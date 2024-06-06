@@ -1433,13 +1433,13 @@ export class FederatedGraphRepository {
           fedGraphLabelMatchers: federatedGraph.labelMatchers,
         });
 
-        const ffSchemaVersions: {
+        const fgSchemaVersions: {
           featureFlagName: string;
           schemaVersionId: string;
         }[] = [];
 
         // the string is the contract id
-        const contractsffSchemaVersions: Map<string, { featureFlagName: string; schemaVersionId: string }[]> =
+        const fgSchemaVersionsOfContracts: Map<string, { featureFlagName: string; schemaVersionId: string }[]> =
           new Map();
 
         for (const compositionPossibility of compositionPossibilities) {
@@ -1478,7 +1478,7 @@ export class FederatedGraphRepository {
             deployment.schemaVersionId &&
             !errors
           ) {
-            ffSchemaVersions.push({
+            fgSchemaVersions.push({
               featureFlagName: compositionPossibility.featureFlagName || '',
               schemaVersionId: deployment.schemaVersionId,
             });
@@ -1509,8 +1509,8 @@ export class FederatedGraphRepository {
               contractDeployment.schemaVersionId &&
               !contractErrors
             ) {
-              contractsffSchemaVersions.set(contractGraph.id, [
-                ...(contractsffSchemaVersions.get(contractGraph.id) || []),
+              fgSchemaVersionsOfContracts.set(contractGraph.id, [
+                ...(fgSchemaVersionsOfContracts.get(contractGraph.id) || []),
                 {
                   featureFlagName: compositionPossibility.featureFlagName,
                   schemaVersionId: contractDeployment.schemaVersionId,
@@ -1536,7 +1536,7 @@ export class FederatedGraphRepository {
 
         const { errors: uploadErrors } = await composer.composeAndUploadRouterConfig({
           federatedGraph: updatedFedGraph,
-          ffSchemaVersions,
+          fgSchemaVersions,
           blobStorage,
           federatedSchemaVersionId: updatedFedGraph.composedSchemaVersionId,
           organizationId: this.organizationId,
@@ -1556,7 +1556,7 @@ export class FederatedGraphRepository {
             })),
         );
 
-        for (const [contractId, contractFFSchemaVersions] of contractsffSchemaVersions) {
+        for (const [contractId, contractFGSchemaVersions] of fgSchemaVersionsOfContracts) {
           const updatedContract = await this.byId(contractId);
           if (!updatedContract || !updatedContract.composedSchemaVersionId) {
             throw new Error(`Unexpected: Contract graph with id '${contractId}' not found after latest composition`);
@@ -1564,7 +1564,7 @@ export class FederatedGraphRepository {
 
           const { errors: uploadErrors } = await composer.composeAndUploadRouterConfig({
             federatedGraph: updatedContract,
-            ffSchemaVersions: contractFFSchemaVersions,
+            fgSchemaVersions: contractFGSchemaVersions,
             blobStorage,
             federatedSchemaVersionId: updatedContract.composedSchemaVersionId,
             organizationId: this.organizationId,

@@ -1,1 +1,0 @@
-ALTER TABLE "graph_compositions" ADD COLUMN "is_feature_flag_composition" boolean DEFAULT false NOT NULL;

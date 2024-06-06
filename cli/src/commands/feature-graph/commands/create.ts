@@ -17,12 +17,12 @@ import { websocketSubprotocolDescription } from '../../../constants.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('create');
-  command.description('Creates a feature flag on the control plane.');
-  command.argument('<name>', 'The name of the feature flag to create.');
-  command.option('-n, --namespace [string]', 'The namespace of the feature flag.');
+  command.description('Creates a feature graph on the control plane.');
+  command.argument('<name>', 'The name of the feature graph to create.');
+  command.option('-n, --namespace [string]', 'The namespace of the feature graph.');
   command.requiredOption(
     '-r, --routing-url <url>',
-    'The routing url of your feature flag. This is the url that the feature flag will be accessible at.',
+    'The routing url of your feature graph. This is the url that the feature graph will be accessible at.',
   );
   command.option(
     '--subscription-url [url]',
@@ -30,11 +30,11 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option(
     '--subscription-protocol <protocol>',
-    'The protocol to use when subscribing to the feature flag. The supported protocols are ws, sse, and sse_post.',
+    'The protocol to use when subscribing to the feature graph. The supported protocols are ws, sse, and sse_post.',
   );
   command.option('--websocket-subprotocol <protocol>', websocketSubprotocolDescription);
-  command.option('--readme <path-to-readme>', 'The markdown file which describes the feature flag.');
-  command.requiredOption('--subgraph <subgraph>', 'The subgraph name for which the feature flag is to be created');
+  command.option('--readme <path-to-readme>', 'The markdown file which describes the feature graph.');
+  command.requiredOption('--subgraph <subgraph>', 'The subgraph name for which the feature graph is to be created');
   command.action(async (name, options) => {
     let readmeFile;
     if (options.readme) {
@@ -53,7 +53,7 @@ export default (opts: BaseCommandOptions) => {
       websocketSubprotocol: options.websocketSubprotocol,
     });
 
-    const spinner = ora('Feature flag is being created...').start();
+    const spinner = ora('Feature graph is being created...').start();
     const resp = await opts.client.platform.createFederatedSubgraph(
       {
         name,
@@ -69,7 +69,7 @@ export default (opts: BaseCommandOptions) => {
           ? parseGraphQLWebsocketSubprotocol(options.websocketSubprotocol)
           : undefined,
         readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
-        isFeatureFlag: true,
+        isFeatureGraph: true,
         baseSubgraphName: options.subgraph,
       },
       {
@@ -78,9 +78,9 @@ export default (opts: BaseCommandOptions) => {
     );
 
     if (resp.response?.code === EnumStatusCode.OK) {
-      spinner.succeed('Feature flag was created successfully.');
+      spinner.succeed('Feature graph was created successfully.');
     } else {
-      spinner.fail('Failed to create feature flag.');
+      spinner.fail('Failed to create feature graph.');
       if (resp.response?.details) {
         console.log(pc.red(pc.bold(resp.response?.details)));
       }

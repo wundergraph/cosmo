@@ -133,8 +133,7 @@ message CreateFederatedSubgraphRequest {
   optional string readme = 7;
   string namespace = 8;
   optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 9;
-  optional bool isFeatureFlag = 10;
-  // TODO to discuss with dustin
+  optional bool isFeatureGraph = 10;
   optional string baseSubgraphName = 11;
 }
 
@@ -1989,39 +1988,39 @@ message IsMemberLimitReachedResponse {
   int32 member_count = 3;  
 }
 
-message CreateFeatureFlagGroupRequest {
-  string featureFlagGroupName = 1;
+message CreateFeatureFlagRequest {
+  string featureFlagName = 1;
   string namespace = 2;
   repeated Label labels = 3;
-  repeated string featureFlagNames = 4;
+  repeated string featureGraphNames = 4;
 }
 
-message CreateFeatureFlagGroupResponse {
+message CreateFeatureFlagResponse {
   Response response = 1;
   repeated CompositionError compositionErrors = 2;
   repeated DeploymentError deploymentErrors = 3;
 }
 
-message UpdateFeatureFlagGroupRequest {
-  string featureFlagGroupName = 1;
+message UpdateFeatureFlagRequest {
+  string featureFlagName = 1;
   string namespace = 2;
   repeated Label labels = 3;
-  repeated string featureFlagNames = 4;
+  repeated string featureGraphNames = 4;
 }
 
-message UpdateFeatureFlagGroupResponse {
+message UpdateFeatureFlagResponse {
   Response response = 1;
   repeated CompositionError compositionErrors = 2;
   repeated DeploymentError deploymentErrors = 3;
 }
 
-message EnableFeatureFlagGroupRequest {
-  string featureFlagGroupName = 1;
+message EnableFeatureFlagRequest {
+  string featureFlagName = 1;
   string namespace = 2;
   bool enabled = 3;
 }
 
-message EnableFeatureFlagGroupResponse {
+message EnableFeatureFlagResponse {
   Response response = 1;
   repeated CompositionError compositionErrors = 2;
   repeated DeploymentError deploymentErrors = 3;
@@ -2242,12 +2241,12 @@ service PlatformService {
   // GetUserAccessiblePermissions returns all the federated and subgraphs where the user has write permissions
   rpc GetUserAccessiblePermissions(GetUserAccessiblePermissionsRequest) returns (GetUserAccessiblePermissionsResponse) {}
 
-  // CreateFeatureFlagGroup creates a new group for the selected feature flags
-  rpc CreateFeatureFlagGroup(CreateFeatureFlagGroupRequest) returns (CreateFeatureFlagGroupResponse) {}
-  // UpdateFeatureFlagGroup updates a new group for the selected feature flags
-  rpc UpdateFeatureFlagGroup(UpdateFeatureFlagGroupRequest) returns (UpdateFeatureFlagGroupResponse) {}
-  // EnableFeatureFlagGroup enables/disables a feature flag group
-  rpc EnableFeatureFlagGroup(EnableFeatureFlagGroupRequest) returns (EnableFeatureFlagGroupResponse) {}
+  // CreateFeatureFlag creates a new feature flag for the selected feature graphs
+  rpc CreateFeatureFlag(CreateFeatureFlagRequest) returns (CreateFeatureFlagResponse) {}
+  // UpdateFeatureFlag updates a new feature flag for the selected feature graphs
+  rpc UpdateFeatureFlag(UpdateFeatureFlagRequest) returns (UpdateFeatureFlagResponse) {}
+  // EnableFeatureFlag enables/disables a feature flag
+  rpc EnableFeatureFlag(EnableFeatureFlagRequest) returns (EnableFeatureFlagResponse) {}
 
   // Analytics
   rpc GetAnalyticsView(GetAnalyticsViewRequest) returns (GetAnalyticsViewResponse) {

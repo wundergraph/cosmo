@@ -16,28 +16,28 @@ export default (opts: BaseCommandOptions) => {
     '--label [labels...]',
     'The labels to apply to the feature flag. The labels are passed in the format <key>=<value> <key>=<value>.',
   );
-  command.requiredOption(
-    '-ff, --feature-flags <featureFlags...>',
-    'The names of the feature flags which have to be the part of the group. The feature flags are passed in the format <featureFlag1> <featureFlag2> <featureFlag3>. The feature flag group must have at least 1 feature flags.',
+  command.option(
+    '-fg, --feature-graphs <featureGraphs...>',
+    'The names of the feature graphs which have to be the part of the feature flag. The feature graphs are passed in the format <featureGraph1> <featureGraph2> <featureGraph3>. The feature flag must have at least 1 feature graphs.',
   );
   command.action(async (name, options) => {
-    if (!options.featureFlags || options.featureFlags.length === 0) {
+    if (!options.featureGraphs || options.featureGraphs.length === 0) {
       program.error(
         pc.red(
           pc.bold(
-            `The feature flag group must have at least 1 feature flags. Please check the feature flags and try again.`,
+            `The feature flag must have at least 1 feature graphs. Please check the feature graphs and try again.`,
           ),
         ),
       );
     }
 
-    const spinner = ora('Feature flag group is being created...').start();
-    const resp = await opts.client.platform.createFeatureFlagGroup(
+    const spinner = ora('Feature flag is being created...').start();
+    const resp = await opts.client.platform.createFeatureFlag(
       {
-        featureFlagGroupName: name,
+        featureFlagName: name,
         namespace: options.namespace,
         labels: options.label ? options.label.map((label: string) => splitLabel(label)) : [],
-        featureFlagNames: options.featureFlags,
+        featureGraphNames: options.featureGraphs,
       },
       {
         headers: getBaseHeaders(),
@@ -46,7 +46,7 @@ export default (opts: BaseCommandOptions) => {
 
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {
-        spinner.succeed('Feature flag group was created successfully.');
+        spinner.succeed('Feature flag was created successfully.');
         break;
       }
       case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {
@@ -109,7 +109,7 @@ export default (opts: BaseCommandOptions) => {
         break;
       }
       default: {
-        spinner.fail('Failed to create feature flag group.');
+        spinner.fail('Failed to create feature flag.');
         if (resp.response?.details) {
           console.log(pc.red(pc.bold(resp.response?.details)));
         }

@@ -1132,13 +1132,11 @@ export class CreateFederatedSubgraphRequest extends Message<CreateFederatedSubgr
   websocketSubprotocol?: GraphQLWebsocketSubprotocol;
 
   /**
-   * @generated from field: optional bool isFeatureFlag = 10;
+   * @generated from field: optional bool isFeatureGraph = 10;
    */
-  isFeatureFlag?: boolean;
+  isFeatureGraph?: boolean;
 
   /**
-   * TODO to discuss with dustin
-   *
    * @generated from field: optional string baseSubgraphName = 11;
    */
   baseSubgraphName?: string;
@@ -1159,7 +1157,7 @@ export class CreateFederatedSubgraphRequest extends Message<CreateFederatedSubgr
     { no: 7, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 8, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 9, name: "websocket_subprotocol", kind: "enum", T: proto3.getEnumType(GraphQLWebsocketSubprotocol), opt: true },
-    { no: 10, name: "isFeatureFlag", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 10, name: "isFeatureGraph", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 11, name: "baseSubgraphName", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
@@ -15741,13 +15739,13 @@ export class IsMemberLimitReachedResponse extends Message<IsMemberLimitReachedRe
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.CreateFeatureFlagGroupRequest
+ * @generated from message wg.cosmo.platform.v1.CreateFeatureFlagRequest
  */
-export class CreateFeatureFlagGroupRequest extends Message<CreateFeatureFlagGroupRequest> {
+export class CreateFeatureFlagRequest extends Message<CreateFeatureFlagRequest> {
   /**
-   * @generated from field: string featureFlagGroupName = 1;
+   * @generated from field: string featureFlagName = 1;
    */
-  featureFlagGroupName = "";
+  featureFlagName = "";
 
   /**
    * @generated from field: string namespace = 2;
@@ -15760,45 +15758,45 @@ export class CreateFeatureFlagGroupRequest extends Message<CreateFeatureFlagGrou
   labels: Label[] = [];
 
   /**
-   * @generated from field: repeated string featureFlagNames = 4;
+   * @generated from field: repeated string featureGraphNames = 4;
    */
-  featureFlagNames: string[] = [];
+  featureGraphNames: string[] = [];
 
-  constructor(data?: PartialMessage<CreateFeatureFlagGroupRequest>) {
+  constructor(data?: PartialMessage<CreateFeatureFlagRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.CreateFeatureFlagGroupRequest";
+  static readonly typeName = "wg.cosmo.platform.v1.CreateFeatureFlagRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "featureFlagGroupName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "featureFlagName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "labels", kind: "message", T: Label, repeated: true },
-    { no: 4, name: "featureFlagNames", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 4, name: "featureGraphNames", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateFeatureFlagGroupRequest {
-    return new CreateFeatureFlagGroupRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateFeatureFlagRequest {
+    return new CreateFeatureFlagRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateFeatureFlagGroupRequest {
-    return new CreateFeatureFlagGroupRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateFeatureFlagRequest {
+    return new CreateFeatureFlagRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateFeatureFlagGroupRequest {
-    return new CreateFeatureFlagGroupRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateFeatureFlagRequest {
+    return new CreateFeatureFlagRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: CreateFeatureFlagGroupRequest | PlainMessage<CreateFeatureFlagGroupRequest> | undefined, b: CreateFeatureFlagGroupRequest | PlainMessage<CreateFeatureFlagGroupRequest> | undefined): boolean {
-    return proto3.util.equals(CreateFeatureFlagGroupRequest, a, b);
+  static equals(a: CreateFeatureFlagRequest | PlainMessage<CreateFeatureFlagRequest> | undefined, b: CreateFeatureFlagRequest | PlainMessage<CreateFeatureFlagRequest> | undefined): boolean {
+    return proto3.util.equals(CreateFeatureFlagRequest, a, b);
   }
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.CreateFeatureFlagGroupResponse
+ * @generated from message wg.cosmo.platform.v1.CreateFeatureFlagResponse
  */
-export class CreateFeatureFlagGroupResponse extends Message<CreateFeatureFlagGroupResponse> {
+export class CreateFeatureFlagResponse extends Message<CreateFeatureFlagResponse> {
   /**
    * @generated from field: wg.cosmo.platform.v1.Response response = 1;
    */
@@ -15814,44 +15812,44 @@ export class CreateFeatureFlagGroupResponse extends Message<CreateFeatureFlagGro
    */
   deploymentErrors: DeploymentError[] = [];
 
-  constructor(data?: PartialMessage<CreateFeatureFlagGroupResponse>) {
+  constructor(data?: PartialMessage<CreateFeatureFlagResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.CreateFeatureFlagGroupResponse";
+  static readonly typeName = "wg.cosmo.platform.v1.CreateFeatureFlagResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
     { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateFeatureFlagGroupResponse {
-    return new CreateFeatureFlagGroupResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateFeatureFlagResponse {
+    return new CreateFeatureFlagResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateFeatureFlagGroupResponse {
-    return new CreateFeatureFlagGroupResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateFeatureFlagResponse {
+    return new CreateFeatureFlagResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateFeatureFlagGroupResponse {
-    return new CreateFeatureFlagGroupResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateFeatureFlagResponse {
+    return new CreateFeatureFlagResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: CreateFeatureFlagGroupResponse | PlainMessage<CreateFeatureFlagGroupResponse> | undefined, b: CreateFeatureFlagGroupResponse | PlainMessage<CreateFeatureFlagGroupResponse> | undefined): boolean {
-    return proto3.util.equals(CreateFeatureFlagGroupResponse, a, b);
+  static equals(a: CreateFeatureFlagResponse | PlainMessage<CreateFeatureFlagResponse> | undefined, b: CreateFeatureFlagResponse | PlainMessage<CreateFeatureFlagResponse> | undefined): boolean {
+    return proto3.util.equals(CreateFeatureFlagResponse, a, b);
   }
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.UpdateFeatureFlagGroupRequest
+ * @generated from message wg.cosmo.platform.v1.UpdateFeatureFlagRequest
  */
-export class UpdateFeatureFlagGroupRequest extends Message<UpdateFeatureFlagGroupRequest> {
+export class UpdateFeatureFlagRequest extends Message<UpdateFeatureFlagRequest> {
   /**
-   * @generated from field: string featureFlagGroupName = 1;
+   * @generated from field: string featureFlagName = 1;
    */
-  featureFlagGroupName = "";
+  featureFlagName = "";
 
   /**
    * @generated from field: string namespace = 2;
@@ -15864,45 +15862,45 @@ export class UpdateFeatureFlagGroupRequest extends Message<UpdateFeatureFlagGrou
   labels: Label[] = [];
 
   /**
-   * @generated from field: repeated string featureFlagNames = 4;
+   * @generated from field: repeated string featureGraphNames = 4;
    */
-  featureFlagNames: string[] = [];
+  featureGraphNames: string[] = [];
 
-  constructor(data?: PartialMessage<UpdateFeatureFlagGroupRequest>) {
+  constructor(data?: PartialMessage<UpdateFeatureFlagRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.UpdateFeatureFlagGroupRequest";
+  static readonly typeName = "wg.cosmo.platform.v1.UpdateFeatureFlagRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "featureFlagGroupName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "featureFlagName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "labels", kind: "message", T: Label, repeated: true },
-    { no: 4, name: "featureFlagNames", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 4, name: "featureGraphNames", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateFeatureFlagGroupRequest {
-    return new UpdateFeatureFlagGroupRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateFeatureFlagRequest {
+    return new UpdateFeatureFlagRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateFeatureFlagGroupRequest {
-    return new UpdateFeatureFlagGroupRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateFeatureFlagRequest {
+    return new UpdateFeatureFlagRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateFeatureFlagGroupRequest {
-    return new UpdateFeatureFlagGroupRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateFeatureFlagRequest {
+    return new UpdateFeatureFlagRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: UpdateFeatureFlagGroupRequest | PlainMessage<UpdateFeatureFlagGroupRequest> | undefined, b: UpdateFeatureFlagGroupRequest | PlainMessage<UpdateFeatureFlagGroupRequest> | undefined): boolean {
-    return proto3.util.equals(UpdateFeatureFlagGroupRequest, a, b);
+  static equals(a: UpdateFeatureFlagRequest | PlainMessage<UpdateFeatureFlagRequest> | undefined, b: UpdateFeatureFlagRequest | PlainMessage<UpdateFeatureFlagRequest> | undefined): boolean {
+    return proto3.util.equals(UpdateFeatureFlagRequest, a, b);
   }
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.UpdateFeatureFlagGroupResponse
+ * @generated from message wg.cosmo.platform.v1.UpdateFeatureFlagResponse
  */
-export class UpdateFeatureFlagGroupResponse extends Message<UpdateFeatureFlagGroupResponse> {
+export class UpdateFeatureFlagResponse extends Message<UpdateFeatureFlagResponse> {
   /**
    * @generated from field: wg.cosmo.platform.v1.Response response = 1;
    */
@@ -15918,44 +15916,44 @@ export class UpdateFeatureFlagGroupResponse extends Message<UpdateFeatureFlagGro
    */
   deploymentErrors: DeploymentError[] = [];
 
-  constructor(data?: PartialMessage<UpdateFeatureFlagGroupResponse>) {
+  constructor(data?: PartialMessage<UpdateFeatureFlagResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.UpdateFeatureFlagGroupResponse";
+  static readonly typeName = "wg.cosmo.platform.v1.UpdateFeatureFlagResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
     { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateFeatureFlagGroupResponse {
-    return new UpdateFeatureFlagGroupResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateFeatureFlagResponse {
+    return new UpdateFeatureFlagResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateFeatureFlagGroupResponse {
-    return new UpdateFeatureFlagGroupResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateFeatureFlagResponse {
+    return new UpdateFeatureFlagResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateFeatureFlagGroupResponse {
-    return new UpdateFeatureFlagGroupResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateFeatureFlagResponse {
+    return new UpdateFeatureFlagResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: UpdateFeatureFlagGroupResponse | PlainMessage<UpdateFeatureFlagGroupResponse> | undefined, b: UpdateFeatureFlagGroupResponse | PlainMessage<UpdateFeatureFlagGroupResponse> | undefined): boolean {
-    return proto3.util.equals(UpdateFeatureFlagGroupResponse, a, b);
+  static equals(a: UpdateFeatureFlagResponse | PlainMessage<UpdateFeatureFlagResponse> | undefined, b: UpdateFeatureFlagResponse | PlainMessage<UpdateFeatureFlagResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateFeatureFlagResponse, a, b);
   }
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.EnableFeatureFlagGroupRequest
+ * @generated from message wg.cosmo.platform.v1.EnableFeatureFlagRequest
  */
-export class EnableFeatureFlagGroupRequest extends Message<EnableFeatureFlagGroupRequest> {
+export class EnableFeatureFlagRequest extends Message<EnableFeatureFlagRequest> {
   /**
-   * @generated from field: string featureFlagGroupName = 1;
+   * @generated from field: string featureFlagName = 1;
    */
-  featureFlagGroupName = "";
+  featureFlagName = "";
 
   /**
    * @generated from field: string namespace = 2;
@@ -15967,40 +15965,40 @@ export class EnableFeatureFlagGroupRequest extends Message<EnableFeatureFlagGrou
    */
   enabled = false;
 
-  constructor(data?: PartialMessage<EnableFeatureFlagGroupRequest>) {
+  constructor(data?: PartialMessage<EnableFeatureFlagRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.EnableFeatureFlagGroupRequest";
+  static readonly typeName = "wg.cosmo.platform.v1.EnableFeatureFlagRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "featureFlagGroupName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "featureFlagName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "enabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EnableFeatureFlagGroupRequest {
-    return new EnableFeatureFlagGroupRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EnableFeatureFlagRequest {
+    return new EnableFeatureFlagRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EnableFeatureFlagGroupRequest {
-    return new EnableFeatureFlagGroupRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EnableFeatureFlagRequest {
+    return new EnableFeatureFlagRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EnableFeatureFlagGroupRequest {
-    return new EnableFeatureFlagGroupRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EnableFeatureFlagRequest {
+    return new EnableFeatureFlagRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: EnableFeatureFlagGroupRequest | PlainMessage<EnableFeatureFlagGroupRequest> | undefined, b: EnableFeatureFlagGroupRequest | PlainMessage<EnableFeatureFlagGroupRequest> | undefined): boolean {
-    return proto3.util.equals(EnableFeatureFlagGroupRequest, a, b);
+  static equals(a: EnableFeatureFlagRequest | PlainMessage<EnableFeatureFlagRequest> | undefined, b: EnableFeatureFlagRequest | PlainMessage<EnableFeatureFlagRequest> | undefined): boolean {
+    return proto3.util.equals(EnableFeatureFlagRequest, a, b);
   }
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.EnableFeatureFlagGroupResponse
+ * @generated from message wg.cosmo.platform.v1.EnableFeatureFlagResponse
  */
-export class EnableFeatureFlagGroupResponse extends Message<EnableFeatureFlagGroupResponse> {
+export class EnableFeatureFlagResponse extends Message<EnableFeatureFlagResponse> {
   /**
    * @generated from field: wg.cosmo.platform.v1.Response response = 1;
    */
@@ -16016,33 +16014,33 @@ export class EnableFeatureFlagGroupResponse extends Message<EnableFeatureFlagGro
    */
   deploymentErrors: DeploymentError[] = [];
 
-  constructor(data?: PartialMessage<EnableFeatureFlagGroupResponse>) {
+  constructor(data?: PartialMessage<EnableFeatureFlagResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.EnableFeatureFlagGroupResponse";
+  static readonly typeName = "wg.cosmo.platform.v1.EnableFeatureFlagResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
     { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EnableFeatureFlagGroupResponse {
-    return new EnableFeatureFlagGroupResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EnableFeatureFlagResponse {
+    return new EnableFeatureFlagResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EnableFeatureFlagGroupResponse {
-    return new EnableFeatureFlagGroupResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EnableFeatureFlagResponse {
+    return new EnableFeatureFlagResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EnableFeatureFlagGroupResponse {
-    return new EnableFeatureFlagGroupResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EnableFeatureFlagResponse {
+    return new EnableFeatureFlagResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: EnableFeatureFlagGroupResponse | PlainMessage<EnableFeatureFlagGroupResponse> | undefined, b: EnableFeatureFlagGroupResponse | PlainMessage<EnableFeatureFlagGroupResponse> | undefined): boolean {
-    return proto3.util.equals(EnableFeatureFlagGroupResponse, a, b);
+  static equals(a: EnableFeatureFlagResponse | PlainMessage<EnableFeatureFlagResponse> | undefined, b: EnableFeatureFlagResponse | PlainMessage<EnableFeatureFlagResponse> | undefined): boolean {
+    return proto3.util.equals(EnableFeatureFlagResponse, a, b);
   }
 }
 

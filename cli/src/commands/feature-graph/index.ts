@@ -1,13 +1,13 @@
 import { Command } from 'commander';
 import { BaseCommandOptions } from '../../core/types/types.js';
 import { checkAuth } from '../auth/utils.js';
-import CreateFeatureFlagCommand from './commands/create.js';
+import CreateFeatureGraphCommand from './commands/create.js';
 
 export default (opts: BaseCommandOptions) => {
-  const command = new Command('feature-flag');
-  command.description('Provides commands for creating and managing a feature flags');
+  const command = new Command('feature-graph');
+  command.description('Provides commands for creating and managing a feature graphs');
 
-  command.addCommand(CreateFeatureFlagCommand(opts));
+  command.addCommand(CreateFeatureGraphCommand(opts));
 
   command.hook('preAction', async () => {
     await checkAuth();

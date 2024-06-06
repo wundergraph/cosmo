@@ -129,10 +129,10 @@ export class Composer {
 
   async composeRouterConfig({
     federatedGraphTargetId,
-    ffSchemaVersions,
+    fgSchemaVersions,
   }: {
     federatedGraphTargetId: string;
-    ffSchemaVersions: {
+    fgSchemaVersions: {
       featureFlagName: string;
       schemaVersionId: string;
     }[];
@@ -147,8 +147,8 @@ export class Composer {
     let ffRouterConfigs: {
       [key: string]: FeatureFlagRouterExecutionConfig;
     };
-    if (ffSchemaVersions.length > 0) {
-      ffRouterConfigs = await this.featureFlagRepo.getFFRouterConfigsBySchemaVersionIds({ ffSchemaVersions });
+    if (fgSchemaVersions.length > 0) {
+      ffRouterConfigs = await this.featureFlagRepo.getFFRouterConfigsBySchemaVersionIds({ fgSchemaVersions });
       const featureFlagConfigs = baseRouterConfig.featureFlagConfigs;
       if (featureFlagConfigs) {
         const configByFfName = featureFlagConfigs.configByFeatureFlagName;
@@ -304,14 +304,14 @@ export class Composer {
 
   async composeAndUploadRouterConfig({
     federatedGraph,
-    ffSchemaVersions,
+    fgSchemaVersions,
     blobStorage,
     organizationId,
     federatedSchemaVersionId,
     admissionConfig,
   }: {
     federatedGraph: FederatedGraphDTO;
-    ffSchemaVersions: {
+    fgSchemaVersions: {
       featureFlagName: string;
       schemaVersionId: string;
     }[];
@@ -325,7 +325,7 @@ export class Composer {
   }) {
     const baseRouterConfig = await this.composeRouterConfig({
       federatedGraphTargetId: federatedGraph.targetId,
-      ffSchemaVersions,
+      fgSchemaVersions,
     });
 
     const { errors } = await this.uploadRouterConfig({

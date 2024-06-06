@@ -104,7 +104,7 @@ export interface SubgraphDTO {
   namespace: string;
   namespaceId: string;
   isV2Graph?: boolean;
-  isFeatureFlag?: boolean;
+  isFeatureGraph?: boolean;
 }
 
 export interface FeatureFlagGroupDTO {

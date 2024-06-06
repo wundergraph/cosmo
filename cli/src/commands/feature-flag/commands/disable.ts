@@ -8,15 +8,15 @@ import { BaseCommandOptions } from '../../../core/types/types.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('disable');
-  command.description('Disables a feature flag group on the control plane.');
-  command.argument('<name>', 'The name of the feature flag group to disable.');
-  command.option('-n, --namespace [string]', 'The namespace of the feature flag group.');
+  command.description('Disables a feature flag on the control plane.');
+  command.argument('<name>', 'The name of the feature flag to disable.');
+  command.option('-n, --namespace [string]', 'The namespace of the feature flag.');
 
   command.action(async (name, options) => {
-    const spinner = ora('Feature flag group is being disabled...').start();
-    const resp = await opts.client.platform.enableFeatureFlagGroup(
+    const spinner = ora('Feature flag is being disabled...').start();
+    const resp = await opts.client.platform.enableFeatureFlag(
       {
-        featureFlagGroupName: name,
+        featureFlagName: name,
         namespace: options.namespace,
         enabled: false,
       },
@@ -27,7 +27,7 @@ export default (opts: BaseCommandOptions) => {
 
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {
-        spinner.succeed('Feature flag group was disabled successfully.');
+        spinner.succeed('Feature flag was disabled successfully.');
         break;
       }
       case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {
@@ -90,7 +90,7 @@ export default (opts: BaseCommandOptions) => {
         break;
       }
       default: {
-        spinner.fail('Failed to disable feature flag group.');
+        spinner.fail('Failed to disable feature flag.');
         if (resp.response?.details) {
           console.log(pc.red(pc.bold(resp.response?.details)));
         }

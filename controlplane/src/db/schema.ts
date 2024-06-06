@@ -235,13 +235,13 @@ export const subgraphs = pgTable('subgraphs', {
     .references(() => targets.id, {
       onDelete: 'cascade',
     }),
-  isFeatureFlag: boolean('is_feature_flag').default(false).notNull(),
+  isFeatureGraph: boolean('is_feature_graph').default(false).notNull(),
 });
 
-export const featureFlagsToSubgraph = pgTable(
-  'feature_flags_subgraphs',
+export const featureGraphsToSubgraph = pgTable(
+  'feature_graphs_subgraphs',
   {
-    featureFlagId: uuid('feature_flag_id')
+    featureGraphId: uuid('feature_graph_id')
       .notNull()
       .references(() => subgraphs.id, {
         onDelete: 'cascade',
@@ -251,27 +251,26 @@ export const featureFlagsToSubgraph = pgTable(
       .references(() => subgraphs.id, {
         onDelete: 'cascade',
       }),
-    isEnabled: boolean('is_enabled').default(false).notNull(),
   },
   (t) => {
     return {
-      pk: primaryKey({ columns: [t.featureFlagId, t.baseSubgraphId] }),
+      pk: primaryKey({ columns: [t.featureGraphId, t.baseSubgraphId] }),
     };
   },
 );
 
-export const featureFlagsToSubgraphRelations = relations(featureFlagsToSubgraph, ({ one }) => ({
+export const featureGraphsToSubgraphRelations = relations(featureGraphsToSubgraph, ({ one }) => ({
   baseSubgraph: one(subgraphs, {
-    fields: [featureFlagsToSubgraph.baseSubgraphId],
+    fields: [featureGraphsToSubgraph.baseSubgraphId],
     references: [subgraphs.id],
   }),
-  featureFlag: one(subgraphs, {
-    fields: [featureFlagsToSubgraph.featureFlagId],
+  featureGraph: one(subgraphs, {
+    fields: [featureGraphsToSubgraph.featureGraphId],
     references: [subgraphs.id],
   }),
 }));
 
-export const featureFlagGroups = pgTable('feature_flag_groups', {
+export const featureFlags = pgTable('feature_flags', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
   organizationId: uuid('organization_id')
@@ -293,15 +292,15 @@ export const featureFlagGroups = pgTable('feature_flag_groups', {
   }),
 });
 
-export const featureFlagGroupToFeatureFlags = pgTable(
-  'feature_flags_group_to_feature_flags',
+export const featureFlagToFeatureGraphs = pgTable(
+  'feature_flags_to_feature_graphs',
   {
-    featureFlagGroupId: uuid('feature_flag_group_id')
+    featureFlagId: uuid('feature_flag_id')
       .notNull()
-      .references(() => featureFlagGroups.id, {
+      .references(() => featureFlags.id, {
         onDelete: 'cascade',
       }),
-    featureFlagId: uuid('feature_flag_id')
+    featureGraphId: uuid('feature_graph_id')
       .notNull()
       .references(() => subgraphs.id, {
         onDelete: 'cascade',
@@ -309,18 +308,18 @@ export const featureFlagGroupToFeatureFlags = pgTable(
   },
   (t) => {
     return {
-      pk: primaryKey({ columns: [t.featureFlagId, t.featureFlagGroupId] }),
+      pk: primaryKey({ columns: [t.featureFlagId, t.featureGraphId] }),
     };
   },
 );
 
-export const featureFlagGroupToFeatureFlagsRelations = relations(featureFlagGroupToFeatureFlags, ({ one }) => ({
-  featureFlagGroup: one(featureFlagGroups, {
-    fields: [featureFlagGroupToFeatureFlags.featureFlagGroupId],
-    references: [featureFlagGroups.id],
+export const featureFlagToFeatureGraphsRelations = relations(featureFlagToFeatureGraphs, ({ one }) => ({
+  featureFlag: one(featureFlags, {
+    fields: [featureFlagToFeatureGraphs.featureFlagId],
+    references: [featureFlags.id],
   }),
-  featureFlag: one(subgraphs, {
-    fields: [featureFlagGroupToFeatureFlags.featureFlagId],
+  featureGraph: one(subgraphs, {
+    fields: [featureFlagToFeatureGraphs.featureGraphId],
     references: [subgraphs.id],
   }),
 }));

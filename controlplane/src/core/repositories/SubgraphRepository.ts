@@ -7,7 +7,7 @@ import { FastifyBaseLogger } from 'fastify';
 import { WebsocketSubprotocol } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
-  featureFlagsToSubgraph,
+  featureGraphsToSubgraph,
   graphCompositionSubgraphs,
   graphCompositions,
   schemaChecks,
@@ -73,8 +73,8 @@ export class SubgraphRepository {
     websocketSubprotocol?: WebsocketSubprotocol;
     readme?: string;
     namespaceId: string;
-    featureFlagOptions?: {
-      isFeatureFlag: boolean;
+    featureGraphOptions?: {
+      isFeatureGraph: boolean;
       baseSubgraphID: string;
     };
   }): Promise<SubgraphDTO | undefined> {
@@ -115,7 +115,7 @@ export class SubgraphRepository {
           subscriptionUrl,
           subscriptionProtocol: data.subscriptionProtocol ?? 'ws',
           websocketSubprotocol: data.websocketSubprotocol || 'auto',
-          isFeatureFlag: data.featureFlagOptions?.isFeatureFlag || false,
+          isFeatureGraph: data.featureGraphOptions?.isFeatureGraph || false,
         })
         .returning()
         .execute();
@@ -129,7 +129,7 @@ export class SubgraphRepository {
         namespaceId: data.namespaceId,
       });
 
-      if (federatedGraphs.length > 0 && !data.featureFlagOptions?.isFeatureFlag) {
+      if (federatedGraphs.length > 0 && !data.featureGraphOptions?.isFeatureGraph) {
         await tx
           .insert(subgraphsToFederatedGraph)
           .values(
@@ -152,13 +152,12 @@ export class SubgraphRepository {
        * 5. Insert into featureFlagsToSubgraph to map the faeture flag to the base subgraph
        */
 
-      if (data.featureFlagOptions) {
+      if (data.featureGraphOptions) {
         await tx
-          .insert(featureFlagsToSubgraph)
+          .insert(featureGraphsToSubgraph)
           .values({
-            baseSubgraphId: data.featureFlagOptions.baseSubgraphID,
-            featureFlagId: insertedSubgraph[0].id,
-            isEnabled: true,
+            baseSubgraphId: data.featureGraphOptions.baseSubgraphID,
+            featureGraphId: insertedSubgraph[0].id,
           })
           .execute();
       }
@@ -175,7 +174,7 @@ export class SubgraphRepository {
         lastUpdatedAt: '',
         namespace: data.namespace,
         namespaceId: data.namespaceId,
-        isFeatureFlag: insertedSubgraph[0].isFeatureFlag,
+        isFeatureGraph: insertedSubgraph[0].isFeatureGraph,
       } as SubgraphDTO;
     });
   }
@@ -298,7 +297,7 @@ export class SubgraphRepository {
           })
           .where(eq(targets.id, subgraph.targetId));
 
-        if (!subgraph.isFeatureFlag) {
+        if (!subgraph.isFeatureGraph) {
           // find all federated graphs that match with the new subgraph labels
           const newFederatedGraphs = await fedGraphRepo.bySubgraphLabels({
             labels: newLabels,
@@ -345,17 +344,17 @@ export class SubgraphRepository {
         }
       }
 
-      if (subgraph.isFeatureFlag) {
+      if (subgraph.isFeatureGraph) {
         // the fed graphs to be composed are to be fetched by using the base subgraph
         const baseSubgraph = await tx
           .select({
-            id: featureFlagsToSubgraph.baseSubgraphId,
+            id: featureGraphsToSubgraph.baseSubgraphId,
             labels: targets.labels,
           })
-          .from(featureFlagsToSubgraph)
-          .innerJoin(subgraphs, eq(subgraphs.id, featureFlagsToSubgraph.baseSubgraphId))
+          .from(featureGraphsToSubgraph)
+          .innerJoin(subgraphs, eq(subgraphs.id, featureGraphsToSubgraph.baseSubgraphId))
           .innerJoin(targets, eq(targets.id, subgraphs.targetId))
-          .where(eq(featureFlagsToSubgraph.featureFlagId, subgraph.id));
+          .where(eq(featureGraphsToSubgraph.featureGraphId, subgraph.id));
 
         if (baseSubgraph.length > 0) {
           updatedFederatedGraphs.push(
@@ -671,7 +670,7 @@ export class SubgraphRepository {
         namespaceId: schema.namespaces.id,
         namespaceName: schema.namespaces.name,
         schemaVersionId: schema.subgraphs.schemaVersionId,
-        isFeatureFlag: schema.subgraphs.isFeatureFlag,
+        isFeatureGraph: schema.subgraphs.isFeatureGraph,
       })
       .from(targets)
       .innerJoin(schema.subgraphs, eq(targets.id, schema.subgraphs.targetId))
@@ -715,7 +714,7 @@ export class SubgraphRepository {
       namespace: resp[0].namespaceName,
       namespaceId: resp[0].namespaceId,
       isV2Graph,
-      isFeatureFlag: resp[0].isFeatureFlag,
+      isFeatureGraph: resp[0].isFeatureGraph,
     };
   }
 
@@ -970,11 +969,11 @@ export class SubgraphRepository {
   public async byGraphLabelMatchers({
     labelMatchers,
     namespaceId,
-    isFeatureFlag,
+    isFeatureGraph,
   }: {
     labelMatchers: string[];
     namespaceId: string;
-    isFeatureFlag?: boolean;
+    isFeatureGraph?: boolean;
   }): Promise<SubgraphDTO[]> {
     const groupedLabels: Label[][] = [];
     for (const lm of labelMatchers) {
@@ -1004,7 +1003,7 @@ export class SubgraphRepository {
           eq(targets.organizationId, this.organizationId),
           eq(targets.type, 'subgraph'),
           eq(targets.namespaceId, namespaceId),
-          eq(schema.subgraphs.isFeatureFlag, isFeatureFlag || false),
+          eq(schema.subgraphs.isFeatureGraph, isFeatureGraph || false),
           ...conditions,
         ),
       )
