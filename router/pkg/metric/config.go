@@ -3,7 +3,9 @@ package metric
 import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
+	"go.opentelemetry.io/otel/attribute"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"net/http"
 	"net/url"
 	"regexp"
 )
@@ -78,6 +80,12 @@ type Config struct {
 
 	// Prometheus includes the Prometheus configuration
 	Prometheus PrometheusConfig
+
+	// AttributesMapper added to the global attributes for all metrics.
+	AttributesMapper func(req *http.Request) []attribute.KeyValue
+
+	// ResourceAttributes added to the global resource attributes for all metrics.
+	ResourceAttributes []attribute.KeyValue
 }
 
 func (c *Config) IsEnabled() bool {
@@ -88,8 +96,10 @@ func (c *Config) IsEnabled() bool {
 func DefaultConfig(serviceVersion string) *Config {
 
 	return &Config{
-		Name:    DefaultServerName,
-		Version: serviceVersion,
+		Name:               DefaultServerName,
+		Version:            serviceVersion,
+		AttributesMapper:   nil,
+		ResourceAttributes: make([]attribute.KeyValue, 0),
 		OpenTelemetry: OpenTelemetry{
 			Enabled:       false,
 			RouterRuntime: true,
