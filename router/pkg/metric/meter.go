@@ -9,7 +9,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
 	"net/url"
-	"regexp"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -106,11 +105,8 @@ func NewPrometheusMeterProvider(ctx context.Context, c *Config, serviceInstanceI
 
 	opts, err := defaultPrometheusMetricOptions(
 		ctx,
-		c.Name,
-		c.Version,
 		serviceInstanceID,
-		c.Prometheus.ExcludeMetrics,
-		c.Prometheus.ExcludeMetricLabels,
+		c,
 	)
 	if err != nil {
 		return nil, nil, err
@@ -185,7 +181,7 @@ func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.
 }
 
 func NewOtlpMeterProvider(ctx context.Context, log *zap.Logger, c *Config, serviceInstanceID string) (*sdkmetric.MeterProvider, error) {
-	opts, err := defaultOtlpMetricOptions(ctx, c.Name, c.Version, serviceInstanceID)
+	opts, err := defaultOtlpMetricOptions(ctx, serviceInstanceID, c)
 	if err != nil {
 		return nil, err
 	}
@@ -224,11 +220,12 @@ func NewOtlpMeterProvider(ctx context.Context, log *zap.Logger, c *Config, servi
 	return mp, nil
 }
 
-func getResource(ctx context.Context, serviceName, serviceVersion string, serviceInstanceID string) (*resource.Resource, error) {
+func getResource(ctx context.Context, serviceInstanceID string, c *Config) (*resource.Resource, error) {
 	r, err := resource.New(ctx,
-		resource.WithAttributes(semconv.ServiceNameKey.String(serviceName)),
-		resource.WithAttributes(semconv.ServiceVersionKey.String(serviceVersion)),
+		resource.WithAttributes(semconv.ServiceNameKey.String(c.Name)),
+		resource.WithAttributes(semconv.ServiceVersionKey.String(c.Version)),
 		resource.WithAttributes(semconv.ServiceInstanceID(serviceInstanceID)),
+		resource.WithAttributes(c.ResourceAttributes...),
 		resource.WithProcessPID(),
 		resource.WithOSType(),
 		resource.WithTelemetrySDK(),
@@ -241,8 +238,8 @@ func getResource(ctx context.Context, serviceName, serviceVersion string, servic
 	return r, nil
 }
 
-func defaultPrometheusMetricOptions(ctx context.Context, serviceName, serviceVersion string, serviceInstanceID string, excludeMetrics, excludeMetricAttributes []*regexp.Regexp) ([]sdkmetric.Option, error) {
-	r, err := getResource(ctx, serviceName, serviceVersion, serviceInstanceID)
+func defaultPrometheusMetricOptions(ctx context.Context, serviceInstanceID string, c *Config) ([]sdkmetric.Option, error) {
+	r, err := getResource(ctx, serviceInstanceID, c)
 	if err != nil {
 		return nil, err
 	}
@@ -256,7 +253,7 @@ func defaultPrometheusMetricOptions(ctx context.Context, serviceName, serviceVer
 			return false
 		}
 		name := sanitizeName(string(value.Key))
-		for _, re := range excludeMetricAttributes {
+		for _, re := range c.Prometheus.ExcludeMetricLabels {
 			if re.MatchString(name) {
 				return false
 			}
@@ -276,7 +273,7 @@ func defaultPrometheusMetricOptions(ctx context.Context, serviceName, serviceVer
 		s := sdkmetric.Stream{Name: i.Name, Description: i.Description, Unit: i.Unit}
 
 		// Filter out metrics that match the excludeMetrics regexes
-		for _, re := range excludeMetrics {
+		for _, re := range c.Prometheus.ExcludeMetrics {
 			promName := sanitizeName(i.Name)
 			if re.MatchString(promName) {
 				// Drop the metric
@@ -307,8 +304,8 @@ func defaultPrometheusMetricOptions(ctx context.Context, serviceName, serviceVer
 	return opts, nil
 }
 
-func defaultOtlpMetricOptions(ctx context.Context, serviceName, serviceVersion string, serviceInstanceID string) ([]sdkmetric.Option, error) {
-	r, err := getResource(ctx, serviceName, serviceVersion, serviceInstanceID)
+func defaultOtlpMetricOptions(ctx context.Context, serviceInstanceID string, c *Config) ([]sdkmetric.Option, error) {
+	r, err := getResource(ctx, serviceInstanceID, c)
 	if err != nil {
 		return nil, err
 	}

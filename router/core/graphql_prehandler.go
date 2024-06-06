@@ -44,6 +44,7 @@ type PreHandlerOptions struct {
 	TracerProvider              *sdktrace.TracerProvider
 	FlushTelemetryAfterResponse bool
 	TraceExportVariables        bool
+	SpanAttributesMapper        func(r *http.Request) []attribute.KeyValue
 }
 
 type PreHandler struct {
@@ -61,6 +62,7 @@ type PreHandler struct {
 	flushTelemetryAfterResponse bool
 	tracer                      trace.Tracer
 	traceExportVariables        bool
+	spanAttributesMapper        func(r *http.Request) []attribute.KeyValue
 }
 
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
@@ -78,6 +80,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		flushTelemetryAfterResponse: opts.FlushTelemetryAfterResponse,
 		tracerProvider:              opts.TracerProvider,
 		traceExportVariables:        opts.TraceExportVariables,
+		spanAttributesMapper:        opts.SpanAttributesMapper,
 		tracer: opts.TracerProvider.Tracer(
 			"wundergraph/cosmo/router/pre_handler",
 			trace.WithInstrumentationVersion("0.0.1"),
@@ -111,7 +114,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		routerSpan := trace.SpanFromContext(r.Context())
 
 		clientInfo := NewClientInfoFromRequest(r)
-		baseAttributeValues := []attribute.KeyValue{
+		attributes := []attribute.KeyValue{
 			otel.WgClientName.String(clientInfo.Name),
 			otel.WgClientVersion.String(clientInfo.Version),
 			otel.WgOperationProtocol.String(OperationProtocolHTTP.String()),
@@ -147,10 +150,14 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		traceTimings := art.NewTraceTimings(r.Context())
 
-		metrics := h.metrics.StartOperation(clientInfo, requestLogger, r.ContentLength)
+		var commonAttributes []attribute.KeyValue
+		if h.spanAttributesMapper != nil {
+			commonAttributes = append(commonAttributes, h.spanAttributesMapper(r)...)
+		}
 
-		routerSpan.SetAttributes(baseAttributeValues...)
-		metrics.AddAttributes(baseAttributeValues...)
+		metrics := h.metrics.StartOperation(clientInfo, requestLogger, r.ContentLength, append(commonAttributes, attributes...))
+
+		routerSpan.SetAttributes(attributes...)
 
 		if h.flushTelemetryAfterResponse {
 			defer h.flushMetrics(r.Context(), requestLogger)
@@ -190,6 +197,8 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		_, engineParseSpan := h.tracer.Start(r.Context(), "Operation - Parse",
 			trace.WithSpanKind(trace.SpanKindInternal),
+			trace.WithAttributes(commonAttributes...),
+			trace.WithAttributes(attributes...),
 		)
 
 		operationKit, err := h.operationProcessor.NewKit(body)
@@ -238,16 +247,16 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		// Set the router span name after we have the operation name
 		routerSpan.SetName(GetSpanName(operationKit.parsedOperation.Name, operationKit.parsedOperation.Type))
 
-		baseAttributeValues = []attribute.KeyValue{
+		attributes = []attribute.KeyValue{
 			otel.WgOperationName.String(operationKit.parsedOperation.Name),
 			otel.WgOperationType.String(operationKit.parsedOperation.Type),
 		}
 		if operationKit.parsedOperation.PersistedID != "" {
-			baseAttributeValues = append(baseAttributeValues, otel.WgOperationPersistedID.String(operationKit.parsedOperation.PersistedID))
+			attributes = append(attributes, otel.WgOperationPersistedID.String(operationKit.parsedOperation.PersistedID))
 		}
 
-		routerSpan.SetAttributes(baseAttributeValues...)
-		metrics.AddAttributes(baseAttributeValues...)
+		routerSpan.SetAttributes(attributes...)
+		metrics.AddAttributes(attributes...)
 
 		/**
 		* Normalize the operation
@@ -259,6 +268,8 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		_, engineNormalizeSpan := h.tracer.Start(r.Context(), "Operation - Normalize",
 			trace.WithSpanKind(trace.SpanKindInternal),
+			trace.WithAttributes(commonAttributes...),
+			trace.WithAttributes(attributes...),
 		)
 
 		err = operationKit.Normalize()
@@ -286,15 +297,15 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			routerSpan.SetAttributes(otel.WgOperationVariables.String(string(operationKit.parsedOperation.Variables)))
 		}
 
-		baseAttributeValues = []attribute.KeyValue{
+		attributes = []attribute.KeyValue{
 			otel.WgOperationHash.String(strconv.FormatUint(operationKit.parsedOperation.ID, 10)),
 		}
 
 		// Set the normalized operation as soon as we have it
 		routerSpan.SetAttributes(otel.WgOperationContent.String(operationKit.parsedOperation.NormalizedRepresentation))
-		routerSpan.SetAttributes(baseAttributeValues...)
+		routerSpan.SetAttributes(attributes...)
 
-		metrics.AddAttributes(baseAttributeValues...)
+		metrics.AddAttributes(attributes...)
 
 		/**
 		* Validate the operation
@@ -306,6 +317,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		_, engineValidateSpan := h.tracer.Start(r.Context(), "Operation - Validate",
 			trace.WithSpanKind(trace.SpanKindInternal),
+			trace.WithAttributes(commonAttributes...),
 		)
 		err = operationKit.Validate()
 		if err != nil {
@@ -341,6 +353,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		_, enginePlanSpan := h.tracer.Start(r.Context(), "Operation - Plan",
 			trace.WithSpanKind(trace.SpanKindInternal),
 			trace.WithAttributes(otel.WgEngineRequestTracingEnabled.Bool(traceOptions.Enable)),
+			trace.WithAttributes(commonAttributes...),
 		)
 
 		opContext, err := h.planner.Plan(operationKit.parsedOperation, clientInfo, OperationProtocolHTTP, traceOptions)
@@ -371,6 +384,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		if len(h.accessController.authenticators) > 0 {
 			_, authenticateSpan := h.tracer.Start(r.Context(), "Authenticate",
 				trace.WithSpanKind(trace.SpanKindServer),
+				trace.WithAttributes(commonAttributes...),
 			)
 
 			validatedReq, err := h.accessController.Access(w, r)

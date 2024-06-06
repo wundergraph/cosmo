@@ -419,7 +419,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 	}
 
 	// Add default tracing exporter if needed
-	if r.traceConfig.Enabled && len(r.traceConfig.Exporters) == 0 {
+	if r.traceConfig.Enabled && len(r.traceConfig.Exporters) == 0 && r.traceConfig.TestMemoryExporter == nil {
 		if endpoint := otelconfig.DefaultEndpoint(); endpoint != "" {
 			r.logger.Debug("Using default trace exporter", zap.String("endpoint", endpoint))
 			r.traceConfig.Exporters = append(r.traceConfig.Exporters, &rtrace.ExporterConfig{
@@ -432,7 +432,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 	}
 
 	// Add default metric exporter if none are configured
-	if r.metricConfig.OpenTelemetry.Enabled && len(r.metricConfig.OpenTelemetry.Exporters) == 0 {
+	if r.metricConfig.OpenTelemetry.Enabled && len(r.metricConfig.OpenTelemetry.Exporters) == 0 && r.metricConfig.OpenTelemetry.TestReader == nil {
 		if endpoint := otelconfig.DefaultEndpoint(); endpoint != "" {
 			r.logger.Debug("Using default metrics exporter", zap.String("endpoint", endpoint))
 			r.metricConfig.OpenTelemetry.Exporters = append(r.metricConfig.OpenTelemetry.Exporters, &rmetric.OpenTelemetryExporter{
@@ -1057,9 +1057,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	var traceHandler *rtrace.Middleware
 	if r.traceConfig.Enabled {
 		spanStartOptions := []oteltrace.SpanStartOption{
-			oteltrace.WithAttributes(
-				baseAttributes...,
-			),
+			oteltrace.WithAttributes(baseAttributes...),
 			oteltrace.WithAttributes(
 				otel.RouterServerAttribute,
 				otel.WgRouterRootSpan.Bool(true),
@@ -1071,6 +1069,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		}
 
 		traceHandler = rtrace.NewMiddleware(
+			r.traceConfig.SpanAttributesMapper,
 			otelhttp.WithSpanOptions(spanStartOptions...),
 			otelhttp.WithFilter(rtrace.CommonRequestFilter),
 			otelhttp.WithFilter(rtrace.PrefixRequestFilter(
@@ -1183,9 +1182,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			rmetric.WithLogger(r.logger),
 			rmetric.WithProcessStartTime(r.processStartTime),
 			rmetric.WithRouterRuntimeMetrics(r.metricConfig.OpenTelemetry.RouterRuntime),
-			rmetric.WithAttributes(
-				baseAttributes...,
-			),
+			rmetric.WithAttributes(baseAttributes...),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create metric handler: %w", err)
@@ -1225,6 +1222,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 				},
 			},
 			TracerProvider:                r.tracerProvider,
+			AttributesMapper:              r.traceConfig.SpanAttributesMapper,
 			LocalhostFallbackInsideDocker: r.localhostFallbackInsideDocker,
 			Logger:                        r.logger,
 		},
@@ -1291,7 +1289,8 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		TracerProvider:                         r.tracerProvider,
 		Authorizer:                             NewCosmoAuthorizer(authorizerOptions),
 		SubgraphErrorPropagation:               r.subgraphErrorPropagation,
-		EngineLoaderHooks:                      NewEngineRequestHooks(ro.metricStore),
+		EngineLoaderHooks:                      NewEngineRequestHooks(ro.metricStore, r.traceConfig.SpanAttributesMapper),
+		SpanAttributesMapper:                   r.traceConfig.SpanAttributesMapper,
 	}
 
 	if r.Config.redisClient != nil {
@@ -1342,6 +1341,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		TracerProvider:              r.tracerProvider,
 		FlushTelemetryAfterResponse: r.awsLambda,
 		TraceExportVariables:        r.traceConfig.ExportGraphQLVariables.Enabled,
+		SpanAttributesMapper:        r.traceConfig.SpanAttributesMapper,
 	})
 
 	graphqlChiRouter := chi.NewRouter()
@@ -1985,9 +1985,45 @@ func TraceConfigFromTelemetry(cfg *config.Telemetry) *rtrace.Config {
 		ExportGraphQLVariables: rtrace.ExportGraphQLVariables{
 			Enabled: cfg.Tracing.ExportGraphQLVariables,
 		},
-		Exporters:   exporters,
-		Propagators: propagators,
+		SpanAttributesMapper: buildAttributesMapper(cfg.Attributes),
+		ResourceAttributes:   buildResourceAttributes(cfg.ResourceAttributes),
+		Exporters:            exporters,
+		Propagators:          propagators,
 	}
+}
+
+func buildAttributesMapper(attributes []config.OtelAttribute) func(req *http.Request) []attribute.KeyValue {
+	return func(req *http.Request) []attribute.KeyValue {
+		var result []attribute.KeyValue
+
+		for _, attr := range attributes {
+			if attr.ValueFrom != nil {
+				if req != nil && attr.ValueFrom.RequestHeader != "" {
+					hv := req.Header.Get(attr.ValueFrom.RequestHeader)
+					if hv != "" {
+						result = append(result, attribute.String(attr.Key, hv))
+					} else if attr.Default != "" {
+						result = append(result, attribute.String(attr.Key, attr.Default))
+					}
+				} else if attr.Default != "" {
+					result = append(result, attribute.String(attr.Key, attr.Default))
+				}
+			} else if attr.Default != "" {
+				result = append(result, attribute.String(attr.Key, attr.Default))
+			}
+		}
+
+		return result
+	}
+}
+
+func buildResourceAttributes(attributes []config.OtelResourceAttribute) []attribute.KeyValue {
+	var result []attribute.KeyValue
+	for _, attr := range attributes {
+		result = append(result, attribute.String(attr.Key, attr.Value))
+	}
+	r := attribute.NewSet(result...)
+	return r.ToSlice()
 }
 
 func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
@@ -2003,8 +2039,10 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 	}
 
 	return &rmetric.Config{
-		Name:    cfg.ServiceName,
-		Version: Version,
+		Name:               cfg.ServiceName,
+		Version:            Version,
+		AttributesMapper:   buildAttributesMapper(cfg.Attributes),
+		ResourceAttributes: buildResourceAttributes(cfg.ResourceAttributes),
 		OpenTelemetry: rmetric.OpenTelemetry{
 			Enabled:       cfg.Metrics.OTLP.Enabled,
 			RouterRuntime: cfg.Metrics.OTLP.RouterRuntime,

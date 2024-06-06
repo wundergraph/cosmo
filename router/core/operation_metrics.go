@@ -87,19 +87,28 @@ func (m *OperationMetrics) AddClientInfo(info *ClientInfo) {
 	m.metricBaseFields = append(m.metricBaseFields, otel.WgClientVersion.String(info.Version))
 }
 
-// startOperationMetrics starts the metrics for an operation. This should only be called by
+type OperationMetricsOptions struct {
+	Attributes           []attribute.KeyValue
+	RouterConfigVersion  string
+	RequestContentLength int64
+	RouterMetrics        RouterMetrics
+	Logger               *zap.Logger
+}
+
+// newOperationMetrics creates a new OperationMetrics struct and starts the operation metrics.
 // routerMetrics.StartOperation()
-func startOperationMetrics(rMetrics RouterMetrics, logger *zap.Logger, requestContentLength int64, routerConfigVersion string) *OperationMetrics {
+func newOperationMetrics(opts OperationMetricsOptions) *OperationMetrics {
 	operationStartTime := time.Now()
 
-	inflightMetric := rMetrics.MetricStore().MeasureInFlight(context.Background())
+	inflightMetric := opts.RouterMetrics.MetricStore().MeasureInFlight(context.Background(), opts.Attributes...)
 	return &OperationMetrics{
-		requestContentLength: requestContentLength,
+		metricBaseFields:     opts.Attributes,
+		requestContentLength: opts.RequestContentLength,
 		operationStartTime:   operationStartTime,
 		inflightMetric:       inflightMetric,
-		routerConfigVersion:  routerConfigVersion,
-		routerMetrics:        rMetrics,
-		logger:               logger,
+		routerConfigVersion:  opts.RouterConfigVersion,
+		routerMetrics:        opts.RouterMetrics,
+		logger:               opts.Logger,
 	}
 }
 

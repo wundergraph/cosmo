@@ -21,7 +21,8 @@ processors:
         action: insert
   batch:
     send_batch_size: 10000
-    timeout: 5s
+    send_batch_max_size: 20000
+    timeout: 15s
 
 exporters:
   clickhouse:

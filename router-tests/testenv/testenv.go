@@ -31,7 +31,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
-	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -108,6 +107,8 @@ type Config struct {
 	DisableParentBasedSampler          bool
 	TLSConfig                          *core.TlsConfig
 	TraceExporter                      trace.SpanExporter
+	OtelAttributes                     []config.OtelAttribute
+	OtelResourceAttributes             []config.OtelResourceAttribute
 	MetricReader                       metric.Reader
 	PrometheusRegistry                 *prometheus.Registry
 }
@@ -582,15 +583,25 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	routerOpts = append(routerOpts, testConfig.RouterOptions...)
 
 	if testConfig.TraceExporter != nil {
-		routerOpts = append(routerOpts, core.WithTracing(&rtrace.Config{
-			Enabled:            true,
-			Sampler:            1,
-			TestMemoryExporter: testConfig.TraceExporter,
-			ParentBasedSampler: !testConfig.DisableParentBasedSampler,
-			Propagators: []rtrace.Propagator{
-				rtrace.PropagatorTraceContext,
+		c := core.TraceConfigFromTelemetry(&config.Telemetry{
+			ServiceName:        "cosmo-router",
+			Attributes:         testConfig.OtelAttributes,
+			ResourceAttributes: testConfig.OtelResourceAttributes,
+			Tracing: config.Tracing{
+				Enabled:            true,
+				SamplingRate:       1,
+				ParentBasedSampler: !testConfig.DisableParentBasedSampler,
+				Exporters:          []config.TracingExporter{},
+				Propagation: config.PropagationConfig{
+					TraceContext: true,
+				},
+				TracingGlobalFeatures: config.TracingGlobalFeatures{},
 			},
-		}))
+		})
+
+		c.TestMemoryExporter = testConfig.TraceExporter
+
+		routerOpts = append(routerOpts, core.WithTracing(c))
 	}
 
 	var prometheusConfig rmetric.PrometheusConfig
@@ -609,14 +620,26 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	}
 
 	if testConfig.MetricReader != nil {
-		routerOpts = append(routerOpts, core.WithMetrics(&rmetric.Config{
-			Prometheus: prometheusConfig,
-			OpenTelemetry: rmetric.OpenTelemetry{
-				Enabled:       true,
-				RouterRuntime: false,
-				TestReader:    testConfig.MetricReader,
+		c := core.MetricConfigFromTelemetry(&config.Telemetry{
+			ServiceName:        "cosmo-router",
+			Attributes:         testConfig.OtelAttributes,
+			ResourceAttributes: testConfig.OtelResourceAttributes,
+			Tracing:            config.Tracing{},
+			Metrics: config.Metrics{
+				Prometheus: config.Prometheus{
+					Enabled: true,
+				},
+				OTLP: config.MetricsOTLP{
+					Enabled:       true,
+					RouterRuntime: false,
+				},
 			},
-		}))
+		})
+
+		c.Prometheus = prometheusConfig
+		c.OpenTelemetry.TestReader = testConfig.MetricReader
+
+		routerOpts = append(routerOpts, core.WithMetrics(c))
 
 	}
 

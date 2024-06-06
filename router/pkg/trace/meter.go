@@ -114,6 +114,7 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 		resource.WithAttributes(semconv.ServiceNameKey.String(config.Config.Name)),
 		resource.WithAttributes(semconv.ServiceVersionKey.String(config.Config.Version)),
 		resource.WithAttributes(semconv.ServiceInstanceID(config.ServiceInstanceID)),
+		resource.WithAttributes(config.Config.ResourceAttributes...),
 		resource.WithProcessPID(),
 		resource.WithOSType(),
 		resource.WithTelemetrySDK(),
