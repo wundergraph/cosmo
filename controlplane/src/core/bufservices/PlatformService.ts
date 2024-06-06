@@ -897,6 +897,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         logger = enrichLogger(ctx, logger, authContext);
 
         const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
+        const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
         const orgWebhooks = new OrganizationWebhookService(
           opts.db,
           authContext.organizationId,
@@ -910,6 +911,31 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
               details: `Subgraph '${req.name}' not found`,
+            },
+            compositionErrors: [],
+            deploymentErrors: [],
+          };
+        }
+
+        if (graph.isFeatureFlag) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `Feature flags cannot be moved`,
+            },
+            compositionErrors: [],
+            deploymentErrors: [],
+          };
+        }
+
+        const featureFlags = await featureFlagRepo.getFeatureFlagsBySubgraphId({
+          subgraphId: graph.id,
+        });
+        if (featureFlags.length > 0) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `Subgraph with feature flags cannot be moved`,
             },
             compositionErrors: [],
             deploymentErrors: [],
@@ -1362,11 +1388,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         await opts.db.transaction(async (tx) => {
           const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
-          const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
-          const contractRepo = new ContractRepository(logger, tx, authContext.organizationId);
-          const featureFlagRepo = new FeatureFlagRepository(logger, tx, authContext.organizationId);
-
-          const composer = new Composer(logger, fedGraphRepo, subgraphRepo, contractRepo, featureFlagRepo);
 
           const composition = await fedGraphRepo.composeAndDeployGraphs({
             federatedGraphs: [federatedGraph],
@@ -1714,7 +1735,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             featureFlag: '',
           })),
         );
-
+        // TODO
         if (deployment) {
           // deploymentErrors.push(
           //   ...deployment.errors
@@ -1938,6 +1959,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
         const contractRepo = new ContractRepository(logger, opts.db, authContext.organizationId);
         const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
+        const graphCompostionRepo = new GraphCompositionRepository(logger, opts.db);
 
         req.namespace = req.namespace || DefaultNamespace;
 
@@ -2064,7 +2086,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           schemaCheckID,
         });
 
-        const composer = new Composer(logger, fedGraphRepo, subgraphRepo, contractRepo, featureFlagRepo);
+        const composer = new Composer(
+          logger,
+          fedGraphRepo,
+          subgraphRepo,
+          contractRepo,
+          featureFlagRepo,
+          graphCompostionRepo,
+        );
 
         const result = req.delete
           ? await composer.composeWithDeletedSubgraph(subgraph.labels, subgraph.name, subgraph.namespaceId)
@@ -2222,8 +2251,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
         const contractRepo = new ContractRepository(logger, opts.db, authContext.organizationId);
         const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
+        const graphCompostionRepo = new GraphCompositionRepository(logger, opts.db);
 
-        const composer = new Composer(logger, fedGraphRepo, subgraphRepo, contractRepo, featureFlagRepo);
+        const composer = new Composer(
+          logger,
+          fedGraphRepo,
+          subgraphRepo,
+          contractRepo,
+          featureFlagRepo,
+          graphCompostionRepo,
+        );
 
         req.namespace = req.namespace || DefaultNamespace;
 
@@ -3480,10 +3517,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const { compositionErrors, deploymentErrors } = await opts.db.transaction(async (tx) => {
           const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
           const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
-          const namespaceRepo = new NamespaceRepository(tx, authContext.organizationId);
-          const contractRepo = new ContractRepository(logger, tx, authContext.organizationId);
           const featureFlagRepo = new FeatureFlagRepository(logger, tx, authContext.organizationId);
-          const composer = new Composer(logger, fedGraphRepo, subgraphRepo, contractRepo, featureFlagRepo);
           const auditLogRepo = new AuditLogRepository(tx);
 
           let labels = subgraph.labels;
@@ -5257,10 +5291,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         await opts.db.transaction(async (tx) => {
           const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
-          const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
-          const contractRepo = new ContractRepository(logger, tx, authContext.organizationId);
-          const featureFlagRepo = new FeatureFlagRepository(logger, tx, authContext.organizationId);
-          const composer = new Composer(logger, fedGraphRepo, subgraphRepo, contractRepo, featureFlagRepo);
 
           const federatedGraph = await apolloMigrator.migrateGraphFromApollo({
             fedGraph: {

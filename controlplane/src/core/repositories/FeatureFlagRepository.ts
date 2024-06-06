@@ -209,6 +209,17 @@ export class FeatureFlagRepository {
     return baseSubgraphDTO;
   }
 
+  public async getFeatureFlagsBySubgraphId({ subgraphId }: { subgraphId: string }) {
+    const ffs = await this.db
+      .select({
+        id: featureFlagsToSubgraph.featureFlagId,
+      })
+      .from(featureFlagsToSubgraph)
+      .where(eq(featureFlagsToSubgraph.baseSubgraphId, subgraphId));
+
+    return ffs;
+  }
+
   public deleteFeatureFlagsBySubgraphId({ subgraphId, namespaceId }: { subgraphId: string; namespaceId: string }) {
     return this.db.transaction(async (tx) => {
       const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);

@@ -132,7 +132,7 @@ export class SubgraphRepository {
         namespaceId: data.namespaceId,
       });
 
-      if (federatedGraphs.length > 0) {
+      if (federatedGraphs.length > 0 && !data.featureFlagOptions?.isFeatureFlag) {
         await tx
           .insert(subgraphsToFederatedGraph)
           .values(
@@ -219,9 +219,6 @@ export class SubgraphRepository {
       const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
       const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
       const targetRepo = new TargetRepository(tx, this.organizationId);
-      const contractRepo = new ContractRepository(this.logger, tx, this.organizationId);
-      const featureFlagRepo = new FeatureFlagRepository(this.logger, tx, this.organizationId);
-      const composer = new Composer(this.logger, fedGraphRepo, subgraphRepo, contractRepo, featureFlagRepo);
 
       const subgraph = await subgraphRepo.byTargetId(data.targetId);
       if (!subgraph) {
@@ -429,8 +426,6 @@ export class SubgraphRepository {
       const updatedFederatedGraphs: FederatedGraphDTO[] = [];
 
       const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
-      const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
-      const contractRepo = new ContractRepository(this.logger, tx, this.organizationId);
 
       updatedFederatedGraphs.push(
         ...(await fedGraphRepo.bySubgraphLabels({ labels: data.subgraphLabels, namespaceId: data.currentNamespaceId })),

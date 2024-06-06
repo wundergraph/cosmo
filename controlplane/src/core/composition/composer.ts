@@ -22,6 +22,7 @@ import {
   AdmissionWebhookJwtPayload,
 } from '../services/AdmissionWebhookController.js';
 import { FeatureFlagRepository } from '../repositories/FeatureFlagRepository.js';
+import { GraphCompositionRepository } from '../repositories/GraphCompositionRepository.js';
 import { composeSubgraphs, composeSubgraphsWithContracts } from './composition.js';
 import { GetDiffBetweenGraphsResult, getDiffBetweenGraphs } from './schemaCheck.js';
 
@@ -105,7 +106,6 @@ export interface ComposedFederatedGraph {
 
 export interface CompositionDeployResult {
   schemaVersionId: string;
-  // errors: ComposeDeploymentError[];
 }
 
 export class RouterConfigUploadError extends Error {
@@ -124,6 +124,7 @@ export class Composer {
     private subgraphRepo: SubgraphRepository,
     private contractRepo: ContractRepository,
     private featureFlagRepo: FeatureFlagRepository,
+    private graphCompositionRepository: GraphCompositionRepository,
   ) {}
 
   async composeRouterConfig({
@@ -278,6 +279,12 @@ export class Composer {
       }
     }
 
+    await this.graphCompositionRepository.updateComposition({
+      fedGraphSchemaVersionId: federatedSchemaVersionId,
+      deploymentErrorString: deploymentError?.message,
+      admissionErrorString: admissionError?.message,
+    });
+
     const errors: ComposeDeploymentError[] = [];
 
     if (deploymentError) {
@@ -288,7 +295,49 @@ export class Composer {
       errors.push(admissionError);
     }
 
-    // TODO
+    return {
+      errors,
+    };
+  }
+
+  async composeAndUploadRouterConfig({
+    federatedGraph,
+    ffSchemaVersions,
+    blobStorage,
+    organizationId,
+    federatedSchemaVersionId,
+    admissionConfig,
+  }: {
+    federatedGraph: FederatedGraphDTO;
+    ffSchemaVersions: {
+      featureFlagName: string;
+      schemaVersionId: string;
+    }[];
+    blobStorage: BlobStorage;
+    organizationId: string;
+    federatedSchemaVersionId: string;
+    admissionConfig: {
+      jwtSecret: string;
+      cdnBaseUrl: string;
+    };
+  }) {
+    const baseRouterConfig = await this.composeRouterConfig({
+      federatedGraphTargetId: federatedGraph.targetId,
+      ffSchemaVersions,
+    });
+
+    const { errors } = await this.uploadRouterConfig({
+      blobStorage,
+      federatedGraphId: federatedGraph.id,
+      federatedSchemaVersionId,
+      organizationId,
+      routerConfig: baseRouterConfig,
+      admissionWebhookURL: federatedGraph.admissionWebhookURL,
+      admissionConfig: {
+        cdnBaseUrl: admissionConfig.cdnBaseUrl,
+        jwtSecret: admissionConfig.jwtSecret,
+      },
+    });
 
     return {
       errors,
@@ -302,21 +351,12 @@ export class Composer {
   async deployComposition({
     composedGraph,
     composedBy,
-    blobStorage,
     organizationId,
-    admissionConfig,
-    admissionWebhookURL,
     isFeatureFlagComposition,
   }: {
     composedGraph: ComposedFederatedGraph;
     composedBy: string;
-    blobStorage: BlobStorage;
     organizationId: string;
-    admissionWebhookURL?: string;
-    admissionConfig: {
-      jwtSecret: string;
-      cdnBaseUrl: string;
-    };
     isFeatureFlagComposition: boolean;
   }): Promise<CompositionDeployResult> {
     const hasCompositionErrors = composedGraph.errors.length > 0;
@@ -325,15 +365,10 @@ export class Composer {
     let routerConfigJson: JsonValue = null;
 
     // CDN path and bucket path are the same in this case
-    const s3PathDraft = `${organizationId}/${composedGraph.id}/routerconfigs/draft.json`;
     const s3PathReady = `${organizationId}/${composedGraph.id}/routerconfigs/latest.json`;
 
     // The signature will be added by the admission webhook
     let signatureSha256: undefined | string;
-
-    // It is important to use undefined here, we do not null check in the database queries
-    let deploymentError: RouterConfigUploadError | undefined;
-    let admissionError: AdmissionError | undefined;
 
     // Build and deploy the router config when composed schema is valid
     if (!hasCompositionErrors && composedGraph.composedSchema) {
@@ -362,8 +397,6 @@ export class Composer {
       compositionErrors: composedGraph.errors,
       routerConfig: routerConfigJson,
       routerConfigSignature: signatureSha256,
-      // deploymentError,
-      // admissionError,
       composedBy,
       schemaVersionId: federatedSchemaVersionId,
       // passing the path only when there exists a previous valid version or when the composition passes.
@@ -403,19 +436,8 @@ export class Composer {
       }
     }
 
-    const errors: ComposeDeploymentError[] = [];
-
-    // if (deploymentError) {
-    //   errors.push(deploymentError);
-    // }
-
-    // if (admissionError) {
-    //   errors.push(admissionError);
-    // }
-
     return {
       schemaVersionId: updatedFederatedGraph?.composedSchemaVersionId || '',
-      // errors,
     };
   }
 

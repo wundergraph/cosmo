@@ -65,6 +65,24 @@ export class GraphCompositionRepository {
     });
   }
 
+  public async updateComposition({
+    fedGraphSchemaVersionId,
+    admissionErrorString,
+    deploymentErrorString,
+  }: {
+    fedGraphSchemaVersionId: string;
+    admissionErrorString?: string;
+    deploymentErrorString?: string;
+  }) {
+    await this.db
+      .update(graphCompositions)
+      .set({
+        deploymentError: deploymentErrorString,
+        admissionError: admissionErrorString,
+      })
+      .where(eq(graphCompositions.schemaVersionId, fedGraphSchemaVersionId));
+  }
+
   public async getGraphComposition(input: {
     compositionId: string;
     organizationId: string;

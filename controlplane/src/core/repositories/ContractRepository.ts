@@ -105,6 +105,7 @@ export class ContractRepository {
       const compositionRepo = new GraphCompositionRepository(this.logger, tx);
       const contractRepo = new ContractRepository(this.logger, tx, this.organizationId);
       const featureFlagRepo = new FeatureFlagRepository(this.logger, tx, this.organizationId);
+      const graphCompostionRepo = new GraphCompositionRepository(this.logger, tx);
 
       if (!contractGraph.contract?.sourceFederatedGraphId) {
         return { contractErrors };
@@ -144,15 +145,19 @@ export class ContractRepository {
 
       contractErrors.push(...(errors || []));
 
-      const composer = new Composer(this.logger, fedGraphRepo, subgraphRepo, contractRepo, featureFlagRepo);
+      const composer = new Composer(
+        this.logger,
+        fedGraphRepo,
+        subgraphRepo,
+        contractRepo,
+        featureFlagRepo,
+        graphCompostionRepo,
+      );
       // TODO
       const deployment = await composer.deployComposition({
         composedGraph: mapResultToComposedGraph(contractGraph, subgraphs, errors, result),
         composedBy: actorId,
-        blobStorage,
         organizationId: this.organizationId,
-        admissionWebhookURL: contractGraph.admissionWebhookURL,
-        admissionConfig,
         isFeatureFlagComposition: false,
       });
 
