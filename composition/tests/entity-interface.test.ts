@@ -81,6 +81,7 @@ describe('Entity Interface Tests', () => {
           'Interface',
           {
             entityInterfaceConcreteTypeNames: new Set<string>(['Entity']),
+            externalFieldNames: new Set<string>(),
             fieldNames: new Set<string>(['id']),
             isInterfaceObject: false,
             isRootNode: true,
@@ -91,6 +92,7 @@ describe('Entity Interface Tests', () => {
         [
           'Entity',
           {
+            externalFieldNames: new Set<string>(),
             fieldNames: new Set<string>(['id']),
             isRootNode: true,
             typeName: 'Entity',
@@ -104,6 +106,7 @@ describe('Entity Interface Tests', () => {
         [
           'Query',
           {
+            externalFieldNames: new Set<string>(),
             fieldNames: new Set<string>(['interface']),
             isRootNode: true,
             typeName: 'Query',
@@ -113,6 +116,7 @@ describe('Entity Interface Tests', () => {
           'Interface',
           {
             entityInterfaceConcreteTypeNames: new Set<string>(['Entity']),
+            externalFieldNames: new Set<string>(),
             fieldNames: new Set<string>(['id', 'name', 'age']),
             isInterfaceObject: true,
             isRootNode: true,
@@ -123,6 +127,7 @@ describe('Entity Interface Tests', () => {
         [
           'Entity',
           {
+            externalFieldNames: new Set<string>(),
             fieldNames: new Set<string>(['id', 'name', 'age']),
             isRootNode: true,
             typeName: 'Entity',

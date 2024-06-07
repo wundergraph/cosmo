@@ -496,6 +496,7 @@ describe('@override directive tests', () => {
         [
           'Query',
           {
+            externalFieldNames: new Set<string>(),
             fieldNames: new Set<string>(['query']),
             isRootNode: true,
             typeName: 'Query',
@@ -504,6 +505,7 @@ describe('@override directive tests', () => {
         [
           'Entity',
           {
+            externalFieldNames: new Set<string>(),
             fieldNames: new Set<string>(['id', 'age']),
             isRootNode: true,
             keys: [{ fieldName: '', selectionSet: 'id' }],
@@ -517,6 +519,7 @@ describe('@override directive tests', () => {
         [
           'Entity',
           {
+            externalFieldNames: new Set<string>(),
             fieldNames: new Set<string>(['id', 'name']),
             isRootNode: true,
             keys: [{ fieldName: '', selectionSet: 'id' }],
@@ -530,6 +533,7 @@ describe('@override directive tests', () => {
         [
           'Entity',
           {
+            externalFieldNames: new Set<string>(),
             fieldNames: new Set<string>(['id', 'name', 'age']),
             isRootNode: true,
             keys: [{ fieldName: '', selectionSet: 'id' }],
@@ -627,6 +631,7 @@ describe('@override directive tests', () => {
         [
           'Query',
           {
+            externalFieldNames: new Set<string>(),
             fieldNames: new Set<string>(['fieldOne']),
             isRootNode: true,
             typeName: 'Query',
@@ -641,6 +646,7 @@ describe('@override directive tests', () => {
         [
           'Query',
           {
+            externalFieldNames: new Set<string>(),
             fieldNames: new Set<string>(['fieldTwo']),
             isRootNode: true,
             typeName: 'Query',
@@ -680,6 +686,7 @@ describe('@override directive tests', () => {
         [
           'Query',
           {
+            externalFieldNames: new Set<string>(),
             fieldNames: new Set<string>(['fieldOne']),
             isRootNode: true,
             typeName: 'Query',
@@ -694,6 +701,7 @@ describe('@override directive tests', () => {
         [
           'Query',
           {
+            externalFieldNames: new Set<string>(),
             fieldNames: new Set<string>(['fieldTwo']),
             isRootNode: true,
             typeName: 'Query',
@@ -728,6 +736,7 @@ describe('@override directive tests', () => {
         [
           'Query',
           {
+            externalFieldNames: new Set<string>(),
             fieldNames: new Set<string>(['field']),
             isRootNode: true,
             typeName: 'Query',
@@ -762,6 +771,7 @@ describe('@override directive tests', () => {
         [
           'Query',
           {
+            externalFieldNames: new Set<string>(),
             fieldNames: new Set<string>(['field']),
             isRootNode: true,
             typeName: 'Query',
