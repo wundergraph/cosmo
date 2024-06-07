@@ -89,7 +89,7 @@ export function configurationDataMapToDataSourceConfiguration(
     const typeName = data.typeName;
     const fieldNames: string[] = [...data.fieldNames];
     const typeField = new TypeField({ typeName, fieldNames });
-    if (data.externalFieldNames.size > 0) {
+    if (data.externalFieldNames && data.externalFieldNames.size > 0) {
       typeField.externalFieldNames = [...data.externalFieldNames];
     }
     if (data.isRootNode) {

@@ -1668,7 +1668,6 @@ export class FederationFactory {
             entity.subgraphNames.add(subgraphName);
           }
           const configurationData: ConfigurationData = {
-            externalFieldNames: new Set<string>(),
             fieldNames,
             isRootNode: true,
             keys,

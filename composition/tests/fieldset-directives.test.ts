@@ -346,7 +346,6 @@ describe('openfed_FieldSet Tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id']),
               isRootNode: false,
               typeName: 'Object',
@@ -374,7 +373,6 @@ describe('openfed_FieldSet Tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['entity']),
               isRootNode: false,
               provides: [{ fieldName: 'entity', selectionSet: '... on Entity { name }' }],
@@ -442,7 +440,6 @@ describe('openfed_FieldSet Tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['entity']),
               isRootNode: false,
               provides: [{ fieldName: 'entity', selectionSet: 'interface { ... on I { ... on I { name } } }' }],
@@ -462,7 +459,6 @@ describe('openfed_FieldSet Tests', () => {
           [
             'I',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['name']),
               isRootNode: false,
               typeName: 'I',
@@ -498,7 +494,6 @@ describe('openfed_FieldSet Tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['entity']),
               isRootNode: false,
               provides: [{ fieldName: 'entity', selectionSet: 'interface { ... on AnotherObject { name } }' }],
@@ -518,7 +513,6 @@ describe('openfed_FieldSet Tests', () => {
           [
             'I',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['name']),
               isRootNode: false,
               typeName: 'I',
@@ -527,7 +521,6 @@ describe('openfed_FieldSet Tests', () => {
           [
             'AnotherObject',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['name']),
               isRootNode: false,
               typeName: 'AnotherObject',
@@ -596,7 +589,6 @@ describe('openfed_FieldSet Tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['entity']),
               isRootNode: false,
               provides: [{ fieldName: 'entity', selectionSet: 'union { ... on AnotherObject { name } }' }],
@@ -616,7 +608,6 @@ describe('openfed_FieldSet Tests', () => {
           [
             'AnotherObject',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['name']),
               isRootNode: false,
               typeName: 'AnotherObject',
@@ -710,7 +701,6 @@ describe('openfed_FieldSet Tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['entity']),
               isRootNode: false,
               provides: [{ fieldName: 'entity', selectionSet: 'anotherObject { name }' }],
@@ -730,7 +720,6 @@ describe('openfed_FieldSet Tests', () => {
           [
             'AnotherObject',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['name']),
               isRootNode: false,
               typeName: 'AnotherObject',
@@ -761,7 +750,6 @@ describe('openfed_FieldSet Tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['entity']),
               isRootNode: false,
               provides: [{ fieldName: 'entity', selectionSet: 'anotherObject(arg: "string") { name }' }],
@@ -781,7 +769,6 @@ describe('openfed_FieldSet Tests', () => {
           [
             'AnotherObject',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['name']),
               isRootNode: false,
               typeName: 'AnotherObject',
@@ -807,7 +794,6 @@ describe('openfed_FieldSet Tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'name']),
               isRootNode: false,
               typeName: 'Object',
@@ -895,7 +881,6 @@ describe('openfed_FieldSet Tests', () => {
           [
             'I',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['name']),
               isRootNode: false,
               typeName: 'I',
@@ -940,7 +925,6 @@ describe('openfed_FieldSet Tests', () => {
           [
             'I',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['name']),
               isRootNode: false,
               typeName: 'I',
@@ -949,7 +933,6 @@ describe('openfed_FieldSet Tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['name', 'age']),
               isRootNode: false,
               typeName: 'Object',
@@ -1025,7 +1008,6 @@ describe('openfed_FieldSet Tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['name', 'age']),
               isRootNode: false,
               typeName: 'Object',
@@ -1123,7 +1105,6 @@ describe('openfed_FieldSet Tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['name']),
               isRootNode: false,
               typeName: 'Object',
@@ -1163,7 +1144,6 @@ describe('openfed_FieldSet Tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['name']),
               isRootNode: false,
               typeName: 'Object',

@@ -56,12 +56,12 @@ export type RequiredFieldConfiguration = {
 };
 
 export type ConfigurationData = {
-  externalFieldNames: Set<string>;
   fieldNames: Set<string>;
   isRootNode: boolean;
   typeName: string;
   entityInterfaceConcreteTypeNames?: Set<string>;
   events?: EventConfiguration[];
+  externalFieldNames?: Set<string>;
   isInterfaceObject?: boolean;
   provides?: RequiredFieldConfiguration[];
   keys?: RequiredFieldConfiguration[];

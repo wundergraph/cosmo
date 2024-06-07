@@ -321,7 +321,6 @@ describe('Entity tests', () => {
           [
             'Query',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['entity']),
               isRootNode: true,
               typeName: 'Query',
@@ -330,7 +329,6 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'name']),
               isRootNode: true,
               keys: [{ disableEntityResolver: true, fieldName: '', selectionSet: 'id' }],
@@ -344,7 +342,6 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'age']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
@@ -368,7 +365,6 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'age']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
@@ -382,7 +378,6 @@ describe('Entity tests', () => {
           [
             'Query',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['entity']),
               isRootNode: true,
               typeName: 'Query',
@@ -391,7 +386,6 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'name']),
               isRootNode: true,
               keys: [{ disableEntityResolver: true, fieldName: '', selectionSet: 'id' }],
@@ -415,7 +409,6 @@ describe('Entity tests', () => {
           [
             'Query',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['entity']),
               isRootNode: true,
               typeName: 'Query',
@@ -424,7 +417,6 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'name']),
               isRootNode: true,
               keys: [{ disableEntityResolver: true, fieldName: '', selectionSet: 'id' }],
@@ -438,7 +430,6 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'object', 'age']),
               isRootNode: true,
               keys: [
@@ -451,7 +442,6 @@ describe('Entity tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'name']),
               isRootNode: false,
               typeName: 'Object',
@@ -478,7 +468,6 @@ describe('Entity tests', () => {
           [
             'Query',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['entity']),
               isRootNode: true,
               typeName: 'Query',
@@ -487,7 +476,6 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['object', 'name']),
               isRootNode: true,
               keys: [
@@ -500,7 +488,6 @@ describe('Entity tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'nestedObject']),
               isRootNode: false,
               typeName: 'Object',
@@ -509,7 +496,6 @@ describe('Entity tests', () => {
           [
             'NestedObject',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id']),
               isRootNode: false,
               typeName: 'NestedObject',
@@ -522,7 +508,6 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'name', 'age']),
               isRootNode: true,
               keys: [
@@ -539,7 +524,6 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['object', 'isEntity']),
               isRootNode: true,
               keys: [
@@ -552,7 +536,6 @@ describe('Entity tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'nestedObject']),
               isRootNode: false,
               typeName: 'Object',
@@ -561,7 +544,6 @@ describe('Entity tests', () => {
           [
             'NestedObject',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'name']),
               isRootNode: false,
               typeName: 'NestedObject',
@@ -574,7 +556,6 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'property']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
@@ -598,7 +579,6 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'age']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
@@ -612,7 +592,6 @@ describe('Entity tests', () => {
           [
             'Query',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['entity']),
               isRootNode: true,
               typeName: 'Query',
@@ -643,7 +622,6 @@ describe('Entity tests', () => {
           [
             'Query',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['entities']),
               isRootNode: true,
               typeName: 'Query',
@@ -652,7 +630,6 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'property']),
               isRootNode: true,
               keys: [
@@ -695,7 +672,6 @@ describe('Entity tests', () => {
           [
             'Query',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['entities']),
               isRootNode: true,
               typeName: 'Query',
@@ -704,7 +680,6 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'name', 'a']),
               isRootNode: true,
               typeName: 'Entity',
@@ -721,7 +696,6 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['name', 'b']),
               isRootNode: true,
               typeName: 'Entity',
@@ -761,7 +735,6 @@ describe('Entity tests', () => {
           [
             'Query',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['entities']),
               isRootNode: true,
               typeName: 'Query',
@@ -770,7 +743,6 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'name', 'a']),
               isRootNode: true,
               typeName: 'Entity',
@@ -787,7 +759,6 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['name', 'b']),
               isRootNode: true,
               typeName: 'Entity',
@@ -842,7 +813,6 @@ describe('Entity tests', () => {
           [
             'Query',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['entities']),
               isRootNode: true,
               typeName: 'Query',
@@ -851,7 +821,6 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'object', 'a']),
               isRootNode: true,
               typeName: 'Entity',
@@ -866,7 +835,6 @@ describe('Entity tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'name', 'nestedObject']),
               isRootNode: false,
               typeName: 'Object',
@@ -875,7 +843,6 @@ describe('Entity tests', () => {
           [
             'NestedObject',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id']),
               isRootNode: false,
               typeName: 'NestedObject',
@@ -888,7 +855,6 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['object', 'b']),
               isRootNode: true,
               typeName: 'Entity',
@@ -898,7 +864,6 @@ describe('Entity tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id']),
               isRootNode: false,
               typeName: 'Object',
@@ -911,7 +876,6 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'object', 'c']),
               isRootNode: true,
               typeName: 'Entity',
@@ -926,7 +890,6 @@ describe('Entity tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'name', 'nestedObject']),
               isRootNode: false,
               typeName: 'Object',
@@ -935,7 +898,6 @@ describe('Entity tests', () => {
           [
             'NestedObject',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id']),
               isRootNode: false,
               typeName: 'NestedObject',
@@ -989,7 +951,6 @@ describe('Entity tests', () => {
           [
             'Query',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['entities']),
               isRootNode: true,
               typeName: 'Query',
@@ -998,7 +959,6 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'object', 'a']),
               isRootNode: true,
               typeName: 'Entity',
@@ -1013,7 +973,6 @@ describe('Entity tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'name', 'nestedObject']),
               isRootNode: false,
               typeName: 'Object',
@@ -1022,7 +981,6 @@ describe('Entity tests', () => {
           [
             'NestedObject',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id']),
               isRootNode: false,
               typeName: 'NestedObject',
@@ -1035,7 +993,6 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['object', 'b']),
               isRootNode: true,
               typeName: 'Entity',
@@ -1045,7 +1002,6 @@ describe('Entity tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id']),
               isRootNode: false,
               typeName: 'Object',
@@ -1058,7 +1014,6 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'object', 'c']),
               isRootNode: true,
               typeName: 'Entity',
@@ -1073,7 +1028,6 @@ describe('Entity tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'name', 'nestedObject']),
               isRootNode: false,
               typeName: 'Object',
@@ -1082,7 +1036,6 @@ describe('Entity tests', () => {
           [
             'NestedObject',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id']),
               isRootNode: false,
               typeName: 'NestedObject',
@@ -1136,7 +1089,6 @@ describe('Entity tests', () => {
           [
             'Query',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['entities']),
               isRootNode: true,
               typeName: 'Query',
@@ -1145,7 +1097,6 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'object', 'a']),
               isRootNode: true,
               typeName: 'Entity',
@@ -1160,7 +1111,6 @@ describe('Entity tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'name', 'nestedObject']),
               isRootNode: false,
               typeName: 'Object',
@@ -1169,7 +1119,6 @@ describe('Entity tests', () => {
           [
             'NestedObject',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id']),
               isRootNode: false,
               typeName: 'NestedObject',
@@ -1182,7 +1131,6 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['object', 'b']),
               isRootNode: true,
               typeName: 'Entity',
@@ -1192,7 +1140,6 @@ describe('Entity tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id']),
               isRootNode: false,
               typeName: 'Object',
@@ -1205,7 +1152,6 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'object', 'c']),
               isRootNode: true,
               typeName: 'Entity',
@@ -1220,7 +1166,6 @@ describe('Entity tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'name', 'nestedObject']),
               isRootNode: false,
               typeName: 'Object',
@@ -1229,7 +1174,6 @@ describe('Entity tests', () => {
           [
             'NestedObject',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id']),
               isRootNode: false,
               typeName: 'NestedObject',
@@ -1283,7 +1227,6 @@ describe('Entity tests', () => {
           [
             'Query',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['entities']),
               isRootNode: true,
               typeName: 'Query',
@@ -1292,7 +1235,6 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'object', 'a']),
               isRootNode: true,
               typeName: 'Entity',
@@ -1307,7 +1249,6 @@ describe('Entity tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'name', 'nestedObject']),
               isRootNode: false,
               typeName: 'Object',
@@ -1316,7 +1257,6 @@ describe('Entity tests', () => {
           [
             'NestedObject',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id']),
               isRootNode: false,
               typeName: 'NestedObject',
@@ -1329,7 +1269,6 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['object', 'b']),
               isRootNode: true,
               typeName: 'Entity',
@@ -1339,7 +1278,6 @@ describe('Entity tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id']),
               isRootNode: false,
               typeName: 'Object',
@@ -1352,7 +1290,6 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'object', 'c']),
               isRootNode: true,
               typeName: 'Entity',
@@ -1367,7 +1304,6 @@ describe('Entity tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'name', 'nestedObject']),
               isRootNode: false,
               typeName: 'Object',
@@ -1376,7 +1312,6 @@ describe('Entity tests', () => {
           [
             'NestedObject',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id']),
               isRootNode: false,
               typeName: 'NestedObject',
@@ -1430,7 +1365,6 @@ describe('Entity tests', () => {
           [
             'Query',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['entities']),
               isRootNode: true,
               typeName: 'Query',
@@ -1439,7 +1373,6 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'object', 'a']),
               isRootNode: true,
               typeName: 'Entity',
@@ -1454,7 +1387,6 @@ describe('Entity tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'name', 'nestedObject']),
               isRootNode: false,
               typeName: 'Object',
@@ -1463,7 +1395,6 @@ describe('Entity tests', () => {
           [
             'NestedObject',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id']),
               isRootNode: false,
               typeName: 'NestedObject',
@@ -1476,7 +1407,6 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['object', 'b']),
               isRootNode: true,
               typeName: 'Entity',
@@ -1486,7 +1416,6 @@ describe('Entity tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id']),
               isRootNode: false,
               typeName: 'Object',
@@ -1499,7 +1428,6 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'object', 'c']),
               isRootNode: true,
               typeName: 'Entity',
@@ -1514,7 +1442,6 @@ describe('Entity tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'name', 'nestedObject']),
               isRootNode: false,
               typeName: 'Object',
@@ -1523,7 +1450,6 @@ describe('Entity tests', () => {
           [
             'NestedObject',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id']),
               isRootNode: false,
               typeName: 'NestedObject',
@@ -1577,7 +1503,6 @@ describe('Entity tests', () => {
           [
             'Query',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['entities']),
               isRootNode: true,
               typeName: 'Query',
@@ -1586,7 +1511,6 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'object', 'a']),
               isRootNode: true,
               typeName: 'Entity',
@@ -1601,7 +1525,6 @@ describe('Entity tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'name', 'nestedObject']),
               isRootNode: false,
               typeName: 'Object',
@@ -1610,7 +1533,6 @@ describe('Entity tests', () => {
           [
             'NestedObject',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id']),
               isRootNode: false,
               typeName: 'NestedObject',
@@ -1623,7 +1545,6 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['object', 'b']),
               isRootNode: true,
               typeName: 'Entity',
@@ -1633,7 +1554,6 @@ describe('Entity tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id']),
               isRootNode: false,
               typeName: 'Object',
@@ -1646,7 +1566,6 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'object', 'c']),
               isRootNode: true,
               typeName: 'Entity',
@@ -1661,7 +1580,6 @@ describe('Entity tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'name', 'nestedObject']),
               isRootNode: false,
               typeName: 'Object',
@@ -1670,7 +1588,6 @@ describe('Entity tests', () => {
           [
             'NestedObject',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id']),
               isRootNode: false,
               typeName: 'NestedObject',

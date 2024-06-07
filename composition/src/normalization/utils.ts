@@ -213,12 +213,20 @@ export function addFieldNamesToConfigurationData(
   fieldDataByFieldName: Map<string, FieldData>,
   configurationData: ConfigurationData,
 ) {
+  const externalFieldNames = new Set<string>();
   for (const [fieldName, fieldContainer] of fieldDataByFieldName) {
     if (fieldContainer.directivesByDirectiveName.has(EXTERNAL)) {
-      configurationData.externalFieldNames.add(fieldName);
+      if (configurationData.externalFieldNames) {
+        configurationData.externalFieldNames.add(fieldName);
+      } else {
+        externalFieldNames.add(fieldName);
+      }
     } else {
       configurationData.fieldNames.add(fieldName);
     }
+  }
+  if (externalFieldNames.size > 0) {
+    configurationData.externalFieldNames = externalFieldNames;
   }
 }
 

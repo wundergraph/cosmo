@@ -55,7 +55,6 @@ describe('events Configuration tests', () => {
           [
             'Query',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['findEntity']),
               isRootNode: true,
               typeName: 'Query',
@@ -73,7 +72,6 @@ describe('events Configuration tests', () => {
           [
             'edfs__PublishResult',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['success']),
               isRootNode: false,
               typeName: 'edfs__PublishResult',
@@ -82,7 +80,6 @@ describe('events Configuration tests', () => {
           [
             'Mutation',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['updateEntity']),
               isRootNode: true,
               typeName: 'Mutation',
@@ -100,7 +97,6 @@ describe('events Configuration tests', () => {
           [
             'Subscription',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['entitySubscription', 'entitySubscriptionTwo']),
               isRootNode: true,
               typeName: 'Subscription',
@@ -183,7 +179,6 @@ describe('events Configuration tests', () => {
           [
             'Subscription',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['entitySubscription']),
               isRootNode: true,
               typeName: 'Subscription',
@@ -221,7 +216,6 @@ describe('events Configuration tests', () => {
           [
             'Query',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['findEntity']),
               isRootNode: true,
               typeName: 'Query',
@@ -239,7 +233,6 @@ describe('events Configuration tests', () => {
           [
             'edfs__PublishResult',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['success']),
               isRootNode: false,
               typeName: 'edfs__PublishResult',
@@ -248,7 +241,6 @@ describe('events Configuration tests', () => {
           [
             'Mutation',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['updateEntity']),
               isRootNode: true,
               typeName: 'Mutation',
@@ -266,7 +258,6 @@ describe('events Configuration tests', () => {
           [
             'Subscription',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['entitySubscription']),
               isRootNode: true,
               typeName: 'Subscription',
@@ -421,7 +412,6 @@ describe('events Configuration tests', () => {
           [
             'Mutation',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['kafkaMutation', 'natsMutation']),
               isRootNode: true,
               typeName: 'Mutation',
@@ -446,7 +436,6 @@ describe('events Configuration tests', () => {
           [
             'Query',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['natsQuery']),
               isRootNode: true,
               typeName: 'Query',
@@ -464,7 +453,6 @@ describe('events Configuration tests', () => {
           [
             'Subscription',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['kafkaSubscription']),
               isRootNode: true,
               typeName: 'Subscription',
@@ -482,7 +470,6 @@ describe('events Configuration tests', () => {
           [
             'edfs__PublishResult',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['success']),
               isRootNode: false,
               typeName: 'edfs__PublishResult',

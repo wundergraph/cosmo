@@ -16,7 +16,6 @@ describe('Router Configuration tests', () => {
           [
             'Query',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['employee', 'employees', 'products', 'teammates']),
               isRootNode: true,
               typeName: 'Query',
@@ -25,7 +24,6 @@ describe('Router Configuration tests', () => {
           [
             'Mutation',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['updateEmployeeTag']),
               isRootNode: true,
               typeName: 'Mutation',
@@ -34,7 +32,6 @@ describe('Router Configuration tests', () => {
           [
             'Subscription',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['currentTime']),
               isRootNode: true,
               typeName: 'Subscription',
@@ -43,7 +40,6 @@ describe('Router Configuration tests', () => {
           [
             'RoleType',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['departments', 'title']),
               isRootNode: false,
               typeName: 'RoleType',
@@ -52,7 +48,6 @@ describe('Router Configuration tests', () => {
           [
             'Identifiable',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id']),
               isRootNode: false,
               typeName: 'Identifiable',
@@ -61,7 +56,6 @@ describe('Router Configuration tests', () => {
           [
             'Engineer',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['departments', 'engineerType', 'title']),
               isRootNode: false,
               typeName: 'Engineer',
@@ -70,7 +64,6 @@ describe('Router Configuration tests', () => {
           [
             'Marketer',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['departments', 'title']),
               isRootNode: false,
               typeName: 'Marketer',
@@ -79,7 +72,6 @@ describe('Router Configuration tests', () => {
           [
             'Operator',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['departments', 'operatorType', 'title']),
               isRootNode: false,
               typeName: 'Operator',
@@ -88,7 +80,6 @@ describe('Router Configuration tests', () => {
           [
             'Details',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['forename', 'location', 'surname']),
               isRootNode: false,
               typeName: 'Details',
@@ -97,7 +88,6 @@ describe('Router Configuration tests', () => {
           [
             'Employee',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['details', 'id', 'tag', 'role', 'notes', 'updatedAt', 'startDate']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
@@ -107,7 +97,6 @@ describe('Router Configuration tests', () => {
           [
             'Time',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['unixTime', 'timeStamp']),
               isRootNode: false,
               typeName: 'Time',
@@ -116,7 +105,6 @@ describe('Router Configuration tests', () => {
           [
             'IProduct',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['upc', 'engineers']),
               isRootNode: false,
               typeName: 'IProduct',
@@ -125,7 +113,6 @@ describe('Router Configuration tests', () => {
           [
             'Consultancy',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['upc', 'lead']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'upc' }],
@@ -135,7 +122,6 @@ describe('Router Configuration tests', () => {
           [
             'Cosmo',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['upc', 'engineers', 'lead']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'upc' }],
@@ -145,7 +131,6 @@ describe('Router Configuration tests', () => {
           [
             'SDK',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['upc', 'engineers', 'owner']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'upc' }],
@@ -166,7 +151,6 @@ describe('Router Configuration tests', () => {
           [
             'Query',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['findEmployees']),
               isRootNode: true,
               typeName: 'Query',
@@ -175,7 +159,6 @@ describe('Router Configuration tests', () => {
           [
             'Animal',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['class', 'gender']),
               isRootNode: false,
               typeName: 'Animal',
@@ -184,7 +167,6 @@ describe('Router Configuration tests', () => {
           [
             'Pet',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['class', 'gender', 'name']),
               isRootNode: false,
               typeName: 'Pet',
@@ -193,7 +175,6 @@ describe('Router Configuration tests', () => {
           [
             'Alligator',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['class', 'dangerous', 'gender', 'name']),
               isRootNode: false,
               typeName: 'Alligator',
@@ -202,7 +183,6 @@ describe('Router Configuration tests', () => {
           [
             'Cat',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['class', 'gender', 'name', 'type']),
               isRootNode: false,
               typeName: 'Cat',
@@ -211,7 +191,6 @@ describe('Router Configuration tests', () => {
           [
             'Dog',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['breed', 'class', 'gender', 'name']),
               isRootNode: false,
               typeName: 'Dog',
@@ -220,7 +199,6 @@ describe('Router Configuration tests', () => {
           [
             'Mouse',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['class', 'gender', 'name']),
               isRootNode: false,
               typeName: 'Mouse',
@@ -229,7 +207,6 @@ describe('Router Configuration tests', () => {
           [
             'Pony',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['class', 'gender', 'name']),
               isRootNode: false,
               typeName: 'Pony',
@@ -238,7 +215,6 @@ describe('Router Configuration tests', () => {
           [
             'Details',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>([
                 'forename',
                 'middlename',
@@ -255,7 +231,6 @@ describe('Router Configuration tests', () => {
           [
             'Employee',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['details', 'id']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
@@ -276,7 +251,6 @@ describe('Router Configuration tests', () => {
           [
             'Exercise',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['category']),
               isRootNode: false,
               typeName: 'Exercise',
@@ -285,7 +259,6 @@ describe('Router Configuration tests', () => {
           [
             'Experience',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['yearsOfExperience']),
               isRootNode: false,
               typeName: 'Experience',
@@ -294,7 +267,6 @@ describe('Router Configuration tests', () => {
           [
             'Flying',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['planeModels', 'yearsOfExperience']),
               isRootNode: false,
               typeName: 'Flying',
@@ -303,7 +275,6 @@ describe('Router Configuration tests', () => {
           [
             'Gaming',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['genres', 'name', 'yearsOfExperience']),
               isRootNode: false,
               typeName: 'Gaming',
@@ -312,7 +283,6 @@ describe('Router Configuration tests', () => {
           [
             'Other',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['name']),
               isRootNode: false,
               typeName: 'Other',
@@ -321,7 +291,6 @@ describe('Router Configuration tests', () => {
           [
             'Programming',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['languages']),
               isRootNode: false,
               typeName: 'Programming',
@@ -330,7 +299,6 @@ describe('Router Configuration tests', () => {
           [
             'Travelling',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['countriesLived']),
               isRootNode: false,
               typeName: 'Travelling',
@@ -339,7 +307,6 @@ describe('Router Configuration tests', () => {
           [
             'Employee',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'hobbies']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
@@ -349,7 +316,6 @@ describe('Router Configuration tests', () => {
           [
             'SDK',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['upc', 'clientLanguages']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'upc' }],
@@ -370,7 +336,6 @@ describe('Router Configuration tests', () => {
           [
             'Query',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['productTypes', 'topSecretFederationFacts', 'factTypes']),
               isRootNode: true,
               typeName: 'Query',
@@ -379,7 +344,6 @@ describe('Router Configuration tests', () => {
           [
             'TopSecretFact',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['description', 'factType']),
               isRootNode: false,
               typeName: 'TopSecretFact',
@@ -388,7 +352,6 @@ describe('Router Configuration tests', () => {
           [
             'DirectiveFact',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['title', 'description', 'factType']),
               isRootNode: false,
               typeName: 'DirectiveFact',
@@ -397,7 +360,6 @@ describe('Router Configuration tests', () => {
           [
             'EntityFact',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['title', 'description', 'factType']),
               isRootNode: false,
               typeName: 'EntityFact',
@@ -406,7 +368,6 @@ describe('Router Configuration tests', () => {
           [
             'MiscellaneousFact',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['title', 'description', 'factType']),
               isRootNode: false,
               typeName: 'MiscellaneousFact',
@@ -415,7 +376,6 @@ describe('Router Configuration tests', () => {
           [
             'Employee',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'products', 'notes']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
@@ -425,7 +385,6 @@ describe('Router Configuration tests', () => {
           [
             'Consultancy',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['upc', 'name']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'upc' }],
@@ -435,7 +394,6 @@ describe('Router Configuration tests', () => {
           [
             'Cosmo',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['upc', 'name', 'repositoryURL']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'upc' }],
@@ -445,7 +403,6 @@ describe('Router Configuration tests', () => {
           [
             'Documentation',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['url', 'urls']),
               isRootNode: false,
               typeName: 'Documentation',
@@ -505,7 +462,6 @@ describe('Router Configuration tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['age', 'entity', 'name']),
               isRootNode: false,
               provides: [{ fieldName: 'entity', selectionSet: 'field' }],
@@ -526,7 +482,6 @@ describe('Router Configuration tests', () => {
           [
             'OtherObject',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['age', 'name', 'nested']),
               isRootNode: false,
               typeName: 'OtherObject',
@@ -535,7 +490,6 @@ describe('Router Configuration tests', () => {
           [
             'NestedObject',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['name']),
               isRootNode: false,
               typeName: 'NestedObject',
@@ -564,7 +518,6 @@ describe('Router Configuration tests', () => {
           [
             'Entity',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'age', 'field']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
@@ -575,7 +528,6 @@ describe('Router Configuration tests', () => {
             'Interface',
             {
               entityInterfaceConcreteTypeNames: new Set<string>(['Entity']),
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'age']),
               isInterfaceObject: false,
               isRootNode: true,
@@ -601,7 +553,6 @@ describe('Router Configuration tests', () => {
             'Interface',
             {
               entityInterfaceConcreteTypeNames: new Set<string>(),
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'name']),
               isInterfaceObject: true,
               isRootNode: true,
@@ -803,7 +754,6 @@ describe('Router Configuration tests', () => {
           [
             'Query',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['getUser']),
               isRootNode: true,
               typeName: 'Query',
@@ -816,7 +766,6 @@ describe('Router Configuration tests', () => {
           [
             'Query',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['getUser']),
               isRootNode: true,
               typeName: 'Query',
@@ -825,7 +774,6 @@ describe('Router Configuration tests', () => {
           [
             'Review',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['content', 'rating']),
               isRootNode: false,
               typeName: 'Review',
@@ -834,7 +782,6 @@ describe('Router Configuration tests', () => {
           [
             'User',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'reviews']),
               isRootNode: false,
               typeName: 'User',
@@ -847,7 +794,6 @@ describe('Router Configuration tests', () => {
           [
             'Query',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['getUser']),
               isRootNode: true,
               typeName: 'Query',
@@ -856,7 +802,6 @@ describe('Router Configuration tests', () => {
           [
             'User',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'username']),
               isRootNode: false,
               typeName: 'User',

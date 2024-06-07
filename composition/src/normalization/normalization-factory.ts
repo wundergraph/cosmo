@@ -1449,7 +1449,6 @@ export class NormalizationFactory {
           ? parentExtensionData.renamedTypeName || extensionTypeName
           : extensionTypeName;
       const configurationData: ConfigurationData = {
-        externalFieldNames: new Set<string>(),
         fieldNames: new Set<string>(),
         isRootNode: isEntity,
         typeName: newParentTypeName,
@@ -1653,7 +1652,6 @@ export class NormalizationFactory {
               ? parentDefinitionData.renamedTypeName || parentTypeName
               : parentTypeName;
           const configurationData: ConfigurationData = {
-            externalFieldNames: new Set<string>(),
             fieldNames: new Set<string>(),
             isRootNode: isEntity,
             typeName: newParentTypeName,

@@ -79,7 +79,6 @@ describe('Objects Tests', () => {
           [
             'Object',
             {
-              externalFieldNames: new Set<string>(),
               fieldNames: new Set<string>(['age', 'name']),
               isRootNode: false,
               typeName: 'Object',
