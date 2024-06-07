@@ -97,7 +97,7 @@ import {
   MagnifyingGlassIcon,
   PlusIcon,
 } from "@radix-ui/react-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
@@ -186,8 +186,9 @@ const FieldUsageColumn = ({
   const { range, dateRange } = useAnalyticsQueryState();
   const graph = useContext(GraphContext);
 
-  const { data: usageData } = useQuery({
-    ...getFieldUsage.useQuery({
+  const { data: usageData } = useQuery(
+    getFieldUsage,
+    {
       field: fieldName,
       typename,
       graphName: graph?.graph?.name,
@@ -197,9 +198,11 @@ const FieldUsageColumn = ({
         start: formatISO(dateRange.start),
         end: formatISO(dateRange.end),
       },
-    }),
-    enabled: !!graph?.graph?.name,
-  });
+    },
+    {
+      enabled: !!graph?.graph?.name,
+    },
+  );
 
   const { data } = useChartData(range, usageData?.requestSeries ?? []);
 
@@ -501,23 +504,12 @@ const TypeDiscussions = ({
 
   const applyParams = useApplyParams();
 
-  const user = useUser();
-
-  const { data, isLoading, error, refetch } = useQuery({
-    ...getAllDiscussions.useQuery({
-      targetId: graphData?.graph?.targetId,
-      schemaVersionId,
-    }),
+  const { data, isLoading, error, refetch } = useQuery(getAllDiscussions, {
+    targetId: graphData?.graph?.targetId,
+    schemaVersionId,
   });
 
-  const { data: membersData } = useQuery({
-    ...getOrganizationMembers.useQuery(),
-    queryKey: [
-      user?.currentOrganization.slug || "",
-      "GetOrganizationMembers",
-      {},
-    ],
-  });
+  const { data: membersData } = useQuery(getOrganizationMembers);
 
   if (isLoading) return <Loader fullscreen />;
 
@@ -1250,16 +1242,17 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
   const category = router.query.category as GraphQLTypeCategory;
 
   const { data, isLoading, error, refetch } = useQuery(
-    getFederatedGraphSDLByName.useQuery({
+    getFederatedGraphSDLByName,
+    {
       name: graphName,
       namespace,
-    }),
+    },
   );
 
   const schema =
     (router.query.schemaType as string) === "router"
       ? data?.sdl
-      : data?.clientSchema;
+      : data?.clientSchema || data?.sdl;
 
   const { ast, isParsing } = useParseSchema(schema);
 

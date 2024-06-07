@@ -27,7 +27,7 @@ import {
 } from "@/lib/insights-helpers";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { CubeIcon } from "@radix-ui/react-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getFieldUsage } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { GetFieldUsageResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
@@ -353,8 +353,9 @@ export const FieldUsageSheet = () => {
 
   const graph = useContext(GraphContext);
 
-  const { data, error, isLoading, refetch } = useQuery({
-    ...getFieldUsage.useQuery({
+  const { data, error, isLoading, refetch, } = useQuery(
+    getFieldUsage,
+    {
       field,
       typename: isNamedType ? undefined : type,
       namedType: isNamedType ? type : undefined,
@@ -365,10 +366,12 @@ export const FieldUsageSheet = () => {
         start: formatISO(dateRange.start),
         end: formatISO(dateRange.end),
       },
-    }),
-    enabled: !!showUsage && !!graph?.graph?.name,
-    refetchOnWindowFocus: false,
-  });
+    },
+    {
+      enabled: !!showUsage && !!graph?.graph?.name,
+      refetchOnWindowFocus: false,
+    },
+  );
 
   let content: React.ReactNode;
 

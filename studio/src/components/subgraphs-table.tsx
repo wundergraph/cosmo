@@ -9,7 +9,7 @@ import {
   CheckIcon,
   InfoCircledIcon,
 } from "@radix-ui/react-icons";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@connectrpc/connect-query";
 import {
   addSubgraphMember,
   getOrganizationMembers,
@@ -129,12 +129,10 @@ export const AddSubgraphUsersContent = ({
   const user = useUser();
   const rbac = useFeature("rbac");
   const isAdmin = user?.currentOrganization.roles.includes("admin");
-  const { mutate: addMember, isPending: addingMember } = useMutation(
-    addSubgraphMember.useMutation(),
-  );
-  const { mutate: removeMember, isPending: removingMember } = useMutation(
-    removeSubgraphMember.useMutation(),
-  );
+  const { mutate: addMember, isPending: addingMember } =
+    useMutation(addSubgraphMember);
+  const { mutate: removeMember, isPending: removingMember } =
+    useMutation(removeSubgraphMember);
 
   const [isOpen, setIsOpen] = useState(false);
 
@@ -317,15 +315,18 @@ const AddSubgraphUsers = ({
   const [open, setOpen] = useState(false);
   const user = useUser();
   const isAdmin = user?.currentOrganization.roles.includes("admin");
-  const { data } = useQuery(getOrganizationMembers.useQuery());
+  const { data } = useQuery(getOrganizationMembers);
 
-  const { data: subgraphMembersData, refetch } = useQuery({
-    ...getSubgraphMembers.useQuery({
+  const { data: subgraphMembersData, refetch } = useQuery(
+    getSubgraphMembers,
+    {
       subgraphName,
       namespace,
-    }),
-    enabled: open,
-  });
+    },
+    {
+      enabled: open,
+    },
+  );
 
   const [inviteOptions, setInviteOptions] = useState<string[]>([]);
 
@@ -415,8 +416,8 @@ export const SubgraphsTable = ({
   if (!subgraphs || subgraphs.length === 0) return <Empty graph={graph} />;
 
   return (
-    <div className="flex h-full flex-col gap-y-3">
-      <TableWrapper>
+    <>
+      <TableWrapper className="mb-3">
         <Table>
           <TableHeader>
             <TableRow>
@@ -536,6 +537,6 @@ export const SubgraphsTable = ({
         </Table>
       </TableWrapper>
       <Pagination limit={limit} noOfPages={noOfPages} pageNumber={pageNumber} />
-    </div>
+    </>
   );
 };

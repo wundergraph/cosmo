@@ -82,7 +82,7 @@ import {
   PlayIcon,
   PlusIcon,
 } from "@radix-ui/react-icons";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getClients,
@@ -177,13 +177,16 @@ const ClientOperations = () => {
   const clientName = searchParams.get("clientName");
   const graphContext = useContext(GraphContext);
 
-  const { data: sdlData } = useQuery({
-    ...getFederatedGraphSDLByName.useQuery({
+  const { data: sdlData } = useQuery(
+    getFederatedGraphSDLByName,
+    {
       name: slug,
       namespace,
-    }),
-    enabled: !!clientId,
-  });
+    },
+    {
+      enabled: !!clientId,
+    },
+  );
 
   const { ast } = useParseSchema(sdlData?.sdl);
 
@@ -201,14 +204,17 @@ const ClientOperations = () => {
     });
   };
 
-  const { data, isLoading, error, refetch } = useQuery({
-    ...getPersistedOperations.useQuery({
+  const { data, isLoading, error, refetch } = useQuery(
+    getPersistedOperations,
+    {
       clientId: clientId ?? "",
       federatedGraphName: slug,
       namespace,
-    }),
-    enabled: !!clientId,
-  });
+    },
+    {
+      enabled: !!clientId,
+    },
+  );
 
   let content: React.ReactNode;
 
@@ -495,8 +501,7 @@ const CreateClient = ({ refresh }: { refresh: () => void }) => {
     schema: FormSchema,
   });
 
-  const { mutate, isPending } = useMutation({
-    ...publishPersistedOperations.useMutation(),
+  const { mutate, isPending } = useMutation(publishPersistedOperations, {
     onSuccess(data) {
       if (data.response?.code !== EnumStatusCode.OK) {
         toast({
@@ -605,12 +610,10 @@ const ClientsPage: NextPageWithLayout = () => {
     }
   };
 
-  const { data, isLoading, error, refetch } = useQuery(
-    getClients.useQuery({
-      fedGraphName: slug,
-      namespace,
-    }),
-  );
+  const { data, isLoading, error, refetch } = useQuery(getClients, {
+    fedGraphName: slug,
+    namespace,
+  });
 
   if (!data) return null;
 

@@ -14,7 +14,7 @@ import { Toolbar } from "@/components/ui/toolbar";
 import { NextPageWithLayout } from "@/lib/page";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { CheckCircledIcon, FileTextIcon } from "@radix-ui/react-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getDiscussion } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import Link from "next/link";
@@ -37,10 +37,8 @@ const SubgraphDiscussionPage: NextPageWithLayout = () => {
     isLoading,
     error,
     refetch,
-  } = useQuery({
-    ...getDiscussion.useQuery({
-      discussionId: id,
-    }),
+  } = useQuery(getDiscussion, {
+    discussionId: id,
   });
 
   return (

@@ -48,7 +48,7 @@ import { NextPageWithLayout } from "@/lib/page";
 import { checkUserAccess, cn } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { Pencil1Icon, PlusIcon, TrashIcon } from "@radix-ui/react-icons";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   createOrganizationWebhookConfig,
@@ -73,9 +73,7 @@ const DeleteWebhook = ({
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
 
-  const { mutate, isPending } = useMutation(
-    deleteOrganizationWebhookConfig.useMutation(),
-  );
+  const { mutate, isPending } = useMutation(deleteOrganizationWebhookConfig);
 
   const onDelete = () => {
     mutate(
@@ -172,11 +170,11 @@ const Webhook = ({
   const { toast } = useToast();
 
   const { mutate: create, isPending: isCreating } = useMutation(
-    createOrganizationWebhookConfig.useMutation(),
+    createOrganizationWebhookConfig,
   );
 
   const { mutate: update, isPending: isUpdating } = useMutation(
-    updateOrganizationWebhookConfig.useMutation(),
+    updateOrganizationWebhookConfig,
   );
 
   const [shouldUpdateKey, setShouldUpdateKey] = useState(false);
@@ -186,13 +184,16 @@ const Webhook = ({
     schema: FormSchema,
   });
 
-  const { data, isLoading, error, refetch } = useQuery({
-    ...getOrganizationWebhookMeta.useQuery({
+  const { data, isLoading, error, refetch } = useQuery(
+    getOrganizationWebhookMeta,
+    {
       id: existing?.id ?? "",
-    }),
-    gcTime: 0,
-    enabled: !!existing?.id && mode === "update" && isOpen,
-  });
+    },
+    {
+      gcTime: 0,
+      enabled: !!existing?.id && mode === "update" && isOpen,
+    },
+  );
 
   const [meta, setMeta] = useState<EventsMeta>(data?.eventsMeta || []);
 
@@ -470,10 +471,9 @@ const Webhook = ({
 const WebhooksPage: NextPageWithLayout = () => {
   const user = useContext(UserContext);
   const router = useRouter();
-  const { data, isLoading, error, refetch } = useQuery({
-    ...getOrganizationWebhookConfigs.useQuery(),
-    queryKey: [user?.currentOrganization.slug || "", router.asPath || "", {}],
-  });
+  const { data, isLoading, error, refetch } = useQuery(
+    getOrganizationWebhookConfigs,
+  );
 
   if (isLoading) return <Loader fullscreen />;
 

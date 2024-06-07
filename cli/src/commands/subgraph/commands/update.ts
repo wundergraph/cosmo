@@ -23,7 +23,8 @@ export default (opts: BaseCommandOptions) => {
   command.option('-n, --namespace [string]', 'The namespace of the subgraph.');
   command.option(
     '-r, --routing-url <url>',
-    'The routing url of your subgraph. This is the url that the subgraph will be accessible at.',
+    'The routing URL of the subgraph. This is the URL at which the subgraph will be accessible.' +
+      ' Returns an error if the subgraph is an Event-Driven Graph.',
   );
   command.option(
     '--label [labels...]',
@@ -35,13 +36,18 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option(
     '--subscription-url <url>',
-    'The url used for subscriptions. If empty, it defaults to same url used for routing.',
+    'The url used for subscriptions. If empty, it defaults to same url used for routing.' +
+      ' Returns an error if the subgraph is an Event-Driven Graph.',
   );
   command.option(
     '--subscription-protocol <protocol>',
-    'The protocol to use when subscribing to the subgraph. The supported protocols are ws, sse, and sse_post.',
+    'The protocol to use when subscribing to the subgraph. The supported protocols are ws, sse, and sse_post.' +
+      ' Returns an error if the subgraph is an Event-Driven Graph.',
   );
-  command.option('--websocket-subprotocol <protocol>', websocketSubprotocolDescription);
+  command.option(
+    '--websocket-subprotocol <protocol>',
+    websocketSubprotocolDescription + ' Returns an error if the subgraph is an Event-Driven Graph.',
+  );
   command.option('--readme <path-to-readme>', 'The markdown file which describes the subgraph.');
 
   command.action(async (name, options) => {

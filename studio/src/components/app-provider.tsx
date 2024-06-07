@@ -14,6 +14,7 @@ import { useCookieOrganization } from "@/hooks/use-cookie-organization";
 export const UserContext = createContext<User | undefined>(undefined);
 
 const queryClient = new QueryClient();
+const sessionQueryClient = new QueryClient();
 
 const publicPaths = ["/login", "/signup"];
 
@@ -127,11 +128,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         return failureCount < 3;
       },
     },
-    queryClient,
+    sessionQueryClient,
   );
 
   const [user, setUser] = useState<User>();
   const [transport, setTransport] = useState<Transport>();
+  const [verifiedOrganizationSlug, setVerifiedOrganizationSlug] =
+    useState<string>();
 
   useEffect(() => {
     if (isFetching || !router.isReady) return;
@@ -169,22 +172,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         plan: organization.plan,
       });
 
-      const organizationSlug = organization.slug;
-
-      setTransport(
-        createConnectTransport({
-          baseUrl: process.env.NEXT_PUBLIC_COSMO_CP_URL!,
-          useHttpGet: true,
-          interceptors: [
-            (next) => async (req) => {
-              req.header.set("cosmo-org-slug", organizationSlug);
-              return await next(req);
-            },
-          ],
-          // Allow cookies to be sent to the server
-          credentials: "include",
-        }),
-      );
+      setVerifiedOrganizationSlug(organization.slug);
 
       if (
         (router.pathname === "/" ||
@@ -198,12 +186,37 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const params = new URLSearchParams(url.search);
         router.replace(
           params.size !== 0
-            ? `/${organizationSlug}?${params}`
-            : `/${organizationSlug}`,
+            ? `/${organization.slug}?${params}`
+            : `/${organization.slug}`,
         );
       }
     }
   }, [router, data, isFetching, error, cookieOrgSlug]);
+
+  useEffect(() => {
+    if (!verifiedOrganizationSlug) {
+      return;
+    }
+
+    const newTransport = createConnectTransport({
+      baseUrl: process.env.NEXT_PUBLIC_COSMO_CP_URL!,
+      useHttpGet: true,
+      interceptors: [
+        (next) => async (req) => {
+          req.header.set("cosmo-org-slug", verifiedOrganizationSlug);
+          return await next(req);
+        },
+      ],
+      // Allow cookies to be sent to the server
+      credentials: "include",
+    });
+
+    setTransport(newTransport);
+  }, [verifiedOrganizationSlug]);
+
+  useEffect(() => {
+    queryClient.resetQueries();
+  }, [transport]);
 
   if (!transport) {
     return <UserContext.Provider value={user}>{children}</UserContext.Provider>;

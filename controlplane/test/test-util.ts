@@ -251,7 +251,7 @@ export const removeKeycloakSetup = async ({
   });
 };
 
-export const createSubgraph = async (
+export const createAndPublishSubgraph = async (
   client: PromiseClient<typeof PlatformService>,
   name: string,
   namespace: string,
@@ -346,3 +346,47 @@ export class InMemoryBlobStorage implements BlobStorage {
     return Promise.resolve(count);
   }
 }
+
+export async function createEventDrivenGraph(client: PromiseClient<typeof PlatformService>, name: string) {
+  const response = await client.createFederatedSubgraph({
+    name,
+    namespace: 'default',
+    isEventDrivenGraph: true,
+  });
+
+  expect(response.response?.code).toBe(EnumStatusCode.OK);
+}
+
+export async function createSubgraph(
+  client: PromiseClient<typeof PlatformService>,
+  name: string,
+  routingUrl?: string,
+) {
+  const response = await client.createFederatedSubgraph({
+    name,
+    namespace: 'default',
+    routingUrl,
+  });
+  expect(response.response?.code).toBe(EnumStatusCode.OK);
+}
+
+export const eventDrivenGraphSDL = `
+  type Subscription {
+    a: Entity! @edfs__natsSubscribe(subjects: ["a.1"])
+  }
+  
+  type Entity @key(fields: "id", resolvable: false) {
+    id: Int! @external
+  }
+  
+  input edfs__NatsStreamConfiguration {
+    consumerName: String!
+     streamName: String!
+  }
+`;
+
+export const subgraphSDL = `
+  type Query {
+    dummy: String!
+  }
+`;

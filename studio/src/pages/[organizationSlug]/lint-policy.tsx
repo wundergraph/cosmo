@@ -34,7 +34,7 @@ import { docsBaseURL, lintCategories } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn, countLintConfigsByCategory } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   configureNamespaceLintConfig,
@@ -84,21 +84,14 @@ const LintPolicyPage: NextPageWithLayout = () => {
   const user = useContext(UserContext);
   const router = useRouter();
   const namespace = router.query.namespace as string;
-  const { data, isLoading, refetch, error } = useQuery({
-    ...getNamespaceLintConfig.useQuery({
-      namespace,
-    }),
-    queryKey: [
-      user?.currentOrganization.slug || "",
-      "GetNamespaceLintConfig",
-      { namespace },
-    ],
+  const { data, isLoading, refetch, error } = useQuery(getNamespaceLintConfig, {
+    namespace,
   });
   const { mutate: configureLintRules, isPending: isConfiguring } = useMutation(
-    configureNamespaceLintConfig.useMutation(),
+    configureNamespaceLintConfig,
   );
 
-  const { mutate } = useMutation(enableLintingForTheNamespace.useMutation());
+  const { mutate } = useMutation(enableLintingForTheNamespace);
 
   const { toast } = useToast();
 

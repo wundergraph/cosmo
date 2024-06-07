@@ -10,30 +10,16 @@ import { getDashboardLayout } from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
 import { Pagination } from "@/components/ui/pagination";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Toolbar } from "@/components/ui/toolbar";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { createDateRange } from "@/lib/insights-helpers";
 import { NextPageWithLayout } from "@/lib/page";
+import { useQuery } from "@connectrpc/connect-query";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  DoubleArrowLeftIcon,
-  DoubleArrowRightIcon,
-} from "@radix-ui/react-icons";
-import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getAuditLogs } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { formatISO } from "date-fns";
 import { useRouter } from "next/router";
-import { useCallback } from "react";
 
 const AuditLogPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -51,14 +37,11 @@ const AuditLogPage: NextPageWithLayout = () => {
   const startDate = range ? createDateRange(range).start : start;
   const endDate = range ? createDateRange(range).end : end;
 
-  const { data, isLoading, error, refetch } = useQuery({
-    ...getAuditLogs.useQuery({
-      limit: limit > 50 ? 50 : limit,
-      offset: (pageNumber - 1) * limit,
-      startDate: formatISO(startDate),
-      endDate: formatISO(endDate),
-    }),
-    queryKey: [router.asPath, "GetAuditLogs", {}],
+  const { data, isLoading, error, refetch } = useQuery(getAuditLogs, {
+    limit: limit > 50 ? 50 : limit,
+    offset: (pageNumber - 1) * limit,
+    startDate: formatISO(startDate),
+    endDate: formatISO(endDate),
   });
 
   if (isLoading) return <Loader fullscreen />;

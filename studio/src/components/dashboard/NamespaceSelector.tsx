@@ -1,5 +1,5 @@
 import { docsBaseURL } from "@/lib/constants";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
 import { getNamespaces } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -25,10 +25,8 @@ export const NamespaceSelector = () => {
   const [namespaces, setNamespaces] = useState(["default"]);
   const [namespace, setNamespace] = useState(namespaceParam || "default");
 
-  const { data } = useQuery({
-    ...getNamespaces.useQuery(),
-    queryKey: [user?.currentOrganization.slug || "", "GetNamespaces", {}],
-  });
+  const { data, refetch } = useQuery(getNamespaces);
+
   const applyParams = useApplyParams();
 
   useEffect(() => {
