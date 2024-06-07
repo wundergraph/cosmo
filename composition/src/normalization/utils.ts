@@ -64,7 +64,7 @@ import {
   unparsableFieldSetSelectionErrorMessage,
 } from '../errors/errors';
 import { BASE_SCALARS } from '../utils/constants';
-import { RequiredFieldConfiguration } from '../router-configuration/router-configuration';
+import { ConfigurationData, RequiredFieldConfiguration } from '../router-configuration/router-configuration';
 import { FieldData, ParentWithFieldsData, UnionDefinitionData } from '../schema-building/type-definition-data';
 import { getTypeNodeNamedTypeName } from '../schema-building/ast';
 
@@ -209,12 +209,24 @@ export type InputValidationContainer = {
   typeString: string;
 };
 
-export function addNonExternalFieldsToSet(fieldDataByFieldName: Map<string, FieldData>, fieldNames: Set<string>) {
+export function addFieldNamesToConfigurationData(
+  fieldDataByFieldName: Map<string, FieldData>,
+  configurationData: ConfigurationData,
+) {
+  const externalFieldNames = new Set<string>();
   for (const [fieldName, fieldContainer] of fieldDataByFieldName) {
     if (fieldContainer.directivesByDirectiveName.has(EXTERNAL)) {
-      continue;
+      if (configurationData.externalFieldNames) {
+        configurationData.externalFieldNames.add(fieldName);
+      } else {
+        externalFieldNames.add(fieldName);
+      }
+    } else {
+      configurationData.fieldNames.add(fieldName);
     }
-    fieldNames.add(fieldName);
+  }
+  if (externalFieldNames.size > 0) {
+    configurationData.externalFieldNames = externalFieldNames;
   }
 }
 

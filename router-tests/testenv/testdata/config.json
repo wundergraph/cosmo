@@ -48,6 +48,10 @@
               "derivedMood",
               "rootFieldThrowsError",
               "rootFieldErrorWrapper"
+            ],
+            "externalFieldNames": [
+              "currentMood",
+              "isAvailable"
             ]
           },
           {
@@ -895,6 +899,9 @@
           {
             "typeName": "Employee",
             "fieldNames": [
+              "id"
+            ],
+            "externalFieldNames": [
               "id"
             ]
           }

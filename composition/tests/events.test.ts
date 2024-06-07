@@ -125,6 +125,7 @@ describe('events Configuration tests', () => {
           [
             'Entity',
             {
+              externalFieldNames: new Set<string>(['id']),
               fieldNames: new Set<string>(['id']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id', disableEntityResolver: true }],
@@ -195,6 +196,7 @@ describe('events Configuration tests', () => {
           [
             'Entity',
             {
+              externalFieldNames: new Set<string>(['id']),
               fieldNames: new Set<string>(['id']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id', disableEntityResolver: true }],
@@ -273,6 +275,7 @@ describe('events Configuration tests', () => {
           [
             'Entity',
             {
+              externalFieldNames: new Set<string>(['id']),
               fieldNames: new Set<string>(['id']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id', disableEntityResolver: true }],
@@ -399,6 +402,7 @@ describe('events Configuration tests', () => {
           [
             'Entity',
             {
+              externalFieldNames: new Set<string>(['id']),
               fieldNames: new Set<string>(['id']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id', disableEntityResolver: true }],

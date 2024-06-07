@@ -382,6 +382,7 @@ describe('openfed_FieldSet Tests', () => {
           [
             'Entity',
             {
+              externalFieldNames: new Set<string>(['name']),
               fieldNames: new Set<string>(['id']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
@@ -448,6 +449,7 @@ describe('openfed_FieldSet Tests', () => {
           [
             'Entity',
             {
+              externalFieldNames: new Set<string>(['interface']),
               fieldNames: new Set<string>(['id']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
@@ -501,6 +503,7 @@ describe('openfed_FieldSet Tests', () => {
           [
             'Entity',
             {
+              externalFieldNames: new Set<string>(['interface']),
               fieldNames: new Set<string>(['id']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
@@ -595,6 +598,7 @@ describe('openfed_FieldSet Tests', () => {
           [
             'Entity',
             {
+              externalFieldNames: new Set<string>(['union']),
               fieldNames: new Set<string>(['id']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
@@ -706,6 +710,7 @@ describe('openfed_FieldSet Tests', () => {
           [
             'Entity',
             {
+              externalFieldNames: new Set<string>(['anotherObject']),
               fieldNames: new Set<string>(['id']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
@@ -754,6 +759,7 @@ describe('openfed_FieldSet Tests', () => {
           [
             'Entity',
             {
+              externalFieldNames: new Set<string>(['anotherObject']),
               fieldNames: new Set<string>(['id']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
@@ -812,6 +818,7 @@ describe('openfed_FieldSet Tests', () => {
           [
             'Entity',
             {
+              externalFieldNames: new Set<string>(['name']),
               fieldNames: new Set<string>(['id', 'age']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
@@ -863,6 +870,7 @@ describe('openfed_FieldSet Tests', () => {
           [
             'Entity',
             {
+              externalFieldNames: new Set<string>(['name']),
               fieldNames: new Set<string>(['id', 'age']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
@@ -906,6 +914,7 @@ describe('openfed_FieldSet Tests', () => {
           [
             'Entity',
             {
+              externalFieldNames: new Set<string>(['interface']),
               fieldNames: new Set<string>(['id', 'age']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
@@ -988,6 +997,7 @@ describe('openfed_FieldSet Tests', () => {
           [
             'Entity',
             {
+              externalFieldNames: new Set<string>(['union']),
               fieldNames: new Set<string>(['id', 'age']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
@@ -1084,6 +1094,7 @@ describe('openfed_FieldSet Tests', () => {
           [
             'Entity',
             {
+              externalFieldNames: new Set<string>(['object']),
               fieldNames: new Set<string>(['id', 'age']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
@@ -1122,6 +1133,7 @@ describe('openfed_FieldSet Tests', () => {
           [
             'Entity',
             {
+              externalFieldNames: new Set<string>(['object']),
               fieldNames: new Set<string>(['id', 'age']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],

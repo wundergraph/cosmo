@@ -600,7 +600,8 @@ describe('Entity tests', () => {
           [
             'Entity',
             {
-              fieldNames: new Set<string>(['id', 'name']),
+              externalFieldNames: new Set<string>(['id']),
+              fieldNames: new Set<string>(['name', 'id']),
               isRootNode: true,
               keys: [{ disableEntityResolver: true, fieldName: '', selectionSet: 'id' }],
               typeName: 'Entity',
