@@ -32,7 +32,7 @@ import {
   ScalarTypeNode,
 } from '../ast/utils';
 import {
-  addNonExternalFieldsToSet,
+  addFieldNamesToConfigurationData,
   FieldSetData,
   InputValidationContainer,
   isNodeQuery,
@@ -1460,7 +1460,7 @@ export class NormalizationFactory {
           parentExtensionData.fieldDataByFieldName.delete(SERVICE_FIELD);
           parentExtensionData.fieldDataByFieldName.delete(ENTITIES_FIELD);
         }
-        addNonExternalFieldsToSet(parentExtensionData.fieldDataByFieldName, configurationData.fieldNames);
+        addFieldNamesToConfigurationData(parentExtensionData.fieldDataByFieldName, configurationData);
       }
       const parentDefinitionData = this.parentDefinitionDataByTypeName.get(extensionTypeName);
       if (!parentDefinitionData) {
@@ -1571,8 +1571,8 @@ export class NormalizationFactory {
           ) {
             this.errors.push(noFieldDefinitionsError(kindToTypeString(parentDefinitionData.kind), extensionTypeName));
           }
-          // Add the non-external base type field names to the configuration data
-          addNonExternalFieldsToSet(parentDefinitionData.fieldDataByFieldName, configurationData.fieldNames);
+          // Add the base type field names to the configuration data
+          addFieldNamesToConfigurationData(parentDefinitionData.fieldDataByFieldName, configurationData);
           break;
         case Kind.SCALAR_TYPE_DEFINITION:
           definitions.push(
@@ -1668,7 +1668,7 @@ export class NormalizationFactory {
             configurationData.events = events;
           }
           this.configurationDataByParentTypeName.set(newParentTypeName, configurationData);
-          addNonExternalFieldsToSet(parentDefinitionData.fieldDataByFieldName, configurationData.fieldNames);
+          addFieldNamesToConfigurationData(parentDefinitionData.fieldDataByFieldName, configurationData);
           this.validateInterfaceImplementations(parentDefinitionData);
           definitions.push(
             getParentWithFieldsNodeByData(
