@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.26.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.26.0...@wundergraph/composition@0.26.1) (2024-06-07)
+
+### Bug Fixes
+
+* entity field edge cases ([#860](https://github.com/wundergraph/cosmo/issues/860)) ([e4f553f](https://github.com/wundergraph/cosmo/commit/e4f553f1b586aad3bff2ac2e1897e22479dce068)) (@Aenimus)
+
 # [0.26.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.25.1...@wundergraph/composition@0.26.0) (2024-06-06)
 
 ### Features
