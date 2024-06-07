@@ -33,7 +33,7 @@ func (n NoopMetrics) MeasureResponseSize(ctx context.Context, size int64, attr .
 func (n NoopMetrics) MeasureLatency(ctx context.Context, requestStartTime time.Time, attr ...attribute.KeyValue) {
 }
 
-func (n NoopMetrics) MeasureSubscriptionCount(ctx context.Context, attr ...attribute.KeyValue) {
+func (n NoopMetrics) MeasureSubscriptionCount(ctx context.Context, count int64, attr ...attribute.KeyValue) {
 }
 
 func (n NoopMetrics) Flush(ctx context.Context) error {

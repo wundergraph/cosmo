@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/wundergraph/cosmo/router/pkg/metric"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 )
@@ -22,15 +23,17 @@ type WebSocketsStatistics interface {
 }
 
 type WebSocketStats struct {
-	mu            sync.Mutex
-	ctx           context.Context
-	logger        *zap.Logger
-	connections   atomic.Uint64
-	subscriptions atomic.Uint64
-	messagesSent  atomic.Uint64
-	triggers      atomic.Uint64
-	update        chan struct{}
-	subscribers   map[context.Context]chan *UsageReport
+	mu                         sync.Mutex
+	ctx                        context.Context
+	logger                     *zap.Logger
+	metrics                    metric.Store
+	connections                atomic.Uint64
+	subscriptions              atomic.Uint64
+	messagesSent               atomic.Uint64
+	triggers                   atomic.Uint64
+	update                     chan struct{}
+	reportWebSocketConnections bool
+	subscribers                map[context.Context]chan *UsageReport
 }
 
 type UsageReport struct {
@@ -40,10 +43,11 @@ type UsageReport struct {
 	Triggers      uint64
 }
 
-func NewWebSocketStats(ctx context.Context, logger *zap.Logger) *WebSocketStats {
+func NewWebSocketStats(ctx context.Context, metrics metric.Store, logger *zap.Logger, reportWebSocketConnections bool) *WebSocketStats {
 	stats := &WebSocketStats{
 		ctx:         ctx,
 		logger:      logger,
+		metrics:     metrics,
 		update:      make(chan struct{}),
 		mu:          sync.Mutex{},
 		subscribers: map[context.Context]chan *UsageReport{},
@@ -99,6 +103,10 @@ func (s *WebSocketStats) run(ctx context.Context) {
 }
 
 func (s *WebSocketStats) reportConnections() {
+	if !s.reportWebSocketConnections {
+		return
+	}
+
 	s.logger.Info("WebSocket Stats",
 		zap.Uint64("open_connections", s.connections.Load()),
 		zap.Uint64("active_subscriptions", s.subscriptions.Load()),
@@ -125,12 +133,24 @@ func (s *WebSocketStats) ConnectionsDec() {
 }
 
 func (s *WebSocketStats) SubscriptionCountInc(count int) {
+	if count == 0 {
+		return
+	}
+
 	s.subscriptions.Add(uint64(count))
+	s.metrics.MeasureSubscriptionCount(s.ctx, int64(count))
+	//s.metrics.Flush(s.ctx)
 	s.publish()
 }
 
 func (s *WebSocketStats) SubscriptionCountDec(count int) {
+	if count == 0 {
+		return
+	}
+
 	s.subscriptions.Sub(uint64(count))
+	s.metrics.MeasureSubscriptionCount(s.ctx, int64(-count))
+	//s.metrics.Flush(s.ctx)
 	s.publish()
 }
 

@@ -134,7 +134,7 @@ func (h *OtlpMetricStore) MeasureRequestError(ctx context.Context, attr ...attri
 	}
 }
 
-func (h *OtlpMetricStore) MeasureSubscriptionCount(ctx context.Context, attr ...attribute.KeyValue) {
+func (h *OtlpMetricStore) MeasureSubscriptionCount(ctx context.Context, count int64, attr ...attribute.KeyValue) {
 	var baseKeys []attribute.KeyValue
 
 	baseKeys = append(baseKeys, h.baseAttributes...)
@@ -142,8 +142,8 @@ func (h *OtlpMetricStore) MeasureSubscriptionCount(ctx context.Context, attr ...
 
 	baseAttributes := otelmetric.WithAttributes(baseKeys...)
 
-	if c, ok := h.measurements.counters[SubscriptionCounter]; ok {
-		c.Add(ctx, 1, baseAttributes)
+	if c, ok := h.measurements.upDownCounters[SubscriptionsUpDownCounter]; ok {
+		c.Add(ctx, count, baseAttributes)
 	}
 }
 

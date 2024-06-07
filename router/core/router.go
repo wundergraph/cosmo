@@ -882,10 +882,6 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.redisClient = redis.NewClient(options)
 	}
 
-	if r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
-		r.WebsocketStats = NewWebSocketStats(ctx, r.logger)
-	}
-
 	if r.engineExecutionConfiguration.Debug.ReportMemoryUsage {
 		debug.ReportMemoryUsage(ctx, r.logger)
 	}
@@ -1191,6 +1187,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		ro.metricStore = m
 	}
 
+	r.WebsocketStats = NewWebSocketStats(ctx, ro.metricStore, r.logger, r.engineExecutionConfiguration.Debug.ReportWebSocketConnections)
 	routerMetrics := NewRouterMetrics(&routerMetricsConfig{
 		metrics:             ro.metricStore,
 		gqlMetricsExporter:  r.gqlMetricsExporter,

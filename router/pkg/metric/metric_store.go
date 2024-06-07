@@ -21,7 +21,7 @@ const (
 	ResponseContentLengthCounter  = "router.http.response.content_length"       // Outgoing response bytes total
 	InFlightRequestsUpDownCounter = "router.http.requests.in_flight"            // Number of requests in flight
 	RequestError                  = "router.http.requests.error"                // Total request error count
-	SubscriptionCounter           = "router.http.subscriptions"                 // Subscriptions count total
+	SubscriptionsUpDownCounter    = "router.ws.subscriptions"                   // Number of active subscriptions
 
 	unitBytes        = "bytes"
 	unitMilliseconds = "ms"
@@ -57,8 +57,8 @@ var (
 	InFlightRequestsUpDownCounterOptions     = []otelmetric.Int64UpDownCounterOption{
 		otelmetric.WithDescription(InFlightRequestsUpDownCounterDescription),
 	}
-	SubscriptionCounterDescription = "Total number of subscriptions"
-	SubscriptionCounterOptions     = []otelmetric.Int64CounterOption{
+	SubscriptionCounterDescription    = "Number of active subscriptions"
+	SubscriptionsUpDownCounterOptions = []otelmetric.Int64UpDownCounterOption{
 		otelmetric.WithDescription(SubscriptionCounterDescription),
 	}
 )
@@ -88,7 +88,7 @@ type (
 		MeasureResponseSize(ctx context.Context, size int64, attr ...attribute.KeyValue)
 		MeasureLatency(ctx context.Context, requestStartTime time.Time, attr ...attribute.KeyValue)
 		MeasureRequestError(ctx context.Context, attr ...attribute.KeyValue)
-		MeasureSubscriptionCount(ctx context.Context, attr ...attribute.KeyValue)
+		MeasureSubscriptionCount(ctx context.Context, count int64, attr ...attribute.KeyValue)
 		Flush(ctx context.Context) error
 	}
 )
@@ -166,9 +166,9 @@ func (h *Metrics) MeasureRequestError(ctx context.Context, attr ...attribute.Key
 	h.promRequestMetrics.MeasureRequestError(ctx, attr...)
 }
 
-func (h *Metrics) MeasureSubscriptionCount(ctx context.Context, attr ...attribute.KeyValue) {
-	h.otlpRequestMetrics.MeasureSubscriptionCount(ctx, attr...)
-	h.promRequestMetrics.MeasureSubscriptionCount(ctx, attr...)
+func (h *Metrics) MeasureSubscriptionCount(ctx context.Context, count int64, attr ...attribute.KeyValue) {
+	h.otlpRequestMetrics.MeasureSubscriptionCount(ctx, count, attr...)
+	h.promRequestMetrics.MeasureSubscriptionCount(ctx, count, attr...)
 }
 
 // Flush flushes the metrics to the backend synchronously.

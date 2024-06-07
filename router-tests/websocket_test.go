@@ -34,7 +34,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
-	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 )
 
 func TestWebSockets(t *testing.T) {
@@ -173,6 +172,8 @@ func TestWebSockets(t *testing.T) {
 		t.Parallel()
 
 		authServer, err := jwks.NewServer(t)
+		metricReader := metric.NewManualReader()
+
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
 		authOptions := authentication.JWKSAuthenticatorOptions{
@@ -184,6 +185,7 @@ func TestWebSockets(t *testing.T) {
 		authenticators := []authentication.Authenticator{authenticator}
 
 		testenv.Run(t, &testenv.Config{
+			MetricReader: metricReader,
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
@@ -213,6 +215,44 @@ func TestWebSockets(t *testing.T) {
 				require.NoError(t, err)
 				err = xEnv.NatsConnectionDefault.Flush()
 				require.NoError(t, err)
+
+				rm := metricdata.ResourceMetrics{}
+				err = metricReader.Collect(context.Background(), &rm)
+				require.NoError(t, err)
+
+				wsSubscriptionsMetric := metricdata.Metrics{
+					Name:        "router.ws.subscriptions",
+					Description: "Number of active subscriptions",
+					Unit:        "",
+					Data: metricdata.Sum[int64]{
+						Temporality: metricdata.CumulativeTemporality,
+						IsMonotonic: false,
+						DataPoints: []metricdata.DataPoint[int64]{
+							{
+								Attributes: attribute.NewSet(
+									otel.WgFederatedGraphID.String("graph"),
+									otel.WgRouterClusterName.String(""),
+									otel.WgRouterConfigVersion.String(""),
+									otel.WgRouterVersion.String("dev"),
+								),
+								Value: 1,
+							},
+						},
+					},
+				}
+
+				var receivedMetric *metricdata.Metrics
+				for _, m := range rm.ScopeMetrics[0].Metrics {
+					if m.Name == wsSubscriptionsMetric.Name {
+						receivedMetric = &m
+						break
+					}
+				}
+				require.Equal(t, 1, len(rm.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rm.ScopeMetrics))
+				require.Equal(t, 1, len(rm.ScopeMetrics[0].Metrics), "expected 1 Metrics, got %d", len(rm.ScopeMetrics[0].Metrics))
+				require.NotNil(t, receivedMetric, "%s metric not present", wsSubscriptionsMetric.Name)
+
+				metricdatatest.AssertEqual(t, wsSubscriptionsMetric, *receivedMetric, metricdatatest.IgnoreTimestamp())
 			}()
 
 			var res testenv.WebSocketMessage
@@ -224,6 +264,44 @@ func TestWebSockets(t *testing.T) {
 
 			require.NoError(t, conn.Close())
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+
+			rm := metricdata.ResourceMetrics{}
+			err = metricReader.Collect(context.Background(), &rm)
+			require.NoError(t, err)
+
+			wsSubscriptionsMetric := metricdata.Metrics{
+				Name:        "router.ws.subscriptions",
+				Description: "Number of active subscriptions",
+				Unit:        "",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: false,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgRouterClusterName.String(""),
+								otel.WgRouterConfigVersion.String(""),
+								otel.WgRouterVersion.String("dev"),
+							),
+							Value: 0,
+						},
+					},
+				},
+			}
+
+			var receivedMetric *metricdata.Metrics
+			for _, m := range rm.ScopeMetrics[0].Metrics {
+				if m.Name == wsSubscriptionsMetric.Name {
+					receivedMetric = &m
+					break
+				}
+			}
+			require.Equal(t, 1, len(rm.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rm.ScopeMetrics))
+			require.Equal(t, 6, len(rm.ScopeMetrics[0].Metrics), "expected 6 Metrics, got %d", len(rm.ScopeMetrics[0].Metrics))
+			require.NotNil(t, receivedMetric, "%s metric not present", wsSubscriptionsMetric.Name)
+
+			metricdatatest.AssertEqual(t, wsSubscriptionsMetric, *receivedMetric, metricdatatest.IgnoreTimestamp())
 		})
 	})
 	t.Run("subscription with authorization reject", func(t *testing.T) {
@@ -352,135 +430,6 @@ func TestWebSockets(t *testing.T) {
 			} else {
 				require.Fail(t, "expected net.Error")
 			}
-		})
-	})
-
-	t.Run("subscription with metrics", func(t *testing.T) {
-		t.Parallel()
-
-		metricReader := metric.NewManualReader()
-		exporter := tracetest.NewInMemoryExporter(t)
-
-		testenv.Run(t, &testenv.Config{
-			TraceExporter: exporter,
-			MetricReader:  metricReader,
-			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-
-			type currentTimePayload struct {
-				Data struct {
-					CurrentTime struct {
-						UnixTime  float64 `json:"unixTime"`
-						Timestamp string  `json:"timestamp"`
-					} `json:"currentTime"`
-				} `json:"data"`
-			}
-
-			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-			err := conn.WriteJSON(&testenv.WebSocketMessage{
-				ID:      "1",
-				Type:    "subscribe",
-				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
-			})
-			require.NoError(t, err)
-			var msg testenv.WebSocketMessage
-			var payload currentTimePayload
-
-			// Read a result and store its timestamp, next result should be 1 second later
-			err = conn.ReadJSON(&msg)
-			require.NoError(t, err)
-			require.Equal(t, "1", msg.ID)
-			require.Equal(t, "next", msg.Type)
-			err = json.Unmarshal(msg.Payload, &payload)
-			require.NoError(t, err)
-
-			unix1 := payload.Data.CurrentTime.UnixTime
-
-			err = conn.ReadJSON(&msg)
-			require.NoError(t, err)
-			require.Equal(t, "1", msg.ID)
-			require.Equal(t, "next", msg.Type)
-			err = json.Unmarshal(msg.Payload, &payload)
-			require.NoError(t, err)
-
-			unix2 := payload.Data.CurrentTime.UnixTime
-			require.Greater(t, unix2, unix1)
-
-			// Sending a complete must stop the subscription
-			err = conn.WriteJSON(&testenv.WebSocketMessage{
-				ID:   "1",
-				Type: "complete",
-			})
-			require.NoError(t, err)
-
-			var complete testenv.WebSocketMessage
-			err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
-			require.NoError(t, err)
-			err = conn.ReadJSON(&complete)
-			require.NoError(t, err)
-			require.Equal(t, "1", complete.ID)
-			require.Equal(t, "complete", complete.Type)
-
-			err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
-			require.NoError(t, err)
-			_, _, err = conn.ReadMessage()
-			require.Error(t, err)
-			var netErr net.Error
-			if errors.As(err, &netErr) {
-				require.True(t, netErr.Timeout())
-			} else {
-				require.Fail(t, "expected net.Error")
-			}
-
-			/**
-			* Metrics
-			 */
-			rm := metricdata.ResourceMetrics{}
-			err = metricReader.Collect(context.Background(), &rm)
-			require.NoError(t, err)
-
-			httpSubscriptionMetric := metricdata.Metrics{
-				Name:        "router.http.subscriptions",
-				Description: "Total number of subscriptions",
-				Unit:        "",
-				Data: metricdata.Sum[int64]{
-					Temporality: metricdata.CumulativeTemporality,
-					IsMonotonic: true,
-					DataPoints: []metricdata.DataPoint[int64]{
-						{
-							Attributes: attribute.NewSet(
-								otel.WgClientName.String("unknown"),
-								otel.WgClientVersion.String("missing"),
-								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("13258717046432306894"),
-								otel.WgOperationName.String(""),
-								otel.WgOperationProtocol.String("ws"),
-								otel.WgOperationType.String("subscription"),
-								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String(""),
-								otel.WgRouterVersion.String("dev"),
-							),
-							Value: 1,
-						},
-					},
-				},
-			}
-
-			var receivedMetric *metricdata.Metrics
-			for _, m := range rm.ScopeMetrics[0].Metrics {
-				if m.Name == httpSubscriptionMetric.Name {
-					receivedMetric = &m
-					break
-				}
-			}
-
-			require.Equal(t, 1, len(rm.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rm.ScopeMetrics))
-			require.Equal(t, 6, len(rm.ScopeMetrics[0].Metrics), "expected 6 Metrics, got %d", len(rm.ScopeMetrics[0].Metrics))
-			require.NotNil(t, receivedMetric, "%s metric not present", httpSubscriptionMetric.Name)
-
-			metricdatatest.AssertEqual(t, httpSubscriptionMetric, *receivedMetric, metricdatatest.IgnoreTimestamp())
 		})
 	})
 
@@ -1164,7 +1113,10 @@ func TestWebSockets(t *testing.T) {
 		})
 	})
 	t.Run("multiple subscriptions one connection", func(t *testing.T) {
+		metricReader := metric.NewManualReader()
+
 		testenv.Run(t, &testenv.Config{
+			MetricReader: metricReader,
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
 			},
@@ -1258,7 +1210,83 @@ func TestWebSockets(t *testing.T) {
 				require.NoError(t, client.Run())
 			}()
 			xEnv.WaitForSubscriptionCount(4, time.Second*5)
+
+			rm := metricdata.ResourceMetrics{}
+			err := metricReader.Collect(context.Background(), &rm)
+			require.NoError(t, err)
+
+			wsSubscriptionsMetric := metricdata.Metrics{
+				Name:        "router.ws.subscriptions",
+				Description: "Number of active subscriptions",
+				Unit:        "",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: false,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgRouterClusterName.String(""),
+								otel.WgRouterConfigVersion.String(""),
+								otel.WgRouterVersion.String("dev"),
+							),
+							Value: 4,
+						},
+					},
+				},
+			}
+
+			var receivedMetric *metricdata.Metrics
+			for _, m := range rm.ScopeMetrics[0].Metrics {
+				if m.Name == wsSubscriptionsMetric.Name {
+					receivedMetric = &m
+					break
+				}
+			}
+			require.Equal(t, 1, len(rm.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rm.ScopeMetrics))
+			require.Equal(t, 6, len(rm.ScopeMetrics[0].Metrics), "expected 6 Metrics, got %d", len(rm.ScopeMetrics[0].Metrics))
+			require.NotNil(t, receivedMetric, "%s metric not present", wsSubscriptionsMetric.Name)
+
+			metricdatatest.AssertEqual(t, wsSubscriptionsMetric, *receivedMetric, metricdatatest.IgnoreTimestamp())
+
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+
+			err = metricReader.Collect(context.Background(), &rm)
+			require.NoError(t, err)
+
+			wsSubscriptionsMetric = metricdata.Metrics{
+				Name:        "router.ws.subscriptions",
+				Description: "Number of active subscriptions",
+				Unit:        "",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: false,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgRouterClusterName.String(""),
+								otel.WgRouterConfigVersion.String(""),
+								otel.WgRouterVersion.String("dev"),
+							),
+							Value: 0,
+						},
+					},
+				},
+			}
+
+			for _, m := range rm.ScopeMetrics[0].Metrics {
+				if m.Name == wsSubscriptionsMetric.Name {
+					receivedMetric = &m
+					break
+				}
+			}
+			require.Equal(t, 1, len(rm.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rm.ScopeMetrics))
+			require.Equal(t, 6, len(rm.ScopeMetrics[0].Metrics), "expected 6 Metrics, got %d", len(rm.ScopeMetrics[0].Metrics))
+			require.NotNil(t, receivedMetric, "%s metric not present", wsSubscriptionsMetric.Name)
+
+			metricdatatest.AssertEqual(t, wsSubscriptionsMetric, *receivedMetric, metricdatatest.IgnoreTimestamp())
+
 			xEnv.WaitForTriggerCount(0, time.Second*5)
 			// we cannot guarantee that the client will receive the complete message for all subscriptions
 			// this is because only one subscription is completed by the server

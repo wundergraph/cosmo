@@ -42,16 +42,6 @@ func createMeasures(meter otelmetric.Meter) (*Measurements, error) {
 
 	h.counters[RequestError] = requestError
 
-	subscriptionCounter, err := meter.Int64Counter(
-		SubscriptionCounter,
-		SubscriptionCounterOptions...,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create subscription counter: %w", err)
-	}
-
-	h.counters[SubscriptionCounter] = subscriptionCounter
-
 	serverLatencyMeasure, err := meter.Float64Histogram(
 		ServerLatencyHistogram,
 		ServerLatencyHistogramOptions...,
@@ -91,6 +81,16 @@ func createMeasures(meter otelmetric.Meter) (*Measurements, error) {
 	}
 
 	h.upDownCounters[InFlightRequestsUpDownCounter] = inFlightRequestsGauge
+
+	subscriptionsGauge, err := meter.Int64UpDownCounter(
+		SubscriptionsUpDownCounter,
+		SubscriptionsUpDownCounterOptions...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create subscription counter: %w", err)
+	}
+
+	h.upDownCounters[SubscriptionsUpDownCounter] = subscriptionsGauge
 
 	return h, nil
 }
