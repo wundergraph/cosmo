@@ -367,6 +367,41 @@ describe('Field resolvability tests', () => {
       ),
     );
   });
+
+  test('that extensions do not affect resolvability', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphX, subgraphY, subgraphZ]);
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(
+        versionOneRouterDefinitions +
+          `
+        type Entity {
+          age: Int!
+          entityTwo: EntityTwo!
+          id: Int!
+          name: String!
+        }
+        
+        type EntityThree {
+          age: Int!
+          id: Int!
+          name: String!
+        }
+        
+        type EntityTwo {
+          age: Int!
+          entityThree: EntityThree!
+          id: Int!
+          name: String!
+        }
+
+        type Query {
+          entity: Entity!
+        }
+      `,
+      ),
+    );
+  });
 });
 
 const subgraphA: Subgraph = {
@@ -774,6 +809,75 @@ const subgraphW: Subgraph = {
     }
 
     type Entity @key(fields: "id") {
+      id: Int!
+    }
+  `),
+};
+
+const subgraphX: Subgraph = {
+  name: 'subgraph-x',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entity: Entity!
+    }
+    
+    extend type Entity {
+      name: String!
+    }
+
+    type Entity @key(fields: "id") {
+      id: Int!
+      entityTwo: EntityTwo!
+    }
+    
+    extend type EntityTwo {
+      name: String!
+    }
+    
+    type EntityTwo @key(fields: "id") {
+      id: Int!
+      age: Int!
+    }
+  `),
+};
+
+const subgraphY: Subgraph = {
+  name: 'subgraph-y',
+  url: '',
+  definitions: parse(`
+    type EntityTwo @key(fields: "id") {
+      id: Int!
+      entityThree: EntityThree!
+    }
+    
+    type EntityThree {
+      name: String!
+    }
+    
+    extend type EntityThree @key(fields: "id") {
+      id: Int!
+    }
+  `),
+};
+
+const subgraphZ: Subgraph = {
+  name: 'subgraph-z',
+  url: '',
+  definitions: parse(`
+    extend type Entity @key(fields: "id") {
+      id: Int!
+    }
+    
+    type Entity {
+      age: Int!
+    }
+    
+    extend type EntityThree {
+      age: Int!
+    }
+    
+    type EntityThree @key(fields: "id") {
       id: Int!
     }
   `),

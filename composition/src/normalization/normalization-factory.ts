@@ -190,7 +190,7 @@ import { InternalSubgraph, recordSubgraphName, Subgraph } from '../subgraph/subg
 import { invalidOverrideTargetSubgraphNameWarning } from '../warnings/warnings';
 import {
   consolidateAuthorizationDirectives,
-  upsertDirectiveAndSchemaDefinitions,
+  upsertDirectiveSchemaAndEntityDefinitions,
   upsertParentsAndChildren,
 } from './walkers';
 import {
@@ -597,17 +597,13 @@ export class NormalizationFactory {
       this.subgraphName,
       this.renamedParentTypeName,
     );
-    // TODO re-assess this line
-    if (node.kind === Kind.INTERFACE_TYPE_DEFINITION || node.kind === Kind.INTERFACE_TYPE_EXTENSION || !isEntity) {
+    const entityInterfaceData = this.entityInterfaces.get(this.renamedParentTypeName);
+    if (!entityInterfaceData) {
       return;
     }
-    const fieldSetData = getValueOrDefault(this.fieldSetDataByTypeName, this.originalParentTypeName, newFieldSetData);
-    this.extractKeyFieldSets(node, fieldSetData);
-    upsertEntityDataProperties(this.entityDataByTypeName, {
-      typeName: this.originalParentTypeName,
-      keyFieldSets: fieldSetData.isUnresolvableByKeyFieldSet.keys(),
-      ...(this.subgraphName ? { subgraphNames: [this.subgraphName] } : {}),
-    });
+    for (const fieldNode of node.fields || []) {
+      entityInterfaceData.interfaceFieldNames.add(fieldNode.name.value);
+    }
   }
 
   extractKeyFieldSets(node: ObjectLikeTypeNode, fieldSetData: FieldSetData) {
@@ -1361,7 +1357,7 @@ export class NormalizationFactory {
     allDirectiveDefinitions cannot be used to check for duplicate definitions, and another set (below) is required */
 
     // Collect any renamed root types
-    upsertDirectiveAndSchemaDefinitions(this, document);
+    upsertDirectiveSchemaAndEntityDefinitions(this, document);
     upsertParentsAndChildren(this, document);
     consolidateAuthorizationDirectives(this, document);
     for (const interfaceTypeName of this.interfaceTypeNamesWithAuthorizationDirectives) {
