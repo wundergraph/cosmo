@@ -2,11 +2,12 @@ package metric
 
 import (
 	"context"
+	"time"
+
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.uber.org/zap"
-	"time"
 )
 
 const (
@@ -130,6 +131,23 @@ func (h *OtlpMetricStore) MeasureRequestError(ctx context.Context, attr ...attri
 
 	if c, ok := h.measurements.counters[RequestError]; ok {
 		c.Add(ctx, 1, baseAttributes)
+	}
+}
+
+func (h *OtlpMetricStore) MeasureSubscriptionCount(count int) {
+	// skip counter decrements for now
+	if count == 0 {
+		return
+	}
+
+	var baseKeys []attribute.KeyValue
+
+	baseKeys = append(baseKeys, h.baseAttributes...)
+
+	baseAttributes := otelmetric.WithAttributes(baseKeys...)
+
+	if c, ok := h.measurements.counters[GraphqlSubscriptionCounter]; ok {
+		c.Add(context.TODO(), int64(count), baseAttributes)
 	}
 }
 

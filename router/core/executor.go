@@ -6,24 +6,21 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
-
-	"github.com/twmb/franz-go/pkg/kgo"
-	"github.com/twmb/franz-go/pkg/sasl/plain"
-	"github.com/wundergraph/cosmo/router/pkg/config"
-	"go.uber.org/zap"
 	"time"
 
 	"github.com/nats-io/nats.go"
+	"github.com/twmb/franz-go/pkg/kgo"
+	"github.com/twmb/franz-go/pkg/sasl/plain"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/introspection_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
+	"go.uber.org/zap"
 )
 
 type ExecutorConfigurationBuilder struct {
@@ -43,7 +40,9 @@ type Executor struct {
 	RenameTypeNames []resolve.RenameTypeName
 }
 
-func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *nodev1.RouterConfig, routerEngineConfig *RouterEngineConfiguration, pubSubProviders *EnginePubSubProviders, reporter resolve.Reporter) (*Executor, error) {
+func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *nodev1.RouterConfig,
+	routerEngineConfig *RouterEngineConfiguration, pubSubProviders *EnginePubSubProviders,
+	reporter resolve.Reporter, metricer resolve.Metricer) (*Executor, error) {
 	planConfig, err := b.buildPlannerConfiguration(ctx, routerConfig, routerEngineConfig, pubSubProviders)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build planner configuration: %w", err)
@@ -53,6 +52,7 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *
 		MaxConcurrency:               routerEngineConfig.Execution.MaxConcurrentResolvers,
 		Debug:                        routerEngineConfig.Execution.Debug.EnableResolverDebugging,
 		Reporter:                     reporter,
+		Metricer:                     metricer,
 		PropagateSubgraphErrors:      routerEngineConfig.SubgraphErrorPropagation.Enabled,
 		PropagateSubgraphStatusCodes: routerEngineConfig.SubgraphErrorPropagation.PropagateStatusCodes,
 		RewriteSubgraphErrorPaths:    routerEngineConfig.SubgraphErrorPropagation.RewritePaths,

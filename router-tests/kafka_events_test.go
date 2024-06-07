@@ -19,6 +19,11 @@ import (
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 )
 
 func TestLocalKafka(t *testing.T) {
@@ -52,12 +57,36 @@ func TestKafkaEvents(t *testing.T) {
 		require.NoError(t, kafkaContainer.Terminate(ctx))
 	})
 
+	subscriptionCountMetric := metricdata.Metrics{
+		Name:        "router.graphql.subscriptions",
+		Description: "Total number of created graphql subscriptions",
+		Unit:        "",
+		Data: metricdata.Sum[int64]{
+			Temporality: metricdata.CumulativeTemporality,
+			IsMonotonic: true,
+			DataPoints: []metricdata.DataPoint[int64]{
+				{
+					Attributes: attribute.NewSet(
+						otel.WgFederatedGraphID.String("graph"),
+						otel.WgRouterClusterName.String(""),
+						otel.WgRouterConfigVersion.String(""),
+						otel.WgRouterVersion.String("dev"),
+					),
+					Value: 1,
+				},
+			},
+		},
+	}
+
 	t.Run("subscribe async", func(t *testing.T) {
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
+		metricReader := metric.NewManualReader()
+
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds: seeds,
+			KafkaSeeds:   seeds,
+			MetricReader: metricReader,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)
@@ -105,6 +134,11 @@ func TestKafkaEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
 
+			var rm metricdata.ResourceMetrics
+			err = metricReader.Collect(ctx, &rm)
+			require.NoError(t, err)
+			metricdatatest.AssertEqual(t, subscriptionCountMetric, rm.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
+
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
 			xEnv.WaitForMessagesSent(1, time.Second*10)
@@ -117,8 +151,11 @@ func TestKafkaEvents(t *testing.T) {
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
+		metricReader := metric.NewManualReader()
+
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds: seeds,
+			KafkaSeeds:   seeds,
+			MetricReader: metricReader,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)
@@ -174,6 +211,11 @@ func TestKafkaEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
 
+			var rm metricdata.ResourceMetrics
+			err = metricReader.Collect(ctx, &rm)
+			require.NoError(t, err)
+			metricdatatest.AssertEqual(t, subscriptionCountMetric, rm.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
+
 			produceKafkaMessage(t, xEnv, topics[0], ``) // Empty message
 			xEnv.WaitForMessagesSent(1, time.Second*10)
 
@@ -203,8 +245,11 @@ func TestKafkaEvents(t *testing.T) {
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
+		metricReader := metric.NewManualReader()
+
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds: seeds,
+			KafkaSeeds:   seeds,
+			MetricReader: metricReader,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)
@@ -265,6 +310,11 @@ func TestKafkaEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
 
+			var rm metricdata.ResourceMetrics
+			err = metricReader.Collect(ctx, &rm)
+			require.NoError(t, err)
+			metricdatatest.AssertEqual(t, subscriptionCountMetric, rm.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
+
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
 			xEnv.WaitForMessagesSent(2, time.Second*10)
@@ -277,8 +327,11 @@ func TestKafkaEvents(t *testing.T) {
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
+		metricReader := metric.NewManualReader()
+
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds: seeds,
+			KafkaSeeds:   seeds,
+			MetricReader: metricReader,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)
@@ -349,6 +402,11 @@ func TestKafkaEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
 
+			var rm metricdata.ResourceMetrics
+			err = metricReader.Collect(ctx, &rm)
+			require.NoError(t, err)
+			metricdatatest.AssertEqual(t, subscriptionCountMetric, rm.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
+
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 			produceKafkaMessage(t, xEnv, topics[1], `{"__typename":"Employee","id": 2,"update":{"name":"foo"}}`)
 
@@ -373,8 +431,11 @@ func TestKafkaEvents(t *testing.T) {
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
+		metricReader := metric.NewManualReader()
+
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds: seeds,
+			KafkaSeeds:   seeds,
+			MetricReader: metricReader,
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.EnableWebSocketEpollKqueue = false
 				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 100
@@ -426,6 +487,11 @@ func TestKafkaEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
 
+			var rm metricdata.ResourceMetrics
+			err = metricReader.Collect(ctx, &rm)
+			require.NoError(t, err)
+			metricdatatest.AssertEqual(t, subscriptionCountMetric, rm.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
+
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
 			xEnv.WaitForMessagesSent(1, time.Second*10)
@@ -438,8 +504,11 @@ func TestKafkaEvents(t *testing.T) {
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
+		metricReader := metric.NewManualReader()
+
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds: seeds,
+			KafkaSeeds:   seeds,
+			MetricReader: metricReader,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)
@@ -482,6 +551,11 @@ func TestKafkaEvents(t *testing.T) {
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
+
+			var rm metricdata.ResourceMetrics
+			err = metricReader.Collect(ctx, &rm)
+			require.NoError(t, err)
+			metricdatatest.AssertEqual(t, subscriptionCountMetric, rm.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 

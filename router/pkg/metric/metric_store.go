@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go.uber.org/zap"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
+	"go.uber.org/zap"
 )
 
 // Server HTTP metrics.
@@ -20,6 +20,7 @@ const (
 	ResponseContentLengthCounter  = "router.http.response.content_length"       // Outgoing response bytes total
 	InFlightRequestsUpDownCounter = "router.http.requests.in_flight"            // Number of requests in flight
 	RequestError                  = "router.http.requests.error"                // Total request error count
+	GraphqlSubscriptionCounter    = "router.graphql.subscriptions"              // Number of graphql subscriptions
 
 	unitBytes        = "bytes"
 	unitMilliseconds = "ms"
@@ -35,6 +36,10 @@ var (
 	RequestErrorCounterDescription = "Total number of failed request"
 	RequestErrorCounterOptions     = []otelmetric.Int64CounterOption{
 		otelmetric.WithDescription(RequestErrorCounterDescription),
+	}
+	GraphqlSubscriptionCounterDescription = "Total number of created graphql subscriptions"
+	GraphqlSubscriptionCounterOptions     = []otelmetric.Int64CounterOption{
+		otelmetric.WithDescription(GraphqlSubscriptionCounterDescription),
 	}
 	ServerLatencyHistogramDescription = "Server latency in milliseconds"
 	ServerLatencyHistogramOptions     = []otelmetric.Float64HistogramOption{
@@ -82,6 +87,7 @@ type (
 		MeasureResponseSize(ctx context.Context, size int64, attr ...attribute.KeyValue)
 		MeasureLatency(ctx context.Context, requestStartTime time.Time, attr ...attribute.KeyValue)
 		MeasureRequestError(ctx context.Context, attr ...attribute.KeyValue)
+		MeasureSubscriptionCount(count int)
 		Flush(ctx context.Context) error
 	}
 )
@@ -157,6 +163,10 @@ func (h *Metrics) MeasureLatency(ctx context.Context, requestStartTime time.Time
 func (h *Metrics) MeasureRequestError(ctx context.Context, attr ...attribute.KeyValue) {
 	h.otlpRequestMetrics.MeasureRequestError(ctx, attr...)
 	h.promRequestMetrics.MeasureRequestError(ctx, attr...)
+}
+
+func (h *Metrics) MeasureSubscriptionCount(count int) {
+	h.otlpRequestMetrics.MeasureSubscriptionCount(count)
 }
 
 // Flush flushes the metrics to the backend synchronously.

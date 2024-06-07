@@ -2,6 +2,7 @@ package metric
 
 import (
 	"fmt"
+
 	otelmetric "go.opentelemetry.io/otel/metric"
 )
 
@@ -40,6 +41,16 @@ func createMeasures(meter otelmetric.Meter) (*Measurements, error) {
 	}
 
 	h.counters[RequestError] = requestError
+
+	subscriptionCount, err := meter.Int64Counter(
+		GraphqlSubscriptionCounter,
+		GraphqlSubscriptionCounterOptions...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create subscription counter: %w", err)
+	}
+
+	h.counters[GraphqlSubscriptionCounter] = subscriptionCount
 
 	serverLatencyMeasure, err := meter.Float64Histogram(
 		ServerLatencyHistogram,

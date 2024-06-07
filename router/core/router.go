@@ -1245,7 +1245,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	}
 	ro.pubSubProviders = pubSubProviders
 
-	executor, err := ecb.Build(ctx, routerConfig, routerEngineConfig, pubSubProviders, r.WebsocketStats)
+	executor, err := ecb.Build(ctx, routerConfig, routerEngineConfig, pubSubProviders, r.WebsocketStats, ro.metricStore)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
 	}

@@ -2,11 +2,12 @@ package metric
 
 import (
 	"context"
+	"time"
+
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.uber.org/zap"
-	"time"
 )
 
 const (
@@ -131,6 +132,10 @@ func (h *PromMetricStore) MeasureRequestError(ctx context.Context, attr ...attri
 	if c, ok := h.measurements.counters[RequestError]; ok {
 		c.Add(ctx, 1, baseAttributes)
 	}
+}
+
+func (h *PromMetricStore) MeasureSubscriptionCount(count int) {
+	// noop for now
 }
 
 func (h *PromMetricStore) Flush(ctx context.Context) error {
