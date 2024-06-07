@@ -158,6 +158,7 @@ enum DataSourceKind {
 message TypeField {
   string type_name = 1;
   repeated string field_names = 2;
+  repeated string external_field_names = 3;
 }
 
 message RequiredField {

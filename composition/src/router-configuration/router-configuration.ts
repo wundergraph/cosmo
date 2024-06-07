@@ -61,6 +61,7 @@ export type ConfigurationData = {
   typeName: string;
   entityInterfaceConcreteTypeNames?: Set<string>;
   events?: EventConfiguration[];
+  externalFieldNames?: Set<string>;
   isInterfaceObject?: boolean;
   provides?: RequiredFieldConfiguration[];
   keys?: RequiredFieldConfiguration[];
