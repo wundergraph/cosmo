@@ -45,12 +45,13 @@ type UsageReport struct {
 
 func NewWebSocketStats(ctx context.Context, metrics metric.Store, logger *zap.Logger, reportWebSocketConnections bool) *WebSocketStats {
 	stats := &WebSocketStats{
-		ctx:         ctx,
-		logger:      logger,
-		metrics:     metrics,
-		update:      make(chan struct{}),
-		mu:          sync.Mutex{},
-		subscribers: map[context.Context]chan *UsageReport{},
+		ctx:                        ctx,
+		logger:                     logger,
+		metrics:                    metrics,
+		update:                     make(chan struct{}),
+		mu:                         sync.Mutex{},
+		subscribers:                map[context.Context]chan *UsageReport{},
+		reportWebSocketConnections: reportWebSocketConnections,
 	}
 	go stats.run(ctx)
 	return stats
@@ -76,13 +77,18 @@ func (s *WebSocketStats) GetReport() *UsageReport {
 }
 
 func (s *WebSocketStats) run(ctx context.Context) {
-	tickReport := time.NewTicker(time.Second * 5)
-	defer tickReport.Stop()
+	var tickChan <-chan time.Time
+	if s.reportWebSocketConnections {
+		tickReport := time.NewTicker(time.Second * 5)
+		defer tickReport.Stop()
+		tickChan = tickReport.C
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-tickReport.C:
+		case <-tickChan:
 			s.reportConnections()
 		case <-s.update:
 			s.mu.Lock()
@@ -103,10 +109,6 @@ func (s *WebSocketStats) run(ctx context.Context) {
 }
 
 func (s *WebSocketStats) reportConnections() {
-	if !s.reportWebSocketConnections {
-		return
-	}
-
 	s.logger.Info("WebSocket Stats",
 		zap.Uint64("open_connections", s.connections.Load()),
 		zap.Uint64("active_subscriptions", s.subscriptions.Load()),
@@ -139,7 +141,7 @@ func (s *WebSocketStats) SubscriptionCountInc(count int) {
 
 	s.subscriptions.Add(uint64(count))
 	s.metrics.MeasureSubscriptionCount(s.ctx, int64(count))
-	//s.metrics.Flush(s.ctx)
+	s.metrics.Flush(s.ctx)
 	s.publish()
 }
 
@@ -150,7 +152,7 @@ func (s *WebSocketStats) SubscriptionCountDec(count int) {
 
 	s.subscriptions.Sub(uint64(count))
 	s.metrics.MeasureSubscriptionCount(s.ctx, int64(-count))
-	//s.metrics.Flush(s.ctx)
+	s.metrics.Flush(s.ctx)
 	s.publish()
 }
 
