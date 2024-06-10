@@ -51,9 +51,10 @@ type (
 		kafka map[string]pubsub_datasource.KafkaPubSub
 	}
 
-	// server is the swappable implementation of the Router which is a HTTP server with middlewares.
-	// Everytime a schema is updated, a new server is created. For feature flags, a separate mux is created and
-	// dynamically switched based on the feature flag header or cookie. All server fields are shared between all.
+	// server is the swappable implementation of the Router which is an HTTP server with middlewares.
+	// Everytime a schema is updated, the old server is shutdown and a new server is created.
+	// For feature flags, a separate mux is created and dynamically switched based on the feature flag header or cookie.
+	// All server fields are shared between all feature muxes.
 	server struct {
 		Config
 		httpServer         *http.Server
