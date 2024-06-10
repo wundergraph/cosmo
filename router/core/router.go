@@ -2,13 +2,22 @@ package core
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
 	"fmt"
+	br "github.com/andybalholm/brotli"
+	"github.com/dgraph-io/ristretto"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/wundergraph/cosmo/router/internal/docker"
+	"github.com/wundergraph/cosmo/router/internal/graphiql"
+	rjwt "github.com/wundergraph/cosmo/router/internal/jwt"
+	"github.com/wundergraph/cosmo/router/internal/recoveryhandler"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"io"
-
 	"net"
 	"net/http"
 	"net/url"
@@ -16,58 +25,32 @@ import (
 	"sync"
 	"time"
 
-	"github.com/nats-io/nats.go"
-	"github.com/nats-io/nats.go/jetstream"
-
 	"github.com/nats-io/nuid"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
-	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
-
 	"github.com/redis/go-redis/v9"
 
-	"github.com/wundergraph/cosmo/router/internal/recoveryhandler"
-	"github.com/wundergraph/cosmo/router/internal/requestlogger"
+	"connectrpc.com/connect"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/health"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
-	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
-
-	"connectrpc.com/connect"
-	"github.com/golang-jwt/jwt/v5"
 	brotli "go.withmatt.com/connect-brotli"
 
-	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
+	"github.com/mitchellh/mapstructure"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/internal/controlplane/selfregister"
 	"github.com/wundergraph/cosmo/router/internal/debug"
-	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
-	rjwt "github.com/wundergraph/cosmo/router/internal/jwt"
-
-	br "github.com/andybalholm/brotli"
-	"github.com/dgraph-io/ristretto"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/mitchellh/mapstructure"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"github.com/wundergraph/cosmo/router/internal/retrytransport"
+	"github.com/wundergraph/cosmo/router/internal/stringsx"
 	"go.opentelemetry.io/otel/attribute"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	oteltrace "go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/internal/graphiql"
-	"github.com/wundergraph/cosmo/router/internal/retrytransport"
-	"github.com/wundergraph/cosmo/router/internal/stringsx"
 )
 
 type IPAnonymizationMethod string
@@ -133,11 +116,6 @@ type (
 		ClientAuth *TlsClientAuthConfig
 	}
 
-	EnginePubSubProviders struct {
-		nats  map[string]pubsub_datasource.NatsPubSub
-		kafka map[string]pubsub_datasource.KafkaPubSub
-	}
-
 	// Config defines the configuration options for the Router.
 	Config struct {
 		clusterName              string
@@ -150,8 +128,8 @@ type (
 		promMeterProvider        *sdkmetric.MeterProvider
 		gqlMetricsExporter       graphqlmetrics.SchemaUsageExporter
 		corsOptions              *cors.Config
-		routerConfig             *nodev1.RouterConfig
 		gracePeriod              time.Duration
+		routerConfig             *nodev1.RouterConfig
 		awsLambda                bool
 		shutdown                 bool
 		bootstrapped             bool
@@ -214,30 +192,9 @@ type (
 
 		subgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
 	}
-
-	Server interface {
-		HttpServer() *http.Server
-		HealthChecks() health.Checker
-		BaseURL() string
-	}
-
-	// server is the main router instance.
-	server struct {
-		Config
-		httpServer      *http.Server
-		metricStore     rmetric.Store
-		routerConfig    *nodev1.RouterConfig
-		healthChecks    health.Checker
-		pubSubProviders *EnginePubSubProviders
-	}
-
 	// Option defines the method to customize server.
 	Option func(svr *Router)
 )
-
-func (s *server) BaseURL() string {
-	return s.baseURL
-}
 
 // NewRouter creates a new Router instance. Router.Start() must be called to start the server.
 // Alternatively, use Router.NewServer() to create a new server instance without starting it.
@@ -357,6 +314,8 @@ func NewRouter(opts ...Option) (*Router, error) {
 		// Required for Trace Context propagation
 		"traceparent",
 		"tracestate",
+		// Required for feature flags
+		"x-feature-flag",
 	}
 
 	defaultMethods := []string{
@@ -498,106 +457,6 @@ func NewRouter(opts ...Option) (*Router, error) {
 	}
 
 	return r, nil
-}
-
-func (r *Router) configureSubgraphOverwrites(cfg *nodev1.RouterConfig) ([]Subgraph, error) {
-	subgraphs := make([]Subgraph, 0, len(cfg.Subgraphs))
-	for _, sg := range cfg.Subgraphs {
-
-		subgraph := Subgraph{
-			Id:   sg.Id,
-			Name: sg.Name,
-		}
-
-		// Validate subgraph url. Note that it can be empty if the subgraph is virtual
-		parsedURL, err := url.Parse(sg.RoutingUrl)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse subgraph url '%s': %w", sg.RoutingUrl, err)
-		}
-
-		subgraph.Url = parsedURL
-
-		overrideURL, ok := r.overrideRoutingURLConfiguration.Subgraphs[sg.Name]
-		overrideSubgraph, overrideSubgraphOk := r.overrides.Subgraphs[sg.Name]
-
-		var overrideSubscriptionURL string
-		var overrideSubscriptionProtocol *common.GraphQLSubscriptionProtocol
-		var overrideSubscriptionWebsocketSubprotocol *common.GraphQLWebsocketSubprotocol
-
-		if overrideSubgraphOk {
-			if overrideSubgraph.RoutingURL != "" {
-				overrideURL = overrideSubgraph.RoutingURL
-			}
-			if overrideSubgraph.SubscriptionURL != "" {
-				overrideSubscriptionURL = overrideSubgraph.SubscriptionURL
-				_, err := url.Parse(overrideSubscriptionURL)
-				if err != nil {
-					return nil, fmt.Errorf("failed to parse override url '%s': %w", overrideSubscriptionURL, err)
-				}
-			}
-			if overrideSubgraph.SubscriptionProtocol != "" {
-				switch overrideSubgraph.SubscriptionProtocol {
-				case "ws":
-					overrideSubscriptionProtocol = common.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_WS.Enum()
-				case "sse":
-					overrideSubscriptionProtocol = common.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE.Enum()
-				case "sse_post":
-					overrideSubscriptionProtocol = common.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST.Enum()
-				default:
-					return nil, fmt.Errorf("invalid subscription protocol '%s'", overrideSubgraph.SubscriptionProtocol)
-				}
-			}
-			if overrideSubgraph.SubscriptionWebsocketSubprotocol != "" {
-				switch overrideSubgraph.SubscriptionWebsocketSubprotocol {
-				case "graphql-ws":
-					overrideSubscriptionWebsocketSubprotocol = common.GraphQLWebsocketSubprotocol_GRAPHQL_WEBSOCKET_SUBPROTOCOL_WS.Enum()
-				case "graphql-transport-ws":
-					overrideSubscriptionWebsocketSubprotocol = common.GraphQLWebsocketSubprotocol_GRAPHQL_WEBSOCKET_SUBPROTOCOL_TRANSPORT_WS.Enum()
-				case "auto":
-					overrideSubscriptionWebsocketSubprotocol = common.GraphQLWebsocketSubprotocol_GRAPHQL_WEBSOCKET_SUBPROTOCOL_AUTO.Enum()
-				default:
-					return nil, fmt.Errorf("invalid subscription websocket subprotocol '%s'", overrideSubgraph.SubscriptionWebsocketSubprotocol)
-				}
-			}
-		}
-
-		// check if the subgraph is overridden
-		if ok || overrideSubgraphOk {
-			if overrideURL != "" {
-				parsedURL, err := url.Parse(overrideURL)
-				if err != nil {
-					return nil, fmt.Errorf("failed to parse override url '%s': %w", overrideURL, err)
-				}
-
-				subgraph.Url = parsedURL
-			}
-
-			// Override datasource urls
-			for _, conf := range cfg.EngineConfig.DatasourceConfigurations {
-				if conf.Id == sg.Id {
-					if overrideURL != "" {
-						conf.CustomGraphql.Fetch.Url.StaticVariableContent = overrideURL
-						sg.RoutingUrl = overrideURL
-					}
-					if overrideSubscriptionURL != "" {
-						conf.CustomGraphql.Subscription.Url.StaticVariableContent = overrideSubscriptionURL
-					}
-					if overrideSubscriptionProtocol != nil {
-						conf.CustomGraphql.Subscription.Protocol = overrideSubscriptionProtocol
-					}
-					if overrideSubscriptionWebsocketSubprotocol != nil {
-						conf.CustomGraphql.Subscription.WebsocketSubprotocol = overrideSubscriptionWebsocketSubprotocol
-					}
-
-					break
-				}
-			}
-		}
-
-		subgraphs = append(subgraphs, subgraph)
-	}
-
-	return subgraphs, nil
 }
 
 // UpdateServer creates a new server and swaps the active server with the new one. The old server is shutdown gracefully.
@@ -947,208 +806,56 @@ func (r *Router) Start(ctx context.Context) error {
 	return nil
 }
 
-func (r *Router) buildPubSubConfiguration(ctx context.Context, routerCfg *nodev1.RouterConfig, routerEngineCfg *RouterEngineConfiguration) (*EnginePubSubProviders, error) {
-
-	natsPubSubByProviderID := make(map[string]pubsub_datasource.NatsPubSub)
-	kafkaPubSubByProviderID := make(map[string]pubsub_datasource.KafkaPubSub)
-
-	datasourceConfigurations := routerCfg.EngineConfig.GetDatasourceConfigurations()
-	for _, datasourceConfiguration := range datasourceConfigurations {
-		if datasourceConfiguration.CustomEvents == nil {
-			continue
-		}
-
-		for _, eventConfiguration := range datasourceConfiguration.GetCustomEvents().GetNats() {
-
-			providerID := eventConfiguration.EngineEventConfiguration.GetProviderId()
-			// if this source name's provider has already been initiated, do not try to initiate again
-			_, ok := natsPubSubByProviderID[providerID]
-			if ok {
-				continue
-			}
-
-			for _, eventSource := range routerEngineCfg.Events.Providers.Nats {
-				if eventSource.ID == eventConfiguration.EngineEventConfiguration.GetProviderId() {
-					options, err := buildNatsOptions(eventSource, r.logger)
-					if err != nil {
-						return nil, fmt.Errorf("failed to build options for Nats provider with ID \"%s\": %w", providerID, err)
-					}
-					natsConnection, err := nats.Connect(eventSource.URL, options...)
-					if err != nil {
-						return nil, fmt.Errorf("failed to create connection for Nats provider with ID \"%s\": %w", providerID, err)
-					}
-					js, err := jetstream.New(natsConnection)
-					if err != nil {
-						return nil, err
-					}
-
-					natsPubSubByProviderID[providerID] = pubsubNats.NewConnector(r.logger, natsConnection, js).New(ctx)
-
-					break
-				}
-			}
-		}
-
-		for _, eventConfiguration := range datasourceConfiguration.GetCustomEvents().GetKafka() {
-
-			providerID := eventConfiguration.EngineEventConfiguration.GetProviderId()
-			// if this source name's provider has already been initiated, do not try to initiate again
-			_, ok := kafkaPubSubByProviderID[providerID]
-			if ok {
-				continue
-			}
-
-			for _, eventSource := range routerEngineCfg.Events.Providers.Kafka {
-
-				if eventSource.ID == providerID {
-					options, err := buildKafkaOptions(eventSource)
-					if err != nil {
-						return nil, fmt.Errorf("failed to build options for Kafka provider with ID \"%s\": %w", providerID, err)
-					}
-					ps, err := kafka.NewConnector(r.logger, options)
-					if err != nil {
-						return nil, fmt.Errorf("failed to create connection for Kafka provider with ID \"%s\": %w", providerID, err)
-					}
-
-					kafkaPubSubByProviderID[providerID] = ps.New(ctx)
-
-					break
-				}
-			}
-		}
-
-	}
-
-	return &EnginePubSubProviders{
-		nats:  natsPubSubByProviderID,
-		kafka: kafkaPubSubByProviderID,
-	}, nil
-}
-
 // newServer creates a new server instance.
 // All stateful data is copied from the Router over to the new server instance. Not safe for concurrent use.
 func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfig) (*server, error) {
-	subgraphs, err := r.configureSubgraphOverwrites(routerConfig)
-	if err != nil {
-		return nil, err
+	s := &server{
+		Config:             r.Config,
+		metricStore:        rmetric.NewNoopMetrics(),
+		websocketStats:     r.WebsocketStats,
+		executionTransport: newHTTPTransport(r.subgraphTransportOptions),
+		pubSubProviders: &EnginePubSubProviders{
+			nats:  map[string]pubsub_datasource.NatsPubSub{},
+			kafka: map[string]pubsub_datasource.KafkaPubSub{},
+		},
 	}
 
-	ro := &server{
-		routerConfig: routerConfig,
-		Config:       r.Config,
-		metricStore:  rmetric.NewNoopMetrics(),
-	}
-
-	baseAttributes := []attribute.KeyValue{
-		otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
+	baseOtelAttributes := []attribute.KeyValue{
 		otel.WgRouterVersion.String(Version),
 		otel.WgRouterClusterName.String(r.clusterName),
 	}
 
-	if r.graphApiToken != "" {
-		claims, err := rjwt.ExtractFederatedGraphTokenClaims(r.graphApiToken)
+	if s.graphApiToken != "" {
+		claims, err := rjwt.ExtractFederatedGraphTokenClaims(s.graphApiToken)
 		if err != nil {
 			return nil, err
 		}
-		baseAttributes = append(baseAttributes, otel.WgFederatedGraphID.String(claims.FederatedGraphID))
+		baseOtelAttributes = append(baseOtelAttributes, otel.WgFederatedGraphID.String(claims.FederatedGraphID))
 	}
 
-	recoveryHandler := recoveryhandler.New(recoveryhandler.WithLogger(r.logger), recoveryhandler.WithPrintStack())
-	var traceHandler *rtrace.Middleware
-	if r.traceConfig.Enabled {
-		spanStartOptions := []oteltrace.SpanStartOption{
-			oteltrace.WithAttributes(baseAttributes...),
-			oteltrace.WithAttributes(
-				otel.RouterServerAttribute,
-				otel.WgRouterRootSpan.Bool(true),
-			),
-		}
+	s.baseOtelAttributes = baseOtelAttributes
 
-		if r.traceConfig.WithNewRoot {
-			spanStartOptions = append(spanStartOptions, oteltrace.WithNewRoot())
-		}
-
-		traceHandler = rtrace.NewMiddleware(
-			r.traceConfig.SpanAttributesMapper,
-			otelhttp.WithSpanOptions(spanStartOptions...),
-			otelhttp.WithFilter(rtrace.CommonRequestFilter),
-			otelhttp.WithFilter(rtrace.PrefixRequestFilter(
-				[]string{r.healthCheckPath, r.readinessCheckPath, r.livenessCheckPath}),
+	// Prometheus metricStore rely on OTLP metricStore
+	if s.metricConfig.IsEnabled() {
+		m, err := rmetric.NewStore(
+			rmetric.WithPromMeterProvider(s.promMeterProvider),
+			rmetric.WithOtlpMeterProvider(s.otlpMeterProvider),
+			rmetric.WithLogger(s.logger),
+			rmetric.WithProcessStartTime(s.processStartTime),
+			rmetric.WithRouterRuntimeMetrics(s.metricConfig.OpenTelemetry.RouterRuntime),
+			rmetric.WithAttributes(append(s.baseOtelAttributes,
+				// We use the base router config version to identify the router graph composition
+				// Feature flags relate to the base router config version
+				otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
+			)...,
 			),
-			// Disable built-in metricStore through NoopMeterProvider
-			otelhttp.WithMeterProvider(sdkmetric.NewMeterProvider()),
-			otelhttp.WithSpanNameFormatter(SpanNameFormatter),
-			otelhttp.WithTracerProvider(r.tracerProvider),
 		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create metric handler: %w", err)
+		}
+
+		s.metricStore = m
 	}
-
-	// Request logger
-	requestLoggerOpts := []requestlogger.Option{
-		requestlogger.WithDefaultOptions(),
-		requestlogger.WithNoTimeField(),
-		requestlogger.WithContext(func(request *http.Request) []zapcore.Field {
-			return []zapcore.Field{
-				zap.String("config_version", routerConfig.GetVersion()),
-				zap.String("request_id", middleware.GetReqID(request.Context())),
-			}
-		}),
-	}
-
-	if r.ipAnonymization.Enabled {
-		requestLoggerOpts = append(requestLoggerOpts, requestlogger.WithAnonymization(&requestlogger.IPAnonymizationConfig{
-			Enabled: r.ipAnonymization.Enabled,
-			Method:  requestlogger.IPAnonymizationMethod(r.ipAnonymization.Method),
-		}))
-	}
-
-	requestLogger := requestlogger.New(
-		r.logger,
-		requestLoggerOpts...,
-	)
-
-	httpRouter := chi.NewRouter()
-	httpRouter.Use(recoveryHandler)
-	httpRouter.Use(middleware.RequestSize(int64(r.routerTrafficConfig.MaxRequestBodyBytes)))
-	httpRouter.Use(middleware.Compress(5, CustomCompressibleContentTypes...))
-
-	brCompressor := middleware.NewCompressor(5, CustomCompressibleContentTypes...)
-	brCompressor.SetEncoder("br", func(w io.Writer, level int) io.Writer {
-		return br.NewWriterLevel(w, level)
-	})
-	httpRouter.Use(brCompressor.Handler)
-
-	httpRouter.Use(func(h http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			r = r.WithContext(withSubgraphs(r.Context(), subgraphs))
-			h.ServeHTTP(w, r)
-		})
-	})
-
-	httpRouter.Use(middleware.RequestID)
-	httpRouter.Use(middleware.RealIP)
-
-	// Register the trace middleware before the request logger, so we can log the trace ID
-	if traceHandler != nil {
-		httpRouter.Use(traceHandler.Handler)
-	}
-	httpRouter.Use(requestLogger)
-	httpRouter.Use(cors.New(*r.corsOptions))
-
-	if r.healthChecks != nil {
-		ro.healthChecks = r.healthChecks
-	} else {
-		ro.healthChecks = health.New(&health.Options{
-			Logger: r.logger,
-		})
-	}
-
-	httpRouter.Get(r.healthCheckPath, ro.healthChecks.Liveness())
-	httpRouter.Get(r.livenessCheckPath, ro.healthChecks.Liveness())
-	httpRouter.Get(r.readinessCheckPath, ro.healthChecks.Readiness())
-
-	var (
-		planCache ExecutionPlanCache
-	)
 
 	// when an execution plan was generated, which can be quite expensive, we want to cache it
 	// this means that we can hash the input and cache the generated plan
@@ -1156,241 +863,53 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	// the engine is smart enough to first do normalization and then hash the input
 	// this means that we can cache the normalized input and don't have to worry about
 	// different inputs that would generate the same execution plan
-	if r.engineExecutionConfiguration.ExecutionPlanCacheSize > 0 {
+	if s.engineExecutionConfiguration.ExecutionPlanCacheSize > 0 {
 		planCacheConfig := &ristretto.Config{
-			MaxCost:     r.engineExecutionConfiguration.ExecutionPlanCacheSize,
-			NumCounters: r.engineExecutionConfiguration.ExecutionPlanCacheSize * 10,
+			MaxCost:     s.engineExecutionConfiguration.ExecutionPlanCacheSize,
+			NumCounters: s.engineExecutionConfiguration.ExecutionPlanCacheSize * 10,
 			BufferItems: 64,
 		}
-		planCache, err = ristretto.NewCache(planCacheConfig)
+
+		planCache, err := ristretto.NewCache(planCacheConfig)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create planner cache: %w", err)
 		}
+
+		s.executionPlanCache = planCache
 	} else {
-		planCache = NewNoopExecutionPlanCache()
+		s.executionPlanCache = NewNoopExecutionPlanCache()
 	}
 
-	if r.localhostFallbackInsideDocker && docker.Inside() {
-		r.logger.Info("localhost fallback enabled, connections that fail to connect to localhost will be retried using host.docker.internal")
-	}
-
-	// Prometheus metricStore rely on OTLP metricStore
-	if r.metricConfig.IsEnabled() {
-		m, err := rmetric.NewStore(
-			rmetric.WithPromMeterProvider(r.promMeterProvider),
-			rmetric.WithOtlpMeterProvider(r.otlpMeterProvider),
-			rmetric.WithLogger(r.logger),
-			rmetric.WithProcessStartTime(r.processStartTime),
-			rmetric.WithRouterRuntimeMetrics(r.metricConfig.OpenTelemetry.RouterRuntime),
-			rmetric.WithAttributes(baseAttributes...),
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create metric handler: %w", err)
-		}
-
-		ro.metricStore = m
-	}
-
-	routerMetrics := NewRouterMetrics(&routerMetricsConfig{
-		metrics:             ro.metricStore,
-		gqlMetricsExporter:  r.gqlMetricsExporter,
-		exportEnabled:       r.graphqlMetricsConfig.Enabled,
-		routerConfigVersion: routerConfig.GetVersion(),
-		logger:              r.logger,
-	})
-
-	transport := newHTTPTransport(r.subgraphTransportOptions)
-
-	ecb := &ExecutorConfigurationBuilder{
-		introspection: r.introspection,
-		baseURL:       r.baseURL,
-		transport:     transport,
-		logger:        r.logger,
-		includeInfo:   r.graphqlMetricsConfig.Enabled,
-		transportOptions: &TransportOptions{
-			RequestTimeout: r.subgraphTransportOptions.RequestTimeout,
-			PreHandlers:    r.preOriginHandlers,
-			PostHandlers:   r.postOriginHandlers,
-			MetricStore:    ro.metricStore,
-			RetryOptions: retrytransport.RetryOptions{
-				Enabled:       r.retryOptions.Enabled,
-				MaxRetryCount: r.retryOptions.MaxRetryCount,
-				MaxDuration:   r.retryOptions.MaxDuration,
-				Interval:      r.retryOptions.Interval,
-				ShouldRetry: func(err error, req *http.Request, resp *http.Response) bool {
-					return retrytransport.IsRetryableError(err, resp) && !isMutationRequest(req.Context())
-				},
-			},
-			TracerProvider:                r.tracerProvider,
-			AttributesMapper:              r.traceConfig.SpanAttributesMapper,
-			LocalhostFallbackInsideDocker: r.localhostFallbackInsideDocker,
-			Logger:                        r.logger,
-		},
-	}
-
-	routerEngineConfig := &RouterEngineConfiguration{
-		Execution:                r.engineExecutionConfiguration,
-		Headers:                  r.headerRules,
-		Events:                   r.eventsConfig,
-		SubgraphErrorPropagation: r.subgraphErrorPropagation,
-	}
-
-	if r.developmentMode && r.engineExecutionConfiguration.EnableRequestTracing && r.graphApiToken == "" {
-		r.logger.Warn("Advanced Request Tracing (ART) is enabled in development mode but requires a graph token to work in production. For more information see https://cosmo-docs.wundergraph.com/router/advanced-request-tracing-art")
-	}
-
-	pubSubProviders, err := r.buildPubSubConfiguration(ctx, routerConfig, routerEngineConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build pubsub configuration: %w", err)
-	}
-	ro.pubSubProviders = pubSubProviders
-
-	executor, err := ecb.Build(ctx, routerConfig, routerEngineConfig, pubSubProviders, r.WebsocketStats)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
-	}
-
-	operationParser := NewOperationParser(OperationParserOptions{
-		Executor:                executor,
-		MaxOperationSizeInBytes: int64(r.routerTrafficConfig.MaxRequestBodyBytes),
-		PersistentOpClient:      r.cdnPersistentOpClient,
-	})
-	operationPlanner := NewOperationPlanner(executor, planCache)
-
-	var graphqlPlaygroundHandler func(http.Handler) http.Handler
-
-	if r.playground {
-		playgroundUrl, err := url.JoinPath(r.baseURL, r.playgroundPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to join playground url: %w", err)
-		}
-		r.logger.Info("Serving GraphQL playground", zap.String("url", playgroundUrl))
-		graphqlPlaygroundHandler = graphiql.NewPlayground(&graphiql.PlaygroundOptions{
-			Log:        r.logger,
-			Html:       graphiql.PlaygroundHTML(),
-			GraphqlURL: r.graphqlWebURL,
-		})
-	}
-
-	authorizerOptions := &CosmoAuthorizerOptions{
-		FieldConfigurations:           routerConfig.EngineConfig.FieldConfigurations,
-		RejectOperationIfUnauthorized: false,
-	}
-
-	if r.Config.authorization != nil {
-		authorizerOptions.RejectOperationIfUnauthorized = r.Config.authorization.RejectOperationIfUnauthorized
-	}
-
-	handlerOpts := HandlerOptions{
-		Executor:                               executor,
-		Log:                                    r.logger,
-		EnableExecutionPlanCacheResponseHeader: routerEngineConfig.Execution.EnableExecutionPlanCacheResponseHeader,
-		WebSocketStats:                         r.WebsocketStats,
-		TracerProvider:                         r.tracerProvider,
-		Authorizer:                             NewCosmoAuthorizer(authorizerOptions),
-		SubgraphErrorPropagation:               r.subgraphErrorPropagation,
-		EngineLoaderHooks:                      NewEngineRequestHooks(ro.metricStore, r.traceConfig.SpanAttributesMapper),
-		SpanAttributesMapper:                   r.traceConfig.SpanAttributesMapper,
-	}
-
-	if r.Config.redisClient != nil {
-		handlerOpts.RateLimitConfig = r.Config.rateLimit
-		handlerOpts.RateLimiter = NewCosmoRateLimiter(&CosmoRateLimiterOptions{
-			RedisClient: r.Config.redisClient,
-			Debug:       r.Config.rateLimit.Debug,
-		})
-		r.logger.Info("Rate limiting enabled",
-			zap.Int("rate", r.Config.rateLimit.SimpleStrategy.Rate),
-			zap.Int("burst", r.Config.rateLimit.SimpleStrategy.Burst),
-			zap.Duration("duration", r.Config.rateLimit.SimpleStrategy.Period),
-			zap.Bool("rejectExceeding", r.Config.rateLimit.SimpleStrategy.RejectExceedingRequests),
-		)
-	} else {
-		r.logger.Info("Rate limiting disabled")
-	}
-
-	graphqlHandler := NewGraphQLHandler(handlerOpts)
-	executor.Resolver.SetAsyncErrorWriter(graphqlHandler)
-
-	var publicKey *ecdsa.PublicKey
-
-	if r.registrationInfo != nil {
-		publicKey, err = jwt.ParseECPublicKeyFromPEM([]byte(r.registrationInfo.GetGraphPublicKey()))
+	if s.registrationInfo != nil {
+		publicKey, err := jwt.ParseECPublicKeyFromPEM([]byte(s.registrationInfo.GetGraphPublicKey()))
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse router public key: %w", err)
 		}
+		s.publicKey = publicKey
 	}
 
-	operationBlocker := NewOperationBlocker(&OperationBlockerOptions{
-		BlockMutations:     r.securityConfiguration.BlockMutations,
-		BlockSubscriptions: r.securityConfiguration.BlockSubscriptions,
-		BlockNonPersisted:  r.securityConfiguration.BlockNonPersistedOperations,
-	})
+	recoveryHandler := recoveryhandler.New(
+		recoveryhandler.WithLogger(s.logger),
+		recoveryhandler.WithPrintStack(),
+	)
 
-	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
-		Logger:                      r.logger,
-		Executor:                    executor,
-		Metrics:                     routerMetrics,
-		OperationProcessor:          operationParser,
-		Planner:                     operationPlanner,
-		AccessController:            r.accessController,
-		OperationBlocker:            operationBlocker,
-		RouterPublicKey:             publicKey,
-		EnableRequestTracing:        r.engineExecutionConfiguration.EnableRequestTracing,
-		DevelopmentMode:             r.developmentMode,
-		TracerProvider:              r.tracerProvider,
-		FlushTelemetryAfterResponse: r.awsLambda,
-		TraceExportVariables:        r.traceConfig.ExportGraphQLVariables.Enabled,
-		SpanAttributesMapper:        r.traceConfig.SpanAttributesMapper,
-	})
-
-	graphqlChiRouter := chi.NewRouter()
-
-	if r.webSocketConfiguration != nil && r.webSocketConfiguration.Enabled {
-		wsMiddleware := NewWebsocketMiddleware(ctx, WebsocketMiddlewareOptions{
-			OperationProcessor:         operationParser,
-			OperationBlocker:           operationBlocker,
-			Planner:                    operationPlanner,
-			GraphQLHandler:             graphqlHandler,
-			Metrics:                    routerMetrics,
-			AccessController:           r.accessController,
-			Logger:                     r.logger,
-			Stats:                      r.WebsocketStats,
-			ReadTimeout:                r.engineExecutionConfiguration.WebSocketReadTimeout,
-			EnableWebSocketEpollKqueue: r.engineExecutionConfiguration.EnableWebSocketEpollKqueue,
-			EpollKqueuePollTimeout:     r.engineExecutionConfiguration.EpollKqueuePollTimeout,
-			EpollKqueueConnBufferSize:  r.engineExecutionConfiguration.EpollKqueueConnBufferSize,
-			WebSocketConfiguration:     r.webSocketConfiguration,
+	if s.healthChecks == nil {
+		s.healthChecks = health.New(&health.Options{
+			Logger: s.logger,
 		})
-		// When the playground path is equal to the graphql path, we need to handle
-		// ws upgrades and html requests on the same route.
-		if r.playground && r.graphqlPath == r.playgroundPath {
-			graphqlChiRouter.Use(graphqlPlaygroundHandler, wsMiddleware)
-		} else {
-			if r.playground {
-				httpRouter.Get(r.playgroundPath, graphqlPlaygroundHandler(nil).ServeHTTP)
-			}
-			graphqlChiRouter.Use(wsMiddleware)
-		}
-	} else {
-		if r.playground {
-			httpRouter.Get(r.playgroundPath, graphqlPlaygroundHandler(nil).ServeHTTP)
-		}
 	}
 
-	graphqlChiRouter.Use(graphqlPreHandler.Handler)
-
-	// Built in and custom modules
-	graphqlChiRouter.Use(r.routerMiddlewares...)
-
-	graphqlChiRouter.Post("/", graphqlHandler.ServeHTTP)
-
-	// Serve GraphQL. MetricStore are collected after the request is handled and classified as a GraphQL request.
-	httpRouter.Mount(r.graphqlPath, graphqlChiRouter)
-
-	if r.webSocketConfiguration != nil && r.webSocketConfiguration.Enabled && r.webSocketConfiguration.AbsintheProtocol.Enabled {
-		// Mount the Absinthe protocol handler for WebSockets
-		httpRouter.Mount(r.webSocketConfiguration.AbsintheProtocol.HandlerPath, graphqlChiRouter)
+	if s.playground {
+		playgroundUrl, err := url.JoinPath(s.baseURL, s.playgroundPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to join playground url: %w", err)
+		}
+		s.logger.Info("Serving GraphQL playground", zap.String("url", playgroundUrl))
+		s.playgroundHandler = graphiql.NewPlayground(&graphiql.PlaygroundOptions{
+			Log:        s.logger,
+			Html:       graphiql.PlaygroundHTML(),
+			GraphqlURL: s.graphqlWebURL,
+		})
 	}
 
 	graphqlEndpointURL, err := url.JoinPath(r.baseURL, r.graphqlPath)
@@ -1398,12 +917,94 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		return nil, fmt.Errorf("failed to join graphql endpoint url: %w", err)
 	}
 
+	httpRouter := chi.NewRouter()
+
+	/**
+	* Middlewares
+	 */
+
+	httpRouter.Use(recoveryHandler)
+	httpRouter.Use(middleware.RequestSize(int64(s.routerTrafficConfig.MaxRequestBodyBytes)))
+	httpRouter.Use(middleware.RequestID)
+	httpRouter.Use(middleware.RealIP)
+	httpRouter.Use(cors.New(*s.corsOptions))
+
+	baseMux, err := s.buildMux(ctx, "", routerConfig.GetVersion(), routerConfig.GetEngineConfig(), routerConfig.GetSubgraphs())
+	if err != nil {
+		return nil, fmt.Errorf("failed to build base mux: %w", err)
+	}
+
+	featureFlagHandler, err := s.buildMultiGraphHandler(ctx, baseMux, routerConfig.FeatureFlagConfigs.GetConfigByFeatureFlagName())
+	if err != nil {
+		return nil, fmt.Errorf("failed to build feature flag handler: %w", err)
+	}
+
+	brCompressor := middleware.NewCompressor(5, CustomCompressibleContentTypes...)
+	brCompressor.SetEncoder("br", func(w io.Writer, level int) io.Writer {
+		return br.NewWriterLevel(w, level)
+	})
+
+	/**
+	* A group where we can selectively apply middlewares to the graphql endpoint
+	 */
+	httpRouter.Group(func(cr chi.Router) {
+
+		// We are applying it conditionally because compressing the 3MB playground is very slow
+		cr.Use(middleware.Compress(5, CustomCompressibleContentTypes...))
+		cr.Use(brCompressor.Handler)
+
+		// Mount the feature flag handler. It calls the base mux if no feature flag is set.
+		cr.Mount(r.graphqlPath, featureFlagHandler)
+
+		if r.webSocketConfiguration != nil && r.webSocketConfiguration.Enabled && r.webSocketConfiguration.AbsintheProtocol.Enabled {
+			// Mount the Absinthe protocol handler for WebSockets
+			httpRouter.Mount(r.webSocketConfiguration.AbsintheProtocol.HandlerPath, featureFlagHandler)
+		}
+	})
+
+	/**
+	* Routes
+	 */
+
+	// We mount the playground once here when we don't have a conflict with the websocket handler
+	// If we have a conflict, we mount the playground during building the individual muxes
+	if s.playgroundHandler != nil && s.graphqlPath != s.playgroundPath {
+		httpRouter.Get(r.playgroundPath, s.playgroundHandler(nil).ServeHTTP)
+	}
+
+	httpRouter.Get(s.healthCheckPath, s.healthChecks.Liveness())
+	httpRouter.Get(s.livenessCheckPath, s.healthChecks.Liveness())
+	httpRouter.Get(s.readinessCheckPath, s.healthChecks.Readiness())
+
+	/**
+	* Server logging after features has been initialized / disabled
+	 */
+
 	r.logger.Info("GraphQL endpoint",
 		zap.String("method", http.MethodPost),
 		zap.String("url", graphqlEndpointURL),
 	)
 
-	ro.httpServer = &http.Server{
+	if s.localhostFallbackInsideDocker && docker.Inside() {
+		s.logger.Info("localhost fallback enabled, connections that fail to connect to localhost will be retried using host.docker.internal")
+	}
+
+	if s.developmentMode && s.engineExecutionConfiguration.EnableRequestTracing && s.graphApiToken == "" {
+		s.logger.Warn("Advanced Request Tracing (ART) is enabled in development mode but requires a graph token to work in production. For more information see https://cosmo-docs.wundergraph.com/router/advanced-request-tracing-art")
+	}
+
+	if s.redisClient != nil {
+		s.logger.Info("Rate limiting enabled",
+			zap.Int("rate", s.rateLimit.SimpleStrategy.Rate),
+			zap.Int("burst", s.rateLimit.SimpleStrategy.Burst),
+			zap.Duration("duration", s.Config.rateLimit.SimpleStrategy.Period),
+			zap.Bool("rejectExceeding", s.Config.rateLimit.SimpleStrategy.RejectExceedingRequests),
+		)
+	} else {
+		s.logger.Info("Rate limiting disabled")
+	}
+
+	s.httpServer = &http.Server{
 		Addr: r.listenAddr,
 		// https://ieftimov.com/posts/make-resilient-golang-net-http-servers-using-timeouts-deadlines-context-cancellation/
 		ReadTimeout:       1 * time.Minute,
@@ -1414,22 +1015,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		TLSConfig:         r.tlsServerConfig,
 	}
 
-	return ro, nil
-}
-
-// listenAndServe starts the server and blocks until the server is shutdown.
-func (s *server) listenAndServe() error {
-	if s.tlsConfig != nil && s.tlsConfig.Enabled {
-		// Leave the cert and key empty to use the default ones
-		if err := s.httpServer.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			return err
-		}
-	} else {
-		if err := s.httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			return err
-		}
-	}
-	return nil
+	return s, nil
 }
 
 // Shutdown gracefully shuts down the router. It blocks until the server is shutdown.
@@ -1545,63 +1131,6 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 	wg.Wait()
 
 	return err
-}
-
-// Shutdown gracefully shutdown the server.
-func (s *server) Shutdown(ctx context.Context) error {
-
-	s.healthChecks.SetReady(false)
-
-	s.logger.Info("Gracefully shutting down the router ...",
-		zap.String("config_version", s.routerConfig.GetVersion()),
-		zap.String("grace_period", s.gracePeriod.String()),
-	)
-
-	var finalErr error
-
-	if s.httpServer != nil {
-		if err := s.httpServer.Shutdown(ctx); err != nil {
-			s.logger.Error("Failed to shutdown HTTP server", zap.Error(err))
-			finalErr = errors.Join(finalErr, err)
-		}
-	}
-
-	if err := s.metricStore.Flush(ctx); err != nil {
-		s.logger.Error("Failed to flush metric store", zap.Error(err))
-		finalErr = errors.Join(finalErr, err)
-	}
-
-	if s.pubSubProviders != nil {
-
-		s.logger.Debug("Shutting down pubsub providers")
-
-		for _, pubSub := range s.pubSubProviders.nats {
-			if p, ok := pubSub.(pubsub.Lifecycle); ok {
-				if err := p.Shutdown(ctx); err != nil {
-					s.logger.Error("Failed to shutdown Nats pubsub provider", zap.Error(err))
-					finalErr = errors.Join(finalErr, err)
-				}
-			}
-		}
-		for _, pubSub := range s.pubSubProviders.kafka {
-			if p, ok := pubSub.(pubsub.Lifecycle); ok {
-				if err := p.Shutdown(ctx); err != nil {
-					s.logger.Error("Failed to shutdown Kafka pubsub provider", zap.Error(err))
-					finalErr = errors.Join(finalErr, err)
-				}
-			}
-		}
-	}
-
-	return finalErr
-}
-
-func (s *server) HealthChecks() health.Checker {
-	return s.healthChecks
-}
-
-func (s *server) HttpServer() *http.Server {
-	return s.httpServer
 }
 
 func WithListenerAddr(addr string) Option {

@@ -71,7 +71,7 @@ func NewCustomTransport(
 func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err error, resp *http.Response) {
 
 	reqContext := getRequestContext(req.Context())
-	baseFields := setAttributesFromOperationContext(reqContext.operation)
+	baseFields := getAttributesFromOperationContext(reqContext.operation)
 
 	activeSubgraph := reqContext.ActiveSubgraph(req)
 	if activeSubgraph != nil {
@@ -333,7 +333,7 @@ func (t TransportFactory) RoundTripper(enableSingleFlight bool, transport http.R
 			reqContext := getRequestContext(r.Context())
 			operation := reqContext.operation
 
-			commonAttributeValues := setAttributesFromOperationContext(operation)
+			commonAttributeValues := getAttributesFromOperationContext(operation)
 
 			subgraph := reqContext.ActiveSubgraph(r)
 			if subgraph != nil {

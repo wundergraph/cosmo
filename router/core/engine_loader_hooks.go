@@ -100,7 +100,7 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, data
 	}
 
 	// Ensure common attributes are set
-	baseAttributes = append(baseAttributes, setAttributesFromOperationContext(reqContext.operation)...)
+	baseAttributes = append(baseAttributes, getAttributesFromOperationContext(reqContext.operation)...)
 
 	if err != nil {
 

@@ -4,7 +4,7 @@ import { checkAuth } from '../auth/utils.js';
 import CreateFeatureGraphCommand from './commands/create.js';
 
 export default (opts: BaseCommandOptions) => {
-  const command = new Command('feature-graph');
+  const command = new Command('feature-graph').alias('fg');
   command.description('Provides commands for creating and managing a feature graphs');
 
   command.addCommand(CreateFeatureGraphCommand(opts));
