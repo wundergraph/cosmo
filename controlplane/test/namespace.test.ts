@@ -2,7 +2,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
-import { SetupTest, createFederatedGraph, createAndPublishSubgraph } from './test-util.js';
+import { SetupTest, createFederatedGraph, createThenPublishSubgraph } from './test-util.js';
 
 let dbname = '';
 
@@ -44,8 +44,8 @@ describe('Namespaces', (ctx) => {
 
     const subgraphSchemaSDL = 'type Query { hello: String! }';
 
-    await createAndPublishSubgraph(client, subgraph1Name, prod, subgraphSchemaSDL, [label], 'http://localhost:8081');
-    await createAndPublishSubgraph(client, subgraph2Name, dev, subgraphSchemaSDL, [label], 'http://localhost:8082');
+    await createThenPublishSubgraph(client, subgraph1Name, prod, subgraphSchemaSDL, [label], 'http://localhost:8081');
+    await createThenPublishSubgraph(client, subgraph2Name, dev, subgraphSchemaSDL, [label], 'http://localhost:8082');
 
     await createFederatedGraph(client, fedGraphName, prod, [joinLabel(label)], 'http://localhost:8080');
     await createFederatedGraph(client, fedGraphName, dev, [joinLabel(label)], 'http://localhost:8081');
@@ -190,8 +190,8 @@ describe('Namespaces', (ctx) => {
 
     const subgraphSchemaSDL = 'type Query { hello: String! }';
 
-    await createAndPublishSubgraph(client, subgraph1Name, prod, subgraphSchemaSDL, [label], 'http://localhost:8081');
-    await createAndPublishSubgraph(client, subgraph2Name, dev, subgraphSchemaSDL, [label], 'http://localhost:8082');
+    await createThenPublishSubgraph(client, subgraph1Name, prod, subgraphSchemaSDL, [label], 'http://localhost:8081');
+    await createThenPublishSubgraph(client, subgraph2Name, dev, subgraphSchemaSDL, [label], 'http://localhost:8082');
 
     await createFederatedGraph(client, fedGraphName, prod, [joinLabel(label)], 'http://localhost:8080');
     await createFederatedGraph(client, fedGraphName, dev, [joinLabel(label)], 'http://localhost:8081');
@@ -281,8 +281,8 @@ describe('Namespaces', (ctx) => {
 
     const subgraphSchemaSDL = 'type Query { hello: String! }';
 
-    await createAndPublishSubgraph(client, subgraph1Name, prod, subgraphSchemaSDL, [label], 'http://localhost:8081');
-    await createAndPublishSubgraph(client, subgraph2Name, dev, subgraphSchemaSDL, [label], 'http://localhost:8082');
+    await createThenPublishSubgraph(client, subgraph1Name, prod, subgraphSchemaSDL, [label], 'http://localhost:8081');
+    await createThenPublishSubgraph(client, subgraph2Name, dev, subgraphSchemaSDL, [label], 'http://localhost:8082');
 
     await createFederatedGraph(client, fedGraph1Name, prod, [joinLabel(label)], 'http://localhost:8080');
     await createFederatedGraph(client, fedGraph2Name, dev, [joinLabel(label)], 'http://localhost:8081');
@@ -362,8 +362,8 @@ describe('Namespaces', (ctx) => {
 
     const subgraphSchemaSDL = 'type Query { hello: String! }';
 
-    await createAndPublishSubgraph(client, subgraph1Name, prod, subgraphSchemaSDL, [label], 'http://localhost:8081');
-    await createAndPublishSubgraph(client, subgraph2Name, dev, subgraphSchemaSDL, [label], 'http://localhost:8082');
+    await createThenPublishSubgraph(client, subgraph1Name, prod, subgraphSchemaSDL, [label], 'http://localhost:8081');
+    await createThenPublishSubgraph(client, subgraph2Name, dev, subgraphSchemaSDL, [label], 'http://localhost:8082');
 
     await createFederatedGraph(client, fedGraph1Name, prod, [joinLabel(label)], 'http://localhost:8080');
     await createFederatedGraph(client, fedGraph2Name, dev, [joinLabel(label)], 'http://localhost:8081');

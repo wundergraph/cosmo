@@ -25,7 +25,7 @@ export default (opts: BaseCommandOptions) => {
       program.error(
         pc.red(
           pc.bold(
-            `The feature flag must have at least 1 feature graphs. Please check the feature graphs and try again.`,
+            `The feature flag must have at least one feature graph. Please check the feature graphs and try again.`,
           ),
         ),
       );

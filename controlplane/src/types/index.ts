@@ -109,7 +109,7 @@ export interface SubgraphDTO {
   isFeatureGraph?: boolean;
 }
 
-export interface FeatureFlagGroupDTO {
+export interface FeatureFlagDTO {
   id: string;
   name: string;
   namespaceId: string;

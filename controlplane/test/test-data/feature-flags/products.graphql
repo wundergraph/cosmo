@@ -1,0 +1,14 @@
+type Mutation {
+  addProductToUserBasket(userID: ID!, upc: Int! sku: String!): User
+}
+
+type Product @key(fields: "upc sku") {
+  upc: Int!
+  sku: String!
+  details: String!
+}
+
+type User @key(fields: "id") {
+  id: ID!
+  basket: [Product!]!
+}

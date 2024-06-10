@@ -18,7 +18,7 @@ import {
   subgraphsToFederatedGraph,
   targets,
 } from '../../db/schema.js';
-import { FeatureFlagGroupDTO, FederatedGraphDTO, Label, SubgraphDTO } from '../../types/index.js';
+import { FeatureFlagDTO, FederatedGraphDTO, Label, SubgraphDTO } from '../../types/index.js';
 import { normalizeLabels } from '../util.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
@@ -91,7 +91,7 @@ export class FeatureFlagRepository {
     labels,
     featureGraphIds,
   }: {
-    featureFlag: FeatureFlagGroupDTO;
+    featureFlag: FeatureFlagDTO;
     labels: Label[];
     featureGraphIds: string[];
   }) {
@@ -150,7 +150,7 @@ export class FeatureFlagRepository {
   }: {
     featureFlagId: string;
     namespaceId: string;
-  }): Promise<FeatureFlagGroupDTO | undefined> {
+  }): Promise<FeatureFlagDTO | undefined> {
     const resp = await this.db
       .select({
         id: featureFlags.id,
@@ -189,7 +189,7 @@ export class FeatureFlagRepository {
   }: {
     featureFlagName: string;
     namespaceId: string;
-  }): Promise<FeatureFlagGroupDTO | undefined> {
+  }): Promise<FeatureFlagDTO | undefined> {
     const resp = await this.db
       .select({
         id: featureFlags.id,
@@ -575,7 +575,7 @@ export class FeatureFlagRepository {
     baseSubgraphNames: string[];
     labelMatchers: string[];
   }): Promise<FeatureFlagWithFeatureGraphs[]> {
-    const featureFlagGroupWithEnabledFeatureFlags: FeatureFlagWithFeatureGraphs[] = [];
+    const featureFlagWithEnabledFeatureGraphs: FeatureFlagWithFeatureGraphs[] = [];
     const enabledFeatureFlags = await this.getEnabledFeatureFlagsBySubgraphId({
       subgraphId,
       namespaceId,
@@ -611,17 +611,17 @@ export class FeatureFlagRepository {
         continue;
       }
 
-      featureFlagGroupWithEnabledFeatureFlags.push({
+      featureFlagWithEnabledFeatureGraphs.push({
         id: enabledFeatureFlag.id,
         name: enabledFeatureFlag.name,
         featureGraphs: featureGraphsByFlag,
       });
     }
-    return featureFlagGroupWithEnabledFeatureFlags;
+    return featureFlagWithEnabledFeatureGraphs;
   }
 
   // evaluates all the ffs and ffgs and returns the compositon possibilities(the subgraphs that should be composed)
-  public async getCompositionPosibilities({
+  public async getCompositionPossibilities({
     subgraphs,
     fedGraphLabelMatchers,
     baseCompositionSubgraphs,

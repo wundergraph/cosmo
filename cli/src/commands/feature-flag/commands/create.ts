@@ -9,29 +9,21 @@ import { BaseCommandOptions } from '../../../core/types/types.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('create');
-  command.description('Creates a feature flag group on the control plane.');
+  command.description('Creates a feature flag on the control plane. A feature flag can contain one or more feature graphs.');
   command.argument('<name>', 'The name of the feature flag group to create.');
   command.option('-n, --namespace [string]', 'The namespace of the feature flag.');
   command.option(
     '--label [labels...]',
     'The labels to apply to the feature flag. The labels are passed in the format <key>=<value> <key>=<value>.',
   );
-  command.option(
+  command.requiredOption(
     '--fg, --feature-graphs <featureGraphs...>',
-    'The names of the feature graphs which have to be the part of the feature flag. The feature graphs are passed in the format <featureGraph1> <featureGraph2> <featureGraph3>. The feature flag must have at least 1 feature graphs.',
+    'The names of the feature graphs that will form the feature flag.' +
+    ' The feature graphs are passed in the format <featureGraph1> <featureGraph2> <featureGraph3>.' +
+    ' The feature flag must have at least one feature graph.',
   );
   command.action(async (name, options) => {
-    if (!options.featureGraphs || options.featureGraphs.length === 0) {
-      program.error(
-        pc.red(
-          pc.bold(
-            `The feature flag must have at least 1 feature graphs. Please check the feature graphs and try again.`,
-          ),
-        ),
-      );
-    }
-
-    const spinner = ora('Feature flag is being created...').start();
+    const spinner = ora('The feature flag is being created...').start();
     const resp = await opts.client.platform.createFeatureFlag(
       {
         featureFlagName: name,

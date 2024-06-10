@@ -153,7 +153,7 @@ import {
   SubgraphDTO,
   UpdatedPersistedOperation,
 } from '../../types/index.js';
-import { Composer, RouterConfigUploadError } from '../composition/composer.js';
+import { Composer } from '../composition/composer.js';
 import { buildSchema, composeSubgraphs } from '../composition/composition.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
 import { audiences, nowInSeconds, signJwtHS256 } from '../crypto/jwt.js';
@@ -187,7 +187,6 @@ import { TraceRepository } from '../repositories/analytics/TraceRepository.js';
 import { UsageRepository } from '../repositories/analytics/UsageRepository.js';
 import { parseTimeFilters } from '../repositories/analytics/util.js';
 import type { RouterOptions } from '../routes.js';
-import { AdmissionError } from '../services/AdmissionWebhookController.js';
 import { ApiKeyGenerator } from '../services/ApiGenerator.js';
 import ApolloMigrator from '../services/ApolloMigrator.js';
 import { BillingService } from '../services/BillingService.js';
@@ -1911,13 +1910,23 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         let baseSubgraphID = '';
-        if (req.isFeatureGraph && req.baseSubgraphName) {
+        if (req.isFeatureGraph) {
+          if (!req.baseSubgraphName) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `A feature graph requires a base subgraph.`,
+              },
+              compositionErrors: [],
+              admissionErrors: [],
+            };
+          }
           const baseSubgraph = await subgraphRepo.byName(req.baseSubgraphName, req.namespace);
           if (!baseSubgraph) {
             return {
               response: {
                 code: EnumStatusCode.ERR,
-                details: `Base subgraph '${req.baseSubgraphName}' does not exist in the namespace '${req.namespace}'.`,
+                details: `Base subgraph "${req.baseSubgraphName}" does not exist in the namespace "${req.namespace}".`,
               },
               compositionErrors: [],
               admissionErrors: [],
@@ -3740,6 +3749,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        if (req.featureGraphNames.length === 0) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `At least one feature graph is required to create a feature flag.`,
+            },
+            compositionErrors: [],
+            deploymentErrors: [],
+          };
+        }
+
         const namespace = await namespaceRepo.byName(req.namespace);
         if (!namespace) {
           return {
@@ -3771,7 +3791,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           return {
             response: {
               code: EnumStatusCode.ERR_ALREADY_EXISTS,
-              details: `Feature flag '${req.featureFlagName}' already exists in the namespace`,
+              details: `Feature flag "${req.featureFlagName}" already exists in the namespace.`,
             },
             compositionErrors: [],
             deploymentErrors: [],
@@ -3783,7 +3803,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         for (const featureGraphName of req.featureGraphNames) {
           const subgraph = await subgraphRepo.byName(featureGraphName, req.namespace);
           if (!subgraph || !subgraph.isFeatureGraph) {
-            errorMessage += `Feature Graph '${featureGraphName}' not found\n`;
+            errorMessage += `Feature graph "${featureGraphName}" not found.\n`;
             continue;
           }
           featureGraphIds.push(subgraph.id);
@@ -3944,7 +3964,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Feature flag '${req.featureFlagName}' does not exists in the namespace ${req.namespace}`,
+              details: `Feature flag "${req.featureFlagName}" does not exists in the namespace ${req.namespace}`,
             },
             compositionErrors: [],
             deploymentErrors: [],
@@ -3956,7 +3976,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         for (const featureGraphName of req.featureGraphNames) {
           const subgraph = await subgraphRepo.byName(featureGraphName, req.namespace);
           if (!subgraph || !subgraph.isFeatureGraph) {
-            errorMessage += `Feature Graph '${featureGraphName}' not found\n`;
+            errorMessage += `Feature graph "${featureGraphName}" not found.\n`;
             continue;
           }
           featureGraphIds.push(subgraph.id);
@@ -4103,7 +4123,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Feature flag group '${req.featureFlagName}' not found`,
+              details: `Feature flag '${req.featureFlagName}' not found`,
             },
             compositionErrors: [],
             deploymentErrors: [],

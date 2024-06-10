@@ -1,0 +1,21 @@
+type Mutation {
+  addProductToUserBasket(userID: ID!, upc: Int! sku: String!): User @override(from: "products-feature")
+}
+
+type Product @key(fields: "upc sku") {
+  upc: Int!
+  sku: String!
+}
+
+type Query {
+  user(id: ID!): User
+  users: [User!]!
+}
+
+type User @key(fields: "id") {
+  id: ID!
+  name: String @deprecated(reason: "replaced by username")
+  email: String!
+  basket: [Product!]! @override(from: "products-feature")
+  username: String!
+}

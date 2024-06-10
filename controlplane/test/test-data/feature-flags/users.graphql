@@ -1,0 +1,10 @@
+type User @key(fields: "id") {
+  id: ID!
+  name: String!
+  email: String!
+}
+
+type Query {
+  user(id: ID!): User
+  users: [User!]!
+}

@@ -1441,7 +1441,7 @@ export class FederatedGraphRepository {
           definitions: parse(s.schemaSDL),
         }));
 
-        const compositionPossibilities: CompositionPossibilities[] = await featureFlagRepo.getCompositionPosibilities({
+        const compositionPossibilities: CompositionPossibilities[] = await featureFlagRepo.getCompositionPossibilities({
           subgraphs,
           baseCompositionSubgraphs,
           fedGraphLabelMatchers: federatedGraph.labelMatchers,
@@ -1456,10 +1456,11 @@ export class FederatedGraphRepository {
         const fgSchemaVersionsOfContracts: Map<string, { featureFlagName: string; schemaVersionId: string }[]> =
           new Map();
 
-        // this is to make sure that we dont have fg schema versions of contracts if the base composition has errors. The boolean value determines if the base composition is successful or not
+        // this is to make sure that we don't have fg schema versions of contracts if the base composition has errors.
+        // The boolean value determines whether the base composition is successful or not
         const baseCompositionOfContracts: Map<string, boolean> = new Map();
 
-        compositionLoop: for (const compositionPossibility of compositionPossibilities) {
+        for (const compositionPossibility of compositionPossibilities) {
           let errors: Error[] | undefined;
           let result: FederationResult | undefined;
           let federationResultContainerByContractName: Map<string, FederationResultContainer> | undefined;

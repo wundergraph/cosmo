@@ -32,6 +32,7 @@ import { OrganizationRepository } from '../src/core/repositories/OrganizationRep
 import { UserRepository } from '../src/core/repositories/UserRepository.js';
 import ApiKeyAuthenticator from '../src/core/services/ApiKeyAuthenticator.js';
 import { ApiKeyRepository } from '../src/core/repositories/ApiKeyRepository.js';
+import { startOfTomorrow, startOfYear } from 'date-fns';
 
 export const SetupTest = async function ({
   dbname,
@@ -251,7 +252,7 @@ export const removeKeycloakSetup = async ({
   });
 };
 
-export const createAndPublishSubgraph = async (
+export const createThenPublishSubgraph = async (
   client: PromiseClient<typeof PlatformService>,
   name: string,
   namespace: string,
@@ -264,6 +265,54 @@ export const createAndPublishSubgraph = async (
     namespace,
     labels,
     routingUrl,
+  });
+  expect(createRes.response?.code).toBe(EnumStatusCode.OK);
+  const publishResp = await client.publishFederatedSubgraph({
+    name,
+    namespace,
+    schema: schemaSDL,
+  });
+  expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
+
+  return publishResp;
+};
+
+export const createAndPublishSubgraph = async (
+  client: PromiseClient<typeof PlatformService>,
+  name: string,
+  namespace: string,
+  schemaSDL: string,
+  labels: Label[],
+  routingUrl: string,
+) => {
+  const publishResp = await client.publishFederatedSubgraph({
+    name,
+    namespace,
+    labels,
+    routingUrl,
+    schema: schemaSDL,
+  });
+  expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
+
+  return publishResp;
+};
+
+export const createThenPublishFeatureGraph = async (
+  client: PromiseClient<typeof PlatformService>,
+  name: string,
+  baseSubgraphName: string,
+  namespace: string,
+  schemaSDL: string,
+  labels: Label[],
+  routingUrl: string,
+) => {
+  const createRes = await client.createFederatedSubgraph({
+    name,
+    namespace,
+    labels,
+    routingUrl,
+    isFeatureGraph: true,
+    baseSubgraphName: baseSubgraphName,
   });
   expect(createRes.response?.code).toBe(EnumStatusCode.OK);
   const publishResp = await client.publishFederatedSubgraph({
@@ -370,6 +419,27 @@ export async function createSubgraph(
   expect(response.response?.code).toBe(EnumStatusCode.OK);
 }
 
+export async function createBaseAndFeatureGraph(
+  client: PromiseClient<typeof PlatformService>,
+  baseGraphName: string,
+  featureGraphName: string,
+  baseGraphRoutingUrl: string,
+  featureGraphRoutingUrl: string,
+) {
+
+  await createSubgraph(client, baseGraphName, baseGraphRoutingUrl);
+
+  const featureGraphResponse = await client.createFederatedSubgraph({
+    name: featureGraphName,
+    namespace: 'default',
+    routingUrl: featureGraphRoutingUrl,
+    isFeatureGraph: true,
+    baseSubgraphName: baseGraphName,
+  });
+
+  expect(featureGraphResponse.response?.code).toBe(EnumStatusCode.OK);
+}
+
 export const eventDrivenGraphSDL = `
   type Subscription {
     a: Entity! @edfs__natsSubscribe(subjects: ["a.1"])
@@ -390,3 +460,6 @@ export const subgraphSDL = `
     dummy: String!
   }
 `;
+
+export const yearStartDate = startOfYear(2024);
+export const tomorrowDate = startOfTomorrow();
