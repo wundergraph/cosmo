@@ -130,6 +130,8 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 			} else {
 				opts.Logger.Warn("Epoll is only available on Linux and MacOS. Falling back to synchronous handling.")
 			}
+		} else {
+			opts.Logger.Debug("Epoll is disabled by configuration")
 		}
 
 		return handler
