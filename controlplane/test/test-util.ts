@@ -9,6 +9,7 @@ import Fastify from 'fastify';
 import { pino } from 'pino';
 import { expect } from 'vitest';
 import postgres from 'postgres';
+import { startOfTomorrow, startOfYear } from 'date-fns';
 import { BlobNotFoundError, BlobObject, BlobStorage } from '../src/core/blobstorage/index.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import database from '../src/core/plugins/database.js';
@@ -32,7 +33,6 @@ import { OrganizationRepository } from '../src/core/repositories/OrganizationRep
 import { UserRepository } from '../src/core/repositories/UserRepository.js';
 import ApiKeyAuthenticator from '../src/core/services/ApiKeyAuthenticator.js';
 import { ApiKeyRepository } from '../src/core/repositories/ApiKeyRepository.js';
-import { startOfTomorrow, startOfYear } from 'date-fns';
 
 export const SetupTest = async function ({
   dbname,
@@ -312,7 +312,7 @@ export const createThenPublishFeatureGraph = async (
     labels,
     routingUrl,
     isFeatureGraph: true,
-    baseSubgraphName: baseSubgraphName,
+    baseSubgraphName,
   });
   expect(createRes.response?.code).toBe(EnumStatusCode.OK);
   const publishResp = await client.publishFederatedSubgraph({
@@ -426,7 +426,6 @@ export async function createBaseAndFeatureGraph(
   baseGraphRoutingUrl: string,
   featureGraphRoutingUrl: string,
 ) {
-
   await createSubgraph(client, baseGraphName, baseGraphRoutingUrl);
 
   const featureGraphResponse = await client.createFederatedSubgraph({
