@@ -4,6 +4,8 @@
 
 ## Getting started
 
+Official documentation: [https://cosmo-docs.wundergraph.com/cli](https://cosmo-docs.wundergraph.com/cli)
+
 ### Prerequisites
 
 - [Node.js 20 LTS or higher](https://nodejs.dev/en/about/releases/)
