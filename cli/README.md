@@ -24,7 +24,7 @@ npm install -g wgc --help
 
 Ensure that at least Node.js 20.6.0 is installed because rely on the native .env file support.
 
-Replace `env.example` with `.env` and fill in the required values. By default, we point to the local environment.
+Replace `env.example` with `.env` and fill in the required values. By default, we point to the services of your local development environment.
 
 Run any command with `pnpm wgc` to test your changes locally directly.
 
