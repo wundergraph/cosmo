@@ -135,7 +135,6 @@ func (h *OtlpMetricStore) MeasureRequestError(ctx context.Context, attr ...attri
 }
 
 func (h *OtlpMetricStore) MeasureSubscriptionCount(count int) {
-	// skip counter decrements for now
 	if count == 0 {
 		return
 	}
@@ -146,7 +145,7 @@ func (h *OtlpMetricStore) MeasureSubscriptionCount(count int) {
 
 	baseAttributes := otelmetric.WithAttributes(baseKeys...)
 
-	if c, ok := h.measurements.counters[GraphqlSubscriptionCounter]; ok {
+	if c, ok := h.measurements.upDownCounters[GraphqlSubscriptionCounter]; ok {
 		c.Add(context.TODO(), int64(count), baseAttributes)
 	}
 }

@@ -57,27 +57,6 @@ func TestKafkaEvents(t *testing.T) {
 		require.NoError(t, kafkaContainer.Terminate(ctx))
 	})
 
-	subscriptionCountMetric := metricdata.Metrics{
-		Name:        "router.graphql.subscriptions",
-		Description: "Total number of created graphql subscriptions",
-		Unit:        "",
-		Data: metricdata.Sum[int64]{
-			Temporality: metricdata.CumulativeTemporality,
-			IsMonotonic: true,
-			DataPoints: []metricdata.DataPoint[int64]{
-				{
-					Attributes: attribute.NewSet(
-						otel.WgFederatedGraphID.String("graph"),
-						otel.WgRouterClusterName.String(""),
-						otel.WgRouterConfigVersion.String(""),
-						otel.WgRouterVersion.String("dev"),
-					),
-					Value: 1,
-				},
-			},
-		},
-	}
-
 	t.Run("subscribe async", func(t *testing.T) {
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
@@ -137,13 +116,21 @@ func TestKafkaEvents(t *testing.T) {
 			var rm metricdata.ResourceMetrics
 			err = metricReader.Collect(ctx, &rm)
 			require.NoError(t, err)
-			metricdatatest.AssertEqual(t, subscriptionCountMetric, rm.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
+			require.Equal(t, 1, len(rm.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rm.ScopeMetrics))
+			require.Equal(t, 1, len(rm.ScopeMetrics[0].Metrics), "expected 1 Metric, got %d", len(rm.ScopeMetrics[0].Metrics))
+			metricdatatest.AssertEqual(t, buildSubscriptionCountMetric(1), rm.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
 			xEnv.WaitForMessagesSent(1, time.Second*10)
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
 			xEnv.WaitForConnectionCount(0, time.Second*10)
+
+			err = metricReader.Collect(ctx, &rm)
+			require.NoError(t, err)
+			require.Equal(t, 1, len(rm.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rm.ScopeMetrics))
+			require.Equal(t, 6, len(rm.ScopeMetrics[0].Metrics), "expected 6 Metrics, got %d", len(rm.ScopeMetrics[0].Metrics))
+			metricdatatest.AssertEqual(t, buildSubscriptionCountMetric(0), rm.ScopeMetrics[0].Metrics[1], metricdatatest.IgnoreTimestamp())
 		})
 	})
 
@@ -214,7 +201,9 @@ func TestKafkaEvents(t *testing.T) {
 			var rm metricdata.ResourceMetrics
 			err = metricReader.Collect(ctx, &rm)
 			require.NoError(t, err)
-			metricdatatest.AssertEqual(t, subscriptionCountMetric, rm.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
+			require.Equal(t, 1, len(rm.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rm.ScopeMetrics))
+			require.Equal(t, 1, len(rm.ScopeMetrics[0].Metrics), "expected 1 Metric, got %d", len(rm.ScopeMetrics[0].Metrics))
+			metricdatatest.AssertEqual(t, buildSubscriptionCountMetric(1), rm.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
 
 			produceKafkaMessage(t, xEnv, topics[0], ``) // Empty message
 			xEnv.WaitForMessagesSent(1, time.Second*10)
@@ -238,6 +227,12 @@ func TestKafkaEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
 			xEnv.WaitForConnectionCount(0, time.Second*10)
+
+			err = metricReader.Collect(ctx, &rm)
+			require.NoError(t, err)
+			require.Equal(t, 1, len(rm.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rm.ScopeMetrics))
+			require.Equal(t, 6, len(rm.ScopeMetrics[0].Metrics), "expected 6 Metrics, got %d", len(rm.ScopeMetrics[0].Metrics))
+			metricdatatest.AssertEqual(t, buildSubscriptionCountMetric(0), rm.ScopeMetrics[0].Metrics[1], metricdatatest.IgnoreTimestamp())
 		})
 	})
 
@@ -313,13 +308,21 @@ func TestKafkaEvents(t *testing.T) {
 			var rm metricdata.ResourceMetrics
 			err = metricReader.Collect(ctx, &rm)
 			require.NoError(t, err)
-			metricdatatest.AssertEqual(t, subscriptionCountMetric, rm.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
+			require.Equal(t, 1, len(rm.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rm.ScopeMetrics))
+			require.Equal(t, 1, len(rm.ScopeMetrics[0].Metrics), "expected 1 Metric, got %d", len(rm.ScopeMetrics[0].Metrics))
+			metricdatatest.AssertEqual(t, buildSubscriptionCountMetric(1), rm.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
 			xEnv.WaitForMessagesSent(2, time.Second*10)
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
 			xEnv.WaitForConnectionCount(0, time.Second*10)
+
+			err = metricReader.Collect(ctx, &rm)
+			require.NoError(t, err)
+			require.Equal(t, 1, len(rm.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rm.ScopeMetrics))
+			require.Equal(t, 6, len(rm.ScopeMetrics[0].Metrics), "expected 6 Metrics, got %d", len(rm.ScopeMetrics[0].Metrics))
+			metricdatatest.AssertEqual(t, buildSubscriptionCountMetric(0), rm.ScopeMetrics[0].Metrics[1], metricdatatest.IgnoreTimestamp())
 		})
 	})
 
@@ -405,7 +408,9 @@ func TestKafkaEvents(t *testing.T) {
 			var rm metricdata.ResourceMetrics
 			err = metricReader.Collect(ctx, &rm)
 			require.NoError(t, err)
-			metricdatatest.AssertEqual(t, subscriptionCountMetric, rm.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
+			require.Equal(t, 1, len(rm.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rm.ScopeMetrics))
+			require.Equal(t, 1, len(rm.ScopeMetrics[0].Metrics), "expected 1 Metric, got %d", len(rm.ScopeMetrics[0].Metrics))
+			metricdatatest.AssertEqual(t, buildSubscriptionCountMetric(1), rm.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 			produceKafkaMessage(t, xEnv, topics[1], `{"__typename":"Employee","id": 2,"update":{"name":"foo"}}`)
@@ -424,6 +429,12 @@ func TestKafkaEvents(t *testing.T) {
 			xEnv.WaitForMessagesSent(4, time.Second*10)
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
 			xEnv.WaitForConnectionCount(0, time.Second*10)
+
+			err = metricReader.Collect(ctx, &rm)
+			require.NoError(t, err)
+			require.Equal(t, 1, len(rm.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rm.ScopeMetrics))
+			require.Equal(t, 6, len(rm.ScopeMetrics[0].Metrics), "expected 6 Metrics, got %d", len(rm.ScopeMetrics[0].Metrics))
+			metricdatatest.AssertEqual(t, buildSubscriptionCountMetric(0), rm.ScopeMetrics[0].Metrics[1], metricdatatest.IgnoreTimestamp())
 		})
 	})
 
@@ -490,13 +501,21 @@ func TestKafkaEvents(t *testing.T) {
 			var rm metricdata.ResourceMetrics
 			err = metricReader.Collect(ctx, &rm)
 			require.NoError(t, err)
-			metricdatatest.AssertEqual(t, subscriptionCountMetric, rm.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
+			require.Equal(t, 1, len(rm.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rm.ScopeMetrics))
+			require.Equal(t, 1, len(rm.ScopeMetrics[0].Metrics), "expected 1 Metric, got %d", len(rm.ScopeMetrics[0].Metrics))
+			metricdatatest.AssertEqual(t, buildSubscriptionCountMetric(1), rm.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
 			xEnv.WaitForMessagesSent(1, time.Second*10)
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
 			xEnv.WaitForConnectionCount(0, time.Second*10)
+
+			err = metricReader.Collect(ctx, &rm)
+			require.NoError(t, err)
+			require.Equal(t, 1, len(rm.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rm.ScopeMetrics))
+			require.Equal(t, 6, len(rm.ScopeMetrics[0].Metrics), "expected 6 Metrics, got %d", len(rm.ScopeMetrics[0].Metrics))
+			metricdatatest.AssertEqual(t, buildSubscriptionCountMetric(0), rm.ScopeMetrics[0].Metrics[1], metricdatatest.IgnoreTimestamp())
 		})
 	})
 
@@ -555,7 +574,9 @@ func TestKafkaEvents(t *testing.T) {
 			var rm metricdata.ResourceMetrics
 			err = metricReader.Collect(ctx, &rm)
 			require.NoError(t, err)
-			metricdatatest.AssertEqual(t, subscriptionCountMetric, rm.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
+			require.Equal(t, 1, len(rm.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rm.ScopeMetrics))
+			require.Equal(t, 2, len(rm.ScopeMetrics[0].Metrics), "expected 2 Metrics, got %d", len(rm.ScopeMetrics[0].Metrics))
+			metricdatatest.AssertEqual(t, buildSubscriptionCountMetric(1), rm.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
@@ -563,6 +584,12 @@ func TestKafkaEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
 			xEnv.WaitForConnectionCount(0, time.Second*10)
+
+			err = metricReader.Collect(ctx, &rm)
+			require.NoError(t, err)
+			require.Equal(t, 1, len(rm.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rm.ScopeMetrics))
+			require.Equal(t, 6, len(rm.ScopeMetrics[0].Metrics), "expected 6 Metrics, got %d", len(rm.ScopeMetrics[0].Metrics))
+			metricdatatest.AssertEqual(t, buildSubscriptionCountMetric(0), rm.ScopeMetrics[0].Metrics[1], metricdatatest.IgnoreTimestamp())
 		})
 	})
 
@@ -1007,4 +1034,26 @@ func produceKafkaMessage(t *testing.T, xEnv *testenv.Environment, topicName stri
 	wg.Wait()
 
 	require.NoError(t, pErr)
+}
+
+func buildSubscriptionCountMetric(val int64) metricdata.Metrics {
+	return metricdata.Metrics{
+		Name:        "router.graphql.subscriptions",
+		Description: "Total number of created graphql subscriptions",
+		Unit:        "",
+		Data: metricdata.Sum[int64]{
+			Temporality: metricdata.CumulativeTemporality,
+			DataPoints: []metricdata.DataPoint[int64]{
+				{
+					Attributes: attribute.NewSet(
+						otel.WgFederatedGraphID.String("graph"),
+						otel.WgRouterClusterName.String(""),
+						otel.WgRouterConfigVersion.String(""),
+						otel.WgRouterVersion.String("dev"),
+					),
+					Value: val,
+				},
+			},
+		},
+	}
 }

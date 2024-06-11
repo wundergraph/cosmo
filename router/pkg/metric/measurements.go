@@ -42,7 +42,7 @@ func createMeasures(meter otelmetric.Meter) (*Measurements, error) {
 
 	h.counters[RequestError] = requestError
 
-	subscriptionCount, err := meter.Int64Counter(
+	subscriptionCount, err := meter.Int64UpDownCounter(
 		GraphqlSubscriptionCounter,
 		GraphqlSubscriptionCounterOptions...,
 	)
@@ -50,7 +50,7 @@ func createMeasures(meter otelmetric.Meter) (*Measurements, error) {
 		return nil, fmt.Errorf("failed to create subscription counter: %w", err)
 	}
 
-	h.counters[GraphqlSubscriptionCounter] = subscriptionCount
+	h.upDownCounters[GraphqlSubscriptionCounter] = subscriptionCount
 
 	serverLatencyMeasure, err := meter.Float64Histogram(
 		ServerLatencyHistogram,

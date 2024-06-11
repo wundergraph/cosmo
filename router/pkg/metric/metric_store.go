@@ -38,7 +38,7 @@ var (
 		otelmetric.WithDescription(RequestErrorCounterDescription),
 	}
 	GraphqlSubscriptionCounterDescription = "Total number of created graphql subscriptions"
-	GraphqlSubscriptionCounterOptions     = []otelmetric.Int64CounterOption{
+	GraphqlSubscriptionCounterOptions     = []otelmetric.Int64UpDownCounterOption{
 		otelmetric.WithDescription(GraphqlSubscriptionCounterDescription),
 	}
 	ServerLatencyHistogramDescription = "Server latency in milliseconds"

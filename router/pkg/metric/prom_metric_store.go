@@ -2,6 +2,7 @@ package metric
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -135,7 +136,21 @@ func (h *PromMetricStore) MeasureRequestError(ctx context.Context, attr ...attri
 }
 
 func (h *PromMetricStore) MeasureSubscriptionCount(count int) {
-	// noop for now
+	if count == 0 {
+		return
+	}
+
+	var baseKeys []attribute.KeyValue
+
+	fmt.Printf("***** [Prometheus] MeasureSubscriptionCount: %d\n", count)
+
+	baseKeys = append(baseKeys, h.baseAttributes...)
+
+	baseAttributes := otelmetric.WithAttributes(baseKeys...)
+
+	if c, ok := h.measurements.upDownCounters[GraphqlSubscriptionCounter]; ok {
+		c.Add(context.TODO(), int64(count), baseAttributes)
+	}
 }
 
 func (h *PromMetricStore) Flush(ctx context.Context) error {
