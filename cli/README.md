@@ -22,7 +22,7 @@ npm install -g wgc --help
 
 ### Development
 
-Ensure that at least Node.js 20.6.0 is installed because rely on the native .env file support.
+Ensure that at least Node.js 20.6.0 is installed because we rely on the native .env file support.
 
 Replace `env.example` with `.env` and fill in the required values. By default, we point to the services of your local development environment.
 
