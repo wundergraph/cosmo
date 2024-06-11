@@ -26,15 +26,15 @@ Ensure that at least Node.js 20.6.0 is installed because rely on the native .env
 
 Replace `env.example` with `.env` and fill in the required values. By default, we point to the local environment.
 
-Run the following script to test your changes locally:
+Run any command with `pnpm wgc` to test your changes locally directly.
 
 ```bash
-pnpm wgc schema push
+pnpm wgc ...
 ```
 
 _Everything behind `wgc` is passed to the `wgc` cli. This allows you to test your changes locally._
 
-Run tests:
+#### Run tests:
 
 ```bash
 pnpm test
