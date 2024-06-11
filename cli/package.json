@@ -20,7 +20,7 @@
   },
   "scripts": {
     "build": "del dist && tsc",
-    "wgc": "tsx src/index.ts",
+    "wgc": "tsx --env-file .env src/index.ts",
     "test": "pnpm lint && vitest run",
     "coverage": "vitest run --coverage",
     "lint": "eslint --cache --ext .ts,.mjs,.cjs . && prettier -c src",
