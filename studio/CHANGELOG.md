@@ -4,6 +4,62 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.77.18](https://github.com/wundergraph/cosmo/compare/studio@0.77.17...studio@0.77.18) (2024-06-07)
+
+**Note:** Version bump only for package studio
+
+## [0.77.17](https://github.com/wundergraph/cosmo/compare/studio@0.77.16...studio@0.77.17) (2024-06-06)
+
+**Note:** Version bump only for package studio
+
+## [0.77.16](https://github.com/wundergraph/cosmo/compare/studio@0.77.15...studio@0.77.16) (2024-06-05)
+
+**Note:** Version bump only for package studio
+
+## [0.77.15](https://github.com/wundergraph/cosmo/compare/studio@0.77.14...studio@0.77.15) (2024-06-04)
+
+### Bug Fixes
+
+* poor performance on sdl due to anchor tags ([#851](https://github.com/wundergraph/cosmo/issues/851)) ([d57fedb](https://github.com/wundergraph/cosmo/commit/d57fedbddcd39b0e2df4fed67faef486c6ea59cb)) (@thisisnithin)
+* sdl viewer slow performance due to line links ([#850](https://github.com/wundergraph/cosmo/issues/850)) ([908e55c](https://github.com/wundergraph/cosmo/commit/908e55c35ac4aaf3469491cd041191ed636af5fb)) (@thisisnithin)
+
+## [0.77.14](https://github.com/wundergraph/cosmo/compare/studio@0.77.13...studio@0.77.14) (2024-06-04)
+
+### Bug Fixes
+
+* set transport on org change ([#849](https://github.com/wundergraph/cosmo/issues/849)) ([d361c7c](https://github.com/wundergraph/cosmo/commit/d361c7c31f97f4d746c334a626193efbe0224048)) (@thisisnithin)
+
+## [0.77.13](https://github.com/wundergraph/cosmo/compare/studio@0.77.12...studio@0.77.13) (2024-06-04)
+
+### Bug Fixes
+
+* fallback to router schema if client schema does not exist ([#848](https://github.com/wundergraph/cosmo/issues/848)) ([b6a9b03](https://github.com/wundergraph/cosmo/commit/b6a9b03b8a19ba539002b76e4687903288e71ca3)) (@thisisnithin)
+* reset queries on organization change ([#846](https://github.com/wundergraph/cosmo/issues/846)) ([9f967eb](https://github.com/wundergraph/cosmo/commit/9f967eb8ccfb16e7cf07fd14a6b85e58b776b1d0)) (@thisisnithin)
+* trace graphql data rendering ([#844](https://github.com/wundergraph/cosmo/issues/844)) ([1923d51](https://github.com/wundergraph/cosmo/commit/1923d51252e10751dce9d63a67143d3e41f2374f)) (@StarpTech)
+
+## [0.77.12](https://github.com/wundergraph/cosmo/compare/studio@0.77.11...studio@0.77.12) (2024-05-31)
+
+### Bug Fixes
+
+* clickhouse cardinality mismatch ([#669](https://github.com/wundergraph/cosmo/issues/669)) ([1908089](https://github.com/wundergraph/cosmo/commit/1908089a6cd62d8e60625555f1173102ce5d8f57)) (@thisisnithin)
+* display graphql operation and variables after truncation in trace detail view ([#843](https://github.com/wundergraph/cosmo/issues/843)) ([96e9483](https://github.com/wundergraph/cosmo/commit/96e9483ea27552355506681b4b33c9cb4ec2bea7)) (@StarpTech)
+* potential fix to always show graphql variables ([#842](https://github.com/wundergraph/cosmo/issues/842)) ([574e5dd](https://github.com/wundergraph/cosmo/commit/574e5dd5dde02371d4323201d1f2991688849e9d)) (@StarpTech)
+* render variables and content correctly in trace view ([757b58c](https://github.com/wundergraph/cosmo/commit/757b58c6018761e41534082ba191d4d961d21e0a)) (@StarpTech)
+
+## [0.77.11](https://github.com/wundergraph/cosmo/compare/studio@0.77.10...studio@0.77.11) (2024-05-30)
+
+### Bug Fixes
+
+* incorrect query key for invalidation ([#839](https://github.com/wundergraph/cosmo/issues/839)) ([65f8274](https://github.com/wundergraph/cosmo/commit/65f8274f363390acfbbf4157134810c3bd997766)) (@thisisnithin)
+
+## [0.77.10](https://github.com/wundergraph/cosmo/compare/studio@0.77.9...studio@0.77.10) (2024-05-30)
+
+**Note:** Version bump only for package studio
+
+## [0.77.9](https://github.com/wundergraph/cosmo/compare/studio@0.77.8...studio@0.77.9) (2024-05-29)
+
+**Note:** Version bump only for package studio
+
 ## [0.77.8](https://github.com/wundergraph/cosmo/compare/studio@0.77.7...studio@0.77.8) (2024-05-28)
 
 ### Bug Fixes

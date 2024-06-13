@@ -68,7 +68,7 @@ const SubGraphsPage: NextPageWithLayout = () => {
       <SubgraphsTable
         subgraphs={filteredSubgraphs}
         graph={graphData.graph}
-        totalCount={graphData.subgraphs.length}
+        totalCount={filteredSubgraphs.length}
       />
     </div>
   );

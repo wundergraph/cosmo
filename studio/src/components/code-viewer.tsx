@@ -105,7 +105,7 @@ export const CodeViewer = ({
         });
         setContent(res);
       } catch {
-        setContent("INVALID CONTENT");
+        setContent(source);
       }
     };
 

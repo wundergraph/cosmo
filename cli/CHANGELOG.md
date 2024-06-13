@@ -4,6 +4,42 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.57.3](https://github.com/wundergraph/cosmo/compare/wgc@0.57.2...wgc@0.57.3) (2024-06-11)
+
+**Note:** Version bump only for package wgc
+
+## [0.57.2](https://github.com/wundergraph/cosmo/compare/wgc@0.57.1...wgc@0.57.2) (2024-06-07)
+
+**Note:** Version bump only for package wgc
+
+## [0.57.1](https://github.com/wundergraph/cosmo/compare/wgc@0.57.0...wgc@0.57.1) (2024-06-06)
+
+### Bug Fixes
+
+* match option ref to -edg flag ([#858](https://github.com/wundergraph/cosmo/issues/858)) ([35ee698](https://github.com/wundergraph/cosmo/commit/35ee698e7a92342711efe84967df0056a5431757)) (@Aenimus)
+
+# [0.57.0](https://github.com/wundergraph/cosmo/compare/wgc@0.56.0...wgc@0.57.0) (2024-06-06)
+
+### Features
+
+* handle creating, publishing, and updating Event-Driven Graphs ([#855](https://github.com/wundergraph/cosmo/issues/855)) ([fc2a8f2](https://github.com/wundergraph/cosmo/commit/fc2a8f20b97a17d0927c589f81df66ff7abf78c5)) (@Aenimus)
+
+# [0.56.0](https://github.com/wundergraph/cosmo/compare/wgc@0.55.5...wgc@0.56.0) (2024-06-05)
+
+### Features
+
+* admission webhook signature ([#852](https://github.com/wundergraph/cosmo/issues/852)) ([9212bb3](https://github.com/wundergraph/cosmo/commit/9212bb3aa3f3ca41f38c7944c3e6022c5fdc3ca8)) (@thisisnithin)
+
+## [0.55.5](https://github.com/wundergraph/cosmo/compare/wgc@0.55.4...wgc@0.55.5) (2024-05-30)
+
+**Note:** Version bump only for package wgc
+
+## [0.55.4](https://github.com/wundergraph/cosmo/compare/wgc@0.55.3...wgc@0.55.4) (2024-05-29)
+
+### Bug Fixes
+
+* prevent subgraph update except schema in publish ([#831](https://github.com/wundergraph/cosmo/issues/831)) ([37a9701](https://github.com/wundergraph/cosmo/commit/37a9701a2b9c61a9ecd489584cd6e2a9fe7ab70b)) (@thisisnithin)
+
 ## [0.55.3](https://github.com/wundergraph/cosmo/compare/wgc@0.55.2...wgc@0.55.3) (2024-05-24)
 
 **Note:** Version bump only for package wgc

@@ -148,6 +148,7 @@ export class ContractRepository {
         blobStorage,
         organizationId: this.organizationId,
         admissionWebhookURL: contractGraph.admissionWebhookURL,
+        admissionWebhookSecret: contractGraph.admissionWebhookSecret,
         admissionConfig,
       });
 

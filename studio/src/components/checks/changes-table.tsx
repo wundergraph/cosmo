@@ -151,7 +151,11 @@ const Row = ({
   const client = useQueryClient();
 
   const invalidateCheckOperations = () => {
-    const key = createConnectQueryKey(getCheckOperations);
+    const key = createConnectQueryKey(getCheckOperations, {
+      checkId: router.query.checkId as string,
+      graphName: graphContext?.graph?.name,
+      namespace: graphContext?.graph?.namespace,
+    });
     client.invalidateQueries({
       queryKey: key,
     });

@@ -1,34 +1,41 @@
-# Cosmo CLI aka "wgc"
+# WunderGraph Cosmo CLI aka "wgc"
 
 [![npm version](https://badge.fury.io/js/wgc.svg)](https://badge.fury.io/js/wgc)
 
 ## Getting started
 
+Official documentation: [https://cosmo-docs.wundergraph.com/cli](https://cosmo-docs.wundergraph.com/cli)
+
 ### Prerequisites
 
-- [Node.js 16 LTS or higher](https://nodejs.dev/en/about/releases/)
+- [Node.js 20 LTS or higher](https://nodejs.dev/en/about/releases/)
 
 The cosmo CLI tool `wgc`. Used to manage the cosmo platform e.g. pushing schema, check schemas, creating new projects, managing users, etc. It interacts with the control plane.
 
 ### Installation
 
 ```bash
-npx wgc schema push --service reviews --endpoint https://my-service.com/graphql <schema>.graphql
+npx wgc --help
+# or install it globally
+npm install -g wgc --help
 ```
 
 ### Development
 
-Run the following script to test your changes locally:
+Ensure that at least Node.js 20.6.0 is installed because we rely on the native .env file support.
+
+Replace `env.example` with `.env` and fill in the required values. By default, we point to the services of your local development environment.
+
+Run any command with `pnpm wgc` to test your changes locally directly.
 
 ```bash
-pnpm build && pnpm wgc schema push
+pnpm wgc ...
 ```
 
-_Everything behind `wgc` is passed to the `wgc` cli._
+_Everything behind `wgc` is passed to the `wgc` cli. This allows you to test your changes locally._
 
-## Authentication
+#### Run tests:
 
-The CLI uses the following environment variables to authenticate with the control plane:
-
-- `COSMO_API_KEY` - API key for the control plane
-- `COSMO_API_URL` - URL of the control plane
+```bash
+pnpm test
+```

@@ -100,17 +100,6 @@ const LintPolicyPage: NextPageWithLayout = () => {
   const [countByCategory, setCountByCategory] = useState<number[]>();
 
   useEffect(() => {
-    if (
-      !user ||
-      !user.currentOrganization ||
-      !user.currentOrganization.slug ||
-      !refetch
-    )
-      return;
-    refetch();
-  }, [refetch, user, user?.currentOrganization.slug]);
-
-  useEffect(() => {
     if (!data) return;
     setSelectedLintRules(data.configs);
     setLinterEnabled(data.linterEnabled);

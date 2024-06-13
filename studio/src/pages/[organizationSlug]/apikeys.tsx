@@ -777,17 +777,6 @@ const APIKeysPage: NextPageWithLayout = () => {
   const [openApiKeyCreatedDialog, setOpenApiKeyCreatedDialog] = useState(false);
 
   useEffect(() => {
-    if (
-      !user ||
-      !user.currentOrganization ||
-      !user.currentOrganization.slug ||
-      !refetch
-    )
-      return;
-    refetch();
-  }, [refetch, user, user?.currentOrganization.slug]);
-
-  useEffect(() => {
     if (!openApiKeyCreatedDialog) setApiKey(undefined);
   }, [openApiKeyCreatedDialog, setApiKey]);
 

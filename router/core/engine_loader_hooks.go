@@ -12,6 +12,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
+	"net/http"
 	"slices"
 	"strings"
 )
@@ -26,17 +27,19 @@ const EngineLoaderHooksScopeVersion = "0.0.1"
 // EngineLoaderHooks implements resolve.LoaderHooks
 // It is used to trace and measure the performance of the engine loader
 type EngineLoaderHooks struct {
-	tracer      trace.Tracer
-	metricStore metric.Store
+	tracer               trace.Tracer
+	metricStore          metric.Store
+	spanAttributesMapper func(r *http.Request) []attribute.KeyValue
 }
 
-func NewEngineRequestHooks(metricStore metric.Store) resolve.LoaderHooks {
+func NewEngineRequestHooks(metricStore metric.Store, spanAttributesMapper func(r *http.Request) []attribute.KeyValue) resolve.LoaderHooks {
 	return &EngineLoaderHooks{
 		tracer: otel.GetTracerProvider().Tracer(
 			EngineLoaderHooksScopeName,
 			trace.WithInstrumentationVersion(EngineLoaderHooksScopeVersion),
 		),
-		metricStore: metricStore,
+		metricStore:          metricStore,
+		spanAttributesMapper: spanAttributesMapper,
 	}
 }
 
@@ -51,7 +54,13 @@ func (f *EngineLoaderHooks) OnLoad(ctx context.Context, dataSourceID string) con
 		return ctx
 	}
 
-	ctx, span := f.tracer.Start(ctx, "Engine - Fetch")
+	var baseAttributes []attribute.KeyValue
+
+	if f.spanAttributesMapper != nil {
+		baseAttributes = f.spanAttributesMapper(reqContext.Request())
+	}
+
+	ctx, span := f.tracer.Start(ctx, "Engine - Fetch", trace.WithAttributes(baseAttributes...))
 
 	subgraph := reqContext.SubgraphByID(dataSourceID)
 	if subgraph != nil {

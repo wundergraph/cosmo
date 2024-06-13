@@ -32,7 +32,7 @@ import {
   ScalarTypeNode,
 } from '../ast/utils';
 import {
-  addNonExternalFieldsToSet,
+  addFieldNamesToConfigurationData,
   FieldSetData,
   InputValidationContainer,
   isNodeQuery,
@@ -190,7 +190,7 @@ import { InternalSubgraph, recordSubgraphName, Subgraph } from '../subgraph/subg
 import { invalidOverrideTargetSubgraphNameWarning } from '../warnings/warnings';
 import {
   consolidateAuthorizationDirectives,
-  upsertDirectiveAndSchemaDefinitions,
+  upsertDirectiveSchemaAndEntityDefinitions,
   upsertParentsAndChildren,
 } from './walkers';
 import {
@@ -238,6 +238,7 @@ export type NormalizationResult = {
   parentDefinitionDataByTypeName: Map<string, ParentDefinitionData>;
   parentExtensionDataByTypeName: Map<string, ObjectExtensionData>;
   originalTypeNameByRenamedTypeName: Map<string, string>;
+  isEventDrivenGraph: boolean;
   isVersionTwo: boolean;
   keyFieldNamesByParentTypeName: Map<string, Set<string>>;
   operationTypes: Map<string, OperationTypeNode>;
@@ -299,6 +300,7 @@ export class NormalizationFactory {
   parentExtensionDataByTypeName = new Map<string, ParentExtensionData>();
   interfaceTypeNamesWithAuthorizationDirectives = new Set<string>();
   isCurrentParentExtension = false;
+  isSubgraphEventDrivenGraph = false;
   isSubgraphVersionTwo = false;
   fieldSetDataByTypeName = new Map<string, FieldSetData>();
   heirFieldAuthorizationDataByTypeName = new Map<string, FieldAuthorizationData[]>();
@@ -595,17 +597,13 @@ export class NormalizationFactory {
       this.subgraphName,
       this.renamedParentTypeName,
     );
-    // TODO re-assess this line
-    if (node.kind === Kind.INTERFACE_TYPE_DEFINITION || node.kind === Kind.INTERFACE_TYPE_EXTENSION || !isEntity) {
+    const entityInterfaceData = this.entityInterfaces.get(this.renamedParentTypeName);
+    if (!entityInterfaceData) {
       return;
     }
-    const fieldSetData = getValueOrDefault(this.fieldSetDataByTypeName, this.originalParentTypeName, newFieldSetData);
-    this.extractKeyFieldSets(node, fieldSetData);
-    upsertEntityDataProperties(this.entityDataByTypeName, {
-      typeName: this.originalParentTypeName,
-      keyFieldSets: fieldSetData.isUnresolvableByKeyFieldSet.keys(),
-      ...(this.subgraphName ? { subgraphNames: [this.subgraphName] } : {}),
-    });
+    for (const fieldNode of node.fields || []) {
+      entityInterfaceData.interfaceFieldNames.add(fieldNode.name.value);
+    }
   }
 
   extractKeyFieldSets(node: ObjectLikeTypeNode, fieldSetData: FieldSetData) {
@@ -1359,7 +1357,7 @@ export class NormalizationFactory {
     allDirectiveDefinitions cannot be used to check for duplicate definitions, and another set (below) is required */
 
     // Collect any renamed root types
-    upsertDirectiveAndSchemaDefinitions(this, document);
+    upsertDirectiveSchemaAndEntityDefinitions(this, document);
     upsertParentsAndChildren(this, document);
     consolidateAuthorizationDirectives(this, document);
     for (const interfaceTypeName of this.interfaceTypeNamesWithAuthorizationDirectives) {
@@ -1462,7 +1460,7 @@ export class NormalizationFactory {
           parentExtensionData.fieldDataByFieldName.delete(SERVICE_FIELD);
           parentExtensionData.fieldDataByFieldName.delete(ENTITIES_FIELD);
         }
-        addNonExternalFieldsToSet(parentExtensionData.fieldDataByFieldName, configurationData.fieldNames);
+        addFieldNamesToConfigurationData(parentExtensionData.fieldDataByFieldName, configurationData);
       }
       const parentDefinitionData = this.parentDefinitionDataByTypeName.get(extensionTypeName);
       if (!parentDefinitionData) {
@@ -1573,8 +1571,8 @@ export class NormalizationFactory {
           ) {
             this.errors.push(noFieldDefinitionsError(kindToTypeString(parentDefinitionData.kind), extensionTypeName));
           }
-          // Add the non-external base type field names to the configuration data
-          addNonExternalFieldsToSet(parentDefinitionData.fieldDataByFieldName, configurationData.fieldNames);
+          // Add the base type field names to the configuration data
+          addFieldNamesToConfigurationData(parentDefinitionData.fieldDataByFieldName, configurationData);
           break;
         case Kind.SCALAR_TYPE_DEFINITION:
           definitions.push(
@@ -1670,7 +1668,7 @@ export class NormalizationFactory {
             configurationData.events = events;
           }
           this.configurationDataByParentTypeName.set(newParentTypeName, configurationData);
-          addNonExternalFieldsToSet(parentDefinitionData.fieldDataByFieldName, configurationData.fieldNames);
+          addFieldNamesToConfigurationData(parentDefinitionData.fieldDataByFieldName, configurationData);
           this.validateInterfaceImplementations(parentDefinitionData);
           definitions.push(
             getParentWithFieldsNodeByData(
@@ -1807,7 +1805,8 @@ export class NormalizationFactory {
         this.subgraphName,
       );
     }
-    if (this.edfsDirectiveReferences.size > 0) {
+    this.isSubgraphEventDrivenGraph = this.edfsDirectiveReferences.size > 0;
+    if (this.isSubgraphEventDrivenGraph) {
       this.validateEventDrivenSubgraph();
     }
     if (this.errors.length > 0) {
@@ -1828,6 +1827,7 @@ export class NormalizationFactory {
         entityInterfaces: this.entityInterfaces,
         parentDefinitionDataByTypeName: this.parentDefinitionDataByTypeName,
         parentExtensionDataByTypeName: validParentExtensionOrphansByTypeName,
+        isEventDrivenGraph: this.isSubgraphEventDrivenGraph,
         isVersionTwo: this.isSubgraphVersionTwo,
         keyFieldNamesByParentTypeName: this.keyFieldNamesByParentTypeName,
         operationTypes: this.operationTypeNodeByTypeName,
