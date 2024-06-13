@@ -320,6 +320,7 @@ message Subgraph {
   string subscriptionProtocol = 11;
   optional bool isV2Graph = 12;
   bool isEventDrivenGraph = 13;
+  string websocketSubprotocol = 14;
 }
 
 message GetSubgraphsResponse {

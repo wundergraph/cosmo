@@ -179,6 +179,7 @@ export class GraphCompositionRepository {
         namespaceId: schema.namespaces.id,
         namespace: schema.namespaces.name,
         lastUpdatedAt: graphCompositionSubgraphs.createdAt,
+        websocketSubprotocol: schema.subgraphs.websocketSubprotocol,
         isEventDrivenGraph: schema.subgraphs.isEventDrivenGraph,
       })
       .from(graphCompositionSubgraphs)

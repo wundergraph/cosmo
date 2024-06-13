@@ -1,16 +1,15 @@
 import { eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
-import { federateSubgraphsContract } from '@wundergraph/composition';
 import { parse } from 'graphql';
 import * as schema from '../../db/schema.js';
-import { Composer, CompositionDeployResult, mapResultToComposedGraph } from '../composition/composer.js';
+import { FederatedGraphDTO } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
+import { Composer, CompositionDeployResult, mapResultToComposedGraph } from '../composition/composer.js';
 import { composeSubgraphsForContract } from '../composition/composition.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
-import { SubgraphRepository } from './SubgraphRepository.js';
 import { GraphCompositionRepository } from './GraphCompositionRepository.js';
-import { FederatedGraphDTO } from 'src/types/index.js';
+import { SubgraphRepository } from './SubgraphRepository.js';
 
 export class ContractRepository {
   constructor(
