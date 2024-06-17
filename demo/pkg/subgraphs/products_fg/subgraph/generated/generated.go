@@ -16,7 +16,7 @@ import (
 	"github.com/99designs/gqlgen/plugin/federation/fedruntime"
 	gqlparser "github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
-	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/products/subgraph/model"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/products_fg/subgraph/model"
 )
 
 // region    ************************** generated!.gotpl **************************
@@ -72,9 +72,10 @@ type ComplexityRoot struct {
 	}
 
 	Employee struct {
-		ID       func(childComplexity int) int
-		Notes    func(childComplexity int) int
-		Products func(childComplexity int) int
+		ID           func(childComplexity int) int
+		Notes        func(childComplexity int) int
+		ProductCount func(childComplexity int) int
+		Products     func(childComplexity int) int
 	}
 
 	Entity struct {
@@ -242,6 +243,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Employee.Notes(childComplexity), true
+
+	case "Employee.productCount":
+		if e.complexity.Employee.ProductCount == nil {
+			break
+		}
+
+		return e.complexity.Employee.ProductCount(childComplexity), true
 
 	case "Employee.products":
 		if e.complexity.Employee.Products == nil {
@@ -560,6 +568,7 @@ enum ProductName {
 type Employee @key(fields: "id") {
   id: Int!
   products: [ProductName!]!
+  productCount: Int!
   notes: String @override(from: "employees")
 }
 
@@ -666,7 +675,7 @@ func (ec *executionContext) field_Documentation_url_args(ctx context.Context, ra
 	var arg0 model.ProductName
 	if tmp, ok := rawArgs["product"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("product"))
-		arg0, err = ec.unmarshalNProductName2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductName(ctx, tmp)
+		arg0, err = ec.unmarshalNProductName2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐProductName(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -681,7 +690,7 @@ func (ec *executionContext) field_Documentation_urls_args(ctx context.Context, r
 	var arg0 []model.ProductName
 	if tmp, ok := rawArgs["products"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("products"))
-		arg0, err = ec.unmarshalNProductName2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductNameᚄ(ctx, tmp)
+		arg0, err = ec.unmarshalNProductName2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐProductNameᚄ(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -741,7 +750,7 @@ func (ec *executionContext) field_Mutation_addFact_args(ctx context.Context, raw
 	var arg0 model.TopSecretFactInput
 	if tmp, ok := rawArgs["fact"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("fact"))
-		arg0, err = ec.unmarshalNTopSecretFactInput2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactInput(ctx, tmp)
+		arg0, err = ec.unmarshalNTopSecretFactInput2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐTopSecretFactInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -890,7 +899,7 @@ func (ec *executionContext) _Consultancy_name(ctx context.Context, field graphql
 	}
 	res := resTmp.(model.ProductName)
 	fc.Result = res
-	return ec.marshalNProductName2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductName(ctx, field.Selections, res)
+	return ec.marshalNProductName2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐProductName(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Consultancy_name(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -978,7 +987,7 @@ func (ec *executionContext) _Cosmo_name(ctx context.Context, field graphql.Colle
 	}
 	res := resTmp.(model.ProductName)
 	fc.Result = res
-	return ec.marshalNProductName2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductName(ctx, field.Selections, res)
+	return ec.marshalNProductName2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐProductName(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Cosmo_name(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1151,7 +1160,7 @@ func (ec *executionContext) _DirectiveFact_factType(ctx context.Context, field g
 	}
 	res := resTmp.(*model.TopSecretFactType)
 	fc.Result = res
-	return ec.marshalOTopSecretFactType2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactType(ctx, field.Selections, res)
+	return ec.marshalOTopSecretFactType2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐTopSecretFactType(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_DirectiveFact_factType(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1349,7 +1358,7 @@ func (ec *executionContext) _Employee_products(ctx context.Context, field graphq
 	}
 	res := resTmp.([]model.ProductName)
 	fc.Result = res
-	return ec.marshalNProductName2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductNameᚄ(ctx, field.Selections, res)
+	return ec.marshalNProductName2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐProductNameᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Employee_products(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1360,6 +1369,50 @@ func (ec *executionContext) fieldContext_Employee_products(ctx context.Context, 
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type ProductName does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Employee_productCount(ctx context.Context, field graphql.CollectedField, obj *model.Employee) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Employee_productCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ProductCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Employee_productCount(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Employee",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
 		},
 	}
 	return fc, nil
@@ -1434,7 +1487,7 @@ func (ec *executionContext) _Entity_findConsultancyByUpc(ctx context.Context, fi
 	}
 	res := resTmp.(*model.Consultancy)
 	fc.Result = res
-	return ec.marshalNConsultancy2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐConsultancy(ctx, field.Selections, res)
+	return ec.marshalNConsultancy2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐConsultancy(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Entity_findConsultancyByUpc(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1495,7 +1548,7 @@ func (ec *executionContext) _Entity_findCosmoByUpc(ctx context.Context, field gr
 	}
 	res := resTmp.(*model.Cosmo)
 	fc.Result = res
-	return ec.marshalNCosmo2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐCosmo(ctx, field.Selections, res)
+	return ec.marshalNCosmo2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐCosmo(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Entity_findCosmoByUpc(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1558,7 +1611,7 @@ func (ec *executionContext) _Entity_findEmployeeByID(ctx context.Context, field 
 	}
 	res := resTmp.(*model.Employee)
 	fc.Result = res
-	return ec.marshalNEmployee2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐEmployee(ctx, field.Selections, res)
+	return ec.marshalNEmployee2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐEmployee(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Entity_findEmployeeByID(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1573,6 +1626,8 @@ func (ec *executionContext) fieldContext_Entity_findEmployeeByID(ctx context.Con
 				return ec.fieldContext_Employee_id(ctx, field)
 			case "products":
 				return ec.fieldContext_Employee_products(ctx, field)
+			case "productCount":
+				return ec.fieldContext_Employee_productCount(ctx, field)
 			case "notes":
 				return ec.fieldContext_Employee_notes(ctx, field)
 			}
@@ -1706,7 +1761,7 @@ func (ec *executionContext) _EntityFact_factType(ctx context.Context, field grap
 	}
 	res := resTmp.(*model.TopSecretFactType)
 	fc.Result = res
-	return ec.marshalOTopSecretFactType2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactType(ctx, field.Selections, res)
+	return ec.marshalOTopSecretFactType2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐTopSecretFactType(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_EntityFact_factType(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1835,7 +1890,7 @@ func (ec *executionContext) _MiscellaneousFact_factType(ctx context.Context, fie
 	}
 	res := resTmp.(*model.TopSecretFactType)
 	fc.Result = res
-	return ec.marshalOTopSecretFactType2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactType(ctx, field.Selections, res)
+	return ec.marshalOTopSecretFactType2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐTopSecretFactType(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_MiscellaneousFact_factType(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1879,7 +1934,7 @@ func (ec *executionContext) _Mutation_addFact(ctx context.Context, field graphql
 	}
 	res := resTmp.(model.TopSecretFact)
 	fc.Result = res
-	return ec.marshalNTopSecretFact2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFact(ctx, field.Selections, res)
+	return ec.marshalNTopSecretFact2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐTopSecretFact(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_addFact(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1934,7 +1989,7 @@ func (ec *executionContext) _Queries_productTypes(ctx context.Context, field gra
 	}
 	res := resTmp.([]model.Products)
 	fc.Result = res
-	return ec.marshalNProducts2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductsᚄ(ctx, field.Selections, res)
+	return ec.marshalNProducts2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐProductsᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Queries_productTypes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1978,7 +2033,7 @@ func (ec *executionContext) _Queries_topSecretFederationFacts(ctx context.Contex
 	}
 	res := resTmp.([]model.TopSecretFact)
 	fc.Result = res
-	return ec.marshalNTopSecretFact2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactᚄ(ctx, field.Selections, res)
+	return ec.marshalNTopSecretFact2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐTopSecretFactᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Queries_topSecretFederationFacts(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -2019,7 +2074,7 @@ func (ec *executionContext) _Queries_factTypes(ctx context.Context, field graphq
 	}
 	res := resTmp.([]model.TopSecretFactType)
 	fc.Result = res
-	return ec.marshalOTopSecretFactType2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactTypeᚄ(ctx, field.Selections, res)
+	return ec.marshalOTopSecretFactType2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐTopSecretFactTypeᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Queries_factTypes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4111,7 +4166,7 @@ func (ec *executionContext) unmarshalInputTopSecretFactInput(ctx context.Context
 			it.Description = data
 		case "factType":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("factType"))
-			data, err := ec.unmarshalNTopSecretFactType2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactType(ctx, v)
+			data, err := ec.unmarshalNTopSecretFactType2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐTopSecretFactType(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -4483,6 +4538,11 @@ func (ec *executionContext) _Employee(ctx context.Context, sel ast.SelectionSet,
 			}
 		case "products":
 			out.Values[i] = ec._Employee_products(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "productCount":
+			out.Values[i] = ec._Employee_productCount(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -5294,11 +5354,11 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
-func (ec *executionContext) marshalNConsultancy2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐConsultancy(ctx context.Context, sel ast.SelectionSet, v model.Consultancy) graphql.Marshaler {
+func (ec *executionContext) marshalNConsultancy2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐConsultancy(ctx context.Context, sel ast.SelectionSet, v model.Consultancy) graphql.Marshaler {
 	return ec._Consultancy(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNConsultancy2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐConsultancy(ctx context.Context, sel ast.SelectionSet, v *model.Consultancy) graphql.Marshaler {
+func (ec *executionContext) marshalNConsultancy2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐConsultancy(ctx context.Context, sel ast.SelectionSet, v *model.Consultancy) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -5308,11 +5368,11 @@ func (ec *executionContext) marshalNConsultancy2ᚖgithubᚗcomᚋwundergraphᚋ
 	return ec._Consultancy(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNCosmo2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐCosmo(ctx context.Context, sel ast.SelectionSet, v model.Cosmo) graphql.Marshaler {
+func (ec *executionContext) marshalNCosmo2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐCosmo(ctx context.Context, sel ast.SelectionSet, v model.Cosmo) graphql.Marshaler {
 	return ec._Cosmo(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNCosmo2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐCosmo(ctx context.Context, sel ast.SelectionSet, v *model.Cosmo) graphql.Marshaler {
+func (ec *executionContext) marshalNCosmo2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐCosmo(ctx context.Context, sel ast.SelectionSet, v *model.Cosmo) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -5322,11 +5382,11 @@ func (ec *executionContext) marshalNCosmo2ᚖgithubᚗcomᚋwundergraphᚋcosmo�
 	return ec._Cosmo(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNEmployee2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐEmployee(ctx context.Context, sel ast.SelectionSet, v model.Employee) graphql.Marshaler {
+func (ec *executionContext) marshalNEmployee2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐEmployee(ctx context.Context, sel ast.SelectionSet, v model.Employee) graphql.Marshaler {
 	return ec._Employee(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNEmployee2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐEmployee(ctx context.Context, sel ast.SelectionSet, v *model.Employee) graphql.Marshaler {
+func (ec *executionContext) marshalNEmployee2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐEmployee(ctx context.Context, sel ast.SelectionSet, v *model.Employee) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -5396,17 +5456,17 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 	return res
 }
 
-func (ec *executionContext) unmarshalNProductName2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductName(ctx context.Context, v interface{}) (model.ProductName, error) {
+func (ec *executionContext) unmarshalNProductName2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐProductName(ctx context.Context, v interface{}) (model.ProductName, error) {
 	var res model.ProductName
 	err := res.UnmarshalGQL(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNProductName2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductName(ctx context.Context, sel ast.SelectionSet, v model.ProductName) graphql.Marshaler {
+func (ec *executionContext) marshalNProductName2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐProductName(ctx context.Context, sel ast.SelectionSet, v model.ProductName) graphql.Marshaler {
 	return v
 }
 
-func (ec *executionContext) unmarshalNProductName2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductNameᚄ(ctx context.Context, v interface{}) ([]model.ProductName, error) {
+func (ec *executionContext) unmarshalNProductName2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐProductNameᚄ(ctx context.Context, v interface{}) ([]model.ProductName, error) {
 	var vSlice []interface{}
 	if v != nil {
 		vSlice = graphql.CoerceList(v)
@@ -5415,7 +5475,7 @@ func (ec *executionContext) unmarshalNProductName2ᚕgithubᚗcomᚋwundergraph�
 	res := make([]model.ProductName, len(vSlice))
 	for i := range vSlice {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalNProductName2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductName(ctx, vSlice[i])
+		res[i], err = ec.unmarshalNProductName2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐProductName(ctx, vSlice[i])
 		if err != nil {
 			return nil, err
 		}
@@ -5423,7 +5483,7 @@ func (ec *executionContext) unmarshalNProductName2ᚕgithubᚗcomᚋwundergraph�
 	return res, nil
 }
 
-func (ec *executionContext) marshalNProductName2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductNameᚄ(ctx context.Context, sel ast.SelectionSet, v []model.ProductName) graphql.Marshaler {
+func (ec *executionContext) marshalNProductName2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐProductNameᚄ(ctx context.Context, sel ast.SelectionSet, v []model.ProductName) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -5447,7 +5507,7 @@ func (ec *executionContext) marshalNProductName2ᚕgithubᚗcomᚋwundergraphᚋ
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNProductName2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductName(ctx, sel, v[i])
+			ret[i] = ec.marshalNProductName2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐProductName(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -5467,7 +5527,7 @@ func (ec *executionContext) marshalNProductName2ᚕgithubᚗcomᚋwundergraphᚋ
 	return ret
 }
 
-func (ec *executionContext) marshalNProducts2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProducts(ctx context.Context, sel ast.SelectionSet, v model.Products) graphql.Marshaler {
+func (ec *executionContext) marshalNProducts2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐProducts(ctx context.Context, sel ast.SelectionSet, v model.Products) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -5477,7 +5537,7 @@ func (ec *executionContext) marshalNProducts2githubᚗcomᚋwundergraphᚋcosmo�
 	return ec._Products(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNProducts2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductsᚄ(ctx context.Context, sel ast.SelectionSet, v []model.Products) graphql.Marshaler {
+func (ec *executionContext) marshalNProducts2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐProductsᚄ(ctx context.Context, sel ast.SelectionSet, v []model.Products) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -5501,7 +5561,7 @@ func (ec *executionContext) marshalNProducts2ᚕgithubᚗcomᚋwundergraphᚋcos
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNProducts2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProducts(ctx, sel, v[i])
+			ret[i] = ec.marshalNProducts2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐProducts(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -5568,7 +5628,7 @@ func (ec *executionContext) marshalNString2ᚕstringᚄ(ctx context.Context, sel
 	return ret
 }
 
-func (ec *executionContext) marshalNTopSecretFact2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFact(ctx context.Context, sel ast.SelectionSet, v model.TopSecretFact) graphql.Marshaler {
+func (ec *executionContext) marshalNTopSecretFact2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐTopSecretFact(ctx context.Context, sel ast.SelectionSet, v model.TopSecretFact) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -5578,7 +5638,7 @@ func (ec *executionContext) marshalNTopSecretFact2githubᚗcomᚋwundergraphᚋc
 	return ec._TopSecretFact(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNTopSecretFact2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactᚄ(ctx context.Context, sel ast.SelectionSet, v []model.TopSecretFact) graphql.Marshaler {
+func (ec *executionContext) marshalNTopSecretFact2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐTopSecretFactᚄ(ctx context.Context, sel ast.SelectionSet, v []model.TopSecretFact) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -5602,7 +5662,7 @@ func (ec *executionContext) marshalNTopSecretFact2ᚕgithubᚗcomᚋwundergraph�
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNTopSecretFact2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFact(ctx, sel, v[i])
+			ret[i] = ec.marshalNTopSecretFact2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐTopSecretFact(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -5622,18 +5682,18 @@ func (ec *executionContext) marshalNTopSecretFact2ᚕgithubᚗcomᚋwundergraph�
 	return ret
 }
 
-func (ec *executionContext) unmarshalNTopSecretFactInput2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactInput(ctx context.Context, v interface{}) (model.TopSecretFactInput, error) {
+func (ec *executionContext) unmarshalNTopSecretFactInput2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐTopSecretFactInput(ctx context.Context, v interface{}) (model.TopSecretFactInput, error) {
 	res, err := ec.unmarshalInputTopSecretFactInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) unmarshalNTopSecretFactType2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactType(ctx context.Context, v interface{}) (model.TopSecretFactType, error) {
+func (ec *executionContext) unmarshalNTopSecretFactType2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐTopSecretFactType(ctx context.Context, v interface{}) (model.TopSecretFactType, error) {
 	var res model.TopSecretFactType
 	err := res.UnmarshalGQL(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNTopSecretFactType2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactType(ctx context.Context, sel ast.SelectionSet, v model.TopSecretFactType) graphql.Marshaler {
+func (ec *executionContext) marshalNTopSecretFactType2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐTopSecretFactType(ctx context.Context, sel ast.SelectionSet, v model.TopSecretFactType) graphql.Marshaler {
 	return v
 }
 
@@ -6233,7 +6293,7 @@ func (ec *executionContext) marshalOString2ᚖstring(ctx context.Context, sel as
 	return res
 }
 
-func (ec *executionContext) unmarshalOTopSecretFactType2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactTypeᚄ(ctx context.Context, v interface{}) ([]model.TopSecretFactType, error) {
+func (ec *executionContext) unmarshalOTopSecretFactType2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐTopSecretFactTypeᚄ(ctx context.Context, v interface{}) ([]model.TopSecretFactType, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -6245,7 +6305,7 @@ func (ec *executionContext) unmarshalOTopSecretFactType2ᚕgithubᚗcomᚋwunder
 	res := make([]model.TopSecretFactType, len(vSlice))
 	for i := range vSlice {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalNTopSecretFactType2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactType(ctx, vSlice[i])
+		res[i], err = ec.unmarshalNTopSecretFactType2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐTopSecretFactType(ctx, vSlice[i])
 		if err != nil {
 			return nil, err
 		}
@@ -6253,7 +6313,7 @@ func (ec *executionContext) unmarshalOTopSecretFactType2ᚕgithubᚗcomᚋwunder
 	return res, nil
 }
 
-func (ec *executionContext) marshalOTopSecretFactType2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactTypeᚄ(ctx context.Context, sel ast.SelectionSet, v []model.TopSecretFactType) graphql.Marshaler {
+func (ec *executionContext) marshalOTopSecretFactType2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐTopSecretFactTypeᚄ(ctx context.Context, sel ast.SelectionSet, v []model.TopSecretFactType) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
@@ -6280,7 +6340,7 @@ func (ec *executionContext) marshalOTopSecretFactType2ᚕgithubᚗcomᚋwundergr
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNTopSecretFactType2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactType(ctx, sel, v[i])
+			ret[i] = ec.marshalNTopSecretFactType2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐTopSecretFactType(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -6300,7 +6360,7 @@ func (ec *executionContext) marshalOTopSecretFactType2ᚕgithubᚗcomᚋwundergr
 	return ret
 }
 
-func (ec *executionContext) unmarshalOTopSecretFactType2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactType(ctx context.Context, v interface{}) (*model.TopSecretFactType, error) {
+func (ec *executionContext) unmarshalOTopSecretFactType2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐTopSecretFactType(ctx context.Context, v interface{}) (*model.TopSecretFactType, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -6309,7 +6369,7 @@ func (ec *executionContext) unmarshalOTopSecretFactType2ᚖgithubᚗcomᚋwunder
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalOTopSecretFactType2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactType(ctx context.Context, sel ast.SelectionSet, v *model.TopSecretFactType) graphql.Marshaler {
+func (ec *executionContext) marshalOTopSecretFactType2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproducts_fgᚋsubgraphᚋmodelᚐTopSecretFactType(ctx context.Context, sel ast.SelectionSet, v *model.TopSecretFactType) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}

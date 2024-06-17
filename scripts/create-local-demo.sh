@@ -12,7 +12,7 @@ pnpm wgc subgraph create family --namespace default --label team=A --routing-url
 pnpm wgc subgraph create hobbies --namespace default --label team=B --routing-url http://localhost:4003/graphql
 pnpm wgc subgraph create products --namespace default --label team=B --routing-url http://localhost:4004/graphql
 pnpm wgc subgraph create employeeupdated --event-driven-graph --namespace default --label team=B
-pnpm wgc contract create mygraph-external --source mygraph -r http://localhost:3003/graphql --exclude internal
+# pnpm wgc contract create mygraph-external --source mygraph -r http://localhost:3003/graphql --exclude internal
 
 ./scripts/update-demo.sh
 

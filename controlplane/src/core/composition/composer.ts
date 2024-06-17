@@ -137,7 +137,7 @@ export class Composer {
       schemaVersionId: string;
     }[];
   }) {
-    // fetch all the router configs for the composistions where there are no composition
+    // fetch all the router configs for the compositions where there are no composition
     const baseVersion = await this.federatedGraphRepo.getLatestValidRouterConfig(federatedGraphTargetId);
     if (!baseVersion) {
       // TODO improve message

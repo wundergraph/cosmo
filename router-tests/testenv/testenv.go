@@ -120,6 +120,7 @@ type SubgraphsConfig struct {
 	Family           SubgraphConfig
 	Hobbies          SubgraphConfig
 	Products         SubgraphConfig
+	ProductsFg       SubgraphConfig
 	Test1            SubgraphConfig
 	Availability     SubgraphConfig
 	Mood             SubgraphConfig
@@ -275,6 +276,16 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		localDelay:       cfg.Subgraphs.Products.Delay,
 	}
 
+	productsFg := &Subgraph{
+		handler:          subgraphs.ProductsFGHandler(subgraphOptions(ctx, t, natsData.Server)),
+		middleware:       cfg.Subgraphs.ProductsFg.Middleware,
+		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
+		globalCounter:    counters.Global,
+		localCounter:     counters.ProductFg,
+		globalDelay:      cfg.Subgraphs.GlobalDelay,
+		localDelay:       cfg.Subgraphs.ProductsFg.Delay,
+	}
+
 	test1 := &Subgraph{
 		handler:          subgraphs.Test1Handler(subgraphOptions(ctx, t, natsData.Server)),
 		middleware:       cfg.Subgraphs.Test1.Middleware,
@@ -323,6 +334,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	availabilityServer := httptest.NewServer(availability)
 	moodServer := httptest.NewServer(mood)
 	countriesServer := httptest.NewServer(countries)
+	productFgServer := httptest.NewServer(productsFg)
 
 	replacements := map[string]string{
 		subgraphs.EmployeesDefaultDemoURL:    gqlURL(employeesServer),
@@ -333,6 +345,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		subgraphs.AvailabilityDefaultDemoURL: gqlURL(availabilityServer),
 		subgraphs.MoodDefaultDemoURL:         gqlURL(moodServer),
 		subgraphs.CountriesDefaultDemoURL:    gqlURL(countriesServer),
+		subgraphs.ProductsFgDefaultDemoURL:   gqlURL(productFgServer),
 	}
 
 	replaced := configJSONTemplate
@@ -442,6 +455,9 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 	if cfg.Subgraphs.Countries.CloseOnStart {
 		countriesServer.Close()
+	}
+	if cfg.Subgraphs.ProductsFg.CloseOnStart {
+		productFgServer.Close()
 	}
 
 	e := &Environment{
@@ -795,6 +811,7 @@ type SubgraphRequestCount struct {
 	Family       *atomic.Int64
 	Hobbies      *atomic.Int64
 	Products     *atomic.Int64
+	ProductFg    *atomic.Int64
 	Test1        *atomic.Int64
 	Availability *atomic.Int64
 	Mood         *atomic.Int64

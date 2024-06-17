@@ -1,4 +1,11 @@
 version: 1
+feature_flags:
+  - name: myff
+    subgraphs:
+    - name: products
+      routing_url: http://localhost:4004/graphql
+      schema:
+        file: ./pkg/subgraphs/products/subgraph/schema.graphqls
 subgraphs:
   - name: employees
     routing_url: http://localhost:4001/graphql

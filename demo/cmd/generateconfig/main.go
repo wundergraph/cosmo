@@ -34,6 +34,8 @@ func main() {
 
 	countries := subgraphs.CountriesHandler(&subgraphs.SubgraphOptions{})
 
+	productFeatureGraph := subgraphs.ProductsFGHandler(&subgraphs.SubgraphOptions{})
+
 	employeesServer := httptest.NewServer(employees)
 	defer employeesServer.Close()
 	familyServer := httptest.NewServer(family)
@@ -50,6 +52,8 @@ func main() {
 	defer moodServer.Close()
 	countriesServer := httptest.NewServer(countries)
 	defer countriesServer.Close()
+	productsFeatureGraphServer := httptest.NewServer(productFeatureGraph)
+	defer productsFeatureGraphServer.Close()
 
 	// get directory of this file
 	_, b, _, _ := runtime.Caller(0)
@@ -98,6 +102,10 @@ func main() {
 			Name:   "employeeupdated",
 			Schema: string(employeeUpdatedSchema),
 		},
+		{
+			Name: "products_fg",
+			URL:  gqlURL(productsFeatureGraphServer),
+		},
 	}
 
 	routerConfigJSON, err := composition.BuildRouterConfiguration(sgs...)
@@ -130,6 +138,8 @@ func main() {
 			return subgraphs.MoodDefaultDemoURL
 		case sgs[7].URL:
 			return subgraphs.CountriesDefaultDemoURL
+		case sgs[8].URL:
+			return subgraphs.ProductsFgDefaultDemoURL
 		default:
 			return s
 		}
