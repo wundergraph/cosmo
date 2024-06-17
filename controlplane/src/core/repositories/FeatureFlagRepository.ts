@@ -32,12 +32,11 @@ export interface FeatureFlagWithFeatureGraphs {
   })[];
 }
 
-export interface CompositionPossibilities {
+export interface FeatureFlagRelatedGraph {
   compositionSubgraphs: Subgraph[];
   subgraphs: SubgraphDTO[];
   isFeatureFlagComposition: boolean;
-  // can be the name of ff or ffg
-  featureFlagName?: string;
+  featureFlagName: string;
 }
 
 export class FeatureFlagRepository {
@@ -620,8 +619,40 @@ export class FeatureFlagRepository {
     return featureFlagWithEnabledFeatureGraphs;
   }
 
-  // evaluates all the ffs and ffgs and returns the compositon possibilities(the subgraphs that should be composed)
-  public async getCompositionPossibilities({
+  getFeatureFlagRelatedGraphsToCompose(
+    featureFlagToComposeByFlagName: Map<string, FeatureFlagWithFeatureGraphs>,
+    baseCompositionSubgraphs: Array<Subgraph>,
+    subgraphs: Array<SubgraphDTO>,
+    featureFlagRelatedGraphsToCompose: Array<FeatureFlagRelatedGraph>,
+  ): Array<FeatureFlagRelatedGraph> {
+    for (const flag of featureFlagToComposeByFlagName.values()) {
+      let compositionSubgraphs = baseCompositionSubgraphs;
+      let subgraphDTOs = subgraphs;
+      if (flag.featureGraphs.length === 0) {
+        continue;
+      }
+      for (const featureGraph of flag.featureGraphs) {
+        compositionSubgraphs = compositionSubgraphs.filter((b) => b.name !== featureGraph.baseSubgraphName);
+        subgraphDTOs = subgraphDTOs.filter((s) => s.name !== featureGraph.baseSubgraphName);
+        compositionSubgraphs.push({
+          name: featureGraph.name,
+          url: featureGraph.routingUrl,
+          definitions: parse(featureGraph.schemaSDL),
+        });
+        subgraphDTOs.push(featureGraph);
+      }
+      featureFlagRelatedGraphsToCompose.push({
+        compositionSubgraphs,
+        isFeatureFlagComposition: true,
+        featureFlagName: flag.name,
+        subgraphs: subgraphDTOs,
+      });
+    }
+    return featureFlagRelatedGraphsToCompose;
+  }
+
+  // evaluates all the feature graphs and feature flags and returns the composition possibilities(the subgraphs that should be composed)
+  public async getAllFeatureFlagRelatedGraphs({
     subgraphs,
     fedGraphLabelMatchers,
     baseCompositionSubgraphs,
@@ -629,51 +660,91 @@ export class FeatureFlagRepository {
     subgraphs: SubgraphDTO[];
     fedGraphLabelMatchers: string[];
     baseCompositionSubgraphs: Subgraph[];
-  }): Promise<CompositionPossibilities[]> {
-    const compositionPossibilities: CompositionPossibilities[] = [
-      { compositionSubgraphs: baseCompositionSubgraphs, isFeatureFlagComposition: false, subgraphs },
+  }): Promise<Array<FeatureFlagRelatedGraph>> {
+    // When getting all feature flag related graphs, include the base graph
+    const featureFlagRelatedGraphsToCompose: Array<FeatureFlagRelatedGraph> = [
+      {
+        compositionSubgraphs: baseCompositionSubgraphs,
+        isFeatureFlagComposition: false,
+        subgraphs,
+        featureFlagName: '',
+      },
     ];
-    const featureFlagsToBeComposed: FeatureFlagWithFeatureGraphs[] = [];
+    const featureFlagToComposeByFlagName = new Map<string, FeatureFlagWithFeatureGraphs>();
     for (const subgraph of subgraphs) {
       // fetching all the ffs which have fgs whose base subgraph id is the passed as input
       const enabledFeatureFlags = await this.getEnabledFeatureFlagsBySubgraphIdAndLabels({
         subgraphId: subgraph.id,
         namespaceId: subgraph.namespaceId,
         labelMatchers: fedGraphLabelMatchers,
-        baseSubgraphNames: baseCompositionSubgraphs.map((b) => b.name),
+        baseSubgraphNames: baseCompositionSubgraphs.map((baseSubgraph) => baseSubgraph.name),
       });
       for (const flag of enabledFeatureFlags) {
-        const found = featureFlagsToBeComposed.some((g) => g.id === flag.id);
-        if (found) {
+        if (featureFlagToComposeByFlagName.has(flag.name)) {
           continue;
         }
-        featureFlagsToBeComposed.push(flag);
+        featureFlagToComposeByFlagName.set(flag.name, flag);
+      }
+    }
+    return this.getFeatureFlagRelatedGraphsToCompose(
+      featureFlagToComposeByFlagName,
+      baseCompositionSubgraphs,
+      subgraphs,
+      featureFlagRelatedGraphsToCompose,
+    );
+  }
+
+  public async getFilteredFeatureFlagRelatedGraphs({
+    subgraphs,
+    fedGraphLabelMatchers,
+    baseCompositionSubgraphs,
+    featureFlagName,
+    isFeatureFlagEnabled,
+  }: {
+    subgraphs: SubgraphDTO[];
+    fedGraphLabelMatchers: string[];
+    baseCompositionSubgraphs: Subgraph[];
+    featureFlagName: string;
+    isFeatureFlagEnabled: boolean;
+  }): Promise<FeatureFlagRelatedGraph[]> {
+    const featureFlagRelatedGraphsToCompose: FeatureFlagRelatedGraph[] = [];
+    // If the feature flag has been disabled, also re-compose the base federated graphh
+    if (!isFeatureFlagEnabled) {
+      featureFlagRelatedGraphsToCompose.push({
+        compositionSubgraphs: baseCompositionSubgraphs,
+        isFeatureFlagComposition: false,
+        subgraphs,
+        featureFlagName: '',
+      });
+    }
+    const featureFlagToComposeByFlagName = new Map<string, FeatureFlagWithFeatureGraphs>();
+    for (const subgraph of subgraphs) {
+      // Fetch all enabled feature flags where the subgraph in question is a base subgraph for the feature graph
+      const enabledFeatureFlags = await this.getEnabledFeatureFlagsBySubgraphIdAndLabels({
+        subgraphId: subgraph.id,
+        namespaceId: subgraph.namespaceId,
+        labelMatchers: fedGraphLabelMatchers,
+        baseSubgraphNames: baseCompositionSubgraphs.map((baseSubgraph) => baseSubgraph.name),
+      });
+      for (const flag of enabledFeatureFlags) {
+        if (featureFlagToComposeByFlagName.has(flag.name)) {
+          continue;
+        }
+        // If the incoming feature graph has just been enabled, only that feature graph needs to be considered
+        // If the incoming feature graph has just been disabled, only the OTHER feature graphs need to be considered
+        if (isFeatureFlagEnabled !== (flag.name === featureFlagName)) {
+          continue;
+        }
+        featureFlagToComposeByFlagName.set(flag.name, flag);
       }
     }
 
-    for (const flag of featureFlagsToBeComposed) {
-      let compositionSubgraphs = baseCompositionSubgraphs;
-      let subgraphDTOs = subgraphs;
-      if (flag.featureGraphs.length > 0) {
-        for (const featureGraph of flag.featureGraphs) {
-          compositionSubgraphs = compositionSubgraphs.filter((b) => b.name !== featureGraph.baseSubgraphName);
-          subgraphDTOs = subgraphDTOs.filter((s) => s.name !== featureGraph.baseSubgraphName);
-          compositionSubgraphs.push({
-            name: featureGraph.name,
-            url: featureGraph.routingUrl,
-            definitions: parse(featureGraph.schemaSDL),
-          });
-          subgraphDTOs.push(featureGraph);
-        }
-        compositionPossibilities.push({
-          compositionSubgraphs,
-          isFeatureFlagComposition: true,
-          featureFlagName: flag.name,
-          subgraphs: subgraphDTOs,
-        });
-      }
-    }
-    return compositionPossibilities;
+    return this.getFeatureFlagRelatedGraphsToCompose(
+      featureFlagToComposeByFlagName,
+      baseCompositionSubgraphs,
+      subgraphs,
+      featureFlagRelatedGraphsToCompose,
+    );
   }
 
   public async getFFRouterConfigsBySchemaVersionIds({

@@ -1,4 +1,5 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { CompositionError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
 export class ServiceError extends Error {
   constructor(
@@ -29,4 +30,20 @@ export function isPublicError(e: Error): e is PublicError {
 
 export function isAuthorizationError(e: Error): e is AuthorizationError {
   return e instanceof AuthorizationError;
+}
+
+export function featureFlagBaseGraphError(
+  federatedGraphName: string,
+  featureFlag: string,
+  namespace = 'default',
+): CompositionError {
+  return new CompositionError({
+    message:
+      `The feature flag "${featureFlag}" could not be composed because the composition for the last publish` +
+      ` to the federated graph "${federatedGraphName}" was unsuccessful.` +
+      ` Once a subsequent publish produces a successful federated graph composition, the feature flag will be composed.`,
+    federatedGraphName,
+    featureFlag,
+    namespace,
+  });
 }

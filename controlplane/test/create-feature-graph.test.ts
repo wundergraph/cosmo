@@ -1,7 +1,7 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { afterAllSetup, beforeAllSetup, genID } from '../src/core/test-util.js';
-import { createSubgraph, SetupTest } from './test-util.js';
+import { createNamespace, createSubgraph, SetupTest } from './test-util.js';
 
 let dbname = '';
 
@@ -24,7 +24,6 @@ describe('Create feature graph tests', () => {
 
     const featureGraphResponse = await client.createFederatedSubgraph({
       name: featureGraphName,
-      namespace: 'default',
       routingUrl: 'http://localhost:4002',
       isFeatureGraph: true,
       baseSubgraphName: subgraphName,
@@ -42,7 +41,6 @@ describe('Create feature graph tests', () => {
 
     const createFederatedSubgraphResp = await client.createFederatedSubgraph({
       name: subgraphName,
-      namespace: 'default',
       routingUrl: 'http://localhost:4002',
       isFeatureGraph: true,
     });
@@ -62,15 +60,12 @@ describe('Create feature graph tests', () => {
 
     await createSubgraph(client, subgraphName, 'http://localhost:4001');
 
-    const namespaceResponse = await client.createNamespace({
-      name: 'features',
-    });
-
-    expect(namespaceResponse.response?.code).toBe(EnumStatusCode.OK);
+    const namespace = 'features';
+    await createNamespace(client, namespace);
 
     const featureGraphResponse = await client.createFederatedSubgraph({
       name: featureGraphName,
-      namespace: 'features',
+      namespace,
       routingUrl: 'http://localhost:4002',
       isFeatureGraph: true,
       baseSubgraphName: subgraphName,
@@ -89,7 +84,6 @@ describe('Create feature graph tests', () => {
 
     const createFederatedSubgraphResp = await client.createFederatedSubgraph({
       name: subgraphName,
-      namespace: 'default',
       isFeatureGraph: true,
     });
 

@@ -7,6 +7,7 @@ type Product @key(fields: "upc sku") {
   sku: String!
   details: String!
   price: Float!
+  isPremium: Boolean! @tag(name: "exclude")
 }
 
 type Query {

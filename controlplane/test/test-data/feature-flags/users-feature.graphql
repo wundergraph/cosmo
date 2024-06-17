@@ -18,4 +18,5 @@ type User @key(fields: "id") {
   email: String!
   basket: [Product!]! @override(from: "products-feature")
   username: String!
+  isPremium: Boolean! @tag(name: "exclude")
 }

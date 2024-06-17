@@ -2,6 +2,7 @@ type User @key(fields: "id") {
   id: ID!
   name: String!
   email: String!
+  isPremium: Boolean! @tag(name: "exclude")
 }
 
 type Query {

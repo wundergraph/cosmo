@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto';
+import fs from 'node:fs';
+import { join } from 'node:path';
 import { createPromiseClient, PromiseClient } from '@connectrpc/connect';
 import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
 import { createConnectTransport } from '@connectrpc/connect-node';
@@ -9,7 +11,7 @@ import Fastify from 'fastify';
 import { pino } from 'pino';
 import { expect } from 'vitest';
 import postgres from 'postgres';
-import { startOfTomorrow, startOfYear } from 'date-fns';
+import { formatISO, startOfTomorrow, startOfYear } from 'date-fns';
 import { BlobNotFoundError, BlobObject, BlobStorage } from '../src/core/blobstorage/index.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import database from '../src/core/plugins/database.js';
@@ -462,3 +464,137 @@ export const subgraphSDL = `
 
 export const yearStartDate = startOfYear(2024);
 export const tomorrowDate = startOfTomorrow();
+
+type IntegrationSubgraph = {
+  name: string;
+  hasFeatureGraph: boolean;
+}
+export async function featureFlagIntegrationTestSetUp(
+  client: PromiseClient<typeof PlatformService>,
+  subgraphNames: Array<IntegrationSubgraph>,
+  federatedGraphName: string,
+  labels: Array<Label> = [],
+  namespace = 'default',
+) {
+  const featureGraphNames: Array<string> = [];
+  let port = 4001;
+  for (const { name, hasFeatureGraph } of subgraphNames) {
+    await createAndPublishSubgraph(
+      client,
+      name,
+      namespace,
+      fs.readFileSync(join(process.cwd(), `test/test-data/feature-flags/${name}.graphql`)).toString(),
+      labels,
+      `http://localhost:${port}`,
+    );
+    port += 1;
+    if (!hasFeatureGraph) {
+      continue;
+    }
+    const featureGraphName = `${name}-feature`;
+    await createThenPublishFeatureGraph(
+      client,
+      featureGraphName,
+      name,
+      namespace,
+      fs.readFileSync(join(process.cwd(), `test/test-data/feature-flags/${featureGraphName}.graphql`)).toString(),
+      labels,
+      `http://localhost:${port + 100}`,
+    );
+  }
+
+  const federatedGraphLabels = labels.map(({ key, value }) => `${key}=${value}`);
+  await createFederatedGraph(
+    client,
+    federatedGraphName,
+    namespace,
+    federatedGraphLabels,
+    'http://localhost:3002',
+  );
+  const federatedGraphResponse = await client.getFederatedGraphByName({
+    name: federatedGraphName,
+    namespace,
+  });
+  expect(federatedGraphResponse.response?.code).toBe(EnumStatusCode.OK);
+  return federatedGraphResponse;
+}
+
+export async function createNamespace(
+  client: PromiseClient<typeof PlatformService>,
+  name: string,
+) {
+  const createNamespaceResponse = await client.createNamespace({
+    name,
+  });
+  expect(createNamespaceResponse.response?.code).toBe(EnumStatusCode.OK);
+}
+
+export async function createFeatureFlag(
+  client: PromiseClient<typeof PlatformService>,
+  featureFlagName: string,
+  labels: Array<Label>,
+  featureGraphNames: Array<string>,
+  namespace = 'default',
+) {
+  const createFeatureFlagResponse = await client.createFeatureFlag({
+    featureFlagName,
+    featureGraphNames,
+    labels,
+    namespace,
+  });
+  expect(createFeatureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
+}
+
+export async function assertNumberOfCompositions(
+  client: PromiseClient<typeof PlatformService>,
+  federatedGraphName: string,
+  numberOfCompositions: number,
+  namespace = 'default',
+) {
+  const getCompositionsResponse = await client.getCompositions({
+    fedGraphName: federatedGraphName,
+    startDate: formatISO(yearStartDate),
+    endDate: formatISO(tomorrowDate),
+    namespace,
+  });
+  expect(getCompositionsResponse.response?.code).toBe(EnumStatusCode.OK);
+  expect(getCompositionsResponse.compositions).toHaveLength(numberOfCompositions);
+}
+
+export async function assertFeatureFlagExecutionConfig(
+  blobStorage: InMemoryBlobStorage,
+  key: string,
+  hasFeatureFlagExecutionConfig: boolean,
+) {
+  const blob = await blobStorage.getObject({ key });
+  const routerExecutionConfig =  await blob.stream.getReader().read()
+    .then((result) => JSON.parse(result.value.toString()));
+  if (hasFeatureFlagExecutionConfig) {
+    expect(routerExecutionConfig.featureFlagConfigs).toBeDefined();
+  } else {
+    expect(routerExecutionConfig.featureFlagConfigs).toBeUndefined();
+  }
+}
+
+export async function toggleFeatureFlag(
+  client: PromiseClient<typeof PlatformService>,
+  featureFlagName: string,
+  enabled: boolean,
+  namespace = 'default',
+) {
+  const enableFeatureFlagResponse = await client.enableFeatureFlag({
+    featureFlagName,
+    enabled,
+    namespace,
+  });
+  expect(enableFeatureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
+}
+
+export function getDebugTestOptions(isDebugMode: boolean) {
+  if (!isDebugMode) {
+    return {};
+  }
+  return ({
+    timeout: 2_000_000
+  });
+}

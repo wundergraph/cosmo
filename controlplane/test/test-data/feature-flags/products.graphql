@@ -6,6 +6,7 @@ type Product @key(fields: "upc sku") {
   upc: Int!
   sku: String!
   details: String!
+  isPremium: Boolean! @tag(name: "exclude")
 }
 
 type User @key(fields: "id") {

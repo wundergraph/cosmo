@@ -12,7 +12,7 @@ export default (opts: BaseCommandOptions) => {
   command.description(
     'Creates a feature flag on the control plane. A feature flag can contain one or more feature graphs.',
   );
-  command.argument('<name>', 'The name of the feature flag group to create.');
+  command.argument('<name>', 'The name of the feature flag to create.');
   command.option('-n, --namespace [string]', 'The namespace of the feature flag.');
   command.option(
     '--label [labels...]',

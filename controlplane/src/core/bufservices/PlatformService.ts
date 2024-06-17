@@ -3791,7 +3791,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           return {
             response: {
               code: EnumStatusCode.ERR_ALREADY_EXISTS,
-              details: `Feature flag "${req.featureFlagName}" already exists in the namespace.`,
+              details: `Feature flag "${req.featureFlagName}" already exists in the namespace "${namespace.name}".`,
             },
             compositionErrors: [],
             deploymentErrors: [],
@@ -3840,7 +3840,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         await opts.db.transaction(async (tx) => {
           const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
 
-          const composition = await fedGraphRepo.composeAndDeployGraphs({
+          const composition = await fedGraphRepo.composeAndDeployFeatureFlag({
             federatedGraphs,
             actorId: authContext.userId,
             blobStorage: opts.blobStorage,
@@ -3848,6 +3848,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               cdnBaseUrl: opts.cdnBaseUrl,
               webhookJWTSecret: opts.admissionWebhookJWTSecret,
             },
+            featureFlagName: req.featureFlagName,
+            isFeatureFlagEnabled: true,
           });
 
           compositionErrors.push(...composition.compositionErrors);
@@ -4148,7 +4150,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         await opts.db.transaction(async (tx) => {
           const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
 
-          const composition = await fedGraphRepo.composeAndDeployGraphs({
+          const composition = await fedGraphRepo.composeAndDeployFeatureFlag({
             federatedGraphs,
             actorId: authContext.userId,
             blobStorage: opts.blobStorage,
@@ -4156,6 +4158,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               cdnBaseUrl: opts.cdnBaseUrl,
               webhookJWTSecret: opts.admissionWebhookJWTSecret,
             },
+            featureFlagName: req.featureFlagName,
+            isFeatureFlagEnabled: req.enabled,
           });
 
           compositionErrors.push(...composition.compositionErrors);

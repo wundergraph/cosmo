@@ -1,19 +1,18 @@
-import { join } from 'node:path';
-import fs from 'node:fs';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { formatISO } from 'date-fns';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { afterAllSetup, beforeAllSetup, genID } from '../src/core/test-util.js';
+import { Label } from '../src/types/index.js';
 import {
-  createAndPublishSubgraph,
-  createBaseAndFeatureGraph,
-  createFederatedGraph,
-  createThenPublishFeatureGraph,
+  assertFeatureFlagExecutionConfig,
+  assertNumberOfCompositions,
+  createFeatureFlag,
+  createNamespace, getDebugTestOptions,
+  toggleFeatureFlag,
+  featureFlagIntegrationTestSetUp,
   SetupTest,
-  tomorrowDate,
-  yearStartDate,
 } from './test-util.js';
 
+const isDebugMode = true;
 let dbname = '';
 
 describe('Feature flag integration tests', () => {
@@ -25,152 +24,162 @@ describe('Feature flag integration tests', () => {
     await afterAllSetup(dbname);
   });
 
-  test('that a feature flag can be disabled and re-enabled', async () => {
+  test('that a feature flag can be disabled and re-enabled (default namespace with labels)', getDebugTestOptions(isDebugMode),  async () => {
     const { client, server, blobStorage } = await SetupTest({ dbname });
 
-    const namespace = 'default';
     const labels = [{ key: 'team', value: 'A' }];
-    const users = 'users';
-    await createAndPublishSubgraph(
+    const federatedGraphName = 'federatedGraphName'
+    const federatedGraphResponse = await featureFlagIntegrationTestSetUp(
       client,
-      users,
-      namespace,
-      fs.readFileSync(join(process.cwd(), `test/test-data/feature-flags/users.graphql`)).toString(),
-      labels,
-      'http://localhost:4001',
-    );
-    const products = 'products';
-    await createAndPublishSubgraph(
-      client,
-      products,
-      namespace,
-      fs.readFileSync(join(process.cwd(), 'test/test-data/feature-flags/products.graphql')).toString(),
-      labels,
-      'http://localhost:4002',
-    );
-    const usersFeature = 'users-feature';
-    await createThenPublishFeatureGraph(
-      client,
-      usersFeature,
-      users,
-      namespace,
-      fs.readFileSync(join(process.cwd(), 'test/test-data/feature-flags/users-feature.graphql')).toString(),
-      labels,
-      'http://localhost:4003',
-    );
-    const productsFeature = 'products-feature';
-    await createThenPublishFeatureGraph(
-      client,
-      productsFeature,
-      products,
-      namespace,
-      fs.readFileSync(join(process.cwd(), 'test/test-data/feature-flags/products-feature.graphql')).toString(),
-      labels,
-      'http://localhost:4004',
-    );
-
-    const federatedGraphName = genID('federatedGraphName');
-    await createFederatedGraph(
-      client,
+      [
+        { name: 'users', hasFeatureGraph: true }, { name: 'products', hasFeatureGraph: true }
+      ],
       federatedGraphName,
-      namespace,
-      ['team=A'],
-      'http://localhost:3002',
+      labels,
     );
-    const federatedGraph = await client.getFederatedGraphByName({
-      name: federatedGraphName,
-    });
     expect(blobStorage.keys()).toHaveLength(1);
     const key = blobStorage.keys()[0];
-    expect(key).toContain(federatedGraph.graph!.id);
-    const baseGraphBlob = await blobStorage.getObject({ key });
-    const routerExeConfig =  await baseGraphBlob.stream.getReader().read()
-      .then((result) => JSON.parse(result.value.toString()));
-    expect(routerExeConfig.featureFlagConfigs).toBeUndefined();
-    const baseGraphCompositionResponse = await client.getCompositions({
-      fedGraphName: federatedGraphName,
-      startDate: formatISO(yearStartDate),
-      endDate: formatISO(tomorrowDate),
-    });
-    expect(baseGraphCompositionResponse.response?.code).toBe(EnumStatusCode.OK);
-    expect(baseGraphCompositionResponse.compositions).toHaveLength(1);
-    const flagName = 'flag';
-    const createFeatureFlagResponse = await client.createFeatureFlag({
-      featureFlagName: flagName,
-      featureGraphNames: [usersFeature, productsFeature],
-      labels,
-    });
-    expect(createFeatureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
-    const featureFlagCompositionResponse = await client.getCompositions({
-      fedGraphName: federatedGraphName,
-      startDate: formatISO(yearStartDate),
-      endDate: formatISO(tomorrowDate),
-    });
-    expect(featureFlagCompositionResponse.response?.code).toBe(EnumStatusCode.OK);
-    // TODO
-    // expect(compositionsResponseTwo.compositions).toHaveLength(2);
+    expect(key).toContain(federatedGraphResponse.graph!.id);
+    await assertFeatureFlagExecutionConfig(blobStorage, key, false);
 
-    expect(blobStorage.keys()).toHaveLength(1);
-    const ffBlob = await blobStorage.getObject({ key });
-    const routerExecutionConfigWithFF =  await ffBlob.stream.getReader().read()
-      .then((result) => JSON.parse(result.value.toString()));
-    expect(routerExecutionConfigWithFF.featureFlagConfigs).toBeDefined();
+    // The base composition
+     await assertNumberOfCompositions(client, federatedGraphName, 1);
 
-    const disableFeatureFlagResponse = await client.enableFeatureFlag({
-      featureFlagName: flagName,
-      namespace,
-      enabled: false,
-    });
-    expect(disableFeatureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
+    const featureFlagName = 'flag';
+    await createFeatureFlag(client, featureFlagName, labels, ['users-feature', 'products-feature']);
 
-    const disableFfBlob = await blobStorage.getObject({ key });
-    const routerExecutionConfigWithDisabledFF =  await disableFfBlob.stream.getReader().read()
-      .then((result) => JSON.parse(result.value.toString()));
-    expect(routerExecutionConfigWithDisabledFF.featureFlagConfigs).toBeUndefined();
+    // The base composition and the feature flag composition
+    await assertNumberOfCompositions(client, federatedGraphName, 2);
 
-    const enableFeatureFlagResponse = await client.enableFeatureFlag({
-      featureFlagName: flagName,
-      namespace,
-      enabled: true,
-    });
-    expect(enableFeatureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
+    await assertFeatureFlagExecutionConfig(blobStorage, key, true);
 
-    const enableFfBlob = await blobStorage.getObject({ key });
-    const routerExecutionConfigWithEnabledFF =  await enableFfBlob.stream.getReader().read()
-      .then((result) => JSON.parse(result.value.toString()));
-    expect(routerExecutionConfigWithEnabledFF.featureFlagConfigs).toBeDefined();
+    await toggleFeatureFlag(client, featureFlagName, false);
+
+    // Another composition to remove the feature flag
+    await assertNumberOfCompositions(client, federatedGraphName, 3);
+
+    await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+
+    await toggleFeatureFlag(client, featureFlagName, true);
+
+    // Another composition to add the feature flag
+    await assertNumberOfCompositions(client, federatedGraphName, 4);
+
+    await assertFeatureFlagExecutionConfig(blobStorage, key, true);
 
     await server.close();
   });
 
-  test('that a feature flag can be updated with another feature graph', async () => {
-    const { client, server } = await SetupTest({ dbname });
+  test('that a feature flag can be disabled and re-enabled (namespace without labels)', getDebugTestOptions(isDebugMode), async () => {
+    const { client, server, blobStorage } = await SetupTest({ dbname });
 
-    const subgraphName = genID('subgraph');
-    const featureGraphName = genID('featureGraph');
+    const labels: Array<Label> = [];
+    const namespace = genID('namespace').toLowerCase();
+    await createNamespace(client, namespace);
+    const federatedGraphName = 'federatedGraphName'
+    const federatedGraphResponse = await featureFlagIntegrationTestSetUp(
+      client,
+      [
+        { name: 'users', hasFeatureGraph: true }, { name: 'products', hasFeatureGraph: true }
+      ],
+      federatedGraphName,
+      labels,
+      namespace,
+    );
+    expect(blobStorage.keys()).toHaveLength(1);
+    const key = blobStorage.keys()[0];
+    expect(key).toContain(federatedGraphResponse.graph!.id);
+    await assertFeatureFlagExecutionConfig(blobStorage, key, false);
 
-    await createBaseAndFeatureGraph(client, subgraphName, featureGraphName, 'http://localhost:4001', 'http://localhost:4002');
+    // The base composition
+    await assertNumberOfCompositions(client, federatedGraphName, 1, namespace);
 
-    const flagName = genID('flag');
+    const featureFlagName = 'flag';
+    await createFeatureFlag(client, featureFlagName, labels, ['users-feature', 'products-feature'], namespace);
 
-    const createFeatureFlagResponse = await client.createFeatureFlag({
-      featureFlagName: flagName,
-      featureGraphNames: [featureGraphName],
+    // The base composition and the feature flag composition
+    await assertNumberOfCompositions(client, federatedGraphName, 2, namespace);
+
+    await assertFeatureFlagExecutionConfig(blobStorage, key, true);
+
+    await toggleFeatureFlag(client, featureFlagName, false, namespace);
+
+    // Another composition to remove the feature flag
+    await assertNumberOfCompositions(client, federatedGraphName, 3, namespace);
+
+    await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+
+    await toggleFeatureFlag(client, featureFlagName, true, namespace);
+
+    // Another composition to add the feature flag
+    await assertNumberOfCompositions(client, federatedGraphName, 4, namespace);
+
+    await assertFeatureFlagExecutionConfig(blobStorage, key, true);
+
+    await server.close();
+  });
+
+  test('that a feature flag and contracts something something todo', getDebugTestOptions(isDebugMode), async () => {
+    const { client, server, blobStorage } = await SetupTest({ dbname });
+
+    const labels: Array<Label> = [];
+    const namespace = genID('namespace').toLowerCase();
+    await createNamespace(client, namespace);
+    const baseGraphName = 'federatedGraphName'
+    const baseGraphResponse = await featureFlagIntegrationTestSetUp(
+      client,
+      [
+        { name: 'users', hasFeatureGraph: true }, { name: 'products', hasFeatureGraph: true }
+      ],
+      baseGraphName,
+      labels,
+      namespace,
+    );
+    expect(blobStorage.keys()).toHaveLength(1);
+    const baseGraphKey = blobStorage.keys()[0];
+    expect(baseGraphKey).toContain(baseGraphResponse.graph!.id);
+    await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
+
+    // The base composition
+    await assertNumberOfCompositions(client, baseGraphName, 1, namespace);
+
+    const contractName = genID('contract');
+    const createContractResponse = await client.createContract({
+      name: contractName,
+      namespace,
+      sourceGraphName: baseGraphName,
+      excludeTags: ['exclude'],
+      routingUrl: 'http://localhost:3003',
     });
+    expect(createContractResponse.response?.code).toBe(EnumStatusCode.OK);
 
-    expect(createFeatureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
+    // The contract composition
+    await assertNumberOfCompositions(client, contractName, 1, namespace);
 
-    const subgraphNameTwo = genID('subgraph');
-    const featureGraphNameTwo = genID('featureGraph');
+    // The base composition should remain at one
+    await assertNumberOfCompositions(client, baseGraphName, 1, namespace);
 
-    await createBaseAndFeatureGraph(client, subgraphNameTwo, featureGraphNameTwo, 'http://localhost:4001', 'http://localhost:4002');
-
-    const updateFeatureFlagResponse = await client.updateFeatureFlag({
-      featureFlagName: flagName,
-      featureGraphNames: [featureGraphName, featureGraphNameTwo],
+    expect(blobStorage.keys()).toHaveLength(2);
+    const contractKey = blobStorage.keys()[1];
+    const contractResponse = await client.getFederatedGraphByName({
+      name: contractName,
+      namespace,
     });
+    expect(contractResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(contractKey).toContain(contractResponse.graph!.id);
+    await assertFeatureFlagExecutionConfig(blobStorage, contractKey, false);
 
-    expect(updateFeatureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
+    const featureFlagName = 'flag';
+    await createFeatureFlag(client, featureFlagName, labels, ['users-feature', 'products-feature'], namespace);
+
+    // The base composition and the feature flag composition
+    await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
+    await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, true);
+
+    // The contract composition and the feature flag composition
+    // TODO investigate the number of compositions
+    await assertNumberOfCompositions(client, contractName, 3, namespace);
+    await assertFeatureFlagExecutionConfig(blobStorage, contractKey, true);
 
     await server.close();
   });
