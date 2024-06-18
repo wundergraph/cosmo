@@ -3834,6 +3834,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             response: {
               code: EnumStatusCode.OK,
             },
+            compositionErrors: [],
+            deploymentErrors: [],
           };
         }
 
