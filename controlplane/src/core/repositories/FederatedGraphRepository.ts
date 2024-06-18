@@ -1713,17 +1713,11 @@ export class FederatedGraphRepository {
         const ffSchemaVersionsOfContracts: Map<string, { featureFlagName: string; schemaVersionId: string }[]> =
           new Map();
 
-        // this is to make sure that we don't have fg schema versions of contracts if the base composition has errors.
-        // The boolean value determines whether the base composition is successful or not
-        // TODO
-        const baseCompositionOfContracts: Map<string, boolean> = new Map();
-
         for (const featureFlagRelatedGraph of featureFlagRelatedGraphsToCompose) {
           let errors: Error[] | undefined;
           let result: FederationResult | undefined;
           let federationResultContainerByContractName: Map<string, FederationResultContainer> | undefined;
 
-          // TODO do not compose unnecessary contracts
           if (federatedGraph.contract) {
             const { errors: contractErrors, federationResult } = composeSubgraphsForContract(
               featureFlagRelatedGraph.compositionSubgraphs,
@@ -1775,7 +1769,7 @@ export class FederatedGraphRepository {
 
             const contractGraph = await fedGraphRepo.byName(contractName, federatedGraph.namespace);
             if (!contractGraph) {
-              throw new Error(`Contract graph ${contractName} not found`);
+              throw new Error(`Contract graph "${contractName}" was not found.`);
             }
 
             compositionErrors.push(

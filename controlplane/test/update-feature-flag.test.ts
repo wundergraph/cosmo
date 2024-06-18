@@ -72,4 +72,26 @@ describe('Update feature flag tests', () => {
 
     await server.close();
   });
+
+  test('that an error is returned if a feature flag that does not exist is updated', async () => {
+    const { client, server } = await SetupTest({ dbname });
+
+    const subgraphName = genID('subgraph');
+    const featureGraphName = genID('featureGraph');
+
+    await createBaseAndFeatureGraph(client, subgraphName, featureGraphName, 'http://localhost:4001', 'http://localhost:4002');
+
+    const flagName = genID('flag');
+
+    const updateFeatureFlagResponse = await client.updateFeatureFlag({
+      featureFlagName: flagName,
+      featureGraphNames: [featureGraphName],
+    });
+
+    expect(updateFeatureFlagResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
+    expect(updateFeatureFlagResponse.response?.details)
+      .toBe(`Feature flag "${flagName}" does not exists in the namespace "default".`);
+
+    await server.close();
+  });
 });

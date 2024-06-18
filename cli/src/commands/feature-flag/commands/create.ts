@@ -24,6 +24,10 @@ export default (opts: BaseCommandOptions) => {
       ' The feature graphs are passed in the format <featureGraph1> <featureGraph2> <featureGraph3>.' +
       ' The feature flag must have at least one feature graph.',
   );
+  command.option(
+    '-e, --enabled',
+    'Flag that if included will enable the feature flag upon creation.' + ' A new feature flag is disabled by default.',
+  );
   command.action(async (name, options) => {
     const spinner = ora('The feature flag is being created...').start();
     const resp = await opts.client.platform.createFeatureFlag(
@@ -32,6 +36,7 @@ export default (opts: BaseCommandOptions) => {
         namespace: options.namespace,
         labels: options.label ? options.label.map((label: string) => splitLabel(label)) : [],
         featureGraphNames: options.featureGraphs,
+        isEnabled: !!options.enabled,
       },
       {
         headers: getBaseHeaders(),

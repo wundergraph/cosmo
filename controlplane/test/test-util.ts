@@ -535,12 +535,14 @@ export async function createFeatureFlag(
   labels: Array<Label>,
   featureGraphNames: Array<string>,
   namespace = 'default',
+  isEnabled = false,
 ) {
   const createFeatureFlagResponse = await client.createFeatureFlag({
     featureFlagName,
     featureGraphNames,
     labels,
     namespace,
+    isEnabled,
   });
   expect(createFeatureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
 }

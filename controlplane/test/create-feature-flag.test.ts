@@ -71,7 +71,7 @@ describe('Create feature flag tests', () => {
     });
 
     expect(featureFlagResponseTwo.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
-    expect(featureFlagResponseTwo.response?.details).toBe(`Feature flag "${flagName}" already exists in the namespace.`);
+    expect(featureFlagResponseTwo.response?.details).toBe(`Feature flag "${flagName}" already exists in the namespace "default".`);
 
     await server.close();
   });

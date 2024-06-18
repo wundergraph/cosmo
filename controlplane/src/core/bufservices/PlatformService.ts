@@ -3828,6 +3828,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           createdBy: authContext.userId,
         });
 
+        // If the feature flag was not created with -e or --enabled, there is nothing further to do
+        if (!req.isEnabled) {
+          return {
+            response: {
+              code: EnumStatusCode.OK,
+            },
+          };
+        }
+
         const federatedGraphs = await featureFlagRepo.getFederatedGraphsByFF({
           featureFlagId: featureFlag.id,
           namespaceId: namespace.id,
@@ -3958,15 +3967,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const ff = await featureFlagRepo.getFeatureFlagByName({
+        const featureFlagDTO = await featureFlagRepo.getFeatureFlagByName({
           featureFlagName: req.featureFlagName,
           namespaceId: namespace.id,
         });
-        if (!ff) {
+        if (!featureFlagDTO) {
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Feature flag "${req.featureFlagName}" does not exists in the namespace ${req.namespace}`,
+              details: `Feature flag "${req.featureFlagName}" does not exists in the namespace "${req.namespace}".`,
             },
             compositionErrors: [],
             deploymentErrors: [],
@@ -3996,13 +4005,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         await featureFlagRepo.updateFeatureFlag({
-          featureFlag: ff,
+          featureFlag: featureFlagDTO,
           labels: req.labels,
           featureGraphIds,
         });
 
         const federatedGraphs = await featureFlagRepo.getFederatedGraphsByFF({
-          featureFlagId: ff.id,
+          featureFlagId: featureFlagDTO.id,
           namespaceId: namespace.id,
           excludeDisabled: true,
         });

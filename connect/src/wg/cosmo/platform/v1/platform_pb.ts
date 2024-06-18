@@ -15816,6 +15816,11 @@ export class CreateFeatureFlagRequest extends Message<CreateFeatureFlagRequest> 
    */
   featureGraphNames: string[] = [];
 
+  /**
+   * @generated from field: bool isEnabled = 5;
+   */
+  isEnabled = false;
+
   constructor(data?: PartialMessage<CreateFeatureFlagRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -15828,6 +15833,7 @@ export class CreateFeatureFlagRequest extends Message<CreateFeatureFlagRequest> 
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "labels", kind: "message", T: Label, repeated: true },
     { no: 4, name: "featureGraphNames", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 5, name: "isEnabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateFeatureFlagRequest {

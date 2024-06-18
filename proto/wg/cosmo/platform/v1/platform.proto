@@ -2002,6 +2002,7 @@ message CreateFeatureFlagRequest {
   string namespace = 2;
   repeated Label labels = 3;
   repeated string featureGraphNames = 4;
+  bool isEnabled = 5;
 }
 
 message CreateFeatureFlagResponse {

@@ -4,6 +4,7 @@ import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
 import { SQL, and, asc, count, desc, eq, gt, inArray, like, lt, notInArray, or, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
+import { namespace } from 'axios-retry';
 import { WebsocketSubprotocol } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
@@ -32,6 +33,7 @@ import { BlobStorage } from '../blobstorage/index.js';
 import { hasLabelsChanged, normalizeLabels } from '../util.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
+import { FeatureFlagRepository, FeatureFlagWithFeatureGraphs } from './FeatureFlagRepository.js';
 
 type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
 
@@ -210,6 +212,7 @@ export class SubgraphRepository {
   }> {
     const deploymentErrors: PlainMessage<DeploymentError>[] = [];
     const compositionErrors: PlainMessage<CompositionError>[] = [];
+    // The collection of federated graphs that will be potentially re-composed
     const updatedFederatedGraphs: FederatedGraphDTO[] = [];
     let subgraphChanged = false;
     let labelChanged = false;
@@ -218,6 +221,7 @@ export class SubgraphRepository {
       const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
       const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
       const targetRepo = new TargetRepository(tx, this.organizationId);
+      const featureFlagRepo = new FeatureFlagRepository(this.logger, tx, this.organizationId);
 
       const subgraph = await subgraphRepo.byTargetId(data.targetId);
       if (!subgraph) {
@@ -360,22 +364,35 @@ export class SubgraphRepository {
           .where(eq(featureGraphsToSubgraph.featureGraphId, subgraph.id));
 
         if (baseSubgraph.length > 0) {
-          updatedFederatedGraphs.push(
-            ...(await fedGraphRepo.bySubgraphLabels({
-              labels: baseSubgraph[0].labels?.map?.((l) => splitLabel(l)) ?? [],
+          // Retrieve the federated graphs that match the labels for the base graph of the feature graph
+          const federatedGraphDTOs = await fedGraphRepo.bySubgraphLabels({
+            labels: baseSubgraph[0].labels?.map?.((l) => splitLabel(l)) ?? [],
+            namespaceId: data.namespaceId,
+          });
+          for (const federatedGraphDTO of federatedGraphDTOs) {
+            // Retrieve all the subgraphs that compose the federated graph to retrieve the feature flags
+            const subgraphs = await subgraphRepo.listByFederatedGraph({
+              federatedGraphTargetId: federatedGraphDTO.targetId,
+              published: true,
+            });
+            const enabledFeatureFlags = await featureFlagRepo.getEnabledFeatureFlagsBySubgraphIdAndLabels({
+              subgraphId: subgraph.id,
               namespaceId: data.namespaceId,
-            })),
-          );
+              labelMatchers: baseSubgraph[0].labels || [],
+              baseSubgraphNames: subgraphs.map((subgraph) => subgraph.name),
+            });
+            // If an enabled feature flag includes the feature graph that has just been published, push it to the array
+            if (enabledFeatureFlags.length > 0) {
+              updatedFederatedGraphs.push(federatedGraphDTO);
+            }
+          }
         }
-      } else {
-        // We need to compose and build a new router config also on routing/subscription urls and labels changes
-        // eslint-disable-next-line no-lonely-if
-        if (subgraphChanged || labelChanged) {
-          // find all federated graphs that use this subgraph. We need evaluate them again.
-          updatedFederatedGraphs.push(
-            ...(await fedGraphRepo.bySubgraphLabels({ labels: subgraph.labels, namespaceId: data.namespaceId })),
-          );
-        }
+        // Generate a new router config for non-feature graphs upon routing/subscription urls and labels changes
+      } else if (subgraphChanged || labelChanged) {
+        // find all federated graphs that use this subgraph. We need evaluate them again.
+        updatedFederatedGraphs.push(
+          ...(await fedGraphRepo.bySubgraphLabels({ labels: subgraph.labels, namespaceId: data.namespaceId })),
+        );
       }
 
       const { compositionErrors: cErrors, deploymentErrors: dErrors } = await fedGraphRepo.composeAndDeployGraphs({

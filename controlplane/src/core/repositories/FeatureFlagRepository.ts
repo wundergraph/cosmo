@@ -598,7 +598,7 @@ export class FeatureFlagRepository {
         namespaceId,
       });
 
-      // if there are no enabled feature flags in the group, then skip the group
+      // if there are no enabled feature graphs in the flag, then skip the flag
       if (featureGraphsByFlag.length === 0) {
         continue;
       }
