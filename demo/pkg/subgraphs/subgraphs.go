@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/products_fg"
 	"go.uber.org/zap"
 	"log"
 	"net/http"
@@ -153,7 +154,7 @@ func ProductsHandler(opts *SubgraphOptions) http.Handler {
 }
 
 func ProductsFGHandler(opts *SubgraphOptions) http.Handler {
-	return subgraphHandler(products.NewSchema(opts.NatsPubSubByProviderID))
+	return subgraphHandler(products_fg.NewSchema(opts.NatsPubSubByProviderID))
 }
 
 func Test1Handler(opts *SubgraphOptions) http.Handler {

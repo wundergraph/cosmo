@@ -230,6 +230,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		Family:       atomic.NewInt64(0),
 		Hobbies:      atomic.NewInt64(0),
 		Products:     atomic.NewInt64(0),
+		ProductFg:    atomic.NewInt64(0),
 		Test1:        atomic.NewInt64(0),
 		Availability: atomic.NewInt64(0),
 		Mood:         atomic.NewInt64(0),

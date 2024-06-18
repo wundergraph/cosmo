@@ -9115,6 +9115,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           organizationId: authContext.organizationId,
           typename: req.typename,
           field: req.field,
+          // In the schema UI we only show the latest valid version which represents the composed schema
+          routerConfigVersion: graph.composedSchemaVersionId,
           namedType: req.namedType,
           range: req.range,
           dateRange: dr,

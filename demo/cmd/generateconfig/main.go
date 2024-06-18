@@ -34,8 +34,6 @@ func main() {
 
 	countries := subgraphs.CountriesHandler(&subgraphs.SubgraphOptions{})
 
-	productFeatureGraph := subgraphs.ProductsFGHandler(&subgraphs.SubgraphOptions{})
-
 	employeesServer := httptest.NewServer(employees)
 	defer employeesServer.Close()
 	familyServer := httptest.NewServer(family)
@@ -52,8 +50,6 @@ func main() {
 	defer moodServer.Close()
 	countriesServer := httptest.NewServer(countries)
 	defer countriesServer.Close()
-	productsFeatureGraphServer := httptest.NewServer(productFeatureGraph)
-	defer productsFeatureGraphServer.Close()
 
 	// get directory of this file
 	_, b, _, _ := runtime.Caller(0)
@@ -101,10 +97,6 @@ func main() {
 		{
 			Name:   "employeeupdated",
 			Schema: string(employeeUpdatedSchema),
-		},
-		{
-			Name: "products_fg",
-			URL:  gqlURL(productsFeatureGraphServer),
 		},
 	}
 

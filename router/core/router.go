@@ -949,7 +949,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	 */
 	httpRouter.Group(func(cr chi.Router) {
 
-		// We are applying it conditionally because compressing the 3MB playground is very slow
+		// We are applying it conditionally because brotli compressing the 3MB playground is very slow
 		cr.Use(middleware.Compress(5, CustomCompressibleContentTypes...))
 		cr.Use(brCompressor.Handler)
 
