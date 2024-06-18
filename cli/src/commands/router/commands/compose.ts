@@ -38,7 +38,7 @@ type Config = {
   version: number;
   feature_flags: {
     name: string;
-    feature_graphs: (Subgraph & { replace: string })[];
+    feature_graphs: (Subgraph & { subgraph_name: string })[];
   }[];
   subgraphs: Subgraph[];
 };
@@ -140,7 +140,7 @@ export default (opts: BaseCommandOptions) => {
 
         // Replace base subgraphs with feature flag subgraphs
         for (const s of config.subgraphs) {
-          const featureGraph = ff.feature_graphs.find((ffs) => ffs.replace === s.name);
+          const featureGraph = ff.feature_graphs.find((ffs) => ffs.subgraph_name === s.name);
           if (featureGraph) {
             if (featureGraph?.schema?.file) {
               const schemaFile = resolve(inputFileLocation, featureGraph.schema.file);

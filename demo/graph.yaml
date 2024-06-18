@@ -3,7 +3,7 @@ feature_flags:
   - name: myff
     feature_graphs:
     - name: products_fg
-      replace: products
+      subgraph_name: products
       routing_url: http://localhost:4010/graphql
       schema:
         file: ./pkg/subgraphs/products_fg/subgraph/schema.graphqls
