@@ -6,9 +6,9 @@ import { parse } from 'graphql';
 import * as yaml from 'js-yaml';
 import { dirname, resolve } from 'pathe';
 import pc from 'picocolors';
+import { printSchemaWithDirectives } from '@graphql-tools/utils';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { composeSubgraphs, introspectSubgraph } from '../../../utils.js';
-import { printSchemaWithDirectives } from '@graphql-tools/utils';
 
 type Config = {
   version: number;
