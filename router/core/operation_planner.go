@@ -61,7 +61,7 @@ func (p *OperationPlanner) preparePlan(requestOperationName []byte, requestOpera
 	validation := astvalidation.DefaultOperationValidator()
 
 	// validate the document before planning
-	state := validation.Validate(&doc, p.executor.Definition, &report)
+	state := validation.Validate(&doc, p.executor.RouterSchema, &report)
 	if state != astvalidation.Valid {
 		return nil, &reportError{report: &report}
 	}
@@ -72,7 +72,7 @@ func (p *OperationPlanner) preparePlan(requestOperationName []byte, requestOpera
 	}
 
 	// create and postprocess the plan
-	preparedPlan := planner.Plan(&doc, p.executor.Definition, unsafebytes.BytesToString(requestOperationName), &report)
+	preparedPlan := planner.Plan(&doc, p.executor.RouterSchema, unsafebytes.BytesToString(requestOperationName), &report)
 	if report.HasErrors() {
 		return nil, &reportError{report: &report}
 	}
@@ -82,7 +82,7 @@ func (p *OperationPlanner) preparePlan(requestOperationName []byte, requestOpera
 	return &planWithMetaData{
 		preparedPlan:      preparedPlan,
 		operationDocument: &doc,
-		schemaDocument:    p.executor.Definition,
+		schemaDocument:    p.executor.RouterSchema,
 	}, nil
 }
 

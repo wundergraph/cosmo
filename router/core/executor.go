@@ -6,14 +6,13 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
+	"time"
 
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/twmb/franz-go/pkg/sasl/plain"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 	"go.uber.org/zap"
-	"time"
+
+	"github.com/wundergraph/cosmo/router/pkg/config"
 
 	"github.com/nats-io/nats.go"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
@@ -37,10 +36,10 @@ type ExecutorConfigurationBuilder struct {
 }
 
 type Executor struct {
-	PlanConfig      plan.Configuration
-	Definition      *ast.Document
-	Resolver        *resolve.Resolver
-	RenameTypeNames []resolve.RenameTypeName
+	PlanConfig                 plan.Configuration
+	ClientSchema, RouterSchema *ast.Document
+	Resolver                   *resolve.Resolver
+	RenameTypeNames            []resolve.RenameTypeName
 }
 
 func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *nodev1.RouterConfig, routerEngineConfig *RouterEngineConfiguration, pubSubProviders *EnginePubSubProviders, reporter resolve.Reporter) (*Executor, error) {
@@ -72,32 +71,41 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *
 	// this is the resolver, it's stateful and manages all the client connections, etc...
 	resolver := resolve.New(ctx, options)
 
-	// this is the GraphQL Schema that we will expose from our API
-	var definition ast.Document
-	var report operationreport.Report
-	// The client schema may not be present in old configs
-	if routerConfig.EngineConfig.GetGraphqlClientSchema() != "" {
-		definition, report = astparser.ParseGraphqlDocumentString(routerConfig.EngineConfig.GetGraphqlClientSchema())
-	} else {
-		definition, report = astparser.ParseGraphqlDocumentString(routerConfig.EngineConfig.GraphqlSchema)
-	}
+	routerSchemaDefinition, report := astparser.ParseGraphqlDocumentString(routerConfig.EngineConfig.GraphqlSchema)
 	if report.HasErrors() {
 		return nil, fmt.Errorf("failed to parse graphql schema from engine config: %w", report)
 	}
-
 	// we need to merge the base schema, it contains the __schema and __type queries
 	// these are not usually part of a regular GraphQL schema
 	// the engine needs to have them defined, otherwise it cannot resolve such fields
-	err = asttransform.MergeDefinitionWithBaseSchema(&definition)
+	err = asttransform.MergeDefinitionWithBaseSchema(&routerSchemaDefinition)
 	if err != nil {
 		return nil, fmt.Errorf("failed to merge graphql schema with base schema: %w", err)
+	}
+
+	// this is the GraphQL Schema that we will expose from our API
+	// it should be used for the introspection and query validation
+	var clientSchemaDefinition *ast.Document
+
+	if routerConfig.EngineConfig.GetGraphqlClientSchema() != "" {
+		clientSchema, report := astparser.ParseGraphqlDocumentString(routerConfig.EngineConfig.GetGraphqlClientSchema())
+		if report.HasErrors() {
+			return nil, fmt.Errorf("failed to parse graphql client schema from engine config: %w", report)
+		}
+		err = asttransform.MergeDefinitionWithBaseSchema(&clientSchema)
+		if err != nil {
+			return nil, fmt.Errorf("failed to merge graphql schema with base schema: %w", err)
+		}
+		clientSchemaDefinition = &clientSchema
+	} else {
+		clientSchemaDefinition = &routerSchemaDefinition
 	}
 
 	if b.introspection {
 		// by default, the engine doesn't understand how to resolve the __schema and __type queries
 		// we need to add a special data source for that
 		// it takes the definition as the input and generates resolvers from it
-		introspectionFactory, err := introspection_datasource.NewIntrospectionConfigFactory(&definition)
+		introspectionFactory, err := introspection_datasource.NewIntrospectionConfigFactory(clientSchemaDefinition)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create introspection config factory: %w", err)
 		}
@@ -125,7 +133,8 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *
 
 	return &Executor{
 		PlanConfig:      *planConfig,
-		Definition:      &definition,
+		ClientSchema:    clientSchemaDefinition,
+		RouterSchema:    &routerSchemaDefinition,
 		Resolver:        resolver,
 		RenameTypeNames: renameTypeNames,
 	}, nil

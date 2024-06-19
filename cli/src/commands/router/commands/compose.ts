@@ -6,6 +6,7 @@ import { parse, printSchema } from 'graphql';
 import * as yaml from 'js-yaml';
 import { dirname, resolve } from 'pathe';
 import pc from 'picocolors';
+import { printSchemaWithDirectives } from '@graphql-tools/utils';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { composeSubgraphs, introspectSubgraph } from '../../../utils.js';
 
@@ -94,8 +95,7 @@ export default (opts: BaseCommandOptions) => {
     }
 
     const federatedClientSDL = result.federationResult.shouldIncludeClientSchema
-      ? printSchema(result.federationResult.federatedGraphSchema)
-      : '';
+      ? printSchemaWithDirectives(result.federationResult.federatedGraphClientSchema) : '';
     const routerConfig = buildRouterConfig({
       federatedClientSDL,
       federatedSDL: printSchema(result.federationResult.federatedGraphSchema),
