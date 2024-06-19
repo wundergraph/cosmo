@@ -411,11 +411,12 @@ export async function createEventDrivenGraph(client: PromiseClient<typeof Platfo
 export async function createSubgraph(
   client: PromiseClient<typeof PlatformService>,
   name: string,
-  routingUrl?: string,
+  routingUrl: string,
+  namespace = 'default',
 ) {
   const response = await client.createFederatedSubgraph({
     name,
-    namespace: 'default',
+    namespace,
     routingUrl,
   });
   expect(response.response?.code).toBe(EnumStatusCode.OK);
@@ -427,12 +428,13 @@ export async function createBaseAndFeatureGraph(
   featureGraphName: string,
   baseGraphRoutingUrl: string,
   featureGraphRoutingUrl: string,
+  namespace = 'default',
 ) {
-  await createSubgraph(client, baseGraphName, baseGraphRoutingUrl);
+  await createSubgraph(client, baseGraphName, baseGraphRoutingUrl, namespace);
 
   const featureGraphResponse = await client.createFederatedSubgraph({
     name: featureGraphName,
-    namespace: 'default',
+    namespace,
     routingUrl: featureGraphRoutingUrl,
     isFeatureGraph: true,
     baseSubgraphName: baseGraphName,
@@ -590,6 +592,18 @@ export async function toggleFeatureFlag(
     namespace,
   });
   expect(enableFeatureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
+}
+
+export async function deleteFeatureFlag(
+  client: PromiseClient<typeof PlatformService>,
+  featureFlagName: string,
+  namespace = 'default',
+) {
+  const deleteFeatureFlagResponse = await client.deleteFeatureFlag({
+    featureFlagName,
+    namespace
+  });
+  expect(deleteFeatureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
 }
 
 export function getDebugTestOptions(isDebugMode: boolean) {

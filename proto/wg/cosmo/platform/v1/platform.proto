@@ -2036,6 +2036,17 @@ message EnableFeatureFlagResponse {
   repeated DeploymentError deploymentErrors = 3;
 }
 
+message DeleteFeatureFlagRequest {
+  string featureFlagName = 1;
+  string namespace = 2;
+}
+
+message DeleteFeatureFlagResponse {
+  Response response = 1;
+  repeated CompositionError compositionErrors = 2;
+  repeated DeploymentError deploymentErrors = 3;
+}
+
 service PlatformService {
   // Namespaces
   rpc CreateNamespace(CreateNamespaceRequest) returns (CreateNamespaceResponse) {}
@@ -2253,6 +2264,8 @@ service PlatformService {
 
   // CreateFeatureFlag creates a new feature flag for the selected feature graphs
   rpc CreateFeatureFlag(CreateFeatureFlagRequest) returns (CreateFeatureFlagResponse) {}
+  // DeleteFeatureFlag deletes an existing feature flag
+  rpc DeleteFeatureFlag(DeleteFeatureFlagRequest) returns (DeleteFeatureFlagResponse) {}
   // UpdateFeatureFlag updates a new feature flag for the selected feature graphs
   rpc UpdateFeatureFlag(UpdateFeatureFlagRequest) returns (UpdateFeatureFlagResponse) {}
   // EnableFeatureFlag enables/disables a feature flag

@@ -194,7 +194,7 @@ export default (opts: BaseCommandOptions) => {
         }
 
         const federatedClientSDL = result.federationResult.shouldIncludeClientSchema
-          ? printSchema(result.federationResult.federatedGraphSchema)
+          ? printSchema(result.federationResult.federatedGraphClientSchema)
           : '';
         const routerConfig = buildRouterConfig({
           federatedClientSDL,

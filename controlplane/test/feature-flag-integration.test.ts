@@ -8,11 +8,15 @@ import { featureFlagBaseGraphError } from '../src/core/errors/errors.js';
 import {
   assertFeatureFlagExecutionConfig,
   assertNumberOfCompositions,
+  createAndPublishSubgraph,
   createFeatureFlag,
-  createNamespace, getDebugTestOptions,
-  toggleFeatureFlag,
+  createNamespace,
+  createThenPublishFeatureGraph,
+  deleteFeatureFlag,
   featureFlagIntegrationTestSetUp,
-  SetupTest, createThenPublishFeatureGraph, createAndPublishSubgraph,
+  getDebugTestOptions,
+  SetupTest,
+  toggleFeatureFlag,
 } from './test-util.js';
 
 const isDebugMode = true;
@@ -166,7 +170,7 @@ describe('Feature flag integration tests', () => {
     await server.close();
   });
 
-  test('that a feature flag that is enabled upon creation and contracts something something todo', getDebugTestOptions(isDebugMode), async () => {
+  test('that a feature flag that is enabled upon creation can be composed with contracts (namespace without labels)', getDebugTestOptions(isDebugMode), async () => {
     const { client, server, blobStorage } = await SetupTest({ dbname });
 
     const labels: Array<Label> = [];
@@ -217,21 +221,27 @@ describe('Feature flag integration tests', () => {
     await assertFeatureFlagExecutionConfig(blobStorage, contractKey, false);
 
     const featureFlagName = 'flag';
-    await createFeatureFlag(client, featureFlagName, labels, ['users-feature', 'products-feature'], namespace, true);
+    await createFeatureFlag(
+      client,
+      featureFlagName,
+      labels,
+      ['users-feature', 'products-feature'],
+      namespace,
+      true,
+    );
 
     // The base composition and the feature flag composition
     await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
     await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, true);
 
     // The contract composition and the feature flag composition
-    // TODO investigate the number of compositions
-    await assertNumberOfCompositions(client, contractName, 3, namespace);
+    await assertNumberOfCompositions(client, contractName, 2, namespace);
     await assertFeatureFlagExecutionConfig(blobStorage, contractKey, true);
 
     await server.close();
   });
 
-  test('that a feature flag that is disabled upon creation and contracts something something todo', getDebugTestOptions(isDebugMode), async () => {
+  test('that a feature flag that is disabled upon creation can be composed with contracts (namespace without labels)', getDebugTestOptions(isDebugMode), async () => {
     const { client, server, blobStorage } = await SetupTest({ dbname });
 
     const labels: Array<Label> = [];
@@ -296,14 +306,13 @@ describe('Feature flag integration tests', () => {
     await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, true);
 
     // The contract composition and the feature flag composition
-    // TODO investigate the number of compositions
-    await assertNumberOfCompositions(client, contractName, 3, namespace);
+    await assertNumberOfCompositions(client, contractName, 2, namespace);
     await assertFeatureFlagExecutionConfig(blobStorage, contractKey, true);
 
     await server.close();
   });
 
-  test('that publishing a feature graph without its corresponding feature flag does not trigger a composition', getDebugTestOptions(isDebugMode), async () => {
+  test('that publishing a feature graph that is not part of a feature flag does not trigger a composition', getDebugTestOptions(isDebugMode), async () => {
     const { client, server, blobStorage } = await SetupTest({ dbname });
 
     const labels: Array<Label> = [];
@@ -402,6 +411,92 @@ describe('Feature flag integration tests', () => {
     // Composition should now trigger for the base graph and then the feature flag
     await assertNumberOfCompositions(client, baseGraphName, 4, namespace);
     await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, true);
+
+    await server.close();
+  });
+
+  test('that a feature flag that is enabled upon creation can be deleted with contracts (namespace without labels)', getDebugTestOptions(isDebugMode), async () => {
+    const { client, server, blobStorage } = await SetupTest({ dbname });
+
+    const labels: Array<Label> = [];
+    const namespace = genID('namespace').toLowerCase();
+    await createNamespace(client, namespace);
+    const baseGraphName = genID('baseGraphName');
+    const baseGraphResponse = await featureFlagIntegrationTestSetUp(
+      client,
+      [
+        { name: 'users', hasFeatureGraph: true }, { name: 'products', hasFeatureGraph: true }
+      ],
+      baseGraphName,
+      labels,
+      namespace,
+    );
+    expect(blobStorage.keys()).toHaveLength(1);
+    const baseGraphKey = blobStorage.keys()[0];
+    expect(baseGraphKey).toContain(baseGraphResponse.graph!.id);
+    await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
+
+    // The base composition
+    await assertNumberOfCompositions(client, baseGraphName, 1, namespace);
+
+    const contractName = genID('contract');
+    const createContractResponse = await client.createContract({
+      name: contractName,
+      namespace,
+      sourceGraphName: baseGraphName,
+      excludeTags: ['exclude'],
+      routingUrl: 'http://localhost:3003',
+    });
+    expect(createContractResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // The contract composition
+    await assertNumberOfCompositions(client, contractName, 1, namespace);
+
+    // The base composition should remain at one
+    await assertNumberOfCompositions(client, baseGraphName, 1, namespace);
+
+    expect(blobStorage.keys()).toHaveLength(2);
+    const contractKey = blobStorage.keys()[1];
+    const contractResponse = await client.getFederatedGraphByName({
+      name: contractName,
+      namespace,
+    });
+    expect(contractResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(contractKey).toContain(contractResponse.graph!.id);
+    await assertFeatureFlagExecutionConfig(blobStorage, contractKey, false);
+
+    const featureFlagName = genID('flag');
+    await createFeatureFlag(
+      client,
+      featureFlagName,
+      labels,
+      ['users-feature', 'products-feature'],
+      namespace,
+      true,
+    );
+
+    // The base composition and the feature flag composition
+    await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
+    await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, true);
+
+    // The contract composition and the feature flag composition
+    await assertNumberOfCompositions(client, contractName, 2, namespace);
+    await assertFeatureFlagExecutionConfig(blobStorage, contractKey, true);
+
+    await deleteFeatureFlag(client, featureFlagName, namespace);
+
+    // The base composition should remove the feature flag
+    await assertNumberOfCompositions(client, baseGraphName, 3, namespace);
+    await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
+
+    // The contract composition should remove the feature flag
+    await assertNumberOfCompositions(client, contractName, 3, namespace);
+    await assertFeatureFlagExecutionConfig(blobStorage, contractKey, false);
+
+    // Attempting to delete the feature flag again should result in a not found error
+    const deleteFeatureFlagResponse = await client.deleteFeatureFlag({ featureFlagName, namespace });
+    expect(deleteFeatureFlagResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
+    expect(deleteFeatureFlagResponse.response?.details).toBe(`Feature flag "${featureFlagName}" not found.`);
 
     await server.close();
   });

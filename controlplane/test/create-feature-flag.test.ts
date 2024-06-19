@@ -1,7 +1,7 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { afterAllSetup, beforeAllSetup, genID } from '../src/core/test-util.js';
-import { createBaseAndFeatureGraph, createSubgraph, SetupTest } from './test-util.js';
+import { createBaseAndFeatureGraph, createNamespace, createSubgraph, SetupTest } from './test-util.js';
 
 let dbname = '';
 
@@ -120,17 +120,14 @@ describe('Create feature flag tests', () => {
 
     await createBaseAndFeatureGraph(client, subgraphName, featureGraphName, 'http://localhost:4001', 'http://localhost:4002');
 
-    const namespaceResponse = await client.createNamespace({
-      name: 'features',
-    });
-
-    expect(namespaceResponse.response?.code).toBe(EnumStatusCode.OK);
+    const namespace = genID('namespace').toLowerCase();
+    await createNamespace(client, namespace);
 
     const flagName = genID('flag');
 
     const featureFlagResponse = await client.createFeatureFlag({
       featureFlagName: flagName,
-      namespace: 'features',
+      namespace,
       featureGraphNames: [featureGraphName],
     });
 

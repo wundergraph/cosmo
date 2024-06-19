@@ -60,7 +60,7 @@ describe('Create feature graph tests', () => {
 
     await createSubgraph(client, subgraphName, 'http://localhost:4001');
 
-    const namespace = 'features';
+    const namespace = genID('namespace').toLowerCase();
     await createNamespace(client, namespace);
 
     const featureGraphResponse = await client.createFederatedSubgraph({

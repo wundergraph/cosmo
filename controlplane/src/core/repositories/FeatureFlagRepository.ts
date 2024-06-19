@@ -276,7 +276,7 @@ export class FeatureFlagRepository {
     });
   }
 
-  public async getFederatedGraphsByFF({
+  public async getFederatedGraphsByFeatureFlag({
     featureFlagId,
     namespaceId,
     excludeDisabled,
@@ -730,8 +730,17 @@ export class FeatureFlagRepository {
         if (featureFlagToComposeByFlagName.has(flag.name)) {
           continue;
         }
-        // If the incoming feature graph has just been enabled, only that feature graph needs to be considered
-        // If the incoming feature graph has just been disabled, only the OTHER feature graphs need to be considered
+        /* If the incoming feature flag has just been enabled, only that feature flag needs to be considered
+         * If the incoming feature flag has just been disabled, only the OTHER feature flags need to be considered
+         * For example:
+         * The feature flag has been enabled (true)
+         * The current feature flag in the for loop is the same feature flag that was just enabled (true)
+         * Because true === true, we should compose this feature flag again (don't continue)
+         * Conversely:
+         * The feature flag has been disabled (false)
+         * The current feature flag in the for loop is NOT the same feature flag that was just disabled (false)
+         * Because false === false, we should compose this feature flag (don't continue)
+         */
         if (isFeatureFlagEnabled !== (flag.name === featureFlagName)) {
           continue;
         }
@@ -782,5 +791,9 @@ export class FeatureFlagRepository {
     }
 
     return ffRouterConfigs;
+  }
+
+  public async delete(featureFlagId: string) {
+    await this.db.delete(featureFlags).where(eq(featureFlags.id, featureFlagId)).execute();
   }
 }

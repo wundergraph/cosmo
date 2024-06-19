@@ -1,7 +1,7 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { afterAllSetup, beforeAllSetup, genID } from '../src/core/test-util.js';
-import { createBaseAndFeatureGraph, createSubgraph, SetupTest } from './test-util.js';
+import { createBaseAndFeatureGraph, createFeatureFlag, SetupTest } from './test-util.js';
 
 let dbname = '';
 
@@ -22,20 +22,13 @@ describe('Update feature flag tests', () => {
 
     await createBaseAndFeatureGraph(client, subgraphName, featureGraphName, 'http://localhost:4001', 'http://localhost:4002');
 
-    const flagName = genID('flag');
-
-    const createFeatureFlagResponse = await client.createFeatureFlag({
-      featureFlagName: flagName,
-      featureGraphNames: [featureGraphName],
-    });
-
-    expect(createFeatureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
+    const featureFlagName = genID('flag');
+    await createFeatureFlag(client, featureFlagName, [], [featureGraphName])
 
     const updateFeatureFlagResponse = await client.updateFeatureFlag({
-      featureFlagName: flagName,
+      featureFlagName,
       featureGraphNames: [featureGraphName],
     });
-
     expect(updateFeatureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
 
     await server.close();
@@ -49,14 +42,8 @@ describe('Update feature flag tests', () => {
 
     await createBaseAndFeatureGraph(client, subgraphName, featureGraphName, 'http://localhost:4001', 'http://localhost:4002');
 
-    const flagName = genID('flag');
-
-    const createFeatureFlagResponse = await client.createFeatureFlag({
-      featureFlagName: flagName,
-      featureGraphNames: [featureGraphName],
-    });
-
-    expect(createFeatureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
+    const featureFlagName = genID('flag');
+    await createFeatureFlag(client, featureFlagName, [], [featureGraphName])
 
     const subgraphNameTwo = genID('subgraph');
     const featureGraphNameTwo = genID('featureGraph');
@@ -64,7 +51,7 @@ describe('Update feature flag tests', () => {
     await createBaseAndFeatureGraph(client, subgraphNameTwo, featureGraphNameTwo, 'http://localhost:4001', 'http://localhost:4002');
 
     const updateFeatureFlagResponse = await client.updateFeatureFlag({
-      featureFlagName: flagName,
+      featureFlagName,
       featureGraphNames: [featureGraphName, featureGraphNameTwo],
     });
 
@@ -81,16 +68,16 @@ describe('Update feature flag tests', () => {
 
     await createBaseAndFeatureGraph(client, subgraphName, featureGraphName, 'http://localhost:4001', 'http://localhost:4002');
 
-    const flagName = genID('flag');
+    const featureFlagName = genID('flag');
 
     const updateFeatureFlagResponse = await client.updateFeatureFlag({
-      featureFlagName: flagName,
+      featureFlagName,
       featureGraphNames: [featureGraphName],
     });
 
     expect(updateFeatureFlagResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     expect(updateFeatureFlagResponse.response?.details)
-      .toBe(`Feature flag "${flagName}" does not exists in the namespace "default".`);
+      .toBe(`Feature flag "${featureFlagName}" does not exists in the namespace "default".`);
 
     await server.close();
   });

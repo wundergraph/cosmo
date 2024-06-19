@@ -16104,3 +16104,95 @@ export class EnableFeatureFlagResponse extends Message<EnableFeatureFlagResponse
   }
 }
 
+/**
+ * @generated from message wg.cosmo.platform.v1.DeleteFeatureFlagRequest
+ */
+export class DeleteFeatureFlagRequest extends Message<DeleteFeatureFlagRequest> {
+  /**
+   * @generated from field: string featureFlagName = 1;
+   */
+  featureFlagName = "";
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
+  constructor(data?: PartialMessage<DeleteFeatureFlagRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.DeleteFeatureFlagRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "featureFlagName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteFeatureFlagRequest {
+    return new DeleteFeatureFlagRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteFeatureFlagRequest {
+    return new DeleteFeatureFlagRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteFeatureFlagRequest {
+    return new DeleteFeatureFlagRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteFeatureFlagRequest | PlainMessage<DeleteFeatureFlagRequest> | undefined, b: DeleteFeatureFlagRequest | PlainMessage<DeleteFeatureFlagRequest> | undefined): boolean {
+    return proto3.util.equals(DeleteFeatureFlagRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.DeleteFeatureFlagResponse
+ */
+export class DeleteFeatureFlagResponse extends Message<DeleteFeatureFlagResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionError compositionErrors = 2;
+   */
+  compositionErrors: CompositionError[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.DeploymentError deploymentErrors = 3;
+   */
+  deploymentErrors: DeploymentError[] = [];
+
+  constructor(data?: PartialMessage<DeleteFeatureFlagResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.DeleteFeatureFlagResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
+    { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteFeatureFlagResponse {
+    return new DeleteFeatureFlagResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteFeatureFlagResponse {
+    return new DeleteFeatureFlagResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteFeatureFlagResponse {
+    return new DeleteFeatureFlagResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteFeatureFlagResponse | PlainMessage<DeleteFeatureFlagResponse> | undefined, b: DeleteFeatureFlagResponse | PlainMessage<DeleteFeatureFlagResponse> | undefined): boolean {
+    return proto3.util.equals(DeleteFeatureFlagResponse, a, b);
+  }
+}
+
