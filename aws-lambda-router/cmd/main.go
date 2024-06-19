@@ -29,6 +29,8 @@ var (
 	stage             = os.Getenv("STAGE")
 	graphApiToken     = os.Getenv("GRAPH_API_TOKEN")
 	httpPort          = os.Getenv("HTTP_PORT")
+	playgroundPath    = os.Getenv("PLAYGROUND_PATH")
+	graphqlPath       = os.Getenv("GRAPHQL_PATH")
 )
 
 func main() {
@@ -48,6 +50,8 @@ func main() {
 		internal.WithGraphApiToken(graphApiToken),
 		internal.WithLogger(logger),
 		internal.WithRouterConfigPath(routerConfigPath),
+		internal.WithPlaygroundPath(playgroundPath),
+		internal.WithGraphQLPath(graphqlPath),
 		internal.WithTelemetryServiceName(telemetryServiceName),
 		internal.WithStage(stage),
 		internal.WithTraceSampleRate(defaultSampleRate),

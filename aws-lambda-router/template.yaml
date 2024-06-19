@@ -47,6 +47,8 @@ Resources:
           GRAPH_API_TOKEN: "" # Add your Graph API token here
           STAGE: "Prod" # Add the stage e.g. "Prod" if you use the Lambda default endpoint
           DEV_MODE: "false" # Set to "true" to enable the dev mode
+          GRAPHQL_PATH: "" # Add your custom graphql path
+          PLAYGROUND_PATH: "" # Add your custom playground path
 
 Outputs:
   Endpoint:
