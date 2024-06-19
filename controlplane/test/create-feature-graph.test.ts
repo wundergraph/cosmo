@@ -72,7 +72,7 @@ describe('Create feature graph tests', () => {
     });
 
     expect(featureGraphResponse.response?.code).toBe(EnumStatusCode.ERR);
-    expect(featureGraphResponse.response?.details).toBe(`Base subgraph "${subgraphName}" does not exist in the namespace "features".`);
+    expect(featureGraphResponse.response?.details).toBe(`Base subgraph "${subgraphName}" does not exist in the namespace "${namespace}".`);
 
     await server.close();
   });
