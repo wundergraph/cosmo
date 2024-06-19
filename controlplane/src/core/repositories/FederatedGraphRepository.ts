@@ -1751,7 +1751,10 @@ export class FederatedGraphRepository {
           });
 
           if (featureFlagRelatedGraph.featureFlagName && deployment.schemaVersionId && !errors) {
-            featureGraphSchemaVersionsByFeatureFlag.push({ featureFlagName, schemaVersionId: deployment.schemaVersionId });
+            featureGraphSchemaVersionsByFeatureFlag.push({
+              featureFlagName,
+              schemaVersionId: deployment.schemaVersionId,
+            });
           }
         }
 

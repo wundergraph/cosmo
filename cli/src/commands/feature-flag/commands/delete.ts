@@ -58,8 +58,8 @@ export default (opts: BaseCommandOptions) => {
         console.log(
           pc.red(
             `There were composition errors when composing at least one federated graph.` +
-            `\nThe router will continue to work with the latest valid schema.` +
-            `\n${pc.bold('Please check the errors below:')}`,
+              `\nThe router will continue to work with the latest valid schema.` +
+              `\n${pc.bold('Please check the errors below:')}`,
           ),
         );
         for (const compositionError of resp.compositionErrors) {
@@ -76,8 +76,8 @@ export default (opts: BaseCommandOptions) => {
       case EnumStatusCode.ERR_DEPLOYMENT_FAILED: {
         spinner.warn(
           `The feature flag "${name}" was deleted, but the updated composition hasn't been deployed,` +
-          ` so it's not accessible to the router.` +
-          `\n${pc.bold('Please check the errors below:')}`,
+            ` so it's not accessible to the router.` +
+            `\n${pc.bold('Please check the errors below:')}`,
         );
 
         const deploymentErrorsTable = new Table({
