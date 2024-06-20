@@ -13,8 +13,6 @@ import (
 	"github.com/twmb/franz-go/pkg/sasl/plain"
 	"go.uber.org/zap"
 
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
@@ -22,6 +20,9 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
+
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
 type ExecutorConfigurationBuilder struct {
@@ -97,9 +98,8 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *
 	}
 
 	if clientSchemaStr := routerConfig.EngineConfig.GetGraphqlClientSchema(); clientSchemaStr != "" {
-		// client schema is a subset of federated schema with filtered out fields/types based on:
-		// - @inaccessible directives - such fields are not exposed to the client
-		// - included/excluded @tags for the contract schema - fields/types that should not be in this contract schema version
+		// The client schema is a subset of the router schema that does not include @inaccessible fields.
+		// The client schema only exists if the federated schema includes @inaccessible directives or @tag directives
 
 		clientSchema, report := astparser.ParseGraphqlDocumentString(clientSchemaStr)
 		if report.HasErrors() {
@@ -111,9 +111,7 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *
 		}
 		clientSchemaDefinition = &clientSchema
 	} else {
-		// when federated schema do not have @inaccessible directives, and it is not filtered by @tags,
-		// e.g. it is not a contract schema,
-		// client schema is the same as router schema
+		// In the event that a client schema is not generated, the router schema is used in place of the client schema (e.g., for operation validation)
 
 		clientSchemaDefinition = &routerSchemaDefinition
 	}
