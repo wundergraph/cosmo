@@ -16,7 +16,7 @@ import (
 func TestOperationParser(t *testing.T) {
 	executor := &Executor{
 		PlanConfig:      plan.Configuration{},
-		Definition:      nil,
+		RouterSchema:    nil,
 		Resolver:        nil,
 		RenameTypeNames: nil,
 	}
@@ -162,7 +162,7 @@ func TestOperationParser(t *testing.T) {
 func TestOperationParserExtensions(t *testing.T) {
 	executor := &Executor{
 		PlanConfig:      plan.Configuration{},
-		Definition:      nil,
+		RouterSchema:    nil,
 		Resolver:        nil,
 		RenameTypeNames: nil,
 	}
