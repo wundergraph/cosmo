@@ -3,11 +3,13 @@ package subgraphs
 import (
 	"context"
 	"fmt"
-	"go.uber.org/zap"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
+	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/handler/debug"
@@ -65,8 +67,9 @@ func (p *Ports) AsArray() []int {
 }
 
 type Config struct {
-	Ports       Ports
-	EnableDebug bool
+	Ports             Ports
+	EnableDebug       bool
+	ArtificialLatency time.Duration
 }
 
 type Subgraphs struct {
@@ -103,7 +106,7 @@ func (s *Subgraphs) ListenAndServe(ctx context.Context) error {
 	return group.Wait()
 }
 
-func newServer(name string, enableDebug bool, port int, schema graphql.ExecutableSchema) *http.Server {
+func newServer(name string, enableDebug bool, port int, artificialLatency time.Duration, schema graphql.ExecutableSchema) *http.Server {
 	if port == 0 {
 		panic(fmt.Errorf("port for %s is 0", name))
 		return nil
@@ -114,54 +117,69 @@ func newServer(name string, enableDebug bool, port int, schema graphql.Executabl
 	}
 	mux := http.NewServeMux()
 	mux.Handle("/", playground.Handler("GraphQL playground", "/graphql"))
-	mux.Handle("/graphql", srv)
+	if artificialLatency > 0 {
+		mux.HandleFunc("/graphql", func(w http.ResponseWriter, r *http.Request) {
+			time.Sleep(artificialLatency)
+			srv.ServeHTTP(w, r)
+		})
+	} else {
+		mux.Handle("/graphql", srv)
+	}
 	return &http.Server{
 		Addr:    ":" + strconv.Itoa(port),
 		Handler: injector.HTTP(mux),
 	}
 }
 
-func subgraphHandler(schema graphql.ExecutableSchema) http.Handler {
+func subgraphHandler(schema graphql.ExecutableSchema, options *SubgraphOptions) http.Handler {
 	srv := NewDemoServer(schema)
 	mux := http.NewServeMux()
-	mux.Handle("/graphql", srv)
+	if options.ArtificialLatency > 0 {
+		mux.HandleFunc("/graphql", func(w http.ResponseWriter, r *http.Request) {
+			time.Sleep(options.ArtificialLatency)
+			srv.ServeHTTP(w, r)
+		})
+	} else {
+		mux.Handle("/graphql", srv)
+	}
 	return injector.HTTP(mux)
 }
 
 type SubgraphOptions struct {
 	NatsPubSubByProviderID map[string]pubsub_datasource.NatsPubSub
+	ArtificialLatency      time.Duration
 }
 
 func EmployeesHandler(opts *SubgraphOptions) http.Handler {
-	return subgraphHandler(employees.NewSchema(opts.NatsPubSubByProviderID))
+	return subgraphHandler(employees.NewSchema(opts.NatsPubSubByProviderID), opts)
 }
 
 func FamilyHandler(opts *SubgraphOptions) http.Handler {
-	return subgraphHandler(family.NewSchema(opts.NatsPubSubByProviderID))
+	return subgraphHandler(family.NewSchema(opts.NatsPubSubByProviderID), opts)
 }
 
 func HobbiesHandler(opts *SubgraphOptions) http.Handler {
-	return subgraphHandler(hobbies.NewSchema(opts.NatsPubSubByProviderID))
+	return subgraphHandler(hobbies.NewSchema(opts.NatsPubSubByProviderID), opts)
 }
 
 func ProductsHandler(opts *SubgraphOptions) http.Handler {
-	return subgraphHandler(products.NewSchema(opts.NatsPubSubByProviderID))
+	return subgraphHandler(products.NewSchema(opts.NatsPubSubByProviderID), opts)
 }
 
 func Test1Handler(opts *SubgraphOptions) http.Handler {
-	return subgraphHandler(test1.NewSchema(opts.NatsPubSubByProviderID))
+	return subgraphHandler(test1.NewSchema(opts.NatsPubSubByProviderID), opts)
 }
 
 func AvailabilityHandler(opts *SubgraphOptions) http.Handler {
-	return subgraphHandler(availability.NewSchema(opts.NatsPubSubByProviderID))
+	return subgraphHandler(availability.NewSchema(opts.NatsPubSubByProviderID), opts)
 }
 
 func MoodHandler(opts *SubgraphOptions) http.Handler {
-	return subgraphHandler(mood.NewSchema(opts.NatsPubSubByProviderID))
+	return subgraphHandler(mood.NewSchema(opts.NatsPubSubByProviderID), opts)
 }
 
 func CountriesHandler(opts *SubgraphOptions) http.Handler {
-	return subgraphHandler(countries.NewSchema(opts.NatsPubSubByProviderID))
+	return subgraphHandler(countries.NewSchema(opts.NatsPubSubByProviderID), opts)
 }
 
 func New(ctx context.Context, config *Config) (*Subgraphs, error) {
@@ -203,28 +221,28 @@ func New(ctx context.Context, config *Config) (*Subgraphs, error) {
 	}
 
 	var servers []*http.Server
-	if srv := newServer("employees", config.EnableDebug, config.Ports.Employees, employees.NewSchema(natsPubSubByProviderID)); srv != nil {
+	if srv := newServer("employees", config.EnableDebug, config.Ports.Employees, config.ArtificialLatency, employees.NewSchema(natsPubSubByProviderID)); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("family", config.EnableDebug, config.Ports.Family, family.NewSchema(natsPubSubByProviderID)); srv != nil {
+	if srv := newServer("family", config.EnableDebug, config.Ports.Family, config.ArtificialLatency, family.NewSchema(natsPubSubByProviderID)); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("hobbies", config.EnableDebug, config.Ports.Hobbies, hobbies.NewSchema(natsPubSubByProviderID)); srv != nil {
+	if srv := newServer("hobbies", config.EnableDebug, config.Ports.Hobbies, config.ArtificialLatency, hobbies.NewSchema(natsPubSubByProviderID)); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("products", config.EnableDebug, config.Ports.Products, products.NewSchema(natsPubSubByProviderID)); srv != nil {
+	if srv := newServer("products", config.EnableDebug, config.Ports.Products, config.ArtificialLatency, products.NewSchema(natsPubSubByProviderID)); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("test1", config.EnableDebug, config.Ports.Test1, test1.NewSchema(natsPubSubByProviderID)); srv != nil {
+	if srv := newServer("test1", config.EnableDebug, config.Ports.Test1, config.ArtificialLatency, test1.NewSchema(natsPubSubByProviderID)); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("availability", config.EnableDebug, config.Ports.Availability, availability.NewSchema(natsPubSubByProviderID)); srv != nil {
+	if srv := newServer("availability", config.EnableDebug, config.Ports.Availability, config.ArtificialLatency, availability.NewSchema(natsPubSubByProviderID)); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("mood", config.EnableDebug, config.Ports.Mood, mood.NewSchema(natsPubSubByProviderID)); srv != nil {
+	if srv := newServer("mood", config.EnableDebug, config.Ports.Mood, config.ArtificialLatency, mood.NewSchema(natsPubSubByProviderID)); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("countries", config.EnableDebug, config.Ports.Countries, countries.NewSchema(natsPubSubByProviderID)); srv != nil {
+	if srv := newServer("countries", config.EnableDebug, config.Ports.Countries, config.ArtificialLatency, countries.NewSchema(natsPubSubByProviderID)); srv != nil {
 		servers = append(servers, srv)
 	}
 	return &Subgraphs{
