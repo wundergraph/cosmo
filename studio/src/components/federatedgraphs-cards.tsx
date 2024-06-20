@@ -56,6 +56,7 @@ import {
 } from "./ui/tooltip";
 import { useToast } from "./ui/use-toast";
 import { useMutation } from "@connectrpc/connect-query";
+import { GraphContext } from '@/components/layout/graph-layout';
 
 // this is required to render a blank line with LineChart
 const fallbackData = [
@@ -121,6 +122,7 @@ const MigrationDialog = ({
       {
         apiKey: data.apiKey,
         variantName: data.variantName,
+        namespace: router.query.namespace as string,
       },
       {
         onSuccess: (d) => {
