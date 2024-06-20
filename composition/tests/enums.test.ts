@@ -124,13 +124,13 @@ describe('Enum federation tests', () => {
     expect(errors![0]).toStrictEqual(incompatibleSharedEnumError(parentName));
   });
 
-  test('that declaring an enum value as inaccessible prevents an enum inconsistency error #1', () => {
+  test('that declaring an enum value as inaccessible prevents an enum inconsistency error #1.1', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphG, subgraphH]);
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
         versionTwoRouterDefinitions +
-        `
+          `
       enum Enum {
         A
         B
@@ -149,7 +149,7 @@ describe('Enum federation tests', () => {
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
       normalizeString(
         versionTwoClientDefinitions +
-        `
+          `
       enum Enum {
         A
         B
@@ -166,13 +166,13 @@ describe('Enum federation tests', () => {
     );
   });
 
-  test('that declaring an enum value as inaccessible prevents an enum inconsistency error #2', () => {
+  test('that declaring an enum value as inaccessible prevents an enum inconsistency error #1.2', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphH, subgraphG]);
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
         versionTwoRouterDefinitions +
-        `
+          `
       enum Enum {
         A
         B
@@ -191,7 +191,7 @@ describe('Enum federation tests', () => {
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
       normalizeString(
         versionTwoClientDefinitions +
-        `
+          `
       enum Enum {
         A
         B
