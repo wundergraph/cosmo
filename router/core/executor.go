@@ -8,22 +8,20 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/nats-io/nats.go"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/twmb/franz-go/pkg/sasl/plain"
 	"go.uber.org/zap"
 
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
-
-	"github.com/nats-io/nats.go"
-
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/introspection_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 )
 
 type ExecutorConfigurationBuilder struct {
@@ -37,10 +35,14 @@ type ExecutorConfigurationBuilder struct {
 }
 
 type Executor struct {
-	PlanConfig                 plan.Configuration
-	ClientSchema, RouterSchema *ast.Document
-	Resolver                   *resolve.Resolver
-	RenameTypeNames            []resolve.RenameTypeName
+	PlanConfig plan.Configuration
+	// ClientSchema is the GraphQL Schema that is exposed from our API
+	// it is used for the introspection and query normalization/validation.
+	ClientSchema *ast.Document
+	// RouterSchema the GraphQL Schema that we use for planning the queries
+	RouterSchema    *ast.Document
+	Resolver        *resolve.Resolver
+	RenameTypeNames []resolve.RenameTypeName
 }
 
 func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *nodev1.RouterConfig, routerEngineConfig *RouterEngineConfiguration, pubSubProviders *EnginePubSubProviders, reporter resolve.Reporter) (*Executor, error) {
@@ -72,7 +74,16 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *
 	// this is the resolver, it's stateful and manages all the client connections, etc...
 	resolver := resolve.New(ctx, options)
 
-	routerSchemaDefinition, report := astparser.ParseGraphqlDocumentString(routerConfig.EngineConfig.GraphqlSchema)
+	var (
+		// clientSchemaDefinition is the GraphQL Schema that is exposed from our API
+		// it should be used for the introspection and query normalization/validation.
+		clientSchemaDefinition *ast.Document
+		// routerSchemaDefinition the GraphQL Schema that we use for planning the queries
+		routerSchemaDefinition ast.Document
+		report                 operationreport.Report
+	)
+
+	routerSchemaDefinition, report = astparser.ParseGraphqlDocumentString(routerConfig.EngineConfig.GraphqlSchema)
 	if report.HasErrors() {
 		return nil, fmt.Errorf("failed to parse graphql schema from engine config: %w", report)
 	}
@@ -85,11 +96,11 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *
 		return nil, fmt.Errorf("failed to merge graphql schema with base schema: %w", err)
 	}
 
-	// this is the GraphQL Schema that we will expose from our API
-	// it should be used for the introspection and query validation
-	var clientSchemaDefinition *ast.Document
-
 	if clientSchemaStr := routerConfig.EngineConfig.GetGraphqlClientSchema(); clientSchemaStr != "" {
+		// client schema is a subset of federated schema with filtered out fields/types based on:
+		// - @inaccessible directives - such fields are not exposed to the client
+		// - included/excluded @tags for the contract schema - fields/types that should not be in this contract schema version
+
 		clientSchema, report := astparser.ParseGraphqlDocumentString(clientSchemaStr)
 		if report.HasErrors() {
 			return nil, fmt.Errorf("failed to parse graphql client schema from engine config: %w", report)
@@ -100,6 +111,10 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *
 		}
 		clientSchemaDefinition = &clientSchema
 	} else {
+		// when federated schema do not have @inaccessible directives, and it is not filtered by @tags,
+		// e.g. it is not a contract schema,
+		// client schema is the same as router schema
+
 		clientSchemaDefinition = &routerSchemaDefinition
 	}
 
