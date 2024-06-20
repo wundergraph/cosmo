@@ -1,7 +1,6 @@
 package core
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -10,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
 
 	"github.com/go-chi/chi/v5/middleware"
@@ -18,8 +18,6 @@ import (
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
-
-	"github.com/wundergraph/cosmo/router/internal/pool"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -161,23 +159,13 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch p := operationCtx.preparedPlan.preparedPlan.(type) {
 	case *plan.SynchronousResponsePlan:
 		w.Header().Set("Content-Type", "application/json")
-		executionBuf := pool.GetBytesBuffer()
-		defer pool.PutBytesBuffer(executionBuf)
+		h.setExecutionPlanCacheResponseHeader(w, operationCtx.planCacheHit)
 
-		err := h.executor.Resolver.ResolveGraphQLResponse(ctx, p.Response, nil, executionBuf)
+		err := h.executor.Resolver.ResolveGraphQLResponse(ctx, p.Response, nil, w)
 		if err != nil {
 			requestLogger.Error("unable to resolve response", zap.Error(err))
 			trackResponseError(ctx.Context(), err)
-			h.WriteError(ctx, err, p.Response, w, executionBuf)
-			return
-		}
-
-		h.setExecutionPlanCacheResponseHeader(w, operationCtx.planCacheHit)
-
-		_, err = executionBuf.WriteTo(w)
-		if err != nil {
-			requestLogger.Error("unable to write response", zap.Error(err))
-			trackResponseError(ctx.Context(), err)
+			h.WriteError(ctx, err, p.Response, w)
 			return
 		}
 	case *plan.SubscriptionResponsePlan:
@@ -249,10 +237,11 @@ func (h *GraphQLHandler) configureRateLimiting(ctx *resolve.Context) *resolve.Co
 // WriteError writes the error to the response writer. This function must be concurrency-safe.
 // @TODO This function should be refactored to be a helper function for websocket and http error writing
 // In the websocket case, we call this function concurrently as part of the polling loop. This is error-prone.
-func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolve.GraphQLResponse, w io.Writer, buf *bytes.Buffer) {
+func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolve.GraphQLResponse, w io.Writer) {
 	requestLogger := h.log.With(logging.WithRequestID(middleware.GetReqID(ctx.Context())))
 	httpWriter, isHttpResponseWriter := w.(http.ResponseWriter)
-	buf.Reset()
+	buf := pool.GetBytesBuffer()
+	defer pool.PutBytesBuffer(buf)
 	response := GraphQLErrorResponse{
 		Errors: make([]graphqlError, 1),
 		Data:   nil,

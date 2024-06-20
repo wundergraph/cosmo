@@ -404,6 +404,9 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		newReq := r.WithContext(ctxWithOperation)
 
+		operationKit.Free()
+		operationKit = nil
+
 		// Call the final handler that resolves the operation
 		// and enrich the context to make it available in the request context as well for metrics etc.
 		next.ServeHTTP(ww, newReq)
