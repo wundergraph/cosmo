@@ -1,6 +1,6 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { Subgraph as ProtoSubgraph } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { program } from 'commander';
-import { BREAK, parse, visit } from 'graphql';
 import jwtDecode from 'jwt-decode';
 import pc from 'picocolors';
 import { Client } from '../../../core/client/client.js';
@@ -72,6 +72,7 @@ export interface Subgraph {
   routingURL: string;
   subscriptionURL: string;
   subscriptionProtocol: string;
+  isEventDrivenGraph?: boolean;
   isV2Graph?: boolean;
 }
 
@@ -105,12 +106,13 @@ export const getSubgraphsOfFedGraph = async ({
 
   const subgraphs = await resp.subgraphs;
 
-  return subgraphs.map((s) => {
+  return subgraphs.map((s: ProtoSubgraph) => {
     return {
       name: s.name,
       routingURL: s.routingURL,
       subscriptionURL: s.subscriptionUrl,
       subscriptionProtocol: s.subscriptionProtocol,
+      isEventDrivenGraph: s.isEventDrivenGraph,
       isV2Graph: s.isV2Graph,
     };
   });

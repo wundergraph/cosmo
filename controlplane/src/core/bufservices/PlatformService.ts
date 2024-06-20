@@ -47,16 +47,16 @@ import {
   FixSubgraphSchemaResponse,
   ForceCheckSuccessResponse,
   GenerateRouterTokenResponse,
-  GetAPIKeysResponse,
   GetAllDiscussionsResponse,
   GetAllOverridesResponse,
   GetAnalyticsViewResponse,
+  GetAPIKeysResponse,
   GetAuditLogsResponse,
   GetBillingPlansResponse,
   GetChangelogBySchemaVersionResponse,
   GetCheckOperationsResponse,
-  GetCheckSummaryResponse,
   GetChecksByFederatedGraphNameResponse,
+  GetCheckSummaryResponse,
   GetClientsResponse,
   GetCompositionDetailsResponse,
   GetCompositionsResponse,
@@ -65,8 +65,8 @@ import {
   GetDiscussionSchemasResponse,
   GetFederatedGraphByNameResponse,
   GetFederatedGraphChangelogResponse,
-  GetFederatedGraphSDLByNameResponse,
   GetFederatedGraphsBySubgraphLabelsResponse,
+  GetFederatedGraphSDLByNameResponse,
   GetFederatedGraphsResponse,
   GetFieldUsageResponse,
   GetGraphMetricsResponse,
@@ -85,8 +85,8 @@ import {
   GetOrganizationWebhookMetaResponse,
   GetPendingOrganizationMembersResponse,
   GetPersistedOperationsResponse,
-  GetRouterTokensResponse,
   GetRoutersResponse,
+  GetRouterTokensResponse,
   GetSdlBySchemaVersionResponse,
   GetSubgraphByNameResponse,
   GetSubgraphMembersResponse,
@@ -107,11 +107,11 @@ import {
   MigrateMonographResponse,
   MoveGraphResponse,
   Permission,
+  PublishedOperation,
+  PublishedOperationStatus,
   PublishFederatedSubgraphResponse,
   PublishMonographResponse,
   PublishPersistedOperationsResponse,
-  PublishedOperation,
-  PublishedOperationStatus,
   RemoveInvitationResponse,
   RemoveOperationIgnoreAllOverrideResponse,
   RemoveOperationOverridesResponse,
@@ -121,14 +121,15 @@ import {
   RequestSeriesItem,
   Router,
   SetDiscussionResolutionResponse,
+  Subgraph,
   UpdateDiscussionCommentResponse,
   UpdateFeatureSettingsResponse,
   UpdateFederatedGraphResponse,
   UpdateIntegrationConfigResponse,
   UpdateMonographResponse,
-  UpdateOrgMemberRoleResponse,
   UpdateOrganizationDetailsResponse,
   UpdateOrganizationWebhookConfigResponse,
+  UpdateOrgMemberRoleResponse,
   UpdateSubgraphResponse,
   UpgradePlanResponse,
   WhoAmIResponse,
@@ -136,7 +137,7 @@ import {
 import { isValidUrl, joinLabel } from '@wundergraph/cosmo-shared';
 import { subHours } from 'date-fns';
 import { FastifyBaseLogger } from 'fastify';
-import { DocumentNode, buildASTSchema, parse } from 'graphql';
+import { buildASTSchema, DocumentNode, parse } from 'graphql';
 import { validate } from 'graphql/validation/index.js';
 import { uid } from 'uid/secure';
 import {
@@ -150,8 +151,8 @@ import {
   SubgraphDTO,
   UpdatedPersistedOperation,
 } from '../../types/index.js';
-import { Composer, RouterConfigUploadError, mapResultToComposedGraph } from '../composition/composer.js';
-import { buildSchema, composeSubgraphs, composeSubgraphsWithContracts } from '../composition/composition.js';
+import { Composer, RouterConfigUploadError } from '../composition/composer.js';
+import { buildSchema, composeSubgraphs } from '../composition/composition.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
 import { audiences, nowInSeconds, signJwtHS256 } from '../crypto/jwt.js';
 import { AuthenticationError, PublicError } from '../errors/errors.js';
@@ -190,10 +191,10 @@ import ApolloMigrator from '../services/ApolloMigrator.js';
 import { BillingService } from '../services/BillingService.js';
 import OidcProvider from '../services/OidcProvider.js';
 import {
+  collectOperationUsageStats,
   InspectorOperationResult,
   InspectorSchemaChange,
   SchemaUsageTrafficInspector,
-  collectOperationUsageStats,
 } from '../services/SchemaUsageTrafficInspector.js';
 import Slack from '../services/Slack.js';
 import {
@@ -1153,6 +1154,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             createdBy: authContext.userId,
             labels: [label],
             routingUrl: req.graphUrl,
+            isEventDrivenGraph: false,
             readme: req.readme,
             subscriptionUrl: req.subscriptionUrl,
             subscriptionProtocol:
@@ -1866,15 +1868,82 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        if (!isValidUrl(req.routingUrl)) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR,
-              details: `Routing URL is not a valid URL`,
-            },
-            compositionErrors: [],
-            admissionErrors: [],
-          };
+        /* Routing URL is now optional; if empty or undefined, set an empty string
+         * The routing URL must be defined unless the subgraph is an Event-Driven Graph
+         * */
+        const routingUrl = req.routingUrl || '';
+        if (req.isEventDrivenGraph) {
+          if (req.routingUrl !== undefined) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `An Event-Driven Graph must not define a routing URL`,
+              },
+              compositionErrors: [],
+              admissionErrors: [],
+            };
+          }
+          if (req.subscriptionUrl !== undefined) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `An Event-Driven Graph must not define a subscription URL`,
+              },
+              compositionErrors: [],
+              admissionErrors: [],
+            };
+          }
+          if (req.subscriptionProtocol !== undefined) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `An Event-Driven Graph must not define a subscription protocol`,
+              },
+              compositionErrors: [],
+              admissionErrors: [],
+            };
+          }
+          if (req.websocketSubprotocol !== undefined) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `An Event-Driven Graph must not define a websocket subprotocol`,
+              },
+              compositionErrors: [],
+              admissionErrors: [],
+            };
+          }
+        } else {
+          if (!routingUrl) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `A non-Event-Driven Graph must define a routing URL`,
+              },
+              compositionErrors: [],
+              admissionErrors: [],
+            };
+          }
+          if (!isValidUrl(routingUrl)) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `Routing URL "${routingUrl}" is not a valid URL`,
+              },
+              compositionErrors: [],
+              admissionErrors: [],
+            };
+          }
+          if (req.subscriptionUrl && !isValidUrl(req.subscriptionUrl)) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `Subscription URL "${req.subscriptionUrl}" is not a valid URL`,
+              },
+              compositionErrors: [],
+              admissionErrors: [],
+            };
+          }
         }
 
         const namespace = await namespaceRepo.byName(req.namespace);
@@ -1906,7 +1975,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           namespaceId: namespace.id,
           createdBy: authContext.userId,
           labels: req.labels,
-          routingUrl: req.routingUrl,
+          routingUrl,
+          isEventDrivenGraph: req.isEventDrivenGraph || false,
           readme: req.readme,
           subscriptionUrl: req.subscriptionUrl,
           subscriptionProtocol:
@@ -2615,6 +2685,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         const subgraphSchemaSDL = req.schema;
+        let isEventDrivenGraph = false;
         let isV2Graph: boolean | undefined;
 
         try {
@@ -2630,6 +2701,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               deploymentErrors: [],
             };
           }
+          isEventDrivenGraph = normalizationResult?.isEventDrivenGraph || false;
           isV2Graph = normalizationResult?.isVersionTwo;
         } catch (e: any) {
           return {
@@ -2655,11 +2727,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
+        const routingUrl = req.routingUrl || '';
         let subgraph = await subgraphRepo.byName(req.name, req.namespace);
 
-        // Check if the subgraph already exists and if it doesn't, validate input and create it
+        /* If the subgraph exists, validate that no parameters were included.
+         * Otherwise, validate the input and create the subgraph.
+         */
         if (subgraph) {
-          // check if the user is authorized to perform the action
+          // check whether the user is authorized to perform the action
           await opts.authorizer.authorize({
             db: opts.db,
             graph: {
@@ -2669,7 +2744,27 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             headers: ctx.requestHeader,
             authContext,
           });
+          /* The subgraph already exists, so the database flag and the normalization result should match.
+           * If he flags do not match, the database is the source of truth, so return an appropriate error.
+           * */
+          if (subgraph.isEventDrivenGraph !== isEventDrivenGraph) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: isEventDrivenGraph
+                  ? 'The subgraph was originally created as a regular subgraph.' +
+                    ' A regular subgraph cannot be retroactively changed into an Event-Driven Graph (EDG).' +
+                    ' Please create a new Event-Driven subgraph with the -edg flag.'
+                  : 'The subgraph was originally created as an Event-Driven Graph (EDG).' +
+                    ' An EDG cannot be retroactively changed into a regular subgraph.' +
+                    ' Please create a new regular subgraph.',
+              },
+              compositionErrors: [],
+              deploymentErrors: [],
+            };
+          }
         } else {
+          // Labels are not required but should be valid if included.
           if (!isValidLabels(req.labels)) {
             return {
               response: {
@@ -2681,26 +2776,71 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             };
           }
 
-          if (!req.routingUrl) {
-            return {
-              response: {
-                code: EnumStatusCode.ERR,
-                details: `Routing URL is required to create a new subgraph`,
-              },
-              compositionErrors: [],
-              deploymentErrors: [],
-            };
-          }
+          if (isEventDrivenGraph) {
+            if (req.routingUrl !== undefined) {
+              return {
+                response: {
+                  code: EnumStatusCode.ERR,
+                  details: `An Event-Driven Graph must not define a routing URL`,
+                },
+                compositionErrors: [],
+                deploymentErrors: [],
+              };
+            }
+            if (req.subscriptionUrl !== undefined) {
+              return {
+                response: {
+                  code: EnumStatusCode.ERR,
+                  details: `An Event-Driven Graph must not define a subscription URL`,
+                },
+                compositionErrors: [],
+                deploymentErrors: [],
+              };
+            }
+            if (req.subscriptionProtocol !== undefined) {
+              return {
+                response: {
+                  code: EnumStatusCode.ERR,
+                  details: `An Event-Driven Graph must not define a subscription protocol`,
+                },
+                compositionErrors: [],
+                deploymentErrors: [],
+              };
+            }
+            if (req.websocketSubprotocol !== undefined) {
+              return {
+                response: {
+                  code: EnumStatusCode.ERR,
+                  details: `An Event-Driven Graph must not define a websocket subprotocol`,
+                },
+                compositionErrors: [],
+                deploymentErrors: [],
+              };
+            }
+          } else {
+            if (!isValidUrl(routingUrl)) {
+              return {
+                response: {
+                  code: EnumStatusCode.ERR,
+                  details: routingUrl
+                    ? `Routing URL "${routingUrl}" is not a valid URL`
+                    : `A valid, non-empty routing URL is required to create and publish a non-Event-Driven subgraph`,
+                },
+                compositionErrors: [],
+                deploymentErrors: [],
+              };
+            }
 
-          if (req.subscriptionUrl && !isValidUrl(req.subscriptionUrl)) {
-            return {
-              response: {
-                code: EnumStatusCode.ERR,
-                details: `Subscription URL is not a valid URL`,
-              },
-              compositionErrors: [],
-              deploymentErrors: [],
-            };
+            if (req.subscriptionUrl && !isValidUrl(req.subscriptionUrl)) {
+              return {
+                response: {
+                  code: EnumStatusCode.ERR,
+                  details: `Subscription URL "${req.subscriptionUrl}" is not a valid URL`,
+                },
+                compositionErrors: [],
+                deploymentErrors: [],
+              };
+            }
           }
 
           // Create the subgraph if it doesn't exist
@@ -2710,7 +2850,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             namespaceId: namespace.id,
             createdBy: authContext.userId,
             labels: req.labels,
-            routingUrl: req.routingUrl!,
+            isEventDrivenGraph,
+            routingUrl,
             subscriptionUrl: req.subscriptionUrl,
             subscriptionProtocol:
               req.subscriptionProtocol === undefined ? undefined : formatSubscriptionProtocol(req.subscriptionProtocol),
@@ -3994,6 +4135,73 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        // If the graph is an EDG, it should never define a routing URL nor a subscription URL
+        if (subgraph.isEventDrivenGraph) {
+          if (req.routingUrl !== undefined) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `Event-Driven Graphs must not define a routing URL`,
+              },
+              compositionErrors: [],
+              deploymentErrors: [],
+            };
+          }
+          if (req.subscriptionUrl !== undefined) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `Event-Driven Graphs must not define a subscription URL`,
+              },
+              compositionErrors: [],
+              deploymentErrors: [],
+            };
+          }
+          if (req.subscriptionProtocol !== undefined) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `Event-Driven Graphs must not define a subscription protocol`,
+              },
+              compositionErrors: [],
+              deploymentErrors: [],
+            };
+          }
+          if (req.websocketSubprotocol !== undefined) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `Event-Driven Graphs must not define a websocket subprotocol`,
+              },
+              compositionErrors: [],
+              deploymentErrors: [],
+            };
+          }
+        } else {
+          // Routing URL should never be an empty string, so check explicitly for undefined
+          if (req.routingUrl !== undefined && !isValidUrl(req.routingUrl)) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `Routing URL "${req.routingUrl}" is not a valid URL`,
+              },
+              compositionErrors: [],
+              deploymentErrors: [],
+            };
+          }
+          // When un-setting the url, the url can be an empty string
+          if (req.subscriptionUrl && !isValidUrl(req.subscriptionUrl)) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `Subscription URL is not a valid URL`,
+              },
+              compositionErrors: [],
+              deploymentErrors: [],
+            };
+          }
+        }
+
         // Check if the user is authorized to perform the action
         await opts.authorizer.authorize({
           db: opts.db,
@@ -4004,18 +4212,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           headers: ctx.requestHeader,
           authContext,
         });
-
-        // When un-setting the url, the url can be empty string
-        if (req.subscriptionUrl && !isValidUrl(req.subscriptionUrl)) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR,
-              details: `Subscription URL is not a valid URL`,
-            },
-            compositionErrors: [],
-            deploymentErrors: [],
-          };
-        }
 
         const { compositionErrors, updatedFederatedGraphs, deploymentErrors } = await subgraphRepo.update(
           {
@@ -4154,16 +4350,18 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           namespaceId: federatedGraph.namespaceId,
         });
 
-        const subgraphsDetails = subgraphs.map((s) => ({
+        const subgraphsDetails: PlainMessage<Subgraph>[] = subgraphs.map((s) => ({
           id: s.id,
           name: s.name,
           routingURL: s.routingUrl,
           labels: s.labels,
           lastUpdatedAt: s.lastUpdatedAt,
           targetId: s.targetId,
+          isEventDrivenGraph: s.isEventDrivenGraph,
           subscriptionUrl: s.subscriptionUrl,
           subscriptionProtocol: s.subscriptionProtocol,
           namespace: s.namespace,
+          websocketSubprotocol: s.websocketSubprotocol || '',
         }));
 
         const result = composeSubgraphs(
@@ -6980,9 +7178,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             labels: g.labels,
             createdUserId: g.creatorUserId,
             targetId: g.targetId,
+            isEventDrivenGraph: g.isEventDrivenGraph,
             subscriptionUrl: g.subscriptionUrl,
             subscriptionProtocol: g.subscriptionProtocol,
             namespace: g.namespace,
+            websocketSubprotocol: g.websocketSubprotocol || '',
           })),
           count,
           response: {
@@ -7021,10 +7221,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             routingURL: subgraph.routingUrl,
             labels: subgraph.labels,
             targetId: subgraph.targetId,
+            isEventDrivenGraph: subgraph.isEventDrivenGraph,
             readme: subgraph.readme,
             subscriptionUrl: subgraph.subscriptionUrl,
             subscriptionProtocol: subgraph.subscriptionProtocol,
             namespace: subgraph.namespace,
+            websocketSubprotocol: subgraph.websocketSubprotocol || '',
           },
           members: await subgraphRepo.getSubgraphMembers(subgraph.id),
           response: {
@@ -7349,7 +7551,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             subscriptionUrl: g.subscriptionUrl,
             namespace: g.namespace,
             subscriptionProtocol: g.subscriptionProtocol,
+            isEventDrivenGraph: g.isEventDrivenGraph,
             isV2Graph: g.isV2Graph,
+            websocketSubprotocol: g.websocketSubprotocol || '',
           })),
           graphRequestToken: routerRequestToken,
           response: {
