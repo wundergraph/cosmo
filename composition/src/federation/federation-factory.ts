@@ -1712,7 +1712,7 @@ export class FederationFactory {
             };
             switch (mergeMethod) {
               case MergeMethod.CONSISTENT:
-                if (parentDefinitionData.appearances > enumValueData.appearances) {
+                if (!isValueInaccessible && parentDefinitionData.appearances > enumValueData.appearances) {
                   this.errors.push(incompatibleSharedEnumError(parentTypeName));
                 }
                 enumValueNodes.push(enumValueNode);
