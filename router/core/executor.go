@@ -15,6 +15,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 
 	"github.com/nats-io/nats.go"
+
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
@@ -75,8 +76,9 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *
 	if report.HasErrors() {
 		return nil, fmt.Errorf("failed to parse graphql schema from engine config: %w", report)
 	}
-	// we need to merge the base schema, it contains the __schema and __type queries
-	// these are not usually part of a regular GraphQL schema
+	// we need to merge the base schema, it contains the __schema and __type queries,
+	// as well as built-in scalars like Int, String, etc...
+	// these are usually not part of a regular GraphQL schema
 	// the engine needs to have them defined, otherwise it cannot resolve such fields
 	err = asttransform.MergeDefinitionWithBaseSchema(&routerSchemaDefinition)
 	if err != nil {
@@ -87,14 +89,14 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *
 	// it should be used for the introspection and query validation
 	var clientSchemaDefinition *ast.Document
 
-	if routerConfig.EngineConfig.GetGraphqlClientSchema() != "" {
-		clientSchema, report := astparser.ParseGraphqlDocumentString(routerConfig.EngineConfig.GetGraphqlClientSchema())
+	if clientSchemaStr := routerConfig.EngineConfig.GetGraphqlClientSchema(); clientSchemaStr != "" {
+		clientSchema, report := astparser.ParseGraphqlDocumentString(clientSchemaStr)
 		if report.HasErrors() {
 			return nil, fmt.Errorf("failed to parse graphql client schema from engine config: %w", report)
 		}
 		err = asttransform.MergeDefinitionWithBaseSchema(&clientSchema)
 		if err != nil {
-			return nil, fmt.Errorf("failed to merge graphql schema with base schema: %w", err)
+			return nil, fmt.Errorf("failed to merge graphql client schema with base schema: %w", err)
 		}
 		clientSchemaDefinition = &clientSchema
 	} else {
@@ -103,8 +105,9 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *
 
 	if b.introspection {
 		// by default, the engine doesn't understand how to resolve the __schema and __type queries
-		// we need to add a special data source for that
-		// it takes the definition as the input and generates resolvers from it
+		// we need to add a special datasource for that
+		// it takes the definition as the input and generates introspection data
+		// datasource is attached to Query.__schema, Query.__type, __Type.fields and __Type.enumValues fields
 		introspectionFactory, err := introspection_datasource.NewIntrospectionConfigFactory(clientSchemaDefinition)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create introspection config factory: %w", err)
