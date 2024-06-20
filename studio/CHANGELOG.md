@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.78.0](https://github.com/wundergraph/cosmo/compare/studio@0.77.18...studio@0.78.0) (2024-06-20)
+
+### Bug Fixes
+
+* migrate button should respect namespace ([#875](https://github.com/wundergraph/cosmo/issues/875)) ([46958d6](https://github.com/wundergraph/cosmo/commit/46958d6ceb61835033593fd3d32092f2bac2849c)) (@Aenimus)
+
+### Features
+
+* add subscripion protocol and ws subprotocol to ui ([#829](https://github.com/wundergraph/cosmo/issues/829)) ([26708e4](https://github.com/wundergraph/cosmo/commit/26708e4d02fa3a6fa44b39a8c9138bd14a78c96f)) (@JivusAyrus)
+
 ## [0.77.18](https://github.com/wundergraph/cosmo/compare/studio@0.77.17...studio@0.77.18) (2024-06-07)
 
 **Note:** Version bump only for package studio
