@@ -1,7 +1,12 @@
 import { federateSubgraphs, incompatibleSharedEnumError, Subgraph } from '../src';
 import { parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
-import { normalizeString, schemaToSortedNormalizedString, versionTwoRouterDefinitions } from './utils/utils';
+import {
+  normalizeString,
+  schemaToSortedNormalizedString,
+  versionTwoClientDefinitions,
+  versionTwoRouterDefinitions,
+} from './utils/utils';
 
 describe('Enum federation tests', () => {
   const parentName = 'Instruction';
@@ -118,6 +123,90 @@ describe('Enum federation tests', () => {
     expect(errors).toHaveLength(1);
     expect(errors![0]).toStrictEqual(incompatibleSharedEnumError(parentName));
   });
+
+  test('that declaring an enum value as inaccessible prevents an enum inconsistency error #1', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphG, subgraphH]);
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(
+        versionTwoRouterDefinitions +
+        `
+      enum Enum {
+        A
+        B
+        C @inaccessible
+      }
+
+      type Query {
+        enum(enum: Enum!): Enum!
+        enumTwo(enum: Enum!): Enum!
+      }
+      
+      scalar openfed__Scope
+    `,
+      ),
+    );
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
+      normalizeString(
+        versionTwoClientDefinitions +
+        `
+      enum Enum {
+        A
+        B
+      }
+
+      type Query {
+        enum(enum: Enum!): Enum!
+        enumTwo(enum: Enum!): Enum!
+      }
+      
+      scalar openfed__Scope
+    `,
+      ),
+    );
+  });
+
+  test('that declaring an enum value as inaccessible prevents an enum inconsistency error #2', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphH, subgraphG]);
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(
+        versionTwoRouterDefinitions +
+        `
+      enum Enum {
+        A
+        B
+        C @inaccessible
+      }
+
+      type Query {
+        enum(enum: Enum!): Enum!
+        enumTwo(enum: Enum!): Enum!
+      }
+      
+      scalar openfed__Scope
+    `,
+      ),
+    );
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
+      normalizeString(
+        versionTwoClientDefinitions +
+        `
+      enum Enum {
+        A
+        B
+      }
+
+      type Query {
+        enum(enum: Enum!): Enum!
+        enumTwo(enum: Enum!): Enum!
+      }
+      
+      scalar openfed__Scope
+    `,
+      ),
+    );
+  });
 });
 
 const subgraphA: Subgraph = {
@@ -208,6 +297,37 @@ const subgraphF: Subgraph = {
 
     type BattleAction {
       baseAction(input: Instruction): Boolean!
+    }
+  `),
+};
+
+const subgraphG: Subgraph = {
+  name: 'subgraph-g',
+  url: '',
+  definitions: parse(`
+    enum Enum {
+      A
+      B
+      C @inaccessible
+    }
+
+    type Query {
+      enum(enum: Enum!): Enum!
+    }
+  `),
+};
+
+const subgraphH: Subgraph = {
+  name: 'subgraph-h',
+  url: '',
+  definitions: parse(`
+    enum Enum {
+      A
+      B
+    }
+
+    type Query {
+      enumTwo(enum: Enum!): Enum!
     }
   `),
 };
