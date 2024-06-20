@@ -5,6 +5,7 @@ import { Command, program } from 'commander';
 import { parse, printSchema } from 'graphql';
 import * as yaml from 'js-yaml';
 import { dirname, resolve } from 'pathe';
+import { createHash } from 'node:crypto';
 import pc from 'picocolors';
 import {
   FeatureFlagRouterExecutionConfig,
@@ -109,7 +110,7 @@ export default (opts: BaseCommandOptions) => {
       federatedClientSDL,
       federatedSDL: printSchema(result.federationResult.federatedGraphSchema),
       fieldConfigurations: result.federationResult.fieldConfigurations,
-      schemaVersionId: '',
+      schemaVersionId: 'static',
       subgraphs: config.subgraphs.map((s, index) => {
         const subgraphConfig = result.federationResult!.subgraphConfigBySubgraphName.get(s.name);
         const schema = subgraphConfig?.schema;
@@ -128,6 +129,8 @@ export default (opts: BaseCommandOptions) => {
         };
       }),
     });
+
+    routerConfig.version = createHash('sha1').update(routerConfig.toJsonString()).digest('hex');
 
     if (config.feature_flags && config.feature_flags.length > 0) {
       const ffConfigs: FeatureFlagRouterExecutionConfigs = new FeatureFlagRouterExecutionConfigs();
@@ -200,7 +203,7 @@ export default (opts: BaseCommandOptions) => {
           federatedClientSDL,
           federatedSDL: printSchema(result.federationResult.federatedGraphSchema),
           fieldConfigurations: result.federationResult.fieldConfigurations,
-          schemaVersionId: '',
+          schemaVersionId: `static`,
           subgraphs: subgraphs.map((s, index) => {
             const subgraphConfig = result.federationResult!.subgraphConfigBySubgraphName.get(s.name);
             const schema = subgraphConfig?.schema;
@@ -225,6 +228,10 @@ export default (opts: BaseCommandOptions) => {
           subgraphs: routerConfig.subgraphs,
           engineConfig: routerConfig.engineConfig,
         });
+
+        ffConfigs.configByFeatureFlagName[ff.name].version = createHash('sha1')
+          .update(routerConfig.toJsonString())
+          .digest('hex');
       }
 
       routerConfig.featureFlagConfigs = ffConfigs;

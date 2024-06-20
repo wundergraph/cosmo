@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"go.opentelemetry.io/otel/attribute"
 	"net/http"
 	"net/url"
 	"sync"
@@ -18,6 +19,7 @@ type key string
 
 const requestContextKey = key("request")
 const subgraphsContextKey = key("subgraphs")
+const baseAttributesContextKey = key("baseOtelAttributes")
 
 var _ RequestContext = (*requestContext)(nil)
 
@@ -439,6 +441,15 @@ func withSubgraphs(ctx context.Context, subgraphs []Subgraph) context.Context {
 func subgraphsFromContext(ctx context.Context) []Subgraph {
 	subgraphs, _ := ctx.Value(subgraphsContextKey).([]Subgraph)
 	return subgraphs
+}
+
+func withBaseAttributes(ctx context.Context, attributes []attribute.KeyValue) context.Context {
+	return context.WithValue(ctx, baseAttributesContextKey, attributes)
+}
+
+func baseAttributesFromContext(ctx context.Context) []attribute.KeyValue {
+	attributes, _ := ctx.Value(baseAttributesContextKey).([]attribute.KeyValue)
+	return attributes
 }
 
 func buildRequestContext(w http.ResponseWriter, r *http.Request, opContext *operationContext, requestLogger *zap.Logger) *requestContext {

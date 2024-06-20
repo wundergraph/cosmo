@@ -843,12 +843,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			rmetric.WithLogger(s.logger),
 			rmetric.WithProcessStartTime(s.processStartTime),
 			rmetric.WithRouterRuntimeMetrics(s.metricConfig.OpenTelemetry.RouterRuntime),
-			rmetric.WithAttributes(append(s.baseOtelAttributes,
-				// We use the base router config version to identify the router graph composition
-				// Feature flags relate to the base router config version
-				otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
-			)...,
-			),
+			rmetric.WithAttributes(s.baseOtelAttributes...),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create metric handler: %w", err)

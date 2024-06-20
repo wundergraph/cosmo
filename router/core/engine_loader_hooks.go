@@ -12,7 +12,6 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
-	"net/http"
 	"slices"
 	"strings"
 )
@@ -27,19 +26,17 @@ const EngineLoaderHooksScopeVersion = "0.0.1"
 // EngineLoaderHooks implements resolve.LoaderHooks
 // It is used to trace and measure the performance of the engine loader
 type EngineLoaderHooks struct {
-	tracer               trace.Tracer
-	metricStore          metric.Store
-	spanAttributesMapper func(r *http.Request) []attribute.KeyValue
+	tracer      trace.Tracer
+	metricStore metric.Store
 }
 
-func NewEngineRequestHooks(metricStore metric.Store, spanAttributesMapper func(r *http.Request) []attribute.KeyValue) resolve.LoaderHooks {
+func NewEngineRequestHooks(metricStore metric.Store) resolve.LoaderHooks {
 	return &EngineLoaderHooks{
 		tracer: otel.GetTracerProvider().Tracer(
 			EngineLoaderHooksScopeName,
 			trace.WithInstrumentationVersion(EngineLoaderHooksScopeVersion),
 		),
-		metricStore:          metricStore,
-		spanAttributesMapper: spanAttributesMapper,
+		metricStore: metricStore,
 	}
 }
 
@@ -56,8 +53,8 @@ func (f *EngineLoaderHooks) OnLoad(ctx context.Context, dataSourceID string) con
 
 	var baseAttributes []attribute.KeyValue
 
-	if f.spanAttributesMapper != nil {
-		baseAttributes = f.spanAttributesMapper(reqContext.Request())
+	if attributes := baseAttributesFromContext(reqContext.Request().Context()); attributes != nil {
+		baseAttributes = append(baseAttributes, attributes...)
 	}
 
 	ctx, span := f.tracer.Start(ctx, "Engine - Fetch", trace.WithAttributes(baseAttributes...))
@@ -101,6 +98,10 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, data
 
 	// Ensure common attributes are set
 	baseAttributes = append(baseAttributes, getAttributesFromOperationContext(reqContext.operation)...)
+
+	if attributes := baseAttributesFromContext(reqContext.Request().Context()); attributes != nil {
+		baseAttributes = append(baseAttributes, attributes...)
+	}
 
 	if err != nil {
 

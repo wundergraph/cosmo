@@ -134,9 +134,10 @@ func (s *server) buildMux(ctx context.Context,
 		logger:              s.logger,
 	})
 
-	baseOtelAttributes := append(s.baseOtelAttributes, []attribute.KeyValue{
-		otel.WgRouterConfigVersion.String(routerConfigVersion),
-	}...)
+	baseOtelAttributes := append(
+		[]attribute.KeyValue{otel.WgRouterConfigVersion.String(routerConfigVersion)},
+		s.baseOtelAttributes...,
+	)
 
 	if featureFlagName != "" {
 		baseOtelAttributes = append(baseOtelAttributes, otel.WgFeatureFlag.String(featureFlagName))
@@ -145,7 +146,6 @@ func (s *server) buildMux(ctx context.Context,
 	var traceHandler *rtrace.Middleware
 	if s.traceConfig.Enabled {
 		spanStartOptions := []oteltrace.SpanStartOption{
-			oteltrace.WithAttributes(baseOtelAttributes...),
 			oteltrace.WithAttributes(
 				otel.RouterServerAttribute,
 				otel.WgRouterRootSpan.Bool(true),
@@ -157,7 +157,12 @@ func (s *server) buildMux(ctx context.Context,
 		}
 
 		traceHandler = rtrace.NewMiddleware(
-			s.traceConfig.SpanAttributesMapper,
+			func(r *http.Request) {
+				span := oteltrace.SpanFromContext(r.Context())
+				if attributes := baseAttributesFromContext(r.Context()); attributes != nil {
+					span.SetAttributes(attributes...)
+				}
+			},
 			otelhttp.WithSpanOptions(spanStartOptions...),
 			otelhttp.WithFilter(rtrace.CommonRequestFilter),
 			otelhttp.WithFilter(rtrace.PrefixRequestFilter(
@@ -197,15 +202,34 @@ func (s *server) buildMux(ctx context.Context,
 		}))
 	}
 
+	var otelAttributesMappers []func(req *http.Request) []attribute.KeyValue
+
+	if s.traceConfig.SpanAttributesMapper != nil {
+		otelAttributesMappers = append(otelAttributesMappers, s.traceConfig.SpanAttributesMapper)
+	}
+
+	otelAttributesMappers = append(otelAttributesMappers, func(req *http.Request) []attribute.KeyValue {
+		return baseOtelAttributes
+	})
+
 	requestLogger := requestlogger.New(
 		s.logger,
 		requestLoggerOpts...,
 	)
 
-	// Enrich the request context with the subgraphs information
+	// Enrich the request context with the subgraphs information and base OTEL attributes
 	httpRouter.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			r = r.WithContext(withSubgraphs(r.Context(), subgraphs))
+			var attributes []attribute.KeyValue
+			for _, mapper := range otelAttributesMappers {
+				attributes = append(attributes, mapper(r)...)
+			}
+
+			attributes = append(attributes, baseOtelAttributes...)
+
+			r = r.WithContext(
+				withBaseAttributes(withSubgraphs(r.Context(), subgraphs), attributes),
+			)
 			h.ServeHTTP(w, r)
 		})
 	})
@@ -249,7 +273,6 @@ func (s *server) buildMux(ctx context.Context,
 				},
 			},
 			TracerProvider:                s.tracerProvider,
-			AttributesMapper:              s.traceConfig.SpanAttributesMapper,
 			LocalhostFallbackInsideDocker: s.localhostFallbackInsideDocker,
 			Logger:                        s.logger,
 		},
@@ -293,8 +316,7 @@ func (s *server) buildMux(ctx context.Context,
 		TracerProvider:                         s.tracerProvider,
 		Authorizer:                             NewCosmoAuthorizer(authorizerOptions),
 		SubgraphErrorPropagation:               s.subgraphErrorPropagation,
-		EngineLoaderHooks:                      NewEngineRequestHooks(s.metricStore, s.traceConfig.SpanAttributesMapper),
-		SpanAttributesMapper:                   s.traceConfig.SpanAttributesMapper,
+		EngineLoaderHooks:                      NewEngineRequestHooks(s.metricStore),
 	}
 
 	if s.redisClient != nil {
@@ -328,7 +350,6 @@ func (s *server) buildMux(ctx context.Context,
 		TracerProvider:              s.tracerProvider,
 		FlushTelemetryAfterResponse: s.awsLambda,
 		TraceExportVariables:        s.traceConfig.ExportGraphQLVariables.Enabled,
-		SpanAttributesMapper:        s.traceConfig.SpanAttributesMapper,
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
