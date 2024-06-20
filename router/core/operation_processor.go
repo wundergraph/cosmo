@@ -331,7 +331,7 @@ func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo, log *z
 // and variables is available. Also, the final operation ID is generated.
 func (o *OperationKit) Normalize() error {
 	report := &operationreport.Report{}
-	o.kit.normalizer.NormalizeNamedOperation(o.kit.doc, o.operationParser.executor.Definition, staticOperationName, report)
+	o.kit.normalizer.NormalizeNamedOperation(o.kit.doc, o.operationParser.executor.ClientSchema, staticOperationName, report)
 	if report.HasErrors() {
 		return &reportError{
 			report: report,
@@ -339,7 +339,7 @@ func (o *OperationKit) Normalize() error {
 	}
 
 	// Hash the normalized operation with the static operation name to avoid different IDs for the same operation
-	err := o.kit.printer.Print(o.kit.doc, o.operationParser.executor.Definition, o.kit.keyGen)
+	err := o.kit.printer.Print(o.kit.doc, o.operationParser.executor.ClientSchema, o.kit.keyGen)
 	if err != nil {
 		return errors.WithStack(fmt.Errorf("failed to print normalized operation: %w", err))
 	}
@@ -349,7 +349,7 @@ func (o *OperationKit) Normalize() error {
 
 	// Print the operation with the original operation name
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = o.originalOperationNameRef
-	err = o.kit.printer.Print(o.kit.doc, o.operationParser.executor.Definition, o.kit.normalizedOperation)
+	err = o.kit.printer.Print(o.kit.doc, o.operationParser.executor.ClientSchema, o.kit.normalizedOperation)
 	if err != nil {
 		return errors.WithStack(fmt.Errorf("failed to print normalized operation: %w", err))
 	}
@@ -368,7 +368,7 @@ func (o *OperationKit) Normalize() error {
 
 // Validate validates the operation variables.
 func (o *OperationKit) Validate() error {
-	err := o.kit.variablesValidator.Validate(o.kit.doc, o.operationParser.executor.Definition, o.parsedOperation.Variables)
+	err := o.kit.variablesValidator.Validate(o.kit.doc, o.operationParser.executor.ClientSchema, o.parsedOperation.Variables)
 	if err != nil {
 		return &inputError{
 			message:    err.Error(),

@@ -4,13 +4,14 @@ import (
 	"errors"
 	"strconv"
 
+	"golang.org/x/sync/singleflight"
+
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/postprocess"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-	"golang.org/x/sync/singleflight"
 
 	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 )
@@ -60,8 +61,8 @@ func (p *OperationPlanner) preparePlan(requestOperationName []byte, requestOpera
 
 	validation := astvalidation.DefaultOperationValidator()
 
-	// validate the document before planning
-	state := validation.Validate(&doc, p.executor.Definition, &report)
+	// validate the document against client schema before planning
+	state := validation.Validate(&doc, p.executor.ClientSchema, &report)
 	if state != astvalidation.Valid {
 		return nil, &reportError{report: &report}
 	}
@@ -72,7 +73,8 @@ func (p *OperationPlanner) preparePlan(requestOperationName []byte, requestOpera
 	}
 
 	// create and postprocess the plan
-	preparedPlan := planner.Plan(&doc, p.executor.Definition, unsafebytes.BytesToString(requestOperationName), &report)
+	// planning uses the router schema
+	preparedPlan := planner.Plan(&doc, p.executor.RouterSchema, unsafebytes.BytesToString(requestOperationName), &report)
 	if report.HasErrors() {
 		return nil, &reportError{report: &report}
 	}
@@ -82,7 +84,7 @@ func (p *OperationPlanner) preparePlan(requestOperationName []byte, requestOpera
 	return &planWithMetaData{
 		preparedPlan:      preparedPlan,
 		operationDocument: &doc,
-		schemaDocument:    p.executor.Definition,
+		schemaDocument:    p.executor.RouterSchema,
 	}, nil
 }
 
