@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { buildRouterConfig, normalizeURL } from '@wundergraph/cosmo-shared';
 import { Command, program } from 'commander';
-import { parse, printSchema } from 'graphql';
+import { parse } from 'graphql';
 import * as yaml from 'js-yaml';
 import { dirname, resolve } from 'pathe';
 import pc from 'picocolors';
@@ -99,7 +99,7 @@ export default (opts: BaseCommandOptions) => {
       : '';
     const routerConfig = buildRouterConfig({
       federatedClientSDL,
-      federatedSDL: printSchema(result.federationResult.federatedGraphSchema),
+      federatedSDL: printSchemaWithDirectives(result.federationResult.federatedGraphSchema),
       fieldConfigurations: result.federationResult.fieldConfigurations,
       schemaVersionId: '',
       subgraphs: config.subgraphs.map((s, index) => {
