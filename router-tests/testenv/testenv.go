@@ -590,6 +590,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithWithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation),
 		core.WithTLSConfig(testConfig.TLSConfig),
 		core.WithInstanceID("test-instance"),
+		core.WithIntrospection(true),
 		core.WithEvents(config.EventsConfiguration{
 			Providers: config.EventProviders{
 				Nats:  natsEventSources,
