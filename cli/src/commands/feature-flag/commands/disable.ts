@@ -90,7 +90,7 @@ export default (opts: BaseCommandOptions) => {
         break;
       }
       default: {
-        spinner.fail('Failed to disable feature flag.');
+        spinner.fail(`Failed to disable feature flag "${name}"`);
         if (resp.response?.details) {
           console.log(pc.red(pc.bold(resp.response?.details)));
         }

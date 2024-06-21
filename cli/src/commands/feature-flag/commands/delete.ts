@@ -102,7 +102,7 @@ export default (opts: BaseCommandOptions) => {
         break;
       }
       default: {
-        spinner.fail(`Failed to delete the feature flag "${name}".`);
+        spinner.fail(`Failed to delete feature flag "${name}".`);
         if (resp.response?.details) {
           console.log(pc.red(pc.bold(resp.response?.details)));
         }

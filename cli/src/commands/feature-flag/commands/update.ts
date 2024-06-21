@@ -109,7 +109,7 @@ export default (opts: BaseCommandOptions) => {
         break;
       }
       default: {
-        spinner.fail('Failed to update feature flag.');
+        spinner.fail(`Failed to update feature flag "${name}"`);
         if (resp.response?.details) {
           console.log(pc.red(pc.bold(resp.response?.details)));
         }

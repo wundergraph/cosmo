@@ -1,6 +1,6 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { splitLabel } from '@wundergraph/cosmo-shared';
-import { Command, program } from 'commander';
+import { Command } from 'commander';
 import ora from 'ora';
 import pc from 'picocolors';
 import Table from 'cli-table3';
@@ -26,7 +26,8 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option(
     '-e, --enabled',
-    'Flag that if included will enable the feature flag upon creation.' + ' A new feature flag is disabled by default.',
+    'Flag that if included will enable the feature flag upon creation.' +
+      ' A new feature flag is disabled by default to prevent accidental compositions.',
   );
   command.action(async (name, options) => {
     const spinner = ora('The feature flag is being created...').start();
@@ -108,7 +109,7 @@ export default (opts: BaseCommandOptions) => {
         break;
       }
       default: {
-        spinner.fail('Failed to create feature flag.');
+        spinner.fail(`Failed to create feature flag "${name}"`);
         if (resp.response?.details) {
           console.log(pc.red(pc.bold(resp.response?.details)));
         }
