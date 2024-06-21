@@ -1,11 +1,11 @@
 import { existsSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { buildRouterConfig, normalizeURL } from '@wundergraph/cosmo-shared';
 import { Command, program } from 'commander';
 import { parse } from 'graphql';
 import * as yaml from 'js-yaml';
 import { dirname, resolve } from 'pathe';
-import { createHash } from 'node:crypto';
 import pc from 'picocolors';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
 import {
