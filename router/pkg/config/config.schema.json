@@ -519,6 +519,11 @@
           "default": true,
           "description": "The allowed credentials. The default value is to allow credentials. This allows the browser to send cookies and authentication headers."
         },
+        "allow_wildcard": {
+          "type": "boolean",
+          "default": true,
+          "description": "Allow wildcard origins in the allowed origins list. e.g. http://some-domain/*, https://api.* or http://some.*.subdomain.com."
+        },
         "max_age": {
           "type": "string",
           "duration": {

@@ -114,6 +114,7 @@ type CORS struct {
 	AllowMethods     []string      `yaml:"allow_methods" default:"HEAD,GET,POST" envconfig:"CORS_ALLOW_METHODS"`
 	AllowHeaders     []string      `yaml:"allow_headers" default:"Origin,Content-Length,Content-Type" envconfig:"CORS_ALLOW_HEADERS"`
 	AllowCredentials bool          `yaml:"allow_credentials" default:"true" envconfig:"CORS_ALLOW_CREDENTIALS"`
+	AllowWildcard    bool	       `yaml:"allow_wildcard" default:"true" envconfig:"CORS_ALLOW_WILDCARD"`
 	MaxAge           time.Duration `yaml:"max_age" default:"5m" envconfig:"CORS_MAX_AGE"`
 }
 
