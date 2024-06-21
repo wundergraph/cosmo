@@ -138,6 +138,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 			AllowOrigins:     cfg.CORS.AllowOrigins,
 			AllowMethods:     cfg.CORS.AllowMethods,
 			AllowCredentials: cfg.CORS.AllowCredentials,
+			AllowWildcard: 	  cfg.CORS.AllowWildcard,
 			AllowHeaders:     cfg.CORS.AllowHeaders,
 			MaxAge:           cfg.CORS.MaxAge,
 		}),

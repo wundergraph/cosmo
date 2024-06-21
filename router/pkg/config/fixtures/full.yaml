@@ -42,6 +42,7 @@ cors:
     - Content-Length
     - Content-Type
   allow_credentials: true
+  allow_wildcard: true
   max_age: 5m
 
 compliance:
