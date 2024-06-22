@@ -50,14 +50,19 @@ import {
   RouterRequestKeysDTO,
 } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
-import { Composer, RouterConfigUploadError, mapResultToComposedGraph } from '../composition/composer.js';
+import {
+  Composer,
+  RouterConfigUploadError,
+  mapResultToComposedGraph,
+  FeatureFlagSchemaVersion,
+} from '../composition/composer.js';
 import { composeSubgraphsForContract, composeSubgraphsWithContracts } from '../composition/composition.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
 import { AdmissionError } from '../services/AdmissionWebhookController.js';
-import { normalizeLabelMatchers, normalizeLabels } from '../util.js';
+import { getValueOrDefault, normalizeLabelMatchers, normalizeLabels } from '../util.js';
 import { featureFlagBaseGraphError } from '../errors/errors.js';
 import { ContractRepository } from './ContractRepository.js';
-import { FeatureFlagRelatedGraph, FeatureFlagRepository } from './FeatureFlagRepository.js';
+import { FederatedGraphToRecompose, FeatureFlagRepository } from './FeatureFlagRepository.js';
 import { GraphCompositionRepository } from './GraphCompositionRepository.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
@@ -331,8 +336,6 @@ export class FederatedGraphRepository {
     return this.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
       const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
-      const contractRepo = new ContractRepository(this.logger, tx, this.organizationId);
-      const featureFlagRepo = new FeatureFlagRepository(this.logger, tx, this.organizationId);
 
       await tx.update(targets).set({ namespaceId: data.newNamespaceId }).where(eq(targets.id, data.targetId));
 
@@ -1420,10 +1423,10 @@ export class FederatedGraphRepository {
         graphCompositionRepo,
       );
 
-      const deploymentErrors: PlainMessage<DeploymentError>[] = [];
-      const compositionErrors: PlainMessage<CompositionError>[] = [];
+      const allDeploymentErrors: PlainMessage<DeploymentError>[] = [];
+      const allCompositionErrors: PlainMessage<CompositionError>[] = [];
 
-      federatedGraphLoop: for (const federatedGraph of federatedGraphs) {
+      parentLoop: for (const federatedGraph of federatedGraphs) {
         // Get published subgraphs for recomposition of the federated graph
         const subgraphs = await subgraphRepo.listByFederatedGraph({
           federatedGraphTargetId: federatedGraph.targetId,
@@ -1442,79 +1445,78 @@ export class FederatedGraphRepository {
           definitions: parse(s.schemaSDL),
         }));
 
-        const compositionPossibilities: FeatureFlagRelatedGraph[] =
-          await featureFlagRepo.getAllFeatureFlagRelatedGraphs({
+        // Collects the base graph and applicable feature flag related graphs
+        const federatedGraphsToRecompose: FederatedGraphToRecompose[] =
+          await featureFlagRepo.getFederatedGraphsToRecompose({
             subgraphs,
             baseCompositionSubgraphs,
             fedGraphLabelMatchers: federatedGraph.labelMatchers,
           });
 
-        const fgSchemaVersions: {
-          featureFlagName: string;
-          schemaVersionId: string;
-        }[] = [];
+        const featureFlagSchemaVersions: Array<FeatureFlagSchemaVersion> = [];
 
-        // the string is the contract id
-        const fgSchemaVersionsOfContracts: Map<string, { featureFlagName: string; schemaVersionId: string }[]> =
-          new Map();
+        // The feature flags that affect contracts, where the key is the contract id
+        const featureFlagSchemaVersionsByContractId: Map<string, Array<FeatureFlagSchemaVersion>> = new Map();
 
-        // this is to make sure that we don't have fg schema versions of contracts if the base composition has errors.
-        // The boolean value determines whether the base composition is successful or not
-        const baseCompositionOfContracts: Map<string, boolean> = new Map();
-
-        for (const compositionPossibility of compositionPossibilities) {
-          let errors: Error[] | undefined;
+        for (const federatedGraphToRecompose of federatedGraphsToRecompose) {
+          let compositionErrors: Error[] | undefined;
           let result: FederationResult | undefined;
           let federationResultContainerByContractName: Map<string, FederationResultContainer> | undefined;
 
+          // This condition is only true when entering the method to specifically create/update a contract
           if (federatedGraph.contract) {
-            const { errors: contractErrors, federationResult } = composeSubgraphsForContract(
-              compositionPossibility.compositionSubgraphs,
+            const { errors, federationResult } = composeSubgraphsForContract(
+              federatedGraphToRecompose.compositionSubgraphs,
               new Set(federatedGraph.contract.excludeTags),
             );
-            errors = contractErrors;
+            compositionErrors = errors;
             result = federationResult;
           } else {
             const {
-              errors: federatedGraphErrors,
+              errors,
               federationResult,
               federationResultContainerByContractName: contractFederationResult,
-            } = composeSubgraphsWithContracts(compositionPossibility.compositionSubgraphs, tagExclusionsByContractName);
-            errors = federatedGraphErrors;
+            } = composeSubgraphsWithContracts(
+              federatedGraphToRecompose.compositionSubgraphs,
+              tagExclusionsByContractName,
+            );
+            compositionErrors = errors;
             result = federationResult;
             federationResultContainerByContractName = contractFederationResult;
           }
 
           // Collect all composition errors
-          compositionErrors.push(
-            ...(errors || []).map((e) => ({
+          allCompositionErrors.push(
+            ...(compositionErrors || []).map((e) => ({
               federatedGraphName: federatedGraph.name,
               namespace: federatedGraph.namespace,
               message: e.message,
-              featureFlag: compositionPossibility.featureFlagName || '',
+              featureFlag: federatedGraphToRecompose.featureFlagName || '',
             })),
           );
 
           const deployment = await composer.deployComposition({
-            composedGraph: mapResultToComposedGraph(federatedGraph, compositionPossibility.subgraphs, errors, result),
+            composedGraph: mapResultToComposedGraph(
+              federatedGraph,
+              federatedGraphToRecompose.subgraphs,
+              compositionErrors,
+              result,
+            ),
             composedBy: actorId,
             organizationId: this.organizationId,
-            isFeatureFlagComposition: compositionPossibility.isFeatureFlagComposition,
+            isFeatureFlagComposition: federatedGraphToRecompose.isFeatureFlagComposition,
           });
 
-          // if the base composition has errors, we shouldnt break the loop and return the errors
-          if (!compositionPossibility.isFeatureFlagComposition && compositionErrors.length > 0) {
-            continue federatedGraphLoop;
+          /* If the base composition failed to compose, return to the parent loop, because
+           * contracts are not composed if the base composition fails.
+           */
+          if (compositionErrors) {
+            continue parentLoop;
           }
 
-          if (
-            compositionPossibility.isFeatureFlagComposition &&
-            compositionPossibility.featureFlagName &&
-            deployment.schemaVersionId &&
-            !errors
-          ) {
-            fgSchemaVersions.push({
-              featureFlagName: compositionPossibility.featureFlagName || '',
+          if (federatedGraphToRecompose.isFeatureFlagComposition && deployment.schemaVersionId) {
+            featureFlagSchemaVersions.push({
+              featureFlagName: federatedGraphToRecompose.featureFlagName,
               schemaVersionId: deployment.schemaVersionId,
             });
           }
@@ -1523,64 +1525,86 @@ export class FederatedGraphRepository {
             continue;
           }
 
-          for (const [contractName, resultContainer] of federationResultContainerByContractName.entries()) {
-            const { errors: contractErrors, federationResult: result } = resultContainer;
-
+          for (const [contractName, { errors, federationResult }] of federationResultContainerByContractName) {
             const contractGraph = await fedGraphRepo.byName(contractName, federatedGraph.namespace);
             if (!contractGraph) {
-              throw new Error(`Contract graph ${contractName} not found`);
+              throw new Error(`Contract graph "${contractName}" not found.`);
             }
 
-            compositionErrors.push(
-              ...(contractErrors || []).map((e) => ({
+            allCompositionErrors.push(
+              ...(errors || []).map((e) => ({
                 federatedGraphName: contractGraph.name,
                 namespace: contractGraph.namespace,
                 message: e.message,
-                featureFlag: compositionPossibility.featureFlagName || '',
+                featureFlag: federatedGraphToRecompose.featureFlagName,
               })),
             );
 
             const contractDeployment = await composer.deployComposition({
-              composedGraph: mapResultToComposedGraph(contractGraph, subgraphs, contractErrors, result),
+              composedGraph: mapResultToComposedGraph(
+                contractGraph,
+                federatedGraphToRecompose.subgraphs,
+                errors,
+                federationResult,
+              ),
               composedBy: actorId,
               organizationId: this.organizationId,
-              isFeatureFlagComposition: compositionPossibility.isFeatureFlagComposition,
+              isFeatureFlagComposition: federatedGraphToRecompose.isFeatureFlagComposition,
             });
 
-            // TODO reassess
-            if (!compositionPossibility.isFeatureFlagComposition && contractErrors && contractErrors.length > 0) {
-              baseCompositionOfContracts.set(contractGraph.id, false);
+            if ((errors && errors.length > 0) || !contractDeployment.schemaVersionId) {
               continue;
-            } else {
-              baseCompositionOfContracts.set(contractGraph.id, true);
             }
 
-            if (
-              baseCompositionOfContracts.get(contractGraph.id) &&
-              compositionPossibility.isFeatureFlagComposition &&
-              compositionPossibility.featureFlagName &&
-              contractDeployment.schemaVersionId &&
-              !contractErrors
-            ) {
-              fgSchemaVersionsOfContracts.set(contractGraph.id, [
-                ...(fgSchemaVersionsOfContracts.get(contractGraph.id) || []),
-                {
-                  featureFlagName: compositionPossibility.featureFlagName,
-                  schemaVersionId: contractDeployment.schemaVersionId,
-                },
-              ]);
+            /* If the contract has a feature flag, get the current array feature flag versions (or set a new one),
+             * and then push the current schema version to the array
+             * */
+            if (federatedGraphToRecompose.isFeatureFlagComposition) {
+              getValueOrDefault(featureFlagSchemaVersionsByContractId, contractGraph.id, () => []).push({
+                featureFlagName: federatedGraphToRecompose.featureFlagName,
+                schemaVersionId: contractDeployment.schemaVersionId,
+              });
+              continue;
             }
+
+            // If the contract has no feature flag, upload the config, or it will never reach the cdn
+            const updatedContract = await this.byId(contractGraph.id);
+            if (!updatedContract || !updatedContract.composedSchemaVersionId) {
+              throw new Error(`Unexpected: Contract graph "${contractName}" not found after latest composition`);
+            }
+
+            const { errors: uploadErrors } = await composer.composeAndUploadRouterConfig({
+              federatedGraph: updatedContract,
+              featureFlagSchemaVersions: [], // Not a feature flag, so should be an empty array
+              blobStorage,
+              federatedSchemaVersionId: updatedContract.composedSchemaVersionId,
+              organizationId: this.organizationId,
+              admissionConfig: {
+                cdnBaseUrl: admissionConfig.cdnBaseUrl,
+                jwtSecret: admissionConfig.webhookJWTSecret,
+              },
+            });
+
+            allDeploymentErrors.push(
+              ...uploadErrors
+                .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
+                .map((e) => ({
+                  federatedGraphName: federatedGraph.name,
+                  namespace: federatedGraph.namespace,
+                  message: e.message ?? '',
+                })),
+            );
           }
         }
 
         const updatedFedGraph = await this.byId(federatedGraph.id);
         if (!updatedFedGraph || !updatedFedGraph.composedSchemaVersionId) {
-          throw new Error(`Unexpected: Federated graph '${federatedGraph.name}' not found after latest composition`);
+          throw new Error(`Unexpected: Federated graph "${federatedGraph.name}" not found after latest composition.`);
         }
 
         const { errors: uploadErrors } = await composer.composeAndUploadRouterConfig({
           federatedGraph: updatedFedGraph,
-          fgSchemaVersions,
+          featureFlagSchemaVersions,
           blobStorage,
           federatedSchemaVersionId: updatedFedGraph.composedSchemaVersionId,
           organizationId: this.organizationId,
@@ -1590,7 +1614,7 @@ export class FederatedGraphRepository {
           },
         });
 
-        deploymentErrors.push(
+        allDeploymentErrors.push(
           ...uploadErrors
             .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
             .map((e) => ({
@@ -1600,15 +1624,15 @@ export class FederatedGraphRepository {
             })),
         );
 
-        for (const [contractId, contractFGSchemaVersions] of fgSchemaVersionsOfContracts) {
+        for (const [contractId, contractFeatureFlagSchemaVersions] of featureFlagSchemaVersionsByContractId) {
           const updatedContract = await this.byId(contractId);
           if (!updatedContract || !updatedContract.composedSchemaVersionId) {
-            throw new Error(`Unexpected: Contract graph with id '${contractId}' not found after latest composition`);
+            throw new Error(`Unexpected: Contract graph with id "${contractId}" not found after latest composition`);
           }
 
           const { errors: uploadErrors } = await composer.composeAndUploadRouterConfig({
             federatedGraph: updatedContract,
-            fgSchemaVersions: contractFGSchemaVersions,
+            featureFlagSchemaVersions: contractFeatureFlagSchemaVersions,
             blobStorage,
             federatedSchemaVersionId: updatedContract.composedSchemaVersionId,
             organizationId: this.organizationId,
@@ -1618,7 +1642,7 @@ export class FederatedGraphRepository {
             },
           });
 
-          deploymentErrors.push(
+          allDeploymentErrors.push(
             ...uploadErrors
               .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
               .map((e) => ({
@@ -1630,7 +1654,7 @@ export class FederatedGraphRepository {
         }
       }
 
-      return { compositionErrors, deploymentErrors };
+      return { compositionErrors: allCompositionErrors, deploymentErrors: allDeploymentErrors };
     });
   };
 
@@ -1667,12 +1691,12 @@ export class FederatedGraphRepository {
         graphCompositionRepo,
       );
 
-      const deploymentErrors: PlainMessage<DeploymentError>[] = [];
-      const compositionErrors: PlainMessage<CompositionError>[] = [];
+      const allDeploymentErrors: PlainMessage<DeploymentError>[] = [];
+      const allCompositionErrors: PlainMessage<CompositionError>[] = [];
 
       for (const federatedGraph of federatedGraphs) {
         if (!federatedGraph.isComposable) {
-          compositionErrors.push(
+          allCompositionErrors.push(
             featureFlagBaseGraphError(federatedGraph.name, featureFlagName, federatedGraph.namespace),
           );
           continue;
@@ -1695,7 +1719,7 @@ export class FederatedGraphRepository {
           definitions: parse(s.schemaSDL),
         }));
 
-        const featureFlagRelatedGraphsToCompose: FeatureFlagRelatedGraph[] =
+        const featureFlagRelatedGraphsToCompose: FederatedGraphToRecompose[] =
           await featureFlagRepo.getFilteredFeatureFlagRelatedGraphs({
             subgraphs,
             baseCompositionSubgraphs,
@@ -1704,38 +1728,35 @@ export class FederatedGraphRepository {
             isFeatureFlagEnabled,
           });
 
-        const featureGraphSchemaVersionsByFeatureFlag: {
-          featureFlagName: string;
-          schemaVersionId: string;
-        }[] = [];
+        const featureFlagSchemaVersions: Array<FeatureFlagSchemaVersion> = [];
 
         for (const featureFlagRelatedGraph of featureFlagRelatedGraphsToCompose) {
-          let errors: Error[] | undefined;
+          let compositionErrors: Error[] | undefined;
           let result: FederationResult | undefined;
 
           if (federatedGraph.contract) {
-            const { errors: contractErrors, federationResult } = composeSubgraphsForContract(
+            const { errors, federationResult } = composeSubgraphsForContract(
               featureFlagRelatedGraph.compositionSubgraphs,
               new Set(federatedGraph.contract.excludeTags),
             );
-            errors = contractErrors;
+            compositionErrors = errors;
             result = federationResult;
           } else {
             const {
-              errors: federatedGraphErrors,
+              errors,
               federationResult,
               federationResultContainerByContractName: contractFederationResult,
             } = composeSubgraphsWithContracts(
               featureFlagRelatedGraph.compositionSubgraphs,
               tagExclusionsByContractName,
             );
-            errors = federatedGraphErrors;
+            compositionErrors = errors;
             result = federationResult;
           }
 
           // Collect all composition errors
-          compositionErrors.push(
-            ...(errors || []).map((e) => ({
+          allCompositionErrors.push(
+            ...(compositionErrors || []).map((e) => ({
               federatedGraphName: federatedGraph.name,
               namespace: federatedGraph.namespace,
               message: e.message,
@@ -1744,14 +1765,19 @@ export class FederatedGraphRepository {
           );
 
           const deployment = await composer.deployComposition({
-            composedGraph: mapResultToComposedGraph(federatedGraph, featureFlagRelatedGraph.subgraphs, errors, result),
+            composedGraph: mapResultToComposedGraph(
+              federatedGraph,
+              featureFlagRelatedGraph.subgraphs,
+              compositionErrors,
+              result,
+            ),
             composedBy: actorId,
             organizationId: this.organizationId,
             isFeatureFlagComposition: featureFlagRelatedGraph.isFeatureFlagComposition,
           });
 
-          if (featureFlagRelatedGraph.featureFlagName && deployment.schemaVersionId && !errors) {
-            featureGraphSchemaVersionsByFeatureFlag.push({
+          if (featureFlagRelatedGraph.featureFlagName && deployment.schemaVersionId && !compositionErrors) {
+            featureFlagSchemaVersions.push({
               featureFlagName,
               schemaVersionId: deployment.schemaVersionId,
             });
@@ -1761,15 +1787,15 @@ export class FederatedGraphRepository {
         const updatedFedGraph = await this.byId(federatedGraph.id);
         if (!updatedFedGraph || !updatedFedGraph.composedSchemaVersionId) {
           if (federatedGraph.contract) {
-            throw new Error(`Unexpected: Contract graph '${federatedGraph.name}' not found after latest composition`);
+            throw new Error(`Unexpected: Contract graph "${federatedGraph.name}" not found after latest composition.`);
           } else {
-            throw new Error(`Unexpected: Federated graph '${federatedGraph.name}' not found after latest composition`);
+            throw new Error(`Unexpected: Federated graph "${federatedGraph.name}" not found after latest composition.`);
           }
         }
 
-        const { errors: uploadErrors } = await composer.composeAndUploadRouterConfig({
+        const { errors } = await composer.composeAndUploadRouterConfig({
           federatedGraph: updatedFedGraph,
-          fgSchemaVersions: featureGraphSchemaVersionsByFeatureFlag,
+          featureFlagSchemaVersions,
           blobStorage,
           federatedSchemaVersionId: updatedFedGraph.composedSchemaVersionId,
           organizationId: this.organizationId,
@@ -1779,8 +1805,8 @@ export class FederatedGraphRepository {
           },
         });
 
-        deploymentErrors.push(
-          ...uploadErrors
+        allDeploymentErrors.push(
+          ...errors
             .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
             .map((e) => ({
               federatedGraphName: federatedGraph.name,
@@ -1790,7 +1816,7 @@ export class FederatedGraphRepository {
         );
       }
 
-      return { compositionErrors, deploymentErrors };
+      return { compositionErrors: allCompositionErrors, deploymentErrors: allDeploymentErrors };
     });
   };
 }

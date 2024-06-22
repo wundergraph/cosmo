@@ -799,7 +799,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               continue;
             }
 
-            const { deploymentErrors: contractDeploymentErrors, compositionErrors: contractErrors } =
+            const { compositionErrors: contractErrors, deploymentErrors: contractDeploymentErrors } =
               await fedGraphRepo.move(
                 {
                   targetId: contractGraph.targetId,
@@ -815,8 +815,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                 },
               );
 
-            allCompositionErrors.push(...compositionErrors);
-            allDeploymentErrors.push(...deploymentErrors);
+            allCompositionErrors.push(...contractErrors);
+            allDeploymentErrors.push(...contractDeploymentErrors);
 
             movedGraphs.push(contractGraph);
           }

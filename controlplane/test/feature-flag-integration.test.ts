@@ -9,17 +9,18 @@ import {
   assertFeatureFlagExecutionConfig,
   assertNumberOfCompositions,
   createAndPublishSubgraph,
-  createFeatureFlag,
+  createFeatureFlag, createFederatedGraph,
   createNamespace,
   createThenPublishFeatureGraph,
   deleteFeatureFlag,
   featureFlagIntegrationTestSetUp,
-  getDebugTestOptions,
+  getDebugTestOptions, GraphNameAndKey,
   SetupTest,
   toggleFeatureFlag,
 } from './test-util.js';
 
-const isDebugMode = true;
+// Change to true to enable a longer timeout
+const isDebugMode = false;
 let dbname = '';
 
 describe('Feature flag integration tests', () => {
@@ -497,6 +498,237 @@ describe('Feature flag integration tests', () => {
     const deleteFeatureFlagResponse = await client.deleteFeatureFlag({ featureFlagName, namespace });
     expect(deleteFeatureFlagResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     expect(deleteFeatureFlagResponse.response?.details).toBe(`Feature flag "${featureFlagName}" not found.`);
+
+    await server.close();
+  });
+
+  test('that publishing a change to a subgraph produces new compositions for the base graph and contracts that also have feature flags', getDebugTestOptions(isDebugMode), async () => {
+    const { client, server, blobStorage } = await SetupTest({ dbname });
+
+    const labels: Array<Label> = [];
+    const namespace = genID('namespace').toLowerCase();
+    await createNamespace(client, namespace);
+    const baseGraphName = genID('baseGraphName');
+    const baseGraphResponse = await featureFlagIntegrationTestSetUp(
+      client,
+      [
+        { name: 'users', hasFeatureGraph: true }, { name: 'products', hasFeatureGraph: true }
+      ],
+      baseGraphName,
+      labels,
+      namespace,
+    );
+    expect(blobStorage.keys()).toHaveLength(1);
+    const baseGraphKey = blobStorage.keys()[0];
+    expect(baseGraphKey).toContain(baseGraphResponse.graph!.id);
+    await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
+
+    // The base composition
+    await assertNumberOfCompositions(client, baseGraphName, 1, namespace);
+
+    const contractName = genID('contract');
+    const createContractResponse = await client.createContract({
+      name: contractName,
+      namespace,
+      sourceGraphName: baseGraphName,
+      excludeTags: ['exclude'],
+      routingUrl: 'http://localhost:3003',
+    });
+    expect(createContractResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    expect(blobStorage.keys()).toHaveLength(2);
+    const contractKey = blobStorage.keys()[1];
+    const contractResponse = await client.getFederatedGraphByName({
+      name: contractName,
+      namespace,
+    });
+    expect(contractResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(contractKey).toContain(contractResponse.graph!.id);
+    await assertFeatureFlagExecutionConfig(blobStorage, contractKey, false);
+
+    const graphNamesAndKeys: Array<GraphNameAndKey> = [
+      { name: baseGraphName, key: baseGraphKey },
+      { name: contractName, key: contractKey },
+    ];
+
+    // Both graphs should still be at a single composition with feature flag config
+    for (const { name, key } of graphNamesAndKeys) {
+      await assertNumberOfCompositions(client, name, 1, namespace);
+      await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+    }
+
+    const featureFlagName = genID('flag');
+    await createFeatureFlag(
+      client,
+      featureFlagName,
+      labels,
+      ['users-feature', 'products-feature'],
+      namespace,
+      true,
+    );
+
+    // The feature flag composition should be added, and the config should contain a feature flag config
+    for (const { name, key } of graphNamesAndKeys) {
+      await assertNumberOfCompositions(client, name, 2, namespace);
+      await assertFeatureFlagExecutionConfig(blobStorage, key, true);
+    }
+
+    const publishResponse = await client.publishFederatedSubgraph({
+      name: 'users',
+      namespace,
+      schema: fs.readFileSync(join(process.cwd(),`test/test-data/feature-flags/users-update.graphql`)).toString(),
+    });
+    expect(publishResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // There should be a new base composition, feature flag composition, and the feature flag config should remain
+    for (const { name, key } of graphNamesAndKeys) {
+      await assertNumberOfCompositions(client, name, 4, namespace);
+      await assertFeatureFlagExecutionConfig(blobStorage, key, true);
+    }
+
+    await server.close();
+  });
+
+  test('test that multiple federated graphs and contracts compose and deploy correctly', getDebugTestOptions(isDebugMode), async () => {
+    const { client, server, blobStorage } = await SetupTest({ dbname });
+
+    const labels: Array<Label> = [];
+    const namespace = genID('namespace').toLowerCase();
+    await createNamespace(client, namespace);
+    const baseGraphNameOne = genID('baseGraphName');
+    const baseGraphResponseOne = await featureFlagIntegrationTestSetUp(
+      client,
+      [
+        { name: 'users', hasFeatureGraph: true }, { name: 'products', hasFeatureGraph: true }
+      ],
+      baseGraphNameOne,
+      labels,
+      namespace,
+    );
+    expect(blobStorage.keys()).toHaveLength(1);
+    const baseGraphKeyOne = blobStorage.keys()[0];
+    expect(baseGraphKeyOne).toContain(baseGraphResponseOne.graph!.id);
+    await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKeyOne, false);
+
+    // Base graph one composition
+    await assertNumberOfCompositions(client, baseGraphNameOne, 1, namespace);
+
+    const contractNameOne = genID('contractOne');
+    const createContractResponseOne = await client.createContract({
+      name: contractNameOne,
+      namespace,
+      sourceGraphName: baseGraphNameOne,
+      excludeTags: ['exclude'],
+      routingUrl: 'http://localhost:3003',
+    });
+    expect(createContractResponseOne.response?.code).toBe(EnumStatusCode.OK);
+
+    // Base graph one contract composition
+    await assertNumberOfCompositions(client, contractNameOne, 1, namespace);
+
+    // Base graph one compositions should remain at one
+    await assertNumberOfCompositions(client, baseGraphNameOne, 1, namespace);
+
+    expect(blobStorage.keys()).toHaveLength(2);
+    const contractKeyOne = blobStorage.keys()[1];
+    const contractResponseOne = await client.getFederatedGraphByName({
+      name: contractNameOne,
+      namespace,
+    });
+    expect(contractResponseOne.response?.code).toBe(EnumStatusCode.OK);
+    expect(contractKeyOne).toContain(contractResponseOne.graph!.id);
+    await assertFeatureFlagExecutionConfig(blobStorage, contractKeyOne, false);
+
+    const baseGraphNameTwo = genID('baseGraphNameTwo');
+    await createFederatedGraph(client, baseGraphNameTwo, namespace, [], 'http://localhost:3003');
+    const baseGraphResponseTwo = await client.getFederatedGraphByName({
+      name: baseGraphNameTwo,
+      namespace,
+    });
+
+    // Base graph two composition
+    await assertNumberOfCompositions(client, baseGraphNameTwo, 1, namespace);
+
+    expect(blobStorage.keys()).toHaveLength(3);
+    const baseGraphKeyTwo = blobStorage.keys()[2];
+    expect(baseGraphKeyTwo).toContain(baseGraphResponseTwo.graph!.id);
+    await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKeyTwo, false);
+
+    const contractNameTwo = genID('contractTwo');
+    const createContractResponseTwo = await client.createContract({
+      name: contractNameTwo,
+      namespace,
+      sourceGraphName: baseGraphNameTwo,
+      excludeTags: ['exclude'],
+      routingUrl: 'http://localhost:3004',
+    });
+    expect(createContractResponseTwo.response?.code).toBe(EnumStatusCode.OK);
+
+    expect(blobStorage.keys()).toHaveLength(4);
+    const contractKeyTwo = blobStorage.keys()[3];
+    const contractResponseTwo = await client.getFederatedGraphByName({
+      name: contractNameTwo,
+      namespace,
+    });
+    expect(contractResponseTwo.response?.code).toBe(EnumStatusCode.OK);
+    expect(contractKeyTwo).toContain(contractResponseTwo.graph!.id);
+    await assertFeatureFlagExecutionConfig(blobStorage, contractKeyTwo, false);
+
+    const graphNamesAndKeys: Array<GraphNameAndKey> = [
+      { name: baseGraphNameOne, key: baseGraphKeyOne },
+      { name: contractNameOne, key: contractKeyOne },
+      { name: baseGraphNameTwo, key: baseGraphKeyTwo },
+      { name: contractNameTwo, key: contractKeyTwo },
+    ];
+
+    // All graphs should still be at a single composition without feature flag configs
+    for (const { name, key } of graphNamesAndKeys) {
+      await assertNumberOfCompositions(client, name, 1, namespace);
+      await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+    }
+
+    const featureFlagName = genID('flag');
+    await createFeatureFlag(
+      client,
+      featureFlagName,
+      labels,
+      ['users-feature', 'products-feature'],
+      namespace,
+      true,
+    );
+
+    /* Each graph should have produced two total compositions: the original base and the feature flag
+     * Each config should feature a feature flag config
+     * */
+    for (const { name, key } of graphNamesAndKeys) {
+      await assertNumberOfCompositions(client, name, 2, namespace);
+      await assertFeatureFlagExecutionConfig(blobStorage, key, true);
+    }
+
+    const publishResponse = await client.publishFederatedSubgraph({
+      name: 'users',
+      namespace,
+      schema: fs.readFileSync(join(process.cwd(),`test/test-data/feature-flags/users-update.graphql`)).toString(),
+    });
+    expect(publishResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    /* Each graph should have produced two new compositions: a base recomposition and the feature flag
+     * The feature flag config should remain
+     * */
+    for (const { name, key } of graphNamesAndKeys) {
+      await assertNumberOfCompositions(client, name, 4, namespace);
+      await assertFeatureFlagExecutionConfig(blobStorage, key, true);
+    }
+
+    await toggleFeatureFlag(client, featureFlagName, false, namespace);
+
+    /* Each graph should have two new compositions: a base recomposition and the feature flag
+     * The feature flag config should also be removed
+     * */
+    for (const { name, key } of graphNamesAndKeys) {
+      await assertNumberOfCompositions(client, name, 5, namespace);
+      await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+    }
 
     await server.close();
   });

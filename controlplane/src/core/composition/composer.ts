@@ -30,6 +30,11 @@ export type CompositionResult = {
   compositions: ComposedFederatedGraph[];
 };
 
+export type FeatureFlagSchemaVersion = {
+  featureFlagName: string;
+  schemaVersionId: string;
+};
+
 export interface S3RouterConfigMetadata extends Record<string, string> {
   version: string;
   'signature-sha256': string;
@@ -129,35 +134,34 @@ export class Composer {
 
   async composeRouterConfig({
     federatedGraphTargetId,
-    fgSchemaVersions,
+    featureFlagSchemaVersions,
   }: {
     federatedGraphTargetId: string;
-    fgSchemaVersions: {
-      featureFlagName: string;
-      schemaVersionId: string;
-    }[];
+    featureFlagSchemaVersions: Array<FeatureFlagSchemaVersion>;
   }) {
     // fetch all the router configs for the compositions where there are no composition
     const baseVersion = await this.federatedGraphRepo.getLatestValidRouterConfig(federatedGraphTargetId);
     if (!baseVersion) {
       // TODO improve message
-      throw new Error('No valid base router config found');
+      throw new Error('No valid base router config found.');
     }
     const baseRouterConfig = baseVersion.config;
-    let ffRouterConfigs: {
+    let featureFlagRouterConfigs: {
       [key: string]: FeatureFlagRouterExecutionConfig;
     };
-    if (fgSchemaVersions.length > 0) {
-      ffRouterConfigs = await this.featureFlagRepo.getFFRouterConfigsBySchemaVersionIds({ fgSchemaVersions });
+    if (featureFlagSchemaVersions.length > 0) {
+      featureFlagRouterConfigs = await this.featureFlagRepo.getFeatureFlagRouterConfigsByFeatureFlagSchemaVersions({
+        featureFlagSchemaVersions,
+      });
       const featureFlagConfigs = baseRouterConfig.featureFlagConfigs;
       if (featureFlagConfigs) {
-        const configByFfName = featureFlagConfigs.configByFeatureFlagName;
-        for (const ffName in ffRouterConfigs) {
-          configByFfName[ffName] = ffRouterConfigs[ffName];
+        const configByFeatureFlagName = featureFlagConfigs.configByFeatureFlagName;
+        for (const featureFlagName in featureFlagRouterConfigs) {
+          configByFeatureFlagName[featureFlagName] = featureFlagRouterConfigs[featureFlagName];
         }
       } else {
         baseRouterConfig.featureFlagConfigs = {
-          configByFeatureFlagName: ffRouterConfigs,
+          configByFeatureFlagName: featureFlagRouterConfigs,
         } as FeatureFlagRouterExecutionConfigs;
       }
     }
@@ -304,17 +308,14 @@ export class Composer {
 
   async composeAndUploadRouterConfig({
     federatedGraph,
-    fgSchemaVersions,
+    featureFlagSchemaVersions,
     blobStorage,
     organizationId,
     federatedSchemaVersionId,
     admissionConfig,
   }: {
     federatedGraph: FederatedGraphDTO;
-    fgSchemaVersions: {
-      featureFlagName: string;
-      schemaVersionId: string;
-    }[];
+    featureFlagSchemaVersions: Array<FeatureFlagSchemaVersion>;
     blobStorage: BlobStorage;
     organizationId: string;
     federatedSchemaVersionId: string;
@@ -325,7 +326,7 @@ export class Composer {
   }) {
     const baseRouterConfig = await this.composeRouterConfig({
       federatedGraphTargetId: federatedGraph.targetId,
-      fgSchemaVersions,
+      featureFlagSchemaVersions,
     });
 
     const { errors } = await this.uploadRouterConfig({

@@ -20,6 +20,7 @@ import {
 } from '../../db/schema.js';
 import { FeatureFlagDTO, FederatedGraphDTO, Label, SubgraphDTO } from '../../types/index.js';
 import { normalizeLabels } from '../util.js';
+import { FeatureFlagSchemaVersion } from '../composition/composer.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 
@@ -32,7 +33,7 @@ export interface FeatureFlagWithFeatureGraphs {
   })[];
 }
 
-export interface FeatureFlagRelatedGraph {
+export interface FederatedGraphToRecompose {
   compositionSubgraphs: Subgraph[];
   subgraphs: SubgraphDTO[];
   isFeatureFlagComposition: boolean;
@@ -623,8 +624,8 @@ export class FeatureFlagRepository {
     featureFlagToComposeByFlagName: Map<string, FeatureFlagWithFeatureGraphs>,
     baseCompositionSubgraphs: Array<Subgraph>,
     subgraphs: Array<SubgraphDTO>,
-    featureFlagRelatedGraphsToCompose: Array<FeatureFlagRelatedGraph>,
-  ): Array<FeatureFlagRelatedGraph> {
+    federatedGraphsToRecompose: Array<FederatedGraphToRecompose>,
+  ): Array<FederatedGraphToRecompose> {
     for (const flag of featureFlagToComposeByFlagName.values()) {
       let compositionSubgraphs = baseCompositionSubgraphs;
       let subgraphDTOs = subgraphs;
@@ -641,18 +642,20 @@ export class FeatureFlagRepository {
         });
         subgraphDTOs.push(featureGraph);
       }
-      featureFlagRelatedGraphsToCompose.push({
+      federatedGraphsToRecompose.push({
         compositionSubgraphs,
         isFeatureFlagComposition: true,
         featureFlagName: flag.name,
         subgraphs: subgraphDTOs,
       });
     }
-    return featureFlagRelatedGraphsToCompose;
+    return federatedGraphsToRecompose;
   }
 
-  // evaluates all the feature graphs and feature flags and returns the composition possibilities(the subgraphs that should be composed)
-  public async getAllFeatureFlagRelatedGraphs({
+  /* Returns all federated graphs that would be impacted by a change in one of its constituent subgraphs
+   * This includes any feature flags
+   * */
+  public async getFederatedGraphsToRecompose({
     subgraphs,
     fedGraphLabelMatchers,
     baseCompositionSubgraphs,
@@ -660,9 +663,9 @@ export class FeatureFlagRepository {
     subgraphs: SubgraphDTO[];
     fedGraphLabelMatchers: string[];
     baseCompositionSubgraphs: Subgraph[];
-  }): Promise<Array<FeatureFlagRelatedGraph>> {
-    // When getting all feature flag related graphs, include the base graph
-    const featureFlagRelatedGraphsToCompose: Array<FeatureFlagRelatedGraph> = [
+  }): Promise<Array<FederatedGraphToRecompose>> {
+    // Always include the base graph
+    const federatedGraphsToRecompose: Array<FederatedGraphToRecompose> = [
       {
         compositionSubgraphs: baseCompositionSubgraphs,
         isFeatureFlagComposition: false,
@@ -690,7 +693,7 @@ export class FeatureFlagRepository {
       featureFlagToComposeByFlagName,
       baseCompositionSubgraphs,
       subgraphs,
-      featureFlagRelatedGraphsToCompose,
+      federatedGraphsToRecompose,
     );
   }
 
@@ -706,8 +709,8 @@ export class FeatureFlagRepository {
     baseCompositionSubgraphs: Subgraph[];
     featureFlagName: string;
     isFeatureFlagEnabled: boolean;
-  }): Promise<FeatureFlagRelatedGraph[]> {
-    const featureFlagRelatedGraphsToCompose: FeatureFlagRelatedGraph[] = [];
+  }): Promise<FederatedGraphToRecompose[]> {
+    const featureFlagRelatedGraphsToCompose: FederatedGraphToRecompose[] = [];
     // If the feature flag has been disabled, also re-compose the base federated graphh
     if (!isFeatureFlagEnabled) {
       featureFlagRelatedGraphsToCompose.push({
@@ -756,20 +759,17 @@ export class FeatureFlagRepository {
     );
   }
 
-  public async getFFRouterConfigsBySchemaVersionIds({
-    fgSchemaVersions,
+  public async getFeatureFlagRouterConfigsByFeatureFlagSchemaVersions({
+    featureFlagSchemaVersions,
   }: {
-    fgSchemaVersions: {
-      featureFlagName: string;
-      schemaVersionId: string;
-    }[];
+    featureFlagSchemaVersions: Array<FeatureFlagSchemaVersion>;
   }): Promise<{
     [key: string]: FeatureFlagRouterExecutionConfig;
   }> {
-    const ffRouterConfigs: {
+    const featureFlagRouterConfigs: {
       [key: string]: FeatureFlagRouterExecutionConfig;
     } = {};
-    const schemaVersionIds = fgSchemaVersions.map((s) => s.schemaVersionId);
+    const schemaVersionIds = featureFlagSchemaVersions.map((s) => s.schemaVersionId);
 
     const compositions = await this.db
       .select({
@@ -782,15 +782,16 @@ export class FeatureFlagRepository {
       .execute();
 
     for (const composition of compositions) {
-      const ffSchemaVersion = fgSchemaVersions.find((s) => s.schemaVersionId === composition.schemaVersionId);
+      const ffSchemaVersion = featureFlagSchemaVersions.find((s) => s.schemaVersionId === composition.schemaVersionId);
       if (!ffSchemaVersion) {
         continue;
       }
-      const ffRouterConfig = ffRouterConfigFromJson(composition.routerConfig as JsonValue);
-      ffRouterConfigs[ffSchemaVersion.featureFlagName] = ffRouterConfig;
+      featureFlagRouterConfigs[ffSchemaVersion.featureFlagName] = ffRouterConfigFromJson(
+        composition.routerConfig as JsonValue,
+      );
     }
 
-    return ffRouterConfigs;
+    return featureFlagRouterConfigs;
   }
 
   public async delete(featureFlagId: string) {

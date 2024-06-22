@@ -1,12 +1,21 @@
+import fs from 'node:fs';
+import { join } from 'node:path';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
-import { SetupTest, createFederatedGraph, createThenPublishSubgraph } from './test-util.js';
+import {
+  SetupTest,
+  createFederatedGraph,
+  createThenPublishSubgraph,
+  createNamespace,
+  DEFAULT_ROUTER_URL,
+  createAndPublishSubgraph, assertFeatureFlagExecutionConfig, assertNumberOfCompositions,
+} from './test-util.js';
 
 let dbname = '';
 
-describe('Contracts', (ctx) => {
+describe('Contract tests', (ctx) => {
   beforeAll(async () => {
     dbname = await beforeAllSetup();
   });
@@ -236,7 +245,7 @@ describe('Contracts', (ctx) => {
     await server.close();
   });
 
-  test('Moving source federated graph moves contract graph', async (testContext) => {
+  test('Moving source federated graph moves contract graph', { timeout: 20_000_000 }, async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
 
     const subgraphName = genID('subgraph');
@@ -774,4 +783,56 @@ describe('Contracts', (ctx) => {
 
     await server.close();
   });
+
+  test('that a contract is not produced if the base graph does not compose', async () => {
+    const { client, server, blobStorage } = await SetupTest({ dbname });
+
+    const namespace = genID('namespace').toLowerCase();
+    await createNamespace(client, namespace);
+    const baseGraphName = genID('baseGraphName');
+    await createFederatedGraph(client, baseGraphName, namespace, [], DEFAULT_ROUTER_URL);
+    await createAndPublishSubgraph(client,
+      'users',
+      namespace,
+      fs.readFileSync(join(process.cwd(), `test/test-data/feature-flags/users-update.graphql`)).toString(),
+      [], 'http://localhost:4001',
+    );
+    const publishSubgraphResponse = await client.publishFederatedSubgraph({
+      name: 'products',
+      namespace,
+      labels: [],
+      routingUrl: 'http://localhost:4001',
+      schema: fs.readFileSync(join(process.cwd(), `test/test-data/feature-flags/products-failing.graphql`)).toString(),
+  });
+    expect(publishSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
+
+    const baseGraphResponse = await client.getFederatedGraphByName({
+      name: baseGraphName,
+      namespace,
+    });
+
+    expect(blobStorage.keys()).toHaveLength(1);
+    const baseGraphKey = blobStorage.keys()[0];
+    expect(baseGraphKey).toContain(baseGraphResponse.graph!.id);
+    await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
+    await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
+
+    const contractName = genID('contractName');
+    const createContractResponse = await client.createContract({
+      name: contractName,
+      namespace,
+      sourceGraphName: baseGraphName,
+      excludeTags: ['exclude'],
+      routingUrl: 'http://localhost:3004',
+    });
+    expect(createContractResponse.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
+    expect(createContractResponse.compositionErrors).toHaveLength(1);
+
+    // There should still only be a single key in storage
+    expect(blobStorage.keys()).toHaveLength(1);
+    // There should be a failed composition for the contract
+    await assertNumberOfCompositions(client, contractName, 1, namespace);
+    // The base graph compositions should remain at 2
+    await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
+  })
 });

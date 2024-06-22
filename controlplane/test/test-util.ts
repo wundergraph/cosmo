@@ -36,6 +36,8 @@ import { UserRepository } from '../src/core/repositories/UserRepository.js';
 import ApiKeyAuthenticator from '../src/core/services/ApiKeyAuthenticator.js';
 import { ApiKeyRepository } from '../src/core/repositories/ApiKeyRepository.js';
 
+export const DEFAULT_ROUTER_URL = 'http://localhost:3002';
+
 export const SetupTest = async function ({
   dbname,
   chClient,
@@ -478,7 +480,6 @@ export async function featureFlagIntegrationTestSetUp(
   labels: Array<Label> = [],
   namespace = 'default',
 ) {
-  const featureGraphNames: Array<string> = [];
   let port = 4001;
   for (const { name, hasFeatureGraph } of subgraphNames) {
     await createAndPublishSubgraph(
@@ -613,4 +614,9 @@ export function getDebugTestOptions(isDebugMode: boolean) {
   return ({
     timeout: 2_000_000
   });
+}
+
+export type GraphNameAndKey = {
+  key: string;
+  name: string;
 }
