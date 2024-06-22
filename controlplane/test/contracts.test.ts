@@ -245,7 +245,7 @@ describe('Contract tests', (ctx) => {
     await server.close();
   });
 
-  test('Moving source federated graph moves contract graph', { timeout: 20_000_000 }, async (testContext) => {
+  test('Moving source federated graph moves contract graph', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
 
     const subgraphName = genID('subgraph');
