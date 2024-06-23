@@ -2925,10 +2925,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         await auditLogRepo.addAuditLog({
           organizationId: authContext.organizationId,
-          auditAction: 'subgraph.updated',
+          auditAction: subgraph.isFeatureGraph ? 'feature_graph.updated' : 'subgraph.updated',
           action: 'updated',
           actorId: authContext.userId,
-          auditableType: 'subgraph',
+          auditableType: subgraph.isFeatureGraph ? 'feature_graph' : 'subgraph',
           auditableDisplayName: subgraph.name,
           actorDisplayName: authContext.userDisplayName,
           actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
@@ -3784,11 +3784,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const ff = await featureFlagRepo.getFeatureFlagByName({
+        const existingFeatureFlag = await featureFlagRepo.getFeatureFlagByName({
           featureFlagName: req.featureFlagName,
           namespaceId: namespace.id,
         });
-        if (ff) {
+        if (existingFeatureFlag) {
           return {
             response: {
               code: EnumStatusCode.ERR_ALREADY_EXISTS,
@@ -3821,12 +3821,27 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        const auditLogRepo = new AuditLogRepository(opts.db);
+
         const featureFlag = await featureFlagRepo.createFeatureFlag({
           namespaceId: namespace.id,
           featureFlagName: req.featureFlagName,
           labels: req.labels,
           featureGraphIds,
           createdBy: authContext.userId,
+        });
+
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'feature_flag.created',
+          action: 'created',
+          actorId: authContext.userId,
+          auditableType: 'feature_flag',
+          auditableDisplayName: featureFlag.name,
+          actorDisplayName: authContext.userDisplayName,
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+          targetNamespaceId: namespace.id,
+          targetNamespaceDisplayName: namespace.name,
         });
 
         // If the feature flag was not created with -e or --enabled, there is nothing further to do
@@ -4007,10 +4022,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        const auditLogRepo = new AuditLogRepository(opts.db);
+
         await featureFlagRepo.updateFeatureFlag({
           featureFlag: featureFlagDTO,
           labels: req.labels,
           featureGraphIds,
+        });
+
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'feature_flag.updated',
+          action: 'updated',
+          actorId: authContext.userId,
+          auditableType: 'feature_flag',
+          auditableDisplayName: featureFlagDTO.name,
+          actorDisplayName: authContext.userDisplayName,
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+          targetNamespaceId: namespace.id,
+          targetNamespaceDisplayName: namespace.name,
         });
 
         const federatedGraphs = await featureFlagRepo.getFederatedGraphsByFeatureFlag({
@@ -4324,7 +4354,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             auditableDisplayName: featureFlag.name,
             actorDisplayName: authContext.userDisplayName,
             actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
-            targetNamespaceId: featureFlag.namespaceId,
+            targetNamespaceId: namespace.id,
             targetNamespaceDisplayName: namespace.name,
           });
 
@@ -4915,10 +4945,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         await auditLogRepo.addAuditLog({
           organizationId: authContext.organizationId,
-          auditAction: 'subgraph.updated',
+          auditAction: subgraph.isFeatureGraph ? 'feature_graph.updated' : 'subgraph.updated',
           action: 'updated',
           actorId: authContext.userId,
-          auditableType: 'subgraph',
+          auditableType: subgraph.isFeatureGraph ? 'feature_graph' : 'subgraph',
           auditableDisplayName: subgraph.name,
           actorDisplayName: authContext.userDisplayName,
           actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',

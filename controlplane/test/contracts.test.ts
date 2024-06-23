@@ -271,7 +271,6 @@ describe('Contract tests', (ctx) => {
       sourceGraphName: fedGraphName,
       excludeTags: ['test'],
       routingUrl: 'http://localhost:8081',
-      admissionWebhookUrl: 'http://localhost:8085',
       readme: 'test',
     });
 
