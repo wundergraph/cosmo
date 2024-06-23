@@ -842,5 +842,7 @@ describe('Contract tests', (ctx) => {
     await assertNumberOfCompositions(client, contractName, 1, namespace);
     // The base graph compositions should remain at 2
     await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
+
+    await server.close();
   })
 });
