@@ -789,17 +789,26 @@ describe('Contract tests', (ctx) => {
     const namespace = genID('namespace').toLowerCase();
     await createNamespace(client, namespace);
     const baseGraphName = genID('baseGraphName');
-    await createFederatedGraph(client, baseGraphName, namespace, [], DEFAULT_ROUTER_URL);
+    const label = genUniqueLabel('label');
+    const labels = [label];
+    await createFederatedGraph(
+      client,
+      baseGraphName,
+      namespace,
+      [joinLabel(label)],
+      DEFAULT_ROUTER_URL,
+    );
     await createAndPublishSubgraph(client,
       'users',
       namespace,
       fs.readFileSync(join(process.cwd(), `test/test-data/feature-flags/users-update.graphql`)).toString(),
-      [], 'http://localhost:4001',
+      labels,
+      'http://localhost:4001',
     );
     const publishSubgraphResponse = await client.publishFederatedSubgraph({
       name: 'products',
       namespace,
-      labels: [],
+      labels,
       routingUrl: 'http://localhost:4001',
       schema: fs.readFileSync(join(process.cwd(), `test/test-data/feature-flags/products-failing.graphql`)).toString(),
   });
