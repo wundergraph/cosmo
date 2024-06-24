@@ -2126,7 +2126,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        let isInspectable = true;
         const hasBreakingChanges = schemaChanges.breakingChanges.length > 0;
 
         await schemaCheckRepo.createSchemaCheckChanges({
@@ -2157,16 +2156,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const compositionErrors: PlainMessage<CompositionError>[] = [];
 
         let inspectorChanges: InspectorSchemaChange[] = [];
-        try {
-          // For operations checks we only consider breaking changes
-          // This method will throw if the schema changes cannot be converted to inspector changes
-          inspectorChanges = trafficInspector.schemaChangesToInspectorChanges(
-            schemaChanges.breakingChanges,
-            storedBreakingChanges,
-          );
-        } catch {
-          isInspectable = false;
-        }
+
+        // For operations checks we only consider breaking changes
+        inspectorChanges = trafficInspector.schemaChangesToInspectorChanges(
+          schemaChanges.breakingChanges,
+          storedBreakingChanges,
+        );
 
         const changeRetention = await orgRepo.getFeature({
           organizationId: authContext.organizationId,
@@ -2188,7 +2183,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
           // We don't collect operation usage when we have composition errors or
           // when we don't have any inspectable changes. That means any breaking change is really breaking
-          if (composition.errors.length > 0 || !isInspectable || inspectorChanges.length === 0) {
+          if (composition.errors.length > 0 || inspectorChanges.length === 0) {
             continue;
           }
 
@@ -2270,7 +2265,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
           breakingChanges: schemaChanges.breakingChanges,
           nonBreakingChanges: schemaChanges.nonBreakingChanges,
-          operationUsageStats: isInspectable ? collectOperationUsageStats(inspectedOperations) : undefined,
+          operationUsageStats: collectOperationUsageStats(inspectedOperations),
           compositionErrors,
           checkId: schemaCheckID,
           checkedFederatedGraphs: result.compositions.map((c) => ({
