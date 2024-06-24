@@ -1328,7 +1328,6 @@ export const lintRulesEnum = pgEnum('lint_rules', [
   'DISALLOW_CASE_INSENSITIVE_ENUM_VALUES',
   'NO_TYPENAME_PREFIX_IN_TYPE_FIELDS',
   'REQUIRE_DEPRECATION_REASON',
-  'REQUIRE_DEPRECATION_DATE',
 ] as const);
 
 export const lintSeverityEnum = pgEnum('lint_severity', ['warn', 'error'] as const);
