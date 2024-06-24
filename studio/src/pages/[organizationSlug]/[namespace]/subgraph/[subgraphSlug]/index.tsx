@@ -144,31 +144,31 @@ const SubgraphOverviewPage = () => {
             </dd>
           </div>
 
-          <div className="flex-start flex max-w-[180px] flex-1 flex-col gap-2">
+          <div className="flex-start flex flex-col gap-2">
             <dt className="text-sm text-muted-foreground">
               Subscription Protocol
             </dt>
             <dd>
-              <p className="max-w-[130px] text-center text-sm">
+              <p className="text-sm">
                 {subgraph.subscriptionUrl !== ""
                   ? subgraph.subscriptionProtocol
                   : "-"}
               </p>
             </dd>
           </div>
-          <div className="flex-start flex max-w-[250px] flex-1 flex-col gap-2">
+          <div className="flex-start flex flex-col gap-2">
             <dt className="text-sm text-muted-foreground">
               Subscription WS Subprotocol
             </dt>
             <dd>
-              <p className="max-w-[180px] text-center text-sm">
+              <p className="text-sm">
                 {subgraph.subscriptionUrl !== ""
                   ? subgraph.websocketSubprotocol
                   : "-"}
               </p>
             </dd>
           </div>
-          <div className="flex-start flex max-w-[120px] flex-1 flex-col gap-2 ">
+          <div className="flex-start flex flex-col gap-2 ">
             <dt className="text-sm text-muted-foreground">Last Published</dt>
             <dd className="whitespace-nowrap text-sm">
               {subgraph.lastUpdatedAt ? (
