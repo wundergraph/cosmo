@@ -53,7 +53,6 @@ describe('DeleteSubgraph', (ctx) => {
       subgraphName,
       namespace: 'default',
       isFeatureSubgraph: false,
-      isFeatureSubgraph: false,
     });
     expect(deleteFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
 
