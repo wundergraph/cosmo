@@ -960,6 +960,11 @@ export class FederatedGraphRepository {
           changes: {
             orderBy: desc(schemaVersionChangeAction.createdAt),
           },
+          composition: {
+            columns: {
+              id: true,
+            },
+          },
         },
         orderBy: desc(schemaVersion.createdAt),
       });
@@ -991,6 +996,7 @@ export class FederatedGraphRepository {
             changeMessage: c.changeMessage,
             createdAt: c.createdAt.toString(),
           })),
+          compositionId: sv.composition?.id ?? '',
         });
       }
 
@@ -1001,6 +1007,8 @@ export class FederatedGraphRepository {
   public async fetchLatestFederatedGraphChangelog(
     federatedGraphId: string,
   ): Promise<FederatedGraphChangelogDTO | undefined> {
+    const compositionRepo = new GraphCompositionRepository(this.logger, this.db);
+
     const federatedGraph = await this.db
       .select({ schemaVersionId: federatedGraphs.composedSchemaVersionId })
       .from(federatedGraphs)
@@ -1021,6 +1029,14 @@ export class FederatedGraphRepository {
       return undefined;
     }
 
+    const composition = await compositionRepo.getGraphCompositionBySchemaVersion({
+      schemaVersionId: federatedGraph[0].schemaVersionId,
+      organizationId: this.organizationId,
+    });
+    if (!composition) {
+      throw new Error(`Could not find composition linked to schema version ${federatedGraph[0].schemaVersionId}`);
+    }
+
     return {
       schemaVersionId: federatedGraph[0].schemaVersionId,
       createdAt: changelogs[0].createdAt.toString(),
@@ -1031,6 +1047,7 @@ export class FederatedGraphRepository {
         changeMessage: c.changeMessage,
         createdAt: c.createdAt.toString(),
       })),
+      compositionId: composition.id,
     };
   }
 
