@@ -503,6 +503,7 @@ message FederatedGraphChangelogOutput{
   string createdAt = 1;
   string schemaVersionId = 2;
   repeated FederatedGraphChangelog changelogs = 3;
+  string compositionId = 4;
 }
 
 message GetFederatedGraphChangelogResponse {

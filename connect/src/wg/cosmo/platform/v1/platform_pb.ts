@@ -3989,6 +3989,11 @@ export class FederatedGraphChangelogOutput extends Message<FederatedGraphChangel
    */
   changelogs: FederatedGraphChangelog[] = [];
 
+  /**
+   * @generated from field: string compositionId = 4;
+   */
+  compositionId = "";
+
   constructor(data?: PartialMessage<FederatedGraphChangelogOutput>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4000,6 +4005,7 @@ export class FederatedGraphChangelogOutput extends Message<FederatedGraphChangel
     { no: 1, name: "createdAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "schemaVersionId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "changelogs", kind: "message", T: FederatedGraphChangelog, repeated: true },
+    { no: 4, name: "compositionId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FederatedGraphChangelogOutput {

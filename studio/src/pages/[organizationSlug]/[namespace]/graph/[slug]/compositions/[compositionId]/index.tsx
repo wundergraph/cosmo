@@ -222,10 +222,11 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
                   <Link
                     key={id}
                     href={`/${organizationSlug}/${namespace}/graph/${slug}/changelog/${schemaVersionId}`}
+                    className="text-primary"
                   >
                     <div className="flex items-center gap-x-1">
                       <PiGitBranch />
-                      {schemaVersionId.split("-")[0]}
+                      {schemaVersionId.slice(0, 6)}
                     </div>
                   </Link>
                 )}

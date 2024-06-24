@@ -1,5 +1,6 @@
 import { useApplyParams } from "@/components/analytics/use-apply-params";
 import { useDateRangeQueryState } from "@/components/analytics/useAnalyticsQueryState";
+import { Changelog } from "@/components/changelog/changelog";
 import { CompositionErrorsBanner } from "@/components/composition-errors-banner";
 import {
   DatePickerWithRange,
@@ -11,7 +12,6 @@ import {
   GraphPageLayout,
   getGraphLayout,
 } from "@/components/layout/graph-layout";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CLI } from "@/components/ui/cli";
 import { Loader } from "@/components/ui/loader";
@@ -21,25 +21,14 @@ import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
 import { createDateRange } from "@/lib/insights-helpers";
 import { NextPageWithLayout } from "@/lib/page";
-import { cn } from "@/lib/utils";
+import { useQuery } from "@connectrpc/connect-query";
 import {
   CommandLineIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
-import {
-  DotFilledIcon,
-  MinusIcon,
-  PlusIcon,
-  UpdateIcon,
-} from "@radix-ui/react-icons";
-import { useQuery } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getFederatedGraphChangelog } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import {
-  FederatedGraphChangelog,
-  FederatedGraphChangelogOutput,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { noCase } from "change-case";
+import { FederatedGraphChangelogOutput } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { endOfDay, formatISO, startOfDay } from "date-fns";
 import { useRouter } from "next/router";
 import { useContext, useEffect, useRef, useState } from "react";
@@ -82,122 +71,6 @@ const ChangelogToolbar = () => {
         calendarDaysLimit={changelogRetention}
       />
     </Toolbar>
-  );
-};
-
-interface StructuredChangelog {
-  changeType: string;
-  parentName: string;
-  childName: string;
-}
-
-const structureChangelogs = (
-  changes: FederatedGraphChangelog[],
-): StructuredChangelog[] => {
-  let parentNodeName = "";
-  const structuredChangelogs: StructuredChangelog[] = [];
-
-  for (const change of changes) {
-    const splitPath = change.path.split(".");
-    if (splitPath.length === 1) {
-      structuredChangelogs.push({
-        changeType: change.changeType,
-        parentName: splitPath[0],
-        childName: "",
-      });
-    } else if (splitPath[0] === parentNodeName) {
-      structuredChangelogs.push({
-        changeType: change.changeType,
-        parentName: splitPath[0],
-        childName: splitPath[1],
-      });
-    } else {
-      structuredChangelogs.push({
-        changeType: "",
-        parentName: splitPath[0],
-        childName: "",
-      });
-      structuredChangelogs.push({
-        changeType: change.changeType,
-        parentName: splitPath[0],
-        childName: splitPath[1],
-      });
-    }
-    parentNodeName = splitPath[0];
-  }
-  return structuredChangelogs;
-};
-
-const getDiffCount = (changelogs: FederatedGraphChangelog[]) => {
-  let addCount = 0;
-  let minusCount = 0;
-  changelogs.forEach((log) => {
-    if (log.changeType.includes("REMOVED")) {
-      minusCount += 1;
-    } else if (log.changeType.includes("ADDED")) {
-      addCount += 1;
-    } else if (log.changeType.includes("CHANGED")) {
-      addCount += 1;
-      minusCount += 1;
-    }
-  });
-  return {
-    addCount,
-    minusCount,
-  };
-};
-
-const Changes = ({ changes }: { changes: FederatedGraphChangelog[] }) => {
-  let parentNodeName = "";
-  let shouldHavePadding = false;
-
-  const getIcon = (code: string) => {
-    if (code.includes("REMOVED")) {
-      return <MinusIcon className="text-destructive" width={25} />;
-    }
-    if (code.includes("ADDED")) {
-      return <PlusIcon className="text-success" width={25} />;
-    }
-    if (code.includes("CHANGED")) {
-      return <UpdateIcon className="text-muted-foreground" width={25} />;
-    }
-    return (
-      <DotFilledIcon className="text-muted-foreground" width={25} height={25} />
-    );
-  };
-
-  const structuredChangelogs = structureChangelogs(changes);
-
-  return (
-    <div className="flex flex-col gap-y-2 pt-4 lg:pt-0">
-      {structuredChangelogs.map(
-        ({ changeType, parentName, childName }, index) => {
-          if (parentName !== parentNodeName) {
-            parentNodeName = parentName;
-            shouldHavePadding = false;
-          } else {
-            shouldHavePadding = true;
-          }
-
-          return (
-            <div
-              className={cn("flex items-center gap-x-2", {
-                "ml-4": shouldHavePadding,
-              })}
-              key={index}
-            >
-              {getIcon(changeType)}
-              <Badge variant="secondary" className="text-sm">
-                {childName || parentName}
-              </Badge>
-              <span className="hidden text-xs italic text-muted-foreground md:block">
-                {noCase(changeType)}
-              </span>
-            </div>
-          );
-        },
-      )}
-    </div>
   );
 };
 
@@ -371,45 +244,7 @@ const ChangelogPage: NextPageWithLayout = () => {
             </div>
           </div>
           <div className="absolute left-40 ml-1.5 hidden h-full w-px border-r lg:block" />
-          <ol className="relative w-full">
-            {items.map(({ schemaVersionId: id, createdAt, changelogs }) => {
-              return (
-                <li
-                  id={id}
-                  key={id}
-                  className="flex w-full flex-col gap-y-8 py-10 first:pt-2"
-                >
-                  <div className="absolute left-40 mt-2 hidden h-3 w-3 rounded-full border bg-accent lg:block"></div>
-                  <div className="flex w-full flex-col items-start gap-x-16 gap-y-4 lg:flex-row">
-                    <div className="flex flex-col items-end gap-y-1">
-                      <time className="mt-2 text-sm font-bold leading-none">
-                        {formatDateTime(new Date(createdAt))}
-                      </time>
-                      <p className="text-sm font-bold text-muted-foreground">
-                        {id.slice(0, 6)}
-                      </p>
-                      <div>
-                        <div className="flex items-center gap-x-1">
-                          <PlusIcon className="text-success" />
-                          <p className="text-sm text-success">
-                            {getDiffCount(changelogs).addCount}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-x-1">
-                          <MinusIcon className="text-destructive" />
-                          <p className="text-sm text-destructive">
-                            {getDiffCount(changelogs).minusCount}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    <hr className="w-full lg:hidden" />
-                    <Changes changes={changelogs} />
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
+          <Changelog entries={items} />
           {!data?.hasNextPage && (
             <p className="mx-auto py-12 text-sm font-bold leading-none">
               End of changelog
