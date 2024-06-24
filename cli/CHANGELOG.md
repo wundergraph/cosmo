@@ -4,6 +4,20 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.57.5](https://github.com/wundergraph/cosmo/compare/wgc@0.57.4...wgc@0.57.5) (2024-06-20)
+
+**Note:** Version bump only for package wgc
+
+## [0.57.4](https://github.com/wundergraph/cosmo/compare/wgc@0.57.3...wgc@0.57.4) (2024-06-20)
+
+### Bug Fixes
+
+* migrate button should respect namespace ([#875](https://github.com/wundergraph/cosmo/issues/875)) ([46958d6](https://github.com/wundergraph/cosmo/commit/46958d6ceb61835033593fd3d32092f2bac2849c)) (@Aenimus)
+
+## [0.57.3](https://github.com/wundergraph/cosmo/compare/wgc@0.57.2...wgc@0.57.3) (2024-06-11)
+
+**Note:** Version bump only for package wgc
+
 ## [0.57.2](https://github.com/wundergraph/cosmo/compare/wgc@0.57.1...wgc@0.57.2) (2024-06-07)
 
 **Note:** Version bump only for package wgc

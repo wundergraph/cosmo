@@ -4361,6 +4361,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           subscriptionUrl: s.subscriptionUrl,
           subscriptionProtocol: s.subscriptionProtocol,
           namespace: s.namespace,
+          websocketSubprotocol: s.websocketSubprotocol || '',
         }));
 
         const result = composeSubgraphs(
@@ -7181,6 +7182,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             subscriptionUrl: g.subscriptionUrl,
             subscriptionProtocol: g.subscriptionProtocol,
             namespace: g.namespace,
+            websocketSubprotocol: g.websocketSubprotocol || '',
           })),
           count,
           response: {
@@ -7224,6 +7226,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             subscriptionUrl: subgraph.subscriptionUrl,
             subscriptionProtocol: subgraph.subscriptionProtocol,
             namespace: subgraph.namespace,
+            websocketSubprotocol: subgraph.websocketSubprotocol || '',
           },
           members: await subgraphRepo.getSubgraphMembers(subgraph.id),
           response: {
@@ -7550,6 +7553,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             subscriptionProtocol: g.subscriptionProtocol,
             isEventDrivenGraph: g.isEventDrivenGraph,
             isV2Graph: g.isV2Graph,
+            websocketSubprotocol: g.websocketSubprotocol || '',
           })),
           graphRequestToken: routerRequestToken,
           response: {
