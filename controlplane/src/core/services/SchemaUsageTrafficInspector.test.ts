@@ -175,6 +175,25 @@ describe('Schema Change converter', (ctx) => {
         },
       ]);
     });
+
+    test('Directive removed should be ignored', async () => {
+      const a = buildSchema(/* GraphQL */ `
+        directive @test on FIELD_DEFINITION
+
+        type Query {
+          a: String @test
+        }
+      `);
+      const b = buildSchema(/* GraphQL */ `
+        type Query {
+          a: String
+        }
+      `);
+
+      const changes = await getBreakingChanges(a, b);
+
+      expect(changes).toEqual<InspectorSchemaChange[]>([]);
+    });
   });
 });
 

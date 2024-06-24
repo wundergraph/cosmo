@@ -632,8 +632,12 @@ export const schemaVersionChangeActionRelations = relations(schemaVersionChangeA
   }),
 }));
 
-export const schemaVersionRelations = relations(schemaVersion, ({ many }) => ({
+export const schemaVersionRelations = relations(schemaVersion, ({ many, one }) => ({
   changes: many(schemaVersionChangeAction),
+  composition: one(graphCompositions, {
+    fields: [schemaVersion.id],
+    references: [graphCompositions.schemaVersionId],
+  }),
 }));
 
 export const schemaChecks = pgTable('schema_checks', {
