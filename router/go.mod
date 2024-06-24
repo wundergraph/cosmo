@@ -1,8 +1,6 @@
 module github.com/wundergraph/cosmo/router
 
-go 1.21.5
-
-toolchain go1.22.0
+go 1.21.0
 
 require (
 	connectrpc.com/connect v1.16.2
@@ -39,7 +37,7 @@ require (
 	github.com/tidwall/gjson v1.17.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/twmb/franz-go v1.16.1
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.50
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.51
 	// Do not upgrade, it renames attributes we rely on
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/contrib/propagators/b3 v1.23.0
@@ -58,13 +56,11 @@ require (
 	go.uber.org/automaxprocs v1.5.3
 	go.uber.org/zap v1.26.0
 	go.withmatt.com/connect-brotli v0.4.0
-	golang.org/x/sync v0.7.0
+	golang.org/x/sync v0.6.0
 	golang.org/x/sys v0.20.0
 	google.golang.org/grpc v1.61.0
-	google.golang.org/protobuf v1.34.1
+	google.golang.org/protobuf v1.33.0
 )
-
-require github.com/mazrean/formstream v1.1.1
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -76,6 +72,7 @@ require (
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
+	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/golang/glog v1.1.2 // indirect
@@ -87,6 +84,7 @@ require (
 	github.com/jensneuse/byte-template v0.0.0-20200214152254-4f3cf06e5c68 // indirect
 	github.com/kingledion/go-tools v0.6.0 // indirect
 	github.com/klauspost/compress v1.17.8 // indirect
+	github.com/leodido/go-urn v1.2.4 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
@@ -107,17 +105,16 @@ require (
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
+	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/twmb/franz-go/pkg/kmsg v1.7.0 // indirect
+	github.com/ugorji/go/codec v1.2.11 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.23.1 // indirect
 	go.opentelemetry.io/proto/otlp v1.1.0 // indirect
-	go.uber.org/mock v0.4.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.23.0 // indirect
-	golang.org/x/mod v0.16.0 // indirect
-	golang.org/x/net v0.25.0 // indirect
+	golang.org/x/net v0.23.0 // indirect
 	golang.org/x/text v0.15.0 // indirect
-	golang.org/x/tools v0.19.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240102182953-50ed04b92917 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240102182953-50ed04b92917 // indirect

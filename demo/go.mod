@@ -11,14 +11,14 @@ require (
 	github.com/rs/cors v1.10.1
 	github.com/vektah/gqlparser/v2 v2.5.11
 	github.com/wundergraph/cosmo/composition-go v0.0.0-20240124120900-5effe48a4a1d
-	github.com/wundergraph/cosmo/router v0.0.0-20240620122742-7fbe53fd8769
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.50
+	github.com/wundergraph/cosmo/router v0.0.0-20240624151828-db8355a8e41c
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.51
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/otel v1.24.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.23.1
 	go.opentelemetry.io/otel/sdk v1.24.0
 	go.uber.org/zap v1.26.0
-	golang.org/x/sync v0.7.0
+	golang.org/x/sync v0.6.0
 )
 
 require (
@@ -69,14 +69,14 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.23.0 // indirect
 	golang.org/x/mod v0.16.0 // indirect
-	golang.org/x/net v0.25.0 // indirect
+	golang.org/x/net v0.23.0 // indirect
 	golang.org/x/sys v0.20.0 // indirect
 	golang.org/x/text v0.15.0 // indirect
 	golang.org/x/tools v0.19.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240102182953-50ed04b92917 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240102182953-50ed04b92917 // indirect
 	google.golang.org/grpc v1.61.0 // indirect
-	google.golang.org/protobuf v1.34.1 // indirect
+	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	rogchap.com/v8go v0.9.0 // indirect
 )
