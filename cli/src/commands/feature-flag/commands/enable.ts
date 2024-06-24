@@ -13,10 +13,10 @@ export default (opts: BaseCommandOptions) => {
   command.option('-n, --namespace [string]', 'The namespace of the feature flag.');
 
   command.action(async (name, options) => {
-    const spinner = ora('Feature flag is being enabled...').start();
+    const spinner = ora(`The feature flag "${name}" is being enabled...`).start();
     const resp = await opts.client.platform.enableFeatureFlag(
       {
-        featureFlagName: name,
+        name,
         namespace: options.namespace,
         enabled: true,
       },
@@ -27,7 +27,7 @@ export default (opts: BaseCommandOptions) => {
 
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {
-        spinner.succeed('Feature flag was enabled successfully.');
+        spinner.succeed(`The feature flag "${name}" was enabled successfully.`);
         break;
       }
       case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {
@@ -46,7 +46,10 @@ export default (opts: BaseCommandOptions) => {
 
         console.log(
           pc.yellow(
-            'But we found composition errors, while composing the federated graph.\nThe graph will not be updated until the errors are fixed. Please check the errors below:',
+            `There were composition errors when composing at least one federated graph related to the` +
+              ` enabling of feature flag "${name}".` +
+              `.\nThe federated graphs will not be updated until the errors are fixed.` +
+              `\n${pc.bold('Please check the errors below:')}`,
           ),
         );
         for (const compositionError of resp.compositionErrors) {
@@ -64,7 +67,9 @@ export default (opts: BaseCommandOptions) => {
       }
       case EnumStatusCode.ERR_DEPLOYMENT_FAILED: {
         spinner.warn(
-          "The Federated Graph was set up, but the updated composition hasn't been deployed, so it's not accessible to the router. Check the errors listed below for details.",
+          `The feature flag "${name}" was enabled, but the updated composition could not be deployed.` +
+            `\nThis means the updated composition is not accessible to the router.` +
+            `\n${pc.bold('Please check the errors below:')}`,
         );
 
         const deploymentErrorsTable = new Table({
@@ -90,7 +95,7 @@ export default (opts: BaseCommandOptions) => {
         break;
       }
       default: {
-        spinner.fail(`Failed to enable feature flag "${name}"`);
+        spinner.fail(`Failed to enable feature flag "${name}".`);
         if (resp.response?.details) {
           console.log(pc.red(pc.bold(resp.response?.details)));
         }

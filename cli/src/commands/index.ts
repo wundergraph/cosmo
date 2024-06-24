@@ -11,7 +11,7 @@ import OperationCommands from './operations/index.js';
 import RouterCommands from './router/index.js';
 import SchemaCommands from './subgraph/index.js';
 import ContractCommands from './contract/index.js';
-import FeatureGraphCommands from './feature-graph/index.js';
+import FeatureGraphCommands from './feature-subgraph/index.js';
 import FeatureFlagCommands from './feature-flag/index.js';
 
 const client = CreateClient({

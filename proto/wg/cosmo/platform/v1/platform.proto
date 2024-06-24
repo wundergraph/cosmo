@@ -136,8 +136,8 @@ message CreateFederatedSubgraphRequest {
   string namespace = 8;
   optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 9;
   optional bool is_event_driven_graph = 10;
-  optional bool isFeatureGraph = 11;
-  optional string baseSubgraphName = 12;
+  optional bool is_feature_subgraph = 11;
+  optional string base_subgraph_name = 12;
 }
 
 message DeleteFederatedGraphRequest {
@@ -158,6 +158,7 @@ message DeleteFederatedSubgraphRequest {
   // The FQDN of the subgraph to be checked e.g. "wg.team1.orders"
   string subgraph_name = 1;
   string namespace = 2;
+  bool is_feature_subgraph = 3;
 }
 
 message SchemaChange{
@@ -1998,53 +1999,53 @@ message IsMemberLimitReachedResponse {
 }
 
 message CreateFeatureFlagRequest {
-  string featureFlagName = 1;
+  string name = 1;
   string namespace = 2;
   repeated Label labels = 3;
-  repeated string featureGraphNames = 4;
-  bool isEnabled = 5;
+  repeated string feature_subgraph_names = 4;
+  bool is_enabled = 5;
 }
 
 message CreateFeatureFlagResponse {
   Response response = 1;
-  repeated CompositionError compositionErrors = 2;
-  repeated DeploymentError deploymentErrors = 3;
+  repeated CompositionError composition_errors = 2;
+  repeated DeploymentError deployment_errors = 3;
 }
 
 message UpdateFeatureFlagRequest {
-  string featureFlagName = 1;
+  string name = 1;
   string namespace = 2;
   repeated Label labels = 3;
-  repeated string featureGraphNames = 4;
+  repeated string feature_subgraph_names = 4;
 }
 
 message UpdateFeatureFlagResponse {
   Response response = 1;
-  repeated CompositionError compositionErrors = 2;
-  repeated DeploymentError deploymentErrors = 3;
+  repeated CompositionError composition_errors = 2;
+  repeated DeploymentError deployment_errors = 3;
 }
 
 message EnableFeatureFlagRequest {
-  string featureFlagName = 1;
+  string name = 1;
   string namespace = 2;
   bool enabled = 3;
 }
 
 message EnableFeatureFlagResponse {
   Response response = 1;
-  repeated CompositionError compositionErrors = 2;
-  repeated DeploymentError deploymentErrors = 3;
+  repeated CompositionError composition_errors = 2;
+  repeated DeploymentError deployment_errors = 3;
 }
 
 message DeleteFeatureFlagRequest {
-  string featureFlagName = 1;
+  string name = 1;
   string namespace = 2;
 }
 
 message DeleteFeatureFlagResponse {
   Response response = 1;
-  repeated CompositionError compositionErrors = 2;
-  repeated DeploymentError deploymentErrors = 3;
+  repeated CompositionError composition_errors = 2;
+  repeated DeploymentError deployment_errors = 3;
 }
 
 service PlatformService {

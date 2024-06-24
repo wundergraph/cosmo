@@ -1149,12 +1149,12 @@ export class CreateFederatedSubgraphRequest extends Message<CreateFederatedSubgr
   isEventDrivenGraph?: boolean;
 
   /**
-   * @generated from field: optional bool isFeatureGraph = 11;
+   * @generated from field: optional bool is_feature_subgraph = 11;
    */
-  isFeatureGraph?: boolean;
+  isFeatureSubgraph?: boolean;
 
   /**
-   * @generated from field: optional string baseSubgraphName = 12;
+   * @generated from field: optional string base_subgraph_name = 12;
    */
   baseSubgraphName?: string;
 
@@ -1175,8 +1175,8 @@ export class CreateFederatedSubgraphRequest extends Message<CreateFederatedSubgr
     { no: 8, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 9, name: "websocket_subprotocol", kind: "enum", T: proto3.getEnumType(GraphQLWebsocketSubprotocol), opt: true },
     { no: 10, name: "is_event_driven_graph", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
-    { no: 11, name: "isFeatureGraph", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
-    { no: 12, name: "baseSubgraphName", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 11, name: "is_feature_subgraph", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 12, name: "base_subgraph_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateFederatedSubgraphRequest {
@@ -1335,6 +1335,11 @@ export class DeleteFederatedSubgraphRequest extends Message<DeleteFederatedSubgr
    */
   namespace = "";
 
+  /**
+   * @generated from field: bool is_feature_subgraph = 3;
+   */
+  isFeatureSubgraph = false;
+
   constructor(data?: PartialMessage<DeleteFederatedSubgraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1345,6 +1350,7 @@ export class DeleteFederatedSubgraphRequest extends Message<DeleteFederatedSubgr
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "subgraph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "is_feature_subgraph", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteFederatedSubgraphRequest {
@@ -15797,9 +15803,9 @@ export class IsMemberLimitReachedResponse extends Message<IsMemberLimitReachedRe
  */
 export class CreateFeatureFlagRequest extends Message<CreateFeatureFlagRequest> {
   /**
-   * @generated from field: string featureFlagName = 1;
+   * @generated from field: string name = 1;
    */
-  featureFlagName = "";
+  name = "";
 
   /**
    * @generated from field: string namespace = 2;
@@ -15812,12 +15818,12 @@ export class CreateFeatureFlagRequest extends Message<CreateFeatureFlagRequest> 
   labels: Label[] = [];
 
   /**
-   * @generated from field: repeated string featureGraphNames = 4;
+   * @generated from field: repeated string feature_subgraph_names = 4;
    */
-  featureGraphNames: string[] = [];
+  featureSubgraphNames: string[] = [];
 
   /**
-   * @generated from field: bool isEnabled = 5;
+   * @generated from field: bool is_enabled = 5;
    */
   isEnabled = false;
 
@@ -15829,11 +15835,11 @@ export class CreateFeatureFlagRequest extends Message<CreateFeatureFlagRequest> 
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.CreateFeatureFlagRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "featureFlagName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "labels", kind: "message", T: Label, repeated: true },
-    { no: 4, name: "featureGraphNames", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 5, name: "isEnabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "feature_subgraph_names", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 5, name: "is_enabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateFeatureFlagRequest {
@@ -15863,12 +15869,12 @@ export class CreateFeatureFlagResponse extends Message<CreateFeatureFlagResponse
   response?: Response;
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.CompositionError compositionErrors = 2;
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionError composition_errors = 2;
    */
   compositionErrors: CompositionError[] = [];
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.DeploymentError deploymentErrors = 3;
+   * @generated from field: repeated wg.cosmo.platform.v1.DeploymentError deployment_errors = 3;
    */
   deploymentErrors: DeploymentError[] = [];
 
@@ -15881,8 +15887,8 @@ export class CreateFeatureFlagResponse extends Message<CreateFeatureFlagResponse
   static readonly typeName = "wg.cosmo.platform.v1.CreateFeatureFlagResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
-    { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
-    { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
+    { no: 2, name: "composition_errors", kind: "message", T: CompositionError, repeated: true },
+    { no: 3, name: "deployment_errors", kind: "message", T: DeploymentError, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateFeatureFlagResponse {
@@ -15907,9 +15913,9 @@ export class CreateFeatureFlagResponse extends Message<CreateFeatureFlagResponse
  */
 export class UpdateFeatureFlagRequest extends Message<UpdateFeatureFlagRequest> {
   /**
-   * @generated from field: string featureFlagName = 1;
+   * @generated from field: string name = 1;
    */
-  featureFlagName = "";
+  name = "";
 
   /**
    * @generated from field: string namespace = 2;
@@ -15922,9 +15928,9 @@ export class UpdateFeatureFlagRequest extends Message<UpdateFeatureFlagRequest> 
   labels: Label[] = [];
 
   /**
-   * @generated from field: repeated string featureGraphNames = 4;
+   * @generated from field: repeated string feature_subgraph_names = 4;
    */
-  featureGraphNames: string[] = [];
+  featureSubgraphNames: string[] = [];
 
   constructor(data?: PartialMessage<UpdateFeatureFlagRequest>) {
     super();
@@ -15934,10 +15940,10 @@ export class UpdateFeatureFlagRequest extends Message<UpdateFeatureFlagRequest> 
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.UpdateFeatureFlagRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "featureFlagName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "labels", kind: "message", T: Label, repeated: true },
-    { no: 4, name: "featureGraphNames", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 4, name: "feature_subgraph_names", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateFeatureFlagRequest {
@@ -15967,12 +15973,12 @@ export class UpdateFeatureFlagResponse extends Message<UpdateFeatureFlagResponse
   response?: Response;
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.CompositionError compositionErrors = 2;
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionError composition_errors = 2;
    */
   compositionErrors: CompositionError[] = [];
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.DeploymentError deploymentErrors = 3;
+   * @generated from field: repeated wg.cosmo.platform.v1.DeploymentError deployment_errors = 3;
    */
   deploymentErrors: DeploymentError[] = [];
 
@@ -15985,8 +15991,8 @@ export class UpdateFeatureFlagResponse extends Message<UpdateFeatureFlagResponse
   static readonly typeName = "wg.cosmo.platform.v1.UpdateFeatureFlagResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
-    { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
-    { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
+    { no: 2, name: "composition_errors", kind: "message", T: CompositionError, repeated: true },
+    { no: 3, name: "deployment_errors", kind: "message", T: DeploymentError, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateFeatureFlagResponse {
@@ -16011,9 +16017,9 @@ export class UpdateFeatureFlagResponse extends Message<UpdateFeatureFlagResponse
  */
 export class EnableFeatureFlagRequest extends Message<EnableFeatureFlagRequest> {
   /**
-   * @generated from field: string featureFlagName = 1;
+   * @generated from field: string name = 1;
    */
-  featureFlagName = "";
+  name = "";
 
   /**
    * @generated from field: string namespace = 2;
@@ -16033,7 +16039,7 @@ export class EnableFeatureFlagRequest extends Message<EnableFeatureFlagRequest> 
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.EnableFeatureFlagRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "featureFlagName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "enabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
@@ -16065,12 +16071,12 @@ export class EnableFeatureFlagResponse extends Message<EnableFeatureFlagResponse
   response?: Response;
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.CompositionError compositionErrors = 2;
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionError composition_errors = 2;
    */
   compositionErrors: CompositionError[] = [];
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.DeploymentError deploymentErrors = 3;
+   * @generated from field: repeated wg.cosmo.platform.v1.DeploymentError deployment_errors = 3;
    */
   deploymentErrors: DeploymentError[] = [];
 
@@ -16083,8 +16089,8 @@ export class EnableFeatureFlagResponse extends Message<EnableFeatureFlagResponse
   static readonly typeName = "wg.cosmo.platform.v1.EnableFeatureFlagResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
-    { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
-    { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
+    { no: 2, name: "composition_errors", kind: "message", T: CompositionError, repeated: true },
+    { no: 3, name: "deployment_errors", kind: "message", T: DeploymentError, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EnableFeatureFlagResponse {
@@ -16109,9 +16115,9 @@ export class EnableFeatureFlagResponse extends Message<EnableFeatureFlagResponse
  */
 export class DeleteFeatureFlagRequest extends Message<DeleteFeatureFlagRequest> {
   /**
-   * @generated from field: string featureFlagName = 1;
+   * @generated from field: string name = 1;
    */
-  featureFlagName = "";
+  name = "";
 
   /**
    * @generated from field: string namespace = 2;
@@ -16126,7 +16132,7 @@ export class DeleteFeatureFlagRequest extends Message<DeleteFeatureFlagRequest> 
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.DeleteFeatureFlagRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "featureFlagName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
@@ -16157,12 +16163,12 @@ export class DeleteFeatureFlagResponse extends Message<DeleteFeatureFlagResponse
   response?: Response;
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.CompositionError compositionErrors = 2;
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionError composition_errors = 2;
    */
   compositionErrors: CompositionError[] = [];
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.DeploymentError deploymentErrors = 3;
+   * @generated from field: repeated wg.cosmo.platform.v1.DeploymentError deployment_errors = 3;
    */
   deploymentErrors: DeploymentError[] = [];
 
@@ -16175,8 +16181,8 @@ export class DeleteFeatureFlagResponse extends Message<DeleteFeatureFlagResponse
   static readonly typeName = "wg.cosmo.platform.v1.DeleteFeatureFlagResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
-    { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
-    { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
+    { no: 2, name: "composition_errors", kind: "message", T: CompositionError, repeated: true },
+    { no: 3, name: "deployment_errors", kind: "message", T: DeploymentError, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteFeatureFlagResponse {

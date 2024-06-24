@@ -10,7 +10,7 @@ import { BaseCommandOptions } from '../../../core/types/types.js';
 export default (opts: BaseCommandOptions) => {
   const command = new Command('create');
   command.description(
-    'Creates a feature flag on the control plane. A feature flag can contain one or more feature graphs.',
+    'Creates a feature flag on the control plane. A feature flag must contain one or more feature subgraphs.',
   );
   command.argument('<name>', 'The name of the feature flag to create.');
   command.option('-n, --namespace [string]', 'The namespace of the feature flag.');
@@ -19,10 +19,10 @@ export default (opts: BaseCommandOptions) => {
     'The labels to apply to the feature flag. The labels are passed in the format <key>=<value> <key>=<value>.',
   );
   command.requiredOption(
-    '--fg, --feature-graphs <featureGraphs...>',
-    'The names of the feature graphs that will form the feature flag.' +
-      ' The feature graphs are passed in the format <featureGraph1> <featureGraph2> <featureGraph3>.' +
-      ' The feature flag must have at least one feature graph.',
+    '--fs, --feature-subgraphs <featureSubgraphs...>',
+    'The names of the feature subgraphs that will form the feature flag.' +
+      ' The feature subgraphs are passed in the format <featureSubgraph1> <featureSubgraph2> <featureSubgraph3>.' +
+      ' The feature flag must have at least one feature subgraph.',
   );
   command.option(
     '-e, --enabled',
@@ -33,10 +33,10 @@ export default (opts: BaseCommandOptions) => {
     const spinner = ora('The feature flag is being created...').start();
     const resp = await opts.client.platform.createFeatureFlag(
       {
-        featureFlagName: name,
+        name,
         namespace: options.namespace,
         labels: options.label ? options.label.map((label: string) => splitLabel(label)) : [],
-        featureGraphNames: options.featureGraphs,
+        featureSubgraphNames: options.featureSubgraphs,
         isEnabled: !!options.enabled,
       },
       {
@@ -46,11 +46,11 @@ export default (opts: BaseCommandOptions) => {
 
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {
-        spinner.succeed('Feature flag was created successfully.');
+        spinner.succeed(`The feature flag "${name}" was created successfully.`);
         break;
       }
       case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {
-        spinner.warn('Federated Graph was created but with composition errors.');
+        spinner.fail(`The feature flag "${name}" was created but with composition errors.`);
 
         const compositionErrorsTable = new Table({
           head: [
@@ -65,7 +65,10 @@ export default (opts: BaseCommandOptions) => {
 
         console.log(
           pc.yellow(
-            'But we found composition errors, while composing the federated graph.\nThe graph will not be updated until the errors are fixed. Please check the errors below:',
+            `There were composition errors when composing at least one federated graph related to the` +
+              ` creation of feature flag "${name}"` +
+              `.\nThe federated graphs will not be updated until the errors are fixed.` +
+              `\n${pc.bold('Please check the errors below:')}`,
           ),
         );
         for (const compositionError of resp.compositionErrors) {
@@ -83,7 +86,9 @@ export default (opts: BaseCommandOptions) => {
       }
       case EnumStatusCode.ERR_DEPLOYMENT_FAILED: {
         spinner.warn(
-          "The Federated Graph was set up, but the updated composition hasn't been deployed, so it's not accessible to the router. Check the errors listed below for details.",
+          `The feature flag "${name}" was created, but the updated composition could not be deployed.` +
+            `\nThis means the updated composition is not accessible to the router.` +
+            `\n${pc.bold('Please check the errors below:')}`,
         );
 
         const deploymentErrorsTable = new Table({
@@ -109,7 +114,7 @@ export default (opts: BaseCommandOptions) => {
         break;
       }
       default: {
-        spinner.fail(`Failed to create feature flag "${name}"`);
+        spinner.fail(`Failed to create the feature flag "${name}".`);
         if (resp.response?.details) {
           console.log(pc.red(pc.bold(resp.response?.details)));
         }

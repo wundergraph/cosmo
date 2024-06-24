@@ -2,22 +2,24 @@ import fs from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { afterAllSetup, beforeAllSetup, genID } from '../src/core/test-util.js';
-import { Label } from '../src/types/index.js';
-import { featureFlagBaseGraphError } from '../src/core/errors/errors.js';
+import { afterAllSetup, beforeAllSetup, genID } from '../../src/core/test-util.js';
+import { Label } from '../../src/types/index.js';
+import { featureFlagBaseGraphError } from '../../src/core/errors/errors.js';
 import {
   assertFeatureFlagExecutionConfig,
   assertNumberOfCompositions,
   createAndPublishSubgraph,
-  createFeatureFlag, createFederatedGraph,
+  createFeatureFlag,
+  createFederatedGraph,
   createNamespace,
-  createThenPublishFeatureGraph,
+  createThenPublishFeatureSubgraph,
   deleteFeatureFlag,
   featureFlagIntegrationTestSetUp,
-  getDebugTestOptions, GraphNameAndKey,
+  getDebugTestOptions,
+  GraphNameAndKey,
   SetupTest,
   toggleFeatureFlag,
-} from './test-util.js';
+} from '../test-util.js';
 
 // Change to true to enable a longer timeout
 const isDebugMode = false;
@@ -40,7 +42,7 @@ describe('Feature flag integration tests', () => {
     const federatedGraphResponse = await featureFlagIntegrationTestSetUp(
       client,
       [
-        { name: 'users', hasFeatureGraph: true }, { name: 'products', hasFeatureGraph: true },
+        { name: 'users', hasFeatureSubgraph: true }, { name: 'products', hasFeatureSubgraph: true },
       ],
       baseGraphName,
       labels,
@@ -88,7 +90,7 @@ describe('Feature flag integration tests', () => {
     const federatedGraphResponse = await featureFlagIntegrationTestSetUp(
       client,
       [
-        { name: 'users', hasFeatureGraph: true }, { name: 'products', hasFeatureGraph: true },
+        { name: 'users', hasFeatureSubgraph: true }, { name: 'products', hasFeatureSubgraph: true },
       ],
       baseGraphName,
       labels,
@@ -137,7 +139,7 @@ describe('Feature flag integration tests', () => {
     const federatedGraphResponse = await featureFlagIntegrationTestSetUp(
       client,
       [
-        { name: 'users', hasFeatureGraph: true }, { name: 'products', hasFeatureGraph: true },
+        { name: 'users', hasFeatureSubgraph: true }, { name: 'products', hasFeatureSubgraph: true },
       ],
       baseGraphName,
       labels,
@@ -181,7 +183,7 @@ describe('Feature flag integration tests', () => {
     const baseGraphResponse = await featureFlagIntegrationTestSetUp(
       client,
       [
-        { name: 'users', hasFeatureGraph: true }, { name: 'products', hasFeatureGraph: true }
+        { name: 'users', hasFeatureSubgraph: true }, { name: 'products', hasFeatureSubgraph: true }
       ],
       baseGraphName,
       labels,
@@ -252,7 +254,7 @@ describe('Feature flag integration tests', () => {
     const baseGraphResponse = await featureFlagIntegrationTestSetUp(
       client,
       [
-        { name: 'users', hasFeatureGraph: true }, { name: 'products', hasFeatureGraph: true },
+        { name: 'users', hasFeatureSubgraph: true }, { name: 'products', hasFeatureSubgraph: true },
       ],
       baseGraphName,
       labels,
@@ -323,7 +325,7 @@ describe('Feature flag integration tests', () => {
     const baseGraphResponse = await featureFlagIntegrationTestSetUp(
       client,
       [
-        { name: 'users', hasFeatureGraph: true }, { name: 'products', hasFeatureGraph: false },
+        { name: 'users', hasFeatureSubgraph: true }, { name: 'products', hasFeatureSubgraph: false },
       ],
       baseGraphName,
       labels,
@@ -337,7 +339,7 @@ describe('Feature flag integration tests', () => {
     // The base composition
     await assertNumberOfCompositions(client, baseGraphName, 1, namespace);
 
-    await createThenPublishFeatureGraph(client,
+    await createThenPublishFeatureSubgraph(client,
       'products-feature',
       'products',
       namespace,
@@ -362,7 +364,7 @@ describe('Feature flag integration tests', () => {
     const baseGraphResponse = await featureFlagIntegrationTestSetUp(
       client,
       [
-        { name: 'users', hasFeatureGraph: true }, { name: 'products', hasFeatureGraph: true },
+        { name: 'users', hasFeatureSubgraph: true }, { name: 'products', hasFeatureSubgraph: true },
       ],
       baseGraphName,
       labels,
@@ -386,8 +388,8 @@ describe('Feature flag integration tests', () => {
 
     const featureFlagName = 'flag';
     const createFeatureFlagResponse = await client.createFeatureFlag({
-      featureFlagName,
-      featureGraphNames: ['users-feature', 'products-feature'],
+      name: featureFlagName,
+      featureSubgraphNames: ['users-feature', 'products-feature'],
       labels,
       namespace,
       isEnabled: true,
@@ -426,7 +428,7 @@ describe('Feature flag integration tests', () => {
     const baseGraphResponse = await featureFlagIntegrationTestSetUp(
       client,
       [
-        { name: 'users', hasFeatureGraph: true }, { name: 'products', hasFeatureGraph: true }
+        { name: 'users', hasFeatureSubgraph: true }, { name: 'products', hasFeatureSubgraph: true }
       ],
       baseGraphName,
       labels,
@@ -495,9 +497,9 @@ describe('Feature flag integration tests', () => {
     await assertFeatureFlagExecutionConfig(blobStorage, contractKey, false);
 
     // Attempting to delete the feature flag again should result in a not found error
-    const deleteFeatureFlagResponse = await client.deleteFeatureFlag({ featureFlagName, namespace });
+    const deleteFeatureFlagResponse = await client.deleteFeatureFlag({ name: featureFlagName, namespace });
     expect(deleteFeatureFlagResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
-    expect(deleteFeatureFlagResponse.response?.details).toBe(`Feature flag "${featureFlagName}" not found.`);
+    expect(deleteFeatureFlagResponse.response?.details).toBe(`The feature flag "${featureFlagName}" was not found.`);
 
     await server.close();
   });
@@ -512,7 +514,7 @@ describe('Feature flag integration tests', () => {
     const baseGraphResponse = await featureFlagIntegrationTestSetUp(
       client,
       [
-        { name: 'users', hasFeatureGraph: true }, { name: 'products', hasFeatureGraph: true }
+        { name: 'users', hasFeatureSubgraph: true }, { name: 'products', hasFeatureSubgraph: true }
       ],
       baseGraphName,
       labels,
@@ -599,7 +601,7 @@ describe('Feature flag integration tests', () => {
     const baseGraphResponseOne = await featureFlagIntegrationTestSetUp(
       client,
       [
-        { name: 'users', hasFeatureGraph: true }, { name: 'products', hasFeatureGraph: true }
+        { name: 'users', hasFeatureSubgraph: true }, { name: 'products', hasFeatureSubgraph: true }
       ],
       baseGraphNameOne,
       labels,

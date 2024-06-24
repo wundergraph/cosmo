@@ -75,8 +75,8 @@ export class SubgraphRepository {
     subscriptionProtocol?: SubscriptionProtocol;
     websocketSubprotocol?: WebsocketSubprotocol;
     readme?: string;
-    featureGraphOptions?: {
-      isFeatureGraph: boolean;
+    featureSubgraphOptions?: {
+      isFeatureSubgraph: boolean;
       baseSubgraphID: string;
     };
   }): Promise<SubgraphDTO | undefined> {
@@ -118,7 +118,7 @@ export class SubgraphRepository {
           isEventDrivenGraph: data.isEventDrivenGraph,
           subscriptionProtocol: data.subscriptionProtocol ?? 'ws',
           websocketSubprotocol: data.websocketSubprotocol || 'auto',
-          isFeatureGraph: data.featureGraphOptions?.isFeatureGraph || false,
+          isFeatureGraph: data.featureSubgraphOptions?.isFeatureSubgraph || false,
         })
         .returning()
         .execute();
@@ -132,7 +132,7 @@ export class SubgraphRepository {
         namespaceId: data.namespaceId,
       });
 
-      if (federatedGraphs.length > 0 && !data.featureGraphOptions?.isFeatureGraph) {
+      if (federatedGraphs.length > 0 && !data.featureSubgraphOptions?.isFeatureSubgraph) {
         await tx
           .insert(subgraphsToFederatedGraph)
           .values(
@@ -155,11 +155,11 @@ export class SubgraphRepository {
        * 5. Insert into featureFlagsToSubgraph to map the faeture flag to the base subgraph
        */
 
-      if (data.featureGraphOptions) {
+      if (data.featureSubgraphOptions) {
         await tx
           .insert(featureGraphsToSubgraph)
           .values({
-            baseSubgraphId: data.featureGraphOptions.baseSubgraphID,
+            baseSubgraphId: data.featureSubgraphOptions.baseSubgraphID,
             featureGraphId: insertedSubgraph[0].id,
           })
           .execute();
@@ -177,7 +177,7 @@ export class SubgraphRepository {
         lastUpdatedAt: '',
         namespace: data.namespace,
         namespaceId: data.namespaceId,
-        isFeatureGraph: insertedSubgraph[0].isFeatureGraph,
+        isFeatureSubgraph: insertedSubgraph[0].isFeatureGraph,
         isEventDrivenGraph: data.isEventDrivenGraph,
       } as SubgraphDTO;
     });
@@ -303,7 +303,7 @@ export class SubgraphRepository {
           })
           .where(eq(targets.id, subgraph.targetId));
 
-        if (!subgraph.isFeatureGraph) {
+        if (!subgraph.isFeatureSubgraph) {
           // find all federated graphs that match with the new subgraph labels
           const newFederatedGraphs = await fedGraphRepo.bySubgraphLabels({
             labels: newLabels,
@@ -350,7 +350,7 @@ export class SubgraphRepository {
         }
       }
 
-      if (subgraph.isFeatureGraph) {
+      if (subgraph.isFeatureSubgraph) {
         // the fed graphs to be composed are to be fetched by using the base subgraph
         const baseSubgraph = await tx
           .select({
@@ -736,7 +736,7 @@ export class SubgraphRepository {
       namespaceId: resp[0].namespaceId,
       isEventDrivenGraph: resp[0].isEventDrivenGraph,
       isV2Graph,
-      isFeatureGraph: resp[0].isFeatureGraph,
+      isFeatureSubgraph: resp[0].isFeatureGraph,
     };
   }
 

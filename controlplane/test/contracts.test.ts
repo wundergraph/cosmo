@@ -589,6 +589,7 @@ describe('Contract tests', (ctx) => {
     await client.deleteFederatedSubgraph({
       subgraphName: subgraph2Name,
       namespace: 'default',
+      isFeatureSubgraph: false,
     });
 
     const sdlResponse2 = await client.getFederatedGraphSDLByName({

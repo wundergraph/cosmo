@@ -1,24 +1,37 @@
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { Command } from 'commander';
-import ora from 'ora';
 import pc from 'picocolors';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import inquirer from 'inquirer';
 import Table from 'cli-table3';
-import { getBaseHeaders } from '../../../core/config.js';
+import ora from 'ora';
 import { BaseCommandOptions } from '../../../core/types/types.js';
+import { getBaseHeaders } from '../../../core/config.js';
 
 export default (opts: BaseCommandOptions) => {
-  const command = new Command('disable');
-  command.description('Disables a feature flag on the control plane.');
-  command.argument('<name>', 'The name of the feature flag to disable.');
-  command.option('-n, --namespace [string]', 'The namespace of the feature flag.');
-
+  const command = new Command('delete');
+  command.description('Deletes a feature subgraph on the control plane.');
+  command.argument('<name>', 'The name of the feature subgraph to delete.');
+  command.option('-n, --namespace [string]', 'The namespace of the feature subgraph.');
+  command.option('-f --force', 'Flag to force the deletion (skip confirmation).');
   command.action(async (name, options) => {
-    const spinner = ora(`The feature flag "${name}" is being disabled...`).start();
-    const resp = await opts.client.platform.enableFeatureFlag(
+    if (!options.force) {
+      const deletionConfirmed = await inquirer.prompt({
+        name: 'confirmDeletion',
+        type: 'confirm',
+        message: `Are you sure you want to delete the feature subgraph "${name}"?`,
+      });
+      if (!deletionConfirmed.confirmDeletion) {
+        process.exit(1);
+      }
+    }
+
+    const spinner = ora(`The feature subgraph "${name}" is being deleted...`).start();
+
+    const resp = await opts.client.platform.deleteFederatedSubgraph(
       {
-        name,
+        subgraphName: name,
         namespace: options.namespace,
-        enabled: false,
+        isFeatureSubgraph: true,
       },
       {
         headers: getBaseHeaders(),
@@ -27,28 +40,27 @@ export default (opts: BaseCommandOptions) => {
 
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {
-        spinner.succeed(`The feature flag "${name}" was disabled successfully.`);
+        spinner.succeed(`The feature subgraph "${name}" was deleted successfully.`);
+
         break;
       }
       case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {
-        spinner.warn(`The feature flag "${name}" was disabled but with composition errors.`);
+        spinner.fail(`The feature subgraph "${name}" was deleted but with composition errors.`);
 
         const compositionErrorsTable = new Table({
           head: [
             pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
             pc.bold(pc.white('NAMESPACE')),
-            pc.bold(pc.white('FEATURE_FLAG')),
             pc.bold(pc.white('ERROR_MESSAGE')),
           ],
-          colWidths: [30, 30, 30, 120],
+          colWidths: [30, 30, 120],
           wordWrap: true,
         });
 
         console.log(
-          pc.yellow(
+          pc.red(
             `There were composition errors when composing at least one federated graph related to the` +
-              ` disabling of feature flag "${name}".` +
-              `.\nThe federated graphs will not be updated until the errors are fixed.` +
+              ` feature subgraph "${name}".\nThe router will continue to work with the latest valid schema.` +
               `\n${pc.bold('Please check the errors below:')}`,
           ),
         );
@@ -56,7 +68,6 @@ export default (opts: BaseCommandOptions) => {
           compositionErrorsTable.push([
             compositionError.federatedGraphName,
             compositionError.namespace,
-            compositionError.featureFlag || '-',
             compositionError.message,
           ]);
         }
@@ -67,7 +78,7 @@ export default (opts: BaseCommandOptions) => {
       }
       case EnumStatusCode.ERR_DEPLOYMENT_FAILED: {
         spinner.warn(
-          `The feature flag "${name}" was disabled, but the updated composition could not be deployed.` +
+          `The feature subgraph "${name}" was deleted, but the updated composition could not be deployed.` +
             `\nThis means the updated composition is not accessible to the router.` +
             `\n${pc.bold('Please check the errors below:')}`,
         );
@@ -95,7 +106,7 @@ export default (opts: BaseCommandOptions) => {
         break;
       }
       default: {
-        spinner.fail(`Failed to disable the feature flag "${name}".`);
+        spinner.fail(`Failed to delete the feature subgraph "${name}".`);
         if (resp.response?.details) {
           console.log(pc.red(pc.bold(resp.response?.details)));
         }

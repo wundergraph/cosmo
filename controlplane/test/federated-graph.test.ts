@@ -308,6 +308,7 @@ describe('Federated Graph', (ctx) => {
     let deleteSubgraphResp = await client.deleteFederatedSubgraph({
       subgraphName: subgraph1Name,
       namespace: 'default',
+      isFeatureSubgraph: false,
     });
     expect(deleteSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
 
@@ -320,10 +321,11 @@ describe('Federated Graph', (ctx) => {
     expect(graph.sdl).toBeDefined();
     expect(graph.sdl).not.toBe('');
 
-    // delete the subgraph because it was the only one it produced a composition error
+    // delete the subgraph because it was responsible for the composition error
     deleteSubgraphResp = await client.deleteFederatedSubgraph({
       subgraphName: subgraph2Name,
       namespace: 'default',
+      isFeatureSubgraph: false,
     });
     expect(deleteSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
 

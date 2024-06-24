@@ -10,34 +10,38 @@ import { BaseCommandOptions } from '../../../core/types/types.js';
 export default (opts: BaseCommandOptions) => {
   const command = new Command('update');
   command.description('Updates a feature flag group on the control plane.');
-  command.argument('<name>', 'The name of the feature flag group to update.');
+  command.argument('<name>', 'The name of the feature flag to update.');
   command.option('-n, --namespace [string]', 'The namespace of the feature flag.');
   command.option(
     '--label [labels...]',
     'The labels to apply to the feature flag. The labels are passed in the format <key>=<value> <key>=<value>.',
   );
   command.option(
-    '--fg, --feature-graphs <featureGraphs...>',
-    'The names of the feature graphs which have to be the part of the feature flag. These feature graphs will replace the ones stored. The feature graphs are passed in the format <featureGraph1> <featureGraph2> <featureGraph3>. The feature flag must have at least 1 feature graphs.',
+    '--fs, --feature-subgraphs <featureSubgraphs...>',
+    'The names of the feature subgraphs that compose the feature flag.' +
+      ' These feature subgraphs will replace the ones stored.' +
+      ' The feature subgraphs are passed in the format <featureSubgraph1> <featureSubgraph2> <featureSubgraph3>.' +
+      ' The feature flag must contain at least one feature subgraph.',
   );
   command.action(async (name, options) => {
-    if (options.featureGraphs && options.featureGraphs.length === 0) {
+    if (options.featureGraphs && options.featureSubgraphs.length === 0) {
       program.error(
         pc.red(
           pc.bold(
-            `The feature flag must have at least one feature graph. Please check the feature graphs and try again.`,
+            `The feature flag must contain at least one feature subgraph.` +
+              ` Please check the feature subgraphs and try again.`,
           ),
         ),
       );
     }
 
-    const spinner = ora('Feature flag is being updated...').start();
+    const spinner = ora(`The feature flag "${name}" is being updated...`).start();
     const resp = await opts.client.platform.updateFeatureFlag(
       {
-        featureFlagName: name,
+        name,
         namespace: options.namespace,
         labels: options.label ? options.label.map((label: string) => splitLabel(label)) : [],
-        featureGraphNames: options.featureGraphs,
+        featureSubgraphNames: options.featureSubgraphs,
       },
       {
         headers: getBaseHeaders(),
@@ -46,11 +50,11 @@ export default (opts: BaseCommandOptions) => {
 
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {
-        spinner.succeed('Feature flag was updated successfully.');
+        spinner.succeed(`The feature flag "${name}" was updated successfully.`);
         break;
       }
       case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {
-        spinner.warn('Federated Graph was updated but with composition errors.');
+        spinner.warn(`The feature flag "${name}" was updated but with composition errors.`);
 
         const compositionErrorsTable = new Table({
           head: [
@@ -65,7 +69,10 @@ export default (opts: BaseCommandOptions) => {
 
         console.log(
           pc.yellow(
-            'But we found composition errors, while composing the federated graph.\nThe graph will not be updated until the errors are fixed. Please check the errors below:',
+            `There were composition errors when composing at least one federated graph related to the` +
+              ` updating of feature flag "${name}".` +
+              `.\nThe federated graphs will not be updated until the errors are fixed.` +
+              `\n${pc.bold('Please check the errors below:')}`,
           ),
         );
         for (const compositionError of resp.compositionErrors) {
@@ -83,7 +90,9 @@ export default (opts: BaseCommandOptions) => {
       }
       case EnumStatusCode.ERR_DEPLOYMENT_FAILED: {
         spinner.warn(
-          "The Federated Graph was set up, but the updated composition hasn't been deployed, so it's not accessible to the router. Check the errors listed below for details.",
+          `The feature flag "${name}" was updated, but the updated composition could not be deployed.` +
+            `\nThis means the updated composition is not accessible to the router.` +
+            `\n${pc.bold('Please check the errors below:')}`,
         );
 
         const deploymentErrorsTable = new Table({
@@ -109,7 +118,7 @@ export default (opts: BaseCommandOptions) => {
         break;
       }
       default: {
-        spinner.fail(`Failed to update feature flag "${name}"`);
+        spinner.fail(`Failed to update feature flag "${name}".`);
         if (resp.response?.details) {
           console.log(pc.red(pc.bold(resp.response?.details)));
         }

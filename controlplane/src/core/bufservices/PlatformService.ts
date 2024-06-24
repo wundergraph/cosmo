@@ -905,37 +905,37 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           opts.billingDefaultPlanId,
         );
 
-        const graph = await subgraphRepo.byName(req.name, req.namespace);
-        if (!graph) {
+        const subgraph = await subgraphRepo.byName(req.name, req.namespace);
+        if (!subgraph) {
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Subgraph '${req.name}' not found`,
+              details: `The subgraph "${req.name}" was not found.`,
             },
             compositionErrors: [],
             deploymentErrors: [],
           };
         }
 
-        if (graph.isFeatureGraph) {
+        if (subgraph.isFeatureSubgraph) {
           return {
             response: {
               code: EnumStatusCode.ERR,
-              details: `Feature graphs cannot be moved`,
+              details: `Feature subgraphs cannot be moved.`,
             },
             compositionErrors: [],
             deploymentErrors: [],
           };
         }
 
-        const featureGraphs = await featureFlagRepo.getFeatureGraphsBySubgraphId({
-          subgraphId: graph.id,
+        const featureSubgraphs = await featureFlagRepo.getFeatureSubgraphsByBaseSubgraphId({
+          baseSubgraphId: subgraph.id,
         });
-        if (featureGraphs.length > 0) {
+        if (featureSubgraphs.length > 0) {
           return {
             response: {
               code: EnumStatusCode.ERR,
-              details: `Subgraph with feature graphs cannot be moved`,
+              details: `Subgraphs that form the base of one or more feature subgraphs cannot be moved.`,
             },
             compositionErrors: [],
             deploymentErrors: [],
@@ -945,7 +945,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         await opts.authorizer.authorize({
           db: opts.db,
           graph: {
-            targetId: graph.targetId,
+            targetId: subgraph.targetId,
             targetType: 'subgraph',
           },
           headers: ctx.requestHeader,
@@ -962,7 +962,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             if (exists) {
               throw new PublicError(
                 EnumStatusCode.ERR_ALREADY_EXISTS,
-                `A subgraph '${req.name}' already exists in the namespace ${req.newNamespace}`,
+                `The subgraph "${req.name}" already exists in the namespace "${req.newNamespace}".`,
               );
             }
 
@@ -973,11 +973,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
             const { compositionErrors, updatedFederatedGraphs, deploymentErrors } = await subgraphRepo.move(
               {
-                targetId: graph.targetId,
+                targetId: subgraph.targetId,
                 updatedBy: authContext.userId,
-                subgraphId: graph.id,
-                subgraphLabels: graph.labels,
-                currentNamespaceId: graph.namespaceId,
+                subgraphId: subgraph.id,
+                subgraphLabels: subgraph.labels,
+                currentNamespaceId: subgraph.namespaceId,
                 newNamespaceId: newNamespace.id,
               },
               opts.blobStorage,
@@ -993,7 +993,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               action: 'moved',
               actorId: authContext.userId,
               auditableType: 'subgraph',
-              auditableDisplayName: graph.name,
+              auditableDisplayName: subgraph.name,
               actorDisplayName: authContext.userDisplayName,
               actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
               targetNamespaceId: newNamespace.id,
@@ -1911,12 +1911,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         let baseSubgraphID = '';
-        if (req.isFeatureGraph) {
+        if (req.isFeatureSubgraph) {
           if (!req.baseSubgraphName) {
             return {
               response: {
                 code: EnumStatusCode.ERR,
-                details: `A feature graph requires a base subgraph.`,
+                details: `A feature subgraph requires a base subgraph.`,
               },
               compositionErrors: [],
               admissionErrors: [],
@@ -1950,9 +1950,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             req.subscriptionProtocol === undefined ? undefined : formatSubscriptionProtocol(req.subscriptionProtocol),
           websocketSubprotocol:
             req.websocketSubprotocol === undefined ? undefined : formatWebsocketSubprotocol(req.websocketSubprotocol),
-          featureGraphOptions: req.isFeatureGraph
+          featureSubgraphOptions: req.isFeatureSubgraph
             ? {
-                isFeatureGraph: req.isFeatureGraph || false,
+                isFeatureSubgraph: req.isFeatureSubgraph || false,
                 baseSubgraphID,
               }
             : undefined,
@@ -1962,17 +1962,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           return {
             response: {
               code: EnumStatusCode.ERR,
-              details: `${req.isFeatureGraph ? 'Feature graph' : 'Subgraph'} '${req.name}' could not be created`,
+              details: `The ${req.isFeatureSubgraph ? 'feature' : ''} subgraph "${req.name}" could not be created.`,
             },
           };
         }
 
         await auditLogRepo.addAuditLog({
           organizationId: authContext.organizationId,
-          auditAction: req.isFeatureGraph ? 'feature_graph.created' : 'subgraph.created',
+          auditAction: req.isFeatureSubgraph ? 'feature_subgraph.created' : 'subgraph.created',
           action: 'created',
           actorId: authContext.userId,
-          auditableType: req.isFeatureGraph ? 'feature_graph' : 'subgraph',
+          auditableType: req.isFeatureSubgraph ? 'feature_subgraph' : 'subgraph',
           auditableDisplayName: subgraph.name,
           actorDisplayName: authContext.userDisplayName,
           actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
@@ -2059,11 +2059,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const subgraph = await subgraphRepo.byName(req.subgraphName, req.namespace);
 
-        if (subgraph?.isFeatureGraph) {
+        if (subgraph?.isFeatureSubgraph) {
           return {
             response: {
               code: EnumStatusCode.ERR,
-              details: `Subgraph '${req.subgraphName}' is a feature graph and cannot perform check operations on them.`,
+              details: `The subgraph "${req.subgraphName}" is a feature subgraph, which do not support check operations.`,
             },
             breakingChanges: [],
             nonBreakingChanges: [],
@@ -2925,10 +2925,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         await auditLogRepo.addAuditLog({
           organizationId: authContext.organizationId,
-          auditAction: subgraph.isFeatureGraph ? 'feature_graph.updated' : 'subgraph.updated',
+          auditAction: subgraph.isFeatureSubgraph ? 'feature_subgraph.updated' : 'subgraph.updated',
           action: 'updated',
           actorId: authContext.userId,
-          auditableType: subgraph.isFeatureGraph ? 'feature_graph' : 'subgraph',
+          auditableType: subgraph.isFeatureSubgraph ? 'feature_subgraph' : 'subgraph',
           auditableDisplayName: subgraph.name,
           actorDisplayName: authContext.userDisplayName,
           actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
@@ -3609,7 +3609,29 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Subgraph '${req.subgraphName}' not found`,
+              details: `The ${req.isFeatureSubgraph ? `feature` : ``} subgraph "${req.subgraphName}" was not found.`,
+            },
+            compositionErrors: [],
+            deploymentErrors: [],
+          };
+        }
+        if (req.isFeatureSubgraph && !subgraph.isFeatureSubgraph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The subgraph "${req.subgraphName}" is not a feature subgraph.`,
+            },
+            compositionErrors: [],
+            deploymentErrors: [],
+          };
+        }
+        if (!req.isFeatureSubgraph && subgraph.isFeatureSubgraph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details:
+                `The subgraph "${req.subgraphName}" is a feature subgraph.` +
+                ` Please use the feature-subgraph delete command instead.`,
             },
             compositionErrors: [],
             deploymentErrors: [],
@@ -3636,13 +3658,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           const auditLogRepo = new AuditLogRepository(tx);
 
           let labels = subgraph.labels;
-          if (subgraph.isFeatureGraph) {
-            const baseSubgraph = await featureFlagRepo.getBaseSubgraphByFGId({ featureGraphId: subgraph.id });
+          if (subgraph.isFeatureSubgraph) {
+            const baseSubgraph = await featureFlagRepo.getBaseSubgraphByFeatureSubgraphId({ id: subgraph.id });
             if (baseSubgraph) {
               labels = baseSubgraph.labels;
             }
           } else {
-            await featureFlagRepo.deleteFeatureGraphsBySubgraphId({
+            await featureFlagRepo.deleteFeatureSubgraphsByBaseSubgraphId({
               subgraphId: subgraph.id,
               namespaceId: subgraph.namespaceId,
             });
@@ -3660,10 +3682,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
           await auditLogRepo.addAuditLog({
             organizationId: authContext.organizationId,
-            auditAction: subgraph.isFeatureGraph ? 'feature_graph.deleted' : 'subgraph.deleted',
+            auditAction: subgraph.isFeatureSubgraph ? 'feature_subgraph.deleted' : 'subgraph.deleted',
             action: 'deleted',
             actorId: authContext.userId,
-            auditableType: subgraph.isFeatureGraph ? 'feature_graph' : 'subgraph',
+            auditableType: subgraph.isFeatureSubgraph ? 'feature_subgraph' : 'subgraph',
             auditableDisplayName: subgraph.name,
             actorDisplayName: authContext.userDisplayName,
             actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
@@ -3750,11 +3772,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        if (req.featureGraphNames.length === 0) {
+        if (req.featureSubgraphNames.length === 0) {
           return {
             response: {
               code: EnumStatusCode.ERR,
-              details: `At least one feature graph is required to create a feature flag.`,
+              details: `At least one feature subgraph is required to create a feature flag.`,
             },
             compositionErrors: [],
             deploymentErrors: [],
@@ -3785,14 +3807,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         const existingFeatureFlag = await featureFlagRepo.getFeatureFlagByName({
-          featureFlagName: req.featureFlagName,
+          featureFlagName: req.name,
           namespaceId: namespace.id,
         });
         if (existingFeatureFlag) {
           return {
             response: {
               code: EnumStatusCode.ERR_ALREADY_EXISTS,
-              details: `Feature flag "${req.featureFlagName}" already exists in the namespace "${namespace.name}".`,
+              details: `The feature flag "${req.name}" already exists in the namespace "${namespace.name}".`,
             },
             compositionErrors: [],
             deploymentErrors: [],
@@ -3800,14 +3822,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         let errorMessage = '';
-        const featureGraphIds = [];
-        for (const featureGraphName of req.featureGraphNames) {
-          const subgraph = await subgraphRepo.byName(featureGraphName, req.namespace);
-          if (!subgraph || !subgraph.isFeatureGraph) {
-            errorMessage += `Feature graph "${featureGraphName}" not found.\n`;
+        const featureSubgraphIds = [];
+        for (const featureSubgraphName of req.featureSubgraphNames) {
+          const subgraph = await subgraphRepo.byName(featureSubgraphName, req.namespace);
+          if (!subgraph || !subgraph.isFeatureSubgraph) {
+            errorMessage += `The feature subgraph "${featureSubgraphName}" was not found.\n`;
             continue;
           }
-          featureGraphIds.push(subgraph.id);
+          featureSubgraphIds.push(subgraph.id);
         }
 
         if (errorMessage) {
@@ -3825,9 +3847,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const featureFlag = await featureFlagRepo.createFeatureFlag({
           namespaceId: namespace.id,
-          featureFlagName: req.featureFlagName,
+          name: req.name,
           labels: req.labels,
-          featureGraphIds,
+          featureSubgraphIds,
           createdBy: authContext.userId,
         });
 
@@ -3875,7 +3897,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               cdnBaseUrl: opts.cdnBaseUrl,
               webhookJWTSecret: opts.admissionWebhookJWTSecret,
             },
-            featureFlagName: req.featureFlagName,
+            featureFlagName: req.name,
             isFeatureFlagEnabled: true,
           });
 
@@ -3986,14 +4008,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         const featureFlagDTO = await featureFlagRepo.getFeatureFlagByName({
-          featureFlagName: req.featureFlagName,
+          featureFlagName: req.name,
           namespaceId: namespace.id,
         });
         if (!featureFlagDTO) {
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Feature flag "${req.featureFlagName}" does not exists in the namespace "${req.namespace}".`,
+              details: `Feature flag "${req.name}" does not exists in the namespace "${req.namespace}".`,
             },
             compositionErrors: [],
             deploymentErrors: [],
@@ -4001,14 +4023,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         let errorMessage = '';
-        const featureGraphIds = [];
-        for (const featureGraphName of req.featureGraphNames) {
-          const subgraph = await subgraphRepo.byName(featureGraphName, req.namespace);
-          if (!subgraph || !subgraph.isFeatureGraph) {
-            errorMessage += `Feature graph "${featureGraphName}" not found.\n`;
+        const featureSubgraphIds = [];
+        for (const featureSubgraphName of req.featureSubgraphNames) {
+          const subgraph = await subgraphRepo.byName(featureSubgraphName, req.namespace);
+          if (!subgraph || !subgraph.isFeatureSubgraph) {
+            errorMessage += `The feature subgraph "${featureSubgraphName}" was not found.\n`;
             continue;
           }
-          featureGraphIds.push(subgraph.id);
+          featureSubgraphIds.push(subgraph.id);
         }
 
         if (errorMessage) {
@@ -4027,7 +4049,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         await featureFlagRepo.updateFeatureFlag({
           featureFlag: featureFlagDTO,
           labels: req.labels,
-          featureGraphIds,
+          featureSubgraphIds,
         });
 
         await auditLogRepo.addAuditLog({
@@ -4160,14 +4182,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         const featureFlag = await featureFlagRepo.getFeatureFlagByName({
-          featureFlagName: req.featureFlagName,
+          featureFlagName: req.name,
           namespaceId: namespace.id,
         });
         if (!featureFlag) {
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Feature flag '${req.featureFlagName}' not found`,
+              details: `The feature flag "${req.name}" was not found.`,
             },
             compositionErrors: [],
             deploymentErrors: [],
@@ -4200,7 +4222,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               cdnBaseUrl: opts.cdnBaseUrl,
               webhookJWTSecret: opts.admissionWebhookJWTSecret,
             },
-            featureFlagName: req.featureFlagName,
+            featureFlagName: req.name,
             isFeatureFlagEnabled: req.enabled,
           });
 
@@ -4299,14 +4321,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         const featureFlag = await featureFlagRepo.getFeatureFlagByName({
-          featureFlagName: req.featureFlagName,
+          featureFlagName: req.name,
           namespaceId: namespace.id,
         });
         if (!featureFlag) {
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Feature flag "${req.featureFlagName}" not found.`,
+              details: `The feature flag "${req.name}" was not found.`,
             },
             compositionErrors: [],
             deploymentErrors: [],
@@ -4366,7 +4388,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               cdnBaseUrl: opts.cdnBaseUrl,
               webhookJWTSecret: opts.admissionWebhookJWTSecret,
             },
-            featureFlagName: req.featureFlagName,
+            featureFlagName: req.name,
             isFeatureFlagEnabled: false,
           });
 
@@ -4945,10 +4967,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         await auditLogRepo.addAuditLog({
           organizationId: authContext.organizationId,
-          auditAction: subgraph.isFeatureGraph ? 'feature_graph.updated' : 'subgraph.updated',
+          auditAction: subgraph.isFeatureSubgraph ? 'feature_subgraph.updated' : 'subgraph.updated',
           action: 'updated',
           actorId: authContext.userId,
-          auditableType: subgraph.isFeatureGraph ? 'feature_graph' : 'subgraph',
+          auditableType: subgraph.isFeatureSubgraph ? 'feature_subgraph' : 'subgraph',
           auditableDisplayName: subgraph.name,
           actorDisplayName: authContext.userDisplayName,
           actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',

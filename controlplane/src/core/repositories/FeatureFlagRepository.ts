@@ -48,24 +48,24 @@ export class FeatureFlagRepository {
   ) {}
 
   public createFeatureFlag({
-    featureFlagName,
+    name,
     namespaceId,
     labels,
     createdBy,
-    featureGraphIds,
+    featureSubgraphIds,
   }: {
-    featureFlagName: string;
+    name: string;
     namespaceId: string;
     labels: Label[];
     createdBy: string;
-    featureGraphIds: string[];
+    featureSubgraphIds: string[];
   }) {
     const uniqueLabels = normalizeLabels(labels);
     return this.db.transaction(async (tx) => {
       const featureFlag = await tx
         .insert(featureFlags)
         .values({
-          name: featureFlagName,
+          name,
           organizationId: this.organizationId,
           namespaceId,
           createdBy,
@@ -74,9 +74,9 @@ export class FeatureFlagRepository {
         })
         .returning()
         .execute();
-      if (featureGraphIds.length > 0) {
+      if (featureSubgraphIds.length > 0) {
         await tx.insert(featureFlagToFeatureGraphs).values(
-          featureGraphIds.map((featureGraphId) => ({
+          featureSubgraphIds.map((featureGraphId) => ({
             featureFlagId: featureFlag[0].id,
             featureGraphId,
           })),
@@ -89,11 +89,11 @@ export class FeatureFlagRepository {
   public updateFeatureFlag({
     featureFlag,
     labels,
-    featureGraphIds,
+    featureSubgraphIds,
   }: {
     featureFlag: FeatureFlagDTO;
     labels: Label[];
-    featureGraphIds: string[];
+    featureSubgraphIds: string[];
   }) {
     const uniqueLabels = normalizeLabels(labels);
     return this.db.transaction(async (tx) => {
@@ -105,7 +105,7 @@ export class FeatureFlagRepository {
         .where(eq(featureFlags.id, featureFlag.id))
         .execute();
 
-      if (featureGraphIds.length > 0) {
+      if (featureSubgraphIds.length > 0) {
         // delete all the feature flags of the group
         await tx
           .delete(featureFlagToFeatureGraphs)
@@ -113,7 +113,7 @@ export class FeatureFlagRepository {
           .execute();
 
         await tx.insert(featureFlagToFeatureGraphs).values(
-          featureGraphIds.map((featureGraphId) => ({
+          featureSubgraphIds.map((featureGraphId) => ({
             featureFlagId: featureFlag.id,
             featureGraphId,
           })),
@@ -222,13 +222,13 @@ export class FeatureFlagRepository {
     };
   }
 
-  public async getBaseSubgraphByFGId({ featureGraphId }: { featureGraphId: string }): Promise<SubgraphDTO | undefined> {
+  public async getBaseSubgraphByFeatureSubgraphId({ id }: { id: string }): Promise<SubgraphDTO | undefined> {
     const baseSubgraph = await this.db
       .select({
         subgraphId: featureGraphsToSubgraph.baseSubgraphId,
       })
       .from(featureGraphsToSubgraph)
-      .where(eq(featureGraphsToSubgraph.featureGraphId, featureGraphId));
+      .where(eq(featureGraphsToSubgraph.featureGraphId, id));
 
     if (baseSubgraph.length === 0) {
       return undefined;
@@ -239,18 +239,24 @@ export class FeatureFlagRepository {
     return baseSubgraphDTO;
   }
 
-  public async getFeatureGraphsBySubgraphId({ subgraphId }: { subgraphId: string }) {
+  public async getFeatureSubgraphsByBaseSubgraphId({ baseSubgraphId }: { baseSubgraphId: string }) {
     const ffs = await this.db
       .select({
         id: featureGraphsToSubgraph.featureGraphId,
       })
       .from(featureGraphsToSubgraph)
-      .where(eq(featureGraphsToSubgraph.baseSubgraphId, subgraphId));
+      .where(eq(featureGraphsToSubgraph.baseSubgraphId, baseSubgraphId));
 
     return ffs;
   }
 
-  public deleteFeatureGraphsBySubgraphId({ subgraphId, namespaceId }: { subgraphId: string; namespaceId: string }) {
+  public deleteFeatureSubgraphsByBaseSubgraphId({
+    subgraphId,
+    namespaceId,
+  }: {
+    subgraphId: string;
+    namespaceId: string;
+  }) {
     return this.db.transaction(async (tx) => {
       const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
       const ffs = await tx

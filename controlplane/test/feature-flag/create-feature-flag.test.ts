@@ -1,7 +1,13 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { afterAllSetup, beforeAllSetup, genID } from '../src/core/test-util.js';
-import { createBaseAndFeatureGraph, createNamespace, createSubgraph, SetupTest } from './test-util.js';
+import { afterAllSetup, beforeAllSetup, genID } from '../../src/core/test-util.js';
+import {
+  createBaseAndFeatureSubgraph,
+  createNamespace,
+  createSubgraph,
+  DEFAULT_SUBGRAPH_URL_ONE,
+  SetupTest,
+} from '../test-util.js';
 
 let dbname = '';
 
@@ -14,19 +20,19 @@ describe('Create feature flag tests', () => {
     await afterAllSetup(dbname);
   });
 
-  test('that a feature flag can be created with a feature graph', async () => {
+  test('that a feature flag can be created with a feature subgraph', async () => {
     const { client, server } = await SetupTest({ dbname });
 
     const subgraphName = genID('subgraph');
-    const featureGraphName = genID('featureGraph');
+    const featureSubgraphName = genID('featureSubgraph');
 
-    await createBaseAndFeatureGraph(client, subgraphName, featureGraphName, 'http://localhost:4001', 'http://localhost:4002');
+    await createBaseAndFeatureSubgraph(client, subgraphName, featureSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, 'http://localhost:4002');
 
     const flagName = genID('flag');
 
     const featureFlagResponse = await client.createFeatureFlag({
-      featureFlagName: flagName,
-      featureGraphNames: [featureGraphName],
+      name: flagName,
+      featureSubgraphNames: [featureSubgraphName],
     });
 
     expect(featureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -34,16 +40,17 @@ describe('Create feature flag tests', () => {
     await server.close();
   });
 
-  test('that an error is returned if a feature flag is created without any feature graphs', async () => {
+  test('that an error is returned if a feature flag is created without any feature subgraphs', async () => {
     const { client, server } = await SetupTest({ dbname });
 
     const flagName = genID('flag');
     const featureFlagResponse = await client.createFeatureFlag({
-      featureFlagName: flagName,
+      name: flagName,
     });
 
     expect(featureFlagResponse.response?.code).toBe(EnumStatusCode.ERR);
-    expect(featureFlagResponse.response?.details).toBe('At least one feature graph is required to create a feature flag.');
+    expect(featureFlagResponse.response?.details)
+      .toBe('At least one feature subgraph is required to create a feature flag.');
 
     await server.close();
   });
@@ -52,73 +59,76 @@ describe('Create feature flag tests', () => {
     const { client, server } = await SetupTest({ dbname });
 
     const subgraphName = genID('subgraph');
-    const featureGraphName = genID('featureGraph');
+    const featureSubgraphName = genID('featureSubgraph');
 
-    await createBaseAndFeatureGraph(client, subgraphName, featureGraphName, 'http://localhost:4001', 'http://localhost:4002');
+    await createBaseAndFeatureSubgraph(client, subgraphName, featureSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, 'http://localhost:4002');
 
     const flagName = genID('flag');
 
     const featureFlagResponse = await client.createFeatureFlag({
-      featureFlagName: flagName,
-      featureGraphNames: [featureGraphName],
+      name: flagName,
+      featureSubgraphNames: [featureSubgraphName],
     });
 
     expect(featureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
 
     const featureFlagResponseTwo = await client.createFeatureFlag({
-      featureFlagName: flagName,
-      featureGraphNames: [featureGraphName],
+      name: flagName,
+      featureSubgraphNames: [featureSubgraphName],
     });
 
     expect(featureFlagResponseTwo.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
-    expect(featureFlagResponseTwo.response?.details).toBe(`Feature flag "${flagName}" already exists in the namespace "default".`);
+    expect(featureFlagResponseTwo.response?.details)
+      .toBe(`The feature flag "${flagName}" already exists in the namespace "default".`);
 
     await server.close();
   });
 
-  test('that an error is returned if a feature graph cannot be found when creating a feature flag', async () => {
+  test('that an error is returned if a feature subgraph cannot be found when creating a feature flag', async () => {
     const { client, server } = await SetupTest({ dbname });
 
-    const featureGraphName = genID('featureGraph');
+    const featureSubgraphName = genID('featureSubgraph');
     const flagName = genID('flag');
 
     const featureFlagResponse = await client.createFeatureFlag({
-      featureFlagName: flagName,
-      featureGraphNames: [featureGraphName],
+      name: flagName,
+      featureSubgraphNames: [featureSubgraphName],
     });
 
     expect(featureFlagResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
-    expect(featureFlagResponse.response?.details).toBe(`Feature graph "${featureGraphName}" not found.\n`);
+    expect(featureFlagResponse.response?.details)
+      .toBe(`The feature subgraph "${featureSubgraphName}" was not found.\n`);
 
     await server.close();
   });
 
-  test('that an error is returned if a non-feature graph is used to create a feature flag', async () => {
+  test('that an error is returned if a non-feature subgraph is used to create a feature flag', async () => {
     const { client, server } = await SetupTest({ dbname });
 
     const subgraphName = genID('subgraph');
-    await createSubgraph(client, subgraphName, 'http://localhost:4001');
+    await createSubgraph(client, subgraphName, DEFAULT_SUBGRAPH_URL_ONE);
 
     const flagName = genID('flag');
 
     const featureFlagResponse = await client.createFeatureFlag({
-      featureFlagName: flagName,
-      featureGraphNames: [subgraphName],
+      name: flagName,
+      featureSubgraphNames: [subgraphName],
     });
 
     expect(featureFlagResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
-    expect(featureFlagResponse.response?.details).toBe(`Feature graph "${subgraphName}" not found.\n`);
+    expect(featureFlagResponse.response?.details)
+      .toBe(`The feature subgraph "${subgraphName}" was not found.\n`);
 
     await server.close();
   });
 
-  test('that an error is returned if the feature graph does not exist in the same namespace as the feature flag', async () => {
+  test('that an error is returned if the feature subgraph does not exist in the same namespace as the feature flag', async () => {
     const { client, server } = await SetupTest({ dbname });
 
     const subgraphName = genID('subgraph');
-    const featureGraphName = genID('featureGraph');
+    const featureSubgraphName = genID('featureSubgraph');
 
-    await createBaseAndFeatureGraph(client, subgraphName, featureGraphName, 'http://localhost:4001', 'http://localhost:4002');
+    await createBaseAndFeatureSubgraph(client, subgraphName, featureSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, 'http://localhost:4002');
 
     const namespace = genID('namespace').toLowerCase();
     await createNamespace(client, namespace);
@@ -126,13 +136,14 @@ describe('Create feature flag tests', () => {
     const flagName = genID('flag');
 
     const featureFlagResponse = await client.createFeatureFlag({
-      featureFlagName: flagName,
+      name: flagName,
       namespace,
-      featureGraphNames: [featureGraphName],
+      featureSubgraphNames: [featureSubgraphName],
     });
 
     expect(featureFlagResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
-    expect(featureFlagResponse.response?.details).toBe(`Feature graph "${featureGraphName}" not found.\n`);
+    expect(featureFlagResponse.response?.details)
+      .toBe(`The feature subgraph "${featureSubgraphName}" was not found.\n`);
 
     await server.close();
   });

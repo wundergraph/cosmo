@@ -52,6 +52,8 @@ describe('DeleteSubgraph', (ctx) => {
     const deleteFederatedSubgraphResp = await client.deleteFederatedSubgraph({
       subgraphName,
       namespace: 'default',
+      isFeatureSubgraph: false,
+      isFeatureSubgraph: false,
     });
     expect(deleteFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
 
@@ -140,6 +142,7 @@ describe('DeleteSubgraph', (ctx) => {
     const deleteFederatedSubgraphResp = await client.deleteFederatedSubgraph({
       subgraphName,
       namespace: 'default',
+      isFeatureSubgraph: false,
     });
     expect(deleteFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
 
