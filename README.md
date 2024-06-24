@@ -90,7 +90,7 @@ Please copy the variables to `.env` (the same for studio but with `.env.local`) 
 Bootstrapping your development environment is easy. Just run the following commands in order:
 
 ```shell
-# 1️⃣ Setup the repository and start all services (Wait a few seconds until Keycloak is ready)
+# 1️⃣ Setup the repository, build libraries and start all services (Wait a few seconds until Keycloak is ready)
 make
 
 # 2️⃣ Run migrations and seed the database

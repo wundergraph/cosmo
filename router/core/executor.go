@@ -6,24 +6,23 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
-
-	"github.com/twmb/franz-go/pkg/kgo"
-	"github.com/twmb/franz-go/pkg/sasl/plain"
-	"github.com/wundergraph/cosmo/router/pkg/config"
-	"go.uber.org/zap"
 	"time"
 
 	"github.com/nats-io/nats.go"
+	"github.com/twmb/franz-go/pkg/kgo"
+	"github.com/twmb/franz-go/pkg/sasl/plain"
+	"go.uber.org/zap"
+
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/introspection_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
 type ExecutorConfigurationBuilder struct {
@@ -37,8 +36,12 @@ type ExecutorConfigurationBuilder struct {
 }
 
 type Executor struct {
-	PlanConfig      plan.Configuration
-	Definition      *ast.Document
+	PlanConfig plan.Configuration
+	// ClientSchema is the GraphQL Schema that is exposed from our API
+	// it is used for the introspection and query normalization/validation.
+	ClientSchema *ast.Document
+	// RouterSchema the GraphQL Schema that we use for planning the queries
+	RouterSchema    *ast.Document
 	Resolver        *resolve.Resolver
 	RenameTypeNames []resolve.RenameTypeName
 }
@@ -72,32 +75,53 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *
 	// this is the resolver, it's stateful and manages all the client connections, etc...
 	resolver := resolve.New(ctx, options)
 
-	// this is the GraphQL Schema that we will expose from our API
-	var definition ast.Document
-	var report operationreport.Report
-	// The client schema may not be present in old configs
-	if routerConfig.EngineConfig.GetGraphqlClientSchema() != "" {
-		definition, report = astparser.ParseGraphqlDocumentString(routerConfig.EngineConfig.GetGraphqlClientSchema())
-	} else {
-		definition, report = astparser.ParseGraphqlDocumentString(routerConfig.EngineConfig.GraphqlSchema)
-	}
+	var (
+		// clientSchemaDefinition is the GraphQL Schema that is exposed from our API
+		// it should be used for the introspection and query normalization/validation.
+		clientSchemaDefinition *ast.Document
+		// routerSchemaDefinition the GraphQL Schema that we use for planning the queries
+		routerSchemaDefinition ast.Document
+		report                 operationreport.Report
+	)
+
+	routerSchemaDefinition, report = astparser.ParseGraphqlDocumentString(routerConfig.EngineConfig.GraphqlSchema)
 	if report.HasErrors() {
 		return nil, fmt.Errorf("failed to parse graphql schema from engine config: %w", report)
 	}
-
-	// we need to merge the base schema, it contains the __schema and __type queries
-	// these are not usually part of a regular GraphQL schema
+	// we need to merge the base schema, it contains the __schema and __type queries,
+	// as well as built-in scalars like Int, String, etc...
+	// these are usually not part of a regular GraphQL schema
 	// the engine needs to have them defined, otherwise it cannot resolve such fields
-	err = asttransform.MergeDefinitionWithBaseSchema(&definition)
+	err = asttransform.MergeDefinitionWithBaseSchema(&routerSchemaDefinition)
 	if err != nil {
 		return nil, fmt.Errorf("failed to merge graphql schema with base schema: %w", err)
 	}
 
+	if clientSchemaStr := routerConfig.EngineConfig.GetGraphqlClientSchema(); clientSchemaStr != "" {
+		// The client schema is a subset of the router schema that does not include @inaccessible fields.
+		// The client schema only exists if the federated schema includes @inaccessible directives or @tag directives
+
+		clientSchema, report := astparser.ParseGraphqlDocumentString(clientSchemaStr)
+		if report.HasErrors() {
+			return nil, fmt.Errorf("failed to parse graphql client schema from engine config: %w", report)
+		}
+		err = asttransform.MergeDefinitionWithBaseSchema(&clientSchema)
+		if err != nil {
+			return nil, fmt.Errorf("failed to merge graphql client schema with base schema: %w", err)
+		}
+		clientSchemaDefinition = &clientSchema
+	} else {
+		// In the event that a client schema is not generated, the router schema is used in place of the client schema (e.g., for operation validation)
+
+		clientSchemaDefinition = &routerSchemaDefinition
+	}
+
 	if b.introspection {
 		// by default, the engine doesn't understand how to resolve the __schema and __type queries
-		// we need to add a special data source for that
-		// it takes the definition as the input and generates resolvers from it
-		introspectionFactory, err := introspection_datasource.NewIntrospectionConfigFactory(&definition)
+		// we need to add a special datasource for that
+		// it takes the definition as the input and generates introspection data
+		// datasource is attached to Query.__schema, Query.__type, __Type.fields and __Type.enumValues fields
+		introspectionFactory, err := introspection_datasource.NewIntrospectionConfigFactory(clientSchemaDefinition)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create introspection config factory: %w", err)
 		}
@@ -125,7 +149,8 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *
 
 	return &Executor{
 		PlanConfig:      *planConfig,
-		Definition:      &definition,
+		ClientSchema:    clientSchemaDefinition,
+		RouterSchema:    &routerSchemaDefinition,
 		Resolver:        resolver,
 		RenameTypeNames: renameTypeNames,
 	}, nil

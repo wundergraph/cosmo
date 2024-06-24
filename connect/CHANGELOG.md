@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.75.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.74.1...@wundergraph/cosmo-connect@0.75.0) (2024-06-20)
+
+### Features
+
+* add subscripion protocol and ws subprotocol to ui ([#829](https://github.com/wundergraph/cosmo/issues/829)) ([26708e4](https://github.com/wundergraph/cosmo/commit/26708e4d02fa3a6fa44b39a8c9138bd14a78c96f)) (@JivusAyrus)
+
+## [0.74.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.74.0...@wundergraph/cosmo-connect@0.74.1) (2024-06-07)
+
+**Note:** Version bump only for package @wundergraph/cosmo-connect
+
 # [0.74.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.73.0...@wundergraph/cosmo-connect@0.74.0) (2024-06-06)
 
 ### Features

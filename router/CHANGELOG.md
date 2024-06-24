@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.92.4](https://github.com/wundergraph/cosmo/compare/router@0.92.3...router@0.92.4) (2024-06-20)
+
+### Bug Fixes
+
+* requires planning, normalization of default values ([#867](https://github.com/wundergraph/cosmo/issues/867)) ([2ec6ef1](https://github.com/wundergraph/cosmo/commit/2ec6ef1b6be274203b59af338ff4f30ec97acb01)) (@devsergiy)
+
+## [0.92.3](https://github.com/wundergraph/cosmo/compare/router@0.92.2...router@0.92.3) (2024-06-20)
+
+### Bug Fixes
+
+* client schema usage, update wgc router compose to use client schema ([#874](https://github.com/wundergraph/cosmo/issues/874)) ([c3cdb1b](https://github.com/wundergraph/cosmo/commit/c3cdb1bf1eda6907a7d2c4b3fe18de341e99fda0)) (@devsergiy)
+
+## [0.92.2](https://github.com/wundergraph/cosmo/compare/router@0.92.1...router@0.92.2) (2024-06-07)
+
+**Note:** Version bump only for package router
+
 ## [0.92.1](https://github.com/wundergraph/cosmo/compare/router@0.92.0...router@0.92.1) (2024-06-06)
 
 **Note:** Version bump only for package router
