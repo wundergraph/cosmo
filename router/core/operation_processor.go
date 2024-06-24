@@ -92,7 +92,6 @@ type parseKit struct {
 	normalizer          *astnormalization.OperationNormalizer
 	printer             *astprinter.Printer
 	normalizedOperation *bytes.Buffer
-	unescapedDocument   []byte
 	variablesValidator  *variablesvalidation.VariablesValidator
 }
 
@@ -137,6 +136,9 @@ func NewOperationKit(parser *OperationProcessor, data []byte) *OperationKit {
 
 // Free releases the resources used by the OperationKit
 func (o *OperationKit) Free() {
+	if o == nil {
+		return
+	}
 	o.operationParser.freeKit(o.kit)
 }
 
@@ -399,7 +401,6 @@ func NewOperationParser(opts OperationParserOptions) *OperationProcessor {
 					),
 					printer:             &astprinter.Printer{},
 					normalizedOperation: &bytes.Buffer{},
-					unescapedDocument:   make([]byte, 1024),
 					variablesValidator:  variablesvalidation.NewVariablesValidator(),
 				}
 			},
@@ -415,7 +416,6 @@ func (p *OperationProcessor) freeKit(kit *parseKit) {
 	kit.keyGen.Reset()
 	kit.doc.Reset()
 	kit.normalizedOperation.Reset()
-	kit.unescapedDocument = kit.unescapedDocument[:0]
 }
 
 func (p *OperationProcessor) entityTooLarge() error {

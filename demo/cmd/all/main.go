@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"log"
+	"time"
 
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs"
 )
@@ -19,6 +20,8 @@ var (
 	availability = flag.Int("availability", 4007, "Port for availability subgraph")
 	mood         = flag.Int("mood", 4008, "Port for mood subgraph")
 	countries    = flag.Int("countries", 4009, "Port for countries subgraph")
+
+	artificialLatency = flag.Int("latency", 0, "Artificial latency in milliseconds")
 )
 
 func main() {
@@ -34,12 +37,13 @@ func main() {
 			Mood:         *mood,
 			Countries:    *countries,
 		},
-		EnableDebug: *debug,
+		EnableDebug:       *debug,
+		ArtificialLatency: time.Duration(*artificialLatency) * time.Millisecond,
 	}
 	ctx := context.Background()
-	subgraphs, err := subgraphs.New(ctx, &config)
+	servers, err := subgraphs.New(ctx, &config)
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Fatal(subgraphs.ListenAndServe(ctx))
+	log.Fatal(servers.ListenAndServe(ctx))
 }
