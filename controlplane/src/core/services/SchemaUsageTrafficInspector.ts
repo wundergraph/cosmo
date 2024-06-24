@@ -113,7 +113,7 @@ export class SchemaUsageTrafficInspector {
   }
 
   /**
-   * Convert schema changes to inspector changes. Throws an error if a change is not supported.
+   * Convert schema changes to inspector changes. Will ignore a change if it is not inspectable.
    * Ultimately, will result in a breaking change because the change is not inspectable with the current implementation.
    */
   public schemaChangesToInspectorChanges(
