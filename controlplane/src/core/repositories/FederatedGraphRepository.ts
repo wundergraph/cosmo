@@ -526,6 +526,7 @@ export class FederatedGraphRepository {
       namespace: resp[0].namespaceName,
       namespaceId: resp[0].namespaceId,
       admissionWebhookURL: resp[0].admissionWebhookURL ?? '',
+      admissionWebhookSecret: resp[0].admissionWebhookSecret ?? undefined,
       supportsFederation: resp[0].supportsFederation,
       contract,
     };
@@ -1454,6 +1455,8 @@ export class FederatedGraphRepository {
             message: e.message,
           })),
         );
+
+        console.log(federatedGraph.admissionWebhookSecret);
 
         const deployment = await composer.deployComposition({
           composedGraph: mapResultToComposedGraph(federatedGraph, subgraphs, errors, result),
