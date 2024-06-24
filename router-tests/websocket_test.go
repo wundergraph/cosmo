@@ -1,10 +1,14 @@
 package integration_test
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router-tests/testutils"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"io"
 	"math/big"
 	"net"
@@ -70,6 +74,7 @@ func TestWebSockets(t *testing.T) {
 		t.Parallel()
 
 		authServer, err := jwks.NewServer(t)
+		metricReader := metric.NewManualReader()
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
 		authOptions := authentication.JWKSAuthenticatorOptions{
@@ -81,6 +86,7 @@ func TestWebSockets(t *testing.T) {
 		authenticators := []authentication.Authenticator{authenticator}
 
 		testenv.Run(t, &testenv.Config{
+			MetricReader: metricReader,
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
@@ -166,6 +172,7 @@ func TestWebSockets(t *testing.T) {
 		t.Parallel()
 
 		authServer, err := jwks.NewServer(t)
+		metricReader := metric.NewManualReader()
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
 		authOptions := authentication.JWKSAuthenticatorOptions{
@@ -177,6 +184,7 @@ func TestWebSockets(t *testing.T) {
 		authenticators := []authentication.Authenticator{authenticator}
 
 		testenv.Run(t, &testenv.Config{
+			MetricReader: metricReader,
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
@@ -206,6 +214,9 @@ func TestWebSockets(t *testing.T) {
 				require.NoError(t, err)
 				err = xEnv.NatsConnectionDefault.Flush()
 				require.NoError(t, err)
+
+				activeSubsMetric := testutils.GetSubscriptionCountMetric(1)
+				testutils.RequireMetricsToContain(t, metricReader, activeSubsMetric)
 			}()
 
 			var res testenv.WebSocketMessage
@@ -217,11 +228,19 @@ func TestWebSockets(t *testing.T) {
 
 			require.NoError(t, conn.Close())
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+
+			rm := metricdata.ResourceMetrics{}
+			err = metricReader.Collect(context.Background(), &rm)
+			require.NoError(t, err)
+
+			activeSubsMetric := testutils.GetSubscriptionCountMetric(0)
+			testutils.RequireMetricsToContain(t, metricReader, activeSubsMetric)
 		})
 	})
 	t.Run("subscription with authorization reject", func(t *testing.T) {
 		t.Parallel()
 		authServer, err := jwks.NewServer(t)
+		metricReader := metric.NewManualReader()
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
 		authOptions := authentication.JWKSAuthenticatorOptions{
@@ -233,6 +252,7 @@ func TestWebSockets(t *testing.T) {
 		authenticators := []authentication.Authenticator{authenticator}
 
 		testenv.Run(t, &testenv.Config{
+			MetricReader: metricReader,
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
@@ -261,6 +281,9 @@ func TestWebSockets(t *testing.T) {
 				require.NoError(t, err)
 				err = xEnv.NatsConnectionDefault.Flush()
 				require.NoError(t, err)
+				activeSubsMetric := testutils.GetSubscriptionCountMetric(1)
+				testutils.RequireMetricsToContain(t, metricReader, activeSubsMetric)
+
 			}()
 			var res testenv.WebSocketMessage
 			err = conn.ReadJSON(&res)
@@ -271,6 +294,8 @@ func TestWebSockets(t *testing.T) {
 
 			require.NoError(t, conn.Close())
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+			activeSubsMetric := testutils.GetSubscriptionCountMetric(0)
+			testutils.RequireMetricsToContain(t, metricReader, activeSubsMetric)
 		})
 	})
 	t.Run("subscription", func(t *testing.T) {
@@ -1027,7 +1052,9 @@ func TestWebSockets(t *testing.T) {
 		})
 	})
 	t.Run("multiple subscriptions one connection", func(t *testing.T) {
+		metricReader := metric.NewManualReader()
 		testenv.Run(t, &testenv.Config{
+			MetricReader: metricReader,
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
 			},
@@ -1121,8 +1148,13 @@ func TestWebSockets(t *testing.T) {
 				require.NoError(t, client.Run())
 			}()
 			xEnv.WaitForSubscriptionCount(4, time.Second*5)
+			activeSubsMetric := testutils.GetSubscriptionCountMetric(4)
+			testutils.RequireMetricsToContain(t, metricReader, activeSubsMetric)
+
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 			xEnv.WaitForTriggerCount(0, time.Second*5)
+			activeSubsMetric = testutils.GetSubscriptionCountMetric(0)
+			testutils.RequireMetricsToContain(t, metricReader, activeSubsMetric)
 			// we cannot guarantee that the client will receive the complete message for all subscriptions
 			// this is because only one subscription is completed by the server
 			// the other subscriptions are completed by the client
@@ -1469,7 +1501,10 @@ func TestWebSockets(t *testing.T) {
 	})
 	t.Run("single connection multiple differing subscriptions", func(t *testing.T) {
 		t.Parallel()
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		metricReader := metric.NewManualReader()
+		testenv.Run(t, &testenv.Config{
+			MetricReader: metricReader,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 
@@ -1492,6 +1527,8 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 
 			xEnv.WaitForSubscriptionCount(2, time.Second*5)
+			activeSubsMetric := testutils.GetSubscriptionCountMetric(2)
+			testutils.RequireMetricsToContain(t, metricReader, activeSubsMetric)
 
 			wg := sync.WaitGroup{}
 			wg.Add(1)
@@ -1577,6 +1614,8 @@ func TestWebSockets(t *testing.T) {
 			wg.Wait()
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 			xEnv.WaitForConnectionCount(0, time.Second*5)
+			activeSubsMetric = testutils.GetSubscriptionCountMetric(0)
+			testutils.RequireMetricsToContain(t, metricReader, activeSubsMetric)
 		})
 	})
 	t.Run("multiple connections with different initial payloads", func(t *testing.T) {

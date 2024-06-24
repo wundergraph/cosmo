@@ -46,7 +46,7 @@ type Executor struct {
 	RenameTypeNames []resolve.RenameTypeName
 }
 
-func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *nodev1.RouterConfig, routerEngineConfig *RouterEngineConfiguration, pubSubProviders *EnginePubSubProviders, reporter resolve.Reporter) (*Executor, error) {
+func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *nodev1.RouterConfig, routerEngineConfig *RouterEngineConfiguration, pubSubProviders *EnginePubSubProviders, reporter resolve.Reporter, metrics resolve.Metrics) (*Executor, error) {
 	planConfig, err := b.buildPlannerConfiguration(ctx, routerConfig, routerEngineConfig, pubSubProviders)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build planner configuration: %w", err)
@@ -56,6 +56,7 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *
 		MaxConcurrency:               routerEngineConfig.Execution.MaxConcurrentResolvers,
 		Debug:                        routerEngineConfig.Execution.Debug.EnableResolverDebugging,
 		Reporter:                     reporter,
+		Metrics:                      metrics,
 		PropagateSubgraphErrors:      routerEngineConfig.SubgraphErrorPropagation.Enabled,
 		PropagateSubgraphStatusCodes: routerEngineConfig.SubgraphErrorPropagation.PropagateStatusCodes,
 		RewriteSubgraphErrorPaths:    routerEngineConfig.SubgraphErrorPropagation.RewritePaths,

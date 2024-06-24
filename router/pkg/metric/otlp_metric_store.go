@@ -133,6 +133,19 @@ func (h *OtlpMetricStore) MeasureRequestError(ctx context.Context, attr ...attri
 	}
 }
 
+func (h *OtlpMetricStore) MeasureActiveSubscriptions(ctx context.Context, count int, attr ...attribute.KeyValue) {
+	var baseKeys []attribute.KeyValue
+
+	baseKeys = append(baseKeys, h.baseAttributes...)
+	baseKeys = append(baseKeys, attr...)
+
+	baseAttributes := otelmetric.WithAttributes(baseKeys...)
+
+	if c, ok := h.measurements.upDownCounters[ActiveSubscriptionsCounter]; ok {
+		c.Add(ctx, int64(count), baseAttributes)
+	}
+}
+
 func (h *OtlpMetricStore) Flush(ctx context.Context) error {
 	return h.meterProvider.ForceFlush(ctx)
 }

@@ -10,6 +10,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"net/http"
 	"testing"
+	"time"
 )
 
 func TestPrometheus(t *testing.T) {
@@ -1701,6 +1702,62 @@ func TestPrometheus(t *testing.T) {
 					Value: PointerOf("products"),
 				},
 			}, responseContentLengthMetrics[2].Label)
+		})
+	})
+
+	t.Run("Active Connections are tracked through active connections metric", func(t *testing.T) {
+		exporter := tracetest.NewInMemoryExporter(t)
+		metricReader := metric.NewManualReader()
+		promRegistry := prometheus.NewRegistry()
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter:      exporter,
+			MetricReader:       metricReader,
+			PrometheusRegistry: promRegistry,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+			err := conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
+			})
+			require.NoError(t, err)
+			xEnv.WaitForSubscriptionCount(1, time.Second*5)
+
+			mf, err := promRegistry.Gather()
+			require.NoError(t, err)
+
+			activeSubscriptionsCount := findMetricFamilyByName(mf, "router_graph_active_subscriptions")
+			activeSubscriptionsCountMetrics := activeSubscriptionsCount.GetMetric()
+
+			require.Len(t, activeSubscriptionsCountMetrics, 1)
+			require.Len(t, activeSubscriptionsCountMetrics[0].Label, 6)
+			require.Equal(t, 1, int(activeSubscriptionsCountMetrics[0].GetGauge().GetValue()))
+
+			// Sending a complete must stop the subscription
+			err = conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:   "1",
+				Type: "complete",
+			})
+			require.NoError(t, err)
+
+			var complete testenv.WebSocketMessage
+			err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+			require.NoError(t, err)
+			err = conn.ReadJSON(&complete)
+			require.NoError(t, err)
+			require.Equal(t, "1", complete.ID)
+			require.Equal(t, "complete", complete.Type)
+
+			mf, err = promRegistry.Gather()
+			require.NoError(t, err)
+
+			activeSubscriptionsCount = findMetricFamilyByName(mf, "router_graph_active_subscriptions")
+			activeSubscriptionsCountMetrics = activeSubscriptionsCount.GetMetric()
+
+			require.Len(t, activeSubscriptionsCountMetrics, 1)
+			require.Len(t, activeSubscriptionsCountMetrics[0].Label, 6)
+			require.Equal(t, 0, int(activeSubscriptionsCountMetrics[0].GetGauge().GetValue()))
 		})
 	})
 }
