@@ -204,7 +204,9 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
     case ChangeType.DirectiveArgumentDefaultValueChanged:
     case ChangeType.DirectiveArgumentTypeChanged:
     case ChangeType.DirectiveLocationRemoved: {
-      throw new Error(`Directive or schema root type changes are not inspectable`);
+      // We cannot inspect these changes. We want to return null instead of throwing an error.
+      // This is so that other changes that we can in fact inspect are not skipped over in the schema check.
+      return null;
     }
     // Safe to ignore
     case ChangeType.DirectiveAdded:
