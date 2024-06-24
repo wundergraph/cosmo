@@ -1456,8 +1456,6 @@ export class FederatedGraphRepository {
           })),
         );
 
-        console.log(federatedGraph.admissionWebhookSecret);
-
         const deployment = await composer.deployComposition({
           composedGraph: mapResultToComposedGraph(federatedGraph, subgraphs, errors, result),
           composedBy: actorId,
