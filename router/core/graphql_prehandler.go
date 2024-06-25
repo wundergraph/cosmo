@@ -233,6 +233,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 					break
 				}
 				if err != nil {
+					part.Close()
 					finalErr = err
 					writeOperationError(r, w, requestLogger, err)
 					return
@@ -246,7 +247,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			if filePartsCount > h.maxUploadFiles {
 				finalErr = &inputError{
 					message:    fmt.Sprintf("too many files: %d, max allowed: %d", filePartsCount, h.maxUploadFiles),
-					statusCode: http.StatusBadRequest,
+					statusCode: http.StatusOK,
 				}
 				writeOperationError(r, w, requestLogger, finalErr)
 				return
@@ -274,7 +275,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 			var tempFiles []*os.File
 			// We will register a handler for each file in the request.
-			for i := 0; i < h.maxUploadFiles; i++ {
+			for i := 0; i < filePartsCount; i++ {
 				fileKey := fmt.Sprintf("%d", i)
 				err = parser.Register(fileKey, func(reader io.Reader, header formstream.Header) error {
 					// Create and open a temporary file to store the file content

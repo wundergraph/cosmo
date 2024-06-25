@@ -80,12 +80,11 @@ func TestFileUpload_FilesExceedsLimit(t *testing.T) {
 		files[0] = []byte("File1 content as text")
 		files[1] = []byte("File2 content as text")
 		files[2] = []byte("File3 content as text")
-		res, _ := xEnv.MakeGraphQLRequestAsMultipartForm(testenv.GraphQLRequest{
+		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query:     "mutation($files: [Upload!]!) { multipleUpload(files: $files)}",
 			Variables: []byte(`{"files":[null, null, null]}`),
 			Files:     files,
 		})
-		require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
 		require.Equal(t, `{"errors":[{"message":"too many files: 3, max allowed: 2"}],"data":null}`, res.Body)
 	})
 }
