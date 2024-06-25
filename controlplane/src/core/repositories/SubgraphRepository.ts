@@ -7,7 +7,7 @@ import { FastifyBaseLogger } from 'fastify';
 import { WebsocketSubprotocol } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
-  featureGraphsToSubgraph,
+  featureSubgraphsToBaseSubgraphs,
   graphCompositionSubgraphs,
   graphCompositions,
   schemaChecks,
@@ -32,7 +32,7 @@ import { BlobStorage } from '../blobstorage/index.js';
 import { hasLabelsChanged, normalizeLabels } from '../util.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
-import { FeatureFlagRepository, FeatureFlagWithFeatureGraphs } from './FeatureFlagRepository.js';
+import { FeatureFlagRepository, FeatureFlagWithFeatureSubgraphs } from './FeatureFlagRepository.js';
 
 type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
 
@@ -118,7 +118,7 @@ export class SubgraphRepository {
           isEventDrivenGraph: data.isEventDrivenGraph,
           subscriptionProtocol: data.subscriptionProtocol ?? 'ws',
           websocketSubprotocol: data.websocketSubprotocol || 'auto',
-          isFeatureGraph: data.featureSubgraphOptions?.isFeatureSubgraph || false,
+          isFeatureSubgraph: data.featureSubgraphOptions?.isFeatureSubgraph || false,
         })
         .returning()
         .execute();
@@ -157,10 +157,10 @@ export class SubgraphRepository {
 
       if (data.featureSubgraphOptions) {
         await tx
-          .insert(featureGraphsToSubgraph)
+          .insert(featureSubgraphsToBaseSubgraphs)
           .values({
             baseSubgraphId: data.featureSubgraphOptions.baseSubgraphID,
-            featureGraphId: insertedSubgraph[0].id,
+            featureSubgraphId: insertedSubgraph[0].id,
           })
           .execute();
       }
@@ -177,7 +177,7 @@ export class SubgraphRepository {
         lastUpdatedAt: '',
         namespace: data.namespace,
         namespaceId: data.namespaceId,
-        isFeatureSubgraph: insertedSubgraph[0].isFeatureGraph,
+        isFeatureSubgraph: insertedSubgraph[0].isFeatureSubgraph,
         isEventDrivenGraph: data.isEventDrivenGraph,
       } as SubgraphDTO;
     });
@@ -236,7 +236,7 @@ export class SubgraphRepository {
           isV2Graph: data.isV2Graph,
         });
         if (!updatedSubgraph) {
-          throw new Error(`Subgraph ${subgraph.name} not found`);
+          throw new Error(`The subgraph "${subgraph.name}" was not found.`);
         }
       }
 
@@ -354,13 +354,13 @@ export class SubgraphRepository {
         // the fed graphs to be composed are to be fetched by using the base subgraph
         const baseSubgraph = await tx
           .select({
-            id: featureGraphsToSubgraph.baseSubgraphId,
+            id: featureSubgraphsToBaseSubgraphs.baseSubgraphId,
             labels: targets.labels,
           })
-          .from(featureGraphsToSubgraph)
-          .innerJoin(subgraphs, eq(subgraphs.id, featureGraphsToSubgraph.baseSubgraphId))
+          .from(featureSubgraphsToBaseSubgraphs)
+          .innerJoin(subgraphs, eq(subgraphs.id, featureSubgraphsToBaseSubgraphs.baseSubgraphId))
           .innerJoin(targets, eq(targets.id, subgraphs.targetId))
-          .where(eq(featureGraphsToSubgraph.featureGraphId, subgraph.id));
+          .where(eq(featureSubgraphsToBaseSubgraphs.featureSubgraphId, subgraph.id));
 
         if (baseSubgraph.length > 0) {
           // Retrieve the federated graphs that match the labels for the base graph of the feature graph
@@ -690,7 +690,7 @@ export class SubgraphRepository {
         namespaceId: schema.namespaces.id,
         namespaceName: schema.namespaces.name,
         schemaVersionId: schema.subgraphs.schemaVersionId,
-        isFeatureGraph: schema.subgraphs.isFeatureGraph,
+        isFeatureSubgraph: schema.subgraphs.isFeatureSubgraph,
         isEventDrivenGraph: schema.subgraphs.isEventDrivenGraph,
       })
       .from(targets)
@@ -736,7 +736,7 @@ export class SubgraphRepository {
       namespaceId: resp[0].namespaceId,
       isEventDrivenGraph: resp[0].isEventDrivenGraph,
       isV2Graph,
-      isFeatureSubgraph: resp[0].isFeatureGraph,
+      isFeatureSubgraph: resp[0].isFeatureSubgraph,
     };
   }
 
@@ -1025,7 +1025,7 @@ export class SubgraphRepository {
           eq(targets.organizationId, this.organizationId),
           eq(targets.type, 'subgraph'),
           eq(targets.namespaceId, namespaceId),
-          eq(schema.subgraphs.isFeatureGraph, isFeatureGraph || false),
+          eq(schema.subgraphs.isFeatureSubgraph, isFeatureGraph || false),
           ...conditions,
         ),
       )

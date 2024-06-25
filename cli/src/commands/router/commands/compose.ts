@@ -3,7 +3,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { buildRouterConfig, normalizeURL } from '@wundergraph/cosmo-shared';
 import { Command, program } from 'commander';
-import { parse } from 'graphql';
+import { parse, printSchema } from 'graphql';
 import * as yaml from 'js-yaml';
 import { dirname, resolve } from 'pathe';
 import pc from 'picocolors';
@@ -105,7 +105,7 @@ export default (opts: BaseCommandOptions) => {
     }
 
     const federatedClientSDL = result.federationResult.shouldIncludeClientSchema
-      ? printSchemaWithDirectives(result.federationResult.federatedGraphClientSchema)
+      ? printSchema(result.federationResult.federatedGraphClientSchema)
       : '';
     const routerConfig = buildRouterConfig({
       federatedClientSDL,
@@ -144,25 +144,25 @@ export default (opts: BaseCommandOptions) => {
 
         // Replace base subgraphs with feature flag subgraphs
         for (const s of config.subgraphs) {
-          const featureGraph = ff.feature_graphs.find((ffs) => ffs.subgraph_name === s.name);
-          if (featureGraph) {
-            if (featureGraph?.schema?.file) {
-              const schemaFile = resolve(inputFileLocation, featureGraph.schema.file);
+          const featureSubgraph = ff.feature_graphs.find((ffs) => ffs.subgraph_name === s.name);
+          if (featureSubgraph) {
+            if (featureSubgraph?.schema?.file) {
+              const schemaFile = resolve(inputFileLocation, featureSubgraph.schema.file);
               const sdl = (await readFile(schemaFile)).toString();
-              subgraphSDLs.set(featureGraph.name, sdl);
+              subgraphSDLs.set(featureSubgraph.name, sdl);
             } else {
               const result = await introspectSubgraph({
-                subgraphURL: featureGraph?.introspection?.url ?? featureGraph.routing_url,
-                additionalHeaders: Object.entries(featureGraph.introspection?.headers ?? {}).map(([key, value]) => ({
+                subgraphURL: featureSubgraph?.introspection?.url ?? featureSubgraph.routing_url,
+                additionalHeaders: Object.entries(featureSubgraph.introspection?.headers ?? {}).map(([key, value]) => ({
                   key,
                   value,
                 })),
-                rawIntrospection: featureGraph.introspection?.raw,
+                rawIntrospection: featureSubgraph.introspection?.raw,
               });
 
               if (!result.success) {
                 program.error(
-                  `Could not introspect feature-graph subgraph ${featureGraph.name}: ${
+                  `Could not introspect feature-graph subgraph ${featureSubgraph.name}: ${
                     result.errorMessage ?? 'failed'
                   }`,
                 );
@@ -170,11 +170,11 @@ export default (opts: BaseCommandOptions) => {
             }
 
             subgraphs.push({
-              name: featureGraph.name,
-              routing_url: featureGraph.routing_url,
-              schema: featureGraph.schema,
-              subscription: featureGraph.subscription,
-              introspection: featureGraph.introspection,
+              name: featureSubgraph.name,
+              routing_url: featureSubgraph.routing_url,
+              schema: featureSubgraph.schema,
+              subscription: featureSubgraph.subscription,
+              introspection: featureSubgraph.introspection,
             });
           } else {
             subgraphs.push(s);

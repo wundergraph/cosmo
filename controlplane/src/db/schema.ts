@@ -236,14 +236,14 @@ export const subgraphs = pgTable('subgraphs', {
     .references(() => targets.id, {
       onDelete: 'cascade',
     }),
-  isFeatureGraph: boolean('is_feature_graph').notNull().default(false),
+  isFeatureSubgraph: boolean('is_feature_subgraph').notNull().default(false),
   isEventDrivenGraph: boolean('is_event_driven_graph').notNull().default(false),
 });
 
-export const featureGraphsToSubgraph = pgTable(
-  'feature_graphs_subgraphs',
+export const featureSubgraphsToBaseSubgraphs = pgTable(
+  'feature_subgraphs_to_base_subgraphs',
   {
-    featureGraphId: uuid('feature_graph_id')
+    featureSubgraphId: uuid('feature_subgraph_id')
       .notNull()
       .references(() => subgraphs.id, {
         onDelete: 'cascade',
@@ -256,18 +256,18 @@ export const featureGraphsToSubgraph = pgTable(
   },
   (t) => {
     return {
-      pk: primaryKey({ columns: [t.featureGraphId, t.baseSubgraphId] }),
+      pk: primaryKey({ columns: [t.featureSubgraphId, t.baseSubgraphId] }),
     };
   },
 );
 
-export const featureGraphsToSubgraphRelations = relations(featureGraphsToSubgraph, ({ one }) => ({
+export const featureSubgraphsToSubgraphRelations = relations(featureSubgraphsToBaseSubgraphs, ({ one }) => ({
   baseSubgraph: one(subgraphs, {
-    fields: [featureGraphsToSubgraph.baseSubgraphId],
+    fields: [featureSubgraphsToBaseSubgraphs.baseSubgraphId],
     references: [subgraphs.id],
   }),
-  featureGraph: one(subgraphs, {
-    fields: [featureGraphsToSubgraph.featureGraphId],
+  featureSubgraph: one(subgraphs, {
+    fields: [featureSubgraphsToBaseSubgraphs.featureSubgraphId],
     references: [subgraphs.id],
   }),
 }));
@@ -294,15 +294,15 @@ export const featureFlags = pgTable('feature_flags', {
   }),
 });
 
-export const featureFlagToFeatureGraphs = pgTable(
-  'feature_flags_to_feature_graphs',
+export const featureFlagToFeatureSubgraphs = pgTable(
+  'feature_flags_to_feature_subgraphs',
   {
     featureFlagId: uuid('feature_flag_id')
       .notNull()
       .references(() => featureFlags.id, {
         onDelete: 'cascade',
       }),
-    featureGraphId: uuid('feature_graph_id')
+    featureSubgraphId: uuid('feature_subgraph_id')
       .notNull()
       .references(() => subgraphs.id, {
         onDelete: 'cascade',
@@ -310,24 +310,24 @@ export const featureFlagToFeatureGraphs = pgTable(
   },
   (t) => {
     return {
-      pk: primaryKey({ columns: [t.featureFlagId, t.featureGraphId] }),
+      pk: primaryKey({ columns: [t.featureFlagId, t.featureSubgraphId] }),
     };
   },
 );
 
-export const featureFlagToFeatureGraphsRelations = relations(featureFlagToFeatureGraphs, ({ one }) => ({
+export const featureFlagToFeatureSubgraphsRelations = relations(featureFlagToFeatureSubgraphs, ({ one }) => ({
   featureFlag: one(featureFlags, {
-    fields: [featureFlagToFeatureGraphs.featureFlagId],
+    fields: [featureFlagToFeatureSubgraphs.featureFlagId],
     references: [featureFlags.id],
   }),
-  featureGraph: one(subgraphs, {
-    fields: [featureFlagToFeatureGraphs.featureGraphId],
+  featureSubgraph: one(subgraphs, {
+    fields: [featureFlagToFeatureSubgraphs.featureSubgraphId],
     references: [subgraphs.id],
   }),
 }));
 
-export const federatedGraphsToFFSchemaVersions = pgTable(
-  'federated_graphs_to_ff_schema_versions',
+export const federatedGraphsToFeatureFlagSchemaVersions = pgTable(
+  'federated_graphs_to_feature_flag_schema_versions',
   {
     federatedGraphId: uuid('federated_graph_id')
       .notNull()
@@ -352,20 +352,23 @@ export const federatedGraphsToFFSchemaVersions = pgTable(
   },
 );
 
-export const federatedGraphsToFFSchemaVersionsRelations = relations(federatedGraphsToFFSchemaVersions, ({ one }) => ({
-  federatedGraph: one(federatedGraphs, {
-    fields: [federatedGraphsToFFSchemaVersions.federatedGraphId],
-    references: [federatedGraphs.id],
+export const federatedGraphsToFeatureFlagSchemaVersionsRelations = relations(
+  federatedGraphsToFeatureFlagSchemaVersions,
+  ({ one }) => ({
+    federatedGraph: one(federatedGraphs, {
+      fields: [federatedGraphsToFeatureFlagSchemaVersions.federatedGraphId],
+      references: [federatedGraphs.id],
+    }),
+    schemaVersion: one(schemaVersion, {
+      fields: [federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId],
+      references: [schemaVersion.id],
+    }),
+    baseSchemaVersion: one(schemaVersion, {
+      fields: [federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId],
+      references: [schemaVersion.id],
+    }),
   }),
-  schemaVersion: one(schemaVersion, {
-    fields: [federatedGraphsToFFSchemaVersions.composedSchemaVersionId],
-    references: [schemaVersion.id],
-  }),
-  baseSchemaVersion: one(schemaVersion, {
-    fields: [federatedGraphsToFFSchemaVersions.baseCompositionSchemaVersionId],
-    references: [schemaVersion.id],
-  }),
-}));
+);
 
 export const federatedGraphRelations = relations(federatedGraphs, ({ many, one }) => ({
   target: one(targets, {

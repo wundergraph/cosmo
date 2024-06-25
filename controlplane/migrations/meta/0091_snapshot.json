@@ -1,5 +1,5 @@
 {
-  "id": "8500b4bf-c145-4783-b4ec-4161ff216600",
+  "id": "eb97e851-3578-4290-90f9-0a61ec854ccd",
   "prevId": "3ed79153-2165-4bea-bbd3-333ebcc192ea",
   "version": "5",
   "dialect": "pg",
@@ -778,8 +778,8 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "feature_flags_to_feature_graphs": {
-      "name": "feature_flags_to_feature_graphs",
+    "feature_flags_to_feature_subgraphs": {
+      "name": "feature_flags_to_feature_subgraphs",
       "schema": "",
       "columns": {
         "feature_flag_id": {
@@ -788,8 +788,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "feature_graph_id": {
-          "name": "feature_graph_id",
+        "feature_subgraph_id": {
+          "name": "feature_subgraph_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
@@ -797,9 +797,9 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "feature_flags_to_feature_graphs_feature_flag_id_feature_flags_id_fk": {
-          "name": "feature_flags_to_feature_graphs_feature_flag_id_feature_flags_id_fk",
-          "tableFrom": "feature_flags_to_feature_graphs",
+        "feature_flags_to_feature_subgraphs_feature_flag_id_feature_flags_id_fk": {
+          "name": "feature_flags_to_feature_subgraphs_feature_flag_id_feature_flags_id_fk",
+          "tableFrom": "feature_flags_to_feature_subgraphs",
           "tableTo": "feature_flags",
           "columnsFrom": [
             "feature_flag_id"
@@ -810,12 +810,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "feature_flags_to_feature_graphs_feature_graph_id_subgraphs_id_fk": {
-          "name": "feature_flags_to_feature_graphs_feature_graph_id_subgraphs_id_fk",
-          "tableFrom": "feature_flags_to_feature_graphs",
+        "feature_flags_to_feature_subgraphs_feature_subgraph_id_subgraphs_id_fk": {
+          "name": "feature_flags_to_feature_subgraphs_feature_subgraph_id_subgraphs_id_fk",
+          "tableFrom": "feature_flags_to_feature_subgraphs",
           "tableTo": "subgraphs",
           "columnsFrom": [
-            "feature_graph_id"
+            "feature_subgraph_id"
           ],
           "columnsTo": [
             "id"
@@ -825,11 +825,11 @@
         }
       },
       "compositePrimaryKeys": {
-        "feature_flags_to_feature_graphs_feature_flag_id_feature_graph_id_pk": {
-          "name": "feature_flags_to_feature_graphs_feature_flag_id_feature_graph_id_pk",
+        "feature_flags_to_feature_subgraphs_feature_flag_id_feature_subgraph_id_pk": {
+          "name": "feature_flags_to_feature_subgraphs_feature_flag_id_feature_subgraph_id_pk",
           "columns": [
             "feature_flag_id",
-            "feature_graph_id"
+            "feature_subgraph_id"
           ]
         }
       },
@@ -942,12 +942,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "feature_graphs_subgraphs": {
-      "name": "feature_graphs_subgraphs",
+    "feature_subgraphs_to_base_subgraphs": {
+      "name": "feature_subgraphs_to_base_subgraphs",
       "schema": "",
       "columns": {
-        "feature_graph_id": {
-          "name": "feature_graph_id",
+        "feature_subgraph_id": {
+          "name": "feature_subgraph_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
@@ -961,12 +961,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "feature_graphs_subgraphs_feature_graph_id_subgraphs_id_fk": {
-          "name": "feature_graphs_subgraphs_feature_graph_id_subgraphs_id_fk",
-          "tableFrom": "feature_graphs_subgraphs",
+        "feature_subgraphs_to_base_subgraphs_feature_subgraph_id_subgraphs_id_fk": {
+          "name": "feature_subgraphs_to_base_subgraphs_feature_subgraph_id_subgraphs_id_fk",
+          "tableFrom": "feature_subgraphs_to_base_subgraphs",
           "tableTo": "subgraphs",
           "columnsFrom": [
-            "feature_graph_id"
+            "feature_subgraph_id"
           ],
           "columnsTo": [
             "id"
@@ -974,9 +974,9 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "feature_graphs_subgraphs_base_subgraph_id_subgraphs_id_fk": {
-          "name": "feature_graphs_subgraphs_base_subgraph_id_subgraphs_id_fk",
-          "tableFrom": "feature_graphs_subgraphs",
+        "feature_subgraphs_to_base_subgraphs_base_subgraph_id_subgraphs_id_fk": {
+          "name": "feature_subgraphs_to_base_subgraphs_base_subgraph_id_subgraphs_id_fk",
+          "tableFrom": "feature_subgraphs_to_base_subgraphs",
           "tableTo": "subgraphs",
           "columnsFrom": [
             "base_subgraph_id"
@@ -989,10 +989,10 @@
         }
       },
       "compositePrimaryKeys": {
-        "feature_graphs_subgraphs_feature_graph_id_base_subgraph_id_pk": {
-          "name": "feature_graphs_subgraphs_feature_graph_id_base_subgraph_id_pk",
+        "feature_subgraphs_to_base_subgraphs_feature_subgraph_id_base_subgraph_id_pk": {
+          "name": "feature_subgraphs_to_base_subgraphs_feature_subgraph_id_base_subgraph_id_pk",
           "columns": [
-            "feature_graph_id",
+            "feature_subgraph_id",
             "base_subgraph_id"
           ]
         }
@@ -1343,8 +1343,8 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "federated_graphs_to_ff_schema_versions": {
-      "name": "federated_graphs_to_ff_schema_versions",
+    "federated_graphs_to_feature_flag_schema_versions": {
+      "name": "federated_graphs_to_feature_flag_schema_versions",
       "schema": "",
       "columns": {
         "federated_graph_id": {
@@ -1368,9 +1368,9 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "federated_graphs_to_ff_schema_versions_federated_graph_id_federated_graphs_id_fk": {
-          "name": "federated_graphs_to_ff_schema_versions_federated_graph_id_federated_graphs_id_fk",
-          "tableFrom": "federated_graphs_to_ff_schema_versions",
+        "federated_graphs_to_feature_flag_schema_versions_federated_graph_id_federated_graphs_id_fk": {
+          "name": "federated_graphs_to_feature_flag_schema_versions_federated_graph_id_federated_graphs_id_fk",
+          "tableFrom": "federated_graphs_to_feature_flag_schema_versions",
           "tableTo": "federated_graphs",
           "columnsFrom": [
             "federated_graph_id"
@@ -1381,9 +1381,9 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "federated_graphs_to_ff_schema_versions_base_composition_schema_version_id_schema_versions_id_fk": {
-          "name": "federated_graphs_to_ff_schema_versions_base_composition_schema_version_id_schema_versions_id_fk",
-          "tableFrom": "federated_graphs_to_ff_schema_versions",
+        "federated_graphs_to_feature_flag_schema_versions_base_composition_schema_version_id_schema_versions_id_fk": {
+          "name": "federated_graphs_to_feature_flag_schema_versions_base_composition_schema_version_id_schema_versions_id_fk",
+          "tableFrom": "federated_graphs_to_feature_flag_schema_versions",
           "tableTo": "schema_versions",
           "columnsFrom": [
             "base_composition_schema_version_id"
@@ -1394,9 +1394,9 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "federated_graphs_to_ff_schema_versions_composed_schema_version_id_schema_versions_id_fk": {
-          "name": "federated_graphs_to_ff_schema_versions_composed_schema_version_id_schema_versions_id_fk",
-          "tableFrom": "federated_graphs_to_ff_schema_versions",
+        "federated_graphs_to_feature_flag_schema_versions_composed_schema_version_id_schema_versions_id_fk": {
+          "name": "federated_graphs_to_feature_flag_schema_versions_composed_schema_version_id_schema_versions_id_fk",
+          "tableFrom": "federated_graphs_to_feature_flag_schema_versions",
           "tableTo": "schema_versions",
           "columnsFrom": [
             "composed_schema_version_id"
@@ -1409,8 +1409,8 @@
         }
       },
       "compositePrimaryKeys": {
-        "federated_graphs_to_ff_schema_versions_federated_graph_id_base_composition_schema_version_id_composed_schema_version_id_pk": {
-          "name": "federated_graphs_to_ff_schema_versions_federated_graph_id_base_composition_schema_version_id_composed_schema_version_id_pk",
+        "federated_graphs_to_feature_flag_schema_versions_federated_graph_id_base_composition_schema_version_id_composed_schema_version_id_pk": {
+          "name": "federated_graphs_to_feature_flag_schema_versions_federated_graph_id_base_composition_schema_version_id_composed_schema_version_id_pk",
           "columns": [
             "federated_graph_id",
             "base_composition_schema_version_id",
@@ -3764,8 +3764,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "is_feature_graph": {
-          "name": "is_feature_graph",
+        "is_feature_subgraph": {
+          "name": "is_feature_subgraph",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,

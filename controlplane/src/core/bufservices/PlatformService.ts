@@ -1526,6 +1526,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             );
           }
 
+          // Ignore composability for monographs
+          if (sourceGraph.supportsFederation && !sourceGraph.isComposable) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details:
+                  `The source graph "${req.sourceGraphName}" is not currently composable.` +
+                  ` A contract can only be created if its respective source graph has composed successfully.`,
+              },
+              compositionErrors: [],
+              deploymentErrors: [],
+            };
+          }
+
           if (sourceGraph.contract) {
             throw new PublicError(
               EnumStatusCode.ERR,
@@ -3889,7 +3903,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         await opts.db.transaction(async (tx) => {
           const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
 
-          const composition = await fedGraphRepo.composeAndDeployFeatureFlag({
+          const composition = await fedGraphRepo.composeAndDeployGraphs({
             federatedGraphs,
             actorId: authContext.userId,
             blobStorage: opts.blobStorage,
@@ -3897,8 +3911,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               cdnBaseUrl: opts.cdnBaseUrl,
               webhookJWTSecret: opts.admissionWebhookJWTSecret,
             },
-            featureFlagName: req.name,
-            isFeatureFlagEnabled: true,
           });
 
           compositionErrors.push(...composition.compositionErrors);
@@ -4214,7 +4226,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         await opts.db.transaction(async (tx) => {
           const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
 
-          const composition = await fedGraphRepo.composeAndDeployFeatureFlag({
+          const composition = await fedGraphRepo.composeAndDeployGraphs({
             federatedGraphs,
             actorId: authContext.userId,
             blobStorage: opts.blobStorage,
@@ -4222,8 +4234,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               cdnBaseUrl: opts.cdnBaseUrl,
               webhookJWTSecret: opts.admissionWebhookJWTSecret,
             },
-            featureFlagName: req.name,
-            isFeatureFlagEnabled: req.enabled,
           });
 
           compositionErrors.push(...composition.compositionErrors);
@@ -4380,7 +4390,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             targetNamespaceDisplayName: namespace.name,
           });
 
-          const composition = await fedGraphRepo.composeAndDeployFeatureFlag({
+          const composition = await fedGraphRepo.composeAndDeployGraphs({
             federatedGraphs,
             actorId: authContext.userId,
             blobStorage: opts.blobStorage,
@@ -4388,8 +4398,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               cdnBaseUrl: opts.cdnBaseUrl,
               webhookJWTSecret: opts.admissionWebhookJWTSecret,
             },
-            featureFlagName: req.name,
-            isFeatureFlagEnabled: false,
           });
 
           compositionErrors.push(...composition.compositionErrors);

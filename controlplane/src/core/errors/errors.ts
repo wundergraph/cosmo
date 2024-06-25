@@ -32,18 +32,15 @@ export function isAuthorizationError(e: Error): e is AuthorizationError {
   return e instanceof AuthorizationError;
 }
 
-export function featureFlagBaseGraphError(
-  federatedGraphName: string,
-  featureFlag: string,
-  namespace = 'default',
-): CompositionError {
+export function unsuccessfulBaseCompositionError(federatedGraphName: string, namespace = 'default'): CompositionError {
   return new CompositionError({
     message:
-      `The feature flag "${featureFlag}" could not be composed because the composition for the last publish` +
-      ` to the federated graph "${federatedGraphName}" was unsuccessful.` +
-      ` Once a subsequent publish produces a successful federated graph composition, the feature flag will be composed.`,
+      `The base composition for the latest publish to the federated graph "${federatedGraphName}" was unsuccessful.` +
+      ` Consequently, all related potential compositions (feature flags and contracts) will be ignored.` +
+      ` Once a subsequent publish produces a successful federated graph base composition, those aforementioned` +
+      ` related compositions will be composed.`,
     federatedGraphName,
-    featureFlag,
+    featureFlag: '',
     namespace,
   });
 }

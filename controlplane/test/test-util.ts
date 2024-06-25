@@ -558,6 +558,7 @@ export async function assertNumberOfCompositions(
   federatedGraphName: string,
   numberOfCompositions: number,
   namespace = DEFAULT_NAMESPACE,
+  expectedEnumStatusCode = EnumStatusCode.OK,
 ) {
   const getCompositionsResponse = await client.getCompositions({
     fedGraphName: federatedGraphName,
@@ -565,7 +566,7 @@ export async function assertNumberOfCompositions(
     endDate: formatISO(tomorrowDate),
     namespace,
   });
-  expect(getCompositionsResponse.response?.code).toBe(EnumStatusCode.OK);
+  expect(getCompositionsResponse.response?.code).toBe(expectedEnumStatusCode);
   expect(getCompositionsResponse.compositions).toHaveLength(numberOfCompositions);
 }
 
@@ -581,6 +582,20 @@ export async function assertFeatureFlagExecutionConfig(
     expect(routerExecutionConfig.featureFlagConfigs).toBeDefined();
   } else {
     expect(routerExecutionConfig.featureFlagConfigs).toBeUndefined();
+  }
+}
+
+export async function assertExecutionConfigSubgraphNames(
+  blobStorage: InMemoryBlobStorage,
+  key: string,
+  subgraphIds: Set<string>,
+) {
+  const blob = await blobStorage.getObject({ key });
+  const routerExecutionConfig =  await blob.stream.getReader().read()
+    .then((result) => JSON.parse(result.value.toString()));
+  expect(subgraphIds.size).toBe(routerExecutionConfig.subgraphs.length);
+  for (const subgraph of routerExecutionConfig.subgraphs) {
+    expect(subgraphIds.has(subgraph.id)).toBe(true);
   }
 }
 

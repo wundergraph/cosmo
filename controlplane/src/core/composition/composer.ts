@@ -1,8 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { JsonValue } from '@bufbuild/protobuf';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
-import { FederationResult, FederationResultContainerWithContracts, FieldConfiguration } from '@wundergraph/composition';
-import { ComposedSubgraph, buildRouterConfig } from '@wundergraph/cosmo-shared';
+import {
+  FederationResult,
+  FederationResultContainerWithContracts,
+  FieldConfiguration,
+  Subgraph,
+} from '@wundergraph/composition';
+import { buildRouterConfig, ComposedSubgraph } from '@wundergraph/cosmo-shared';
 import { FastifyBaseLogger } from 'fastify';
 import { DocumentNode, parse, printSchema } from 'graphql';
 import {
@@ -24,7 +29,7 @@ import {
 import { FeatureFlagRepository } from '../repositories/FeatureFlagRepository.js';
 import { GraphCompositionRepository } from '../repositories/GraphCompositionRepository.js';
 import { composeSubgraphs, composeSubgraphsWithContracts } from './composition.js';
-import { GetDiffBetweenGraphsResult, getDiffBetweenGraphs } from './schemaCheck.js';
+import { getDiffBetweenGraphs, GetDiffBetweenGraphsResult } from './schemaCheck.js';
 
 export type CompositionResult = {
   compositions: ComposedFederatedGraph[];
@@ -38,6 +43,25 @@ export type FeatureFlagSchemaVersion = {
 export interface S3RouterConfigMetadata extends Record<string, string> {
   version: string;
   'signature-sha256': string;
+}
+
+export type UUID = `${string}-${string}-${string}-${string}-${string}`;
+
+export function buildRouterExecutionConfig(
+  composedGraph: ComposedFederatedGraph,
+  federatedSchemaVersionId: UUID,
+): RouterConfig | undefined {
+  if (composedGraph.errors.length > 0 || !composedGraph.composedSchema) {
+    return;
+  }
+  const federatedClientSDL = composedGraph.shouldIncludeClientSchema ? composedGraph.federatedClientSchema || '' : '';
+  return buildRouterConfig({
+    federatedClientSDL,
+    federatedSDL: composedGraph.composedSchema,
+    fieldConfigurations: composedGraph.fieldConfigurations,
+    subgraphs: composedGraph.subgraphs,
+    schemaVersionId: federatedSchemaVersionId,
+  });
 }
 
 export function subgraphDTOsToComposedSubgraphs(
@@ -133,19 +157,21 @@ export class Composer {
   ) {}
 
   async composeRouterConfig({
-    federatedGraphTargetId,
     featureFlagSchemaVersions,
+    baseCompositionSchemaVersionId,
   }: {
-    federatedGraphTargetId: string;
     featureFlagSchemaVersions: Array<FeatureFlagSchemaVersion>;
+    // The base composition is the base federated graph on which feature flags and contracts are based
+    baseCompositionSchemaVersionId: string;
   }) {
-    // fetch all the router configs for the compositions where there are no composition
-    const baseVersion = await this.federatedGraphRepo.getLatestValidRouterConfig(federatedGraphTargetId);
-    if (!baseVersion) {
-      // TODO improve message
-      throw new Error('No valid base router config found.');
+    // Not a race condition because the schema version ID will only be relevant to the current instance
+    const routerExecutionConfig =
+      await this.federatedGraphRepo.getRouterConfigBySchemaVersionId(baseCompositionSchemaVersionId);
+    if (!routerExecutionConfig) {
+      throw new Error(
+        'Fatal: Could not fetch the router execution config for what should have been a valid composition.',
+      );
     }
-    const baseRouterConfig = baseVersion.config;
     let featureFlagRouterConfigs: {
       [key: string]: FeatureFlagRouterExecutionConfig;
     };
@@ -153,21 +179,21 @@ export class Composer {
       featureFlagRouterConfigs = await this.featureFlagRepo.getFeatureFlagRouterConfigsByFeatureFlagSchemaVersions({
         featureFlagSchemaVersions,
       });
-      const featureFlagConfigs = baseRouterConfig.featureFlagConfigs;
+      const featureFlagConfigs = routerExecutionConfig.featureFlagConfigs;
       if (featureFlagConfigs) {
         const configByFeatureFlagName = featureFlagConfigs.configByFeatureFlagName;
         for (const featureFlagName in featureFlagRouterConfigs) {
           configByFeatureFlagName[featureFlagName] = featureFlagRouterConfigs[featureFlagName];
         }
       } else {
-        baseRouterConfig.featureFlagConfigs = {
+        routerExecutionConfig.featureFlagConfigs = {
           configByFeatureFlagName: featureFlagRouterConfigs,
         } as FeatureFlagRouterExecutionConfigs;
       }
     }
 
     return new RouterConfig({
-      ...baseRouterConfig,
+      ...routerExecutionConfig,
     });
   }
 
@@ -307,35 +333,37 @@ export class Composer {
   }
 
   async composeAndUploadRouterConfig({
-    federatedGraph,
+    federatedGraphId,
     featureFlagSchemaVersions,
     blobStorage,
     organizationId,
-    federatedSchemaVersionId,
     admissionConfig,
+    baseCompositionSchemaVersionId,
+    federatedGraphAdmissionWebhookURL,
   }: {
-    federatedGraph: FederatedGraphDTO;
+    federatedGraphId: string;
     featureFlagSchemaVersions: Array<FeatureFlagSchemaVersion>;
     blobStorage: BlobStorage;
     organizationId: string;
-    federatedSchemaVersionId: string;
     admissionConfig: {
       jwtSecret: string;
       cdnBaseUrl: string;
     };
+    baseCompositionSchemaVersionId: string;
+    federatedGraphAdmissionWebhookURL?: string;
   }) {
     const baseRouterConfig = await this.composeRouterConfig({
-      federatedGraphTargetId: federatedGraph.targetId,
       featureFlagSchemaVersions,
+      baseCompositionSchemaVersionId,
     });
 
     const { errors } = await this.uploadRouterConfig({
       blobStorage,
-      federatedGraphId: federatedGraph.id,
-      federatedSchemaVersionId,
+      federatedGraphId,
+      federatedSchemaVersionId: baseCompositionSchemaVersionId,
       organizationId,
       routerConfig: baseRouterConfig,
-      admissionWebhookURL: federatedGraph.admissionWebhookURL,
+      admissionWebhookURL: federatedGraphAdmissionWebhookURL,
       admissionConfig: {
         cdnBaseUrl: admissionConfig.cdnBaseUrl,
         jwtSecret: admissionConfig.jwtSecret,
@@ -365,7 +393,7 @@ export class Composer {
     const hasCompositionErrors = composedGraph.errors.length > 0;
     const federatedSchemaVersionId = randomUUID();
 
-    let routerConfigJson: JsonValue = null;
+    let routerExecutionConfigJSON: JsonValue | undefined;
 
     // CDN path and bucket path are the same in this case
     const s3PathReady = `${organizationId}/${composedGraph.id}/routerconfigs/latest.json`;
@@ -385,7 +413,7 @@ export class Composer {
         subgraphs: composedGraph.subgraphs,
         schemaVersionId: federatedSchemaVersionId,
       });
-      routerConfigJson = routerConfig.toJson();
+      routerExecutionConfigJSON = routerConfig.toJson();
     }
 
     const prevValidFederatedSDL = await this.federatedGraphRepo.getLatestValidSchemaVersion({
@@ -398,45 +426,43 @@ export class Composer {
       clientSchema: composedGraph.federatedClientSchema,
       subgraphSchemaVersionIds: composedGraph.subgraphs.map((s) => s.schemaVersionId!),
       compositionErrors: composedGraph.errors,
-      routerConfig: routerConfigJson,
+      routerConfig: routerExecutionConfigJSON,
       routerConfigSignature: signatureSha256,
       composedBy,
       schemaVersionId: federatedSchemaVersionId,
       // passing the path only when there exists a previous valid version or when the composition passes.
-      routerConfigPath:
-        prevValidFederatedSDL || (!hasCompositionErrors && composedGraph.composedSchema) ? s3PathReady : null,
+      routerConfigPath: prevValidFederatedSDL || routerExecutionConfigJSON ? s3PathReady : null,
       isFeatureFlagComposition,
     });
 
+    if (!routerExecutionConfigJSON || !updatedFederatedGraph?.composedSchemaVersionId || isFeatureFlagComposition) {
+      return {
+        schemaVersionId: updatedFederatedGraph?.composedSchemaVersionId || '',
+      };
+    }
     // Only create changelog when the composed schema is valid
+
+    let schemaChanges: GetDiffBetweenGraphsResult;
+
+    // Prioritize diff against client schemas if no previous valid schema available or if both prev and current client schema is available.
     if (
-      !hasCompositionErrors &&
-      (composedGraph.composedSchema || composedGraph.federatedClientSchema) &&
-      updatedFederatedGraph?.composedSchemaVersionId &&
-      !isFeatureFlagComposition
+      (composedGraph.federatedClientSchema && !prevValidFederatedSDL) ||
+      (composedGraph.federatedClientSchema && prevValidFederatedSDL?.clientSchema)
     ) {
-      let schemaChanges: GetDiffBetweenGraphsResult;
+      schemaChanges = await getDiffBetweenGraphs(
+        prevValidFederatedSDL?.clientSchema || '',
+        composedGraph.federatedClientSchema,
+      );
+    } else {
+      // Fallback to full schema for backwards compatibility
+      schemaChanges = await getDiffBetweenGraphs(prevValidFederatedSDL?.schema || '', composedGraph.composedSchema);
+    }
 
-      // Prioritize diff against client schemas if no previous valid schema available or if both prev and current client schema is available.
-      if (
-        (composedGraph.federatedClientSchema && !prevValidFederatedSDL) ||
-        (composedGraph.federatedClientSchema && prevValidFederatedSDL?.clientSchema)
-      ) {
-        schemaChanges = await getDiffBetweenGraphs(
-          prevValidFederatedSDL?.clientSchema || '',
-          composedGraph.federatedClientSchema,
-        );
-      } else {
-        // Fallback to full schema for backwards compatibility
-        schemaChanges = await getDiffBetweenGraphs(prevValidFederatedSDL?.schema || '', composedGraph.composedSchema);
-      }
-
-      if (schemaChanges.kind !== 'failure' && schemaChanges.changes.length > 0) {
-        await this.federatedGraphRepo.createFederatedGraphChangelog({
-          schemaVersionID: updatedFederatedGraph.composedSchemaVersionId,
-          changes: schemaChanges.changes,
-        });
-      }
+    if (schemaChanges.kind !== 'failure' && schemaChanges.changes.length > 0) {
+      await this.federatedGraphRepo.createFederatedGraphChangelog({
+        schemaVersionID: updatedFederatedGraph.composedSchemaVersionId,
+        changes: schemaChanges.changes,
+      });
     }
 
     return {
@@ -578,7 +604,7 @@ export class Composer {
     subgraphSchemaSDL: string,
   ) {
     return this.composeWithLabels(subgraphLabels, namespaceId, (subgraphs) => {
-      const subgraphsToBeComposed = [];
+      const subgraphsToBeComposed: Array<Subgraph> = [];
 
       for (const subgraph of subgraphs) {
         if (subgraph.name === subgraphName) {
@@ -602,7 +628,7 @@ export class Composer {
 
   composeWithDeletedSubgraph(subgraphLabels: Label[], subgraphName: string, namespaceId: string) {
     return this.composeWithLabels(subgraphLabels, namespaceId, (subgraphs) => {
-      const subgraphsToBeComposed = [];
+      const subgraphsToBeComposed: Array<Subgraph> = [];
 
       const filteredSubgraphs = subgraphs.filter((s) => s.name !== subgraphName);
 
