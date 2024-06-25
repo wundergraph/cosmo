@@ -1245,6 +1245,11 @@
           "type": "integer",
           "default": 10000,
           "description": "The size of the execution plan cache."
+        },
+        "minify_subgraph_operations": {
+          "type": "boolean",
+          "default": false,
+          "description": "Minify the subgraph operations. If the value is true, GraphQL Operations get minified after planning. This reduces the amount of GraphQL AST nodes the Subgraph has to parse, which ultimately saves CPU time and memory, resulting in faster response times."
         }
       }
     },
