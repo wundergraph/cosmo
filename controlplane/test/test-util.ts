@@ -39,6 +39,7 @@ import { ApiKeyRepository } from '../src/core/repositories/ApiKeyRepository.js';
 export const DEFAULT_ROUTER_URL = 'http://localhost:3002';
 export const DEFAULT_SUBGRAPH_URL_ONE = 'http://localhost:4001';
 export const DEFAULT_SUBGRAPH_URL_TWO = 'http://localhost:4002';
+export const DEFAULT_SUBGRAPH_URL_THREE = 'http://localhost:4003';
 export const DEFAULT_NAMESPACE = 'default';
 
 export const SetupTest = async function ({

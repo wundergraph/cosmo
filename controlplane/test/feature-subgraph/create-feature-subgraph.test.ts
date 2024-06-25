@@ -1,7 +1,13 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { afterAllSetup, beforeAllSetup, genID } from '../../src/core/test-util.js';
-import { createNamespace, createSubgraph, SetupTest } from '../test-util.js';
+import {
+  createNamespace,
+  createSubgraph,
+  DEFAULT_SUBGRAPH_URL_ONE,
+  DEFAULT_SUBGRAPH_URL_TWO,
+  SetupTest,
+} from '../test-util.js';
 
 let dbname = '';
 
@@ -20,11 +26,11 @@ describe('Create feature subgraph tests', () => {
     const subgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
 
-    await createSubgraph(client, subgraphName, 'http://localhost:4001');
+    await createSubgraph(client, subgraphName, DEFAULT_SUBGRAPH_URL_ONE);
 
     const featureSubgraphResponse = await client.createFederatedSubgraph({
       name: featureSubgraphName,
-      routingUrl: 'http://localhost:4002',
+      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
       isFeatureSubgraph: true,
       baseSubgraphName: subgraphName,
     });
@@ -41,7 +47,7 @@ describe('Create feature subgraph tests', () => {
 
     const createFederatedSubgraphResp = await client.createFederatedSubgraph({
       name: subgraphName,
-      routingUrl: 'http://localhost:4002',
+      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
       isFeatureSubgraph: true,
     });
 
@@ -58,7 +64,7 @@ describe('Create feature subgraph tests', () => {
     const subgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
 
-    await createSubgraph(client, subgraphName, 'http://localhost:4001');
+    await createSubgraph(client, subgraphName, DEFAULT_SUBGRAPH_URL_ONE);
 
     const namespace = genID('namespace').toLowerCase();
     await createNamespace(client, namespace);
@@ -66,7 +72,7 @@ describe('Create feature subgraph tests', () => {
     const featureSubgraphResponse = await client.createFederatedSubgraph({
       name: featureSubgraphName,
       namespace,
-      routingUrl: 'http://localhost:4002',
+      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
       isFeatureSubgraph: true,
       baseSubgraphName: subgraphName,
     });

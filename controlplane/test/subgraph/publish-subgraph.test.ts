@@ -1,7 +1,7 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { afterAllSetup, beforeAllSetup, genID } from '../src/core/test-util.js';
-import { createEventDrivenGraph, createSubgraph, eventDrivenGraphSDL, SetupTest, subgraphSDL } from './test-util.js';
+import { afterAllSetup, beforeAllSetup, genID } from '../../src/core/test-util.js';
+import { createEventDrivenGraph, createSubgraph, eventDrivenGraphSDL, SetupTest, subgraphSDL } from '../test-util.js';
 
 let dbname = '';
 

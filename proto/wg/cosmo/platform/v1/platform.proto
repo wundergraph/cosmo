@@ -533,6 +533,7 @@ message UpdateSubgraphRequest {
   string namespace = 8;
   optional bool unset_labels = 9;
   optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 10;
+  bool is_feature_subgraph = 11;
 }
 
 message UpdateSubgraphResponse {

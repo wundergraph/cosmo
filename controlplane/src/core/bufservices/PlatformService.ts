@@ -4845,23 +4845,57 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        if (!isValidLabels(req.labels)) {
+        const subgraph = await subgraphRepo.byName(req.name, req.namespace);
+        if (!subgraph) {
           return {
             response: {
-              code: EnumStatusCode.ERR_INVALID_LABELS,
-              details: `One ore more labels were found to be invalid`,
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `The ${req.isFeatureSubgraph ? 'feature' : ''} subgraph "${req.name}" was not found.`,
             },
             compositionErrors: [],
             deploymentErrors: [],
           };
         }
 
-        const subgraph = await subgraphRepo.byName(req.name, req.namespace);
-        if (!subgraph) {
+        if (req.isFeatureSubgraph) {
+          if (!subgraph.isFeatureSubgraph) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `The subgraph "${req.name}" is not a feature subgraph.`,
+              },
+              compositionErrors: [],
+              deploymentErrors: [],
+            };
+          }
+          if (req.labels || req.unsetLabels) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `Feature subgraph labels cannot be changed directly; they are determined by the feature flag.`,
+              },
+              compositionErrors: [],
+              deploymentErrors: [],
+            };
+          }
+        } else if (subgraph.isFeatureSubgraph) {
           return {
             response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Subgraph '${req.name}' not found`,
+              code: EnumStatusCode.ERR,
+              details:
+                `The subgraph "${req.name}" is a feature subgraph.` +
+                ` Please use the feature-subgraph update command instead.`,
+            },
+            compositionErrors: [],
+            deploymentErrors: [],
+          };
+        }
+
+        if (!isValidLabels(req.labels)) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_INVALID_LABELS,
+              details: `One ore more labels were found to be invalid`,
             },
             compositionErrors: [],
             deploymentErrors: [],
@@ -4916,7 +4950,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             return {
               response: {
                 code: EnumStatusCode.ERR,
-                details: `Routing URL "${req.routingUrl}" is not a valid URL`,
+                details: `Routing URL "${req.routingUrl}" is not a valid URL.`,
               },
               compositionErrors: [],
               deploymentErrors: [],
@@ -4927,7 +4961,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             return {
               response: {
                 code: EnumStatusCode.ERR,
-                details: `Subscription URL is not a valid URL`,
+                details: `Subscription URL "${req.subscriptionUrl}" is not a valid URL.`,
               },
               compositionErrors: [],
               deploymentErrors: [],
@@ -7927,13 +7961,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
 
+        req.namespace = req.namespace || DefaultNamespace;
+
         const subgraph = await subgraphRepo.byName(req.name, req.namespace);
 
         if (!subgraph) {
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Subgraph '${req.name}' not found`,
+              details: `The subgraph "${req.name}" was not found.`,
             },
             members: [],
           };

@@ -4,11 +4,7 @@ import Table from 'cli-table3';
 import { Command, program } from 'commander';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import {
-  parseGraphQLSubscriptionProtocol,
-  parseGraphQLWebsocketSubprotocol,
-  splitLabel,
-} from '@wundergraph/cosmo-shared';
+import { parseGraphQLSubscriptionProtocol, parseGraphQLWebsocketSubprotocol } from '@wundergraph/cosmo-shared';
 import { resolve } from 'pathe';
 import ora from 'ora';
 import { BaseCommandOptions } from '../../../core/types/types.js';
@@ -18,25 +14,17 @@ import { websocketSubprotocolDescription } from '../../../constants.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('update');
-  command.description('Updates a subgraph on the control plane.');
-  command.argument('<name>', 'The name of the subgraph to update.');
-  command.option('-n, --namespace [string]', 'The namespace of the subgraph.');
+  command.description('Updates a feature subgraph on the control plane.');
+  command.argument('<name>', 'The name of the feature subgraph to update.');
+  command.option('-n, --namespace [string]', 'The namespace of the feature subgraph.');
   command.option(
     '-r, --routing-url <url>',
-    'The routing URL of the subgraph. This is the URL at which the subgraph will be accessible.' +
+    'The routing URL of the feature subgraph. This is the URL at which the subgraph will be accessible.' +
       ' Returns an error if the subgraph is an Event-Driven Graph.',
   );
   command.option(
-    '--label [labels...]',
-    'The labels to apply to the subgraph. The labels are passed in the format <key>=<value> <key>=<value>. This will overwrite existing labels.',
-  );
-  command.option(
-    '--unset-labels',
-    'This will remove all labels. It will not add new labels if both this and --labels option is passed.',
-  );
-  command.option(
     '--subscription-url <url>',
-    'The url used for subscriptions. If empty, it defaults to same url used for routing.' +
+    'The URL used for subscriptions. If empty, it defaults to same URL used for routing.' +
       ' Returns an error if the subgraph is an Event-Driven Graph.',
   );
   command.option(
@@ -48,7 +36,7 @@ export default (opts: BaseCommandOptions) => {
     '--websocket-subprotocol <protocol>',
     websocketSubprotocolDescription + ' Returns an error if the subgraph is an Event-Driven Graph.',
   );
-  command.option('--readme <path-to-readme>', 'The markdown file which describes the subgraph.');
+  command.option('--readme <path-to-readme>', 'The markdown file which describes the feature subgraph.');
 
   command.action(async (name, options) => {
     let readmeFile;
@@ -68,20 +56,11 @@ export default (opts: BaseCommandOptions) => {
       websocketSubprotocol: options.websocketSubprotocol,
     });
 
-    const spinner = ora(`The subgraph "${name}" is being updated...`).start();
+    const spinner = ora(`The feature subgraph "${name}" is being updated...`).start();
     const resp = await opts.client.platform.updateSubgraph(
       {
         name,
         namespace: options.namespace,
-        labels:
-          options.label?.map?.((label: string) => {
-            const { key, value } = splitLabel(label);
-            return {
-              key,
-              value,
-            };
-          }) ?? [],
-        unsetLabels: options.unsetLabels,
         subscriptionUrl: options.subscriptionUrl,
         routingUrl: options.routingUrl,
         subscriptionProtocol: options.subscriptionProtocol
@@ -91,7 +70,7 @@ export default (opts: BaseCommandOptions) => {
           ? parseGraphQLWebsocketSubprotocol(options.websocketSubprotocol)
           : undefined,
         readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
-        isFeatureSubgraph: false,
+        isFeatureSubgraph: true,
       },
       {
         headers: getBaseHeaders(),
@@ -100,12 +79,12 @@ export default (opts: BaseCommandOptions) => {
 
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {
-        spinner.succeed(`The subgraph "${name}" was updated successfully.`);
+        spinner.succeed(`The feature subgraph "${name}" was updated successfully.`);
 
         break;
       }
       case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {
-        spinner.warn(`The subgraph "${name}" was updated but with composition errors.`);
+        spinner.warn(`The feature subgraph "${name}" was updated but with composition errors.`);
 
         const compositionErrorsTable = new Table({
           head: [
@@ -121,7 +100,7 @@ export default (opts: BaseCommandOptions) => {
         console.log(
           pc.red(
             `There were composition errors when composing at least one federated graph related to the` +
-              ` subgraph "${name}".\nThe router will continue to work with the latest valid schema.` +
+              ` feature subgraph "${name}".\nThe router will continue to work with the latest valid schema.` +
               `\n${pc.bold('Please check the errors below:')}`,
           ),
         );
@@ -140,7 +119,7 @@ export default (opts: BaseCommandOptions) => {
       }
       case EnumStatusCode.ERR_DEPLOYMENT_FAILED: {
         spinner.warn(
-          `The subgraph "${name}" was updated, but the updated composition could not be deployed.` +
+          `The feature subgraph "${name}" was updated, but the updated composition could not be deployed.` +
             `\nThis means the updated composition is not accessible to the router.` +
             `\n${pc.bold('Please check the errors below:')}`,
         );
@@ -168,7 +147,7 @@ export default (opts: BaseCommandOptions) => {
         break;
       }
       default: {
-        spinner.fail(`Failed to update subgraph "${name}".`);
+        spinner.fail(`Failed to update the feature subgraph "${name}".`);
         if (resp.response?.details) {
           console.log(pc.red(pc.bold(resp.response?.details)));
         }
