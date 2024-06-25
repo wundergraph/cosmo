@@ -1,6 +1,6 @@
 {
   "name": "router",
-  "version": "0.92.5",
+  "version": "0.93.0",
   "private": true,
   "description": "Placeholder package to simplify versioning and releasing with lerna.",
   "keywords": [

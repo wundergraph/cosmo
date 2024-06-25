@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.75.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.75.1...@wundergraph/cosmo-connect@0.75.2) (2024-06-25)
+
+### Bug Fixes
+
+* cleanup inspectable check ([#884](https://github.com/wundergraph/cosmo/issues/884)) ([5bcf149](https://github.com/wundergraph/cosmo/commit/5bcf14915115d400ea6dc394b5d219e4f6e2eaca)) (@thisisnithin)
+
 ## [0.75.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.75.0...@wundergraph/cosmo-connect@0.75.1) (2024-06-24)
 
 ### Bug Fixes
