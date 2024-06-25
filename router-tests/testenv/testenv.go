@@ -934,9 +934,7 @@ func multipartBytes(values map[string]io.Reader) (bytes.Buffer, string, error) {
 	w := multipart.NewWriter(&b)
 	for key, r := range values {
 		var fw io.Writer
-		if x, ok := r.(io.Closer); ok {
-			defer x.Close()
-		}
+		x, ok := r.(io.Closer)
 		// Add a file
 		if x, ok := r.(*os.File); ok {
 			if fw, err = w.CreateFormFile(key, x.Name()); err != nil {
@@ -951,7 +949,9 @@ func multipartBytes(values map[string]io.Reader) (bytes.Buffer, string, error) {
 		if _, err = io.Copy(fw, r); err != nil {
 			return b, "", err
 		}
-
+		if ok {
+			x.Close()
+		}
 	}
 	w.Close()
 
