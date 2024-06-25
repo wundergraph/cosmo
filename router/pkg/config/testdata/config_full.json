@@ -302,7 +302,8 @@
     "EpollKqueuePollTimeout": 1000000000,
     "EpollKqueueConnBufferSize": 128,
     "WebSocketReadTimeout": 1000000000,
-    "ExecutionPlanCacheSize": 10000
+    "ExecutionPlanCacheSize": 10000,
+    "MinifySubgraphOperations": false
   },
   "WebSocket": {
     "Enabled": true,

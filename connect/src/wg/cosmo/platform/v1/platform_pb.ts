@@ -1781,7 +1781,6 @@ export class CheckSubgraphSchemaResponse extends Message<CheckSubgraphSchemaResp
 
   /**
    * Contains the operation usage stats for the operations that are impacted by the schema changes.
-   * Can be undefined when the schema changes are not inspectable by real traffic breaking change detection.
    *
    * @generated from field: wg.cosmo.platform.v1.CheckOperationUsageStats operationUsageStats = 5;
    */
