@@ -1330,7 +1330,7 @@ export const lintRulesEnum = pgEnum('lint_rules', [
   'REQUIRE_DEPRECATION_REASON',
   // https://github.com/drizzle-team/drizzle-kit-mirror/issues/178 , the below rule is removed and not be used
   // due to a limitation in postgres, we cant remove a enum value
-  'REQUIRE_DEPRECATION_DATE', // @deprecated
+  // 'REQUIRE_DEPRECATION_DATE', // @deprecated
 ] as const);
 
 export const lintSeverityEnum = pgEnum('lint_severity', ['warn', 'error'] as const);
