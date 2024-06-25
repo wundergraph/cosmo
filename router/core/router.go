@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	br "github.com/andybalholm/brotli"
-	"github.com/dgraph-io/ristretto"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt/v5"
@@ -850,29 +849,6 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		}
 
 		s.metricStore = m
-	}
-
-	// when an execution plan was generated, which can be quite expensive, we want to cache it
-	// this means that we can hash the input and cache the generated plan
-	// the next time we get the same input, we can just return the cached plan
-	// the engine is smart enough to first do normalization and then hash the input
-	// this means that we can cache the normalized input and don't have to worry about
-	// different inputs that would generate the same execution plan
-	if s.engineExecutionConfiguration.ExecutionPlanCacheSize > 0 {
-		planCacheConfig := &ristretto.Config{
-			MaxCost:     s.engineExecutionConfiguration.ExecutionPlanCacheSize,
-			NumCounters: s.engineExecutionConfiguration.ExecutionPlanCacheSize * 10,
-			BufferItems: 64,
-		}
-
-		planCache, err := ristretto.NewCache(planCacheConfig)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create planner cache: %w", err)
-		}
-
-		s.executionPlanCache = planCache
-	} else {
-		s.executionPlanCache = NewNoopExecutionPlanCache()
 	}
 
 	if s.registrationInfo != nil {
