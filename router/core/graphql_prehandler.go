@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"fmt"
@@ -35,10 +36,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
-const (
-	MaxSupportedFilesUpload = 10
-)
-
 type PreHandlerOptions struct {
 	Logger                      *zap.Logger
 	Executor                    *Executor
@@ -54,6 +51,7 @@ type PreHandlerOptions struct {
 	FlushTelemetryAfterResponse bool
 	TraceExportVariables        bool
 	SpanAttributesMapper        func(r *http.Request) []attribute.KeyValue
+	MaxUploadFiles              int
 }
 
 type PreHandler struct {
@@ -72,6 +70,7 @@ type PreHandler struct {
 	tracer                      trace.Tracer
 	traceExportVariables        bool
 	spanAttributesMapper        func(r *http.Request) []attribute.KeyValue
+	maxUploadFiles              int
 }
 
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
@@ -94,6 +93,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 			"wundergraph/cosmo/router/pre_handler",
 			trace.WithInstrumentationVersion("0.0.1"),
 		),
+		maxUploadFiles: opts.MaxUploadFiles,
 	}
 }
 
@@ -200,6 +200,15 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				return
 			}
 		} else if strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
+			tempBuf := pool.GetBytesBuffer()
+			defer pool.PutBytesBuffer(tempBuf)
+			if _, err = h.operationProcessor.ReadBody(tempBuf, r.Body); err != nil {
+				finalErr = err
+				writeOperationError(r, w, requestLogger, err)
+				return
+			}
+			r.Body = io.NopCloser(bytes.NewReader(tempBuf.Bytes()))
+
 			parser, err := httpform.NewParser(r)
 			if err != nil {
 				writeOperationError(r, w, requestLogger, err)
@@ -220,7 +229,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 			// We will register a handler for each file in the request. AFAIK, we can't know how many files we have
 			// before parsing the request, so we will support 10 files max.
-			for i := 0; i < MaxSupportedFilesUpload; i++ {
+			for i := 0; i < h.maxUploadFiles; i++ {
 				fileKey := fmt.Sprintf("%d", i)
 				err = parser.Register(fileKey, func(reader io.Reader, header formstream.Header) error {
 					// Create and open a temporary file to store the file content

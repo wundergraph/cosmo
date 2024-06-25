@@ -886,12 +886,27 @@ func (e *Environment) MakeGraphQLRequest(request GraphQLRequest) (*TestResponse,
 func (e *Environment) MakeGraphQLRequestAsMultipartForm(request GraphQLRequest) (*TestResponse, error) {
 	data, err := json.Marshal(request)
 	require.NoError(e.t, err)
+	formValues := make(map[string]io.Reader)
+	formValues["operations"] = bytes.NewReader(data)
 
-	formValues := map[string]io.Reader{
-		"operations": bytes.NewReader(data),
-		"map":        strings.NewReader(`{ "0": ["variables.file"] }`),
-		"0":          bytes.NewReader(request.Files[0]),
+	if len(request.Files) == 1 {
+		formValues["map"] = strings.NewReader(`{ "0": ["variables.file"] }`)
+		formValues["0"] = bytes.NewReader(request.Files[0])
+	} else {
+		mapStr := `{`
+		for i := 0; i < len(request.Files); i++ {
+			if i > 0 {
+				mapStr += ", "
+			}
+			mapStr += fmt.Sprintf(`"%d": ["variables.files.%d"]`, i, i)
+		}
+		mapStr += `}`
+		formValues["map"] = strings.NewReader(mapStr)
+		for i := 0; i < len(request.Files); i++ {
+			formValues[fmt.Sprintf("%d", i)] = bytes.NewReader(request.Files[i])
+		}
 	}
+
 	multipartBody, contentType, err := multipartBytes(formValues)
 	if err != nil {
 		return nil, err

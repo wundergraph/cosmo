@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-
 	"net"
 	"net/http"
 	"net/url"
@@ -25,6 +24,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
+	rmiddleware "github.com/wundergraph/cosmo/router/internal/middleware"
 	"github.com/wundergraph/cosmo/router/internal/recoveryhandler"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -1108,7 +1108,10 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 
 	httpRouter := chi.NewRouter()
 	httpRouter.Use(recoveryHandler)
-	httpRouter.Use(middleware.RequestSize(int64(r.routerTrafficConfig.MaxRequestBodyBytes)))
+	httpRouter.Use(rmiddleware.RequestSize(
+		int64(r.routerTrafficConfig.MaxRequestBodyBytes),
+		int64(r.routerTrafficConfig.MaxUploadRequestBodyBytes)),
+	)
 	httpRouter.Use(middleware.Compress(5, CustomCompressibleContentTypes...))
 
 	brCompressor := middleware.NewCompressor(5, CustomCompressibleContentTypes...)
@@ -1342,6 +1345,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		FlushTelemetryAfterResponse: r.awsLambda,
 		TraceExportVariables:        r.traceConfig.ExportGraphQLVariables.Enabled,
 		SpanAttributesMapper:        r.traceConfig.SpanAttributesMapper,
+		MaxUploadFiles:              r.routerTrafficConfig.MaxUploadFiles,
 	})
 
 	graphqlChiRouter := chi.NewRouter()
