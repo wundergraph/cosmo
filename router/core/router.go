@@ -1848,8 +1848,8 @@ func WithLocalhostFallbackInsideDocker(fallback bool) Option {
 
 func DefaultRouterTrafficConfig() *config.RouterTrafficConfiguration {
 	return &config.RouterTrafficConfiguration{
-		MaxRequestBodyBytes:       1000 * 1000 * 5, // 5 MB
-		MaxUploadRequestBodyBytes: 1000 * 1000 * 5, // 5 MB,
+		MaxRequestBodyBytes:       1000 * 1000 * 5,  // 5 MB
+		MaxUploadRequestBodyBytes: 1000 * 1000 * 50, // 50 MB,
 		MaxUploadFiles:            10,
 	}
 }

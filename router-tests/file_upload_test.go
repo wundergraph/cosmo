@@ -47,7 +47,7 @@ func TestSingleFileUpload_NoFileProvided(t *testing.T) {
 	})
 }
 
-func TestSingleFileUpload_FileSizeExceedsLimit(t *testing.T) {
+func TestFileUpload_FilesSizeExceedsLimit(t *testing.T) {
 	t.Parallel()
 	testenv.Run(t, &testenv.Config{
 		RouterOptions: []core.Option{core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
@@ -56,7 +56,7 @@ func TestSingleFileUpload_FileSizeExceedsLimit(t *testing.T) {
 	}, func(t *testing.T, xEnv *testenv.Environment) {
 		files := make([][]byte, 1)
 		files[0] = []byte("This is an example of a large file that exceeds the max request body size.")
-		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+		res, err := xEnv.MakeGraphQLRequestAsMultipartForm(testenv.GraphQLRequest{
 			Query:     "mutation ($file: Upload!){singleUpload(file: $file)}",
 			Variables: []byte(`{"file":null}`),
 			Files:     files,
@@ -64,6 +64,29 @@ func TestSingleFileUpload_FileSizeExceedsLimit(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, http.StatusRequestEntityTooLarge, res.Response.StatusCode)
 		require.Equal(t, `{"errors":[{"message":"request body too large"}],"data":null}`, res.Body)
+	})
+}
+
+func TestFileUpload_FilesExceedsLimit(t *testing.T) {
+	t.Parallel()
+	testenv.Run(t, &testenv.Config{
+		RouterOptions: []core.Option{core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
+			MaxUploadFiles:            2,
+			MaxRequestBodyBytes:       50000,
+			MaxUploadRequestBodyBytes: 50000,
+		})},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		files := make([][]byte, 3)
+		files[0] = []byte("File1 content as text")
+		files[1] = []byte("File2 content as text")
+		files[2] = []byte("File3 content as text")
+		res, _ := xEnv.MakeGraphQLRequestAsMultipartForm(testenv.GraphQLRequest{
+			Query:     "mutation($files: [Upload!]!) { multipleUpload(files: $files)}",
+			Variables: []byte(`{"files":[null, null, null]}`),
+			Files:     files,
+		})
+		require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+		require.Equal(t, `{"errors":[{"message":"too many files: 3, max allowed: 2"}],"data":null}`, res.Body)
 	})
 }
 
@@ -102,29 +125,5 @@ func TestMultipleFilesUpload_NoFilesProvided(t *testing.T) {
 		})
 		fmt.Println(res.Body)
 		require.JSONEq(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at Path 'mutation'.","extensions":{"errors":[{"message":"could not render fetch input","path":[]}]}},{"message":"Cannot return null for non-nullable field 'Mutation.multipleUpload'.","path":["multipleUpload"]}],"data":null}`, res.Body)
-	})
-}
-
-func TestMultipleFilesUpload_FileSizeExceedsLimit(t *testing.T) {
-	t.Parallel()
-	testenv.Run(t, &testenv.Config{
-		RouterOptions: []core.Option{core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
-			MaxUploadRequestBodyBytes: 100,
-		})},
-	}, func(t *testing.T, xEnv *testenv.Environment) {
-		files := make([][]byte, 2)
-		files[0] = []byte("This is an example of a large file that exceeds the max request body size.")
-		files[1] = []byte("Another file.")
-		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-			Header: map[string][]string{
-				"Content-Type": {"multipart/form-data"},
-			},
-			Query:     "mutation($files: [Upload!]!) { multipleUpload(files: $files)}",
-			Variables: []byte(`{"files":[null, null]}`),
-			Files:     files,
-		})
-		require.NoError(t, err)
-		require.Equal(t, http.StatusRequestEntityTooLarge, res.Response.StatusCode)
-		require.Equal(t, `{"errors":[{"message":"request body too large"}],"data":null}`, res.Body)
 	})
 }

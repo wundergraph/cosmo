@@ -6,6 +6,8 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"io"
+	"mime"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"strconv"
@@ -209,8 +211,50 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			}
 			r.Body = io.NopCloser(bytes.NewReader(tempBuf.Bytes()))
 
+			contentType := r.Header.Get("Content-Type")
+			_, params, err := mime.ParseMediaType(contentType)
+			if err != nil {
+				finalErr = err
+				writeOperationError(r, w, requestLogger, err)
+				return
+			}
+			boundary, ok := params["boundary"]
+			if !ok {
+				finalErr = fmt.Errorf("missing boundary in Content-Type")
+				writeOperationError(r, w, requestLogger, finalErr)
+				return
+			}
+
+			multipartReader := multipart.NewReader(bytes.NewReader(tempBuf.Bytes()), boundary)
+			filePartsCount := 0
+			for {
+				part, err := multipartReader.NextPart()
+				if err == io.EOF {
+					break
+				}
+				if err != nil {
+					finalErr = err
+					writeOperationError(r, w, requestLogger, err)
+					return
+				}
+				if _, err := strconv.ParseFloat(part.FormName(), 64); err == nil {
+					filePartsCount++
+				}
+				part.Close()
+			}
+
+			if filePartsCount > h.maxUploadFiles {
+				finalErr = &inputError{
+					message:    fmt.Sprintf("too many files: %d, max allowed: %d", filePartsCount, h.maxUploadFiles),
+					statusCode: http.StatusBadRequest,
+				}
+				writeOperationError(r, w, requestLogger, finalErr)
+				return
+			}
+
 			parser, err := httpform.NewParser(r)
 			if err != nil {
+				finalErr = err
 				writeOperationError(r, w, requestLogger, err)
 				return
 			}
@@ -223,12 +267,12 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				return nil
 			}, formstream.WithRequiredPart("operations"), formstream.WithRequiredPart("map"))
 			if err != nil {
+				finalErr = err
 				writeOperationError(r, w, requestLogger, err)
 				return
 			}
 
-			// We will register a handler for each file in the request. AFAIK, we can't know how many files we have
-			// before parsing the request, so we will support 10 files max.
+			// We will register a handler for each file in the request.
 			for i := 0; i < h.maxUploadFiles; i++ {
 				fileKey := fmt.Sprintf("%d", i)
 				err = parser.Register(fileKey, func(reader io.Reader, header formstream.Header) error {
@@ -248,6 +292,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 					return nil
 				}, formstream.WithRequiredPart(fileKey))
 				if err != nil {
+					finalErr = err
 					writeOperationError(r, w, requestLogger, err)
 					return
 				}
@@ -255,6 +300,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 			err = parser.Parse()
 			if err != nil {
+				finalErr = err
 				writeOperationError(r, w, requestLogger, err)
 				return
 			}

@@ -161,7 +161,7 @@
     },
     "Router": {
       "MaxRequestBodyBytes": 5000000,
-      "MaxUploadRequestBodyBytes": 5000000,
+      "MaxUploadRequestBodyBytes": 50000000,
       "MaxUploadFiles": 10
     }
   },
