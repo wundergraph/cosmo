@@ -4,6 +4,7 @@ import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
 import { SetupTest } from './test-util.js';
+import { unsuccessfulBaseCompositionError } from '../src/core/errors/errors.js';
 
 let dbname = '';
 
@@ -244,8 +245,10 @@ describe('Router Config', (ctx) => {
     });
 
     expect(publishPandaResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
-    expect(publishPandaResp.compositionErrors).toHaveLength(1);
+    expect(publishPandaResp.compositionErrors).toHaveLength(2);
     expect(publishPandaResp.compositionErrors[0].message).toStrictEqual(noQueryRootTypeError.message);
+    expect(publishPandaResp.compositionErrors[1])
+      .toStrictEqual(unsuccessfulBaseCompositionError(fedGraphName, 'default'));
 
     const createUsersSubgraph = await client.createFederatedSubgraph({
       name: usersSubgraph,
