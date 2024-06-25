@@ -1110,8 +1110,8 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	httpRouter.Use(recoveryHandler)
 	httpRouter.Use(rmiddleware.RequestSize(
 		int64(r.routerTrafficConfig.MaxRequestBodyBytes),
-		int64(r.routerTrafficConfig.MaxUploadRequestBodyBytes)),
-	)
+		int64(r.routerTrafficConfig.MaxUploadRequestBodyBytes),
+	))
 	httpRouter.Use(middleware.Compress(5, CustomCompressibleContentTypes...))
 
 	brCompressor := middleware.NewCompressor(5, CustomCompressibleContentTypes...)
@@ -1848,7 +1848,9 @@ func WithLocalhostFallbackInsideDocker(fallback bool) Option {
 
 func DefaultRouterTrafficConfig() *config.RouterTrafficConfiguration {
 	return &config.RouterTrafficConfiguration{
-		MaxRequestBodyBytes: 1000 * 1000 * 5, // 5 MB
+		MaxRequestBodyBytes:       1000 * 1000 * 5, // 5 MB
+		MaxUploadRequestBodyBytes: 1000 * 1000 * 5, // 5 MB,
+		MaxUploadFiles:            10,
 	}
 }
 
