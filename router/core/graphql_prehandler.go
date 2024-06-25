@@ -272,6 +272,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				return
 			}
 
+			var tempFiles []*os.File
 			// We will register a handler for each file in the request.
 			for i := 0; i < h.maxUploadFiles; i++ {
 				fileKey := fmt.Sprintf("%d", i)
@@ -279,10 +280,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 					// Create and open a temporary file to store the file content
 					// This file will be deleted after the request is done
 					file, err := os.CreateTemp("", "tempfile-")
+					tempFiles = append(tempFiles, file)
 					if err != nil {
 						return err
 					}
-					defer file.Close()
 					_, err = io.Copy(file, reader)
 					if err != nil {
 						return err
@@ -297,6 +298,13 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 					return
 				}
 			}
+
+			defer func() {
+				for _, file := range tempFiles {
+					file.Close()
+					os.Remove(file.Name())
+				}
+			}()
 
 			err = parser.Parse()
 			if err != nil {
