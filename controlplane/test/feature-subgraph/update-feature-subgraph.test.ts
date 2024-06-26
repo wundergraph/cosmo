@@ -106,14 +106,13 @@ describe('Update feature subgraph tests', () => {
       DEFAULT_SUBGRAPH_URL_TWO,
     );
 
+    // Undefined labels are defaulted to an empty array
     const featureSubgraphResponseOne = await client.updateSubgraph({
       name: featureSubgraphName,
       isFeatureSubgraph: true,
       labels: [],
     });
-    expect(featureSubgraphResponseOne.response?.code).toBe(EnumStatusCode.ERR);
-    expect(featureSubgraphResponseOne.response?.details)
-      .toBe(`Feature subgraph labels cannot be changed directly; they are determined by the feature flag.`);
+    expect(featureSubgraphResponseOne.response?.code).toBe(EnumStatusCode.OK);
 
     const featureSubgraphResponseTwo = await client.updateSubgraph({
       name: featureSubgraphName,

@@ -4868,7 +4868,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               deploymentErrors: [],
             };
           }
-          if (req.labels || req.unsetLabels) {
+          if ((req.labels && req.labels.length > 0) || req.unsetLabels) {
             return {
               response: {
                 code: EnumStatusCode.ERR,
