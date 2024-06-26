@@ -17,7 +17,6 @@ type MultipartParser struct {
 	operationProcessor *OperationProcessor
 	maxUploadFiles     int
 	maxUploadFileSize  int
-	body               []byte
 	files              []httpclient.File
 	fileHandlers       []*os.File
 	form               *multipart.Form
@@ -85,44 +84,46 @@ func (p *MultipartParser) processFilePart(filePart []*multipart.FileHeader) erro
 }
 
 func (p *MultipartParser) Parse(r *http.Request, buf *bytes.Buffer) ([]byte, []httpclient.File, error) {
+	var body []byte
+
 	contentType := r.Header.Get("Content-Type")
 	d, params, err := mime.ParseMediaType(contentType)
 	if err != nil || d != "multipart/form-data" {
-		return p.body, p.files, err
+		return body, p.files, err
 	}
 
 	boundary, ok := params["boundary"]
 	if !ok {
-		return p.body, p.files, errors.New("could not find request boundary")
+		return body, p.files, errors.New("could not find request boundary")
 	}
 
 	reader := multipart.NewReader(r.Body, boundary)
 	p.form, err = reader.ReadForm(0)
 	if err != nil {
-		return p.body, p.files, &inputError{
+		return body, p.files, &inputError{
 			message:    err.Error(),
 			statusCode: http.StatusOK,
 		}
 	}
 
 	if len(p.form.File) > p.maxUploadFiles {
-		return p.body, p.files, &inputError{
+		return body, p.files, &inputError{
 			message:    fmt.Sprintf("too many files: %d, max allowed: %d", len(p.form.File), p.maxUploadFiles),
 			statusCode: http.StatusOK,
 		}
 	}
 
-	p.body, err = p.operationProcessor.ReadBody(buf, strings.NewReader(strings.Join(p.form.Value["operations"], "")))
+	body, err = p.operationProcessor.ReadBody(buf, strings.NewReader(strings.Join(p.form.Value["operations"], "")))
 	if err != nil {
-		return p.body, p.files, err
+		return body, p.files, err
 	}
 
 	for _, filePart := range p.form.File {
 		err = p.processFilePart(filePart)
 		if err != nil {
-			return p.body, p.files, err
+			return body, p.files, err
 		}
 	}
 
-	return p.body, p.files, err
+	return body, p.files, err
 }
