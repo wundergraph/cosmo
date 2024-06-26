@@ -46,7 +46,6 @@ type PreHandlerOptions struct {
 	TracerProvider              *sdktrace.TracerProvider
 	FlushTelemetryAfterResponse bool
 	TraceExportVariables        bool
-	SpanAttributesMapper        func(r *http.Request) []attribute.KeyValue
 	FileUploadEnabled           bool
 	MaxUploadFiles              int
 	MaxUploadFileSize           int
@@ -67,7 +66,6 @@ type PreHandler struct {
 	flushTelemetryAfterResponse bool
 	tracer                      trace.Tracer
 	traceExportVariables        bool
-	spanAttributesMapper        func(r *http.Request) []attribute.KeyValue
 	fileUploadEnabled           bool
 	maxUploadFiles              int
 	maxUploadFileSize           int
