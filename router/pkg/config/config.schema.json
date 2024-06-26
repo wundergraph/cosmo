@@ -624,6 +624,30 @@
       "default": "/",
       "description": "The path of the GraphQL Playground. The GraphQL Playground is a web-based GraphQL IDE that allows you to interact with the GraphQL API. The default value is '/'."
     },
+    "file_upload": {
+      "type": "object",
+      "description": "The configuration for file upload. Configure whether it should be enabled along with file size and number of files.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "max_file_size": {
+          "type": "string",
+          "bytes": {
+            "minimum": "1MB"
+          },
+          "description": "The maximum size of a file that can be uploaded. The size is specified as a string with a number and a unit, e.g. 10KB, 1MB, 1GB. The supported units are 'KB', 'MB', 'GB'."
+        },
+        "max_files": {
+          "type": "integer",
+          "default": 10,
+          "minimum": 1,
+          "description": "The maximum number of files that can be uploaded."
+        }
+      }
+    },
     "traffic_shaping": {
       "type": "object",
       "description": "The configuration for the traffic shaping. Configure rules for traffic shaping like maximum request body size, timeouts, retry behavior, etc. See https://cosmo-docs.wundergraph.com/router/traffic-shaping for more information.",
@@ -639,19 +663,6 @@
                 "minimum": "1MB"
               },
               "description": "The maximum request body size. The size is specified as a string with a number and a unit, e.g. 10KB, 1MB, 1GB. The supported units are 'KB', 'MB', 'GB'."
-            },
-            "max_upload_file_size": {
-              "type": "string",
-              "bytes": {
-                "minimum": "1MB"
-              },
-              "description": "The maximum size of a file that can be uploaded. The size is specified as a string with a number and a unit, e.g. 10KB, 1MB, 1GB. The supported units are 'KB', 'MB', 'GB'."
-            },
-            "max_upload_files": {
-              "type": "integer",
-              "default": 10,
-              "minimum": 1,
-              "description": "The maximum number of files that can be uploaded."
             }
           }
         },

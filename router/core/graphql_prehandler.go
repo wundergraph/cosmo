@@ -47,6 +47,7 @@ type PreHandlerOptions struct {
 	FlushTelemetryAfterResponse bool
 	TraceExportVariables        bool
 	SpanAttributesMapper        func(r *http.Request) []attribute.KeyValue
+	FileUploadEnabled           bool
 	MaxUploadFiles              int
 	MaxUploadFileSize           int
 }
@@ -67,6 +68,7 @@ type PreHandler struct {
 	tracer                      trace.Tracer
 	traceExportVariables        bool
 	spanAttributesMapper        func(r *http.Request) []attribute.KeyValue
+	fileUploadEnabled           bool
 	maxUploadFiles              int
 	maxUploadFileSize           int
 }
@@ -91,6 +93,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 			"wundergraph/cosmo/router/pre_handler",
 			trace.WithInstrumentationVersion("0.0.1"),
 		),
+		fileUploadEnabled: opts.FileUploadEnabled,
 		maxUploadFiles:    opts.MaxUploadFiles,
 		maxUploadFileSize: opts.MaxUploadFileSize,
 	}
@@ -177,12 +180,12 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		var body []byte
 		var files []httpclient.File
-		var err error
 		// XXX: This buffer needs to be returned to the pool only
 		// AFTER we're done with body (retrieved from parser.ReadBody())
 		buf := pool.GetBytesBuffer()
 		defer pool.PutBytesBuffer(buf)
 		if r.Header.Get("Content-Type") == "" || r.Header.Get("Content-Type") == "application/json" {
+			var err error
 			body, err = h.operationProcessor.ReadBody(buf, r.Body)
 			if err != nil {
 				finalErr = err
@@ -199,8 +202,18 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				return
 			}
 		} else if strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
+			if !h.fileUploadEnabled {
+				finalErr = &inputError{
+					message:    "file upload disabled",
+					statusCode: http.StatusOK,
+				}
+				writeOperationError(r, w, requestLogger, finalErr)
+				return
+			}
+
 			multipartParser := NewMultipartParser(h.operationProcessor, h.maxUploadFiles, h.maxUploadFileSize)
 
+			var err error
 			body, files, err = multipartParser.Parse(r, buf)
 			if err != nil {
 				finalErr = err
