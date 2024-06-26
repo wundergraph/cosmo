@@ -789,7 +789,7 @@ func TestSubgraphOperationMinifier(t *testing.T) {
 						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 							body, err := io.ReadAll(r.Body)
 							require.NoError(t, err)
-							require.Equal(t, `{"query":"{a: employees {__typename id}}"}`, string(body))
+							require.Equal(t, `{"query":"{a: employees {id __typename}}"}`, string(body))
 							r.Body = io.NopCloser(bytes.NewReader(body))
 							handler.ServeHTTP(w, r)
 						})
