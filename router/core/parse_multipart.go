@@ -94,6 +94,7 @@ func (p *MultipartParser) parse(r *http.Request, buf *bytes.Buffer) ([]byte, []h
 		} else {
 			// The file is in memory. We write it manually to the disk.
 			tempFile, err := os.CreateTemp("", "cosmo-upload-")
+			p.fileHandlers = append(p.fileHandlers, tempFile)
 			if err != nil {
 				return body, files, err
 			}
@@ -101,13 +102,15 @@ func (p *MultipartParser) parse(r *http.Request, buf *bytes.Buffer) ([]byte, []h
 			if err != nil {
 				return body, files, err
 			}
-			p.fileHandlers = append(p.fileHandlers, tempFile)
 			files = append(files, httpclient.NewFile(tempFile.Name(), filePart[0].Filename))
-			tempFile.Close()
 		}
-
-		file.Close()
 	}
+
+	defer func() {
+		for _, file := range p.fileHandlers {
+			file.Close()
+		}
+	}()
 
 	return body, files, nil
 }
