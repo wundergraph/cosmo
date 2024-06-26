@@ -18,6 +18,7 @@ type MultipartParser struct {
 	maxUploadFiles     int
 	maxUploadFileSize  int
 	fileHandlers       []*os.File
+	form               *multipart.Form
 }
 
 func NewMultipartParser(operationProcessor *OperationProcessor, maxUploadFiles int, maxUploadFileSize int) *MultipartParser {
@@ -32,6 +33,9 @@ func (p *MultipartParser) removeAll() {
 	for _, file := range p.fileHandlers {
 		file.Close()
 		os.Remove(file.Name())
+	}
+	if p.form != nil {
+		p.form.RemoveAll()
 	}
 }
 
@@ -50,7 +54,7 @@ func (p *MultipartParser) parse(r *http.Request, buf *bytes.Buffer) ([]byte, []h
 	}
 
 	reader := multipart.NewReader(r.Body, boundary)
-	form, err := reader.ReadForm(0)
+	p.form, err = reader.ReadForm(0)
 	if err != nil {
 		return body, files, &inputError{
 			message:    err.Error(),
@@ -58,19 +62,19 @@ func (p *MultipartParser) parse(r *http.Request, buf *bytes.Buffer) ([]byte, []h
 		}
 	}
 
-	if len(form.File) > p.maxUploadFiles {
+	if len(p.form.File) > p.maxUploadFiles {
 		return body, files, &inputError{
-			message:    fmt.Sprintf("too many files: %d, max allowed: %d", len(form.File), p.maxUploadFiles),
+			message:    fmt.Sprintf("too many files: %d, max allowed: %d", len(p.form.File), p.maxUploadFiles),
 			statusCode: http.StatusOK,
 		}
 	}
 
-	body, err = p.operationProcessor.ReadBody(buf, strings.NewReader(strings.Join(form.Value["operations"], "")))
+	body, err = p.operationProcessor.ReadBody(buf, strings.NewReader(strings.Join(p.form.Value["operations"], "")))
 	if err != nil {
 		return body, files, err
 	}
 
-	for _, filePart := range form.File {
+	for _, filePart := range p.form.File {
 		file, err := filePart[0].Open()
 		if err != nil {
 			return body, files, err
