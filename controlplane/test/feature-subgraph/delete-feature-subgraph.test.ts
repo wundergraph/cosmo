@@ -40,7 +40,6 @@ describe('Delete feature subgraph tests', () => {
     const deleteFederatedSubgraphResponse = await client.deleteFederatedSubgraph({
       subgraphName: featureSubgraphName,
       namespace: DEFAULT_NAMESPACE,
-      isFeatureSubgraph: true,
     })
     expect(deleteFederatedSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
 
@@ -69,7 +68,6 @@ describe('Delete feature subgraph tests', () => {
     const deleteFederatedSubgraphResponse = await client.deleteFederatedSubgraph({
       subgraphName: featureSubgraphName,
       namespace: DEFAULT_NAMESPACE,
-      isFeatureSubgraph: true,
     })
     expect(deleteFederatedSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     expect(deleteFederatedSubgraphResponse.response?.details)
@@ -103,7 +101,6 @@ describe('Delete feature subgraph tests', () => {
     const deleteFederatedSubgraphResponse = await client.deleteFederatedSubgraph({
       subgraphName: featureSubgraphName,
       namespace: DEFAULT_NAMESPACE,
-      isFeatureSubgraph: true,
     })
     expect(deleteFederatedSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
 
