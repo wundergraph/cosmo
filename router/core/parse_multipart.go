@@ -40,7 +40,6 @@ func (p *MultipartParser) RemoveAll() {
 }
 
 func (p *MultipartParser) processInMemoryFile(filePart []*multipart.FileHeader, file multipart.File, body []byte, files []httpclient.File) ([]byte, []httpclient.File, error) {
-	// The file is in memory. We write it manually to the disk.
 	tempFile, err := os.CreateTemp("", "cosmo-upload-")
 	if err != nil {
 		return body, files, err
