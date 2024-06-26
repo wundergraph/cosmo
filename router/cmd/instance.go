@@ -119,7 +119,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		core.WithHeaderRules(cfg.Headers),
 		core.WithStaticRouterConfig(routerConfig),
 		core.WithRouterTrafficConfig(&cfg.TrafficShaping.Router),
-		core.WithFileUploadsConfig(&cfg.FileUploads),
+		core.WithFileUploadConfig(&cfg.FileUpload),
 		core.WithSubgraphTransportOptions(&core.SubgraphTransportOptions{
 			RequestTimeout:         cfg.TrafficShaping.All.RequestTimeout,
 			ResponseHeaderTimeout:  cfg.TrafficShaping.All.ResponseHeaderTimeout,

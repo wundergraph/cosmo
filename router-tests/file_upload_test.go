@@ -51,7 +51,7 @@ func TestSingleFileUpload_NoFileProvided(t *testing.T) {
 func TestFileUpload_FilesSizeExceedsLimit(t *testing.T) {
 	t.Parallel()
 	testenv.Run(t, &testenv.Config{
-		RouterOptions: []core.Option{core.WithFileUploadsConfig(&config.FileUploadsRules{
+		RouterOptions: []core.Option{core.WithFileUploadConfig(&config.FileUpload{
 			Enabled:          true,
 			MaxFiles:         1,
 			MaxFileSizeBytes: 50,
@@ -73,7 +73,7 @@ func TestFileUpload_FilesSizeExceedsLimit(t *testing.T) {
 func TestFileUpload_FilesExceedsLimit(t *testing.T) {
 	t.Parallel()
 	testenv.Run(t, &testenv.Config{
-		RouterOptions: []core.Option{core.WithFileUploadsConfig(&config.FileUploadsRules{
+		RouterOptions: []core.Option{core.WithFileUploadConfig(&config.FileUpload{
 			Enabled:          true,
 			MaxFiles:         2,
 			MaxFileSizeBytes: 50000,
@@ -130,10 +130,10 @@ func TestMultipleFilesUpload_NoFilesProvided(t *testing.T) {
 	})
 }
 
-func TestFileUpload_UploadsDisabled(t *testing.T) {
+func TestFileUpload_UploadDisabled(t *testing.T) {
 	t.Parallel()
 	testenv.Run(t, &testenv.Config{
-		RouterOptions: []core.Option{core.WithFileUploadsConfig(&config.FileUploadsRules{
+		RouterOptions: []core.Option{core.WithFileUploadConfig(&config.FileUpload{
 			Enabled: false,
 		})},
 	}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -143,6 +143,6 @@ func TestFileUpload_UploadsDisabled(t *testing.T) {
 			Variables: []byte(`{"files":[null]}`),
 			Files:     files,
 		})
-		require.Equal(t, `{"errors":[{"message":"file uploads disabled"}],"data":null}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"file upload disabled"}],"data":null}`, res.Body)
 	})
 }

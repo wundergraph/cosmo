@@ -47,7 +47,7 @@ type PreHandlerOptions struct {
 	FlushTelemetryAfterResponse bool
 	TraceExportVariables        bool
 	SpanAttributesMapper        func(r *http.Request) []attribute.KeyValue
-	FileUploadsEnabled          bool
+	FileUploadEnabled           bool
 	MaxUploadFiles              int
 	MaxUploadFileSize           int
 }
@@ -68,7 +68,7 @@ type PreHandler struct {
 	tracer                      trace.Tracer
 	traceExportVariables        bool
 	spanAttributesMapper        func(r *http.Request) []attribute.KeyValue
-	fileUploadsEnabled          bool
+	fileUploadEnabled           bool
 	maxUploadFiles              int
 	maxUploadFileSize           int
 }
@@ -93,9 +93,9 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 			"wundergraph/cosmo/router/pre_handler",
 			trace.WithInstrumentationVersion("0.0.1"),
 		),
-		fileUploadsEnabled: opts.FileUploadsEnabled,
-		maxUploadFiles:     opts.MaxUploadFiles,
-		maxUploadFileSize:  opts.MaxUploadFileSize,
+		fileUploadEnabled: opts.FileUploadEnabled,
+		maxUploadFiles:    opts.MaxUploadFiles,
+		maxUploadFileSize: opts.MaxUploadFileSize,
 	}
 }
 
@@ -202,9 +202,9 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				return
 			}
 		} else if strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
-			if !h.fileUploadsEnabled {
+			if !h.fileUploadEnabled {
 				finalErr = &inputError{
-					message:    "file uploads disabled",
+					message:    "file upload disabled",
 					statusCode: http.StatusOK,
 				}
 				writeOperationError(r, w, requestLogger, finalErr)

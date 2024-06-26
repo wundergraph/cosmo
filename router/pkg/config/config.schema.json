@@ -624,9 +624,9 @@
       "default": "/",
       "description": "The path of the GraphQL Playground. The GraphQL Playground is a web-based GraphQL IDE that allows you to interact with the GraphQL API. The default value is '/'."
     },
-    "file_uploads": {
+    "file_upload": {
       "type": "object",
-      "description": "The configuration for file uploads. Configure whether it should be enabled along with file size and number of files.",
+      "description": "The configuration for file upload. Configure whether it should be enabled along with file size and number of files.",
       "additionalProperties": false,
       "properties": {
         "enabled": {
