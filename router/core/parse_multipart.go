@@ -42,7 +42,7 @@ func (p *MultipartParser) RemoveAll() {
 }
 
 func (p *MultipartParser) processInMemoryFile(filePart []*multipart.FileHeader, file multipart.File) error {
-	tempFile, err := os.CreateTemp("", "cosmo-upload-")
+	tempFile, err := os.CreateTemp("", "cosmo-upload-*")
 	if err != nil {
 		return err
 	}
