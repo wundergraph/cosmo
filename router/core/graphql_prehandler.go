@@ -201,7 +201,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		} else if strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
 			multipartParser := NewMultipartParser(h.operationProcessor, h.maxUploadFiles, h.maxUploadFileSize)
 
-			body, files, err = multipartParser.parse(r, buf)
+			body, files, err = multipartParser.Parse(r, buf)
 			if err != nil {
 				finalErr = err
 				writeOperationError(r, w, requestLogger, finalErr)
@@ -210,7 +210,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 			// Cleanup all files. Must happen in here, so it is run after response is sent.
 			defer func() {
-				multipartParser.removeAll()
+				multipartParser.RemoveAll()
 			}()
 		}
 

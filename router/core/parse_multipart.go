@@ -29,7 +29,7 @@ func NewMultipartParser(operationProcessor *OperationProcessor, maxUploadFiles i
 	}
 }
 
-func (p *MultipartParser) removeAll() {
+func (p *MultipartParser) RemoveAll() {
 	for _, file := range p.fileHandlers {
 		file.Close()
 		os.Remove(file.Name())
@@ -39,7 +39,49 @@ func (p *MultipartParser) removeAll() {
 	}
 }
 
-func (p *MultipartParser) parse(r *http.Request, buf *bytes.Buffer) ([]byte, []httpclient.File, error) {
+func (p *MultipartParser) processInMemoryFile(filePart []*multipart.FileHeader, file multipart.File, body []byte, files []httpclient.File) ([]byte, []httpclient.File, error) {
+	// The file is in memory. We write it manually to the disk.
+	tempFile, err := os.CreateTemp("", "cosmo-upload-")
+	p.fileHandlers = append(p.fileHandlers, tempFile)
+	if err != nil {
+		return body, files, err
+	}
+	_, err = io.Copy(tempFile, file)
+	if err != nil {
+		return body, files, err
+	}
+	files = append(files, httpclient.NewFile(tempFile.Name(), filePart[0].Filename))
+
+	return body, files, err
+}
+
+func (p *MultipartParser) processFilePart(filePart []*multipart.FileHeader, body []byte, files []httpclient.File) ([]byte, []httpclient.File, error) {
+	file, err := filePart[0].Open()
+	if err != nil {
+		return body, files, err
+	}
+	defer file.Close()
+
+	if filePart[0].Size > int64(p.maxUploadFileSize) {
+		return body, files, &inputError{
+			message:    "file too large to upload",
+			statusCode: http.StatusOK,
+		}
+	}
+
+	// Check if the file was written to the disk
+	if diskFile, ok := file.(*os.File); ok {
+		p.fileHandlers = append(p.fileHandlers, diskFile)
+		files = append(files, httpclient.NewFile(diskFile.Name(), filePart[0].Filename))
+	} else {
+		// The file is in memory. We write it manually to the disk.
+		body, files, err = p.processInMemoryFile(filePart, file, body, files)
+	}
+
+	return body, files, err
+}
+
+func (p *MultipartParser) Parse(r *http.Request, buf *bytes.Buffer) ([]byte, []httpclient.File, error) {
 	var body []byte
 	var files []httpclient.File
 	contentType := r.Header.Get("Content-Type")
@@ -75,42 +117,11 @@ func (p *MultipartParser) parse(r *http.Request, buf *bytes.Buffer) ([]byte, []h
 	}
 
 	for _, filePart := range p.form.File {
-		file, err := filePart[0].Open()
+		body, files, err = p.processFilePart(filePart, body, files)
 		if err != nil {
 			return body, files, err
 		}
-
-		if filePart[0].Size > int64(p.maxUploadFileSize) {
-			return body, files, &inputError{
-				message:    "file too large to upload",
-				statusCode: http.StatusOK,
-			}
-		}
-
-		// Check if the file was written to the disk
-		if diskFile, ok := file.(*os.File); ok {
-			p.fileHandlers = append(p.fileHandlers, diskFile)
-			files = append(files, httpclient.NewFile(diskFile.Name(), filePart[0].Filename))
-		} else {
-			// The file is in memory. We write it manually to the disk.
-			tempFile, err := os.CreateTemp("", "cosmo-upload-")
-			p.fileHandlers = append(p.fileHandlers, tempFile)
-			if err != nil {
-				return body, files, err
-			}
-			_, err = io.Copy(tempFile, file)
-			if err != nil {
-				return body, files, err
-			}
-			files = append(files, httpclient.NewFile(tempFile.Name(), filePart[0].Filename))
-		}
 	}
 
-	defer func() {
-		for _, file := range p.fileHandlers {
-			file.Close()
-		}
-	}()
-
-	return body, files, nil
+	return body, files, err
 }
