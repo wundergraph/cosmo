@@ -181,6 +181,7 @@ type (
 		subgraphTransportOptions *SubgraphTransportOptions
 		graphqlMetricsConfig     *GraphQLMetricsConfig
 		routerTrafficConfig      *config.RouterTrafficConfiguration
+		fileUploadConfig         *config.FileUpload
 		accessController         *AccessController
 		retryOptions             retrytransport.RetryOptions
 		redisClient              *redis.Client
@@ -302,6 +303,9 @@ func NewRouter(opts ...Option) (*Router, error) {
 	}
 	if r.routerTrafficConfig == nil {
 		r.routerTrafficConfig = DefaultRouterTrafficConfig()
+	}
+	if r.fileUploadConfig == nil {
+		r.fileUploadConfig = DefaultFileUploadConfig()
 	}
 	if r.accessController == nil {
 		r.accessController = DefaultAccessController()
@@ -1342,8 +1346,9 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		FlushTelemetryAfterResponse: r.awsLambda,
 		TraceExportVariables:        r.traceConfig.ExportGraphQLVariables.Enabled,
 		SpanAttributesMapper:        r.traceConfig.SpanAttributesMapper,
-		MaxUploadFiles:              r.routerTrafficConfig.MaxUploadFiles,
-		MaxUploadFileSize:           int(r.routerTrafficConfig.MaxUploadFileSizeBytes),
+		FileUploadEnabled:           r.fileUploadConfig.Enabled,
+		MaxUploadFiles:              r.fileUploadConfig.MaxFiles,
+		MaxUploadFileSize:           int(r.fileUploadConfig.MaxFileSizeBytes),
 	})
 
 	graphqlChiRouter := chi.NewRouter()
@@ -1820,6 +1825,12 @@ func WithRouterTrafficConfig(cfg *config.RouterTrafficConfiguration) Option {
 	}
 }
 
+func WithFileUploadConfig(cfg *config.FileUpload) Option {
+	return func(r *Router) {
+		r.fileUploadConfig = cfg
+	}
+}
+
 func WithAccessController(controller *AccessController) Option {
 	return func(r *Router) {
 		r.accessController = controller
@@ -1846,9 +1857,15 @@ func WithLocalhostFallbackInsideDocker(fallback bool) Option {
 
 func DefaultRouterTrafficConfig() *config.RouterTrafficConfiguration {
 	return &config.RouterTrafficConfiguration{
-		MaxRequestBodyBytes:    1000 * 1000 * 5,  // 5 MB
-		MaxUploadFileSizeBytes: 1000 * 1000 * 50, // 50 MB,
-		MaxUploadFiles:         10,
+		MaxRequestBodyBytes: 1000 * 1000 * 5, // 5 MB
+	}
+}
+
+func DefaultFileUploadConfig() *config.FileUpload {
+	return &config.FileUpload{
+		Enabled:          true,
+		MaxFileSizeBytes: 1000 * 1000 * 50, // 50 MB,
+		MaxFiles:         10,
 	}
 }
 
