@@ -376,6 +376,9 @@ func (s *server) buildMux(ctx context.Context,
 		TracerProvider:              s.tracerProvider,
 		FlushTelemetryAfterResponse: s.awsLambda,
 		TraceExportVariables:        s.traceConfig.ExportGraphQLVariables.Enabled,
+		FileUploadEnabled:           s.fileUploadConfig.Enabled,
+		MaxUploadFiles:              s.fileUploadConfig.MaxFiles,
+		MaxUploadFileSize:           int(s.fileUploadConfig.MaxFileSizeBytes),
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {

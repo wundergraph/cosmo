@@ -13,6 +13,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/graphiql"
 	rjwt "github.com/wundergraph/cosmo/router/internal/jwt"
+	rmiddleware "github.com/wundergraph/cosmo/router/internal/middleware"
 	"github.com/wundergraph/cosmo/router/internal/recoveryhandler"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
@@ -899,7 +900,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	 */
 
 	httpRouter.Use(recoveryHandler)
-	httpRouter.Use(middleware.RequestSize(int64(s.routerTrafficConfig.MaxRequestBodyBytes)))
+	httpRouter.Use(rmiddleware.RequestSize(int64(s.routerTrafficConfig.MaxRequestBodyBytes)))
 	httpRouter.Use(middleware.RequestID)
 	httpRouter.Use(middleware.RealIP)
 	httpRouter.Use(cors.New(*s.corsOptions))
