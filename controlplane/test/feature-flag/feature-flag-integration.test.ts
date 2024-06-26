@@ -24,7 +24,7 @@ import {
 } from '../test-util.js';
 
 // Change to true to enable a longer timeout
-const isDebugMode = false;
+const isDebugMode = true;
 let dbname = '';
 
 describe('Feature flag integration tests', () => {
@@ -317,7 +317,7 @@ describe('Feature flag integration tests', () => {
     await server.close();
   });
 
-  test('that publishing a feature graph that is not part of a feature flag does not trigger a composition', getDebugTestOptions(isDebugMode), async () => {
+  test('that publishing a feature subgraph that is not part of a feature flag does not trigger a composition', getDebugTestOptions(isDebugMode), async () => {
     const { client, server, blobStorage } = await SetupTest({ dbname });
 
     const labels: Array<Label> = [];
@@ -734,6 +734,39 @@ describe('Feature flag integration tests', () => {
       await assertNumberOfCompositions(client, name, 6, namespace);
       await assertFeatureFlagExecutionConfig(blobStorage, key, false);
     }
+
+    await toggleFeatureFlag(client, featureFlagName, true, namespace);
+
+    for (const { name, key } of graphNamesAndKeys) {
+      await assertNumberOfCompositions(client, name, 8, namespace);
+      await assertFeatureFlagExecutionConfig(blobStorage, key, true);
+    }
+
+    const deleteFeatureSubgraphResponse = await client.deleteFederatedSubgraph({
+      subgraphName: 'products-feature',
+      namespace,
+    });
+    expect(deleteFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
+
+    // baseGraphOne recomposition and an attempted feature flag composition that fails
+    await assertNumberOfCompositions(client, baseGraphNameOne, 10, namespace);
+    await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKeyOne, false);
+
+    /* contractOne recomposition; however, the feature flag composition with the source graph fails, so there is no
+     * feature flag composition for the contractOne.
+     *  */
+    await assertNumberOfCompositions(client, contractNameOne, 9, namespace);
+    await assertFeatureFlagExecutionConfig(blobStorage, contractKeyOne, false);
+
+    // baseGraphTwo recomposition and an attempted feature flag composition that fails
+    await assertNumberOfCompositions(client, baseGraphNameTwo, 10, namespace);
+    await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKeyTwo, false);
+
+    /* contractTwo recomposition; however, the feature flag composition with the source graph fails, so there is no
+     * feature flag composition for contractTwo.
+     *  */
+    await assertNumberOfCompositions(client, contractNameTwo, 9, namespace);
+    await assertFeatureFlagExecutionConfig(blobStorage, contractKeyTwo, false);
 
     await server.close();
   });

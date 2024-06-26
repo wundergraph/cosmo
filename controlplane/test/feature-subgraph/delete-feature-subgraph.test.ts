@@ -61,55 +61,6 @@ describe('Delete feature subgraph tests', () => {
     await server.close();
   });
 
-  test('that an error is returned if a feature subgraph is attempted to be deleted with subgraph delete', async () => {
-    const { client, server } = await SetupTest({ dbname });
-
-    const baseSubgraphName = genID('subgraph');
-    const featureSubgraphName = genID('featureSubgraph');
-
-    await createBaseAndFeatureSubgraph(
-      client,
-      baseSubgraphName,
-      featureSubgraphName,
-      DEFAULT_SUBGRAPH_URL_ONE,
-      DEFAULT_SUBGRAPH_URL_TWO,
-    );
-
-    const deleteFederatedSubgraphResponse = await client.deleteFederatedSubgraph({
-      subgraphName: featureSubgraphName,
-      namespace: DEFAULT_NAMESPACE,
-      isFeatureSubgraph: false,
-    })
-    expect(deleteFederatedSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR);
-    expect(deleteFederatedSubgraphResponse.response?.details)
-      .toBe(`The subgraph "${featureSubgraphName}" is a feature subgraph. Please use the feature-subgraph delete command instead.`);
-
-    await server.close();
-  });
-
-  test('that an error is returned if a subgraph is attempted to be deleted with feature-subgraph delete', async () => {
-    const { client, server } = await SetupTest({ dbname });
-
-    const baseSubgraphName = genID('subgraph');
-
-    await createSubgraph(
-      client,
-      baseSubgraphName,
-      DEFAULT_SUBGRAPH_URL_ONE,
-    );
-
-    const deleteFederatedSubgraphResponse = await client.deleteFederatedSubgraph({
-      subgraphName: baseSubgraphName,
-      namespace: DEFAULT_NAMESPACE,
-      isFeatureSubgraph: true,
-    })
-    expect(deleteFederatedSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR);
-    expect(deleteFederatedSubgraphResponse.response?.details)
-      .toBe(`The subgraph "${baseSubgraphName}" is not a feature subgraph.`);
-
-    await server.close();
-  });
-
   test('that an error is returned if a non-extant feature-graph is attempted to be deleted', async () => {
     const { client, server } = await SetupTest({ dbname });
 
@@ -122,7 +73,7 @@ describe('Delete feature subgraph tests', () => {
     })
     expect(deleteFederatedSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     expect(deleteFederatedSubgraphResponse.response?.details)
-      .toBe(`The feature subgraph "${featureSubgraphName}" was not found.`);
+      .toBe(`The subgraph "${featureSubgraphName}" was not found.`);
 
     await server.close();
   });

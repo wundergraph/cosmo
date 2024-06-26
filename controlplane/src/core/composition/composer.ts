@@ -1,5 +1,3 @@
-import { randomUUID } from 'node:crypto';
-import { JsonValue } from '@bufbuild/protobuf';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
 import {
   FederationResult,
@@ -26,7 +24,6 @@ import {
   AdmissionWebhookController,
   AdmissionWebhookJwtPayload,
 } from '../services/AdmissionWebhookController.js';
-import { FeatureFlagRepository } from '../repositories/FeatureFlagRepository.js';
 import { GraphCompositionRepository } from '../repositories/GraphCompositionRepository.js';
 import { composeSubgraphs, composeSubgraphsWithContracts } from './composition.js';
 import { getDiffBetweenGraphs, GetDiffBetweenGraphsResult } from './schemaCheck.js';
@@ -44,6 +41,21 @@ export interface S3RouterConfigMetadata extends Record<string, string> {
   version: string;
   'signature-sha256': string;
 }
+
+export type BaseCompositionData = {
+  featureFlagRouterExecutionConfigByFeatureFlagName: Map<string, RouterConfig>;
+  routerExecutionConfig?: RouterConfig;
+  schemaVersionId?: string;
+};
+
+/* The contract base composition schema version ID, router execution config,
+ * and its feature flag schema versions (if any)
+ * */
+export type ContractBaseCompositionData = {
+  featureFlagRouterExecutionConfigByFeatureFlagName: Map<string, RouterConfig>;
+  routerExecutionConfig: RouterConfig;
+  schemaVersionId: string;
+};
 
 export type UUID = `${string}-${string}-${string}-${string}-${string}`;
 
@@ -152,48 +164,40 @@ export class Composer {
     private federatedGraphRepo: FederatedGraphRepository,
     private subgraphRepo: SubgraphRepository,
     private contractRepo: ContractRepository,
-    private featureFlagRepo: FeatureFlagRepository,
     private graphCompositionRepository: GraphCompositionRepository,
   ) {}
 
-  async composeRouterConfig({
-    featureFlagSchemaVersions,
-    baseCompositionSchemaVersionId,
+  composeRouterConfigWithFeatureFlags({
+    featureFlagRouterExecutionConfigByFeatureFlagName,
+    baseCompositionRouterExecutionConfig,
   }: {
-    featureFlagSchemaVersions: Array<FeatureFlagSchemaVersion>;
+    featureFlagRouterExecutionConfigByFeatureFlagName: Map<string, RouterConfig>;
     // The base composition is the base federated graph on which feature flags and contracts are based
-    baseCompositionSchemaVersionId: string;
+    baseCompositionRouterExecutionConfig: RouterConfig;
   }) {
-    // Not a race condition because the schema version ID will only be relevant to the current instance
-    const routerExecutionConfig =
-      await this.federatedGraphRepo.getRouterConfigBySchemaVersionId(baseCompositionSchemaVersionId);
-    if (!routerExecutionConfig) {
-      throw new Error(
-        'Fatal: Could not fetch the router execution config for what should have been a valid composition.',
-      );
-    }
-    let featureFlagRouterConfigs: {
-      [key: string]: FeatureFlagRouterExecutionConfig;
-    };
-    if (featureFlagSchemaVersions.length > 0) {
-      featureFlagRouterConfigs = await this.featureFlagRepo.getFeatureFlagRouterConfigsByFeatureFlagSchemaVersions({
-        featureFlagSchemaVersions,
+    if (featureFlagRouterExecutionConfigByFeatureFlagName.size === 0) {
+      return new RouterConfig({
+        ...baseCompositionRouterExecutionConfig,
       });
-      const featureFlagConfigs = routerExecutionConfig.featureFlagConfigs;
-      if (featureFlagConfigs) {
-        const configByFeatureFlagName = featureFlagConfigs.configByFeatureFlagName;
-        for (const featureFlagName in featureFlagRouterConfigs) {
-          configByFeatureFlagName[featureFlagName] = featureFlagRouterConfigs[featureFlagName];
-        }
-      } else {
-        routerExecutionConfig.featureFlagConfigs = {
-          configByFeatureFlagName: featureFlagRouterConfigs,
-        } as FeatureFlagRouterExecutionConfigs;
+    }
+    const featureFlagRouterConfigs: { [key: string]: FeatureFlagRouterExecutionConfig } = {};
+    for (const [featureFlagName, routerExecutionConfig] of featureFlagRouterExecutionConfigByFeatureFlagName) {
+      featureFlagRouterConfigs[featureFlagName] = routerExecutionConfig;
+    }
+    const featureFlagConfigs = baseCompositionRouterExecutionConfig.featureFlagConfigs;
+    if (featureFlagConfigs) {
+      const configByFeatureFlagName = featureFlagConfigs.configByFeatureFlagName;
+      for (const featureFlagName in featureFlagRouterConfigs) {
+        configByFeatureFlagName[featureFlagName] = featureFlagRouterConfigs[featureFlagName];
       }
+    } else {
+      baseCompositionRouterExecutionConfig.featureFlagConfigs = {
+        configByFeatureFlagName: featureFlagRouterConfigs,
+      } as FeatureFlagRouterExecutionConfigs;
     }
 
     return new RouterConfig({
-      ...routerExecutionConfig,
+      ...baseCompositionRouterExecutionConfig,
     });
   }
 
@@ -333,28 +337,30 @@ export class Composer {
   }
 
   async composeAndUploadRouterConfig({
-    federatedGraphId,
-    featureFlagSchemaVersions,
-    blobStorage,
-    organizationId,
     admissionConfig,
+    baseCompositionRouterExecutionConfig,
     baseCompositionSchemaVersionId,
+    blobStorage,
+    featureFlagRouterExecutionConfigByFeatureFlagName,
+    federatedGraphId,
+    organizationId,
     federatedGraphAdmissionWebhookURL,
   }: {
-    federatedGraphId: string;
-    featureFlagSchemaVersions: Array<FeatureFlagSchemaVersion>;
-    blobStorage: BlobStorage;
-    organizationId: string;
     admissionConfig: {
       jwtSecret: string;
       cdnBaseUrl: string;
     };
+    baseCompositionRouterExecutionConfig: RouterConfig;
     baseCompositionSchemaVersionId: string;
+    blobStorage: BlobStorage;
+    featureFlagRouterExecutionConfigByFeatureFlagName: Map<string, RouterConfig>;
+    federatedGraphId: string;
+    organizationId: string;
     federatedGraphAdmissionWebhookURL?: string;
   }) {
-    const baseRouterConfig = await this.composeRouterConfig({
-      featureFlagSchemaVersions,
-      baseCompositionSchemaVersionId,
+    const baseRouterConfig = await this.composeRouterConfigWithFeatureFlags({
+      featureFlagRouterExecutionConfigByFeatureFlagName,
+      baseCompositionRouterExecutionConfig,
     });
 
     const { errors } = await this.uploadRouterConfig({
@@ -384,37 +390,23 @@ export class Composer {
     composedBy,
     organizationId,
     isFeatureFlagComposition,
+    federatedSchemaVersionId,
+    routerExecutionConfig,
   }: {
     composedGraph: ComposedFederatedGraph;
     composedBy: string;
     organizationId: string;
     isFeatureFlagComposition: boolean;
+    federatedSchemaVersionId: UUID;
+    routerExecutionConfig?: RouterConfig;
   }): Promise<CompositionDeployResult> {
-    const hasCompositionErrors = composedGraph.errors.length > 0;
-    const federatedSchemaVersionId = randomUUID();
-
-    let routerExecutionConfigJSON: JsonValue | undefined;
+    const routerExecutionConfigJSON = routerExecutionConfig ? routerExecutionConfig.toJson() : undefined;
 
     // CDN path and bucket path are the same in this case
     const s3PathReady = `${organizationId}/${composedGraph.id}/routerconfigs/latest.json`;
 
     // The signature will be added by the admission webhook
     let signatureSha256: undefined | string;
-
-    // Build and deploy the router config when composed schema is valid
-    if (!hasCompositionErrors && composedGraph.composedSchema) {
-      const federatedClientSDL = composedGraph.shouldIncludeClientSchema
-        ? composedGraph.federatedClientSchema || ''
-        : '';
-      const routerConfig = buildRouterConfig({
-        federatedClientSDL,
-        federatedSDL: composedGraph.composedSchema,
-        fieldConfigurations: composedGraph.fieldConfigurations,
-        subgraphs: composedGraph.subgraphs,
-        schemaVersionId: federatedSchemaVersionId,
-      });
-      routerExecutionConfigJSON = routerConfig.toJson();
-    }
 
     const prevValidFederatedSDL = await this.federatedGraphRepo.getLatestValidSchemaVersion({
       targetId: composedGraph.targetID,
@@ -431,11 +423,11 @@ export class Composer {
       composedBy,
       schemaVersionId: federatedSchemaVersionId,
       // passing the path only when there exists a previous valid version or when the composition passes.
-      routerConfigPath: prevValidFederatedSDL || routerExecutionConfigJSON ? s3PathReady : null,
+      routerConfigPath: prevValidFederatedSDL || routerExecutionConfig ? s3PathReady : null,
       isFeatureFlagComposition,
     });
 
-    if (!routerExecutionConfigJSON || !updatedFederatedGraph?.composedSchemaVersionId || isFeatureFlagComposition) {
+    if (!routerExecutionConfig || !updatedFederatedGraph?.composedSchemaVersionId || isFeatureFlagComposition) {
       return {
         schemaVersionId: updatedFederatedGraph?.composedSchemaVersionId || '',
       };

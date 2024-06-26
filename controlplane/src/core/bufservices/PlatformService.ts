@@ -2016,7 +2016,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const schemaCheckRepo = new SchemaCheckRepository(opts.db);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
         const contractRepo = new ContractRepository(logger, opts.db, authContext.organizationId);
-        const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
         const graphCompostionRepo = new GraphCompositionRepository(logger, opts.db);
 
         req.namespace = req.namespace || DefaultNamespace;
@@ -2073,11 +2072,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const subgraph = await subgraphRepo.byName(req.subgraphName, req.namespace);
 
-        if (subgraph?.isFeatureSubgraph) {
+        if (!subgraph) {
           return {
             response: {
-              code: EnumStatusCode.ERR,
-              details: `The subgraph "${req.subgraphName}" is a feature subgraph, which do not support check operations.`,
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Subgraph '${req.subgraphName}' not found`,
             },
             breakingChanges: [],
             nonBreakingChanges: [],
@@ -2089,11 +2088,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        if (!subgraph) {
+        if (subgraph.isFeatureSubgraph) {
           return {
             response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Subgraph '${req.subgraphName}' not found`,
+              code: EnumStatusCode.ERR,
+              details:
+                `The subgraph "${req.subgraphName}" is a feature subgraph.` +
+                ` Feature subgraphs do not currently support check operations.`,
             },
             breakingChanges: [],
             nonBreakingChanges: [],
@@ -2143,14 +2144,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           schemaCheckID,
         });
 
-        const composer = new Composer(
-          logger,
-          fedGraphRepo,
-          subgraphRepo,
-          contractRepo,
-          featureFlagRepo,
-          graphCompostionRepo,
-        );
+        const composer = new Composer(logger, fedGraphRepo, subgraphRepo, contractRepo, graphCompostionRepo);
 
         const result = req.delete
           ? await composer.composeWithDeletedSubgraph(subgraph.labels, subgraph.name, subgraph.namespaceId)
@@ -2303,17 +2297,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
         const contractRepo = new ContractRepository(logger, opts.db, authContext.organizationId);
-        const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
         const graphCompostionRepo = new GraphCompositionRepository(logger, opts.db);
 
-        const composer = new Composer(
-          logger,
-          fedGraphRepo,
-          subgraphRepo,
-          contractRepo,
-          featureFlagRepo,
-          graphCompostionRepo,
-        );
+        const composer = new Composer(logger, fedGraphRepo, subgraphRepo, contractRepo, graphCompostionRepo);
 
         req.namespace = req.namespace || DefaultNamespace;
 
@@ -3618,29 +3604,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `The ${req.isFeatureSubgraph ? `feature` : ``} subgraph "${req.subgraphName}" was not found.`,
-            },
-            compositionErrors: [],
-            deploymentErrors: [],
-          };
-        }
-        if (req.isFeatureSubgraph && !subgraph.isFeatureSubgraph) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR,
-              details: `The subgraph "${req.subgraphName}" is not a feature subgraph.`,
-            },
-            compositionErrors: [],
-            deploymentErrors: [],
-          };
-        }
-        if (!req.isFeatureSubgraph && subgraph.isFeatureSubgraph) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR,
-              details:
-                `The subgraph "${req.subgraphName}" is a feature subgraph.` +
-                ` Please use the feature-subgraph delete command instead.`,
+              details: `The subgraph "${req.subgraphName}" was not found.`,
             },
             compositionErrors: [],
             deploymentErrors: [],
@@ -4022,7 +3986,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Feature flag "${req.name}" does not exists in the namespace "${req.namespace}".`,
+              details: `The feature flag "${req.name}" does not exist in the namespace "${req.namespace}".`,
             },
             compositionErrors: [],
             deploymentErrors: [],
@@ -4850,41 +4814,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `The ${req.isFeatureSubgraph ? 'feature' : ''} subgraph "${req.name}" was not found.`,
+              details: `The subgraph "${req.name}" was not found.`,
             },
             compositionErrors: [],
             deploymentErrors: [],
           };
         }
 
-        if (req.isFeatureSubgraph) {
-          if (!subgraph.isFeatureSubgraph) {
-            return {
-              response: {
-                code: EnumStatusCode.ERR,
-                details: `The subgraph "${req.name}" is not a feature subgraph.`,
-              },
-              compositionErrors: [],
-              deploymentErrors: [],
-            };
-          }
-          if ((req.labels && req.labels.length > 0) || req.unsetLabels) {
-            return {
-              response: {
-                code: EnumStatusCode.ERR,
-                details: `Feature subgraph labels cannot be changed directly; they are determined by the feature flag.`,
-              },
-              compositionErrors: [],
-              deploymentErrors: [],
-            };
-          }
-        } else if (subgraph.isFeatureSubgraph) {
+        if (subgraph.isFeatureSubgraph && ((req.labels && req.labels.length > 0) || req.unsetLabels)) {
           return {
             response: {
               code: EnumStatusCode.ERR,
               details:
-                `The subgraph "${req.name}" is a feature subgraph.` +
-                ` Please use the feature-subgraph update command instead.`,
+                `Feature subgraph labels cannot be changed directly.` +
+                ` Feature subgraph labels are determined by the feature flag they comprise.`,
             },
             compositionErrors: [],
             deploymentErrors: [],

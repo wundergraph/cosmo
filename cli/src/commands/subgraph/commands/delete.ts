@@ -12,7 +12,7 @@ export default (opts: BaseCommandOptions) => {
   command.description('Deletes a subgraph on the control plane.');
   command.argument('<name>', 'The name of the subgraph to delete.');
   command.option('-n, --namespace [string]', 'The namespace of the subgraph.');
-  command.option('-f --force', 'Option to force delete');
+  command.option('-f --force', 'Flag to force the deletion (skip confirmation).');
   command.action(async (name, options) => {
     if (!options.force) {
       const deletionConfirmed = await inquirer.prompt({
@@ -31,7 +31,6 @@ export default (opts: BaseCommandOptions) => {
       {
         subgraphName: name,
         namespace: options.namespace,
-        isFeatureSubgraph: false,
       },
       {
         headers: getBaseHeaders(),

@@ -37,7 +37,6 @@ describe('Update feature subgraph tests', () => {
     const featureSubgraphResponse = await client.updateSubgraph({
       name: featureSubgraphName,
       routingUrl: DEFAULT_SUBGRAPH_URL_THREE,
-      isFeatureSubgraph: true,
     });
     expect(featureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
 
@@ -56,10 +55,9 @@ describe('Update feature subgraph tests', () => {
     const createFederatedSubgraphResp = await client.updateSubgraph({
       name: featureSubgraphName,
       routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
-      isFeatureSubgraph: true,
     });
     expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
-    expect(createFederatedSubgraphResp.response?.details).toBe(`The feature subgraph "${featureSubgraphName}" was not found.`);
+    expect(createFederatedSubgraphResp.response?.details).toBe(`The subgraph "${featureSubgraphName}" was not found.`);
 
     await server.close();
   });
@@ -84,10 +82,9 @@ describe('Update feature subgraph tests', () => {
     const createFederatedSubgraphResp = await client.updateSubgraph({
       name: featureSubgraphName,
       routingUrl: DEFAULT_SUBGRAPH_URL_THREE,
-      isFeatureSubgraph: true,
     });
     expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
-    expect(createFederatedSubgraphResp.response?.details).toBe(`The feature subgraph "${featureSubgraphName}" was not found.`);
+    expect(createFederatedSubgraphResp.response?.details).toBe(`The subgraph "${featureSubgraphName}" was not found.`);
 
     await server.close();
   });
@@ -109,28 +106,25 @@ describe('Update feature subgraph tests', () => {
     // Undefined labels are defaulted to an empty array
     const featureSubgraphResponseOne = await client.updateSubgraph({
       name: featureSubgraphName,
-      isFeatureSubgraph: true,
       labels: [],
     });
     expect(featureSubgraphResponseOne.response?.code).toBe(EnumStatusCode.OK);
 
     const featureSubgraphResponseTwo = await client.updateSubgraph({
       name: featureSubgraphName,
-      isFeatureSubgraph: true,
       labels: [{ key: 'hello', value: 'world' }],
     });
     expect(featureSubgraphResponseTwo.response?.code).toBe(EnumStatusCode.ERR);
     expect(featureSubgraphResponseTwo.response?.details)
-      .toBe(`Feature subgraph labels cannot be changed directly; they are determined by the feature flag.`);
+      .toBe(`Feature subgraph labels cannot be changed directly. Feature subgraph labels are determined by the feature flag they comprise.`);
 
     const featureSubgraphResponseThree = await client.updateSubgraph({
       name: featureSubgraphName,
-      isFeatureSubgraph: true,
       unsetLabels: true,
     });
     expect(featureSubgraphResponseThree.response?.code).toBe(EnumStatusCode.ERR);
     expect(featureSubgraphResponseThree.response?.details)
-      .toBe(`Feature subgraph labels cannot be changed directly; they are determined by the feature flag.`);
+      .toBe(`Feature subgraph labels cannot be changed directly. Feature subgraph labels are determined by the feature flag they comprise.`);
 
     await server.close();
   });

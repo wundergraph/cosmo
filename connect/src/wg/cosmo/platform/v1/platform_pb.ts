@@ -1335,11 +1335,6 @@ export class DeleteFederatedSubgraphRequest extends Message<DeleteFederatedSubgr
    */
   namespace = "";
 
-  /**
-   * @generated from field: bool is_feature_subgraph = 3;
-   */
-  isFeatureSubgraph = false;
-
   constructor(data?: PartialMessage<DeleteFederatedSubgraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1350,7 +1345,6 @@ export class DeleteFederatedSubgraphRequest extends Message<DeleteFederatedSubgr
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "subgraph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "is_feature_subgraph", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteFederatedSubgraphRequest {
@@ -4198,11 +4192,6 @@ export class UpdateSubgraphRequest extends Message<UpdateSubgraphRequest> {
    */
   websocketSubprotocol?: GraphQLWebsocketSubprotocol;
 
-  /**
-   * @generated from field: bool is_feature_subgraph = 11;
-   */
-  isFeatureSubgraph = false;
-
   constructor(data?: PartialMessage<UpdateSubgraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4221,7 +4210,6 @@ export class UpdateSubgraphRequest extends Message<UpdateSubgraphRequest> {
     { no: 8, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 9, name: "unset_labels", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 10, name: "websocket_subprotocol", kind: "enum", T: proto3.getEnumType(GraphQLWebsocketSubprotocol), opt: true },
-    { no: 11, name: "is_feature_subgraph", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateSubgraphRequest {

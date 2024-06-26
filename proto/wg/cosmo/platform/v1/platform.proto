@@ -158,7 +158,6 @@ message DeleteFederatedSubgraphRequest {
   // The FQDN of the subgraph to be checked e.g. "wg.team1.orders"
   string subgraph_name = 1;
   string namespace = 2;
-  bool is_feature_subgraph = 3;
 }
 
 message SchemaChange{
@@ -533,7 +532,6 @@ message UpdateSubgraphRequest {
   string namespace = 8;
   optional bool unset_labels = 9;
   optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 10;
-  bool is_feature_subgraph = 11;
 }
 
 message UpdateSubgraphResponse {

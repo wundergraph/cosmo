@@ -77,7 +77,7 @@ describe('Update feature flag tests', () => {
 
     expect(updateFeatureFlagResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     expect(updateFeatureFlagResponse.response?.details)
-      .toBe(`Feature flag "${featureFlagName}" does not exists in the namespace "default".`);
+      .toBe(`The feature flag "${featureFlagName}" does not exist in the namespace "default".`);
 
     await server.close();
   });

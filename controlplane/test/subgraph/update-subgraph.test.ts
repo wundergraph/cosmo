@@ -1,12 +1,7 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { afterAllSetup, beforeAllSetup, genID } from '../../src/core/test-util.js';
-import {
-  createBaseAndFeatureSubgraph,
-  createEventDrivenGraph,
-  DEFAULT_SUBGRAPH_URL_ONE, DEFAULT_SUBGRAPH_URL_THREE, DEFAULT_SUBGRAPH_URL_TWO,
-  SetupTest,
-} from '../test-util.js';
+import { createEventDrivenGraph, DEFAULT_NAMESPACE, SetupTest } from '../test-util.js';
 
 let dbname = '';
 
@@ -27,7 +22,7 @@ describe('Update subgraph tests', () => {
     await createEventDrivenGraph(client, subgraphName);
     const createFederatedSubgraphResp = await client.updateSubgraph({
       name: subgraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       routingUrl: '',
     });
 
@@ -45,7 +40,7 @@ describe('Update subgraph tests', () => {
     await createEventDrivenGraph(client, subgraphName);
     const createFederatedSubgraphResp = await client.updateSubgraph({
       name: subgraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       subscriptionUrl: '',
     });
 
@@ -63,7 +58,7 @@ describe('Update subgraph tests', () => {
     await createEventDrivenGraph(client, subgraphName);
     const createFederatedSubgraphResp = await client.updateSubgraph({
       name: subgraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       subscriptionProtocol: 1,
     });
 
@@ -81,38 +76,12 @@ describe('Update subgraph tests', () => {
     await createEventDrivenGraph(client, subgraphName);
     const createFederatedSubgraphResp = await client.updateSubgraph({
       name: subgraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       websocketSubprotocol: 1,
     });
 
     expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR);
     expect(createFederatedSubgraphResp.response?.details).toBe('Event-Driven Graphs must not define a websocket subprotocol');
-
-    await server.close();
-  });
-
-  test('that an error is returned if a subgraph update is used to attempt to update a feature subgraph', async () => {
-    const { client, server } = await SetupTest({ dbname });
-
-    const subgraphName = genID('subgraph');
-    const featureSubgraphName = genID('featureSubgraph');
-
-    await createBaseAndFeatureSubgraph(
-      client,
-      subgraphName,
-      featureSubgraphName,
-      DEFAULT_SUBGRAPH_URL_ONE,
-      DEFAULT_SUBGRAPH_URL_TWO,
-    );
-
-    const updateSubgraphResponse = await client.updateSubgraph({
-      name: featureSubgraphName,
-      routingUrl: DEFAULT_SUBGRAPH_URL_THREE,
-      isFeatureSubgraph: false,
-    });
-    expect(updateSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR);
-    expect(updateSubgraphResponse.response?.details)
-      .toBe(`The subgraph "${featureSubgraphName}" is a feature subgraph. Please use the feature-subgraph update command instead.`);
 
     await server.close();
   });
