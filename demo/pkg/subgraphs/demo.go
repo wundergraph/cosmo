@@ -19,7 +19,9 @@ func NewDemoServer(schema graphql.ExecutableSchema) *handler.Server {
 	srv.AddTransport(transport.Options{})
 	srv.AddTransport(transport.GET{})
 	srv.AddTransport(transport.POST{})
-	srv.AddTransport(transport.MultipartForm{})
+	srv.AddTransport(transport.MultipartForm{
+		MaxUploadSize: 1 << 30,
+	})
 	srv.AddTransport(transport.Websocket{
 		KeepAlivePingInterval: 10 * time.Second,
 		Upgrader: websocket.Upgrader{

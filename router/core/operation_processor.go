@@ -19,6 +19,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"go.uber.org/zap"
 
@@ -43,6 +44,8 @@ type ParsedOperation struct {
 	Type string
 	// Variables in the "variables" field value in the JSON payload
 	Variables []byte
+	// Files is a list of files, an interface representing the file data needed to be passed forward.
+	Files []httpclient.File
 	// NormalizedRepresentation is the normalized representation of the operation
 	// as a string. This is provided for modules to be able to access the
 	// operation. Only available after the operation has been normalized.
@@ -101,6 +104,7 @@ type parseKit struct {
 // It must be created for each request and freed after the request is done.
 type OperationKit struct {
 	data                     []byte
+	files                    []httpclient.File
 	operationDefinitionRef   int
 	originalOperationNameRef ast.ByteSliceReference
 	operationParser          *OperationProcessor
@@ -126,12 +130,13 @@ type GraphQLRequestExtensionsPersistedQuery struct {
 
 // NewOperationKit creates a new OperationKit. The kit is used to parse, normalize and validate operations.
 // It allocates resources that need to be freed by calling OperationKit.Free()
-func NewOperationKit(parser *OperationProcessor, data []byte) *OperationKit {
+func NewOperationKit(parser *OperationProcessor, data []byte, files []httpclient.File) *OperationKit {
 	return &OperationKit{
 		operationParser:        parser,
 		kit:                    parser.getKit(),
 		operationDefinitionRef: -1,
 		data:                   data,
+		files:                  files,
 	}
 }
 
@@ -318,6 +323,7 @@ func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo, log *z
 		Type:                     operationType,
 		Extensions:               request.Extensions,
 		Variables:                variablesCopy,
+		Files:                    o.files,
 	}
 
 	if extensions.PersistedQuery != nil {
@@ -445,15 +451,15 @@ func (p *OperationProcessor) NewKitFromReader(r io.Reader) (*OperationKit, error
 	if err != nil {
 		return nil, err
 	}
-	return NewOperationKit(p, data), nil
+	return NewOperationKit(p, data, nil), nil
 }
 
 // NewKit creates a new OperationKit. The kit is used to parse, normalize and
 // validate operations. It also validates if the operation size is within the
 // limit.
-func (p *OperationProcessor) NewKit(data []byte) (*OperationKit, error) {
+func (p *OperationProcessor) NewKit(data []byte, files []httpclient.File) (*OperationKit, error) {
 	if len(data) > int(p.maxOperationSizeInBytes) {
 		return nil, p.entityTooLarge()
 	}
-	return NewOperationKit(p, data), nil
+	return NewOperationKit(p, data, files), nil
 }
