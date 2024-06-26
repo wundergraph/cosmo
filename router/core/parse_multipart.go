@@ -17,6 +17,7 @@ type MultipartParser struct {
 	operationProcessor *OperationProcessor
 	maxUploadFiles     int
 	maxUploadFileSize  int
+	fileHandlers       []*os.File
 }
 
 func NewMultipartParser(operationProcessor *OperationProcessor, maxUploadFiles int, maxUploadFileSize int) *MultipartParser {
@@ -27,33 +28,38 @@ func NewMultipartParser(operationProcessor *OperationProcessor, maxUploadFiles i
 	}
 }
 
-func (p *MultipartParser) parse(r *http.Request, buf *bytes.Buffer) ([]byte, []httpclient.File, []*os.File, error) {
+func (p *MultipartParser) removeAll() {
+	for _, file := range p.fileHandlers {
+		file.Close()
+		os.Remove(file.Name())
+	}
+}
+
+func (p *MultipartParser) parse(r *http.Request, buf *bytes.Buffer) ([]byte, []httpclient.File, error) {
 	var body []byte
 	var files []httpclient.File
-	var fileHandlers []*os.File
-
 	contentType := r.Header.Get("Content-Type")
 	d, params, err := mime.ParseMediaType(contentType)
 	if err != nil || d != "multipart/form-data" {
-		return body, files, fileHandlers, err
+		return body, files, err
 	}
 
 	boundary, ok := params["boundary"]
 	if !ok {
-		return body, files, fileHandlers, errors.New("could not find request boundary")
+		return body, files, errors.New("could not find request boundary")
 	}
 
 	reader := multipart.NewReader(r.Body, boundary)
 	form, err := reader.ReadForm(0)
 	if err != nil {
-		return body, files, fileHandlers, &inputError{
+		return body, files, &inputError{
 			message:    err.Error(),
 			statusCode: http.StatusOK,
 		}
 	}
 
 	if len(form.File) > p.maxUploadFiles {
-		return body, files, fileHandlers, &inputError{
+		return body, files, &inputError{
 			message:    fmt.Sprintf("too many files: %d, max allowed: %d", len(form.File), p.maxUploadFiles),
 			statusCode: http.StatusOK,
 		}
@@ -61,17 +67,17 @@ func (p *MultipartParser) parse(r *http.Request, buf *bytes.Buffer) ([]byte, []h
 
 	body, err = p.operationProcessor.ReadBody(buf, strings.NewReader(strings.Join(form.Value["operations"], "")))
 	if err != nil {
-		return body, files, fileHandlers, err
+		return body, files, err
 	}
 
 	for _, filePart := range form.File {
 		file, err := filePart[0].Open()
 		if err != nil {
-			return body, files, fileHandlers, err
+			return body, files, err
 		}
 
 		if filePart[0].Size > int64(p.maxUploadFileSize) {
-			return body, files, fileHandlers, &inputError{
+			return body, files, &inputError{
 				message:    "file too large to upload",
 				statusCode: http.StatusOK,
 			}
@@ -79,19 +85,19 @@ func (p *MultipartParser) parse(r *http.Request, buf *bytes.Buffer) ([]byte, []h
 
 		// Check if the file was written to the disk
 		if diskFile, ok := file.(*os.File); ok {
-			fileHandlers = append(fileHandlers, diskFile)
+			p.fileHandlers = append(p.fileHandlers, diskFile)
 			files = append(files, httpclient.NewFile(diskFile.Name(), filePart[0].Filename))
 		} else {
 			// The file is in memory. We write it manually to the disk.
 			tempFile, err := os.CreateTemp("", "cosmo-upload-")
 			if err != nil {
-				return body, files, fileHandlers, err
+				return body, files, err
 			}
 			_, err = io.Copy(tempFile, file)
 			if err != nil {
-				return body, files, fileHandlers, err
+				return body, files, err
 			}
-			fileHandlers = append(fileHandlers, tempFile)
+			p.fileHandlers = append(p.fileHandlers, tempFile)
 			files = append(files, httpclient.NewFile(tempFile.Name(), filePart[0].Filename))
 			tempFile.Close()
 		}
@@ -99,5 +105,5 @@ func (p *MultipartParser) parse(r *http.Request, buf *bytes.Buffer) ([]byte, []h
 		file.Close()
 	}
 
-	return body, files, fileHandlers, nil
+	return body, files, nil
 }
