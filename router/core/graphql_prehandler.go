@@ -3,15 +3,16 @@ package core
 import (
 	"context"
 	"crypto/ecdsa"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -23,6 +24,7 @@ import (
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/cosmo/router/internal/pool"
@@ -45,6 +47,8 @@ type PreHandlerOptions struct {
 	FlushTelemetryAfterResponse bool
 	TraceExportVariables        bool
 	SpanAttributesMapper        func(r *http.Request) []attribute.KeyValue
+	MaxUploadFiles              int
+	MaxUploadFileSize           int
 }
 
 type PreHandler struct {
@@ -63,6 +67,8 @@ type PreHandler struct {
 	tracer                      trace.Tracer
 	traceExportVariables        bool
 	spanAttributesMapper        func(r *http.Request) []attribute.KeyValue
+	maxUploadFiles              int
+	maxUploadFileSize           int
 }
 
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
@@ -85,6 +91,8 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 			"wundergraph/cosmo/router/pre_handler",
 			trace.WithInstrumentationVersion("0.0.1"),
 		),
+		maxUploadFiles:    opts.MaxUploadFiles,
+		maxUploadFileSize: opts.MaxUploadFileSize,
 	}
 }
 
@@ -167,28 +175,47 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			metrics.Finish(finalErr, statusCode, writtenBytes)
 		}()
 
+		var body []byte
+		var files []httpclient.File
+		var err error
 		// XXX: This buffer needs to be returned to the pool only
 		// AFTER we're done with body (retrieved from parser.ReadBody())
 		buf := pool.GetBytesBuffer()
 		defer pool.PutBytesBuffer(buf)
+		if r.Header.Get("Content-Type") == "" || r.Header.Get("Content-Type") == "application/json" {
+			body, err = h.operationProcessor.ReadBody(buf, r.Body)
+			if err != nil {
+				finalErr = err
 
-		body, err := h.operationProcessor.ReadBody(buf, r.Body)
-		if err != nil {
-			finalErr = err
+				// This error is expected e.g. when the client defines (Content-Length) and aborts the request before
+				// It means that EOF was encountered in the middle of reading the body. This is not a server error.
+				if errors.Is(err, io.ErrUnexpectedEOF) {
+					requestLogger.Debug("unexpected EOF while reading request body", zap.Error(err))
+				} else {
+					requestLogger.Error("failed to read request body", zap.Error(err))
+				}
 
-			// This error is expected e.g. when the client defines (Content-Length) and aborts the request before
-			// It means that EOF was encountered in the middle of reading the body. This is not a server error.
-			if errors.Is(err, io.ErrUnexpectedEOF) {
-				requestLogger.Debug("unexpected EOF while reading request body", zap.Error(err))
-			} else {
-				requestLogger.Error("failed to read request body", zap.Error(err))
+				writeOperationError(r, w, requestLogger, err)
+				return
 			}
-			writeOperationError(r, w, requestLogger, err)
-			return
+		} else if strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
+			multipartParser := NewMultipartParser(h.operationProcessor, h.maxUploadFiles, h.maxUploadFileSize)
+
+			body, files, err = multipartParser.Parse(r, buf)
+			if err != nil {
+				finalErr = err
+				writeOperationError(r, w, requestLogger, finalErr)
+				return
+			}
+
+			// Cleanup all files. Must happen in here, so it is run after response is sent.
+			defer func() {
+				multipartParser.RemoveAll()
+			}()
 		}
 
 		/**
-		* Parse the operation
+		 * Parse the operation
 		 */
 
 		if !traceOptions.ExcludeParseStats {
@@ -201,7 +228,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			trace.WithAttributes(attributes...),
 		)
 
-		operationKit, err := h.operationProcessor.NewKit(body)
+		operationKit, err := h.operationProcessor.NewKit(body, files)
 		if err != nil {
 			finalErr = err
 

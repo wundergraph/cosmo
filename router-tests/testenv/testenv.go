@@ -12,6 +12,7 @@ import (
 	"io"
 	"log"
 	"math/rand"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -807,6 +808,7 @@ type GraphQLRequest struct {
 	Extensions    json.RawMessage `json:"extensions,omitempty"`
 	OperationName json.RawMessage `json:"operationName,omitempty"`
 	Header        http.Header     `json:"-"`
+	Files         [][]byte        `json:"-"`
 }
 
 type TestResponse struct {
@@ -840,7 +842,13 @@ func (e *Environment) WaitForServer(ctx context.Context, url string, timeoutMs i
 }
 
 func (e *Environment) MakeGraphQLRequestOK(request GraphQLRequest) *TestResponse {
-	resp, err := e.MakeGraphQLRequest(request)
+	var resp *TestResponse
+	var err error
+	if request.Files == nil {
+		resp, err = e.MakeGraphQLRequest(request)
+	} else {
+		resp, err = e.MakeGraphQLRequestAsMultipartForm(request)
+	}
 	require.NoError(e.t, err)
 	require.Equal(e.t, http.StatusOK, resp.Response.StatusCode)
 	return resp
@@ -873,6 +881,96 @@ func (e *Environment) MakeGraphQLRequest(request GraphQLRequest) (*TestResponse,
 		Response: resp,
 		Proto:    resp.Proto,
 	}, nil
+}
+
+func (e *Environment) MakeGraphQLRequestAsMultipartForm(request GraphQLRequest) (*TestResponse, error) {
+	data, err := json.Marshal(request)
+	require.NoError(e.t, err)
+	formValues := make(map[string]io.Reader)
+	formValues["operations"] = bytes.NewReader(data)
+
+	if len(request.Files) == 1 {
+		formValues["map"] = strings.NewReader(`{ "0": ["variables.file"] }`)
+		formValues["0"] = bytes.NewReader(request.Files[0])
+	} else {
+		mapStr := `{`
+		for i := 0; i < len(request.Files); i++ {
+			if i > 0 {
+				mapStr += ", "
+			}
+			mapStr += fmt.Sprintf(`"%d": ["variables.files.%d"]`, i, i)
+		}
+		mapStr += `}`
+		formValues["map"] = strings.NewReader(mapStr)
+		for i := 0; i < len(request.Files); i++ {
+			formValues[fmt.Sprintf("%d", i)] = bytes.NewReader(request.Files[i])
+		}
+	}
+
+	multipartBody, contentType, err := multipartBytes(formValues)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequestWithContext(e.Context, http.MethodPost, e.GraphQLRequestURL(), &multipartBody)
+	if err != nil {
+		return nil, err
+	}
+
+	if request.Header != nil {
+		req.Header = request.Header
+	}
+	req.Header.Add("Content-Type", contentType)
+
+	resp, err := e.RouterClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+	buf := new(bytes.Buffer)
+	_, err = buf.ReadFrom(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	resp.Body = io.NopCloser(bytes.NewReader(buf.Bytes()))
+	body := buf.String()
+
+	return &TestResponse{
+		Body:     strings.TrimSpace(body),
+		Response: resp,
+		Proto:    resp.Proto,
+	}, nil
+}
+
+func multipartBytes(values map[string]io.Reader) (bytes.Buffer, string, error) {
+	var err error
+	var b bytes.Buffer
+	w := multipart.NewWriter(&b)
+	for key, r := range values {
+		var fw io.Writer
+		x, ok := r.(io.Closer)
+		if key != "operations" && key != "map" {
+			// Add a file
+			if fw, err = w.CreateFormFile(key, uuid.NewString()); err != nil {
+				return b, "", err
+			}
+		} else {
+			// Add other fields
+			if fw, err = w.CreateFormField(key); err != nil {
+				return b, "", err
+			}
+		}
+		if _, err = io.Copy(fw, r); err != nil {
+			return b, "", err
+		}
+		if ok {
+			x.Close()
+		}
+	}
+	w.Close()
+
+	return b, w.FormDataContentType(), nil
 }
 
 func (e *Environment) MakeRequest(method, path string, header http.Header, body io.Reader) (*http.Response, error) {
