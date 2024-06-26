@@ -160,10 +160,13 @@
       "KeepAliveProbeInterval": 30000000000
     },
     "Router": {
-      "MaxRequestBodyBytes": 5000000,
-      "MaxUploadFileSizeBytes": 50000000,
-      "MaxUploadFiles": 10
+      "MaxRequestBodyBytes": 5000000
     }
+  },
+  "FileUploads": {
+    "Enabled": true,
+    "MaxFileSizeBytes": 50000000,
+    "MaxFiles": 10
   },
   "ListenAddr": "localhost:3002",
   "ControlplaneURL": "https://cosmo-cp.wundergraph.com",

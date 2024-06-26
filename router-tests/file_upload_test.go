@@ -51,10 +51,10 @@ func TestSingleFileUpload_NoFileProvided(t *testing.T) {
 func TestFileUpload_FilesSizeExceedsLimit(t *testing.T) {
 	t.Parallel()
 	testenv.Run(t, &testenv.Config{
-		RouterOptions: []core.Option{core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
-			MaxUploadFiles:         1,
-			MaxRequestBodyBytes:    100,
-			MaxUploadFileSizeBytes: 50,
+		RouterOptions: []core.Option{core.WithFileUploadsConfig(&config.FileUploadsRules{
+			Enabled:          true,
+			MaxFiles:         1,
+			MaxFileSizeBytes: 50,
 		})},
 	}, func(t *testing.T, xEnv *testenv.Environment) {
 		files := make([][]byte, 1)
@@ -73,10 +73,10 @@ func TestFileUpload_FilesSizeExceedsLimit(t *testing.T) {
 func TestFileUpload_FilesExceedsLimit(t *testing.T) {
 	t.Parallel()
 	testenv.Run(t, &testenv.Config{
-		RouterOptions: []core.Option{core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
-			MaxUploadFiles:         2,
-			MaxRequestBodyBytes:    50000,
-			MaxUploadFileSizeBytes: 50000,
+		RouterOptions: []core.Option{core.WithFileUploadsConfig(&config.FileUploadsRules{
+			Enabled:          true,
+			MaxFiles:         2,
+			MaxFileSizeBytes: 50000,
 		})},
 	}, func(t *testing.T, xEnv *testenv.Environment) {
 		files := make([][]byte, 3)
@@ -127,5 +127,22 @@ func TestMultipleFilesUpload_NoFilesProvided(t *testing.T) {
 		})
 		fmt.Println(res.Body)
 		require.JSONEq(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at Path 'mutation'.","extensions":{"errors":[{"message":"could not render fetch input","path":[]}]}},{"message":"Cannot return null for non-nullable field 'Mutation.multipleUpload'.","path":["multipleUpload"]}],"data":null}`, res.Body)
+	})
+}
+
+func TestFileUpload_UploadsDisabled(t *testing.T) {
+	t.Parallel()
+	testenv.Run(t, &testenv.Config{
+		RouterOptions: []core.Option{core.WithFileUploadsConfig(&config.FileUploadsRules{
+			Enabled: false,
+		})},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		files := make([][]byte, 1)
+		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			Query:     "mutation($files: [Upload!]!) { multipleUpload(files: $files)}",
+			Variables: []byte(`{"files":[null]}`),
+			Files:     files,
+		})
+		require.Equal(t, `{"errors":[{"message":"file uploads disabled"}],"data":null}`, res.Body)
 	})
 }
