@@ -124,6 +124,12 @@ type TrafficShapingRules struct {
 	Router RouterTrafficConfiguration `yaml:"router"`
 }
 
+type FileUpload struct {
+	Enabled          bool        `yaml:"enabled" default:"true" envconfig:"FILE_UPLOAD_ENABLED"`
+	MaxFileSizeBytes BytesString `yaml:"max_file_size" default:"50MB" envconfig:"FILE_UPLOAD_MAX_FILE_SIZE"`
+	MaxFiles         int         `yaml:"max_files" default:"10" envconfig:"FILE_UPLOAD_MAX_FILES"`
+}
+
 type RouterTrafficConfiguration struct {
 	// MaxRequestBodyBytes is the maximum size of the request body in bytes
 	MaxRequestBodyBytes BytesString `yaml:"max_request_body_size" default:"5MB"`
@@ -424,6 +430,7 @@ type Config struct {
 	Modules        map[string]interface{} `yaml:"modules,omitempty"`
 	Headers        HeaderRules            `yaml:"headers,omitempty"`
 	TrafficShaping TrafficShapingRules    `yaml:"traffic_shaping,omitempty"`
+	FileUpload     FileUpload             `yaml:"file_upload,omitempty"`
 
 	ListenAddr                    string                      `yaml:"listen_addr" default:"localhost:3002" envconfig:"LISTEN_ADDR"`
 	ControlplaneURL               string                      `yaml:"controlplane_url" default:"https://cosmo-cp.wundergraph.com" envconfig:"CONTROLPLANE_URL"`

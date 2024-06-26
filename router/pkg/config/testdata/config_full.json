@@ -163,6 +163,11 @@
       "MaxRequestBodyBytes": 5000000
     }
   },
+  "FileUpload": {
+    "Enabled": true,
+    "MaxFileSizeBytes": 50000000,
+    "MaxFiles": 10
+  },
   "ListenAddr": "localhost:3002",
   "ControlplaneURL": "https://cosmo-cp.wundergraph.com",
   "PlaygroundEnabled": true,

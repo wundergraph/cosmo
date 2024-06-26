@@ -28,6 +28,9 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"connectrpc.com/connect"
+	rmiddleware "github.com/wundergraph/cosmo/router/internal/middleware"
+	"github.com/wundergraph/cosmo/router/internal/recoveryhandler"
+	"github.com/wundergraph/cosmo/router/internal/requestlogger"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/health"
@@ -158,6 +161,7 @@ type (
 		subgraphTransportOptions *SubgraphTransportOptions
 		graphqlMetricsConfig     *GraphQLMetricsConfig
 		routerTrafficConfig      *config.RouterTrafficConfiguration
+		fileUploadConfig         *config.FileUpload
 		accessController         *AccessController
 		retryOptions             retrytransport.RetryOptions
 		redisClient              *redis.Client
@@ -258,6 +262,9 @@ func NewRouter(opts ...Option) (*Router, error) {
 	}
 	if r.routerTrafficConfig == nil {
 		r.routerTrafficConfig = DefaultRouterTrafficConfig()
+	}
+	if r.fileUploadConfig == nil {
+		r.fileUploadConfig = DefaultFileUploadConfig()
 	}
 	if r.accessController == nil {
 		r.accessController = DefaultAccessController()
@@ -1318,6 +1325,12 @@ func WithRouterTrafficConfig(cfg *config.RouterTrafficConfiguration) Option {
 	}
 }
 
+func WithFileUploadConfig(cfg *config.FileUpload) Option {
+	return func(r *Router) {
+		r.fileUploadConfig = cfg
+	}
+}
+
 func WithAccessController(controller *AccessController) Option {
 	return func(r *Router) {
 		r.accessController = controller
@@ -1345,6 +1358,14 @@ func WithLocalhostFallbackInsideDocker(fallback bool) Option {
 func DefaultRouterTrafficConfig() *config.RouterTrafficConfiguration {
 	return &config.RouterTrafficConfiguration{
 		MaxRequestBodyBytes: 1000 * 1000 * 5, // 5 MB
+	}
+}
+
+func DefaultFileUploadConfig() *config.FileUpload {
+	return &config.FileUpload{
+		Enabled:          true,
+		MaxFileSizeBytes: 1000 * 1000 * 50, // 50 MB,
+		MaxFiles:         10,
 	}
 }
 
