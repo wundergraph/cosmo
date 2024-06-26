@@ -1,7 +1,5 @@
-import { JsonValue } from '@bufbuild/protobuf';
 import { Subgraph } from '@wundergraph/composition';
-import { FeatureFlagRouterExecutionConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { ffRouterConfigFromJson, joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
+import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
 import { and, eq, inArray, SQL, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
@@ -11,8 +9,6 @@ import {
   featureFlags,
   featureFlagToFeatureSubgraphs,
   featureSubgraphsToBaseSubgraphs,
-  federatedGraphsToFeatureFlagSchemaVersions,
-  graphCompositions,
   namespaces,
   schemaVersion,
   subgraphs,
@@ -21,7 +17,6 @@ import {
 } from '../../db/schema.js';
 import { FeatureFlagDTO, FederatedGraphDTO, Label, SubgraphDTO } from '../../types/index.js';
 import { normalizeLabels } from '../util.js';
-import { FeatureFlagSchemaVersion } from '../composition/composer.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 
@@ -707,54 +702,7 @@ export class FeatureFlagRepository {
     );
   }
 
-  public async getFeatureFlagRouterConfigsByFeatureFlagSchemaVersions({
-    featureFlagSchemaVersions,
-  }: {
-    featureFlagSchemaVersions: Array<FeatureFlagSchemaVersion>;
-  }): Promise<{
-    [key: string]: FeatureFlagRouterExecutionConfig;
-  }> {
-    const featureFlagRouterConfigs: {
-      [key: string]: FeatureFlagRouterExecutionConfig;
-    } = {};
-    const schemaVersionIds = featureFlagSchemaVersions.map((s) => s.schemaVersionId);
-
-    const compositions = await this.db
-      .select({
-        schemaVersionId: schemaVersion.id,
-        routerConfig: graphCompositions.routerConfig,
-      })
-      .from(schemaVersion)
-      .innerJoin(graphCompositions, eq(graphCompositions.schemaVersionId, schemaVersion.id))
-      .where(and(inArray(schemaVersion.id, schemaVersionIds), eq(graphCompositions.isComposable, true)))
-      .execute();
-
-    for (const composition of compositions) {
-      const ffSchemaVersion = featureFlagSchemaVersions.find((s) => s.schemaVersionId === composition.schemaVersionId);
-      if (!ffSchemaVersion) {
-        continue;
-      }
-      featureFlagRouterConfigs[ffSchemaVersion.featureFlagName] = ffRouterConfigFromJson(
-        composition.routerConfig as JsonValue,
-      );
-    }
-
-    return featureFlagRouterConfigs;
-  }
-
   public async delete(featureFlagId: string) {
     await this.db.delete(featureFlags).where(eq(featureFlags.id, featureFlagId)).execute();
-  }
-
-  public async getFeatureFlagSchemaVersionIdsByBaseCompositionSchemaVersionId(baseCompositionSchemaVersionId: string) {
-    return await this.db
-      .select({
-        featureFlagSchemaVersionId: federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId,
-      })
-      .from(federatedGraphsToFeatureFlagSchemaVersions)
-      .where(
-        eq(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId, baseCompositionSchemaVersionId),
-      )
-      .execute();
   }
 }
