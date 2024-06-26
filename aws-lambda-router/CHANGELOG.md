@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.15.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.14.1...aws-lambda-router@0.15.0) (2024-06-26)
+
+### Features
+
+* support file upload in router ([#772](https://github.com/wundergraph/cosmo/issues/772)) ([d1cbc11](https://github.com/wundergraph/cosmo/commit/d1cbc11deedbdefad949a3aa5a1b753da4682145)) (@pedraumcosta)
+
 ## [0.14.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.14.0...aws-lambda-router@0.14.1) (2024-06-25)
 
 ### Bug Fixes
