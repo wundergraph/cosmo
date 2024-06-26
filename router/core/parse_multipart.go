@@ -93,7 +93,10 @@ func (p *MultipartParser) parse(r *http.Request, buf *bytes.Buffer) ([]byte, []h
 			}
 			fileHandlers = append(fileHandlers, tempFile)
 			files = append(files, httpclient.NewFile(tempFile.Name(), filePart[0].Filename))
+			tempFile.Close()
 		}
+
+		file.Close()
 	}
 
 	return body, files, fileHandlers, nil
