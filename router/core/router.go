@@ -28,9 +28,6 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"connectrpc.com/connect"
-	rmiddleware "github.com/wundergraph/cosmo/router/internal/middleware"
-	"github.com/wundergraph/cosmo/router/internal/recoveryhandler"
-	"github.com/wundergraph/cosmo/router/internal/requestlogger"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/health"
