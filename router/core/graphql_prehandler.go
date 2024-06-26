@@ -1,7 +1,6 @@
 package core
 
 import (
-	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"fmt"
@@ -28,8 +27,6 @@ import (
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/mazrean/formstream"
-	httpform "github.com/mazrean/formstream/http"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
@@ -54,6 +51,7 @@ type PreHandlerOptions struct {
 	TraceExportVariables        bool
 	SpanAttributesMapper        func(r *http.Request) []attribute.KeyValue
 	MaxUploadFiles              int
+	MaxUploadFileSize           int
 }
 
 type PreHandler struct {
@@ -73,6 +71,7 @@ type PreHandler struct {
 	traceExportVariables        bool
 	spanAttributesMapper        func(r *http.Request) []attribute.KeyValue
 	maxUploadFiles              int
+	maxUploadFileSize           int
 }
 
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
@@ -95,7 +94,8 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 			"wundergraph/cosmo/router/pre_handler",
 			trace.WithInstrumentationVersion("0.0.1"),
 		),
-		maxUploadFiles: opts.MaxUploadFiles,
+		maxUploadFiles:    opts.MaxUploadFiles,
+		maxUploadFileSize: opts.MaxUploadFileSize,
 	}
 }
 
@@ -202,117 +202,96 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				return
 			}
 		} else if strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
-			tempBuf := pool.GetBytesBuffer()
-			defer pool.PutBytesBuffer(tempBuf)
-			if _, err = h.operationProcessor.ReadBody(tempBuf, r.Body); err != nil {
-				finalErr = err
-				writeOperationError(r, w, requestLogger, err)
-				return
-			}
-			r.Body = io.NopCloser(bytes.NewReader(tempBuf.Bytes()))
-
 			contentType := r.Header.Get("Content-Type")
-			_, params, err := mime.ParseMediaType(contentType)
-			if err != nil {
-				finalErr = err
-				writeOperationError(r, w, requestLogger, err)
-				return
-			}
-			boundary, ok := params["boundary"]
-			if !ok {
-				finalErr = fmt.Errorf("missing boundary in Content-Type")
+			d, params, err := mime.ParseMediaType(contentType)
+			if err != nil || d != "multipart/form-data" {
+				finalErr = errors.New("could not parse multipart request")
 				writeOperationError(r, w, requestLogger, finalErr)
 				return
 			}
 
-			multipartReader := multipart.NewReader(bytes.NewReader(tempBuf.Bytes()), boundary)
-			filePartsCount := 0
-			for {
-				part, err := multipartReader.NextPart()
-				if err == io.EOF {
-					break
-				}
-				if err != nil {
-					part.Close()
-					finalErr = err
-					writeOperationError(r, w, requestLogger, err)
-					return
-				}
-				if _, err := strconv.ParseFloat(part.FormName(), 64); err == nil {
-					filePartsCount++
-				}
-				part.Close()
+			boundary, ok := params["boundary"]
+			if !ok {
+				finalErr = errors.New("could not find request boundary")
+				writeOperationError(r, w, requestLogger, finalErr)
+				return
 			}
 
-			if filePartsCount > h.maxUploadFiles {
+			reader := multipart.NewReader(r.Body, boundary)
+			form, err := reader.ReadForm(0)
+			if err != nil {
 				finalErr = &inputError{
-					message:    fmt.Sprintf("too many files: %d, max allowed: %d", filePartsCount, h.maxUploadFiles),
+					message:    err.Error(),
 					statusCode: http.StatusOK,
 				}
 				writeOperationError(r, w, requestLogger, finalErr)
 				return
 			}
 
-			parser, err := httpform.NewParser(r)
-			if err != nil {
-				finalErr = err
-				writeOperationError(r, w, requestLogger, err)
-				return
-			}
-
-			err = parser.Register("operations", func(reader io.Reader, header formstream.Header) error {
-				body, err = h.operationProcessor.ReadBody(buf, reader)
-				if err != nil {
-					return err
+			if len(form.File) > h.maxUploadFiles {
+				finalErr = &inputError{
+					message:    fmt.Sprintf("too many files: %d, max allowed: %d", len(form.File), h.maxUploadFiles),
+					statusCode: http.StatusOK,
 				}
-				return nil
-			}, formstream.WithRequiredPart("operations"), formstream.WithRequiredPart("map"))
+				writeOperationError(r, w, requestLogger, finalErr)
+				return
+			}
+
+			body, err = h.operationProcessor.ReadBody(buf, strings.NewReader(strings.Join(form.Value["operations"], "")))
 			if err != nil {
 				finalErr = err
 				writeOperationError(r, w, requestLogger, err)
 				return
 			}
 
-			var tempFiles []*os.File
-			// We will register a handler for each file in the request.
-			for i := 0; i < filePartsCount; i++ {
-				fileKey := fmt.Sprintf("%d", i)
-				err = parser.Register(fileKey, func(reader io.Reader, header formstream.Header) error {
-					// Create and open a temporary file to store the file content
-					// This file will be deleted after the request is done
-					file, err := os.CreateTemp("", "tempfile-")
-					tempFiles = append(tempFiles, file)
-					if err != nil {
-						return err
-					}
-					_, err = io.Copy(file, reader)
-					if err != nil {
-						return err
-					}
-					files = append(files, httpclient.NewFile(file.Name(), header.FileName()))
-
-					return nil
-				}, formstream.WithRequiredPart(fileKey))
+			var manuallyWrittenDiskFiles []*os.File
+			for _, filePart := range form.File {
+				file, err := filePart[0].Open()
 				if err != nil {
 					finalErr = err
 					writeOperationError(r, w, requestLogger, err)
 					return
 				}
+
+				if filePart[0].Size > int64(h.maxUploadFileSize) {
+					finalErr = &inputError{
+						message:    "file too large to upload",
+						statusCode: http.StatusOK,
+					}
+					writeOperationError(r, w, requestLogger, finalErr)
+					return
+				}
+
+				// Check if the file was written to the disk
+				if diskFile, ok := file.(*os.File); ok {
+					files = append(files, httpclient.NewFile(diskFile.Name(), filePart[0].Filename))
+				} else {
+					// The file is in memory. We write it manually to the disk.
+					tempFile, err := os.CreateTemp("", "tempfile-")
+					if err != nil {
+						finalErr = err
+						writeOperationError(r, w, requestLogger, err)
+						return
+					}
+					_, err = io.Copy(tempFile, file)
+					if err != nil {
+						finalErr = err
+						writeOperationError(r, w, requestLogger, err)
+						return
+					}
+					manuallyWrittenDiskFiles = append(manuallyWrittenDiskFiles, tempFile)
+					files = append(files, httpclient.NewFile(tempFile.Name(), filePart[0].Filename))
+				}
 			}
 
+			// Cleanup all files
 			defer func() {
-				for _, file := range tempFiles {
+				for _, file := range manuallyWrittenDiskFiles {
 					file.Close()
 					os.Remove(file.Name())
 				}
+				form.RemoveAll()
 			}()
-
-			err = parser.Parse()
-			if err != nil {
-				finalErr = err
-				writeOperationError(r, w, requestLogger, err)
-				return
-			}
 		}
 
 		/**

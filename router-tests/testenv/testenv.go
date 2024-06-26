@@ -950,9 +950,9 @@ func multipartBytes(values map[string]io.Reader) (bytes.Buffer, string, error) {
 	for key, r := range values {
 		var fw io.Writer
 		x, ok := r.(io.Closer)
-		// Add a file
-		if x, ok := r.(*os.File); ok {
-			if fw, err = w.CreateFormFile(key, x.Name()); err != nil {
+		if key != "operations" && key != "map" {
+			// Add a file
+			if fw, err = w.CreateFormFile(key, uuid.NewString()); err != nil {
 				return b, "", err
 			}
 		} else {

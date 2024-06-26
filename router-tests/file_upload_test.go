@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/core"
@@ -14,8 +15,8 @@ import (
 func TestSingleFileUpload(t *testing.T) {
 	t.Parallel()
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-		files := make([][]byte, 1)
-		files[0] = []byte("File content as text")
+		fileContent := bytes.Repeat([]byte("a"), 40*1024*1024)
+		files := [][]byte{fileContent}
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query:     "mutation ($file: Upload!){singleUpload(file: $file)}",
 			Variables: []byte(`{"file":null}`),
@@ -51,7 +52,9 @@ func TestFileUpload_FilesSizeExceedsLimit(t *testing.T) {
 	t.Parallel()
 	testenv.Run(t, &testenv.Config{
 		RouterOptions: []core.Option{core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
-			MaxUploadRequestBodyBytes: 100,
+			MaxUploadFiles:         1,
+			MaxRequestBodyBytes:    100,
+			MaxUploadFileSizeBytes: 50,
 		})},
 	}, func(t *testing.T, xEnv *testenv.Environment) {
 		files := make([][]byte, 1)
@@ -62,8 +65,8 @@ func TestFileUpload_FilesSizeExceedsLimit(t *testing.T) {
 			Files:     files,
 		})
 		require.NoError(t, err)
-		require.Equal(t, http.StatusRequestEntityTooLarge, res.Response.StatusCode)
-		require.Equal(t, `{"errors":[{"message":"request body too large"}],"data":null}`, res.Body)
+		require.Equal(t, http.StatusOK, res.Response.StatusCode)
+		require.Equal(t, `{"errors":[{"message":"file too large to upload"}],"data":null}`, res.Body)
 	})
 }
 
@@ -71,9 +74,9 @@ func TestFileUpload_FilesExceedsLimit(t *testing.T) {
 	t.Parallel()
 	testenv.Run(t, &testenv.Config{
 		RouterOptions: []core.Option{core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
-			MaxUploadFiles:            2,
-			MaxRequestBodyBytes:       50000,
-			MaxUploadRequestBodyBytes: 50000,
+			MaxUploadFiles:         2,
+			MaxRequestBodyBytes:    50000,
+			MaxUploadFileSizeBytes: 50000,
 		})},
 	}, func(t *testing.T, xEnv *testenv.Environment) {
 		files := make([][]byte, 3)
@@ -93,8 +96,8 @@ func TestMultipleFilesUpload(t *testing.T) {
 	t.Parallel()
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 		files := make([][]byte, 2)
-		files[0] = []byte("File1 content as text")
-		files[1] = []byte("File2 content as text")
+		files[0] = []byte("Contents of first file")
+		files[1] = []byte("Contents of second file")
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query:     "mutation($files: [Upload!]!) { multipleUpload(files: $files)}",
 			Variables: []byte(`{"files":[null, null]}`),

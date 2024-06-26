@@ -640,12 +640,12 @@
               },
               "description": "The maximum request body size. The size is specified as a string with a number and a unit, e.g. 10KB, 1MB, 1GB. The supported units are 'KB', 'MB', 'GB'."
             },
-            "max_upload_request_body_size": {
+            "max_upload_file_size": {
               "type": "string",
               "bytes": {
                 "minimum": "1MB"
               },
-              "description": "The maximum request body size for file uploads. The size is specified as a string with a number and a unit, e.g. 10KB, 1MB, 1GB. The supported units are 'KB', 'MB', 'GB'."
+              "description": "The maximum size of a file that can be uploaded. The size is specified as a string with a number and a unit, e.g. 10KB, 1MB, 1GB. The supported units are 'KB', 'MB', 'GB'."
             },
             "max_upload_files": {
               "type": "integer",
