@@ -256,7 +256,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 		defer operationKit.Free()
 
-		err = operationKit.Parse(r.Context(), clientInfo, requestLogger)
+		err = operationKit.Parse(r.Context(), clientInfo)
 		if err != nil {
 			finalErr = err
 
@@ -285,14 +285,15 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 
 		// Set the router span name after we have the operation name
-		routerSpan.SetName(GetSpanName(operationKit.parsedOperation.Name, operationKit.parsedOperation.Type))
+		routerSpan.SetName(GetSpanName(operationKit.parsedOperation.Request.OperationName, operationKit.parsedOperation.Type))
 
 		attributes = []attribute.KeyValue{
-			otel.WgOperationName.String(operationKit.parsedOperation.Name),
+			otel.WgOperationName.String(operationKit.parsedOperation.Request.OperationName),
 			otel.WgOperationType.String(operationKit.parsedOperation.Type),
 		}
-		if operationKit.parsedOperation.PersistedID != "" {
-			attributes = append(attributes, otel.WgOperationPersistedID.String(operationKit.parsedOperation.PersistedID))
+		if operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil &&
+			operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash != "" {
+			attributes = append(attributes, otel.WgOperationPersistedID.String(operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash))
 		}
 
 		routerSpan.SetAttributes(attributes...)
@@ -334,7 +335,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		if h.traceExportVariables {
 			// At this stage the variables are normalized
-			routerSpan.SetAttributes(otel.WgOperationVariables.String(string(operationKit.parsedOperation.Variables)))
+			routerSpan.SetAttributes(otel.WgOperationVariables.String(string(operationKit.parsedOperation.Request.Variables)))
 		}
 
 		attributes = []attribute.KeyValue{

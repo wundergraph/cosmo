@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"hash"
 	"io"
 	"net/http"
 	"sync"
@@ -15,16 +14,14 @@ import (
 	"github.com/pkg/errors"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/variablesvalidation"
 
+	"github.com/wundergraph/cosmo/router/internal/cdn"
+	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
-	"go.uber.org/zap"
-
-	"github.com/wundergraph/cosmo/router/internal/cdn"
-	"github.com/wundergraph/cosmo/router/internal/pool"
 )
 
 var (
@@ -37,21 +34,19 @@ type ParsedOperation struct {
 	// ID represents a unique-ish ID for the operation calculated by hashing
 	// its normalized representation and its variables
 	ID uint64
-	// Name is the operation name, if any
-	Name string
 	// Type is a string representing the operation type. One of
 	// "query", "mutation", "subscription"
-	Type string
-	// Variables in the "variables" field value in the JSON payload
-	Variables []byte
+	Type         string
+	VariablesMap map[string]any
 	// Files is a list of files, an interface representing the file data needed to be passed forward.
 	Files []httpclient.File
 	// NormalizedRepresentation is the normalized representation of the operation
 	// as a string. This is provided for modules to be able to access the
 	// operation. Only available after the operation has been normalized.
 	NormalizedRepresentation string
-	Extensions               []byte
-	PersistedID              string
+	Request                  GraphQLRequest
+	GraphQLRequestExtensions GraphQLRequestExtensions
+	IsPersistedQuery         bool
 }
 
 type invalidExtensionsTypeError jsonparser.ValueType
@@ -85,26 +80,34 @@ type OperationProcessor struct {
 	maxOperationSizeInBytes int64
 	cdn                     *cdn.PersistentOperationClient
 	parseKitPool            *sync.Pool
+	operationCache          *OperationCache
 }
 
 // parseKit is a helper struct to parse, normalize and validate operations
 type parseKit struct {
 	parser              *astparser.Parser
 	doc                 *ast.Document
-	keyGen              hash.Hash64
+	keyGen              *xxhash.Digest
 	normalizer          *astnormalization.OperationNormalizer
 	printer             *astprinter.Printer
 	normalizedOperation *bytes.Buffer
-	unescapedDocument   []byte
 	variablesValidator  *variablesvalidation.VariablesValidator
+}
+
+type OperationCache struct {
+	persistetOperationVariableNames     map[string][]string
+	persistetOperationVariableNamesLock sync.RWMutex
+
+	persistedOperationCache     map[uint64]normalizedOperationCacheEntry
+	persistedOperationCacheLock sync.RWMutex
 }
 
 // OperationKit provides methods to parse, normalize and validate operations.
 // After each step, the operation is available as a ParsedOperation.
 // It must be created for each request and freed after the request is done.
 type OperationKit struct {
+	cache                    *OperationCache
 	data                     []byte
-	files                    []httpclient.File
 	operationDefinitionRef   int
 	originalOperationNameRef ast.ByteSliceReference
 	operationParser          *OperationProcessor
@@ -130,13 +133,16 @@ type GraphQLRequestExtensionsPersistedQuery struct {
 
 // NewOperationKit creates a new OperationKit. The kit is used to parse, normalize and validate operations.
 // It allocates resources that need to be freed by calling OperationKit.Free()
-func NewOperationKit(parser *OperationProcessor, data []byte, files []httpclient.File) *OperationKit {
+func NewOperationKit(processor *OperationProcessor, data []byte, files []httpclient.File) *OperationKit {
 	return &OperationKit{
-		operationParser:        parser,
-		kit:                    parser.getKit(),
+		operationParser:        processor,
+		kit:                    processor.getKit(),
 		operationDefinitionRef: -1,
 		data:                   data,
-		files:                  files,
+		cache:                  processor.operationCache,
+		parsedOperation: &ParsedOperation{
+			Files: files,
+		},
 	}
 }
 
@@ -145,47 +151,44 @@ func (o *OperationKit) Free() {
 	o.operationParser.freeKit(o.kit)
 }
 
-func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo, log *zap.Logger) error {
+func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo) error {
 	var (
 		operationCount                  = 0
 		anonymousOperationCount         = 0
 		anonymousOperationDefinitionRef = -1
-		operationType                   string
-		request                         GraphQLRequest
-		extensions                      GraphQLRequestExtensions
 	)
 
-	err := json.Unmarshal(o.data, &request)
+	err := json.Unmarshal(o.data, &o.parsedOperation.Request)
 	if err != nil {
 		return &inputError{
 			message:    fmt.Sprintf("error parsing request body: %s", err),
 			statusCode: http.StatusBadRequest,
 		}
 	}
-	if request.Extensions != nil {
+
+	if o.parsedOperation.Request.Extensions != nil {
 		var mapExtensions map[string]any
-		err = json.Unmarshal(request.Extensions, &mapExtensions)
+		err = json.Unmarshal(o.parsedOperation.Request.Extensions, &mapExtensions)
 		if err != nil {
 			return &inputError{
 				message:    fmt.Sprintf("error parsing extensions: %s", err),
 				statusCode: http.StatusBadRequest,
 			}
 		}
-		err = json.Unmarshal(request.Extensions, &extensions)
+		err = json.Unmarshal(o.parsedOperation.Request.Extensions, &o.parsedOperation.GraphQLRequestExtensions)
 		if err != nil {
 			return &inputError{
 				message:    fmt.Sprintf("error parsing extensions: %s", err),
 				statusCode: http.StatusBadRequest,
 			}
 		}
-		if extensions.PersistedQuery != nil {
+		if o.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil {
 			// Delete persistedQuery from extensions to avoid it being passed to the subgraphs
-			request.Extensions = jsonparser.Delete(request.Extensions, "persistedQuery")
+			o.parsedOperation.Request.Extensions = jsonparser.Delete(o.parsedOperation.Request.Extensions, "persistedQuery")
 		}
 	}
-	if request.Variables != nil {
-		var mapVariables map[string]any
-		err = json.Unmarshal(request.Variables, &mapVariables)
+	if o.parsedOperation.Request.Variables != nil {
+		err = json.Unmarshal(o.parsedOperation.Request.Variables, &o.parsedOperation.VariablesMap)
 		if err != nil {
 			return &inputError{
 				message:    fmt.Sprintf("error parsing variables: %s", err),
@@ -194,25 +197,36 @@ func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo, log *z
 		}
 	}
 
-	if extensions.PersistedQuery != nil && len(extensions.PersistedQuery.Sha256Hash) > 0 {
+	if o.parsedOperation.Request.OperationName == "null" {
+		o.parsedOperation.Request.OperationName = ""
+	}
+
+	if o.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil && len(o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash) > 0 {
 		if o.operationParser.cdn == nil {
 			return &inputError{
 				message:    "could not resolve persisted query, feature is not configured",
 				statusCode: http.StatusOK,
 			}
 		}
-		persistedOperationData, err := o.operationParser.cdn.PersistedOperation(ctx, clientInfo.Name, extensions.PersistedQuery.Sha256Hash)
+		o.parsedOperation.IsPersistedQuery = true
+		fromCache, err := o.loadPersistedOperationFromCache()
+		if err != nil {
+			return &inputError{
+				statusCode: http.StatusInternalServerError,
+				message:    "error loading persisted operation from cache",
+			}
+		}
+		if fromCache {
+			return nil
+		}
+		persistedOperationData, err := o.operationParser.cdn.PersistedOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
 		if err != nil {
 			return err
 		}
-		request.Query = string(persistedOperationData)
+		o.parsedOperation.Request.Query = string(persistedOperationData)
 	}
 
-	if request.OperationName == "null" {
-		request.OperationName = ""
-	}
-
-	if len(request.Query) == 0 {
+	if len(o.parsedOperation.Request.Query) == 0 {
 		return &inputError{
 			message:    "error parsing request body",
 			statusCode: http.StatusBadRequest,
@@ -220,7 +234,7 @@ func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo, log *z
 	}
 
 	report := &operationreport.Report{}
-	o.kit.doc.Input.ResetInputString(request.Query)
+	o.kit.doc.Input.ResetInputString(o.parsedOperation.Request.Query)
 	o.kit.parser.Parse(o.kit.doc, report)
 	if report.HasErrors() {
 		return &reportError{
@@ -242,28 +256,28 @@ func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo, log *z
 			}
 			continue
 		}
-		if request.OperationName == "" {
+		if o.parsedOperation.Request.OperationName == "" {
 			o.operationDefinitionRef = ref
 			o.originalOperationNameRef = o.kit.doc.OperationDefinitions[ref].Name
-			request.OperationName = name
+			o.parsedOperation.Request.OperationName = name
 			continue
 		}
-		if name == request.OperationName && o.operationDefinitionRef == -1 {
+		if name == o.parsedOperation.Request.OperationName && o.operationDefinitionRef == -1 {
 			o.operationDefinitionRef = ref
 			o.originalOperationNameRef = o.kit.doc.OperationDefinitions[ref].Name
 		}
 	}
 
-	if request.OperationName == "" && operationCount > 1 {
+	if o.parsedOperation.Request.OperationName == "" && operationCount > 1 {
 		return &inputError{
 			message:    "operation name is required when multiple operations are defined",
 			statusCode: http.StatusOK,
 		}
 	}
 
-	if request.OperationName != "" && operationCount != 0 && o.operationDefinitionRef == -1 {
+	if o.parsedOperation.Request.OperationName != "" && operationCount != 0 && o.operationDefinitionRef == -1 {
 		return &inputError{
-			message:    fmt.Sprintf("operation with name '%s' not found", request.OperationName),
+			message:    fmt.Sprintf("operation with name '%s' not found", o.parsedOperation.Request.OperationName),
 			statusCode: http.StatusOK,
 		}
 	}
@@ -278,7 +292,7 @@ func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo, log *z
 			}
 		} else {
 			return &inputError{
-				message:    fmt.Sprintf("operation with name '%s' not found", request.OperationName),
+				message:    fmt.Sprintf("operation with name '%s' not found", o.parsedOperation.Request.OperationName),
 				statusCode: http.StatusOK,
 			}
 		}
@@ -286,11 +300,11 @@ func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo, log *z
 
 	switch o.kit.doc.OperationDefinitions[o.operationDefinitionRef].OperationType {
 	case ast.OperationTypeQuery:
-		operationType = "query"
+		o.parsedOperation.Type = "query"
 	case ast.OperationTypeMutation:
-		operationType = "mutation"
+		o.parsedOperation.Type = "mutation"
 	case ast.OperationTypeSubscription:
-		operationType = "subscription"
+		o.parsedOperation.Type = "subscription"
 	default:
 		return &inputError{
 			message:    "operation type not supported",
@@ -299,43 +313,30 @@ func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo, log *z
 	}
 
 	// set variables to empty object if they are null or not present
-	if request.Variables == nil || bytes.Equal(request.Variables, []byte("null")) {
-		request.Variables = []byte("{}")
+	if o.parsedOperation.Request.Variables == nil || bytes.Equal(o.parsedOperation.Request.Variables, []byte("null")) {
+		o.parsedOperation.Request.Variables = []byte("{}")
 	}
 
 	// Set variables on doc input before normalization
 	// IMPORTANT: this is required for the normalization to work correctly!
 	// Normalization reads/rewrites/adds variables
-	o.kit.doc.Input.Variables = request.Variables
+	o.kit.doc.Input.Variables = o.parsedOperation.Request.Variables
 
 	// Replace the operation name with a static name to avoid different IDs for the same operation
 	replaceOperationName := o.kit.doc.Input.AppendInputBytes(staticOperationName)
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = replaceOperationName
-
-	// Here we create a copy of the original variables. After parse, the variables can be consumed or modified.
-	variablesCopy := make([]byte, len(o.kit.doc.Input.Variables))
-	copy(variablesCopy, o.kit.doc.Input.Variables)
-
-	o.parsedOperation = &ParsedOperation{
-		ID:                       0,  // will be set after normalization
-		NormalizedRepresentation: "", // will be set after normalization
-		Name:                     request.OperationName,
-		Type:                     operationType,
-		Extensions:               request.Extensions,
-		Variables:                variablesCopy,
-		Files:                    o.files,
-	}
-
-	if extensions.PersistedQuery != nil {
-		o.parsedOperation.PersistedID = extensions.PersistedQuery.Sha256Hash
-	}
-
 	return nil
 }
 
 // Normalize normalizes the operation. After normalization the normalized representation of the operation
 // and variables is available. Also, the final operation ID is generated.
 func (o *OperationKit) Normalize() error {
+
+	if o.parsedOperation.NormalizedRepresentation != "" {
+		// normalized operation was loaded from cache
+		return nil
+	}
+
 	report := &operationreport.Report{}
 	o.kit.normalizer.NormalizeNamedOperation(o.kit.doc, o.operationParser.executor.ClientSchema, staticOperationName, report)
 	if report.HasErrors() {
@@ -367,14 +368,74 @@ func (o *OperationKit) Normalize() error {
 	variablesCopy := make([]byte, len(o.kit.doc.Input.Variables))
 	copy(variablesCopy, o.kit.doc.Input.Variables)
 
-	o.parsedOperation.Variables = variablesCopy
+	o.parsedOperation.Request.Variables = variablesCopy
 
 	return nil
 }
 
+type normalizedOperationCacheEntry struct {
+	operationID              uint64
+	normalizedRepresentation string
+	operationType            string
+}
+
+func (o *OperationKit) loadPersistedOperationFromCache() (ok bool, err error) {
+	cacheKey, ok := o.loadPersistedOperationCacheKey(o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
+	if !ok {
+		return false, nil
+	}
+
+	o.cache.persistedOperationCacheLock.RLock()
+	entry, ok := o.cache.persistedOperationCache[cacheKey]
+	o.cache.persistedOperationCacheLock.RUnlock()
+	if !ok {
+		return false, nil
+	}
+	o.parsedOperation.ID = entry.operationID
+	o.parsedOperation.NormalizedRepresentation = entry.normalizedRepresentation
+	o.parsedOperation.Type = entry.operationType
+
+	return true, nil
+}
+
+var (
+	literalF = []byte("f")
+	literalT = []byte("t")
+)
+
+func (o *OperationKit) loadPersistedOperationCacheKey(persistedQuerySha256Hash string) (key uint64, ok bool) {
+	o.cache.persistetOperationVariableNamesLock.RLock()
+	variableNames, ok := o.cache.persistetOperationVariableNames[persistedQuerySha256Hash]
+	o.cache.persistetOperationVariableNamesLock.RUnlock()
+	if !ok {
+		return 0, false
+	}
+	o.kit.keyGen.Reset()
+	_, _ = o.kit.keyGen.WriteString(o.parsedOperation.Request.OperationName)
+	for i := range variableNames {
+		value, exists := o.parsedOperation.VariablesMap[variableNames[i]]
+		if !exists {
+			_, _ = o.kit.keyGen.Write(literalF)
+			continue
+		}
+		switch v := value.(type) {
+		case bool:
+			if v {
+				_, _ = o.kit.keyGen.Write(literalT)
+			} else {
+				_, _ = o.kit.keyGen.Write(literalF)
+			}
+		default:
+			_, _ = o.kit.keyGen.Write(literalF)
+		}
+	}
+	key = o.kit.keyGen.Sum64()
+	return key, true
+}
+
 // Validate validates the operation variables.
 func (o *OperationKit) Validate() error {
-	err := o.kit.variablesValidator.Validate(o.kit.doc, o.operationParser.executor.ClientSchema, o.parsedOperation.Variables)
+	err := o.kit.variablesValidator.Validate(o.kit.doc, o.operationParser.executor.ClientSchema, o.parsedOperation.Request.Variables)
 	if err != nil {
 		return &inputError{
 			message:    err.Error(),
@@ -385,11 +446,45 @@ func (o *OperationKit) Validate() error {
 	return nil
 }
 
+var (
+	literalIF = []byte("if")
+)
+
+func (o *OperationKit) skipIncludeVariableNames() []string {
+	variableNames := make(map[string]struct{}, len(o.kit.doc.Directives))
+	for i := range o.kit.doc.Directives {
+		name := o.kit.doc.DirectiveNameBytes(i)
+		switch string(name) {
+		case "skip", "include":
+			if value, ok := o.kit.doc.DirectiveArgumentValueByName(i, literalIF); ok {
+				if value.Kind != ast.ValueKindVariable {
+					continue
+				}
+				variableName := o.kit.doc.VariableValueNameString(value.Ref)
+				variableNames[variableName] = struct{}{}
+			}
+		}
+	}
+	names := make([]string, len(variableNames))
+	i := 0
+	for name := range variableNames {
+		names[i] = name
+		i++
+	}
+	return names
+}
+
 func NewOperationParser(opts OperationParserOptions) *OperationProcessor {
 	return &OperationProcessor{
 		executor:                opts.Executor,
 		maxOperationSizeInBytes: opts.MaxOperationSizeInBytes,
 		cdn:                     opts.PersistentOpClient,
+		operationCache: &OperationCache{
+			persistetOperationVariableNames:     map[string][]string{},
+			persistetOperationVariableNamesLock: sync.RWMutex{},
+			persistedOperationCache:             map[uint64]normalizedOperationCacheEntry{},
+			persistedOperationCacheLock:         sync.RWMutex{},
+		},
 		parseKitPool: &sync.Pool{
 			New: func() interface{} {
 				return &parseKit{
@@ -405,7 +500,6 @@ func NewOperationParser(opts OperationParserOptions) *OperationProcessor {
 					),
 					printer:             &astprinter.Printer{},
 					normalizedOperation: &bytes.Buffer{},
-					unescapedDocument:   make([]byte, 1024),
 					variablesValidator:  variablesvalidation.NewVariablesValidator(),
 				}
 			},
@@ -421,7 +515,6 @@ func (p *OperationProcessor) freeKit(kit *parseKit) {
 	kit.keyGen.Reset()
 	kit.doc.Reset()
 	kit.normalizedOperation.Reset()
-	kit.unescapedDocument = kit.unescapedDocument[:0]
 }
 
 func (p *OperationProcessor) entityTooLarge() error {
