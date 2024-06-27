@@ -1,9 +1,9 @@
 /* eslint-disable no-labels */
 import { KeyObject, randomUUID } from 'node:crypto';
 import { JsonValue, PlainMessage } from '@bufbuild/protobuf';
-import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import { FeatureFlagRouterExecutionConfig, RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { CompositionError, DeploymentError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { buildRouterConfig, joinLabel, normalizeURL, routerConfigFromJson } from '@wundergraph/cosmo-shared';
+import { joinLabel, normalizeURL, routerConfigFromJson } from '@wundergraph/cosmo-shared';
 import {
   and,
   asc,
@@ -55,8 +55,8 @@ import {
   buildRouterExecutionConfig,
   Composer,
   ContractBaseCompositionData,
-  FeatureFlagSchemaVersion,
   mapResultToComposedGraph,
+  routerConfigToFeatureFlagExecutionConfig,
   RouterConfigUploadError,
 } from '../composition/composer.js';
 import { composeSubgraphsForContract, composeSubgraphsWithContracts } from '../composition/composition.js';
@@ -1477,7 +1477,7 @@ export class FederatedGraphRepository {
          * base composition (not a contract or feature flag composition)
          * */
         const baseCompositionData: BaseCompositionData = {
-          featureFlagRouterExecutionConfigByFeatureFlagName: new Map<string, RouterConfig>(),
+          featureFlagRouterExecutionConfigByFeatureFlagName: new Map<string, FeatureFlagRouterExecutionConfig>(),
         };
 
         /* Map of the contract base composition schema version ID, router execution config,
@@ -1554,7 +1554,7 @@ export class FederatedGraphRepository {
           } else if (subgraphsToCompose.isFeatureFlagComposition) {
             baseCompositionData.featureFlagRouterExecutionConfigByFeatureFlagName.set(
               subgraphsToCompose.featureFlagName,
-              routerExecutionConfig,
+              routerConfigToFeatureFlagExecutionConfig(routerExecutionConfig),
             );
             // Otherwise, this is the base composition, so store the schema version id
           } else {
@@ -1619,7 +1619,7 @@ export class FederatedGraphRepository {
               contractBaseCompositionDataByContractId.set(contractGraph.id, {
                 schemaVersionId: contractDeployment.schemaVersionId,
                 routerExecutionConfig: contractRouterExecutionConfig,
-                featureFlagRouterExecutionConfigByFeatureFlagName: new Map<string, RouterConfig>(),
+                featureFlagRouterExecutionConfigByFeatureFlagName: new Map<string, FeatureFlagRouterExecutionConfig>(),
               });
               continue;
             }
@@ -1637,7 +1637,7 @@ export class FederatedGraphRepository {
             }
             existingContractBaseCompositionData.featureFlagRouterExecutionConfigByFeatureFlagName.set(
               subgraphsToCompose.featureFlagName,
-              contractRouterExecutionConfig,
+              routerConfigToFeatureFlagExecutionConfig(contractRouterExecutionConfig),
             );
           }
         }

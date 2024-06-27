@@ -43,7 +43,7 @@ export interface S3RouterConfigMetadata extends Record<string, string> {
 }
 
 export type BaseCompositionData = {
-  featureFlagRouterExecutionConfigByFeatureFlagName: Map<string, RouterConfig>;
+  featureFlagRouterExecutionConfigByFeatureFlagName: Map<string, FeatureFlagRouterExecutionConfig>;
   routerExecutionConfig?: RouterConfig;
   schemaVersionId?: string;
 };
@@ -52,10 +52,18 @@ export type BaseCompositionData = {
  * and its feature flag schema versions (if any)
  * */
 export type ContractBaseCompositionData = {
-  featureFlagRouterExecutionConfigByFeatureFlagName: Map<string, RouterConfig>;
+  featureFlagRouterExecutionConfigByFeatureFlagName: Map<string, FeatureFlagRouterExecutionConfig>;
   routerExecutionConfig: RouterConfig;
   schemaVersionId: string;
 };
+
+export function routerConfigToFeatureFlagExecutionConfig(routerConfig: RouterConfig): FeatureFlagRouterExecutionConfig {
+  return new FeatureFlagRouterExecutionConfig({
+    engineConfig: routerConfig.engineConfig,
+    subgraphs: routerConfig.subgraphs,
+    version: routerConfig.version,
+  });
+}
 
 export type UUID = `${string}-${string}-${string}-${string}-${string}`;
 
@@ -171,7 +179,7 @@ export class Composer {
     featureFlagRouterExecutionConfigByFeatureFlagName,
     baseCompositionRouterExecutionConfig,
   }: {
-    featureFlagRouterExecutionConfigByFeatureFlagName: Map<string, RouterConfig>;
+    featureFlagRouterExecutionConfigByFeatureFlagName: Map<string, FeatureFlagRouterExecutionConfig>;
     // The base composition is the base federated graph on which feature flags and contracts are based
     baseCompositionRouterExecutionConfig: RouterConfig;
   }) {
@@ -353,12 +361,12 @@ export class Composer {
     baseCompositionRouterExecutionConfig: RouterConfig;
     baseCompositionSchemaVersionId: string;
     blobStorage: BlobStorage;
-    featureFlagRouterExecutionConfigByFeatureFlagName: Map<string, RouterConfig>;
+    featureFlagRouterExecutionConfigByFeatureFlagName: Map<string, FeatureFlagRouterExecutionConfig>;
     federatedGraphId: string;
     organizationId: string;
     federatedGraphAdmissionWebhookURL?: string;
   }) {
-    const baseRouterConfig = await this.composeRouterConfigWithFeatureFlags({
+    const baseRouterConfig = this.composeRouterConfigWithFeatureFlags({
       featureFlagRouterExecutionConfigByFeatureFlagName,
       baseCompositionRouterExecutionConfig,
     });
