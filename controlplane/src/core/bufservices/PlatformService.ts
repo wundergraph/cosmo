@@ -3759,7 +3759,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           return {
             response: {
               code: EnumStatusCode.ERR_LIMIT_REACHED,
-              details: `The organization "${authContext.organizationSlug}" has already reached its limit of` +
+              details:
+                `The organization "${authContext.organizationSlug}" has already reached its limit of` +
                 ` ${limit} feature flag${limit === 1 ? '' : 's'}.`,
             },
             compositionErrors: [],
