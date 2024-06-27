@@ -184,24 +184,8 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		// AFTER we're done with body (retrieved from parser.ReadBody())
 		buf := pool.GetBytesBuffer()
 		defer pool.PutBytesBuffer(buf)
-		if r.Header.Get("Content-Type") == "" || r.Header.Get("Content-Type") == "application/json" {
-			var err error
-			body, err = h.operationProcessor.ReadBody(buf, r.Body)
-			if err != nil {
-				finalErr = err
 
-				// This error is expected e.g. when the client defines (Content-Length) and aborts the request before
-				// It means that EOF was encountered in the middle of reading the body. This is not a server error.
-				if errors.Is(err, io.ErrUnexpectedEOF) {
-					requestLogger.Debug("unexpected EOF while reading request body", zap.Error(err))
-				} else {
-					requestLogger.Error("failed to read request body", zap.Error(err))
-				}
-
-				writeOperationError(r, w, requestLogger, err)
-				return
-			}
-		} else if strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
+		if strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
 			if !h.fileUploadEnabled {
 				finalErr = &inputError{
 					message:    "file upload disabled",
@@ -225,6 +209,23 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			defer func() {
 				multipartParser.RemoveAll()
 			}()
+		} else {
+			var err error
+			body, err = h.operationProcessor.ReadBody(buf, r.Body)
+			if err != nil {
+				finalErr = err
+
+				// This error is expected e.g. when the client defines (Content-Length) and aborts the request before
+				// It means that EOF was encountered in the middle of reading the body. This is not a server error.
+				if errors.Is(err, io.ErrUnexpectedEOF) {
+					requestLogger.Debug("unexpected EOF while reading request body", zap.Error(err))
+				} else {
+					requestLogger.Error("failed to read request body", zap.Error(err))
+				}
+
+				writeOperationError(r, w, requestLogger, err)
+				return
+			}
 		}
 
 		/**

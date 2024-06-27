@@ -69,7 +69,7 @@ func normalizeJSON(tb testing.TB, data []byte) []byte {
 	return buf.Bytes()
 }
 
-func TestIntegration(t *testing.T) {
+func TestSimpleQuery(t *testing.T) {
 	t.Parallel()
 
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -77,6 +77,38 @@ func TestIntegration(t *testing.T) {
 			Query: `query { employees { id } }`,
 		})
 		require.JSONEq(t, employeesIDData, res.Body)
+	})
+}
+
+func TestContentTypes(t *testing.T) {
+	t.Parallel()
+
+	type contentType struct {
+		ContentType string
+	}
+
+	var contentTypes = []contentType{
+		{""},
+		{"application/json"},
+		{"application/JSON"},
+		{"application/json; charset=utf-8"},
+		{"application/json; charset=UTF-8"},
+		{"application/json; charset=UTF-8;"},
+	}
+
+	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		for _, ct := range contentTypes {
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", http.Header{
+				"Content-Type": []string{ct.ContentType},
+			}, bytes.NewReader([]byte(`{"query":"{ employees { id } }"}`)))
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.StatusCode)
+
+			body, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.JSONEq(t, employeesIDData, string(body))
+
+		}
 	})
 }
 
