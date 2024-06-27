@@ -27,10 +27,10 @@ const EngineLoaderHooksScopeVersion = "0.0.1"
 // It is used to trace and measure the performance of the engine loader
 type EngineLoaderHooks struct {
 	tracer      trace.Tracer
-	metricStore metric.Store
+	metricStore metric.Provider
 }
 
-func NewEngineRequestHooks(metricStore metric.Store) resolve.LoaderHooks {
+func NewEngineRequestHooks(metricStore metric.Provider) resolve.LoaderHooks {
 	return &EngineLoaderHooks{
 		tracer: otel.GetTracerProvider().Tracer(
 			EngineLoaderHooksScopeName,

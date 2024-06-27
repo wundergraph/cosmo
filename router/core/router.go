@@ -816,8 +816,8 @@ func (r *Router) Start(ctx context.Context) error {
 func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfig) (*server, error) {
 	s := &server{
 		Config:             r.Config,
-		metricStore:        rmetric.NewNoopMetrics(),
 		websocketStats:     r.WebsocketStats,
+		metricStore:        rmetric.NewNoopMetrics(),
 		executionTransport: newHTTPTransport(r.subgraphTransportOptions),
 		pubSubProviders: &EnginePubSubProviders{
 			nats:  map[string]pubsub_datasource.NatsPubSub{},
@@ -840,6 +840,25 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 
 	s.baseOtelAttributes = baseOtelAttributes
 
+	if s.metricConfig.OpenTelemetry.RouterRuntime {
+		// Create runtime metrics exported to OTEL
+		s.runtimeMetrics = rmetric.NewRuntimeMetrics(
+			s.logger,
+			r.otlpMeterProvider,
+			// We track runtime metrics with base router config version
+			// even when we have multiple feature flags
+			append([]attribute.KeyValue{
+				otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
+			}, s.baseOtelAttributes...),
+			s.processStartTime,
+		)
+
+		// Start runtime metrics
+		if err := s.runtimeMetrics.Start(); err != nil {
+			return nil, err
+		}
+	}
+
 	// Prometheus metricStore rely on OTLP metricStore
 	if s.metricConfig.IsEnabled() {
 		m, err := rmetric.NewStore(
@@ -847,8 +866,9 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			rmetric.WithOtlpMeterProvider(s.otlpMeterProvider),
 			rmetric.WithLogger(s.logger),
 			rmetric.WithProcessStartTime(s.processStartTime),
-			rmetric.WithRouterRuntimeMetrics(s.metricConfig.OpenTelemetry.RouterRuntime),
-			rmetric.WithAttributes(s.baseOtelAttributes...),
+			// Don't pass the router config version or feature flags here
+			// We scope the metrics to the feature flags and config version in the handler
+			rmetric.WithAttributes(baseOtelAttributes...),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create metric handler: %w", err)

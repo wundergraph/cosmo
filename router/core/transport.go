@@ -35,7 +35,7 @@ type CustomTransport struct {
 	roundTripper http.RoundTripper
 	preHandlers  []TransportPreHandler
 	postHandlers []TransportPostHandler
-	metricStore  metric.Store
+	metricStore  metric.Provider
 	logger       *zap.Logger
 
 	sf *singleflight.Group
@@ -45,7 +45,7 @@ func NewCustomTransport(
 	logger *zap.Logger,
 	roundTripper http.RoundTripper,
 	retryOptions retrytransport.RetryOptions,
-	metricStore metric.Store,
+	metricStore metric.Provider,
 	enableSingleFlight bool,
 ) *CustomTransport {
 
@@ -279,7 +279,7 @@ type TransportFactory struct {
 	retryOptions                  retrytransport.RetryOptions
 	requestTimeout                time.Duration
 	localhostFallbackInsideDocker bool
-	metricStore                   metric.Store
+	metricStore                   metric.Provider
 	logger                        *zap.Logger
 	tracerProvider                *sdktrace.TracerProvider
 }
@@ -292,7 +292,7 @@ type TransportOptions struct {
 	RetryOptions                  retrytransport.RetryOptions
 	RequestTimeout                time.Duration
 	LocalhostFallbackInsideDocker bool
-	MetricStore                   metric.Store
+	MetricStore                   metric.Provider
 	Logger                        *zap.Logger
 	TracerProvider                *sdktrace.TracerProvider
 }

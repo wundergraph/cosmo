@@ -59,7 +59,6 @@ type (
 	server struct {
 		Config
 		httpServer         *http.Server
-		metricStore        rmetric.Store
 		healthChecks       health.Checker
 		pubSubProviders    *EnginePubSubProviders
 		websocketStats     WebSocketsStatistics
@@ -67,6 +66,8 @@ type (
 		publicKey          *ecdsa.PublicKey
 		executionTransport *http.Transport
 		baseOtelAttributes []attribute.KeyValue
+		runtimeMetrics     *rmetric.RuntimeMetrics
+		metricStore        rmetric.Store
 	}
 )
 
@@ -116,6 +117,15 @@ func (s *server) buildMux(ctx context.Context,
 
 	httpRouter := chi.NewRouter()
 
+	baseOtelAttributes := append(
+		[]attribute.KeyValue{otel.WgRouterConfigVersion.String(routerConfigVersion)},
+		s.baseOtelAttributes...,
+	)
+
+	if featureFlagName != "" {
+		baseOtelAttributes = append(baseOtelAttributes, otel.WgFeatureFlag.String(featureFlagName))
+	}
+
 	subgraphs, err := configureSubgraphOverwrites(
 		engineConfig,
 		configSubgraphs,
@@ -159,15 +169,6 @@ func (s *server) buildMux(ctx context.Context,
 		routerConfigVersion: routerConfigVersion,
 		logger:              s.logger,
 	})
-
-	baseOtelAttributes := append(
-		[]attribute.KeyValue{otel.WgRouterConfigVersion.String(routerConfigVersion)},
-		s.baseOtelAttributes...,
-	)
-
-	if featureFlagName != "" {
-		baseOtelAttributes = append(baseOtelAttributes, otel.WgFeatureFlag.String(featureFlagName))
-	}
 
 	var traceHandler *rtrace.Middleware
 	if s.traceConfig.Enabled {
@@ -508,9 +509,18 @@ func (s *server) Shutdown(ctx context.Context) error {
 		}
 	}
 
-	if err := s.metricStore.Flush(ctx); err != nil {
-		s.logger.Error("Failed to flush metric store", zap.Error(err))
-		finalErr = errors.Join(finalErr, err)
+	if s.metricStore != nil {
+		if err := s.metricStore.Shutdown(ctx); err != nil {
+			s.logger.Error("Failed to shutdown metric store", zap.Error(err))
+			finalErr = errors.Join(finalErr, err)
+		}
+	}
+
+	if s.runtimeMetrics != nil {
+		if err := s.runtimeMetrics.Shutdown(); err != nil {
+			s.logger.Error("Failed to shutdown runtime metrics", zap.Error(err))
+			finalErr = errors.Join(finalErr, err)
+		}
 	}
 
 	if s.pubSubProviders != nil {
