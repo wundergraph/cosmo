@@ -17,6 +17,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/recoveryhandler"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
+	"golang.org/x/exp/maps"
 	"io"
 	"net"
 	"net/http"
@@ -910,7 +911,12 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		return nil, fmt.Errorf("failed to build base mux: %w", err)
 	}
 
-	featureFlagHandler, err := s.buildMultiGraphHandler(ctx, baseMux, routerConfig.FeatureFlagConfigs.GetConfigByFeatureFlagName())
+	featureFlagConfigMap := routerConfig.FeatureFlagConfigs.GetConfigByFeatureFlagName()
+	if len(featureFlagConfigMap) > 0 {
+		s.logger.Info("Feature flags enabled", zap.Strings("flags", maps.Keys(featureFlagConfigMap)))
+	}
+
+	featureFlagHandler, err := s.buildMultiGraphHandler(ctx, baseMux, featureFlagConfigMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build feature flag handler: %w", err)
 	}

@@ -46,7 +46,9 @@ export default (opts: BaseCommandOptions) => {
 
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {
-        spinner.succeed(`The feature flag "${name}" was created successfully.`);
+        spinner.succeed(
+          `The feature flag "${name}" was created successfully. To enable it, use the "wgc feature-flag enable" command or pass the "--enabled" flag when creating it.`,
+        );
         break;
       }
       case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {
