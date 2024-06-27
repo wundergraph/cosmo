@@ -27,7 +27,11 @@ export default (opts: BaseCommandOptions) => {
 
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {
-        spinner.succeed(`The feature flag "${name}" was enabled successfully.`);
+        if (resp?.hasChanged === false) {
+          spinner.succeed(`The feature flag "${name}" is already enabled.`);
+        } else {
+          spinner.succeed(`The feature flag "${name}" was enabled successfully.`);
+        }
         break;
       }
       case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {

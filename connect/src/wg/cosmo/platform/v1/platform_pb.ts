@@ -16079,6 +16079,11 @@ export class EnableFeatureFlagResponse extends Message<EnableFeatureFlagResponse
    */
   deploymentErrors: DeploymentError[] = [];
 
+  /**
+   * @generated from field: optional bool has_changed = 4;
+   */
+  hasChanged?: boolean;
+
   constructor(data?: PartialMessage<EnableFeatureFlagResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -16090,6 +16095,7 @@ export class EnableFeatureFlagResponse extends Message<EnableFeatureFlagResponse
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "composition_errors", kind: "message", T: CompositionError, repeated: true },
     { no: 3, name: "deployment_errors", kind: "message", T: DeploymentError, repeated: true },
+    { no: 4, name: "has_changed", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EnableFeatureFlagResponse {

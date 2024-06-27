@@ -801,4 +801,56 @@ describe('Feature flag integration tests', () => {
 
     await server.close();
   });
+
+  test('that setting a feature flag to its current state does not trigger composition', async () => {
+    const { client, server, blobStorage } = await SetupTest({ dbname });
+
+    const labels = [{ key: 'team', value: 'A' }];
+    const baseGraphName = 'baseGraphName'
+    const federatedGraphResponse = await featureFlagIntegrationTestSetUp(
+      client,
+      [
+        { name: 'users', hasFeatureSubgraph: true }, { name: 'products', hasFeatureSubgraph: true },
+      ],
+      baseGraphName,
+      labels,
+    );
+    expect(blobStorage.keys()).toHaveLength(1);
+    const key = blobStorage.keys()[0];
+    expect(key).toContain(federatedGraphResponse.graph!.id);
+    await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+
+    // The base composition
+    await assertNumberOfCompositions(client, baseGraphName, 1);
+
+    const featureFlagName = 'flag';
+    await createFeatureFlag(client, featureFlagName, labels, ['users-feature', 'products-feature'], 'default', true);
+
+    // The base recomposition and the feature flag composition
+    await assertNumberOfCompositions(client, baseGraphName, 3);
+    await assertFeatureFlagExecutionConfig(blobStorage, key, true);
+
+    // The feature flag is already enabled, so this enable should do nothing
+    await toggleFeatureFlag(client, featureFlagName, true);
+
+    // Expect compositions to remain at 3
+    await assertNumberOfCompositions(client, baseGraphName, 3);
+    await assertFeatureFlagExecutionConfig(blobStorage, key, true);
+
+    // Disable the feature flag
+    await toggleFeatureFlag(client, featureFlagName, false);
+
+    // Expect a base recomposition
+    await assertNumberOfCompositions(client, baseGraphName, 4);
+    await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+
+    // The feature flag is already disabled, so this disable should do nothing
+    await toggleFeatureFlag(client, featureFlagName, false);
+
+    // Expect compositions to remain at 4
+    await assertNumberOfCompositions(client, baseGraphName, 4);
+    await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+
+    await server.close();
+  });
 });

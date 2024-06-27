@@ -116,7 +116,7 @@ describe('Update feature subgraph tests', () => {
     });
     expect(featureSubgraphResponseTwo.response?.code).toBe(EnumStatusCode.ERR);
     expect(featureSubgraphResponseTwo.response?.details)
-      .toBe(`Feature subgraph labels cannot be changed directly. Feature subgraph labels are determined by the feature flag they comprise.`);
+      .toBe(`Feature subgraph labels cannot be changed directly. Feature subgraph labels are determined by the feature flag they compose.`);
 
     const featureSubgraphResponseThree = await client.updateSubgraph({
       name: featureSubgraphName,
@@ -124,7 +124,7 @@ describe('Update feature subgraph tests', () => {
     });
     expect(featureSubgraphResponseThree.response?.code).toBe(EnumStatusCode.ERR);
     expect(featureSubgraphResponseThree.response?.details)
-      .toBe(`Feature subgraph labels cannot be changed directly. Feature subgraph labels are determined by the feature flag they comprise.`);
+      .toBe(`Feature subgraph labels cannot be changed directly. Feature subgraph labels are determined by the feature flag they compose.`);
 
     await server.close();
   });

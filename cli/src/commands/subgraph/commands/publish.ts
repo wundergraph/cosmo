@@ -192,7 +192,7 @@ export default (opts: BaseCommandOptions) => {
         break;
       }
       default: {
-        spinner.fail(`Failed to update subgraph.`);
+        spinner.fail(`Failed to publish subgraph "${name}".`);
         if (resp.response?.details) {
           console.error(pc.red(pc.bold(resp.response?.details)));
         }

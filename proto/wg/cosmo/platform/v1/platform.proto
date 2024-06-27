@@ -2034,6 +2034,7 @@ message EnableFeatureFlagResponse {
   Response response = 1;
   repeated CompositionError composition_errors = 2;
   repeated DeploymentError deployment_errors = 3;
+  optional bool has_changed = 4;
 }
 
 message DeleteFeatureFlagRequest {

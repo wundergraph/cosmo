@@ -4167,6 +4167,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        if (featureFlag.isEnabled === req.enabled) {
+          return {
+            response: {
+              code: EnumStatusCode.OK,
+            },
+            compositionErrors: [],
+            deploymentErrors: [],
+            hasChanged: false,
+          };
+        }
+
         await featureFlagRepo.enableFeatureFlag({
           featureFlagId: featureFlag.id,
           namespaceId: namespace.id,
@@ -4244,6 +4255,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
           compositionErrors,
           deploymentErrors,
+          hasChanged: true,
         };
       });
     },
@@ -4827,7 +4839,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR,
               details:
                 `Feature subgraph labels cannot be changed directly.` +
-                ` Feature subgraph labels are determined by the feature flag they comprise.`,
+                ` Feature subgraph labels are determined by the feature flag they compose.`,
             },
             compositionErrors: [],
             deploymentErrors: [],
