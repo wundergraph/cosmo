@@ -705,4 +705,16 @@ export class FeatureFlagRepository {
   public async delete(featureFlagId: string) {
     await this.db.delete(featureFlags).where(eq(featureFlags.id, featureFlagId)).execute();
   }
+
+  public async count(organizationId: string) {
+    const result = await this.db
+      .select({
+        count: sql<number>`cast(count(${featureFlags.id}) as int)`,
+      })
+      .from(schema.featureFlags)
+      .where(eq(schema.featureFlags.organizationId, organizationId))
+      .execute();
+
+    return result[0]?.count || 0;
+  }
 }

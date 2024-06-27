@@ -11,6 +11,7 @@ export type FeatureIds =
   | 'breaking-change-retention'
   | 'trace-sampling-rate'
   | 'requests'
+  | 'feature-flags'
   // Boolean features
   | 'rbac'
   | 'sso'

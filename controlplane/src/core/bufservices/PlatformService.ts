@@ -3725,6 +3725,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
         const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const orgWebhooks = new OrganizationWebhookService(
           opts.db,
           authContext.organizationId,
@@ -3739,6 +3740,27 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             response: {
               code: EnumStatusCode.ERR,
               details: `The user does not have the permissions to perform this operation`,
+            },
+            compositionErrors: [],
+            deploymentErrors: [],
+          };
+        }
+
+        const feature = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'feature-flags',
+        });
+
+        const limit = feature?.limit || 0;
+
+        const count = await featureFlagRepo.count(authContext.organizationId);
+
+        if (count >= limit) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_LIMIT_REACHED,
+              details: `The organization "${authContext.organizationSlug}" has already reached its limit of` +
+                ` ${limit} feature flag${limit === 1 ? '' : 's'}.`,
             },
             compositionErrors: [],
             deploymentErrors: [],
@@ -3761,7 +3783,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Could not find namespace ${req.namespace}`,
+              details: `Could not find the namespace "${req.namespace}".`,
             },
             compositionErrors: [],
             deploymentErrors: [],

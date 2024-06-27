@@ -5,7 +5,7 @@ import CreateFeatureSubgraphCommand from './commands/create.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('feature-subgraph').alias('fs');
-  command.description('Provides commands for creating and managing a feature subgraphs.');
+  command.description('Provides commands for creating and managing feature subgraphs.');
 
   command.addCommand(CreateFeatureSubgraphCommand(opts));
 
