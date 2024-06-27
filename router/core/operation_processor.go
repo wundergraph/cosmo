@@ -337,6 +337,8 @@ func (o *OperationKit) Normalize() error {
 		return nil
 	}
 
+	skipIncludeNames := o.skipIncludeVariableNames()
+
 	report := &operationreport.Report{}
 	o.kit.normalizer.NormalizeNamedOperation(o.kit.doc, o.operationParser.executor.ClientSchema, staticOperationName, report)
 	if report.HasErrors() {
@@ -367,8 +369,11 @@ func (o *OperationKit) Normalize() error {
 	// Here we copy the normalized variables. After normalization, the variables can be consumed or modified.
 	variablesCopy := make([]byte, len(o.kit.doc.Input.Variables))
 	copy(variablesCopy, o.kit.doc.Input.Variables)
-
 	o.parsedOperation.Request.Variables = variablesCopy
+
+	if o.parsedOperation.IsPersistedQuery {
+		o.savePersistedOperationToCache(skipIncludeNames)
+	}
 
 	return nil
 }
@@ -398,6 +403,17 @@ func (o *OperationKit) loadPersistedOperationFromCache() (ok bool, err error) {
 	return true, nil
 }
 
+func (o *OperationKit) savePersistedOperationToCache(skipIncludeVariableNames []string) {
+	cacheKey := o.generatePersistedOperationCacheKey(skipIncludeVariableNames)
+	o.cache.persistedOperationCacheLock.Lock()
+	o.cache.persistedOperationCache[cacheKey] = normalizedOperationCacheEntry{
+		operationID:              o.parsedOperation.ID,
+		normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
+		operationType:            o.parsedOperation.Type,
+	}
+	o.cache.persistedOperationCacheLock.Unlock()
+}
+
 var (
 	literalF = []byte("f")
 	literalT = []byte("t")
@@ -410,10 +426,16 @@ func (o *OperationKit) loadPersistedOperationCacheKey(persistedQuerySha256Hash s
 	if !ok {
 		return 0, false
 	}
+	key = o.generatePersistedOperationCacheKey(variableNames)
+	return key, true
+}
+
+func (o *OperationKit) generatePersistedOperationCacheKey(skipIncludeVariableNames []string) uint64 {
 	o.kit.keyGen.Reset()
+	_, _ = o.kit.keyGen.WriteString(o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
 	_, _ = o.kit.keyGen.WriteString(o.parsedOperation.Request.OperationName)
-	for i := range variableNames {
-		value, exists := o.parsedOperation.VariablesMap[variableNames[i]]
+	for i := range skipIncludeVariableNames {
+		value, exists := o.parsedOperation.VariablesMap[skipIncludeVariableNames[i]]
 		if !exists {
 			_, _ = o.kit.keyGen.Write(literalF)
 			continue
@@ -429,8 +451,7 @@ func (o *OperationKit) loadPersistedOperationCacheKey(persistedQuerySha256Hash s
 			_, _ = o.kit.keyGen.Write(literalF)
 		}
 	}
-	key = o.kit.keyGen.Sum64()
-	return key, true
+	return o.kit.keyGen.Sum64()
 }
 
 // Validate validates the operation variables.
