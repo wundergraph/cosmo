@@ -394,11 +394,11 @@ export class FeatureFlagRepository {
     const baseSubgraphNames = subgraphs.map((s) => s.name);
 
     for (const subgraph of subgraphs) {
-      const ffs = await this.getFeatureFlagsBySubgraphIdAndLabels({
-        subgraphId: subgraph.id,
+      const ffs = await this.getFeatureFlagsByBaseSubgraphIdAndLabelMatchers({
+        baseSubgraphId: subgraph.id,
         namespaceId,
         baseSubgraphNames,
-        labelMatchers: federatedGraph.labelMatchers,
+        fedGraphLabelMatchers: federatedGraph.labelMatchers,
         excludeDisabled: false,
       });
 
@@ -452,7 +452,7 @@ export class FeatureFlagRepository {
       }
       const matchedFeatureFlags = await this.getMatchedFeatureFlags({
         namespaceId,
-        labelMatchers: federatedGraph.labelMatchers,
+        fedGraphLabelMatchers: federatedGraph.labelMatchers,
         excludeDisabled,
       });
       if (!matchedFeatureFlags.some((m) => m.id === featureFlagId)) {
@@ -466,15 +466,15 @@ export class FeatureFlagRepository {
 
   public async getMatchedFeatureFlags({
     namespaceId,
-    labelMatchers,
+    fedGraphLabelMatchers,
     excludeDisabled,
   }: {
     namespaceId: string;
-    labelMatchers: string[];
+    fedGraphLabelMatchers: string[];
     excludeDisabled: boolean;
   }) {
     const groupedLabels: Label[][] = [];
-    for (const lm of labelMatchers) {
+    for (const lm of fedGraphLabelMatchers) {
       const labels = lm.split(',').map((l) => splitLabel(l));
       const normalizedLabels = normalizeLabels(labels);
       groupedLabels.push(normalizedLabels);
@@ -488,7 +488,7 @@ export class FeatureFlagRepository {
     }
 
     // Only get feature flags that do not have any labels if the label matchers are empty.
-    if (labelMatchers.length === 0) {
+    if (fedGraphLabelMatchers.length === 0) {
       conditions.push(eq(featureFlags.labels, []));
     }
 
@@ -513,17 +513,17 @@ export class FeatureFlagRepository {
     return matchedFeatureFlags;
   }
 
-  public async getFeatureFlagsBySubgraphId({
-    subgraphId,
+  public async getFeatureFlagsByBaseSubgraphId({
+    baseSubgraphId,
     namespaceId,
     excludeDisabled,
   }: {
-    subgraphId: string;
+    baseSubgraphId: string;
     namespaceId: string;
     excludeDisabled: boolean;
   }) {
     const conditions: SQL<unknown>[] = [
-      eq(featureSubgraphsToBaseSubgraphs.baseSubgraphId, subgraphId),
+      eq(featureSubgraphsToBaseSubgraphs.baseSubgraphId, baseSubgraphId),
       eq(featureFlags.namespaceId, namespaceId),
     ];
 
@@ -634,23 +634,23 @@ export class FeatureFlagRepository {
     return featureGraphsByFlag;
   }
 
-  // evaluates all the ffs which have fgs whose base subgraph id is the passed as input and returns the ffs that should be composed
-  public async getFeatureFlagsBySubgraphIdAndLabels({
-    subgraphId,
+  // evaluates all the ffs which have fgs whose base subgraph id and fed graph label matchers are passed as input and returns the ffs that should be composed
+  public async getFeatureFlagsByBaseSubgraphIdAndLabelMatchers({
+    baseSubgraphId,
     namespaceId,
     baseSubgraphNames,
-    labelMatchers,
+    fedGraphLabelMatchers,
     excludeDisabled,
   }: {
-    subgraphId: string;
+    baseSubgraphId: string;
     namespaceId: string;
     baseSubgraphNames: string[];
-    labelMatchers: string[];
+    fedGraphLabelMatchers: string[];
     excludeDisabled: boolean;
   }): Promise<FeatureFlagWithFeatureSubgraphs[]> {
     const featureFlagWithEnabledFeatureGraphs: FeatureFlagWithFeatureSubgraphs[] = [];
-    const featureFlagsBySubgraphId = await this.getFeatureFlagsBySubgraphId({
-      subgraphId,
+    const featureFlagsBySubgraphId = await this.getFeatureFlagsByBaseSubgraphId({
+      baseSubgraphId,
       namespaceId,
       excludeDisabled,
     });
@@ -658,7 +658,7 @@ export class FeatureFlagRepository {
     // gets all the ffs that match the label matchers
     const matchedFeatureFlags = await this.getMatchedFeatureFlags({
       namespaceId,
-      labelMatchers,
+      fedGraphLabelMatchers,
       excludeDisabled,
     });
 
@@ -731,11 +731,11 @@ export class FeatureFlagRepository {
    * At least one of the constituent subgraphs are impacted by a change including any feature flags
    * */
   public async getSubgraphsToCompose({
-    subgraphs,
+    baseSubgraphs,
     fedGraphLabelMatchers,
     baseCompositionSubgraphs,
   }: {
-    subgraphs: SubgraphDTO[];
+    baseSubgraphs: SubgraphDTO[];
     fedGraphLabelMatchers: string[];
     baseCompositionSubgraphs: Subgraph[];
   }): Promise<Array<SubgraphsToCompose>> {
@@ -744,18 +744,18 @@ export class FeatureFlagRepository {
       {
         compositionSubgraphs: baseCompositionSubgraphs,
         isFeatureFlagComposition: false,
-        subgraphs,
+        subgraphs: baseSubgraphs,
         featureFlagName: '',
         featureFlagId: '',
       },
     ];
     const featureFlagToComposeByFlagId = new Map<string, FeatureFlagWithFeatureSubgraphs>();
-    for (const subgraph of subgraphs) {
+    for (const subgraph of baseSubgraphs) {
       // fetching all the ffs which have fgs whose base subgraph id is the passed as input
-      const enabledFeatureFlags = await this.getFeatureFlagsBySubgraphIdAndLabels({
-        subgraphId: subgraph.id,
+      const enabledFeatureFlags = await this.getFeatureFlagsByBaseSubgraphIdAndLabelMatchers({
+        baseSubgraphId: subgraph.id,
         namespaceId: subgraph.namespaceId,
-        labelMatchers: fedGraphLabelMatchers,
+        fedGraphLabelMatchers,
         baseSubgraphNames: baseCompositionSubgraphs.map((baseSubgraph) => baseSubgraph.name),
         excludeDisabled: true,
       });
@@ -769,7 +769,7 @@ export class FeatureFlagRepository {
     return this.getFeatureFlagRelatedSubgraphsToCompose(
       featureFlagToComposeByFlagId,
       baseCompositionSubgraphs,
-      subgraphs,
+      baseSubgraphs,
       subgraphsToCompose,
     );
   }

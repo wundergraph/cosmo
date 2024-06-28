@@ -1507,7 +1507,7 @@ export class FederatedGraphRepository {
 
         // Collects the base graph and applicable feature flag related graphs
         const allSubgraphsToCompose: SubgraphsToCompose[] = await featureFlagRepo.getSubgraphsToCompose({
-          subgraphs,
+          baseSubgraphs: subgraphs,
           baseCompositionSubgraphs,
           fedGraphLabelMatchers: federatedGraph.labelMatchers,
         });

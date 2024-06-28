@@ -374,10 +374,10 @@ export class SubgraphRepository {
               federatedGraphTargetId: federatedGraphDTO.targetId,
               published: true,
             });
-            const enabledFeatureFlags = await featureFlagRepo.getFeatureFlagsBySubgraphIdAndLabels({
-              subgraphId: baseSubgraph[0].id,
+            const enabledFeatureFlags = await featureFlagRepo.getFeatureFlagsByBaseSubgraphIdAndLabelMatchers({
+              baseSubgraphId: baseSubgraph[0].id,
               namespaceId: data.namespaceId,
-              labelMatchers: federatedGraphDTO.labelMatchers || [],
+              fedGraphLabelMatchers: federatedGraphDTO.labelMatchers || [],
               baseSubgraphNames: subgraphs.map((subgraph) => subgraph.name),
               excludeDisabled: true,
             });
