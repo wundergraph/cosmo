@@ -645,6 +645,13 @@
       "when": 1719311467151,
       "tag": "0091_material_weapon_omega",
       "breakpoints": true
+    },
+    {
+      "idx": 92,
+      "version": "5",
+      "when": 1719491223483,
+      "tag": "0092_dapper_felicia_hardy",
+      "breakpoints": true
     }
   ]
 }

@@ -323,6 +323,7 @@ message Subgraph {
   optional bool isV2Graph = 12;
   bool isEventDrivenGraph = 13;
   string websocketSubprotocol = 14;
+  bool isFeatureSubgraph = 15;
 }
 
 message GetSubgraphsResponse {
@@ -342,11 +343,14 @@ message GetFederatedGraphByNameResponse {
   FederatedGraph graph = 2;
   repeated Subgraph subgraphs = 3;
   string graphRequestToken = 4;
+  repeated FeatureFlag featureFlags = 5;
+  repeated FeatureFlag featureFlagsInLatestValidComposition = 6;
 }
 
 message GetFederatedGraphSDLByNameRequest {
   string name = 1;
   string namespace = 2;
+  optional string featureFlagId = 3;
 }
 
 message GetFederatedGraphSDLByNameResponse {
@@ -1564,6 +1568,20 @@ message GetCompositionsResponse {
 
 message GetCompositionDetailsRequest {
   string compositionId = 1;
+  string namespace = 2;
+}
+
+message FeatureFlagComposition {
+  string id = 1;
+  string schemaVersionId = 2;
+  string createdAt = 3;
+  bool isComposable = 4;
+  optional string compositionErrors = 5;
+  optional string createdBy = 6;
+  optional string routerConfigSignature = 7;
+  optional string admissionError = 8;
+  optional string deploymentError = 9;
+  string featureFlagName = 10;
 }
 
 message GetCompositionDetailsResponse {
@@ -1571,6 +1589,7 @@ message GetCompositionDetailsResponse {
   GraphComposition composition = 2;
   repeated GraphCompositionSubgraph compositionSubgraphs = 3;
   ChangeCounts changeCounts = 4;
+  repeated FeatureFlagComposition featureFlagCompositions = 5;
 }
 
 message GetSdlBySchemaVersionRequest {
@@ -2048,6 +2067,50 @@ message DeleteFeatureFlagResponse {
   repeated DeploymentError deployment_errors = 3;
 }
 
+message FeatureFlag{
+  string id = 1;
+  string name = 2;
+  string namespace = 3;
+  repeated Label labels = 4;
+  bool is_enabled = 5;
+  string created_by = 6;
+  string created_at = 7;
+  string updated_at = 8;
+}
+
+message GetFeatureFlagsRequest {
+  int32 limit = 1;
+  int32 offset = 2;
+  string namespace = 3;
+  optional string query = 4;
+}
+
+message GetFeatureFlagsResponse {
+  Response response = 1;
+  repeated FeatureFlag feature_flags = 2;
+  int32 total_count = 3;
+}
+
+message GetFeatureFlagByNameRequest {
+  string name = 1;
+  string namespace = 2;
+}
+
+message GetFeatureFlagByNameResponse {
+  Response response = 1;
+  FeatureFlag featureFlag = 2;
+}
+
+message GetFeatureSubgraphsByFeatureFlagRequest {
+  string featureFlagName = 1;
+  string namespace = 2;
+}
+
+message GetFeatureSubgraphsByFeatureFlagResponse {
+  Response response = 1;
+  repeated Subgraph featureSubgraphs = 2;
+}
+
 service PlatformService {
   // Namespaces
   rpc CreateNamespace(CreateNamespaceRequest) returns (CreateNamespaceResponse) {}
@@ -2311,8 +2374,14 @@ service PlatformService {
   rpc EnableLintingForTheNamespace(EnableLintingForTheNamespaceRequest) returns (EnableLintingForTheNamespaceResponse) {}
   // ConfigureNamespaceLintConfig configures the lint config of the organization.
   rpc ConfigureNamespaceLintConfig(ConfigureNamespaceLintConfigRequest) returns (ConfigureNamespaceLintConfigResponse) {}
-  // GetNamespaceLintConfig returns the lint config of the organization.
+  // GetNamespaceLintConfig returns the lint config of the namespace.
   rpc GetNamespaceLintConfig(GetNamespaceLintConfigRequest) returns (GetNamespaceLintConfigResponse) {}
+  // GetFeatureFlags returns the feature flags of the namespace
+  rpc GetFeatureFlags(GetFeatureFlagsRequest) returns (GetFeatureFlagsResponse) {}
+  // GetFeatureFlagByName returns the feature flag of the namespace
+  rpc GetFeatureFlagByName(GetFeatureFlagByNameRequest) returns (GetFeatureFlagByNameResponse) {}
+  // GetFeatureSubgraphsByFeatureFlag returns the feature subgraphs of a feature flag
+  rpc GetFeatureSubgraphsByFeatureFlag(GetFeatureSubgraphsByFeatureFlagRequest) returns (GetFeatureSubgraphsByFeatureFlagResponse) {}
 
   //
   // Billing

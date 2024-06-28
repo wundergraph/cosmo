@@ -16,11 +16,14 @@ import { getSubgraphs } from "@wundergraph/cosmo-connect/dist/platform/v1/platfo
 import { useRouter } from "next/router";
 import { useContext, useEffect, useState } from "react";
 import { useDebounce } from "use-debounce";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
 
 const SubgraphsDashboardPage: NextPageWithLayout = () => {
-  const user = useContext(UserContext);
   const router = useRouter();
   const namespace = router.query.namespace as string;
+  const tab = router.query.tab as string;
 
   const pageNumber = router.query.page
     ? parseInt(router.query.page as string)
@@ -58,39 +61,67 @@ const SubgraphsDashboardPage: NextPageWithLayout = () => {
     );
   } else if (!data?.graphs) {
     content = null;
+  } else if (tab === "subgraphs") {
+    content = (
+      <SubgraphsTable
+        subgraphs={data.graphs.filter((g) => !g.isFeatureSubgraph)}
+        totalCount={data.count}
+      />
+    );
   } else {
     content = (
-      <SubgraphsTable subgraphs={data.graphs} totalCount={data.count} />
+      <SubgraphsTable
+        subgraphs={data.graphs.filter((g) => g.isFeatureSubgraph)}
+        totalCount={data.count}
+      />
     );
   }
 
   return (
     <div className="flex h-full flex-col">
-      <div className="relative mb-4">
-        <MagnifyingGlassIcon className="absolute bottom-0 left-3 top-0 my-auto" />
-        <Input
-          placeholder="Search by name"
-          className="pl-8 pr-10"
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            applyParams({ search: e.target.value });
-          }}
-        />
-        {search && (
-          <Button
-            variant="ghost"
-            className="absolute bottom-0 right-0 top-0 my-auto rounded-l-none"
-            onClick={() => {
-              setSearch("");
-              applyParams({ search: null });
+      <Tabs value={tab ?? "subgraphs"} className="flex h-full min-h-0 flex-col">
+        <div className="flex flex-row pb-4">
+          <TabsList>
+            <TabsTrigger value="subgraphs" asChild>
+              <Link href={{ query: { ...router.query, tab: "subgraphs" } }}>
+                Subgraphs
+              </Link>
+            </TabsTrigger>
+            <TabsTrigger value="featureSubgraphs" asChild>
+              <Link
+                href={{ query: { ...router.query, tab: "featureSubgraphs" } }}
+              >
+                Feature Subgraphs
+              </Link>
+            </TabsTrigger>
+          </TabsList>
+        </div>
+        <div className="relative mb-4">
+          <MagnifyingGlassIcon className="absolute bottom-0 left-3 top-0 my-auto" />
+          <Input
+            placeholder="Search by name"
+            className="pl-8 pr-10"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              applyParams({ search: e.target.value });
             }}
-          >
-            <Cross1Icon />
-          </Button>
-        )}
-      </div>
-      {content}
+          />
+          {search && (
+            <Button
+              variant="ghost"
+              className="absolute bottom-0 right-0 top-0 my-auto rounded-l-none"
+              onClick={() => {
+                setSearch("");
+                applyParams({ search: null });
+              }}
+            >
+              <Cross1Icon />
+            </Button>
+          )}
+        </div>
+        {content}
+      </Tabs>
     </div>
   );
 };

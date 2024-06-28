@@ -1,24 +1,28 @@
 import { Subgraph } from '@wundergraph/composition';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
-import { and, eq, inArray, SQL, sql, count } from 'drizzle-orm';
+import { SQL, and, count, eq, inArray, like, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { parse } from 'graphql';
 import * as schema from '../../db/schema.js';
 import {
-  featureFlags,
   featureFlagToFeatureSubgraphs,
+  featureFlags,
   featureSubgraphsToBaseSubgraphs,
+  federatedGraphsToFeatureFlagSchemaVersions,
+  graphCompositions,
   namespaces,
   schemaVersion,
   subgraphs,
   subgraphsToFederatedGraph,
   targets,
+  users,
 } from '../../db/schema.js';
-import { FeatureFlagDTO, FederatedGraphDTO, Label, SubgraphDTO } from '../../types/index.js';
+import { FeatureFlagCompositionDTO, FeatureFlagDTO, FederatedGraphDTO, Label, SubgraphDTO } from '../../types/index.js';
 import { normalizeLabels } from '../util.js';
-import { SubgraphRepository } from './SubgraphRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
+import { SubgraphRepository } from './SubgraphRepository.js';
+import { UserRepository } from './UserRepository.js';
 
 export interface FeatureFlagWithFeatureSubgraphs {
   id: string;
@@ -34,6 +38,14 @@ export interface SubgraphsToCompose {
   subgraphs: SubgraphDTO[];
   isFeatureFlagComposition: boolean;
   featureFlagName: string;
+  featureFlagId: string;
+}
+
+export interface FeatureFlagListFilterOptions {
+  namespaceId?: string;
+  limit: number;
+  offset: number;
+  query?: string;
 }
 
 export class FeatureFlagRepository {
@@ -142,6 +154,66 @@ export class FeatureFlagRepository {
       .execute();
   }
 
+  public async getFeatureFlags({ namespaceId, limit, offset, query }: FeatureFlagListFilterOptions) {
+    const conditions: SQL<unknown>[] = [eq(featureFlags.organizationId, this.organizationId)];
+
+    if (query) {
+      conditions.push(like(featureFlags.name, `%${query}%`));
+    }
+
+    if (namespaceId) {
+      conditions.push(eq(featureFlags.namespaceId, namespaceId));
+    }
+
+    const resp = await this.db
+      .select({
+        id: featureFlags.id,
+        name: featureFlags.name,
+        namespace: namespaces.name,
+        labels: featureFlags.labels,
+        isEnabled: featureFlags.isEnabled,
+        createdAt: featureFlags.createdAt,
+        createdBy: users.email,
+        updatedAt: featureFlags.updatedAt,
+      })
+      .from(featureFlags)
+      .innerJoin(namespaces, eq(namespaces.id, featureFlags.namespaceId))
+      .leftJoin(users, eq(users.id, featureFlags.createdBy))
+      .where(and(...conditions))
+      .limit(limit)
+      .offset(offset)
+      .execute();
+
+    return resp.map((r) => ({
+      ...r,
+      labels: r.labels?.map?.((l) => splitLabel(l)) ?? [],
+      createdAt: r.createdAt.toISOString(),
+      updatedAt: resp[0].updatedAt?.toISOString() || '',
+      createdBy: r.createdBy || '',
+    }));
+  }
+
+  public async getFeatureFlagsCount({ namespaceId }: { namespaceId?: string }) {
+    const conditions: SQL<unknown>[] = [eq(featureFlags.organizationId, this.organizationId)];
+    if (namespaceId) {
+      conditions.push(eq(featureFlags.namespaceId, namespaceId));
+    }
+
+    const featureFlagsCount = await this.db
+      .select({
+        count: count(),
+      })
+      .from(featureFlags)
+      .where(and(...conditions))
+      .execute();
+
+    if (featureFlagsCount.length === 0) {
+      return 0;
+    }
+
+    return featureFlagsCount[0].count;
+  }
+
   public async getFeatureFlagById({
     featureFlagId,
     namespaceId,
@@ -154,14 +226,16 @@ export class FeatureFlagRepository {
         id: featureFlags.id,
         name: featureFlags.name,
         namespaceId: featureFlags.namespaceId,
+        namespace: namespaces.name,
         labels: featureFlags.labels,
-        createdBy: featureFlags.createdBy,
+        creatorUserId: featureFlags.createdBy,
         isEnabled: featureFlags.isEnabled,
         organizationId: featureFlags.organizationId,
         createdAt: featureFlags.createdAt,
         updatedAt: featureFlags.updatedAt,
       })
       .from(featureFlags)
+      .innerJoin(namespaces, eq(namespaces.id, featureFlags.namespaceId))
       .where(
         and(
           eq(featureFlags.organizationId, this.organizationId),
@@ -173,11 +247,21 @@ export class FeatureFlagRepository {
     if (resp.length === 0) {
       return;
     }
+
+    let createdBy = '';
+    if (resp[0].creatorUserId) {
+      const userRepo = new UserRepository(this.db);
+      const user = await userRepo.byId(resp[0].creatorUserId);
+      createdBy = user?.email || '';
+    }
+
     return {
       ...resp[0],
       labels: resp[0].labels?.map?.((l) => splitLabel(l)) ?? [],
       createdAt: resp[0].createdAt.toISOString(),
-      updatedAt: resp[0].updatedAt?.toISOString() || undefined,
+      updatedAt: resp[0].updatedAt?.toISOString() || '',
+      createdBy,
+      creatorUserId: resp[0].creatorUserId || undefined,
     };
   }
 
@@ -192,15 +276,17 @@ export class FeatureFlagRepository {
       .select({
         id: featureFlags.id,
         name: featureFlags.name,
+        namespace: namespaces.name,
         namespaceId: featureFlags.namespaceId,
         labels: featureFlags.labels,
-        createdBy: featureFlags.createdBy,
+        creatorUserId: featureFlags.createdBy,
         isEnabled: featureFlags.isEnabled,
         organizationId: featureFlags.organizationId,
         createdAt: featureFlags.createdAt,
         updatedAt: featureFlags.updatedAt,
       })
       .from(featureFlags)
+      .innerJoin(namespaces, eq(namespaces.id, featureFlags.namespaceId))
       .where(
         and(
           eq(featureFlags.organizationId, this.organizationId),
@@ -212,11 +298,21 @@ export class FeatureFlagRepository {
     if (resp.length === 0) {
       return;
     }
+
+    let createdBy = '';
+    if (resp[0].creatorUserId) {
+      const userRepo = new UserRepository(this.db);
+      const user = await userRepo.byId(resp[0].creatorUserId);
+      createdBy = user?.email || '';
+    }
+
     return {
       ...resp[0],
       labels: resp[0].labels?.map?.((l) => splitLabel(l)) ?? [],
       createdAt: resp[0].createdAt.toISOString(),
-      updatedAt: resp[0].updatedAt?.toISOString() || undefined,
+      updatedAt: resp[0].updatedAt?.toISOString() || '',
+      createdBy,
+      creatorUserId: resp[0].creatorUserId || undefined,
     };
   }
 
@@ -281,6 +377,45 @@ export class FeatureFlagRepository {
         await tx.delete(targets).where(eq(targets.id, ffSubgraph.targetId));
       }
     });
+  }
+
+  public async getFeatureFlagsByFederatedGraph({
+    namespaceId,
+    federatedGraph,
+  }: {
+    namespaceId: string;
+    federatedGraph: FederatedGraphDTO;
+  }): Promise<FeatureFlagDTO[]> {
+    const fetaureFlags: FeatureFlagDTO[] = [];
+    const subgraphRepo = new SubgraphRepository(this.logger, this.db, this.organizationId);
+
+    const subgraphs = await subgraphRepo.listByFederatedGraph({
+      federatedGraphTargetId: federatedGraph.targetId,
+      published: true,
+    });
+
+    const baseSubgraphNames = subgraphs.map((s) => s.name);
+
+    for (const subgraph of subgraphs) {
+      const ffs = await this.getFeatureFlagsBySubgraphIdAndLabels({
+        subgraphId: subgraph.id,
+        namespaceId,
+        baseSubgraphNames,
+        labelMatchers: federatedGraph.labelMatchers,
+        excludeDisabled: false,
+      });
+
+      for (const ff of ffs) {
+        const featureFlag = await this.getFeatureFlagById({
+          featureFlagId: ff.id,
+          namespaceId,
+        });
+        if (featureFlag && !fetaureFlags.some((f) => f.id === featureFlag.id)) {
+          fetaureFlags.push(featureFlag);
+        }
+      }
+    }
+    return fetaureFlags;
   }
 
   public async getFederatedGraphsByFeatureFlag({
@@ -355,10 +490,14 @@ export class FeatureFlagRepository {
       conditions.push(sql.raw(`labels && '{${labelsSQL}}'`));
     }
 
-    // Only get subgraphs that do not have any labels if the label matchers are empty.
+    // Only get feature flags that do not have any labels if the label matchers are empty.
     if (labelMatchers.length === 0) {
       conditions.push(eq(featureFlags.labels, []));
     }
+
+    // if (excludeDisabled) {
+    // conditions.push(eq(featureFlags.isEnabled, true));
+    // }
 
     const matchedFeatureFlags = await this.db
       .select({
@@ -378,13 +517,24 @@ export class FeatureFlagRepository {
     return matchedFeatureFlags;
   }
 
-  public async getEnabledFeatureFlagsBySubgraphId({
+  public async getFeatureFlagsBySubgraphId({
     subgraphId,
     namespaceId,
+    excludeDisabled,
   }: {
     subgraphId: string;
     namespaceId: string;
+    excludeDisabled: boolean;
   }) {
+    const conditions: SQL<unknown>[] = [
+      eq(featureSubgraphsToBaseSubgraphs.baseSubgraphId, subgraphId),
+      eq(featureFlags.namespaceId, namespaceId),
+    ];
+
+    // if (excludeDisabled) {
+    conditions.push(eq(featureFlags.isEnabled, true));
+    // }
+
     const enabledFeatureFlags = await this.db
       .select({
         id: featureFlags.id,
@@ -398,13 +548,7 @@ export class FeatureFlagRepository {
         featureSubgraphsToBaseSubgraphs,
         eq(featureFlagToFeatureSubgraphs.featureSubgraphId, featureSubgraphsToBaseSubgraphs.featureSubgraphId),
       )
-      .where(
-        and(
-          eq(featureSubgraphsToBaseSubgraphs.baseSubgraphId, subgraphId),
-          eq(featureFlags.isEnabled, true),
-          eq(featureFlags.namespaceId, namespaceId),
-        ),
-      )
+      .where(and(...conditions))
       .execute();
 
     if (enabledFeatureFlags.length === 0) {
@@ -494,21 +638,24 @@ export class FeatureFlagRepository {
   }
 
   // evaluates all the ffs which have fgs whose base subgraph id is the passed as input and returns the ffs that should be composed
-  public async getEnabledFeatureFlagsBySubgraphIdAndLabels({
+  public async getFeatureFlagsBySubgraphIdAndLabels({
     subgraphId,
     namespaceId,
     baseSubgraphNames,
     labelMatchers,
+    excludeDisabled,
   }: {
     subgraphId: string;
     namespaceId: string;
     baseSubgraphNames: string[];
     labelMatchers: string[];
+    excludeDisabled: boolean;
   }): Promise<FeatureFlagWithFeatureSubgraphs[]> {
     const featureFlagWithEnabledFeatureGraphs: FeatureFlagWithFeatureSubgraphs[] = [];
-    const enabledFeatureFlags = await this.getEnabledFeatureFlagsBySubgraphId({
+    const featureFlagsBySubgraphId = await this.getFeatureFlagsBySubgraphId({
       subgraphId,
       namespaceId,
+      excludeDisabled: true,
     });
 
     // gets all the ffs that match the label matchers
@@ -518,18 +665,18 @@ export class FeatureFlagRepository {
       excludeDisabled: true,
     });
 
-    for (const enabledFeatureFlag of enabledFeatureFlags) {
-      const matched = matchedFeatureFlags.some((m) => m.id === enabledFeatureFlag.id);
+    for (const featureFlag of featureFlagsBySubgraphId) {
+      const matched = matchedFeatureFlags.some((m) => m.id === featureFlag.id);
       if (!matched) {
         continue;
       }
 
       const featureSubgraphsByFlag = await this.getFeatureGraphsByFlagId({
-        featureFlagId: enabledFeatureFlag.id,
+        featureFlagId: featureFlag.id,
         namespaceId,
       });
 
-      // if there are no enabled feature graphs in the flag, then skip the flag
+      // if there are no feature graphs in the flag, then skip the flag
       if (featureSubgraphsByFlag.length === 0) {
         continue;
       }
@@ -542,8 +689,8 @@ export class FeatureFlagRepository {
       }
 
       featureFlagWithEnabledFeatureGraphs.push({
-        id: enabledFeatureFlag.id,
-        name: enabledFeatureFlag.name,
+        id: featureFlag.id,
+        name: featureFlag.name,
         featureSubgraphs: featureSubgraphsByFlag,
       });
     }
@@ -576,6 +723,7 @@ export class FeatureFlagRepository {
         compositionSubgraphs,
         isFeatureFlagComposition: true,
         featureFlagName: flag.name,
+        featureFlagId: flag.id,
         subgraphs: subgraphDTOs,
       });
     }
@@ -601,16 +749,18 @@ export class FeatureFlagRepository {
         isFeatureFlagComposition: false,
         subgraphs,
         featureFlagName: '',
+        featureFlagId: '',
       },
     ];
     const featureFlagToComposeByFlagId = new Map<string, FeatureFlagWithFeatureSubgraphs>();
     for (const subgraph of subgraphs) {
       // fetching all the ffs which have fgs whose base subgraph id is the passed as input
-      const enabledFeatureFlags = await this.getEnabledFeatureFlagsBySubgraphIdAndLabels({
+      const enabledFeatureFlags = await this.getFeatureFlagsBySubgraphIdAndLabels({
         subgraphId: subgraph.id,
         namespaceId: subgraph.namespaceId,
         labelMatchers: fedGraphLabelMatchers,
         baseSubgraphNames: baseCompositionSubgraphs.map((baseSubgraph) => baseSubgraph.name),
+        excludeDisabled: true,
       });
       for (const flag of enabledFeatureFlags) {
         if (featureFlagToComposeByFlagId.has(flag.id)) {
@@ -625,6 +775,144 @@ export class FeatureFlagRepository {
       subgraphs,
       subgraphsToCompose,
     );
+  }
+
+  public async getFeatureFlagCompositionsByBaseSchemaVersion({
+    baseSchemaVersionId,
+    namespaceId,
+  }: {
+    baseSchemaVersionId: string;
+    namespaceId: string;
+  }) {
+    const featureFlagCompositions: FeatureFlagCompositionDTO[] = [];
+    const compositions = await this.db
+      .select({
+        id: graphCompositions.id,
+        featureFlagId: federatedGraphsToFeatureFlagSchemaVersions.featureFlagId,
+        schemaVersionId: graphCompositions.schemaVersionId,
+        isComposable: graphCompositions.isComposable,
+        compositionErrors: graphCompositions.compositionErrors,
+        createdAt: graphCompositions.createdAt,
+        createdBy: users.email,
+        routerConfigSignature: graphCompositions.routerConfigSignature,
+        admissionError: graphCompositions.admissionError,
+        deploymentError: graphCompositions.deploymentError,
+      })
+      .from(graphCompositions)
+      .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
+      .innerJoin(
+        federatedGraphsToFeatureFlagSchemaVersions,
+        eq(federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId, schemaVersion.id),
+      )
+      .leftJoin(users, eq(users.id, graphCompositions.createdBy))
+      .where(eq(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId, baseSchemaVersionId))
+      .execute();
+
+    for (const composition of compositions) {
+      const featureFlag = await this.getFeatureFlagById({
+        featureFlagId: composition.featureFlagId,
+        namespaceId,
+      });
+
+      featureFlagCompositions.push({
+        ...composition,
+        featureFlagName: featureFlag?.name || '',
+        createdAt: composition.createdAt.toISOString(),
+        compositionErrors: composition.compositionErrors || undefined,
+        createdBy: composition.createdBy || undefined,
+        routerConfigSignature: composition.routerConfigSignature || undefined,
+        admissionError: composition.admissionError || undefined,
+        deploymentError: composition.deploymentError || undefined,
+        isComposable: composition.isComposable || false,
+      });
+    }
+    return featureFlagCompositions;
+  }
+
+  public async getFeatureFlagSchemaVersionsByBaseSchemaVersion({
+    baseSchemaVersionId,
+  }: {
+    baseSchemaVersionId: string;
+  }) {
+    const ffSchemaVersions = await this.db
+      .select({
+        id: federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId,
+        featureFlagId: federatedGraphsToFeatureFlagSchemaVersions.featureFlagId,
+      })
+      .from(federatedGraphsToFeatureFlagSchemaVersions)
+      .where(and(eq(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId, baseSchemaVersionId)))
+      .execute();
+
+    if (ffSchemaVersions.length === 0) {
+      return;
+    }
+
+    return ffSchemaVersions;
+  }
+
+  public async getFeatureFlagSchemaVersionByBaseSchemaVersionAndFfId({
+    baseSchemaVersionId,
+    featureFlagId,
+  }: {
+    baseSchemaVersionId: string;
+    featureFlagId: string;
+  }) {
+    const schemaVersion = await this.db
+      .select({
+        id: federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId,
+      })
+      .from(federatedGraphsToFeatureFlagSchemaVersions)
+      .where(
+        and(
+          eq(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId, baseSchemaVersionId),
+          eq(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId, featureFlagId),
+        ),
+      )
+      .execute();
+
+    if (schemaVersion.length === 0) {
+      return;
+    }
+
+    const federatedGraphRepo = new FederatedGraphRepository(this.logger, this.db, this.organizationId);
+    const ffSchemaVersion = await federatedGraphRepo.getSchemaVersionById({ schemaVersionId: schemaVersion[0].id });
+
+    return ffSchemaVersion;
+  }
+
+  public async getFeatureSubgraphsByFeatureFlag({
+    featureFlagId,
+    namespaceId,
+  }: {
+    namespaceId: string;
+    featureFlagId: string;
+  }) {
+    const featureSubgraphsByFf = await this.db
+      .select({
+        id: featureFlagToFeatureSubgraphs.featureSubgraphId,
+      })
+      .from(featureFlagToFeatureSubgraphs)
+      .innerJoin(subgraphs, eq(subgraphs.id, featureFlagToFeatureSubgraphs.featureSubgraphId))
+      .innerJoin(targets, eq(targets.id, subgraphs.targetId))
+      .where(and(eq(targets.namespaceId, namespaceId), eq(featureFlagToFeatureSubgraphs.featureFlagId, featureFlagId)))
+      .execute();
+
+    if (featureSubgraphsByFf.length === 0) {
+      return [];
+    }
+
+    const featureSubgraphs: SubgraphDTO[] = [];
+
+    const subgraphRepo = new SubgraphRepository(this.logger, this.db, this.organizationId);
+    for (const fs of featureSubgraphsByFf) {
+      const subgraph = await subgraphRepo.byId(fs.id);
+      if (!subgraph) {
+        continue;
+      }
+      featureSubgraphs.push(subgraph);
+    }
+
+    return featureSubgraphs;
   }
 
   public async delete(featureFlagId: string) {

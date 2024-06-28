@@ -394,6 +394,7 @@ export class Composer {
     isFeatureFlagComposition,
     federatedSchemaVersionId,
     routerExecutionConfig,
+    featureFlagId,
   }: {
     composedGraph: ComposedFederatedGraph;
     composedBy: string;
@@ -401,6 +402,7 @@ export class Composer {
     isFeatureFlagComposition: boolean;
     federatedSchemaVersionId: UUID;
     routerExecutionConfig?: RouterConfig;
+    featureFlagId: string;
   }): Promise<CompositionDeployResult> {
     const routerExecutionConfigJSON = routerExecutionConfig ? routerExecutionConfig.toJson() : undefined;
 
@@ -427,6 +429,7 @@ export class Composer {
       // passing the path only when there exists a previous valid version or when the composition passes.
       routerConfigPath: prevValidFederatedSDL || routerExecutionConfig ? s3PathReady : null,
       isFeatureFlagComposition,
+      featureFlagId,
     });
 
     if (!routerExecutionConfig || !updatedFederatedGraph?.composedSchemaVersionId || isFeatureFlagComposition) {

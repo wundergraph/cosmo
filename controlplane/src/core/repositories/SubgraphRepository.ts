@@ -374,11 +374,12 @@ export class SubgraphRepository {
               federatedGraphTargetId: federatedGraphDTO.targetId,
               published: true,
             });
-            const enabledFeatureFlags = await featureFlagRepo.getEnabledFeatureFlagsBySubgraphIdAndLabels({
+            const enabledFeatureFlags = await featureFlagRepo.getFeatureFlagsBySubgraphIdAndLabels({
               subgraphId: subgraph.id,
               namespaceId: data.namespaceId,
               labelMatchers: baseSubgraph[0].labels || [],
               baseSubgraphNames: subgraphs.map((subgraph) => subgraph.name),
+              excludeDisabled: true,
             });
             // If an enabled feature flag includes the feature graph that has just been published, push it to the array
             if (enabledFeatureFlags.length > 0) {

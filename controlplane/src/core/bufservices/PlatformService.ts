@@ -66,6 +66,9 @@ import {
   GetDashboardAnalyticsViewResponse,
   GetDiscussionResponse,
   GetDiscussionSchemasResponse,
+  GetFeatureFlagByNameResponse,
+  GetFeatureFlagsResponse,
+  GetFeatureSubgraphsByFeatureFlagResponse,
   GetFederatedGraphByNameResponse,
   GetFederatedGraphChangelogResponse,
   GetFederatedGraphsBySubgraphLabelsResponse,
@@ -146,6 +149,7 @@ import { uid } from 'uid/secure';
 import { de } from 'date-fns/locale';
 import {
   DateRange,
+  FeatureFlagDTO,
   FeatureIds,
   FederatedGraphDTO,
   GraphApiKeyJwtPayload,
@@ -5127,6 +5131,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           subscriptionProtocol: s.subscriptionProtocol,
           namespace: s.namespace,
           websocketSubprotocol: s.websocketSubprotocol || '',
+          isFeatureSubgraph: s.isFeatureSubgraph || false,
         }));
 
         const result = composeSubgraphs(
@@ -7941,6 +7946,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             subscriptionProtocol: g.subscriptionProtocol,
             namespace: g.namespace,
             websocketSubprotocol: g.websocketSubprotocol || '',
+            isFeatureSubgraph: g.isFeatureSubgraph || false,
           })),
           count,
           response: {
@@ -7987,6 +7993,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             subscriptionProtocol: subgraph.subscriptionProtocol,
             namespace: subgraph.namespace,
             websocketSubprotocol: subgraph.websocketSubprotocol || '',
+            isFeatureSubgraph: subgraph.isFeatureSubgraph || false,
           },
           members: await subgraphRepo.getSubgraphMembers(subgraph.id),
           response: {
@@ -8124,6 +8131,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         logger = enrichLogger(ctx, logger, authContext);
 
         const fedRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
+        const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
 
         req.namespace = req.namespace || DefaultNamespace;
 
@@ -8143,6 +8151,28 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
             },
+          };
+        }
+
+        if (req.featureFlagId) {
+          const ffSchemaVersion = await featureFlagRepo.getFeatureFlagSchemaVersionByBaseSchemaVersionAndFfId({
+            baseSchemaVersionId: schemaVersion.schemaVersionId,
+            featureFlagId: req.featureFlagId,
+          });
+          if (!ffSchemaVersion || !ffSchemaVersion.schema) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR_NOT_FOUND,
+              },
+            };
+          }
+          return {
+            response: {
+              code: EnumStatusCode.OK,
+            },
+            sdl: ffSchemaVersion.schema,
+            clientSchema: ffSchemaVersion.clientSchema || undefined,
+            versionId: ffSchemaVersion.schemaVersionId,
           };
         }
 
@@ -8239,6 +8269,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const fedRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
+        const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
 
         req.namespace = req.namespace || DefaultNamespace;
 
@@ -8247,6 +8278,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         if (!federatedGraph) {
           return {
             subgraphs: [],
+            featureFlags: [],
+            featureFlagsInLatestValidComposition: [],
             graphRequestToken: '',
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
@@ -8266,6 +8299,27 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           published: false,
         });
 
+        const featureFlags = await featureFlagRepo.getFeatureFlagsByFederatedGraph({
+          federatedGraph,
+          namespaceId: federatedGraph.namespaceId,
+        });
+
+        const featureFlagsInLatestValidComposition: FeatureFlagDTO[] = [];
+
+        if (federatedGraph.schemaVersionId) {
+          const ffsInLatestValidComposition = await featureFlagRepo.getFeatureFlagSchemaVersionsByBaseSchemaVersion({
+            baseSchemaVersionId: federatedGraph.schemaVersionId,
+          });
+          if (ffsInLatestValidComposition) {
+            for (const ff of ffsInLatestValidComposition) {
+              const flag = featureFlags.find((f) => f.id === ff.featureFlagId);
+              if (flag) {
+                featureFlagsInLatestValidComposition.push(flag);
+              }
+            }
+          }
+        }
+
         const routerRequestToken = await fedRepo.getGraphSignedToken({
           federatedGraphId: federatedGraph.id,
           organizationId: authContext.organizationId,
@@ -8274,6 +8328,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         if (!routerRequestToken) {
           return {
             subgraphs: [],
+            featureFlags: [],
+            featureFlagsInLatestValidComposition: [],
             graphRequestToken: '',
             response: {
               code: EnumStatusCode.ERR,
@@ -8314,8 +8370,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             isEventDrivenGraph: g.isEventDrivenGraph,
             isV2Graph: g.isV2Graph,
             websocketSubprotocol: g.websocketSubprotocol || '',
+            isFeatureSubgraph: g.isFeatureSubgraph || false,
           })),
+          featureFlags,
           graphRequestToken: routerRequestToken,
+          featureFlagsInLatestValidComposition,
           response: {
             code: EnumStatusCode.OK,
           },
@@ -9738,6 +9797,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             start: dateRange.start,
             end: dateRange.end,
           },
+          excludeFeatureFlagCompositions: true,
         });
 
         const compositionsCount = await graphCompositionRepository.getGraphCompositionsCount({
@@ -9746,6 +9806,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             start: dateRange.start,
             end: dateRange.end,
           },
+          excludeFeatureFlagCompositions: true,
         });
 
         return {
@@ -9765,8 +9826,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
+        req.namespace = req.namespace || DefaultNamespace;
+
         const fedRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
+        const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
         const compositionRepo = new GraphCompositionRepository(logger, opts.db);
+
+        const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+
+        const namespace = await namespaceRepo.byName(req.namespace);
+        if (!namespace) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Namespace '${req.namespace}' not found`,
+            },
+            compositionSubgraphs: [],
+            featureFlagCompositions: [],
+          };
+        }
 
         const composition = await compositionRepo.getGraphComposition({
           compositionId: req.compositionId,
@@ -9776,10 +9854,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         if (!composition) {
           return {
             response: {
-              code: EnumStatusCode.ERR,
+              code: EnumStatusCode.ERR_NOT_FOUND,
               details: `Graph composition with '${req.compositionId}' does not exist`,
             },
             compositionSubgraphs: [],
+            featureFlagCompositions: [],
           };
         }
 
@@ -9804,6 +9883,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           }
         }
 
+        const featureFlagCompositions = await featureFlagRepo.getFeatureFlagCompositionsByBaseSchemaVersion({
+          baseSchemaVersionId: composition.schemaVersionId,
+          namespaceId: namespace.id,
+        });
+
         return {
           response: {
             code: EnumStatusCode.OK,
@@ -9814,6 +9898,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             additions: addCount,
             deletions: minusCount,
           },
+          featureFlagCompositions,
         };
       });
     },
@@ -10925,6 +11010,142 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           permissions,
+        };
+      });
+    },
+
+    getFeatureFlags: (req, ctx) => {
+      let logger = getLogger(ctx, opts.logger);
+
+      return handleError<PlainMessage<GetFeatureFlagsResponse>>(ctx, logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+        const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
+        const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+
+        // Namespace is optional, if not provided, we get all the subgraphs
+        const namespace = await namespaceRepo.byName(req.namespace);
+
+        const featureFlags = await featureFlagRepo.getFeatureFlags({
+          limit: req.limit,
+          offset: req.offset,
+          namespaceId: namespace?.id,
+          query: req.query,
+        });
+
+        const totalCount = await featureFlagRepo.getFeatureFlagsCount({ namespaceId: namespace?.id });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          featureFlags,
+          totalCount,
+        };
+      });
+    },
+
+    getFeatureFlagByName: (req, ctx) => {
+      let logger = getLogger(ctx, opts.logger);
+
+      return handleError<PlainMessage<GetFeatureFlagByNameResponse>>(ctx, logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+        const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
+        const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+
+        const namespace = await namespaceRepo.byName(req.namespace);
+        if (!namespace) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Could not find namespace ${req.namespace}`,
+            },
+          };
+        }
+
+        const featureFlag = await featureFlagRepo.getFeatureFlagByName({
+          namespaceId: namespace.id,
+          featureFlagName: req.name,
+        });
+
+        if (!featureFlag) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Could not find feature flag ${req.name}`,
+            },
+          };
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          featureFlag,
+        };
+      });
+    },
+
+    getFeatureSubgraphsByFeatureFlag: (req, ctx) => {
+      let logger = getLogger(ctx, opts.logger);
+
+      return handleError<PlainMessage<GetFeatureSubgraphsByFeatureFlagResponse>>(ctx, logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+        const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
+        const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+
+        const namespace = await namespaceRepo.byName(req.namespace);
+        if (!namespace) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Could not find namespace ${req.namespace}`,
+            },
+            featureSubgraphs: [],
+          };
+        }
+
+        const featureFlag = await featureFlagRepo.getFeatureFlagByName({
+          namespaceId: namespace.id,
+          featureFlagName: req.featureFlagName,
+        });
+
+        if (!featureFlag) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Could not find feature flag ${req.featureFlagName}`,
+            },
+            featureSubgraphs: [],
+          };
+        }
+
+        const featureSubgraphs = await featureFlagRepo.getFeatureSubgraphsByFeatureFlag({
+          namespaceId: namespace.id,
+          featureFlagId: featureFlag.id,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          featureSubgraphs: featureSubgraphs.map((f) => ({
+            id: f.id,
+            name: f.name,
+            routingURL: f.routingUrl,
+            lastUpdatedAt: f.lastUpdatedAt,
+            labels: f.labels,
+            createdUserId: f.creatorUserId,
+            targetId: f.targetId,
+            isEventDrivenGraph: f.isEventDrivenGraph,
+            subscriptionUrl: f.subscriptionUrl,
+            subscriptionProtocol: f.subscriptionProtocol,
+            namespace: f.namespace,
+            websocketSubprotocol: f.websocketSubprotocol || '',
+            isFeatureSubgraph: f.isFeatureSubgraph || false,
+          })),
         };
       });
     },

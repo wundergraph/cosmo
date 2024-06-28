@@ -31,7 +31,7 @@ import { useQuery } from "@connectrpc/connect-query";
 import { getBillingPlans } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { AiOutlineAudit } from "react-icons/ai";
 import { UserContext } from "@/components/app-provider";
-import { MdOutlinePolicy } from "react-icons/md";
+import { MdOutlineFeaturedPlayList, MdOutlinePolicy } from "react-icons/md";
 
 export const StarBanner = ({
   setDisableStarBanner,
@@ -118,6 +118,11 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         title: "Lint Policy",
         href: basePath + "/lint-policy",
         icon: <MdOutlinePolicy className="h-4 w-4" />,
+      },
+      {
+        title: "Feature Flags",
+        href: basePath + "/feature-flags",
+        icon: <MdOutlineFeaturedPlayList className="h-4 w-4" />,
         separator: true,
       },
       {

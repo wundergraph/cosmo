@@ -114,13 +114,15 @@ export interface SubgraphDTO {
 export interface FeatureFlagDTO {
   id: string;
   name: string;
+  namespace: string;
   namespaceId: string;
   labels: Label[];
   creatorUserId?: string;
+  createdBy: string;
   isEnabled: boolean;
   organizationId: string;
   createdAt: string;
-  updatedAt?: string;
+  updatedAt: string;
 }
 
 export interface MigrationSubgraph {
@@ -426,6 +428,19 @@ export interface GraphCompositionDTO {
   routerConfigSignature?: string;
   isComposable: boolean;
   isLatestValid: boolean;
+  admissionError?: string;
+  deploymentError?: string;
+}
+
+export interface FeatureFlagCompositionDTO {
+  id: string;
+  schemaVersionId: string;
+  createdAt: string;
+  featureFlagName: string;
+  createdBy?: string;
+  compositionErrors?: string;
+  routerConfigSignature?: string;
+  isComposable: boolean;
   admissionError?: string;
   deploymentError?: string;
 }

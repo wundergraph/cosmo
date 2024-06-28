@@ -696,6 +696,7 @@ export class FederatedGraphRepository {
     routerConfigPath,
     schemaVersionId,
     isFeatureFlagComposition,
+    featureFlagId,
   }: {
     targetId: string;
     schemaVersionId: string;
@@ -708,6 +709,7 @@ export class FederatedGraphRepository {
     composedBy: string;
     routerConfigPath: string | null;
     isFeatureFlagComposition: boolean;
+    featureFlagId: string;
   }) {
     return this.db.transaction<FederatedGraphDTO | undefined>(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
@@ -743,6 +745,7 @@ export class FederatedGraphRepository {
           composedSchemaVersionId: schemaVersionId,
           federatedGraphId: fedGraph.id,
           baseCompositionSchemaVersionId: fedGraph.composedSchemaVersionId || '',
+          featureFlagId,
         });
       } else {
         await tx
@@ -866,6 +869,42 @@ export class FederatedGraphRepository {
           eq(targets.organizationId, this.organizationId),
           eq(targets.id, data.targetId),
           eq(graphCompositions.isFeatureFlagComposition, false),
+          and(
+            eq(graphCompositions.isComposable, true),
+            or(isNull(graphCompositions.deploymentError), eq(graphCompositions.deploymentError, '')),
+            or(isNull(graphCompositions.admissionError), eq(graphCompositions.admissionError, '')),
+          ),
+        ),
+      )
+      .orderBy(desc(graphCompositions.createdAt))
+      .limit(1)
+      .execute();
+
+    if (latestValidVersion.length === 0) {
+      return undefined;
+    }
+
+    return {
+      schema: latestValidVersion[0].schemaSDL,
+      clientSchema: latestValidVersion[0].clientSchema,
+      schemaVersionId: latestValidVersion[0].schemaVersionId,
+    };
+  }
+
+  public async getSchemaVersionById(data: { schemaVersionId: string }) {
+    const latestValidVersion = await this.db
+      .select({
+        schemaSDL: schemaVersion.schemaSDL,
+        clientSchema: schemaVersion.clientSchema,
+        schemaVersionId: schemaVersion.id,
+      })
+      .from(schemaVersion)
+      .innerJoin(graphCompositions, eq(schemaVersion.id, graphCompositions.schemaVersionId))
+      .innerJoin(targets, eq(schemaVersion.targetId, targets.id))
+      .where(
+        and(
+          eq(targets.organizationId, this.organizationId),
+          eq(schemaVersion.id, data.schemaVersionId),
           and(
             eq(graphCompositions.isComposable, true),
             or(isNull(graphCompositions.deploymentError), eq(graphCompositions.deploymentError, '')),
@@ -1541,6 +1580,7 @@ export class FederatedGraphRepository {
             isFeatureFlagComposition: subgraphsToCompose.isFeatureFlagComposition,
             federatedSchemaVersionId,
             routerExecutionConfig,
+            featureFlagId: subgraphsToCompose.featureFlagId,
           });
 
           if (compositionErrors || !deployment.schemaVersionId || !routerExecutionConfig) {
@@ -1601,6 +1641,7 @@ export class FederatedGraphRepository {
               isFeatureFlagComposition: subgraphsToCompose.isFeatureFlagComposition,
               federatedSchemaVersionId: contractSchemaVersionId,
               routerExecutionConfig: contractRouterExecutionConfig,
+              featureFlagId: subgraphsToCompose.featureFlagId,
             });
 
             if (

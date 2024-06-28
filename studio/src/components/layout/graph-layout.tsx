@@ -66,12 +66,15 @@ import {
 import { PageHeader } from "./head";
 import { LayoutProps } from "./layout";
 import { NavLink, SideNav } from "./sidenav";
+import { MdOutlineFeaturedPlayList } from "react-icons/md";
 
 export interface GraphContextProps {
   graph: GetFederatedGraphByNameResponse["graph"];
   subgraphs: GetFederatedGraphByNameResponse["subgraphs"];
   graphs: GetFederatedGraphsResponse["graphs"];
   graphRequestToken: string;
+  featureFlags: GetFederatedGraphByNameResponse["featureFlags"];
+  featureFlagsInLatestValidComposition: GetFederatedGraphByNameResponse["featureFlagsInLatestValidComposition"];
 }
 
 export const GraphContext = createContext<GraphContextProps | undefined>(
@@ -103,6 +106,8 @@ export const GraphLayout = ({ children }: LayoutProps) => {
       subgraphs: data.subgraphs,
       graphRequestToken: data.graphRequestToken,
       graphs: graphsData.graphs,
+      featureFlags: data.featureFlags,
+      featureFlagsInLatestValidComposition: data.featureFlagsInLatestValidComposition
     };
   }, [data, graphsData]);
 
@@ -115,11 +120,15 @@ export const GraphLayout = ({ children }: LayoutProps) => {
         href: basePath,
         icon: <HomeIcon className="h-4 w-4" />,
       },
-
       {
         title: "Subgraphs",
         href: basePath + "/subgraphs",
         icon: <Component2Icon className="h-4 w-4" />,
+      },
+      {
+        title: "Feature Flags",
+        href: basePath + "/feature-flags",
+        icon: <MdOutlineFeaturedPlayList className="h-4 w-4" />,
       },
       {
         title: "Playground",
