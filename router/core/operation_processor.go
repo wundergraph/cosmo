@@ -378,9 +378,10 @@ WithNext:
 			copy(stringValue[1:], value)
 			stringValue[len(stringValue)-1] = '"'
 			originalVariables, err = jsonparser.Set(originalVariables, stringValue, unsafebytes.BytesToString(key))
+		} else {
+			originalVariables, err = jsonparser.Set(originalVariables, value, unsafebytes.BytesToString(key))
 		}
-		originalVariables, err = jsonparser.Set(originalVariables, value, unsafebytes.BytesToString(key))
-		return err
+		return
 	})
 	if err != nil {
 		return errors.WithStack(fmt.Errorf("failed to set default values for variables: %w", err))
@@ -494,9 +495,10 @@ func (o *OperationKit) loadPersistedOperationFromCache() (ok bool, err error) {
 			copy(stringValue[1:], value)
 			stringValue[len(stringValue)-1] = '"'
 			o.parsedOperation.Request.Variables, err = jsonparser.Set(o.parsedOperation.Request.Variables, stringValue, unsafebytes.BytesToString(key))
+		} else {
+			o.parsedOperation.Request.Variables, err = jsonparser.Set(o.parsedOperation.Request.Variables, value, unsafebytes.BytesToString(key))
 		}
-		o.parsedOperation.Request.Variables, err = jsonparser.Set(o.parsedOperation.Request.Variables, value, unsafebytes.BytesToString(key))
-		return err
+		return
 	})
 	if err != nil {
 		return false, errors.WithStack(fmt.Errorf("failed to set default values for variables: %w", err))
