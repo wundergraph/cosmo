@@ -64,6 +64,8 @@ require (
 	google.golang.org/protobuf v1.34.1
 )
 
+require golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8
+
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
