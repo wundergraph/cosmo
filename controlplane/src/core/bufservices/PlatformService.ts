@@ -3849,6 +3849,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           labels: req.labels,
           featureSubgraphIds,
           createdBy: authContext.userId,
+          isEnabled: !!req.isEnabled,
         });
 
         await auditLogRepo.addAuditLog({

@@ -49,12 +49,14 @@ export class FeatureFlagRepository {
     labels,
     createdBy,
     featureSubgraphIds,
+    isEnabled,
   }: {
     name: string;
     namespaceId: string;
     labels: Label[];
     createdBy: string;
     featureSubgraphIds: string[];
+    isEnabled: boolean;
   }) {
     const uniqueLabels = normalizeLabels(labels);
     return this.db.transaction(async (tx) => {
@@ -65,7 +67,7 @@ export class FeatureFlagRepository {
           organizationId: this.organizationId,
           namespaceId,
           createdBy,
-          isEnabled: true,
+          isEnabled,
           labels: uniqueLabels.map((ul) => joinLabel(ul)),
         })
         .returning()
