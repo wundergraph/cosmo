@@ -39,10 +39,21 @@ func TestKafkaEvents(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 
-	ctx := context.Background()
-	kafkaContainer, err := kafka.RunContainer(ctx, testcontainers.WithImage("confluentinc/confluent-local:7.6.1"))
-	require.NoError(t, err)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 
+	var (
+		kafkaContainer *kafka.KafkaContainer
+		err            error
+	)
+
+	for {
+		kafkaContainer, err = kafka.RunContainer(ctx, testcontainers.WithImage("confluentinc/confluent-local:7.6.1"))
+		if err == nil {
+			break
+		}
+	}
+	require.NoError(t, err)
 	require.NoError(t, kafkaContainer.Start(ctx))
 
 	seeds, err := kafkaContainer.Brokers(ctx)
