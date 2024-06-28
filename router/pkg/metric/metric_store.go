@@ -64,8 +64,6 @@ type (
 		otelMeterProvider *metric.MeterProvider
 		promMeterProvider *metric.MeterProvider
 
-		runtimeMetrics   *RuntimeMetrics
-		enableRuntime    bool
 		processStartTime time.Time
 
 		otlpRequestMetrics Provider
