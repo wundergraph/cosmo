@@ -1,3 +1,4 @@
+import type { UUID } from 'node:crypto';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
 import {
   FederationResult,
@@ -27,8 +28,6 @@ import {
 import { GraphCompositionRepository } from '../repositories/GraphCompositionRepository.js';
 import { composeSubgraphs, composeSubgraphsWithContracts } from './composition.js';
 import { getDiffBetweenGraphs, GetDiffBetweenGraphsResult } from './schemaCheck.js';
-
-import type { UUID } from 'node:crypto';
 
 export type CompositionResult = {
   compositions: ComposedFederatedGraph[];
