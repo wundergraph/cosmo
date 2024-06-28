@@ -1,6 +1,6 @@
 import { Subgraph } from '@wundergraph/composition';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
-import { and, eq, inArray, SQL, sql } from 'drizzle-orm';
+import { and, eq, inArray, SQL, sql, count } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { parse } from 'graphql';
@@ -632,7 +632,7 @@ export class FeatureFlagRepository {
   public async count(organizationId: string) {
     const result = await this.db
       .select({
-        count: sql<number>`cast(count(${featureFlags.id}) as int)`,
+        count: count(),
       })
       .from(schema.featureFlags)
       .where(eq(schema.featureFlags.organizationId, organizationId))

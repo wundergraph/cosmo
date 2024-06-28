@@ -104,7 +104,6 @@ export const SetupTest = async function ({
   await server.register(fastifyRedis, {
     host: 'localhost',
     port: 6379,
-    password: 'test',
   });
 
   const readmeQueue = new AIGraphReadmeQueue(log, server.redisForQueue);
@@ -476,7 +475,7 @@ export const tomorrowDate = startOfTomorrow();
 type IntegrationSubgraph = {
   name: string;
   hasFeatureSubgraph: boolean;
-}
+};
 export async function featureFlagIntegrationTestSetUp(
   client: PromiseClient<typeof PlatformService>,
   subgraphNames: Array<IntegrationSubgraph>,
@@ -511,13 +510,7 @@ export async function featureFlagIntegrationTestSetUp(
   }
 
   const federatedGraphLabels = labels.map(({ key, value }) => `${key}=${value}`);
-  await createFederatedGraph(
-    client,
-    federatedGraphName,
-    namespace,
-    federatedGraphLabels,
-    DEFAULT_ROUTER_URL,
-  );
+  await createFederatedGraph(client, federatedGraphName, namespace, federatedGraphLabels, DEFAULT_ROUTER_URL);
   const federatedGraphResponse = await client.getFederatedGraphByName({
     name: federatedGraphName,
     namespace,
@@ -526,10 +519,7 @@ export async function featureFlagIntegrationTestSetUp(
   return federatedGraphResponse;
 }
 
-export async function createNamespace(
-  client: PromiseClient<typeof PlatformService>,
-  name: string,
-) {
+export async function createNamespace(client: PromiseClient<typeof PlatformService>, name: string) {
   const createNamespaceResponse = await client.createNamespace({
     name,
   });
@@ -577,7 +567,9 @@ export async function assertFeatureFlagExecutionConfig(
   hasFeatureFlagExecutionConfig: boolean,
 ) {
   const blob = await blobStorage.getObject({ key });
-  const routerExecutionConfig =  await blob.stream.getReader().read()
+  const routerExecutionConfig = await blob.stream
+    .getReader()
+    .read()
     .then((result) => JSON.parse(result.value.toString()));
   if (hasFeatureFlagExecutionConfig) {
     expect(routerExecutionConfig.featureFlagConfigs).toBeDefined();
@@ -592,7 +584,9 @@ export async function assertExecutionConfigSubgraphNames(
   subgraphIds: Set<string>,
 ) {
   const blob = await blobStorage.getObject({ key });
-  const routerExecutionConfig =  await blob.stream.getReader().read()
+  const routerExecutionConfig = await blob.stream
+    .getReader()
+    .read()
     .then((result) => JSON.parse(result.value.toString()));
   expect(subgraphIds.size).toBe(routerExecutionConfig.subgraphs.length);
   for (const subgraph of routerExecutionConfig.subgraphs) {
@@ -621,7 +615,7 @@ export async function deleteFeatureFlag(
 ) {
   const deleteFeatureFlagResponse = await client.deleteFeatureFlag({
     name,
-    namespace
+    namespace,
   });
   expect(deleteFeatureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
 }
@@ -630,12 +624,12 @@ export function getDebugTestOptions(isDebugMode: boolean) {
   if (!isDebugMode) {
     return {};
   }
-  return ({
-    timeout: 2_000_000
-  });
+  return {
+    timeout: 2_000_000,
+  };
 }
 
 export type GraphNameAndKey = {
   key: string;
   name: string;
-}
+};

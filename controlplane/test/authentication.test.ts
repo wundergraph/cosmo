@@ -55,7 +55,6 @@ describe('Authentication', (ctx) => {
       redis: {
         host: 'localhost',
         port: 6379,
-        password: 'test',
       },
       cdnBaseUrl: 'http://localhost:11000',
       admissionWebhook: {

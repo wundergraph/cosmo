@@ -3751,21 +3751,23 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           featureId: 'feature-flags',
         });
 
-        const limit = feature?.limit || 0;
+        const limit = feature?.limit === -1 ? undefined : feature?.limit;
 
-        const count = await featureFlagRepo.count(authContext.organizationId);
+        if (limit) {
+          const count = await featureFlagRepo.count(authContext.organizationId);
 
-        if (count >= limit) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_LIMIT_REACHED,
-              details:
-                `The organization "${authContext.organizationSlug}" has already reached its limit of` +
-                ` ${limit} feature flag${limit === 1 ? '' : 's'}.`,
-            },
-            compositionErrors: [],
-            deploymentErrors: [],
-          };
+          if (count >= limit) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR_LIMIT_REACHED,
+                details:
+                  `The organization "${authContext.organizationSlug}" has already reached its limit of` +
+                  ` ${limit} feature flag${limit === 1 ? '' : 's'}.`,
+              },
+              compositionErrors: [],
+              deploymentErrors: [],
+            };
+          }
         }
 
         if (req.featureSubgraphNames.length === 0) {

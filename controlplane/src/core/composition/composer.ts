@@ -193,9 +193,9 @@ export class Composer {
         configByFeatureFlagName[featureFlagName] = featureFlagRouterConfigs[featureFlagName];
       }
     } else {
-      baseCompositionRouterExecutionConfig.featureFlagConfigs = {
+      baseCompositionRouterExecutionConfig.featureFlagConfigs = new FeatureFlagRouterExecutionConfigs({
         configByFeatureFlagName: featureFlagRouterConfigs,
-      } as FeatureFlagRouterExecutionConfigs;
+      });
     }
 
     return new RouterConfig({
