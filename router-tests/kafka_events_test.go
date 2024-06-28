@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/testcontainers/testcontainers-go"
 	"net/http"
 	"sync"
 	"testing"
@@ -13,7 +14,6 @@ import (
 
 	"github.com/hasura/go-graphql-client"
 	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/kafka"
 	"github.com/tidwall/gjson"
 	"github.com/twmb/franz-go/pkg/kgo"
@@ -39,21 +39,10 @@ func TestKafkaEvents(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	var (
-		kafkaContainer *kafka.KafkaContainer
-		err            error
-	)
-
-	for {
-		kafkaContainer, err = kafka.RunContainer(ctx, testcontainers.WithImage("confluentinc/confluent-local:7.6.1"))
-		if err == nil {
-			break
-		}
-	}
+	ctx := context.Background()
+	kafkaContainer, err := kafka.RunContainer(ctx, testcontainers.WithImage("confluentinc/confluent-local:7.6.1"))
 	require.NoError(t, err)
+
 	require.NoError(t, kafkaContainer.Start(ctx))
 
 	seeds, err := kafkaContainer.Brokers(ctx)
