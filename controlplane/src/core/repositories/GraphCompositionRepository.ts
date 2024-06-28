@@ -202,6 +202,7 @@ export class GraphCompositionRepository {
         lastUpdatedAt: graphCompositionSubgraphs.createdAt,
         websocketSubprotocol: schema.subgraphs.websocketSubprotocol,
         isEventDrivenGraph: schema.subgraphs.isEventDrivenGraph,
+        isFeatureSubgraph: schema.subgraphs.isFeatureSubgraph,
       })
       .from(graphCompositionSubgraphs)
       .innerJoin(graphCompositions, eq(graphCompositions.id, graphCompositionSubgraphs.graphCompositionId))

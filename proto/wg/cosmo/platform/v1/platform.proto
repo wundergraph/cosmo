@@ -1549,6 +1549,7 @@ message GraphCompositionSubgraph {
   string schemaVersionId = 2;
   string name = 3;
   string target_id = 4;
+  bool isFeatureSubgraph = 5;
 }
 
 message GetCompositionsRequest {
