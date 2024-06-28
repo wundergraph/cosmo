@@ -1642,7 +1642,6 @@ export class FederatedGraphRepository {
           }
         }
 
-        // As long as the schema version ID from the DTO is not used, there are no race conditions
         const federatedGraphDTO = await this.byId(federatedGraph.id);
         if (!federatedGraphDTO) {
           throw new Error(`Fatal:The federated graph "${federatedGraph.name}" was not found.`);
