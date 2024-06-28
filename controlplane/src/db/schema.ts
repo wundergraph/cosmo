@@ -344,11 +344,9 @@ export const federatedGraphsToFeatureFlagSchemaVersions = pgTable(
       .references(() => schemaVersion.id, {
         onDelete: 'cascade',
       }),
-    featureFlagId: uuid('feature_flag_id')
-      .notNull()
-      .references(() => featureFlags.id, {
-        onDelete: 'set null',
-      }),
+    featureFlagId: uuid('feature_flag_id').references(() => featureFlags.id, {
+      onDelete: 'set null',
+    }),
   },
   (t) => {
     return {

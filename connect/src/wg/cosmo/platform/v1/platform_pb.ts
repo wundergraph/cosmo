@@ -12101,6 +12101,11 @@ export class GetCompositionsRequest extends Message<GetCompositionsRequest> {
    */
   namespace = "";
 
+  /**
+   * @generated from field: bool excludeFeatureFlagCompositions = 7;
+   */
+  excludeFeatureFlagCompositions = false;
+
   constructor(data?: PartialMessage<GetCompositionsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -12115,6 +12120,7 @@ export class GetCompositionsRequest extends Message<GetCompositionsRequest> {
     { no: 4, name: "startDate", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "endDate", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "excludeFeatureFlagCompositions", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCompositionsRequest {

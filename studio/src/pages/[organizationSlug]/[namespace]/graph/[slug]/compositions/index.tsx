@@ -69,6 +69,7 @@ const CompositionsPage: NextPageWithLayout = () => {
       offset: (pageNumber - 1) * limit,
       startDate: formatISO(startDate),
       endDate: formatISO(endDate),
+      excludeFeatureFlagCompositions: true
     },
     {
       placeholderData: (prev) => prev,

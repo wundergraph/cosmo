@@ -3870,7 +3870,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           labels: req.labels,
           featureSubgraphIds,
           createdBy: authContext.userId,
-          isEnabled: !!req.isEnabled,
+          isEnabled: req.isEnabled,
         });
 
         await auditLogRepo.addAuditLog({
@@ -4234,7 +4234,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const federatedGraphs = await featureFlagRepo.getFederatedGraphsByFeatureFlag({
           featureFlagId: featureFlag.id,
           namespaceId: namespace.id,
-          excludeDisabled: req.enabled,
+          excludeDisabled: true,
         });
 
         const compositionErrors: PlainMessage<CompositionError>[] = [];
@@ -5131,7 +5131,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           subscriptionProtocol: s.subscriptionProtocol,
           namespace: s.namespace,
           websocketSubprotocol: s.websocketSubprotocol || '',
-          isFeatureSubgraph: s.isFeatureSubgraph || false,
+          isFeatureSubgraph: s.isFeatureSubgraph,
         }));
 
         const result = composeSubgraphs(
@@ -7946,7 +7946,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             subscriptionProtocol: g.subscriptionProtocol,
             namespace: g.namespace,
             websocketSubprotocol: g.websocketSubprotocol || '',
-            isFeatureSubgraph: g.isFeatureSubgraph || false,
+            isFeatureSubgraph: g.isFeatureSubgraph,
           })),
           count,
           response: {
@@ -7993,7 +7993,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             subscriptionProtocol: subgraph.subscriptionProtocol,
             namespace: subgraph.namespace,
             websocketSubprotocol: subgraph.websocketSubprotocol || '',
-            isFeatureSubgraph: subgraph.isFeatureSubgraph || false,
+            isFeatureSubgraph: subgraph.isFeatureSubgraph,
           },
           members: await subgraphRepo.getSubgraphMembers(subgraph.id),
           response: {
@@ -8370,7 +8370,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             isEventDrivenGraph: g.isEventDrivenGraph,
             isV2Graph: g.isV2Graph,
             websocketSubprotocol: g.websocketSubprotocol || '',
-            isFeatureSubgraph: g.isFeatureSubgraph || false,
+            isFeatureSubgraph: g.isFeatureSubgraph,
           })),
           featureFlags,
           graphRequestToken: routerRequestToken,
@@ -9797,7 +9797,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             start: dateRange.start,
             end: dateRange.end,
           },
-          excludeFeatureFlagCompositions: true,
+          excludeFeatureFlagCompositions: req.excludeFeatureFlagCompositions,
         });
 
         const compositionsCount = await graphCompositionRepository.getGraphCompositionsCount({
@@ -9806,7 +9806,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             start: dateRange.start,
             end: dateRange.end,
           },
-          excludeFeatureFlagCompositions: true,
+          excludeFeatureFlagCompositions: req.excludeFeatureFlagCompositions,
         });
 
         return {
@@ -11144,7 +11144,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             subscriptionProtocol: f.subscriptionProtocol,
             namespace: f.namespace,
             websocketSubprotocol: f.websocketSubprotocol || '',
-            isFeatureSubgraph: f.isFeatureSubgraph || false,
+            isFeatureSubgraph: f.isFeatureSubgraph,
           })),
         };
       });

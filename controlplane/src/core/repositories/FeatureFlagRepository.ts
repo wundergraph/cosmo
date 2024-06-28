@@ -495,9 +495,9 @@ export class FeatureFlagRepository {
       conditions.push(eq(featureFlags.labels, []));
     }
 
-    // if (excludeDisabled) {
-    // conditions.push(eq(featureFlags.isEnabled, true));
-    // }
+    if (excludeDisabled) {
+      conditions.push(eq(featureFlags.isEnabled, true));
+    }
 
     const matchedFeatureFlags = await this.db
       .select({
@@ -507,7 +507,6 @@ export class FeatureFlagRepository {
       .where(
         and(
           eq(featureFlags.namespaceId, namespaceId),
-          eq(featureFlags.isEnabled, excludeDisabled),
           eq(featureFlags.organizationId, this.organizationId),
           ...conditions,
         ),
@@ -531,9 +530,9 @@ export class FeatureFlagRepository {
       eq(featureFlags.namespaceId, namespaceId),
     ];
 
-    // if (excludeDisabled) {
-    conditions.push(eq(featureFlags.isEnabled, true));
-    // }
+    if (excludeDisabled) {
+      conditions.push(eq(featureFlags.isEnabled, true));
+    }
 
     const enabledFeatureFlags = await this.db
       .select({
@@ -589,6 +588,7 @@ export class FeatureFlagRepository {
         isFeatureGraph: subgraphs.isFeatureSubgraph,
         baseSubgraphId: featureSubgraphsToBaseSubgraphs.baseSubgraphId,
         isEventDrivenGraph: subgraphs.isEventDrivenGraph,
+        isFeatureSubgraph: subgraphs.isFeatureSubgraph,
       })
       .from(featureFlagToFeatureSubgraphs)
       .innerJoin(
@@ -655,14 +655,14 @@ export class FeatureFlagRepository {
     const featureFlagsBySubgraphId = await this.getFeatureFlagsBySubgraphId({
       subgraphId,
       namespaceId,
-      excludeDisabled: true,
+      excludeDisabled,
     });
 
     // gets all the ffs that match the label matchers
     const matchedFeatureFlags = await this.getMatchedFeatureFlags({
       namespaceId,
       labelMatchers,
-      excludeDisabled: true,
+      excludeDisabled,
     });
 
     for (const featureFlag of featureFlagsBySubgraphId) {
@@ -809,14 +809,18 @@ export class FeatureFlagRepository {
       .execute();
 
     for (const composition of compositions) {
-      const featureFlag = await this.getFeatureFlagById({
-        featureFlagId: composition.featureFlagId,
-        namespaceId,
-      });
+      let featureFlagName = '';
+      if (composition.featureFlagId !== null) {
+        const featureFlag = await this.getFeatureFlagById({
+          featureFlagId: composition.featureFlagId,
+          namespaceId,
+        });
+        featureFlagName = featureFlag?.name || '';
+      }
 
       featureFlagCompositions.push({
         ...composition,
-        featureFlagName: featureFlag?.name || '',
+        featureFlagName,
         createdAt: composition.createdAt.toISOString(),
         compositionErrors: composition.compositionErrors || undefined,
         createdBy: composition.createdBy || undefined,

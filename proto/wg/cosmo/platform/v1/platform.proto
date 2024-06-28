@@ -1558,6 +1558,7 @@ message GetCompositionsRequest {
   string startDate = 4;
   string endDate = 5;
   string namespace = 6;
+  bool excludeFeatureFlagCompositions = 7; 
 }
 
 message GetCompositionsResponse {

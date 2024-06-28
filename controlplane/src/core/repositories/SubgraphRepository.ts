@@ -535,6 +535,7 @@ export class SubgraphRepository {
         labels: subgraph.labels,
         namespace: subgraph.namespace,
         namespaceId: subgraph.namespaceId,
+        isFeatureSubgraph: subgraph.isFeatureSubgraph,
       };
     });
   }

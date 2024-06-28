@@ -1,5 +1,5 @@
 {
-  "id": "0429b005-88a7-4299-be1e-4a726d9bed23",
+  "id": "a2d2eb25-1772-4620-ba19-66ee537ee7a4",
   "prevId": "eb97e851-3578-4290-90f9-0a61ec854ccd",
   "version": "5",
   "dialect": "pg",
@@ -1369,7 +1369,7 @@
           "name": "feature_flag_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         }
       },
       "indexes": {},

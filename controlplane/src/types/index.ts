@@ -108,7 +108,7 @@ export interface SubgraphDTO {
   isV2Graph?: boolean;
   readme?: string;
   websocketSubprotocol?: 'auto' | 'graphql-ws' | 'graphql-transport-ws';
-  isFeatureSubgraph?: boolean;
+  isFeatureSubgraph: boolean;
 }
 
 export interface FeatureFlagDTO {

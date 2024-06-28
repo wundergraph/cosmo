@@ -550,12 +550,14 @@ export async function assertNumberOfCompositions(
   numberOfCompositions: number,
   namespace = DEFAULT_NAMESPACE,
   expectedEnumStatusCode = EnumStatusCode.OK,
+  excludeFeatureFlagCompositions = false,
 ) {
   const getCompositionsResponse = await client.getCompositions({
     fedGraphName: federatedGraphName,
     startDate: formatISO(yearStartDate),
     endDate: formatISO(tomorrowDate),
     namespace,
+    excludeFeatureFlagCompositions,
   });
   expect(getCompositionsResponse.response?.code).toBe(expectedEnumStatusCode);
   expect(getCompositionsResponse.compositions).toHaveLength(numberOfCompositions);
