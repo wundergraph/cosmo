@@ -1720,30 +1720,4 @@ export class FederatedGraphRepository {
       return { compositionErrors: allCompositionErrors, deploymentErrors: allDeploymentErrors };
     });
   };
-
-  public async getRouterConfigBySchemaVersionId(id: string): Promise<RouterConfig | undefined> {
-    const latestValidVersion = await this.db
-      .select({
-        routerConfig: graphCompositions.routerConfig,
-      })
-      .from(schemaVersion)
-      .innerJoin(graphCompositions, eq(schemaVersion.id, graphCompositions.schemaVersionId))
-      .where(
-        and(
-          eq(schemaVersion.id, id),
-          and(
-            eq(graphCompositions.isComposable, true),
-            or(isNull(graphCompositions.deploymentError), eq(graphCompositions.deploymentError, '')),
-            or(isNull(graphCompositions.admissionError), eq(graphCompositions.admissionError, '')),
-          ),
-        ),
-      )
-      .execute();
-
-    if (!latestValidVersion || latestValidVersion.length === 0) {
-      return;
-    }
-
-    return routerConfigFromJson(latestValidVersion[0].routerConfig as JsonValue);
-  }
 }
