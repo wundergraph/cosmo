@@ -28,13 +28,10 @@ import { GraphCompositionRepository } from '../repositories/GraphCompositionRepo
 import { composeSubgraphs, composeSubgraphsWithContracts } from './composition.js';
 import { getDiffBetweenGraphs, GetDiffBetweenGraphsResult } from './schemaCheck.js';
 
+import type { UUID } from 'node:crypto';
+
 export type CompositionResult = {
   compositions: ComposedFederatedGraph[];
-};
-
-export type FeatureFlagSchemaVersion = {
-  featureFlagName: string;
-  schemaVersionId: string;
 };
 
 export interface S3RouterConfigMetadata extends Record<string, string> {
@@ -64,8 +61,6 @@ export function routerConfigToFeatureFlagExecutionConfig(routerConfig: RouterCon
     version: routerConfig.version,
   });
 }
-
-export type UUID = `${string}-${string}-${string}-${string}-${string}`;
 
 export function buildRouterExecutionConfig(
   composedGraph: ComposedFederatedGraph,

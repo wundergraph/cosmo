@@ -1687,7 +1687,6 @@ export class FederatedGraphRepository {
           contractId,
           { featureFlagRouterExecutionConfigByFeatureFlagName, schemaVersionId, routerExecutionConfig },
         ] of contractBaseCompositionDataByContractId) {
-          // As long as the schema version ID of the DTO is not used, there are no race conditions
           const contractDTO = await this.byId(contractId);
           if (!contractDTO) {
             throw new Error(`Unexpected: Contract graph with id "${contractId}" not found after latest composition`);
