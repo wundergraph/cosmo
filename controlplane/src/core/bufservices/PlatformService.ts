@@ -143,6 +143,7 @@ import { FastifyBaseLogger } from 'fastify';
 import { buildASTSchema, DocumentNode, parse } from 'graphql';
 import { validate } from 'graphql/validation/index.js';
 import { uid } from 'uid/secure';
+import { de } from 'date-fns/locale';
 import {
   DateRange,
   FeatureIds,
@@ -2900,6 +2901,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           );
 
         for (const graph of updatedFederatedGraphs) {
+          const hasErrors =
+            compositionErrors.some((error) => error.federatedGraphName === graph.name) ||
+            deploymentErrors.some((error) => error.federatedGraphName === graph.name);
           orgWebhooks.send({
             eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
             payload: {
@@ -2912,7 +2916,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                 id: authContext.organizationId,
                 slug: authContext.organizationSlug,
               },
-              errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
+              errors: hasErrors,
               actor_id: authContext.userId,
             },
           });
@@ -3543,11 +3547,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           }
 
           for (const deletedGraph of deletedGraphs) {
-            const blobStorageDirectory = `${authContext.organizationId}/${deletedGraph.id}`;
-            await opts.blobStorage.removeDirectory({ key: blobStorageDirectory });
-          }
-
-          for (const deletedGraph of deletedGraphs) {
             await auditLogRepo.addAuditLog({
               organizationId: authContext.organizationId,
               auditAction: 'federated_graph.deleted',
@@ -3622,67 +3621,85 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           authContext,
         });
 
-        const federatedGraphSchemaUpdates: FederatedGraphSchemaUpdate[] = [];
+        const { affectedFederatedGraphs, compositionErrors, deploymentErrors } = await opts.db.transaction(
+          async (tx) => {
+            const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
+            const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
+            const featureFlagRepo = new FeatureFlagRepository(logger, tx, authContext.organizationId);
+            const auditLogRepo = new AuditLogRepository(tx);
 
-        const { compositionErrors, deploymentErrors } = await opts.db.transaction(async (tx) => {
-          const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
-          const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
-          const featureFlagRepo = new FeatureFlagRepository(logger, tx, authContext.organizationId);
-          const auditLogRepo = new AuditLogRepository(tx);
-
-          let labels = subgraph.labels;
-          if (subgraph.isFeatureSubgraph) {
-            const baseSubgraph = await featureFlagRepo.getBaseSubgraphByFeatureSubgraphId({ id: subgraph.id });
-            if (baseSubgraph) {
-              labels = baseSubgraph.labels;
+            let labels = subgraph.labels;
+            if (subgraph.isFeatureSubgraph) {
+              const baseSubgraph = await featureFlagRepo.getBaseSubgraphByFeatureSubgraphId({ id: subgraph.id });
+              if (baseSubgraph) {
+                labels = baseSubgraph.labels;
+              }
+            } else {
+              await featureFlagRepo.deleteFeatureSubgraphsByBaseSubgraphId({
+                subgraphId: subgraph.id,
+                namespaceId: subgraph.namespaceId,
+              });
             }
-          } else {
-            await featureFlagRepo.deleteFeatureSubgraphsByBaseSubgraphId({
-              subgraphId: subgraph.id,
+
+            // Collect all federated graphs that used this subgraph before deleting subgraph to include them in the composition
+            const affectedFederatedGraphs = await fedGraphRepo.bySubgraphLabels({
+              labels,
               namespaceId: subgraph.namespaceId,
+              excludeContracts: true,
             });
-          }
 
-          // Collect all federated graphs that used this subgraph before deleting subgraph to include them in the composition
-          const affectedFederatedGraphs = await fedGraphRepo.bySubgraphLabels({
-            labels,
-            namespaceId: subgraph.namespaceId,
-            excludeContracts: true,
-          });
+            // Delete the subgraph
+            await subgraphRepo.delete(subgraph.targetId);
 
-          // Delete the subgraph
-          await subgraphRepo.delete(subgraph.targetId);
+            await auditLogRepo.addAuditLog({
+              organizationId: authContext.organizationId,
+              auditAction: subgraph.isFeatureSubgraph ? 'feature_subgraph.deleted' : 'subgraph.deleted',
+              action: 'deleted',
+              actorId: authContext.userId,
+              auditableType: subgraph.isFeatureSubgraph ? 'feature_subgraph' : 'subgraph',
+              auditableDisplayName: subgraph.name,
+              actorDisplayName: authContext.userDisplayName,
+              actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+              targetNamespaceId: subgraph.namespaceId,
+              targetNamespaceDisplayName: subgraph.namespace,
+            });
 
-          await auditLogRepo.addAuditLog({
-            organizationId: authContext.organizationId,
-            auditAction: subgraph.isFeatureSubgraph ? 'feature_subgraph.deleted' : 'subgraph.deleted',
-            action: 'deleted',
-            actorId: authContext.userId,
-            auditableType: subgraph.isFeatureSubgraph ? 'feature_subgraph' : 'subgraph',
-            auditableDisplayName: subgraph.name,
-            actorDisplayName: authContext.userDisplayName,
-            actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
-            targetNamespaceId: subgraph.namespaceId,
-            targetNamespaceDisplayName: subgraph.namespace,
-          });
+            // Recompose and deploy all affected federated graphs and their respective contracts.
+            // Collects all composition and deployment errors if any.
+            const { compositionErrors, deploymentErrors } = await fedGraphRepo.composeAndDeployGraphs({
+              federatedGraphs: affectedFederatedGraphs,
+              blobStorage: opts.blobStorage,
+              admissionConfig: {
+                webhookJWTSecret: opts.admissionWebhookJWTSecret,
+                cdnBaseUrl: opts.cdnBaseUrl,
+              },
+              actorId: authContext.userId,
+            });
 
-          // Recompose and deploy all affected federated graphs and their respective contracts.
-          // Collects all composition and deployment errors if any.
-          const { compositionErrors, deploymentErrors } = await fedGraphRepo.composeAndDeployGraphs({
-            federatedGraphs: affectedFederatedGraphs,
-            blobStorage: opts.blobStorage,
-            admissionConfig: {
-              webhookJWTSecret: opts.admissionWebhookJWTSecret,
-              cdnBaseUrl: opts.cdnBaseUrl,
+            return { affectedFederatedGraphs, compositionErrors, deploymentErrors };
+          },
+        );
+
+        for (const affectedFederatedGraph of affectedFederatedGraphs) {
+          const hasErrors =
+            compositionErrors.some((error) => error.federatedGraphName === affectedFederatedGraph.name) ||
+            deploymentErrors.some((error) => error.federatedGraphName === affectedFederatedGraph.name);
+          orgWebhooks.send({
+            eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+            payload: {
+              federated_graph: {
+                id: affectedFederatedGraph.id,
+                name: affectedFederatedGraph.name,
+                namespace: affectedFederatedGraph.namespace,
+              },
+              organization: {
+                id: authContext.organizationId,
+                slug: authContext.organizationSlug,
+              },
+              errors: hasErrors,
+              actor_id: authContext.userId,
             },
-            actorId: authContext.userId,
           });
-
-          return { compositionErrors, deploymentErrors };
-        });
-
-        for (const update of federatedGraphSchemaUpdates) {
-          orgWebhooks.send(update);
         }
 
         if (compositionErrors.length > 0) {
