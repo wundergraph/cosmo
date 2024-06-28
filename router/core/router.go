@@ -1255,9 +1255,10 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	}
 
 	operationParser := NewOperationParser(OperationParserOptions{
-		Executor:                executor,
-		MaxOperationSizeInBytes: int64(r.routerTrafficConfig.MaxRequestBodyBytes),
-		PersistentOpClient:      r.cdnPersistentOpClient,
+		Executor:                       executor,
+		MaxOperationSizeInBytes:        int64(r.routerTrafficConfig.MaxRequestBodyBytes),
+		PersistentOpClient:             r.cdnPersistentOpClient,
+		EnablePersistedOperationsCache: r.engineExecutionConfiguration.EnablePersistedOperationsCache,
 	})
 	operationPlanner := NewOperationPlanner(executor, planCache)
 
@@ -1289,12 +1290,13 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		Executor:                               executor,
 		Log:                                    r.logger,
 		EnableExecutionPlanCacheResponseHeader: routerEngineConfig.Execution.EnableExecutionPlanCacheResponseHeader,
-		WebSocketStats:                         r.WebsocketStats,
-		TracerProvider:                         r.tracerProvider,
-		Authorizer:                             NewCosmoAuthorizer(authorizerOptions),
-		SubgraphErrorPropagation:               r.subgraphErrorPropagation,
-		EngineLoaderHooks:                      NewEngineRequestHooks(ro.metricStore, r.traceConfig.SpanAttributesMapper),
-		SpanAttributesMapper:                   r.traceConfig.SpanAttributesMapper,
+		EnablePersistedOperationCacheResponseHeader: routerEngineConfig.Execution.Debug.EnablePersistedOperationsCacheResponseHeader,
+		WebSocketStats:           r.WebsocketStats,
+		TracerProvider:           r.tracerProvider,
+		Authorizer:               NewCosmoAuthorizer(authorizerOptions),
+		SubgraphErrorPropagation: r.subgraphErrorPropagation,
+		EngineLoaderHooks:        NewEngineRequestHooks(ro.metricStore, r.traceConfig.SpanAttributesMapper),
+		SpanAttributesMapper:     r.traceConfig.SpanAttributesMapper,
 	}
 
 	if r.Config.redisClient != nil {
