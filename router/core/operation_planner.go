@@ -101,10 +101,10 @@ func (p *OperationPlanner) Plan(operation *ParsedOperation, clientInfo *ClientIn
 		traceOptions:               traceOptions,
 		extensions:                 operation.Request.Extensions,
 		protocol:                   protocol,
-		persistedOperationCacheHit: operation.PersistedQueryCacheHit,
+		persistedOperationCacheHit: operation.PersistedOperationCacheHit,
 	}
 
-	if operation.IsPersistedQuery {
+	if operation.IsPersistedOperation {
 		opContext.persistedID = operation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
 	}
 

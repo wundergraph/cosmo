@@ -328,6 +328,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			return
 		}
 
+		if operationKit.parsedOperation.IsPersistedOperation {
+			engineNormalizeSpan.SetAttributes(otel.WgEnginePersistedOperationCacheHit.Bool(operationKit.parsedOperation.PersistedOperationCacheHit))
+		}
+
 		engineNormalizeSpan.End()
 
 		if !traceOptions.ExcludeNormalizeStats {

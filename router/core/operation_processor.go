@@ -44,11 +44,11 @@ type ParsedOperation struct {
 	// NormalizedRepresentation is the normalized representation of the operation
 	// as a string. This is provided for modules to be able to access the
 	// operation. Only available after the operation has been normalized.
-	NormalizedRepresentation string
-	Request                  GraphQLRequest
-	GraphQLRequestExtensions GraphQLRequestExtensions
-	IsPersistedQuery         bool
-	PersistedQueryCacheHit   bool
+	NormalizedRepresentation   string
+	Request                    GraphQLRequest
+	GraphQLRequestExtensions   GraphQLRequestExtensions
+	IsPersistedOperation       bool
+	PersistedOperationCacheHit bool
 }
 
 type invalidExtensionsTypeError jsonparser.ValueType
@@ -212,7 +212,7 @@ func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo) error 
 				statusCode: http.StatusOK,
 			}
 		}
-		o.parsedOperation.IsPersistedQuery = true
+		o.parsedOperation.IsPersistedOperation = true
 		fromCache, err := o.loadPersistedOperationFromCache()
 		if err != nil {
 			return &inputError{
@@ -330,8 +330,7 @@ func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo) error 
 // Normalize normalizes the operation. After normalization the normalized representation of the operation
 // and variables is available. Also, the final operation ID is generated.
 func (o *OperationKit) Normalize() error {
-
-	if o.parsedOperation.IsPersistedQuery {
+	if o.parsedOperation.IsPersistedOperation {
 		return o.normalizePersistedOperation()
 	}
 	return o.normalizeNonPersistedOperation()
@@ -408,7 +407,7 @@ WithNext:
 	// Set the normalized representation
 	o.parsedOperation.NormalizedRepresentation = o.kit.normalizedOperation.String()
 
-	if o.parsedOperation.IsPersistedQuery {
+	if o.parsedOperation.IsPersistedOperation {
 		o.savePersistedOperationToCache(skipIncludeNames, exportedVariables)
 	}
 
@@ -476,7 +475,7 @@ func (o *OperationKit) loadPersistedOperationFromCache() (ok bool, err error) {
 	if !ok {
 		return false, nil
 	}
-	o.parsedOperation.PersistedQueryCacheHit = true
+	o.parsedOperation.PersistedOperationCacheHit = true
 	o.parsedOperation.ID = entry.operationID
 	o.parsedOperation.NormalizedRepresentation = entry.normalizedRepresentation
 	o.parsedOperation.Type = entry.operationType
