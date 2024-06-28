@@ -97,7 +97,6 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, variables []byte, r *ht
 
 	if !wgParams.SubscribeOnce {
 		setSubscriptionHeaders(w)
-		flusher.Flush()
 	}
 
 	flushWriter := &HttpFlushWriter{
