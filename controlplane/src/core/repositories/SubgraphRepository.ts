@@ -375,9 +375,9 @@ export class SubgraphRepository {
               published: true,
             });
             const enabledFeatureFlags = await featureFlagRepo.getFeatureFlagsBySubgraphIdAndLabels({
-              subgraphId: subgraph.id,
+              subgraphId: baseSubgraph[0].id,
               namespaceId: data.namespaceId,
-              labelMatchers: baseSubgraph[0].labels || [],
+              labelMatchers: federatedGraphDTO.labelMatchers || [],
               baseSubgraphNames: subgraphs.map((subgraph) => subgraph.name),
               excludeDisabled: true,
             });
