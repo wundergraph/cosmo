@@ -142,45 +142,6 @@ export class FeatureFlagRepository {
       .execute();
   }
 
-  public async getFeatureFlagById({
-    featureFlagId,
-    namespaceId,
-  }: {
-    featureFlagId: string;
-    namespaceId: string;
-  }): Promise<FeatureFlagDTO | undefined> {
-    const resp = await this.db
-      .select({
-        id: featureFlags.id,
-        name: featureFlags.name,
-        namespaceId: featureFlags.namespaceId,
-        labels: featureFlags.labels,
-        createdBy: featureFlags.createdBy,
-        isEnabled: featureFlags.isEnabled,
-        organizationId: featureFlags.organizationId,
-        createdAt: featureFlags.createdAt,
-        updatedAt: featureFlags.updatedAt,
-      })
-      .from(featureFlags)
-      .where(
-        and(
-          eq(featureFlags.organizationId, this.organizationId),
-          eq(featureFlags.id, featureFlagId),
-          eq(featureFlags.namespaceId, namespaceId),
-        ),
-      )
-      .execute();
-    if (resp.length === 0) {
-      return;
-    }
-    return {
-      ...resp[0],
-      labels: resp[0].labels?.map?.((l) => splitLabel(l)) ?? [],
-      createdAt: resp[0].createdAt.toISOString(),
-      updatedAt: resp[0].updatedAt?.toISOString() || undefined,
-    };
-  }
-
   public async getFeatureFlagByName({
     featureFlagName,
     namespaceId,
@@ -233,19 +194,16 @@ export class FeatureFlagRepository {
     }
 
     const subgraphRepo = new SubgraphRepository(this.logger, this.db, this.organizationId);
-    const baseSubgraphDTO = await subgraphRepo.byId(baseSubgraph[0].subgraphId);
-    return baseSubgraphDTO;
+    return subgraphRepo.byId(baseSubgraph[0].subgraphId);
   }
 
-  public async getFeatureSubgraphsByBaseSubgraphId({ baseSubgraphId }: { baseSubgraphId: string }) {
-    const ffs = await this.db
+  public getFeatureSubgraphsByBaseSubgraphId({ baseSubgraphId }: { baseSubgraphId: string }) {
+    return this.db
       .select({
         id: featureSubgraphsToBaseSubgraphs.featureSubgraphId,
       })
       .from(featureSubgraphsToBaseSubgraphs)
       .where(eq(featureSubgraphsToBaseSubgraphs.baseSubgraphId, baseSubgraphId));
-
-    return ffs;
   }
 
   public deleteFeatureSubgraphsByBaseSubgraphId({
