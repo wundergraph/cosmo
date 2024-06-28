@@ -4234,7 +4234,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const federatedGraphs = await featureFlagRepo.getFederatedGraphsByFeatureFlag({
           featureFlagId: featureFlag.id,
           namespaceId: namespace.id,
-          excludeDisabled: true,
+          excludeDisabled: req.enabled,
         });
 
         const compositionErrors: PlainMessage<CompositionError>[] = [];
