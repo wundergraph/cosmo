@@ -4234,6 +4234,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const federatedGraphs = await featureFlagRepo.getFederatedGraphsByFeatureFlag({
           featureFlagId: featureFlag.id,
           namespaceId: namespace.id,
+          // fetch the federated graphs based on the state that has just been set for the feature flag above 
           excludeDisabled: req.enabled,
         });
 
@@ -4367,6 +4368,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const federatedGraphs = await featureFlagRepo.getFederatedGraphsByFeatureFlag({
           featureFlagId: featureFlag.id,
           namespaceId: namespace.id,
+          // if deleting when already disabled, there are no compositions to be done.
           excludeDisabled: true,
         });
 
