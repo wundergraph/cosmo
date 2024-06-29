@@ -13,6 +13,7 @@ import { useRouter } from "next/router";
 import { useContext, useEffect, useState } from "react";
 import Fuse from "fuse.js";
 import { Subgraph } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { set } from "lodash";
 
 const SubGraphsPage: NextPageWithLayout = () => {
   const graphData = useContext(GraphContext);
@@ -28,8 +29,7 @@ const SubGraphsPage: NextPageWithLayout = () => {
   const [search, setSearch] = useState(router.query.search as string);
   const applyParams = useApplyParams();
 
-  const [filteredSubgraphs, setFilteredSubgraphs] = useState<Subgraph[]>([]);
-  const [filteredFeatureSubgraphs, setFilteredFeatureSubgraphs] = useState<Subgraph[]>([]);
+  const [filteredGraphs, setFilteredGraphs] = useState<Subgraph[]>([]);
 
   useEffect(() => {
     if (!graphData) return;
@@ -41,9 +41,9 @@ const SubGraphsPage: NextPageWithLayout = () => {
 
       const searchedFetaureSubgraphs = search
         ? fuse.search(search).map(({ item }) => item)
-        : graphData.subgraphs;
+        : graphData.featureSubgraphs;
 
-      setFilteredFeatureSubgraphs(
+      setFilteredGraphs(
         searchedFetaureSubgraphs.slice(offset, limit + offset),
       );
     } else {
@@ -56,7 +56,7 @@ const SubGraphsPage: NextPageWithLayout = () => {
         ? fuse.search(search).map(({ item }) => item)
         : graphData.subgraphs;
 
-      setFilteredSubgraphs(searchedSubgraphs.slice(offset, limit + offset));
+      setFilteredGraphs(searchedSubgraphs.slice(offset, limit + offset));
     }
   }, [tab, search, offset, limit, graphData]);
 
@@ -90,13 +90,9 @@ const SubGraphsPage: NextPageWithLayout = () => {
         )}
       </div>
       <SubgraphsTable
-        subgraphs={
-          tab === "featureSubgraphs"
-            ? filteredFeatureSubgraphs
-            : filteredSubgraphs
-        }
+        subgraphs={filteredGraphs}
         graph={graphData.graph}
-        totalCount={filteredSubgraphs.length}
+        totalCount={filteredGraphs.length}
       />
     </div>
   );

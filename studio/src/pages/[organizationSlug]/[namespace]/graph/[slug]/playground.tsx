@@ -484,7 +484,11 @@ const PlaygroundPage: NextPageWithLayout = () => {
     {
       name: graphContext?.graph?.name,
       namespace: graphContext?.graph?.namespace,
-      featureFlagId: type === "featureFlag" ? loadSchemaGraphId : undefined,
+      featureFlagName:
+        type === "featureFlag"
+          ? graphContext?.featureFlags.find((f) => f.id === loadSchemaGraphId)
+              ?.name
+          : undefined,
     },
   );
 
