@@ -306,6 +306,7 @@ message GetSubgraphsRequest {
   int32 offset = 2;
   string namespace = 3;
   optional string query = 4;
+  bool exclude_feature_subgraphs = 5;
 }
 
 message Subgraph {
@@ -345,12 +346,15 @@ message GetFederatedGraphByNameResponse {
   string graphRequestToken = 4;
   repeated FeatureFlag featureFlags = 5;
   repeated FeatureFlag featureFlagsInLatestValidComposition = 6;
+  // includes all the feature subgraphs that are part of the federated graph, 
+  // even the ones that are not part of the latest composition
+  repeated Subgraph featureSubgraphs = 7;
 }
 
 message GetFederatedGraphSDLByNameRequest {
   string name = 1;
   string namespace = 2;
-  optional string featureFlagId = 3;
+  optional string feature_flag_name = 3;
 }
 
 message GetFederatedGraphSDLByNameResponse {
@@ -1743,6 +1747,7 @@ message GetFieldUsageRequest {
   optional int32 range = 5;
   DateRange dateRange = 6;
   string namespace = 7;
+  optional string feature_flag_name = 8;
 }
 
 message ClientWithOperations {
@@ -2069,7 +2074,7 @@ message DeleteFeatureFlagResponse {
   repeated DeploymentError deployment_errors = 3;
 }
 
-message FeatureFlag{
+message FeatureFlag {
   string id = 1;
   string name = 2;
   string namespace = 3;
@@ -2111,6 +2116,19 @@ message GetFeatureSubgraphsByFeatureFlagRequest {
 message GetFeatureSubgraphsByFeatureFlagResponse {
   Response response = 1;
   repeated Subgraph featureSubgraphs = 2;
+}
+
+message GetFeatureSubgraphsRequest {
+  int32 limit = 1;
+  int32 offset = 2;
+  string namespace = 3;
+  optional string query = 4;
+}
+
+message GetFeatureSubgraphsResponse {
+  Response response = 1;
+  repeated Subgraph feature_subgraphs = 2;
+  int32 count = 3;
 }
 
 service PlatformService {
@@ -2384,6 +2402,8 @@ service PlatformService {
   rpc GetFeatureFlagByName(GetFeatureFlagByNameRequest) returns (GetFeatureFlagByNameResponse) {}
   // GetFeatureSubgraphsByFeatureFlag returns the feature subgraphs of a feature flag
   rpc GetFeatureSubgraphsByFeatureFlag(GetFeatureSubgraphsByFeatureFlagRequest) returns (GetFeatureSubgraphsByFeatureFlagResponse) {}
+  // GetFeatureSubgraphs returns the list of feature subgraphs.
+  rpc GetFeatureSubgraphs(GetFeatureSubgraphsRequest) returns (GetFeatureSubgraphsResponse) {}
 
   //
   // Billing

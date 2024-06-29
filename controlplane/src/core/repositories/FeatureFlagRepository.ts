@@ -1,6 +1,6 @@
 import { Subgraph } from '@wundergraph/composition';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
-import { SQL, and, count, eq, inArray, like, sql } from 'drizzle-orm';
+import { SQL, and, asc, count, eq, inArray, like, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { parse } from 'graphql';
@@ -214,6 +214,76 @@ export class FeatureFlagRepository {
     return featureFlagsCount[0].count;
   }
 
+  public async getFeatureSubgraphs({ namespaceId, limit, offset, query }: FeatureFlagListFilterOptions) {
+    const subgraphRepo = new SubgraphRepository(this.logger, this.db, this.organizationId);
+    const conditions: SQL<unknown>[] = [
+      eq(targets.organizationId, this.organizationId),
+      eq(targets.type, 'subgraph'),
+      eq(subgraphs.isFeatureSubgraph, true),
+    ];
+
+    if (namespaceId) {
+      conditions.push(eq(targets.namespaceId, namespaceId));
+    }
+
+    if (query) {
+      conditions.push(like(targets.name, `%${query}%`));
+    }
+
+    const featureSubgraphTargets = await this.db
+      .select({
+        id: targets.id,
+        name: targets.name,
+      })
+      .from(targets)
+      .innerJoin(subgraphs, eq(schema.subgraphs.targetId, schema.targets.id))
+      // Left join because version is optional
+      .leftJoin(schemaVersion, eq(schema.subgraphs.schemaVersionId, schema.schemaVersion.id))
+      .orderBy(asc(targets.createdAt), asc(schemaVersion.createdAt))
+      .where(and(...conditions))
+      .limit(limit)
+      .offset(offset);
+
+    const featureSubgraphs: SubgraphDTO[] = [];
+
+    for (const f of featureSubgraphTargets) {
+      const fs = await subgraphRepo.byTargetId(f.id);
+      if (!fs) {
+        continue;
+      }
+
+      featureSubgraphs.push(fs);
+    }
+
+    return featureSubgraphs;
+  }
+
+  public async getFeatureSubgraphsCount({ namespaceId, query }: FeatureFlagListFilterOptions) {
+    const conditions: SQL<unknown>[] = [
+      eq(targets.organizationId, this.organizationId),
+      eq(targets.type, 'subgraph'),
+      eq(subgraphs.isFeatureSubgraph, true),
+    ];
+
+    if (namespaceId) {
+      conditions.push(eq(targets.namespaceId, namespaceId));
+    }
+
+    if (query) {
+      conditions.push(like(targets.name, `%${query}%`));
+    }
+
+    const featureSubgraphTargets = await this.db
+      .select({
+        count: count(),
+      })
+      .from(targets)
+      .innerJoin(subgraphs, eq(schema.subgraphs.targetId, schema.targets.id))
+      .where(and(...conditions));
+
+    return featureSubgraphTargets[0].count;
+  }
+
   public async getFeatureFlagById({
     featureFlagId,
     namespaceId,
@@ -255,6 +325,11 @@ export class FeatureFlagRepository {
       createdBy = user?.email || '';
     }
 
+    const featureSubgraphs = await this.getFeatureSubgraphsByFeatureFlag({
+      namespaceId,
+      featureFlagId,
+    });
+
     return {
       ...resp[0],
       labels: resp[0].labels?.map?.((l) => splitLabel(l)) ?? [],
@@ -262,6 +337,7 @@ export class FeatureFlagRepository {
       updatedAt: resp[0].updatedAt?.toISOString() || '',
       createdBy,
       creatorUserId: resp[0].creatorUserId || undefined,
+      featureSubgraphs,
     };
   }
 
@@ -306,6 +382,11 @@ export class FeatureFlagRepository {
       createdBy = user?.email || '';
     }
 
+    const featureSubgraphs = await this.getFeatureSubgraphsByFeatureFlag({
+      namespaceId,
+      featureFlagId: resp[0].id,
+    });
+
     return {
       ...resp[0],
       labels: resp[0].labels?.map?.((l) => splitLabel(l)) ?? [],
@@ -313,6 +394,7 @@ export class FeatureFlagRepository {
       updatedAt: resp[0].updatedAt?.toISOString() || '',
       createdBy,
       creatorUserId: resp[0].creatorUserId || undefined,
+      featureSubgraphs,
     };
   }
 

@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { ChevronUpDownIcon } from "@heroicons/react/24/outline";
+import { RxComponentPlaceholder } from "react-icons/rx";
 
 const SDLPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -69,9 +70,7 @@ const SDLPage: NextPageWithLayout = () => {
     {
       name: graphName,
       namespace,
-      featureFlagId: graphData?.featureFlags?.find(
-        (f) => f.name === activeFeatureFlag,
-      )?.id,
+      featureFlagName: activeFeatureFlag,
     },
   );
 
@@ -225,7 +224,7 @@ const SDLPage: NextPageWithLayout = () => {
                     </Button>
                   </div>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="min-w-[200px]">
+                <DropdownMenuContent className="min-w-[220px]">
                   {graphData?.graph?.supportsFederation ? (
                     <>
                       <DropdownMenuGroup>

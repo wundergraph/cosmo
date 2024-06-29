@@ -554,6 +554,10 @@ export class SubgraphRepository {
       conditions.push(like(schema.targets.name, `%${opts.query}%`));
     }
 
+    if (opts.excludeFeatureSubgraphs) {
+      conditions.push(eq(schema.subgraphs.isFeatureSubgraph, false));
+    }
+
     const targets = await this.db
       .select({
         id: schema.targets.id,
@@ -597,11 +601,16 @@ export class SubgraphRepository {
       conditions.push(like(schema.targets.name, `%${opts.query}%`));
     }
 
+    if (opts.excludeFeatureSubgraphs) {
+      conditions.push(eq(schema.subgraphs.isFeatureSubgraph, false));
+    }
+
     const subgraphsCount = await this.db
       .select({
         count: count(),
       })
       .from(schema.targets)
+      .innerJoin(subgraphs, eq(schema.subgraphs.targetId, schema.targets.id))
       .where(and(...conditions));
 
     if (subgraphsCount.length === 0) {

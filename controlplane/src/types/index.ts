@@ -31,15 +31,19 @@ export type Feature = {
   limit?: number | null;
 };
 
-export interface FederatedGraphListFilterOptions extends SubgraphListFilterOptions {
-  supportsFederation?: boolean;
-}
-
-export interface SubgraphListFilterOptions {
+export interface ListFilterOptions {
   namespaceId?: string;
   limit: number;
   offset: number;
   query?: string;
+}
+
+export interface FederatedGraphListFilterOptions extends ListFilterOptions {
+  supportsFederation?: boolean;
+}
+
+export interface SubgraphListFilterOptions extends ListFilterOptions {
+  excludeFeatureSubgraphs: boolean;
 }
 
 export interface Label {
@@ -123,6 +127,7 @@ export interface FeatureFlagDTO {
   organizationId: string;
   createdAt: string;
   updatedAt: string;
+  featureSubgraphs: SubgraphDTO[];
 }
 
 export interface MigrationSubgraph {

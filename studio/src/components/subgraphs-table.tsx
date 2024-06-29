@@ -1,15 +1,27 @@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useFeature } from "@/hooks/use-feature";
 import { useUser } from "@/hooks/use-user";
 import { docsBaseURL } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { useMutation, useQuery } from "@connectrpc/connect-query";
 import { ChartBarIcon, CommandLineIcon } from "@heroicons/react/24/outline";
 import {
   CaretSortIcon,
   CheckIcon,
   InfoCircledIcon,
 } from "@radix-ui/react-icons";
-import { useQuery, useMutation } from "@connectrpc/connect-query";
 import {
   addSubgraphMember,
   getOrganizationMembers,
@@ -26,7 +38,6 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { IoPersonAdd } from "react-icons/io5";
-import { useApplyParams } from "./analytics/use-apply-params";
 import { EmptyState } from "./empty-state";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -38,25 +49,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "./ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./ui/select";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Pagination } from "./ui/pagination";
 import {
   Table,
   TableBody,
@@ -66,9 +59,9 @@ import {
   TableRow,
   TableWrapper,
 } from "./ui/table";
+import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { useToast } from "./ui/use-toast";
-import { Pagination } from "./ui/pagination";
 
 export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
   const router = useRouter();
@@ -390,6 +383,32 @@ const AddSubgraphUsers = ({
         </DialogContent>
       </Dialog>
     </div>
+  );
+};
+
+export const SubgraphPageTabs = () => {
+  const router = useRouter();
+  const tab = router.query.tab as string;
+
+  return (
+    <Tabs value={tab ?? "subgraphs"} className="flex min-h-0 flex-col">
+      <div className="flex flex-row pb-4">
+        <TabsList>
+          <TabsTrigger value="subgraphs" asChild>
+            <Link href={{ query: { ...router.query, tab: "subgraphs" } }}>
+              Subgraphs
+            </Link>
+          </TabsTrigger>
+          <TabsTrigger value="featureSubgraphs" asChild>
+            <Link
+              href={{ query: { ...router.query, tab: "featureSubgraphs" } }}
+            >
+              Feature Subgraphs
+            </Link>
+          </TabsTrigger>
+        </TabsList>
+      </div>
+    </Tabs>
   );
 };
 
