@@ -4,7 +4,6 @@ import { createConnectTransport } from '@connectrpc/connect-node';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_connect';
 import build from '../src/core/build-server.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
 
@@ -76,7 +75,6 @@ describe('Authentication', (ctx) => {
     });
 
     const platformClient = createPromiseClient(PlatformService, transport);
-    const nodeClient = createPromiseClient(NodeService, transport);
 
     const createPandasSubgraph = await platformClient.createFederatedSubgraph({
       name: genID('fedGraph'),
@@ -86,12 +84,6 @@ describe('Authentication', (ctx) => {
     });
 
     expect(createPandasSubgraph.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHENTICATED);
-
-    const getRouterConfig = await nodeClient.getLatestValidRouterConfig({
-      graphName: 'test',
-    });
-
-    expect(getRouterConfig.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHENTICATED);
 
     await server.close();
   });

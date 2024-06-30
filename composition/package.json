@@ -34,11 +34,11 @@
     "graphql": "^16.7.1",
     "lodash": "^4.17.21",
     "pathe": "^1.1.1",
-    "vitest": "^1.5.0"
+    "vitest": "^1.6.0"
   },
   "devDependencies": {
     "@types/lodash": "^4.17.0",
     "del-cli": "^5.0.0",
-    "typescript": "^5.2.2"
+    "typescript": "5.5.2"
   }
 }

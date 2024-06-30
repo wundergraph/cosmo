@@ -1852,11 +1852,6 @@ message SetDiscussionResolutionResponse {
   Response response = 1;
 }
 
-message GetConfigRequest {
-  string graph_name = 1;
-  string namespace = 2;
-}
-
 message CreateNamespaceRequest {
   string name = 1;
 }
@@ -2173,8 +2168,6 @@ service PlatformService {
   rpc RemoveOrganizationMember(RemoveOrganizationMemberRequest) returns (RemoveOrganizationMemberResponse){}
   // RemoveInvitation removes the org invitation of the user
   rpc RemoveInvitation(RemoveInvitationRequest) returns (RemoveInvitationResponse){}
-  // GetLatestValidRouterConfig returns the router config for the federated graph
-  rpc GetLatestValidRouterConfig(GetConfigRequest) returns (wg.cosmo.node.v1.GetConfigResponse) {}
   // MigrateFromApollo migrates the graphs from apollo to cosmo
   rpc MigrateFromApollo(MigrateFromApolloRequest) returns (MigrateFromApolloResponse) {}
 

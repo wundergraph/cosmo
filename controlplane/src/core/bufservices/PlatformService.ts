@@ -2,7 +2,6 @@ import crypto from 'node:crypto';
 import { PlainMessage } from '@bufbuild/protobuf';
 import { ServiceImpl } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { GetConfigResponse } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { OrganizationEventName, PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import {
@@ -137,13 +136,12 @@ import {
   UpgradePlanResponse,
   WhoAmIResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { isValidUrl, joinLabel } from '@wundergraph/cosmo-shared';
+import { isValidUrl, joinLabel, routerConfigFromJsonString } from '@wundergraph/cosmo-shared';
 import { subHours } from 'date-fns';
 import { FastifyBaseLogger } from 'fastify';
 import { buildASTSchema, DocumentNode, parse } from 'graphql';
 import { validate } from 'graphql/validation/index.js';
 import { uid } from 'uid/secure';
-import { de } from 'date-fns/locale';
 import {
   DateRange,
   FeatureIds,
@@ -8990,50 +8988,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
           pendingInvitations,
           totalCount: count,
-        };
-      });
-    },
-
-    getLatestValidRouterConfig: (req, ctx) => {
-      req.namespace = req.namespace || DefaultNamespace;
-
-      let logger = getLogger(ctx, opts.logger);
-
-      return handleError<PlainMessage<GetConfigResponse>>(ctx, logger, async () => {
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        logger = enrichLogger(ctx, logger, authContext);
-
-        const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
-
-        const federatedGraph = await fedGraphRepo.byName(req.graphName, req.namespace);
-        if (!federatedGraph) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: 'Federated graph not found',
-            },
-          };
-        }
-
-        const config = await fedGraphRepo.getLatestValidRouterConfig(federatedGraph?.targetId);
-        if (!config) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: 'No valid router config found',
-            },
-          };
-        }
-
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-          config: {
-            subgraphs: config.config.subgraphs,
-            engineConfig: config.config.engineConfig,
-            version: config.schemaVersionId,
-          },
         };
       });
     },

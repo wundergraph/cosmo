@@ -291,6 +291,7 @@ export class Composer {
         }
       }
     }
+
     // Deploy the final router config to the blob storage if the admission webhook did not fail
     if (!admissionError) {
       try {
@@ -320,6 +321,12 @@ export class Composer {
         fedGraphSchemaVersionId: federatedSchemaVersionId,
         deploymentErrorString: deploymentError?.message,
         admissionErrorString: admissionError?.message,
+      });
+    } else {
+      await this.graphCompositionRepository.updateComposition({
+        fedGraphSchemaVersionId: federatedSchemaVersionId,
+        routerConfigSignature: signatureSha256,
+        routerConfigPath: s3PathReady,
       });
     }
 
@@ -384,32 +391,22 @@ export class Composer {
   }
 
   /**
-   * Build and store the final router config and federated schema to the database as well as to the CDN. A diff between the
-   * previous and current schema is stored as changelog.
+   * Create a new schema version for the composition and stores a diff and changelog between the
+   * previous and current schema as changelog.
    */
-  async deployComposition({
+  async saveComposition({
     composedGraph,
     composedBy,
-    organizationId,
     isFeatureFlagComposition,
     federatedSchemaVersionId,
     routerExecutionConfig,
   }: {
     composedGraph: ComposedFederatedGraph;
     composedBy: string;
-    organizationId: string;
     isFeatureFlagComposition: boolean;
     federatedSchemaVersionId: UUID;
     routerExecutionConfig?: RouterConfig;
   }): Promise<CompositionDeployResult> {
-    const routerExecutionConfigJSON = routerExecutionConfig ? routerExecutionConfig.toJson() : undefined;
-
-    // CDN path and bucket path are the same in this case
-    const s3PathReady = `${organizationId}/${composedGraph.id}/routerconfigs/latest.json`;
-
-    // The signature will be added by the admission webhook
-    let signatureSha256: undefined | string;
-
     const prevValidFederatedSDL = await this.federatedGraphRepo.getLatestValidSchemaVersion({
       targetId: composedGraph.targetID,
     });
@@ -420,21 +417,17 @@ export class Composer {
       clientSchema: composedGraph.federatedClientSchema,
       subgraphSchemaVersionIds: composedGraph.subgraphs.map((s) => s.schemaVersionId!),
       compositionErrors: composedGraph.errors,
-      routerConfig: routerExecutionConfigJSON,
-      routerConfigSignature: signatureSha256,
       composedBy,
       schemaVersionId: federatedSchemaVersionId,
-      // passing the path only when there exists a previous valid version or when the composition passes.
-      routerConfigPath: prevValidFederatedSDL || routerExecutionConfig ? s3PathReady : null,
       isFeatureFlagComposition,
     });
 
+    // If the composed schema is invalid, or it is a feature flag composition, we do not create a changelog
     if (!routerExecutionConfig || !updatedFederatedGraph?.composedSchemaVersionId || isFeatureFlagComposition) {
       return {
         schemaVersionId: updatedFederatedGraph?.composedSchemaVersionId || '',
       };
     }
-    // Only create changelog when the composed schema is valid
 
     let schemaChanges: GetDiffBetweenGraphsResult;
 

@@ -645,6 +645,13 @@
       "when": 1719311467151,
       "tag": "0091_material_weapon_omega",
       "breakpoints": true
+    },
+    {
+      "idx": 92,
+      "version": "5",
+      "when": 1719672201186,
+      "tag": "0092_noisy_starbolt",
+      "breakpoints": true
     }
   ]
 }
