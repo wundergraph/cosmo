@@ -10,7 +10,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
-	"go.uber.org/zap"
 )
 
 func TestOperationParser(t *testing.T) {
@@ -28,7 +27,6 @@ func TestOperationParser(t *testing.T) {
 		Name:    "test",
 		Version: "1.0.0",
 	}
-	log := zap.NewNop()
 	testCases := []struct {
 		ExpectedType  string
 		ExpectedError error
@@ -145,13 +143,13 @@ func TestOperationParser(t *testing.T) {
 			kit, err := parser.NewKitFromReader(strings.NewReader(tc.Input))
 			assert.NoError(t, err)
 
-			err = kit.Parse(context.Background(), clientInfo, log)
+			err = kit.Parse(context.Background(), clientInfo)
 
 			if err != nil {
 				require.EqualError(t, tc.ExpectedError, err.Error())
 			} else if kit.parsedOperation != nil {
 				require.Equal(t, tc.ExpectedType, kit.parsedOperation.Type)
-				require.JSONEq(t, tc.Variables, string(kit.parsedOperation.Variables))
+				require.JSONEq(t, tc.Variables, string(kit.parsedOperation.Request.Variables))
 				require.Equal(t, uint64(0), kit.parsedOperation.ID)
 				require.Equal(t, "", kit.parsedOperation.NormalizedRepresentation)
 			}
@@ -174,7 +172,6 @@ func TestOperationParserExtensions(t *testing.T) {
 		Name:    "test",
 		Version: "1.0.0",
 	}
-	log := zap.NewNop()
 	testCases := []struct {
 		Input string
 		Valid bool
@@ -211,7 +208,7 @@ func TestOperationParserExtensions(t *testing.T) {
 			kit, err := parser.NewKitFromReader(strings.NewReader(tc.Input))
 			assert.NoError(t, err)
 
-			err = kit.Parse(context.Background(), clientInfo, log)
+			err = kit.Parse(context.Background(), clientInfo)
 			isInputError := errors.As(err, &inputError)
 			if tc.Valid {
 				assert.False(t, isInputError, "expected invalid extensions to not return an input error, got %s", err)

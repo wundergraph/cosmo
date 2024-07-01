@@ -1,4 +1,4 @@
 {
-    "version": 1,
-    "body": "query Employees {\n  employees {\n    id\n    }\n}"
+  "version": 1,
+  "body": "query Employees {\n  employees {\n    id\n    }\n}"
 }

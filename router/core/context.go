@@ -2,11 +2,12 @@ package core
 
 import (
 	"context"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"net/http"
 	"net/url"
 	"sync"
 	"time"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	ctrace "github.com/wundergraph/cosmo/router/pkg/trace"
@@ -366,13 +367,14 @@ type operationContext struct {
 	files      []httpclient.File
 	clientInfo *ClientInfo
 	// preparedPlan is the prepared plan of the operation
-	preparedPlan   *planWithMetaData
-	traceOptions   resolve.TraceOptions
-	planCacheHit   bool
-	initialPayload []byte
-	extensions     []byte
-	persistedID    string
-	protocol       OperationProtocol
+	preparedPlan               *planWithMetaData
+	traceOptions               resolve.TraceOptions
+	planCacheHit               bool
+	initialPayload             []byte
+	extensions                 []byte
+	persistedID                string
+	protocol                   OperationProtocol
+	persistedOperationCacheHit bool
 }
 
 func (o *operationContext) Variables() []byte {

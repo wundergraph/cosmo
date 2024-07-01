@@ -32,9 +32,7 @@ func NewOperationBlocker(opts *OperationBlockerOptions) *OperationBlocker {
 
 func (o *OperationBlocker) OperationIsBlocked(operation *ParsedOperation) error {
 
-	persisted := operation.PersistedID != ""
-
-	if !persisted && o.blockNonPersisted {
+	if !operation.IsPersistedOperation && o.blockNonPersisted {
 		return ErrNonPersistedOperationBlocked
 	}
 

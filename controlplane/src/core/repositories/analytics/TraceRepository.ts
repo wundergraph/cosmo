@@ -44,7 +44,8 @@ export class TraceRepository {
         SpanAttributes['wg.subgraph.name'] as attrSubgraphName,
         SpanAttributes['wg.engine.plan_cache_hit'] as attrEnginePlanCacheHit,
         SpanAttributes['wg.engine.request_tracing_enabled'] as attrEngineRequestTracingEnabled,
-        SpanAttributes['wg.operation.variables'] as attrOperationVariables
+        SpanAttributes['wg.operation.variables'] as attrOperationVariables,
+        SpanAttributes['wg.engine.persisted_operation_cache_hit'] as attrPersistedOperationCacheHit
     FROM ${this.client.database}.otel_traces
     WHERE (TraceId = trace_id) AND (Timestamp >= start) AND (Timestamp <= end) AND SpanAttributes['wg.organization.id'] = '${organizationID}'
     ORDER BY Timestamp ASC
@@ -84,6 +85,7 @@ export class TraceRepository {
         enginePlanCacheHit: result.attrEnginePlanCacheHit,
         engineRequestTracingEnabled: result.attrEngineRequestTracingEnabled,
         operationVariables: result.attrOperationVariables,
+        persistedOperationCacheHit: result.attrPersistedOperationCacheHit,
       },
     }));
   }

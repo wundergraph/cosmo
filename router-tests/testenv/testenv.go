@@ -524,14 +524,16 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		EnableRequestTracing:                   true,
 		EnableExecutionPlanCacheResponseHeader: true,
 		Debug: config.EngineDebugConfiguration{
-			ReportWebSocketConnections: true,
-			PrintQueryPlans:            false,
+			ReportWebSocketConnections:                   true,
+			PrintQueryPlans:                              false,
+			EnablePersistedOperationsCacheResponseHeader: true,
 		},
-		EpollKqueuePollTimeout:    300 * time.Millisecond,
-		EpollKqueueConnBufferSize: 1,
-		WebSocketReadTimeout:      time.Millisecond * 100,
-		MaxConcurrentResolvers:    128,
-		ExecutionPlanCacheSize:    1024,
+		EpollKqueuePollTimeout:         300 * time.Millisecond,
+		EpollKqueueConnBufferSize:      1,
+		WebSocketReadTimeout:           time.Millisecond * 100,
+		MaxConcurrentResolvers:         128,
+		ExecutionPlanCacheSize:         1024,
+		EnablePersistedOperationsCache: true,
 	}
 	if testConfig.ModifyEngineExecutionConfiguration != nil {
 		testConfig.ModifyEngineExecutionConfiguration(&engineExecutionConfig)
@@ -690,7 +692,7 @@ func testTokenClaims() jwt.MapClaims {
 }
 
 func setupCDNServer() *httptest.Server {
-	cdnFileServer := http.FileServer(http.Dir(filepath.Join("testdata", "cdn")))
+	cdnFileServer := http.FileServer(http.Dir(filepath.Join("testenv", "testdata", "cdn")))
 	var cdnRequestLog []string
 	cdnServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
@@ -864,6 +866,7 @@ func (e *Environment) MakeGraphQLRequest(request GraphQLRequest) (*TestResponse,
 	if request.Header != nil {
 		req.Header = request.Header
 	}
+	req.Header.Set("Accept-Encoding", "identity")
 	resp, err := e.RouterClient.Do(req)
 	if err != nil {
 		return nil, err

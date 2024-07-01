@@ -297,7 +297,8 @@
       "DatasourceVisitor": false,
       "ReportWebSocketConnections": false,
       "ReportMemoryUsage": false,
-      "EnableResolverDebugging": false
+      "EnableResolverDebugging": false,
+      "EnablePersistedOperationsCacheResponseHeader": false
     },
     "EnableSingleFlight": true,
     "EnableRequestTracing": true,
@@ -308,7 +309,8 @@
     "EpollKqueueConnBufferSize": 128,
     "WebSocketReadTimeout": 1000000000,
     "ExecutionPlanCacheSize": 10000,
-    "MinifySubgraphOperations": false
+    "MinifySubgraphOperations": false,
+    "EnablePersistedOperationsCache": true
   },
   "WebSocket": {
     "Enabled": true,

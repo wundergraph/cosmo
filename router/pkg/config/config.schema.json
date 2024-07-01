@@ -1221,6 +1221,10 @@
             "enable_resolver_debugging": {
               "type": "boolean",
               "description": "Enable verbose debug logging for the Resolver."
+            },
+            "enable_persisted_operations_cache_response_header": {
+              "type": "boolean",
+              "description": "Enable the persisted operations cache response header. The persisted operations cache response header is used to cache the persisted operations in the client."
             }
           }
         },
@@ -1274,6 +1278,11 @@
           "type": "boolean",
           "default": false,
           "description": "Minify the subgraph operations. If the value is true, GraphQL Operations get minified after planning. This reduces the amount of GraphQL AST nodes the Subgraph has to parse, which ultimately saves CPU time and memory, resulting in faster response times."
+        },
+        "enable_persisted_operations_cache": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the persisted operations cache. The persisted operations cache is used to cache normalized persisted operations to improve performance."
         }
       }
     },

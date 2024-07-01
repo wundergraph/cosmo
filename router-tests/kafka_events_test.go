@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/testcontainers/testcontainers-go"
 	"net/http"
 	"sync"
 	"testing"
@@ -13,7 +14,6 @@ import (
 
 	"github.com/hasura/go-graphql-client"
 	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/kafka"
 	"github.com/tidwall/gjson"
 	"github.com/twmb/franz-go/pkg/kgo"
