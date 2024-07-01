@@ -65,7 +65,7 @@ export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
             },
             {
               description: "Create a feature flag using the below command.",
-              command: `npx wgc feature-flag create <feature-flag-name> --namespace ${router.query.namespace} --label ${label} --feature-subgraphs <feature-subgraph-names...> -e`,
+              command: `npx wgc feature-flag create <feature-flag-name> --namespace ${router.query.namespace} --label ${label} --feature-subgraphs <feature-subgraph-names...> --enabled`,
             },
           ]}
         />
