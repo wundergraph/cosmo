@@ -396,6 +396,7 @@ WithNext:
 
 	// Generate the operation ID
 	o.parsedOperation.ID = o.kit.keyGen.Sum64()
+	o.kit.keyGen.Reset()
 
 	// Print the operation with the original operation name
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = o.originalOperationNameRef
@@ -556,7 +557,6 @@ func (o *OperationKit) loadPersistedOperationCacheKey(persistedQuerySha256Hash s
 }
 
 func (o *OperationKit) generatePersistedOperationCacheKey(skipIncludeVariableNames []string) uint64 {
-	o.kit.keyGen.Reset()
 	_, _ = o.kit.keyGen.WriteString(o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
 	_, _ = o.kit.keyGen.WriteString(o.parsedOperation.Request.OperationName)
 	for i := range skipIncludeVariableNames {
@@ -576,7 +576,9 @@ func (o *OperationKit) generatePersistedOperationCacheKey(skipIncludeVariableNam
 			_, _ = o.kit.keyGen.Write(literalF)
 		}
 	}
-	return o.kit.keyGen.Sum64()
+	sum := o.kit.keyGen.Sum64()
+	o.kit.keyGen.Reset()
+	return sum
 }
 
 // Validate validates the operation variables.
@@ -666,6 +668,7 @@ func (p *OperationProcessor) freeKit(kit *parseKit) {
 	kit.keyGen.Reset()
 	kit.doc.Reset()
 	kit.normalizedOperation.Reset()
+	p.parseKitPool.Put(kit)
 }
 
 func (p *OperationProcessor) entityTooLarge() error {

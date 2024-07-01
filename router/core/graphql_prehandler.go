@@ -255,7 +255,14 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			writeOperationError(r, w, requestLogger, err)
 			return
 		}
-		defer operationKit.Free()
+		defer func() {
+			if operationKit != nil {
+				// before processing the request with the graphql_handler.go, we're calling Free() already on the operationKit and set the reference to nil
+				// this allows us to use less memory and free the resources as soon as possible
+				// however, we might return early in case of an error, which is why we're using defer here to make sure we're freeing the resources
+				operationKit.Free()
+			}
+		}()
 
 		err = operationKit.Parse(r.Context(), clientInfo)
 		if err != nil {
@@ -452,6 +459,11 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 			r = validatedReq
 		}
+
+		// Free the operation kit after we're done with it
+		// We don't need to hold onto it while processing the operation
+		operationKit.Free()
+		operationKit = nil
 
 		art.SetRequestTracingStats(r.Context(), traceOptions, traceTimings)
 
