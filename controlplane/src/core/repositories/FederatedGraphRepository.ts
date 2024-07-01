@@ -912,8 +912,6 @@ export class FederatedGraphRepository {
           ),
         ),
       )
-      .orderBy(desc(graphCompositions.createdAt))
-      .limit(1)
       .execute();
 
     if (latestValidVersion.length === 0) {

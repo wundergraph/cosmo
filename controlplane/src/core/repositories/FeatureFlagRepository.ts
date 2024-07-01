@@ -188,7 +188,7 @@ export class FeatureFlagRepository {
       ...r,
       labels: r.labels?.map?.((l) => splitLabel(l)) ?? [],
       createdAt: r.createdAt.toISOString(),
-      updatedAt: resp[0].updatedAt?.toISOString() || '',
+      updatedAt: r.updatedAt?.toISOString() || '',
       createdBy: r.createdBy || '',
     }));
   }
@@ -398,6 +398,7 @@ export class FeatureFlagRepository {
     };
   }
 
+  // returns the base subgraph based on the feature subgraph id
   public async getBaseSubgraphByFeatureSubgraphId({ id }: { id: string }): Promise<SubgraphDTO | undefined> {
     const baseSubgraph = await this.db
       .select({
@@ -414,6 +415,7 @@ export class FeatureFlagRepository {
     return subgraphRepo.byId(baseSubgraph[0].subgraphId);
   }
 
+  // returns all the feature subgraph ids associated with the base subgraph
   public getFeatureSubgraphsByBaseSubgraphId({ baseSubgraphId }: { baseSubgraphId: string }) {
     return this.db
       .select({
@@ -423,6 +425,7 @@ export class FeatureFlagRepository {
       .where(eq(featureSubgraphsToBaseSubgraphs.baseSubgraphId, baseSubgraphId));
   }
 
+  // deletes all the feature subgraphs associated with the base subgraph
   public deleteFeatureSubgraphsByBaseSubgraphId({
     subgraphId,
     namespaceId,
@@ -458,6 +461,7 @@ export class FeatureFlagRepository {
     });
   }
 
+  // returns all the feature flags associated with the federated graph
   public async getFeatureFlagsByFederatedGraph({
     namespaceId,
     federatedGraph,
@@ -497,6 +501,7 @@ export class FeatureFlagRepository {
     return fetaureFlags;
   }
 
+  // returns all the federated graphs associated with the feature flag
   public async getFederatedGraphsByFeatureFlag({
     featureFlagId,
     namespaceId,
@@ -546,6 +551,7 @@ export class FeatureFlagRepository {
     return federatedGraphs;
   }
 
+  // returns all the feature flags which match the federated graph's label matchers
   public async getMatchedFeatureFlags({
     namespaceId,
     fedGraphLabelMatchers,
@@ -595,6 +601,7 @@ export class FeatureFlagRepository {
     return matchedFeatureFlags;
   }
 
+  // returns all the feature flags which contain feature subgraphs whose base subgraph is the same as the input base subgraph
   public async getFeatureFlagsByBaseSubgraphId({
     baseSubgraphId,
     namespaceId,
@@ -716,7 +723,7 @@ export class FeatureFlagRepository {
     return featureGraphsByFlag;
   }
 
-  // evaluates all the ffs which have fgs whose base subgraph id and fed graph label matchers are passed as input and returns the ffs that should be composed
+  // evaluates all the feature flags which have fgs whose base subgraph id and fed graph label matchers are passed as input and returns the feature flags that should be composed
   public async getFeatureFlagsByBaseSubgraphIdAndLabelMatchers({
     baseSubgraphId,
     namespaceId,
@@ -737,7 +744,7 @@ export class FeatureFlagRepository {
       excludeDisabled,
     });
 
-    // gets all the ffs that match the label matchers
+    // gets all the feature flags that match the label matchers
     const matchedFeatureFlags = await this.getMatchedFeatureFlags({
       namespaceId,
       fedGraphLabelMatchers,
@@ -856,6 +863,8 @@ export class FeatureFlagRepository {
     );
   }
 
+  // return all the feature flag compositions associated with the base schema version
+  // input: base schema version id, namespace id
   public async getFeatureFlagCompositionsByBaseSchemaVersion({
     baseSchemaVersionId,
     namespaceId,
@@ -912,6 +921,8 @@ export class FeatureFlagRepository {
     return featureFlagCompositions;
   }
 
+  // return all the feature flag schema versions associated with the base schema version
+  // input: base schema version id
   public async getFeatureFlagSchemaVersionsByBaseSchemaVersion({
     baseSchemaVersionId,
   }: {
@@ -933,6 +944,8 @@ export class FeatureFlagRepository {
     return ffSchemaVersions;
   }
 
+  // return a particular feature flag schema version which is associated with the base schema version and feature flag id
+  // input: base schema version id and feature flag id
   public async getFeatureFlagSchemaVersionByBaseSchemaVersionAndFfId({
     baseSchemaVersionId,
     featureFlagId,
@@ -963,6 +976,8 @@ export class FeatureFlagRepository {
     return ffSchemaVersion;
   }
 
+  // returns all the feature subgraphs associated with the feature flag
+  // input: feature flag id, namespace id
   public async getFeatureSubgraphsByFeatureFlag({
     featureFlagId,
     namespaceId,
@@ -977,7 +992,14 @@ export class FeatureFlagRepository {
       .from(featureFlagToFeatureSubgraphs)
       .innerJoin(subgraphs, eq(subgraphs.id, featureFlagToFeatureSubgraphs.featureSubgraphId))
       .innerJoin(targets, eq(targets.id, subgraphs.targetId))
-      .where(and(eq(targets.namespaceId, namespaceId), eq(featureFlagToFeatureSubgraphs.featureFlagId, featureFlagId)))
+      .where(
+        and(
+          eq(targets.namespaceId, namespaceId),
+          eq(featureFlagToFeatureSubgraphs.featureFlagId, featureFlagId),
+          eq(targets.organizationId, this.organizationId),
+          eq(subgraphs.isFeatureSubgraph, true),
+        ),
+      )
       .execute();
 
     if (featureSubgraphsByFf.length === 0) {

@@ -69,11 +69,6 @@ export const FeatureFlagLayout = ({ children }: LayoutProps) => {
         href: basePath + "/feature-subgraphs",
         icon: <Component2Icon className="h-4 w-4" />,
       },
-      // {
-      //   title: "Graphs",
-      //   href: basePath + "/graphs",
-      //   icon: <PiGraphLight className="h-4 w-4" />,
-      // },
     ];
   }, [organizationSlug, namespace, slug]);
 
