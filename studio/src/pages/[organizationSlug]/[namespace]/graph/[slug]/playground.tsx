@@ -780,37 +780,43 @@ const ConfigSelect = () => {
               {graphContext?.graph?.name}
             </SelectItem>
           </SelectGroup>
-          <SelectSeparator />
+
           {featureFlags && featureFlags.length > 0 && (
-            <SelectGroup>
-              <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
-                <MdOutlineFeaturedPlayList className="h-3 w-3" /> Feature Flags
-              </SelectLabel>
-              {featureFlags.map(({ name, id }) => (
-                <SelectItem
-                  key={id}
-                  value={`{ "load": "${id}", "type": "featureFlag" }`}
-                >
-                  {name}
-                </SelectItem>
-              ))}
-            </SelectGroup>
+            <>
+              <SelectSeparator />
+              <SelectGroup>
+                <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
+                  <MdOutlineFeaturedPlayList className="h-3 w-3" /> Feature
+                  Flags
+                </SelectLabel>
+                {featureFlags.map(({ name, id }) => (
+                  <SelectItem
+                    key={id}
+                    value={`{ "load": "${id}", "type": "featureFlag" }`}
+                  >
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </>
           )}
-          <SelectSeparator />
           {subgraphs && subgraphs.length > 0 && (
-            <SelectGroup>
-              <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
-                <Component2Icon className="h-3 w-3" /> Subgraphs
-              </SelectLabel>
-              {subgraphs.map(({ name, id }) => (
-                <SelectItem
-                  key={id}
-                  value={`{ "load": "${id}", "type": "subgraph" }`}
-                >
-                  {name}
-                </SelectItem>
-              ))}
-            </SelectGroup>
+            <>
+              <SelectSeparator />
+              <SelectGroup>
+                <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
+                  <Component2Icon className="h-3 w-3" /> Subgraphs
+                </SelectLabel>
+                {subgraphs.map(({ name, id }) => (
+                  <SelectItem
+                    key={id}
+                    value={`{ "load": "${id}", "type": "subgraph" }`}
+                  >
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </>
           )}
         </SelectContent>
       </Select>

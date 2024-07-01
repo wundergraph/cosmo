@@ -11182,6 +11182,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR_NOT_FOUND,
               details: `Could not find namespace ${req.namespace}`,
             },
+            featureSubgraphs: [],
+            federatedGraphs: [],
           };
         }
 
@@ -11196,14 +11198,61 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR_NOT_FOUND,
               details: `Could not find feature flag ${req.name}`,
             },
+            featureSubgraphs: [],
+            federatedGraphs: [],
           };
         }
+
+        const federatedGraphs = await featureFlagRepo.getFederatedGraphsByFeatureFlag({
+          featureFlagId: featureFlag.id,
+          namespaceId: namespace.id,
+          excludeDisabled: false,
+        });
+
+        const featureSubgraphs = await featureFlagRepo.getFeatureSubgraphsByFeatureFlag({
+          featureFlagId: featureFlag.id,
+          namespaceId: namespace.id,
+        });
 
         return {
           response: {
             code: EnumStatusCode.OK,
           },
           featureFlag,
+          featureSubgraphs: featureSubgraphs.map((f) => ({
+            id: f.id,
+            name: f.name,
+            routingURL: f.routingUrl,
+            lastUpdatedAt: f.lastUpdatedAt,
+            labels: f.labels,
+            createdUserId: f.creatorUserId,
+            targetId: f.targetId,
+            isEventDrivenGraph: f.isEventDrivenGraph,
+            subscriptionUrl: f.subscriptionUrl,
+            subscriptionProtocol: f.subscriptionProtocol,
+            namespace: f.namespace,
+            websocketSubprotocol: f.websocketSubprotocol || '',
+            isFeatureSubgraph: f.isFeatureSubgraph,
+            baseSubgraphName: f.baseSubgraphName,
+            baseSubgraphId: f.baseSubgraphId,
+          })),
+          federatedGraphs: federatedGraphs.map((g) => ({
+            id: g.id,
+            targetId: g.targetId,
+            name: g.name,
+            namespace: g.namespace,
+            labelMatchers: g.labelMatchers,
+            routingURL: g.routingUrl,
+            lastUpdatedAt: g.lastUpdatedAt,
+            connectedSubgraphs: g.subgraphsCount,
+            compositionErrors: g.compositionErrors ?? '',
+            isComposable: g.isComposable,
+            compositionId: g.compositionId,
+            supportsFederation: g.supportsFederation,
+            contract: g.contract,
+            admissionWebhookUrl: g.admissionWebhookURL,
+            requestSeries: [],
+          })),
         };
       });
     },

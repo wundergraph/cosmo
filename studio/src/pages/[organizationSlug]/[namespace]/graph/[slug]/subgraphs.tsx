@@ -93,6 +93,7 @@ const SubGraphsPage: NextPageWithLayout = () => {
         subgraphs={filteredGraphs}
         graph={graphData.graph}
         totalCount={filteredGraphs.length}
+        tab = {tab === "featureSubgraphs" ? "featureSubgraphs" : "subgraphs"}
       />
     </div>
   );

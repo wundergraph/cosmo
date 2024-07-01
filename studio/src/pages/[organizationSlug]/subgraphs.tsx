@@ -76,7 +76,11 @@ const SubgraphsDashboardPage: NextPageWithLayout = () => {
       content = null;
     } else {
       content = (
-        <SubgraphsTable subgraphs={data.graphs} totalCount={data.count} />
+        <SubgraphsTable
+          subgraphs={data.graphs}
+          totalCount={data.count}
+          tab="subgraphs"
+        />
       );
     }
   } else if (tab === "featureSubgraphs") {
@@ -107,6 +111,7 @@ const SubgraphsDashboardPage: NextPageWithLayout = () => {
         <SubgraphsTable
           subgraphs={featureSubgraphsData.featureSubgraphs}
           totalCount={featureSubgraphsData.count}
+          tab="featureSubgraphs"
         />
       );
     }

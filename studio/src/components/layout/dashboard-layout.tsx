@@ -118,6 +118,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         title: "Feature Flags",
         href: basePath + "/feature-flags",
         icon: <MdOutlineFeaturedPlayList className="h-4 w-4" />,
+        matchExact: false,
       },
       {
         title: "Lint Policy",
@@ -125,7 +126,6 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         icon: <MdOutlinePolicy className="h-4 w-4" />,
         separator: true,
       },
-      
       {
         title: "Members",
         href: basePath + "/members",
@@ -224,6 +224,7 @@ export const getDashboardLayout = (
   items?: React.ReactNode,
   toolbar?: React.ReactNode,
   breadcrumbs?: React.ReactNode[],
+  noPadding?: boolean,
 ) => {
   return (
     <DashboardLayout>
@@ -234,6 +235,7 @@ export const getDashboardLayout = (
           items={items}
           toolbar={toolbar}
           breadcrumbs={breadcrumbs}
+          noPadding={noPadding}
         >
           {page}
         </TitleLayout>

@@ -2103,6 +2103,8 @@ message GetFeatureFlagByNameRequest {
 message GetFeatureFlagByNameResponse {
   Response response = 1;
   FeatureFlag featureFlag = 2;
+  repeated FederatedGraph federatedGraphs = 3;
+  repeated Subgraph featureSubgraphs = 4;
 }
 
 message GetFeatureSubgraphsByFeatureFlagRequest {

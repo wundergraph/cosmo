@@ -4,7 +4,6 @@ import {
   GraphPageLayout,
   getGraphLayout,
 } from "@/components/layout/graph-layout";
-import { SubgraphsTable } from "@/components/subgraphs-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NextPageWithLayout } from "@/lib/page";

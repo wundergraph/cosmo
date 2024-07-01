@@ -16576,6 +16576,16 @@ export class GetFeatureFlagByNameResponse extends Message<GetFeatureFlagByNameRe
    */
   featureFlag?: FeatureFlag;
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.FederatedGraph federatedGraphs = 3;
+   */
+  federatedGraphs: FederatedGraph[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.Subgraph featureSubgraphs = 4;
+   */
+  featureSubgraphs: Subgraph[] = [];
+
   constructor(data?: PartialMessage<GetFeatureFlagByNameResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -16586,6 +16596,8 @@ export class GetFeatureFlagByNameResponse extends Message<GetFeatureFlagByNameRe
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "featureFlag", kind: "message", T: FeatureFlag },
+    { no: 3, name: "federatedGraphs", kind: "message", T: FederatedGraph, repeated: true },
+    { no: 4, name: "featureSubgraphs", kind: "message", T: Subgraph, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFeatureFlagByNameResponse {

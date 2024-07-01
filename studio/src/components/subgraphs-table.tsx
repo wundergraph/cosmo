@@ -416,16 +416,17 @@ export const SubgraphsTable = ({
   graph,
   subgraphs,
   totalCount,
+  tab
 }: {
   graph?: FederatedGraph;
   subgraphs: Subgraph[];
   totalCount: number;
+  tab: "subgraphs" | "featureSubgraphs";
 }) => {
   const user = useUser();
   const rbac = useFeature("rbac");
   const router = useRouter();
   const organizationSlug = user?.currentOrganization.slug;
-  const tab = router.query.tab as string;
 
   const pageNumber = router.query.page
     ? parseInt(router.query.page as string)

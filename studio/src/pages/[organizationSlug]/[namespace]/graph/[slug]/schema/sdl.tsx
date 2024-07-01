@@ -264,48 +264,53 @@ const SDLPage: NextPageWithLayout = () => {
                           </DropdownMenuPortal>
                         </DropdownMenuSub>
                       </DropdownMenuGroup>
-                      <Separator className="my-2" />
+                      
+                      {featureFlags.length > 0 && (
+                        <>
+                          <Separator className="my-2" />
 
-                      <DropdownMenuGroup>
-                        <DropdownMenuLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
-                          <MdOutlineFeaturedPlayList className="h-3 w-3" />{" "}
-                          Feature Flags
-                        </DropdownMenuLabel>
-                        {featureFlags.map(({ name, query }) => {
-                          return (
-                            <>
-                              <DropdownMenuSub>
-                                <DropdownMenuSubTrigger>
-                                  {name}
-                                </DropdownMenuSubTrigger>
-                                <DropdownMenuPortal>
-                                  <DropdownMenuSubContent>
-                                    <DropdownMenuRadioGroup
-                                      value={`?featureFlag=${activeFeatureFlag}&schemaType=${schemaType}`}
-                                      onValueChange={(query) =>
-                                        router.push(pathname + query)
-                                      }
-                                    >
-                                      <DropdownMenuRadioItem
-                                        className="w-[150px] items-center justify-between pl-2"
-                                        value={`${query}&schemaType=client`}
-                                      >
-                                        Client Schema
-                                      </DropdownMenuRadioItem>
-                                      <DropdownMenuRadioItem
-                                        className="w-[150px] items-center justify-between pl-2"
-                                        value={`${query}&schemaType=router`}
-                                      >
-                                        Router Schema
-                                      </DropdownMenuRadioItem>
-                                    </DropdownMenuRadioGroup>
-                                  </DropdownMenuSubContent>
-                                </DropdownMenuPortal>
-                              </DropdownMenuSub>
-                            </>
-                          );
-                        })}
-                      </DropdownMenuGroup>
+                          <DropdownMenuGroup>
+                            <DropdownMenuLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
+                              <MdOutlineFeaturedPlayList className="h-3 w-3" />{" "}
+                              Feature Flags
+                            </DropdownMenuLabel>
+                            {featureFlags.map(({ name, query }) => {
+                              return (
+                                <>
+                                  <DropdownMenuSub>
+                                    <DropdownMenuSubTrigger>
+                                      {name}
+                                    </DropdownMenuSubTrigger>
+                                    <DropdownMenuPortal>
+                                      <DropdownMenuSubContent>
+                                        <DropdownMenuRadioGroup
+                                          value={`?featureFlag=${activeFeatureFlag}&schemaType=${schemaType}`}
+                                          onValueChange={(query) =>
+                                            router.push(pathname + query)
+                                          }
+                                        >
+                                          <DropdownMenuRadioItem
+                                            className="w-[150px] items-center justify-between pl-2"
+                                            value={`${query}&schemaType=client`}
+                                          >
+                                            Client Schema
+                                          </DropdownMenuRadioItem>
+                                          <DropdownMenuRadioItem
+                                            className="w-[150px] items-center justify-between pl-2"
+                                            value={`${query}&schemaType=router`}
+                                          >
+                                            Router Schema
+                                          </DropdownMenuRadioItem>
+                                        </DropdownMenuRadioGroup>
+                                      </DropdownMenuSubContent>
+                                    </DropdownMenuPortal>
+                                  </DropdownMenuSub>
+                                </>
+                              );
+                            })}
+                          </DropdownMenuGroup>
+                        </>
+                      )}
 
                       <Separator className="my-2" />
                       <DropdownMenuGroup>

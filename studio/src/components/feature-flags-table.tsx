@@ -122,7 +122,9 @@ export const FeatureFlagsTable = ({
                 namespace,
                 isEnabled,
               }) => {
-                const path = `/${organizationSlug}/${namespace}/feature-flag/${name}/feature-subgraphs`;
+                const path = graph
+                  ? `${router.asPath.split("?")[0]}/${name}`
+                  : `/${organizationSlug}/feature-flags/${name}?namespace=${namespace}`;
 
                 return (
                   <TableRow

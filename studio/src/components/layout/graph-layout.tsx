@@ -131,6 +131,7 @@ export const GraphLayout = ({ children }: LayoutProps) => {
         title: "Feature Flags",
         href: basePath + "/feature-flags",
         icon: <MdOutlineFeaturedPlayList className="h-4 w-4" />,
+        matchExact: false,
       },
       {
         title: "Playground",
