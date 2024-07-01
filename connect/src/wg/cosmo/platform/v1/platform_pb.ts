@@ -2563,6 +2563,16 @@ export class Subgraph extends Message<Subgraph> {
    */
   isFeatureSubgraph = false;
 
+  /**
+   * @generated from field: optional string baseSubgraphName = 16;
+   */
+  baseSubgraphName?: string;
+
+  /**
+   * @generated from field: optional string baseSubgraphId = 17;
+   */
+  baseSubgraphId?: string;
+
   constructor(data?: PartialMessage<Subgraph>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2586,6 +2596,8 @@ export class Subgraph extends Message<Subgraph> {
     { no: 13, name: "isEventDrivenGraph", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 14, name: "websocketSubprotocol", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 15, name: "isFeatureSubgraph", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 16, name: "baseSubgraphName", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 17, name: "baseSubgraphId", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Subgraph {

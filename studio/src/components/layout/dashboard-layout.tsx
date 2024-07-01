@@ -115,16 +115,17 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         icon: <Component2Icon className="h-4 w-4" />,
       },
       {
-        title: "Lint Policy",
-        href: basePath + "/lint-policy",
-        icon: <MdOutlinePolicy className="h-4 w-4" />,
-      },
-      {
         title: "Feature Flags",
         href: basePath + "/feature-flags",
         icon: <MdOutlineFeaturedPlayList className="h-4 w-4" />,
+      },
+      {
+        title: "Lint Policy",
+        href: basePath + "/lint-policy",
+        icon: <MdOutlinePolicy className="h-4 w-4" />,
         separator: true,
       },
+      
       {
         title: "Members",
         href: basePath + "/members",

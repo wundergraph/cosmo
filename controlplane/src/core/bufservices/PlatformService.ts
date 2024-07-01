@@ -7973,7 +7973,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         // Namespace is optional, if not provided, we get all the subgraphs
         const namespace = await namespaceRepo.byName(req.namespace);
 
-        const list: SubgraphDTO[] = await featureFlagRepo.getFeatureSubgraphs({
+        const list = await featureFlagRepo.getFeatureSubgraphs({
           limit: req.limit,
           offset: req.offset,
           namespaceId: namespace?.id,
@@ -8002,6 +8002,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             namespace: g.namespace,
             websocketSubprotocol: g.websocketSubprotocol || '',
             isFeatureSubgraph: g.isFeatureSubgraph,
+            baseSubgraphName: g.baseSubgraphName,
+            baseSubgraphId: g.baseSubgraphId,
           })),
           count,
           response: {
@@ -8420,6 +8422,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                   isV2Graph: fs.isV2Graph,
                   websocketSubprotocol: fs.websocketSubprotocol || '',
                   isFeatureSubgraph: fs.isFeatureSubgraph,
+                  baseSubgraphId: fs.baseSubgraphId,
+                  baseSubgraphName: fs.baseSubgraphName,
                 }),
               );
             }
@@ -11262,6 +11266,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             namespace: f.namespace,
             websocketSubprotocol: f.websocketSubprotocol || '',
             isFeatureSubgraph: f.isFeatureSubgraph,
+            baseSubgraphName: f.baseSubgraphName,
+            baseSubgraphId: f.baseSubgraphId,
           })),
         };
       });

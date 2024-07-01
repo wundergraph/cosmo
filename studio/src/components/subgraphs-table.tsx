@@ -425,6 +425,7 @@ export const SubgraphsTable = ({
   const rbac = useFeature("rbac");
   const router = useRouter();
   const organizationSlug = user?.currentOrganization.slug;
+  const tab = router.query.tab as string;
 
   const pageNumber = router.query.page
     ? parseInt(router.query.page as string)
@@ -442,7 +443,14 @@ export const SubgraphsTable = ({
             <TableRow>
               <TableHead className="px-4">Name</TableHead>
               <TableHead className="w-4/12 px-4">Url</TableHead>
-              <TableHead className="w-4/12 px-4">Labels</TableHead>
+              <TableHead
+                className={cn("px-4", {
+                  "w-3/12": tab === "featureSubgraphs",
+                  "w-4/12": tab !== "featureSubgraphs",
+                })}
+              >
+                {tab === "featureSubgraphs" ? "Base Subgraph Name" : "Labels"}
+              </TableHead>
               <TableHead className="w-2/12 px-4">Last Published</TableHead>
               {rbac?.enabled && <TableHead className="w-1/12"></TableHead>}
             </TableRow>
@@ -456,6 +464,7 @@ export const SubgraphsTable = ({
                 labels,
                 creatorUserId,
                 namespace,
+                baseSubgraphName,
               }) => {
                 const path = `/${organizationSlug}/${namespace}/subgraph/${name}`;
                 let analyticsPath = `${path}/analytics`;
@@ -487,24 +496,28 @@ export const SubgraphsTable = ({
                       {routingURL}
                     </TableCell>
                     <TableCell className="px-4">
-                      <div className="flex flex-wrap gap-2">
-                        {labels.length === 0 && (
-                          <Tooltip delayDuration={200}>
-                            <TooltipTrigger>-</TooltipTrigger>
-                            <TooltipContent>
-                              Only graphs with empty label matchers will compose
-                              this subgraph
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                        {labels.map(({ key, value }) => {
-                          return (
-                            <Badge variant="secondary" key={key + value}>
-                              {key}={value}
-                            </Badge>
-                          );
-                        })}
-                      </div>
+                      {tab !== "featureSubgraphs" ? (
+                        <div className="flex flex-wrap gap-2">
+                          {labels.length === 0 && (
+                            <Tooltip delayDuration={200}>
+                              <TooltipTrigger>-</TooltipTrigger>
+                              <TooltipContent>
+                                Only graphs with empty label matchers will
+                                compose this subgraph
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                          {labels.map(({ key, value }) => {
+                            return (
+                              <Badge variant="secondary" key={key + value}>
+                                {key}={value}
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <>{baseSubgraphName}</>
+                      )}
                     </TableCell>
                     <TableCell className="px-4 text-muted-foreground">
                       {lastUpdatedAt

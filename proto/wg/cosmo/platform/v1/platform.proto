@@ -325,6 +325,8 @@ message Subgraph {
   bool isEventDrivenGraph = 13;
   string websocketSubprotocol = 14;
   bool isFeatureSubgraph = 15;
+  optional string baseSubgraphName = 16;
+  optional string baseSubgraphId = 17;
 }
 
 message GetSubgraphsResponse {

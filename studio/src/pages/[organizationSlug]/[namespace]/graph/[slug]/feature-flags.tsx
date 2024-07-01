@@ -78,12 +78,12 @@ const FeatureFlagsPage: NextPageWithLayout = () => {
 FeatureFlagsPage.getLayout = (page) =>
   getGraphLayout(
     <GraphPageLayout
-      title="Subgraphs"
-      subtitle="View the subgraphs that compose this federated graph"
+      title="Feature Flags"
+      subtitle="An overview of all feature flags"
     >
       {page}
     </GraphPageLayout>,
-    { title: "Subgraphs" },
+    { title: "Feature Flags" },
   );
 
 export default FeatureFlagsPage;

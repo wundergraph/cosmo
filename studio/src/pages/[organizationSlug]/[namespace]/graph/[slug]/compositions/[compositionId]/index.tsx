@@ -74,59 +74,68 @@ export const FeatureFlagCompositionsTable = ({
         <TableHeader>
           <TableRow>
             <TableHead>Id</TableHead>
+            <TableHead>Feature Flag Name</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="text-center">Details</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {ffCompositions.length !== 0 ? (
-            ffCompositions.map(({ id, isComposable, createdAt }) => {
-              const path = `${router.asPath.split("?")[0]}/feature-flag/${id}`;
-              return (
-                <TableRow
-                  key={id}
-                  className="group cursor-pointer hover:bg-secondary/30"
-                  onClick={() => router.push(path)}
-                >
-                  <TableCell>
-                    <div className="flex flex-col items-start">
-                      <Link href={path} className="font-medium text-foreground">
-                        {id}
-                      </Link>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(createdAt), {
-                              addSuffix: true,
-                            })}
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom">
-                          {formatDateTime(new Date(createdAt))}
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                  </TableCell>
-                  <TableCell className="w-[128px] md:w-auto">
-                    <div className="flex w-max flex-col gap-2 md:flex-row md:items-center">
-                      <Badge variant="outline" className="gap-2 py-1.5">
-                        {getCheckIcon(isComposable)} <span>Composes</span>
-                      </Badge>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Button
-                      asChild
-                      variant="ghost"
-                      size="sm"
-                      className="table-action"
-                    >
-                      <Link href={path}>View</Link>
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              );
-            })
+            ffCompositions.map(
+              ({ id, isComposable, createdAt, featureFlagName }) => {
+                const path = `${
+                  router.asPath.split("?")[0]
+                }/feature-flag/${id}`;
+                return (
+                  <TableRow
+                    key={id}
+                    className="group cursor-pointer hover:bg-secondary/30"
+                    onClick={() => router.push(path)}
+                  >
+                    <TableCell>
+                      <div className="flex flex-col items-start">
+                        <Link
+                          href={path}
+                          className="font-medium text-foreground"
+                        >
+                          {id}
+                        </Link>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="text-xs text-muted-foreground">
+                              {formatDistanceToNow(new Date(createdAt), {
+                                addSuffix: true,
+                              })}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">
+                            {formatDateTime(new Date(createdAt))}
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </TableCell>
+                    <TableCell>{featureFlagName}</TableCell>
+                    <TableCell className="w-[128px] md:w-auto">
+                      <div className="flex w-max flex-col gap-2 md:flex-row md:items-center">
+                        <Badge variant="outline" className="gap-2 py-1.5">
+                          {getCheckIcon(isComposable)} <span>Composes</span>
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Button
+                        asChild
+                        variant="ghost"
+                        size="sm"
+                        className="table-action"
+                      >
+                        <Link href={path}>View</Link>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              },
+            )
           ) : (
             <TableRow>
               <TableCell colSpan={7} className="h-24 text-center">

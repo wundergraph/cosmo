@@ -115,6 +115,11 @@ export interface SubgraphDTO {
   isFeatureSubgraph: boolean;
 }
 
+export interface FeatureSubgraphDTO extends SubgraphDTO {
+  baseSubgraphId: string;
+  baseSubgraphName: string;
+}
+
 export interface FeatureFlagDTO {
   id: string;
   name: string;
@@ -127,7 +132,7 @@ export interface FeatureFlagDTO {
   organizationId: string;
   createdAt: string;
   updatedAt: string;
-  featureSubgraphs: SubgraphDTO[];
+  featureSubgraphs: FeatureSubgraphDTO[];
 }
 
 export interface MigrationSubgraph {
