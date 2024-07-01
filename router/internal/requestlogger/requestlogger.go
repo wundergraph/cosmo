@@ -43,6 +43,7 @@ type handler struct {
 	context               Fn
 	handler               http.Handler
 	logger                *zap.Logger
+	fields                []zapcore.Field
 }
 
 func parseOptions(r *handler, opts ...Option) http.Handler {
@@ -59,7 +60,7 @@ func WithAnonymization(ipConfig *IPAnonymizationConfig) Option {
 	}
 }
 
-func WithContext(fn Fn) Option {
+func WithRequestFields(fn Fn) Option {
 	return func(r *handler) {
 		r.context = fn
 	}
@@ -69,6 +70,12 @@ func WithNoTimeField() Option {
 	return func(r *handler) {
 		r.timeFormat = ""
 		r.utc = false
+	}
+}
+
+func WithFields(fields ...zapcore.Field) Option {
+	return func(r *handler) {
+		r.fields = fields
 	}
 }
 
@@ -128,12 +135,17 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h.timeFormat != "" {
 		fields = append(fields, zap.String("time", end.Format(h.timeFormat)))
 	}
+
 	if h.traceID {
 		span := trace.SpanFromContext(r.Context())
 		spanContext := span.SpanContext()
 		if spanContext.HasTraceID() {
 			fields = append(fields, zap.String("traceID", spanContext.TraceID().String()))
 		}
+	}
+
+	if len(h.fields) > 0 {
+		fields = append(fields, h.fields...)
 	}
 
 	if h.context != nil {

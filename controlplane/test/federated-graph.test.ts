@@ -320,7 +320,7 @@ describe('Federated Graph', (ctx) => {
     expect(graph.sdl).toBeDefined();
     expect(graph.sdl).not.toBe('');
 
-    // delete the subgraph because it was the only one it produced a composition error
+    // delete the subgraph because it was responsible for the composition error
     deleteSubgraphResp = await client.deleteFederatedSubgraph({
       subgraphName: subgraph2Name,
       namespace: 'default',

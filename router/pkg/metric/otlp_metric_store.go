@@ -23,7 +23,7 @@ type OtlpMetricStore struct {
 	measurements *Measurements
 }
 
-func NewOtlpMetricStore(logger *zap.Logger, meterProvider *metric.MeterProvider, baseAttributes []attribute.KeyValue) (Store, error) {
+func NewOtlpMetricStore(logger *zap.Logger, meterProvider *metric.MeterProvider, baseAttributes []attribute.KeyValue) (Provider, error) {
 
 	meter := meterProvider.Meter(cosmoRouterMeterName,
 		otelmetric.WithInstrumentationVersion(cosmoRouterMeterVersion),

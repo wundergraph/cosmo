@@ -3,7 +3,6 @@ package core
 import (
 	"bytes"
 	"fmt"
-	"go.opentelemetry.io/otel/attribute"
 	"io"
 	"net/http"
 	"net/url"
@@ -33,12 +32,11 @@ type TransportPreHandler func(req *http.Request, ctx RequestContext) (*http.Requ
 type TransportPostHandler func(resp *http.Response, ctx RequestContext) *http.Response
 
 type CustomTransport struct {
-	roundTripper    http.RoundTripper
-	preHandlers     []TransportPreHandler
-	postHandlers    []TransportPostHandler
-	metricStore     metric.Store
-	logger          *zap.Logger
-	attributeMapper func(r *http.Request) []attribute.KeyValue
+	roundTripper http.RoundTripper
+	preHandlers  []TransportPreHandler
+	postHandlers []TransportPostHandler
+	metricStore  metric.Provider
+	logger       *zap.Logger
 
 	sf *singleflight.Group
 }
@@ -47,14 +45,12 @@ func NewCustomTransport(
 	logger *zap.Logger,
 	roundTripper http.RoundTripper,
 	retryOptions retrytransport.RetryOptions,
-	metricStore metric.Store,
+	metricStore metric.Provider,
 	enableSingleFlight bool,
-	attributeMapper func(r *http.Request) []attribute.KeyValue,
 ) *CustomTransport {
 
 	ct := &CustomTransport{
-		metricStore:     metricStore,
-		attributeMapper: attributeMapper,
+		metricStore: metricStore,
 	}
 	if retryOptions.Enabled {
 		ct.roundTripper = retrytransport.NewRetryHTTPTransport(roundTripper, retryOptions, logger)
@@ -71,7 +67,7 @@ func NewCustomTransport(
 func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err error, resp *http.Response) {
 
 	reqContext := getRequestContext(req.Context())
-	baseFields := setAttributesFromOperationContext(reqContext.operation)
+	baseFields := getAttributesFromOperationContext(reqContext.operation)
 
 	activeSubgraph := reqContext.ActiveSubgraph(req)
 	if activeSubgraph != nil {
@@ -79,8 +75,8 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 		baseFields = append(baseFields, otel.WgSubgraphID.String(activeSubgraph.Id))
 	}
 
-	if ct.attributeMapper != nil {
-		baseFields = append(baseFields, ct.attributeMapper(reqContext.Request())...)
+	if attributes := baseAttributesFromContext(req.Context()); attributes != nil {
+		baseFields = append(baseFields, attributes...)
 	}
 
 	inFlightDone := ct.metricStore.MeasureInFlight(req.Context(), baseFields...)
@@ -283,10 +279,9 @@ type TransportFactory struct {
 	retryOptions                  retrytransport.RetryOptions
 	requestTimeout                time.Duration
 	localhostFallbackInsideDocker bool
-	metricStore                   metric.Store
+	metricStore                   metric.Provider
 	logger                        *zap.Logger
 	tracerProvider                *sdktrace.TracerProvider
-	attributesMapper              func(r *http.Request) []attribute.KeyValue
 }
 
 var _ ApiTransportFactory = TransportFactory{}
@@ -297,10 +292,9 @@ type TransportOptions struct {
 	RetryOptions                  retrytransport.RetryOptions
 	RequestTimeout                time.Duration
 	LocalhostFallbackInsideDocker bool
-	MetricStore                   metric.Store
+	MetricStore                   metric.Provider
 	Logger                        *zap.Logger
 	TracerProvider                *sdktrace.TracerProvider
-	AttributesMapper              func(r *http.Request) []attribute.KeyValue
 }
 
 func NewTransport(opts *TransportOptions) *TransportFactory {
@@ -313,7 +307,6 @@ func NewTransport(opts *TransportOptions) *TransportFactory {
 		metricStore:                   opts.MetricStore,
 		logger:                        opts.Logger,
 		tracerProvider:                opts.TracerProvider,
-		attributesMapper:              opts.AttributesMapper,
 	}
 }
 
@@ -333,7 +326,7 @@ func (t TransportFactory) RoundTripper(enableSingleFlight bool, transport http.R
 			reqContext := getRequestContext(r.Context())
 			operation := reqContext.operation
 
-			commonAttributeValues := setAttributesFromOperationContext(operation)
+			commonAttributeValues := getAttributesFromOperationContext(operation)
 
 			subgraph := reqContext.ActiveSubgraph(r)
 			if subgraph != nil {
@@ -341,8 +334,8 @@ func (t TransportFactory) RoundTripper(enableSingleFlight bool, transport http.R
 				commonAttributeValues = append(commonAttributeValues, otel.WgSubgraphName.String(subgraph.Name))
 			}
 
-			if t.attributesMapper != nil {
-				commonAttributeValues = append(commonAttributeValues, t.attributesMapper(reqContext.Request())...)
+			if attributes := baseAttributesFromContext(r.Context()); attributes != nil {
+				commonAttributeValues = append(commonAttributeValues, attributes...)
 			}
 
 			span.SetAttributes(commonAttributeValues...)
@@ -355,7 +348,6 @@ func (t TransportFactory) RoundTripper(enableSingleFlight bool, transport http.R
 		t.retryOptions,
 		t.metricStore,
 		enableSingleFlight,
-		t.attributesMapper,
 	)
 
 	tp.preHandlers = t.preHandlers

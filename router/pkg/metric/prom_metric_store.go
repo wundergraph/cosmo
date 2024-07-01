@@ -23,7 +23,7 @@ type PromMetricStore struct {
 	measurements *Measurements
 }
 
-func NewPromMetricStore(logger *zap.Logger, meterProvider *metric.MeterProvider, baseAttributes []attribute.KeyValue) (Store, error) {
+func NewPromMetricStore(logger *zap.Logger, meterProvider *metric.MeterProvider, baseAttributes []attribute.KeyValue) (Provider, error) {
 
 	meter := meterProvider.Meter(cosmoRouterPrometheusMeterName,
 		otelmetric.WithInstrumentationVersion(cosmoRouterPrometheusMeterVersion),
@@ -135,4 +135,8 @@ func (h *PromMetricStore) MeasureRequestError(ctx context.Context, attr ...attri
 
 func (h *PromMetricStore) Flush(ctx context.Context) error {
 	return h.meterProvider.ForceFlush(ctx)
+}
+
+func (h *PromMetricStore) Shutdown(ctx context.Context) error {
+	return h.meterProvider.Shutdown(ctx)
 }

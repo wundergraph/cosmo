@@ -46,7 +46,6 @@ type PreHandlerOptions struct {
 	TracerProvider              *sdktrace.TracerProvider
 	FlushTelemetryAfterResponse bool
 	TraceExportVariables        bool
-	SpanAttributesMapper        func(r *http.Request) []attribute.KeyValue
 	FileUploadEnabled           bool
 	MaxUploadFiles              int
 	MaxUploadFileSize           int
@@ -67,7 +66,6 @@ type PreHandler struct {
 	flushTelemetryAfterResponse bool
 	tracer                      trace.Tracer
 	traceExportVariables        bool
-	spanAttributesMapper        func(r *http.Request) []attribute.KeyValue
 	fileUploadEnabled           bool
 	maxUploadFiles              int
 	maxUploadFileSize           int
@@ -88,7 +86,6 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		flushTelemetryAfterResponse: opts.FlushTelemetryAfterResponse,
 		tracerProvider:              opts.TracerProvider,
 		traceExportVariables:        opts.TraceExportVariables,
-		spanAttributesMapper:        opts.SpanAttributesMapper,
 		tracer: opts.TracerProvider.Tracer(
 			"wundergraph/cosmo/router/pre_handler",
 			trace.WithInstrumentationVersion("0.0.1"),
@@ -162,8 +159,8 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		traceTimings := art.NewTraceTimings(r.Context())
 
 		var commonAttributes []attribute.KeyValue
-		if h.spanAttributesMapper != nil {
-			commonAttributes = append(commonAttributes, h.spanAttributesMapper(r)...)
+		if attributes := baseAttributesFromContext(r.Context()); attributes != nil {
+			commonAttributes = append(commonAttributes, attributes...)
 		}
 
 		metrics := h.metrics.StartOperation(clientInfo, requestLogger, r.ContentLength, append(commonAttributes, attributes...))

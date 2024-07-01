@@ -11,6 +11,7 @@ export type FeatureIds =
   | 'breaking-change-retention'
   | 'trace-sampling-rate'
   | 'requests'
+  | 'feature-flags'
   // Boolean features
   | 'rbac'
   | 'sso'
@@ -107,6 +108,19 @@ export interface SubgraphDTO {
   isV2Graph?: boolean;
   readme?: string;
   websocketSubprotocol?: 'auto' | 'graphql-ws' | 'graphql-transport-ws';
+  isFeatureSubgraph?: boolean;
+}
+
+export interface FeatureFlagDTO {
+  id: string;
+  name: string;
+  namespaceId: string;
+  labels: Label[];
+  creatorUserId?: string;
+  isEnabled: boolean;
+  organizationId: string;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface MigrationSubgraph {

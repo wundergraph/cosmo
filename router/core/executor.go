@@ -46,24 +46,32 @@ type Executor struct {
 	RenameTypeNames []resolve.RenameTypeName
 }
 
-func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *nodev1.RouterConfig, routerEngineConfig *RouterEngineConfiguration, pubSubProviders *EnginePubSubProviders, reporter resolve.Reporter) (*Executor, error) {
-	planConfig, err := b.buildPlannerConfiguration(ctx, routerConfig, routerEngineConfig, pubSubProviders)
+type ExecutorBuildOptions struct {
+	EngineConfig       *nodev1.EngineConfiguration
+	Subgraphs          []*nodev1.Subgraph
+	RouterEngineConfig *RouterEngineConfiguration
+	PubSubProviders    *EnginePubSubProviders
+	Reporter           resolve.Reporter
+}
+
+func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *ExecutorBuildOptions) (*Executor, error) {
+	planConfig, err := b.buildPlannerConfiguration(ctx, opts.EngineConfig, opts.Subgraphs, opts.RouterEngineConfig, opts.PubSubProviders)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build planner configuration: %w", err)
 	}
 
 	options := resolve.ResolverOptions{
-		MaxConcurrency:               routerEngineConfig.Execution.MaxConcurrentResolvers,
-		Debug:                        routerEngineConfig.Execution.Debug.EnableResolverDebugging,
-		Reporter:                     reporter,
-		PropagateSubgraphErrors:      routerEngineConfig.SubgraphErrorPropagation.Enabled,
-		PropagateSubgraphStatusCodes: routerEngineConfig.SubgraphErrorPropagation.PropagateStatusCodes,
-		RewriteSubgraphErrorPaths:    routerEngineConfig.SubgraphErrorPropagation.RewritePaths,
-		OmitSubgraphErrorLocations:   routerEngineConfig.SubgraphErrorPropagation.OmitLocations,
-		OmitSubgraphErrorExtensions:  routerEngineConfig.SubgraphErrorPropagation.OmitExtensions,
+		MaxConcurrency:               opts.RouterEngineConfig.Execution.MaxConcurrentResolvers,
+		Debug:                        opts.RouterEngineConfig.Execution.Debug.EnableResolverDebugging,
+		Reporter:                     opts.Reporter,
+		PropagateSubgraphErrors:      opts.RouterEngineConfig.SubgraphErrorPropagation.Enabled,
+		PropagateSubgraphStatusCodes: opts.RouterEngineConfig.SubgraphErrorPropagation.PropagateStatusCodes,
+		RewriteSubgraphErrorPaths:    opts.RouterEngineConfig.SubgraphErrorPropagation.RewritePaths,
+		OmitSubgraphErrorLocations:   opts.RouterEngineConfig.SubgraphErrorPropagation.OmitLocations,
+		OmitSubgraphErrorExtensions:  opts.RouterEngineConfig.SubgraphErrorPropagation.OmitExtensions,
 	}
 
-	switch routerEngineConfig.SubgraphErrorPropagation.Mode {
+	switch opts.RouterEngineConfig.SubgraphErrorPropagation.Mode {
 	case config.SubgraphErrorPropagationModePassthrough:
 		options.SubgraphErrorPropagationMode = resolve.SubgraphErrorPropagationModePassThrough
 	case config.SubgraphErrorPropagationModeWrapped:
@@ -84,7 +92,7 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *
 		report                 operationreport.Report
 	)
 
-	routerSchemaDefinition, report = astparser.ParseGraphqlDocumentString(routerConfig.EngineConfig.GraphqlSchema)
+	routerSchemaDefinition, report = astparser.ParseGraphqlDocumentString(opts.EngineConfig.GraphqlSchema)
 	if report.HasErrors() {
 		return nil, fmt.Errorf("failed to parse graphql schema from engine config: %w", report)
 	}
@@ -97,7 +105,7 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *
 		return nil, fmt.Errorf("failed to merge graphql schema with base schema: %w", err)
 	}
 
-	if clientSchemaStr := routerConfig.EngineConfig.GetGraphqlClientSchema(); clientSchemaStr != "" {
+	if clientSchemaStr := opts.EngineConfig.GetGraphqlClientSchema(); clientSchemaStr != "" {
 		// The client schema is a subset of the router schema that does not include @inaccessible fields.
 		// The client schema only exists if the federated schema includes @inaccessible directives or @tag directives
 
@@ -212,7 +220,7 @@ func buildKafkaOptions(eventSource config.KafkaEventSource) ([]kgo.Opt, error) {
 	return opts, nil
 }
 
-func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Context, routerCfg *nodev1.RouterConfig, routerEngineCfg *RouterEngineConfiguration, pubSubProviders *EnginePubSubProviders) (*plan.Configuration, error) {
+func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Context, engineConfig *nodev1.EngineConfiguration, subgraphs []*nodev1.Subgraph, routerEngineCfg *RouterEngineConfiguration, pubSubProviders *EnginePubSubProviders) (*plan.Configuration, error) {
 	// this loader is used to take the engine config and create a plan config
 	// the plan config is what the engine uses to turn a GraphQL Request into an execution plan
 	// the plan config is stateful as it carries connection pools and other things
@@ -228,7 +236,7 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 	))
 
 	// this generates the plan config using the data source factories from the config package
-	planConfig, err := loader.Load(routerCfg, routerEngineCfg)
+	planConfig, err := loader.Load(engineConfig, subgraphs, routerEngineCfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load configuration: %w", err)
 	}

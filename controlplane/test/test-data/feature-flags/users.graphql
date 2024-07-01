@@ -1,0 +1,11 @@
+type User @key(fields: "id") {
+  id: ID!
+  name: String!
+  email: String!
+  isPremium: Boolean! @tag(name: "exclude")
+}
+
+type Query {
+  user(id: ID!): User
+  users: [User!]!
+}

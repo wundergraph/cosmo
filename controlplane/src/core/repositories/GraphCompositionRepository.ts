@@ -1,11 +1,10 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { and, count, desc, eq, gt, lt } from 'drizzle-orm';
-import { JsonValue } from '@bufbuild/protobuf';
 import { FastifyBaseLogger } from 'fastify';
 import { splitLabel } from '@wundergraph/cosmo-shared';
 import * as schema from '../../db/schema.js';
 import { graphCompositions, graphCompositionSubgraphs, schemaVersion, targets, users } from '../../db/schema.js';
-import { DateRange, GraphCompositionDTO, SubgraphDTO } from '../../types/index.js';
+import { DateRange, GraphCompositionDTO } from '../../types/index.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 
 export class GraphCompositionRepository {
@@ -17,34 +16,34 @@ export class GraphCompositionRepository {
   public async addComposition({
     fedGraphSchemaVersionId,
     compositionErrorString,
-    routerConfig,
     routerConfigSignature,
     subgraphSchemaVersionIds,
     composedBy,
     admissionErrorString,
     deploymentErrorString,
+    isFeatureFlagComposition,
   }: {
     fedGraphSchemaVersionId: string;
     compositionErrorString: string;
-    routerConfig?: JsonValue;
     routerConfigSignature?: string;
     subgraphSchemaVersionIds: string[];
     composedBy: string;
     admissionErrorString?: string;
     deploymentErrorString?: string;
+    isFeatureFlagComposition: boolean;
   }) {
     await this.db.transaction(async (tx) => {
       const insertedComposition = await tx
         .insert(graphCompositions)
         .values({
           schemaVersionId: fedGraphSchemaVersionId,
-          routerConfig: routerConfig || null,
           compositionErrors: compositionErrorString,
           isComposable: compositionErrorString === '',
           routerConfigSignature,
           createdBy: composedBy,
           deploymentError: deploymentErrorString,
           admissionError: admissionErrorString,
+          isFeatureFlagComposition,
         })
         .returning()
         .execute();
@@ -60,6 +59,30 @@ export class GraphCompositionRepository {
           .execute();
       }
     });
+  }
+
+  public async updateComposition({
+    fedGraphSchemaVersionId,
+    admissionErrorString,
+    deploymentErrorString,
+    routerConfigSignature,
+    routerConfigPath,
+  }: {
+    fedGraphSchemaVersionId: string;
+    admissionErrorString?: string;
+    deploymentErrorString?: string;
+    routerConfigSignature?: string;
+    routerConfigPath?: string;
+  }) {
+    await this.db
+      .update(graphCompositions)
+      .set({
+        deploymentError: deploymentErrorString,
+        admissionError: admissionErrorString,
+        routerConfigSignature,
+        routerConfigPath,
+      })
+      .where(eq(graphCompositions.schemaVersionId, fedGraphSchemaVersionId));
   }
 
   public async getGraphComposition(input: {

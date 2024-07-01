@@ -136,6 +136,8 @@ message CreateFederatedSubgraphRequest {
   string namespace = 8;
   optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 9;
   optional bool is_event_driven_graph = 10;
+  optional bool is_feature_subgraph = 11;
+  optional string base_subgraph_name = 12;
 }
 
 message DeleteFederatedGraphRequest {
@@ -170,6 +172,7 @@ message CompositionError {
   string message = 1;
   string federatedGraphName = 2;
   string namespace = 3;
+  string featureFlag = 4;
 }
 
 message DeploymentError {
@@ -1849,11 +1852,6 @@ message SetDiscussionResolutionResponse {
   Response response = 1;
 }
 
-message GetConfigRequest {
-  string graph_name = 1;
-  string namespace = 2;
-}
-
 message CreateNamespaceRequest {
   string name = 1;
 }
@@ -1994,6 +1992,57 @@ message IsMemberLimitReachedResponse {
   int32 member_count = 3;
 }
 
+message CreateFeatureFlagRequest {
+  string name = 1;
+  string namespace = 2;
+  repeated Label labels = 3;
+  repeated string feature_subgraph_names = 4;
+  bool is_enabled = 5;
+}
+
+message CreateFeatureFlagResponse {
+  Response response = 1;
+  repeated CompositionError composition_errors = 2;
+  repeated DeploymentError deployment_errors = 3;
+}
+
+message UpdateFeatureFlagRequest {
+  string name = 1;
+  string namespace = 2;
+  repeated Label labels = 3;
+  repeated string feature_subgraph_names = 4;
+}
+
+message UpdateFeatureFlagResponse {
+  Response response = 1;
+  repeated CompositionError composition_errors = 2;
+  repeated DeploymentError deployment_errors = 3;
+}
+
+message EnableFeatureFlagRequest {
+  string name = 1;
+  string namespace = 2;
+  bool enabled = 3;
+}
+
+message EnableFeatureFlagResponse {
+  Response response = 1;
+  repeated CompositionError composition_errors = 2;
+  repeated DeploymentError deployment_errors = 3;
+  optional bool has_changed = 4;
+}
+
+message DeleteFeatureFlagRequest {
+  string name = 1;
+  string namespace = 2;
+}
+
+message DeleteFeatureFlagResponse {
+  Response response = 1;
+  repeated CompositionError composition_errors = 2;
+  repeated DeploymentError deployment_errors = 3;
+}
+
 service PlatformService {
   // Namespaces
   rpc CreateNamespace(CreateNamespaceRequest) returns (CreateNamespaceResponse) {}
@@ -2119,8 +2168,6 @@ service PlatformService {
   rpc RemoveOrganizationMember(RemoveOrganizationMemberRequest) returns (RemoveOrganizationMemberResponse){}
   // RemoveInvitation removes the org invitation of the user
   rpc RemoveInvitation(RemoveInvitationRequest) returns (RemoveInvitationResponse){}
-  // GetLatestValidRouterConfig returns the router config for the federated graph
-  rpc GetLatestValidRouterConfig(GetConfigRequest) returns (wg.cosmo.node.v1.GetConfigResponse) {}
   // MigrateFromApollo migrates the graphs from apollo to cosmo
   rpc MigrateFromApollo(MigrateFromApolloRequest) returns (MigrateFromApolloResponse) {}
 
@@ -2208,6 +2255,15 @@ service PlatformService {
   rpc AddReadme(AddReadmeRequest) returns (AddReadmeResponse) {}
   // GetUserAccessiblePermissions returns all the federated and subgraphs where the user has write permissions
   rpc GetUserAccessiblePermissions(GetUserAccessiblePermissionsRequest) returns (GetUserAccessiblePermissionsResponse) {}
+
+  // CreateFeatureFlag creates a new feature flag for the selected feature graphs
+  rpc CreateFeatureFlag(CreateFeatureFlagRequest) returns (CreateFeatureFlagResponse) {}
+  // DeleteFeatureFlag deletes an existing feature flag
+  rpc DeleteFeatureFlag(DeleteFeatureFlagRequest) returns (DeleteFeatureFlagResponse) {}
+  // UpdateFeatureFlag updates a new feature flag for the selected feature graphs
+  rpc UpdateFeatureFlag(UpdateFeatureFlagRequest) returns (UpdateFeatureFlagResponse) {}
+  // EnableFeatureFlag enables/disables a feature flag
+  rpc EnableFeatureFlag(EnableFeatureFlagRequest) returns (EnableFeatureFlagResponse) {}
 
   // Analytics
   rpc GetAnalyticsView(GetAnalyticsViewRequest) returns (GetAnalyticsViewResponse) {

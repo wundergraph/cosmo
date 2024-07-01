@@ -1,7 +1,7 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { afterAllSetup, beforeAllSetup, genID } from '../src/core/test-util.js';
-import { SetupTest } from './test-util.js';
+import { afterAllSetup, beforeAllSetup, genID } from '../../src/core/test-util.js';
+import { DEFAULT_NAMESPACE, DEFAULT_SUBGRAPH_URL_ONE, SetupTest } from '../test-util.js';
 
 let dbname = '';
 
@@ -21,7 +21,7 @@ describe('Create subgraph tests', () => {
 
     const createFederatedSubgraphResp = await client.createFederatedSubgraph({
       name: subgraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       isEventDrivenGraph: true,
     });
 
@@ -37,8 +37,8 @@ describe('Create subgraph tests', () => {
 
     const createFederatedSubgraphResp = await client.createFederatedSubgraph({
       name: subgraphName,
-      namespace: 'default',
-      routingUrl: 'http://localhost:4001',
+      namespace: DEFAULT_NAMESPACE,
+      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
     });
 
     expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
@@ -53,7 +53,7 @@ describe('Create subgraph tests', () => {
 
     const createFederatedSubgraphResp = await client.createFederatedSubgraph({
       name: subgraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       isEventDrivenGraph: true,
       routingUrl: '',
     });
@@ -71,7 +71,7 @@ describe('Create subgraph tests', () => {
 
     const createFederatedSubgraphResp = await client.createFederatedSubgraph({
       name: subgraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       isEventDrivenGraph: true,
       subscriptionUrl: '',
     });
@@ -89,7 +89,7 @@ describe('Create subgraph tests', () => {
 
     const createFederatedSubgraphResp = await client.createFederatedSubgraph({
       name: subgraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       isEventDrivenGraph: true,
       subscriptionProtocol: 1,
     });
@@ -107,7 +107,7 @@ describe('Create subgraph tests', () => {
 
     const createFederatedSubgraphResp = await client.createFederatedSubgraph({
       name: subgraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       isEventDrivenGraph: true,
       websocketSubprotocol: 1,
     });
@@ -125,8 +125,8 @@ describe('Create subgraph tests', () => {
 
     const createFederatedSubgraphResp = await client.createFederatedSubgraph({
       name: subgraphName,
-      namespace: 'default',
-      routingUrl: 'http://localhost:4001',
+      namespace: DEFAULT_NAMESPACE,
+      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
       subscriptionUrl: 'ws://whatever.co',
     });
 
@@ -142,8 +142,8 @@ describe('Create subgraph tests', () => {
 
     const createFederatedSubgraphResp = await client.createFederatedSubgraph({
       name: subgraphName,
-      namespace: 'default',
-      routingUrl: 'http://localhost:4001',
+      namespace: DEFAULT_NAMESPACE,
+      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
       subscriptionUrl: 'url',
     });
 
@@ -160,7 +160,7 @@ describe('Create subgraph tests', () => {
 
     const createFederatedSubgraphResp = await client.createFederatedSubgraph({
       name: subgraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
     });
 
     expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR);
@@ -176,7 +176,7 @@ describe('Create subgraph tests', () => {
 
     const createFederatedSubgraphResp = await client.createFederatedSubgraph({
       name: subgraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       routingUrl: 'url',
     });
 

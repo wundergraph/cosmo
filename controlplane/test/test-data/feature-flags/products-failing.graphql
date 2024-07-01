@@ -1,0 +1,16 @@
+type Mutation {
+  addProductToUserBasket(userID: ID!, upc: Int! sku: String!): User
+}
+
+type Product @key(fields: "upc sku") {
+  upc: Int!
+  sku: String!
+  details: String!
+  isPremium: Boolean! @tag(name: "exclude")
+}
+
+type User @key(fields: "id") {
+  id: ID! @shareable
+  basket: [Product!]!
+  email: String! # causes a composition error
+}
