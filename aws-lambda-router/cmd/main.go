@@ -25,6 +25,7 @@ const (
 var (
 	defaultSampleRate = 0.2 // 20% of requests will be sampled
 	enableTelemetry   = os.Getenv("DISABLE_TELEMETRY") != "true"
+	enableCompression = os.Getenv("DISABLE_COMPRESSION") != "true"
 	devMode           = os.Getenv("DEV_MODE") == "true"
 	stage             = os.Getenv("STAGE")
 	graphApiToken     = os.Getenv("GRAPH_API_TOKEN")
@@ -52,6 +53,7 @@ func main() {
 		internal.WithStage(stage),
 		internal.WithTraceSampleRate(defaultSampleRate),
 		internal.WithEnableTelemetry(enableTelemetry),
+		internal.WithEnableCompression(enableCompression),
 		internal.WithHttpPort(httpPort),
 		internal.WithRouterOpts(core.WithDevelopmentMode(devMode)),
 		internal.WithRouterOpts(
@@ -79,8 +81,11 @@ func main() {
 		}
 		return
 	}
-
-	lambdaHandler := algnhsa.New(svr.HttpServer().Handler, nil)
+	// IsBase64Encoded:false
+	lambdaHandler := algnhsa.New(svr.HttpServer().Handler, &algnhsa.Options{
+		// BinaryContentTypes: []string{"text/html"}, // Handle all binary content types
+		DebugLog: false,
+	})
 	lambda.StartWithOptions(lambdaHandler,
 		lambda.WithContext(ctx),
 		// Registered an internal extensions which gives us 500ms to shutdown
