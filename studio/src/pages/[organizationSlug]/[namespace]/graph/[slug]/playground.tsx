@@ -81,6 +81,7 @@ const graphiQLFetch = async (
   clientValidationEnabled: boolean,
   url: URL,
   init: RequestInit,
+  featureFlagName?: string,
 ) => {
   try {
     const headers: Record<string, string> = {
@@ -98,6 +99,10 @@ const graphiQLFetch = async (
     // add token if trace header is present
     if (hasTraceHeader) {
       headers["X-WG-Token"] = graphRequestToken;
+    }
+
+    if (featureFlagName) {
+      headers["X-Feature-Flag"] = featureFlagName;
     }
 
     if (schema && clientValidationEnabled) {
@@ -660,15 +665,13 @@ const PlaygroundPage: NextPageWithLayout = () => {
           clientValidationEnabled,
           args[0] as URL,
           args[1] as RequestInit,
+          type === "featureFlag"
+            ? graphContext?.featureFlags.find((f) => f.id === loadSchemaGraphId)
+                ?.name
+            : undefined,
         ),
     });
-  }, [
-    routingUrl,
-    subscriptionUrl,
-    graphContext?.graphRequestToken,
-    schema,
-    clientValidationEnabled,
-  ]);
+  }, [routingUrl, subscriptionUrl, graphContext?.graphRequestToken, graphContext?.featureFlags, schema, clientValidationEnabled, type, loadSchemaGraphId]);
 
   const { theme } = useTheme();
 

@@ -2,8 +2,11 @@ import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
 import { FederatedGraphsTable } from "@/pages/[organizationSlug]/[namespace]/subgraph/[subgraphSlug]/graphs";
 import { InformationCircleIcon } from "@heroicons/react/24/outline";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@radix-ui/react-tabs";
-import { FeatureFlag, FederatedGraph, Subgraph } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import {
+  FeatureFlag,
+  FederatedGraph,
+  Subgraph,
+} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -11,6 +14,7 @@ import { EmptyState } from "./empty-state";
 import { SubgraphsTable } from "./subgraphs-table";
 import { Badge } from "./ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 
 export const FeatureFlagDetails = ({
   featureFlag,
@@ -24,14 +28,20 @@ export const FeatureFlagDetails = ({
   const router = useRouter();
   const slug = router.query.slug as string;
   const tab = router.query.tab as string;
-  const { id, labels, createdAt, createdBy, isEnabled } = featureFlag;
+  const { name, labels, createdAt, createdBy, isEnabled } = featureFlag;
 
   return (
     <div className="flex h-full flex-col">
       <div className="flex-shrink-0 overflow-x-auto border-b scrollbar-thin">
         <dl className="flex w-full flex-row gap-x-4 gap-y-2 space-x-4 px-4 py-4 text-sm lg:px-8">
           <div className="flex-start flex max-w-[200px] flex-1 flex-col gap-1">
-            <dt className="text-sm text-muted-foreground">Is Enabled</dt>
+            <dt className="text-sm text-muted-foreground">Name</dt>
+            <dd>
+              {name}
+            </dd>
+          </div>
+          <div className="flex-start flex max-w-[200px] flex-1 flex-col gap-1">
+            <dt className="text-sm text-muted-foreground">Enabled</dt>
             <dd>
               <div className="flex items-center gap-x-2">
                 <Badge variant={isEnabled ? "success" : "destructive"}>
@@ -120,12 +130,13 @@ export const FeatureFlagDetails = ({
                     ) : (
                       <EmptyState
                         icon={<InformationCircleIcon />}
-                        title="No associated federated graphs found"
+                        title="No associated federated graphs found."
                         description={
                           <>
-                            This feature flag is not associated with any
-                            federated graph currently. To associate a federated
-                            graph with this feature flag,
+                            To associate a federated graph with this feature
+                            flag, please try updating the labels of the feature
+                            flag or publishing the feature subgraphs of the
+                            feature flag if not already.{" "}
                             <a
                               target="_blank"
                               rel="noreferrer"
