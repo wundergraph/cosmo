@@ -5,7 +5,7 @@ import { FastifyBaseLogger } from 'fastify';
 import { splitLabel } from '@wundergraph/cosmo-shared';
 import * as schema from '../../db/schema.js';
 import { graphCompositions, graphCompositionSubgraphs, schemaVersion, targets, users } from '../../db/schema.js';
-import { DateRange, GraphCompositionDTO, SubgraphDTO } from '../../types/index.js';
+import { DateRange, GraphCompositionDTO } from '../../types/index.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 
 export class GraphCompositionRepository {
@@ -17,7 +17,6 @@ export class GraphCompositionRepository {
   public async addComposition({
     fedGraphSchemaVersionId,
     compositionErrorString,
-    routerConfig,
     routerConfigSignature,
     subgraphSchemaVersionIds,
     composedBy,
@@ -27,7 +26,6 @@ export class GraphCompositionRepository {
   }: {
     fedGraphSchemaVersionId: string;
     compositionErrorString: string;
-    routerConfig?: JsonValue;
     routerConfigSignature?: string;
     subgraphSchemaVersionIds: string[];
     composedBy: string;
@@ -40,7 +38,6 @@ export class GraphCompositionRepository {
         .insert(graphCompositions)
         .values({
           schemaVersionId: fedGraphSchemaVersionId,
-          routerConfig: routerConfig || null,
           compositionErrors: compositionErrorString,
           isComposable: compositionErrorString === '',
           routerConfigSignature,
@@ -69,16 +66,22 @@ export class GraphCompositionRepository {
     fedGraphSchemaVersionId,
     admissionErrorString,
     deploymentErrorString,
+    routerConfigSignature,
+    routerConfigPath,
   }: {
     fedGraphSchemaVersionId: string;
     admissionErrorString?: string;
     deploymentErrorString?: string;
+    routerConfigSignature?: string;
+    routerConfigPath?: string;
   }) {
     await this.db
       .update(graphCompositions)
       .set({
         deploymentError: deploymentErrorString,
         admissionError: admissionErrorString,
+        routerConfigSignature,
+        routerConfigPath,
       })
       .where(eq(graphCompositions.schemaVersionId, fedGraphSchemaVersionId));
   }

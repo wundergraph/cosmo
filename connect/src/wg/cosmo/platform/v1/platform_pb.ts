@@ -14680,49 +14680,6 @@ export class SetDiscussionResolutionResponse extends Message<SetDiscussionResolu
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.GetConfigRequest
- */
-export class GetConfigRequest extends Message<GetConfigRequest> {
-  /**
-   * @generated from field: string graph_name = 1;
-   */
-  graphName = "";
-
-  /**
-   * @generated from field: string namespace = 2;
-   */
-  namespace = "";
-
-  constructor(data?: PartialMessage<GetConfigRequest>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.GetConfigRequest";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetConfigRequest {
-    return new GetConfigRequest().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetConfigRequest {
-    return new GetConfigRequest().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetConfigRequest {
-    return new GetConfigRequest().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: GetConfigRequest | PlainMessage<GetConfigRequest> | undefined, b: GetConfigRequest | PlainMessage<GetConfigRequest> | undefined): boolean {
-    return proto3.util.equals(GetConfigRequest, a, b);
-  }
-}
-
-/**
  * @generated from message wg.cosmo.platform.v1.CreateNamespaceRequest
  */
 export class CreateNamespaceRequest extends Message<CreateNamespaceRequest> {

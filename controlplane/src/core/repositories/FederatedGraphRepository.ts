@@ -1,9 +1,9 @@
 /* eslint-disable no-labels */
 import { KeyObject, randomUUID } from 'node:crypto';
-import { JsonValue, PlainMessage } from '@bufbuild/protobuf';
-import { FeatureFlagRouterExecutionConfig, RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import { PlainMessage } from '@bufbuild/protobuf';
+import { FeatureFlagRouterExecutionConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { CompositionError, DeploymentError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { joinLabel, normalizeURL, routerConfigFromJson } from '@wundergraph/cosmo-shared';
+import { joinLabel, normalizeURL } from '@wundergraph/cosmo-shared';
 import {
   and,
   asc,
@@ -689,11 +689,8 @@ export class FederatedGraphRepository {
     composedSDL,
     clientSchema,
     compositionErrors,
-    routerConfig,
-    routerConfigSignature,
     subgraphSchemaVersionIds,
     composedBy,
-    routerConfigPath,
     schemaVersionId,
     isFeatureFlagComposition,
     featureFlagId,
@@ -703,11 +700,8 @@ export class FederatedGraphRepository {
     composedSDL?: string;
     clientSchema?: string;
     compositionErrors?: Error[];
-    routerConfig?: JsonValue;
-    routerConfigSignature?: string;
     subgraphSchemaVersionIds: string[];
     composedBy: string;
-    routerConfigPath: string | null;
     isFeatureFlagComposition: boolean;
     featureFlagId: string;
   }) {
@@ -752,7 +746,6 @@ export class FederatedGraphRepository {
           .update(federatedGraphs)
           .set({
             composedSchemaVersionId: insertedVersion[0].insertedId,
-            routerConfigPath,
           })
           .where(eq(federatedGraphs.id, fedGraph.id));
       }
@@ -762,8 +755,6 @@ export class FederatedGraphRepository {
         fedGraphSchemaVersionId: insertedVersion[0].insertedId,
         subgraphSchemaVersionIds,
         compositionErrorString,
-        routerConfig,
-        routerConfigSignature,
         composedBy,
         isFeatureFlagComposition,
       });
@@ -809,45 +800,6 @@ export class FederatedGraphRepository {
       .execute();
 
     return latestValidVersion?.[0]?.id === schemaVersionId;
-  }
-
-  public async getLatestValidRouterConfig(targetId: string): Promise<
-    | {
-        config: RouterConfig;
-        schemaVersionId: string;
-      }
-    | undefined
-  > {
-    const latestValidVersion = await this.db
-      .select({
-        id: schemaVersion.id,
-        routerConfig: graphCompositions.routerConfig,
-      })
-      .from(schemaVersion)
-      .innerJoin(graphCompositions, eq(schemaVersion.id, graphCompositions.schemaVersionId))
-      .where(
-        and(
-          eq(schemaVersion.targetId, targetId),
-          eq(graphCompositions.isFeatureFlagComposition, false),
-          and(
-            eq(graphCompositions.isComposable, true),
-            or(isNull(graphCompositions.deploymentError), eq(graphCompositions.deploymentError, '')),
-            or(isNull(graphCompositions.admissionError), eq(graphCompositions.admissionError, '')),
-          ),
-        ),
-      )
-      .orderBy(desc(schemaVersion.createdAt))
-      .limit(1)
-      .execute();
-
-    if (!latestValidVersion || latestValidVersion.length === 0) {
-      return undefined;
-    }
-
-    return {
-      config: routerConfigFromJson(latestValidVersion[0].routerConfig as JsonValue),
-      schemaVersionId: latestValidVersion[0].id,
-    };
   }
 
   // returns the latest valid schema version of a federated graph
@@ -1571,17 +1523,16 @@ export class FederatedGraphRepository {
           // Build the router execution config if the composed schema is valid
           const routerExecutionConfig = buildRouterExecutionConfig(composedGraph, federatedSchemaVersionId);
 
-          const deployment = await composer.deployComposition({
+          const baseComposition = await composer.saveComposition({
             composedGraph,
             composedBy: actorId,
-            organizationId: this.organizationId,
             isFeatureFlagComposition: subgraphsToCompose.isFeatureFlagComposition,
             federatedSchemaVersionId,
             routerExecutionConfig,
             featureFlagId: subgraphsToCompose.featureFlagId,
           });
 
-          if (compositionErrors || !deployment.schemaVersionId || !routerExecutionConfig) {
+          if (compositionErrors || !baseComposition.schemaVersionId || !routerExecutionConfig) {
             /* If the base composition failed to compose or deploy, return to the parent loop, because
              * contracts are not composed if the base composition fails.
              */
@@ -1596,7 +1547,7 @@ export class FederatedGraphRepository {
             );
             // Otherwise, this is the base composition, so store the schema version id
           } else {
-            baseCompositionData.schemaVersionId = deployment.schemaVersionId;
+            baseCompositionData.schemaVersionId = baseComposition.schemaVersionId;
             baseCompositionData.routerExecutionConfig = routerExecutionConfig;
           }
 
@@ -1632,10 +1583,9 @@ export class FederatedGraphRepository {
             // Build the router execution config if the composed schema is valid
             const contractRouterExecutionConfig = buildRouterExecutionConfig(composedGraph, contractSchemaVersionId);
 
-            const contractDeployment = await composer.deployComposition({
+            const contractComposition = await composer.saveComposition({
               composedGraph: composedContract,
               composedBy: actorId,
-              organizationId: this.organizationId,
               isFeatureFlagComposition: subgraphsToCompose.isFeatureFlagComposition,
               federatedSchemaVersionId: contractSchemaVersionId,
               routerExecutionConfig: contractRouterExecutionConfig,
@@ -1644,7 +1594,7 @@ export class FederatedGraphRepository {
 
             if (
               (errors && errors.length > 0) ||
-              !contractDeployment.schemaVersionId ||
+              !contractComposition.schemaVersionId ||
               !contractRouterExecutionConfig
             ) {
               continue;
@@ -1656,7 +1606,7 @@ export class FederatedGraphRepository {
              * */
             if (!subgraphsToCompose.isFeatureFlagComposition) {
               contractBaseCompositionDataByContractId.set(contractGraph.id, {
-                schemaVersionId: contractDeployment.schemaVersionId,
+                schemaVersionId: contractComposition.schemaVersionId,
                 routerExecutionConfig: contractRouterExecutionConfig,
                 featureFlagRouterExecutionConfigByFeatureFlagName: new Map<string, FeatureFlagRouterExecutionConfig>(),
               });
