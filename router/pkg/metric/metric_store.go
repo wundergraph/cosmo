@@ -20,6 +20,7 @@ const (
 	ResponseContentLengthCounter  = "router.http.response.content_length"       // Outgoing response bytes total
 	InFlightRequestsUpDownCounter = "router.http.requests.in_flight"            // Number of requests in flight
 	RequestError                  = "router.http.requests.error"                // Total request error count
+	ActiveSubscriptionsCounter    = "router.graph.active_subscriptions"         // Number of active subscriptions
 
 	unitBytes        = "bytes"
 	unitMilliseconds = "ms"
@@ -55,6 +56,11 @@ var (
 	InFlightRequestsUpDownCounterOptions     = []otelmetric.Int64UpDownCounterOption{
 		otelmetric.WithDescription(InFlightRequestsUpDownCounterDescription),
 	}
+
+	ActiveSubscriptionsUpDownCounterDescription = "Number of active subscriptions"
+	ActiveSubscriptionsUpDownCounterOptions     = []otelmetric.Int64UpDownCounterOption{
+		otelmetric.WithDescription(ActiveSubscriptionsUpDownCounterDescription),
+	}
 )
 
 type (
@@ -82,6 +88,7 @@ type (
 		MeasureResponseSize(ctx context.Context, size int64, attr ...attribute.KeyValue)
 		MeasureLatency(ctx context.Context, requestStartTime time.Time, attr ...attribute.KeyValue)
 		MeasureRequestError(ctx context.Context, attr ...attribute.KeyValue)
+		MeasureActiveSubscriptions(ctx context.Context, count int, attr ...attribute.KeyValue)
 		Flush(ctx context.Context) error
 	}
 )
@@ -157,6 +164,11 @@ func (h *Metrics) MeasureLatency(ctx context.Context, requestStartTime time.Time
 func (h *Metrics) MeasureRequestError(ctx context.Context, attr ...attribute.KeyValue) {
 	h.otlpRequestMetrics.MeasureRequestError(ctx, attr...)
 	h.promRequestMetrics.MeasureRequestError(ctx, attr...)
+}
+
+func (h *Metrics) MeasureActiveSubscriptions(ctx context.Context, count int, attr ...attribute.KeyValue) {
+	h.otlpRequestMetrics.MeasureActiveSubscriptions(ctx, count, attr...)
+	h.promRequestMetrics.MeasureActiveSubscriptions(ctx, count, attr...)
 }
 
 // Flush flushes the metrics to the backend synchronously.

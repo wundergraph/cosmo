@@ -6,6 +6,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/wundergraph/cosmo/router-tests/testutils"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"net/http"
 	"sync"
 	"testing"
@@ -55,9 +58,11 @@ func TestKafkaEvents(t *testing.T) {
 	t.Run("subscribe async", func(t *testing.T) {
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
+		metricReader := metric.NewManualReader()
 
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds: seeds,
+			KafkaSeeds:   seeds,
+			MetricReader: metricReader,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)
@@ -104,12 +109,16 @@ func TestKafkaEvents(t *testing.T) {
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
+			activeSubsMetric := testutils.GetSubscriptionCountMetric(1)
+			testutils.RequireMetricsToContain(t, metricReader, activeSubsMetric)
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
 			xEnv.WaitForMessagesSent(1, time.Second*10)
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
 			xEnv.WaitForConnectionCount(0, time.Second*10)
+			activeSubsMetric = testutils.GetSubscriptionCountMetric(0)
+			testutils.RequireMetricsToContain(t, metricReader, activeSubsMetric)
 		})
 	})
 
@@ -117,8 +126,10 @@ func TestKafkaEvents(t *testing.T) {
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
+		metricReader := metric.NewManualReader()
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds: seeds,
+			KafkaSeeds:   seeds,
+			MetricReader: metricReader,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)
@@ -173,6 +184,8 @@ func TestKafkaEvents(t *testing.T) {
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
+			activeSubsMetric := testutils.GetSubscriptionCountMetric(1)
+			testutils.RequireMetricsToContain(t, metricReader, activeSubsMetric)
 
 			produceKafkaMessage(t, xEnv, topics[0], ``) // Empty message
 			xEnv.WaitForMessagesSent(1, time.Second*10)
@@ -196,15 +209,18 @@ func TestKafkaEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
 			xEnv.WaitForConnectionCount(0, time.Second*10)
+			activeSubsMetric = testutils.GetSubscriptionCountMetric(0)
+			testutils.RequireMetricsToContain(t, metricReader, activeSubsMetric)
 		})
 	})
 
 	t.Run("every subscriber gets the message", func(t *testing.T) {
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
-
+		metricReader := metric.NewManualReader()
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds: seeds,
+			MetricReader: metricReader,
+			KafkaSeeds:   seeds,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)
@@ -264,21 +280,26 @@ func TestKafkaEvents(t *testing.T) {
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
+			activeSubsMetric := testutils.GetSubscriptionCountMetric(1)
+			testutils.RequireMetricsToContain(t, metricReader, activeSubsMetric)
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
 			xEnv.WaitForMessagesSent(2, time.Second*10)
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
 			xEnv.WaitForConnectionCount(0, time.Second*10)
+			activeSubsMetric = testutils.GetSubscriptionCountMetric(0)
+			testutils.RequireMetricsToContain(t, metricReader, activeSubsMetric)
 		})
 	})
 
 	t.Run("subscribe to multiple topics through a single directive", func(t *testing.T) {
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
-
+		metricReader := metric.NewManualReader()
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds: seeds,
+			MetricReader: metricReader,
+			KafkaSeeds:   seeds,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)
@@ -348,6 +369,8 @@ func TestKafkaEvents(t *testing.T) {
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
+			activeSubsMetric := testutils.GetSubscriptionCountMetric(1)
+			testutils.RequireMetricsToContain(t, metricReader, activeSubsMetric)
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 			produceKafkaMessage(t, xEnv, topics[1], `{"__typename":"Employee","id": 2,"update":{"name":"foo"}}`)
@@ -366,15 +389,18 @@ func TestKafkaEvents(t *testing.T) {
 			xEnv.WaitForMessagesSent(4, time.Second*10)
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
 			xEnv.WaitForConnectionCount(0, time.Second*10)
+			activeSubsMetric = testutils.GetSubscriptionCountMetric(0)
+			testutils.RequireMetricsToContain(t, metricReader, activeSubsMetric)
 		})
 	})
 
 	t.Run("subscribe async epoll/kqueue disabled", func(t *testing.T) {
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
-
+		metricReader := metric.NewManualReader()
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds: seeds,
+			MetricReader: metricReader,
+			KafkaSeeds:   seeds,
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.EnableWebSocketEpollKqueue = false
 				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 100
@@ -425,21 +451,26 @@ func TestKafkaEvents(t *testing.T) {
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
+			activeSubsMetric := testutils.GetSubscriptionCountMetric(1)
+			testutils.RequireMetricsToContain(t, metricReader, activeSubsMetric)
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
 			xEnv.WaitForMessagesSent(1, time.Second*10)
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
 			xEnv.WaitForConnectionCount(0, time.Second*10)
+			activeSubsMetric = testutils.GetSubscriptionCountMetric(0)
+			testutils.RequireMetricsToContain(t, metricReader, activeSubsMetric)
 		})
 	})
 
 	t.Run("subscribe sync sse", func(t *testing.T) {
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
-
+		metricReader := metric.NewManualReader()
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds: seeds,
+			MetricReader: metricReader,
+			KafkaSeeds:   seeds,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)
@@ -484,11 +515,15 @@ func TestKafkaEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			activeSubsMetric := testutils.GetSubscriptionCountMetric(1)
+			testutils.RequireMetricsToContain(t, metricReader, activeSubsMetric)
 
 			wg.Wait()
 
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
 			xEnv.WaitForConnectionCount(0, time.Second*10)
+			activeSubsMetric = testutils.GetSubscriptionCountMetric(0)
+			testutils.RequireMetricsToContain(t, metricReader, activeSubsMetric)
 		})
 	})
 
@@ -496,9 +531,10 @@ func TestKafkaEvents(t *testing.T) {
 		t.Parallel()
 
 		subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
-
+		metricReader := metric.NewManualReader()
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds: seeds,
+			MetricReader: metricReader,
+			KafkaSeeds:   seeds,
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 				securityConfiguration.BlockSubscriptions = true
 			},
@@ -530,15 +566,24 @@ func TestKafkaEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
 			xEnv.WaitForConnectionCount(0, time.Second*10)
+
+			var rm metricdata.ResourceMetrics
+			err = metricReader.Collect(context.Background(), &rm)
+			require.NoError(t, err)
+			activeSubsMetric := testutils.GetSubscriptionCountMetric(1)
+			// Since no subscriptions have been successfully created, the metric will not exist
+			receivedMetric := testutils.FindScopeMetricByName(rm, activeSubsMetric.Name)
+			require.Nilf(t, receivedMetric, "Metric %s wasn't supposed to exist, but was created", activeSubsMetric.Name)
 		})
 	})
 
 	t.Run("subscribe async with filter", func(t *testing.T) {
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
-
+		metricReader := metric.NewManualReader()
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds: seeds,
+			MetricReader: metricReader,
+			KafkaSeeds:   seeds,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)
@@ -568,6 +613,8 @@ func TestKafkaEvents(t *testing.T) {
 			var payload subscriptionPayload
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
+			activeSubsMetric := testutils.GetSubscriptionCountMetric(1)
+			testutils.RequireMetricsToContain(t, metricReader, activeSubsMetric)
 
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
@@ -642,9 +689,10 @@ func TestKafkaEvents(t *testing.T) {
 	t.Run("subscribe async with filter and multiple list field arguments", func(t *testing.T) {
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
-
+		metricReader := metric.NewManualReader()
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds: seeds,
+			MetricReader: metricReader,
+			KafkaSeeds:   seeds,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)
@@ -674,6 +722,8 @@ func TestKafkaEvents(t *testing.T) {
 			var payload subscriptionPayload
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
+			activeSubsMetric := testutils.GetSubscriptionCountMetric(1)
+			testutils.RequireMetricsToContain(t, metricReader, activeSubsMetric)
 
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
@@ -737,9 +787,10 @@ func TestKafkaEvents(t *testing.T) {
 	t.Run("subscribe async with filter and nested list argument", func(t *testing.T) {
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
-
+		metricReader := metric.NewManualReader()
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds: seeds,
+			MetricReader: metricReader,
+			KafkaSeeds:   seeds,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)
@@ -769,6 +820,8 @@ func TestKafkaEvents(t *testing.T) {
 			var payload subscriptionPayload
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
+			activeSubsMetric := testutils.GetSubscriptionCountMetric(1)
+			testutils.RequireMetricsToContain(t, metricReader, activeSubsMetric)
 
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
@@ -832,9 +885,10 @@ func TestKafkaEvents(t *testing.T) {
 	t.Run("subscribe async with filter non-matching filter and nested list argument", func(t *testing.T) {
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
-
+		metricReader := metric.NewManualReader()
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds: seeds,
+			MetricReader: metricReader,
+			KafkaSeeds:   seeds,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)
@@ -864,6 +918,8 @@ func TestKafkaEvents(t *testing.T) {
 			var payload subscriptionPayload
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
+			activeSubsMetric := testutils.GetSubscriptionCountMetric(1)
+			testutils.RequireMetricsToContain(t, metricReader, activeSubsMetric)
 
 			wg := &sync.WaitGroup{}
 			wg.Add(1)

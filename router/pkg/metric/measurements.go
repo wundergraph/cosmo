@@ -81,5 +81,15 @@ func createMeasures(meter otelmetric.Meter) (*Measurements, error) {
 
 	h.upDownCounters[InFlightRequestsUpDownCounter] = inFlightRequestsGauge
 
+	activeSubscriptionsGauge, err := meter.Int64UpDownCounter(
+		ActiveSubscriptionsCounter,
+		ActiveSubscriptionsUpDownCounterOptions...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create active subscriptions gauge: %w", err)
+	}
+
+	h.upDownCounters[ActiveSubscriptionsCounter] = activeSubscriptionsGauge
+
 	return h, nil
 }
