@@ -375,9 +375,9 @@ export class SubgraphRepository {
               published: true,
             });
             const enabledFeatureFlags = await featureFlagRepo.getEnabledFeatureFlagsBySubgraphIdAndLabels({
-              subgraphId: subgraph.id,
+              subgraphId: baseSubgraph[0].id,
               namespaceId: data.namespaceId,
-              labelMatchers: baseSubgraph[0].labels || [],
+              labelMatchers: federatedGraphDTO.labelMatchers || [],
               baseSubgraphNames: subgraphs.map((subgraph) => subgraph.name),
             });
             // If an enabled feature flag includes the feature graph that has just been published, push it to the array
