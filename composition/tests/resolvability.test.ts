@@ -10,6 +10,46 @@ import {
   versionTwoRouterDefinitions,
 } from './utils/utils';
 
+
+describe('Root types Query and Mutation tests', () => {
+  test('query that returns a Query and mutation that returns a Mutation', () => {
+    const subgraph1: Subgraph = {
+      name: 'subgraph-1',
+      url: '',
+      definitions: parse(`
+    type Query {
+      impersonate: Query
+    }
+    
+    type Mutation {
+      impersonate: Mutation
+    }
+  `),
+    };
+    const subgraph2: Subgraph = {
+      name: 'subgraph-2',
+      url: '',
+      definitions: parse(`
+    type Book {
+      id: ID!      
+    }
+    
+    type Query {
+      book(id:ID!): Book
+    }
+
+    type Mutation {
+      upsertBook: Book
+    }
+    
+  `),
+    };
+    const { errors, federationResult } = federateSubgraphs([subgraph1, subgraph2]);
+    expect(errors).toBeUndefined();
+
+  });
+})
+
 describe('Field resolvability tests', () => {
   test('that shared queries that return a nested type that is only resolvable over multiple subgraphs are valid', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
