@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.94.3](https://github.com/wundergraph/cosmo/compare/router@0.94.2...router@0.94.3) (2024-07-01)
+
+### Bug Fixes
+
+* merging deeply nested representation variables ([#902](https://github.com/wundergraph/cosmo/issues/902)) ([daa5b40](https://github.com/wundergraph/cosmo/commit/daa5b404ab9b7cf81553d089ebaeb26927c6c706)) (@devsergiy)
+
 ## [0.94.2](https://github.com/wundergraph/cosmo/compare/router@0.94.1...router@0.94.2) (2024-06-27)
 
 ### Bug Fixes
