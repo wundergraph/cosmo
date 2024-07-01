@@ -24,7 +24,7 @@ import {
 } from '../test-util.js';
 
 // Change to true to enable a longer timeout
-const isDebugMode = true;
+const isDebugMode = false;
 let dbname = '';
 
 describe('Feature flag integration tests', () => {
