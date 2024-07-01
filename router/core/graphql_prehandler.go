@@ -255,9 +255,16 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			writeOperationError(r, w, requestLogger, err)
 			return
 		}
-		defer operationKit.Free()
+		defer func() {
+			if operationKit != nil {
+				// before processing the request with the graphql_handler.go, we're calling Free() already on the operationKit and set the reference to nil
+				// this allows us to use less memory and free the resources as soon as possible
+				// however, we might return early in case of an error, which is why we're using defer here to make sure we're freeing the resources
+				operationKit.Free()
+			}
+		}()
 
-		err = operationKit.Parse(r.Context(), clientInfo, requestLogger)
+		err = operationKit.Parse(r.Context(), clientInfo)
 		if err != nil {
 			finalErr = err
 
@@ -286,14 +293,15 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 
 		// Set the router span name after we have the operation name
-		routerSpan.SetName(GetSpanName(operationKit.parsedOperation.Name, operationKit.parsedOperation.Type))
+		routerSpan.SetName(GetSpanName(operationKit.parsedOperation.Request.OperationName, operationKit.parsedOperation.Type))
 
 		attributes = []attribute.KeyValue{
-			otel.WgOperationName.String(operationKit.parsedOperation.Name),
+			otel.WgOperationName.String(operationKit.parsedOperation.Request.OperationName),
 			otel.WgOperationType.String(operationKit.parsedOperation.Type),
 		}
-		if operationKit.parsedOperation.PersistedID != "" {
-			attributes = append(attributes, otel.WgOperationPersistedID.String(operationKit.parsedOperation.PersistedID))
+		if operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil &&
+			operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash != "" {
+			attributes = append(attributes, otel.WgOperationPersistedID.String(operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash))
 		}
 
 		routerSpan.SetAttributes(attributes...)
@@ -327,6 +335,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			return
 		}
 
+		if operationKit.parsedOperation.IsPersistedOperation {
+			engineNormalizeSpan.SetAttributes(otel.WgEnginePersistedOperationCacheHit.Bool(operationKit.parsedOperation.PersistedOperationCacheHit))
+		}
+
 		engineNormalizeSpan.End()
 
 		if !traceOptions.ExcludeNormalizeStats {
@@ -335,7 +347,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		if h.traceExportVariables {
 			// At this stage the variables are normalized
-			routerSpan.SetAttributes(otel.WgOperationVariables.String(string(operationKit.parsedOperation.Variables)))
+			routerSpan.SetAttributes(otel.WgOperationVariables.String(string(operationKit.parsedOperation.Request.Variables)))
 		}
 
 		attributes = []attribute.KeyValue{
@@ -447,6 +459,11 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 			r = validatedReq
 		}
+
+		// Free the operation kit after we're done with it
+		// We don't need to hold onto it while processing the operation
+		operationKit.Free()
+		operationKit = nil
 
 		art.SetRequestTracingStats(r.Context(), traceOptions, traceTimings)
 
