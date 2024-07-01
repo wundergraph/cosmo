@@ -43,9 +43,6 @@ export default class SchemaLinter {
       case 'REQUIRE_DEPRECATION_REASON': {
         return rules['require-deprecation-reason'];
       }
-      case 'REQUIRE_DEPRECATION_DATE': {
-        return rules['require-deprecation-date'];
-      }
       default: {
         throw new Error(`Rule ${rule} doesnt exist`);
       }
@@ -122,10 +119,6 @@ export default class SchemaLinter {
           break;
         }
         case 'REQUIRE_DEPRECATION_REASON': {
-          rulesConfig[ruleName] = [rule.severity];
-          break;
-        }
-        case 'REQUIRE_DEPRECATION_DATE': {
           rulesConfig[ruleName] = [rule.severity];
           break;
         }
