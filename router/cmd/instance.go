@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 
 	"github.com/wundergraph/cosmo/router/internal/cdn"
@@ -98,6 +99,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		core.WithSelfRegistration(selfRegister),
 		core.WithIntrospection(cfg.IntrospectionEnabled),
 		core.WithPlayground(cfg.PlaygroundEnabled),
+		core.WithCompression(cfg.CompressionEnabled),
 		core.WithGraphApiToken(cfg.Graph.Token),
 		core.WithGraphQLPath(cfg.GraphQLPath),
 		core.WithModulesConfig(cfg.Modules),

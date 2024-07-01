@@ -561,6 +561,11 @@
       "description": "Enable the GraphQL introspection. The GraphQL introspection allows you to query the schema of the GraphQL API. The default value is true. If the value is false, the GraphQL introspection is disabled. In production, it is recommended to disable the introspection.",
       "default": true
     },
+    "compression_enabled": {
+      "type": "boolean",
+      "description": "Enable the Gzip compression for clients that accept compressed responses. The default value is true. If the value is false, the Gzip compression is disabled. In production, it is recommended to enable compression.",
+      "default": true
+    },
     "log_level": {
       "type": "string",
       "enum": ["debug", "info", "warning", "error", "fatal", "panic"],

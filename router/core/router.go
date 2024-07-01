@@ -163,6 +163,7 @@ type (
 		graphqlPath              string
 		playground               bool
 		introspection            bool
+		compression              bool
 		graphApiToken            string
 		healthCheckPath          string
 		healthChecks             health.Checker
@@ -658,6 +659,7 @@ func (r *Router) updateServerAndStart(ctx context.Context, cfg *nodev1.RouterCon
 			zap.String("listen_addr", r.listenAddr),
 			zap.Bool("playground", r.playground),
 			zap.Bool("introspection", r.introspection),
+			zap.Bool("compression", r.compression),
 			zap.String("config_version", cfg.GetVersion()),
 		)
 
@@ -1109,13 +1111,17 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	httpRouter := chi.NewRouter()
 	httpRouter.Use(recoveryHandler)
 	httpRouter.Use(middleware.RequestSize(int64(r.routerTrafficConfig.MaxRequestBodyBytes)))
-	httpRouter.Use(middleware.Compress(5, CustomCompressibleContentTypes...))
+	
+	if(r.compression) {
 
-	brCompressor := middleware.NewCompressor(5, CustomCompressibleContentTypes...)
-	brCompressor.SetEncoder("br", func(w io.Writer, level int) io.Writer {
-		return br.NewWriterLevel(w, level)
-	})
-	httpRouter.Use(brCompressor.Handler)
+		httpRouter.Use(middleware.Compress(5, CustomCompressibleContentTypes...))
+
+		brCompressor := middleware.NewCompressor(5, CustomCompressibleContentTypes...)
+		brCompressor.SetEncoder("br", func(w io.Writer, level int) io.Writer {
+			return br.NewWriterLevel(w, level)
+		})
+		httpRouter.Use(brCompressor.Handler)
+	}
 
 	httpRouter.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -1625,6 +1631,12 @@ func WithPlayground(enable bool) Option {
 func WithIntrospection(enable bool) Option {
 	return func(r *Router) {
 		r.introspection = enable
+	}
+}
+
+func WithCompression(enable bool) Option {
+	return func(r *Router) {
+		r.compression = enable
 	}
 }
 

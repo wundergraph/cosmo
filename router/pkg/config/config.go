@@ -428,6 +428,7 @@ type Config struct {
 	ControlplaneURL               string                      `yaml:"controlplane_url" default:"https://cosmo-cp.wundergraph.com" envconfig:"CONTROLPLANE_URL"`
 	PlaygroundEnabled             bool                        `yaml:"playground_enabled" default:"true" envconfig:"PLAYGROUND_ENABLED"`
 	IntrospectionEnabled          bool                        `yaml:"introspection_enabled" default:"true" envconfig:"INTROSPECTION_ENABLED"`
+	CompressionEnabled            bool                        `yaml:"compression_enabled" default:"true" envconfig:"COMPRESSION_ENABLED"`
 	LogLevel                      string                      `yaml:"log_level" default:"info" envconfig:"LOG_LEVEL"`
 	JSONLog                       bool                        `yaml:"json_log" default:"true" envconfig:"JSON_LOG"`
 	ShutdownDelay                 time.Duration               `yaml:"shutdown_delay" default:"60s" envconfig:"SHUTDOWN_DELAY"`

@@ -12,6 +12,7 @@ controlplane_url: "https://cosmo-cp.wundergraph.com"
 playground_enabled: true
 playground_path: "/"
 introspection_enabled: true
+compression_enabled: true
 json_log: true
 shutdown_delay: 15s
 grace_period: 20s
