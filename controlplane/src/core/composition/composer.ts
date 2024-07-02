@@ -400,12 +400,14 @@ export class Composer {
     isFeatureFlagComposition,
     federatedSchemaVersionId,
     routerExecutionConfig,
+    featureFlagId,
   }: {
     composedGraph: ComposedFederatedGraph;
     composedBy: string;
     isFeatureFlagComposition: boolean;
     federatedSchemaVersionId: UUID;
     routerExecutionConfig?: RouterConfig;
+    featureFlagId: string;
   }): Promise<CompositionDeployResult> {
     const prevValidFederatedSDL = await this.federatedGraphRepo.getLatestValidSchemaVersion({
       targetId: composedGraph.targetID,
@@ -420,6 +422,7 @@ export class Composer {
       composedBy,
       schemaVersionId: federatedSchemaVersionId,
       isFeatureFlagComposition,
+      featureFlagId,
     });
 
     // If the composed schema is invalid, or it is a feature flag composition, we do not create a changelog

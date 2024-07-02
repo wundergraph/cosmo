@@ -374,11 +374,12 @@ export class SubgraphRepository {
               federatedGraphTargetId: federatedGraphDTO.targetId,
               published: true,
             });
-            const enabledFeatureFlags = await featureFlagRepo.getEnabledFeatureFlagsBySubgraphIdAndLabels({
-              subgraphId: baseSubgraph[0].id,
+            const enabledFeatureFlags = await featureFlagRepo.getFeatureFlagsByBaseSubgraphIdAndLabelMatchers({
+              baseSubgraphId: baseSubgraph[0].id,
               namespaceId: data.namespaceId,
-              labelMatchers: federatedGraphDTO.labelMatchers || [],
+              fedGraphLabelMatchers: federatedGraphDTO.labelMatchers || [],
               baseSubgraphNames: subgraphs.map((subgraph) => subgraph.name),
+              excludeDisabled: true,
             });
             // If an enabled feature flag includes the feature graph that has just been published, push it to the array
             if (enabledFeatureFlags.length > 0) {
@@ -534,6 +535,7 @@ export class SubgraphRepository {
         labels: subgraph.labels,
         namespace: subgraph.namespace,
         namespaceId: subgraph.namespaceId,
+        isFeatureSubgraph: subgraph.isFeatureSubgraph,
       };
     });
   }
@@ -550,6 +552,10 @@ export class SubgraphRepository {
 
     if (opts.query) {
       conditions.push(like(schema.targets.name, `%${opts.query}%`));
+    }
+
+    if (opts.excludeFeatureSubgraphs) {
+      conditions.push(eq(schema.subgraphs.isFeatureSubgraph, false));
     }
 
     const targets = await this.db
@@ -595,11 +601,16 @@ export class SubgraphRepository {
       conditions.push(like(schema.targets.name, `%${opts.query}%`));
     }
 
+    if (opts.excludeFeatureSubgraphs) {
+      conditions.push(eq(schema.subgraphs.isFeatureSubgraph, false));
+    }
+
     const subgraphsCount = await this.db
       .select({
         count: count(),
       })
       .from(schema.targets)
+      .innerJoin(subgraphs, eq(schema.subgraphs.targetId, schema.targets.id))
       .where(and(...conditions));
 
     if (subgraphsCount.length === 0) {

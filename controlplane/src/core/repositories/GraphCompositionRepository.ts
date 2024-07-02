@@ -1,5 +1,6 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { and, count, desc, eq, gt, lt } from 'drizzle-orm';
+import { SQL, and, count, desc, eq, gt, lt } from 'drizzle-orm';
+import { JsonValue } from '@bufbuild/protobuf';
 import { FastifyBaseLogger } from 'fastify';
 import { splitLabel } from '@wundergraph/cosmo-shared';
 import * as schema from '../../db/schema.js';
@@ -204,6 +205,7 @@ export class GraphCompositionRepository {
         lastUpdatedAt: graphCompositionSubgraphs.createdAt,
         websocketSubprotocol: schema.subgraphs.websocketSubprotocol,
         isEventDrivenGraph: schema.subgraphs.isEventDrivenGraph,
+        isFeatureSubgraph: schema.subgraphs.isFeatureSubgraph,
       })
       .from(graphCompositionSubgraphs)
       .innerJoin(graphCompositions, eq(graphCompositions.id, graphCompositionSubgraphs.graphCompositionId))
@@ -229,14 +231,25 @@ export class GraphCompositionRepository {
     limit,
     offset,
     dateRange,
+    excludeFeatureFlagCompositions,
   }: {
     fedGraphTargetId: string;
     organizationId: string;
     limit: number;
     offset: number;
     dateRange: DateRange;
+    excludeFeatureFlagCompositions: boolean;
   }): Promise<GraphCompositionDTO[]> {
     const fedRepo = new FederatedGraphRepository(this.logger, this.db, organizationId);
+    const conditions: SQL<unknown>[] = [
+      eq(schemaVersion.targetId, fedGraphTargetId),
+      gt(graphCompositions.createdAt, new Date(dateRange.start)),
+      lt(graphCompositions.createdAt, new Date(dateRange.end)),
+    ];
+
+    if (excludeFeatureFlagCompositions) {
+      conditions.push(eq(graphCompositions.isFeatureFlagComposition, false));
+    }
 
     const resp = await this.db
       .select({
@@ -253,13 +266,7 @@ export class GraphCompositionRepository {
       .from(graphCompositions)
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
       .leftJoin(users, eq(graphCompositions.createdBy, users.id))
-      .where(
-        and(
-          eq(schemaVersion.targetId, fedGraphTargetId),
-          gt(graphCompositions.createdAt, new Date(dateRange.start)),
-          lt(graphCompositions.createdAt, new Date(dateRange.end)),
-        ),
-      )
+      .where(and(...conditions))
       .orderBy(desc(schemaVersion.createdAt))
       .limit(limit)
       .offset(offset)
@@ -290,10 +297,22 @@ export class GraphCompositionRepository {
   public async getGraphCompositionsCount({
     fedGraphTargetId,
     dateRange,
+    excludeFeatureFlagCompositions,
   }: {
     fedGraphTargetId: string;
     dateRange: DateRange;
+    excludeFeatureFlagCompositions: boolean;
   }): Promise<number> {
+    const conditions: SQL<unknown>[] = [
+      eq(schemaVersion.targetId, fedGraphTargetId),
+      gt(graphCompositions.createdAt, new Date(dateRange.start)),
+      lt(graphCompositions.createdAt, new Date(dateRange.end)),
+    ];
+
+    if (excludeFeatureFlagCompositions) {
+      conditions.push(eq(graphCompositions.isFeatureFlagComposition, false));
+    }
+
     const compositionsCount = await this.db
       .select({
         count: count(),
@@ -301,13 +320,7 @@ export class GraphCompositionRepository {
       .from(graphCompositions)
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
       .leftJoin(users, eq(graphCompositions.createdBy, users.id))
-      .where(
-        and(
-          eq(schemaVersion.targetId, fedGraphTargetId),
-          gt(graphCompositions.createdAt, new Date(dateRange.start)),
-          lt(graphCompositions.createdAt, new Date(dateRange.end)),
-        ),
-      )
+      .where(and(...conditions))
       .execute();
 
     if (compositionsCount.length === 0) {

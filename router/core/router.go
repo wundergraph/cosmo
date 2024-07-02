@@ -130,7 +130,7 @@ type (
 		gqlMetricsExporter       graphqlmetrics.SchemaUsageExporter
 		corsOptions              *cors.Config
 		gracePeriod              time.Duration
-		routerConfig             *nodev1.RouterConfig
+		staticRouterConfig       *nodev1.RouterConfig
 		awsLambda                bool
 		shutdown                 bool
 		bootstrapped             bool
@@ -513,7 +513,7 @@ func (r *Router) updateServerAndStart(ctx context.Context, cfg *nodev1.RouterCon
 	}
 
 	// read here to avoid race condition
-	version := r.activeServer.routerConfig.GetVersion()
+	version := r.activeServer.baseRouterConfigVersion
 
 	// Start new server
 	go func() {
@@ -610,9 +610,9 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 	}
 
 	// Start the server with the static config without polling
-	if r.routerConfig != nil {
+	if r.staticRouterConfig != nil {
 		r.logger.Info("Static router config provided. Polling is disabled. Updating router config is only possible by providing a config.")
-		return r.UpdateServer(ctx, r.routerConfig)
+		return r.UpdateServer(ctx, r.staticRouterConfig)
 	}
 
 	// when no static config is provided and no poller is configured, we can't start the server
@@ -774,9 +774,9 @@ func (r *Router) Start(ctx context.Context) error {
 	}
 
 	// Start the server with the static config without polling
-	if r.routerConfig != nil {
+	if r.staticRouterConfig != nil {
 		r.logger.Info("Static router config provided. Polling is disabled. Updating router config is only possible by providing a config.")
-		return r.updateServerAndStart(ctx, r.routerConfig)
+		return r.updateServerAndStart(ctx, r.staticRouterConfig)
 	}
 
 	// when no static config is provided and no poller is configured, we can't start the server
@@ -815,10 +815,11 @@ func (r *Router) Start(ctx context.Context) error {
 // All stateful data is copied from the Router over to the new server instance. Not safe for concurrent use.
 func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfig) (*server, error) {
 	s := &server{
-		Config:             r.Config,
-		websocketStats:     r.WebsocketStats,
-		metricStore:        rmetric.NewNoopMetrics(),
-		executionTransport: newHTTPTransport(r.subgraphTransportOptions),
+		Config:                  r.Config,
+		websocketStats:          r.WebsocketStats,
+		metricStore:             rmetric.NewNoopMetrics(),
+		executionTransport:      newHTTPTransport(r.subgraphTransportOptions),
+		baseRouterConfigVersion: routerConfig.GetVersion(),
 		pubSubProviders: &EnginePubSubProviders{
 			nats:  map[string]pubsub_datasource.NatsPubSub{},
 			kafka: map[string]pubsub_datasource.KafkaPubSub{},
@@ -848,7 +849,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			// We track runtime metrics with base router config version
 			// even when we have multiple feature flags
 			append([]attribute.KeyValue{
-				otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
+				otel.WgRouterConfigVersion.String(s.baseRouterConfigVersion),
 			}, s.baseOtelAttributes...),
 			s.processStartTime,
 		)
@@ -926,7 +927,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	httpRouter.Use(middleware.RealIP)
 	httpRouter.Use(cors.New(*s.corsOptions))
 
-	baseMux, err := s.buildMux(ctx, "", routerConfig.GetVersion(), routerConfig.GetEngineConfig(), routerConfig.GetSubgraphs())
+	baseMux, err := s.buildMux(ctx, "", s.baseRouterConfigVersion, routerConfig.GetEngineConfig(), routerConfig.GetSubgraphs())
 	if err != nil {
 		return nil, fmt.Errorf("failed to build base mux: %w", err)
 	}
@@ -1002,8 +1003,6 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			zap.Duration("duration", s.Config.rateLimit.SimpleStrategy.Period),
 			zap.Bool("rejectExceeding", s.Config.rateLimit.SimpleStrategy.RejectExceedingRequests),
 		)
-	} else {
-		s.logger.Info("Rate limiting disabled")
 	}
 
 	s.httpServer = &http.Server{
@@ -1246,7 +1245,7 @@ func WithModulesConfig(config map[string]interface{}) Option {
 
 func WithStaticRouterConfig(cfg *nodev1.RouterConfig) Option {
 	return func(r *Router) {
-		r.routerConfig = cfg
+		r.staticRouterConfig = cfg
 	}
 }
 

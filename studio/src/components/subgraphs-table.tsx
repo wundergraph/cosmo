@@ -1,15 +1,29 @@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useFeature } from "@/hooks/use-feature";
 import { useUser } from "@/hooks/use-user";
 import { docsBaseURL } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { useMutation, useQuery } from "@connectrpc/connect-query";
 import { ChartBarIcon, CommandLineIcon } from "@heroicons/react/24/outline";
 import {
   CaretSortIcon,
   CheckIcon,
+  Component1Icon,
+  Component2Icon,
   InfoCircledIcon,
 } from "@radix-ui/react-icons";
-import { useQuery, useMutation } from "@connectrpc/connect-query";
 import {
   addSubgraphMember,
   getOrganizationMembers,
@@ -26,7 +40,6 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { IoPersonAdd } from "react-icons/io5";
-import { useApplyParams } from "./analytics/use-apply-params";
 import { EmptyState } from "./empty-state";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -38,25 +51,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "./ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./ui/select";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Pagination } from "./ui/pagination";
 import {
   Table,
   TableBody,
@@ -66,9 +61,9 @@ import {
   TableRow,
   TableWrapper,
 } from "./ui/table";
+import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { useToast } from "./ui/use-toast";
-import { Pagination } from "./ui/pagination";
 
 export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
   const router = useRouter();
@@ -393,14 +388,56 @@ const AddSubgraphUsers = ({
   );
 };
 
+export const SubgraphPageTabs = () => {
+  const router = useRouter();
+  const tab = router.query.tab as string;
+
+  return (
+    <Tabs value={tab ?? "subgraphs"} className="flex min-h-0 flex-col">
+      <div className="flex flex-row">
+        <TabsList>
+          <TabsTrigger
+            value="subgraphs"
+            className="flex items-center gap-x-2"
+            asChild
+          >
+            <Link
+              href={{ query: { ...router.query, tab: "subgraphs", page: 1 } }}
+            >
+              <Component2Icon className="h-4 w-4" />
+              Subgraphs
+            </Link>
+          </TabsTrigger>
+          <TabsTrigger
+            value="featureSubgraphs"
+            className="flex items-center gap-x-2"
+            asChild
+          >
+            <Link
+              href={{
+                query: { ...router.query, tab: "featureSubgraphs", page: 1 },
+              }}
+            >
+              <Component1Icon className="h-4 w-4" />
+              Feature Subgraphs
+            </Link>
+          </TabsTrigger>
+        </TabsList>
+      </div>
+    </Tabs>
+  );
+};
+
 export const SubgraphsTable = ({
   graph,
   subgraphs,
   totalCount,
+  tab,
 }: {
   graph?: FederatedGraph;
   subgraphs: Subgraph[];
   totalCount: number;
+  tab: "subgraphs" | "featureSubgraphs";
 }) => {
   const user = useUser();
   const rbac = useFeature("rbac");
@@ -423,7 +460,14 @@ export const SubgraphsTable = ({
             <TableRow>
               <TableHead className="px-4">Name</TableHead>
               <TableHead className="w-4/12 px-4">Url</TableHead>
-              <TableHead className="w-4/12 px-4">Labels</TableHead>
+              <TableHead
+                className={cn("px-4", {
+                  "w-3/12": tab === "featureSubgraphs",
+                  "w-4/12": tab !== "featureSubgraphs",
+                })}
+              >
+                {tab === "featureSubgraphs" ? "Base Subgraph Name" : "Labels"}
+              </TableHead>
               <TableHead className="w-2/12 px-4">Last Published</TableHead>
               {rbac?.enabled && <TableHead className="w-1/12"></TableHead>}
             </TableRow>
@@ -437,6 +481,7 @@ export const SubgraphsTable = ({
                 labels,
                 creatorUserId,
                 namespace,
+                baseSubgraphName,
               }) => {
                 const path = `/${organizationSlug}/${namespace}/subgraph/${name}`;
                 let analyticsPath = `${path}/analytics`;
@@ -468,24 +513,28 @@ export const SubgraphsTable = ({
                       {routingURL}
                     </TableCell>
                     <TableCell className="px-4">
-                      <div className="flex flex-wrap gap-2">
-                        {labels.length === 0 && (
-                          <Tooltip delayDuration={200}>
-                            <TooltipTrigger>-</TooltipTrigger>
-                            <TooltipContent>
-                              Only graphs with empty label matchers will compose
-                              this subgraph
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                        {labels.map(({ key, value }) => {
-                          return (
-                            <Badge variant="secondary" key={key + value}>
-                              {key}={value}
-                            </Badge>
-                          );
-                        })}
-                      </div>
+                      {tab !== "featureSubgraphs" ? (
+                        <div className="flex flex-wrap gap-2">
+                          {labels.length === 0 && (
+                            <Tooltip delayDuration={200}>
+                              <TooltipTrigger>-</TooltipTrigger>
+                              <TooltipContent>
+                                Only graphs with empty label matchers will
+                                compose this subgraph
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                          {labels.map(({ key, value }) => {
+                            return (
+                              <Badge variant="secondary" key={key + value}>
+                                {key}={value}
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <>{baseSubgraphName}</>
+                      )}
                     </TableCell>
                     <TableCell className="px-4 text-muted-foreground">
                       {lastUpdatedAt
