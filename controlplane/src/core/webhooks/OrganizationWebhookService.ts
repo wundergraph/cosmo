@@ -1,13 +1,13 @@
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { eq } from 'drizzle-orm';
-import { EventMeta, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
-import pino from 'pino';
 import { PlainMessage } from '@bufbuild/protobuf';
-import axiosRetry, { exponentialDelay } from 'axios-retry';
+import { EventMeta, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import axios, { AxiosError, AxiosInstance } from 'axios';
+import axiosRetry, { exponentialDelay } from 'axios-retry';
+import { eq } from 'drizzle-orm';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import pino from 'pino';
 import * as schema from '../../db/schema.js';
-import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
+import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { makeWebhookRequest } from './utils.js';
 
 export interface FederatedGraphSchemaUpdate {
@@ -54,8 +54,6 @@ type Config = {
 };
 
 export class OrganizationWebhookService {
-  private readonly configs?: Config[];
-  private synced?: boolean;
   private readonly logger: pino.Logger;
   private readonly defaultBillingPlanId?: string;
   private httpClient: AxiosInstance;
@@ -68,8 +66,6 @@ export class OrganizationWebhookService {
   ) {
     this.logger = logger.child({ organizationId });
     this.defaultBillingPlanId = defaultBillingPlanId;
-    this.configs = [];
-    this.synced = false;
 
     this.httpClient = axios.create({
       timeout: 10_000,
@@ -83,7 +79,9 @@ export class OrganizationWebhookService {
     });
   }
 
-  private async syncOrganizationSettings(eventName: OrganizationEventName) {
+  private async getOrganizationConfigs(eventName: OrganizationEventName) {
+    const configs: Config[] = [];
+
     const orgRepo = new OrganizationRepository(this.logger, this.db, this.defaultBillingPlanId);
     const orgConfigs = await this.db.query.organizationWebhooks.findMany({
       where: eq(schema.organizationWebhooks.organizationId, this.organizationId),
@@ -131,7 +129,7 @@ export class OrganizationWebhookService {
         }
       }
 
-      this.configs?.push({
+      configs.push({
         url: config?.endpoint ?? '',
         key: config?.key ?? '',
         allowedUserEvents: config?.events ?? [],
@@ -151,7 +149,7 @@ export class OrganizationWebhookService {
         continue;
       }
 
-      this.configs?.push({
+      configs.push({
         url: integration.integrationConfig?.config.value?.endpoint ?? '',
         key: '',
         allowedUserEvents: integration.events ?? [],
@@ -160,7 +158,7 @@ export class OrganizationWebhookService {
       });
     }
 
-    this.synced = true;
+    return configs;
   }
 
   private shouldProcess(eventData: OrganizationEventData, config: Config) {
@@ -328,14 +326,10 @@ export class OrganizationWebhookService {
     }
   }
 
-  private async sendEvent(eventData: OrganizationEventData) {
-    if (!this.configs) {
-      return;
-    }
-
+  private async sendEvent(eventData: OrganizationEventData, configs: Config[]) {
     const logger = this.logger.child({ eventName: OrganizationEventName[eventData.eventName] });
 
-    for (const config of this.configs) {
+    for (const config of configs) {
       if (!this.shouldProcess(eventData, config)) {
         continue;
       }
@@ -370,18 +364,14 @@ export class OrganizationWebhookService {
     }
   }
 
-  send(eventData: OrganizationEventData) {
-    if (!this.synced) {
-      this.syncOrganizationSettings(eventData.eventName)
-        .then(() => this.sendEvent(eventData))
-        .catch((e) => {
-          const logger = this.logger.child({ eventName: OrganizationEventName[eventData.eventName] });
-          logger.child({ message: e.message });
-          logger.error(`Could not send webhook event`);
-        });
-      return;
+  async send(eventData: OrganizationEventData) {
+    try {
+      const configs = await this.getOrganizationConfigs(eventData.eventName);
+      this.sendEvent(eventData, configs);
+    } catch (e: any) {
+      const logger = this.logger.child({ eventName: OrganizationEventName[eventData.eventName] });
+      logger.child({ message: e.message });
+      logger.error(`Could not send webhook event`);
     }
-
-    this.sendEvent(eventData);
   }
 }
