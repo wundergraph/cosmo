@@ -4971,13 +4971,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         // this will happen only when the user was invited but the user didn't login and the admin removed that user,
         // in this case the user will not have a personal org
         if (userMemberships.length === 0) {
-          // deleting the user from keycloak
-          await opts.keycloakClient.client.users.del({
+          await userRepo.deleteUser({
             id: user.id,
-            realm: opts.keycloakRealm,
+            keycloakClient: opts.keycloakClient,
+            keycloakRealm: opts.keycloakRealm,
           });
-          // deleting the user from the db
-          await userRepo.deleteUser({ id: user.id });
         }
 
         await auditLogRepo.addAuditLog({
@@ -5081,13 +5079,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         // this will happen only when the user was invited but the user didn't login and the admin removed that user,
         // in this case the user will not have a personal org
         if (userMemberships.length === 0 && userPendingInvitations.length === 0) {
-          // deleting the user from keycloak
-          await opts.keycloakClient.client.users.del({
+          await userRepo.deleteUser({
             id: user.id,
-            realm: opts.keycloakRealm,
+            keycloakClient: opts.keycloakClient,
+            keycloakRealm: opts.keycloakRealm,
           });
-          // deleting the user from the db
-          await userRepo.deleteUser({ id: user.id });
         }
 
         await auditLogRepo.addAuditLog({
@@ -5658,40 +5654,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        await opts.keycloakClient.authenticateClient();
-
-        const organizationGroup = await opts.keycloakClient.client.groups.find({
-          max: 1,
-          search: org.slug,
-          realm: opts.keycloakRealm,
+        await orgRepo.deleteOrganization(authContext.organizationId, org.slug, {
+          keycloakClient: opts.keycloakClient,
+          keycloakRealm: opts.keycloakRealm,
         });
 
-        if (organizationGroup.length === 0) {
-          throw new Error(`Organization group '${org.slug}' not found`);
-        }
-
-        await opts.keycloakClient.client.groups.del({
-          id: organizationGroup[0].id!,
-          realm: opts.keycloakRealm,
-        });
-
-        return opts.db.transaction(async (tx) => {
-          const orgRepo = new OrganizationRepository(logger, tx, opts.billingDefaultPlanId);
-          const billingRepo = new BillingRepository(tx);
-          const billingService = new BillingService(tx, billingRepo);
-
-          const subscription = await billingRepo.getActiveSubscriptionOfOrganization(authContext.organizationId);
-          if (subscription) {
-            await billingService.cancelSubscription(authContext.organizationId, subscription.id, 'Deleted by api');
-          }
-          await orgRepo.deleteOrganization(authContext.organizationId);
-
-          return {
-            response: {
-              code: EnumStatusCode.OK,
-            },
-          };
-        });
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
       });
     },
 
@@ -9700,7 +9672,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               contentJson: JSON.stringify(gd.thread[0].contentJson),
               createdAt: gd.thread[0].createdAt.toISOString(),
               updatedAt: gd.thread[0].updatedAt?.toISOString(),
-              createdBy: gd.thread[0].createdById,
+              createdBy: gd.thread[0].createdById ?? undefined,
               isDeleted: gd.thread[0].isDeleted,
             },
           })),
@@ -9860,7 +9832,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           contentJson: t.contentJson ? JSON.stringify(t.contentJson) : '',
           createdAt: t.createdAt.toISOString(),
           updatedAt: t.updatedAt?.toISOString(),
-          createdBy: t.createdById,
+          createdBy: t.createdById ?? undefined,
           isDeleted: t.isDeleted,
         }));
 

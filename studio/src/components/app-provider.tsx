@@ -37,7 +37,7 @@ export interface Organization {
   name: string;
   slug: string;
   plan?: string;
-  creatorUserId: string;
+  creatorUserId?: string;
   roles: string[];
   createdAt: string;
   features: {

@@ -79,7 +79,7 @@ export class OperationsRepository {
         filePath: row.filePath,
         createdAt: row.createdAt.toISOString(),
         lastUpdatedAt: row?.updatedAt?.toISOString() || '',
-        createdBy: row.createdBy.email,
+        createdBy: row.createdBy?.email,
         lastUpdatedBy: row.updatedBy?.email ?? '',
         contents: row.operationContent ?? '',
         operationNames: row.operationNames ?? [],

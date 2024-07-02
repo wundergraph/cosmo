@@ -92,7 +92,7 @@ export default class OidcProvider {
     kcRealm: string;
     organizationId: string;
     organizationSlug: string;
-    orgCreatorUserId: string;
+    orgCreatorUserId?: string;
     alias: string;
     db: PostgresJsDatabase<typeof schema>;
   }) {

@@ -1175,7 +1175,7 @@ message Organization {
   string id = 1;
   string name = 2;
   string slug = 3;
-  string creatorUserId = 4;
+  optional string creatorUserId = 4;
   string createdAt = 5;
 }
 
@@ -1476,7 +1476,7 @@ message OrganizationInvite{
   string id = 1;
   string name = 2;
   string slug = 3;
-  string creatorUserId = 4;
+  optional string creatorUserId = 4;
   string createdAt = 5;
   optional string invitedBy = 6;
 }
@@ -1805,7 +1805,7 @@ message Discussion {
 message DiscussionComment {
   string id = 1;
   string content_json = 2;
-  string created_by = 3;
+  optional string created_by = 3;
   string created_at = 4;
   optional string updated_at = 5;
   bool is_deleted = 6;
