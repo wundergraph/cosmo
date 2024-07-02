@@ -8237,7 +8237,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             };
           }
 
-          const ffSchemaVersion = await featureFlagRepo.getFeatureFlagSchemaVersionByBaseSchemaVersionAndFfId({
+          const ffSchemaVersion = await featureFlagRepo.getFeatureFlagSchemaVersionByBaseSchemaVersion({
             baseSchemaVersionId: schemaVersion.schemaVersionId,
             featureFlagId: featureFlag.id,
           });
@@ -9528,7 +9528,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           }
 
           if (routerConfigVersion) {
-            const ffSchemaVersion = await featureFlagRepo.getFeatureFlagSchemaVersionByBaseSchemaVersionAndFfId({
+            const ffSchemaVersion = await featureFlagRepo.getFeatureFlagSchemaVersionByBaseSchemaVersion({
               baseSchemaVersionId: routerConfigVersion,
               featureFlagId: featureFlag.id,
             });

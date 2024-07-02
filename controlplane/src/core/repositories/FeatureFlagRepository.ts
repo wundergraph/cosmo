@@ -961,7 +961,7 @@ export class FeatureFlagRepository {
 
   // return a particular feature flag schema version which is associated with the base schema version and feature flag id
   // input: base schema version id and feature flag id
-  public async getFeatureFlagSchemaVersionByBaseSchemaVersionAndFfId({
+  public async getFeatureFlagSchemaVersionByBaseSchemaVersion({
     baseSchemaVersionId,
     featureFlagId,
   }: {
