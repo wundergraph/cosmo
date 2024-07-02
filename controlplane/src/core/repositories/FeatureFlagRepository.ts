@@ -464,7 +464,11 @@ export class FeatureFlagRepository {
         .innerJoin(subgraphs, eq(subgraphs.id, featureSubgraphsToBaseSubgraphs.featureSubgraphId))
         .innerJoin(targets, eq(targets.id, subgraphs.targetId))
         .where(
-          and(eq(featureSubgraphsToBaseSubgraphs.baseSubgraphId, subgraphId), eq(targets.namespaceId, namespaceId)),
+          and(
+            eq(featureSubgraphsToBaseSubgraphs.baseSubgraphId, subgraphId),
+            eq(targets.namespaceId, namespaceId),
+            eq(targets.organizationId, this.organizationId),
+          ),
         );
 
       if (ffs.length === 0) {
@@ -532,13 +536,16 @@ export class FeatureFlagRepository {
     excludeDisabled: boolean;
   }): Promise<FederatedGraphDTO[]> {
     const federatedGraphs: FederatedGraphDTO[] = [];
-    const featureGraphsOfFeatureFlag = await this.getFeatureSubgraphsByFlagId({ featureFlagId, namespaceId });
-    if (featureGraphsOfFeatureFlag.length === 0) {
+    const featureSubraphsOfFeatureFlag = await this.getFeatureSubgraphsByFlagId({
+      featureFlagId,
+      namespaceId,
+    });
+    if (featureSubraphsOfFeatureFlag.length === 0) {
       return [];
     }
-    const baseSubgraphIds = featureGraphsOfFeatureFlag.map((f) => f.baseSubgraphId);
+    const baseSubgraphIds = featureSubraphsOfFeatureFlag.map((f) => f.baseSubgraphId);
 
-    // fetches the federated graphs which contains all the base subgraphs of the ffg
+    // fetches the federated graphs which contains all the base subgraphs of the feature subgraphs
     const federatedGraphIds = await this.db
       .select({
         federatedGraphId: subgraphsToFederatedGraph.federatedGraphId,
@@ -705,15 +712,17 @@ export class FeatureFlagRepository {
     const featureGraphsByFlag = [];
 
     for (const fg of fgs) {
-      if (fg.schemaVersionId === null) {
-        continue;
-      }
+      let lastUpdatedAt = '';
+      let schemaSDL = '';
+      let schemaVersionId = '';
 
-      const sv = await this.db.query.schemaVersion.findFirst({
-        where: eq(schemaVersion.id, fg.schemaVersionId),
-      });
-      if (!sv || !sv.schemaSDL) {
-        continue;
+      if (fg.schemaVersionId !== null) {
+        const sv = await this.db.query.schemaVersion.findFirst({
+          where: eq(schemaVersion.id, fg.schemaVersionId),
+        });
+        lastUpdatedAt = sv?.createdAt?.toISOString() ?? '';
+        schemaSDL = sv?.schemaSDL ?? '';
+        schemaVersionId = sv?.id ?? '';
       }
 
       const baseSubgraph = await subgraphRepo.byId(fg.baseSubgraphId);
@@ -727,11 +736,11 @@ export class FeatureFlagRepository {
         subscriptionProtocol: fg.subscriptionProtocol ?? 'ws',
         websocketSubprotocol: fg.websocketSubprotocol || undefined,
         creatorUserId: fg.createdBy || undefined,
-        schemaSDL: sv.schemaSDL,
-        lastUpdatedAt: sv.createdAt.toISOString(),
         labels: fg.labels?.map?.((l) => splitLabel(l)) ?? [],
         namespace: fg.namespaceName,
-        schemaVersionId: sv.id,
+        schemaVersionId,
+        schemaSDL,
+        lastUpdatedAt,
         baseSubgraphName: baseSubgraph.name,
       });
     }
@@ -789,10 +798,12 @@ export class FeatureFlagRepository {
         continue;
       }
 
+      const filteredFeatureSubgraphs = featureSubgraphsByFlag.filter((ff) => ff.schemaVersionId !== '');
+
       featureFlagWithEnabledFeatureGraphs.push({
         id: featureFlag.id,
         name: featureFlag.name,
-        featureSubgraphs: featureSubgraphsByFlag,
+        featureSubgraphs: filteredFeatureSubgraphs,
       });
     }
     return featureFlagWithEnabledFeatureGraphs;

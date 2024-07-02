@@ -491,7 +491,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
       namespace: graphContext?.graph?.namespace,
       featureFlagName:
         type === "featureFlag"
-          ? graphContext?.featureFlags.find((f) => f.id === loadSchemaGraphId)
+          ? graphContext?.featureFlagsInLatestValidComposition.find((f) => f.id === loadSchemaGraphId)
               ?.name
           : undefined,
     },
@@ -666,12 +666,12 @@ const PlaygroundPage: NextPageWithLayout = () => {
           args[0] as URL,
           args[1] as RequestInit,
           type === "featureFlag"
-            ? graphContext?.featureFlags.find((f) => f.id === loadSchemaGraphId)
+            ? graphContext?.featureFlagsInLatestValidComposition.find((f) => f.id === loadSchemaGraphId)
                 ?.name
             : undefined,
         ),
     });
-  }, [routingUrl, subscriptionUrl, graphContext?.graphRequestToken, graphContext?.featureFlags, schema, clientValidationEnabled, type, loadSchemaGraphId]);
+  }, [routingUrl, subscriptionUrl, graphContext?.graphRequestToken, graphContext?.featureFlagsInLatestValidComposition, schema, clientValidationEnabled, type, loadSchemaGraphId]);
 
   const { theme } = useTheme();
 

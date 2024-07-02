@@ -46,7 +46,12 @@ const FeatureFlagDetailsPage: NextPageWithLayout = () => {
       <FeatureFlagDetails
         featureFlag={data.featureFlag}
         featureSubgraphs={data.featureSubgraphs}
-        federatedGraphs={data.federatedGraphs}
+        federatedGraphs={data.federatedGraphs.map((g) => {
+          return {
+            federatedGraph: g.federatedGraph!,
+            isConnected: g.isConnected,
+          };
+        })}
       />
     </div>
   );
@@ -58,7 +63,7 @@ const FeatureFlagBreadcrumb = () => {
   const namespace = router.query.namespace as string;
 
   return (
-    <div className="h-8 flex justify-center items-center">
+    <div className="flex h-8 items-center justify-center">
       <Link
         key={organizationSlug + namespace}
         href={`/${organizationSlug}/feature-flags?namespace=${namespace}`}
@@ -83,7 +88,11 @@ FeatureFlagDetailsPage.getLayout = (page) => {
     "A quick glance of the details for this feature flag.",
     undefined,
     undefined,
-    [<FeatureFlagBreadcrumb key={0} />, <FeatureFlagNameBreadcrumb key={1} />],
+    [
+      <NamespaceSelector key={0} shouldRedirect />,
+      <FeatureFlagBreadcrumb key={1} />,
+      <FeatureFlagNameBreadcrumb key={2} />,
+    ],
     true,
   );
 };

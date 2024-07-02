@@ -346,11 +346,10 @@ message GetFederatedGraphByNameResponse {
   FederatedGraph graph = 2;
   repeated Subgraph subgraphs = 3;
   string graphRequestToken = 4;
-  repeated FeatureFlag featureFlags = 5;
-  repeated FeatureFlag featureFlagsInLatestValidComposition = 6;
+  repeated FeatureFlag featureFlagsInLatestValidComposition = 5;
   // includes all the feature subgraphs that are part of the federated graph, 
   // even the ones that are not part of the latest composition
-  repeated Subgraph featureSubgraphs = 7;
+  repeated Subgraph featureSubgraphs = 6;
 }
 
 message GetFederatedGraphSDLByNameRequest {
@@ -2101,20 +2100,24 @@ message GetFeatureFlagByNameRequest {
 }
 
 message GetFeatureFlagByNameResponse {
+  message FfFederatedGraph{
+    FederatedGraph federated_graph = 1;
+    bool is_connected = 2;
+  }
   Response response = 1;
-  FeatureFlag featureFlag = 2;
-  repeated FederatedGraph federatedGraphs = 3;
-  repeated Subgraph featureSubgraphs = 4;
+  FeatureFlag feature_flag = 2;
+  repeated FfFederatedGraph federated_graphs = 3;
+  repeated Subgraph feature_subgraphs = 4;
 }
 
 message GetFeatureSubgraphsByFeatureFlagRequest {
-  string featureFlagName = 1;
+  string feature_flag_name = 1;
   string namespace = 2;
 }
 
 message GetFeatureSubgraphsByFeatureFlagResponse {
   Response response = 1;
-  repeated Subgraph featureSubgraphs = 2;
+  repeated Subgraph feature_subgraphs = 2;
 }
 
 message GetFeatureSubgraphsRequest {
@@ -2128,6 +2131,20 @@ message GetFeatureSubgraphsResponse {
   Response response = 1;
   repeated Subgraph feature_subgraphs = 2;
   int32 count = 3;
+}
+
+message GetFeatureFlagsByFederatedGraphRequest {
+  string federated_graph_name  = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+  string namespace = 4;
+  optional string query = 5;
+}
+
+message GetFeatureFlagsByFederatedGraphResponse {
+  Response response = 1;
+  repeated FeatureFlag feature_flags = 2;
+  int32 total_count = 3;
 }
 
 service PlatformService {
@@ -2401,6 +2418,8 @@ service PlatformService {
   rpc GetFeatureSubgraphsByFeatureFlag(GetFeatureSubgraphsByFeatureFlagRequest) returns (GetFeatureSubgraphsByFeatureFlagResponse) {}
   // GetFeatureSubgraphs returns the list of feature subgraphs.
   rpc GetFeatureSubgraphs(GetFeatureSubgraphsRequest) returns (GetFeatureSubgraphsResponse) {}
+  // GetFeatureFlagsByFederatedGraph returns the list of feature flags which match the label matchers of the federated graph.
+  rpc GetFeatureFlagsByFederatedGraph(GetFeatureFlagsByFederatedGraphRequest) returns (GetFeatureFlagsByFederatedGraphResponse) {}
 
   //
   // Billing

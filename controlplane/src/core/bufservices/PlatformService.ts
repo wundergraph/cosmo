@@ -66,6 +66,7 @@ import {
   GetDiscussionResponse,
   GetDiscussionSchemasResponse,
   GetFeatureFlagByNameResponse,
+  GetFeatureFlagsByFederatedGraphResponse,
   GetFeatureFlagsResponse,
   GetFeatureSubgraphsByFeatureFlagResponse,
   GetFeatureSubgraphsResponse,
@@ -220,7 +221,7 @@ import {
   isValidSchemaTags,
   validateDateRanges,
 } from '../util.js';
-import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
+import { OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { apiKeyPermissions } from '../constants.js';
 import SchemaLinter from '../services/SchemaLinter.js';
 import { FeatureFlagRepository } from '../repositories/FeatureFlagRepository.js';
@@ -11173,6 +11174,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
         const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
+        const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
         const namespace = await namespaceRepo.byName(req.namespace);
@@ -11203,6 +11205,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        // gets all federated graphs that match the feature flag labels
+        const labelMatchedFederatedGraphs = await fedGraphRepo.bySubgraphLabels({
+          namespaceId: namespace.id,
+          labels: featureFlag.labels,
+          excludeContracts: false,
+        });
+
+        // the federated graphs that are connected to the feature flag
         const federatedGraphs = await featureFlagRepo.getFederatedGraphsByFeatureFlag({
           featureFlagId: featureFlag.id,
           namespaceId: namespace.id,
@@ -11236,22 +11246,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             baseSubgraphName: f.baseSubgraphName,
             baseSubgraphId: f.baseSubgraphId,
           })),
-          federatedGraphs: federatedGraphs.map((g) => ({
-            id: g.id,
-            targetId: g.targetId,
-            name: g.name,
-            namespace: g.namespace,
-            labelMatchers: g.labelMatchers,
-            routingURL: g.routingUrl,
-            lastUpdatedAt: g.lastUpdatedAt,
-            connectedSubgraphs: g.subgraphsCount,
-            compositionErrors: g.compositionErrors ?? '',
-            isComposable: g.isComposable,
-            compositionId: g.compositionId,
-            supportsFederation: g.supportsFederation,
-            contract: g.contract,
-            admissionWebhookUrl: g.admissionWebhookURL,
-            requestSeries: [],
+          federatedGraphs: labelMatchedFederatedGraphs.map((g) => ({
+            federatedGraph: {
+              id: g.id,
+              targetId: g.targetId,
+              name: g.name,
+              namespace: g.namespace,
+              labelMatchers: g.labelMatchers,
+              routingURL: g.routingUrl,
+              lastUpdatedAt: g.lastUpdatedAt,
+              connectedSubgraphs: g.subgraphsCount,
+              compositionErrors: g.compositionErrors ?? '',
+              isComposable: g.isComposable,
+              compositionId: g.compositionId,
+              supportsFederation: g.supportsFederation,
+              contract: g.contract,
+              admissionWebhookUrl: g.admissionWebhookURL,
+              requestSeries: [],
+            },
+            isConnected: federatedGraphs.some((f) => f.id === g.id),
           })),
         };
       });
@@ -11318,6 +11331,67 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             baseSubgraphName: f.baseSubgraphName,
             baseSubgraphId: f.baseSubgraphId,
           })),
+        };
+      });
+    },
+
+    getFeatureFlagsByFederatedGraph: (req, ctx) => {
+      let logger = getLogger(ctx, opts.logger);
+
+      return handleError<PlainMessage<GetFeatureFlagsByFederatedGraphResponse>>(ctx, logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+        const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
+        const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
+        const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+
+        const namespace = await namespaceRepo.byName(req.namespace);
+        if (!namespace) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Namespace ${req.namespace} not found`,
+            },
+            featureFlags: [],
+            totalCount: 0,
+          };
+        }
+
+        const federatedGraph = await fedGraphRepo.byName(req.federatedGraphName, req.namespace);
+        if (!federatedGraph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Federated Graph '${req.federatedGraphName}' not found`,
+            },
+            featureFlags: [],
+            totalCount: 0,
+          };
+        }
+
+        const matchedFeatureFlags = await featureFlagRepo.getMatchedFeatureFlags({
+          namespaceId: namespace.id,
+          fedGraphLabelMatchers: federatedGraph.labelMatchers,
+          excludeDisabled: false,
+        });
+
+        const featureFlags: FeatureFlagDTO[] = [];
+        for (const f of matchedFeatureFlags) {
+          const featureFlag = await featureFlagRepo.getFeatureFlagById({
+            featureFlagId: f.id,
+            namespaceId: namespace.id,
+          });
+          if (featureFlag) {
+            featureFlags.push(featureFlag);
+          }
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          featureFlags,
+          totalCount: featureFlags.length,
         };
       });
     },

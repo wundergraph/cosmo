@@ -24,15 +24,18 @@ import {
 import { useSubgraph } from "@/hooks/use-subgraph";
 import { docsBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
-import { CommandLineIcon } from "@heroicons/react/24/outline";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@connectrpc/connect-query";
+import {
+  CommandLineIcon,
+  ExclamationTriangleIcon,
+} from "@heroicons/react/24/outline";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getFederatedGraphsBySubgraphLabels } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { FederatedGraph } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { PiWarningCircle } from "react-icons/pi";
 
 export const Empty = ({ labels }: { labels: string[] }) => {
   const router = useRouter();
@@ -71,7 +74,7 @@ export const Empty = ({ labels }: { labels: string[] }) => {
 export const FederatedGraphsTable = ({
   graphs,
 }: {
-  graphs: FederatedGraph[];
+  graphs: { federatedGraph: FederatedGraph; isConnected?: boolean }[];
 }) => {
   const router = useRouter();
   const organizationSlug = router.query.organizationSlug;
@@ -96,7 +99,7 @@ export const FederatedGraphsTable = ({
         <TableHeader>
           <TableRow>
             <TableHead className="px-4">Name</TableHead>
-            <TableHead className="w-4/12 px-4">Url</TableHead>
+            <TableHead className="w-3/12 px-4">Url</TableHead>
             <TableHead className="w-4/12 px-4">Label Matchers</TableHead>
             <TableHead className="w-2/12 px-4">Last Published</TableHead>
             <TableHead className="w-1/12"></TableHead>
@@ -104,7 +107,16 @@ export const FederatedGraphsTable = ({
         </TableHeader>
         <TableBody>
           {graphs.map(
-            ({ name, routingURL, lastUpdatedAt, labelMatchers, namespace }) => {
+            ({
+              federatedGraph: {
+                name,
+                routingURL,
+                lastUpdatedAt,
+                labelMatchers,
+                namespace,
+              },
+              isConnected,
+            }) => {
               const path = `/${organizationSlug}/${namespace}/graph/${name}`;
               return (
                 <TableRow
@@ -112,7 +124,27 @@ export const FederatedGraphsTable = ({
                   className="group cursor-pointer py-1 hover:bg-secondary/30"
                   onClick={() => router.push(path)}
                 >
-                  <TableCell className="px-4 font-medium">{name}</TableCell>
+                  <TableCell className="flex items-center gap-x-2 px-4 font-medium">
+                    <>
+                      <div>{name}</div>
+                      {isConnected === false && (
+                        <Tooltip delayDuration={200}>
+                          <TooltipTrigger>
+                            <Badge
+                              variant="destructive"
+                              className="flex items-center gap-x-2"
+                            >
+                              <>Action required</>
+                              <PiWarningCircle className="h-4 w-4 text-red-500" />
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent className="w-64">
+                            {`The federated graph does not include one of the base subgraphs of the feature subgraphs that the feature flag relies on for composition.`}
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </>
+                  </TableCell>
                   <TableCell className="px-4 text-muted-foreground">
                     {routingURL}
                   </TableCell>
@@ -196,7 +228,15 @@ const FederatedGraphsPage: NextPageWithLayout = () => {
     );
   }
 
-  return <FederatedGraphsTable graphs={data.graphs} />;
+  return (
+    <FederatedGraphsTable
+      graphs={data.graphs.map((g) => {
+        return {
+          federatedGraph: g,
+        };
+      })}
+    />
+  );
 };
 
 FederatedGraphsPage.getLayout = (page) =>

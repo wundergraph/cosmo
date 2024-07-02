@@ -1,4 +1,6 @@
 import { useApplyParams } from "@/components/analytics/use-apply-params";
+import { EmptyState } from "@/components/empty-state";
+import { FeatureFlagsTable } from "@/components/feature-flags-table";
 import {
   GraphContext,
   GraphPageLayout,
@@ -6,16 +8,25 @@ import {
 } from "@/components/layout/graph-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Loader } from "@/components/ui/loader";
 import { NextPageWithLayout } from "@/lib/page";
-import { Cross1Icon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
+import { useQuery } from "@connectrpc/connect-query";
+import {
+  Cross1Icon,
+  ExclamationTriangleIcon,
+  MagnifyingGlassIcon,
+} from "@radix-ui/react-icons";
+import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+import { getFeatureFlagsByFederatedGraph } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { useRouter } from "next/router";
 import { useContext, useState } from "react";
-import Fuse from "fuse.js";
-import { FeatureFlagsTable } from "@/components/feature-flags-table";
+import { useDebounce } from "use-debounce";
 
 const FeatureFlagsPage: NextPageWithLayout = () => {
   const graphData = useContext(GraphContext);
   const router = useRouter();
+
+  const namespace = router.query.namespace as string;
 
   const pageNumber = router.query.page
     ? parseInt(router.query.page as string)
@@ -23,21 +34,54 @@ const FeatureFlagsPage: NextPageWithLayout = () => {
   const pageSize = Number.parseInt((router.query.pageSize as string) || "10");
   const limit = pageSize > 50 ? 50 : pageSize;
   const offset = (pageNumber - 1) * limit;
+
   const [search, setSearch] = useState(router.query.search as string);
+  const [query] = useDebounce(search, 500);
+
   const applyParams = useApplyParams();
+
+  const { data, isLoading, error, refetch } = useQuery(getFeatureFlagsByFederatedGraph, {
+    federatedGraphName: graphData?.graph?.name,
+    namespace,
+    query,
+    limit,
+    offset,
+  }, {
+    enabled: !!graphData,
+  });
 
   if (!graphData) return null;
 
-  const fuse = new Fuse(graphData.featureFlags, {
-    keys: ["name"],
-    minMatchCharLength: 1,
-  });
+  let content;
 
-  const searchedFeatureFlags = search
-    ? fuse.search(search).map(({ item }) => item)
-    : graphData.featureFlags;
-
-  const filteredFeatureFlags = searchedFeatureFlags.slice(offset, limit + offset);
+  if (isLoading) {
+    content = <Loader className="" fullscreen />;
+  } else if (error || data?.response?.code !== EnumStatusCode.OK) {
+    content = (
+      <EmptyState
+        icon={<ExclamationTriangleIcon />}
+        title="Could not retrieve feature flags"
+        description={
+          data?.response?.details || error?.message || "Please try again"
+        }
+        actions={<Button onClick={() => refetch()}>Retry</Button>}
+      />
+    );
+  } else if (!data?.featureFlags) {
+    content = null;
+  } else {
+    const filteredFeatureFlags = data.featureFlags.slice(
+      offset,
+      limit + offset,
+    );
+    content = (
+      <FeatureFlagsTable
+        featureFlags={filteredFeatureFlags}
+        graph={graphData.graph}
+        totalCount={data.totalCount}
+      />
+    );
+  }
 
   return (
     <div className="flex h-full flex-col">
@@ -65,11 +109,7 @@ const FeatureFlagsPage: NextPageWithLayout = () => {
           </Button>
         )}
       </div>
-      <FeatureFlagsTable
-        featureFlags={filteredFeatureFlags}
-        graph={graphData.graph}
-        totalCount={filteredFeatureFlags.length}
-      />
+      {content}
     </div>
   );
 };

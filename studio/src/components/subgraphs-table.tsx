@@ -20,6 +20,8 @@ import { ChartBarIcon, CommandLineIcon } from "@heroicons/react/24/outline";
 import {
   CaretSortIcon,
   CheckIcon,
+  Component1Icon,
+  Component2Icon,
   InfoCircledIcon,
 } from "@radix-ui/react-icons";
 import {
@@ -392,17 +394,31 @@ export const SubgraphPageTabs = () => {
 
   return (
     <Tabs value={tab ?? "subgraphs"} className="flex min-h-0 flex-col">
-      <div className="flex flex-row pb-4">
+      <div className="flex flex-row">
         <TabsList>
-          <TabsTrigger value="subgraphs" asChild>
-            <Link href={{ query: { ...router.query, tab: "subgraphs" } }}>
+          <TabsTrigger
+            value="subgraphs"
+            className="flex items-center gap-x-2"
+            asChild
+          >
+            <Link
+              href={{ query: { ...router.query, tab: "subgraphs", page: 1 } }}
+            >
+              <Component2Icon className="h-4 w-4" />
               Subgraphs
             </Link>
           </TabsTrigger>
-          <TabsTrigger value="featureSubgraphs" asChild>
+          <TabsTrigger
+            value="featureSubgraphs"
+            className="flex items-center gap-x-2"
+            asChild
+          >
             <Link
-              href={{ query: { ...router.query, tab: "featureSubgraphs" } }}
+              href={{
+                query: { ...router.query, tab: "featureSubgraphs", page: 1 },
+              }}
             >
+              <Component1Icon className="h-4 w-4" />
               Feature Subgraphs
             </Link>
           </TabsTrigger>
@@ -416,7 +432,7 @@ export const SubgraphsTable = ({
   graph,
   subgraphs,
   totalCount,
-  tab
+  tab,
 }: {
   graph?: FederatedGraph;
   subgraphs: Subgraph[];

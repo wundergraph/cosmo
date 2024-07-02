@@ -19,10 +19,11 @@ const FeatureFlagDetailsPage: NextPageWithLayout = () => {
 
   const organizationSlug = router.query.organizationSlug as string;
   const namespace = router.query.namespace as string;
-  const slug = router.query.featureFlagSlug as string;
+  const slug = router.query.slug as string;
+  const featureFlagSlug = router.query.featureFlagSlug as string;
 
   const { data, isLoading, error, refetch } = useQuery(getFeatureFlagByName, {
-    name: slug,
+    name: featureFlagSlug,
     namespace,
   });
 
@@ -36,11 +37,11 @@ const FeatureFlagDetailsPage: NextPageWithLayout = () => {
   )
     return (
       <GraphPageLayout
-        title={slug}
+        title={featureFlagSlug}
         subtitle="A quick glance of the details for this feature flag"
         breadcrumbs={[
           <Link
-            key={slug}
+            key={featureFlagSlug}
             href={`/${organizationSlug}/${namespace}/graph/${slug}/feature-flags`}
           >
             Feature Flags
@@ -61,7 +62,7 @@ const FeatureFlagDetailsPage: NextPageWithLayout = () => {
 
   return (
     <GraphPageLayout
-      title={slug}
+      title={featureFlagSlug}
       subtitle="A quick glance of the details for this feature flag"
       breadcrumbs={[
         <Link
@@ -76,7 +77,12 @@ const FeatureFlagDetailsPage: NextPageWithLayout = () => {
       <FeatureFlagDetails
         featureFlag={data.featureFlag}
         featureSubgraphs={data.featureSubgraphs}
-        federatedGraphs={data.federatedGraphs}
+        federatedGraphs={data.federatedGraphs.map((g) => {
+          return {
+            federatedGraph: g.federatedGraph!,
+            isConnected: g.isConnected,
+          };
+        })}
       />
     </GraphPageLayout>
   );

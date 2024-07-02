@@ -12,6 +12,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@connectrpc/connect-query";
 import {
   ChartBarIcon,
   ExclamationTriangleIcon,
@@ -24,10 +25,8 @@ import {
   Component2Icon,
   FileTextIcon,
   HomeIcon,
-  MagnifyingGlassIcon,
   PlayIcon,
 } from "@radix-ui/react-icons";
-import { useQuery } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getFederatedGraphByName,
@@ -40,6 +39,7 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { useRouter } from "next/router";
 import { Fragment, createContext, useContext, useMemo, useState } from "react";
+import { MdOutlineFeaturedPlayList } from "react-icons/md";
 import {
   PiChat,
   PiCubeFocus,
@@ -50,30 +50,17 @@ import {
 import { EmptyState } from "../empty-state";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
-import { Input } from "../ui/input";
 import { Link } from "../ui/link";
 import { Loader } from "../ui/loader";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectSeparator,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
 import { PageHeader } from "./head";
 import { LayoutProps } from "./layout";
 import { NavLink, SideNav } from "./sidenav";
-import { MdOutlineFeaturedPlayList } from "react-icons/md";
 
 export interface GraphContextProps {
   graph: GetFederatedGraphByNameResponse["graph"];
   subgraphs: GetFederatedGraphByNameResponse["subgraphs"];
   graphs: GetFederatedGraphsResponse["graphs"];
   graphRequestToken: string;
-  featureFlags: GetFederatedGraphByNameResponse["featureFlags"];
   featureFlagsInLatestValidComposition: GetFederatedGraphByNameResponse["featureFlagsInLatestValidComposition"];
   featureSubgraphs: GetFederatedGraphByNameResponse["featureSubgraphs"];
 }
@@ -107,9 +94,9 @@ export const GraphLayout = ({ children }: LayoutProps) => {
       subgraphs: data.subgraphs,
       graphRequestToken: data.graphRequestToken,
       graphs: graphsData.graphs,
-      featureFlags: data.featureFlags,
-      featureFlagsInLatestValidComposition: data.featureFlagsInLatestValidComposition,
-      featureSubgraphs: data.featureSubgraphs
+      featureFlagsInLatestValidComposition:
+        data.featureFlagsInLatestValidComposition,
+      featureSubgraphs: data.featureSubgraphs,
     };
   }, [data, graphsData]);
 

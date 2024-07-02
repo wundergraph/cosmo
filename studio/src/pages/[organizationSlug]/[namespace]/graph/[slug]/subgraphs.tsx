@@ -14,6 +14,7 @@ import { useContext, useEffect, useState } from "react";
 import Fuse from "fuse.js";
 import { Subgraph } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { set } from "lodash";
+import { Toolbar } from "@/components/ui/toolbar";
 
 const SubGraphsPage: NextPageWithLayout = () => {
   const graphData = useContext(GraphContext);
@@ -29,7 +30,11 @@ const SubGraphsPage: NextPageWithLayout = () => {
   const [search, setSearch] = useState(router.query.search as string);
   const applyParams = useApplyParams();
 
-  const [filteredGraphs, setFilteredGraphs] = useState<Subgraph[]>([]);
+  const [filteredSubgraphs, setFilteredSubgraphs] = useState<Subgraph[]>([]);
+  const [filteredFeatureSubgraphs, setFilteredFeatureSubgraphs] = useState<
+    Subgraph[]
+  >([]);
+  const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
     if (!graphData) return;
@@ -43,7 +48,8 @@ const SubGraphsPage: NextPageWithLayout = () => {
         ? fuse.search(search).map(({ item }) => item)
         : graphData.featureSubgraphs;
 
-      setFilteredGraphs(
+      setTotalCount(searchedFetaureSubgraphs.length);
+      setFilteredFeatureSubgraphs(
         searchedFetaureSubgraphs.slice(offset, limit + offset),
       );
     } else {
@@ -56,7 +62,8 @@ const SubGraphsPage: NextPageWithLayout = () => {
         ? fuse.search(search).map(({ item }) => item)
         : graphData.subgraphs;
 
-      setFilteredGraphs(searchedSubgraphs.slice(offset, limit + offset));
+      setTotalCount(searchedSubgraphs.length);
+      setFilteredSubgraphs(searchedSubgraphs.slice(offset, limit + offset));
     }
   }, [tab, search, offset, limit, graphData]);
 
@@ -64,7 +71,6 @@ const SubGraphsPage: NextPageWithLayout = () => {
 
   return (
     <div className="flex h-full flex-col">
-      <SubgraphPageTabs />
       <div className="relative mb-4">
         <MagnifyingGlassIcon className="absolute bottom-0 left-3 top-0 my-auto" />
         <Input
@@ -90,10 +96,15 @@ const SubGraphsPage: NextPageWithLayout = () => {
         )}
       </div>
       <SubgraphsTable
-        subgraphs={filteredGraphs}
+        key={tab}
+        subgraphs={
+          tab === "featureSubgraphs"
+            ? filteredFeatureSubgraphs
+            : filteredSubgraphs
+        }
         graph={graphData.graph}
-        totalCount={filteredGraphs.length}
-        tab = {tab === "featureSubgraphs" ? "featureSubgraphs" : "subgraphs"}
+        totalCount={totalCount}
+        tab={tab === "featureSubgraphs" ? "featureSubgraphs" : "subgraphs"}
       />
     </div>
   );
@@ -104,6 +115,11 @@ SubGraphsPage.getLayout = (page) =>
     <GraphPageLayout
       title="Subgraphs"
       subtitle="View the subgraphs that compose this federated graph"
+      toolbar={
+        <Toolbar>
+          <SubgraphPageTabs />
+        </Toolbar>
+      }
     >
       {page}
     </GraphPageLayout>,

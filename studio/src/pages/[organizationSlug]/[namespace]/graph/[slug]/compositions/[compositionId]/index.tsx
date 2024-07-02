@@ -41,8 +41,7 @@ import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@connectrpc/connect-query";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { RxComponentInstance, RxComponentPlaceholder } from "react-icons/rx";
-import { Component2Icon } from "@radix-ui/react-icons";
+import { BoxIcon, Component2Icon } from "@radix-ui/react-icons";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getCompositionDetails,
@@ -61,6 +60,7 @@ import { useRouter } from "next/router";
 import { useContext, useState } from "react";
 import { MdNearbyError, MdVerifiedUser } from "react-icons/md";
 import { PiGitBranch } from "react-icons/pi";
+import { RxComponentInstance } from "react-icons/rx";
 
 export const FeatureFlagCompositionsTable = ({
   ffCompositions,
@@ -390,7 +390,7 @@ export const CompositionDetails = ({
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <div>
-                                  <RxComponentPlaceholder className="mt-1 h-4 w-4 flex-shrink-0" />
+                                  <RxComponentInstance className="mt-1 h-4 w-4 flex-shrink-0" />
                                 </div>
                               </TooltipTrigger>
                               <TooltipContent side="bottom">
@@ -401,7 +401,7 @@ export const CompositionDetails = ({
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <div>
-                                  <RxComponentInstance className="mt-1 h-4 w-4 flex-shrink-0" />
+                                  <BoxIcon className="mt-1 h-3 w-3 flex-shrink-0" />
                                 </div>
                               </TooltipTrigger>
                               <TooltipContent side="bottom">
