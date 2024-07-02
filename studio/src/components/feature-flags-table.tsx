@@ -54,18 +54,17 @@ export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
         <CLISteps
           steps={[
             {
-              description:
-                "Create a feature subgraphs using the below command.",
+              description: "Create a feature subgraph using the below command.",
               command: `npx wgc feature-subgraph create <feature-subgraph-name> --namespace ${router.query.namespace} -r <routing-url> --subgraph <base-subgraph-name>`,
             },
             {
               description:
-                "Publish a feature subgraphs using the below command.",
+                "Publish a feature subgraph using the below command.",
               command: `npx wgc subgraph publish <feature-subgraph-name> --namespace ${router.query.namespace} --schema <schema-path> `,
             },
             {
               description: "Create a feature flag using the below command.",
-              command: `npx wgc feature-flag create <feature-flag-name> --namespace ${router.query.namespace} --label ${label} --feature-subgraphs <feature-subgraph-names...> --enabled`,
+              command: `npx wgc feature-flag create <feature-flag-name> --namespace ${router.query.namespace} --label ${label} --enabled --feature-subgraphs <feature-subgraph-names...>`,
             },
           ]}
         />
