@@ -58,16 +58,17 @@ type (
 	// All server fields are shared between all feature muxes.
 	server struct {
 		Config
-		httpServer         *http.Server
-		healthChecks       health.Checker
-		pubSubProviders    *EnginePubSubProviders
-		websocketStats     WebSocketsStatistics
-		playgroundHandler  func(http.Handler) http.Handler
-		publicKey          *ecdsa.PublicKey
-		executionTransport *http.Transport
-		baseOtelAttributes []attribute.KeyValue
-		runtimeMetrics     *rmetric.RuntimeMetrics
-		metricStore        rmetric.Store
+		httpServer              *http.Server
+		healthChecks            health.Checker
+		pubSubProviders         *EnginePubSubProviders
+		websocketStats          WebSocketsStatistics
+		playgroundHandler       func(http.Handler) http.Handler
+		publicKey               *ecdsa.PublicKey
+		executionTransport      *http.Transport
+		baseOtelAttributes      []attribute.KeyValue
+		runtimeMetrics          *rmetric.RuntimeMetrics
+		metricStore             rmetric.Store
+		baseRouterConfigVersion string
 	}
 )
 

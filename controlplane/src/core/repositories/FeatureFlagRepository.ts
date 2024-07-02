@@ -604,7 +604,7 @@ export class FeatureFlagRepository {
       conditions.push(eq(featureFlags.isEnabled, true));
     }
 
-    const matchedFeatureFlags = await this.db
+    return this.db
       .select({
         id: featureFlags.id,
       })
@@ -617,8 +617,6 @@ export class FeatureFlagRepository {
         ),
       )
       .execute();
-
-    return matchedFeatureFlags;
   }
 
   // returns all the feature flags which contain feature subgraphs whose base subgraph is the same as the input base subgraph
