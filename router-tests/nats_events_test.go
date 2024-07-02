@@ -5,13 +5,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/nats-io/nats.go"
-	"github.com/nats-io/nats.go/jetstream"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 	"net/http"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 
 	"github.com/hasura/go-graphql-client"
 	"github.com/stretchr/testify/require"
@@ -902,6 +903,9 @@ func TestNatsEvents(t *testing.T) {
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
 
+			tick := make(chan struct{}, 1)
+			timeout := time.After(time.Second * 10)
+
 			go func() {
 				defer wg.Done()
 
@@ -932,6 +936,12 @@ func TestNatsEvents(t *testing.T) {
 				require.NoError(t, gErr)
 				require.Equal(t, "", string(line))
 
+				select {
+				case tick <- struct{}{}:
+				case <-timeout:
+					require.Fail(t, "timeout")
+				}
+
 				eventNext, _, gErr = reader.ReadLine()
 				require.NoError(t, gErr)
 				require.Equal(t, "event: next", string(eventNext))
@@ -941,6 +951,12 @@ func TestNatsEvents(t *testing.T) {
 				line, _, gErr = reader.ReadLine()
 				require.NoError(t, gErr)
 				require.Equal(t, "", string(line))
+
+				select {
+				case tick <- struct{}{}:
+				case <-timeout:
+					require.Fail(t, "timeout")
+				}
 
 				eventNext, _, gErr = reader.ReadLine()
 				require.NoError(t, gErr)
@@ -952,6 +968,12 @@ func TestNatsEvents(t *testing.T) {
 				require.NoError(t, gErr)
 				require.Equal(t, "", string(line))
 
+				select {
+				case tick <- struct{}{}:
+				case <-timeout:
+					require.Fail(t, "timeout")
+				}
+
 				eventNext, _, gErr = reader.ReadLine()
 				require.NoError(t, gErr)
 				require.Equal(t, "event: next", string(eventNext))
@@ -961,6 +983,12 @@ func TestNatsEvents(t *testing.T) {
 				line, _, gErr = reader.ReadLine()
 				require.NoError(t, gErr)
 				require.Equal(t, "", string(line))
+
+				select {
+				case tick <- struct{}{}:
+				case <-timeout:
+					require.Fail(t, "timeout")
+				}
 
 				eventNext, _, gErr = reader.ReadLine()
 				require.NoError(t, gErr)
@@ -972,6 +1000,12 @@ func TestNatsEvents(t *testing.T) {
 				require.NoError(t, gErr)
 				require.Equal(t, "", string(line))
 
+				select {
+				case tick <- struct{}{}:
+				case <-timeout:
+					require.Fail(t, "timeout")
+				}
+
 				eventNext, _, gErr = reader.ReadLine()
 				require.NoError(t, gErr)
 				require.Equal(t, "event: next", string(eventNext))
@@ -982,6 +1016,12 @@ func TestNatsEvents(t *testing.T) {
 				require.NoError(t, gErr)
 				require.Equal(t, "", string(line))
 
+				select {
+				case tick <- struct{}{}:
+				case <-timeout:
+					require.Fail(t, "timeout")
+				}
+
 				eventNext, _, gErr = reader.ReadLine()
 				require.NoError(t, gErr)
 				require.Equal(t, "event: next", string(eventNext))
@@ -991,6 +1031,12 @@ func TestNatsEvents(t *testing.T) {
 				line, _, gErr = reader.ReadLine()
 				require.NoError(t, gErr)
 				require.Equal(t, "", string(line))
+
+				select {
+				case tick <- struct{}{}:
+				case <-timeout:
+					require.Fail(t, "timeout")
+				}
 
 				eventNext, _, gErr = reader.ReadLine()
 				require.NoError(t, gErr)
@@ -1011,8 +1057,15 @@ func TestNatsEvents(t *testing.T) {
 
 			// Events 1, 3, 4, 5, 7, 8, and 11 should be included
 			for i := 1; i < 13; i++ {
-				// Ensure the NATS consumer can keep up with the provider
-				time.Sleep(time.Millisecond * 100)
+
+				switch i {
+				case 1, 3, 4, 5, 7, 8, 11:
+					select {
+					case <-tick:
+					case <-timeout:
+						require.Fail(t, "timeout")
+					}
+				}
 
 				err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.1", []byte(fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, i)))
 				require.NoError(t, err)

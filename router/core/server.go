@@ -321,9 +321,10 @@ func (s *server) buildMux(ctx context.Context,
 	}
 
 	operationParser := NewOperationParser(OperationParserOptions{
-		Executor:                executor,
-		MaxOperationSizeInBytes: int64(s.routerTrafficConfig.MaxRequestBodyBytes),
-		PersistentOpClient:      s.cdnPersistentOpClient,
+		Executor:                       executor,
+		MaxOperationSizeInBytes:        int64(s.routerTrafficConfig.MaxRequestBodyBytes),
+		PersistentOpClient:             s.cdnPersistentOpClient,
+		EnablePersistedOperationsCache: s.engineExecutionConfiguration.EnablePersistedOperationsCache,
 	})
 	operationPlanner := NewOperationPlanner(executor, planCache)
 
@@ -340,11 +341,12 @@ func (s *server) buildMux(ctx context.Context,
 		Executor:                               executor,
 		Log:                                    s.logger,
 		EnableExecutionPlanCacheResponseHeader: s.engineExecutionConfiguration.EnableExecutionPlanCacheResponseHeader,
-		WebSocketStats:                         s.websocketStats,
-		TracerProvider:                         s.tracerProvider,
-		Authorizer:                             NewCosmoAuthorizer(authorizerOptions),
-		SubgraphErrorPropagation:               s.subgraphErrorPropagation,
-		EngineLoaderHooks:                      NewEngineRequestHooks(s.metricStore),
+		EnablePersistedOperationCacheResponseHeader: s.engineExecutionConfiguration.Debug.EnablePersistedOperationsCacheResponseHeader,
+		WebSocketStats:           s.websocketStats,
+		TracerProvider:           s.tracerProvider,
+		Authorizer:               NewCosmoAuthorizer(authorizerOptions),
+		SubgraphErrorPropagation: s.subgraphErrorPropagation,
+		EngineLoaderHooks:        NewEngineRequestHooks(s.metricStore),
 	}
 
 	if s.redisClient != nil {

@@ -368,13 +368,14 @@ type operationContext struct {
 	files      []httpclient.File
 	clientInfo *ClientInfo
 	// preparedPlan is the prepared plan of the operation
-	preparedPlan   *planWithMetaData
-	traceOptions   resolve.TraceOptions
-	planCacheHit   bool
-	initialPayload []byte
-	extensions     []byte
-	persistedID    string
-	protocol       OperationProtocol
+	preparedPlan               *planWithMetaData
+	traceOptions               resolve.TraceOptions
+	planCacheHit               bool
+	initialPayload             []byte
+	extensions                 []byte
+	persistedID                string
+	protocol                   OperationProtocol
+	persistedOperationCacheHit bool
 }
 
 func (o *operationContext) Variables() []byte {

@@ -672,7 +672,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 		return nil, nil, err
 	}
 
-	if err := operationKit.Parse(h.ctx, h.clientInfo, h.logger); err != nil {
+	if err := operationKit.Parse(h.ctx, h.clientInfo); err != nil {
 		return nil, nil, err
 	}
 

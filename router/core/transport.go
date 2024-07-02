@@ -190,23 +190,33 @@ func (ct *CustomTransport) allowSingleFlight(req *http.Request) bool {
 }
 
 func (ct *CustomTransport) roundTripSingleFlight(req *http.Request) (*http.Response, error) {
+
+	var (
+		buf *bytes.Buffer
+	)
+
+	if req.ContentLength > 0 {
+		buf = bytes.NewBuffer(make([]byte, 0, req.ContentLength))
+	} else {
+		buf = bytes.NewBuffer(make([]byte, 0, 1024))
+	}
+
 	keyGen := pool.Hash64.Get()
 	defer pool.Hash64.Put(keyGen)
 
 	// Hash the request body
 	if req.Body != nil {
-		executionBuf := pool.BytesBuffer.Get()
-		defer executionBuf.Reset()
-		if _, err := io.Copy(executionBuf, req.Body); err != nil {
+		_, err := buf.ReadFrom(req.Body)
+		if err != nil {
 			return nil, err
 		}
-		body := executionBuf.Bytes()
-		_, err := keyGen.Write(body)
+		body := buf.Bytes()
+		_, err = keyGen.Write(body)
 		if err != nil {
 			return nil, err
 		}
 		// Restore the body
-		req.Body = io.NopCloser(bytes.NewReader(body))
+		req.Body = io.NopCloser(buf)
 	}
 
 	unsortedHeaders := make([]string, 0, len(req.Header))
@@ -233,17 +243,14 @@ func (ct *CustomTransport) roundTripSingleFlight(req *http.Request) (*http.Respo
 		if err != nil {
 			return nil, err
 		}
-		executionBuf := pool.BytesBuffer.Get()
-		defer executionBuf.Reset()
+		buf.Reset()
+		_, err = buf.ReadFrom(res.Body)
 		if err != nil {
-			return nil, err
-		}
-		if _, err := io.Copy(executionBuf, res.Body); err != nil {
 			return nil, err
 		}
 		return &responseWithBody{
 			res:  res,
-			body: executionBuf.Bytes(),
+			body: buf.Bytes(),
 		}, nil
 	})
 	if err != nil {
