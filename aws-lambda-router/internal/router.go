@@ -18,6 +18,7 @@ type RouterConfig struct {
 	GraphApiToken        string
 	HttpPort             string
 	EnableTelemetry      bool
+	EnableCompression	 bool
 	Stage                string
 	TraceSampleRate      float64
 	Logger               *zap.Logger
@@ -49,6 +50,7 @@ func NewRouter(opts ...Option) *core.Router {
 		core.WithStaticRouterConfig(routerConfig),
 		core.WithAwsLambdaRuntime(),
 		core.WithGraphApiToken(rc.GraphApiToken),
+		core.WithCompression(rc.EnableCompression),
 	}
 
 	if rc.HttpPort != "" {
@@ -127,6 +129,12 @@ func WithHttpPort(port string) Option {
 func WithEnableTelemetry(enable bool) Option {
 	return func(r *RouterConfig) {
 		r.EnableTelemetry = enable
+	}
+}
+
+func WithEnableCompression(enable bool) Option {
+	return func(r *RouterConfig) {
+		r.EnableCompression = enable
 	}
 }
 
