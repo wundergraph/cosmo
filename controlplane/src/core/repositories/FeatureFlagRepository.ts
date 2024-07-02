@@ -579,7 +579,7 @@ export class FeatureFlagRepository {
   }
 
   // returns all the feature flags which match the federated graph's label matchers
-  public async getMatchedFeatureFlags({
+  public getMatchedFeatureFlags({
     namespaceId,
     fedGraphLabelMatchers,
     excludeDisabled,
