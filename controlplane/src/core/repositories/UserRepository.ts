@@ -1,11 +1,9 @@
 import { eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { pino } from 'pino';
 import * as schema from '../../db/schema.js';
 import { users } from '../../db/schema.js';
-import { OrganizationDTO, UserDTO } from '../../types/index.js';
+import { UserDTO } from '../../types/index.js';
 import Keycloak from '../services/Keycloak.js';
-import { OrganizationRepository } from './OrganizationRepository.js';
 
 /**
  * Repository for user related operations.
@@ -65,6 +63,7 @@ export class UserRepository {
       await tx.delete(users).where(eq(users.id, input.id)).execute();
 
       // Delete from keycloak
+      await input.keycloakClient.authenticateClient();
       await input.keycloakClient.client.users.del({
         id: input.id,
         realm: input.keycloakRealm,

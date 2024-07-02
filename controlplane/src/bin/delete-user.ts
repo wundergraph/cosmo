@@ -2,11 +2,11 @@ import process from 'node:process';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { pino } from 'pino';
 import postgres from 'postgres';
-import { OrganizationRepository } from 'src/core/repositories/OrganizationRepository.js';
 import { buildDatabaseConnectionConfig } from '../core/plugins/database.js';
 import { UserRepository } from '../core/repositories/UserRepository.js';
 import Keycloak from '../core/services/Keycloak.js';
 import * as schema from '../db/schema.js';
+import { OrganizationRepository } from '../core/repositories/OrganizationRepository.js';
 
 const realm = process.env.KC_REALM || 'cosmo';
 const loginRealm = process.env.KC_LOGIN_REALM || 'master';

@@ -1994,6 +1994,12 @@ message IsMemberLimitReachedResponse {
   int32 member_count = 3;
 }
 
+message DeleteUserRequest {}
+
+message DeleteUserResponse {
+  Response response = 1;
+}
+
 service PlatformService {
   // Namespaces
   rpc CreateNamespace(CreateNamespaceRequest) returns (CreateNamespaceResponse) {}
@@ -2144,6 +2150,8 @@ service PlatformService {
   // DeleteIntegration deletes an organization web integration hook
   rpc DeleteIntegration(DeleteIntegrationRequest) returns (DeleteIntegrationResponse) {}
 
+  // DeleteUser deletes the user
+  rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse) {}
   // DeleteOrganization deletes an organization
   rpc DeleteOrganization(DeleteOrganizationRequest) returns (DeleteOrganizationResponse) {}
   // LeaveOrganization removes a member from the organization

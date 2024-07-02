@@ -41,6 +41,7 @@ import {
   DeleteOIDCProviderResponse,
   DeleteOrganizationResponse,
   DeleteRouterTokenResponse,
+  DeleteUserResponse,
   DeploymentError,
   EnableLintingForTheNamespaceResponse,
   Feature,
@@ -10130,6 +10131,61 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           permissions,
+        };
+      });
+    },
+
+    deleteUser: (req, ctx) => {
+      let logger = getLogger(ctx, opts.logger);
+
+      return handleError<PlainMessage<DeleteUserResponse>>(ctx, logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+        const orgRepo = new OrganizationRepository(logger, opts.db);
+
+        // Check if user can be deleted
+        const { isSafe, soloOrganizations, unsafeOrganizations } = await orgRepo.canUserBeDeleted(authContext.userId);
+
+        if (!isSafe) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details:
+                'Cannot delete because you are the only admin of organizations with several members: ' +
+                unsafeOrganizations.map((o) => o.name).join(',') +
+                '.',
+            },
+          };
+        }
+
+        await opts.db.transaction(async (tx) => {
+          const userRepo = new UserRepository(tx);
+          const orgRepo = new OrganizationRepository(logger, tx);
+
+          // Delete the user
+          await userRepo.deleteUser({
+            id: authContext.userId,
+            keycloakClient: opts.keycloakClient,
+            keycloakRealm: opts.keycloakRealm,
+          });
+
+          // Delete all solo organizations of the user
+          const deleteOrgs: Promise<void>[] = [];
+          for (const org of soloOrganizations) {
+            deleteOrgs.push(
+              orgRepo.deleteOrganization(org.id, org.slug, {
+                keycloakClient: opts.keycloakClient,
+                keycloakRealm: opts.keycloakRealm,
+              }),
+            );
+          }
+          await Promise.all(deleteOrgs);
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
         };
       });
     },
