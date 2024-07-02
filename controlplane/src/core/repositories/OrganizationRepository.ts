@@ -25,6 +25,8 @@ import {
   billingSubscriptions,
 } from '../../db/schema.js';
 import { Feature, FeatureIds, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
+import { BillingService } from '../services/BillingService.js';
+import Keycloak from '../services/Keycloak.js';
 import { BillingRepository } from './BillingRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 
@@ -63,7 +65,7 @@ export class OrganizationRepository {
       id: insertedOrg[0].id,
       name: insertedOrg[0].name,
       slug: insertedOrg[0].slug,
-      creatorUserId: insertedOrg[0].createdBy,
+      creatorUserId: insertedOrg[0].createdBy || undefined,
       createdAt: insertedOrg[0].createdAt.toISOString(),
     };
 
@@ -119,7 +121,7 @@ export class OrganizationRepository {
       id: org[0].id,
       name: org[0].name,
       slug: org[0].slug,
-      creatorUserId: org[0].creatorUserId,
+      creatorUserId: org[0].creatorUserId || undefined,
       createdAt: org[0].createdAt.toISOString(),
       billing: plan
         ? {
@@ -166,7 +168,7 @@ export class OrganizationRepository {
       id: org[0].id,
       name: org[0].name,
       slug: org[0].slug,
-      creatorUserId: org[0].creatorUserId,
+      creatorUserId: org[0].creatorUserId || undefined,
       createdAt: org[0].createdAt.toISOString(),
       billing: plan
         ? {
@@ -231,7 +233,7 @@ export class OrganizationRepository {
           id: org.id,
           name: org.name,
           slug: org.slug,
-          creatorUserId: org.creatorUserId,
+          creatorUserId: org.creatorUserId || undefined,
           createdAt: org.createdAt.toISOString(),
           roles: await this.getOrganizationMemberRoles({
             userID: input.userId,
@@ -812,8 +814,45 @@ export class OrganizationRepository {
     return result[0];
   }
 
-  public deleteOrganization(organizationID: string) {
-    return this.db.delete(organizations).where(eq(organizations.id, organizationID)).execute();
+  public deleteOrganization(
+    organizationID: string,
+    organizationSlug: string,
+    opts: {
+      keycloakClient: Keycloak;
+      keycloakRealm: string;
+    },
+  ) {
+    return this.db.transaction(async (tx) => {
+      // Cancel subscription
+      const billingRepo = new BillingRepository(tx);
+      const billingService = new BillingService(tx, billingRepo);
+
+      const subscription = await billingRepo.getActiveSubscriptionOfOrganization(organizationID);
+      if (subscription) {
+        await billingService.cancelSubscription(organizationID, subscription.id, 'Deleted by api');
+      }
+
+      // Delete organization from db
+      await this.db.delete(organizations).where(eq(organizations.id, organizationID)).execute();
+
+      await opts.keycloakClient.authenticateClient();
+
+      const organizationGroup = await opts.keycloakClient.client.groups.find({
+        max: 1,
+        search: organizationSlug,
+        realm: opts.keycloakRealm,
+      });
+
+      if (organizationGroup.length === 0) {
+        throw new Error(`Organization group '${organizationSlug}' not found`);
+      }
+
+      // Delete org from keycloak.
+      await opts.keycloakClient.client.groups.del({
+        id: organizationGroup[0].id!,
+        realm: opts.keycloakRealm,
+      });
+    });
   }
 
   public async updateUserRole(input: {
@@ -1188,5 +1227,42 @@ export class OrganizationRepository {
     }
 
     return list;
+  }
+
+  public async canUserBeDeleted(id: string): Promise<{
+    isSafe: boolean;
+    soloOrganizations: OrganizationDTO[];
+    unsafeOrganizations: OrganizationDTO[];
+  }> {
+    let isSafe = true;
+
+    const orgs = await this.memberships({ userId: id });
+    const orgsWhereUserIsAdmin = orgs.filter((o) => o.roles.includes('admin'));
+
+    // We need to track these orgs to delete them since the user is the only member.
+    const soloAdminSoloMemberOrgs: OrganizationDTO[] = [];
+
+    // A user who is an admin can only be deleted if the organization has another admin as well.
+    // We keep track of cases where the user is the only admin to inform the actor
+    const soloAdminManyMembersOrgs: OrganizationDTO[] = [];
+
+    for (const org of orgsWhereUserIsAdmin) {
+      const members = await this.getMembers({
+        organizationID: org.id,
+      });
+
+      if (members.length === 1) {
+        soloAdminSoloMemberOrgs.push(org);
+        continue;
+      }
+
+      const admins = members.filter((m) => m.roles.includes('admin'));
+      if (admins.length === 1) {
+        soloAdminManyMembersOrgs.push(org);
+        isSafe = false;
+      }
+    }
+
+    return { isSafe, soloOrganizations: soloAdminSoloMemberOrgs, unsafeOrganizations: soloAdminManyMembersOrgs };
   }
 }

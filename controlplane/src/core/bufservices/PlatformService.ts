@@ -41,6 +41,7 @@ import {
   DeleteOIDCProviderResponse,
   DeleteOrganizationResponse,
   DeleteRouterTokenResponse,
+  DeleteUserResponse,
   DeploymentError,
   EnableLintingForTheNamespaceResponse,
   Feature,
@@ -4971,13 +4972,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         // this will happen only when the user was invited but the user didn't login and the admin removed that user,
         // in this case the user will not have a personal org
         if (userMemberships.length === 0) {
-          // deleting the user from keycloak
-          await opts.keycloakClient.client.users.del({
+          await userRepo.deleteUser({
             id: user.id,
-            realm: opts.keycloakRealm,
+            keycloakClient: opts.keycloakClient,
+            keycloakRealm: opts.keycloakRealm,
           });
-          // deleting the user from the db
-          await userRepo.deleteUser({ id: user.id });
         }
 
         await auditLogRepo.addAuditLog({
@@ -5081,13 +5080,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         // this will happen only when the user was invited but the user didn't login and the admin removed that user,
         // in this case the user will not have a personal org
         if (userMemberships.length === 0 && userPendingInvitations.length === 0) {
-          // deleting the user from keycloak
-          await opts.keycloakClient.client.users.del({
+          await userRepo.deleteUser({
             id: user.id,
-            realm: opts.keycloakRealm,
+            keycloakClient: opts.keycloakClient,
+            keycloakRealm: opts.keycloakRealm,
           });
-          // deleting the user from the db
-          await userRepo.deleteUser({ id: user.id });
         }
 
         await auditLogRepo.addAuditLog({
@@ -5658,40 +5655,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        await opts.keycloakClient.authenticateClient();
-
-        const organizationGroup = await opts.keycloakClient.client.groups.find({
-          max: 1,
-          search: org.slug,
-          realm: opts.keycloakRealm,
+        await orgRepo.deleteOrganization(authContext.organizationId, org.slug, {
+          keycloakClient: opts.keycloakClient,
+          keycloakRealm: opts.keycloakRealm,
         });
 
-        if (organizationGroup.length === 0) {
-          throw new Error(`Organization group '${org.slug}' not found`);
-        }
-
-        await opts.keycloakClient.client.groups.del({
-          id: organizationGroup[0].id!,
-          realm: opts.keycloakRealm,
-        });
-
-        return opts.db.transaction(async (tx) => {
-          const orgRepo = new OrganizationRepository(logger, tx, opts.billingDefaultPlanId);
-          const billingRepo = new BillingRepository(tx);
-          const billingService = new BillingService(tx, billingRepo);
-
-          const subscription = await billingRepo.getActiveSubscriptionOfOrganization(authContext.organizationId);
-          if (subscription) {
-            await billingService.cancelSubscription(authContext.organizationId, subscription.id, 'Deleted by api');
-          }
-          await orgRepo.deleteOrganization(authContext.organizationId);
-
-          return {
-            response: {
-              code: EnumStatusCode.OK,
-            },
-          };
-        });
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
       });
     },
 
@@ -9700,7 +9673,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               contentJson: JSON.stringify(gd.thread[0].contentJson),
               createdAt: gd.thread[0].createdAt.toISOString(),
               updatedAt: gd.thread[0].updatedAt?.toISOString(),
-              createdBy: gd.thread[0].createdById,
+              createdBy: gd.thread[0].createdById ?? undefined,
               isDeleted: gd.thread[0].isDeleted,
             },
           })),
@@ -9860,7 +9833,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           contentJson: t.contentJson ? JSON.stringify(t.contentJson) : '',
           createdAt: t.createdAt.toISOString(),
           updatedAt: t.updatedAt?.toISOString(),
-          createdBy: t.createdById,
+          createdBy: t.createdById ?? undefined,
           isDeleted: t.isDeleted,
         }));
 
@@ -10158,6 +10131,61 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           permissions,
+        };
+      });
+    },
+
+    deleteUser: (req, ctx) => {
+      let logger = getLogger(ctx, opts.logger);
+
+      return handleError<PlainMessage<DeleteUserResponse>>(ctx, logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+        const orgRepo = new OrganizationRepository(logger, opts.db);
+
+        // Check if user can be deleted
+        const { isSafe, soloOrganizations, unsafeOrganizations } = await orgRepo.canUserBeDeleted(authContext.userId);
+
+        if (!isSafe) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details:
+                'Cannot delete because you are the only admin of organizations with several members: ' +
+                unsafeOrganizations.map((o) => o.name).join(',') +
+                '.',
+            },
+          };
+        }
+
+        await opts.db.transaction(async (tx) => {
+          const userRepo = new UserRepository(tx);
+          const orgRepo = new OrganizationRepository(logger, tx);
+
+          // Delete the user
+          await userRepo.deleteUser({
+            id: authContext.userId,
+            keycloakClient: opts.keycloakClient,
+            keycloakRealm: opts.keycloakRealm,
+          });
+
+          // Delete all solo organizations of the user
+          const deleteOrgs: Promise<void>[] = [];
+          for (const org of soloOrganizations) {
+            deleteOrgs.push(
+              orgRepo.deleteOrganization(org.id, org.slug, {
+                keycloakClient: opts.keycloakClient,
+                keycloakRealm: opts.keycloakRealm,
+              }),
+            );
+          }
+          await Promise.all(deleteOrgs);
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
         };
       });
     },

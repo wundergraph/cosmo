@@ -3,6 +3,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { users } from '../../db/schema.js';
 import { UserDTO } from '../../types/index.js';
+import Keycloak from '../services/Keycloak.js';
 
 /**
  * Repository for user related operations.
@@ -56,8 +57,18 @@ export class UserRepository {
       .execute();
   }
 
-  public async deleteUser(input: { id: string }) {
-    await this.db.delete(users).where(eq(users.id, input.id)).execute();
+  public deleteUser(input: { id: string; keycloakClient: Keycloak; keycloakRealm: string }) {
+    return this.db.transaction(async (tx) => {
+      // Delete from db
+      await tx.delete(users).where(eq(users.id, input.id)).execute();
+
+      // Delete from keycloak
+      await input.keycloakClient.authenticateClient();
+      await input.keycloakClient.client.users.del({
+        id: input.id,
+        realm: input.keycloakRealm,
+      });
+    });
   }
 
   // only to update the active attribute

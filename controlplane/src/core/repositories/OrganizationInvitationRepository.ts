@@ -91,7 +91,7 @@ export class OrganizationInvitationRepository {
       id: org.id,
       name: org.name,
       slug: org.slug,
-      creatorUserId: org.creatorUserId,
+      creatorUserId: org.creatorUserId || undefined,
       createdAt: org.createdAt.toISOString(),
       invitedBy: org.invitedBy || undefined,
     }));
