@@ -65,13 +65,55 @@ import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { useToast } from "./ui/use-toast";
 
-export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
+export const Empty = ({
+  graph,
+  tab,
+}: {
+  graph?: FederatedGraph;
+  tab: "subgraphs" | "featureSubgraphs";
+}) => {
   const router = useRouter();
 
   let label = "team=A";
   if (graph?.labelMatchers && graph.labelMatchers.length > 0) {
     label = graph.labelMatchers[0].split(",")[0];
   }
+
+  if (tab === "featureSubgraphs") {
+    return (
+      <EmptyState
+        icon={<CommandLineIcon />}
+        title="Create a feature subgraph using CLI"
+        description={
+          <>
+            No feature subgraphs found. Use the CLI tool to create one.{" "}
+            <a
+              target="_blank"
+              rel="noreferrer"
+              href={
+                docsBaseURL + "/cli/feature-subgraph/create-feature-subgraph"
+              }
+              className="text-primary"
+            >
+              Learn more.
+            </a>
+          </>
+        }
+        actions={
+          <CLISteps
+            steps={[
+              {
+                description:
+                  "Create a feature subgraph using the below command.",
+                command: `npx wgc feature-subgraph create <feature-subgraph-name> --namespace ${router.query.namespace} -r <routing-url> --subgraph <base-subgraph-name>`,
+              },
+            ]}
+          />
+        }
+      />
+    );
+  }
+
   return (
     <EmptyState
       icon={<CommandLineIcon />}
@@ -450,7 +492,8 @@ export const SubgraphsTable = ({
   const limit = Number.parseInt((router.query.pageSize as string) || "10");
   const noOfPages = Math.ceil(totalCount / limit);
 
-  if (!subgraphs || subgraphs.length === 0) return <Empty graph={graph} />;
+  if (!subgraphs || subgraphs.length === 0)
+    return <Empty graph={graph} tab={tab} />;
 
   return (
     <>
