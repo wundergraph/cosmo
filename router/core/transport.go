@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
+
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
 	"github.com/wundergraph/cosmo/router/pkg/metric"
