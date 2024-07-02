@@ -92,17 +92,17 @@ func (s *server) buildMultiGraphHandler(ctx context.Context, baseMux *chi.Mux, f
 		// 2. From the cookie
 
 		ff := strings.TrimSpace(r.Header.Get(featureFlagHeader))
-		if mux, ok := featureFlagToMux[ff]; ok {
-			mux.ServeHTTP(w, r)
-			return
+		if ff == "" {
+			cookie, err := r.Cookie(featureFlagCookie)
+			if err == nil && cookie != nil {
+				ff = strings.TrimSpace(cookie.Value)
+			}
 		}
 
-		fc, err := r.Cookie(featureFlagCookie)
-		if err == nil && fc != nil {
-			if mux, ok := featureFlagToMux[strings.TrimSpace(fc.Value)]; ok {
-				mux.ServeHTTP(w, r)
-				return
-			}
+		if mux, ok := featureFlagToMux[ff]; ok {
+			w.Header().Set(featureFlagHeader, ff)
+			mux.ServeHTTP(w, r)
+			return
 		}
 
 		// Fall back to the base composition

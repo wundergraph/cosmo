@@ -18,6 +18,7 @@ func TestFeatureFlags(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id productCount } }`,
 			})
+			require.Empty(t, res.Response.Header.Get("X-Feature-Flag"))
 			require.JSONEq(t, `{"errors":[{"message":"field: productCount not defined on type: Employee","path":["query","employees","productCount"]}],"data":null}`, res.Body)
 		})
 	})
@@ -33,6 +34,7 @@ func TestFeatureFlags(t *testing.T) {
 					"X-Feature-Flag": {"nonexistent"},
 				},
 			})
+			require.Empty(t, res.Response.Header.Get("X-Feature-Flag"))
 			require.JSONEq(t, `{"errors":[{"message":"field: productCount not defined on type: Employee","path":["query","employees","productCount"]}],"data":null}`, res.Body)
 		})
 	})
@@ -48,6 +50,7 @@ func TestFeatureFlags(t *testing.T) {
 					"Cookie": {"feature_flag=nonexistent"},
 				},
 			})
+			require.Empty(t, res.Response.Header.Get("X-Feature-Flag"))
 			require.JSONEq(t, `{"errors":[{"message":"field: productCount not defined on type: Employee","path":["query","employees","productCount"]}],"data":null}`, res.Body)
 		})
 	})
@@ -63,6 +66,7 @@ func TestFeatureFlags(t *testing.T) {
 					"X-Feature-Flag": {"myff"},
 				},
 			})
+			require.Equal(t, res.Response.Header.Get("X-Feature-Flag"), "myff")
 			require.JSONEq(t, `{"data":{"employees":[{"id":1,"productCount":5},{"id":2,"productCount":2},{"id":3,"productCount":2},{"id":4,"productCount":3},{"id":5,"productCount":2},{"id":7,"productCount":0},{"id":8,"productCount":2},{"id":10,"productCount":3},{"id":11,"productCount":1},{"id":12,"productCount":4}]}}`, res.Body)
 		})
 	})
@@ -78,6 +82,7 @@ func TestFeatureFlags(t *testing.T) {
 					"Cookie": {"feature_flag=myff"},
 				},
 			})
+			require.Equal(t, res.Response.Header.Get("X-Feature-Flag"), "myff")
 			require.JSONEq(t, `{"data":{"employees":[{"id":1,"productCount":5},{"id":2,"productCount":2},{"id":3,"productCount":2},{"id":4,"productCount":3},{"id":5,"productCount":2},{"id":7,"productCount":0},{"id":8,"productCount":2},{"id":10,"productCount":3},{"id":11,"productCount":1},{"id":12,"productCount":4}]}}`, res.Body)
 		})
 	})
