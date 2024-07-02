@@ -4,21 +4,18 @@ import {
   GraphPageLayout,
   getGraphLayout,
 } from "@/components/layout/graph-layout";
-import { SubgraphPageTabs, SubgraphsTable } from "@/components/subgraphs-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NextPageWithLayout } from "@/lib/page";
 import { Cross1Icon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import { useRouter } from "next/router";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useState } from "react";
 import Fuse from "fuse.js";
-import { Subgraph } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { set } from "lodash";
+import { FeatureFlagsTable } from "@/components/feature-flags-table";
 
-const SubGraphsPage: NextPageWithLayout = () => {
+const FeatureFlagsPage: NextPageWithLayout = () => {
   const graphData = useContext(GraphContext);
   const router = useRouter();
-  const tab = router.query.tab as string;
 
   const pageNumber = router.query.page
     ? parseInt(router.query.page as string)
@@ -29,42 +26,21 @@ const SubGraphsPage: NextPageWithLayout = () => {
   const [search, setSearch] = useState(router.query.search as string);
   const applyParams = useApplyParams();
 
-  const [filteredGraphs, setFilteredGraphs] = useState<Subgraph[]>([]);
-
-  useEffect(() => {
-    if (!graphData) return;
-    if (tab === "featureSubgraphs") {
-      const fuse = new Fuse(graphData.featureSubgraphs, {
-        keys: ["name"],
-        minMatchCharLength: 1,
-      });
-
-      const searchedFetaureSubgraphs = search
-        ? fuse.search(search).map(({ item }) => item)
-        : graphData.featureSubgraphs;
-
-      setFilteredGraphs(
-        searchedFetaureSubgraphs.slice(offset, limit + offset),
-      );
-    } else {
-      const fuse = new Fuse(graphData.subgraphs, {
-        keys: ["name"],
-        minMatchCharLength: 1,
-      });
-
-      const searchedSubgraphs = search
-        ? fuse.search(search).map(({ item }) => item)
-        : graphData.subgraphs;
-
-      setFilteredGraphs(searchedSubgraphs.slice(offset, limit + offset));
-    }
-  }, [tab, search, offset, limit, graphData]);
-
   if (!graphData) return null;
+
+  const fuse = new Fuse(graphData.featureFlags, {
+    keys: ["name"],
+    minMatchCharLength: 1,
+  });
+
+  const searchedFeatureFlags = search
+    ? fuse.search(search).map(({ item }) => item)
+    : graphData.featureFlags;
+
+  const filteredFeatureFlags = searchedFeatureFlags.slice(offset, limit + offset);
 
   return (
     <div className="flex h-full flex-col">
-      <SubgraphPageTabs />
       <div className="relative mb-4">
         <MagnifyingGlassIcon className="absolute bottom-0 left-3 top-0 my-auto" />
         <Input
@@ -89,25 +65,24 @@ const SubGraphsPage: NextPageWithLayout = () => {
           </Button>
         )}
       </div>
-      <SubgraphsTable
-        subgraphs={filteredGraphs}
+      <FeatureFlagsTable
+        featureFlags={filteredFeatureFlags}
         graph={graphData.graph}
-        totalCount={filteredGraphs.length}
-        tab = {tab === "featureSubgraphs" ? "featureSubgraphs" : "subgraphs"}
+        totalCount={filteredFeatureFlags.length}
       />
     </div>
   );
 };
 
-SubGraphsPage.getLayout = (page) =>
+FeatureFlagsPage.getLayout = (page) =>
   getGraphLayout(
     <GraphPageLayout
-      title="Subgraphs"
-      subtitle="View the subgraphs that compose this federated graph"
+      title="Feature Flags"
+      subtitle="An overview of all feature flags"
     >
       {page}
     </GraphPageLayout>,
-    { title: "Subgraphs" },
+    { title: "Feature Flags" },
   );
 
-export default SubGraphsPage;
+export default FeatureFlagsPage;

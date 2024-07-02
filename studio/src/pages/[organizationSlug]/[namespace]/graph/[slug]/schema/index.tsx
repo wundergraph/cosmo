@@ -88,6 +88,7 @@ import {
 } from "@/lib/schema-helpers";
 import { cn } from "@/lib/utils";
 import {
+  ChevronUpDownIcon,
   ExclamationTriangleIcon,
   InformationCircleIcon,
 } from "@heroicons/react/24/outline";
@@ -121,8 +122,22 @@ import {
   useRef,
   useState,
 } from "react";
-import { PiChat } from "react-icons/pi";
+import { PiChat, PiGraphLight } from "react-icons/pi";
 import { Line, LineChart, ResponsiveContainer } from "recharts";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuPortal,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MdOutlineFeaturedPlayList } from "react-icons/md";
 
 const fallback = buildASTSchema(parse(`type Query { dummy: String! }`));
 
@@ -185,6 +200,8 @@ const FieldUsageColumn = ({
 }) => {
   const { range, dateRange } = useAnalyticsQueryState();
   const graph = useContext(GraphContext);
+  const router = useRouter();
+  const featureFlagName = router.query.featureFlag as string;
 
   const { data: usageData } = useQuery(
     getFieldUsage,
@@ -198,6 +215,7 @@ const FieldUsageColumn = ({
         start: formatISO(dateRange.start),
         end: formatISO(dateRange.end),
       },
+      featureFlagName,
     },
     {
       enabled: !!graph?.graph?.name,
@@ -1039,6 +1057,174 @@ const SearchType = ({
   );
 };
 
+export const GraphSelector = () => {
+  const graphData = useContext(GraphContext);
+  const router = useRouter();
+  const activeFeatureFlag = router.query.featureFlag as string;
+  const graphName = router.query.slug as string;
+  const schemaType = router.query.schemaType as string;
+
+  const fullPath = router.asPath;
+  const pathWithHash = fullPath.split("?")[0];
+  const pathname = pathWithHash.split("#")[0];
+
+  const applyParams = useApplyParams();
+  const featureFlags =
+    graphData?.featureFlagsInLatestValidComposition.map((each) => {
+      return {
+        name: each.name,
+        query: `?featureFlag=${each.name}`,
+      };
+    }) ?? [];
+
+  const activeGraphWithSDL = {
+    title: activeFeatureFlag || graphName,
+    targetId: graphData?.graph?.targetId ?? "",
+    routingUrl: graphData?.graph?.routingURL ?? "",
+  };
+
+  if (featureFlags.length > 0) {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          value={activeGraphWithSDL.title}
+          className="w-full md:ml-auto md:w-max md:min-w-[200px]"
+          asChild
+        >
+          <div className="flex items-center justify-center">
+            <Button
+              className="flex w-[220px] text-sm"
+              variant="outline"
+              asChild
+            >
+              <div className="flex justify-between">
+                <div className="flex">
+                  <p className="max-w-[120px] truncate">
+                    {activeGraphWithSDL.title}
+                  </p>
+                  <Badge variant="secondary" className="ml-2">
+                    {schemaType === "router" ? "router" : "client"}
+                  </Badge>
+                </div>
+                <ChevronUpDownIcon className="h-4 w-4" />
+              </div>
+            </Button>
+          </div>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="min-w-[220px]">
+          <DropdownMenuGroup>
+            <DropdownMenuLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
+              <PiGraphLight className="h-3 w-3" /> Graph
+            </DropdownMenuLabel>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                {graphData?.graph?.name}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuPortal>
+                <DropdownMenuSubContent>
+                  <DropdownMenuRadioGroup
+                    onValueChange={(query) => router.push(pathname + query)}
+                    value={`${
+                      !activeFeatureFlag
+                        ? `?schemaType=${schemaType}`
+                        : undefined
+                    }`}
+                  >
+                    <DropdownMenuRadioItem
+                      className="w-[150px] items-center justify-between pl-2"
+                      value="?schemaType=client"
+                    >
+                      Client Schema
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem
+                      className="w-[150px] items-center justify-between pl-2"
+                      value="?schemaType=router"
+                    >
+                      Router Schema
+                    </DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuSubContent>
+              </DropdownMenuPortal>
+            </DropdownMenuSub>
+          </DropdownMenuGroup>
+          <Separator className="my-2" />
+
+          <DropdownMenuGroup>
+            <DropdownMenuLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
+              <MdOutlineFeaturedPlayList className="h-3 w-3" /> Feature Flags
+            </DropdownMenuLabel>
+            {featureFlags.map(({ name, query }) => {
+              return (
+                <>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>{name}</DropdownMenuSubTrigger>
+                    <DropdownMenuPortal>
+                      <DropdownMenuSubContent>
+                        <DropdownMenuRadioGroup
+                          value={`?featureFlag=${activeFeatureFlag}&schemaType=${schemaType}`}
+                          onValueChange={(query) =>
+                            router.push(pathname + query)
+                          }
+                        >
+                          <DropdownMenuRadioItem
+                            className="w-[150px] items-center justify-between pl-2"
+                            value={`${query}&schemaType=client`}
+                          >
+                            Client Schema
+                          </DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem
+                            className="w-[150px] items-center justify-between pl-2"
+                            value={`${query}&schemaType=router`}
+                          >
+                            Router Schema
+                          </DropdownMenuRadioItem>
+                        </DropdownMenuRadioGroup>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuPortal>
+                  </DropdownMenuSub>
+                </>
+              );
+            })}
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  } else {
+    return (
+      <Select
+        onValueChange={(v) => {
+          applyParams({
+            schemaType: v,
+          });
+        }}
+        value={(router.query.schemaType as string) || "client"}
+      >
+        <SelectTrigger className="w-max">
+          <SelectValue>
+            {sentenceCase((router.query.schemaType as string) || "client")}{" "}
+            Schema
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="client">
+            Client Schema{" "}
+            <p className="mt-1 max-w-xs text-xs text-muted-foreground">
+              The schema available to the clients and through introspection
+            </p>
+          </SelectItem>
+          <Separator />
+          <SelectItem value="router">
+            Router Schema
+            <p className="mt-1 max-w-xs text-xs text-muted-foreground">
+              The full schema used by the router to plan your operations
+            </p>
+          </SelectItem>
+        </SelectContent>
+      </Select>
+    );
+  }
+};
+
 const Toolbar = () => {
   const router = useRouter();
   const selectedCategory = (router.query.category as string) ?? "query";
@@ -1076,36 +1262,7 @@ const Toolbar = () => {
   return (
     <SchemaToolbar tab="explorer">
       <div className="hidden md:ml-auto md:block" />
-      <Select
-        onValueChange={(v) => {
-          applyParams({
-            schemaType: v,
-          });
-        }}
-        value={(router.query.schemaType as string) || "client"}
-      >
-        <SelectTrigger className="w-max">
-          <SelectValue>
-            {sentenceCase((router.query.schemaType as string) || "client")}{" "}
-            Schema
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="client">
-            Client Schema{" "}
-            <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-              The schema available to the clients and through introspection
-            </p>
-          </SelectItem>
-          <Separator />
-          <SelectItem value="router">
-            Router Schema
-            <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-              The full schema used by the router to plan your operations
-            </p>
-          </SelectItem>
-        </SelectContent>
-      </Select>
+      <GraphSelector />
       {ast && (
         <>
           <SearchType open={open} setOpen={setOpen} />
@@ -1240,12 +1397,14 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
   const selectedCategory = (router.query.category as string) ?? "query";
   const typename = router.query.typename as string;
   const category = router.query.category as GraphQLTypeCategory;
+  const featureFlagName = router.query.featureFlag as string;
 
   const { data, isLoading, error, refetch } = useQuery(
     getFederatedGraphSDLByName,
     {
       name: graphName,
       namespace,
+      featureFlagName: featureFlagName,
     },
   );
 

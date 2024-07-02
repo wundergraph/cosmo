@@ -31,15 +31,19 @@ export type Feature = {
   limit?: number | null;
 };
 
-export interface FederatedGraphListFilterOptions extends SubgraphListFilterOptions {
-  supportsFederation?: boolean;
-}
-
-export interface SubgraphListFilterOptions {
+export interface ListFilterOptions {
   namespaceId?: string;
   limit: number;
   offset: number;
   query?: string;
+}
+
+export interface FederatedGraphListFilterOptions extends ListFilterOptions {
+  supportsFederation?: boolean;
+}
+
+export interface SubgraphListFilterOptions extends ListFilterOptions {
+  excludeFeatureSubgraphs: boolean;
 }
 
 export interface Label {
@@ -108,19 +112,27 @@ export interface SubgraphDTO {
   isV2Graph?: boolean;
   readme?: string;
   websocketSubprotocol?: 'auto' | 'graphql-ws' | 'graphql-transport-ws';
-  isFeatureSubgraph?: boolean;
+  isFeatureSubgraph: boolean;
+}
+
+export interface FeatureSubgraphDTO extends SubgraphDTO {
+  baseSubgraphId: string;
+  baseSubgraphName: string;
 }
 
 export interface FeatureFlagDTO {
   id: string;
   name: string;
+  namespace: string;
   namespaceId: string;
   labels: Label[];
   creatorUserId?: string;
+  createdBy: string;
   isEnabled: boolean;
   organizationId: string;
   createdAt: string;
-  updatedAt?: string;
+  updatedAt: string;
+  featureSubgraphs: FeatureSubgraphDTO[];
 }
 
 export interface MigrationSubgraph {
@@ -426,6 +438,19 @@ export interface GraphCompositionDTO {
   routerConfigSignature?: string;
   isComposable: boolean;
   isLatestValid: boolean;
+  admissionError?: string;
+  deploymentError?: string;
+}
+
+export interface FeatureFlagCompositionDTO {
+  id: string;
+  schemaVersionId: string;
+  createdAt: string;
+  featureFlagName: string;
+  createdBy?: string;
+  compositionErrors?: string;
+  routerConfigSignature?: string;
+  isComposable: boolean;
   admissionError?: string;
   deploymentError?: string;
 }

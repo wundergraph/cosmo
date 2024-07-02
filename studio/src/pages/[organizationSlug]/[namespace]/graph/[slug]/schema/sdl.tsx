@@ -15,20 +15,11 @@ import { SDLViewerMonaco } from "@/components/schema/sdl-viewer-monaco";
 import { SchemaToolbar } from "@/components/schema/toolbar";
 import { Badge } from "@/components/ui/badge";
 import { Loader } from "@/components/ui/loader";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import useHash from "@/hooks/use-hash";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
-import { Component2Icon } from "@radix-ui/react-icons";
+import { CheckIcon, Component2Icon } from "@radix-ui/react-icons";
 import { useQuery } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
@@ -39,10 +30,29 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useContext } from "react";
 import { PiGraphLight } from "react-icons/pi";
+import { MdOutlineFeaturedPlayList } from "react-icons/md";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+  DropdownMenuGroup,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal,
+  DropdownMenuSubContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuLabel,
+  DropdownMenuItemIndicator,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { ChevronUpDownIcon } from "@heroicons/react/24/outline";
+import { RxComponentPlaceholder } from "react-icons/rx";
 
 const SDLPage: NextPageWithLayout = () => {
   const router = useRouter();
   const activeSubgraph = router.query.subgraph as string;
+  const activeFeatureFlag = router.query.featureFlag as string;
   const namespace = router.query.namespace as string;
   const graphName = router.query.slug as string;
   const schemaType = router.query.schemaType as string;
@@ -53,15 +63,16 @@ const SDLPage: NextPageWithLayout = () => {
 
   const hash = useHash();
 
+  const graphData = useContext(GraphContext);
+
   const { data: federatedGraphSdl, isLoading: loadingGraphSDL } = useQuery(
     getFederatedGraphSDLByName,
     {
       name: graphName,
       namespace,
+      featureFlagName: activeFeatureFlag,
     },
   );
-
-  const graphData = useContext(GraphContext);
 
   let validGraph =
     graphData?.graph?.isComposable && !!graphData?.graph?.lastUpdatedAt;
@@ -86,6 +97,14 @@ const SDLPage: NextPageWithLayout = () => {
       };
     }) ?? [];
 
+  const featureFlags =
+    graphData?.featureFlagsInLatestValidComposition.map((each) => {
+      return {
+        name: each.name,
+        query: `?featureFlag=${each.name}`,
+      };
+    }) ?? [];
+
   const activeSubgraphObject = graphData?.subgraphs.find((each) => {
     return each.name === activeSubgraph;
   });
@@ -100,7 +119,7 @@ const SDLPage: NextPageWithLayout = () => {
         time: "",
       }
     : {
-        title: graphName,
+        title: activeFeatureFlag || graphName,
         targetId: graphData?.graph?.targetId ?? "",
         routingUrl: graphData?.graph?.routingURL ?? "",
         sdl:
@@ -173,64 +192,178 @@ const SDLPage: NextPageWithLayout = () => {
         toolbar={
           <SchemaToolbar tab="sdl">
             <div className="mt-2 flex flex-1 flex-row flex-wrap gap-2 md:mt-0">
-              <Select onValueChange={(query) => router.push(pathname + query)}>
-                <SelectTrigger
+              <DropdownMenu>
+                <DropdownMenuTrigger
                   value={activeGraphWithSDL.title}
                   className="w-full md:ml-auto md:w-max md:min-w-[200px]"
+                  asChild
                 >
-                  <SelectValue aria-label={activeGraphWithSDL.title}>
-                    {graphData?.graph?.supportsFederation
-                      ? activeGraphWithSDL.title
-                      : activeSubgraph
-                      ? "Published SDL"
-                      : "Router SDL"}
-                    {!activeSubgraph && (
-                      <Badge variant="secondary" className="ml-2">
-                        {schemaType === "router" ? "router" : "client"}
-                      </Badge>
-                    )}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
+                  <div className="flex items-center justify-center">
+                    <Button
+                      className="flex w-[220px] text-sm"
+                      variant="outline"
+                      asChild
+                    >
+                      <div className="flex justify-between">
+                        <div className="flex">
+                          <p className="max-w-[120px] truncate">
+                            {graphData?.graph?.supportsFederation
+                              ? activeGraphWithSDL.title
+                              : activeSubgraph
+                              ? "Published SDL"
+                              : "Router SDL"}
+                          </p>
+                          {!activeSubgraph && (
+                            <Badge variant="secondary" className="ml-2">
+                              {schemaType === "router" ? "router" : "client"}
+                            </Badge>
+                          )}
+                        </div>
+                        <ChevronUpDownIcon className="h-4 w-4" />
+                      </div>
+                    </Button>
+                  </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="min-w-[220px]">
                   {graphData?.graph?.supportsFederation ? (
                     <>
-                      <SelectGroup>
-                        <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
+                      <DropdownMenuGroup>
+                        <DropdownMenuLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
                           <PiGraphLight className="h-3 w-3" /> Graph
-                        </SelectLabel>
-                        <SelectItem value="">Client Schema</SelectItem>
-                        <SelectItem value="?schemaType=router">
-                          Router Schema
-                        </SelectItem>
-                      </SelectGroup>
+                        </DropdownMenuLabel>
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger>
+                            {graphData.graph.name}
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuPortal>
+                            <DropdownMenuSubContent>
+                              <DropdownMenuRadioGroup
+                                onValueChange={(query) =>
+                                  router.push(pathname + query)
+                                }
+                                value={`${
+                                  !activeFeatureFlag
+                                    ? `?schemaType=${schemaType}`
+                                    : undefined
+                                }`}
+                              >
+                                <DropdownMenuRadioItem
+                                  className="w-[150px] items-center justify-between pl-2"
+                                  value="?schemaType=client"
+                                >
+                                  Client Schema
+                                </DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem
+                                  className="w-[150px] items-center justify-between pl-2"
+                                  value="?schemaType=router"
+                                >
+                                  Router Schema
+                                </DropdownMenuRadioItem>
+                              </DropdownMenuRadioGroup>
+                            </DropdownMenuSubContent>
+                          </DropdownMenuPortal>
+                        </DropdownMenuSub>
+                      </DropdownMenuGroup>
+                      
+                      {featureFlags.length > 0 && (
+                        <>
+                          <Separator className="my-2" />
+
+                          <DropdownMenuGroup>
+                            <DropdownMenuLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
+                              <MdOutlineFeaturedPlayList className="h-3 w-3" />{" "}
+                              Feature Flags
+                            </DropdownMenuLabel>
+                            {featureFlags.map(({ name, query }) => {
+                              return (
+                                <>
+                                  <DropdownMenuSub>
+                                    <DropdownMenuSubTrigger>
+                                      {name}
+                                    </DropdownMenuSubTrigger>
+                                    <DropdownMenuPortal>
+                                      <DropdownMenuSubContent>
+                                        <DropdownMenuRadioGroup
+                                          value={`?featureFlag=${activeFeatureFlag}&schemaType=${schemaType}`}
+                                          onValueChange={(query) =>
+                                            router.push(pathname + query)
+                                          }
+                                        >
+                                          <DropdownMenuRadioItem
+                                            className="w-[150px] items-center justify-between pl-2"
+                                            value={`${query}&schemaType=client`}
+                                          >
+                                            Client Schema
+                                          </DropdownMenuRadioItem>
+                                          <DropdownMenuRadioItem
+                                            className="w-[150px] items-center justify-between pl-2"
+                                            value={`${query}&schemaType=router`}
+                                          >
+                                            Router Schema
+                                          </DropdownMenuRadioItem>
+                                        </DropdownMenuRadioGroup>
+                                      </DropdownMenuSubContent>
+                                    </DropdownMenuPortal>
+                                  </DropdownMenuSub>
+                                </>
+                              );
+                            })}
+                          </DropdownMenuGroup>
+                        </>
+                      )}
+
                       <Separator className="my-2" />
-                      <SelectGroup>
-                        <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
+                      <DropdownMenuGroup>
+                        <DropdownMenuLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
                           <Component2Icon className="h-3 w-3" /> Subgraphs
-                        </SelectLabel>
-                        {subgraphs.map(({ name, query }) => {
-                          return (
-                            <SelectItem key={name} value={query}>
-                              {name}
-                            </SelectItem>
-                          );
-                        })}
-                      </SelectGroup>
+                        </DropdownMenuLabel>
+                        <DropdownMenuRadioGroup
+                          onValueChange={(query) =>
+                            router.push(pathname + query)
+                          }
+                          value={`?subgraph=${activeSubgraph}`}
+                        >
+                          {subgraphs.map(({ name, query }) => {
+                            return (
+                              <DropdownMenuRadioItem
+                                className="items-center justify-between pl-2"
+                                key={name}
+                                value={query}
+                              >
+                                {name}
+                              </DropdownMenuRadioItem>
+                            );
+                          })}
+                        </DropdownMenuRadioGroup>
+                      </DropdownMenuGroup>
                     </>
                   ) : (
                     <>
-                      <SelectItem value="">Router SDL</SelectItem>
-                      {subgraphs.map(({ name, query }) => {
-                        return (
-                          <SelectItem key={name} value={query}>
-                            Published SDL
-                          </SelectItem>
-                        );
-                      })}
+                      <DropdownMenuRadioGroup
+                        onValueChange={(query) => router.push(pathname + query)}
+                      >
+                        <DropdownMenuRadioItem
+                          className="w-[150px] items-center justify-between pl-2"
+                          value=""
+                        >
+                          Router SDL
+                        </DropdownMenuRadioItem>
+                        {subgraphs.map(({ name, query }) => {
+                          return (
+                            <DropdownMenuRadioItem
+                              className="w-[150px] items-center justify-between pl-2"
+                              key={name}
+                              value={query}
+                            >
+                              Published SDL
+                            </DropdownMenuRadioItem>
+                          );
+                        })}
+                      </DropdownMenuRadioGroup>
                     </>
                   )}
-                </SelectContent>
-              </Select>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <SDLViewerActions
                 className="w-auto"
                 sdl={activeGraphWithSDL.sdl ?? ""}
