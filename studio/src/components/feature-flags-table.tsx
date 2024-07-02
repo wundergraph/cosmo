@@ -43,7 +43,7 @@ export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
           <a
             target="_blank"
             rel="noreferrer"
-            href={docsBaseURL + "/cli/feature-flags/create"}
+            href={docsBaseURL + "/cli/feature-flags/create-feature-flag"}
             className="text-primary"
           >
             Learn more.
