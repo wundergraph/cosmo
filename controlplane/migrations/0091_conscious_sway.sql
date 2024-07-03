@@ -26,11 +26,15 @@ CREATE TABLE IF NOT EXISTS "federated_graphs_to_feature_flag_schema_versions" (
 	"federated_graph_id" uuid NOT NULL,
 	"base_composition_schema_version_id" uuid NOT NULL,
 	"composed_schema_version_id" uuid NOT NULL,
+	"feature_flag_id" uuid,
 	CONSTRAINT "federated_graphs_to_feature_flag_schema_versions_federated_graph_id_base_composition_schema_version_id_composed_schema_version_id_pk" PRIMARY KEY("federated_graph_id","base_composition_schema_version_id","composed_schema_version_id")
 );
 --> statement-breakpoint
+ALTER TABLE "graph_compositions" ADD COLUMN "router_config_path" text;--> statement-breakpoint
 ALTER TABLE "graph_compositions" ADD COLUMN "is_feature_flag_composition" boolean DEFAULT false NOT NULL;--> statement-breakpoint
 ALTER TABLE "subgraphs" ADD COLUMN "is_feature_subgraph" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE "federated_graphs" DROP COLUMN IF EXISTS "router_config_path";--> statement-breakpoint
+ALTER TABLE "graph_compositions" DROP COLUMN IF EXISTS "router_config";--> statement-breakpoint
 DO $$ BEGIN
  ALTER TABLE "feature_flags_to_feature_subgraphs" ADD CONSTRAINT "feature_flags_to_feature_subgraphs_feature_flag_id_feature_flags_id_fk" FOREIGN KEY ("feature_flag_id") REFERENCES "feature_flags"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
@@ -87,6 +91,12 @@ END $$;
 --> statement-breakpoint
 DO $$ BEGIN
  ALTER TABLE "federated_graphs_to_feature_flag_schema_versions" ADD CONSTRAINT "federated_graphs_to_feature_flag_schema_versions_composed_schema_version_id_schema_versions_id_fk" FOREIGN KEY ("composed_schema_version_id") REFERENCES "schema_versions"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "federated_graphs_to_feature_flag_schema_versions" ADD CONSTRAINT "federated_graphs_to_feature_flag_schema_versions_feature_flag_id_feature_flags_id_fk" FOREIGN KEY ("feature_flag_id") REFERENCES "feature_flags"("id") ON DELETE set null ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;

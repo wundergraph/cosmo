@@ -1,5 +1,5 @@
 {
-  "id": "eb97e851-3578-4290-90f9-0a61ec854ccd",
+  "id": "20bcecbd-d75d-4033-bdba-5750907a004c",
   "prevId": "3ed79153-2165-4bea-bbd3-333ebcc192ea",
   "version": "5",
   "dialect": "pg",
@@ -1285,12 +1285,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "router_config_path": {
-          "name": "router_config_path",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "admission_webhook_url": {
           "name": "admission_webhook_url",
           "type": "text",
@@ -1364,6 +1358,12 @@
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
+        },
+        "feature_flag_id": {
+          "name": "feature_flag_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
@@ -1405,6 +1405,19 @@
             "id"
           ],
           "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "federated_graphs_to_feature_flag_schema_versions_feature_flag_id_feature_flags_id_fk": {
+          "name": "federated_graphs_to_feature_flag_schema_versions_feature_flag_id_feature_flags_id_fk",
+          "tableFrom": "federated_graphs_to_feature_flag_schema_versions",
+          "tableTo": "feature_flags",
+          "columnsFrom": [
+            "feature_flag_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -1690,14 +1703,14 @@
           "primaryKey": false,
           "notNull": false
         },
-        "router_config": {
-          "name": "router_config",
-          "type": "jsonb",
+        "router_config_signature": {
+          "name": "router_config_signature",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "router_config_signature": {
-          "name": "router_config_signature",
+        "router_config_path": {
+          "name": "router_config_path",
           "type": "text",
           "primaryKey": false,
           "notNull": false

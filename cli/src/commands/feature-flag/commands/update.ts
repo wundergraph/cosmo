@@ -6,6 +6,7 @@ import pc from 'picocolors';
 import Table from 'cli-table3';
 import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
+import { handleFeatureFlagResult } from '../../../handle-feature-flag-result.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('update');
@@ -48,82 +49,28 @@ export default (opts: BaseCommandOptions) => {
       },
     );
 
-    switch (resp.response?.code) {
-      case EnumStatusCode.OK: {
-        spinner.succeed(`The feature flag "${name}" was updated successfully.`);
-        break;
-      }
-      case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {
-        spinner.warn(`The feature flag "${name}" was updated but with composition errors.`);
-
-        const compositionErrorsTable = new Table({
-          head: [
-            pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
-            pc.bold(pc.white('NAMESPACE')),
-            pc.bold(pc.white('FEATURE_FLAG')),
-            pc.bold(pc.white('ERROR_MESSAGE')),
-          ],
-          colWidths: [30, 30, 30, 120],
-          wordWrap: true,
-        });
-
-        console.log(
-          pc.yellow(
-            `There were composition errors when composing at least one federated graph related to the` +
-              ` updating of feature flag "${name}".` +
-              `.\nThe federated graphs will not be updated until the errors are fixed.` +
-              `\n${pc.bold('Please check the errors below:')}`,
-          ),
-        );
-        for (const compositionError of resp.compositionErrors) {
-          compositionErrorsTable.push([
-            compositionError.federatedGraphName,
-            compositionError.namespace,
-            compositionError.featureFlag || '-',
-            compositionError.message,
-          ]);
-        }
-        // Don't exit here with 1 because the change was still applied
-        console.log(compositionErrorsTable.toString());
-
-        break;
-      }
-      case EnumStatusCode.ERR_DEPLOYMENT_FAILED: {
-        spinner.warn(
+    try {
+      handleFeatureFlagResult({
+        responseCode: resp.response?.code,
+        responseDetails: resp.response?.details,
+        compositionErrors: resp.compositionErrors,
+        deploymentErrors: resp.deploymentErrors,
+        spinner,
+        successMessage: `The feature flag "${name}" was updated successfully.`,
+        subgraphCompositionBaseErrorMessage: `The feature flag "${name}" was updated but with composition errors.`,
+        subgraphCompositionDetailedErrorMessage:
+          `There were composition errors when composing at least one federated graph related to the` +
+          ` updating of feature flag "${name}".` +
+          `.\nThe federated graphs will not be updated until the errors are fixed.` +
+          `\n${pc.bold('Please check the errors below:')}`,
+        deploymentErrorMessage:
           `The feature flag "${name}" was updated, but the updated composition could not be deployed.` +
-            `\nThis means the updated composition is not accessible to the router.` +
-            `\n${pc.bold('Please check the errors below:')}`,
-        );
-
-        const deploymentErrorsTable = new Table({
-          head: [
-            pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
-            pc.bold(pc.white('NAMESPACE')),
-            pc.bold(pc.white('ERROR_MESSAGE')),
-          ],
-          colWidths: [30, 30, 120],
-          wordWrap: true,
-        });
-
-        for (const deploymentError of resp.deploymentErrors) {
-          deploymentErrorsTable.push([
-            deploymentError.federatedGraphName,
-            deploymentError.namespace,
-            deploymentError.message,
-          ]);
-        }
-        // Don't exit here with 1 because the change was still applied
-        console.log(deploymentErrorsTable.toString());
-
-        break;
-      }
-      default: {
-        spinner.fail(`Failed to update feature flag "${name}".`);
-        if (resp.response?.details) {
-          console.log(pc.red(pc.bold(resp.response?.details)));
-        }
-        process.exit(1);
-      }
+          `\nThis means the updated composition is not accessible to the router.` +
+          `\n${pc.bold('Please check the errors below:')}`,
+        defaultErrorMessage: `Failed to update the feature flag "${name}".`,
+      });
+    } catch {
+      process.exit(1);
     }
   });
 
