@@ -98,9 +98,9 @@ export const FederatedGraphsTable = ({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="px-4">Name</TableHead>
+            <TableHead className="px-4 w-80">Name</TableHead>
             <TableHead className="w-3/12 px-4">Url</TableHead>
-            <TableHead className="w-4/12 px-4">Label Matchers</TableHead>
+            <TableHead className="w-3/12 px-4">Label Matchers</TableHead>
             <TableHead className="w-2/12 px-4">Last Published</TableHead>
             <TableHead className="w-1/12"></TableHead>
           </TableRow>
@@ -126,7 +126,7 @@ export const FederatedGraphsTable = ({
                 >
                   <TableCell className="flex items-center gap-x-2 px-4 font-medium">
                     <>
-                      <div>{name}</div>
+                      <div className="w-72">{name}</div>
                       {isConnected === false && (
                         <Tooltip delayDuration={200}>
                           <TooltipTrigger>
