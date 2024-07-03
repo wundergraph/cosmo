@@ -322,11 +322,10 @@ export class Composer {
         deploymentErrorString: deploymentError?.message,
         admissionErrorString: admissionError?.message,
       });
-    } else {
+    } else if (signatureSha256) {
       await this.graphCompositionRepository.updateComposition({
         fedGraphSchemaVersionId: federatedSchemaVersionId,
         routerConfigSignature: signatureSha256,
-        routerConfigPath: s3PathReady,
       });
     }
 

@@ -1,0 +1,1 @@
+ALTER TABLE "graph_compositions" DROP COLUMN IF EXISTS "router_config_path";

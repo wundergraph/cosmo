@@ -1311,8 +1311,6 @@ export const graphCompositions = pgTable('graph_compositions', {
   compositionErrors: text('composition_errors'),
   // Signature of the schema. Provided by the user when the admission hook is called.
   routerConfigSignature: text('router_config_signature'),
-  // The S3 path to the router config file. This is only set when schema is composable.
-  routerConfigPath: text('router_config_path'),
   // The errors that occurred during the deployment of the schema. Only set when the schema was composable and no admission errors occurred.
   deploymentError: text('deployment_error'),
   // The errors that occurred during the admission of the config. Only set when the schema was composable.

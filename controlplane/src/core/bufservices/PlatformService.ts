@@ -3776,7 +3776,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const limit = feature?.limit === -1 ? undefined : feature?.limit;
 
-        if (limit) {
+        if (limit !== undefined && limit !== null) {
           const count = await featureFlagRepo.count(authContext.organizationId);
 
           if (count >= limit) {

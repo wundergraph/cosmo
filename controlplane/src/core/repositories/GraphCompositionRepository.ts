@@ -62,26 +62,23 @@ export class GraphCompositionRepository {
     });
   }
 
-  public async updateComposition({
+  public updateComposition({
     fedGraphSchemaVersionId,
     admissionErrorString,
     deploymentErrorString,
     routerConfigSignature,
-    routerConfigPath,
   }: {
     fedGraphSchemaVersionId: string;
     admissionErrorString?: string;
     deploymentErrorString?: string;
     routerConfigSignature?: string;
-    routerConfigPath?: string;
   }) {
-    await this.db
+    return this.db
       .update(graphCompositions)
       .set({
         deploymentError: deploymentErrorString,
         admissionError: admissionErrorString,
         routerConfigSignature,
-        routerConfigPath,
       })
       .where(eq(graphCompositions.schemaVersionId, fedGraphSchemaVersionId));
   }
