@@ -3925,6 +3925,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         });
 
         for (const graph of federatedGraphs) {
+          const hasErrors =
+            compositionErrors.some((error) => error.federatedGraphName === graph.name) ||
+            deploymentErrors.some((error) => error.federatedGraphName === graph.name);
           orgWebhooks.send({
             eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
             payload: {
@@ -3937,7 +3940,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                 id: authContext.organizationId,
                 slug: authContext.organizationSlug,
               },
-              errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
+              errors: hasErrors,
               actor_id: authContext.userId,
             },
           });
