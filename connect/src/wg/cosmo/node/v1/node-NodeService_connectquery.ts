@@ -4,22 +4,7 @@
 // @ts-nocheck
 
 import { MethodKind } from "@bufbuild/protobuf";
-import { GetConfigRequest, GetConfigResponse, SelfRegisterRequest, SelfRegisterResponse } from "./node_pb.js";
-
-/**
- * @generated from rpc wg.cosmo.node.v1.NodeService.GetLatestValidRouterConfig
- * @deprecated
- */
-export const getLatestValidRouterConfig = {
-  localName: "getLatestValidRouterConfig",
-  name: "GetLatestValidRouterConfig",
-  kind: MethodKind.Unary,
-  I: GetConfigRequest,
-  O: GetConfigResponse,
-  service: {
-    typeName: "wg.cosmo.node.v1.NodeService"
-  }
-} as const;
+import { SelfRegisterRequest, SelfRegisterResponse } from "./node_pb.js";
 
 /**
  * @generated from rpc wg.cosmo.node.v1.NodeService.SelfRegister

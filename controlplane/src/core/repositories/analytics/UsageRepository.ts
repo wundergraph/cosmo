@@ -129,6 +129,7 @@ export class UsageRepository {
     namedType?: string;
     range?: number;
     dateRange?: DateRange;
+    routerConfigVersion?: string;
     organizationId: string;
     federatedGraphId: string;
   }) {
@@ -143,6 +144,9 @@ export class UsageRepository {
     }
     if (input.namedType) {
       whereSql += ` AND NamedType = '${input.namedType}'`;
+    }
+    if (input.routerConfigVersion) {
+      whereSql += ` AND RouterConfigVersion = '${input.routerConfigVersion}'`;
     }
 
     const [requestSeries, clients, meta] = await Promise.all([

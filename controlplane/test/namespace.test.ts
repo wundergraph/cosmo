@@ -2,7 +2,8 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
-import { SetupTest, createFederatedGraph, createAndPublishSubgraph } from './test-util.js';
+import { unsuccessfulBaseCompositionError } from '../src/core/errors/errors.js';
+import { createFederatedGraph, createThenPublishSubgraph, SetupTest } from './test-util.js';
 
 let dbname = '';
 
@@ -16,7 +17,7 @@ type Query {
   hello: String!
 }`;
 
-describe('Namespaces', (ctx) => {
+describe('Namespace tests', (ctx) => {
   beforeAll(async () => {
     dbname = await beforeAllSetup();
   });
@@ -44,8 +45,8 @@ describe('Namespaces', (ctx) => {
 
     const subgraphSchemaSDL = 'type Query { hello: String! }';
 
-    await createAndPublishSubgraph(client, subgraph1Name, prod, subgraphSchemaSDL, [label], 'http://localhost:8081');
-    await createAndPublishSubgraph(client, subgraph2Name, dev, subgraphSchemaSDL, [label], 'http://localhost:8082');
+    await createThenPublishSubgraph(client, subgraph1Name, prod, subgraphSchemaSDL, [label], 'http://localhost:8081');
+    await createThenPublishSubgraph(client, subgraph2Name, dev, subgraphSchemaSDL, [label], 'http://localhost:8082');
 
     await createFederatedGraph(client, fedGraphName, prod, [joinLabel(label)], 'http://localhost:8080');
     await createFederatedGraph(client, fedGraphName, dev, [joinLabel(label)], 'http://localhost:8081');
@@ -190,8 +191,8 @@ describe('Namespaces', (ctx) => {
 
     const subgraphSchemaSDL = 'type Query { hello: String! }';
 
-    await createAndPublishSubgraph(client, subgraph1Name, prod, subgraphSchemaSDL, [label], 'http://localhost:8081');
-    await createAndPublishSubgraph(client, subgraph2Name, dev, subgraphSchemaSDL, [label], 'http://localhost:8082');
+    await createThenPublishSubgraph(client, subgraph1Name, prod, subgraphSchemaSDL, [label], 'http://localhost:8081');
+    await createThenPublishSubgraph(client, subgraph2Name, dev, subgraphSchemaSDL, [label], 'http://localhost:8082');
 
     await createFederatedGraph(client, fedGraphName, prod, [joinLabel(label)], 'http://localhost:8080');
     await createFederatedGraph(client, fedGraphName, dev, [joinLabel(label)], 'http://localhost:8081');
@@ -281,8 +282,8 @@ describe('Namespaces', (ctx) => {
 
     const subgraphSchemaSDL = 'type Query { hello: String! }';
 
-    await createAndPublishSubgraph(client, subgraph1Name, prod, subgraphSchemaSDL, [label], 'http://localhost:8081');
-    await createAndPublishSubgraph(client, subgraph2Name, dev, subgraphSchemaSDL, [label], 'http://localhost:8082');
+    await createThenPublishSubgraph(client, subgraph1Name, prod, subgraphSchemaSDL, [label], 'http://localhost:8081');
+    await createThenPublishSubgraph(client, subgraph2Name, dev, subgraphSchemaSDL, [label], 'http://localhost:8082');
 
     await createFederatedGraph(client, fedGraph1Name, prod, [joinLabel(label)], 'http://localhost:8080');
     await createFederatedGraph(client, fedGraph2Name, dev, [joinLabel(label)], 'http://localhost:8081');
@@ -362,8 +363,8 @@ describe('Namespaces', (ctx) => {
 
     const subgraphSchemaSDL = 'type Query { hello: String! }';
 
-    await createAndPublishSubgraph(client, subgraph1Name, prod, subgraphSchemaSDL, [label], 'http://localhost:8081');
-    await createAndPublishSubgraph(client, subgraph2Name, dev, subgraphSchemaSDL, [label], 'http://localhost:8082');
+    await createThenPublishSubgraph(client, subgraph1Name, prod, subgraphSchemaSDL, [label], 'http://localhost:8081');
+    await createThenPublishSubgraph(client, subgraph2Name, dev, subgraphSchemaSDL, [label], 'http://localhost:8082');
 
     await createFederatedGraph(client, fedGraph1Name, prod, [joinLabel(label)], 'http://localhost:8080');
     await createFederatedGraph(client, fedGraph2Name, dev, [joinLabel(label)], 'http://localhost:8081');
@@ -394,9 +395,15 @@ describe('Namespaces', (ctx) => {
 
     // We expect the dev graphs to have composition errors due to not having subgraphs in dev anymore
     expect(moveRes.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
-    expect(moveRes.compositionErrors.length).toBe(2);
+    expect(moveRes.compositionErrors).toHaveLength(4);
     expect(moveRes.compositionErrors[0].federatedGraphName).toBe(fedGraph2Name);
-    expect(moveRes.compositionErrors[1].federatedGraphName).toBe(fedGraph3Name);
+    expect(moveRes.compositionErrors[1].federatedGraphName).toBe(fedGraph2Name);
+    expect(moveRes.compositionErrors[1])
+      .toStrictEqual(unsuccessfulBaseCompositionError(fedGraph2Name, dev));
+    expect(moveRes.compositionErrors[2].federatedGraphName).toBe(fedGraph3Name);
+    expect(moveRes.compositionErrors[3].federatedGraphName).toBe(fedGraph3Name);
+    expect(moveRes.compositionErrors[3])
+      .toStrictEqual(unsuccessfulBaseCompositionError(fedGraph3Name, dev));
 
     /* VERIFY */
     const subgraphsInDevAfterMove = await client.getSubgraphs({

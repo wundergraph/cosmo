@@ -17,9 +17,14 @@ import {
   SelectValue,
 } from "../ui/select";
 
-export const NamespaceSelector = () => {
+export const NamespaceSelector = ({
+  shouldRedirect,
+}: {
+  shouldRedirect?: boolean;
+}) => {
   const user = useContext(UserContext);
   const router = useRouter();
+  const organizationSlug = router.query.organizationSlug as string;
   const namespaceParam = router.query.namespace as string;
 
   const [namespaces, setNamespaces] = useState(["default"]);
@@ -52,7 +57,11 @@ export const NamespaceSelector = () => {
     <Select
       value={namespace}
       onValueChange={(namespace) => {
-        applyParams({ namespace });
+        if (shouldRedirect) {
+          router.push(`/${organizationSlug}/feature-flags?namespace=${namespace}`)
+        } else {
+          applyParams({ namespace });
+        }
         setNamespace(namespace);
       }}
     >

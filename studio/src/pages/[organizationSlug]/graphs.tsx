@@ -16,14 +16,13 @@ import {
 } from "@/components/ui/select";
 import { Toolbar } from "@/components/ui/toolbar";
 import { NextPageWithLayout } from "@/lib/page";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@connectrpc/connect-query";
+import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getFederatedGraphs } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { capitalCase } from "change-case";
 import { useRouter } from "next/router";
-import { useContext, useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useContext } from "react";
 
 const GraphToolbar = () => {
   const router = useRouter();

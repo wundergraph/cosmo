@@ -16,10 +16,10 @@ wgc namespace create dev
 wgc federated-graph create mygraph -n dev --routing-url http://localhost:3002/graphql
 
 # 3. Create subgraphs for development-demo
-wgc subgraph publish employees -n dev --routing-url https://employees-api.fly.dev/graphql --schema ./demo/pkg/subgraphs/employees/subgraph/schema.graphqls
-wgc subgraph publish family -n dev --routing-url https://family-api.fly.dev/graphql --schema ./demo/pkg/subgraphs/family/subgraph/schema.graphqls
-wgc subgraph publish hobbies -n dev --routing-url https://hobbies-api.fly.dev/graphql --schema ./demo/pkg/subgraphs/hobbies/subgraph/schema.graphqls
-wgc subgraph publish products -n dev --routing-url https://product-api.fly.dev/graphql --schema ./demo/pkg/subgraphs/products/subgraph/schema.graphqls
+wgc subgraph publish employees -n dev --routing-url https://employees-api.fly.dev/graphql --schema ../demo/pkg/subgraphs/employees/subgraph/schema.graphqls
+wgc subgraph publish family -n dev --routing-url https://family-api.fly.dev/graphql --schema ../demo/pkg/subgraphs/family/subgraph/schema.graphqls
+wgc subgraph publish hobbies -n dev --routing-url https://hobbies-api.fly.dev/graphql --schema ../demo/pkg/subgraphs/hobbies/subgraph/schema.graphqls
+wgc subgraph publish products -n dev --routing-url https://product-api.fly.dev/graphql --schema ../demo/pkg/subgraphs/products/subgraph/schema.graphqls
 
 # 4. Create a router token for development federated graph
 
@@ -37,10 +37,10 @@ wgc namespace create prod
 wgc federated-graph create mygraph -n prod --routing-url http://localhost:3003/graphql
 
 # 3. Create subgraphs for prod
-wgc subgraph publish employees -n prod --routing-url https://employees-api.fly.dev/graphql --schema ./demo/pkg/subgraphs/employees/subgraph/schema.graphqls
-wgc subgraph publish family -n prod --routing-url https://family-api.fly.dev/graphql --schema ./demo/pkg/subgraphs/family/subgraph/schema.graphqls
-wgc subgraph publish hobbies -n prod --routing-url https://hobbies-api.fly.dev/graphql --schema ./demo/pkg/subgraphs/hobbies/subgraph/schema.graphqls
-wgc subgraph publish products -n prod --routing-url https://product-api.fly.dev/graphql --schema ./demo/pkg/subgraphs/products/subgraph/schema.graphqls
+wgc subgraph publish employees -n prod --routing-url https://employees-api.fly.dev/graphql --schema ../demo/pkg/subgraphs/employees/subgraph/schema.graphqls
+wgc subgraph publish family -n prod --routing-url https://family-api.fly.dev/graphql --schema ../demo/pkg/subgraphs/family/subgraph/schema.graphqls
+wgc subgraph publish hobbies -n prod --routing-url https://hobbies-api.fly.dev/graphql --schema ../demo/pkg/subgraphs/hobbies/subgraph/schema.graphqls
+wgc subgraph publish products -n prod --routing-url https://product-api.fly.dev/graphql --schema ../demo/pkg/subgraphs/products/subgraph/schema.graphqls
 
 # 4. Create a router token for prod federated graph
 

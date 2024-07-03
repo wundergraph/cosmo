@@ -34,7 +34,7 @@ export class SchemaUsageTrafficInspector {
 
   /**
    * Inspect the usage of a schema change in the last X days on real traffic and return the
-   * affected operations.
+   * affected operations. We will consider all available compositions.
    */
   public async inspect(
     changes: InspectorSchemaChange[],

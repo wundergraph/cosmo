@@ -3,7 +3,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { Label } from '../src/types/index.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
-import { createFederatedGraph, createAndPublishSubgraph, SetupTest } from './test-util.js';
+import { createFederatedGraph, createThenPublishSubgraph, SetupTest } from './test-util.js';
 
 let dbname = '';
 
@@ -27,8 +27,8 @@ describe('Labels', (ctx) => {
 
     const subgraphSchemaSDL = 'type Query { hello: String! }';
 
-    await createAndPublishSubgraph(client, subgraph1Name, 'default', subgraphSchemaSDL, [label1], 'http://localhost:8081');
-    await createAndPublishSubgraph(client, subgraph2Name, 'default', subgraphSchemaSDL, [label2], 'http://localhost:8082');
+    await createThenPublishSubgraph(client, subgraph1Name, 'default', subgraphSchemaSDL, [label1], 'http://localhost:8081');
+    await createThenPublishSubgraph(client, subgraph2Name, 'default', subgraphSchemaSDL, [label2], 'http://localhost:8082');
 
     const createFedGraphRes = await client.createFederatedGraph({
       name: fedGraphName,
@@ -201,7 +201,7 @@ describe('Labels', (ctx) => {
 
     const subgraphSchemaSDL = 'type Query { hello: String! }';
 
-    await createAndPublishSubgraph(
+    await createThenPublishSubgraph(
       client,
       subgraph1Name,
       'default',
@@ -209,7 +209,7 @@ describe('Labels', (ctx) => {
       [labelTeamA, labelProviderAWS, labelEnvProd],
       'http://localhost:8081',
     );
-    await createAndPublishSubgraph(
+    await createThenPublishSubgraph(
       client,
       subgraph2Name,
       'default',
@@ -217,7 +217,7 @@ describe('Labels', (ctx) => {
       [labelTeamB, labelEnvProd],
       'http://localhost:8082',
     );
-    await createAndPublishSubgraph(
+    await createThenPublishSubgraph(
       client,
       subgraph3Name,
       'default',

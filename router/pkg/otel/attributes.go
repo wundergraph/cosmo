@@ -28,6 +28,7 @@ const (
 	WgRouterClusterName                = attribute.Key("wg.router.cluster.name")
 	WgSubgraphErrorExtendedCode        = attribute.Key("wg.subgraph.error.extended_code")
 	WgSubgraphErrorMessage             = attribute.Key("wg.subgraph.error.message")
+	WgFeatureFlag                      = attribute.Key("wg.feature_flag")
 )
 
 var (

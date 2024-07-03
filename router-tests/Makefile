@@ -3,6 +3,9 @@ SHELL := bash
 test:
 	go test -race ./...
 
+update-snapshot:
+	go test -update -race ./...
+
 test-fresh: clean-testcache test
 
 test-no-race:

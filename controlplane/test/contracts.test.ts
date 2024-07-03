@@ -1,12 +1,27 @@
+import fs from 'node:fs';
+import { join } from 'node:path';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
-import { SetupTest, createFederatedGraph, createAndPublishSubgraph } from './test-util.js';
+import { unsuccessfulBaseCompositionError } from '../src/core/errors/errors.js';
+import {
+  SetupTest,
+  createFederatedGraph,
+  createThenPublishSubgraph,
+  createNamespace,
+  DEFAULT_ROUTER_URL,
+  createAndPublishSubgraph,
+  assertFeatureFlagExecutionConfig,
+  assertNumberOfCompositions,
+  DEFAULT_SUBGRAPH_URL_ONE,
+  DEFAULT_SUBGRAPH_URL_TWO,
+  DEFAULT_NAMESPACE,
+} from './test-util.js';
 
 let dbname = '';
 
-describe('Contracts', (ctx) => {
+describe('Contract tests', (ctx) => {
   beforeAll(async () => {
     dbname = await beforeAllSetup();
   });
@@ -25,13 +40,20 @@ describe('Contracts', (ctx) => {
 
     const subgraphSchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
 
-    await createAndPublishSubgraph(client, subgraphName, 'default', subgraphSchemaSDL, [label], 'http://localhost:8082');
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      subgraphSchemaSDL,
+      [label],
+      'http://localhost:8082',
+    );
 
-    await createFederatedGraph(client, fedGraphName, 'default', [joinLabel(label)], 'http://localhost:8080');
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:8080');
 
     await client.createContract({
       name: contractGraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       sourceGraphName: fedGraphName,
       excludeTags: ['test'],
       routingUrl: 'http://localhost:8081',
@@ -40,15 +62,15 @@ describe('Contracts', (ctx) => {
 
     const fedGraphRes = await client.getFederatedGraphByName({
       name: fedGraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
     });
     expect(fedGraphRes.graph?.name).toBe(fedGraphName);
 
     const contractGraphRes = await client.getFederatedGraphByName({
       name: contractGraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
     });
-    expect(contractGraphRes.graph?.namespace).toBe('default');
+    expect(contractGraphRes.graph?.namespace).toBe(DEFAULT_NAMESPACE);
     expect(contractGraphRes.subgraphs.length).toBe(1);
     expect(contractGraphRes.subgraphs[0].name).toBe(subgraphName);
     expect(contractGraphRes.graph?.contract?.sourceFederatedGraphId).toBe(fedGraphRes.graph?.id);
@@ -56,7 +78,7 @@ describe('Contracts', (ctx) => {
     expect(contractGraphRes.graph?.labelMatchers).toEqual(fedGraphRes.graph?.labelMatchers);
     expect(contractGraphRes.graph?.routingURL).toBe('http://localhost:8081');
     expect(contractGraphRes.graph?.readme).toBe('test');
-    expect(contractGraphRes.graph?.supportsFederation).toEqual(true)
+    expect(contractGraphRes.graph?.supportsFederation).toEqual(true);
     expect(blobStorage.keys().length).toBe(2);
 
     await server.close();
@@ -72,35 +94,41 @@ describe('Contracts', (ctx) => {
 
     const subgraphSchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
 
-    await createAndPublishSubgraph(client, subgraphName, 'default', subgraphSchemaSDL, [label], 'http://localhost:8082');
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      subgraphSchemaSDL,
+      [label],
+      'http://localhost:8082',
+    );
 
-    await createFederatedGraph(client, fedGraphName, 'default', [joinLabel(label)], 'http://localhost:8080');
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:8080');
 
     await client.createContract({
       name: contractGraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       sourceGraphName: fedGraphName,
       excludeTags: ['test'],
       routingUrl: 'http://localhost:8081',
-      admissionWebhookUrl: 'http://localhost:8085',
       readme: 'test',
     });
 
     const contractGraphRes = await client.getFederatedGraphByName({
       name: contractGraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
     });
     expect(contractGraphRes.graph?.contract?.excludeTags).toEqual(['test']);
 
     await client.updateContract({
       name: contractGraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       excludeTags: ['new'],
     });
 
     const contractGraphUpdatedRes = await client.getFederatedGraphByName({
       name: contractGraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
     });
     expect(contractGraphUpdatedRes.graph?.contract?.excludeTags).toEqual(['new']);
 
@@ -117,13 +145,20 @@ describe('Contracts', (ctx) => {
 
     const subgraphSchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
 
-    await createAndPublishSubgraph(client, subgraphName, 'default', subgraphSchemaSDL, [label], 'http://localhost:8082');
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      subgraphSchemaSDL,
+      [label],
+      'http://localhost:8082',
+    );
 
-    await createFederatedGraph(client, fedGraphName, 'default', [joinLabel(label)], 'http://localhost:8080');
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:8080');
 
     await client.createContract({
       name: contractGraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       sourceGraphName: fedGraphName,
       excludeTags: ['test'],
       routingUrl: 'http://localhost:8081',
@@ -132,7 +167,7 @@ describe('Contracts', (ctx) => {
 
     const contractGraphRes = await client.getFederatedGraphByName({
       name: contractGraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
     });
     expect(contractGraphRes.graph?.contract).toBeDefined();
 
@@ -140,12 +175,12 @@ describe('Contracts', (ctx) => {
 
     await client.deleteFederatedGraph({
       name: fedGraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
     });
 
     const contractGraphDeletedRes = await client.getFederatedGraphByName({
       name: contractGraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
     });
     expect(contractGraphDeletedRes.response?.code).toEqual(EnumStatusCode.ERR_NOT_FOUND);
 
@@ -165,35 +200,41 @@ describe('Contracts', (ctx) => {
 
     const subgraphSchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
 
-    await createAndPublishSubgraph(client, subgraphName, 'default', subgraphSchemaSDL, [label], 'http://localhost:8082');
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      subgraphSchemaSDL,
+      [label],
+      'http://localhost:8082',
+    );
 
-    await createFederatedGraph(client, fedGraphName, 'default', [joinLabel(label)], 'http://localhost:8080');
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:8080');
 
     await client.createContract({
       name: contractGraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       sourceGraphName: fedGraphName,
       excludeTags: ['test'],
       routingUrl: 'http://localhost:8081',
-      admissionWebhookUrl: 'http://localhost:8085',
       readme: 'test',
     });
 
     const contractGraphRes = await client.getFederatedGraphByName({
       name: contractGraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
     });
     expect(contractGraphRes.graph?.contract).toBeDefined();
 
     await client.updateFederatedGraph({
       name: fedGraphName,
-      namespace: 'default',
-      labelMatchers: [joinLabel(label), joinLabel(label2)]
+      namespace: DEFAULT_NAMESPACE,
+      labelMatchers: [joinLabel(label), joinLabel(label2)],
     });
 
     const contractGraphUpdatedRes = await client.getFederatedGraphByName({
       name: contractGraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
     });
     expect(contractGraphUpdatedRes.graph?.labelMatchers).toEqual([joinLabel(label), joinLabel(label2)]);
 
@@ -211,27 +252,33 @@ describe('Contracts', (ctx) => {
 
     const subgraphSchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
 
-    await createAndPublishSubgraph(client, subgraphName, 'default', subgraphSchemaSDL, [label], 'http://localhost:8082');
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      subgraphSchemaSDL,
+      [label],
+      'http://localhost:8082',
+    );
 
-    await createFederatedGraph(client, fedGraphName, 'default', [joinLabel(label)], 'http://localhost:8080');
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:8080');
 
     await client.createContract({
       name: contractGraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       sourceGraphName: fedGraphName,
       excludeTags: ['test'],
       routingUrl: 'http://localhost:8081',
-      admissionWebhookUrl: 'http://localhost:8085',
       readme: 'test',
     });
 
     const res = await client.updateFederatedGraph({
       name: contractGraphName,
-      namespace: 'default',
-      labelMatchers: [joinLabel(label), joinLabel(label2)]
+      namespace: DEFAULT_NAMESPACE,
+      labelMatchers: [joinLabel(label), joinLabel(label2)],
     });
 
-    expect(res.response?.code).toEqual(EnumStatusCode.ERR)
+    expect(res.response?.code).toEqual(EnumStatusCode.ERR);
 
     await server.close();
   });
@@ -243,41 +290,47 @@ describe('Contracts', (ctx) => {
     const fedGraphName = genID('fedGraph');
     const contractGraphName = genID('contract');
     const label = genUniqueLabel('label');
-    const prod = 'prod'
+    const prod = 'prod';
 
     await client.createNamespace({
-      name: prod
-    })
+      name: prod,
+    });
 
     const subgraphSchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
 
-    await createAndPublishSubgraph(client, subgraphName, 'default', subgraphSchemaSDL, [label], 'http://localhost:8082');
-    await createAndPublishSubgraph(client, subgraphName, prod, subgraphSchemaSDL, [label], 'http://localhost:8082');
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      subgraphSchemaSDL,
+      [label],
+      'http://localhost:8082',
+    );
+    await createThenPublishSubgraph(client, subgraphName, prod, subgraphSchemaSDL, [label], 'http://localhost:8082');
 
-    await createFederatedGraph(client, fedGraphName, 'default', [joinLabel(label)], 'http://localhost:8080');
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:8080');
 
     await client.createContract({
       name: contractGraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       sourceGraphName: fedGraphName,
       excludeTags: ['test'],
       routingUrl: 'http://localhost:8081',
-      admissionWebhookUrl: 'http://localhost:8085',
       readme: 'test',
     });
 
     const moveRes = await client.moveFederatedGraph({
       name: fedGraphName,
-      namespace: 'default',
-      newNamespace: prod
+      namespace: DEFAULT_NAMESPACE,
+      newNamespace: prod,
     });
-    expect(moveRes.response?.code).toEqual(EnumStatusCode.OK)
+    expect(moveRes.response?.code).toEqual(EnumStatusCode.OK);
 
     const contractResAfterMove = await client.getFederatedGraphByName({
       name: contractGraphName,
       namespace: prod,
     });
-    expect(contractResAfterMove.response?.code).toEqual(EnumStatusCode.OK)
+    expect(contractResAfterMove.response?.code).toEqual(EnumStatusCode.OK);
 
     await server.close();
   });
@@ -289,34 +342,40 @@ describe('Contracts', (ctx) => {
     const fedGraphName = genID('fedGraph');
     const contractGraphName = genID('contract');
     const label = genUniqueLabel('label');
-    const prod = 'prod'
+    const prod = 'prod';
 
     await client.createNamespace({
-      name: prod
-    })
+      name: prod,
+    });
 
     const subgraphSchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
 
-    await createAndPublishSubgraph(client, subgraphName, 'default', subgraphSchemaSDL, [label], 'http://localhost:8082');
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      subgraphSchemaSDL,
+      [label],
+      'http://localhost:8082',
+    );
 
-    await createFederatedGraph(client, fedGraphName, 'default', [joinLabel(label)], 'http://localhost:8080');
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:8080');
 
     await client.createContract({
       name: contractGraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       sourceGraphName: fedGraphName,
       excludeTags: ['test'],
       routingUrl: 'http://localhost:8081',
-      admissionWebhookUrl: 'http://localhost:8085',
       readme: 'test',
     });
 
     const moveRes = await client.moveFederatedGraph({
       name: contractGraphName,
-      namespace: 'default',
-      newNamespace: prod
+      namespace: DEFAULT_NAMESPACE,
+      newNamespace: prod,
     });
-    expect(moveRes.response?.code).toEqual(EnumStatusCode.ERR)
+    expect(moveRes.response?.code).toEqual(EnumStatusCode.ERR);
 
     await server.close();
   });
@@ -329,7 +388,7 @@ describe('Contracts', (ctx) => {
 
     const createResp = await client.createMonograph({
       name: monographName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       graphUrl: 'http://localhost:4000',
       routingUrl: 'http://localhost:3002',
     });
@@ -337,21 +396,20 @@ describe('Contracts', (ctx) => {
 
     await client.createContract({
       name: contractGraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       sourceGraphName: monographName,
       excludeTags: ['test'],
       routingUrl: 'http://localhost:8081',
-      admissionWebhookUrl: 'http://localhost:8085',
       readme: 'test',
     });
 
     const getContractRes = await client.getFederatedGraphByName({
       name: contractGraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
     });
-    expect(getContractRes.response?.code).toEqual(EnumStatusCode.OK)
-    expect(getContractRes.graph?.supportsFederation).toEqual(false)
-    expect(getContractRes.subgraphs.length).toEqual(1)
+    expect(getContractRes.response?.code).toEqual(EnumStatusCode.OK);
+    expect(getContractRes.graph?.supportsFederation).toEqual(false);
+    expect(getContractRes.subgraphs.length).toEqual(1);
 
     await server.close();
   });
@@ -361,15 +419,15 @@ describe('Contracts', (ctx) => {
 
     const monographName = genID('monograph');
     const contractGraphName = genID('contract');
-    const prod = 'prod'
+    const prod = 'prod';
 
     await client.createNamespace({
-      name: prod
-    })
+      name: prod,
+    });
 
     const createResp = await client.createMonograph({
       name: monographName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       graphUrl: 'http://localhost:4000',
       routingUrl: 'http://localhost:3002',
     });
@@ -377,27 +435,26 @@ describe('Contracts', (ctx) => {
 
     await client.createContract({
       name: contractGraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       sourceGraphName: monographName,
       excludeTags: ['test'],
       routingUrl: 'http://localhost:8081',
-      admissionWebhookUrl: 'http://localhost:8085',
       readme: 'test',
     });
 
     const moveRes = await client.moveMonograph({
       name: monographName,
-      namespace: 'default',
-      newNamespace: prod
+      namespace: DEFAULT_NAMESPACE,
+      newNamespace: prod,
     });
-    expect(moveRes.response?.code).toEqual(EnumStatusCode.OK)
+    expect(moveRes.response?.code).toEqual(EnumStatusCode.OK);
 
     const getContractRes = await client.getFederatedGraphByName({
       name: contractGraphName,
       namespace: prod,
     });
-    expect(getContractRes.response?.code).toEqual(EnumStatusCode.OK)
-    expect(getContractRes.subgraphs.length).toEqual(1)
+    expect(getContractRes.response?.code).toEqual(EnumStatusCode.OK);
+    expect(getContractRes.subgraphs.length).toEqual(1);
 
     await server.close();
   });
@@ -410,7 +467,7 @@ describe('Contracts', (ctx) => {
 
     const createResp = await client.createMonograph({
       name: monographName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       graphUrl: 'http://localhost:4000',
       routingUrl: 'http://localhost:3002',
     });
@@ -418,14 +475,14 @@ describe('Contracts', (ctx) => {
 
     const publishRes1 = await client.publishMonograph({
       name: monographName,
-      namespace: 'default',
-      schema: 'type Query { hello: String!, hi: String! @tag(name: "test"), test: String! }'
+      namespace: DEFAULT_NAMESPACE,
+      schema: 'type Query { hello: String!, hi: String! @tag(name: "test"), test: String! }',
     });
-    expect(publishRes1.response?.code).toEqual(EnumStatusCode.OK)
+    expect(publishRes1.response?.code).toEqual(EnumStatusCode.OK);
 
     await client.createContract({
       name: contractGraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       sourceGraphName: monographName,
       excludeTags: ['test'],
       routingUrl: 'http://localhost:8081',
@@ -436,15 +493,15 @@ describe('Contracts', (ctx) => {
 
     const deleteRes = await client.deleteMonograph({
       name: monographName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
     });
-    expect(deleteRes.response?.code).toEqual(EnumStatusCode.OK)
+    expect(deleteRes.response?.code).toEqual(EnumStatusCode.OK);
 
     const getContractRes = await client.getFederatedGraphByName({
       name: contractGraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
     });
-    expect(getContractRes.response?.code).toEqual(EnumStatusCode.ERR_NOT_FOUND)
+    expect(getContractRes.response?.code).toEqual(EnumStatusCode.ERR_NOT_FOUND);
 
     expect(blobStorage.keys().length).toBe(0);
 
@@ -459,7 +516,7 @@ describe('Contracts', (ctx) => {
 
     const createResp = await client.createMonograph({
       name: monographName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       graphUrl: 'http://localhost:4000',
       routingUrl: 'http://localhost:3002',
     });
@@ -467,26 +524,25 @@ describe('Contracts', (ctx) => {
 
     await client.createContract({
       name: contractGraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       sourceGraphName: monographName,
       excludeTags: ['test'],
       routingUrl: 'http://localhost:8081',
-      admissionWebhookUrl: 'http://localhost:8085',
       readme: 'test',
     });
 
     const migrateRes = await client.migrateMonograph({
       name: monographName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
     });
-    expect(migrateRes.response?.code).toEqual(EnumStatusCode.OK)
+    expect(migrateRes.response?.code).toEqual(EnumStatusCode.OK);
 
     const getContractRes = await client.getFederatedGraphByName({
       name: contractGraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
     });
-    expect(getContractRes.response?.code).toEqual(EnumStatusCode.OK)
-    expect(getContractRes.graph?.supportsFederation).toEqual(true)
+    expect(getContractRes.response?.code).toEqual(EnumStatusCode.OK);
+    expect(getContractRes.graph?.supportsFederation).toEqual(true);
 
     await server.close();
   });
@@ -501,43 +557,50 @@ describe('Contracts', (ctx) => {
 
     const subgraphSchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
 
-    await createAndPublishSubgraph(client, subgraphName, 'default', subgraphSchemaSDL, [label], 'http://localhost:8082');
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      subgraphSchemaSDL,
+      [label],
+      'http://localhost:8082',
+    );
 
-    await createFederatedGraph(client, fedGraphName, 'default', [joinLabel(label)], 'http://localhost:8080');
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:8080');
 
     const res = await client.createContract({
       name: contractGraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       sourceGraphName: fedGraphName,
       excludeTags: ['test'],
       routingUrl: 'http://localhost:8081',
     });
-    expect(res.response?.code).toEqual(EnumStatusCode.OK)
+    expect(res.response?.code).toEqual(EnumStatusCode.OK);
 
     const sdlResponse = await client.getFederatedGraphSDLByName({
       name: contractGraphName,
-      namespace: 'default'
-    })
-    expect(sdlResponse.response?.code).toEqual(EnumStatusCode.OK)
+      namespace: DEFAULT_NAMESPACE,
+    });
+    expect(sdlResponse.response?.code).toEqual(EnumStatusCode.OK);
     expect(sdlResponse.clientSchema).toEqual(`type Query {
   hello: String!
-}`)
+}`);
 
     await client.publishFederatedSubgraph({
       name: subgraphName,
-      namespace: 'default',
-      schema: 'type Query { hello: String!, hi: String! }'
+      namespace: DEFAULT_NAMESPACE,
+      schema: 'type Query { hello: String!, hi: String! }',
     });
 
     const sdlResponse2 = await client.getFederatedGraphSDLByName({
       name: contractGraphName,
-      namespace: 'default'
-    })
-    expect(sdlResponse2.response?.code).toEqual(EnumStatusCode.OK)
+      namespace: DEFAULT_NAMESPACE,
+    });
+    expect(sdlResponse2.response?.code).toEqual(EnumStatusCode.OK);
     expect(sdlResponse2.clientSchema).toEqual(`type Query {
   hello: String!
   hi: String!
-}`)
+}`);
 
     await server.close();
   });
@@ -554,43 +617,57 @@ describe('Contracts', (ctx) => {
     const subgraph1SchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
     const subgraph2SchemaSDL = 'type Query { test: String! }';
 
-    await createAndPublishSubgraph(client, subgraph1Name, 'default', subgraph1SchemaSDL, [label], 'http://localhost:8082');
-    await createAndPublishSubgraph(client, subgraph2Name, 'default', subgraph2SchemaSDL, [label], 'http://localhost:8083');
+    await createThenPublishSubgraph(
+      client,
+      subgraph1Name,
+      DEFAULT_NAMESPACE,
+      subgraph1SchemaSDL,
+      [label],
+      'http://localhost:8082',
+    );
+    await createThenPublishSubgraph(
+      client,
+      subgraph2Name,
+      DEFAULT_NAMESPACE,
+      subgraph2SchemaSDL,
+      [label],
+      'http://localhost:8083',
+    );
 
-    await createFederatedGraph(client, fedGraphName, 'default', [joinLabel(label)], 'http://localhost:8080');
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:8080');
 
     const res = await client.createContract({
       name: contractGraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       sourceGraphName: fedGraphName,
       excludeTags: ['test'],
       routingUrl: 'http://localhost:8081',
     });
-    expect(res.response?.code).toEqual(EnumStatusCode.OK)
+    expect(res.response?.code).toEqual(EnumStatusCode.OK);
 
     const sdlResponse = await client.getFederatedGraphSDLByName({
       name: contractGraphName,
-      namespace: 'default'
-    })
-    expect(sdlResponse.response?.code).toEqual(EnumStatusCode.OK)
+      namespace: DEFAULT_NAMESPACE,
+    });
+    expect(sdlResponse.response?.code).toEqual(EnumStatusCode.OK);
     expect(sdlResponse.clientSchema).toEqual(`type Query {
   hello: String!
   test: String!
-}`)
+}`);
 
     await client.deleteFederatedSubgraph({
       subgraphName: subgraph2Name,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
     });
 
     const sdlResponse2 = await client.getFederatedGraphSDLByName({
       name: contractGraphName,
-      namespace: 'default'
-    })
-    expect(sdlResponse2.response?.code).toEqual(EnumStatusCode.OK)
+      namespace: DEFAULT_NAMESPACE,
+    });
+    expect(sdlResponse2.response?.code).toEqual(EnumStatusCode.OK);
     expect(sdlResponse2.clientSchema).toEqual(`type Query {
   hello: String!
-}`)
+}`);
 
     await server.close();
   });
@@ -605,50 +682,64 @@ describe('Contracts', (ctx) => {
     const label = genUniqueLabel('label');
 
     await client.createNamespace({
-      name: 'prod'
-    })
+      name: 'prod',
+    });
 
     const subgraph1SchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
     const subgraph2SchemaSDL = 'type Query { test: String! }';
 
-    await createAndPublishSubgraph(client, subgraph1Name, 'default', subgraph1SchemaSDL, [label], 'http://localhost:8082');
-    await createAndPublishSubgraph(client, subgraph2Name, 'default', subgraph2SchemaSDL, [label], 'http://localhost:8083');
+    await createThenPublishSubgraph(
+      client,
+      subgraph1Name,
+      DEFAULT_NAMESPACE,
+      subgraph1SchemaSDL,
+      [label],
+      'http://localhost:8082',
+    );
+    await createThenPublishSubgraph(
+      client,
+      subgraph2Name,
+      DEFAULT_NAMESPACE,
+      subgraph2SchemaSDL,
+      [label],
+      'http://localhost:8083',
+    );
 
-    await createFederatedGraph(client, fedGraphName, 'default', [joinLabel(label)], 'http://localhost:8080');
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:8080');
 
     const res = await client.createContract({
       name: contractGraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       sourceGraphName: fedGraphName,
       excludeTags: ['test'],
       routingUrl: 'http://localhost:8081',
     });
-    expect(res.response?.code).toEqual(EnumStatusCode.OK)
+    expect(res.response?.code).toEqual(EnumStatusCode.OK);
 
     const sdlResponse = await client.getFederatedGraphSDLByName({
       name: contractGraphName,
-      namespace: 'default'
-    })
-    expect(sdlResponse.response?.code).toEqual(EnumStatusCode.OK)
+      namespace: DEFAULT_NAMESPACE,
+    });
+    expect(sdlResponse.response?.code).toEqual(EnumStatusCode.OK);
     expect(sdlResponse.clientSchema).toEqual(`type Query {
   hello: String!
   test: String!
-}`)
+}`);
 
     await client.moveSubgraph({
       name: subgraph2Name,
-      namespace: 'default',
-      newNamespace: 'prod'
+      namespace: DEFAULT_NAMESPACE,
+      newNamespace: 'prod',
     });
 
     const sdlResponse2 = await client.getFederatedGraphSDLByName({
       name: contractGraphName,
-      namespace: 'default'
-    })
-    expect(sdlResponse2.response?.code).toEqual(EnumStatusCode.OK)
+      namespace: DEFAULT_NAMESPACE,
+    });
+    expect(sdlResponse2.response?.code).toEqual(EnumStatusCode.OK);
     expect(sdlResponse2.clientSchema).toEqual(`type Query {
   hello: String!
-}`)
+}`);
 
     await server.close();
   });
@@ -663,7 +754,7 @@ describe('Contracts', (ctx) => {
 
     const createResp = await client.createMonograph({
       name: monographName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       graphUrl: 'http://localhost:4000',
       routingUrl: 'http://localhost:3002',
     });
@@ -671,46 +762,45 @@ describe('Contracts', (ctx) => {
 
     const publishRes1 = await client.publishMonograph({
       name: monographName,
-      namespace: 'default',
-      schema: monographSchema
+      namespace: DEFAULT_NAMESPACE,
+      schema: monographSchema,
     });
-    expect(publishRes1.response?.code).toEqual(EnumStatusCode.OK)
+    expect(publishRes1.response?.code).toEqual(EnumStatusCode.OK);
 
     const res = await client.createContract({
       name: contractGraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       sourceGraphName: monographName,
       excludeTags: ['test'],
       routingUrl: 'http://localhost:8081',
     });
-    expect(res.response?.code).toEqual(EnumStatusCode.OK)
+    expect(res.response?.code).toEqual(EnumStatusCode.OK);
 
     const sdlResponse = await client.getFederatedGraphSDLByName({
       name: contractGraphName,
-      namespace: 'default'
-    })
-    expect(sdlResponse.response?.code).toEqual(EnumStatusCode.OK)
+      namespace: DEFAULT_NAMESPACE,
+    });
+    expect(sdlResponse.response?.code).toEqual(EnumStatusCode.OK);
     expect(sdlResponse.clientSchema).toEqual(`type Query {
   hello: String!
   test: String!
-}`)
+}`);
 
     const publishRes2 = await client.publishMonograph({
       name: monographName,
-      namespace: 'default',
-      schema: 'type Query { hello: String!, hi: String! @tag(name: "test") }'
+      namespace: DEFAULT_NAMESPACE,
+      schema: 'type Query { hello: String!, hi: String! @tag(name: "test") }',
     });
-    expect(publishRes2.response?.code).toEqual(EnumStatusCode.OK)
-
+    expect(publishRes2.response?.code).toEqual(EnumStatusCode.OK);
 
     const sdlResponse2 = await client.getFederatedGraphSDLByName({
       name: contractGraphName,
-      namespace: 'default'
-    })
-    expect(sdlResponse2.response?.code).toEqual(EnumStatusCode.OK)
+      namespace: DEFAULT_NAMESPACE,
+    });
+    expect(sdlResponse2.response?.code).toEqual(EnumStatusCode.OK);
     expect(sdlResponse2.clientSchema).toEqual(`type Query {
   hello: String!
-}`)
+}`);
 
     await server.close();
   });
@@ -726,51 +816,231 @@ describe('Contracts', (ctx) => {
     const label2 = genUniqueLabel('label2');
 
     await client.createNamespace({
-      name: 'prod'
-    })
+      name: 'prod',
+    });
 
     const subgraph1SchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
     const subgraph2SchemaSDL = 'type Query { test: String! }';
 
-    await createAndPublishSubgraph(client, subgraph1Name, 'default', subgraph1SchemaSDL, [label1], 'http://localhost:8082');
-    await createAndPublishSubgraph(client, subgraph2Name, 'default', subgraph2SchemaSDL, [label2], 'http://localhost:8083');
+    await createThenPublishSubgraph(
+      client,
+      subgraph1Name,
+      DEFAULT_NAMESPACE,
+      subgraph1SchemaSDL,
+      [label1],
+      'http://localhost:8082',
+    );
+    await createThenPublishSubgraph(
+      client,
+      subgraph2Name,
+      DEFAULT_NAMESPACE,
+      subgraph2SchemaSDL,
+      [label2],
+      'http://localhost:8083',
+    );
 
-    await createFederatedGraph(client, fedGraphName, 'default', [[joinLabel(label1), joinLabel(label2)].join(",")], 'http://localhost:8080');
+    await createFederatedGraph(
+      client,
+      fedGraphName,
+      DEFAULT_NAMESPACE,
+      [[joinLabel(label1), joinLabel(label2)].join(',')],
+      'http://localhost:8080',
+    );
 
     const res = await client.createContract({
       name: contractGraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       sourceGraphName: fedGraphName,
       excludeTags: ['test'],
       routingUrl: 'http://localhost:8081',
     });
-    expect(res.response?.code).toEqual(EnumStatusCode.OK)
+    expect(res.response?.code).toEqual(EnumStatusCode.OK);
 
     const sdlResponse = await client.getFederatedGraphSDLByName({
       name: contractGraphName,
-      namespace: 'default'
-    })
-    expect(sdlResponse.response?.code).toEqual(EnumStatusCode.OK)
+      namespace: DEFAULT_NAMESPACE,
+    });
+    expect(sdlResponse.response?.code).toEqual(EnumStatusCode.OK);
     expect(sdlResponse.clientSchema).toEqual(`type Query {
   hello: String!
   test: String!
-}`)
+}`);
 
     const updateRes = await client.updateFederatedGraph({
       name: fedGraphName,
-      namespace: 'default',
-      labelMatchers: [joinLabel(label1)]
+      namespace: DEFAULT_NAMESPACE,
+      labelMatchers: [joinLabel(label1)],
     });
-    expect(updateRes.response?.code).toEqual(EnumStatusCode.OK)
+    expect(updateRes.response?.code).toEqual(EnumStatusCode.OK);
 
     const sdlResponse2 = await client.getFederatedGraphSDLByName({
       name: contractGraphName,
-      namespace: 'default'
-    })
-    expect(sdlResponse2.response?.code).toEqual(EnumStatusCode.OK)
+      namespace: DEFAULT_NAMESPACE,
+    });
+    expect(sdlResponse2.response?.code).toEqual(EnumStatusCode.OK);
     expect(sdlResponse2.clientSchema).toEqual(`type Query {
   hello: String!
-}`)
+}`);
+
+    await server.close();
+  });
+
+  test('that a contract is not produced if the source graph does not compose', async () => {
+    const { client, server, blobStorage } = await SetupTest({ dbname });
+
+    const namespace = genID('namespace').toLowerCase();
+    await createNamespace(client, namespace);
+    const baseGraphName = genID('baseGraphName');
+    const label = genUniqueLabel('label');
+    const labels = [label];
+    await createFederatedGraph(client, baseGraphName, namespace, [joinLabel(label)], DEFAULT_ROUTER_URL);
+    await createAndPublishSubgraph(
+      client,
+      'users',
+      namespace,
+      fs.readFileSync(join(process.cwd(), `test/test-data/feature-flags/users-update.graphql`)).toString(),
+      labels,
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+    const publishSubgraphResponse = await client.publishFederatedSubgraph({
+      name: 'products',
+      namespace,
+      labels,
+      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      schema: fs.readFileSync(join(process.cwd(), `test/test-data/feature-flags/products-failing.graphql`)).toString(),
+    });
+    expect(publishSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
+
+    const baseGraphResponse = await client.getFederatedGraphByName({
+      name: baseGraphName,
+      namespace,
+    });
+
+    expect(blobStorage.keys()).toHaveLength(1);
+    const baseGraphKey = blobStorage.keys()[0];
+    expect(baseGraphKey).toContain(baseGraphResponse.graph!.id);
+    await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
+    // Two subgraph publishes for two compositions, the last of which is failing
+    await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
+
+    const contractName = genID('contractName');
+    const createContractResponse = await client.createContract({
+      name: contractName,
+      namespace,
+      sourceGraphName: baseGraphName,
+      excludeTags: ['exclude'],
+      routingUrl: 'http://localhost:3004',
+    });
+    expect(createContractResponse.response?.code).toBe(EnumStatusCode.ERR);
+    expect(createContractResponse.response?.details).toBe(
+      `The source graph "${baseGraphName}" is not currently composable.` +
+        ` A contract can only be created if its respective source graph has composed successfully.`,
+    );
+
+    // There should still only be a single key in storage
+    expect(blobStorage.keys()).toHaveLength(1);
+    // The contract is rejected, so compositions should return ERR_NOT_FOUND and 0 compositions
+    await assertNumberOfCompositions(client, contractName, 0, namespace, EnumStatusCode.ERR_NOT_FOUND);
+    // The base graph compositions should remain at 2
+    await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
+
+    await server.close();
+  });
+
+  test('that updating a contract whose source graph has not successfully composed produces a composition error', async () => {
+    const { client, server, blobStorage } = await SetupTest({ dbname });
+
+    const namespace = genID('namespace').toLowerCase();
+    await createNamespace(client, namespace);
+    const baseGraphName = genID('baseGraphName');
+    const label = genUniqueLabel('label');
+    const labels = [label];
+    await createFederatedGraph(client, baseGraphName, namespace, [joinLabel(label)], DEFAULT_ROUTER_URL);
+    await createAndPublishSubgraph(
+      client,
+      'users',
+      namespace,
+      fs.readFileSync(join(process.cwd(), `test/test-data/feature-flags/users-update.graphql`)).toString(),
+      labels,
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+    const publishSubgraphResponse = await client.publishFederatedSubgraph({
+      name: 'products',
+      namespace,
+      labels,
+      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      schema: fs.readFileSync(join(process.cwd(), `test/test-data/feature-flags/products.graphql`)).toString(),
+    });
+    expect(publishSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const baseGraphResponse = await client.getFederatedGraphByName({
+      name: baseGraphName,
+      namespace,
+    });
+
+    expect(blobStorage.keys()).toHaveLength(1);
+    const baseGraphKey = blobStorage.keys()[0];
+    expect(baseGraphKey).toContain(baseGraphResponse.graph!.id);
+    await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
+    // Two subgraph publishes for two compositions
+    await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
+
+    const contractName = genID('contractName');
+    const createContractResponse = await client.createContract({
+      name: contractName,
+      namespace,
+      sourceGraphName: baseGraphName,
+      excludeTags: ['exclude'],
+      routingUrl: 'http://localhost:3004',
+    });
+    expect(createContractResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const contractResponse = await client.getFederatedGraphByName({
+      name: contractName,
+      namespace,
+    });
+
+    // There should still only be a single key in storage
+    expect(blobStorage.keys()).toHaveLength(2);
+    const contractKey = blobStorage.keys()[1];
+    expect(contractKey).toContain(contractResponse.graph!.id);
+
+    // There should be a composition for the contract
+    await assertNumberOfCompositions(client, contractName, 1, namespace);
+    // The source graph compositions should remain at two
+    await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
+
+    const failingPublishSubgraphResponse = await client.publishFederatedSubgraph({
+      name: 'products',
+      namespace,
+      labels,
+      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      schema: fs.readFileSync(join(process.cwd(), `test/test-data/feature-flags/products-failing.graphql`)).toString(),
+    });
+    expect(failingPublishSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
+    expect(failingPublishSubgraphResponse.compositionErrors).toHaveLength(2);
+    expect(failingPublishSubgraphResponse.compositionErrors[1]).toStrictEqual(
+      unsuccessfulBaseCompositionError(baseGraphName, namespace),
+    );
+
+    // The contract composition should remain at one
+    await assertNumberOfCompositions(client, contractName, 1, namespace);
+    // The source graph compositions should now be at three
+    await assertNumberOfCompositions(client, baseGraphName, 3, namespace);
+
+    // Attempt to update the contract while the source graph is uncomposable
+    const updateContractResponse = await client.updateContract({
+      name: contractName,
+      namespace,
+      excludeTags: ['exclude', 'newTag'],
+    });
+    expect(updateContractResponse.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
+    expect(updateContractResponse.compositionErrors).toHaveLength(1);
+
+    // There should be one more (failing) contract composition
+    await assertNumberOfCompositions(client, contractName, 2, namespace);
+    // The source graph compositions should remain at three
+    await assertNumberOfCompositions(client, baseGraphName, 3, namespace);
 
     await server.close();
   });

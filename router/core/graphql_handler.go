@@ -85,7 +85,6 @@ type HandlerOptions struct {
 	RateLimitConfig                             *config.RateLimitConfiguration
 	SubgraphErrorPropagation                    config.SubgraphErrorPropagationConfiguration
 	EngineLoaderHooks                           resolve.LoaderHooks
-	SpanAttributesMapper                        func(r *http.Request) []attribute.KeyValue
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -104,7 +103,6 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		rateLimitConfig:          opts.RateLimitConfig,
 		subgraphErrorPropagation: opts.SubgraphErrorPropagation,
 		engineLoaderHooks:        opts.EngineLoaderHooks,
-		spanAttributesMapper:     opts.SpanAttributesMapper,
 	}
 	return graphQLHandler
 }
@@ -132,7 +130,6 @@ type GraphQLHandler struct {
 	rateLimitConfig          *config.RateLimitConfiguration
 	subgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
 	engineLoaderHooks        resolve.LoaderHooks
-	spanAttributesMapper     func(r *http.Request) []attribute.KeyValue
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -141,8 +138,8 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	var baseAttributes []attribute.KeyValue
 
-	if h.spanAttributesMapper != nil {
-		baseAttributes = h.spanAttributesMapper(r)
+	if attributes := baseAttributesFromContext(r.Context()); attributes != nil {
+		baseAttributes = append(baseAttributes, attributes...)
 	}
 
 	executionContext, graphqlExecutionSpan := h.tracer.Start(r.Context(), "Operation - Execute",

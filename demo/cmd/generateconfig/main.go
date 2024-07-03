@@ -130,6 +130,8 @@ func main() {
 			return subgraphs.MoodDefaultDemoURL
 		case sgs[7].URL:
 			return subgraphs.CountriesDefaultDemoURL
+		case sgs[8].URL:
+			return subgraphs.ProductsFgDefaultDemoURL
 		default:
 			return s
 		}

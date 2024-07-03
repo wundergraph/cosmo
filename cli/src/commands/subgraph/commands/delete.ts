@@ -12,20 +12,20 @@ export default (opts: BaseCommandOptions) => {
   command.description('Deletes a subgraph on the control plane.');
   command.argument('<name>', 'The name of the subgraph to delete.');
   command.option('-n, --namespace [string]', 'The namespace of the subgraph.');
-  command.option('-f --force', 'Option to force delete');
+  command.option('-f --force', 'Flag to force the deletion (skip confirmation).');
   command.action(async (name, options) => {
     if (!options.force) {
       const deletionConfirmed = await inquirer.prompt({
         name: 'confirmDeletion',
         type: 'confirm',
-        message: 'Are you sure you want to delete this subgraph?',
+        message: `Are you sure you want to delete the subgraph "${name}"?`,
       });
       if (!deletionConfirmed.confirmDeletion) {
         process.exit(1);
       }
     }
 
-    const spinner = ora('Subgraph is being deleted...').start();
+    const spinner = ora(`The subgraph "${name}" is being deleted...`).start();
 
     const resp = await opts.client.platform.deleteFederatedSubgraph(
       {
@@ -39,12 +39,12 @@ export default (opts: BaseCommandOptions) => {
 
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {
-        spinner.succeed(`Subgraph was deleted successfully.`);
+        spinner.succeed(`The subgraph "${name}" was deleted successfully.`);
 
         break;
       }
       case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {
-        spinner.fail('Subgraph was deleted but with composition errors.');
+        spinner.fail(`The subgraph "${name}" was deleted but with composition errors.`);
 
         const compositionErrorsTable = new Table({
           head: [
@@ -58,9 +58,9 @@ export default (opts: BaseCommandOptions) => {
 
         console.log(
           pc.red(
-            `We found composition errors, while composing the federated graph.\nThe router will continue to work with the latest valid schema.\n${pc.bold(
-              'Please check the errors below:',
-            )}`,
+            `There were composition errors when composing at least one federated graph related to the` +
+              ` subgraph "${name}".\nThe router will continue to work with the latest valid schema.` +
+              `\n${pc.bold('Please check the errors below:')}`,
           ),
         );
         for (const compositionError of resp.compositionErrors) {
@@ -77,7 +77,9 @@ export default (opts: BaseCommandOptions) => {
       }
       case EnumStatusCode.ERR_DEPLOYMENT_FAILED: {
         spinner.warn(
-          "The Subgraph was deleted, but the updated composition hasn't been deployed, so it's not accessible to the router. Check the errors listed below for details.",
+          `The subgraph "${name}" was deleted, but the updated composition could not be deployed.` +
+            `\nThis means the updated composition is not accessible to the router.` +
+            `\n${pc.bold('Please check the errors below:')}`,
         );
 
         const deploymentErrorsTable = new Table({
@@ -103,7 +105,7 @@ export default (opts: BaseCommandOptions) => {
         break;
       }
       default: {
-        spinner.fail(`Failed to delete subgraph.`);
+        spinner.fail(`Failed to delete the subgraph "${name}".`);
         if (resp.response?.details) {
           console.log(pc.red(pc.bold(resp.response?.details)));
         }

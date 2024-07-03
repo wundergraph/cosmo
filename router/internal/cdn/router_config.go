@@ -67,7 +67,7 @@ func (e *routerConfigNotFoundError) FederatedGraphId() string {
 }
 
 func (e *routerConfigNotFoundError) Error() string {
-	return fmt.Sprintf("router config of the federated graph %s not found", e.federatedGraphId)
+	return fmt.Sprintf("router config of the federated graph %s not found. This is expected if you have not deployed any subgraphs yet", e.federatedGraphId)
 }
 
 func (cdn *RouterConfigClient) RouterConfig(ctx context.Context, version string) (*nodev1.RouterConfig, error) {

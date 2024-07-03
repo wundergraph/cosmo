@@ -353,3 +353,13 @@ export const extractOperationNames = (contents: string): string[] => {
   });
   return names;
 };
+
+export function getValueOrDefault<K, V>(map: Map<K, V>, key: K, constructor: () => V): V {
+  const existingValue = map.get(key);
+  if (existingValue) {
+    return existingValue;
+  }
+  const value = constructor();
+  map.set(key, value);
+  return value;
+}

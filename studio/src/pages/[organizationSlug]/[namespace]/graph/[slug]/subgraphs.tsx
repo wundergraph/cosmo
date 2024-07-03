@@ -4,18 +4,22 @@ import {
   GraphPageLayout,
   getGraphLayout,
 } from "@/components/layout/graph-layout";
-import { SubgraphsTable } from "@/components/subgraphs-table";
+import { SubgraphPageTabs, SubgraphsTable } from "@/components/subgraphs-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NextPageWithLayout } from "@/lib/page";
 import { Cross1Icon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import { useRouter } from "next/router";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import Fuse from "fuse.js";
+import { Subgraph } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { set } from "lodash";
+import { Toolbar } from "@/components/ui/toolbar";
 
 const SubGraphsPage: NextPageWithLayout = () => {
   const graphData = useContext(GraphContext);
   const router = useRouter();
+  const tab = router.query.tab as string;
 
   const pageNumber = router.query.page
     ? parseInt(router.query.page as string)
@@ -26,18 +30,44 @@ const SubGraphsPage: NextPageWithLayout = () => {
   const [search, setSearch] = useState(router.query.search as string);
   const applyParams = useApplyParams();
 
+  const [filteredSubgraphs, setFilteredSubgraphs] = useState<Subgraph[]>([]);
+  const [filteredFeatureSubgraphs, setFilteredFeatureSubgraphs] = useState<
+    Subgraph[]
+  >([]);
+  const [totalCount, setTotalCount] = useState(0);
+
+  useEffect(() => {
+    if (!graphData) return;
+    if (tab === "featureSubgraphs") {
+      const fuse = new Fuse(graphData.featureSubgraphs, {
+        keys: ["name"],
+        minMatchCharLength: 1,
+      });
+
+      const searchedFetaureSubgraphs = search
+        ? fuse.search(search).map(({ item }) => item)
+        : graphData.featureSubgraphs;
+
+      setTotalCount(searchedFetaureSubgraphs.length);
+      setFilteredFeatureSubgraphs(
+        searchedFetaureSubgraphs.slice(offset, limit + offset),
+      );
+    } else {
+      const fuse = new Fuse(graphData.subgraphs, {
+        keys: ["name"],
+        minMatchCharLength: 1,
+      });
+
+      const searchedSubgraphs = search
+        ? fuse.search(search).map(({ item }) => item)
+        : graphData.subgraphs;
+
+      setTotalCount(searchedSubgraphs.length);
+      setFilteredSubgraphs(searchedSubgraphs.slice(offset, limit + offset));
+    }
+  }, [tab, search, offset, limit, graphData]);
+
   if (!graphData) return null;
-
-  const fuse = new Fuse(graphData.subgraphs, {
-    keys: ["name"],
-    minMatchCharLength: 1,
-  });
-
-  const searchedSubgraphs = search
-    ? fuse.search(search).map(({ item }) => item)
-    : graphData.subgraphs;
-
-  const filteredSubgraphs = searchedSubgraphs.slice(offset, limit + offset);
 
   return (
     <div className="flex h-full flex-col">
@@ -66,9 +96,15 @@ const SubGraphsPage: NextPageWithLayout = () => {
         )}
       </div>
       <SubgraphsTable
-        subgraphs={filteredSubgraphs}
+        key={tab}
+        subgraphs={
+          tab === "featureSubgraphs"
+            ? filteredFeatureSubgraphs
+            : filteredSubgraphs
+        }
         graph={graphData.graph}
-        totalCount={filteredSubgraphs.length}
+        totalCount={totalCount}
+        tab={tab === "featureSubgraphs" ? "featureSubgraphs" : "subgraphs"}
       />
     </div>
   );
@@ -79,6 +115,11 @@ SubGraphsPage.getLayout = (page) =>
     <GraphPageLayout
       title="Subgraphs"
       subtitle="View the subgraphs that compose this federated graph"
+      toolbar={
+        <Toolbar>
+          <SubgraphPageTabs />
+        </Toolbar>
+      }
     >
       {page}
     </GraphPageLayout>,

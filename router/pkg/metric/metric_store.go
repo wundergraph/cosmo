@@ -64,18 +64,16 @@ type (
 		otelMeterProvider *metric.MeterProvider
 		promMeterProvider *metric.MeterProvider
 
-		runtimeMetrics   *RuntimeMetrics
-		enableRuntime    bool
 		processStartTime time.Time
 
-		otlpRequestMetrics Store
-		promRequestMetrics Store
+		otlpRequestMetrics Provider
+		promRequestMetrics Provider
 
 		baseAttributes []attribute.KeyValue
 		logger         *zap.Logger
 	}
 
-	Store interface {
+	Provider interface {
 		MeasureInFlight(ctx context.Context, attr ...attribute.KeyValue) func()
 		MeasureRequestCount(ctx context.Context, attr ...attribute.KeyValue)
 		MeasureRequestSize(ctx context.Context, contentLength int64, attr ...attribute.KeyValue)
@@ -83,6 +81,11 @@ type (
 		MeasureLatency(ctx context.Context, requestStartTime time.Time, attr ...attribute.KeyValue)
 		MeasureRequestError(ctx context.Context, attr ...attribute.KeyValue)
 		Flush(ctx context.Context) error
+	}
+
+	Store interface {
+		Shutdown(ctx context.Context) error
+		Provider
 	}
 )
 
@@ -93,16 +96,6 @@ func NewStore(opts ...Option) (Store, error) {
 
 	for _, opt := range opts {
 		opt(h)
-	}
-
-	if h.enableRuntime {
-		// Create runtime metrics exported to OTEL
-		h.runtimeMetrics = NewRuntimeMetrics(h.logger, h.otelMeterProvider, h.baseAttributes, h.processStartTime)
-
-		// Start runtime metrics
-		if err := h.runtimeMetrics.Start(); err != nil {
-			return nil, err
-		}
 	}
 
 	// Create OTLP metrics exported to OTEL
@@ -170,10 +163,17 @@ func (h *Metrics) Flush(ctx context.Context) error {
 	if err := h.promRequestMetrics.Flush(ctx); err != nil {
 		errors.Join(err, fmt.Errorf("failed to flush prometheus metrics: %w", err))
 	}
-	if h.runtimeMetrics != nil {
-		if err := h.runtimeMetrics.Stop(); err != nil {
-			errors.Join(err, fmt.Errorf("failed to stop runtime metrics: %w", err))
-		}
+
+	return err
+}
+
+// Shutdown flushes the metrics and stops the runtime metrics.
+func (h *Metrics) Shutdown(ctx context.Context) error {
+
+	var err error
+
+	if err := h.Flush(ctx); err != nil {
+		errors.Join(err, fmt.Errorf("failed to flush metrics: %w", err))
 	}
 
 	return err
@@ -207,11 +207,5 @@ func WithPromMeterProvider(promMeterProvider *metric.MeterProvider) Option {
 func WithProcessStartTime(processStartTime time.Time) Option {
 	return func(h *Metrics) {
 		h.processStartTime = processStartTime
-	}
-}
-
-func WithRouterRuntimeMetrics(enableRuntime bool) Option {
-	return func(h *Metrics) {
-		h.enableRuntime = enableRuntime
 	}
 }

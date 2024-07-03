@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto';
+import fs from 'node:fs';
+import { join } from 'node:path';
 import { createPromiseClient, PromiseClient } from '@connectrpc/connect';
 import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
 import { createConnectTransport } from '@connectrpc/connect-node';
@@ -9,6 +11,7 @@ import Fastify from 'fastify';
 import { pino } from 'pino';
 import { expect } from 'vitest';
 import postgres from 'postgres';
+import { formatISO, startOfTomorrow, startOfYear } from 'date-fns';
 import { BlobNotFoundError, BlobObject, BlobStorage } from '../src/core/blobstorage/index.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import database from '../src/core/plugins/database.js';
@@ -32,6 +35,12 @@ import { OrganizationRepository } from '../src/core/repositories/OrganizationRep
 import { UserRepository } from '../src/core/repositories/UserRepository.js';
 import ApiKeyAuthenticator from '../src/core/services/ApiKeyAuthenticator.js';
 import { ApiKeyRepository } from '../src/core/repositories/ApiKeyRepository.js';
+
+export const DEFAULT_ROUTER_URL = 'http://localhost:3002';
+export const DEFAULT_SUBGRAPH_URL_ONE = 'http://localhost:4001';
+export const DEFAULT_SUBGRAPH_URL_TWO = 'http://localhost:4002';
+export const DEFAULT_SUBGRAPH_URL_THREE = 'http://localhost:4003';
+export const DEFAULT_NAMESPACE = 'default';
 
 export const SetupTest = async function ({
   dbname,
@@ -95,7 +104,6 @@ export const SetupTest = async function ({
   await server.register(fastifyRedis, {
     host: 'localhost',
     port: 6379,
-    password: 'test',
   });
 
   const readmeQueue = new AIGraphReadmeQueue(log, server.redisForQueue);
@@ -251,7 +259,7 @@ export const removeKeycloakSetup = async ({
   });
 };
 
-export const createAndPublishSubgraph = async (
+export const createThenPublishSubgraph = async (
   client: PromiseClient<typeof PlatformService>,
   name: string,
   namespace: string,
@@ -264,6 +272,54 @@ export const createAndPublishSubgraph = async (
     namespace,
     labels,
     routingUrl,
+  });
+  expect(createRes.response?.code).toBe(EnumStatusCode.OK);
+  const publishResp = await client.publishFederatedSubgraph({
+    name,
+    namespace,
+    schema: schemaSDL,
+  });
+  expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
+
+  return publishResp;
+};
+
+export const createAndPublishSubgraph = async (
+  client: PromiseClient<typeof PlatformService>,
+  name: string,
+  namespace: string,
+  schemaSDL: string,
+  labels: Label[],
+  routingUrl: string,
+) => {
+  const publishResp = await client.publishFederatedSubgraph({
+    name,
+    namespace,
+    labels,
+    routingUrl,
+    schema: schemaSDL,
+  });
+  expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
+
+  return publishResp;
+};
+
+export const createThenPublishFeatureSubgraph = async (
+  client: PromiseClient<typeof PlatformService>,
+  name: string,
+  baseSubgraphName: string,
+  namespace: string,
+  schemaSDL: string,
+  labels: Label[],
+  routingUrl: string,
+) => {
+  const createRes = await client.createFederatedSubgraph({
+    name,
+    namespace,
+    labels,
+    routingUrl,
+    isFeatureSubgraph: true,
+    baseSubgraphName,
   });
   expect(createRes.response?.code).toBe(EnumStatusCode.OK);
   const publishResp = await client.publishFederatedSubgraph({
@@ -350,7 +406,7 @@ export class InMemoryBlobStorage implements BlobStorage {
 export async function createEventDrivenGraph(client: PromiseClient<typeof PlatformService>, name: string) {
   const response = await client.createFederatedSubgraph({
     name,
-    namespace: 'default',
+    namespace: DEFAULT_NAMESPACE,
     isEventDrivenGraph: true,
   });
 
@@ -360,14 +416,36 @@ export async function createEventDrivenGraph(client: PromiseClient<typeof Platfo
 export async function createSubgraph(
   client: PromiseClient<typeof PlatformService>,
   name: string,
-  routingUrl?: string,
+  routingUrl: string,
+  namespace = DEFAULT_NAMESPACE,
 ) {
   const response = await client.createFederatedSubgraph({
     name,
-    namespace: 'default',
+    namespace,
     routingUrl,
   });
   expect(response.response?.code).toBe(EnumStatusCode.OK);
+}
+
+export async function createBaseAndFeatureSubgraph(
+  client: PromiseClient<typeof PlatformService>,
+  baseSubgraphName: string,
+  featureSubgraphName: string,
+  baseSubgraphRoutingUrl: string,
+  featureSubgraphRoutingUrl: string,
+  namespace = DEFAULT_NAMESPACE,
+) {
+  await createSubgraph(client, baseSubgraphName, baseSubgraphRoutingUrl, namespace);
+
+  const featureSubgraphResponse = await client.createFederatedSubgraph({
+    name: featureSubgraphName,
+    namespace,
+    routingUrl: featureSubgraphRoutingUrl,
+    isFeatureSubgraph: true,
+    baseSubgraphName,
+  });
+
+  expect(featureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
 }
 
 export const eventDrivenGraphSDL = `
@@ -390,3 +468,171 @@ export const subgraphSDL = `
     dummy: String!
   }
 `;
+
+export const yearStartDate = startOfYear(2024);
+export const tomorrowDate = startOfTomorrow();
+
+type IntegrationSubgraph = {
+  name: string;
+  hasFeatureSubgraph: boolean;
+};
+export async function featureFlagIntegrationTestSetUp(
+  client: PromiseClient<typeof PlatformService>,
+  subgraphNames: Array<IntegrationSubgraph>,
+  federatedGraphName: string,
+  labels: Array<Label> = [],
+  namespace = DEFAULT_NAMESPACE,
+  subgraphLabelsOverride?: Array<Label>,
+) {
+  let port = 4001;
+  for (const { name, hasFeatureSubgraph } of subgraphNames) {
+    await createAndPublishSubgraph(
+      client,
+      name,
+      namespace,
+      fs.readFileSync(join(process.cwd(), `test/test-data/feature-flags/${name}.graphql`)).toString(),
+      subgraphLabelsOverride || labels,
+      `http://localhost:${port}`,
+    );
+    port += 1;
+    if (!hasFeatureSubgraph) {
+      continue;
+    }
+    const featureSubgraphName = `${name}-feature`;
+    await createThenPublishFeatureSubgraph(
+      client,
+      featureSubgraphName,
+      name,
+      namespace,
+      fs.readFileSync(join(process.cwd(), `test/test-data/feature-flags/${featureSubgraphName}.graphql`)).toString(),
+      labels,
+      `http://localhost:${port + 100}`,
+    );
+  }
+
+  const federatedGraphLabels = labels.map(({ key, value }) => `${key}=${value}`);
+  await createFederatedGraph(client, federatedGraphName, namespace, federatedGraphLabels, DEFAULT_ROUTER_URL);
+  const federatedGraphResponse = await client.getFederatedGraphByName({
+    name: federatedGraphName,
+    namespace,
+  });
+  expect(federatedGraphResponse.response?.code).toBe(EnumStatusCode.OK);
+  return federatedGraphResponse;
+}
+
+export async function createNamespace(client: PromiseClient<typeof PlatformService>, name: string) {
+  const createNamespaceResponse = await client.createNamespace({
+    name,
+  });
+  expect(createNamespaceResponse.response?.code).toBe(EnumStatusCode.OK);
+}
+
+export async function createFeatureFlag(
+  client: PromiseClient<typeof PlatformService>,
+  name: string,
+  labels: Array<Label>,
+  featureSubgraphNames: Array<string>,
+  namespace = DEFAULT_NAMESPACE,
+  isEnabled = false,
+) {
+  const createFeatureFlagResponse = await client.createFeatureFlag({
+    name,
+    featureSubgraphNames,
+    labels,
+    namespace,
+    isEnabled,
+  });
+  expect(createFeatureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
+}
+
+export async function assertNumberOfCompositions(
+  client: PromiseClient<typeof PlatformService>,
+  federatedGraphName: string,
+  numberOfCompositions: number,
+  namespace = DEFAULT_NAMESPACE,
+  expectedEnumStatusCode = EnumStatusCode.OK,
+  excludeFeatureFlagCompositions = false,
+) {
+  const getCompositionsResponse = await client.getCompositions({
+    fedGraphName: federatedGraphName,
+    startDate: formatISO(yearStartDate),
+    endDate: formatISO(tomorrowDate),
+    namespace,
+    excludeFeatureFlagCompositions,
+  });
+  expect(getCompositionsResponse.response?.code).toBe(expectedEnumStatusCode);
+  expect(getCompositionsResponse.compositions).toHaveLength(numberOfCompositions);
+}
+
+export async function assertFeatureFlagExecutionConfig(
+  blobStorage: InMemoryBlobStorage,
+  key: string,
+  hasFeatureFlagExecutionConfig: boolean,
+) {
+  const blob = await blobStorage.getObject({ key });
+  const routerExecutionConfig = await blob.stream
+    .getReader()
+    .read()
+    .then((result) => JSON.parse(result.value.toString()));
+  if (hasFeatureFlagExecutionConfig) {
+    expect(routerExecutionConfig.featureFlagConfigs).toBeDefined();
+  } else {
+    expect(routerExecutionConfig.featureFlagConfigs).toBeUndefined();
+  }
+}
+
+export async function assertExecutionConfigSubgraphNames(
+  blobStorage: InMemoryBlobStorage,
+  key: string,
+  subgraphIds: Set<string>,
+) {
+  const blob = await blobStorage.getObject({ key });
+  const routerExecutionConfig = await blob.stream
+    .getReader()
+    .read()
+    .then((result) => JSON.parse(result.value.toString()));
+  expect(subgraphIds.size).toBe(routerExecutionConfig.subgraphs.length);
+  for (const subgraph of routerExecutionConfig.subgraphs) {
+    expect(subgraphIds.has(subgraph.id)).toBe(true);
+  }
+}
+
+export async function toggleFeatureFlag(
+  client: PromiseClient<typeof PlatformService>,
+  name: string,
+  enabled: boolean,
+  namespace = DEFAULT_NAMESPACE,
+) {
+  const enableFeatureFlagResponse = await client.enableFeatureFlag({
+    name,
+    enabled,
+    namespace,
+  });
+  expect(enableFeatureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
+}
+
+export async function deleteFeatureFlag(
+  client: PromiseClient<typeof PlatformService>,
+  name: string,
+  namespace = DEFAULT_NAMESPACE,
+) {
+  const deleteFeatureFlagResponse = await client.deleteFeatureFlag({
+    name,
+    namespace,
+  });
+  expect(deleteFeatureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
+}
+
+export function getDebugTestOptions(isDebugMode: boolean) {
+  if (!isDebugMode) {
+    return {};
+  }
+  return {
+    timeout: 2_000_000,
+  };
+}
+
+export type GraphNameAndKey = {
+  key: string;
+  name: string;
+};
