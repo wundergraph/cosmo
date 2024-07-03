@@ -128,7 +128,7 @@ export const FederatedGraphsTable = ({
                 >
                   <TableCell className="flex items-center gap-x-2 px-4 font-medium">
                     <>
-                      <div className="w-72">{name}</div>
+                      <div className="w-48">{name}</div>
                       {isConnected === false && (
                         <Tooltip delayDuration={200}>
                           <TooltipTrigger>
