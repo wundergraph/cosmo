@@ -326,7 +326,6 @@ export class Composer {
       await this.graphCompositionRepository.updateComposition({
         fedGraphSchemaVersionId: federatedSchemaVersionId,
         routerConfigSignature: signatureSha256,
-        routerConfigPath: s3PathReady,
       });
     }
 

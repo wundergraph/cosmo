@@ -67,13 +67,11 @@ export class GraphCompositionRepository {
     admissionErrorString,
     deploymentErrorString,
     routerConfigSignature,
-    routerConfigPath,
   }: {
     fedGraphSchemaVersionId: string;
     admissionErrorString?: string;
     deploymentErrorString?: string;
     routerConfigSignature?: string;
-    routerConfigPath?: string;
   }) {
     await this.db
       .update(graphCompositions)
@@ -81,7 +79,6 @@ export class GraphCompositionRepository {
         deploymentError: deploymentErrorString,
         admissionError: admissionErrorString,
         routerConfigSignature,
-        routerConfigPath,
       })
       .where(eq(graphCompositions.schemaVersionId, fedGraphSchemaVersionId));
   }
