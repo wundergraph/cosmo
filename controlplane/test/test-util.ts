@@ -429,20 +429,20 @@ export async function createSubgraph(
 
 export async function createBaseAndFeatureSubgraph(
   client: PromiseClient<typeof PlatformService>,
-  baseGraphName: string,
+  baseSubgraphName: string,
   featureSubgraphName: string,
-  baseGraphRoutingUrl: string,
+  baseSubgraphRoutingUrl: string,
   featureSubgraphRoutingUrl: string,
   namespace = DEFAULT_NAMESPACE,
 ) {
-  await createSubgraph(client, baseGraphName, baseGraphRoutingUrl, namespace);
+  await createSubgraph(client, baseSubgraphName, baseSubgraphRoutingUrl, namespace);
 
   const featureSubgraphResponse = await client.createFederatedSubgraph({
     name: featureSubgraphName,
     namespace,
     routingUrl: featureSubgraphRoutingUrl,
     isFeatureSubgraph: true,
-    baseSubgraphName: baseGraphName,
+    baseSubgraphName,
   });
 
   expect(featureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);

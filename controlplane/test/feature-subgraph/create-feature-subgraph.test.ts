@@ -98,4 +98,77 @@ describe('Create feature subgraph tests', () => {
 
     await server.close();
   });
+
+  test('that an error is returned if a feature subgraph is created with the same name as its base subgraph', async () => {
+    const { client, server } = await SetupTest({ dbname });
+
+    const subgraphName = genID('subgraph');
+
+    await createSubgraph(client, subgraphName, DEFAULT_SUBGRAPH_URL_ONE);
+
+    const featureSubgraphResponse = await client.createFederatedSubgraph({
+      name: subgraphName,
+      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      isFeatureSubgraph: true,
+      baseSubgraphName: subgraphName,
+    });
+
+    expect(featureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
+    expect(featureSubgraphResponse.response?.details)
+      .toBe(`A subgraph with the name "${subgraphName}" already exists in the namespace "default".`);
+
+    await server.close();
+  });
+
+  test('that an error is returned if a feature subgraph is created with the same name as another subgraph', async () => {
+    const { client, server } = await SetupTest({ dbname });
+
+    const subgraphNameOne = genID('subgraphOne');
+    const subgraphNameTwo = genID('subgraphTwo');
+
+    await createSubgraph(client, subgraphNameOne, DEFAULT_SUBGRAPH_URL_ONE);
+    await createSubgraph(client, subgraphNameTwo, DEFAULT_SUBGRAPH_URL_TWO);
+
+    const featureSubgraphResponse = await client.createFederatedSubgraph({
+      name: subgraphNameTwo,
+      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      isFeatureSubgraph: true,
+      baseSubgraphName: subgraphNameOne,
+    });
+
+    expect(featureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
+    expect(featureSubgraphResponse.response?.details)
+      .toBe(`A subgraph with the name "${subgraphNameTwo}" already exists in the namespace "default".`);
+
+    await server.close();
+  });
+
+  test('that an error is returned if a feature subgraph is created with the same name as another feature subgraph', async () => {
+    const { client, server } = await SetupTest({ dbname });
+
+    const subgraphNameOne = genID('subgraphOne');
+    const featureSubgraphName = genID('featureSubgraphOne');
+
+    await createSubgraph(client, subgraphNameOne, DEFAULT_SUBGRAPH_URL_ONE);
+
+    const featureSubgraphResponseOne = await client.createFederatedSubgraph({
+      name: featureSubgraphName,
+      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      isFeatureSubgraph: true,
+      baseSubgraphName: subgraphNameOne,
+    });
+    expect(featureSubgraphResponseOne.response?.code).toBe(EnumStatusCode.OK);
+
+    const featureSubgraphResponseTwo = await client.createFederatedSubgraph({
+      name: featureSubgraphName,
+      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      isFeatureSubgraph: true,
+      baseSubgraphName: subgraphNameOne,
+    });
+    expect(featureSubgraphResponseTwo.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
+    expect(featureSubgraphResponseTwo.response?.details)
+      .toBe(`A feature subgraph with the name "${featureSubgraphName}" already exists in the namespace "default".`);
+
+    await server.close();
+  });
 });

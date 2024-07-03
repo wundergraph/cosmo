@@ -1918,12 +1918,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const exists = await subgraphRepo.exists(req.name, req.namespace);
-        if (exists) {
+        const existingSubgraph = await subgraphRepo.byName(req.name, req.namespace);
+        if (existingSubgraph) {
           return {
             response: {
               code: EnumStatusCode.ERR_ALREADY_EXISTS,
-              details: `Subgraph/Feature flag with the name '${req.name}' already exists in the namespace '${req.namespace}'.`,
+              details:
+                `A ${existingSubgraph.isFeatureSubgraph ? 'feature ' : ''}subgraph with the name` +
+                ` "${req.name}" already exists in the namespace "${req.namespace}".`,
             },
             compositionErrors: [],
             admissionErrors: [],

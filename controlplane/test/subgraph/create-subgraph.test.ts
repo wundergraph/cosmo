@@ -1,7 +1,14 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { afterAllSetup, beforeAllSetup, genID } from '../../src/core/test-util.js';
-import { DEFAULT_NAMESPACE, DEFAULT_SUBGRAPH_URL_ONE, SetupTest } from '../test-util.js';
+import {
+  createBaseAndFeatureSubgraph,
+  createSubgraph,
+  DEFAULT_NAMESPACE,
+  DEFAULT_SUBGRAPH_URL_ONE,
+  DEFAULT_SUBGRAPH_URL_TWO,
+  SetupTest,
+} from '../test-util.js';
 
 let dbname = '';
 
@@ -182,6 +189,32 @@ describe('Create subgraph tests', () => {
 
     expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR);
     expect(createFederatedSubgraphResp.response?.details).toBe('Routing URL "url" is not a valid URL');
+
+    await server.close();
+  });
+
+  test('that an error is returned if a subgraph is created with the same name as another feature subgraph', async () => {
+    const { client, server } = await SetupTest({ dbname });
+
+    const subgraphName = genID('subgraphOne');
+    const featureSubgraphName = genID('featureSubgraphOne');
+
+    await createBaseAndFeatureSubgraph(
+      client,
+      subgraphName,
+      featureSubgraphName,
+      DEFAULT_SUBGRAPH_URL_ONE,
+      DEFAULT_SUBGRAPH_URL_TWO,
+    );
+
+    const createSubgraphResponse = await client.createFederatedSubgraph({
+      name: featureSubgraphName,
+      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      isFeatureSubgraph: false,
+    });
+    expect(createSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
+    expect(createSubgraphResponse.response?.details)
+      .toBe(`A feature subgraph with the name "${featureSubgraphName}" already exists in the namespace "default".`);
 
     await server.close();
   });
