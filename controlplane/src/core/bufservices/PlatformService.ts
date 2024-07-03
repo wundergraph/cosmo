@@ -3843,22 +3843,42 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        let errorMessage = '';
+        const errorMessages = [];
         const featureSubgraphIds = [];
+        const baseSubgraphIds: string[] = [];
+        let count = 1;
         for (const featureSubgraphName of req.featureSubgraphNames) {
-          const subgraph = await subgraphRepo.byName(featureSubgraphName, req.namespace);
-          if (!subgraph || !subgraph.isFeatureSubgraph) {
-            errorMessage += `The feature subgraph "${featureSubgraphName}" was not found.\n`;
+          const featureSubgraph = await subgraphRepo.byName(featureSubgraphName, req.namespace);
+          if (!featureSubgraph) {
+            errorMessages.push(`${count++}. The feature subgraph "${featureSubgraphName}" was not found.`);
+            continue;
+          } else if (!featureSubgraph.isFeatureSubgraph) {
+            errorMessages.push(`${count++}. The subgraph "${featureSubgraphName}" is not a feature subgraph.`);
             continue;
           }
-          featureSubgraphIds.push(subgraph.id);
+          const baseSubgraph = await featureFlagRepo.getBaseSubgraphByFeatureSubgraphId({ id: featureSubgraph.id });
+          if (!baseSubgraph) {
+            errorMessages.push(
+              `${count++}. The base subgraph of the feature subgraph "${featureSubgraphName}" was not found.`,
+            );
+            continue;
+          }
+          if (baseSubgraphIds.includes(baseSubgraph.id)) {
+            errorMessages.push(
+              `${count++}. Feature subgraphs with the same base subgraph cannot be a part of the same feature flag.`,
+            );
+            break;
+          } else {
+            baseSubgraphIds.push(baseSubgraph.id);
+          }
+          featureSubgraphIds.push(featureSubgraph.id);
         }
 
-        if (errorMessage) {
+        if (errorMessages.length > 0) {
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
-              details: errorMessage,
+              details: errorMessages.join('\n'),
             },
             compositionErrors: [],
             deploymentErrors: [],
