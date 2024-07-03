@@ -119,10 +119,11 @@ export class FeatureFlagRepository {
     const uniqueLabels = normalizeLabels(labels);
     return this.db.transaction(async (tx) => {
       if (labels.length > 0 || unsetLabels) {
+        const newLabels = unsetLabels ? [] : uniqueLabels;
         await tx
           .update(featureFlags)
           .set({
-            labels: uniqueLabels.map((ul) => joinLabel(ul)),
+            labels: newLabels.map((ul) => joinLabel(ul)),
           })
           .where(and(eq(featureFlags.id, featureFlag.id), eq(featureFlags.organizationId, this.organizationId)))
           .execute();
