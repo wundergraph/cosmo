@@ -40,7 +40,7 @@ describe('Feature flag integration tests', () => {
     const { client, server, blobStorage } = await SetupTest({ dbname });
 
     const labels = [{ key: 'team', value: 'A' }];
-    const baseGraphName = 'baseGraphName'
+    const baseGraphName = genID('baseFederatedGraphName');
     const federatedGraphResponse = await featureFlagIntegrationTestSetUp(
       client,
       [
@@ -88,7 +88,7 @@ describe('Feature flag integration tests', () => {
     const labels: Array<Label> = [];
     const namespace = genID('namespace').toLowerCase();
     await createNamespace(client, namespace);
-    const baseGraphName = 'baseGraphName'
+    const baseGraphName = genID('baseFederatedGraphName');
     const federatedGraphResponse = await featureFlagIntegrationTestSetUp(
       client,
       [
@@ -137,7 +137,7 @@ describe('Feature flag integration tests', () => {
     const labels: Array<Label> = [];
     const namespace = genID('namespace').toLowerCase();
     await createNamespace(client, namespace);
-    const baseGraphName = 'baseGraphName'
+    const baseGraphName = genID('baseFederatedGraphName');
     const federatedGraphResponse = await featureFlagIntegrationTestSetUp(
       client,
       [
@@ -181,7 +181,7 @@ describe('Feature flag integration tests', () => {
     const labels: Array<Label> = [];
     const namespace = genID('namespace').toLowerCase();
     await createNamespace(client, namespace);
-    const baseGraphName = 'federatedGraphName'
+    const baseGraphName = genID('baseFederatedGraphName');
     const baseGraphResponse = await featureFlagIntegrationTestSetUp(
       client,
       [
@@ -252,7 +252,7 @@ describe('Feature flag integration tests', () => {
     const labels: Array<Label> = [];
     const namespace = genID('namespace').toLowerCase();
     await createNamespace(client, namespace);
-    const baseGraphName = 'federatedGraphName'
+    const baseGraphName = genID('baseFederatedGraphName');
     const baseGraphResponse = await featureFlagIntegrationTestSetUp(
       client,
       [
@@ -323,7 +323,7 @@ describe('Feature flag integration tests', () => {
     const labels: Array<Label> = [];
     const namespace = genID('namespace').toLowerCase();
     await createNamespace(client, namespace);
-    const baseGraphName = 'baseGraphName'
+    const baseGraphName = genID('baseFederatedGraphName');
     const baseGraphResponse = await featureFlagIntegrationTestSetUp(
       client,
       [
@@ -362,7 +362,7 @@ describe('Feature flag integration tests', () => {
     const labels: Array<Label> = [];
     const namespace = genID('namespace').toLowerCase();
     await createNamespace(client, namespace);
-    const baseGraphName = 'baseGraphName'
+    const baseGraphName = genID('baseFederatedGraphName');
     const baseGraphResponse = await featureFlagIntegrationTestSetUp(
       client,
       [
@@ -941,6 +941,90 @@ describe('Feature flag integration tests', () => {
     // Another base recomposition and a feature flag composition
     await assertNumberOfCompositions(client, baseGraphName, 7, namespace);
     await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, true);
+
+    await server.close();
+  });
+
+  test('that a federated graph with feature flags and feature subgraphs can be moved', getDebugTestOptions(isDebugMode),  async () => {
+    const { client, server, blobStorage } = await SetupTest({ dbname });
+
+    const labels: Array<Label> = [];
+    const namespace = genID('namespace').toLowerCase();
+    await createNamespace(client, namespace);
+    const newNamespace = genID('newnamespace').toLowerCase();
+    await createNamespace(client, newNamespace);
+    const baseGraphName = genID('baseFederatedGraphName');
+    const featureFlagName = genID('flag');
+
+    await featureFlagIntegrationTestSetUp(
+      client,
+      [
+        { name: 'users', hasFeatureSubgraph: true }, { name: 'products', hasFeatureSubgraph: true },
+      ],
+      baseGraphName,
+      labels,
+      namespace,
+    );
+
+    await createFeatureFlag(client, featureFlagName, labels, ['users-feature', 'products-feature'], namespace, true);
+
+    const moveFederatedGraphResponse = await client.moveFederatedGraph({
+      name: baseGraphName,
+      namespace,
+      newNamespace,
+    });
+    expect(moveFederatedGraphResponse.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
+    expect(moveFederatedGraphResponse.compositionErrors).toHaveLength(2);
+    expect(moveFederatedGraphResponse.compositionErrors[0].message).toBe('At least one subgraph is required for federation.');
+    expect(moveFederatedGraphResponse.compositionErrors[1])
+      .toStrictEqual(unsuccessfulBaseCompositionError(baseGraphName, namespace));
+
+    await server.close();
+  });
+
+  test('that a federated graph with a contract, feature flags, and feature subgraphs can be moved', getDebugTestOptions(isDebugMode),  async () => {
+    const { client, server, blobStorage } = await SetupTest({ dbname });
+
+    const labels: Array<Label> = [];
+    const namespace = genID('namespace').toLowerCase();
+    await createNamespace(client, namespace);
+    const newNamespace = genID('newnamespace').toLowerCase();
+    await createNamespace(client, newNamespace);
+    const baseGraphName = genID('baseFederatedGraphName');
+    const featureFlagName = genID('flag');
+
+    await featureFlagIntegrationTestSetUp(
+      client,
+      [
+        { name: 'users', hasFeatureSubgraph: true }, { name: 'products', hasFeatureSubgraph: true },
+      ],
+      baseGraphName,
+      labels,
+      namespace,
+    );
+
+    const contractName = genID('contract');
+    const createContractResponse = await client.createContract({
+      name: contractName,
+      namespace,
+      sourceGraphName: baseGraphName,
+      excludeTags: ['exclude'],
+      routingUrl: 'http://localhost:3003',
+    });
+    expect(createContractResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    await createFeatureFlag(client, featureFlagName, labels, ['users-feature', 'products-feature'], namespace, true);
+
+    const moveFederatedGraphResponse = await client.moveFederatedGraph({
+      name: baseGraphName,
+      namespace,
+      newNamespace,
+    });
+    expect(moveFederatedGraphResponse.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
+    expect(moveFederatedGraphResponse.compositionErrors).toHaveLength(2);
+    expect(moveFederatedGraphResponse.compositionErrors[0].message).toBe('At least one subgraph is required for federation.');
+    expect(moveFederatedGraphResponse.compositionErrors[1])
+      .toStrictEqual(unsuccessfulBaseCompositionError(baseGraphName, namespace));
 
     await server.close();
   });
