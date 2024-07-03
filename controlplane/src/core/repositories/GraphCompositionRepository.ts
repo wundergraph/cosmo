@@ -62,7 +62,7 @@ export class GraphCompositionRepository {
     });
   }
 
-  public async updateComposition({
+  public updateComposition({
     fedGraphSchemaVersionId,
     admissionErrorString,
     deploymentErrorString,
@@ -73,7 +73,7 @@ export class GraphCompositionRepository {
     deploymentErrorString?: string;
     routerConfigSignature?: string;
   }) {
-    await this.db
+    return this.db
       .update(graphCompositions)
       .set({
         deploymentError: deploymentErrorString,
