@@ -2,7 +2,9 @@ package subgraphs
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/products_fg"
 	"go.uber.org/zap"
 	"log"
 	"net/http"
@@ -38,6 +40,7 @@ const (
 	AvailabilityDefaultDemoURL = "http://localhost:4007/graphql"
 	MoodDefaultDemoURL         = "http://localhost:4008/graphql"
 	CountriesDefaultDemoURL    = "http://localhost:4009/graphql"
+	ProductsFgDefaultDemoURL   = "http://localhost:4010/graphql"
 )
 
 type Ports struct {
@@ -45,6 +48,7 @@ type Ports struct {
 	Family       int
 	Hobbies      int
 	Products     int
+	ProductsFG   int
 	Test1        int
 	Availability int
 	Mood         int
@@ -57,6 +61,7 @@ func (p *Ports) AsArray() []int {
 		p.Family,
 		p.Hobbies,
 		p.Products,
+		p.ProductsFG,
 		p.Test1,
 		p.Availability,
 		p.Mood,
@@ -93,7 +98,7 @@ func (s *Subgraphs) ListenAndServe(ctx context.Context) error {
 		srv := srv
 		group.Go(func() error {
 			err := srv.ListenAndServe()
-			if err != nil && err != http.ErrServerClosed {
+			if err != nil && !errors.Is(err, http.ErrServerClosed) {
 				log.Printf("error listening and serving: %v", err)
 				return err
 			}
@@ -146,6 +151,10 @@ func HobbiesHandler(opts *SubgraphOptions) http.Handler {
 
 func ProductsHandler(opts *SubgraphOptions) http.Handler {
 	return subgraphHandler(products.NewSchema(opts.NatsPubSubByProviderID))
+}
+
+func ProductsFGHandler(opts *SubgraphOptions) http.Handler {
+	return subgraphHandler(products_fg.NewSchema(opts.NatsPubSubByProviderID))
 }
 
 func Test1Handler(opts *SubgraphOptions) http.Handler {
@@ -213,6 +222,9 @@ func New(ctx context.Context, config *Config) (*Subgraphs, error) {
 		servers = append(servers, srv)
 	}
 	if srv := newServer("products", config.EnableDebug, config.Ports.Products, products.NewSchema(natsPubSubByProviderID)); srv != nil {
+		servers = append(servers, srv)
+	}
+	if srv := newServer("products_fg", config.EnableDebug, config.Ports.ProductsFG, products.NewSchema(natsPubSubByProviderID)); srv != nil {
 		servers = append(servers, srv)
 	}
 	if srv := newServer("test1", config.EnableDebug, config.Ports.Test1, test1.NewSchema(natsPubSubByProviderID)); srv != nil {

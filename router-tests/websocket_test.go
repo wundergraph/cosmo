@@ -1368,6 +1368,55 @@ func TestWebSockets(t *testing.T) {
 		})
 	})
 
+	// Feature Flags
+
+	t.Run("query a field from a feature flag that provides the productCount field / feature flags", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(map[string][]string{
+				"X-Feature-Flag": {"myff"},
+			}, nil, nil)
+			err := conn.WriteJSON(testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"{ employees { id productCount } }"}`),
+			})
+			require.NoError(t, err)
+			var res testenv.WebSocketMessage
+			err = conn.ReadJSON(&res)
+			require.NoError(t, err)
+			require.Equal(t, "next", res.Type)
+			require.Equal(t, "1", res.ID)
+			require.JSONEq(t, `{"data":{"employees":[{"id":1,"productCount":5},{"id":2,"productCount":2},{"id":3,"productCount":2},{"id":4,"productCount":3},{"id":5,"productCount":2},{"id":7,"productCount":0},{"id":8,"productCount":2},{"id":10,"productCount":3},{"id":11,"productCount":1},{"id":12,"productCount":4}]}}`, string(res.Payload))
+			var complete testenv.WebSocketMessage
+			err = conn.ReadJSON(&complete)
+			require.NoError(t, err)
+			require.Equal(t, "complete", complete.Type)
+			require.Equal(t, "1", complete.ID)
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+		})
+	})
+
+	t.Run("return an error because the field is not provided by the base graph / feature flags", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+			err := conn.WriteJSON(testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"{ employees { id productCount } }"}`),
+			})
+			require.NoError(t, err)
+			var res testenv.WebSocketMessage
+			err = conn.ReadJSON(&res)
+			require.NoError(t, err)
+			require.Equal(t, "error", res.Type)
+			require.Equal(t, "1", res.ID)
+			require.JSONEq(t, `[{"message":"field: productCount not defined on type: Employee"}]`, string(res.Payload))
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+		})
+	})
+
 	// times out on GitHub Actions
 
 	t.Run("shutdown with epoll", func(t *testing.T) {

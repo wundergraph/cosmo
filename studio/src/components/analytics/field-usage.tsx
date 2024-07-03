@@ -352,8 +352,9 @@ export const FieldUsageSheet = () => {
   const [type, field] = showUsage?.split(".") ?? [];
 
   const graph = useContext(GraphContext);
+  const featureFlagName = router.query.featureFlag as string;
 
-  const { data, error, isLoading, refetch, } = useQuery(
+  const { data, error, isLoading, refetch } = useQuery(
     getFieldUsage,
     {
       field,
@@ -366,6 +367,7 @@ export const FieldUsageSheet = () => {
         start: formatISO(dateRange.start),
         end: formatISO(dateRange.end),
       },
+      featureFlagName,
     },
     {
       enabled: !!showUsage && !!graph?.graph?.name,

@@ -1,4 +1,4 @@
-FROM --platform=${BUILDPLATFORM} node:lts as builder
+FROM --platform=${BUILDPLATFORM} node:lts AS builder
 
 WORKDIR /app
 

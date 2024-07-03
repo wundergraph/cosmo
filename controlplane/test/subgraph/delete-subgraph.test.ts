@@ -1,8 +1,13 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
-import { SetupTest } from './test-util.js';
+import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../../src/core/test-util.js';
+import {
+  createBaseAndFeatureSubgraph, DEFAULT_NAMESPACE,
+  DEFAULT_SUBGRAPH_URL_ONE,
+  DEFAULT_SUBGRAPH_URL_TWO,
+  SetupTest,
+} from '../test-util.js';
 
 let dbname = '';
 
@@ -166,6 +171,60 @@ describe('DeleteSubgraph', (ctx) => {
 
     expect(getGraph2Resp.response?.code).toBe(EnumStatusCode.OK);
     expect(getGraph2Resp.subgraphs.length).toBe(0);
+
+    await server.close();
+  });
+
+  test('that deleting a subgraph also deletes any feature subgraphs for which it is the base subgraph', async () => {
+    const { client, server } = await SetupTest({ dbname });
+
+    const baseSubgraphName = genID('subgraph');
+    const featureSubgraphNameOne = genID('featureSubgraphOne');
+    const featureSubgraphNameTwo = genID('featureSubgraphTwo');
+
+    await createBaseAndFeatureSubgraph(
+      client,
+      baseSubgraphName,
+      featureSubgraphNameOne,
+      DEFAULT_SUBGRAPH_URL_ONE,
+      DEFAULT_SUBGRAPH_URL_TWO,
+    );
+
+    // Create a second feature subgraph
+    const createFeatureSubgraphResponse = await client.createFederatedSubgraph({
+      name: featureSubgraphNameTwo,
+      routingUrl: 'http://localhost:4004',
+      baseSubgraphName,
+      isFeatureSubgraph: true,
+    });
+    expect(createFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const deleteFederatedSubgraphResponse = await client.deleteFederatedSubgraph({
+      subgraphName: baseSubgraphName,
+      namespace: DEFAULT_NAMESPACE,
+    })
+    expect(deleteFederatedSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Expect the base subgraph to no longer exist
+    const getFeatureSubgraphByNameResponseOne = await client.getSubgraphByName({
+      name: baseSubgraphName,
+      namespace: DEFAULT_NAMESPACE,
+    });
+    expect(getFeatureSubgraphByNameResponseOne.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
+
+    // Expect the first feature subgraph to no longer exist
+    const getFeatureSubgraphByNameResponseTwo = await client.getSubgraphByName({
+      name: featureSubgraphNameOne,
+      namespace: DEFAULT_NAMESPACE,
+    });
+    expect(getFeatureSubgraphByNameResponseTwo.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
+
+    // Expect the second feature subgraph to no longer exist
+    const getFeatureSubgraphByNameResponseThree = await client.getSubgraphByName({
+      name: featureSubgraphNameTwo,
+      namespace: DEFAULT_NAMESPACE,
+    });
+    expect(getFeatureSubgraphByNameResponseThree.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
 
     await server.close();
   });

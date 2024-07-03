@@ -4,10 +4,10 @@ import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
 import { SQL, and, asc, count, desc, eq, gt, inArray, like, lt, notInArray, or, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
-import { parse } from 'graphql';
 import { WebsocketSubprotocol } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
+  featureSubgraphsToBaseSubgraphs,
   graphCompositionSubgraphs,
   graphCompositions,
   schemaChecks,
@@ -29,18 +29,10 @@ import {
   SubgraphMemberDTO,
 } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
-import {
-  ComposeDeploymentError,
-  Composer,
-  RouterConfigUploadError,
-  mapResultToComposedGraph,
-} from '../composition/composer.js';
-import { composeSubgraphsWithContracts } from '../composition/composition.js';
-import { AdmissionError } from '../services/AdmissionWebhookController.js';
 import { hasLabelsChanged, normalizeLabels } from '../util.js';
-import { ContractRepository } from './ContractRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
+import { FeatureFlagRepository, FeatureFlagWithFeatureSubgraphs } from './FeatureFlagRepository.js';
 
 type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
 
@@ -83,6 +75,10 @@ export class SubgraphRepository {
     subscriptionProtocol?: SubscriptionProtocol;
     websocketSubprotocol?: WebsocketSubprotocol;
     readme?: string;
+    featureSubgraphOptions?: {
+      isFeatureSubgraph: boolean;
+      baseSubgraphID: string;
+    };
   }): Promise<SubgraphDTO | undefined> {
     const uniqueLabels = normalizeLabels(data.labels);
     const routingUrl = normalizeURL(data.routingUrl);
@@ -122,6 +118,7 @@ export class SubgraphRepository {
           isEventDrivenGraph: data.isEventDrivenGraph,
           subscriptionProtocol: data.subscriptionProtocol ?? 'ws',
           websocketSubprotocol: data.websocketSubprotocol || 'auto',
+          isFeatureSubgraph: data.featureSubgraphOptions?.isFeatureSubgraph || false,
         })
         .returning()
         .execute();
@@ -135,7 +132,7 @@ export class SubgraphRepository {
         namespaceId: data.namespaceId,
       });
 
-      if (federatedGraphs.length > 0) {
+      if (federatedGraphs.length > 0 && !data.featureSubgraphOptions?.isFeatureSubgraph) {
         await tx
           .insert(subgraphsToFederatedGraph)
           .values(
@@ -154,6 +151,20 @@ export class SubgraphRepository {
       const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
       await subgraphRepo.addSubgraphMember({ subgraphId: insertedSubgraph[0].id, userId: data.createdBy });
 
+      /**
+       * 5. Insert into featureFlagsToSubgraph to map the faeture flag to the base subgraph
+       */
+
+      if (data.featureSubgraphOptions) {
+        await tx
+          .insert(featureSubgraphsToBaseSubgraphs)
+          .values({
+            baseSubgraphId: data.featureSubgraphOptions.baseSubgraphID,
+            featureSubgraphId: insertedSubgraph[0].id,
+          })
+          .execute();
+      }
+
       return {
         id: insertedSubgraph[0].id,
         name: data.name,
@@ -166,6 +177,7 @@ export class SubgraphRepository {
         lastUpdatedAt: '',
         namespace: data.namespace,
         namespaceId: data.namespaceId,
+        isFeatureSubgraph: insertedSubgraph[0].isFeatureSubgraph,
         isEventDrivenGraph: data.isEventDrivenGraph,
       } as SubgraphDTO;
     });
@@ -199,6 +211,7 @@ export class SubgraphRepository {
   }> {
     const deploymentErrors: PlainMessage<DeploymentError>[] = [];
     const compositionErrors: PlainMessage<CompositionError>[] = [];
+    // The collection of federated graphs that will be potentially re-composed
     const updatedFederatedGraphs: FederatedGraphDTO[] = [];
     let subgraphChanged = false;
     let labelChanged = false;
@@ -207,6 +220,7 @@ export class SubgraphRepository {
       const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
       const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
       const targetRepo = new TargetRepository(tx, this.organizationId);
+      const featureFlagRepo = new FeatureFlagRepository(this.logger, tx, this.organizationId);
 
       const subgraph = await subgraphRepo.byTargetId(data.targetId);
       if (!subgraph) {
@@ -222,7 +236,7 @@ export class SubgraphRepository {
           isV2Graph: data.isV2Graph,
         });
         if (!updatedSubgraph) {
-          throw new Error(`Subgraph ${subgraph.name} not found`);
+          throw new Error(`The subgraph "${subgraph.name}" was not found.`);
         }
       }
 
@@ -289,53 +303,92 @@ export class SubgraphRepository {
           })
           .where(eq(targets.id, subgraph.targetId));
 
-        // find all federated graphs that match with the new subgraph labels
-        const newFederatedGraphs = await fedGraphRepo.bySubgraphLabels({
-          labels: newLabels,
-          namespaceId: data.namespaceId,
-        });
+        if (!subgraph.isFeatureSubgraph) {
+          // find all federated graphs that match with the new subgraph labels
+          const newFederatedGraphs = await fedGraphRepo.bySubgraphLabels({
+            labels: newLabels,
+            namespaceId: data.namespaceId,
+          });
 
-        // add them to the updatedFederatedGraphs array without duplicates
-        for (const federatedGraph of newFederatedGraphs) {
-          const exists = updatedFederatedGraphs.find((g) => g.name === federatedGraph.name);
-          if (!exists) {
-            updatedFederatedGraphs.push(federatedGraph);
+          // add them to the updatedFederatedGraphs array without duplicates
+          for (const federatedGraph of newFederatedGraphs) {
+            const exists = updatedFederatedGraphs.find((g) => g.name === federatedGraph.name);
+            if (!exists) {
+              updatedFederatedGraphs.push(federatedGraph);
+            }
           }
-        }
 
-        // delete all subgraphsToFederatedGraphs that are not in the newFederatedGraphs array
-        let deleteCondition: SQL<unknown> | undefined = eq(subgraphsToFederatedGraph.subgraphId, subgraph.id);
+          // delete all subgraphsToFederatedGraphs that are not in the newFederatedGraphs array
+          let deleteCondition: SQL<unknown> | undefined = eq(subgraphsToFederatedGraph.subgraphId, subgraph.id);
 
-        // we do this conditionally because notInArray cannot take empty value
-        if (newFederatedGraphs.length > 0) {
-          deleteCondition = and(
-            deleteCondition,
-            notInArray(
-              subgraphsToFederatedGraph.federatedGraphId,
-              newFederatedGraphs.map((g) => g.id),
-            ),
-          );
-        }
+          // we do this conditionally because notInArray cannot take empty value
+          if (newFederatedGraphs.length > 0) {
+            deleteCondition = and(
+              deleteCondition,
+              notInArray(
+                subgraphsToFederatedGraph.federatedGraphId,
+                newFederatedGraphs.map((g) => g.id),
+              ),
+            );
+          }
 
-        await tx.delete(subgraphsToFederatedGraph).where(deleteCondition);
+          await tx.delete(subgraphsToFederatedGraph).where(deleteCondition);
 
-        // we create new connections between the new federated graphs and the subgraph
-        if (newFederatedGraphs.length > 0) {
-          await tx
-            .insert(subgraphsToFederatedGraph)
-            .values(
-              newFederatedGraphs.map((federatedGraph) => ({
-                federatedGraphId: federatedGraph.id,
-                subgraphId: subgraph.id,
-              })),
-            )
-            .onConflictDoNothing()
-            .execute();
+          // we create new connections between the new federated graphs and the subgraph
+          if (newFederatedGraphs.length > 0) {
+            await tx
+              .insert(subgraphsToFederatedGraph)
+              .values(
+                newFederatedGraphs.map((federatedGraph) => ({
+                  federatedGraphId: federatedGraph.id,
+                  subgraphId: subgraph.id,
+                })),
+              )
+              .onConflictDoNothing()
+              .execute();
+          }
         }
       }
 
-      // We need to compose and build a new router config also on routing/subscription urls and labels changes
-      if (subgraphChanged || labelChanged) {
+      if (subgraph.isFeatureSubgraph) {
+        // the fed graphs to be composed are to be fetched by using the base subgraph
+        const baseSubgraph = await tx
+          .select({
+            id: featureSubgraphsToBaseSubgraphs.baseSubgraphId,
+            labels: targets.labels,
+          })
+          .from(featureSubgraphsToBaseSubgraphs)
+          .innerJoin(subgraphs, eq(subgraphs.id, featureSubgraphsToBaseSubgraphs.baseSubgraphId))
+          .innerJoin(targets, eq(targets.id, subgraphs.targetId))
+          .where(eq(featureSubgraphsToBaseSubgraphs.featureSubgraphId, subgraph.id));
+
+        if (baseSubgraph.length > 0) {
+          // Retrieve the federated graphs that match the labels for the base graph of the feature graph
+          const federatedGraphDTOs = await fedGraphRepo.bySubgraphLabels({
+            labels: baseSubgraph[0].labels?.map?.((l) => splitLabel(l)) ?? [],
+            namespaceId: data.namespaceId,
+          });
+          for (const federatedGraphDTO of federatedGraphDTOs) {
+            // Retrieve all the subgraphs that compose the federated graph to retrieve the feature flags
+            const subgraphs = await subgraphRepo.listByFederatedGraph({
+              federatedGraphTargetId: federatedGraphDTO.targetId,
+              published: true,
+            });
+            const enabledFeatureFlags = await featureFlagRepo.getFeatureFlagsByBaseSubgraphIdAndLabelMatchers({
+              baseSubgraphId: baseSubgraph[0].id,
+              namespaceId: data.namespaceId,
+              fedGraphLabelMatchers: federatedGraphDTO.labelMatchers || [],
+              baseSubgraphNames: subgraphs.map((subgraph) => subgraph.name),
+              excludeDisabled: true,
+            });
+            // If an enabled feature flag includes the feature graph that has just been published, push it to the array
+            if (enabledFeatureFlags.length > 0) {
+              updatedFederatedGraphs.push(federatedGraphDTO);
+            }
+          }
+        }
+        // Generate a new router config for non-feature graphs upon routing/subscription urls and labels changes
+      } else if (subgraphChanged || labelChanged) {
         // find all federated graphs that use this subgraph. We need evaluate them again.
         updatedFederatedGraphs.push(
           ...(await fedGraphRepo.bySubgraphLabels({ labels: subgraph.labels, namespaceId: data.namespaceId })),
@@ -389,8 +442,6 @@ export class SubgraphRepository {
       const updatedFederatedGraphs: FederatedGraphDTO[] = [];
 
       const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
-      const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
-      const contractRepo = new ContractRepository(this.logger, tx, this.organizationId);
 
       updatedFederatedGraphs.push(
         ...(await fedGraphRepo.bySubgraphLabels({ labels: data.subgraphLabels, namespaceId: data.currentNamespaceId })),
@@ -484,6 +535,7 @@ export class SubgraphRepository {
         labels: subgraph.labels,
         namespace: subgraph.namespace,
         namespaceId: subgraph.namespaceId,
+        isFeatureSubgraph: subgraph.isFeatureSubgraph,
       };
     });
   }
@@ -500,6 +552,10 @@ export class SubgraphRepository {
 
     if (opts.query) {
       conditions.push(like(schema.targets.name, `%${opts.query}%`));
+    }
+
+    if (opts.excludeFeatureSubgraphs) {
+      conditions.push(eq(schema.subgraphs.isFeatureSubgraph, false));
     }
 
     const targets = await this.db
@@ -545,11 +601,16 @@ export class SubgraphRepository {
       conditions.push(like(schema.targets.name, `%${opts.query}%`));
     }
 
+    if (opts.excludeFeatureSubgraphs) {
+      conditions.push(eq(schema.subgraphs.isFeatureSubgraph, false));
+    }
+
     const subgraphsCount = await this.db
       .select({
         count: count(),
       })
       .from(schema.targets)
+      .innerJoin(subgraphs, eq(schema.subgraphs.targetId, schema.targets.id))
       .where(and(...conditions));
 
     if (subgraphsCount.length === 0) {
@@ -640,6 +701,7 @@ export class SubgraphRepository {
         namespaceId: schema.namespaces.id,
         namespaceName: schema.namespaces.name,
         schemaVersionId: schema.subgraphs.schemaVersionId,
+        isFeatureSubgraph: schema.subgraphs.isFeatureSubgraph,
         isEventDrivenGraph: schema.subgraphs.isEventDrivenGraph,
       })
       .from(targets)
@@ -685,6 +747,7 @@ export class SubgraphRepository {
       namespaceId: resp[0].namespaceId,
       isEventDrivenGraph: resp[0].isEventDrivenGraph,
       isV2Graph,
+      isFeatureSubgraph: resp[0].isFeatureSubgraph,
     };
   }
 
@@ -936,9 +999,17 @@ export class SubgraphRepository {
     await this.db.delete(targets).where(eq(targets.id, targetID)).execute();
   }
 
-  public async byGraphLabelMatchers(data: { labelMatchers: string[]; namespaceId: string }): Promise<SubgraphDTO[]> {
+  public async byGraphLabelMatchers({
+    labelMatchers,
+    namespaceId,
+    isFeatureGraph,
+  }: {
+    labelMatchers: string[];
+    namespaceId: string;
+    isFeatureGraph?: boolean;
+  }): Promise<SubgraphDTO[]> {
     const groupedLabels: Label[][] = [];
-    for (const lm of data.labelMatchers) {
+    for (const lm of labelMatchers) {
       const labels = lm.split(',').map((l) => splitLabel(l));
       const normalizedLabels = normalizeLabels(labels);
       groupedLabels.push(normalizedLabels);
@@ -952,22 +1023,23 @@ export class SubgraphRepository {
     }
 
     // Only get subgraphs that do not have any labels if the label matchers are empty.
-    if (data.labelMatchers.length === 0) {
+    if (labelMatchers.length === 0) {
       conditions.push(eq(targets.labels, []));
     }
 
     const subgraphs = await this.db
       .select({ id: schema.subgraphs.id, name: schema.targets.name, targetId: schema.targets.id })
       .from(targets)
+      .innerJoin(schema.subgraphs, eq(schema.subgraphs.targetId, targets.id))
       .where(
         and(
           eq(targets.organizationId, this.organizationId),
           eq(targets.type, 'subgraph'),
-          eq(targets.namespaceId, data.namespaceId),
+          eq(targets.namespaceId, namespaceId),
+          eq(schema.subgraphs.isFeatureSubgraph, isFeatureGraph || false),
           ...conditions,
         ),
       )
-      .innerJoin(schema.subgraphs, eq(schema.subgraphs.targetId, targets.id))
       .execute();
 
     const subgraphDTOs: SubgraphDTO[] = [];
