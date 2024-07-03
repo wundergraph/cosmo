@@ -86,6 +86,8 @@ export default (opts: BaseCommandOptions) => {
       if (!result.success) {
         program.error(`Could not introspect subgraph ${s.name}: ${result.errorMessage ?? 'failed'}`);
       }
+
+      subgraphSDLs.set(s.name, result.sdl);
     }
 
     const result = composeSubgraphs(
