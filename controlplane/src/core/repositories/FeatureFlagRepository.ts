@@ -116,11 +116,11 @@ export class FeatureFlagRepository {
         .set({
           labels: uniqueLabels.map((ul) => joinLabel(ul)),
         })
-        .where(eq(featureFlags.id, featureFlag.id))
+        .where(and(eq(featureFlags.id, featureFlag.id), eq(featureFlags.organizationId, this.organizationId)))
         .execute();
 
       if (featureSubgraphIds.length > 0) {
-        // delete all the feature flags of the group
+        // delete all the feature subgraphs of the feature flag
         await tx
           .delete(featureFlagToFeatureSubgraphs)
           .where(eq(featureFlagToFeatureSubgraphs.featureFlagId, featureFlag.id))
@@ -610,6 +610,7 @@ export class FeatureFlagRepository {
     const conditions: SQL<unknown>[] = [
       eq(featureSubgraphsToBaseSubgraphs.baseSubgraphId, baseSubgraphId),
       eq(featureFlags.namespaceId, namespaceId),
+      eq(featureFlags.organizationId, this.organizationId),
     ];
 
     if (excludeDisabled) {
@@ -677,7 +678,14 @@ export class FeatureFlagRepository {
       .innerJoin(subgraphs, eq(subgraphs.id, featureSubgraphsToBaseSubgraphs.featureSubgraphId))
       .innerJoin(targets, eq(subgraphs.targetId, targets.id))
       .innerJoin(namespaces, eq(namespaces.id, targets.namespaceId))
-      .where(and(eq(featureFlagToFeatureSubgraphs.featureFlagId, featureFlagId), eq(targets.namespaceId, namespaceId)))
+      .where(
+        and(
+          eq(featureFlagToFeatureSubgraphs.featureFlagId, featureFlagId),
+          eq(targets.namespaceId, namespaceId),
+          eq(subgraphs.isFeatureSubgraph, true),
+          eq(targets.organizationId, this.organizationId),
+        ),
+      )
       .execute();
 
     const featureGraphsByFlag = [];
@@ -974,7 +982,10 @@ export class FeatureFlagRepository {
   }
 
   public async delete(featureFlagId: string) {
-    await this.db.delete(featureFlags).where(eq(featureFlags.id, featureFlagId)).execute();
+    await this.db
+      .delete(featureFlags)
+      .where(and(eq(featureFlags.id, featureFlagId), eq(featureFlags.organizationId, this.organizationId)))
+      .execute();
   }
 
   public async count(organizationId: string) {
