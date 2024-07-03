@@ -74,6 +74,10 @@ type (
 
 func (s *server) buildMultiGraphHandler(ctx context.Context, baseMux *chi.Mux, featureFlagConfigs map[string]*nodev1.FeatureFlagRouterExecutionConfig) (http.HandlerFunc, error) {
 
+	if len(featureFlagConfigs) == 0 {
+		return baseMux.ServeHTTP, nil
+	}
+
 	featureFlagToMux := make(map[string]*chi.Mux, len(featureFlagConfigs))
 
 	// Build all the muxes for the feature flags in serial to avoid any race conditions
@@ -172,6 +176,8 @@ func (s *server) buildMux(ctx context.Context,
 	})
 
 	var traceHandler *rtrace.Middleware
+	var otelAttributesMappers []func(req *http.Request) []attribute.KeyValue
+
 	if s.traceConfig.Enabled {
 		spanStartOptions := []oteltrace.SpanStartOption{
 			oteltrace.WithAttributes(
@@ -201,6 +207,14 @@ func (s *server) buildMux(ctx context.Context,
 			otelhttp.WithSpanNameFormatter(SpanNameFormatter),
 			otelhttp.WithTracerProvider(s.tracerProvider),
 		)
+
+		if s.traceConfig.SpanAttributesMapper != nil {
+			otelAttributesMappers = append(otelAttributesMappers, s.traceConfig.SpanAttributesMapper)
+		}
+
+		otelAttributesMappers = append(otelAttributesMappers, func(req *http.Request) []attribute.KeyValue {
+			return baseOtelAttributes
+		})
 	}
 
 	baseLogFields := []zapcore.Field{
@@ -230,37 +244,38 @@ func (s *server) buildMux(ctx context.Context,
 		}))
 	}
 
-	var otelAttributesMappers []func(req *http.Request) []attribute.KeyValue
-
-	if s.traceConfig.SpanAttributesMapper != nil {
-		otelAttributesMappers = append(otelAttributesMappers, s.traceConfig.SpanAttributesMapper)
-	}
-
-	otelAttributesMappers = append(otelAttributesMappers, func(req *http.Request) []attribute.KeyValue {
-		return baseOtelAttributes
-	})
-
 	requestLogger := requestlogger.New(
 		s.logger,
 		requestLoggerOpts...,
 	)
 
-	// Enrich the request context with the subgraphs information and base OTEL attributes
+	// Enrich the request context with the subgraphs information which is required for custom modules and tracing
 	httpRouter.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			var attributes []attribute.KeyValue
-			for _, mapper := range otelAttributesMappers {
-				attributes = append(attributes, mapper(r)...)
-			}
-
-			attributes = append(attributes, baseOtelAttributes...)
-
-			r = r.WithContext(
-				withBaseAttributes(withSubgraphs(r.Context(), subgraphs), attributes),
-			)
+			r = r.WithContext(withSubgraphs(r.Context(), subgraphs))
 			h.ServeHTTP(w, r)
 		})
 	})
+
+	if s.traceConfig.Enabled {
+		httpRouter.Use(func(h http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+				var attributes []attribute.KeyValue
+				for _, mapper := range otelAttributesMappers {
+					attributes = append(attributes, mapper(r)...)
+				}
+
+				attributes = append(attributes, baseOtelAttributes...)
+
+				r = r.WithContext(
+					withBaseAttributes(r.Context(), attributes),
+				)
+
+				h.ServeHTTP(w, r)
+			})
+		})
+	}
 
 	// Register the trace middleware before the request logger, so we can log the trace ID
 	if traceHandler != nil {

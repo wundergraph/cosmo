@@ -3,6 +3,7 @@ package integration
 import (
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"testing"
 )
 
@@ -28,6 +29,26 @@ func TestFeatureFlags(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employees { id productCount } }`,
+				Header: map[string][]string{
+					"X-Feature-Flag": {"nonexistent"},
+				},
+			})
+			require.Empty(t, res.Response.Header.Get("X-Feature-Flag"))
+			require.JSONEq(t, `{"errors":[{"message":"field: productCount not defined on type: Employee","path":["query","employees","productCount"]}],"data":null}`, res.Body)
+		})
+	})
+
+	t.Run("Base feature graph schema is served without feature flags", func(t *testing.T) {
+
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
+				routerConfig.FeatureFlagConfigs = nil
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id productCount } }`,
 				Header: map[string][]string{
