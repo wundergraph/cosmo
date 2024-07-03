@@ -937,7 +937,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		s.logger.Info("Feature flags enabled", zap.Strings("flags", maps.Keys(featureFlagConfigMap)))
 	}
 
-	featureFlagHandler, err := s.buildMultiGraphHandler(ctx, baseMux, featureFlagConfigMap)
+	multiGraphHandler, err := s.buildMultiGraphHandler(ctx, baseMux, featureFlagConfigMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build feature flag handler: %w", err)
 	}
@@ -957,11 +957,11 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		cr.Use(brCompressor.Handler)
 
 		// Mount the feature flag handler. It calls the base mux if no feature flag is set.
-		cr.Mount(r.graphqlPath, featureFlagHandler)
+		cr.Mount(r.graphqlPath, multiGraphHandler)
 
 		if r.webSocketConfiguration != nil && r.webSocketConfiguration.Enabled && r.webSocketConfiguration.AbsintheProtocol.Enabled {
 			// Mount the Absinthe protocol handler for WebSockets
-			httpRouter.Mount(r.webSocketConfiguration.AbsintheProtocol.HandlerPath, featureFlagHandler)
+			httpRouter.Mount(r.webSocketConfiguration.AbsintheProtocol.HandlerPath, multiGraphHandler)
 		}
 	})
 
