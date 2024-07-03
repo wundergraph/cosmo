@@ -18,7 +18,7 @@ import { PiGraphLight } from "react-icons/pi";
 import { EmptyState } from "./empty-state";
 import { SubgraphsTable } from "./subgraphs-table";
 import { Badge } from "./ui/badge";
-import { CLISteps } from "./ui/cli";
+import { CLI, CLISteps } from "./ui/cli";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
@@ -47,6 +47,11 @@ const FeatureFlagOverview = ({
         actions={
           <CLISteps
             steps={[
+              {
+                description:
+                  "Create a feature subgraph using the below command.",
+                command: `npx wgc feature-subgraph create <feature-subgraph-name> --namespace ${router.query.namespace} -r <routing-url> --subgraph <base-subgraph-name>`,
+              },
               {
                 description:
                   "Update your feature subgraphs of this feature flag.",
@@ -85,17 +90,13 @@ const FeatureFlagOverview = ({
             <>
               None of the feature subgraphs which are part of this feature flag
               are published. Please publish the feature subgraphs using the
-              command below.
+              command below. Publish the feature subgraphs using the below
+              command.
             </>
           }
           actions={
-            <CLISteps
-              steps={[
-                {
-                  description: "Publish a feature subgraph.",
-                  command: `npx wgc subgraph publish <feature-subgraph-name> --namespace ${router.query.namespace} --schema <path-to-schema>`,
-                },
-              ]}
+            <CLI
+              command={`npx wgc subgraph publish <feature-subgraph-name> --namespace ${router.query.namespace} --schema <path-to-schema>`}
             />
           }
         />

@@ -107,6 +107,11 @@ export const Empty = ({
                   "Create a feature subgraph using the below command.",
                 command: `npx wgc feature-subgraph create <feature-subgraph-name> --namespace ${router.query.namespace} -r <routing-url> --subgraph <base-subgraph-name>`,
               },
+              {
+                description:
+                  "Update your feature subgraphs of this feature flag.",
+                command: `npx wgc feature-flag update <feature-flag-name> --namespace ${router.query.namespace} --feature-subgraphs <featureSubgraphs...>`,
+              },
             ]}
           />
         }
