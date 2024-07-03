@@ -339,7 +339,7 @@ export class FeatureFlagRepository {
       createdBy = user?.email || '';
     }
 
-    const featureSubgraphs = await this.getFeatureSubgraphsByFeatureFlag({
+    const featureSubgraphs = await this.getFeatureSubgraphsByFeatureFlagId({
       namespaceId,
       featureFlagId: resp[0].id,
     });
@@ -507,7 +507,7 @@ export class FeatureFlagRepository {
     excludeDisabled: boolean;
   }): Promise<FederatedGraphDTO[]> {
     const federatedGraphs: FederatedGraphDTO[] = [];
-    const featureSubraphsOfFeatureFlag = await this.getFeatureSubgraphsByFlagId({
+    const featureSubraphsOfFeatureFlag = await this.getFeatureSubgraphsByFeatureFlagId({
       featureFlagId,
       namespaceId,
     });
@@ -639,7 +639,9 @@ export class FeatureFlagRepository {
     return enabledFeatureFlags;
   }
 
-  public async getFeatureSubgraphsByFlagId({
+  // returns all the feature subgraphs associated with the feature flag
+  // input: feature flag id, namespace id
+  public async getFeatureSubgraphsByFeatureFlagId({
     featureFlagId,
     namespaceId,
   }: {
@@ -750,7 +752,7 @@ export class FeatureFlagRepository {
         continue;
       }
 
-      const featureSubgraphsByFlag = await this.getFeatureSubgraphsByFlagId({
+      const featureSubgraphsByFlag = await this.getFeatureSubgraphsByFeatureFlagId({
         featureFlagId: featureFlag.id,
         namespaceId,
       });
@@ -969,61 +971,6 @@ export class FeatureFlagRepository {
     const ffSchemaVersion = await federatedGraphRepo.getSchemaVersionById({ schemaVersionId: schemaVersion[0].id });
 
     return ffSchemaVersion;
-  }
-
-  // returns all the feature subgraphs associated with the feature flag
-  // input: feature flag id, namespace id
-  public async getFeatureSubgraphsByFeatureFlag({
-    featureFlagId,
-    namespaceId,
-  }: {
-    namespaceId: string;
-    featureFlagId: string;
-  }): Promise<FeatureSubgraphDTO[]> {
-    const featureSubgraphsByFf = await this.db
-      .select({
-        id: featureFlagToFeatureSubgraphs.featureSubgraphId,
-        baseSubgraphId: featureSubgraphsToBaseSubgraphs.baseSubgraphId,
-      })
-      .from(featureFlagToFeatureSubgraphs)
-      .innerJoin(subgraphs, eq(subgraphs.id, featureFlagToFeatureSubgraphs.featureSubgraphId))
-      .innerJoin(featureSubgraphsToBaseSubgraphs, eq(subgraphs.id, featureSubgraphsToBaseSubgraphs.featureSubgraphId))
-      .innerJoin(targets, eq(targets.id, subgraphs.targetId))
-      .where(
-        and(
-          eq(targets.namespaceId, namespaceId),
-          eq(featureFlagToFeatureSubgraphs.featureFlagId, featureFlagId),
-          eq(targets.organizationId, this.organizationId),
-          eq(subgraphs.isFeatureSubgraph, true),
-        ),
-      )
-      .execute();
-
-    if (featureSubgraphsByFf.length === 0) {
-      return [];
-    }
-
-    const featureSubgraphs: FeatureSubgraphDTO[] = [];
-
-    const subgraphRepo = new SubgraphRepository(this.logger, this.db, this.organizationId);
-    for (const fs of featureSubgraphsByFf) {
-      const subgraph = await subgraphRepo.byId(fs.id);
-      if (!subgraph) {
-        continue;
-      }
-      const baseSubgraph = await subgraphRepo.byId(fs.baseSubgraphId);
-      if (!baseSubgraph) {
-        continue;
-      }
-
-      featureSubgraphs.push({
-        ...subgraph,
-        baseSubgraphId: fs.baseSubgraphId,
-        baseSubgraphName: baseSubgraph.name,
-      });
-    }
-
-    return featureSubgraphs;
   }
 
   public async delete(featureFlagId: string) {

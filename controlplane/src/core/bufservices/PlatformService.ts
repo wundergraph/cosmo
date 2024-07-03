@@ -11244,7 +11244,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           excludeDisabled: false,
         });
 
-        const featureSubgraphs = await featureFlagRepo.getFeatureSubgraphsByFeatureFlag({
+        const featureSubgraphs = await featureFlagRepo.getFeatureSubgraphsByFeatureFlagId({
           featureFlagId: featureFlag.id,
           namespaceId: namespace.id,
         });
@@ -11330,7 +11330,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const featureSubgraphs = await featureFlagRepo.getFeatureSubgraphsByFeatureFlag({
+        const featureSubgraphs = await featureFlagRepo.getFeatureSubgraphsByFeatureFlagId({
           namespaceId: namespace.id,
           featureFlagId: featureFlag.id,
         });
