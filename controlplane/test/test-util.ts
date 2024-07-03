@@ -482,6 +482,7 @@ export async function featureFlagIntegrationTestSetUp(
   federatedGraphName: string,
   labels: Array<Label> = [],
   namespace = DEFAULT_NAMESPACE,
+  subgraphLabelsOverride?: Array<Label>,
 ) {
   let port = 4001;
   for (const { name, hasFeatureSubgraph } of subgraphNames) {
@@ -490,7 +491,7 @@ export async function featureFlagIntegrationTestSetUp(
       name,
       namespace,
       fs.readFileSync(join(process.cwd(), `test/test-data/feature-flags/${name}.graphql`)).toString(),
-      labels,
+      subgraphLabelsOverride || labels,
       `http://localhost:${port}`,
     );
     port += 1;

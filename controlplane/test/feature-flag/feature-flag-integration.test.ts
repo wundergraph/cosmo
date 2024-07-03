@@ -13,7 +13,7 @@ import {
   createFeatureFlag,
   createFederatedGraph,
   createNamespace,
-  createThenPublishFeatureSubgraph,
+  createThenPublishFeatureSubgraph, DEFAULT_NAMESPACE,
   DEFAULT_SUBGRAPH_URL_TWO,
   deleteFeatureFlag,
   featureFlagIntegrationTestSetUp,
@@ -1025,6 +1025,89 @@ describe('Feature flag integration tests', () => {
     expect(moveFederatedGraphResponse.compositionErrors[0].message).toBe('At least one subgraph is required for federation.');
     expect(moveFederatedGraphResponse.compositionErrors[1])
       .toStrictEqual(unsuccessfulBaseCompositionError(baseGraphName, namespace));
+
+    await server.close();
+  });
+
+  test('that a feature flag whose labels are updated recompose the correct federated graphs successfully', getDebugTestOptions(isDebugMode),  async () => {
+    const { client, server, blobStorage } = await SetupTest({ dbname });
+
+    const firstLabel = { key: 'team', value: 'A' };
+    const secondLabel = { key: 'team', value: 'B' };
+    const baseGraphNameOne = genID('baseFederatedGraphNameOne');
+    const baseGraphNameTwo = genID('baseFederatedGraphNameTwo');
+    const namespace = genID('namespace').toLowerCase();
+    await createNamespace(client, namespace);
+    const federatedGraphResponseOne = await featureFlagIntegrationTestSetUp(
+      client,
+      [
+        { name: 'users', hasFeatureSubgraph: true }, { name: 'products', hasFeatureSubgraph: true },
+      ],
+      baseGraphNameOne,
+      [firstLabel],
+      namespace,
+      [firstLabel, secondLabel],
+    );
+    expect(blobStorage.keys()).toHaveLength(1);
+    const federatedGraphKeyOne = blobStorage.keys()[0];
+    expect(federatedGraphKeyOne).toContain(federatedGraphResponseOne.graph!.id);
+    await assertFeatureFlagExecutionConfig(blobStorage, federatedGraphKeyOne, false);
+
+    // The base composition of graph one
+    await assertNumberOfCompositions(client, baseGraphNameOne, 1, namespace);
+
+    await createFederatedGraph(
+      client,
+      baseGraphNameTwo,
+      namespace,
+      ['team=B'],
+      'http://localhost:3003',
+    );
+    const federatedGraphResponseTwo = await client.getFederatedGraphByName({
+      name: baseGraphNameTwo,
+      namespace,
+    });
+
+    expect(blobStorage.keys()).toHaveLength(2);
+    const federatedGraphKeyTwo = blobStorage.keys()[1];
+    expect(federatedGraphKeyTwo).toContain(federatedGraphResponseTwo.graph!.id);
+    await assertFeatureFlagExecutionConfig(blobStorage, federatedGraphKeyTwo, false);
+
+    // The base composition of graph two
+    await assertNumberOfCompositions(client, baseGraphNameTwo, 1, namespace);
+
+    const featureFlagName = genID('flag');
+    await createFeatureFlag(
+      client,
+      featureFlagName,
+      [firstLabel],
+      ['users-feature', 'products-feature'],
+      namespace,
+      true,
+    );
+
+    // The base recomposition of graph one and the feature flag composition
+    await assertNumberOfCompositions(client, baseGraphNameOne, 3, namespace);
+    await assertFeatureFlagExecutionConfig(blobStorage, federatedGraphKeyOne, true);
+
+    // The compositions of graph two should remain unchanged
+    await assertNumberOfCompositions(client, baseGraphNameTwo, 1, namespace);
+    await assertFeatureFlagExecutionConfig(blobStorage, federatedGraphKeyTwo, false);
+
+    const updateFeatureFlagResponse = await client.updateFeatureFlag({
+      name: featureFlagName,
+      namespace,
+      labels: [secondLabel],
+    });
+    expect(updateFeatureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // The base recomposition of graph one
+    await assertNumberOfCompositions(client, baseGraphNameOne, 4, namespace);
+    await assertFeatureFlagExecutionConfig(blobStorage, federatedGraphKeyOne, false);
+
+    // The base recomposition of graph two and the feature flag composition
+    await assertNumberOfCompositions(client, baseGraphNameTwo, 3, namespace);
+    await assertFeatureFlagExecutionConfig(blobStorage, federatedGraphKeyTwo, true);
 
     await server.close();
   });
