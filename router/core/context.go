@@ -2,6 +2,8 @@ package core
 
 import (
 	"context"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
+	"go.opentelemetry.io/otel/attribute"
 	"net/http"
 	"net/url"
 	"sync"
@@ -18,6 +20,7 @@ type key string
 
 const requestContextKey = key("request")
 const subgraphsContextKey = key("subgraphs")
+const baseAttributesContextKey = key("baseOtelAttributes")
 
 var _ RequestContext = (*requestContext)(nil)
 
@@ -362,19 +365,25 @@ type operationContext struct {
 	// Content is the content of the operation
 	content    string
 	variables  []byte
+	files      []httpclient.File
 	clientInfo *ClientInfo
 	// preparedPlan is the prepared plan of the operation
-	preparedPlan   *planWithMetaData
-	traceOptions   resolve.TraceOptions
-	planCacheHit   bool
-	initialPayload []byte
-	extensions     []byte
-	persistedID    string
-	protocol       OperationProtocol
+	preparedPlan               *planWithMetaData
+	traceOptions               resolve.TraceOptions
+	planCacheHit               bool
+	initialPayload             []byte
+	extensions                 []byte
+	persistedID                string
+	protocol                   OperationProtocol
+	persistedOperationCacheHit bool
 }
 
 func (o *operationContext) Variables() []byte {
 	return o.variables
+}
+
+func (o *operationContext) Files() []httpclient.File {
+	return o.files
 }
 
 func (o *operationContext) Name() string {
@@ -439,6 +448,15 @@ func withSubgraphs(ctx context.Context, subgraphs []Subgraph) context.Context {
 func subgraphsFromContext(ctx context.Context) []Subgraph {
 	subgraphs, _ := ctx.Value(subgraphsContextKey).([]Subgraph)
 	return subgraphs
+}
+
+func withBaseAttributes(ctx context.Context, attributes []attribute.KeyValue) context.Context {
+	return context.WithValue(ctx, baseAttributesContextKey, attributes)
+}
+
+func baseAttributesFromContext(ctx context.Context) []attribute.KeyValue {
+	attributes, _ := ctx.Value(baseAttributesContextKey).([]attribute.KeyValue)
+	return attributes
 }
 
 func buildRequestContext(w http.ResponseWriter, r *http.Request, opContext *operationContext, requestLogger *zap.Logger) *requestContext {

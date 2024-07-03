@@ -6,10 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"go.opentelemetry.io/otel/attribute"
 	"io"
 	"net/http"
 	"strings"
+
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
 
@@ -35,7 +36,8 @@ var (
 )
 
 const (
-	ExecutionPlanCacheHeader = "X-WG-Execution-Plan-Cache"
+	ExecutionPlanCacheHeader      = "X-WG-Execution-Plan-Cache"
+	PersistedOperationCacheHeader = "X-WG-Persisted-Operation-Cache"
 )
 
 type ErrUpgradeFailed struct {
@@ -72,17 +74,17 @@ func (e *reportError) Report() *operationreport.Report {
 }
 
 type HandlerOptions struct {
-	Executor                               *Executor
-	Log                                    *zap.Logger
-	EnableExecutionPlanCacheResponseHeader bool
-	WebSocketStats                         WebSocketsStatistics
-	TracerProvider                         trace.TracerProvider
-	Authorizer                             *CosmoAuthorizer
-	RateLimiter                            *CosmoRateLimiter
-	RateLimitConfig                        *config.RateLimitConfiguration
-	SubgraphErrorPropagation               config.SubgraphErrorPropagationConfiguration
-	EngineLoaderHooks                      resolve.LoaderHooks
-	SpanAttributesMapper                   func(r *http.Request) []attribute.KeyValue
+	Executor                                    *Executor
+	Log                                         *zap.Logger
+	EnableExecutionPlanCacheResponseHeader      bool
+	EnablePersistedOperationCacheResponseHeader bool
+	WebSocketStats                              WebSocketsStatistics
+	TracerProvider                              trace.TracerProvider
+	Authorizer                                  *CosmoAuthorizer
+	RateLimiter                                 *CosmoRateLimiter
+	RateLimitConfig                             *config.RateLimitConfiguration
+	SubgraphErrorPropagation                    config.SubgraphErrorPropagationConfiguration
+	EngineLoaderHooks                           resolve.LoaderHooks
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -90,7 +92,8 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		log:                                    opts.Log,
 		executor:                               opts.Executor,
 		enableExecutionPlanCacheResponseHeader: opts.EnableExecutionPlanCacheResponseHeader,
-		websocketStats:                         opts.WebSocketStats,
+		enablePersistedOperationCacheResponseHeader: opts.EnablePersistedOperationCacheResponseHeader,
+		websocketStats: opts.WebSocketStats,
 		tracer: opts.TracerProvider.Tracer(
 			"wundergraph/cosmo/router/graphql_handler",
 			trace.WithInstrumentationVersion("0.0.1"),
@@ -100,7 +103,6 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		rateLimitConfig:          opts.RateLimitConfig,
 		subgraphErrorPropagation: opts.SubgraphErrorPropagation,
 		engineLoaderHooks:        opts.EngineLoaderHooks,
-		spanAttributesMapper:     opts.SpanAttributesMapper,
 	}
 	return graphQLHandler
 }
@@ -116,18 +118,18 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 // https://github.com/graphql/graphql-over-http/blob/main/spec/GraphQLOverHTTP.md#response
 
 type GraphQLHandler struct {
-	log                                    *zap.Logger
-	executor                               *Executor
-	enableExecutionPlanCacheResponseHeader bool
-	websocketStats                         WebSocketsStatistics
-	tracer                                 trace.Tracer
-	authorizer                             *CosmoAuthorizer
+	log                                         *zap.Logger
+	executor                                    *Executor
+	enableExecutionPlanCacheResponseHeader      bool
+	enablePersistedOperationCacheResponseHeader bool
+	websocketStats                              WebSocketsStatistics
+	tracer                                      trace.Tracer
+	authorizer                                  *CosmoAuthorizer
 
 	rateLimiter              *CosmoRateLimiter
 	rateLimitConfig          *config.RateLimitConfiguration
 	subgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
 	engineLoaderHooks        resolve.LoaderHooks
-	spanAttributesMapper     func(r *http.Request) []attribute.KeyValue
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -136,8 +138,8 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	var baseAttributes []attribute.KeyValue
 
-	if h.spanAttributesMapper != nil {
-		baseAttributes = h.spanAttributesMapper(r)
+	if attributes := baseAttributesFromContext(r.Context()); attributes != nil {
+		baseAttributes = append(baseAttributes, attributes...)
 	}
 
 	executionContext, graphqlExecutionSpan := h.tracer.Start(r.Context(), "Operation - Execute",
@@ -148,6 +150,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	ctx := &resolve.Context{
 		Variables: operationCtx.Variables(),
+		Files:     operationCtx.Files(),
 		Request: resolve.Request{
 			Header: r.Header,
 		},
@@ -184,6 +187,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		h.setExecutionPlanCacheResponseHeader(w, operationCtx.planCacheHit)
+		h.setPersistedOperationCacheHeader(w, operationCtx.persistedOperationCacheHit)
 
 		_, err = executionBuf.WriteTo(w)
 		if err != nil {
@@ -372,5 +376,16 @@ func (h *GraphQLHandler) setExecutionPlanCacheResponseHeader(w http.ResponseWrit
 		w.Header().Set(ExecutionPlanCacheHeader, "HIT")
 	} else {
 		w.Header().Set(ExecutionPlanCacheHeader, "MISS")
+	}
+}
+
+func (h *GraphQLHandler) setPersistedOperationCacheHeader(w http.ResponseWriter, persistedOperationCacheHit bool) {
+	if !h.enablePersistedOperationCacheResponseHeader {
+		return
+	}
+	if persistedOperationCacheHit {
+		w.Header().Set(PersistedOperationCacheHeader, "HIT")
+	} else {
+		w.Header().Set(PersistedOperationCacheHeader, "MISS")
 	}
 }

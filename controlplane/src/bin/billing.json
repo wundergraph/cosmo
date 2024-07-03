@@ -23,7 +23,8 @@
         { "id": "tracing-retention", "limit": 7 },
         { "id": "changelog-retention", "limit": 7 },
         { "id": "breaking-change-retention", "limit": 7 },
-        { "id": "trace-sampling-rate", "limit": 0.1 }
+        { "id": "trace-sampling-rate", "limit": 0.1 },
+        { "id": "feature-flags", "limit": 0 }
       ]
     },
     "launch@1": {
@@ -55,7 +56,12 @@
         { "id": "tracing-retention", "limit": 7 },
         { "id": "changelog-retention", "limit": 7 },
         { "id": "breaking-change-retention", "limit": 7 },
-        { "id": "trace-sampling-rate", "limit": 0.2 }
+        { "id": "trace-sampling-rate", "limit": 0.2 },
+        {
+          "id": "feature-flags",
+          "description": "1 Feature Flag",
+          "limit": 1
+        }
       ]
     },
     "scale@1": {
@@ -69,8 +75,8 @@
         { "id": "users", "description": "25 Users", "limit": 25 },
         {
           "id": "federated-graphs",
-          "description": "3 Federated Graphs",
-          "limit": 3
+          "description": "5 Federated Graphs",
+          "limit": 5
         },
         {
           "id": "requests",
@@ -93,7 +99,12 @@
         { "id": "trace-sampling-rate", "limit": 0.3 },
         { "id": "rbac", "description": "Resource-based Access Control" },
         { "id": "sso", "description": "Single Sign-On (SSO)" },
-        { "id": "oidc" }
+        { "id": "oidc" },
+        {
+          "id": "feature-flags",
+          "description": "3 Feature Flags",
+          "limit": 3
+        }
       ]
     },
     "enterprise": {
@@ -130,7 +141,8 @@
         { "id": "breaking-change-retention", "limit": 90 },
         { "id": "trace-sampling-rate", "limit": 0.1 },
         { "id": "oidc" },
-        { "id": "scim", "description": "System for Cross-Domain Identity Management (SCIM)" }
+        { "id": "scim", "description": "System for Cross-Domain Identity Management (SCIM)" },
+        { "id": "feature-flags", "description": "Custom Number of Feature Flags", "limit": 10 }
       ]
     }
   }

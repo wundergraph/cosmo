@@ -15,13 +15,13 @@ type RouterMetrics interface {
 	StartOperation(clientInfo *ClientInfo, logger *zap.Logger, requestContentLength int64, metricAttributes []attribute.KeyValue) *OperationMetrics
 	ExportSchemaUsageInfo(operationContext *operationContext, statusCode int, hasError bool)
 	GqlMetricsExporter() graphqlmetrics.SchemaUsageExporter
-	MetricStore() metric.Store
+	MetricStore() metric.Provider
 }
 
 // routerMetrics encapsulates all data and configuration that the router
 // uses to collect and its metrics
 type routerMetrics struct {
-	metrics             metric.Store
+	metrics             metric.Provider
 	gqlMetricsExporter  graphqlmetrics.SchemaUsageExporter
 	routerConfigVersion string
 	logger              *zap.Logger
@@ -29,7 +29,7 @@ type routerMetrics struct {
 }
 
 type routerMetricsConfig struct {
-	metrics             metric.Store
+	metrics             metric.Provider
 	gqlMetricsExporter  graphqlmetrics.SchemaUsageExporter
 	routerConfigVersion string
 	logger              *zap.Logger
@@ -61,7 +61,7 @@ func (m *routerMetrics) StartOperation(clientInfo *ClientInfo, logger *zap.Logge
 	return metrics
 }
 
-func (m *routerMetrics) MetricStore() metric.Store {
+func (m *routerMetrics) MetricStore() metric.Provider {
 	return m.metrics
 }
 

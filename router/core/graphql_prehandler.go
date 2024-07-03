@@ -3,15 +3,16 @@ package core
 import (
 	"context"
 	"crypto/ecdsa"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -23,6 +24,7 @@ import (
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/cosmo/router/internal/pool"
@@ -44,7 +46,9 @@ type PreHandlerOptions struct {
 	TracerProvider              *sdktrace.TracerProvider
 	FlushTelemetryAfterResponse bool
 	TraceExportVariables        bool
-	SpanAttributesMapper        func(r *http.Request) []attribute.KeyValue
+	FileUploadEnabled           bool
+	MaxUploadFiles              int
+	MaxUploadFileSize           int
 }
 
 type PreHandler struct {
@@ -62,7 +66,9 @@ type PreHandler struct {
 	flushTelemetryAfterResponse bool
 	tracer                      trace.Tracer
 	traceExportVariables        bool
-	spanAttributesMapper        func(r *http.Request) []attribute.KeyValue
+	fileUploadEnabled           bool
+	maxUploadFiles              int
+	maxUploadFileSize           int
 }
 
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
@@ -80,11 +86,13 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		flushTelemetryAfterResponse: opts.FlushTelemetryAfterResponse,
 		tracerProvider:              opts.TracerProvider,
 		traceExportVariables:        opts.TraceExportVariables,
-		spanAttributesMapper:        opts.SpanAttributesMapper,
 		tracer: opts.TracerProvider.Tracer(
 			"wundergraph/cosmo/router/pre_handler",
 			trace.WithInstrumentationVersion("0.0.1"),
 		),
+		fileUploadEnabled: opts.FileUploadEnabled,
+		maxUploadFiles:    opts.MaxUploadFiles,
+		maxUploadFileSize: opts.MaxUploadFileSize,
 	}
 }
 
@@ -151,8 +159,8 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		traceTimings := art.NewTraceTimings(r.Context())
 
 		var commonAttributes []attribute.KeyValue
-		if h.spanAttributesMapper != nil {
-			commonAttributes = append(commonAttributes, h.spanAttributesMapper(r)...)
+		if attributes := baseAttributesFromContext(r.Context()); attributes != nil {
+			commonAttributes = append(commonAttributes, attributes...)
 		}
 
 		metrics := h.metrics.StartOperation(clientInfo, requestLogger, r.ContentLength, append(commonAttributes, attributes...))
@@ -167,28 +175,58 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			metrics.Finish(finalErr, statusCode, writtenBytes)
 		}()
 
+		var body []byte
+		var files []httpclient.File
 		// XXX: This buffer needs to be returned to the pool only
 		// AFTER we're done with body (retrieved from parser.ReadBody())
 		buf := pool.GetBytesBuffer()
 		defer pool.PutBytesBuffer(buf)
 
-		body, err := h.operationProcessor.ReadBody(buf, r.Body)
-		if err != nil {
-			finalErr = err
-
-			// This error is expected e.g. when the client defines (Content-Length) and aborts the request before
-			// It means that EOF was encountered in the middle of reading the body. This is not a server error.
-			if errors.Is(err, io.ErrUnexpectedEOF) {
-				requestLogger.Debug("unexpected EOF while reading request body", zap.Error(err))
-			} else {
-				requestLogger.Error("failed to read request body", zap.Error(err))
+		if strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
+			if !h.fileUploadEnabled {
+				finalErr = &inputError{
+					message:    "file upload disabled",
+					statusCode: http.StatusOK,
+				}
+				writeOperationError(r, w, requestLogger, finalErr)
+				return
 			}
-			writeOperationError(r, w, requestLogger, err)
-			return
+
+			multipartParser := NewMultipartParser(h.operationProcessor, h.maxUploadFiles, h.maxUploadFileSize)
+
+			var err error
+			body, files, err = multipartParser.Parse(r, buf)
+			if err != nil {
+				finalErr = err
+				writeOperationError(r, w, requestLogger, finalErr)
+				return
+			}
+
+			// Cleanup all files. Must happen in here, so it is run after response is sent.
+			defer func() {
+				multipartParser.RemoveAll()
+			}()
+		} else {
+			var err error
+			body, err = h.operationProcessor.ReadBody(buf, r.Body)
+			if err != nil {
+				finalErr = err
+
+				// This error is expected e.g. when the client defines (Content-Length) and aborts the request before
+				// It means that EOF was encountered in the middle of reading the body. This is not a server error.
+				if errors.Is(err, io.ErrUnexpectedEOF) {
+					requestLogger.Debug("unexpected EOF while reading request body", zap.Error(err))
+				} else {
+					requestLogger.Error("failed to read request body", zap.Error(err))
+				}
+
+				writeOperationError(r, w, requestLogger, err)
+				return
+			}
 		}
 
 		/**
-		* Parse the operation
+		 * Parse the operation
 		 */
 
 		if !traceOptions.ExcludeParseStats {
@@ -201,7 +239,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			trace.WithAttributes(attributes...),
 		)
 
-		operationKit, err := h.operationProcessor.NewKit(body)
+		operationKit, err := h.operationProcessor.NewKit(body, files)
 		if err != nil {
 			finalErr = err
 
@@ -214,9 +252,16 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			writeOperationError(r, w, requestLogger, err)
 			return
 		}
-		defer operationKit.Free()
+		defer func() {
+			if operationKit != nil {
+				// before processing the request with the graphql_handler.go, we're calling Free() already on the operationKit and set the reference to nil
+				// this allows us to use less memory and free the resources as soon as possible
+				// however, we might return early in case of an error, which is why we're using defer here to make sure we're freeing the resources
+				operationKit.Free()
+			}
+		}()
 
-		err = operationKit.Parse(r.Context(), clientInfo, requestLogger)
+		err = operationKit.Parse(r.Context(), clientInfo)
 		if err != nil {
 			finalErr = err
 
@@ -245,14 +290,15 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 
 		// Set the router span name after we have the operation name
-		routerSpan.SetName(GetSpanName(operationKit.parsedOperation.Name, operationKit.parsedOperation.Type))
+		routerSpan.SetName(GetSpanName(operationKit.parsedOperation.Request.OperationName, operationKit.parsedOperation.Type))
 
 		attributes = []attribute.KeyValue{
-			otel.WgOperationName.String(operationKit.parsedOperation.Name),
+			otel.WgOperationName.String(operationKit.parsedOperation.Request.OperationName),
 			otel.WgOperationType.String(operationKit.parsedOperation.Type),
 		}
-		if operationKit.parsedOperation.PersistedID != "" {
-			attributes = append(attributes, otel.WgOperationPersistedID.String(operationKit.parsedOperation.PersistedID))
+		if operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil &&
+			operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash != "" {
+			attributes = append(attributes, otel.WgOperationPersistedID.String(operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash))
 		}
 
 		routerSpan.SetAttributes(attributes...)
@@ -286,6 +332,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			return
 		}
 
+		if operationKit.parsedOperation.IsPersistedOperation {
+			engineNormalizeSpan.SetAttributes(otel.WgEnginePersistedOperationCacheHit.Bool(operationKit.parsedOperation.PersistedOperationCacheHit))
+		}
+
 		engineNormalizeSpan.End()
 
 		if !traceOptions.ExcludeNormalizeStats {
@@ -294,7 +344,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		if h.traceExportVariables {
 			// At this stage the variables are normalized
-			routerSpan.SetAttributes(otel.WgOperationVariables.String(string(operationKit.parsedOperation.Variables)))
+			routerSpan.SetAttributes(otel.WgOperationVariables.String(string(operationKit.parsedOperation.Request.Variables)))
 		}
 
 		attributes = []attribute.KeyValue{
@@ -406,6 +456,11 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 			r = validatedReq
 		}
+
+		// Free the operation kit after we're done with it
+		// We don't need to hold onto it while processing the operation
+		operationKit.Free()
+		operationKit = nil
 
 		art.SetRequestTracingStats(r.Context(), traceOptions, traceTimings)
 

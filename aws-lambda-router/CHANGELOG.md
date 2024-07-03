@@ -4,6 +4,30 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.15.2](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.15.1...aws-lambda-router@0.15.2) (2024-07-01)
+
+### Bug Fixes
+
+* merging deeply nested representation variables ([#902](https://github.com/wundergraph/cosmo/issues/902)) ([daa5b40](https://github.com/wundergraph/cosmo/commit/daa5b404ab9b7cf81553d089ebaeb26927c6c706)) (@devsergiy)
+
+## [0.15.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.15.0...aws-lambda-router@0.15.1) (2024-06-26)
+
+### Bug Fixes
+
+* fix merging response nodes edge cases ([#897](https://github.com/wundergraph/cosmo/issues/897)) ([f5247db](https://github.com/wundergraph/cosmo/commit/f5247db8e80bd7d9224fd08c894a305bec035548)) (@devsergiy)
+
+# [0.15.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.14.1...aws-lambda-router@0.15.0) (2024-06-26)
+
+### Features
+
+* support file upload in router ([#772](https://github.com/wundergraph/cosmo/issues/772)) ([d1cbc11](https://github.com/wundergraph/cosmo/commit/d1cbc11deedbdefad949a3aa5a1b753da4682145)) (@pedraumcosta)
+
+## [0.14.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.14.0...aws-lambda-router@0.14.1) (2024-06-25)
+
+### Bug Fixes
+
+* merging response nodes ([#888](https://github.com/wundergraph/cosmo/issues/888)) ([fb4b1a7](https://github.com/wundergraph/cosmo/commit/fb4b1a70eb1afec928551543f359d08eedae8863)) (@devsergiy)
+
 # [0.14.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.13.2...aws-lambda-router@0.14.0) (2024-06-25)
 
 ### Features

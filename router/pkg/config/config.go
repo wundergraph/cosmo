@@ -124,6 +124,12 @@ type TrafficShapingRules struct {
 	Router RouterTrafficConfiguration `yaml:"router"`
 }
 
+type FileUpload struct {
+	Enabled          bool        `yaml:"enabled" default:"true" envconfig:"FILE_UPLOAD_ENABLED"`
+	MaxFileSizeBytes BytesString `yaml:"max_file_size" default:"50MB" envconfig:"FILE_UPLOAD_MAX_FILE_SIZE"`
+	MaxFiles         int         `yaml:"max_files" default:"10" envconfig:"FILE_UPLOAD_MAX_FILES"`
+}
+
 type RouterTrafficConfiguration struct {
 	// MaxRequestBodyBytes is the maximum size of the request body in bytes
 	MaxRequestBodyBytes BytesString `yaml:"max_request_body_size" default:"5MB"`
@@ -185,17 +191,18 @@ type RequestHeaderRule struct {
 }
 
 type EngineDebugConfiguration struct {
-	PrintOperationTransformations bool `default:"false" envconfig:"ENGINE_DEBUG_PRINT_OPERATION_TRANSFORMATIONS" yaml:"print_operation_transformations"`
-	PrintOperationEnableASTRefs   bool `default:"false" envconfig:"ENGINE_DEBUG_PRINT_OPERATION_ENABLE_AST_REFS" yaml:"print_operation_enable_ast_refs"`
-	PrintPlanningPaths            bool `default:"false" envconfig:"ENGINE_DEBUG_PRINT_PLANNING_PATHS" yaml:"print_planning_paths"`
-	PrintQueryPlans               bool `default:"false" envconfig:"ENGINE_DEBUG_PRINT_QUERY_PLANS" yaml:"print_query_plans"`
-	PrintNodeSuggestions          bool `default:"false" envconfig:"ENGINE_DEBUG_PRINT_NODE_SUGGESTIONS" yaml:"print_node_suggestions"`
-	ConfigurationVisitor          bool `default:"false" envconfig:"ENGINE_DEBUG_CONFIGURATION_VISITOR" yaml:"configuration_visitor"`
-	PlanningVisitor               bool `default:"false" envconfig:"ENGINE_DEBUG_PLANNING_VISITOR" yaml:"planning_visitor"`
-	DatasourceVisitor             bool `default:"false" envconfig:"ENGINE_DEBUG_DATASOURCE_VISITOR" yaml:"datasource_visitor"`
-	ReportWebSocketConnections    bool `default:"false" envconfig:"ENGINE_DEBUG_REPORT_WEBSOCKET_CONNECTIONS" yaml:"report_websocket_connections"`
-	ReportMemoryUsage             bool `default:"false" envconfig:"ENGINE_DEBUG_REPORT_MEMORY_USAGE" yaml:"report_memory_usage"`
-	EnableResolverDebugging       bool `default:"false" envconfig:"ENGINE_DEBUG_ENABLE_RESOLVER_DEBUGGING" yaml:"enable_resolver_debugging"`
+	PrintOperationTransformations                bool `default:"false" envconfig:"ENGINE_DEBUG_PRINT_OPERATION_TRANSFORMATIONS" yaml:"print_operation_transformations"`
+	PrintOperationEnableASTRefs                  bool `default:"false" envconfig:"ENGINE_DEBUG_PRINT_OPERATION_ENABLE_AST_REFS" yaml:"print_operation_enable_ast_refs"`
+	PrintPlanningPaths                           bool `default:"false" envconfig:"ENGINE_DEBUG_PRINT_PLANNING_PATHS" yaml:"print_planning_paths"`
+	PrintQueryPlans                              bool `default:"false" envconfig:"ENGINE_DEBUG_PRINT_QUERY_PLANS" yaml:"print_query_plans"`
+	PrintNodeSuggestions                         bool `default:"false" envconfig:"ENGINE_DEBUG_PRINT_NODE_SUGGESTIONS" yaml:"print_node_suggestions"`
+	ConfigurationVisitor                         bool `default:"false" envconfig:"ENGINE_DEBUG_CONFIGURATION_VISITOR" yaml:"configuration_visitor"`
+	PlanningVisitor                              bool `default:"false" envconfig:"ENGINE_DEBUG_PLANNING_VISITOR" yaml:"planning_visitor"`
+	DatasourceVisitor                            bool `default:"false" envconfig:"ENGINE_DEBUG_DATASOURCE_VISITOR" yaml:"datasource_visitor"`
+	ReportWebSocketConnections                   bool `default:"false" envconfig:"ENGINE_DEBUG_REPORT_WEBSOCKET_CONNECTIONS" yaml:"report_websocket_connections"`
+	ReportMemoryUsage                            bool `default:"false" envconfig:"ENGINE_DEBUG_REPORT_MEMORY_USAGE" yaml:"report_memory_usage"`
+	EnableResolverDebugging                      bool `default:"false" envconfig:"ENGINE_DEBUG_ENABLE_RESOLVER_DEBUGGING" yaml:"enable_resolver_debugging"`
+	EnablePersistedOperationsCacheResponseHeader bool `default:"false" envconfig:"ENGINE_DEBUG_ENABLE_PERSISTED_OPERATIONS_CACHE_RESPONSE_HEADER" yaml:"enable_persisted_operations_cache_response_header"`
 }
 
 type EngineExecutionConfiguration struct {
@@ -210,6 +217,7 @@ type EngineExecutionConfiguration struct {
 	WebSocketReadTimeout                   time.Duration            `default:"5s" envconfig:"ENGINE_WEBSOCKET_READ_TIMEOUT" yaml:"websocket_read_timeout,omitempty"`
 	ExecutionPlanCacheSize                 int64                    `default:"10000" envconfig:"ENGINE_EXECUTION_PLAN_CACHE_SIZE" yaml:"execution_plan_cache_size,omitempty"`
 	MinifySubgraphOperations               bool                     `default:"false" envconfig:"ENGINE_MINIFY_SUBGRAPH_OPERATIONS" yaml:"minify_subgraph_operations"`
+	EnablePersistedOperationsCache         bool                     `default:"true" envconfig:"ENGINE_ENABLE_PERSISTED_OPERATIONS_CACHE" yaml:"enable_persisted_operations_cache"`
 }
 
 type SecurityConfiguration struct {
@@ -424,6 +432,7 @@ type Config struct {
 	Modules        map[string]interface{} `yaml:"modules,omitempty"`
 	Headers        HeaderRules            `yaml:"headers,omitempty"`
 	TrafficShaping TrafficShapingRules    `yaml:"traffic_shaping,omitempty"`
+	FileUpload     FileUpload             `yaml:"file_upload,omitempty"`
 
 	ListenAddr                    string                      `yaml:"listen_addr" default:"localhost:3002" envconfig:"LISTEN_ADDR"`
 	ControlplaneURL               string                      `yaml:"controlplane_url" default:"https://cosmo-cp.wundergraph.com" envconfig:"CONTROLPLANE_URL"`
