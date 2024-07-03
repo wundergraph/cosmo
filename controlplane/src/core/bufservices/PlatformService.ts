@@ -4057,10 +4057,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const auditLogRepo = new AuditLogRepository(opts.db);
 
+        const allFederatedGraphsToCompose: FederatedGraphDTO[] = [];
+        const allFederatedGraphIdsToCompose = new Set<string>();
+
+        const prevFederatedGraphs = await featureFlagRepo.getFederatedGraphsByFeatureFlag({
+          featureFlagId: featureFlagDTO.id,
+          namespaceId: namespace.id,
+          excludeDisabled: true,
+        });
+
+        for (const prevFederatedGraph of prevFederatedGraphs) {
+          allFederatedGraphIdsToCompose.add(prevFederatedGraph.id);
+          allFederatedGraphsToCompose.push(prevFederatedGraph);
+        }
+
         await featureFlagRepo.updateFeatureFlag({
           featureFlag: featureFlagDTO,
           labels: req.labels,
           featureSubgraphIds,
+          unsetLabels: req.unsetLabels ?? false,
         });
 
         await auditLogRepo.addAuditLog({
@@ -4076,11 +4091,18 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           targetNamespaceDisplayName: namespace.name,
         });
 
-        const federatedGraphs = await featureFlagRepo.getFederatedGraphsByFeatureFlag({
+        const newFederatedGraphs = await featureFlagRepo.getFederatedGraphsByFeatureFlag({
           featureFlagId: featureFlagDTO.id,
           namespaceId: namespace.id,
           excludeDisabled: true,
         });
+
+        for (const newFederatedGraph of newFederatedGraphs) {
+          if (allFederatedGraphIdsToCompose.has(newFederatedGraph.id)) {
+            continue;
+          }
+          allFederatedGraphsToCompose.push(newFederatedGraph);
+        }
 
         const compositionErrors: PlainMessage<CompositionError>[] = [];
         const deploymentErrors: PlainMessage<DeploymentError>[] = [];
@@ -4089,7 +4111,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
 
           const composition = await fedGraphRepo.composeAndDeployGraphs({
-            federatedGraphs,
+            federatedGraphs: allFederatedGraphsToCompose,
             actorId: authContext.userId,
             blobStorage: opts.blobStorage,
             admissionConfig: {
@@ -4102,7 +4124,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           deploymentErrors.push(...composition.deploymentErrors);
         });
 
-        for (const graph of federatedGraphs) {
+        for (const graph of allFederatedGraphsToCompose) {
+          const hasErrors =
+            compositionErrors.some((error) => error.federatedGraphName === graph.name) ||
+            deploymentErrors.some((error) => error.federatedGraphName === graph.name);
           orgWebhooks.send({
             eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
             payload: {
@@ -4115,7 +4140,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                 id: authContext.organizationId,
                 slug: authContext.organizationSlug,
               },
-              errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
+              errors: hasErrors,
               actor_id: authContext.userId,
             },
           });

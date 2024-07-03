@@ -18,6 +18,10 @@ export default (opts: BaseCommandOptions) => {
     'The labels to apply to the feature flag. The labels are passed in the format <key>=<value> <key>=<value>.',
   );
   command.option(
+    '--unset-labels',
+    'This will remove all labels. It will not add new labels if both this and --labels option is passed.',
+  );
+  command.option(
     '--fs, --feature-subgraphs <featureSubgraphs...>',
     'The names of the feature subgraphs that compose the feature flag.' +
       ' These feature subgraphs will replace the ones stored.' +
@@ -43,6 +47,7 @@ export default (opts: BaseCommandOptions) => {
         namespace: options.namespace,
         labels: options.label ? options.label.map((label: string) => splitLabel(label)) : [],
         featureSubgraphNames: options.featureSubgraphs,
+        unsetLabels: options.unsetLabels,
       },
       {
         headers: getBaseHeaders(),

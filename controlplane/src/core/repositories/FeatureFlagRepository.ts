@@ -109,20 +109,24 @@ export class FeatureFlagRepository {
     featureFlag,
     labels,
     featureSubgraphIds,
+    unsetLabels,
   }: {
     featureFlag: FeatureFlagDTO;
     labels: Label[];
     featureSubgraphIds: string[];
+    unsetLabels: boolean;
   }) {
     const uniqueLabels = normalizeLabels(labels);
     return this.db.transaction(async (tx) => {
-      await tx
-        .update(featureFlags)
-        .set({
-          labels: uniqueLabels.map((ul) => joinLabel(ul)),
-        })
-        .where(and(eq(featureFlags.id, featureFlag.id), eq(featureFlags.organizationId, this.organizationId)))
-        .execute();
+      if (labels.length > 0 || unsetLabels) {
+        await tx
+          .update(featureFlags)
+          .set({
+            labels: uniqueLabels.map((ul) => joinLabel(ul)),
+          })
+          .where(and(eq(featureFlags.id, featureFlag.id), eq(featureFlags.organizationId, this.organizationId)))
+          .execute();
+      }
 
       if (featureSubgraphIds.length > 0) {
         // delete all the feature subgraphs of the feature flag

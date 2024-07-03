@@ -16054,6 +16054,11 @@ export class UpdateFeatureFlagRequest extends Message<UpdateFeatureFlagRequest> 
    */
   featureSubgraphNames: string[] = [];
 
+  /**
+   * @generated from field: bool unset_labels = 5;
+   */
+  unsetLabels = false;
+
   constructor(data?: PartialMessage<UpdateFeatureFlagRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -16066,6 +16071,7 @@ export class UpdateFeatureFlagRequest extends Message<UpdateFeatureFlagRequest> 
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "labels", kind: "message", T: Label, repeated: true },
     { no: 4, name: "feature_subgraph_names", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 5, name: "unset_labels", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateFeatureFlagRequest {

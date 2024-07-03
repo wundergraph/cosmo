@@ -2038,6 +2038,7 @@ message UpdateFeatureFlagRequest {
   string namespace = 2;
   repeated Label labels = 3;
   repeated string feature_subgraph_names = 4;
+  bool unset_labels = 5;
 }
 
 message UpdateFeatureFlagResponse {
