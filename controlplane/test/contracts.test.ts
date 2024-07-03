@@ -947,7 +947,7 @@ describe('Contract tests', (ctx) => {
     await server.close();
   });
 
-  test('that a updating a contract whose source graph ', async () => {
+  test('that updating a contract whose source graph has not successfully composed produces a composition error', async () => {
     const { client, server, blobStorage } = await SetupTest({ dbname });
 
     const namespace = genID('namespace').toLowerCase();
