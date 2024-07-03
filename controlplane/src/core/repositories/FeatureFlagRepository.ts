@@ -52,6 +52,11 @@ export interface FeatureFlagListFilterOptions {
   query?: string;
 }
 
+export type CheckConstituentFeatureSubgraphsResult = {
+  errorMessages: Array<string>;
+  featureSubgraphIds: Array<string>;
+};
+
 export class FeatureFlagRepository {
   constructor(
     private logger: FastifyBaseLogger,
@@ -998,5 +1003,50 @@ export class FeatureFlagRepository {
       .execute();
 
     return result[0]?.count || 0;
+  }
+
+  public async checkConstituentFeatureSubgraphs({
+    featureSubgraphNames,
+    namespace,
+  }: {
+    featureSubgraphNames: Array<string>;
+    namespace: string;
+  }): Promise<CheckConstituentFeatureSubgraphsResult> {
+    const subgraphRepo = new SubgraphRepository(this.logger, this.db, this.organizationId);
+    const errorMessages: Array<string> = [];
+    const baseSubgraphIds = new Set<string>();
+    // Set to be 100% confident there are no duplicate IDs
+    const featureSubgraphIds = new Set<string>();
+    let count = 1;
+    for (const featureSubgraphName of featureSubgraphNames) {
+      const featureSubgraph = await subgraphRepo.byName(featureSubgraphName, namespace);
+      if (!featureSubgraph) {
+        errorMessages.push(`${count++}. The feature subgraph "${featureSubgraphName}" was not found.`);
+        continue;
+      } else if (!featureSubgraph.isFeatureSubgraph) {
+        errorMessages.push(`${count++}. The subgraph "${featureSubgraphName}" is not a feature subgraph.`);
+        continue;
+      }
+      const baseSubgraph = await this.getBaseSubgraphByFeatureSubgraphId({ id: featureSubgraph.id });
+      if (!baseSubgraph) {
+        errorMessages.push(
+          `${count++}. The base subgraph of the feature subgraph "${featureSubgraphName}" was not found.`,
+        );
+        continue;
+      }
+      if (baseSubgraphIds.has(baseSubgraph.id)) {
+        errorMessages.push(
+          `${count++}. Feature subgraphs with the same base subgraph cannot compose the same feature flag.`,
+        );
+        break;
+      } else {
+        baseSubgraphIds.add(baseSubgraph.id);
+      }
+      featureSubgraphIds.add(featureSubgraph.id);
+    }
+    return {
+      errorMessages,
+      featureSubgraphIds: [...featureSubgraphIds],
+    };
   }
 }

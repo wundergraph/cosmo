@@ -3746,7 +3746,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
         const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
         const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
@@ -3843,41 +3842,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const errorMessages = [];
-        const featureSubgraphIds = [];
-        const baseSubgraphIds: string[] = [];
-        let count = 1;
-        for (const featureSubgraphName of req.featureSubgraphNames) {
-          const featureSubgraph = await subgraphRepo.byName(featureSubgraphName, req.namespace);
-          if (!featureSubgraph) {
-            errorMessages.push(`${count++}. The feature subgraph "${featureSubgraphName}" was not found.`);
-            continue;
-          } else if (!featureSubgraph.isFeatureSubgraph) {
-            errorMessages.push(`${count++}. The subgraph "${featureSubgraphName}" is not a feature subgraph.`);
-            continue;
-          }
-          const baseSubgraph = await featureFlagRepo.getBaseSubgraphByFeatureSubgraphId({ id: featureSubgraph.id });
-          if (!baseSubgraph) {
-            errorMessages.push(
-              `${count++}. The base subgraph of the feature subgraph "${featureSubgraphName}" was not found.`,
-            );
-            continue;
-          }
-          if (baseSubgraphIds.includes(baseSubgraph.id)) {
-            errorMessages.push(
-              `${count++}. Feature subgraphs with the same base subgraph cannot be a part of the same feature flag.`,
-            );
-            break;
-          } else {
-            baseSubgraphIds.push(baseSubgraph.id);
-          }
-          featureSubgraphIds.push(featureSubgraph.id);
-        }
+        const { errorMessages, featureSubgraphIds } = await featureFlagRepo.checkConstituentFeatureSubgraphs({
+          featureSubgraphNames: req.featureSubgraphNames,
+          namespace: namespace.name,
+        });
 
         if (errorMessages.length > 0) {
           return {
             response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
+              code: EnumStatusCode.ERR,
               details: errorMessages.join('\n'),
             },
             compositionErrors: [],
@@ -4066,22 +4039,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        let errorMessage = '';
-        const featureSubgraphIds = [];
-        for (const featureSubgraphName of req.featureSubgraphNames) {
-          const subgraph = await subgraphRepo.byName(featureSubgraphName, req.namespace);
-          if (!subgraph || !subgraph.isFeatureSubgraph) {
-            errorMessage += `The feature subgraph "${featureSubgraphName}" was not found.\n`;
-            continue;
-          }
-          featureSubgraphIds.push(subgraph.id);
-        }
+        const { errorMessages, featureSubgraphIds } = await featureFlagRepo.checkConstituentFeatureSubgraphs({
+          featureSubgraphNames: req.featureSubgraphNames,
+          namespace: namespace.name,
+        });
 
-        if (errorMessage) {
+        if (errorMessages.length > 0) {
           return {
             response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: errorMessage,
+              code: EnumStatusCode.ERR,
+              details: errorMessages.join('\n'),
             },
             compositionErrors: [],
             deploymentErrors: [],
