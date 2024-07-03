@@ -31,7 +31,7 @@
       "name": "Launch",
       "price": 499,
       "active": true,
-      "stripePriceId": "price_1OOfANKHknvMloVzGQsIPwBP",
+      "stripePriceId": "price_1OMuHkKHknvMloVzmo5roKDD",
       "weight": 1,
       "features": [
         { "id": "router", "description": "Self-Hosted Router" },
@@ -45,6 +45,11 @@
           "id": "requests",
           "description": "Up to 100M Requests per month",
           "limit": 100
+        },
+        {
+          "id": "retention",
+          "description": "7 days of Data Retention",
+          "limit": 14
         },
         { "id": "support", "description": "Email Support" },
         { "id": "analytics-retention", "limit": 7 },
@@ -92,6 +97,9 @@
         { "id": "changelog-retention", "limit": 14 },
         { "id": "breaking-change-retention", "limit": 14 },
         { "id": "trace-sampling-rate", "limit": 0.3 },
+        { "id": "rbac", "description": "Resource-based Access Control" },
+        { "id": "sso", "description": "Single Sign-On (SSO)" },
+        { "id": "oidc" },
         {
           "id": "feature-flags",
           "description": "3 Feature Flags",
@@ -106,7 +114,7 @@
       "weight": 3,
       "features": [
         { "id": "router", "description": "Self-Hosted Enterprise Router" },
-        { "id": "users", "description": "Unlimited Users", "limit": 100 },
+        { "id": "users", "description": "Unlimited Users", "limit": 200 },
         {
           "id": "federated-graphs",
           "description": "Unlimited Federated Graphs",
@@ -119,10 +127,10 @@
         },
         {
           "id": "retention",
-          "description": "Unlimited days of Data Retention",
+          "description": "Unlimited Days of Data Retention",
           "limit": 365
         },
-        { "id": "rbac", "description": "Role-based Access Control" },
+        { "id": "rbac", "description": "Resource-based Access Control" },
         { "id": "sla", "description": "99.99% SLA" },
         { "id": "sso", "description": "Single Sign-On (SSO)" },
         { "id": "security", "description": "Advanced Security & Compliance" },
@@ -133,6 +141,7 @@
         { "id": "breaking-change-retention", "limit": 90 },
         { "id": "trace-sampling-rate", "limit": 0.1 },
         { "id": "oidc" },
+        { "id": "scim", "description": "System for Cross-Domain Identity Management (SCIM)" },
         { "id": "feature-flags", "description": "Custom Number of Feature Flags", "limit": 10 }
       ]
     }
