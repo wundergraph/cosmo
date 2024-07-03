@@ -73,8 +73,10 @@ export const Empty = ({ labels }: { labels: string[] }) => {
 
 export const FederatedGraphsTable = ({
   graphs,
+  noFeatureSubgraphs,
 }: {
   graphs: { federatedGraph: FederatedGraph; isConnected?: boolean }[];
+  noFeatureSubgraphs?: boolean;
 }) => {
   const router = useRouter();
   const organizationSlug = router.query.organizationSlug;
@@ -98,7 +100,7 @@ export const FederatedGraphsTable = ({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="px-4 w-80">Name</TableHead>
+            <TableHead className="w-80 px-4">Name</TableHead>
             <TableHead className="w-3/12 px-4">Url</TableHead>
             <TableHead className="w-3/12 px-4">Label Matchers</TableHead>
             <TableHead className="w-2/12 px-4">Last Published</TableHead>
@@ -139,7 +141,9 @@ export const FederatedGraphsTable = ({
                             </Badge>
                           </TooltipTrigger>
                           <TooltipContent className="w-64">
-                            {`The federated graph does not include one of the base subgraphs of the feature subgraphs that the feature flag relies on for composition.`}
+                            {noFeatureSubgraphs
+                              ? `This feature flag does not contain any feature subgraphs, so won't be considered during composition.`
+                              : `The federated graph does not include one of the base subgraphs of the feature subgraphs that the feature flag relies on for composition.`}
                           </TooltipContent>
                         </Tooltip>
                       )}

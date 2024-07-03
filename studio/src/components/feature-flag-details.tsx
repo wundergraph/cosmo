@@ -22,6 +22,106 @@ import { CLISteps } from "./ui/cli";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
+const FeatureFlagOverview = ({
+  federatedGraphs,
+  featureSubgraphs,
+}: {
+  federatedGraphs: { federatedGraph: FederatedGraph; isConnected: boolean }[];
+  featureSubgraphs: Subgraph[];
+}) => {
+  const router = useRouter();
+  const slug = router.query.slug as string;
+
+  let content: React.ReactNode;
+  if (
+    federatedGraphs.find((f) => f.federatedGraph.name === slug)?.isConnected
+  ) {
+    if (featureSubgraphs.length === 0) {
+      content = (
+        <EmptyState
+          icon={<ExclamationTriangleIcon className="text-red-500" />}
+          title="Feature flag is not used for composition."
+          description={
+            <>
+              {`This feature flag does not contain any feature subgraphs, so won't
+              be considered during composition.`}
+            </>
+          }
+          actions={
+            <CLISteps
+              steps={[
+                {
+                  description:
+                    "Update your feature subgraphs of this feature flag.",
+                  command: `npx wgc feature-flag update <feature-flag-name> --namespace ${router.query.namespace} --feature-subgraphs <featureSubgraphs...>`,
+                },
+              ]}
+            />
+          }
+        />
+      );
+    } else if (featureSubgraphs.some((fs) => fs.lastUpdatedAt !== "")) {
+      content = (
+        <EmptyState
+          icon={<CheckCircleIcon className="text-success" />}
+          title="Feature flag is active."
+          description={
+            <>
+              This feature flag will be a part of compositions of this federated
+              graph. Once the feature flag is composed succesfully, you can
+              query the feature flag in the{""}
+              <Link href=""></Link>
+            </>
+          }
+          actions={[]}
+        />
+      );
+    } else {
+      content = (
+        <EmptyState
+          icon={<ExclamationTriangleIcon className="text-red-500" />}
+          title="Feature flag is not used for composition."
+          description={
+            <>
+              None of the feature subgraphs which are part of this feature flag
+              are published. Please publish the feature subgraphs using the
+              command below.
+            </>
+          }
+          actions={
+            <CLISteps
+              steps={[
+                {
+                  description: "Publish a feature subgraph.",
+                  command: `npx wgc subgraph publish <feature-subgraph-name> --namespace ${router.query.namespace} --schema <path-to-schema>`,
+                },
+              ]}
+            />
+          }
+        />
+      );
+    }
+  } else {
+    content = (
+      <EmptyState
+        icon={<ExclamationTriangleIcon className="text-red-500" />}
+        title="Feature flag is not used for composition."
+        description={
+          <>
+            The labels of this feature flag match to that of this federated
+            graph. But to be used for composition, the feature subgraphs which
+            are part of this feature flag should have their respective base
+            subgraphs be a part of this federated graph.{" "}
+          </>
+        }
+        actions={[]}
+      />
+    );
+  }
+
+  return <>{content}</>;
+};
+
 export const FeatureFlagDetails = ({
   featureFlag,
   federatedGraphs,
@@ -154,7 +254,10 @@ export const FeatureFlagDetails = ({
                 <TabsContent value="graphs" className="w-full">
                   <div className="px-6">
                     {federatedGraphs.length > 0 ? (
-                      <FederatedGraphsTable graphs={federatedGraphs} />
+                      <FederatedGraphsTable
+                        graphs={federatedGraphs}
+                        noFeatureSubgraphs={featureSubgraphs.length === 0}
+                      />
                     ) : (
                       <EmptyState
                         icon={<InformationCircleIcon />}
@@ -174,66 +277,10 @@ export const FeatureFlagDetails = ({
               )}
               {slug && (
                 <TabsContent value="overview" className="w-full">
-                  {federatedGraphs.find((f) => f.federatedGraph.name === slug)
-                    ?.isConnected ? (
-                    featureSubgraphs.some((fs) => fs.lastUpdatedAt !== "") ? (
-                      <EmptyState
-                        icon={<CheckCircleIcon className="text-success" />}
-                        title="Feature flag is active."
-                        description={
-                          <>
-                            This feature flag will be a part of compositions of
-                            this federated graph. Once the feature flag is
-                            composed succesfully, you can query the feature flag
-                            in the{""}
-                            <Link href=""></Link>
-                          </>
-                        }
-                        actions={[]}
-                      />
-                    ) : (
-                      <EmptyState
-                        icon={
-                          <ExclamationTriangleIcon className="text-red-500" />
-                        }
-                        title="Feature flag is not used for composition."
-                        description={
-                          <>
-                            None of the feature subgraphs which are part of this
-                            feature flag are published. Please publish the
-                            feature subgraphs using the command below.
-                          </>
-                        }
-                        actions={
-                          <CLISteps
-                            steps={[
-                              {
-                                description: "Publish a feature subgraph.",
-                                command: `npx wgc subgraph publish <feature-subgraph-name> --namespace ${router.query.namespace} --schema <path-to-schema>`,
-                              },
-                            ]}
-                          />
-                        }
-                      />
-                    )
-                  ) : (
-                    <EmptyState
-                      icon={
-                        <ExclamationTriangleIcon className="text-red-500" />
-                      }
-                      title="Feature flag is not used for composition."
-                      description={
-                        <>
-                          The labels of this feature flag match to that of this
-                          federated graph. But to be used for composition, the
-                          feature subgraphs which are part of this feature flag
-                          should have their respective base subgraphs be a part
-                          of this federated graph.{" "}
-                        </>
-                      }
-                      actions={[]}
-                    />
-                  )}
+                  <FeatureFlagOverview
+                    featureSubgraphs={featureSubgraphs}
+                    federatedGraphs={federatedGraphs}
+                  />
                 </TabsContent>
               )}
               <TabsContent value="featureSubgraphs" className="w-full">

@@ -1,9 +1,7 @@
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { splitLabel } from '@wundergraph/cosmo-shared';
 import { Command, program } from 'commander';
 import ora from 'ora';
 import pc from 'picocolors';
-import Table from 'cli-table3';
 import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { handleFeatureFlagResult } from '../../../handle-feature-flag-result.js';
