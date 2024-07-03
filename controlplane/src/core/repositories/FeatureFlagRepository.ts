@@ -506,10 +506,12 @@ export class FeatureFlagRepository {
     featureFlagId,
     namespaceId,
     excludeDisabled,
+    includeContracts,
   }: {
     featureFlagId: string;
     namespaceId: string;
     excludeDisabled: boolean;
+    includeContracts?: boolean;
   }): Promise<FederatedGraphDTO[]> {
     const federatedGraphs: FederatedGraphDTO[] = [];
     const featureSubraphsOfFeatureFlag = await this.getFeatureSubgraphsByFeatureFlagId({
@@ -537,7 +539,7 @@ export class FeatureFlagRepository {
       const federatedGraphRepo = new FederatedGraphRepository(this.logger, this.db, this.organizationId);
       const federatedGraph = await federatedGraphRepo.byId(fg.federatedGraphId);
       // Contracts will be handled through the source graph
-      if (!federatedGraph || federatedGraph.contract) {
+      if (!federatedGraph || (federatedGraph.contract && !includeContracts)) {
         continue;
       }
       const matchedFeatureFlags = await this.getMatchedFeatureFlags({

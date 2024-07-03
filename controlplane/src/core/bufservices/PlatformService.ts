@@ -11209,6 +11209,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           featureFlagId: featureFlag.id,
           namespaceId: namespace.id,
           excludeDisabled: false,
+          includeContracts: true,
         });
 
         const featureSubgraphs = await featureFlagRepo.getFeatureSubgraphsByFeatureFlagId({

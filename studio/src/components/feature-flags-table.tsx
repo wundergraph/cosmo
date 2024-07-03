@@ -24,7 +24,6 @@ import {
   TableWrapper,
 } from "./ui/table";
 import { Tooltip } from "./ui/tooltip";
-import { update } from "lodash";
 
 export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
   const router = useRouter();
