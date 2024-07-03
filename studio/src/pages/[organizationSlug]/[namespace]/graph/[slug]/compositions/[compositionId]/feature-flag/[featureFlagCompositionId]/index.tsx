@@ -26,6 +26,7 @@ const FeatureFlagCompositionDetailsPage: NextPageWithLayout = () => {
 
   const { data, isLoading, error, refetch } = useQuery(getCompositionDetails, {
     compositionId: featureFlagCompositionId,
+    namespace,
   });
 
   if (isLoading) return <Loader fullscreen />;

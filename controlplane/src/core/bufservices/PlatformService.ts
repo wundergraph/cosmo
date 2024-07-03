@@ -9964,8 +9964,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        req.namespace = req.namespace || DefaultNamespace;
-
         const fedRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
         const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
         const compositionRepo = new GraphCompositionRepository(logger, opts.db);

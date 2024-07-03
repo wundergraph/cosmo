@@ -630,6 +630,7 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
 
   const { data, isLoading, error, refetch } = useQuery(getCompositionDetails, {
     compositionId: id,
+    namespace,
   });
 
   if (isLoading) return <Loader fullscreen />;
