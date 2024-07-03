@@ -50,7 +50,11 @@ export default (opts: BaseCommandOptions) => {
         compositionErrors: resp.compositionErrors,
         deploymentErrors: resp.deploymentErrors,
         spinner,
-        successMessage: `The feature flag "${name}" was created successfully. To enable it, use the "wgc feature-flag enable" command or pass the "--enabled" flag when creating it.`,
+        successMessage: `The feature flag "${name}" was created successfully. ${
+          options.enabled
+            ? ''
+            : `To enable it, use the "wgc feature-flag enable" command or pass the "--enabled" flag when creating it.`
+        }`,
         subgraphCompositionBaseErrorMessage: `The feature flag "${name}" was created but with composition errors.`,
         subgraphCompositionDetailedErrorMessage:
           `There were composition errors when composing at least one federated graph related to the` +
