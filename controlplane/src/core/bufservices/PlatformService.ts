@@ -11352,6 +11352,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           const userRepo = new UserRepository(tx);
           const orgRepo = new OrganizationRepository(logger, tx);
 
+          await opts.keycloakClient.authenticateClient();
+
           // Remove keycloak user from all org groups
           for (const org of allMemberships) {
             const orgMember = await orgRepo.getOrganizationMember({

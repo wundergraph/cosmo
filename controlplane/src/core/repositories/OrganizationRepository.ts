@@ -851,8 +851,6 @@ export class OrganizationRepository {
       // Delete organization from db
       await this.db.delete(organizations).where(eq(organizations.id, organizationId)).execute();
 
-      await opts.keycloakClient.authenticateClient();
-
       await opts.keycloakClient.deleteOrganizationGroup({
         realm: opts.keycloakRealm,
         organizationSlug,
