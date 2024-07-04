@@ -376,7 +376,7 @@ func (h *WebsocketHandler) removeConnection(conn net.Conn, handler *WebSocketCon
 	h.connectionsMu.Lock()
 	delete(h.connections, fd)
 	h.connectionsMu.Unlock()
-	err := h.epoll.Remove(conn)
+	err := h.epoll.Remove(conn, true)
 	if err != nil {
 		h.logger.Warn("Removing connection from epoll", zap.Error(err))
 	}

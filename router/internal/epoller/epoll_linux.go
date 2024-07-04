@@ -85,7 +85,7 @@ func (e *Epoll) Add(conn net.Conn) error {
 }
 
 // Remove removes a connection from the poller.
-func (e *Epoll) Remove(conn net.Conn) error {
+func (e *Epoll) Remove(conn net.Conn, close bool) error {
 	fd := socketFD(conn)
 	err := unix.EpollCtl(e.fd, syscall.EPOLL_CTL_DEL, fd, nil)
 	if err != nil {
@@ -94,6 +94,10 @@ func (e *Epoll) Remove(conn net.Conn) error {
 	e.lock.Lock()
 	defer e.lock.Unlock()
 	delete(e.conns, fd)
+
+	if close {
+		return unix.Close(e.fd)
+	}
 
 	return nil
 }
@@ -121,10 +125,6 @@ retry:
 	for i := 0; i < n; i++ {
 		conn := e.conns[int(events[i].Fd)]
 		if conn != nil {
-			if (events[i].Events & unix.POLLHUP) == unix.POLLHUP {
-				conn.Close()
-			}
-
 			conns = append(conns, conn)
 		}
 	}

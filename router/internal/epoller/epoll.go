@@ -9,8 +9,8 @@ import (
 type Poller interface {
 	// Add adds the connection to poller.
 	Add(conn net.Conn) error
-	// Remove removes the connection from poller. Notice it doesn't call the conn.Close method.
-	Remove(conn net.Conn) error
+	// Remove removes the connection from poller. If close is true, it will close the connection.
+	Remove(conn net.Conn, close bool) error
 	// Wait waits for at most count events and returns the connections.
 	Wait(count int) ([]net.Conn, error)
 	// Close closes the poller. If closeConns is true, it will close all the connections.

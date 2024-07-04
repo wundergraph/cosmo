@@ -97,7 +97,7 @@ func (e *Epoll) Add(conn net.Conn) error {
 
 // Remove removes a connection from the poller.
 // If close is true, the connection will be closed.
-func (e *Epoll) Remove(conn net.Conn) error {
+func (e *Epoll) Remove(conn net.Conn, close bool) error {
 	fd := socketFD(conn)
 
 	e.mu.Lock()
@@ -117,6 +117,10 @@ func (e *Epoll) Remove(conn net.Conn) error {
 	}
 
 	delete(e.conns, fd)
+
+	if close {
+		return syscall.Close(fd)
+	}
 
 	return nil
 }
@@ -149,9 +153,6 @@ retry:
 	for i := 0; i < n; i++ {
 		conn := e.conns[int(events[i].Ident)]
 		if conn != nil {
-			if (events[i].Flags & syscall.EV_EOF) == syscall.EV_EOF {
-				conn.Close()
-			}
 			conns = append(conns, conn)
 		}
 	}
