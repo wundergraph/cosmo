@@ -85,7 +85,7 @@ func (e *Epoll) Add(conn net.Conn) error {
 }
 
 // Remove removes a connection from the poller.
-func (e *Epoll) Remove(conn net.Conn, close bool) error {
+func (e *Epoll) Remove(conn net.Conn) error {
 	fd := socketFD(conn)
 	err := unix.EpollCtl(e.fd, syscall.EPOLL_CTL_DEL, fd, nil)
 	if err != nil {
@@ -95,11 +95,7 @@ func (e *Epoll) Remove(conn net.Conn, close bool) error {
 	defer e.lock.Unlock()
 	delete(e.conns, fd)
 
-	if close {
-		return unix.Close(e.fd)
-	}
-
-	return nil
+	return unix.Close(fd)
 }
 
 // Wait waits for at most count events and returns the connections.
