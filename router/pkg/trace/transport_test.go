@@ -40,6 +40,7 @@ func TestTransport(t *testing.T) {
 
 		tr := NewTransport(http.DefaultTransport, []otelhttp.Option{
 			otelhttp.WithSpanOptions(trace.WithAttributes(otel.WgComponentName.String("test"))),
+			otelhttp.WithTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))),
 		})
 
 		c := http.Client{Transport: tr}
@@ -92,6 +93,7 @@ func TestTransport(t *testing.T) {
 
 		tr := NewTransport(http.DefaultTransport, []otelhttp.Option{
 			otelhttp.WithSpanOptions(trace.WithAttributes(otel.WgComponentName.String("test"))),
+			otelhttp.WithTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))),
 		})
 
 		c := http.Client{Transport: tr}

@@ -13,14 +13,14 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - uses: actions/setup-node@v3
+    - uses: actions/setup-node@v4
       with:
         node-version: ${{ inputs.node-version }}
 
-    - uses: pnpm/action-setup@v2.4.0
+    - uses: pnpm/action-setup@v4.0.0
       id: pnpm-install
       with:
-        version: 8.6.10
+        version: 8.7.0
         run_install: false
 
     - name: Get pnpm store directory
