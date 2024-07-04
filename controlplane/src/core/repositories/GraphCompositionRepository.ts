@@ -34,6 +34,13 @@ export class GraphCompositionRepository {
     isFeatureFlagComposition: boolean;
   }) {
     await this.db.transaction(async (tx) => {
+      const actor = await tx.query.users.findFirst({
+        where: eq(users.id, composedBy),
+      });
+      if (!actor) {
+        throw new Error(`Could not find actor ${composedBy}`);
+      }
+
       const insertedComposition = await tx
         .insert(graphCompositions)
         .values({
@@ -42,7 +49,7 @@ export class GraphCompositionRepository {
           isComposable: compositionErrorString === '',
           routerConfigSignature,
           createdBy: composedBy,
-          createdByEmail: composedBy,
+          createdByEmail: actor.email,
           deploymentError: deploymentErrorString,
           admissionError: admissionErrorString,
           isFeatureFlagComposition,

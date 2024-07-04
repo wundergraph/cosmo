@@ -7,16 +7,21 @@ import { createConnectTransport } from '@connectrpc/connect-node';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_connect';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
+import { formatISO, startOfTomorrow, startOfYear } from 'date-fns';
 import Fastify from 'fastify';
 import { pino } from 'pino';
-import { expect } from 'vitest';
 import postgres from 'postgres';
-import { formatISO, startOfTomorrow, startOfYear } from 'date-fns';
+import { expect } from 'vitest';
 import { BlobNotFoundError, BlobObject, BlobStorage } from '../src/core/blobstorage/index.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
+import ScimController from '../src/core/controllers/scim.js';
 import database from '../src/core/plugins/database.js';
 import fastifyRedis from '../src/core/plugins/redis.js';
+import { ApiKeyRepository } from '../src/core/repositories/ApiKeyRepository.js';
+import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
+import { UserRepository } from '../src/core/repositories/UserRepository.js';
 import routes from '../src/core/routes.js';
+import ApiKeyAuthenticator from '../src/core/services/ApiKeyAuthenticator.js';
 import { Authorization } from '../src/core/services/Authorization.js';
 import Keycloak from '../src/core/services/Keycloak.js';
 import Mailer from '../src/core/services/Mailer.js';
@@ -30,11 +35,6 @@ import {
 import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService.js';
 import { AIGraphReadmeQueue } from '../src/core/workers/AIGraphReadmeWorker.js';
 import { FeatureIds, Label } from '../src/types/index.js';
-import ScimController from '../src/core/controllers/scim.js';
-import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
-import { UserRepository } from '../src/core/repositories/UserRepository.js';
-import ApiKeyAuthenticator from '../src/core/services/ApiKeyAuthenticator.js';
-import { ApiKeyRepository } from '../src/core/repositories/ApiKeyRepository.js';
 
 export const DEFAULT_ROUTER_URL = 'http://localhost:3002';
 export const DEFAULT_SUBGRAPH_URL_ONE = 'http://localhost:4001';
@@ -156,6 +156,19 @@ export const SetupTest = async function ({
   const queryConnection = postgres(databaseConnectionUrl);
 
   await seedTest(queryConnection, users.adminAliceCompanyA, createScimKey);
+  await SetupKeycloak({
+    keycloakClient,
+    realmName: realm,
+    userTestData: {
+      userId: users.adminAliceCompanyA.userId,
+      organizationId: users.adminAliceCompanyA.organizationId,
+      organizationName: users.adminAliceCompanyA.organizationName,
+      organizationSlug: users.adminAliceCompanyA.organizationSlug,
+      email: users.adminAliceCompanyA.email,
+      apiKey: users.adminAliceCompanyA.apiKey,
+      roles: ['admin'],
+    },
+  });
 
   if (enableMultiUsers) {
     if (users.adminBobCompanyA) {
@@ -227,12 +240,18 @@ export const SetupKeycloak = async ({
   realmName: string;
 }) => {
   await keycloakClient.authenticateClient();
-  await keycloakClient.client.realms.create({
+
+  const existingRealm = keycloakClient.client.realms.findOne({
     realm: realmName,
-    enabled: true,
-    displayName: realmName,
-    registrationEmailAsUsername: true,
   });
+  if (!existingRealm) {
+    await keycloakClient.client.realms.create({
+      realm: realmName,
+      enabled: true,
+      displayName: realmName,
+      registrationEmailAsUsername: true,
+    });
+  }
   const id = await keycloakClient.addKeycloakUser({
     email: userTestData.email,
     realm: realmName,
@@ -245,6 +264,7 @@ export const SetupKeycloak = async ({
     userID: id,
     organizationSlug: userTestData.organizationSlug,
   });
+  return id;
 };
 
 export const removeKeycloakSetup = async ({

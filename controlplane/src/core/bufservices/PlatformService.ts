@@ -142,7 +142,7 @@ import {
   UpgradePlanResponse,
   WhoAmIResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { isValidUrl, joinLabel, routerConfigFromJsonString } from '@wundergraph/cosmo-shared';
+import { isValidUrl, joinLabel } from '@wundergraph/cosmo-shared';
 import { subHours } from 'date-fns';
 import { FastifyBaseLogger } from 'fastify';
 import { buildASTSchema, DocumentNode, parse } from 'graphql';
