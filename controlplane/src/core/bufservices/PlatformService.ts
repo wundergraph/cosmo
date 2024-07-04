@@ -11332,7 +11332,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const orgRepo = new OrganizationRepository(logger, opts.db);
 
         // Check if user can be deleted
-        const { isSafe, soloOrganizations, unsafeOrganizations } = await orgRepo.canUserBeDeleted(authContext.userId);
+        const { isSafe, soloOrganizations, unsafeOrganizations, allMemberships } = await orgRepo.canUserBeDeleted(
+          authContext.userId,
+        );
 
         if (!isSafe) {
           return {
@@ -11349,6 +11351,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         await opts.db.transaction(async (tx) => {
           const userRepo = new UserRepository(tx);
           const orgRepo = new OrganizationRepository(logger, tx);
+
+          // Remove keycloak user from all org groups
+          for (const org of allMemberships) {
+            const orgMember = await orgRepo.getOrganizationMember({
+              organizationID: org.id,
+              userID: authContext.userId,
+            });
+
+            if (!orgMember) {
+              throw new Error('Organization member not found');
+            }
+
+            await opts.keycloakClient.removeUserFromOrganization({
+              realm: opts.keycloakRealm,
+              userID: authContext.userId,
+              groupName: org.slug,
+              roles: orgMember.roles,
+            });
+          }
 
           // Delete the user
           await userRepo.deleteUser({

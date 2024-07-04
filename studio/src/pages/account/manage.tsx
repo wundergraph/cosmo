@@ -87,7 +87,8 @@ const ManageAccountPage: NextPageWithLayout = () => {
           <CardTitle>Delete Account</CardTitle>
           <CardDescription className="text-sm text-muted-foreground">
             Your account will be permanently deleted. This action is
-            irreversible!
+            irreversible! <br /> You will lose memberships to all your
+            organizations and any API keys created by you will be deleted.
           </CardDescription>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
@@ -122,11 +123,7 @@ const ManageAccountPage: NextPageWithLayout = () => {
                 <span className="mt-2 text-sm">
                   Enter <strong>DELETE MY ACCOUNT</strong> to confirm.
                 </span>
-                <Input
-                  type="text"
-                  {...register("confirmation")}
-                  autoFocus={true}
-                />
+                <Input type="text" {...register("confirmation")} />
                 {errors.confirmation && (
                   <span className="px-2 text-xs text-destructive">
                     {errors.confirmation.message}

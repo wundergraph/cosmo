@@ -17,6 +17,7 @@ ALTER TABLE "discussion_thread" ALTER COLUMN "created_by_id" DROP NOT NULL;--> s
 ALTER TABLE "federated_graph_clients" ALTER COLUMN "created_by_id" DROP NOT NULL;--> statement-breakpoint
 ALTER TABLE "federated_graph_persisted_operations" ALTER COLUMN "created_by_id" DROP NOT NULL;--> statement-breakpoint
 ALTER TABLE "organizations" ALTER COLUMN "user_id" DROP NOT NULL;--> statement-breakpoint
+ALTER TABLE "graph_compositions" ADD COLUMN "created_by_email" text;--> statement-breakpoint
 DO $$ BEGIN
  ALTER TABLE "api_keys" ADD CONSTRAINT "api_keys_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION

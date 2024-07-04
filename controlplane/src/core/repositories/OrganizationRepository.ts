@@ -27,8 +27,10 @@ import {
 import { Feature, FeatureIds, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
 import { BillingService } from '../services/BillingService.js';
 import Keycloak from '../services/Keycloak.js';
+import OidcProvider from '../services/OidcProvider.js';
 import { BillingRepository } from './BillingRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
+import { OidcRepository } from './OidcRepository.js';
 
 /**
  * Repository for organization related operations.
@@ -815,7 +817,7 @@ export class OrganizationRepository {
   }
 
   public deleteOrganization(
-    organizationID: string,
+    organizationId: string,
     organizationSlug: string,
     opts: {
       keycloakClient: Keycloak;
@@ -826,31 +828,34 @@ export class OrganizationRepository {
       // Cancel subscription
       const billingRepo = new BillingRepository(tx);
       const billingService = new BillingService(tx, billingRepo);
+      const oidcRepo = new OidcRepository(tx);
+      const oidcProvider = new OidcProvider();
 
-      const subscription = await billingRepo.getActiveSubscriptionOfOrganization(organizationID);
+      const subscription = await billingRepo.getActiveSubscriptionOfOrganization(organizationId);
       if (subscription) {
-        await billingService.cancelSubscription(organizationID, subscription.id, 'Deleted by api');
+        await billingService.cancelSubscription(organizationId, subscription.id, 'Deleted by api');
+      }
+
+      const provider = await oidcRepo.getOidcProvider({ organizationId });
+      if (provider) {
+        await oidcProvider.deleteOidcProvider({
+          kcClient: opts.keycloakClient,
+          kcRealm: opts.keycloakRealm,
+          organizationId,
+          organizationSlug,
+          alias: provider.alias,
+          db: tx,
+        });
       }
 
       // Delete organization from db
-      await this.db.delete(organizations).where(eq(organizations.id, organizationID)).execute();
+      await this.db.delete(organizations).where(eq(organizations.id, organizationId)).execute();
 
       await opts.keycloakClient.authenticateClient();
 
-      const organizationGroup = await opts.keycloakClient.client.groups.find({
-        max: 1,
-        search: organizationSlug,
+      await opts.keycloakClient.deleteOrganizationGroup({
         realm: opts.keycloakRealm,
-      });
-
-      if (organizationGroup.length === 0) {
-        throw new Error(`Organization group '${organizationSlug}' not found`);
-      }
-
-      // Delete org from keycloak.
-      await opts.keycloakClient.client.groups.del({
-        id: organizationGroup[0].id!,
-        realm: opts.keycloakRealm,
+        organizationSlug,
       });
     });
   }
@@ -1234,6 +1239,7 @@ export class OrganizationRepository {
     isSafe: boolean;
     soloOrganizations: OrganizationDTO[];
     unsafeOrganizations: OrganizationDTO[];
+    allMemberships: OrganizationDTO[];
   }> {
     let isSafe = true;
 
@@ -1264,6 +1270,11 @@ export class OrganizationRepository {
       }
     }
 
-    return { isSafe, soloOrganizations: soloAdminSoloMemberOrgs, unsafeOrganizations: soloAdminManyMembersOrgs };
+    return {
+      isSafe,
+      soloOrganizations: soloAdminSoloMemberOrgs,
+      unsafeOrganizations: soloAdminManyMembersOrgs,
+      allMemberships: orgs,
+    };
   }
 }

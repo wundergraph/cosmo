@@ -1315,6 +1315,7 @@ export const graphCompositions = pgTable('graph_compositions', {
   createdBy: uuid('created_by').references(() => users.id, {
     onDelete: 'set null',
   }),
+  createdByEmail: text('created_by_email'),
   isFeatureFlagComposition: boolean('is_feature_flag_composition').default(false).notNull(),
 });
 
