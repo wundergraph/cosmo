@@ -22,6 +22,9 @@ const getConfig = () => {
     databaseTlsCa: process.env.DB_TLS_CA,
     databaseTlsCert: process.env.DB_TLS_CERT,
     databaseTlsKey: process.env.DB_TLS_KEY,
+
+    webhookUrl: process.env.WEBHOOK_URL,
+    webhookSecret: process.env.WEBHOOK_SECRET,
   };
 };
 

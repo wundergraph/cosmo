@@ -6,6 +6,7 @@ enum PlatformEventName {
   USER_REGISTER_SUCCESS = 0;
   APOLLO_MIGRATE_INIT = 1;
   APOLLO_MIGRATE_SUCCESS = 2;
+  USER_DELETE_SUCCESS = 3;
 }
 
 enum OrganizationEventName {

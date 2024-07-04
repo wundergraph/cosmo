@@ -11359,6 +11359,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           });
         });
 
+        opts.platformWebhooks.send(PlatformEventName.USER_DELETE_SUCCESS, {
+          user_id: authContext.userId,
+          user_email: authContext.userDisplayName,
+        });
+
         return {
           response: {
             code: EnumStatusCode.OK,

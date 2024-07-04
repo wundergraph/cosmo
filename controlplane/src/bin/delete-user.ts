@@ -2,8 +2,10 @@ import process from 'node:process';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { pino } from 'pino';
 import postgres from 'postgres';
+import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { buildDatabaseConnectionConfig } from '../core/plugins/database.js';
 import { UserRepository } from '../core/repositories/UserRepository.js';
+import { PlatformWebhookService } from '../core/webhooks/PlatformWebhookService.js';
 import Keycloak from '../core/services/Keycloak.js';
 import * as schema from '../db/schema.js';
 import { OrganizationRepository } from '../core/repositories/OrganizationRepository.js';
@@ -20,6 +22,8 @@ const {
   databaseTlsCa,
   databaseTlsCert,
   databaseTlsKey,
+  webhookUrl,
+  webhookSecret,
 } = getConfig();
 
 const userId = process.env.USER_ID || '';
@@ -47,6 +51,9 @@ const keycloakClient = new Keycloak({
 });
 await keycloakClient.authenticateClient();
 
+// Init platform webhooks
+const platformWebhooks = new PlatformWebhookService(webhookUrl, webhookSecret, pino());
+
 // Find user on keycloak
 const user = await keycloakClient.client.users.findOne({
   realm,
@@ -57,7 +64,7 @@ await db.transaction(async (tx) => {
   const userRepo = new UserRepository(pino(), tx);
   const orgRepo = new OrganizationRepository(pino(), tx);
 
-  if (!user || !user.id) {
+  if (!user || !user.id || !user.email) {
     throw new Error('User not found');
   }
 
@@ -75,6 +82,11 @@ await db.transaction(async (tx) => {
     id: user.id,
     keycloakClient,
     keycloakRealm: realm,
+  });
+
+  platformWebhooks.send(PlatformEventName.USER_DELETE_SUCCESS, {
+    user_id: user.id,
+    user_email: user.email!,
   });
 });
 
