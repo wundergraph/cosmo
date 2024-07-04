@@ -25,6 +25,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/epoller"
 	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/cosmo/router/internal/wsproto"
+	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
@@ -232,17 +233,19 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	requestLogger := h.logger.With(logging.WithRequestID(requestID))
 	clientInfo := NewClientInfoFromRequest(r)
 
-	// Check access control before upgrading the connection
-	validatedReq, err := h.accessController.Access(w, r)
-	if err != nil {
-		statusCode := http.StatusForbidden
-		if errors.Is(err, ErrUnauthorized) {
-			statusCode = http.StatusUnauthorized
+	if !h.config.Authentication.FromInitialPayload.Enabled {
+		// Check access control before upgrading the connection
+		validatedReq, err := h.accessController.Access(w, r)
+		if err != nil {
+			statusCode := http.StatusForbidden
+			if errors.Is(err, ErrUnauthorized) {
+				statusCode = http.StatusUnauthorized
+			}
+			http.Error(w, http.StatusText(statusCode), statusCode)
+			return
 		}
-		http.Error(w, http.StatusText(statusCode), statusCode)
-		return
+		r = validatedReq
 	}
-	r = validatedReq
 
 	upgrader := ws.HTTPUpgrader{
 		Timeout: time.Second * 5,
@@ -302,6 +305,23 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		requestLogger.Error("Initializing websocket connection", zap.Error(err))
 		handler.Close()
 		return
+	}
+
+	// Authenticate the connection using the initial payload
+	if h.config.Authentication.FromInitialPayload.Enabled {
+		// Setting the initialPayload in the context to be used by the websocketInitialPayloadAuthenticator
+		r = r.WithContext(authentication.WithWebsocketInitialPayloadContextKey(r.Context(), handler.initialPayload))
+
+		// Later check access control after initial payload is read and set into the context
+		_, err := h.accessController.Access(w, r)
+		if err != nil {
+			statusCode := http.StatusForbidden
+			if errors.Is(err, ErrUnauthorized) {
+				statusCode = http.StatusUnauthorized
+			}
+			http.Error(w, http.StatusText(statusCode), statusCode)
+			return
+		}
 	}
 
 	// Only when epoll is available. On Windows, epoll is not available

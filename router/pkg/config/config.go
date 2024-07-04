@@ -356,6 +356,17 @@ type ComplianceConfig struct {
 	AnonymizeIP AnonymizeIpConfiguration `yaml:"anonymize_ip,omitempty"`
 }
 
+type WebSocketAuthenticationConfiguration struct {
+	// Tells if the Router should look for the JWT Token in the initial payload of the WebSocket Connection
+	FromInitialPayload InitialPayloadAuthenticationConfiguration `yaml:"from_initial_payload,omitempty"`
+}
+type InitialPayloadAuthenticationConfiguration struct {
+	// When true the Router should look for the token in the initial payload of the WebSocket Connection
+	Enabled bool `yaml:"enabled,omitempty" default:"false"`
+	// The key in the initial payload where the token is stored
+	SecretKey string `yaml:"secret_key,omitempty" default:"Authorization"`
+}
+
 type WebSocketConfiguration struct {
 	// Enabled true if the Router should accept Requests over WebSockets
 	Enabled bool `yaml:"enabled" default:"true" envconfig:"WEBSOCKETS_ENABLED"`
@@ -367,6 +378,8 @@ type WebSocketConfiguration struct {
 	ForwardUpgradeQueryParams ForwardUpgradeQueryParamsConfiguration `yaml:"forward_upgrade_query_params"`
 	// ForwardInitialPayload true if the Router should forward the initial payload of a Subscription Request to the Subgraph
 	ForwardInitialPayload bool `yaml:"forward_initial_payload" default:"true" envconfig:"WEBSOCKETS_FORWARD_INITIAL_PAYLOAD"`
+	// Authentication configuration for the WebSocket Connection
+	Authentication WebSocketAuthenticationConfiguration `yaml:"authentication,omitempty"`
 }
 
 type ForwardUpgradeHeadersConfiguration struct {
