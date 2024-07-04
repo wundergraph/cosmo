@@ -52,7 +52,7 @@ export function genUniqueLabel(prefix = 'prefix'): Label {
 export async function seedTest(queryConnection: postgres.Sql, userTestData: UserTestData, createScimKey?: boolean) {
   const db = drizzle(queryConnection, { schema: { ...schema } });
 
-  const userRepo = new UserRepository(db);
+  const userRepo = new UserRepository(pino(), db);
   const orgRepo = new OrganizationRepository(pino(), db, userTestData.defaultBillingPlanId);
   const apiKeyRepo = new ApiKeyRepository(db);
 

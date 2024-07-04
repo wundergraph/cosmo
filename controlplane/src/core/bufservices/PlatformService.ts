@@ -5293,7 +5293,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const userRepo = new UserRepository(opts.db);
+        const userRepo = new UserRepository(logger, opts.db);
         const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const orgInvitationRepo = new OrganizationInvitationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const auditLogRepo = new AuditLogRepository(opts.db);
@@ -5680,7 +5680,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const auditLogRepo = new AuditLogRepository(opts.db);
-        const userRepo = new UserRepository(opts.db);
+        const userRepo = new UserRepository(logger, opts.db);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -5802,7 +5802,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const orgInvitationRepo = new OrganizationInvitationRepository(logger, opts.db, opts.billingDefaultPlanId);
-        const userRepo = new UserRepository(opts.db);
+        const userRepo = new UserRepository(logger, opts.db);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
@@ -5910,7 +5910,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const userRepo = new UserRepository(opts.db);
+        const userRepo = new UserRepository(logger, opts.db);
         const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
@@ -7479,7 +7479,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         logger = enrichLogger(ctx, logger, authContext);
 
         const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
-        const userRepo = new UserRepository(opts.db);
+        const userRepo = new UserRepository(logger, opts.db);
         const orgInvitationRepo = new OrganizationInvitationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
@@ -7636,7 +7636,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         logger = enrichLogger(ctx, logger, authContext);
 
         const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
-        const userRepo = new UserRepository(opts.db);
+        const userRepo = new UserRepository(logger, opts.db);
         const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
@@ -11332,9 +11332,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const orgRepo = new OrganizationRepository(logger, opts.db);
 
         // Check if user can be deleted
-        const { isSafe, soloOrganizations, unsafeOrganizations, allMemberships } = await orgRepo.canUserBeDeleted(
-          authContext.userId,
-        );
+        const { isSafe, unsafeOrganizations } = await orgRepo.canUserBeDeleted(authContext.userId);
 
         if (!isSafe) {
           return {
@@ -11348,30 +11346,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        await opts.keycloakClient.authenticateClient();
+
         await opts.db.transaction(async (tx) => {
-          const userRepo = new UserRepository(tx);
-          const orgRepo = new OrganizationRepository(logger, tx);
-
-          await opts.keycloakClient.authenticateClient();
-
-          // Remove keycloak user from all org groups
-          for (const org of allMemberships) {
-            const orgMember = await orgRepo.getOrganizationMember({
-              organizationID: org.id,
-              userID: authContext.userId,
-            });
-
-            if (!orgMember) {
-              throw new Error('Organization member not found');
-            }
-
-            await opts.keycloakClient.removeUserFromOrganization({
-              realm: opts.keycloakRealm,
-              userID: authContext.userId,
-              groupName: org.slug,
-              roles: orgMember.roles,
-            });
-          }
+          const userRepo = new UserRepository(logger, tx);
 
           // Delete the user
           await userRepo.deleteUser({
@@ -11379,18 +11357,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             keycloakClient: opts.keycloakClient,
             keycloakRealm: opts.keycloakRealm,
           });
-
-          // Delete all solo organizations of the user
-          const deleteOrgs: Promise<void>[] = [];
-          for (const org of soloOrganizations) {
-            deleteOrgs.push(
-              orgRepo.deleteOrganization(org.id, org.slug, {
-                keycloakClient: opts.keycloakClient,
-                keycloakRealm: opts.keycloakRealm,
-              }),
-            );
-          }
-          await Promise.all(deleteOrgs);
         });
 
         return {

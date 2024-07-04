@@ -7,18 +7,20 @@ import { UserRepository } from '../core/repositories/UserRepository.js';
 import Keycloak from '../core/services/Keycloak.js';
 import * as schema from '../db/schema.js';
 import { OrganizationRepository } from '../core/repositories/OrganizationRepository.js';
+import { getConfig } from './get-config.js';
 
-const realm = process.env.KC_REALM || 'cosmo';
-const loginRealm = process.env.KC_LOGIN_REALM || 'master';
-const adminUser = process.env.KC_ADMIN_USER || 'admin';
-const adminPassword = process.env.KC_ADMIN_PASSWORD || 'changeme';
-const clientId = process.env.KC_CLIENT_ID || 'studio';
-const apiUrl = process.env.KC_API_URL || 'http://localhost:8080';
-
-const databaseConnectionUrl = process.env.DB_URL || 'postgresql://postgres:changeme@localhost:5432/controlplane';
-const databaseTlsCa = process.env.DB_TLS_CA;
-const databaseTlsCert = process.env.DB_TLS_CERT;
-const databaseTlsKey = process.env.DB_TLS_KEY;
+const {
+  realm,
+  loginRealm,
+  adminUser,
+  adminPassword,
+  clientId,
+  apiUrl,
+  databaseConnectionUrl,
+  databaseTlsCa,
+  databaseTlsCert,
+  databaseTlsKey,
+} = getConfig();
 
 const userId = process.env.USER_ID || '';
 
@@ -52,7 +54,7 @@ const user = await keycloakClient.client.users.findOne({
 });
 
 await db.transaction(async (tx) => {
-  const userRepo = new UserRepository(tx);
+  const userRepo = new UserRepository(pino(), tx);
   const orgRepo = new OrganizationRepository(pino(), tx);
 
   if (!user || !user.id) {
@@ -74,18 +76,6 @@ await db.transaction(async (tx) => {
     keycloakClient,
     keycloakRealm: realm,
   });
-
-  // Delete all solo organizations of the user
-  const deleteOrgs: Promise<void>[] = [];
-  for (const org of soloOrganizations) {
-    deleteOrgs.push(
-      orgRepo.deleteOrganization(org.id, org.slug, {
-        keycloakClient,
-        keycloakRealm: realm,
-      }),
-    );
-  }
-  await Promise.all(deleteOrgs);
 });
 
 // Close database connection

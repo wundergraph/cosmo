@@ -135,7 +135,7 @@ export const SetupTest = async function ({
   });
 
   const organizationRepository = new OrganizationRepository(log, server.db, '');
-  const userRepository = new UserRepository(server.db);
+  const userRepository = new UserRepository(log, server.db);
   const apiKeyRepository = new ApiKeyRepository(server.db);
   const apiKeyAuth = new ApiKeyAuthenticator(server.db, organizationRepository);
   await server.register(ScimController, {

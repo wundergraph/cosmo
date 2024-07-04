@@ -141,7 +141,7 @@ export class OrganizationInvitationRepository {
     inviterUserId: string;
   }) {
     await this.db.transaction(async (tx) => {
-      const userRepo = new UserRepository(tx);
+      const userRepo = new UserRepository(this.logger, tx);
 
       if (!input.dbUser) {
         await userRepo.addUser({

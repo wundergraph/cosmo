@@ -344,7 +344,7 @@ export class FeatureFlagRepository {
 
     let createdBy = '';
     if (resp[0].creatorUserId) {
-      const userRepo = new UserRepository(this.db);
+      const userRepo = new UserRepository(this.logger, this.db);
       const user = await userRepo.byId(resp[0].creatorUserId);
       createdBy = user?.email || '';
     }

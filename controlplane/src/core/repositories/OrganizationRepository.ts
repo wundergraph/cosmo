@@ -1233,15 +1233,9 @@ export class OrganizationRepository {
     return list;
   }
 
-  public async canUserBeDeleted(id: string): Promise<{
-    isSafe: boolean;
-    soloOrganizations: OrganizationDTO[];
-    unsafeOrganizations: OrganizationDTO[];
-    allMemberships: OrganizationDTO[];
-  }> {
-    let isSafe = true;
+  public async adminMemberships({ userId }: { userId: string }) {
+    const orgs = await this.memberships({ userId });
 
-    const orgs = await this.memberships({ userId: id });
     const orgsWhereUserIsAdmin = orgs.filter((o) => o.roles.includes('admin'));
 
     // We need to track these orgs to delete them since the user is the only member.
@@ -1264,15 +1258,33 @@ export class OrganizationRepository {
       const admins = members.filter((m) => m.roles.includes('admin'));
       if (admins.length === 1) {
         soloAdminManyMembersOrgs.push(org);
-        isSafe = false;
       }
     }
+
+    return {
+      soloAdminSoloMemberOrgs,
+      soloAdminManyMembersOrgs,
+      allMemberships: orgs,
+    };
+  }
+
+  public async canUserBeDeleted(id: string): Promise<{
+    isSafe: boolean;
+    soloOrganizations: OrganizationDTO[];
+    unsafeOrganizations: OrganizationDTO[];
+    allMemberships: OrganizationDTO[];
+  }> {
+    const { soloAdminManyMembersOrgs, soloAdminSoloMemberOrgs, allMemberships } = await this.adminMemberships({
+      userId: id,
+    });
+
+    const isSafe = soloAdminManyMembersOrgs.length === 0;
 
     return {
       isSafe,
       soloOrganizations: soloAdminSoloMemberOrgs,
       unsafeOrganizations: soloAdminManyMembersOrgs,
-      allMemberships: orgs,
+      allMemberships,
     };
   }
 }

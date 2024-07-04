@@ -1117,7 +1117,7 @@ export class FederatedGraphRepository {
       throw new Error('Failed to create token');
     }
 
-    const userRepo = new UserRepository(this.db);
+    const userRepo = new UserRepository(this.logger, this.db);
     const user = await userRepo.byId(input.createdBy);
 
     if (!user) {
