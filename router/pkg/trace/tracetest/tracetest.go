@@ -3,8 +3,6 @@ package tracetest
 import (
 	"testing"
 
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
@@ -15,7 +13,5 @@ func NewInMemoryExporter(t *testing.T) *tracetest.InMemoryExporter {
 	t.Cleanup(func() {
 		me.Reset()
 	})
-	otel.SetTracerProvider(trace.NewTracerProvider(trace.WithSyncer(me)))
-
 	return me
 }
