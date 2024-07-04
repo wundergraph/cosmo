@@ -31,6 +31,8 @@ const FeatureFlagOverview = ({
 }) => {
   const router = useRouter();
   const slug = router.query.slug as string;
+  const organizationSlug = router.query.organizationSlug as string;
+  const namespace = router.query.namespace as string;
 
   let content: React.ReactNode;
   if (featureSubgraphs.length === 0) {
@@ -74,8 +76,14 @@ const FeatureFlagOverview = ({
             <>
               This feature flag will be a part of compositions of this federated
               graph. Once the feature flag is composed succesfully, you can
-              query the feature flag in the{""}
-              <Link href=""></Link>
+              query the feature flag in the{" "}
+              <Link
+                href={`/${organizationSlug}/${namespace}/graph/${slug}/playground`}
+                className="text-sm text-primary"
+              >
+                playground
+              </Link>
+              .
             </>
           }
           actions={[]}
