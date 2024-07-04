@@ -263,7 +263,7 @@ func TestKafkaEvents(t *testing.T) {
 				require.NoError(t, clientCloseErr)
 			}()
 
-			xEnv.WaitForSubscriptionCount(1, time.Second*10)
+			xEnv.WaitForSubscriptionCount(2, time.Second*10)
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
@@ -347,7 +347,7 @@ func TestKafkaEvents(t *testing.T) {
 				require.NoError(t, clientErr)
 			}()
 
-			xEnv.WaitForSubscriptionCount(1, time.Second*10)
+			xEnv.WaitForSubscriptionCount(2, time.Second*10)
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 			produceKafkaMessage(t, xEnv, topics[1], `{"__typename":"Employee","id": 2,"update":{"name":"foo"}}`)
