@@ -6,8 +6,8 @@ import {
   DateRangePickerChangeHandler,
 } from "@/components/date-picker-with-range";
 import { EmptyState } from "@/components/empty-state";
+import { InfoTooltip } from "@/components/info-tooltip";
 import {
-  GraphContext,
   GraphPageLayout,
   getGraphLayout,
 } from "@/components/layout/graph-layout";
@@ -34,16 +34,15 @@ import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { formatDateTime } from "@/lib/format-date";
 import { createDateRange } from "@/lib/insights-helpers";
 import { NextPageWithLayout } from "@/lib/page";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@connectrpc/connect-query";
+import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getCompositions } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { FeatureFlagComposition, GraphComposition } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatDistanceToNow, formatISO } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import React, { useContext } from "react";
 import { MdNearbyError, MdVerifiedUser } from "react-icons/md";
-import { InfoTooltip } from "@/components/info-tooltip";
 
 const CompositionsPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -70,6 +69,7 @@ const CompositionsPage: NextPageWithLayout = () => {
       offset: (pageNumber - 1) * limit,
       startDate: formatISO(startDate),
       endDate: formatISO(endDate),
+      excludeFeatureFlagCompositions: true
     },
     {
       placeholderData: (prev) => prev,

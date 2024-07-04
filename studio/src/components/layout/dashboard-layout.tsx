@@ -18,7 +18,7 @@ import {
   useState,
 } from "react";
 import { AiOutlineAudit } from "react-icons/ai";
-import { MdOutlinePolicy } from "react-icons/md";
+import { MdOutlineFeaturedPlayList, MdOutlinePolicy } from "react-icons/md";
 import {
   PiBell,
   PiChartDonut,
@@ -114,6 +114,12 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         title: "Subgraphs",
         href: basePath + "/subgraphs",
         icon: <Component2Icon className="h-4 w-4" />,
+      },
+      {
+        title: "Feature Flags",
+        href: basePath + "/feature-flags",
+        icon: <MdOutlineFeaturedPlayList className="h-4 w-4" />,
+        matchExact: false,
       },
       {
         title: "Lint Policy",
@@ -224,6 +230,7 @@ export const getDashboardLayout = (
   items?: React.ReactNode,
   toolbar?: React.ReactNode,
   breadcrumbs?: React.ReactNode[],
+  noPadding?: boolean,
 ) => {
   return (
     <DashboardLayout>
@@ -234,6 +241,7 @@ export const getDashboardLayout = (
           items={items}
           toolbar={toolbar}
           breadcrumbs={breadcrumbs}
+          noPadding={noPadding}
         >
           {page}
         </TitleLayout>
