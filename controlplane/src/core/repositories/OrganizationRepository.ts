@@ -1264,7 +1264,7 @@ export class OrganizationRepository {
     return {
       soloAdminSoloMemberOrgs,
       soloAdminManyMembersOrgs,
-      allMemberships: orgs,
+      memberships: orgs,
     };
   }
 
@@ -1272,9 +1272,8 @@ export class OrganizationRepository {
     isSafe: boolean;
     soloOrganizations: OrganizationDTO[];
     unsafeOrganizations: OrganizationDTO[];
-    allMemberships: OrganizationDTO[];
   }> {
-    const { soloAdminManyMembersOrgs, soloAdminSoloMemberOrgs, allMemberships } = await this.adminMemberships({
+    const { soloAdminManyMembersOrgs, soloAdminSoloMemberOrgs } = await this.adminMemberships({
       userId: id,
     });
 
@@ -1284,7 +1283,6 @@ export class OrganizationRepository {
       isSafe,
       soloOrganizations: soloAdminSoloMemberOrgs,
       unsafeOrganizations: soloAdminManyMembersOrgs,
-      allMemberships,
     };
   }
 }

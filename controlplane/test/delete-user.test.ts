@@ -1,9 +1,20 @@
 import { randomUUID } from 'node:crypto';
-/* eslint-disable import/order */
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel, TestUser, UserTestData } from '../src/core/test-util.js';
+import { pino } from 'pino';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { joinLabel } from '@wundergraph/cosmo-shared';
+import { addSeconds, formatISO, subDays } from 'date-fns';
+import { UserRepository } from '../src/core/repositories/UserRepository.js';
+import { ApiKeyRepository } from '../src/core/repositories/ApiKeyRepository.js';
+import * as schema from '../src/db/schema.js';
+import { ApiKeyGenerator } from '../src/core/services/ApiGenerator.js';
+import Keycloak from '../src/core/services/Keycloak.js';
+import { AuthContext } from '../src/types/index.js';
 import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
+import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel, TestUser, UserTestData } from '../src/core/test-util.js';
+import { OidcRepository } from '../src/core/repositories/OidcRepository.js';
 import {
   createFederatedGraph,
   createThenPublishSubgraph,
@@ -11,18 +22,6 @@ import {
   SetupKeycloak,
   SetupTest,
 } from './test-util.js';
-import { pino } from 'pino';
-import { UserRepository } from '../src/core/repositories/UserRepository.js';
-import { ApiKeyRepository } from '../src/core/repositories/ApiKeyRepository.js';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import * as schema from '../src/db/schema.js';
-import { ApiKeyGenerator } from '../src/core/services/ApiGenerator.js';
-import { ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import Keycloak from '../src/core/services/Keycloak.js';
-import { AuthContext } from '../src/types/index.js';
-import { joinLabel } from '@wundergraph/cosmo-shared';
-import { addSeconds, formatISO, subDays } from 'date-fns';
-import { OidcRepository } from '../src/core/repositories/OidcRepository.js';
 
 let dbname = '';
 
@@ -138,7 +137,7 @@ const createTempUser = async (
   }
 };
 
-describe('Delete user tests', (ctx) => {
+describe.sequential('Delete user tests', (ctx) => {
   beforeAll(async () => {
     dbname = await beforeAllSetup();
   });

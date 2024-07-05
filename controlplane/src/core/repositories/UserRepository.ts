@@ -66,10 +66,10 @@ export class UserRepository {
     return this.db.transaction(async (tx) => {
       const orgRepo = new OrganizationRepository(this.logger, tx);
 
-      const { soloAdminSoloMemberOrgs, allMemberships } = await orgRepo.adminMemberships({ userId: input.id });
+      const { soloAdminSoloMemberOrgs, memberships } = await orgRepo.adminMemberships({ userId: input.id });
 
       // Remove keycloak user from all org groups
-      for (const org of allMemberships) {
+      for (const org of memberships) {
         const orgMember = await orgRepo.getOrganizationMember({
           organizationID: org.id,
           userID: input.id,

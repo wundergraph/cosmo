@@ -241,29 +241,50 @@ export const SetupKeycloak = async ({
 }) => {
   await keycloakClient.authenticateClient();
 
-  const existingRealm = keycloakClient.client.realms.findOne({
-    realm: realmName,
-  });
-  if (!existingRealm) {
+  try {
     await keycloakClient.client.realms.create({
       realm: realmName,
       enabled: true,
       displayName: realmName,
       registrationEmailAsUsername: true,
     });
+  } catch (e: any) {
+    if (e.response?.status !== 409) {
+      throw e;
+    }
   }
-  const id = await keycloakClient.addKeycloakUser({
-    email: userTestData.email,
-    realm: realmName,
-    isPasswordTemp: false,
-    password: 'wunder@123',
-    id: userTestData.userId,
-  });
-  await keycloakClient.seedGroup({
-    realm: realmName,
-    userID: id,
-    organizationSlug: userTestData.organizationSlug,
-  });
+
+  let id = '';
+  try {
+    id = await keycloakClient.addKeycloakUser({
+      email: userTestData.email,
+      realm: realmName,
+      isPasswordTemp: false,
+      password: 'wunder@123',
+      id: userTestData.userId,
+    });
+  } catch (e: any) {
+    if (e.response?.status === 409) {
+      const res = await keycloakClient.client.users.find({
+        realm: realmName,
+        email: userTestData.email,
+      });
+      id = res[0].id!;
+    } else {
+      throw e;
+    }
+  }
+  try {
+    await keycloakClient.seedGroup({
+      realm: realmName,
+      userID: id,
+      organizationSlug: userTestData.organizationSlug,
+    });
+  } catch (e: any) {
+    if (e.response?.status !== 409) {
+      throw e;
+    }
+  }
   return id;
 };
 
