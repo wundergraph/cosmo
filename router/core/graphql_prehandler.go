@@ -111,9 +111,6 @@ func (p *PreHandler) getBodyReadBuffer(preferredSize int64) *bytes.Buffer {
 }
 
 func (p *PreHandler) releaseBodyReadBuffer(buf *bytes.Buffer) {
-	if buf == nil {
-		return
-	}
 	buf.Reset()
 	p.bodyReadBuffers.Put(buf)
 }
@@ -202,7 +199,6 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		// XXX: This buffer needs to be returned to the pool only
 		// AFTER we're done with body (retrieved from parser.ReadBody())
 		buf := h.getBodyReadBuffer(r.ContentLength)
-		defer h.releaseBodyReadBuffer(buf)
 
 		if strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
 			if !h.fileUploadEnabled {
@@ -211,6 +207,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 					statusCode: http.StatusOK,
 				}
 				writeOperationError(r, w, requestLogger, finalErr)
+				h.releaseBodyReadBuffer(buf)
 				return
 			}
 
@@ -221,6 +218,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			if err != nil {
 				finalErr = err
 				writeOperationError(r, w, requestLogger, finalErr)
+				h.releaseBodyReadBuffer(buf)
 				return
 			}
 
@@ -243,6 +241,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				}
 
 				writeOperationError(r, w, requestLogger, err)
+				h.releaseBodyReadBuffer(buf)
 				return
 			}
 		}
@@ -272,6 +271,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			engineParseSpan.End()
 
 			writeOperationError(r, w, requestLogger, err)
+			h.releaseBodyReadBuffer(buf)
 			return
 		}
 		defer func() {
@@ -294,6 +294,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			engineParseSpan.End()
 
 			writeOperationError(r, w, requestLogger, err)
+			h.releaseBodyReadBuffer(buf)
 			return
 		}
 
@@ -304,7 +305,6 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 
 		h.releaseBodyReadBuffer(buf)
-		buf = nil
 
 		if blockedErr := h.operationBlocker.OperationIsBlocked(operationKit.parsedOperation); blockedErr != nil {
 			// Mark the root span of the router as failed, so we can easily identify failed requests
