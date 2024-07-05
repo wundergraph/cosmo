@@ -48,6 +48,27 @@ func (r *queryResolver) Delay(ctx context.Context, response string, ms int) (str
 	return response, nil
 }
 
+// BigResponse is the resolver for the bigResponse field.
+func (r *queryResolver) BigResponse(ctx context.Context, bigObjects int, nestedObjects int, deeplyNestedObjects int) ([]*model.BigObject, error) {
+	big := make([]*model.BigObject, bigObjects)
+	for i := 0; i < bigObjects; i++ {
+		nested := make([]*model.NestedObject, nestedObjects)
+		for i := 0; i < nestedObjects; i++ {
+			deeplyNested := make([]*model.DeeplyNestedObject, deeplyNestedObjects)
+			for i := 0; i < deeplyNestedObjects; i++ {
+				deeplyNested[i] = &deeplyNestedObject
+			}
+			nested[i] = &model.NestedObject{
+				DeeplyNestedObjects: deeplyNested,
+			}
+		}
+		big[i] = &model.BigObject{
+			NestedObjects: nested,
+		}
+	}
+	return big, nil
+}
+
 // HeaderValue is the resolver for the headerValue field.
 func (r *subscriptionResolver) HeaderValue(ctx context.Context, name string, repeat *int) (<-chan *model.TimestampedString, error) {
 	header := injector.Header(ctx)
@@ -169,3 +190,40 @@ func (r *Resolver) Subscription() generated.SubscriptionResolver { return &subsc
 
 type queryResolver struct{ *Resolver }
 type subscriptionResolver struct{ *Resolver }
+
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//     it when you're done.
+//   - You have helper methods in this file. Move them out to keep these resolver files clean.
+var (
+	deeplyNestedObject = model.DeeplyNestedObject{
+		AFieldOnDeeplyNestedObject: "a field on deeply nested object - lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur excepteur sint occaecat cupidatat non proident sunt in culpa qui officia deserunt mollit anim id est laborum",
+		BFieldOnDeeplyNestedObject: 1,
+		CFieldOnDeeplyNestedObject: true,
+		DFieldOnDeeplyNestedObject: 2,
+		EFieldOnDeeplyNestedObject: "e field on deeply nested object - lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur excepteur sint occaecat cupidatat non proident sunt in culpa qui officia deserunt mollit anim id est laborum",
+		FFieldOnDeeplyNestedObject: 3,
+		GFieldOnDeeplyNestedObject: false,
+		HFieldOnDeeplyNestedObject: 4,
+		IFieldOnDeeplyNestedObject: "i field on deeply nested object - lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur excepteur sint occaecat cupidatat non proident sunt in culpa qui officia deserunt mollit anim id est laborum",
+		JFieldOnDeeplyNestedObject: 5,
+		KFieldOnDeeplyNestedObject: true,
+		LFieldOnDeeplyNestedObject: 6,
+		MFieldOnDeeplyNestedObject: "m field on deeply nested object - lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur excepteur sint occaecat cupidatat non proident sunt in culpa qui officia deserunt mollit anim id est laborum",
+		NFieldOnDeeplyNestedObject: 7,
+		OFieldOnDeeplyNestedObject: false,
+		PFieldOnDeeplyNestedObject: 8,
+		QFieldOnDeeplyNestedObject: "q field on deeply nested object - lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur excepteur sint occaecat cupidatat non proident sunt in culpa qui officia deserunt mollit anim id est laborum",
+		RFieldOnDeeplyNestedObject: 9,
+		SFieldOnDeeplyNestedObject: true,
+		TFieldOnDeeplyNestedObject: 10,
+		UFieldOnDeeplyNestedObject: "u field on deeply nested object - lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur excepteur sint occaecat cupidatat non proident sunt in culpa qui officia deserunt mollit anim id est laborum",
+		VFieldOnDeeplyNestedObject: 11,
+		WFieldOnDeeplyNestedObject: false,
+		XFieldOnDeeplyNestedObject: 12,
+		YFieldOnDeeplyNestedObject: "y field on deeply nested object - lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur excepteur sint occaecat cupidatat non proident sunt in culpa qui officia deserunt mollit anim id est laborum",
+		ZFieldOnDeeplyNestedObject: 13,
+	}
+)

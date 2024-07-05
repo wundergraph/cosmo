@@ -673,7 +673,7 @@ func (p *OperationProcessor) freeKit(kit *parseKit) {
 
 func (p *OperationProcessor) entityTooLarge() error {
 	return &inputError{
-		message:    "request body too large",
+		message:    fmt.Sprintf("request body too large, max size is %d bytes", p.maxOperationSizeInBytes),
 		statusCode: http.StatusRequestEntityTooLarge,
 	}
 }

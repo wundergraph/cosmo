@@ -1374,6 +1374,6 @@ func TestRequestBodySizeLimit(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, http.StatusRequestEntityTooLarge, res.Response.StatusCode)
-		require.Equal(t, `{"errors":[{"message":"request body too large"}],"data":null}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"request body too large, max size is 10 bytes"}],"data":null}`, res.Body)
 	})
 }

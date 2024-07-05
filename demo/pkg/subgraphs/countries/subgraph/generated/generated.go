@@ -240,7 +240,10 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 }
 
 var sources = []*ast.Source{
-	{Name: "../schema.graphqls", Input: `# Using a nested key field simply because it can showcase potential bug
+	{Name: "../schema.graphqls", Input: `extend schema
+@link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@authenticated", "@composeDirective", "@external", "@extends", "@inaccessible", "@interfaceObject", "@override", "@provides", "@key", "@requires", "@requiresScopes", "@shareable", "@tag"])
+
+# Using a nested key field simply because it can showcase potential bug
 # vectors / Federation capabilities.
 type Country @key(fields: "key { name }") {
   key: CountryKey!
