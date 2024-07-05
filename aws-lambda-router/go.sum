@@ -281,10 +281,10 @@ github.com/ugorji/go/codec v1.2.12 h1:9LC83zGrHhuUA9l16C9AHXAqEV/2wBQ4nkvumAE65E
 github.com/ugorji/go/codec v1.2.12/go.mod h1:UNopzCgEMSXjBc6AOMqYvWC1ktqTAfzJZUZgYf6w6lg=
 github.com/vektah/gqlparser/v2 v2.5.11 h1:JJxLtXIoN7+3x6MBdtIP59TP1RANnY7pXOaDnADQSf8=
 github.com/vektah/gqlparser/v2 v2.5.11/go.mod h1:1rCcfwB2ekJofmluGWXMSEnPMZgbxzwj6FaZ/4OT8Cc=
-github.com/wundergraph/cosmo/router v0.0.0-20240704084646-ab606af9d14c h1:w0H2Mjkm4d6AveQSdHr4ogfyMSoLSzOptq/MFxSf6B8=
-github.com/wundergraph/cosmo/router v0.0.0-20240704084646-ab606af9d14c/go.mod h1:WTJhtxZsj62qGy+vWxmoEkAdxZEUTgOsLCw7uoQ+XFk=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.56 h1:TjU4SSmGkEUYHg2sK03QPVmDtgK2NWbJlV/j5LeAVMM=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.56/go.mod h1:YCJyt5TSr4luj4YWFGk93ayC/0KwHVEJmhgcNhcfLBc=
+github.com/wundergraph/cosmo/router v0.0.0-20240705122303-9dbce2fc3ebe h1:GJI6CcNnpHKm626ncwEdjsYisGbB1Lib1yGE5B05AAs=
+github.com/wundergraph/cosmo/router v0.0.0-20240705122303-9dbce2fc3ebe/go.mod h1:ViY6FYHMXNEowmsXixiJh2/aCkpfy4VYYSQo9QurCwE=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.59 h1:kUes0NP6gW13ITBZJ5VN7P4/UMReedLVtI7Mt50dAuU=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.59/go.mod h1:YCJyt5TSr4luj4YWFGk93ayC/0KwHVEJmhgcNhcfLBc=
 github.com/yusufpapurcu/wmi v1.2.4 h1:zFUKzehAFReQwLys1b/iSMl+JQGSCSjtVqQn9bBrPo0=
 github.com/yusufpapurcu/wmi v1.2.4/go.mod h1:SBZ9tNy3G9/m5Oi98Zks0QjeHVDvuK0qfxQmPyzfmi0=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1 h1:aFJWCqJMNjENlcleuuOkGAPH82y0yULBScfXcIEdS24=

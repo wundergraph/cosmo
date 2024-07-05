@@ -127,7 +127,7 @@ func TestMultipleFilesUpload_NoFilesProvided(t *testing.T) {
 			Variables: []byte(`{"files":null}`),
 		})
 		fmt.Println(res.Body)
-		require.JSONEq(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at Path 'mutation'.","extensions":{"errors":[{"message":"could not render fetch input","path":[]}]}},{"message":"Cannot return null for non-nullable field 'Mutation.multipleUpload'.","path":["multipleUpload"]}],"data":null}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at Path 'mutation'.","extensions":{"errors":[{"message":"cannot be null","path":["variable","files"],"extensions":{"code":"GRAPHQL_VALIDATION_FAILED"}}],"statusCode":422}},{"message":"Cannot return null for non-nullable field 'Mutation.multipleUpload'.","path":["multipleUpload"]}],"data":null}`, res.Body)
 	})
 }
 
