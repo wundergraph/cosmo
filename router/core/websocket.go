@@ -776,7 +776,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 			h.logger.Warn("Resolving GraphQL response", zap.Error(err))
 			buf := pool.GetBytesBuffer()
 			defer pool.PutBytesBuffer(buf)
-			h.graphqlHandler.WriteError(resolveCtx, err, p.Response, rw, buf)
+			h.graphqlHandler.WriteError(resolveCtx, err, p.Response, rw)
 		}
 		_ = rw.Flush()
 		rw.Complete()
@@ -786,7 +786,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 			h.logger.Warn("Resolving GraphQL subscription", zap.Error(err))
 			buf := pool.GetBytesBuffer()
 			defer pool.PutBytesBuffer(buf)
-			h.graphqlHandler.WriteError(resolveCtx, err, p.Response.Response, rw, buf)
+			h.graphqlHandler.WriteError(resolveCtx, err, p.Response.Response, rw)
 			return
 		}
 	}

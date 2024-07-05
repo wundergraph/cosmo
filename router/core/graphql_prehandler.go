@@ -407,7 +407,6 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		)
 
 		opContext, err := h.planner.Plan(operationKit.parsedOperation, clientInfo, OperationProtocolHTTP, traceOptions)
-
 		if err != nil {
 			finalErr = err
 
