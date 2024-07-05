@@ -12,6 +12,7 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -69,6 +70,8 @@ type (
 		runtimeMetrics          *rmetric.RuntimeMetrics
 		metricStore             rmetric.Store
 		baseRouterConfigVersion string
+		cdnOperationClient      *cdn.PersistentOperationClient
+		cancel                  context.CancelFunc
 	}
 )
 
@@ -166,6 +169,14 @@ func (s *server) buildMux(ctx context.Context,
 	} else {
 		planCache = NewNoopExecutionPlanCache()
 	}
+
+	// Close the plan cache when the context is done.
+	// This is happening after the server is shutdown.
+	// This will stop all goroutines and free up resources
+	go func() {
+		<-ctx.Done()
+		planCache.Close()
+	}()
 
 	routerMetrics := NewRouterMetrics(&routerMetricsConfig{
 		metrics:             s.metricStore,
@@ -338,7 +349,7 @@ func (s *server) buildMux(ctx context.Context,
 	operationParser := NewOperationParser(OperationParserOptions{
 		Executor:                       executor,
 		MaxOperationSizeInBytes:        int64(s.routerTrafficConfig.MaxRequestBodyBytes),
-		PersistentOpClient:             s.cdnPersistentOpClient,
+		PersistentOpClient:             s.cdnOperationClient,
 		EnablePersistedOperationsCache: s.engineExecutionConfiguration.EnablePersistedOperationsCache,
 	})
 	operationPlanner := NewOperationPlanner(executor, planCache)
@@ -561,6 +572,11 @@ func (s *server) Shutdown(ctx context.Context) error {
 				}
 			}
 		}
+	}
+
+	// Shutdown the CDN operation client and free up resources
+	if s.cdnOperationClient != nil {
+		s.cdnOperationClient.Close()
 	}
 
 	return finalErr

@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/graphiql"
 	rjwt "github.com/wundergraph/cosmo/router/internal/jwt"
@@ -41,7 +42,6 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/internal/controlplane/selfregister"
 	"github.com/wundergraph/cosmo/router/internal/debug"
@@ -148,7 +148,6 @@ type (
 		readinessCheckPath       string
 		livenessCheckPath        string
 		cdnConfig                config.CDNConfiguration
-		cdnPersistentOpClient    *cdn.PersistentOperationClient
 		eventsConfig             config.EventsConfiguration
 		prometheusServer         *http.Server
 		modulesConfig            map[string]interface{}
@@ -439,17 +438,6 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.logger.Warn("No graph token provided. The following features are disabled. Not recommended for Production.", zap.Strings("features", disabledFeatures))
 	}
 
-	if r.graphApiToken != "" {
-		routerCDN, err := cdn.NewPersistentOperationClient(r.cdnConfig.URL, r.graphApiToken, cdn.PersistentOperationsOptions{
-			CacheSize: r.cdnConfig.CacheSize.Uint64(),
-			Logger:    r.logger,
-		})
-		if err != nil {
-			return nil, err
-		}
-		r.cdnPersistentOpClient = routerCDN
-	}
-
 	if r.developmentMode {
 		r.logger.Warn("Development mode enabled. This should only be used for testing purposes")
 	}
@@ -464,9 +452,9 @@ func NewRouter(opts ...Option) (*Router, error) {
 	return r, nil
 }
 
-// UpdateServer creates a new server and swaps the active server with the new one. The old server is shutdown gracefully.
+// updateServer creates a new server and swaps the active server with the new one. The old server is shutdown gracefully.
 // When the router can't be swapped due to an error the old server kept running. Not safe for concurrent use.
-func (r *Router) UpdateServer(ctx context.Context, cfg *nodev1.RouterConfig) (Server, error) {
+func (r *Router) updateServer(ctx context.Context, cfg *nodev1.RouterConfig) (*server, error) {
 	// Rebuild server with new router config
 	// In case of an error, we return early and keep the old server running
 	newServer, err := r.newServer(ctx, cfg)
@@ -477,6 +465,9 @@ func (r *Router) UpdateServer(ctx context.Context, cfg *nodev1.RouterConfig) (Se
 
 	// Shutdown old server
 	if r.activeServer != nil {
+
+		// Cancel the server context after the graceful shutdown
+		defer r.activeServer.cancel()
 
 		// Respect grace period
 		if r.gracePeriod > 0 {
@@ -507,8 +498,7 @@ func (r *Router) UpdateServer(ctx context.Context, cfg *nodev1.RouterConfig) (Se
 }
 
 func (r *Router) updateServerAndStart(ctx context.Context, cfg *nodev1.RouterConfig) error {
-
-	if _, err := r.UpdateServer(ctx, cfg); err != nil {
+	if _, err := r.updateServer(ctx, cfg); err != nil {
 		return err
 	}
 
@@ -599,7 +589,7 @@ func (r *Router) initModules(ctx context.Context) error {
 // NewServer prepares a new server instance but does not start it. The method should only be used when you want to bootstrap
 // the server manually otherwise you can use Router.Start(). You're responsible for setting health checks status to ready with Server.HealthChecks().
 // The server can be shutdown with Router.Shutdown(). Use core.WithStaticRouterConfig to pass the initial config otherwise the Router will
-// try to fetch the config from the control plane. You can swap the router config by using Router.UpdateServer().
+// try to fetch the config from the control plane. You can swap the router config by using Router.updateServer().
 func (r *Router) NewServer(ctx context.Context) (Server, error) {
 	if r.shutdown {
 		return nil, fmt.Errorf("router is shutdown. Create a new instance with router.NewRouter()")
@@ -612,7 +602,7 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 	// Start the server with the static config without polling
 	if r.staticRouterConfig != nil {
 		r.logger.Info("Static router config provided. Polling is disabled. Updating router config is only possible by providing a config.")
-		return r.UpdateServer(ctx, r.staticRouterConfig)
+		return r.updateServer(ctx, r.staticRouterConfig)
 	}
 
 	// when no static config is provided and no poller is configured, we can't start the server
@@ -625,7 +615,7 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 		return nil, fmt.Errorf("failed to get initial router config: %w", err)
 	}
 
-	if _, err := r.UpdateServer(ctx, routerConfig); err != nil {
+	if _, err := r.updateServer(ctx, routerConfig); err != nil {
 		r.logger.Error("Failed to start server with initial config", zap.Error(err))
 		return nil, err
 	}
@@ -776,6 +766,7 @@ func (r *Router) Start(ctx context.Context) error {
 	// Start the server with the static config without polling
 	if r.staticRouterConfig != nil {
 		r.logger.Info("Static router config provided. Polling is disabled. Updating router config is only possible by providing a config.")
+
 		return r.updateServerAndStart(ctx, r.staticRouterConfig)
 	}
 
@@ -814,16 +805,30 @@ func (r *Router) Start(ctx context.Context) error {
 // newServer creates a new server instance.
 // All stateful data is copied from the Router over to the new server instance. Not safe for concurrent use.
 func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfig) (*server, error) {
+	ctx, serverCancel := context.WithCancel(ctx)
+
 	s := &server{
 		Config:                  r.Config,
 		websocketStats:          r.WebsocketStats,
 		metricStore:             rmetric.NewNoopMetrics(),
 		executionTransport:      newHTTPTransport(r.subgraphTransportOptions),
 		baseRouterConfigVersion: routerConfig.GetVersion(),
+		cancel:                  serverCancel,
 		pubSubProviders: &EnginePubSubProviders{
 			nats:  map[string]pubsub_datasource.NatsPubSub{},
 			kafka: map[string]pubsub_datasource.KafkaPubSub{},
 		},
+	}
+
+	if s.graphApiToken != "" {
+		cdnPersistentOpClient, err := cdn.NewPersistentOperationClient(s.cdnConfig.URL, s.graphApiToken, cdn.PersistentOperationsOptions{
+			CacheSize: r.cdnConfig.CacheSize.Uint64(),
+			Logger:    s.logger,
+		})
+		if err != nil {
+			return nil, err
+		}
+		s.cdnOperationClient = cdnPersistentOpClient
 	}
 
 	baseOtelAttributes := []attribute.KeyValue{

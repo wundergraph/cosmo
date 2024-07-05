@@ -57,6 +57,15 @@ type WebsocketMiddlewareOptions struct {
 
 func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions) func(http.Handler) http.Handler {
 
+	handlerPool := pond.New(
+		64,
+		0,
+		pond.Context(ctx),
+		pond.IdleTimeout(time.Second*30),
+		pond.Strategy(pond.Lazy()),
+		pond.MinWorkers(8),
+	)
+
 	return func(next http.Handler) http.Handler {
 		handler := &WebsocketHandler{
 			ctx:                ctx,
@@ -71,6 +80,7 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 			stats:              opts.Stats,
 			readTimeout:        opts.ReadTimeout,
 			config:             opts.WebSocketConfiguration,
+			handlerPool:        handlerPool,
 		}
 		if opts.WebSocketConfiguration != nil && opts.WebSocketConfiguration.AbsintheProtocol.Enabled {
 			handler.absintheHandlerEnabled = true
@@ -111,14 +121,6 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 			handler.forwardQueryParamsConfig.withStaticAllowList = len(handler.forwardQueryParamsConfig.staticAllowList) > 0
 			handler.forwardQueryParamsConfig.withRegexAllowList = len(handler.forwardQueryParamsConfig.regexAllowList) > 0
 		}
-		handler.handlerPool = pond.New(
-			64,
-			0,
-			pond.Context(ctx),
-			pond.IdleTimeout(time.Second*30),
-			pond.Strategy(pond.Lazy()),
-			pond.MinWorkers(8),
-		)
 		if opts.EnableWebSocketEpollKqueue {
 			poller, err := epoller.NewPoller(opts.EpollKqueueConnBufferSize, opts.EpollKqueuePollTimeout)
 			if err == nil {

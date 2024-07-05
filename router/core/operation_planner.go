@@ -30,6 +30,7 @@ type OperationPlanner struct {
 type ExecutionPlanCache interface {
 	Get(key interface{}) (interface{}, bool)
 	Set(key, value interface{}, cost int64) bool
+	Close()
 }
 
 func NewNoopExecutionPlanCache() ExecutionPlanCache {
@@ -37,6 +38,8 @@ func NewNoopExecutionPlanCache() ExecutionPlanCache {
 }
 
 type noopExecutionPlanCache struct{}
+
+func (n *noopExecutionPlanCache) Close() {}
 
 func (n *noopExecutionPlanCache) Get(key interface{}) (interface{}, bool) {
 	return nil, false

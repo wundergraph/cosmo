@@ -224,3 +224,7 @@ func NewPersistentOperationClient(endpoint string, token string, opts Persistent
 		},
 	}, nil
 }
+
+func (cdn *PersistentOperationClient) Close() {
+	cdn.operationsCache.cache.Close()
+}
