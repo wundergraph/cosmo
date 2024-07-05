@@ -28,11 +28,11 @@ func configureAuth(t *testing.T) ([]authentication.Authenticator, *jwks.Server) 
 	authServer, err := jwks.NewServer(t)
 	require.NoError(t, err)
 	t.Cleanup(authServer.Close)
-	authOptions := authentication.JWKSAuthenticatorOptions{
+	authOptions := authentication.HttpHeaderAuthenticatorOptions{
 		Name: jwksName,
 		URL:  authServer.JWKSURL(),
 	}
-	authenticator, err := authentication.NewJWKSAuthenticator(authOptions)
+	authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
 	require.NoError(t, err)
 	return []authentication.Authenticator{authenticator}, authServer
 }
@@ -610,13 +610,13 @@ func TestAuthenticationWithCustomHeaders(t *testing.T) {
 	authServer, err := jwks.NewServer(t)
 	require.NoError(t, err)
 	t.Cleanup(authServer.Close)
-	authOptions := authentication.JWKSAuthenticatorOptions{
+	authOptions := authentication.HttpHeaderAuthenticatorOptions{
 		Name:                jwksName,
 		URL:                 authServer.JWKSURL(),
 		HeaderNames:         []string{headerName},
 		HeaderValuePrefixes: []string{headerValuePrefix},
 	}
-	authenticator, err := authentication.NewJWKSAuthenticator(authOptions)
+	authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
 	require.NoError(t, err)
 	authenticators := []authentication.Authenticator{authenticator}
 
@@ -744,7 +744,7 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 	t.Cleanup(authServer2.Close)
 
 	authenticator1HeaderValuePrefixes := []string{"Bearer"}
-	authenticator1, err := authentication.NewJWKSAuthenticator(authentication.JWKSAuthenticatorOptions{
+	authenticator1, err := authentication.NewHttpHeaderAuthenticator(authentication.HttpHeaderAuthenticatorOptions{
 		Name:                "1",
 		HeaderValuePrefixes: authenticator1HeaderValuePrefixes,
 		URL:                 authServer1.JWKSURL(),
@@ -752,7 +752,7 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 	require.NoError(t, err)
 
 	authenticator2HeaderValuePrefixes := []string{"", "Bearer", "Token"}
-	authenticator2, err := authentication.NewJWKSAuthenticator(authentication.JWKSAuthenticatorOptions{
+	authenticator2, err := authentication.NewHttpHeaderAuthenticator(authentication.HttpHeaderAuthenticatorOptions{
 		Name:                "2",
 		HeaderValuePrefixes: authenticator2HeaderValuePrefixes,
 		URL:                 authServer2.JWKSURL(),
@@ -849,12 +849,12 @@ func TestAuthenticationOverWebsocket(t *testing.T) {
 	require.NoError(t, err)
 	defer authServer.Close()
 
-	jwksOpts := authentication.JWKSAuthenticatorOptions{
+	jwksOpts := authentication.HttpHeaderAuthenticatorOptions{
 		Name: jwksName,
 		URL:  authServer.JWKSURL(),
 	}
 
-	authenticator, err := authentication.NewJWKSAuthenticator(jwksOpts)
+	authenticator, err := authentication.NewHttpHeaderAuthenticator(jwksOpts)
 	require.NoError(t, err)
 	authenticators := []authentication.Authenticator{authenticator}
 

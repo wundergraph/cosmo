@@ -92,7 +92,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 			if cfg.WebSocket.Authentication.FromInitialPayload.Enabled {
 				opts := authentication.WebsocketInitialPayloadAuthenticatorOptions{
 					TokenDecoder:        tokenDecoder,
-					SecretKey:           cfg.WebSocket.Authentication.FromInitialPayload.SecretKey,
+					Key:                 cfg.WebSocket.Authentication.FromInitialPayload.Key,
 					HeaderValuePrefixes: auth.JWKS.HeaderValuePrefixes,
 				}
 				authenticator, err = authentication.NewWebsocketInitialPayloadAuthenticator(opts)

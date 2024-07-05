@@ -356,15 +356,25 @@ type ComplianceConfig struct {
 	AnonymizeIP AnonymizeIpConfiguration `yaml:"anonymize_ip,omitempty"`
 }
 
+type ExportTokenToRequestHeaderConfiguration struct {
+	// Enabled true if the Router should export the token to the client request header
+	Enabled bool `yaml:"enabled" default:"true"`
+	// HeaderKey is the name of the header where the token should be exported to
+	HeaderKey string `yaml:"header_key,omitempty" default:"Authorization"`
+}
+
 type WebSocketAuthenticationConfiguration struct {
 	// Tells if the Router should look for the JWT Token in the initial payload of the WebSocket Connection
 	FromInitialPayload InitialPayloadAuthenticationConfiguration `yaml:"from_initial_payload,omitempty"`
 }
+
 type InitialPayloadAuthenticationConfiguration struct {
 	// When true the Router should look for the token in the initial payload of the WebSocket Connection
 	Enabled bool `yaml:"enabled,omitempty" default:"false"`
 	// The key in the initial payload where the token is stored
-	SecretKey string `yaml:"secret_key,omitempty" default:"Authorization"`
+	Key string `yaml:"key,omitempty" default:"Authorization"`
+	// ExportTokenToRequestHeader represents the configuration for exporting the token to the client request header.
+	ExportTokenToRequestHeader ExportTokenToRequestHeaderConfiguration `yaml:"export_token_to_client_request_header"`
 }
 
 type WebSocketConfiguration struct {

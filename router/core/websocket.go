@@ -308,7 +308,8 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	}
 
 	// Authenticate the connection using the initial payload
-	if h.config.Authentication.FromInitialPayload.Enabled {
+	fromInitialPayloadConfig := h.config.Authentication.FromInitialPayload
+	if fromInitialPayloadConfig.Enabled {
 		// Setting the initialPayload in the context to be used by the websocketInitialPayloadAuthenticator
 		r = r.WithContext(authentication.WithWebsocketInitialPayloadContextKey(r.Context(), handler.initialPayload))
 
@@ -321,6 +322,14 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 			}
 			http.Error(w, http.StatusText(statusCode), statusCode)
 			return
+		}
+
+		// Export the token from the initial payload to the request header
+		if fromInitialPayloadConfig.ExportTokenToRequestHeader.Enabled {
+			var initialPayloadMap map[string]interface{}
+			json.Unmarshal(handler.initialPayload, &initialPayloadMap)
+			jwtToken := initialPayloadMap[fromInitialPayloadConfig.Key].(string)
+			r.Header.Set(fromInitialPayloadConfig.ExportTokenToRequestHeader.HeaderKey, jwtToken)
 		}
 	}
 

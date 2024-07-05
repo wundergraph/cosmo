@@ -183,7 +183,7 @@
               "description": "The configuration used to tell the Router to look for the JWT (JSON Web Token) in the initial payload of the WebSocket Connection.",
               "additionalProperties": false,
               "properties": {
-                "secret_key": {
+                "key": {
                   "type": "string",
                   "default": "Authorization",
                   "description": "The name of the property holding the JWT (JSON Web Token) value. The default value is 'Authorization'"
@@ -192,6 +192,23 @@
                   "type": "boolean",
                   "description": "This configuration indicates if the Router should look for the JWT (JSON Web Token) in the initial payload of the WebSocket Connection. The default value is 'false'.",
                   "default": false
+                },
+                "export_token_to_client_request_header": {
+                  "type": "object",
+                  "description": "The configuration used to export the JWT (JSON Web Token) to the client request header.",
+                  "additionalProperties": false,
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "This configuration indicates if the Router will export the JWT (JSON Web Token) to the client request header. The default value is 'false'.",
+                      "default": false
+                    },
+                    "header_key": {
+                      "type": "string",
+                      "description": "The name of the header property that will have the JWT (JSON Web Token) value. The default value is 'Authorization'",
+                      "default": "Authorization"
+                    }
+                  }
                 }
               }
             }

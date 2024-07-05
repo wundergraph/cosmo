@@ -72,11 +72,11 @@ func TestWebSockets(t *testing.T) {
 		authServer, err := jwks.NewServer(t)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
-		authOptions := authentication.JWKSAuthenticatorOptions{
+		authOptions := authentication.HttpHeaderAuthenticatorOptions{
 			Name: jwksName,
 			URL:  authServer.JWKSURL(),
 		}
-		authenticator, err := authentication.NewJWKSAuthenticator(authOptions)
+		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
 		require.NoError(t, err)
 		authenticators := []authentication.Authenticator{authenticator}
 
@@ -120,11 +120,11 @@ func TestWebSockets(t *testing.T) {
 		authServer, err := jwks.NewServer(t)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
-		authOptions := authentication.JWKSAuthenticatorOptions{
+		authOptions := authentication.HttpHeaderAuthenticatorOptions{
 			Name: jwksName,
 			URL:  authServer.JWKSURL(),
 		}
-		authenticator, err := authentication.NewJWKSAuthenticator(authOptions)
+		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
 		require.NoError(t, err)
 		authenticators := []authentication.Authenticator{authenticator}
 
@@ -168,11 +168,11 @@ func TestWebSockets(t *testing.T) {
 		authServer, err := jwks.NewServer(t)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
-		authOptions := authentication.JWKSAuthenticatorOptions{
+		authOptions := authentication.HttpHeaderAuthenticatorOptions{
 			Name: jwksName,
 			URL:  authServer.JWKSURL(),
 		}
-		authenticator, err := authentication.NewJWKSAuthenticator(authOptions)
+		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
 		require.NoError(t, err)
 		authenticators := []authentication.Authenticator{authenticator}
 
@@ -224,11 +224,11 @@ func TestWebSockets(t *testing.T) {
 		authServer, err := jwks.NewServer(t)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
-		authOptions := authentication.JWKSAuthenticatorOptions{
+		authOptions := authentication.HttpHeaderAuthenticatorOptions{
 			Name: jwksName,
 			URL:  authServer.JWKSURL(),
 		}
-		authenticator, err := authentication.NewJWKSAuthenticator(authOptions)
+		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
 		require.NoError(t, err)
 		authenticators := []authentication.Authenticator{authenticator}
 
