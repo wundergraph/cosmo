@@ -221,9 +221,6 @@ func TestKafkaEvents(t *testing.T) {
 
 			surl := xEnv.GraphQLSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
-			t.Cleanup(func() {
-				_ = client.Close()
-			})
 
 			wg := &sync.WaitGroup{}
 			wg.Add(2)
@@ -251,23 +248,23 @@ func TestKafkaEvents(t *testing.T) {
 				require.NoError(t, clientErr)
 			}()
 
-			go func() {
-				wg.Wait()
-				unsubscribeErr := client.Unsubscribe(subscriptionOneID)
-				require.NoError(t, unsubscribeErr)
-
-				unsubscribeErr = client.Unsubscribe(subscriptionTwoID)
-				require.NoError(t, unsubscribeErr)
-
-				clientCloseErr := client.Close()
-				require.NoError(t, clientCloseErr)
-			}()
-
-			xEnv.WaitForSubscriptionCount(1, time.Second*10)
+			xEnv.WaitForSubscriptionCount(2, time.Second*10)
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
 			xEnv.WaitForMessagesSent(2, time.Second*10)
+
+			wg.Wait()
+
+			unsubscribeErr := client.Unsubscribe(subscriptionOneID)
+			require.NoError(t, unsubscribeErr)
+
+			unsubscribeErr = client.Unsubscribe(subscriptionTwoID)
+			require.NoError(t, unsubscribeErr)
+
+			clientCloseErr := client.Close()
+			require.NoError(t, clientCloseErr)
+
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
 			xEnv.WaitForConnectionCount(0, time.Second*10)
 		})
@@ -347,7 +344,7 @@ func TestKafkaEvents(t *testing.T) {
 				require.NoError(t, clientErr)
 			}()
 
-			xEnv.WaitForSubscriptionCount(1, time.Second*10)
+			xEnv.WaitForSubscriptionCount(2, time.Second*10)
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 			produceKafkaMessage(t, xEnv, topics[1], `{"__typename":"Employee","id": 2,"update":{"name":"foo"}}`)

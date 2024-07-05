@@ -7,9 +7,14 @@ update-snapshot:
 test:
 	go test -race ./...
 
+test-fresh: clean-testcache test
+
 lint:
 	go vet ./...
 	staticcheck ./...
+
+clean-testcache:
+	go clean -testcache
 
 bump-engine:
 	go get github.com/wundergraph/graphql-go-tools/v2@upgrade
