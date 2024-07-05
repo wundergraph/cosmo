@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"fmt"
@@ -26,8 +27,6 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
-
-	"github.com/wundergraph/cosmo/router/internal/pool"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
@@ -69,6 +68,7 @@ type PreHandler struct {
 	fileUploadEnabled           bool
 	maxUploadFiles              int
 	maxUploadFileSize           int
+	bodyReadBuffers             *sync.Pool
 }
 
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
@@ -93,7 +93,29 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		fileUploadEnabled: opts.FileUploadEnabled,
 		maxUploadFiles:    opts.MaxUploadFiles,
 		maxUploadFileSize: opts.MaxUploadFileSize,
+		bodyReadBuffers:   &sync.Pool{},
 	}
+}
+
+func (p *PreHandler) getBodyReadBuffer(preferredSize int64) *bytes.Buffer {
+	if preferredSize <= 0 {
+		preferredSize = 1024
+	} else if preferredSize > p.operationProcessor.maxOperationSizeInBytes {
+		preferredSize = p.operationProcessor.maxOperationSizeInBytes
+	}
+	buf := p.bodyReadBuffers.Get()
+	if buf == nil {
+		return bytes.NewBuffer(make([]byte, 0, preferredSize))
+	}
+	return buf.(*bytes.Buffer)
+}
+
+func (p *PreHandler) releaseBodyReadBuffer(buf *bytes.Buffer) {
+	if buf == nil {
+		return
+	}
+	buf.Reset()
+	p.bodyReadBuffers.Put(buf)
 }
 
 // Error and Status Code handling
@@ -179,8 +201,8 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		var files []httpclient.File
 		// XXX: This buffer needs to be returned to the pool only
 		// AFTER we're done with body (retrieved from parser.ReadBody())
-		buf := pool.GetBytesBuffer()
-		defer pool.PutBytesBuffer(buf)
+		buf := h.getBodyReadBuffer(r.ContentLength)
+		defer h.releaseBodyReadBuffer(buf)
 
 		if strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
 			if !h.fileUploadEnabled {
@@ -280,6 +302,9 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		if !traceOptions.ExcludeParseStats {
 			traceTimings.EndParse()
 		}
+
+		h.releaseBodyReadBuffer(buf)
+		buf = nil
 
 		if blockedErr := h.operationBlocker.OperationIsBlocked(operationKit.parsedOperation); blockedErr != nil {
 			// Mark the root span of the router as failed, so we can easily identify failed requests
