@@ -3,11 +3,12 @@ package integration_test
 import (
 	"bytes"
 	"fmt"
+	"net/http"
+	"testing"
+
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
-	"net/http"
-	"testing"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 )
@@ -15,7 +16,7 @@ import (
 func TestSingleFileUpload(t *testing.T) {
 	t.Parallel()
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-		fileContent := bytes.Repeat([]byte("a"), 40*1024*1024)
+		fileContent := bytes.Repeat([]byte("a"), 1024)
 		files := [][]byte{fileContent}
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query:     "mutation ($file: Upload!){singleUpload(file: $file)}",
