@@ -2,6 +2,7 @@
   <configuration default="false" name="router" type="GoApplicationRunConfiguration" factoryName="Go Application">
     <module name="cosmo" />
     <working_directory value="$PROJECT_DIR$/router" />
+    <go_parameters value="-race" />
     <envs>
       <env name="CGO_ENABLED" value="0" />
     </envs>

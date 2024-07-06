@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/gorilla/websocket"
 	"net"
 	"net/http"
 	"regexp"
@@ -20,7 +21,6 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
-	"github.com/gorilla/websocket"
 	"github.com/tidwall/gjson"
 	"github.com/wundergraph/cosmo/router/internal/epoller"
 	"github.com/wundergraph/cosmo/router/internal/wsproto"
@@ -65,78 +65,93 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 		pond.MinWorkers(8),
 	)
 
-	return func(next http.Handler) http.Handler {
-		handler := &WebsocketHandler{
-			ctx:                ctx,
-			next:               next,
-			operationProcessor: opts.OperationProcessor,
-			operationBlocker:   opts.OperationBlocker,
-			planner:            opts.Planner,
-			graphqlHandler:     opts.GraphQLHandler,
-			metrics:            opts.Metrics,
-			accessController:   opts.AccessController,
-			logger:             opts.Logger,
-			stats:              opts.Stats,
-			readTimeout:        opts.ReadTimeout,
-			config:             opts.WebSocketConfiguration,
-			handlerPool:        handlerPool,
-		}
-		if opts.WebSocketConfiguration != nil && opts.WebSocketConfiguration.AbsintheProtocol.Enabled {
-			handler.absintheHandlerEnabled = true
-			handler.absintheHandlerPath = opts.WebSocketConfiguration.AbsintheProtocol.HandlerPath
-		}
-		if opts.WebSocketConfiguration.ForwardUpgradeHeaders.Enabled {
-			handler.forwardUpgradeHeadersConfig.enabled = true
-			for _, str := range opts.WebSocketConfiguration.ForwardUpgradeHeaders.AllowList {
-				if detectNonRegex.MatchString(str) {
-					canonicalHeaderKey := http.CanonicalHeaderKey(str)
-					handler.forwardUpgradeHeadersConfig.staticAllowList = append(handler.forwardUpgradeHeadersConfig.staticAllowList, canonicalHeaderKey)
-				} else {
-					re, err := regexp.Compile(str)
-					if err != nil {
-						opts.Logger.Warn("Invalid regex in forward upgrade headers allow list", zap.String("regex", str), zap.Error(err))
-						continue
-					}
-					handler.forwardUpgradeHeadersConfig.regexAllowList = append(handler.forwardUpgradeHeadersConfig.regexAllowList, re)
-				}
-			}
-			handler.forwardUpgradeHeadersConfig.withStaticAllowList = len(handler.forwardUpgradeHeadersConfig.staticAllowList) > 0
-			handler.forwardUpgradeHeadersConfig.withRegexAllowList = len(handler.forwardUpgradeHeadersConfig.regexAllowList) > 0
-		}
-		if opts.WebSocketConfiguration.ForwardUpgradeQueryParams.Enabled {
-			handler.forwardQueryParamsConfig.enabled = true
-			for _, str := range opts.WebSocketConfiguration.ForwardUpgradeQueryParams.AllowList {
-				if detectNonRegex.MatchString(str) {
-					handler.forwardQueryParamsConfig.staticAllowList = append(handler.forwardQueryParamsConfig.staticAllowList, str)
-				} else {
-					re, err := regexp.Compile(str)
-					if err != nil {
-						opts.Logger.Warn("Invalid regex in forward upgrade query params allow list", zap.String("regex", str), zap.Error(err))
-						continue
-					}
-					handler.forwardQueryParamsConfig.regexAllowList = append(handler.forwardQueryParamsConfig.regexAllowList, re)
-				}
-			}
-			handler.forwardQueryParamsConfig.withStaticAllowList = len(handler.forwardQueryParamsConfig.staticAllowList) > 0
-			handler.forwardQueryParamsConfig.withRegexAllowList = len(handler.forwardQueryParamsConfig.regexAllowList) > 0
-		}
-		if opts.EnableWebSocketEpollKqueue {
-			poller, err := epoller.NewPoller(opts.EpollKqueueConnBufferSize, opts.EpollKqueuePollTimeout)
-			if err == nil {
-				opts.Logger.Debug("Epoll is available")
-
-				handler.epoll = poller
-				handler.connections = make(map[int]*WebSocketConnectionHandler)
-				go handler.runPoller()
-			} else {
-				opts.Logger.Warn("Epoll is only available on Linux and MacOS. Falling back to synchronous handling.")
-			}
-		} else {
-			opts.Logger.Debug("Epoll is disabled by configuration")
-		}
-
-		return handler
+	handler := &WebsocketHandler{
+		ctx:                ctx,
+		operationProcessor: opts.OperationProcessor,
+		operationBlocker:   opts.OperationBlocker,
+		planner:            opts.Planner,
+		graphqlHandler:     opts.GraphQLHandler,
+		metrics:            opts.Metrics,
+		accessController:   opts.AccessController,
+		logger:             opts.Logger,
+		stats:              opts.Stats,
+		readTimeout:        opts.ReadTimeout,
+		config:             opts.WebSocketConfiguration,
+		handlerPool:        handlerPool,
 	}
+	if opts.WebSocketConfiguration != nil && opts.WebSocketConfiguration.AbsintheProtocol.Enabled {
+		handler.absintheHandlerEnabled = true
+		handler.absintheHandlerPath = opts.WebSocketConfiguration.AbsintheProtocol.HandlerPath
+	}
+	if opts.WebSocketConfiguration.ForwardUpgradeHeaders.Enabled {
+		handler.forwardUpgradeHeadersConfig.enabled = true
+		for _, str := range opts.WebSocketConfiguration.ForwardUpgradeHeaders.AllowList {
+			if detectNonRegex.MatchString(str) {
+				canonicalHeaderKey := http.CanonicalHeaderKey(str)
+				handler.forwardUpgradeHeadersConfig.staticAllowList = append(handler.forwardUpgradeHeadersConfig.staticAllowList, canonicalHeaderKey)
+			} else {
+				re, err := regexp.Compile(str)
+				if err != nil {
+					opts.Logger.Warn("Invalid regex in forward upgrade headers allow list", zap.String("regex", str), zap.Error(err))
+					continue
+				}
+				handler.forwardUpgradeHeadersConfig.regexAllowList = append(handler.forwardUpgradeHeadersConfig.regexAllowList, re)
+			}
+		}
+		handler.forwardUpgradeHeadersConfig.withStaticAllowList = len(handler.forwardUpgradeHeadersConfig.staticAllowList) > 0
+		handler.forwardUpgradeHeadersConfig.withRegexAllowList = len(handler.forwardUpgradeHeadersConfig.regexAllowList) > 0
+	}
+	if opts.WebSocketConfiguration.ForwardUpgradeQueryParams.Enabled {
+		handler.forwardQueryParamsConfig.enabled = true
+		for _, str := range opts.WebSocketConfiguration.ForwardUpgradeQueryParams.AllowList {
+			if detectNonRegex.MatchString(str) {
+				handler.forwardQueryParamsConfig.staticAllowList = append(handler.forwardQueryParamsConfig.staticAllowList, str)
+			} else {
+				re, err := regexp.Compile(str)
+				if err != nil {
+					opts.Logger.Warn("Invalid regex in forward upgrade query params allow list", zap.String("regex", str), zap.Error(err))
+					continue
+				}
+				handler.forwardQueryParamsConfig.regexAllowList = append(handler.forwardQueryParamsConfig.regexAllowList, re)
+			}
+		}
+		handler.forwardQueryParamsConfig.withStaticAllowList = len(handler.forwardQueryParamsConfig.staticAllowList) > 0
+		handler.forwardQueryParamsConfig.withRegexAllowList = len(handler.forwardQueryParamsConfig.regexAllowList) > 0
+	}
+	if opts.EnableWebSocketEpollKqueue {
+		poller, err := epoller.NewPoller(opts.EpollKqueueConnBufferSize, opts.EpollKqueuePollTimeout)
+		if err == nil {
+			opts.Logger.Debug("Epoll is available")
+
+			handler.epoll = poller
+			handler.connections = make(map[int]*WebSocketConnectionHandler)
+			go handler.runPoller()
+		} else {
+			opts.Logger.Warn("Epoll is only available on Linux and MacOS. Falling back to synchronous handling.")
+		}
+	} else {
+		opts.Logger.Debug("Epoll is disabled by configuration")
+	}
+
+	return func(next http.Handler) http.Handler {
+		return &WebsocketDirector{
+			next:    next,
+			handler: handler.handleUpgradeRequest,
+		}
+	}
+}
+
+type WebsocketDirector struct {
+	next    http.Handler
+	handler http.HandlerFunc
+}
+
+func (h *WebsocketDirector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if !websocket.IsWebSocketUpgrade(r) {
+		h.next.ServeHTTP(w, r)
+		return
+	}
+	h.handler(w, r)
 }
 
 // wsConnectionWrapper is a wrapper around websocket.Conn that allows
@@ -195,7 +210,6 @@ func (c *wsConnectionWrapper) Close() error {
 type WebsocketHandler struct {
 	ctx                context.Context
 	config             *config.WebSocketConfiguration
-	next               http.Handler
 	operationProcessor *OperationProcessor
 	operationBlocker   *OperationBlocker
 	planner            *OperationPlanner
@@ -220,14 +234,6 @@ type WebsocketHandler struct {
 
 	forwardUpgradeHeadersConfig forwardConfig
 	forwardQueryParamsConfig    forwardConfig
-}
-
-func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if !websocket.IsWebSocketUpgrade(r) {
-		h.next.ServeHTTP(w, r)
-		return
-	}
-	h.handleUpgradeRequest(w, r)
 }
 
 func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.Request) {

@@ -70,7 +70,7 @@ type (
 		runtimeMetrics          *rmetric.RuntimeMetrics
 		metricStore             rmetric.Store
 		baseRouterConfigVersion string
-		cdnOperationClient      *cdn.PersistentOperationClient
+		cdnOperationClient      *cdn.PersistedOperationClient
 		cancel                  context.CancelFunc
 	}
 )

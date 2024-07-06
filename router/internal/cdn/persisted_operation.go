@@ -85,7 +85,7 @@ type PersistentOperationsOptions struct {
 	Logger    *zap.Logger
 }
 
-type PersistentOperationClient struct {
+type PersistedOperationClient struct {
 	cdnURL              *url.URL
 	authenticationToken string
 	// federatedGraphID is the ID of the federated graph that was obtained
@@ -99,7 +99,7 @@ type PersistentOperationClient struct {
 	logger          *zap.Logger
 }
 
-func (cdn *PersistentOperationClient) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error) {
+func (cdn *PersistedOperationClient) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error) {
 	if data := cdn.operationsCache.Get(clientName, sha256Hash); data != nil {
 		return data, nil
 	}
@@ -184,7 +184,7 @@ func (cdn *PersistentOperationClient) PersistedOperation(ctx context.Context, cl
 
 // NewPersistentOperationClient creates a new CDN client. URL is the URL of the CDN.
 // Token is the token used to authenticate with the CDN, the same as the GRAPH_API_TOKEN
-func NewPersistentOperationClient(endpoint string, token string, opts PersistentOperationsOptions) (*PersistentOperationClient, error) {
+func NewPersistentOperationClient(endpoint string, token string, opts PersistentOperationsOptions) (*PersistedOperationClient, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("invalid CDN URL %q: %w", endpoint, err)
@@ -212,7 +212,7 @@ func NewPersistentOperationClient(endpoint string, token string, opts Persistent
 			return nil, fmt.Errorf("initializing CDN cache: %v", err)
 		}
 	}
-	return &PersistentOperationClient{
+	return &PersistedOperationClient{
 		cdnURL:              u,
 		authenticationToken: token,
 		federatedGraphID:    url.PathEscape(claims.FederatedGraphID),
@@ -225,6 +225,6 @@ func NewPersistentOperationClient(endpoint string, token string, opts Persistent
 	}, nil
 }
 
-func (cdn *PersistentOperationClient) Close() {
+func (cdn *PersistedOperationClient) Close() {
 	cdn.operationsCache.cache.Close()
 }
