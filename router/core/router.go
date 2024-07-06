@@ -467,6 +467,7 @@ func (r *Router) updateServer(ctx context.Context, cfg *nodev1.RouterConfig) (*s
 	if r.activeServer != nil {
 
 		// Cancel the server context after the graceful shutdown
+		// to stop and free all resources
 		defer r.activeServer.cancel()
 
 		// Respect grace period

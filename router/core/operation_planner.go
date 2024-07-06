@@ -28,8 +28,11 @@ type OperationPlanner struct {
 }
 
 type ExecutionPlanCache interface {
+	// Get the value from the cache
 	Get(key interface{}) (interface{}, bool)
+	// Set the value in the cache with a cost. The cost depends on the cache implementation
 	Set(key, value interface{}, cost int64) bool
+	// Close the cache and free resources
 	Close()
 }
 
