@@ -134,26 +134,14 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 	}
 
 	return func(next http.Handler) http.Handler {
-		return &WebsocketDirector{
-			next:    next,
-			handler: handler.handleUpgradeRequest,
-		}
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if !websocket.IsWebSocketUpgrade(r) {
+				next.ServeHTTP(w, r)
+				return
+			}
+			handler.handleUpgradeRequest(w, r)
+		})
 	}
-}
-
-type WebsocketDirector struct {
-	// The handler to call if the request is not a websocket upgrade
-	next http.Handler
-	// The handler to call if the request is a websocket upgrade
-	handler http.HandlerFunc
-}
-
-func (h *WebsocketDirector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if !websocket.IsWebSocketUpgrade(r) {
-		h.next.ServeHTTP(w, r)
-		return
-	}
-	h.handler(w, r)
 }
 
 // wsConnectionWrapper is a wrapper around websocket.Conn that allows
