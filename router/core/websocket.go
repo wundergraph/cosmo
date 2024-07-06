@@ -142,7 +142,9 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 }
 
 type WebsocketDirector struct {
-	next    http.Handler
+	// The handler to call if the request is not a websocket upgrade
+	next http.Handler
+	// The handler to call if the request is a websocket upgrade
 	handler http.HandlerFunc
 }
 
