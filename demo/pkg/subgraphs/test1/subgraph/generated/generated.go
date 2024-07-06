@@ -49,6 +49,39 @@ type DirectiveRoot struct {
 }
 
 type ComplexityRoot struct {
+	BigObject struct {
+		NestedObjects func(childComplexity int) int
+	}
+
+	DeeplyNestedObject struct {
+		AFieldOnDeeplyNestedObject func(childComplexity int) int
+		BFieldOnDeeplyNestedObject func(childComplexity int) int
+		CFieldOnDeeplyNestedObject func(childComplexity int) int
+		DFieldOnDeeplyNestedObject func(childComplexity int) int
+		EFieldOnDeeplyNestedObject func(childComplexity int) int
+		FFieldOnDeeplyNestedObject func(childComplexity int) int
+		GFieldOnDeeplyNestedObject func(childComplexity int) int
+		HFieldOnDeeplyNestedObject func(childComplexity int) int
+		IFieldOnDeeplyNestedObject func(childComplexity int) int
+		JFieldOnDeeplyNestedObject func(childComplexity int) int
+		KFieldOnDeeplyNestedObject func(childComplexity int) int
+		LFieldOnDeeplyNestedObject func(childComplexity int) int
+		MFieldOnDeeplyNestedObject func(childComplexity int) int
+		NFieldOnDeeplyNestedObject func(childComplexity int) int
+		OFieldOnDeeplyNestedObject func(childComplexity int) int
+		PFieldOnDeeplyNestedObject func(childComplexity int) int
+		QFieldOnDeeplyNestedObject func(childComplexity int) int
+		RFieldOnDeeplyNestedObject func(childComplexity int) int
+		SFieldOnDeeplyNestedObject func(childComplexity int) int
+		TFieldOnDeeplyNestedObject func(childComplexity int) int
+		UFieldOnDeeplyNestedObject func(childComplexity int) int
+		VFieldOnDeeplyNestedObject func(childComplexity int) int
+		WFieldOnDeeplyNestedObject func(childComplexity int) int
+		XFieldOnDeeplyNestedObject func(childComplexity int) int
+		YFieldOnDeeplyNestedObject func(childComplexity int) int
+		ZFieldOnDeeplyNestedObject func(childComplexity int) int
+	}
+
 	Employee struct {
 		FieldThrowsError func(childComplexity int) int
 		ID               func(childComplexity int) int
@@ -58,7 +91,12 @@ type ComplexityRoot struct {
 		FindEmployeeByID func(childComplexity int, id int) int
 	}
 
+	NestedObject struct {
+		DeeplyNestedObjects func(childComplexity int) int
+	}
+
 	Query struct {
+		BigResponse        func(childComplexity int, bigObjects int, nestedObjects int, deeplyNestedObjects int) int
 		Delay              func(childComplexity int, response string, ms int) int
 		HeaderValue        func(childComplexity int, name string) int
 		InitPayloadValue   func(childComplexity int, key string) int
@@ -95,6 +133,7 @@ type QueryResolver interface {
 	InitPayloadValue(ctx context.Context, key string) (string, error)
 	InitialPayload(ctx context.Context) (map[string]interface{}, error)
 	Delay(ctx context.Context, response string, ms int) (string, error)
+	BigResponse(ctx context.Context, bigObjects int, nestedObjects int, deeplyNestedObjects int) ([]*model.BigObject, error)
 }
 type SubscriptionResolver interface {
 	HeaderValue(ctx context.Context, name string, repeat *int) (<-chan *model.TimestampedString, error)
@@ -122,6 +161,195 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	_ = ec
 	switch typeName + "." + field {
 
+	case "BigObject.nestedObjects":
+		if e.complexity.BigObject.NestedObjects == nil {
+			break
+		}
+
+		return e.complexity.BigObject.NestedObjects(childComplexity), true
+
+	case "DeeplyNestedObject.aFieldOnDeeplyNestedObject":
+		if e.complexity.DeeplyNestedObject.AFieldOnDeeplyNestedObject == nil {
+			break
+		}
+
+		return e.complexity.DeeplyNestedObject.AFieldOnDeeplyNestedObject(childComplexity), true
+
+	case "DeeplyNestedObject.bFieldOnDeeplyNestedObject":
+		if e.complexity.DeeplyNestedObject.BFieldOnDeeplyNestedObject == nil {
+			break
+		}
+
+		return e.complexity.DeeplyNestedObject.BFieldOnDeeplyNestedObject(childComplexity), true
+
+	case "DeeplyNestedObject.cFieldOnDeeplyNestedObject":
+		if e.complexity.DeeplyNestedObject.CFieldOnDeeplyNestedObject == nil {
+			break
+		}
+
+		return e.complexity.DeeplyNestedObject.CFieldOnDeeplyNestedObject(childComplexity), true
+
+	case "DeeplyNestedObject.dFieldOnDeeplyNestedObject":
+		if e.complexity.DeeplyNestedObject.DFieldOnDeeplyNestedObject == nil {
+			break
+		}
+
+		return e.complexity.DeeplyNestedObject.DFieldOnDeeplyNestedObject(childComplexity), true
+
+	case "DeeplyNestedObject.eFieldOnDeeplyNestedObject":
+		if e.complexity.DeeplyNestedObject.EFieldOnDeeplyNestedObject == nil {
+			break
+		}
+
+		return e.complexity.DeeplyNestedObject.EFieldOnDeeplyNestedObject(childComplexity), true
+
+	case "DeeplyNestedObject.fFieldOnDeeplyNestedObject":
+		if e.complexity.DeeplyNestedObject.FFieldOnDeeplyNestedObject == nil {
+			break
+		}
+
+		return e.complexity.DeeplyNestedObject.FFieldOnDeeplyNestedObject(childComplexity), true
+
+	case "DeeplyNestedObject.gFieldOnDeeplyNestedObject":
+		if e.complexity.DeeplyNestedObject.GFieldOnDeeplyNestedObject == nil {
+			break
+		}
+
+		return e.complexity.DeeplyNestedObject.GFieldOnDeeplyNestedObject(childComplexity), true
+
+	case "DeeplyNestedObject.hFieldOnDeeplyNestedObject":
+		if e.complexity.DeeplyNestedObject.HFieldOnDeeplyNestedObject == nil {
+			break
+		}
+
+		return e.complexity.DeeplyNestedObject.HFieldOnDeeplyNestedObject(childComplexity), true
+
+	case "DeeplyNestedObject.iFieldOnDeeplyNestedObject":
+		if e.complexity.DeeplyNestedObject.IFieldOnDeeplyNestedObject == nil {
+			break
+		}
+
+		return e.complexity.DeeplyNestedObject.IFieldOnDeeplyNestedObject(childComplexity), true
+
+	case "DeeplyNestedObject.jFieldOnDeeplyNestedObject":
+		if e.complexity.DeeplyNestedObject.JFieldOnDeeplyNestedObject == nil {
+			break
+		}
+
+		return e.complexity.DeeplyNestedObject.JFieldOnDeeplyNestedObject(childComplexity), true
+
+	case "DeeplyNestedObject.kFieldOnDeeplyNestedObject":
+		if e.complexity.DeeplyNestedObject.KFieldOnDeeplyNestedObject == nil {
+			break
+		}
+
+		return e.complexity.DeeplyNestedObject.KFieldOnDeeplyNestedObject(childComplexity), true
+
+	case "DeeplyNestedObject.lFieldOnDeeplyNestedObject":
+		if e.complexity.DeeplyNestedObject.LFieldOnDeeplyNestedObject == nil {
+			break
+		}
+
+		return e.complexity.DeeplyNestedObject.LFieldOnDeeplyNestedObject(childComplexity), true
+
+	case "DeeplyNestedObject.mFieldOnDeeplyNestedObject":
+		if e.complexity.DeeplyNestedObject.MFieldOnDeeplyNestedObject == nil {
+			break
+		}
+
+		return e.complexity.DeeplyNestedObject.MFieldOnDeeplyNestedObject(childComplexity), true
+
+	case "DeeplyNestedObject.nFieldOnDeeplyNestedObject":
+		if e.complexity.DeeplyNestedObject.NFieldOnDeeplyNestedObject == nil {
+			break
+		}
+
+		return e.complexity.DeeplyNestedObject.NFieldOnDeeplyNestedObject(childComplexity), true
+
+	case "DeeplyNestedObject.oFieldOnDeeplyNestedObject":
+		if e.complexity.DeeplyNestedObject.OFieldOnDeeplyNestedObject == nil {
+			break
+		}
+
+		return e.complexity.DeeplyNestedObject.OFieldOnDeeplyNestedObject(childComplexity), true
+
+	case "DeeplyNestedObject.pFieldOnDeeplyNestedObject":
+		if e.complexity.DeeplyNestedObject.PFieldOnDeeplyNestedObject == nil {
+			break
+		}
+
+		return e.complexity.DeeplyNestedObject.PFieldOnDeeplyNestedObject(childComplexity), true
+
+	case "DeeplyNestedObject.qFieldOnDeeplyNestedObject":
+		if e.complexity.DeeplyNestedObject.QFieldOnDeeplyNestedObject == nil {
+			break
+		}
+
+		return e.complexity.DeeplyNestedObject.QFieldOnDeeplyNestedObject(childComplexity), true
+
+	case "DeeplyNestedObject.rFieldOnDeeplyNestedObject":
+		if e.complexity.DeeplyNestedObject.RFieldOnDeeplyNestedObject == nil {
+			break
+		}
+
+		return e.complexity.DeeplyNestedObject.RFieldOnDeeplyNestedObject(childComplexity), true
+
+	case "DeeplyNestedObject.sFieldOnDeeplyNestedObject":
+		if e.complexity.DeeplyNestedObject.SFieldOnDeeplyNestedObject == nil {
+			break
+		}
+
+		return e.complexity.DeeplyNestedObject.SFieldOnDeeplyNestedObject(childComplexity), true
+
+	case "DeeplyNestedObject.tFieldOnDeeplyNestedObject":
+		if e.complexity.DeeplyNestedObject.TFieldOnDeeplyNestedObject == nil {
+			break
+		}
+
+		return e.complexity.DeeplyNestedObject.TFieldOnDeeplyNestedObject(childComplexity), true
+
+	case "DeeplyNestedObject.uFieldOnDeeplyNestedObject":
+		if e.complexity.DeeplyNestedObject.UFieldOnDeeplyNestedObject == nil {
+			break
+		}
+
+		return e.complexity.DeeplyNestedObject.UFieldOnDeeplyNestedObject(childComplexity), true
+
+	case "DeeplyNestedObject.vFieldOnDeeplyNestedObject":
+		if e.complexity.DeeplyNestedObject.VFieldOnDeeplyNestedObject == nil {
+			break
+		}
+
+		return e.complexity.DeeplyNestedObject.VFieldOnDeeplyNestedObject(childComplexity), true
+
+	case "DeeplyNestedObject.wFieldOnDeeplyNestedObject":
+		if e.complexity.DeeplyNestedObject.WFieldOnDeeplyNestedObject == nil {
+			break
+		}
+
+		return e.complexity.DeeplyNestedObject.WFieldOnDeeplyNestedObject(childComplexity), true
+
+	case "DeeplyNestedObject.xFieldOnDeeplyNestedObject":
+		if e.complexity.DeeplyNestedObject.XFieldOnDeeplyNestedObject == nil {
+			break
+		}
+
+		return e.complexity.DeeplyNestedObject.XFieldOnDeeplyNestedObject(childComplexity), true
+
+	case "DeeplyNestedObject.yFieldOnDeeplyNestedObject":
+		if e.complexity.DeeplyNestedObject.YFieldOnDeeplyNestedObject == nil {
+			break
+		}
+
+		return e.complexity.DeeplyNestedObject.YFieldOnDeeplyNestedObject(childComplexity), true
+
+	case "DeeplyNestedObject.zFieldOnDeeplyNestedObject":
+		if e.complexity.DeeplyNestedObject.ZFieldOnDeeplyNestedObject == nil {
+			break
+		}
+
+		return e.complexity.DeeplyNestedObject.ZFieldOnDeeplyNestedObject(childComplexity), true
+
 	case "Employee.fieldThrowsError":
 		if e.complexity.Employee.FieldThrowsError == nil {
 			break
@@ -147,6 +375,25 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Entity.FindEmployeeByID(childComplexity, args["id"].(int)), true
+
+	case "NestedObject.deeplyNestedObjects":
+		if e.complexity.NestedObject.DeeplyNestedObjects == nil {
+			break
+		}
+
+		return e.complexity.NestedObject.DeeplyNestedObjects(childComplexity), true
+
+	case "Query.bigResponse":
+		if e.complexity.Query.BigResponse == nil {
+			break
+		}
+
+		args, err := ec.field_Query_bigResponse_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.BigResponse(childComplexity, args["bigObjects"].(int), args["nestedObjects"].(int), args["deeplyNestedObjects"].(int)), true
 
 	case "Query.delay":
 		if e.complexity.Query.Delay == nil {
@@ -401,43 +648,89 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 }
 
 var sources = []*ast.Source{
-	{Name: "../schema.graphqls", Input: `type Query {
-  "Returns the value of the received HTTP header."
-  headerValue(name: String!): String!
-  "Returns the value of the given key in the WS initial payload."
-  initPayloadValue(key: String!): String!
-  initialPayload: Map
-  "Returns response after the given delay"
-  delay(response: String!, ms: Int!): String!
+	{Name: "../schema.graphqls", Input: `extend schema
+@link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@authenticated", "@composeDirective", "@external", "@extends", "@inaccessible", "@interfaceObject", "@override", "@provides", "@key", "@requires", "@requiresScopes", "@shareable", "@tag"])
+
+type Query {
+    "Returns the value of the received HTTP header."
+    headerValue(name: String!): String!
+    "Returns the value of the given key in the WS initial payload."
+    initPayloadValue(key: String!): String!
+    initialPayload: Map
+    "Returns response after the given delay"
+    delay(response: String!, ms: Int!): String!
+
+    bigResponse(
+        bigObjects: Int! = 100
+        nestedObjects: Int! = 100
+        deeplyNestedObjects: Int! = 100
+    ): [BigObject!]!
 }
 
 scalar Map
 
 type TimestampedString {
-  "The value of the string."
-  value: String!
-  "The timestamp when the response was generated."
-  unixTime: Int!
-  "Sequence number"
-  seq: Int!
-  "Total number of responses to be sent"
-  total: Int!
-  initialPayload: Map
+    "The value of the string."
+    value: String!
+    "The timestamp when the response was generated."
+    unixTime: Int!
+    "Sequence number"
+    seq: Int!
+    "Total number of responses to be sent"
+    total: Int!
+    initialPayload: Map
 }
 
 type Subscription {
-  "Returns a stream with the value of the received HTTP header."
-  headerValue(name: String!, repeat: Int): TimestampedString!
-  "Returns a stream with the value of value of the given key in the WS initial payload."
-  initPayloadValue(key: String!, repeat: Int): TimestampedString!
-  "Returns a stream with the value of the WS initial payload."
-  initialPayload(repeat: Int): Map
-  returnsError: String
+    "Returns a stream with the value of the received HTTP header."
+    headerValue(name: String!, repeat: Int): TimestampedString!
+    "Returns a stream with the value of value of the given key in the WS initial payload."
+    initPayloadValue(key: String!, repeat: Int): TimestampedString!
+    "Returns a stream with the value of the WS initial payload."
+    initialPayload(repeat: Int): Map
+    returnsError: String
 }
 
 type Employee @key(fields: "id") {
-  id: Int!
-  fieldThrowsError: String
+    id: Int!
+    fieldThrowsError: String
+}
+
+type BigObject {
+    nestedObjects: [NestedObject!]!
+}
+
+type NestedObject {
+    deeplyNestedObjects: [DeeplyNestedObject!]!
+}
+
+type DeeplyNestedObject {
+    aFieldOnDeeplyNestedObject: String!
+    bFieldOnDeeplyNestedObject: Int!
+    cFieldOnDeeplyNestedObject: Boolean!
+    dFieldOnDeeplyNestedObject: Float!
+    eFieldOnDeeplyNestedObject: String!
+    fFieldOnDeeplyNestedObject: Int!
+    gFieldOnDeeplyNestedObject: Boolean!
+    hFieldOnDeeplyNestedObject: Float!
+    iFieldOnDeeplyNestedObject: String!
+    jFieldOnDeeplyNestedObject: Int!
+    kFieldOnDeeplyNestedObject: Boolean!
+    lFieldOnDeeplyNestedObject: Float!
+    mFieldOnDeeplyNestedObject: String!
+    nFieldOnDeeplyNestedObject: Int!
+    oFieldOnDeeplyNestedObject: Boolean!
+    pFieldOnDeeplyNestedObject: Float!
+    qFieldOnDeeplyNestedObject: String!
+    rFieldOnDeeplyNestedObject: Int!
+    sFieldOnDeeplyNestedObject: Boolean!
+    tFieldOnDeeplyNestedObject: Float!
+    uFieldOnDeeplyNestedObject: String!
+    vFieldOnDeeplyNestedObject: Int!
+    wFieldOnDeeplyNestedObject: Boolean!
+    xFieldOnDeeplyNestedObject: Float!
+    yFieldOnDeeplyNestedObject: String!
+    zFieldOnDeeplyNestedObject: Int!
 }`, BuiltIn: false},
 	{Name: "../../federation/directives.graphql", Input: `
 	directive @authenticated on FIELD_DEFINITION | OBJECT | INTERFACE | SCALAR | ENUM
@@ -558,6 +851,39 @@ func (ec *executionContext) field_Query__entities_args(ctx context.Context, rawA
 		}
 	}
 	args["representations"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_bigResponse_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int
+	if tmp, ok := rawArgs["bigObjects"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("bigObjects"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["bigObjects"] = arg0
+	var arg1 int
+	if tmp, ok := rawArgs["nestedObjects"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nestedObjects"))
+		arg1, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["nestedObjects"] = arg1
+	var arg2 int
+	if tmp, ok := rawArgs["deeplyNestedObjects"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("deeplyNestedObjects"))
+		arg2, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["deeplyNestedObjects"] = arg2
 	return args, nil
 }
 
@@ -716,6 +1042,1198 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 
 // region    **************************** field.gotpl *****************************
 
+func (ec *executionContext) _BigObject_nestedObjects(ctx context.Context, field graphql.CollectedField, obj *model.BigObject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BigObject_nestedObjects(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.NestedObjects, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.NestedObject)
+	fc.Result = res
+	return ec.marshalNNestedObject2ᚕᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋtest1ᚋsubgraphᚋmodelᚐNestedObjectᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BigObject_nestedObjects(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BigObject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "deeplyNestedObjects":
+				return ec.fieldContext_NestedObject_deeplyNestedObjects(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type NestedObject", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DeeplyNestedObject_aFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField, obj *model.DeeplyNestedObject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DeeplyNestedObject_aFieldOnDeeplyNestedObject(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AFieldOnDeeplyNestedObject, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DeeplyNestedObject_aFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeeplyNestedObject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DeeplyNestedObject_bFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField, obj *model.DeeplyNestedObject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DeeplyNestedObject_bFieldOnDeeplyNestedObject(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.BFieldOnDeeplyNestedObject, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DeeplyNestedObject_bFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeeplyNestedObject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DeeplyNestedObject_cFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField, obj *model.DeeplyNestedObject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DeeplyNestedObject_cFieldOnDeeplyNestedObject(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CFieldOnDeeplyNestedObject, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DeeplyNestedObject_cFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeeplyNestedObject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DeeplyNestedObject_dFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField, obj *model.DeeplyNestedObject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DeeplyNestedObject_dFieldOnDeeplyNestedObject(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.DFieldOnDeeplyNestedObject, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DeeplyNestedObject_dFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeeplyNestedObject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DeeplyNestedObject_eFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField, obj *model.DeeplyNestedObject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DeeplyNestedObject_eFieldOnDeeplyNestedObject(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.EFieldOnDeeplyNestedObject, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DeeplyNestedObject_eFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeeplyNestedObject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DeeplyNestedObject_fFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField, obj *model.DeeplyNestedObject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DeeplyNestedObject_fFieldOnDeeplyNestedObject(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FFieldOnDeeplyNestedObject, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DeeplyNestedObject_fFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeeplyNestedObject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DeeplyNestedObject_gFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField, obj *model.DeeplyNestedObject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DeeplyNestedObject_gFieldOnDeeplyNestedObject(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.GFieldOnDeeplyNestedObject, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DeeplyNestedObject_gFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeeplyNestedObject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DeeplyNestedObject_hFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField, obj *model.DeeplyNestedObject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DeeplyNestedObject_hFieldOnDeeplyNestedObject(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.HFieldOnDeeplyNestedObject, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DeeplyNestedObject_hFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeeplyNestedObject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DeeplyNestedObject_iFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField, obj *model.DeeplyNestedObject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DeeplyNestedObject_iFieldOnDeeplyNestedObject(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.IFieldOnDeeplyNestedObject, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DeeplyNestedObject_iFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeeplyNestedObject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DeeplyNestedObject_jFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField, obj *model.DeeplyNestedObject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DeeplyNestedObject_jFieldOnDeeplyNestedObject(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.JFieldOnDeeplyNestedObject, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DeeplyNestedObject_jFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeeplyNestedObject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DeeplyNestedObject_kFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField, obj *model.DeeplyNestedObject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DeeplyNestedObject_kFieldOnDeeplyNestedObject(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.KFieldOnDeeplyNestedObject, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DeeplyNestedObject_kFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeeplyNestedObject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DeeplyNestedObject_lFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField, obj *model.DeeplyNestedObject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DeeplyNestedObject_lFieldOnDeeplyNestedObject(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.LFieldOnDeeplyNestedObject, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DeeplyNestedObject_lFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeeplyNestedObject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DeeplyNestedObject_mFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField, obj *model.DeeplyNestedObject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DeeplyNestedObject_mFieldOnDeeplyNestedObject(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.MFieldOnDeeplyNestedObject, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DeeplyNestedObject_mFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeeplyNestedObject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DeeplyNestedObject_nFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField, obj *model.DeeplyNestedObject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DeeplyNestedObject_nFieldOnDeeplyNestedObject(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.NFieldOnDeeplyNestedObject, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DeeplyNestedObject_nFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeeplyNestedObject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DeeplyNestedObject_oFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField, obj *model.DeeplyNestedObject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DeeplyNestedObject_oFieldOnDeeplyNestedObject(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.OFieldOnDeeplyNestedObject, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DeeplyNestedObject_oFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeeplyNestedObject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DeeplyNestedObject_pFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField, obj *model.DeeplyNestedObject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DeeplyNestedObject_pFieldOnDeeplyNestedObject(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PFieldOnDeeplyNestedObject, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DeeplyNestedObject_pFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeeplyNestedObject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DeeplyNestedObject_qFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField, obj *model.DeeplyNestedObject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DeeplyNestedObject_qFieldOnDeeplyNestedObject(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.QFieldOnDeeplyNestedObject, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DeeplyNestedObject_qFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeeplyNestedObject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DeeplyNestedObject_rFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField, obj *model.DeeplyNestedObject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DeeplyNestedObject_rFieldOnDeeplyNestedObject(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.RFieldOnDeeplyNestedObject, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DeeplyNestedObject_rFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeeplyNestedObject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DeeplyNestedObject_sFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField, obj *model.DeeplyNestedObject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DeeplyNestedObject_sFieldOnDeeplyNestedObject(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SFieldOnDeeplyNestedObject, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DeeplyNestedObject_sFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeeplyNestedObject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DeeplyNestedObject_tFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField, obj *model.DeeplyNestedObject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DeeplyNestedObject_tFieldOnDeeplyNestedObject(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.TFieldOnDeeplyNestedObject, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DeeplyNestedObject_tFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeeplyNestedObject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DeeplyNestedObject_uFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField, obj *model.DeeplyNestedObject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DeeplyNestedObject_uFieldOnDeeplyNestedObject(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.UFieldOnDeeplyNestedObject, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DeeplyNestedObject_uFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeeplyNestedObject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DeeplyNestedObject_vFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField, obj *model.DeeplyNestedObject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DeeplyNestedObject_vFieldOnDeeplyNestedObject(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.VFieldOnDeeplyNestedObject, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DeeplyNestedObject_vFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeeplyNestedObject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DeeplyNestedObject_wFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField, obj *model.DeeplyNestedObject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DeeplyNestedObject_wFieldOnDeeplyNestedObject(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.WFieldOnDeeplyNestedObject, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DeeplyNestedObject_wFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeeplyNestedObject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DeeplyNestedObject_xFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField, obj *model.DeeplyNestedObject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DeeplyNestedObject_xFieldOnDeeplyNestedObject(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.XFieldOnDeeplyNestedObject, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DeeplyNestedObject_xFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeeplyNestedObject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DeeplyNestedObject_yFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField, obj *model.DeeplyNestedObject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DeeplyNestedObject_yFieldOnDeeplyNestedObject(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.YFieldOnDeeplyNestedObject, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DeeplyNestedObject_yFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeeplyNestedObject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DeeplyNestedObject_zFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField, obj *model.DeeplyNestedObject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DeeplyNestedObject_zFieldOnDeeplyNestedObject(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ZFieldOnDeeplyNestedObject, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DeeplyNestedObject_zFieldOnDeeplyNestedObject(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeeplyNestedObject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Employee_id(ctx context.Context, field graphql.CollectedField, obj *model.Employee) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Employee_id(ctx, field)
 	if err != nil {
@@ -858,6 +2376,104 @@ func (ec *executionContext) fieldContext_Entity_findEmployeeByID(ctx context.Con
 	if fc.Args, err = ec.field_Entity_findEmployeeByID_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _NestedObject_deeplyNestedObjects(ctx context.Context, field graphql.CollectedField, obj *model.NestedObject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_NestedObject_deeplyNestedObjects(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.DeeplyNestedObjects, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.DeeplyNestedObject)
+	fc.Result = res
+	return ec.marshalNDeeplyNestedObject2ᚕᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋtest1ᚋsubgraphᚋmodelᚐDeeplyNestedObjectᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_NestedObject_deeplyNestedObjects(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "NestedObject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "aFieldOnDeeplyNestedObject":
+				return ec.fieldContext_DeeplyNestedObject_aFieldOnDeeplyNestedObject(ctx, field)
+			case "bFieldOnDeeplyNestedObject":
+				return ec.fieldContext_DeeplyNestedObject_bFieldOnDeeplyNestedObject(ctx, field)
+			case "cFieldOnDeeplyNestedObject":
+				return ec.fieldContext_DeeplyNestedObject_cFieldOnDeeplyNestedObject(ctx, field)
+			case "dFieldOnDeeplyNestedObject":
+				return ec.fieldContext_DeeplyNestedObject_dFieldOnDeeplyNestedObject(ctx, field)
+			case "eFieldOnDeeplyNestedObject":
+				return ec.fieldContext_DeeplyNestedObject_eFieldOnDeeplyNestedObject(ctx, field)
+			case "fFieldOnDeeplyNestedObject":
+				return ec.fieldContext_DeeplyNestedObject_fFieldOnDeeplyNestedObject(ctx, field)
+			case "gFieldOnDeeplyNestedObject":
+				return ec.fieldContext_DeeplyNestedObject_gFieldOnDeeplyNestedObject(ctx, field)
+			case "hFieldOnDeeplyNestedObject":
+				return ec.fieldContext_DeeplyNestedObject_hFieldOnDeeplyNestedObject(ctx, field)
+			case "iFieldOnDeeplyNestedObject":
+				return ec.fieldContext_DeeplyNestedObject_iFieldOnDeeplyNestedObject(ctx, field)
+			case "jFieldOnDeeplyNestedObject":
+				return ec.fieldContext_DeeplyNestedObject_jFieldOnDeeplyNestedObject(ctx, field)
+			case "kFieldOnDeeplyNestedObject":
+				return ec.fieldContext_DeeplyNestedObject_kFieldOnDeeplyNestedObject(ctx, field)
+			case "lFieldOnDeeplyNestedObject":
+				return ec.fieldContext_DeeplyNestedObject_lFieldOnDeeplyNestedObject(ctx, field)
+			case "mFieldOnDeeplyNestedObject":
+				return ec.fieldContext_DeeplyNestedObject_mFieldOnDeeplyNestedObject(ctx, field)
+			case "nFieldOnDeeplyNestedObject":
+				return ec.fieldContext_DeeplyNestedObject_nFieldOnDeeplyNestedObject(ctx, field)
+			case "oFieldOnDeeplyNestedObject":
+				return ec.fieldContext_DeeplyNestedObject_oFieldOnDeeplyNestedObject(ctx, field)
+			case "pFieldOnDeeplyNestedObject":
+				return ec.fieldContext_DeeplyNestedObject_pFieldOnDeeplyNestedObject(ctx, field)
+			case "qFieldOnDeeplyNestedObject":
+				return ec.fieldContext_DeeplyNestedObject_qFieldOnDeeplyNestedObject(ctx, field)
+			case "rFieldOnDeeplyNestedObject":
+				return ec.fieldContext_DeeplyNestedObject_rFieldOnDeeplyNestedObject(ctx, field)
+			case "sFieldOnDeeplyNestedObject":
+				return ec.fieldContext_DeeplyNestedObject_sFieldOnDeeplyNestedObject(ctx, field)
+			case "tFieldOnDeeplyNestedObject":
+				return ec.fieldContext_DeeplyNestedObject_tFieldOnDeeplyNestedObject(ctx, field)
+			case "uFieldOnDeeplyNestedObject":
+				return ec.fieldContext_DeeplyNestedObject_uFieldOnDeeplyNestedObject(ctx, field)
+			case "vFieldOnDeeplyNestedObject":
+				return ec.fieldContext_DeeplyNestedObject_vFieldOnDeeplyNestedObject(ctx, field)
+			case "wFieldOnDeeplyNestedObject":
+				return ec.fieldContext_DeeplyNestedObject_wFieldOnDeeplyNestedObject(ctx, field)
+			case "xFieldOnDeeplyNestedObject":
+				return ec.fieldContext_DeeplyNestedObject_xFieldOnDeeplyNestedObject(ctx, field)
+			case "yFieldOnDeeplyNestedObject":
+				return ec.fieldContext_DeeplyNestedObject_yFieldOnDeeplyNestedObject(ctx, field)
+			case "zFieldOnDeeplyNestedObject":
+				return ec.fieldContext_DeeplyNestedObject_zFieldOnDeeplyNestedObject(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type DeeplyNestedObject", field.Name)
+		},
 	}
 	return fc, nil
 }
@@ -1062,6 +2678,65 @@ func (ec *executionContext) fieldContext_Query_delay(ctx context.Context, field 
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_delay_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_bigResponse(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_bigResponse(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().BigResponse(rctx, fc.Args["bigObjects"].(int), fc.Args["nestedObjects"].(int), fc.Args["deeplyNestedObjects"].(int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.BigObject)
+	fc.Result = res
+	return ec.marshalNBigObject2ᚕᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋtest1ᚋsubgraphᚋmodelᚐBigObjectᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_bigResponse(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "nestedObjects":
+				return ec.fieldContext_BigObject_nestedObjects(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type BigObject", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_bigResponse_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -3638,6 +5313,209 @@ func (ec *executionContext) __Entity(ctx context.Context, sel ast.SelectionSet, 
 
 // region    **************************** object.gotpl ****************************
 
+var bigObjectImplementors = []string{"BigObject"}
+
+func (ec *executionContext) _BigObject(ctx context.Context, sel ast.SelectionSet, obj *model.BigObject) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, bigObjectImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("BigObject")
+		case "nestedObjects":
+			out.Values[i] = ec._BigObject_nestedObjects(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var deeplyNestedObjectImplementors = []string{"DeeplyNestedObject"}
+
+func (ec *executionContext) _DeeplyNestedObject(ctx context.Context, sel ast.SelectionSet, obj *model.DeeplyNestedObject) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, deeplyNestedObjectImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("DeeplyNestedObject")
+		case "aFieldOnDeeplyNestedObject":
+			out.Values[i] = ec._DeeplyNestedObject_aFieldOnDeeplyNestedObject(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "bFieldOnDeeplyNestedObject":
+			out.Values[i] = ec._DeeplyNestedObject_bFieldOnDeeplyNestedObject(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "cFieldOnDeeplyNestedObject":
+			out.Values[i] = ec._DeeplyNestedObject_cFieldOnDeeplyNestedObject(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "dFieldOnDeeplyNestedObject":
+			out.Values[i] = ec._DeeplyNestedObject_dFieldOnDeeplyNestedObject(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "eFieldOnDeeplyNestedObject":
+			out.Values[i] = ec._DeeplyNestedObject_eFieldOnDeeplyNestedObject(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "fFieldOnDeeplyNestedObject":
+			out.Values[i] = ec._DeeplyNestedObject_fFieldOnDeeplyNestedObject(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "gFieldOnDeeplyNestedObject":
+			out.Values[i] = ec._DeeplyNestedObject_gFieldOnDeeplyNestedObject(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "hFieldOnDeeplyNestedObject":
+			out.Values[i] = ec._DeeplyNestedObject_hFieldOnDeeplyNestedObject(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "iFieldOnDeeplyNestedObject":
+			out.Values[i] = ec._DeeplyNestedObject_iFieldOnDeeplyNestedObject(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "jFieldOnDeeplyNestedObject":
+			out.Values[i] = ec._DeeplyNestedObject_jFieldOnDeeplyNestedObject(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "kFieldOnDeeplyNestedObject":
+			out.Values[i] = ec._DeeplyNestedObject_kFieldOnDeeplyNestedObject(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "lFieldOnDeeplyNestedObject":
+			out.Values[i] = ec._DeeplyNestedObject_lFieldOnDeeplyNestedObject(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "mFieldOnDeeplyNestedObject":
+			out.Values[i] = ec._DeeplyNestedObject_mFieldOnDeeplyNestedObject(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "nFieldOnDeeplyNestedObject":
+			out.Values[i] = ec._DeeplyNestedObject_nFieldOnDeeplyNestedObject(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "oFieldOnDeeplyNestedObject":
+			out.Values[i] = ec._DeeplyNestedObject_oFieldOnDeeplyNestedObject(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "pFieldOnDeeplyNestedObject":
+			out.Values[i] = ec._DeeplyNestedObject_pFieldOnDeeplyNestedObject(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "qFieldOnDeeplyNestedObject":
+			out.Values[i] = ec._DeeplyNestedObject_qFieldOnDeeplyNestedObject(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "rFieldOnDeeplyNestedObject":
+			out.Values[i] = ec._DeeplyNestedObject_rFieldOnDeeplyNestedObject(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "sFieldOnDeeplyNestedObject":
+			out.Values[i] = ec._DeeplyNestedObject_sFieldOnDeeplyNestedObject(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "tFieldOnDeeplyNestedObject":
+			out.Values[i] = ec._DeeplyNestedObject_tFieldOnDeeplyNestedObject(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "uFieldOnDeeplyNestedObject":
+			out.Values[i] = ec._DeeplyNestedObject_uFieldOnDeeplyNestedObject(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "vFieldOnDeeplyNestedObject":
+			out.Values[i] = ec._DeeplyNestedObject_vFieldOnDeeplyNestedObject(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "wFieldOnDeeplyNestedObject":
+			out.Values[i] = ec._DeeplyNestedObject_wFieldOnDeeplyNestedObject(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "xFieldOnDeeplyNestedObject":
+			out.Values[i] = ec._DeeplyNestedObject_xFieldOnDeeplyNestedObject(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "yFieldOnDeeplyNestedObject":
+			out.Values[i] = ec._DeeplyNestedObject_yFieldOnDeeplyNestedObject(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "zFieldOnDeeplyNestedObject":
+			out.Values[i] = ec._DeeplyNestedObject_zFieldOnDeeplyNestedObject(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var employeeImplementors = []string{"Employee", "_Entity"}
 
 func (ec *executionContext) _Employee(ctx context.Context, sel ast.SelectionSet, obj *model.Employee) graphql.Marshaler {
@@ -3720,6 +5598,45 @@ func (ec *executionContext) _Entity(ctx context.Context, sel ast.SelectionSet) g
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var nestedObjectImplementors = []string{"NestedObject"}
+
+func (ec *executionContext) _NestedObject(ctx context.Context, sel ast.SelectionSet, obj *model.NestedObject) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, nestedObjectImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("NestedObject")
+		case "deeplyNestedObjects":
+			out.Values[i] = ec._NestedObject_deeplyNestedObjects(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -3835,6 +5752,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_delay(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "bigResponse":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_bigResponse(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -4366,6 +6305,60 @@ func (ec *executionContext) ___Type(ctx context.Context, sel ast.SelectionSet, o
 
 // region    ***************************** type.gotpl *****************************
 
+func (ec *executionContext) marshalNBigObject2ᚕᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋtest1ᚋsubgraphᚋmodelᚐBigObjectᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.BigObject) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNBigObject2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋtest1ᚋsubgraphᚋmodelᚐBigObject(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNBigObject2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋtest1ᚋsubgraphᚋmodelᚐBigObject(ctx context.Context, sel ast.SelectionSet, v *model.BigObject) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._BigObject(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNBoolean2bool(ctx context.Context, v interface{}) (bool, error) {
 	res, err := graphql.UnmarshalBoolean(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -4379,6 +6372,60 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) marshalNDeeplyNestedObject2ᚕᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋtest1ᚋsubgraphᚋmodelᚐDeeplyNestedObjectᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.DeeplyNestedObject) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNDeeplyNestedObject2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋtest1ᚋsubgraphᚋmodelᚐDeeplyNestedObject(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNDeeplyNestedObject2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋtest1ᚋsubgraphᚋmodelᚐDeeplyNestedObject(ctx context.Context, sel ast.SelectionSet, v *model.DeeplyNestedObject) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._DeeplyNestedObject(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNEmployee2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋtest1ᚋsubgraphᚋmodelᚐEmployee(ctx context.Context, sel ast.SelectionSet, v model.Employee) graphql.Marshaler {
@@ -4410,6 +6457,21 @@ func (ec *executionContext) marshalNFieldSet2string(ctx context.Context, sel ast
 	return res
 }
 
+func (ec *executionContext) unmarshalNFloat2float64(ctx context.Context, v interface{}) (float64, error) {
+	res, err := graphql.UnmarshalFloatContext(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNFloat2float64(ctx context.Context, sel ast.SelectionSet, v float64) graphql.Marshaler {
+	res := graphql.MarshalFloatContext(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return graphql.WrapContextMarshaler(ctx, res)
+}
+
 func (ec *executionContext) unmarshalNInt2int(ctx context.Context, v interface{}) (int, error) {
 	res, err := graphql.UnmarshalInt(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -4423,6 +6485,60 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) marshalNNestedObject2ᚕᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋtest1ᚋsubgraphᚋmodelᚐNestedObjectᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.NestedObject) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNNestedObject2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋtest1ᚋsubgraphᚋmodelᚐNestedObject(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNNestedObject2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋtest1ᚋsubgraphᚋmodelᚐNestedObject(ctx context.Context, sel ast.SelectionSet, v *model.NestedObject) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._NestedObject(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {
