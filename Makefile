@@ -154,3 +154,11 @@ sync-go-workspace:
 	cd graphqlmetrics && go mod tidy
 	cd router-tests && make bump-deps
 	go work sync
+
+# Validates if any breaking changes has been introduced.
+# Compares the head of the branch with your local changes
+check-buf:
+	buf breaking --against '.git#branch=main'
+
+buf-lint:
+	buf lint
