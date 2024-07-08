@@ -250,6 +250,7 @@ export const SetupKeycloak = async ({
     });
   } catch (e: any) {
     if (e.response?.status !== 409) {
+      e.message = `Failed to create keycloak realm: ${realmName}.` + e.message;
       throw e;
     }
   }
@@ -271,6 +272,7 @@ export const SetupKeycloak = async ({
       });
       id = res[0].id!;
     } else {
+      e.message = `Failed to add keycloak user: ${userTestData.email}.` + e.message;
       throw e;
     }
   }
@@ -282,6 +284,7 @@ export const SetupKeycloak = async ({
     });
   } catch (e: any) {
     if (e.response?.status !== 409) {
+      e.message = `Failed to seed group: ${userTestData.organizationSlug}.` + e.message;
       throw e;
     }
   }
