@@ -4,3 +4,9 @@
 # This file is used to debugging purposes only.
 
 version: "1"
+
+log_level: "info"
+json_log: true
+log_file: "/path/to/logfile.log"
+
+
