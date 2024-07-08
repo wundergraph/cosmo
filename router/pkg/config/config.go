@@ -440,6 +440,7 @@ type Config struct {
 	IntrospectionEnabled          bool                        `yaml:"introspection_enabled" default:"true" envconfig:"INTROSPECTION_ENABLED"`
 	LogLevel                      string                      `yaml:"log_level" default:"info" envconfig:"LOG_LEVEL"`
 	JSONLog                       bool                        `yaml:"json_log" default:"true" envconfig:"JSON_LOG"`
+	LogFile                       string                      `yaml:"log_file"`
 	ShutdownDelay                 time.Duration               `yaml:"shutdown_delay" default:"60s" envconfig:"SHUTDOWN_DELAY"`
 	GracePeriod                   time.Duration               `yaml:"grace_period" default:"30s" envconfig:"GRACE_PERIOD"`
 	PollInterval                  time.Duration               `yaml:"poll_interval" default:"10s" envconfig:"POLL_INTERVAL"`
@@ -476,7 +477,6 @@ type LoadResult struct {
 	Config        Config
 	DefaultLoaded bool
 }
-
 func LoadConfig(configFilePath string, envOverride string) (*LoadResult, error) {
 	_ = godotenv.Load(".env.local")
 	_ = godotenv.Load()

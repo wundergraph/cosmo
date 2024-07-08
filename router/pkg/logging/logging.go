@@ -9,17 +9,71 @@ import (
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"gopkg.in/yaml.v2"
 )
 
 const (
 	requestIDField = "reqId"
 )
 
+type Config struct {
+	PrettyLogging bool   `yaml:"pretty_logging"`
+	Debug         bool   `yaml:"debug"`
+	LogLevel      string `yaml:"log_level"`
+	LogFile       string `yaml:"log_file"`
+}
+
 type RequestIDKey struct{}
 
-func New(prettyLogging bool, debug bool, level zapcore.Level) *zap.Logger {
-	return newZapLogger(zapcore.AddSync(os.Stdout), prettyLogging, debug, level)
+func New(config *Config) (*zap.Logger, error) {
+	level, err := ZapLogLevelFromString(config.LogLevel)
+	if err != nil {
+		return nil, err
+	}
+
+	consoleSyncer := zapcore.AddSync(os.Stdout)
+	fileSyncer, err := getLogFileSyncer(config.LogFile)
+	if err != nil {
+		return nil, err
+	}
+	multiSyncer := zapcore.NewMultiWriteSyncer(consoleSyncer, fileSyncer)
+
+	return newZapLogger(multiSyncer, config.PrettyLogging, config.Debug, level), nil
 }
+
+func NewFromConfigFile(configFile string) (*zap.Logger, error) {
+	config, err := loadConfig(configFile)
+	if err != nil {
+		return nil, err
+	}
+	return New(config)
+}
+
+func loadConfig(configFile string) (*Config, error) {
+	file, err := os.Open(configFile)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	var config Config
+	decoder := yaml.NewDecoder(file)
+	err = decoder.Decode(&config)
+	if err != nil {
+		return nil, err
+	}
+
+	return &config, nil
+}
+
+func getLogFileSyncer(logFile string) (zapcore.WriteSyncer, error) {
+	file, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open log file: %w", err)
+	}
+	return zapcore.AddSync(file), nil
+}
+
 
 func zapBaseEncoderConfig() zapcore.EncoderConfig {
 	ec := zap.NewProductionEncoderConfig()
@@ -113,3 +167,4 @@ func ZapLogLevelFromString(logLevel string) (zapcore.Level, error) {
 func WithRequestID(reqID string) zap.Field {
 	return zap.String(requestIDField, reqID)
 }
+
