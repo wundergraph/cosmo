@@ -296,3 +296,24 @@ overrides:
 	require.ErrorAs(t, err, &js)
 	require.Equal(t, js.Causes[0].Message, "'a' is not valid 'http-url'")
 }
+
+// New tests for logging configurations
+
+func TestLoadConfigWithLogFile(t *testing.T) {
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+log_level: "info"
+json_log: true
+log_file: "/tmp/test_log.log"
+shutdown_delay: "10s"
+`)
+	cfg, err := LoadConfig(f, "")
+
+	require.NoError(t, err)
+	require.Equal(t, "info", cfg.Config.LogLevel)
+	require.True(t, cfg.Config.JSONLog)
+	require.Equal(t, "/tmp/test_log.log", cfg.Config.Log
+
