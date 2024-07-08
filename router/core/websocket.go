@@ -319,22 +319,24 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		r = r.WithContext(authentication.WithWebsocketInitialPayloadContextKey(r.Context(), handler.initialPayload))
 
 		// Later check access control after initial payload is read and set into the context
-		_, err := h.accessController.Access(w, r)
+		validatedReq, err := h.accessController.Access(w, r)
 		if err != nil {
 			statusCode := http.StatusForbidden
 			if errors.Is(err, ErrUnauthorized) {
 				statusCode = http.StatusUnauthorized
 			}
-			http.Error(w, http.StatusText(statusCode), statusCode)
+			http.Error(handler.w, http.StatusText(statusCode), statusCode)
+			_ = handler.requestError(fmt.Errorf("WebSocket authorization failed: %w", err))
 			return
 		}
+		handler.r = validatedReq
 
 		// Export the token from the initial payload to the request header
 		if fromInitialPayloadConfig.ExportTokenToRequestHeader.Enabled {
 			var initialPayloadMap map[string]interface{}
 			json.Unmarshal(handler.initialPayload, &initialPayloadMap)
 			jwtToken := initialPayloadMap[fromInitialPayloadConfig.Key].(string)
-			r.Header.Set(fromInitialPayloadConfig.ExportTokenToRequestHeader.HeaderKey, jwtToken)
+			handler.r.Header.Set(fromInitialPayloadConfig.ExportTokenToRequestHeader.HeaderKey, jwtToken)
 		}
 	}
 
