@@ -51,8 +51,10 @@ const keycloakClient = new Keycloak({
 });
 await keycloakClient.authenticateClient();
 
+const logger = pino();
+
 // Init platform webhooks
-const platformWebhooks = new PlatformWebhookService(webhookUrl, webhookSecret, pino());
+const platformWebhooks = new PlatformWebhookService(webhookUrl, webhookSecret, logger);
 
 // Find user on keycloak
 const user = await keycloakClient.client.users.findOne({
@@ -61,8 +63,8 @@ const user = await keycloakClient.client.users.findOne({
 });
 
 await db.transaction(async (tx) => {
-  const userRepo = new UserRepository(pino(), tx);
-  const orgRepo = new OrganizationRepository(pino(), tx);
+  const userRepo = new UserRepository(logger, tx);
+  const orgRepo = new OrganizationRepository(logger, tx);
 
   if (!user || !user.id || !user.email) {
     throw new Error('User not found');

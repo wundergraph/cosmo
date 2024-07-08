@@ -48,7 +48,7 @@ export class GraphCompositionRepository {
           compositionErrors: compositionErrorString,
           isComposable: compositionErrorString === '',
           routerConfigSignature,
-          createdBy: composedBy,
+          createdById: composedBy,
           createdByEmail: actor.email,
           deploymentError: deploymentErrorString,
           admissionError: admissionErrorString,
@@ -113,7 +113,7 @@ export class GraphCompositionRepository {
       })
       .from(graphCompositions)
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
-      .leftJoin(users, eq(graphCompositions.createdBy, users.id))
+      .leftJoin(users, eq(graphCompositions.createdById, users.id))
       .where(eq(graphCompositions.id, input.compositionId))
       .orderBy(desc(schemaVersion.createdAt))
       .execute();
@@ -165,7 +165,7 @@ export class GraphCompositionRepository {
       })
       .from(graphCompositions)
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
-      .leftJoin(users, eq(graphCompositions.createdBy, users.id))
+      .leftJoin(users, eq(graphCompositions.createdById, users.id))
       .where(eq(graphCompositions.schemaVersionId, input.schemaVersionId))
       .orderBy(desc(schemaVersion.createdAt))
       .execute();
@@ -273,7 +273,7 @@ export class GraphCompositionRepository {
       })
       .from(graphCompositions)
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
-      .leftJoin(users, eq(graphCompositions.createdBy, users.id))
+      .leftJoin(users, eq(graphCompositions.createdById, users.id))
       .where(and(...conditions))
       .orderBy(desc(schemaVersion.createdAt))
       .limit(limit)
@@ -327,7 +327,7 @@ export class GraphCompositionRepository {
       })
       .from(graphCompositions)
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
-      .leftJoin(users, eq(graphCompositions.createdBy, users.id))
+      .leftJoin(users, eq(graphCompositions.createdById, users.id))
       .where(and(...conditions))
       .execute();
 

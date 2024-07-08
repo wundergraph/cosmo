@@ -1268,6 +1268,11 @@ export class OrganizationRepository {
     };
   }
 
+  /***
+   * Checks if the user can be deleted.
+   * It returns with isSafe=false if the user is the only admin of one or more multi member organizations along with said organizations.
+   * It also returns organizations where the user is the only member.
+   */
   public async canUserBeDeleted(id: string): Promise<{
     isSafe: boolean;
     soloOrganizations: OrganizationDTO[];

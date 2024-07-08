@@ -910,7 +910,7 @@ export class FeatureFlagRepository {
         federatedGraphsToFeatureFlagSchemaVersions,
         eq(federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId, schemaVersion.id),
       )
-      .leftJoin(users, eq(users.id, graphCompositions.createdBy))
+      .leftJoin(users, eq(users.id, graphCompositions.createdById))
       .where(eq(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId, baseSchemaVersionId))
       .execute();
 

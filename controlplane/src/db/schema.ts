@@ -1312,7 +1312,7 @@ export const graphCompositions = pgTable('graph_compositions', {
   // The errors that occurred during the admission of the config. Only set when the schema was composable.
   admissionError: text('admission_error'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  createdBy: uuid('created_by').references(() => users.id, {
+  createdById: uuid('created_by_id').references(() => users.id, {
     onDelete: 'set null',
   }),
   createdByEmail: text('created_by_email'),

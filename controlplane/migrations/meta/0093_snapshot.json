@@ -1,5 +1,5 @@
 {
-  "id": "8d672025-bc99-4e16-8f6f-e5ccdd2b56fa",
+  "id": "dbf5249c-50ee-456d-ba59-567b5ad55b76",
   "prevId": "1c54bcc9-c5f5-4cd4-b3ce-dd5b3322b566",
   "version": "5",
   "dialect": "pg",
@@ -1728,8 +1728,8 @@
           "notNull": true,
           "default": "now()"
         },
-        "created_by": {
-          "name": "created_by",
+        "created_by_id": {
+          "name": "created_by_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
@@ -1763,12 +1763,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "graph_compositions_created_by_users_id_fk": {
-          "name": "graph_compositions_created_by_users_id_fk",
+        "graph_compositions_created_by_id_users_id_fk": {
+          "name": "graph_compositions_created_by_id_users_id_fk",
           "tableFrom": "graph_compositions",
           "tableTo": "users",
           "columnsFrom": [
-            "created_by"
+            "created_by_id"
           ],
           "columnsTo": [
             "id"
