@@ -315,5 +315,21 @@ shutdown_delay: "10s"
 	require.NoError(t, err)
 	require.Equal(t, "info", cfg.Config.LogLevel)
 	require.True(t, cfg.Config.JSONLog)
-	require.Equal(t, "/tmp/test_log.log", cfg.Config.Log
+	require.Equal(t, "/tmp/test_log.log", cfg.Config.LogFile)
+	require.Equal(t, 10*time.Second, cfg.Config.ShutdownDelay)
+}
 
+func TestLoadConfigWithInvalidLogFile(t *testing.T) {
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+log_level: "info"
+json_log: true
+log_file: "/nonexistent/path/to/logfile.log"
+shutdown_delay: "10s"
+`)
+	_, err := LoadConfig(f, "")
+	require.Error(t, err)
+}

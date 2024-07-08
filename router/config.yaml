@@ -7,6 +7,6 @@ version: "1"
 
 log_level: "info"
 json_log: true
-log_file: "/path/to/logfile.log"
+log_file: "./log_file.log"
 
 
