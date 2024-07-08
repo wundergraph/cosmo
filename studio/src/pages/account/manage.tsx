@@ -86,9 +86,21 @@ const ManageAccountPage: NextPageWithLayout = () => {
         <div className="space-y-1.5">
           <CardTitle>Delete Account</CardTitle>
           <CardDescription className="text-sm text-muted-foreground">
-            Your account will be permanently deleted. This action is
-            irreversible! <br /> You will lose memberships to all your
-            organizations and any API keys created by you will be deleted.
+            <ol className="list-decimal px-4 pt-2">
+              <li>
+                Your account will be permanently deleted. This action is
+                irreversible!
+              </li>
+              <li>You will lose memberships to all your organizations.</li>
+              <li>
+                In case of organizations where you are the only member, the
+                organizations and all containing resources will be deleted.
+              </li>
+              <li>
+                Any API keys created by you in all organizations will be
+                deleted.
+              </li>
+            </ol>
           </CardDescription>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
@@ -112,7 +124,7 @@ const ManageAccountPage: NextPageWithLayout = () => {
             <form onSubmit={handleSubmit(handleDeleteUser)} className="mt-2">
               <div className="flex flex-col gap-y-3">
                 <span className="text-sm">
-                  Enter your email <strong>{user?.email}</strong>.
+                  Enter your email <strong>{user?.email}</strong>
                 </span>
                 <Input type="text" {...register("email")} autoFocus={true} />
                 {errors.email && (
