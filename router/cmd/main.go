@@ -42,16 +42,24 @@ func Main() {
 	)
 	defer stop()
 
-	logLevel, err := logging.ZapLogLevelFromString(result.Config.LogLevel)
-	if err != nil {
-		log.Fatal("Could not parse log level", zap.Error(err))
+	// Create logger config
+	loggerConfig := &logging.Config{
+		PrettyLogging: !result.Config.JSONLog,
+		Debug:         result.Config.LogLevel == "debug",
+		LogLevel:      result.Config.LogLevel,
+		LogFile:       result.Config.LogFile,
 	}
 
-	logger := logging.New(!result.Config.JSONLog, result.Config.LogLevel == "debug", logLevel).
-		With(
-			zap.String("component", "@wundergraph/router"),
-			zap.String("service_version", core.Version),
-		)
+	logger, err := logging.New(loggerConfig)
+	if err != nil {
+		log.Fatal("Could not initialize logger", zap.Error(err))
+	}
+	defer logger.Sync()
+
+	logger = logger.With(
+		zap.String("component", "@wundergraph/router"),
+		zap.String("service_version", core.Version),
+	)
 
 	if *configPathFlag != "" {
 		logger.Info(
@@ -104,3 +112,4 @@ func Main() {
 	logger.Debug("Server exiting")
 	os.Exit(0)
 }
+
