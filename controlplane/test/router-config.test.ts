@@ -1,8 +1,10 @@
 import { noQueryRootTypeError } from '@wundergraph/composition';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { joinLabel } from '@wundergraph/cosmo-shared';
+import { joinLabel, routerConfigFromJsonString } from '@wundergraph/cosmo-shared';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { BlobNotFoundError } from '../src/core/blobstorage/index.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
+import { unsuccessfulBaseCompositionError } from '../src/core/errors/errors.js';
 import { SetupTest } from './test-util.js';
 
 let dbname = '';
@@ -17,7 +19,7 @@ describe('Router Config', (ctx) => {
   });
 
   test('Should return routerConfig after federating a valid graph', async (testContext) => {
-    const { client, server, nodeClient } = await SetupTest({ dbname });
+    const { client, server, blobStorage, users } = await SetupTest({ dbname });
 
     const inventorySubgraph = genID('inventory');
     const pandasSubgraph = genID('pandas');
@@ -172,15 +174,15 @@ describe('Router Config', (ctx) => {
 
     expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
 
-    const graph = await client.getFederatedGraphByName({
+    const graphResponse = await client.getFederatedGraphByName({
       name: fedGraphName,
       namespace: 'default',
     });
 
-    expect(graph.response?.code).toBe(EnumStatusCode.OK);
+    expect(graphResponse.response?.code).toBe(EnumStatusCode.OK);
 
-    expect(graph.graph?.isComposable).toBe(true);
-    expect(graph.graph?.compositionErrors).toBe('');
+    expect(graphResponse.graph?.isComposable).toBe(true);
+    expect(graphResponse.graph?.compositionErrors).toBe('');
 
     const tokenResp = await client.generateRouterToken({
       fedGraphName,
@@ -189,25 +191,19 @@ describe('Router Config', (ctx) => {
 
     expect(tokenResp.response?.code).toBe(EnumStatusCode.OK);
 
-    const resp = await nodeClient.getLatestValidRouterConfig(
-      {
-        graphName: fedGraphName,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${tokenResp.token}`,
-        },
-      },
-    );
+    const configBlog = await blobStorage.getObject({
+      key: `${users.adminAliceCompanyA.organizationId}/${graphResponse.graph?.id}/routerconfigs/latest.json`,
+    });
+    const configJsonString = await new Response(configBlog.stream).text();
+    const config = routerConfigFromJsonString(configJsonString);
 
-    expect(resp.response?.code).toBe(EnumStatusCode.OK);
-    expect(resp.config?.engineConfig).toBeDefined();
+    expect(config).toBeDefined();
 
     await server.close();
   });
 
   test('Should not return routerConfig if an invalid schema version is available', async (testContext) => {
-    const { client, nodeClient, server } = await SetupTest({ dbname });
+    const { client, server, users, blobStorage } = await SetupTest({ dbname });
 
     const pandasSubgraph = genID('pandas');
     const usersSubgraph = genID('users');
@@ -244,8 +240,11 @@ describe('Router Config', (ctx) => {
     });
 
     expect(publishPandaResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
-    expect(publishPandaResp.compositionErrors).toHaveLength(1);
+    expect(publishPandaResp.compositionErrors).toHaveLength(2);
     expect(publishPandaResp.compositionErrors[0].message).toStrictEqual(noQueryRootTypeError.message);
+    expect(publishPandaResp.compositionErrors[1]).toStrictEqual(
+      unsuccessfulBaseCompositionError(fedGraphName, 'default'),
+    );
 
     const createUsersSubgraph = await client.createFederatedSubgraph({
       name: usersSubgraph,
@@ -289,19 +288,11 @@ describe('Router Config', (ctx) => {
 
     expect(tokenResp.response?.code).toBe(EnumStatusCode.OK);
 
-    let resp = await nodeClient.getLatestValidRouterConfig(
-      {
-        graphName: fedGraphName,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${tokenResp.token}`,
-        },
-      },
-    );
-
-    expect(resp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
-    expect(resp.config).toBeUndefined();
+    await expect(() =>
+      blobStorage.getObject({
+        key: `${users.adminAliceCompanyA.organizationId}/${graph.graph?.id}/routerconfigs/latest.json`,
+      }),
+    ).rejects.toThrowError(BlobNotFoundError);
 
     // This will fix the schema
 
@@ -323,19 +314,13 @@ describe('Router Config', (ctx) => {
 
     expect(publishUsersResp.response?.code).toBe(EnumStatusCode.OK);
 
-    resp = await nodeClient.getLatestValidRouterConfig(
-      {
-        graphName: fedGraphName,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${tokenResp.token}`,
-        },
-      },
-    );
+    const configBlog = await blobStorage.getObject({
+      key: `${users.adminAliceCompanyA.organizationId}/${graph.graph?.id}/routerconfigs/latest.json`,
+    });
+    const configJsonString = await new Response(configBlog.stream).text();
+    const config = routerConfigFromJsonString(configJsonString);
 
-    expect(resp.response?.code).toBe(EnumStatusCode.OK);
-    expect(resp.config).toBeDefined();
+    expect(config).toBeDefined();
 
     await server.close();
   });

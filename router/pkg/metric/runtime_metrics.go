@@ -301,11 +301,11 @@ func (r *RuntimeMetrics) Start() error {
 	return nil
 }
 
-func (r *RuntimeMetrics) Stop() error {
+func (r *RuntimeMetrics) Shutdown() error {
 	var err error
 
 	for _, reg := range r.instrumentRegistrations {
-		if regErr := reg.Unregister(); err != nil {
+		if regErr := reg.Unregister(); regErr != nil {
 			err = errors.Join(regErr)
 		}
 	}

@@ -1,10 +1,19 @@
-import { randomUUID } from 'node:crypto';
-import { JsonValue } from '@bufbuild/protobuf';
+import type { UUID } from 'node:crypto';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
-import { FederationResult, FederationResultContainerWithContracts, FieldConfiguration } from '@wundergraph/composition';
-import { ComposedSubgraph, buildRouterConfig } from '@wundergraph/cosmo-shared';
+import {
+  FederationResult,
+  FederationResultContainerWithContracts,
+  FieldConfiguration,
+  Subgraph,
+} from '@wundergraph/composition';
+import { buildRouterConfig, ComposedSubgraph } from '@wundergraph/cosmo-shared';
 import { FastifyBaseLogger } from 'fastify';
 import { DocumentNode, parse, printSchema } from 'graphql';
+import {
+  FeatureFlagRouterExecutionConfig,
+  FeatureFlagRouterExecutionConfigs,
+  RouterConfig,
+} from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { FederatedGraphDTO, Label, SubgraphDTO } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import { audiences, nowInSeconds, signJwtHS256 } from '../crypto/jwt.js';
@@ -16,8 +25,9 @@ import {
   AdmissionWebhookController,
   AdmissionWebhookJwtPayload,
 } from '../services/AdmissionWebhookController.js';
+import { GraphCompositionRepository } from '../repositories/GraphCompositionRepository.js';
 import { composeSubgraphs, composeSubgraphsWithContracts } from './composition.js';
-import { GetDiffBetweenGraphsResult, getDiffBetweenGraphs } from './schemaCheck.js';
+import { getDiffBetweenGraphs, GetDiffBetweenGraphsResult } from './schemaCheck.js';
 
 export type CompositionResult = {
   compositions: ComposedFederatedGraph[];
@@ -26,6 +36,46 @@ export type CompositionResult = {
 export interface S3RouterConfigMetadata extends Record<string, string> {
   version: string;
   'signature-sha256': string;
+}
+
+export type BaseCompositionData = {
+  featureFlagRouterExecutionConfigByFeatureFlagName: Map<string, FeatureFlagRouterExecutionConfig>;
+  routerExecutionConfig?: RouterConfig;
+  schemaVersionId?: string;
+};
+
+/* The contract base composition schema version ID, router execution config,
+ * and its feature flag schema versions (if any)
+ * */
+export type ContractBaseCompositionData = {
+  featureFlagRouterExecutionConfigByFeatureFlagName: Map<string, FeatureFlagRouterExecutionConfig>;
+  routerExecutionConfig: RouterConfig;
+  schemaVersionId: string;
+};
+
+export function routerConfigToFeatureFlagExecutionConfig(routerConfig: RouterConfig): FeatureFlagRouterExecutionConfig {
+  return new FeatureFlagRouterExecutionConfig({
+    engineConfig: routerConfig.engineConfig,
+    subgraphs: routerConfig.subgraphs,
+    version: routerConfig.version,
+  });
+}
+
+export function buildRouterExecutionConfig(
+  composedGraph: ComposedFederatedGraph,
+  federatedSchemaVersionId: UUID,
+): RouterConfig | undefined {
+  if (composedGraph.errors.length > 0 || !composedGraph.composedSchema) {
+    return;
+  }
+  const federatedClientSDL = composedGraph.shouldIncludeClientSchema ? composedGraph.federatedClientSchema || '' : '';
+  return buildRouterConfig({
+    federatedClientSDL,
+    federatedSDL: composedGraph.composedSchema,
+    fieldConfigurations: composedGraph.fieldConfigurations,
+    subgraphs: composedGraph.subgraphs,
+    schemaVersionId: federatedSchemaVersionId,
+  });
 }
 
 export function subgraphDTOsToComposedSubgraphs(
@@ -98,7 +148,7 @@ export interface ComposedFederatedGraph {
 }
 
 export interface CompositionDeployResult {
-  errors: ComposeDeploymentError[];
+  schemaVersionId: string;
 }
 
 export class RouterConfigUploadError extends Error {
@@ -116,40 +166,70 @@ export class Composer {
     private federatedGraphRepo: FederatedGraphRepository,
     private subgraphRepo: SubgraphRepository,
     private contractRepo: ContractRepository,
+    private graphCompositionRepository: GraphCompositionRepository,
   ) {}
 
-  /**
-   * Build and store the final router config and federated schema to the database as well as to the CDN. A diff between the
-   * previous and current schema is stored as changelog.
-   */
-  async deployComposition({
-    composedGraph,
-    composedBy,
+  composeRouterConfigWithFeatureFlags({
+    featureFlagRouterExecutionConfigByFeatureFlagName,
+    baseCompositionRouterExecutionConfig,
+  }: {
+    featureFlagRouterExecutionConfigByFeatureFlagName: Map<string, FeatureFlagRouterExecutionConfig>;
+    // The base composition is the base federated graph on which feature flags and contracts are based
+    baseCompositionRouterExecutionConfig: RouterConfig;
+  }) {
+    if (featureFlagRouterExecutionConfigByFeatureFlagName.size === 0) {
+      return new RouterConfig({
+        ...baseCompositionRouterExecutionConfig,
+      });
+    }
+    const featureFlagRouterConfigs: { [key: string]: FeatureFlagRouterExecutionConfig } = {};
+    for (const [featureFlagName, routerExecutionConfig] of featureFlagRouterExecutionConfigByFeatureFlagName) {
+      featureFlagRouterConfigs[featureFlagName] = routerExecutionConfig;
+    }
+    const featureFlagConfigs = baseCompositionRouterExecutionConfig.featureFlagConfigs;
+    if (featureFlagConfigs) {
+      const configByFeatureFlagName = featureFlagConfigs.configByFeatureFlagName;
+      for (const featureFlagName in featureFlagRouterConfigs) {
+        configByFeatureFlagName[featureFlagName] = featureFlagRouterConfigs[featureFlagName];
+      }
+    } else {
+      baseCompositionRouterExecutionConfig.featureFlagConfigs = new FeatureFlagRouterExecutionConfigs({
+        configByFeatureFlagName: featureFlagRouterConfigs,
+      });
+    }
+
+    return new RouterConfig({
+      ...baseCompositionRouterExecutionConfig,
+    });
+  }
+
+  async uploadRouterConfig({
+    routerConfig,
     blobStorage,
     organizationId,
+    federatedGraphId,
+    federatedSchemaVersionId,
     admissionConfig,
     admissionWebhookURL,
-    admissionWebhookSecret,
   }: {
-    composedGraph: ComposedFederatedGraph;
-    composedBy: string;
+    routerConfig: RouterConfig;
     blobStorage: BlobStorage;
     organizationId: string;
-    admissionWebhookURL?: string;
-    admissionWebhookSecret?: string;
+    federatedGraphId: string;
+    federatedSchemaVersionId: string;
     admissionConfig: {
       jwtSecret: string;
       cdnBaseUrl: string;
     };
-  }): Promise<CompositionDeployResult> {
-    const hasCompositionErrors = composedGraph.errors.length > 0;
-    const federatedSchemaVersionId = randomUUID();
-
-    let routerConfigJson: JsonValue = null;
+    admissionWebhookURL?: string;
+  }): Promise<{
+    errors: ComposeDeploymentError[];
+  }> {
+    const routerConfigJsonStringBytes = Buffer.from(routerConfig.toJsonString(), 'utf8');
 
     // CDN path and bucket path are the same in this case
-    const s3PathDraft = `${organizationId}/${composedGraph.id}/routerconfigs/draft.json`;
-    const s3PathReady = `${organizationId}/${composedGraph.id}/routerconfigs/latest.json`;
+    const s3PathDraft = `${organizationId}/${federatedGraphId}/routerconfigs/draft.json`;
+    const s3PathReady = `${organizationId}/${federatedGraphId}/routerconfigs/latest.json`;
 
     // The signature will be added by the admission webhook
     let signatureSha256: undefined | string;
@@ -158,158 +238,95 @@ export class Composer {
     let deploymentError: RouterConfigUploadError | undefined;
     let admissionError: AdmissionError | undefined;
 
-    // Build and deploy the router config when composed schema is valid
-    if (!hasCompositionErrors && composedGraph.composedSchema) {
-      const federatedClientSDL = composedGraph.shouldIncludeClientSchema
-        ? composedGraph.federatedClientSchema || ''
-        : '';
-      const routerConfig = buildRouterConfig({
-        federatedClientSDL,
-        federatedSDL: composedGraph.composedSchema,
-        fieldConfigurations: composedGraph.fieldConfigurations,
-        subgraphs: composedGraph.subgraphs,
-        schemaVersionId: federatedSchemaVersionId,
-      });
-      routerConfigJson = routerConfig.toJson();
-      const routerConfigJsonStringBytes = Buffer.from(routerConfig.toJsonString(), 'utf8');
-
-      if (admissionWebhookURL) {
+    if (admissionWebhookURL) {
+      try {
+        // 1. Upload the draft config to the blob storage
+        // so that the admission webhook can download it.
+        await blobStorage.putObject<S3RouterConfigMetadata>({
+          key: s3PathDraft,
+          body: routerConfigJsonStringBytes,
+          contentType: 'application/json; charset=utf-8',
+          metadata: {
+            version: federatedSchemaVersionId,
+            'signature-sha256': '', // The signature will be added by the admission webhook
+          },
+        });
         try {
-          // 1. Upload the draft config to the blob storage
-          // so that the admission webhook can download it.
-          await blobStorage.putObject<S3RouterConfigMetadata>({
+          // 2. Create a private URL with a token that the admission webhook can use to fetch the draft config.
+          // The token is valid for 5 minutes and signed with the organization ID and the federated graph ID.
+          const token = await signJwtHS256<AdmissionWebhookJwtPayload>({
+            secret: admissionConfig.jwtSecret,
+            token: {
+              exp: nowInSeconds() + 5 * 60, // 5 minutes
+              aud: audiences.cosmoCDNAdmission, // to distinguish from other tokens
+              organization_id: organizationId,
+              federated_graph_id: federatedGraphId,
+            },
+          });
+          const admissionWebhookController = new AdmissionWebhookController(this.logger, admissionWebhookURL);
+          const resp = await admissionWebhookController.validateConfig({
+            privateConfigUrl: `${admissionConfig.cdnBaseUrl}/${s3PathDraft}?token=${token}`,
+            organizationId,
+            federatedGraphId,
+          });
+          signatureSha256 = resp.signatureSha256;
+        } finally {
+          // Always clean up the draft config after the draft has been validated.
+          await blobStorage.deleteObject({
             key: s3PathDraft,
-            body: routerConfigJsonStringBytes,
-            contentType: 'application/json; charset=utf-8',
-            metadata: {
-              version: federatedSchemaVersionId,
-              'signature-sha256': '', // The signature will be added by the admission webhook
-            },
           });
-
-          try {
-            // 2. Create a private URL with a token that the admission webhook can use to fetch the draft config.
-            // The token is valid for 5 minutes and signed with the organization ID and the federated graph ID.
-            const token = await signJwtHS256<AdmissionWebhookJwtPayload>({
-              secret: admissionConfig.jwtSecret,
-              token: {
-                exp: nowInSeconds() + 5 * 60, // 5 minutes
-                aud: audiences.cosmoCDNAdmission, // to distinguish from other tokens
-                organization_id: organizationId,
-                federated_graph_id: composedGraph.id,
-              },
-            });
-
-            const admissionWebhookController = new AdmissionWebhookController(
-              this.logger,
-              admissionWebhookURL,
-              admissionWebhookSecret,
-            );
-
-            const resp = await admissionWebhookController.validateConfig({
-              privateConfigUrl: `${admissionConfig.cdnBaseUrl}/${s3PathDraft}?token=${token}`,
-              organizationId,
-              federatedGraphId: composedGraph.id,
-            });
-
-            signatureSha256 = resp.signatureSha256;
-          } finally {
-            // Always clean up the draft config after the draft has been validated.
-            await blobStorage.deleteObject({
-              key: s3PathDraft,
-            });
-          }
-        } catch (err: any) {
-          this.logger.debug(
-            {
-              error: err,
-              federatedGraphId: composedGraph.id,
-            },
-            `Admission webhook failed to validate the router config for the federated graph.`,
-          );
-
-          if (err instanceof AdmissionError) {
-            admissionError = err;
-          } else {
-            admissionError = new AdmissionError('Admission webhook failed to validate the router config', err);
-          }
         }
-      }
-
-      // Deploy the final router config to the blob storage if the admission webhook did not fail
-      if (!admissionError) {
-        try {
-          await blobStorage.putObject<S3RouterConfigMetadata>({
-            key: s3PathReady,
-            body: routerConfigJsonStringBytes,
-            contentType: 'application/json; charset=utf-8',
-            metadata: {
-              version: federatedSchemaVersionId,
-              'signature-sha256': signatureSha256 || '',
-            },
-          });
-        } catch (err: any) {
-          this.logger.debug(
-            {
-              error: err,
-              federatedGraphId: composedGraph.id,
-            },
-            'Failed to upload the final router config to the blob storage',
-          );
-          deploymentError = new RouterConfigUploadError('Failed to upload the final router config to the CDN', err);
+      } catch (err: any) {
+        this.logger.debug(
+          {
+            error: err,
+            federatedGraphId,
+          },
+          `Admission webhook failed to validate the router config for the federated graph.`,
+        );
+        if (err instanceof AdmissionError) {
+          admissionError = err;
+        } else {
+          admissionError = new AdmissionError('Admission webhook failed to validate the router config', err);
         }
       }
     }
 
-    const prevValidFederatedSDL = await this.federatedGraphRepo.getLatestValidSchemaVersion({
-      targetId: composedGraph.targetID,
-    });
-
-    const updatedFederatedGraph = await this.federatedGraphRepo.addSchemaVersion({
-      targetId: composedGraph.targetID,
-      composedSDL: composedGraph.composedSchema,
-      clientSchema: composedGraph.federatedClientSchema,
-      subgraphSchemaVersionIds: composedGraph.subgraphs.map((s) => s.schemaVersionId!),
-      compositionErrors: composedGraph.errors,
-      routerConfig: routerConfigJson,
-      routerConfigSignature: signatureSha256,
-      deploymentError,
-      admissionError,
-      composedBy,
-      schemaVersionId: federatedSchemaVersionId,
-      // passing the path only when there exists a previous valid version or when the composition passes.
-      routerConfigPath:
-        prevValidFederatedSDL || (!hasCompositionErrors && composedGraph.composedSchema) ? s3PathReady : null,
-    });
-
-    // Only create changelog when the composed schema is valid
-    if (
-      !hasCompositionErrors &&
-      (composedGraph.composedSchema || composedGraph.federatedClientSchema) &&
-      updatedFederatedGraph?.composedSchemaVersionId
-    ) {
-      let schemaChanges: GetDiffBetweenGraphsResult;
-
-      // Prioritize diff against client schemas if no previous valid schema available or if both prev and current client schema is available.
-      if (
-        (composedGraph.federatedClientSchema && !prevValidFederatedSDL) ||
-        (composedGraph.federatedClientSchema && prevValidFederatedSDL?.clientSchema)
-      ) {
-        schemaChanges = await getDiffBetweenGraphs(
-          prevValidFederatedSDL?.clientSchema || '',
-          composedGraph.federatedClientSchema,
-        );
-      } else {
-        // Fallback to full schema for backwards compatibility
-        schemaChanges = await getDiffBetweenGraphs(prevValidFederatedSDL?.schema || '', composedGraph.composedSchema);
-      }
-
-      if (schemaChanges.kind !== 'failure' && schemaChanges.changes.length > 0) {
-        await this.federatedGraphRepo.createFederatedGraphChangelog({
-          schemaVersionID: updatedFederatedGraph.composedSchemaVersionId,
-          changes: schemaChanges.changes,
+    // Deploy the final router config to the blob storage if the admission webhook did not fail
+    if (!admissionError) {
+      try {
+        await blobStorage.putObject<S3RouterConfigMetadata>({
+          key: s3PathReady,
+          body: routerConfigJsonStringBytes,
+          contentType: 'application/json; charset=utf-8',
+          metadata: {
+            version: federatedSchemaVersionId,
+            'signature-sha256': signatureSha256 || '',
+          },
         });
+      } catch (err: any) {
+        this.logger.debug(
+          {
+            error: err,
+            federatedGraphId,
+          },
+          'Failed to upload the final router config to the blob storage',
+        );
+        deploymentError = new RouterConfigUploadError('Failed to upload the final router config to the CDN', err);
       }
+    }
+
+    if (deploymentError || admissionError) {
+      await this.graphCompositionRepository.updateComposition({
+        fedGraphSchemaVersionId: federatedSchemaVersionId,
+        deploymentErrorString: deploymentError?.message,
+        admissionErrorString: admissionError?.message,
+      });
+    } else if (signatureSha256) {
+      await this.graphCompositionRepository.updateComposition({
+        fedGraphSchemaVersionId: federatedSchemaVersionId,
+        routerConfigSignature: signatureSha256,
+      });
     }
 
     const errors: ComposeDeploymentError[] = [];
@@ -327,50 +344,119 @@ export class Composer {
     };
   }
 
-  /**
-   * Composes all subgraphs of a federated graph into a single federated graph.
-   * Optionally, you can pass extra subgraphs to include them in the composition.
-   */
-  async composeFederatedGraph(federatedGraph: FederatedGraphDTO): Promise<ComposedFederatedGraph> {
-    const subgraphs = await this.subgraphRepo.listByFederatedGraph({
-      federatedGraphTargetId: federatedGraph.targetId,
-      published: true,
+  async composeAndUploadRouterConfig({
+    admissionConfig,
+    baseCompositionRouterExecutionConfig,
+    baseCompositionSchemaVersionId,
+    blobStorage,
+    featureFlagRouterExecutionConfigByFeatureFlagName,
+    federatedGraphId,
+    organizationId,
+    federatedGraphAdmissionWebhookURL,
+  }: {
+    admissionConfig: {
+      jwtSecret: string;
+      cdnBaseUrl: string;
+    };
+    baseCompositionRouterExecutionConfig: RouterConfig;
+    baseCompositionSchemaVersionId: string;
+    blobStorage: BlobStorage;
+    featureFlagRouterExecutionConfigByFeatureFlagName: Map<string, FeatureFlagRouterExecutionConfig>;
+    federatedGraphId: string;
+    organizationId: string;
+    federatedGraphAdmissionWebhookURL?: string;
+  }) {
+    const baseRouterConfig = this.composeRouterConfigWithFeatureFlags({
+      featureFlagRouterExecutionConfigByFeatureFlagName,
+      baseCompositionRouterExecutionConfig,
     });
-    try {
-      // A federated graph must have at least one subgraph. Let the composition fail if there are none.
 
-      const { errors, federationResult: result } = composeSubgraphs(
-        subgraphs.map((s) => ({
-          name: s.name,
-          url: s.routingUrl,
-          definitions: parse(s.schemaSDL),
-        })),
-      );
+    const { errors } = await this.uploadRouterConfig({
+      blobStorage,
+      federatedGraphId,
+      federatedSchemaVersionId: baseCompositionSchemaVersionId,
+      organizationId,
+      routerConfig: baseRouterConfig,
+      admissionWebhookURL: federatedGraphAdmissionWebhookURL,
+      admissionConfig: {
+        cdnBaseUrl: admissionConfig.cdnBaseUrl,
+        jwtSecret: admissionConfig.jwtSecret,
+      },
+    });
 
-      return mapResultToComposedGraph(federatedGraph, subgraphs, errors, result);
-    } catch (e: any) {
+    return {
+      errors,
+    };
+  }
+
+  /**
+   * Create a new schema version for the composition and stores a diff and changelog between the
+   * previous and current schema as changelog.
+   */
+  async saveComposition({
+    composedGraph,
+    composedBy,
+    isFeatureFlagComposition,
+    federatedSchemaVersionId,
+    routerExecutionConfig,
+    featureFlagId,
+  }: {
+    composedGraph: ComposedFederatedGraph;
+    composedBy: string;
+    isFeatureFlagComposition: boolean;
+    federatedSchemaVersionId: UUID;
+    routerExecutionConfig?: RouterConfig;
+    featureFlagId: string;
+  }): Promise<CompositionDeployResult> {
+    const prevValidFederatedSDL = await this.federatedGraphRepo.getLatestValidSchemaVersion({
+      targetId: composedGraph.targetID,
+    });
+
+    const updatedFederatedGraph = await this.federatedGraphRepo.addSchemaVersion({
+      targetId: composedGraph.targetID,
+      composedSDL: composedGraph.composedSchema,
+      clientSchema: composedGraph.federatedClientSchema,
+      subgraphSchemaVersionIds: composedGraph.subgraphs.map((s) => s.schemaVersionId!),
+      compositionErrors: composedGraph.errors,
+      composedBy,
+      schemaVersionId: federatedSchemaVersionId,
+      isFeatureFlagComposition,
+      featureFlagId,
+    });
+
+    // If the composed schema is invalid, or it is a feature flag composition, we do not create a changelog
+    if (!routerExecutionConfig || !updatedFederatedGraph?.composedSchemaVersionId || isFeatureFlagComposition) {
       return {
-        id: federatedGraph.id,
-        name: federatedGraph.name,
-        namespace: federatedGraph.namespace,
-        namespaceId: federatedGraph.namespaceId,
-        targetID: federatedGraph.targetId,
-        fieldConfigurations: [],
-        errors: [e],
-        subgraphs: subgraphs.map((subgraph) => {
-          return {
-            id: subgraph.id,
-            name: subgraph.name,
-            url: subgraph.routingUrl,
-            sdl: subgraph.schemaSDL,
-            schemaVersionId: subgraph.schemaVersionId,
-            subscriptionUrl: subgraph.subscriptionUrl,
-            subscriptionProtocol: subgraph.subscriptionProtocol,
-            websocketSubprotocol: subgraph.websocketSubprotocol,
-          };
-        }),
+        schemaVersionId: updatedFederatedGraph?.composedSchemaVersionId || '',
       };
     }
+
+    let schemaChanges: GetDiffBetweenGraphsResult;
+
+    // Prioritize diff against client schemas if no previous valid schema available or if both prev and current client schema is available.
+    if (
+      (composedGraph.federatedClientSchema && !prevValidFederatedSDL) ||
+      (composedGraph.federatedClientSchema && prevValidFederatedSDL?.clientSchema)
+    ) {
+      schemaChanges = await getDiffBetweenGraphs(
+        prevValidFederatedSDL?.clientSchema || '',
+        composedGraph.federatedClientSchema,
+      );
+    } else {
+      // Fallback to full schema for backwards compatibility
+      schemaChanges = await getDiffBetweenGraphs(prevValidFederatedSDL?.schema || '', composedGraph.composedSchema);
+    }
+
+    if (schemaChanges.kind !== 'failure' && schemaChanges.changes.length > 0) {
+      await this.federatedGraphRepo.createFederatedGraphChangelog({
+        schemaVersionID: updatedFederatedGraph.composedSchemaVersionId,
+        changes: schemaChanges.changes,
+      });
+    }
+
+    return {
+      schemaVersionId: updatedFederatedGraph?.composedSchemaVersionId || '',
+    };
   }
 
   protected async composeWithLabels(
@@ -461,7 +547,7 @@ export class Composer {
     subgraphSchemaSDL: string,
   ) {
     return this.composeWithLabels(subgraphLabels, namespaceId, (subgraphs) => {
-      const subgraphsToBeComposed = [];
+      const subgraphsToBeComposed: Array<Subgraph> = [];
 
       for (const subgraph of subgraphs) {
         if (subgraph.name === subgraphName) {
@@ -485,7 +571,7 @@ export class Composer {
 
   composeWithDeletedSubgraph(subgraphLabels: Label[], subgraphName: string, namespaceId: string) {
     return this.composeWithLabels(subgraphLabels, namespaceId, (subgraphs) => {
-      const subgraphsToBeComposed = [];
+      const subgraphsToBeComposed: Array<Subgraph> = [];
 
       const filteredSubgraphs = subgraphs.filter((s) => s.name !== subgraphName);
 

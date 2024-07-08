@@ -16,7 +16,7 @@
     "email": "info@wundergraph.com"
   },
   "dependencies": {
-    "@graphiql/plugin-explorer": "^1.0.2",
+    "@graphiql/plugin-explorer": "^3.0.3",
     "@graphiql/toolkit": "^0.9.1",
     "@heroicons/react": "^2.0.18",
     "@radix-ui/react-dialog": "^1.0.4",
@@ -30,14 +30,14 @@
     "clsx": "^2.0.0",
     "copy-to-clipboard": "^3.3.3",
     "dagre": "^0.8.5",
-    "graphiql": "^3.0.10",
+    "graphiql": "^3.3.1",
     "graphql": "^15.8.0",
-    "graphql-ws": "^5.14.2",
+    "graphql-ws": "^5.16.0",
     "prettier": "^3.1.0",
     "prism-react-renderer": "^2.3.0",
     "prismjs": "^1.29.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "react-icons": "^4.12.0",
     "react-move-hook": "^0.1.2",
     "reactflow": "^11.10.1"
@@ -47,18 +47,18 @@
     "@types/dagre": "^0.7.52",
     "@types/node": "^20.10.0",
     "@types/prismjs": "^1.26.3",
-    "@types/react": "^18.2.37",
-    "@types/react-dom": "^18.2.15",
-    "@vitejs/plugin-react": "^4.2.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.16",
     "postcss": "^8.4.38",
     "tailwind-merge": "^2.0.0",
     "tailwind-scrollbar": "^3.1.0",
     "tailwindcss": "^3.3.5",
     "tailwindcss-animate": "^1.0.7",
-    "typescript": "^5.2.2",
-    "vite": "^5.0.8",
-    "vite-plugin-html": "^3.2.0",
-    "vite-plugin-singlefile": "^0.13.5"
+    "typescript": "^5.5.2",
+    "vite": "^5.3.2",
+    "vite-plugin-html": "^3.2.2",
+    "vite-plugin-singlefile": "^2.0.2"
   }
 }

@@ -219,6 +219,92 @@ export class Subgraph extends Message<Subgraph> {
 }
 
 /**
+ * @generated from message wg.cosmo.node.v1.FeatureFlagRouterExecutionConfigs
+ */
+export class FeatureFlagRouterExecutionConfigs extends Message<FeatureFlagRouterExecutionConfigs> {
+  /**
+   * @generated from field: map<string, wg.cosmo.node.v1.FeatureFlagRouterExecutionConfig> config_by_feature_flag_name = 1;
+   */
+  configByFeatureFlagName: { [key: string]: FeatureFlagRouterExecutionConfig } = {};
+
+  constructor(data?: PartialMessage<FeatureFlagRouterExecutionConfigs>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.FeatureFlagRouterExecutionConfigs";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "config_by_feature_flag_name", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: FeatureFlagRouterExecutionConfig} },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FeatureFlagRouterExecutionConfigs {
+    return new FeatureFlagRouterExecutionConfigs().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FeatureFlagRouterExecutionConfigs {
+    return new FeatureFlagRouterExecutionConfigs().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FeatureFlagRouterExecutionConfigs {
+    return new FeatureFlagRouterExecutionConfigs().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FeatureFlagRouterExecutionConfigs | PlainMessage<FeatureFlagRouterExecutionConfigs> | undefined, b: FeatureFlagRouterExecutionConfigs | PlainMessage<FeatureFlagRouterExecutionConfigs> | undefined): boolean {
+    return proto3.util.equals(FeatureFlagRouterExecutionConfigs, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.FeatureFlagRouterExecutionConfig
+ */
+export class FeatureFlagRouterExecutionConfig extends Message<FeatureFlagRouterExecutionConfig> {
+  /**
+   * @generated from field: wg.cosmo.node.v1.EngineConfiguration engine_config = 1;
+   */
+  engineConfig?: EngineConfiguration;
+
+  /**
+   * @generated from field: string version = 2;
+   */
+  version = "";
+
+  /**
+   * @generated from field: repeated wg.cosmo.node.v1.Subgraph subgraphs = 3;
+   */
+  subgraphs: Subgraph[] = [];
+
+  constructor(data?: PartialMessage<FeatureFlagRouterExecutionConfig>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.FeatureFlagRouterExecutionConfig";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "engine_config", kind: "message", T: EngineConfiguration },
+    { no: 2, name: "version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "subgraphs", kind: "message", T: Subgraph, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FeatureFlagRouterExecutionConfig {
+    return new FeatureFlagRouterExecutionConfig().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FeatureFlagRouterExecutionConfig {
+    return new FeatureFlagRouterExecutionConfig().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FeatureFlagRouterExecutionConfig {
+    return new FeatureFlagRouterExecutionConfig().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FeatureFlagRouterExecutionConfig | PlainMessage<FeatureFlagRouterExecutionConfig> | undefined, b: FeatureFlagRouterExecutionConfig | PlainMessage<FeatureFlagRouterExecutionConfig> | undefined): boolean {
+    return proto3.util.equals(FeatureFlagRouterExecutionConfig, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.node.v1.RouterConfig
  */
 export class RouterConfig extends Message<RouterConfig> {
@@ -237,6 +323,13 @@ export class RouterConfig extends Message<RouterConfig> {
    */
   subgraphs: Subgraph[] = [];
 
+  /**
+   * The map of feature flag router execution configs requires a wrapper to be non-breaking
+   *
+   * @generated from field: optional wg.cosmo.node.v1.FeatureFlagRouterExecutionConfigs feature_flag_configs = 4;
+   */
+  featureFlagConfigs?: FeatureFlagRouterExecutionConfigs;
+
   constructor(data?: PartialMessage<RouterConfig>) {
     super();
     proto3.util.initPartial(data, this);
@@ -248,6 +341,7 @@ export class RouterConfig extends Message<RouterConfig> {
     { no: 1, name: "engine_config", kind: "message", T: EngineConfiguration },
     { no: 2, name: "version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "subgraphs", kind: "message", T: Subgraph, repeated: true },
+    { no: 4, name: "feature_flag_configs", kind: "message", T: FeatureFlagRouterExecutionConfigs, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RouterConfig {
@@ -352,102 +446,6 @@ export class ResponseStatus extends Message<ResponseStatus> {
 
   static equals(a: ResponseStatus | PlainMessage<ResponseStatus> | undefined, b: ResponseStatus | PlainMessage<ResponseStatus> | undefined): boolean {
     return proto3.util.equals(ResponseStatus, a, b);
-  }
-}
-
-/**
- * @generated from message wg.cosmo.node.v1.GetConfigRequest
- */
-export class GetConfigRequest extends Message<GetConfigRequest> {
-  /**
-   * With the introduction of namespaces, we no longer need the graph name. We keep it for backwards compatibility.
-   * The FQDN of the graph to get the config for e.g. "wg.production"
-   *
-   * @generated from field: string graph_name = 1 [deprecated = true];
-   * @deprecated
-   */
-  graphName = "";
-
-  /**
-   * The version to check for. If the version is not specified, the latest router config version will be returned.
-   * Otherwise, the version will be used to check if a newer version of the router config is available.
-   * That allow us to not send the router config if the version is the same.
-   *
-   * @generated from field: optional string version = 2;
-   */
-  version?: string;
-
-  constructor(data?: PartialMessage<GetConfigRequest>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.node.v1.GetConfigRequest";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "version", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetConfigRequest {
-    return new GetConfigRequest().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetConfigRequest {
-    return new GetConfigRequest().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetConfigRequest {
-    return new GetConfigRequest().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: GetConfigRequest | PlainMessage<GetConfigRequest> | undefined, b: GetConfigRequest | PlainMessage<GetConfigRequest> | undefined): boolean {
-    return proto3.util.equals(GetConfigRequest, a, b);
-  }
-}
-
-/**
- * @generated from message wg.cosmo.node.v1.GetConfigResponse
- */
-export class GetConfigResponse extends Message<GetConfigResponse> {
-  /**
-   * @generated from field: wg.cosmo.node.v1.Response response = 1;
-   */
-  response?: Response;
-
-  /**
-   * RouterConfig is the router config for the graph. It can be nil when a version is specified and the version is the same as the latest version.
-   *
-   * @generated from field: optional wg.cosmo.node.v1.RouterConfig config = 2;
-   */
-  config?: RouterConfig;
-
-  constructor(data?: PartialMessage<GetConfigResponse>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.node.v1.GetConfigResponse";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "response", kind: "message", T: Response },
-    { no: 2, name: "config", kind: "message", T: RouterConfig, opt: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetConfigResponse {
-    return new GetConfigResponse().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetConfigResponse {
-    return new GetConfigResponse().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetConfigResponse {
-    return new GetConfigResponse().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: GetConfigResponse | PlainMessage<GetConfigResponse> | undefined, b: GetConfigResponse | PlainMessage<GetConfigResponse> | undefined): boolean {
-    return proto3.util.equals(GetConfigResponse, a, b);
   }
 }
 

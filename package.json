@@ -25,7 +25,8 @@
     "lint:fix": "pnpm run -r --parallel lint:fix",
     "clean": "del-cli '**/node_modules/' '**/**/dist/' '**/**/gen/' '**/**/.next' '**/**/tsconfig.tsbuildinfo' '**/**/.eslintcache'",
     "release-preview": "lerna publish --ignore-scripts --dry-run",
-    "release": "lerna publish -y"
+    "release": "lerna publish -y",
+    "wgc": "pnpm -r run --filter './cli' wgc"
   },
   "files": [
     "dist"
@@ -54,11 +55,11 @@
     "husky": "^8.0.3",
     "lint-staged": "^12.5.0",
     "prettier": "^3.0.3",
-    "vitest": "^1.5.0"
+    "vitest": "^1.6.0"
   },
   "pnpm": {
     "overrides": {
-      "react": "18.2.0",
+      "react": "18.3.1",
       "graphql": "16.7.1"
     }
   },

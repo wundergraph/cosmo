@@ -95,7 +95,7 @@ func (e *Epoll) Remove(conn net.Conn) error {
 	defer e.lock.Unlock()
 	delete(e.conns, fd)
 
-	return nil
+	return unix.Close(fd)
 }
 
 // Wait waits for at most count events and returns the connections.
@@ -121,10 +121,6 @@ retry:
 	for i := 0; i < n; i++ {
 		conn := e.conns[int(events[i].Fd)]
 		if conn != nil {
-			if (events[i].Events & unix.POLLHUP) == unix.POLLHUP {
-				conn.Close()
-			}
-
 			conns = append(conns, conn)
 		}
 	}

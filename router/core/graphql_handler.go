@@ -21,8 +21,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 
-	"github.com/wundergraph/cosmo/router/internal/pool"
-
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
@@ -85,7 +83,6 @@ type HandlerOptions struct {
 	RateLimitConfig                             *config.RateLimitConfiguration
 	SubgraphErrorPropagation                    config.SubgraphErrorPropagationConfiguration
 	EngineLoaderHooks                           resolve.LoaderHooks
-	SpanAttributesMapper                        func(r *http.Request) []attribute.KeyValue
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -104,7 +101,6 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		rateLimitConfig:          opts.RateLimitConfig,
 		subgraphErrorPropagation: opts.SubgraphErrorPropagation,
 		engineLoaderHooks:        opts.EngineLoaderHooks,
-		spanAttributesMapper:     opts.SpanAttributesMapper,
 	}
 	return graphQLHandler
 }
@@ -132,7 +128,6 @@ type GraphQLHandler struct {
 	rateLimitConfig          *config.RateLimitConfiguration
 	subgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
 	engineLoaderHooks        resolve.LoaderHooks
-	spanAttributesMapper     func(r *http.Request) []attribute.KeyValue
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -141,8 +136,8 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	var baseAttributes []attribute.KeyValue
 
-	if h.spanAttributesMapper != nil {
-		baseAttributes = h.spanAttributesMapper(r)
+	if attributes := baseAttributesFromContext(r.Context()); attributes != nil {
+		baseAttributes = append(baseAttributes, attributes...)
 	}
 
 	executionContext, graphqlExecutionSpan := h.tracer.Start(r.Context(), "Operation - Execute",
@@ -178,24 +173,14 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch p := operationCtx.preparedPlan.preparedPlan.(type) {
 	case *plan.SynchronousResponsePlan:
 		w.Header().Set("Content-Type", "application/json")
-		executionBuf := pool.GetBytesBuffer()
-		defer pool.PutBytesBuffer(executionBuf)
-
-		err := h.executor.Resolver.ResolveGraphQLResponse(ctx, p.Response, nil, executionBuf)
-		if err != nil {
-			requestLogger.Error("unable to resolve response", zap.Error(err))
-			trackResponseError(ctx.Context(), err)
-			h.WriteError(ctx, err, p.Response, w, executionBuf)
-			return
-		}
-
 		h.setExecutionPlanCacheResponseHeader(w, operationCtx.planCacheHit)
 		h.setPersistedOperationCacheHeader(w, operationCtx.persistedOperationCacheHit)
 
-		_, err = executionBuf.WriteTo(w)
+		err := h.executor.Resolver.ResolveGraphQLResponse(ctx, p.Response, nil, w)
 		if err != nil {
-			requestLogger.Error("unable to write response", zap.Error(err))
+			requestLogger.Error("unable to resolve response", zap.Error(err))
 			trackResponseError(ctx.Context(), err)
+			h.WriteError(ctx, err, p.Response, w)
 			return
 		}
 	case *plan.SubscriptionResponsePlan:
@@ -267,10 +252,9 @@ func (h *GraphQLHandler) configureRateLimiting(ctx *resolve.Context) *resolve.Co
 // WriteError writes the error to the response writer. This function must be concurrency-safe.
 // @TODO This function should be refactored to be a helper function for websocket and http error writing
 // In the websocket case, we call this function concurrently as part of the polling loop. This is error-prone.
-func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolve.GraphQLResponse, w io.Writer, buf *bytes.Buffer) {
+func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolve.GraphQLResponse, w io.Writer) {
 	requestLogger := h.log.With(logging.WithRequestID(middleware.GetReqID(ctx.Context())))
 	httpWriter, isHttpResponseWriter := w.(http.ResponseWriter)
-	buf.Reset()
 	response := GraphQLErrorResponse{
 		Errors: make([]graphqlError, 1),
 		Data:   nil,
@@ -278,6 +262,7 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 	switch getErrorType(err) {
 	case errorTypeRateLimit:
 		response.Errors[0].Message = "Rate limit exceeded"
+		buf := bytes.NewBuffer(make([]byte, 0, 1024))
 		err = h.rateLimiter.RenderResponseExtension(ctx, buf)
 		if err != nil {
 			requestLogger.Error("unable to render rate limit stats", zap.Error(err))
@@ -295,6 +280,7 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 	case errorTypeUnauthorized:
 		response.Errors[0].Message = "Unauthorized"
 		if h.authorizer.HasResponseExtensionData(ctx) {
+			buf := bytes.NewBuffer(make([]byte, 0, 1024))
 			err = h.authorizer.RenderResponseExtension(ctx, buf)
 			if err != nil {
 				requestLogger.Error("unable to render authorization extension", zap.Error(err))

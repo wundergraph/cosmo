@@ -3,11 +3,12 @@ import * as tls from 'node:tls';
 import path from 'node:path';
 import fp from 'fastify-plugin';
 import IORedis from 'ioredis';
+import { ConnectionOptions } from 'bullmq';
 
 declare module 'fastify' {
   interface FastifyInstance {
-    redisForWorker: IORedis.Redis;
-    redisForQueue: IORedis.Redis;
+    redisForWorker: ConnectionOptions;
+    redisForQueue: ConnectionOptions;
     redisConnect(): Promise<void>;
   }
 }
