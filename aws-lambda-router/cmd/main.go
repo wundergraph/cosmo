@@ -11,7 +11,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"net/http"
 	"os"
 	"time"
@@ -34,15 +33,41 @@ var (
 func main() {
 	ctx := context.Background()
 
-	logger := logging.New(false, false, zapcore.InfoLevel)
-	logger = logger.With(
-		zap.String("service_version", internal.Version),
-	)
+	configPath := os.Getenv("CONFIG_PATH")
+	if configPath == "" {
+		configPath = "config.yaml" // Default config file path
+	}
+
+	result, err := config.LoadConfig(configPath, "")
+	if err != nil {
+		log.Fatalf("Could not load config: %v", err)
+	}
+
+	logLevel, err := logging.ZapLogLevelFromString(result.Config.LogLevel)
+	if err != nil {
+		log.Fatalf("Could not parse log level: %v", err)
+	}
+
+	loggerConfig := &logging.Config{
+		PrettyLogging: !result.Config.JSONLog,
+		Debug:         result.Config.LogLevel == "debug",
+		LogLevel:      result.Config.LogLevel,
+		LogFile:       result.Config.LogFile,
+	}
+
+	logger, err := logging.New(loggerConfig)
+	if err != nil {
+		log.Fatalf("Could not initialize logger: %v", err)
+	}
 	defer func() {
 		if err := logger.Sync(); err != nil {
 			fmt.Println("Could not sync logger", err)
 		}
 	}()
+
+	logger = logger.With(
+		zap.String("service_version", internal.Version),
+	)
 
 	r := internal.NewRouter(
 		internal.WithGraphApiToken(graphApiToken),
@@ -83,7 +108,7 @@ func main() {
 	lambdaHandler := algnhsa.New(svr.HttpServer().Handler, nil)
 	lambda.StartWithOptions(lambdaHandler,
 		lambda.WithContext(ctx),
-		// Registered an internal extensions which gives us 500ms to shutdown
+		// Registered an internal extension which gives us 500ms to shutdown
 		// This mechanism does not replace telemetry flushing after a request
 		// https://docs.aws.amazon.com/lambda/latest/dg/runtimes-extensions-api.html#runtimes-lifecycle-extensions-shutdown
 		lambda.WithEnableSIGTERM(func() {
@@ -97,3 +122,4 @@ func main() {
 		}),
 	)
 }
+
