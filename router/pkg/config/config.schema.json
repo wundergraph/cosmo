@@ -201,7 +201,7 @@
                     "enabled": {
                       "type": "boolean",
                       "description": "This configuration indicates if the Router will export the JWT (JSON Web Token) to the client request header. The default value is 'false'.",
-                      "default": false
+                      "default": true
                     },
                     "header_key": {
                       "type": "string",

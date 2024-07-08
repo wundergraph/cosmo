@@ -256,3 +256,10 @@ websocket:
     enabled: true
     allow_list:
       - "Authorization"
+  authentication:
+    from_initial_payload:
+      enabled: true
+      key: "Authorization"
+      export_token_to_client_request_header:
+        enabled: true
+        header_key: "Authorization"
