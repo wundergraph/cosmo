@@ -148,6 +148,7 @@ type (
 		readinessCheckPath       string
 		livenessCheckPath        string
 		cdnConfig                config.CDNConfiguration
+		cdnOperationClient       *cdn.PersistedOperationClient
 		eventsConfig             config.EventsConfiguration
 		prometheusServer         *http.Server
 		modulesConfig            map[string]interface{}
@@ -440,6 +441,17 @@ func NewRouter(opts ...Option) (*Router, error) {
 
 	if r.developmentMode {
 		r.logger.Warn("Development mode enabled. This should only be used for testing purposes")
+	}
+
+	if r.graphApiToken != "" {
+		cdnPersistentOpClient, err := cdn.NewPersistentOperationClient(r.cdnConfig.URL, r.graphApiToken, cdn.PersistentOperationsOptions{
+			CacheSize: r.cdnConfig.CacheSize.Uint64(),
+			Logger:    r.logger,
+		})
+		if err != nil {
+			return nil, err
+		}
+		r.cdnOperationClient = cdnPersistentOpClient
 	}
 
 	for _, source := range r.eventsConfig.Providers.Nats {
@@ -821,17 +833,6 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		},
 	}
 
-	if s.graphApiToken != "" {
-		cdnPersistentOpClient, err := cdn.NewPersistentOperationClient(s.cdnConfig.URL, s.graphApiToken, cdn.PersistentOperationsOptions{
-			CacheSize: r.cdnConfig.CacheSize.Uint64(),
-			Logger:    s.logger,
-		})
-		if err != nil {
-			return nil, err
-		}
-		s.cdnOperationClient = cdnPersistentOpClient
-	}
-
 	baseOtelAttributes := []attribute.KeyValue{
 		otel.WgRouterVersion.String(Version),
 		otel.WgRouterClusterName.String(r.clusterName),
@@ -1134,6 +1135,11 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 			}
 		}
 	}()
+
+	// Shutdown the CDN operation client and free up resources
+	if r.cdnOperationClient != nil {
+		r.cdnOperationClient.Close()
+	}
 
 	wg.Wait()
 

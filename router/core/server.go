@@ -12,7 +12,6 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -70,7 +69,6 @@ type (
 		runtimeMetrics          *rmetric.RuntimeMetrics
 		metricStore             rmetric.Store
 		baseRouterConfigVersion string
-		cdnOperationClient      *cdn.PersistedOperationClient
 		cancel                  context.CancelFunc
 	}
 )
@@ -572,11 +570,6 @@ func (s *server) Shutdown(ctx context.Context) error {
 				}
 			}
 		}
-	}
-
-	// Shutdown the CDN operation client and free up resources
-	if s.cdnOperationClient != nil {
-		s.cdnOperationClient.Close()
 	}
 
 	return finalErr
