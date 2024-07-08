@@ -1,38 +1,84 @@
+extend schema
+@link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@authenticated", "@composeDirective", "@external", "@extends", "@inaccessible", "@interfaceObject", "@override", "@provides", "@key", "@requires", "@requiresScopes", "@shareable", "@tag"])
+
 type Query {
-  "Returns the value of the received HTTP header."
-  headerValue(name: String!): String!
-  "Returns the value of the given key in the WS initial payload."
-  initPayloadValue(key: String!): String!
-  initialPayload: Map
-  "Returns response after the given delay"
-  delay(response: String!, ms: Int!): String!
+    "Returns the value of the received HTTP header."
+    headerValue(name: String!): String!
+    "Returns the value of the given key in the WS initial payload."
+    initPayloadValue(key: String!): String!
+    initialPayload: Map
+    "Returns response after the given delay"
+    delay(response: String!, ms: Int!): String!
+
+    bigResponse(
+        bigObjects: Int! = 100
+        nestedObjects: Int! = 100
+        deeplyNestedObjects: Int! = 100
+    ): [BigObject!]!
 }
 
 scalar Map
 
 type TimestampedString {
-  "The value of the string."
-  value: String!
-  "The timestamp when the response was generated."
-  unixTime: Int!
-  "Sequence number"
-  seq: Int!
-  "Total number of responses to be sent"
-  total: Int!
-  initialPayload: Map
+    "The value of the string."
+    value: String!
+    "The timestamp when the response was generated."
+    unixTime: Int!
+    "Sequence number"
+    seq: Int!
+    "Total number of responses to be sent"
+    total: Int!
+    initialPayload: Map
 }
 
 type Subscription {
-  "Returns a stream with the value of the received HTTP header."
-  headerValue(name: String!, repeat: Int): TimestampedString!
-  "Returns a stream with the value of value of the given key in the WS initial payload."
-  initPayloadValue(key: String!, repeat: Int): TimestampedString!
-  "Returns a stream with the value of the WS initial payload."
-  initialPayload(repeat: Int): Map
-  returnsError: String
+    "Returns a stream with the value of the received HTTP header."
+    headerValue(name: String!, repeat: Int): TimestampedString!
+    "Returns a stream with the value of value of the given key in the WS initial payload."
+    initPayloadValue(key: String!, repeat: Int): TimestampedString!
+    "Returns a stream with the value of the WS initial payload."
+    initialPayload(repeat: Int): Map
+    returnsError: String
 }
 
 type Employee @key(fields: "id") {
-  id: Int!
-  fieldThrowsError: String
+    id: Int!
+    fieldThrowsError: String
+}
+
+type BigObject {
+    nestedObjects: [NestedObject!]!
+}
+
+type NestedObject {
+    deeplyNestedObjects: [DeeplyNestedObject!]!
+}
+
+type DeeplyNestedObject {
+    aFieldOnDeeplyNestedObject: String!
+    bFieldOnDeeplyNestedObject: Int!
+    cFieldOnDeeplyNestedObject: Boolean!
+    dFieldOnDeeplyNestedObject: Float!
+    eFieldOnDeeplyNestedObject: String!
+    fFieldOnDeeplyNestedObject: Int!
+    gFieldOnDeeplyNestedObject: Boolean!
+    hFieldOnDeeplyNestedObject: Float!
+    iFieldOnDeeplyNestedObject: String!
+    jFieldOnDeeplyNestedObject: Int!
+    kFieldOnDeeplyNestedObject: Boolean!
+    lFieldOnDeeplyNestedObject: Float!
+    mFieldOnDeeplyNestedObject: String!
+    nFieldOnDeeplyNestedObject: Int!
+    oFieldOnDeeplyNestedObject: Boolean!
+    pFieldOnDeeplyNestedObject: Float!
+    qFieldOnDeeplyNestedObject: String!
+    rFieldOnDeeplyNestedObject: Int!
+    sFieldOnDeeplyNestedObject: Boolean!
+    tFieldOnDeeplyNestedObject: Float!
+    uFieldOnDeeplyNestedObject: String!
+    vFieldOnDeeplyNestedObject: Int!
+    wFieldOnDeeplyNestedObject: Boolean!
+    xFieldOnDeeplyNestedObject: Float!
+    yFieldOnDeeplyNestedObject: String!
+    zFieldOnDeeplyNestedObject: Int!
 }

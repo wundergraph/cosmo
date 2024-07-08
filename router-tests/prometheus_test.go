@@ -1,6 +1,9 @@
 package integration
 
 import (
+	"net/http"
+	"testing"
+
 	"github.com/prometheus/client_golang/prometheus"
 	io_prometheus_client "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/require"
@@ -8,8 +11,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 	"go.opentelemetry.io/otel/sdk/metric"
-	"net/http"
-	"testing"
 )
 
 func TestPrometheus(t *testing.T) {
@@ -87,7 +88,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("8b9533710fd67c8672461d09fc1bb787b14c5077"),
+					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -134,7 +135,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("8b9533710fd67c8672461d09fc1bb787b14c5077"),
+					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -188,7 +189,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("8b9533710fd67c8672461d09fc1bb787b14c5077"),
+					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -235,7 +236,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("8b9533710fd67c8672461d09fc1bb787b14c5077"),
+					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -301,7 +302,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("8b9533710fd67c8672461d09fc1bb787b14c5077"),
+					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -348,7 +349,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("8b9533710fd67c8672461d09fc1bb787b14c5077"),
+					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -414,7 +415,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("8b9533710fd67c8672461d09fc1bb787b14c5077"),
+					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -465,7 +466,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("8b9533710fd67c8672461d09fc1bb787b14c5077"),
+					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -583,7 +584,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("8b9533710fd67c8672461d09fc1bb787b14c5077"),
+					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -634,7 +635,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("8b9533710fd67c8672461d09fc1bb787b14c5077"),
+					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -692,7 +693,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("8b9533710fd67c8672461d09fc1bb787b14c5077"),
+					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -743,7 +744,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("8b9533710fd67c8672461d09fc1bb787b14c5077"),
+					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -813,7 +814,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("8b9533710fd67c8672461d09fc1bb787b14c5077"),
+					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -864,7 +865,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("8b9533710fd67c8672461d09fc1bb787b14c5077"),
+					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -934,7 +935,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("8b9533710fd67c8672461d09fc1bb787b14c5077"),
+					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -989,7 +990,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("8b9533710fd67c8672461d09fc1bb787b14c5077"),
+					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -1104,7 +1105,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("8b9533710fd67c8672461d09fc1bb787b14c5077"),
+					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -1155,7 +1156,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("8b9533710fd67c8672461d09fc1bb787b14c5077"),
+					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -1213,7 +1214,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("8b9533710fd67c8672461d09fc1bb787b14c5077"),
+					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -1264,7 +1265,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("8b9533710fd67c8672461d09fc1bb787b14c5077"),
+					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -1334,7 +1335,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("8b9533710fd67c8672461d09fc1bb787b14c5077"),
+					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -1385,7 +1386,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("8b9533710fd67c8672461d09fc1bb787b14c5077"),
+					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -1455,7 +1456,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("8b9533710fd67c8672461d09fc1bb787b14c5077"),
+					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -1510,7 +1511,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("8b9533710fd67c8672461d09fc1bb787b14c5077"),
+					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -1614,7 +1615,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("8b9533710fd67c8672461d09fc1bb787b14c5077"),
+					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -1682,7 +1683,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("8b9533710fd67c8672461d09fc1bb787b14c5077"),
+					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -1781,7 +1782,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("05b1d5a74a37d61ed39fcbad6e9537f5089bf71f"),
+					Value: PointerOf("982bb03cbf4043d03036b8517ee304ec7294ae76"),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -1832,7 +1833,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("05b1d5a74a37d61ed39fcbad6e9537f5089bf71f"),
+					Value: PointerOf("982bb03cbf4043d03036b8517ee304ec7294ae76"),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -1890,7 +1891,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("05b1d5a74a37d61ed39fcbad6e9537f5089bf71f"),
+					Value: PointerOf("982bb03cbf4043d03036b8517ee304ec7294ae76"),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -1941,7 +1942,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("05b1d5a74a37d61ed39fcbad6e9537f5089bf71f"),
+					Value: PointerOf("982bb03cbf4043d03036b8517ee304ec7294ae76"),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -2011,7 +2012,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("05b1d5a74a37d61ed39fcbad6e9537f5089bf71f"),
+					Value: PointerOf("982bb03cbf4043d03036b8517ee304ec7294ae76"),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -2062,7 +2063,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("05b1d5a74a37d61ed39fcbad6e9537f5089bf71f"),
+					Value: PointerOf("982bb03cbf4043d03036b8517ee304ec7294ae76"),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -2132,7 +2133,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("05b1d5a74a37d61ed39fcbad6e9537f5089bf71f"),
+					Value: PointerOf("982bb03cbf4043d03036b8517ee304ec7294ae76"),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -2187,7 +2188,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("05b1d5a74a37d61ed39fcbad6e9537f5089bf71f"),
+					Value: PointerOf("982bb03cbf4043d03036b8517ee304ec7294ae76"),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
