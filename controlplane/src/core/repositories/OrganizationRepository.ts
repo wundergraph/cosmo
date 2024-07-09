@@ -816,27 +816,7 @@ export class OrganizationRepository {
     return result[0];
   }
 
-  public async deleteOrganization(
-    organizationId: string,
-    organizationSlug: string,
-    opts: {
-      keycloakClient: Keycloak;
-      keycloakRealm: string;
-    },
-  ) {
-    const oidcRepo = new OidcRepository(this.db);
-    const oidcProvider = new OidcProvider();
-
-    const provider = await oidcRepo.getOidcProvider({ organizationId });
-    if (provider) {
-      await oidcProvider.deleteOidcProvider({
-        kcClient: opts.keycloakClient,
-        kcRealm: opts.keycloakRealm,
-        organizationSlug,
-        alias: provider.alias,
-      });
-    }
-
+  public deleteOrganization(organizationId: string) {
     return this.db.transaction(async (tx) => {
       const oidcRepo = new OidcRepository(tx);
       await oidcRepo.deleteOidcProvider({ organizationId });

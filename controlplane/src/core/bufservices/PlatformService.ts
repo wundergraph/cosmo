@@ -6398,6 +6398,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const billingRepo = new BillingRepository(opts.db);
+        const oidcRepo = new OidcRepository(opts.db);
+        const oidcProvider = new OidcProvider();
 
         const memberships = await orgRepo.memberships({ userId: authContext.userId });
         const orgCount = memberships.length;
@@ -6450,10 +6452,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         await billingRepo.cancelSubscription(authContext.organizationId);
 
-        await orgRepo.deleteOrganization(authContext.organizationId, org.slug, {
-          keycloakClient: opts.keycloakClient,
-          keycloakRealm: opts.keycloakRealm,
-        });
+        const provider = await oidcRepo.getOidcProvider({ organizationId: authContext.organizationId });
+        if (provider) {
+          await oidcProvider.deleteOidcProvider({
+            kcClient: opts.keycloakClient,
+            kcRealm: opts.keycloakRealm,
+            organizationSlug: org.slug,
+            alias: provider.alias,
+          });
+        }
+
+        await orgRepo.deleteOrganization(authContext.organizationId);
 
         await opts.keycloakClient.deleteOrganizationGroup({
           realm: opts.keycloakRealm,

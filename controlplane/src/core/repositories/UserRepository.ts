@@ -5,8 +5,10 @@ import * as schema from '../../db/schema.js';
 import { users } from '../../db/schema.js';
 import { UserDTO } from '../../types/index.js';
 import Keycloak from '../services/Keycloak.js';
+import OidcProvider from '../services/OidcProvider.js';
 import { OrganizationRepository } from './OrganizationRepository.js';
 import { BillingRepository } from './BillingRepository.js';
+import { OidcRepository } from './OidcRepository.js';
 
 /**
  * Repository for user related operations.
@@ -69,9 +71,22 @@ export class UserRepository {
 
     const { soloAdminSoloMemberOrgs, memberships } = await orgRepo.adminMemberships({ userId: input.id });
 
-    // Cancel subscriptions
+    // Cancel subscriptions and remove oidc providers
     for (const org of soloAdminSoloMemberOrgs) {
       await billingRepo.cancelSubscription(org.id);
+
+      const oidcRepo = new OidcRepository(this.db);
+      const oidcProvider = new OidcProvider();
+
+      const provider = await oidcRepo.getOidcProvider({ organizationId: org.id });
+      if (provider) {
+        await oidcProvider.deleteOidcProvider({
+          kcClient: input.keycloakClient,
+          kcRealm: input.keycloakRealm,
+          organizationSlug: org.slug,
+          alias: provider.alias,
+        });
+      }
     }
 
     // Remove keycloak user from all org groups
@@ -99,12 +114,7 @@ export class UserRepository {
       // Delete all solo organizations of the user
       const deleteOrgs: Promise<void>[] = [];
       for (const org of soloAdminSoloMemberOrgs) {
-        deleteOrgs.push(
-          orgRepo.deleteOrganization(org.id, org.slug, {
-            keycloakClient: input.keycloakClient,
-            keycloakRealm: input.keycloakRealm,
-          }),
-        );
+        deleteOrgs.push(orgRepo.deleteOrganization(org.id));
       }
       await Promise.all(deleteOrgs);
 
