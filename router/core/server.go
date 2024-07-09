@@ -5,16 +5,23 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	br "github.com/andybalholm/brotli"
 	"github.com/dgraph-io/ristretto"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/internal/docker"
+	rjwt "github.com/wundergraph/cosmo/router/internal/jwt"
+	rmiddleware "github.com/wundergraph/cosmo/router/internal/middleware"
+	"github.com/wundergraph/cosmo/router/internal/recoveryhandler"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/health"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
@@ -29,6 +36,8 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"golang.org/x/exp/maps"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -58,8 +67,7 @@ type (
 	// All server fields are shared between all feature muxes.
 	server struct {
 		Config
-		httpServer              *http.Server
-		healthChecks            health.Checker
+		ctx                     context.Context
 		pubSubProviders         *EnginePubSubProviders
 		websocketStats          WebSocketsStatistics
 		playgroundHandler       func(http.Handler) http.Handler
@@ -69,9 +77,190 @@ type (
 		runtimeMetrics          *rmetric.RuntimeMetrics
 		metricStore             rmetric.Store
 		baseRouterConfigVersion string
-		cancel                  context.CancelFunc
+		mux                     *chi.Mux
 	}
 )
+
+// newServer creates a new server instance.
+func newServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterConfig) (*server, error) {
+	s := &server{
+		ctx:                     ctx,
+		Config:                  r.Config,
+		websocketStats:          r.WebsocketStats,
+		metricStore:             rmetric.NewNoopMetrics(),
+		executionTransport:      newHTTPTransport(r.subgraphTransportOptions),
+		playgroundHandler:       r.playgroundHandler,
+		baseRouterConfigVersion: routerConfig.GetVersion(),
+		pubSubProviders: &EnginePubSubProviders{
+			nats:  map[string]pubsub_datasource.NatsPubSub{},
+			kafka: map[string]pubsub_datasource.KafkaPubSub{},
+		},
+	}
+
+	baseOtelAttributes := []attribute.KeyValue{
+		otel.WgRouterVersion.String(Version),
+		otel.WgRouterClusterName.String(r.clusterName),
+	}
+
+	if s.graphApiToken != "" {
+		claims, err := rjwt.ExtractFederatedGraphTokenClaims(s.graphApiToken)
+		if err != nil {
+			return nil, err
+		}
+		baseOtelAttributes = append(baseOtelAttributes, otel.WgFederatedGraphID.String(claims.FederatedGraphID))
+	}
+
+	s.baseOtelAttributes = baseOtelAttributes
+
+	if s.metricConfig.OpenTelemetry.RouterRuntime {
+		// Create runtime metrics exported to OTEL
+		s.runtimeMetrics = rmetric.NewRuntimeMetrics(
+			s.logger,
+			r.otlpMeterProvider,
+			// We track runtime metrics with base router config version
+			// even when we have multiple feature flags
+			append([]attribute.KeyValue{
+				otel.WgRouterConfigVersion.String(s.baseRouterConfigVersion),
+			}, s.baseOtelAttributes...),
+			s.processStartTime,
+		)
+
+		// Start runtime metrics
+		if err := s.runtimeMetrics.Start(); err != nil {
+			return nil, err
+		}
+	}
+
+	// Prometheus metricStore rely on OTLP metricStore
+	if s.metricConfig.IsEnabled() {
+		m, err := rmetric.NewStore(
+			rmetric.WithPromMeterProvider(s.promMeterProvider),
+			rmetric.WithOtlpMeterProvider(s.otlpMeterProvider),
+			rmetric.WithLogger(s.logger),
+			rmetric.WithProcessStartTime(s.processStartTime),
+			// Don't pass the router config version or feature flags here
+			// We scope the metrics to the feature flags and config version in the handler
+			rmetric.WithAttributes(baseOtelAttributes...),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create metric handler: %w", err)
+		}
+
+		s.metricStore = m
+	}
+
+	if s.registrationInfo != nil {
+		publicKey, err := jwt.ParseECPublicKeyFromPEM([]byte(s.registrationInfo.GetGraphPublicKey()))
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse router public key: %w", err)
+		}
+		s.publicKey = publicKey
+	}
+
+	recoveryHandler := recoveryhandler.New(
+		recoveryhandler.WithLogger(s.logger),
+		recoveryhandler.WithPrintStack(),
+	)
+
+	graphqlEndpointURL, err := url.JoinPath(r.baseURL, r.graphqlPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to join graphql endpoint url: %w", err)
+	}
+
+	httpRouter := chi.NewRouter()
+
+	/**
+	* Middlewares
+	 */
+
+	httpRouter.Use(recoveryHandler)
+	httpRouter.Use(rmiddleware.RequestSize(int64(s.routerTrafficConfig.MaxRequestBodyBytes)))
+	httpRouter.Use(middleware.RequestID)
+	httpRouter.Use(middleware.RealIP)
+	httpRouter.Use(cors.New(*s.corsOptions))
+
+	baseMux, err := s.buildMux(ctx, "", s.baseRouterConfigVersion, routerConfig.GetEngineConfig(), routerConfig.GetSubgraphs())
+	if err != nil {
+		return nil, fmt.Errorf("failed to build base mux: %w", err)
+	}
+
+	featureFlagConfigMap := routerConfig.FeatureFlagConfigs.GetConfigByFeatureFlagName()
+	if len(featureFlagConfigMap) > 0 {
+		s.logger.Info("Feature flags enabled", zap.Strings("flags", maps.Keys(featureFlagConfigMap)))
+	}
+
+	multiGraphHandler, err := s.buildMultiGraphHandler(ctx, baseMux, featureFlagConfigMap)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build feature flag handler: %w", err)
+	}
+
+	brCompressor := middleware.NewCompressor(5, CustomCompressibleContentTypes...)
+	brCompressor.SetEncoder("br", func(w io.Writer, level int) io.Writer {
+		return br.NewWriterLevel(w, level)
+	})
+
+	/**
+	* A group where we can selectively apply middlewares to the graphql endpoint
+	 */
+	httpRouter.Group(func(cr chi.Router) {
+
+		// We are applying it conditionally because brotli compressing the 3MB playground is very slow
+		cr.Use(middleware.Compress(5, CustomCompressibleContentTypes...))
+		cr.Use(brCompressor.Handler)
+
+		// Mount the feature flag handler. It calls the base mux if no feature flag is set.
+		cr.Mount(r.graphqlPath, multiGraphHandler)
+
+		if r.webSocketConfiguration != nil && r.webSocketConfiguration.Enabled && r.webSocketConfiguration.AbsintheProtocol.Enabled {
+			// Mount the Absinthe protocol handler for WebSockets
+			httpRouter.Mount(r.webSocketConfiguration.AbsintheProtocol.HandlerPath, multiGraphHandler)
+		}
+	})
+
+	/**
+	* Routes
+	 */
+
+	// We mount the playground once here when we don't have a conflict with the websocket handler
+	// If we have a conflict, we mount the playground during building the individual muxes
+	if s.playgroundHandler != nil && s.graphqlPath != s.playgroundPath {
+		httpRouter.Get(r.playgroundPath, s.playgroundHandler(nil).ServeHTTP)
+	}
+
+	httpRouter.Get(s.healthCheckPath, r.healthcheck.Liveness())
+	httpRouter.Get(s.livenessCheckPath, r.healthcheck.Liveness())
+	httpRouter.Get(s.readinessCheckPath, r.healthcheck.Readiness())
+
+	/**
+	* Server logging after features has been initialized / disabled
+	 */
+
+	r.logger.Info("GraphQL endpoint",
+		zap.String("method", http.MethodPost),
+		zap.String("url", graphqlEndpointURL),
+	)
+
+	if s.localhostFallbackInsideDocker && docker.Inside() {
+		s.logger.Info("localhost fallback enabled, connections that fail to connect to localhost will be retried using host.docker.internal")
+	}
+
+	if s.developmentMode && s.engineExecutionConfiguration.EnableRequestTracing && s.graphApiToken == "" {
+		s.logger.Warn("Advanced Request Tracing (ART) is enabled in development mode but requires a graph token to work in production. For more information see https://cosmo-docs.wundergraph.com/router/advanced-request-tracing-art")
+	}
+
+	if s.redisClient != nil {
+		s.logger.Info("Rate limiting enabled",
+			zap.Int("rate", s.rateLimit.SimpleStrategy.Rate),
+			zap.Int("burst", s.rateLimit.SimpleStrategy.Burst),
+			zap.Duration("duration", s.Config.rateLimit.SimpleStrategy.Period),
+			zap.Bool("rejectExceeding", s.Config.rateLimit.SimpleStrategy.RejectExceedingRequests),
+		)
+	}
+
+	s.mux = httpRouter
+
+	return s, nil
+}
 
 func (s *server) buildMultiGraphHandler(ctx context.Context, baseMux *chi.Mux, featureFlagConfigs map[string]*nodev1.FeatureFlagRouterExecutionConfig) (http.HandlerFunc, error) {
 
@@ -83,7 +272,12 @@ func (s *server) buildMultiGraphHandler(ctx context.Context, baseMux *chi.Mux, f
 
 	// Build all the muxes for the feature flags in serial to avoid any race conditions
 	for featureFlagName, executionConfig := range featureFlagConfigs {
-		r, err := s.buildMux(ctx, featureFlagName, executionConfig.GetVersion(), executionConfig.GetEngineConfig(), executionConfig.Subgraphs)
+		r, err := s.buildMux(ctx,
+			featureFlagName,
+			executionConfig.GetVersion(),
+			executionConfig.GetEngineConfig(),
+			executionConfig.Subgraphs,
+		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build mux for feature flag '%s': %w", featureFlagName, err)
 		}
@@ -521,20 +715,13 @@ func (s *server) buildPubSubConfiguration(ctx context.Context, engineConfig *nod
 // Shutdown gracefully shutdown the server.
 func (s *server) Shutdown(ctx context.Context) error {
 
-	s.healthChecks.SetReady(false)
+	s.healthcheck.SetReady(false)
 
 	s.logger.Info("Gracefully shutting down the router ...",
 		zap.String("grace_period", s.gracePeriod.String()),
 	)
 
 	var finalErr error
-
-	if s.httpServer != nil {
-		if err := s.httpServer.Shutdown(ctx); err != nil {
-			s.logger.Error("Failed to shutdown HTTP server", zap.Error(err))
-			finalErr = errors.Join(finalErr, err)
-		}
-	}
 
 	if s.metricStore != nil {
 		if err := s.metricStore.Shutdown(ctx); err != nil {
@@ -573,33 +760,6 @@ func (s *server) Shutdown(ctx context.Context) error {
 	}
 
 	return finalErr
-}
-
-func (s *server) HealthChecks() health.Checker {
-	return s.healthChecks
-}
-
-func (s *server) HttpServer() *http.Server {
-	return s.httpServer
-}
-
-func (s *server) BaseURL() string {
-	return s.baseURL
-}
-
-// listenAndServe starts the server and blocks until the server is shutdown.
-func (s *server) listenAndServe() error {
-	if s.tlsConfig != nil && s.tlsConfig.Enabled {
-		// Leave the cert and key empty to use the default ones
-		if err := s.httpServer.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			return err
-		}
-	} else {
-		if err := s.httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			return err
-		}
-	}
-	return nil
 }
 
 func configureSubgraphOverwrites(
