@@ -2492,10 +2492,13 @@ export class FederationFactory {
       kind: Kind.DOCUMENT,
       definitions: this.routerDefinitions,
     };
-    const newClientSchema: GraphQLSchema = buildASTSchema({
-      kind: Kind.DOCUMENT,
-      definitions: this.clientDefinitions,
-    }, { assumeValid: true, assumeValidSDL: true });
+    const newClientSchema: GraphQLSchema = buildASTSchema(
+      {
+        kind: Kind.DOCUMENT,
+        definitions: this.clientDefinitions,
+      },
+      { assumeValid: true, assumeValidSDL: true },
+    );
     const subgraphConfigBySubgraphName = new Map<string, SubgraphConfig>();
     for (const subgraph of this.internalSubgraphBySubgraphName.values()) {
       subgraphConfigBySubgraphName.set(subgraph.name, {
@@ -2672,10 +2675,13 @@ export class FederationFactory {
       kind: Kind.DOCUMENT,
       definitions: this.routerDefinitions,
     };
-    const newClientSchema: GraphQLSchema = buildASTSchema({
-      kind: Kind.DOCUMENT,
-      definitions: this.clientDefinitions,
-    }, { assumeValid: true, assumeValidSDL: true });
+    const newClientSchema: GraphQLSchema = buildASTSchema(
+      {
+        kind: Kind.DOCUMENT,
+        definitions: this.clientDefinitions,
+      },
+      { assumeValid: true, assumeValidSDL: true },
+    );
     const subgraphConfigBySubgraphName = new Map<string, SubgraphConfig>();
     for (const subgraph of this.internalSubgraphBySubgraphName.values()) {
       subgraphConfigBySubgraphName.set(subgraph.name, {
@@ -2774,15 +2780,14 @@ function initializeFederationFactory(subgraphs: Subgraph[]): FederationFactoryRe
   }
   return {
     federationFactory: new FederationFactory({
-        authorizationDataByParentTypeName,
-        concreteTypeNamesByAbstractTypeName,
-        entityDataByTypeName,
-        entityInterfaceFederationDataByTypeName,
-        graph,
-        internalSubgraphBySubgraphName,
-        warnings,
-      },
-    ),
+      authorizationDataByParentTypeName,
+      concreteTypeNamesByAbstractTypeName,
+      entityDataByTypeName,
+      entityInterfaceFederationDataByTypeName,
+      graph,
+      internalSubgraphBySubgraphName,
+      warnings,
+    }),
   };
 }
 
