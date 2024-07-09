@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.92.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.92.1...controlplane@0.92.2) (2024-07-09)
+
+### Bug Fixes
+
+* admission webhook controller not receiving secret ([#928](https://github.com/wundergraph/cosmo/issues/928)) ([9adb17e](https://github.com/wundergraph/cosmo/commit/9adb17ea24419c34dc0fe898d9f03bc2329fddf0)) (@thisisnithin)
+* upgrade deps due to found CVEs ([#926](https://github.com/wundergraph/cosmo/issues/926)) ([fc6e615](https://github.com/wundergraph/cosmo/commit/fc6e6158e2e761489033acb667cd0b36920c2612)) (@StarpTech)
+
 ## [0.92.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.92.0...controlplane@0.92.1) (2024-07-03)
 
 ### Bug Fixes
