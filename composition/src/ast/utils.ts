@@ -332,7 +332,7 @@ type ParseResult = {
 
 export function safeParse(value: string): ParseResult {
   try {
-    const parsedValue = parse(value);
+    const parsedValue = parse(value, { noLocation: true });
     return { documentNode: parsedValue };
   } catch (e) {
     return { error: e as Error };
