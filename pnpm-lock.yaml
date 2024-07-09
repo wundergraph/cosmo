@@ -413,8 +413,8 @@ importers:
         specifier: ^0.29.4
         version: 0.29.4(postgres@3.4.4)(react@18.3.1)
       ejs:
-        specifier: ^3.1.9
-        version: 3.1.9
+        specifier: ^3.1.10
+        version: 3.1.10
       eslint:
         specifier: ^8.57.0
         version: 8.57.0
@@ -13101,8 +13101,8 @@ packages:
       safe-buffer: 5.2.1
     dev: false
 
-  /ejs@3.1.9:
-    resolution: {integrity: sha512-rC+QVNMJWv+MtPgkt0y+0rVEIdbtxVADApW9JXrUVlzHetgcyczP/E7DJmWJ4fJCZF2cPcBk0laWO9ZHMG3DmQ==}
+  /ejs@3.1.10:
+    resolution: {integrity: sha512-UeJmFfOrAQS8OJWPZ4qtgHyWExa088/MtK5UEyoJGFH67cDEXkZSviOiKRCZ4Xij0zxI3JECgYs3oKx+AizQBA==}
     engines: {node: '>=0.10.0'}
     hasBin: true
     dependencies:
@@ -14439,7 +14439,7 @@ packages:
     peerDependencies:
       eslint: '>=8.38.0'
     dependencies:
-      '@babel/helper-validator-identifier': 7.24.5
+      '@babel/helper-validator-identifier': 7.22.20
       '@eslint-community/eslint-utils': 4.4.0(eslint@8.52.0)
       ci-info: 3.8.0
       clean-regexp: 1.0.0
@@ -14454,7 +14454,7 @@ packages:
       regexp-tree: 0.1.27
       regjsparser: 0.10.0
       safe-regex: 2.1.1
-      semver: 7.6.2
+      semver: 7.5.4
       strip-indent: 3.0.0
     dev: true
 
@@ -14489,7 +14489,7 @@ packages:
     peerDependencies:
       eslint: '>=8.38.0'
     dependencies:
-      '@babel/helper-validator-identifier': 7.24.5
+      '@babel/helper-validator-identifier': 7.22.20
       '@eslint-community/eslint-utils': 4.4.0(eslint@8.57.0)
       ci-info: 3.8.0
       clean-regexp: 1.0.0
@@ -14504,7 +14504,7 @@ packages:
       regexp-tree: 0.1.27
       regjsparser: 0.10.0
       safe-regex: 2.1.1
-      semver: 7.6.2
+      semver: 7.5.4
       strip-indent: 3.0.0
     dev: true
 
@@ -22209,7 +22209,7 @@ packages:
       consola: 2.15.3
       dotenv: 16.4.5
       dotenv-expand: 8.0.3
-      ejs: 3.1.9
+      ejs: 3.1.10
       fast-glob: 3.3.2
       fs-extra: 10.1.0
       html-minifier-terser: 6.1.0

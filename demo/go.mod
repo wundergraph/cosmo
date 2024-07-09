@@ -10,7 +10,7 @@ require (
 	github.com/gorilla/websocket v1.5.1
 	github.com/nats-io/nats.go v1.35.0
 	github.com/ravilushqa/otelgqlgen v0.13.1
-	github.com/rs/cors v1.10.1
+	github.com/rs/cors v1.11.0
 	github.com/vektah/gqlparser/v2 v2.5.11
 	github.com/wundergraph/cosmo/composition-go v0.0.0-20240124120900-5effe48a4a1d
 	github.com/wundergraph/cosmo/router v0.0.0-20240705122303-9dbce2fc3ebe
