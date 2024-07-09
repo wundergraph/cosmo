@@ -91,16 +91,21 @@ func (p *OperationPlanner) preparePlan(requestOperationName []byte, requestOpera
 func (p *OperationPlanner) Plan(operation *ParsedOperation, clientInfo *ClientInfo, protocol OperationProtocol, traceOptions resolve.TraceOptions) (*operationContext, error) {
 
 	opContext := &operationContext{
-		name:         operation.Name,
-		opType:       operation.Type,
-		content:      operation.NormalizedRepresentation,
-		hash:         operation.ID,
-		clientInfo:   clientInfo,
-		variables:    operation.Variables,
-		traceOptions: traceOptions,
-		extensions:   operation.Extensions,
-		persistedID:  operation.PersistedID,
-		protocol:     protocol,
+		name:                       operation.Request.OperationName,
+		opType:                     operation.Type,
+		content:                    operation.NormalizedRepresentation,
+		hash:                       operation.ID,
+		clientInfo:                 clientInfo,
+		variables:                  operation.Request.Variables,
+		files:                      operation.Files,
+		traceOptions:               traceOptions,
+		extensions:                 operation.Request.Extensions,
+		protocol:                   protocol,
+		persistedOperationCacheHit: operation.PersistedOperationCacheHit,
+	}
+
+	if operation.IsPersistedOperation {
+		opContext.persistedID = operation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
 	}
 
 	if traceOptions.Enable {

@@ -69,7 +69,7 @@ func normalizeJSON(tb testing.TB, data []byte) []byte {
 	return buf.Bytes()
 }
 
-func TestIntegration(t *testing.T) {
+func TestSimpleQuery(t *testing.T) {
 	t.Parallel()
 
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -77,6 +77,38 @@ func TestIntegration(t *testing.T) {
 			Query: `query { employees { id } }`,
 		})
 		require.JSONEq(t, employeesIDData, res.Body)
+	})
+}
+
+func TestContentTypes(t *testing.T) {
+	t.Parallel()
+
+	type contentType struct {
+		ContentType string
+	}
+
+	var contentTypes = []contentType{
+		{""},
+		{"application/json"},
+		{"application/JSON"},
+		{"application/json; charset=utf-8"},
+		{"application/json; charset=UTF-8"},
+		{"application/json; charset=UTF-8;"},
+	}
+
+	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		for _, ct := range contentTypes {
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", http.Header{
+				"Content-Type": []string{ct.ContentType},
+			}, bytes.NewReader([]byte(`{"query":"{ employees { id } }"}`)))
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.StatusCode)
+
+			body, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.JSONEq(t, employeesIDData, string(body))
+
+		}
 	})
 }
 
@@ -559,6 +591,31 @@ func BenchmarkParallel(b *testing.B) {
 	})
 }
 
+func BenchmarkParallelWithMinify(b *testing.B) {
+	testenv.Bench(b, &testenv.Config{
+		ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+			cfg.MinifySubgraphOperations = true
+			cfg.ExecutionPlanCacheSize = 0
+		},
+	}, func(b *testing.B, xEnv *testenv.Environment) {
+		expect := `{"data":{"a":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}],"b":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}],"c":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}],"d":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}],"e":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}]}}`
+		b.SetBytes(int64(len(expect)))
+		b.ReportAllocs()
+		b.ResetTimer()
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:         `query MyQuery {a: employees { ...EmployeeDetails } b: employees { ...EmployeeDetails } c: employees { ...EmployeeDetails } d: employees { ...EmployeeDetails } e: employees { ...EmployeeDetails } } fragment EmployeeDetails on Employee { id details { forename surname hasChildren } }`,
+					OperationName: json.RawMessage(`"MyQuery"`),
+				})
+				if res.Body != expect {
+					b.Errorf("unexpected result %q, expecting %q", res.Body, expect)
+				}
+			}
+		})
+	})
+}
+
 const (
 	bigEmployeesQuery = `{
   employees {
@@ -661,6 +718,122 @@ func FuzzQuery(f *testing.F) {
 			if res.Response.StatusCode != http.StatusOK && res.Response.StatusCode != http.StatusBadRequest {
 				t.Error("unexpected status code", res.Response.StatusCode)
 			}
+		})
+	})
+}
+
+func TestSubgraphOperationMinifier(t *testing.T) {
+	t.Run("prefer minified version", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.MinifySubgraphOperations = true
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							body, err := io.ReadAll(r.Body)
+							require.NoError(t, err)
+							require.Equal(t, `{"query":"{a: employees {...A} b: employees {...A} c: employees {...A} d: employees {...A} e: employees {...A}} fragment A on Employee {__typename id}"}`, string(body))
+							r.Body = io.NopCloser(bytes.NewReader(body))
+							handler.ServeHTTP(w, r)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:         `query MyQuery {a: employees { ...EmployeeDetails } b: employees { ...EmployeeDetails } c: employees { ...EmployeeDetails } d: employees { ...EmployeeDetails } e: employees { ...EmployeeDetails } } fragment EmployeeDetails on Employee { id details { forename surname hasChildren } }`,
+				OperationName: json.RawMessage(`"MyQuery"`),
+			})
+			require.Equal(t, `{"data":{"a":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}],"b":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}],"c":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}],"d":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}],"e":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}]}}`, res.Body)
+		})
+	})
+	t.Run("prefer non-minified when disabled", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							body, err := io.ReadAll(r.Body)
+							require.NoError(t, err)
+							require.Equal(t, `{"query":"{a: employees {id __typename} b: employees {id __typename} c: employees {id __typename} d: employees {id __typename} e: employees {id __typename}}"}`, string(body))
+							r.Body = io.NopCloser(bytes.NewReader(body))
+							handler.ServeHTTP(w, r)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:         `query MyQuery {a: employees { ...EmployeeDetails } b: employees { ...EmployeeDetails } c: employees { ...EmployeeDetails } d: employees { ...EmployeeDetails } e: employees { ...EmployeeDetails } } fragment EmployeeDetails on Employee { id details { forename surname hasChildren } }`,
+				OperationName: json.RawMessage(`"MyQuery"`),
+			})
+			require.Equal(t, `{"data":{"a":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}],"b":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}],"c":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}],"d":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}],"e":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}]}}`, res.Body)
+		})
+	})
+	t.Run("minify concurrently without plan cache", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.MinifySubgraphOperations = true
+				cfg.ExecutionPlanCacheSize = 0
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							body, err := io.ReadAll(r.Body)
+							require.NoError(t, err)
+							require.Equal(t, `{"query":"{a: employees {...A} b: employees {...A} c: employees {...A} d: employees {...A} e: employees {...A}} fragment A on Employee {__typename id}"}`, string(body))
+							r.Body = io.NopCloser(bytes.NewReader(body))
+							handler.ServeHTTP(w, r)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			wg := &sync.WaitGroup{}
+			wg.Add(100)
+			start := make(chan struct{})
+			for i := 0; i < 100; i++ {
+				go func() {
+					<-start
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query:         `query MyQuery {a: employees { ...EmployeeDetails } b: employees { ...EmployeeDetails } c: employees { ...EmployeeDetails } d: employees { ...EmployeeDetails } e: employees { ...EmployeeDetails } } fragment EmployeeDetails on Employee { id details { forename surname hasChildren } }`,
+						OperationName: json.RawMessage(`"MyQuery"`),
+					})
+					require.Equal(t, `{"data":{"a":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}],"b":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}],"c":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}],"d":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}],"e":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}]}}`, res.Body)
+					wg.Done()
+				}()
+			}
+			close(start)
+			wg.Wait()
+		})
+	})
+	t.Run("prefer non-minified version", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.MinifySubgraphOperations = true
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							body, err := io.ReadAll(r.Body)
+							require.NoError(t, err)
+							require.Equal(t, `{"query":"{a: employees {id __typename}}"}`, string(body))
+							r.Body = io.NopCloser(bytes.NewReader(body))
+							handler.ServeHTTP(w, r)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:         `query MyQuery {a: employees { ...EmployeeDetails } } fragment EmployeeDetails on Employee { id details { forename surname hasChildren } }`,
+				OperationName: json.RawMessage(`"MyQuery"`),
+			})
+			require.Equal(t, `{"data":{"a":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}]}}`, res.Body)
 		})
 	})
 }
@@ -1201,6 +1374,6 @@ func TestRequestBodySizeLimit(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, http.StatusRequestEntityTooLarge, res.Response.StatusCode)
-		require.Equal(t, `{"errors":[{"message":"request body too large"}],"data":null}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"request body too large, max size is 10 bytes"}],"data":null}`, res.Body)
 	})
 }

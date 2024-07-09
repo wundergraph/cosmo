@@ -4,6 +4,67 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.95.3](https://github.com/wundergraph/cosmo/compare/router@0.95.2...router@0.95.3) (2024-07-05)
+
+**Note:** Version bump only for package router
+
+## [0.95.2](https://github.com/wundergraph/cosmo/compare/router@0.95.1...router@0.95.2) (2024-07-05)
+
+**Note:** Version bump only for package router
+
+## [0.95.1](https://github.com/wundergraph/cosmo/compare/router@0.95.0...router@0.95.1) (2024-07-04)
+
+**Note:** Version bump only for package router
+
+# [0.95.0](https://github.com/wundergraph/cosmo/compare/router@0.94.3...router@0.95.0) (2024-07-03)
+
+### Features
+
+* feature flags ([#853](https://github.com/wundergraph/cosmo/issues/853)) ([5461bb5](https://github.com/wundergraph/cosmo/commit/5461bb5a529decd51a1b22be0a5301936b8ad392)) (@JivusAyrus)
+
+## [0.94.3](https://github.com/wundergraph/cosmo/compare/router@0.94.2...router@0.94.3) (2024-07-01)
+
+### Bug Fixes
+
+* merging deeply nested representation variables ([#902](https://github.com/wundergraph/cosmo/issues/902)) ([daa5b40](https://github.com/wundergraph/cosmo/commit/daa5b404ab9b7cf81553d089ebaeb26927c6c706)) (@devsergiy)
+
+## [0.94.2](https://github.com/wundergraph/cosmo/compare/router@0.94.1...router@0.94.2) (2024-06-27)
+
+### Bug Fixes
+
+* support charset in content-type ([#899](https://github.com/wundergraph/cosmo/issues/899)) ([4da7d24](https://github.com/wundergraph/cosmo/commit/4da7d24d434a4d25e9eb3e71b9a373f70f11318d)) (@StarpTech)
+
+## [0.94.1](https://github.com/wundergraph/cosmo/compare/router@0.94.0...router@0.94.1) (2024-06-26)
+
+### Bug Fixes
+
+* fix merging response nodes edge cases ([#897](https://github.com/wundergraph/cosmo/issues/897)) ([f5247db](https://github.com/wundergraph/cosmo/commit/f5247db8e80bd7d9224fd08c894a305bec035548)) (@devsergiy)
+
+# [0.94.0](https://github.com/wundergraph/cosmo/compare/router@0.93.1...router@0.94.0) (2024-06-26)
+
+### Features
+
+* allow to disable file uploads ([#896](https://github.com/wundergraph/cosmo/issues/896)) ([bc94f15](https://github.com/wundergraph/cosmo/commit/bc94f1565cfc9aa8c6f4353d16d29c1cd4ec0fd3)) (@thisisnithin)
+* support file upload in router ([#772](https://github.com/wundergraph/cosmo/issues/772)) ([d1cbc11](https://github.com/wundergraph/cosmo/commit/d1cbc11deedbdefad949a3aa5a1b753da4682145)) (@pedraumcosta)
+
+## [0.93.1](https://github.com/wundergraph/cosmo/compare/router@0.93.0...router@0.93.1) (2024-06-25)
+
+### Bug Fixes
+
+* merging response nodes ([#888](https://github.com/wundergraph/cosmo/issues/888)) ([fb4b1a7](https://github.com/wundergraph/cosmo/commit/fb4b1a70eb1afec928551543f359d08eedae8863)) (@devsergiy)
+
+# [0.93.0](https://github.com/wundergraph/cosmo/compare/router@0.92.5...router@0.93.0) (2024-06-25)
+
+### Features
+
+* add config option to enable subgraph minify ([#887](https://github.com/wundergraph/cosmo/issues/887)) ([a89c11a](https://github.com/wundergraph/cosmo/commit/a89c11ab283b24349d7e5d2502779c4ac71df877)) (@jensneuse)
+
+## [0.92.5](https://github.com/wundergraph/cosmo/compare/router@0.92.4...router@0.92.5) (2024-06-24)
+
+### Bug Fixes
+
+* **engine-update:** processing websockets dials asynchronously ([#881](https://github.com/wundergraph/cosmo/issues/881)) ([130cb33](https://github.com/wundergraph/cosmo/commit/130cb3325a1ff78c180e604ebacc480525f36848)) (@StarpTech)
+
 ## [0.92.4](https://github.com/wundergraph/cosmo/compare/router@0.92.3...router@0.92.4) (2024-06-20)
 
 ### Bug Fixes

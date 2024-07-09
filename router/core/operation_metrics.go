@@ -112,8 +112,8 @@ func newOperationMetrics(opts OperationMetricsOptions) *OperationMetrics {
 	}
 }
 
-// setAttributesFromOperationContext returns the attributes that are common to both metrics and traces.
-func setAttributesFromOperationContext(operationContext *operationContext) []attribute.KeyValue {
+// getAttributesFromOperationContext returns the attributes that are common to both metrics and traces.
+func getAttributesFromOperationContext(operationContext *operationContext) []attribute.KeyValue {
 	if operationContext == nil {
 		return nil
 	}

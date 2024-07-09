@@ -23,7 +23,6 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/tidwall/gjson"
 	"github.com/wundergraph/cosmo/router/internal/epoller"
-	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/cosmo/router/internal/wsproto"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
@@ -122,10 +121,16 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 		if opts.EnableWebSocketEpollKqueue {
 			poller, err := epoller.NewPoller(opts.EpollKqueueConnBufferSize, opts.EpollKqueuePollTimeout)
 			if err == nil {
+				opts.Logger.Debug("Epoll is available")
+
 				handler.epoll = poller
 				handler.connections = make(map[int]*WebSocketConnectionHandler)
 				go handler.runPoller()
+			} else {
+				opts.Logger.Warn("Epoll is only available on Linux and MacOS. Falling back to synchronous handling.")
 			}
+		} else {
+			opts.Logger.Debug("Epoll is disabled by configuration")
 		}
 
 		return handler
@@ -306,15 +311,12 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 
 	// Only when epoll is available. On Windows, epoll is not available
 	if h.epoll != nil {
-		h.logger.Debug("Epoll is available")
 		err = h.addConnection(c, handler)
 		if err != nil {
 			requestLogger.Error("Adding connection to epoll", zap.Error(err))
 			handler.Close()
 		}
 		return
-	} else {
-		h.logger.Warn("Epoll is only available on Linux and MacOS. Falling back to synchronous handling.")
 	}
 
 	// Handle messages sync when epoll is not available
@@ -663,13 +665,13 @@ func (h *WebSocketConnectionHandler) writeErrorMessage(operationID string, err e
 }
 
 func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperation, *operationContext, error) {
-	operationKit, err := h.operationProcessor.NewKit(payload)
+	operationKit, err := h.operationProcessor.NewKit(payload, nil)
 	defer operationKit.Free()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	if err := operationKit.Parse(h.ctx, h.clientInfo, h.logger); err != nil {
+	if err := operationKit.Parse(h.ctx, h.clientInfo); err != nil {
 		return nil, nil, err
 	}
 
@@ -771,9 +773,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 		err = h.graphqlHandler.executor.Resolver.ResolveGraphQLResponse(resolveCtx, p.Response, nil, rw)
 		if err != nil {
 			h.logger.Warn("Resolving GraphQL response", zap.Error(err))
-			buf := pool.GetBytesBuffer()
-			defer pool.PutBytesBuffer(buf)
-			h.graphqlHandler.WriteError(resolveCtx, err, p.Response, rw, buf)
+			h.graphqlHandler.WriteError(resolveCtx, err, p.Response, rw)
 		}
 		_ = rw.Flush()
 		rw.Complete()
@@ -781,9 +781,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 		err = h.graphqlHandler.executor.Resolver.AsyncResolveGraphQLSubscription(resolveCtx, p.Response, rw.SubscriptionResponseWriter(), id)
 		if err != nil {
 			h.logger.Warn("Resolving GraphQL subscription", zap.Error(err))
-			buf := pool.GetBytesBuffer()
-			defer pool.PutBytesBuffer(buf)
-			h.graphqlHandler.WriteError(resolveCtx, err, p.Response.Response, rw, buf)
+			h.graphqlHandler.WriteError(resolveCtx, err, p.Response.Response, rw)
 			return
 		}
 	}

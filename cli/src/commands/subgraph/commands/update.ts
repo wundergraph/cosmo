@@ -5,9 +5,9 @@ import { Command, program } from 'commander';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
-  splitLabel,
   parseGraphQLSubscriptionProtocol,
   parseGraphQLWebsocketSubprotocol,
+  splitLabel,
 } from '@wundergraph/cosmo-shared';
 import { resolve } from 'pathe';
 import ora from 'ora';
@@ -68,7 +68,7 @@ export default (opts: BaseCommandOptions) => {
       websocketSubprotocol: options.websocketSubprotocol,
     });
 
-    const spinner = ora('Subgraph is being updated...').start();
+    const spinner = ora(`The subgraph "${name}" is being updated...`).start();
     const resp = await opts.client.platform.updateSubgraph(
       {
         name,
@@ -99,34 +99,36 @@ export default (opts: BaseCommandOptions) => {
 
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {
-        spinner.succeed('Subgraph was updated successfully.');
+        spinner.succeed(`The subgraph "${name}" was updated successfully.`);
 
         break;
       }
       case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {
-        spinner.warn('Subgraph was updated but with composition errors.');
+        spinner.warn(`The subgraph "${name}" was updated but with composition errors.`);
 
         const compositionErrorsTable = new Table({
           head: [
             pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
             pc.bold(pc.white('NAMESPACE')),
+            pc.bold(pc.white('FEATURE_FLAG')),
             pc.bold(pc.white('ERROR_MESSAGE')),
           ],
-          colWidths: [30, 30, 120],
+          colWidths: [30, 30, 30, 120],
           wordWrap: true,
         });
 
         console.log(
           pc.red(
-            `We found composition errors, while composing the federated graph.\nThe router will continue to work with the latest valid schema.\n${pc.bold(
-              'Please check the errors below:',
-            )}`,
+            `There were composition errors when composing at least one federated graph related to the` +
+              ` subgraph "${name}".\nThe router will continue to work with the latest valid schema.` +
+              `\n${pc.bold('Please check the errors below:')}`,
           ),
         );
         for (const compositionError of resp.compositionErrors) {
           compositionErrorsTable.push([
             compositionError.federatedGraphName,
             compositionError.namespace,
+            compositionError.featureFlag,
             compositionError.message,
           ]);
         }
@@ -137,7 +139,9 @@ export default (opts: BaseCommandOptions) => {
       }
       case EnumStatusCode.ERR_DEPLOYMENT_FAILED: {
         spinner.warn(
-          "Subgraph was updated, but the updated composition hasn't been deployed, so it's not accessible to the router. Check the errors listed below for details.",
+          `The subgraph "${name}" was updated, but the updated composition could not be deployed.` +
+            `\nThis means the updated composition is not accessible to the router.` +
+            `\n${pc.bold('Please check the errors below:')}`,
         );
 
         const deploymentErrorsTable = new Table({
@@ -163,7 +167,7 @@ export default (opts: BaseCommandOptions) => {
         break;
       }
       default: {
-        spinner.fail(`Failed to update subgraph.`);
+        spinner.fail(`Failed to update subgraph "${name}".`);
         if (resp.response?.details) {
           console.log(pc.red(pc.bold(resp.response?.details)));
         }

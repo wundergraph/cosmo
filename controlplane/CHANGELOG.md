@@ -4,6 +4,43 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.92.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.92.0...controlplane@0.92.1) (2024-07-03)
+
+### Bug Fixes
+
+* limit check and remove router_config_path ([#911](https://github.com/wundergraph/cosmo/issues/911)) ([93180ed](https://github.com/wundergraph/cosmo/commit/93180edbe3f2f84e1c95f3d3a9acd57ec337a6dc)) (@JivusAyrus)
+
+# [0.92.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.91.5...controlplane@0.92.0) (2024-07-03)
+
+### Features
+
+* feature flags ([#853](https://github.com/wundergraph/cosmo/issues/853)) ([5461bb5](https://github.com/wundergraph/cosmo/commit/5461bb5a529decd51a1b22be0a5301936b8ad392)) (@JivusAyrus)
+
+## [0.91.5](https://github.com/wundergraph/cosmo/compare/controlplane@0.91.4...controlplane@0.91.5) (2024-07-02)
+
+### Bug Fixes
+
+* race while fetching configuration for graph notifications ([#903](https://github.com/wundergraph/cosmo/issues/903)) ([c79bb2c](https://github.com/wundergraph/cosmo/commit/c79bb2c894a8c2345e40b1a40779b28fcfa16103)) (@thisisnithin)
+
+## [0.91.4](https://github.com/wundergraph/cosmo/compare/controlplane@0.91.3...controlplane@0.91.4) (2024-07-01)
+
+**Note:** Version bump only for package controlplane
+
+## [0.91.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.91.2...controlplane@0.91.3) (2024-06-25)
+
+### Bug Fixes
+
+* cleanup inspectable check ([#884](https://github.com/wundergraph/cosmo/issues/884)) ([5bcf149](https://github.com/wundergraph/cosmo/commit/5bcf14915115d400ea6dc394b5d219e4f6e2eaca)) (@thisisnithin)
+
+## [0.91.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.91.1...controlplane@0.91.2) (2024-06-24)
+
+### Bug Fixes
+
+* empty admission webhook secret ([#882](https://github.com/wundergraph/cosmo/issues/882)) ([cca7430](https://github.com/wundergraph/cosmo/commit/cca7430aca2f7464e308ae94cb211ce74d75a705)) (@thisisnithin)
+* ignore directive changes instead of throwing ([#859](https://github.com/wundergraph/cosmo/issues/859)) ([0f6d7dc](https://github.com/wundergraph/cosmo/commit/0f6d7dc0e8bbdd486d9c766a5b14d6611cf9deeb)) (@thisisnithin)
+* link composition from changelog ([#857](https://github.com/wundergraph/cosmo/issues/857)) ([45ebcfc](https://github.com/wundergraph/cosmo/commit/45ebcfcb30d7f0aa083ba0dc7798bf6678847091)) (@thisisnithin)
+* remove console log ([#883](https://github.com/wundergraph/cosmo/issues/883)) ([d9b23e3](https://github.com/wundergraph/cosmo/commit/d9b23e384a37d0fb399de6404980df3e2074907e)) (@thisisnithin)
+
 ## [0.91.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.91.0...controlplane@0.91.1) (2024-06-20)
 
 **Note:** Version bump only for package controlplane

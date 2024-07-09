@@ -53,7 +53,12 @@ func TestOverrideURLConfig(t *testing.T) {
 		},
 	}
 
-	subgraphs, err := router.configureSubgraphOverwrites(routerConfig)
+	subgraphs, err := configureSubgraphOverwrites(
+		routerConfig.EngineConfig,
+		routerConfig.Subgraphs,
+		router.overrideRoutingURLConfiguration,
+		router.overrides,
+	)
 	assert.Nil(t, err)
 
 	parsedURL, err := url.Parse("http://localhost:8080")
@@ -113,7 +118,12 @@ func TestOverridesConfig(t *testing.T) {
 		},
 	}
 
-	subgraphs, err := router.configureSubgraphOverwrites(routerConfig)
+	subgraphs, err := configureSubgraphOverwrites(
+		routerConfig.EngineConfig,
+		routerConfig.Subgraphs,
+		router.overrideRoutingURLConfiguration,
+		router.overrides,
+	)
 	assert.Nil(t, err)
 
 	parsedURL, err := url.Parse("http://localhost:8080")
@@ -180,7 +190,12 @@ func TestOverridesPriority(t *testing.T) {
 		},
 	}
 
-	subgraphs, err := router.configureSubgraphOverwrites(routerConfig)
+	subgraphs, err := configureSubgraphOverwrites(
+		routerConfig.EngineConfig,
+		routerConfig.Subgraphs,
+		router.overrideRoutingURLConfiguration,
+		router.overrides,
+	)
 	assert.Nil(t, err)
 
 	parsedURL, err := url.Parse("http://localhost:8080")

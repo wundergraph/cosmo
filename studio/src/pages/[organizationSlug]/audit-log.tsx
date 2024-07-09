@@ -12,6 +12,7 @@ import { Loader } from "@/components/ui/loader";
 import { Pagination } from "@/components/ui/pagination";
 import { Toolbar } from "@/components/ui/toolbar";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
+import { useUser } from "@/hooks/use-user";
 import { createDateRange } from "@/lib/insights-helpers";
 import { NextPageWithLayout } from "@/lib/page";
 import { useQuery } from "@connectrpc/connect-query";

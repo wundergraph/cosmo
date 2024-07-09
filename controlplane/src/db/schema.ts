@@ -58,7 +58,6 @@ export const federatedGraphs = pgTable('federated_graphs', {
   composedSchemaVersionId: uuid('composed_schema_version_id').references(() => schemaVersion.id, {
     onDelete: 'no action',
   }),
-  routerConfigPath: text('router_config_path'),
   // The admission webhook url. This is the url that the controlplane will use to run admission checks.
   // You can use this to enforce policies on the router config.
   admissionWebhookURL: text('admission_webhook_url'),
@@ -236,8 +235,142 @@ export const subgraphs = pgTable('subgraphs', {
     .references(() => targets.id, {
       onDelete: 'cascade',
     }),
+  isFeatureSubgraph: boolean('is_feature_subgraph').notNull().default(false),
   isEventDrivenGraph: boolean('is_event_driven_graph').notNull().default(false),
 });
+
+export const featureSubgraphsToBaseSubgraphs = pgTable(
+  'feature_subgraphs_to_base_subgraphs',
+  {
+    featureSubgraphId: uuid('feature_subgraph_id')
+      .notNull()
+      .references(() => subgraphs.id, {
+        onDelete: 'cascade',
+      }),
+    baseSubgraphId: uuid('base_subgraph_id')
+      .notNull()
+      .references(() => subgraphs.id, {
+        onDelete: 'cascade',
+      }),
+  },
+  (t) => {
+    return {
+      pk: primaryKey({ columns: [t.featureSubgraphId, t.baseSubgraphId] }),
+    };
+  },
+);
+
+export const featureSubgraphsToSubgraphRelations = relations(featureSubgraphsToBaseSubgraphs, ({ one }) => ({
+  baseSubgraph: one(subgraphs, {
+    fields: [featureSubgraphsToBaseSubgraphs.baseSubgraphId],
+    references: [subgraphs.id],
+  }),
+  featureSubgraph: one(subgraphs, {
+    fields: [featureSubgraphsToBaseSubgraphs.featureSubgraphId],
+    references: [subgraphs.id],
+  }),
+}));
+
+export const featureFlags = pgTable('feature_flags', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  organizationId: uuid('organization_id')
+    .notNull()
+    .references(() => organizations.id, {
+      onDelete: 'cascade',
+    }),
+  namespaceId: uuid('namespace_id')
+    .notNull()
+    .references(() => namespaces.id, {
+      onDelete: 'cascade',
+    }),
+  labels: text('labels').array(),
+  isEnabled: boolean('is_enabled').default(false).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }),
+  createdBy: uuid('created_by').references(() => users.id, {
+    onDelete: 'set null',
+  }),
+});
+
+export const featureFlagToFeatureSubgraphs = pgTable(
+  'feature_flags_to_feature_subgraphs',
+  {
+    featureFlagId: uuid('feature_flag_id')
+      .notNull()
+      .references(() => featureFlags.id, {
+        onDelete: 'cascade',
+      }),
+    featureSubgraphId: uuid('feature_subgraph_id')
+      .notNull()
+      .references(() => subgraphs.id, {
+        onDelete: 'cascade',
+      }),
+  },
+  (t) => {
+    return {
+      pk: primaryKey({ columns: [t.featureFlagId, t.featureSubgraphId] }),
+    };
+  },
+);
+
+export const featureFlagToFeatureSubgraphsRelations = relations(featureFlagToFeatureSubgraphs, ({ one }) => ({
+  featureFlag: one(featureFlags, {
+    fields: [featureFlagToFeatureSubgraphs.featureFlagId],
+    references: [featureFlags.id],
+  }),
+  featureSubgraph: one(subgraphs, {
+    fields: [featureFlagToFeatureSubgraphs.featureSubgraphId],
+    references: [subgraphs.id],
+  }),
+}));
+
+export const federatedGraphsToFeatureFlagSchemaVersions = pgTable(
+  'federated_graphs_to_feature_flag_schema_versions',
+  {
+    federatedGraphId: uuid('federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, {
+        onDelete: 'cascade',
+      }),
+    baseCompositionSchemaVersionId: uuid('base_composition_schema_version_id')
+      .notNull()
+      .references(() => schemaVersion.id, {
+        onDelete: 'cascade',
+      }),
+    composedSchemaVersionId: uuid('composed_schema_version_id')
+      .notNull()
+      .references(() => schemaVersion.id, {
+        onDelete: 'cascade',
+      }),
+    featureFlagId: uuid('feature_flag_id').references(() => featureFlags.id, {
+      onDelete: 'set null',
+    }),
+  },
+  (t) => {
+    return {
+      pk: primaryKey({ columns: [t.federatedGraphId, t.baseCompositionSchemaVersionId, t.composedSchemaVersionId] }),
+    };
+  },
+);
+
+export const federatedGraphsToFeatureFlagSchemaVersionsRelations = relations(
+  federatedGraphsToFeatureFlagSchemaVersions,
+  ({ one }) => ({
+    federatedGraph: one(federatedGraphs, {
+      fields: [federatedGraphsToFeatureFlagSchemaVersions.federatedGraphId],
+      references: [federatedGraphs.id],
+    }),
+    schemaVersion: one(schemaVersion, {
+      fields: [federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId],
+      references: [schemaVersion.id],
+    }),
+    baseSchemaVersion: one(schemaVersion, {
+      fields: [federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId],
+      references: [schemaVersion.id],
+    }),
+  }),
+);
 
 export const federatedGraphRelations = relations(federatedGraphs, ({ many, one }) => ({
   target: one(targets, {
@@ -1176,8 +1309,6 @@ export const graphCompositions = pgTable('graph_compositions', {
   isComposable: boolean('is_composable').default(false),
   // The errors that occurred during the composition of the schema. This is only set when isComposable is false.
   compositionErrors: text('composition_errors'),
-  // This is router config based on the composed schema. Only set for federated graphs.
-  routerConfig: customJsonb('router_config'),
   // Signature of the schema. Provided by the user when the admission hook is called.
   routerConfigSignature: text('router_config_signature'),
   // The errors that occurred during the deployment of the schema. Only set when the schema was composable and no admission errors occurred.
@@ -1188,6 +1319,7 @@ export const graphCompositions = pgTable('graph_compositions', {
   createdBy: uuid('created_by').references(() => users.id, {
     onDelete: 'cascade',
   }),
+  isFeatureFlagComposition: boolean('is_feature_flag_composition').default(false).notNull(),
 });
 
 // stores the relation between the fedGraph schema versions and its respective subgraph schema versions

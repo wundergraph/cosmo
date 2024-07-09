@@ -1,7 +1,7 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { afterAllSetup, beforeAllSetup, genID } from '../src/core/test-util.js';
-import { createEventDrivenGraph, SetupTest } from './test-util.js';
+import { afterAllSetup, beforeAllSetup, genID } from '../../src/core/test-util.js';
+import { createEventDrivenGraph, DEFAULT_NAMESPACE, SetupTest } from '../test-util.js';
 
 let dbname = '';
 
@@ -22,7 +22,7 @@ describe('Update subgraph tests', () => {
     await createEventDrivenGraph(client, subgraphName);
     const createFederatedSubgraphResp = await client.updateSubgraph({
       name: subgraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       routingUrl: '',
     });
 
@@ -40,7 +40,7 @@ describe('Update subgraph tests', () => {
     await createEventDrivenGraph(client, subgraphName);
     const createFederatedSubgraphResp = await client.updateSubgraph({
       name: subgraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       subscriptionUrl: '',
     });
 
@@ -58,7 +58,7 @@ describe('Update subgraph tests', () => {
     await createEventDrivenGraph(client, subgraphName);
     const createFederatedSubgraphResp = await client.updateSubgraph({
       name: subgraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       subscriptionProtocol: 1,
     });
 
@@ -76,7 +76,7 @@ describe('Update subgraph tests', () => {
     await createEventDrivenGraph(client, subgraphName);
     const createFederatedSubgraphResp = await client.updateSubgraph({
       name: subgraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       websocketSubprotocol: 1,
     });
 

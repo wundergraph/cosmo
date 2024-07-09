@@ -624,6 +624,30 @@
       "default": "/",
       "description": "The path of the GraphQL Playground. The GraphQL Playground is a web-based GraphQL IDE that allows you to interact with the GraphQL API. The default value is '/'."
     },
+    "file_upload": {
+      "type": "object",
+      "description": "The configuration for file upload. Configure whether it should be enabled along with file size and number of files.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "max_file_size": {
+          "type": "string",
+          "bytes": {
+            "minimum": "1MB"
+          },
+          "description": "The maximum size of a file that can be uploaded. The size is specified as a string with a number and a unit, e.g. 10KB, 1MB, 1GB. The supported units are 'KB', 'MB', 'GB'."
+        },
+        "max_files": {
+          "type": "integer",
+          "default": 10,
+          "minimum": 1,
+          "description": "The maximum number of files that can be uploaded."
+        }
+      }
+    },
     "traffic_shaping": {
       "type": "object",
       "description": "The configuration for the traffic shaping. Configure rules for traffic shaping like maximum request body size, timeouts, retry behavior, etc. See https://cosmo-docs.wundergraph.com/router/traffic-shaping for more information.",
@@ -1197,6 +1221,10 @@
             "enable_resolver_debugging": {
               "type": "boolean",
               "description": "Enable verbose debug logging for the Resolver."
+            },
+            "enable_persisted_operations_cache_response_header": {
+              "type": "boolean",
+              "description": "Enable the persisted operations cache response header. The persisted operations cache response header is used to cache the persisted operations in the client."
             }
           }
         },
@@ -1217,7 +1245,7 @@
         "max_concurrent_resolvers": {
           "type": "integer",
           "description": "The maximum number of concurrent resolvers.",
-          "default": 1024
+          "default": 32
         },
         "enable_websocket_epoll_kqueue": {
           "type": "boolean",
@@ -1245,6 +1273,16 @@
           "type": "integer",
           "default": 10000,
           "description": "The size of the execution plan cache."
+        },
+        "minify_subgraph_operations": {
+          "type": "boolean",
+          "default": false,
+          "description": "Minify the subgraph operations. If the value is true, GraphQL Operations get minified after planning. This reduces the amount of GraphQL AST nodes the Subgraph has to parse, which ultimately saves CPU time and memory, resulting in faster response times."
+        },
+        "enable_persisted_operations_cache": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the persisted operations cache. The persisted operations cache is used to cache normalized persisted operations to improve performance."
         }
       }
     },

@@ -101,6 +101,7 @@ func (s *WebSocketStats) run(ctx context.Context) {
 func (s *WebSocketStats) reportConnections() {
 	s.logger.Info("WebSocket Stats",
 		zap.Uint64("open_connections", s.connections.Load()),
+		zap.Uint64("triggers", s.triggers.Load()),
 		zap.Uint64("active_subscriptions", s.subscriptions.Load()),
 	)
 }

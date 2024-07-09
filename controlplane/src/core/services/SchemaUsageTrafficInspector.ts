@@ -34,7 +34,7 @@ export class SchemaUsageTrafficInspector {
 
   /**
    * Inspect the usage of a schema change in the last X days on real traffic and return the
-   * affected operations.
+   * affected operations. We will consider all available compositions.
    */
   public async inspect(
     changes: InspectorSchemaChange[],
@@ -113,7 +113,7 @@ export class SchemaUsageTrafficInspector {
   }
 
   /**
-   * Convert schema changes to inspector changes. Throws an error if a change is not supported.
+   * Convert schema changes to inspector changes. Will ignore a change if it is not inspectable.
    * Ultimately, will result in a breaking change because the change is not inspectable with the current implementation.
    */
   public schemaChangesToInspectorChanges(

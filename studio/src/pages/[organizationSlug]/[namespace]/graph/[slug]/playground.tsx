@@ -30,6 +30,7 @@ import {
   SelectContent,
   SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectSeparator,
   SelectTrigger,
   SelectValue,
@@ -44,7 +45,7 @@ import { cn } from "@/lib/utils";
 import { explorerPlugin } from "@graphiql/plugin-explorer";
 import { createGraphiQLFetcher } from "@graphiql/toolkit";
 import { SparklesIcon } from "@heroicons/react/24/outline";
-import { MobileIcon } from "@radix-ui/react-icons";
+import { Component2Icon, MobileIcon } from "@radix-ui/react-icons";
 import { TooltipContent, TooltipTrigger } from "@radix-ui/react-tooltip";
 import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
@@ -67,10 +68,11 @@ import { ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { FaNetworkWired } from "react-icons/fa";
 import { FiSave } from "react-icons/fi";
-import { PiBracketsCurly, PiDevices } from "react-icons/pi";
+import { PiBracketsCurly, PiDevices, PiGraphLight } from "react-icons/pi";
 import { TbDevicesCheck } from "react-icons/tb";
 import { z } from "zod";
 import { useApplyParams } from "@/components/analytics/use-apply-params";
+import { MdOutlineFeaturedPlayList } from "react-icons/md";
 
 const graphiQLFetch = async (
   onFetch: any,
@@ -79,6 +81,7 @@ const graphiQLFetch = async (
   clientValidationEnabled: boolean,
   url: URL,
   init: RequestInit,
+  featureFlagName?: string,
 ) => {
   try {
     const headers: Record<string, string> = {
@@ -96,6 +99,10 @@ const graphiQLFetch = async (
     // add token if trace header is present
     if (hasTraceHeader) {
       headers["X-WG-Token"] = graphRequestToken;
+    }
+
+    if (featureFlagName) {
+      headers["X-Feature-Flag"] = featureFlagName;
     }
 
     if (schema && clientValidationEnabled) {
@@ -475,12 +482,19 @@ const PlaygroundPage: NextPageWithLayout = () => {
 
   const loadSchemaGraphId =
     (router.query.load as string) || graphContext?.graph?.id || "";
+  const type = (router.query.type as string) || "graph";
 
   const { data, isLoading: isLoadingGraphSchema } = useQuery(
     getFederatedGraphSDLByName,
     {
       name: graphContext?.graph?.name,
       namespace: graphContext?.graph?.namespace,
+      featureFlagName:
+        type === "featureFlag"
+          ? graphContext?.featureFlagsInLatestValidComposition.find(
+              (f) => f.id === loadSchemaGraphId,
+            )?.name
+          : undefined,
     },
   );
 
@@ -494,7 +508,9 @@ const PlaygroundPage: NextPageWithLayout = () => {
     },
     {
       enabled:
-        !!loadSchemaGraphId && loadSchemaGraphId !== graphContext?.graph?.id,
+        !!loadSchemaGraphId &&
+        loadSchemaGraphId !== graphContext?.graph?.id &&
+        type === "subgraph",
     },
   );
 
@@ -611,7 +627,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
   }, [query, isGraphiqlRendered]);
 
   const { routingUrl, subscriptionUrl } = useMemo(() => {
-    if (!loadSchemaGraphId || loadSchemaGraphId === graphContext?.graph?.id) {
+    if (!loadSchemaGraphId || type === "graph" || type === "featureFlag") {
       const url = graphContext?.graph?.routingURL ?? "";
       return { routingUrl: url, subscriptionUrl: url.replace("http", "ws") };
     }
@@ -628,10 +644,10 @@ const PlaygroundPage: NextPageWithLayout = () => {
       subscriptionUrl: subgraph.subscriptionUrl,
     };
   }, [
-    graphContext?.graph?.id,
     graphContext?.graph?.routingURL,
     graphContext?.subgraphs,
     loadSchemaGraphId,
+    type,
   ]);
 
   const fetcher = useMemo(() => {
@@ -650,14 +666,22 @@ const PlaygroundPage: NextPageWithLayout = () => {
           clientValidationEnabled,
           args[0] as URL,
           args[1] as RequestInit,
+          type === "featureFlag"
+            ? graphContext?.featureFlagsInLatestValidComposition.find(
+                (f) => f.id === loadSchemaGraphId,
+              )?.name
+            : undefined,
         ),
     });
   }, [
     routingUrl,
     subscriptionUrl,
     graphContext?.graphRequestToken,
+    graphContext?.featureFlagsInLatestValidComposition,
     schema,
     clientValidationEnabled,
+    type,
+    loadSchemaGraphId,
   ]);
 
   const { theme } = useTheme();
@@ -729,23 +753,29 @@ const ConfigSelect = () => {
 
   const graphContext = useContext(GraphContext);
   const subgraphs = graphContext?.subgraphs;
+  const featureFlags = graphContext?.featureFlagsInLatestValidComposition;
 
   const selected =
     (router.query.load as string) || graphContext?.graph?.id || "";
+  const type = (router.query.type as string) || "graph";
 
   const applyParams = useApplyParams();
 
   return (
     <div className="ml-1 flex items-center gap-x-2 pl-3">
       <span className="text-sm text-muted-foreground">
-        Querying {selected === graphContext?.graph?.id ? "Graph" : "Subgraph"} :
+        Querying{" "}
+        {type === "featureFlag"
+          ? "Feature flag"
+          : type === "subgraph"
+          ? "Subgraph"
+          : "Graph"}{" "}
+        :
       </span>
       <Select
-        value={selected}
+        value={`{ "load": "${selected}", "type": "${type}" }`}
         onValueChange={(value) => {
-          applyParams({
-            load: value,
-          });
+          applyParams(JSON.parse(value));
         }}
       >
         <SelectTrigger className="ml-1 mr-4 flex h-8 w-auto gap-x-2 border-0 bg-transparent pl-3 pr-1 shadow-none data-[state=open]:bg-accent data-[state=open]:text-accent-foreground hover:bg-accent hover:text-accent-foreground focus:ring-0 md:ml-0">
@@ -753,19 +783,54 @@ const ConfigSelect = () => {
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>
-            <SelectItem value={graphContext?.graph?.id ?? ""}>
+            <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
+              <PiGraphLight className="h-3 w-3" /> Graph
+            </SelectLabel>
+            <SelectItem
+              value={`{ "load": "${
+                graphContext?.graph?.id ?? ""
+              }", "type": "graph" }`}
+            >
               {graphContext?.graph?.name}
             </SelectItem>
           </SelectGroup>
-          <SelectSeparator />
+
+          {featureFlags && featureFlags.length > 0 && (
+            <>
+              <SelectSeparator />
+              <SelectGroup>
+                <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
+                  <MdOutlineFeaturedPlayList className="h-3 w-3" /> Feature
+                  Flags
+                </SelectLabel>
+                {featureFlags.map(({ name, id }) => (
+                  <SelectItem
+                    key={id}
+                    value={`{ "load": "${id}", "type": "featureFlag" }`}
+                  >
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </>
+          )}
           {subgraphs && subgraphs.length > 0 && (
-            <SelectGroup>
-              {subgraphs.map(({ name, id }) => (
-                <SelectItem key={id} value={id}>
-                  {name}
-                </SelectItem>
-              ))}
-            </SelectGroup>
+            <>
+              <SelectSeparator />
+              <SelectGroup>
+                <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
+                  <Component2Icon className="h-3 w-3" /> Subgraphs
+                </SelectLabel>
+                {subgraphs.map(({ name, id }) => (
+                  <SelectItem
+                    key={id}
+                    value={`{ "load": "${id}", "type": "subgraph" }`}
+                  >
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </>
           )}
         </SelectContent>
       </Select>

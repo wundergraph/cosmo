@@ -107,6 +107,11 @@
       "MaxRequestBodyBytes": 5000000
     }
   },
+  "FileUpload": {
+    "Enabled": true,
+    "MaxFileSizeBytes": 50000000,
+    "MaxFiles": 10
+  },
   "ListenAddr": "localhost:3002",
   "ControlplaneURL": "https://cosmo-cp.wundergraph.com",
   "PlaygroundEnabled": true,
@@ -180,17 +185,20 @@
       "DatasourceVisitor": false,
       "ReportWebSocketConnections": false,
       "ReportMemoryUsage": false,
-      "EnableResolverDebugging": false
+      "EnableResolverDebugging": false,
+      "EnablePersistedOperationsCacheResponseHeader": false
     },
     "EnableSingleFlight": true,
     "EnableRequestTracing": true,
     "EnableExecutionPlanCacheResponseHeader": false,
-    "MaxConcurrentResolvers": 1024,
+    "MaxConcurrentResolvers": 32,
     "EnableWebSocketEpollKqueue": true,
     "EpollKqueuePollTimeout": 1000000000,
     "EpollKqueueConnBufferSize": 128,
     "WebSocketReadTimeout": 5000000000,
-    "ExecutionPlanCacheSize": 10000
+    "ExecutionPlanCacheSize": 10000,
+    "MinifySubgraphOperations": false,
+    "EnablePersistedOperationsCache": true
   },
   "WebSocket": {
     "Enabled": true,

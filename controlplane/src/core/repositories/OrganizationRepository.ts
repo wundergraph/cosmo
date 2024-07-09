@@ -1166,6 +1166,7 @@ export class OrganizationRepository {
       'breaking-change-retention': 90,
       'trace-sampling-rate': 1,
       'federated-graphs': 30,
+      'feature-flags': 0,
       users: 25,
       requests: 30,
       rbac: false,

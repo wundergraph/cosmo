@@ -4,6 +4,26 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.58.1](https://github.com/wundergraph/cosmo/compare/wgc@0.58.0...wgc@0.58.1) (2024-07-03)
+
+### Bug Fixes
+
+* router compose command ([#912](https://github.com/wundergraph/cosmo/issues/912)) ([9d27279](https://github.com/wundergraph/cosmo/commit/9d272791b6156386f428feff9b97677743247bc5)) (@JivusAyrus)
+
+# [0.58.0](https://github.com/wundergraph/cosmo/compare/wgc@0.57.7...wgc@0.58.0) (2024-07-03)
+
+### Features
+
+* feature flags ([#853](https://github.com/wundergraph/cosmo/issues/853)) ([5461bb5](https://github.com/wundergraph/cosmo/commit/5461bb5a529decd51a1b22be0a5301936b8ad392)) (@JivusAyrus)
+
+## [0.57.7](https://github.com/wundergraph/cosmo/compare/wgc@0.57.6...wgc@0.57.7) (2024-06-25)
+
+**Note:** Version bump only for package wgc
+
+## [0.57.6](https://github.com/wundergraph/cosmo/compare/wgc@0.57.5...wgc@0.57.6) (2024-06-24)
+
+**Note:** Version bump only for package wgc
+
 ## [0.57.5](https://github.com/wundergraph/cosmo/compare/wgc@0.57.4...wgc@0.57.5) (2024-06-20)
 
 **Note:** Version bump only for package wgc
