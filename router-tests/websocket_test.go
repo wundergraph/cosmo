@@ -71,9 +71,11 @@ func TestWebSockets(t *testing.T) {
 		authServer, err := jwks.NewServer(t)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
+		tokenDecoder, _ := authentication.NewJwksTokenDecoder(authServer.JWKSURL(), time.Second*5)
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
-			Name: jwksName,
-			URL:  authServer.JWKSURL(),
+			Name:         jwksName,
+			URL:          authServer.JWKSURL(),
+			TokenDecoder: tokenDecoder,
 		}
 		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
 		require.NoError(t, err)
@@ -119,9 +121,11 @@ func TestWebSockets(t *testing.T) {
 		authServer, err := jwks.NewServer(t)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
+		tokenDecoder, _ := authentication.NewJwksTokenDecoder(authServer.JWKSURL(), time.Second*5)
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
-			Name: jwksName,
-			URL:  authServer.JWKSURL(),
+			Name:         jwksName,
+			URL:          authServer.JWKSURL(),
+			TokenDecoder: tokenDecoder,
 		}
 		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
 		require.NoError(t, err)
@@ -167,9 +171,11 @@ func TestWebSockets(t *testing.T) {
 		authServer, err := jwks.NewServer(t)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
+		tokenDecoder, _ := authentication.NewJwksTokenDecoder(authServer.JWKSURL(), time.Second*5)
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
-			Name: jwksName,
-			URL:  authServer.JWKSURL(),
+			Name:         jwksName,
+			URL:          authServer.JWKSURL(),
+			TokenDecoder: tokenDecoder,
 		}
 		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
 		require.NoError(t, err)
@@ -223,9 +229,11 @@ func TestWebSockets(t *testing.T) {
 		authServer, err := jwks.NewServer(t)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
+		tokenDecoder, _ := authentication.NewJwksTokenDecoder(authServer.JWKSURL(), time.Second*5)
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
-			Name: jwksName,
-			URL:  authServer.JWKSURL(),
+			Name:         jwksName,
+			URL:          authServer.JWKSURL(),
+			TokenDecoder: tokenDecoder,
 		}
 		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
 		require.NoError(t, err)
@@ -270,6 +278,121 @@ func TestWebSockets(t *testing.T) {
 
 			require.NoError(t, conn.Close())
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+		})
+	})
+	t.Run("subscription with authorization via initial payload no-reject", func(t *testing.T) {
+		t.Parallel()
+
+		authServer, err := jwks.NewServer(t)
+		require.NoError(t, err)
+		t.Cleanup(authServer.Close)
+		tokenDecoder, _ := authentication.NewJwksTokenDecoder(authServer.JWKSURL(), time.Second*5)
+		authOptions := authentication.WebsocketInitialPayloadAuthenticatorOptions{
+			TokenDecoder: tokenDecoder,
+			Key:          "Authorization",
+		}
+		authenticator, err := authentication.NewWebsocketInitialPayloadAuthenticator(authOptions)
+		require.NoError(t, err)
+		authenticators := []authentication.Authenticator{authenticator}
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
+					RejectOperationIfUnauthorized: false,
+				}),
+				core.WithWebSocketConfiguration(&config.WebSocketConfiguration{
+					Enabled: true,
+					Authentication: config.WebSocketAuthenticationConfiguration{
+						FromInitialPayload: config.InitialPayloadAuthenticationConfiguration{
+							Enabled: true,
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := authServer.Token(nil)
+			require.NoError(t, err)
+			initialPayload := []byte(`{"Authorization":"Bearer ` + token + `"}`)
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, initialPayload)
+			err = conn.WriteJSON(testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id }}"}`),
+			})
+			require.NoError(t, err)
+
+			go func() {
+				xEnv.WaitForSubscriptionCount(1, time.Second*5)
+				// Trigger the subscription via NATS
+				subject := "employeeUpdated.3"
+				message := []byte(`{"id":3,"__typename": "Employee"}`)
+				err := xEnv.NatsConnectionDefault.Publish(subject, message)
+				require.NoError(t, err)
+				err = xEnv.NatsConnectionDefault.Flush()
+				require.NoError(t, err)
+			}()
+
+			var res testenv.WebSocketMessage
+			err = conn.ReadJSON(&res)
+			require.NoError(t, err)
+			require.Equal(t, "next", res.Type)
+			require.Equal(t, "1", res.ID)
+			require.JSONEq(t, `{"data":{"employeeUpdated":{"id":3}}}`, string(res.Payload))
+
+			require.NoError(t, conn.Close())
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+		})
+	})
+	t.Run("subscription with authorization via initial payload reject", func(t *testing.T) {
+		t.Parallel()
+
+		authServer, err := jwks.NewServer(t)
+		require.NoError(t, err)
+		t.Cleanup(authServer.Close)
+		tokenDecoder, _ := authentication.NewJwksTokenDecoder(authServer.JWKSURL(), time.Second*5)
+		authOptions := authentication.WebsocketInitialPayloadAuthenticatorOptions{
+			TokenDecoder: tokenDecoder,
+			Key:          "Authorization",
+		}
+		authenticator, err := authentication.NewWebsocketInitialPayloadAuthenticator(authOptions)
+		require.NoError(t, err)
+		authenticators := []authentication.Authenticator{authenticator}
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
+					RejectOperationIfUnauthorized: false,
+				}),
+				core.WithWebSocketConfiguration(&config.WebSocketConfiguration{
+					Enabled: true,
+					Authentication: config.WebSocketAuthenticationConfiguration{
+						FromInitialPayload: config.InitialPayloadAuthenticationConfiguration{
+							Enabled: true,
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			require.NoError(t, err)
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+			err = conn.WriteJSON(testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id }}"}`),
+			})
+			require.NoError(t, err)
+
+			var res testenv.WebSocketMessage
+			err = conn.ReadJSON(&res)
+			require.NoError(t, err)
+			require.Equal(t, "error", res.Type)
+			payload, err := json.Marshal(res.Payload)
+			require.NoError(t, err)
+			require.JSONEq(t, `[{"message":"unauthorized"}]`, string(payload))
+
+			require.NoError(t, conn.Close())
 		})
 	})
 	t.Run("subscription", func(t *testing.T) {

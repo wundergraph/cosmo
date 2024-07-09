@@ -326,7 +326,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 				statusCode = http.StatusUnauthorized
 			}
 			http.Error(handler.w, http.StatusText(statusCode), statusCode)
-			_ = handler.requestError(fmt.Errorf("WebSocket authorization failed: %w", err))
+			handler.writeErrorMessage(requestID, err)
 			return
 		}
 		handler.r = validatedReq

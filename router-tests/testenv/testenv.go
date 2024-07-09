@@ -693,6 +693,12 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 				},
 			},
 			ForwardInitialPayload: true,
+			Authentication: config.WebSocketAuthenticationConfiguration{
+				FromInitialPayload: config.InitialPayloadAuthenticationConfiguration{
+					Enabled: true,
+					Key:     "Authorization",
+				},
+			},
 		}
 		if testConfig.ModifyWebsocketConfiguration != nil {
 			testConfig.ModifyWebsocketConfiguration(wsConfig)

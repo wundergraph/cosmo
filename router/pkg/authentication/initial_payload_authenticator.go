@@ -3,6 +3,7 @@ package authentication
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -20,8 +21,10 @@ func (a *websocketInitialPayloadAuthenticator) Name() string {
 
 func (a *websocketInitialPayloadAuthenticator) Authenticate(ctx context.Context, p Provider) (Claims, error) {
 	initialPayload := WebsocketInitialPayloadFromContext(ctx)
+	var errs error
 	if initialPayload == nil {
-		return nil, nil
+		errs = errors.Join(errs, fmt.Errorf("could not validate token, initial payload is empty"))
+		return nil, errs
 	}
 
 	var initialPayloadMap map[string]interface{}
@@ -33,12 +36,17 @@ func (a *websocketInitialPayloadAuthenticator) Authenticate(ctx context.Context,
 			for _, prefix := range a.headerValuePrefixes {
 				if strings.HasPrefix(authorization, prefix) {
 					authorization := strings.TrimSpace(authorization[len(prefix):])
-					return a.tokenDecoder.Decode(authorization)
+					claims, err := a.tokenDecoder.Decode(authorization)
+					if err != nil {
+						errs = errors.Join(errs, fmt.Errorf("could not validate token: %w", err))
+						continue
+					}
+					return claims, nil
 				}
 			}
 		}
 	}
-	return nil, nil
+	return nil, errs
 }
 
 // WebsocketInitialPayloadAuthenticatorOptions contains the available options for the InitialPayload authenticator
