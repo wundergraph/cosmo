@@ -83,7 +83,7 @@
     "framer-motion": "^11.0.3",
     "fuse.js": "^7.0.0",
     "graphiql": "^3.3.1",
-    "graphql": "^16.7.1",
+    "graphql": "^16.9.0",
     "graphql-ws": "^5.14.1",
     "js-cookie": "^3.0.5",
     "lodash": "^4.17.21",

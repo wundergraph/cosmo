@@ -37,7 +37,7 @@
     "@graphql-tools/utils": "^9.2.1",
     "@wundergraph/composition": "workspace:*",
     "@wundergraph/cosmo-connect": "workspace:*",
-    "graphql": "^16.7.1",
+    "graphql": "^16.9.0",
     "pino": "^8.14.1"
   },
   "devDependencies": {

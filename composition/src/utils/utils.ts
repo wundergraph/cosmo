@@ -361,8 +361,6 @@ export type EntityData = {
   typeName: string;
 };
 
-export type EntityDataByTypeName = Map<string, EntityData>;
-
 export type EntityDataParams = {
   typeName: string;
   fieldNames?: Iterable<string>;
@@ -385,14 +383,14 @@ function addEntityDataProperties(source: EntityData | EntityDataParams, target: 
   addIterableValuesToSet(source.subgraphNames || [], target.subgraphNames);
 }
 
-export function upsertEntityDataProperties(entityDataByTypeName: EntityDataByTypeName, params: EntityDataParams) {
+export function upsertEntityDataProperties(entityDataByTypeName: Map<string, EntityData>, params: EntityDataParams) {
   const existingData = entityDataByTypeName.get(params.typeName);
   existingData
     ? addEntityDataProperties(params, existingData)
     : entityDataByTypeName.set(params.typeName, newEntityData(params));
 }
 
-export function upsertEntityData(entityDataByTypeName: EntityDataByTypeName, incomingData: EntityData) {
+export function upsertEntityData(entityDataByTypeName: Map<string, EntityData>, incomingData: EntityData) {
   const existingData = entityDataByTypeName.get(incomingData.typeName);
   existingData
     ? addEntityDataProperties(incomingData, existingData)

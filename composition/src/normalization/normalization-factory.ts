@@ -36,7 +36,6 @@ import {
   FieldSetData,
   InputValidationContainer,
   isNodeQuery,
-  newFieldSetData,
   validateAndAddDirectivesWithFieldSetToConfigurationData,
 } from './utils';
 import {
@@ -56,7 +55,6 @@ import {
   addIterableValuesToSet,
   AuthorizationData,
   EntityData,
-  EntityDataByTypeName,
   EntityInterfaceSubgraphData,
   FieldAuthorizationData,
   getAuthorizationDataToUpdate,
@@ -75,7 +73,6 @@ import {
   subtractSourceSetFromTargetSet,
   upsertAuthorizationData,
   upsertEntityData,
-  upsertEntityDataProperties,
   upsertFieldAuthorizationData,
 } from '../utils/utils';
 import {
@@ -105,13 +102,13 @@ import {
   invalidKeyDirectiveArgumentErrorMessage,
   invalidKeyDirectivesError,
   invalidKeyFieldSetsEventDrivenErrorMessage,
+  invalidNatsStreamConfigurationDefinitionErrorMessage,
   invalidNatsStreamInputErrorMessage,
   invalidNatsStreamInputFieldsErrorMessage,
   invalidRootTypeDefinitionError,
   invalidRootTypeError,
   invalidRootTypeFieldEventsDirectivesErrorMessage,
   invalidRootTypeFieldResponseTypesEventDrivenErrorMessage,
-  invalidNatsStreamConfigurationDefinitionErrorMessage,
   invalidSubgraphNameErrorMessage,
   invalidSubgraphNamesError,
   invalidSubscriptionFilterLocationError,
@@ -137,6 +134,7 @@ import {
 import {
   AUTHENTICATED,
   CONSUMER_NAME,
+  DEFAULT_EDFS_PROVIDER_ID,
   EDFS_KAFKA_PUBLISH,
   EDFS_KAFKA_SUBSCRIBE,
   EDFS_NATS_PUBLISH,
@@ -151,17 +149,17 @@ import {
   FIELDS,
   FROM,
   INACCESSIBLE,
-  PROVIDER_TYPE_KAFKA,
   KEY,
   MUTATION,
   N_A,
-  PROVIDER_TYPE_NATS,
   NON_NULLABLE_BOOLEAN,
   NON_NULLABLE_EDFS_PUBLISH_EVENT_RESULT,
   NON_NULLABLE_STRING,
   OPERATION_TO_DEFAULT,
   OVERRIDE,
   PROVIDER_ID,
+  PROVIDER_TYPE_KAFKA,
+  PROVIDER_TYPE_NATS,
   PUBLISH,
   QUERY,
   REQUEST,
@@ -181,7 +179,6 @@ import {
   SUCCESS,
   TOPIC,
   TOPICS,
-  DEFAULT_EDFS_PROVIDER_ID,
 } from '../utils/string-constants';
 import { buildASTSchema } from '../buildASTSchema/buildASTSchema';
 import { ConfigurationData, EventConfiguration, NatsEventType } from '../router-configuration/router-configuration';
@@ -234,7 +231,7 @@ export type NormalizationResult = {
   concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>;
   configurationDataByParentTypeName: Map<string, ConfigurationData>;
   entityInterfaces: Map<string, EntityInterfaceSubgraphData>;
-  entityContainerByTypeName: EntityDataByTypeName;
+  entityDataByTypeName: Map<string, EntityData>;
   parentDefinitionDataByTypeName: Map<string, ParentDefinitionData>;
   parentExtensionDataByTypeName: Map<string, ObjectExtensionData>;
   originalTypeNameByRenamedTypeName: Map<string, string>;
@@ -258,7 +255,7 @@ export type NormalizationResultContainer = {
 export type BatchNormalizationContainer = {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
   concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>;
-  entityContainerByTypeName: EntityDataByTypeName;
+  entityDataByTypeName: Map<string, EntityData>;
   graph: MultiGraph;
   internalSubgraphBySubgraphName: Map<string, InternalSubgraph>;
   errors?: Error[];
@@ -1823,7 +1820,7 @@ export class NormalizationFactory {
         // It is an Intermediate configuration object that will be converted to an engine configuration in the router
         concreteTypeNamesByAbstractTypeName: this.concreteTypeNamesByAbstractTypeName,
         configurationDataByParentTypeName: this.configurationDataByParentTypeName,
-        entityContainerByTypeName: this.entityDataByTypeName,
+        entityDataByTypeName: this.entityDataByTypeName,
         entityInterfaces: this.entityInterfaces,
         parentDefinitionDataByTypeName: this.parentDefinitionDataByTypeName,
         parentExtensionDataByTypeName: validParentExtensionOrphansByTypeName,
@@ -1837,7 +1834,7 @@ export class NormalizationFactory {
         persistedDirectiveDefinitionDataByDirectiveName,
         subgraphAST: newAST,
         subgraphString: print(newAST),
-        schema: buildASTSchema(newAST, { assumeValid: true }),
+        schema: buildASTSchema(newAST, { assumeValid: true, assumeValidSDL: true }),
       },
     };
   }
@@ -1846,7 +1843,7 @@ export class NormalizationFactory {
 export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContainer {
   const authorizationDataByParentTypeName = new Map<string, AuthorizationData>();
   const concreteTypeNamesByAbstractTypeName = new Map<string, Set<string>>();
-  const entityDataByTypeName: EntityDataByTypeName = new Map<string, EntityData>();
+  const entityDataByTypeName = new Map<string, EntityData>();
   const internalSubgraphBySubgraphName = new Map<string, InternalSubgraph>();
   const allOverridesByTargetSubgraphName = new Map<string, Map<string, Set<string>>>();
   const overrideSourceSubgraphNamesByFieldPath = new Map<string, string[]>();
@@ -1897,8 +1894,8 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
       }
       addIterableValuesToSet(incomingConcreteTypeNames, existingConcreteTypeNames);
     }
-    for (const entityContainer of normalizationResult.entityContainerByTypeName.values()) {
-      upsertEntityData(entityDataByTypeName, entityContainer);
+    for (const entityData of normalizationResult.entityDataByTypeName.values()) {
+      upsertEntityData(entityDataByTypeName, entityData);
     }
     if (subgraph.name) {
       internalSubgraphBySubgraphName.set(subgraphName, {
@@ -1982,7 +1979,7 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
     return {
       authorizationDataByParentTypeName,
       concreteTypeNamesByAbstractTypeName,
-      entityContainerByTypeName: entityDataByTypeName,
+      entityDataByTypeName,
       errors: allErrors,
       graph,
       internalSubgraphBySubgraphName,
@@ -2010,7 +2007,7 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
   return {
     authorizationDataByParentTypeName,
     concreteTypeNamesByAbstractTypeName,
-    entityContainerByTypeName: entityDataByTypeName,
+    entityDataByTypeName,
     graph,
     internalSubgraphBySubgraphName: internalSubgraphBySubgraphName,
     ...(warnings.length > 0 ? { warnings } : {}),

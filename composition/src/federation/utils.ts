@@ -1,7 +1,19 @@
-import { ConstDirectiveNode, DocumentNode, FieldDefinitionNode, GraphQLSchema, Kind } from 'graphql';
+import { ConstDirectiveNode, DocumentNode, FieldDefinitionNode, GraphQLSchema } from 'graphql';
 import { FieldConfiguration } from '../router-configuration/router-configuration';
-import { SubgraphConfig } from '../subgraph/subgraph';
+import { InternalSubgraph, SubgraphConfig } from '../subgraph/subgraph';
 import { DefinitionWithFieldsData, FieldData } from '../schema-building/type-definition-data';
+import { AuthorizationData, EntityData, EntityInterfaceFederationData } from '../utils/utils';
+import { MultiGraph } from 'graphology';
+
+export type FederationFactoryOptions = {
+  authorizationDataByParentTypeName: Map<string, AuthorizationData>;
+  concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>;
+  entityDataByTypeName: Map<string, EntityData>;
+  entityInterfaceFederationDataByTypeName: Map<string, EntityInterfaceFederationData>;
+  graph: MultiGraph;
+  internalSubgraphBySubgraphName: Map<string, InternalSubgraph>;
+  warnings?: string[];
+};
 
 export type FederationResultContainer = {
   errors?: Error[];

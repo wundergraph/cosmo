@@ -67,7 +67,7 @@
     "fastify-graceful-shutdown": "^3.5.3",
     "fastify-plugin": "^4.5.1",
     "fastify-raw-body": "^4.3.0",
-    "graphql": "^16.8.1",
+    "graphql": "^16.9.0",
     "ioredis": "^5.4.1",
     "jose": "^5.2.4",
     "lodash": "^4.17.21",
