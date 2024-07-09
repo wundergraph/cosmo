@@ -64,6 +64,7 @@ import {
 } from '../errors/errors';
 import {
   ChildTagData,
+  FederationFactoryOptions,
   FederationResultContainer,
   FederationResultContainerWithContracts,
   InterfaceImplementationData,
@@ -109,7 +110,6 @@ import {
   AuthorizationData,
   doSetsIntersect,
   EntityData,
-  EntityDataByTypeName,
   EntityInterfaceFederationData,
   generateSimpleDirective,
   getAllMutualEntries,
@@ -239,22 +239,14 @@ export class FederationFactory {
   tagNamesByPath = new Map<string, Set<string>>();
   warnings: string[];
 
-  constructor(
-    authorizationDataByParentTypeName: Map<string, AuthorizationData>,
-    concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>,
-    entityContainersByTypeName: EntityDataByTypeName,
-    entityInterfaceFederationDataByTypeName: Map<string, EntityInterfaceFederationData>,
-    graph: MultiGraph,
-    internalSubgraphBySubgraphName: Map<string, InternalSubgraph>,
-    warnings?: string[],
-  ) {
-    this.authorizationDataByParentTypeName = authorizationDataByParentTypeName;
-    this.concreteTypeNamesByAbstractTypeName = concreteTypeNamesByAbstractTypeName;
-    this.entityDataByTypeName = entityContainersByTypeName;
-    this.entityInterfaceFederationDataByTypeName = entityInterfaceFederationDataByTypeName;
-    this.graph = graph;
-    this.internalSubgraphBySubgraphName = internalSubgraphBySubgraphName;
-    this.warnings = warnings || [];
+  constructor(options: FederationFactoryOptions) {
+    this.authorizationDataByParentTypeName = options.authorizationDataByParentTypeName;
+    this.concreteTypeNamesByAbstractTypeName = options.concreteTypeNamesByAbstractTypeName;
+    this.entityDataByTypeName = options.entityDataByTypeName;
+    this.entityInterfaceFederationDataByTypeName = options.entityInterfaceFederationDataByTypeName;
+    this.graph = options.graph;
+    this.internalSubgraphBySubgraphName = options.internalSubgraphBySubgraphName;
+    this.warnings = options.warnings || [];
   }
 
   getValidImplementedInterfaces(data: DefinitionWithFieldsData): NamedTypeNode[] {
@@ -2503,7 +2495,7 @@ export class FederationFactory {
     const newClientSchema: GraphQLSchema = buildASTSchema({
       kind: Kind.DOCUMENT,
       definitions: this.clientDefinitions,
-    });
+    }, { assumeValid: true, assumeValidSDL: true });
     const subgraphConfigBySubgraphName = new Map<string, SubgraphConfig>();
     for (const subgraph of this.internalSubgraphBySubgraphName.values()) {
       subgraphConfigBySubgraphName.set(subgraph.name, {
@@ -2519,7 +2511,7 @@ export class FederationFactory {
         fieldConfigurations: Array.from(this.fieldConfigurationByFieldPath.values()),
         subgraphConfigBySubgraphName,
         federatedGraphAST: newRouterAST,
-        federatedGraphSchema: buildASTSchema(newRouterAST),
+        federatedGraphSchema: buildASTSchema(newRouterAST, { assumeValid: true, assumeValidSDL: true }),
         federatedGraphClientSchema: newClientSchema,
         ...this.getClientSchemaObjectBoolean(),
       },
@@ -2683,7 +2675,7 @@ export class FederationFactory {
     const newClientSchema: GraphQLSchema = buildASTSchema({
       kind: Kind.DOCUMENT,
       definitions: this.clientDefinitions,
-    });
+    }, { assumeValid: true, assumeValidSDL: true });
     const subgraphConfigBySubgraphName = new Map<string, SubgraphConfig>();
     for (const subgraph of this.internalSubgraphBySubgraphName.values()) {
       subgraphConfigBySubgraphName.set(subgraph.name, {
@@ -2699,7 +2691,7 @@ export class FederationFactory {
         fieldConfigurations: Array.from(this.fieldConfigurationByFieldPath.values()),
         subgraphConfigBySubgraphName,
         federatedGraphAST: newRouterAST,
-        federatedGraphSchema: buildASTSchema(newRouterAST),
+        federatedGraphSchema: buildASTSchema(newRouterAST, { assumeValid: true, assumeValidSDL: true }),
         federatedGraphClientSchema: newClientSchema,
         ...this.getClientSchemaObjectBoolean(),
       },
@@ -2725,7 +2717,7 @@ function initializeFederationFactory(subgraphs: Subgraph[]): FederationFactoryRe
   const {
     authorizationDataByParentTypeName,
     concreteTypeNamesByAbstractTypeName,
-    entityContainerByTypeName,
+    entityDataByTypeName,
     errors,
     graph,
     internalSubgraphBySubgraphName,
@@ -2781,14 +2773,15 @@ function initializeFederationFactory(subgraphs: Subgraph[]): FederationFactoryRe
     };
   }
   return {
-    federationFactory: new FederationFactory(
-      authorizationDataByParentTypeName,
-      concreteTypeNamesByAbstractTypeName,
-      entityContainerByTypeName,
-      entityInterfaceFederationDataByTypeName,
-      graph,
-      internalSubgraphBySubgraphName,
-      warnings,
+    federationFactory: new FederationFactory({
+        authorizationDataByParentTypeName,
+        concreteTypeNamesByAbstractTypeName,
+        entityDataByTypeName,
+        entityInterfaceFederationDataByTypeName,
+        graph,
+        internalSubgraphBySubgraphName,
+        warnings,
+      },
     ),
   };
 }
