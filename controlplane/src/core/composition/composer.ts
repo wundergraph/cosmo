@@ -211,6 +211,7 @@ export class Composer {
     federatedSchemaVersionId,
     admissionConfig,
     admissionWebhookURL,
+    admissionWebhookSecret,
   }: {
     routerConfig: RouterConfig;
     blobStorage: BlobStorage;
@@ -222,6 +223,7 @@ export class Composer {
       cdnBaseUrl: string;
     };
     admissionWebhookURL?: string;
+    admissionWebhookSecret?: string;
   }): Promise<{
     errors: ComposeDeploymentError[];
   }> {
@@ -263,7 +265,11 @@ export class Composer {
               federated_graph_id: federatedGraphId,
             },
           });
-          const admissionWebhookController = new AdmissionWebhookController(this.logger, admissionWebhookURL);
+          const admissionWebhookController = new AdmissionWebhookController(
+            this.logger,
+            admissionWebhookURL,
+            admissionWebhookSecret,
+          );
           const resp = await admissionWebhookController.validateConfig({
             privateConfigUrl: `${admissionConfig.cdnBaseUrl}/${s3PathDraft}?token=${token}`,
             organizationId,
@@ -353,6 +359,7 @@ export class Composer {
     federatedGraphId,
     organizationId,
     federatedGraphAdmissionWebhookURL,
+    federatedGraphAdmissionWebhookSecret,
   }: {
     admissionConfig: {
       jwtSecret: string;
@@ -365,6 +372,7 @@ export class Composer {
     federatedGraphId: string;
     organizationId: string;
     federatedGraphAdmissionWebhookURL?: string;
+    federatedGraphAdmissionWebhookSecret?: string;
   }) {
     const baseRouterConfig = this.composeRouterConfigWithFeatureFlags({
       featureFlagRouterExecutionConfigByFeatureFlagName,
@@ -378,6 +386,7 @@ export class Composer {
       organizationId,
       routerConfig: baseRouterConfig,
       admissionWebhookURL: federatedGraphAdmissionWebhookURL,
+      admissionWebhookSecret: federatedGraphAdmissionWebhookSecret,
       admissionConfig: {
         cdnBaseUrl: admissionConfig.cdnBaseUrl,
         jwtSecret: admissionConfig.jwtSecret,
