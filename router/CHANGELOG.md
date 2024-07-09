@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.95.4](https://github.com/wundergraph/cosmo/compare/router@0.95.3...router@0.95.4) (2024-07-09)
+
+### Bug Fixes
+
+* close connection only after EOF and read error ([#919](https://github.com/wundergraph/cosmo/issues/919)) ([c2f87ef](https://github.com/wundergraph/cosmo/commit/c2f87ef228410fa39f8c1413401749fcd153222d)) (@StarpTech)
+* upgrade deps due to found CVEs ([#926](https://github.com/wundergraph/cosmo/issues/926)) ([fc6e615](https://github.com/wundergraph/cosmo/commit/fc6e6158e2e761489033acb667cd0b36920c2612)) (@StarpTech)
+
 ## [0.95.3](https://github.com/wundergraph/cosmo/compare/router@0.95.2...router@0.95.3) (2024-07-05)
 
 **Note:** Version bump only for package router
