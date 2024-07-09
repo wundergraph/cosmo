@@ -5814,6 +5814,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        await opts.keycloakClient.authenticateClient();
+
         const keycloakUser = await opts.keycloakClient.client.users.find({
           max: 1,
           email: req.email,
@@ -6395,6 +6397,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         logger = enrichLogger(ctx, logger, authContext);
 
         const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
+        const billingRepo = new BillingRepository(opts.db);
+
         const memberships = await orgRepo.memberships({ userId: authContext.userId });
         const orgCount = memberships.length;
 
@@ -6442,9 +6446,18 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        await opts.keycloakClient.authenticateClient();
+
+        await billingRepo.cancelSubscription(authContext.organizationId);
+
         await orgRepo.deleteOrganization(authContext.organizationId, org.slug, {
           keycloakClient: opts.keycloakClient,
           keycloakRealm: opts.keycloakRealm,
+        });
+
+        await opts.keycloakClient.deleteOrganizationGroup({
+          realm: opts.keycloakRealm,
+          organizationSlug: org.slug,
         });
 
         return {
@@ -7269,12 +7282,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         await oidcProvider.deleteOidcProvider({
           kcClient: opts.keycloakClient,
           kcRealm: opts.keycloakRealm,
-          organizationId: authContext.organizationId,
           organizationSlug: authContext.organizationSlug,
           orgCreatorUserId: organization.creatorUserId,
           alias: provider.alias,
-          db: opts.db,
         });
+
+        await oidcRepo.deleteOidcProvider({ organizationId: authContext.organizationId });
 
         return {
           response: {
@@ -11329,7 +11342,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<DeleteUserResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
+
         const orgRepo = new OrganizationRepository(logger, opts.db);
+        const userRepo = new UserRepository(logger, opts.db);
 
         // Check if user can be deleted
         const { isSafe, unsafeOrganizations } = await orgRepo.canUserBeDeleted(authContext.userId);
@@ -11348,15 +11363,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         await opts.keycloakClient.authenticateClient();
 
-        await opts.db.transaction(async (tx) => {
-          const userRepo = new UserRepository(logger, tx);
-
-          // Delete the user
-          await userRepo.deleteUser({
-            id: authContext.userId,
-            keycloakClient: opts.keycloakClient,
-            keycloakRealm: opts.keycloakRealm,
-          });
+        // Delete the user
+        await userRepo.deleteUser({
+          id: authContext.userId,
+          keycloakClient: opts.keycloakClient,
+          keycloakRealm: opts.keycloakRealm,
         });
 
         opts.platformWebhooks.send(PlatformEventName.USER_DELETE_SUCCESS, {

@@ -816,7 +816,7 @@ export class OrganizationRepository {
     return result[0];
   }
 
-  public deleteOrganization(
+  public async deleteOrganization(
     organizationId: string,
     organizationSlug: string,
     opts: {
@@ -824,37 +824,25 @@ export class OrganizationRepository {
       keycloakRealm: string;
     },
   ) {
+    const oidcRepo = new OidcRepository(this.db);
+    const oidcProvider = new OidcProvider();
+
+    const provider = await oidcRepo.getOidcProvider({ organizationId });
+    if (provider) {
+      await oidcProvider.deleteOidcProvider({
+        kcClient: opts.keycloakClient,
+        kcRealm: opts.keycloakRealm,
+        organizationSlug,
+        alias: provider.alias,
+      });
+    }
+
     return this.db.transaction(async (tx) => {
-      // Cancel subscription
-      const billingRepo = new BillingRepository(tx);
-      const billingService = new BillingService(tx, billingRepo);
       const oidcRepo = new OidcRepository(tx);
-      const oidcProvider = new OidcProvider();
-
-      const subscription = await billingRepo.getActiveSubscriptionOfOrganization(organizationId);
-      if (subscription) {
-        await billingService.cancelSubscription(organizationId, subscription.id, 'Deleted by api');
-      }
-
-      const provider = await oidcRepo.getOidcProvider({ organizationId });
-      if (provider) {
-        await oidcProvider.deleteOidcProvider({
-          kcClient: opts.keycloakClient,
-          kcRealm: opts.keycloakRealm,
-          organizationId,
-          organizationSlug,
-          alias: provider.alias,
-          db: tx,
-        });
-      }
+      await oidcRepo.deleteOidcProvider({ organizationId });
 
       // Delete organization from db
       await this.db.delete(organizations).where(eq(organizations.id, organizationId)).execute();
-
-      await opts.keycloakClient.deleteOrganizationGroup({
-        realm: opts.keycloakRealm,
-        organizationSlug,
-      });
     });
   }
 

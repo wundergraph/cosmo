@@ -1,4 +1,5 @@
 import process from 'node:process';
+import fs from 'node:fs';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { pino } from 'pino';
 import postgres from 'postgres';
@@ -27,6 +28,7 @@ const {
 } = getConfig();
 
 const userId = process.env.USER_ID || '';
+const githubOutputPath = process.env.GITHUB_OUTPUT;
 
 // Establish database connection
 const connectionConfig = await buildDatabaseConnectionConfig({
@@ -62,34 +64,36 @@ const user = await keycloakClient.client.users.findOne({
   id: userId,
 });
 
-await db.transaction(async (tx) => {
-  const userRepo = new UserRepository(logger, tx);
-  const orgRepo = new OrganizationRepository(logger, tx);
+const userRepo = new UserRepository(logger, db);
+const orgRepo = new OrganizationRepository(logger, db);
 
-  if (!user || !user.id || !user.email) {
-    throw new Error('User not found');
-  }
+if (!user || !user.id || !user.email) {
+  throw new Error('User not found');
+}
 
-  // Check if user can be deleted
-  const { isSafe, soloOrganizations, unsafeOrganizations } = await orgRepo.canUserBeDeleted(user.id);
-  console.log(`::set-output name=soloOrganizations::${JSON.stringify(soloOrganizations)}`);
-  console.log(`::set-output name=unsafeOrganizations::${JSON.stringify(unsafeOrganizations)}`);
+// Check if user can be deleted
+const { isSafe, soloOrganizations, unsafeOrganizations } = await orgRepo.canUserBeDeleted(user.id);
 
-  if (!isSafe) {
-    throw new Error('Cannot delete user because they are the only admin of an organization with several members.');
-  }
+// Write to github actions output
+if (githubOutputPath) {
+  fs.appendFileSync(githubOutputPath, `soloOrganizations=${JSON.stringify(soloOrganizations)}\n`);
+  fs.appendFileSync(githubOutputPath, `unsafeOrganizations=${JSON.stringify(soloOrganizations)}\n`);
+}
 
-  // Delete the user
-  await userRepo.deleteUser({
-    id: user.id,
-    keycloakClient,
-    keycloakRealm: realm,
-  });
+if (!isSafe) {
+  throw new Error('Cannot delete user because they are the only admin of an organization with several members.');
+}
 
-  platformWebhooks.send(PlatformEventName.USER_DELETE_SUCCESS, {
-    user_id: user.id,
-    user_email: user.email!,
-  });
+// Delete the user
+await userRepo.deleteUser({
+  id: user.id,
+  keycloakClient,
+  keycloakRealm: realm,
+});
+
+platformWebhooks.send(PlatformEventName.USER_DELETE_SUCCESS, {
+  user_id: user.id,
+  user_email: user.email!,
 });
 
 // Close database connection

@@ -6,6 +6,7 @@ import { users } from '../../db/schema.js';
 import { UserDTO } from '../../types/index.js';
 import Keycloak from '../services/Keycloak.js';
 import { OrganizationRepository } from './OrganizationRepository.js';
+import { BillingRepository } from './BillingRepository.js';
 
 /**
  * Repository for user related operations.
@@ -62,30 +63,38 @@ export class UserRepository {
       .execute();
   }
 
-  public deleteUser(input: { id: string; keycloakClient: Keycloak; keycloakRealm: string }) {
-    return this.db.transaction(async (tx) => {
-      const orgRepo = new OrganizationRepository(this.logger, tx);
+  public async deleteUser(input: { id: string; keycloakClient: Keycloak; keycloakRealm: string }) {
+    const orgRepo = new OrganizationRepository(this.logger, this.db);
+    const billingRepo = new BillingRepository(this.db);
 
-      const { soloAdminSoloMemberOrgs, memberships } = await orgRepo.adminMemberships({ userId: input.id });
+    const { soloAdminSoloMemberOrgs, memberships } = await orgRepo.adminMemberships({ userId: input.id });
 
-      // Remove keycloak user from all org groups
-      for (const org of memberships) {
-        const orgMember = await orgRepo.getOrganizationMember({
-          organizationID: org.id,
-          userID: input.id,
-        });
+    // Cancel subscriptions
+    for (const org of soloAdminSoloMemberOrgs) {
+      await billingRepo.cancelSubscription(org.id);
+    }
 
-        if (!orgMember) {
-          throw new Error('Organization member not found');
-        }
+    // Remove keycloak user from all org groups
+    for (const org of memberships) {
+      const orgMember = await orgRepo.getOrganizationMember({
+        organizationID: org.id,
+        userID: input.id,
+      });
 
-        await input.keycloakClient.removeUserFromOrganization({
-          realm: input.keycloakRealm,
-          userID: input.id,
-          groupName: org.slug,
-          roles: orgMember.roles,
-        });
+      if (!orgMember) {
+        throw new Error('Organization member not found');
       }
+
+      await input.keycloakClient.removeUserFromOrganization({
+        realm: input.keycloakRealm,
+        userID: input.id,
+        groupName: org.slug,
+        roles: orgMember.roles,
+      });
+    }
+
+    await this.db.transaction(async (tx) => {
+      const orgRepo = new OrganizationRepository(this.logger, tx);
 
       // Delete all solo organizations of the user
       const deleteOrgs: Promise<void>[] = [];
@@ -101,13 +110,19 @@ export class UserRepository {
 
       // Delete from db
       await tx.delete(users).where(eq(users.id, input.id)).execute();
+    });
 
-      // Delete user from keycloak
-      await input.keycloakClient.authenticateClient();
-      await input.keycloakClient.client.users.del({
-        id: input.id,
+    for (const org of soloAdminSoloMemberOrgs) {
+      await input.keycloakClient.deleteOrganizationGroup({
         realm: input.keycloakRealm,
+        organizationSlug: org.slug,
       });
+    }
+
+    // Delete user from keycloak
+    await input.keycloakClient.client.users.del({
+      id: input.id,
+      realm: input.keycloakRealm,
     });
   }
 
