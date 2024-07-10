@@ -160,7 +160,7 @@ const CompositionsPage: NextPageWithLayout = () => {
                           </Tooltip>
                         </div>
                       </TableCell>
-                      <TableCell>{createdBy || "-"}</TableCell>
+                      <TableCell>{createdBy}</TableCell>
                       <TableCell>
                         <Tooltip>
                           <TooltipTrigger>

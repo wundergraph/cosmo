@@ -82,13 +82,11 @@ export const contracts = pgTable(
     excludeTags: text('exclude_tags').array().notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }),
-    createdById: uuid('created_by_id')
-      .notNull()
-      .references(() => users.id, {
-        onDelete: 'cascade',
-      }),
+    createdById: uuid('created_by_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
     updatedById: uuid('updated_by_id').references(() => users.id, {
-      onDelete: 'cascade',
+      onDelete: 'set null',
     }),
   },
   (t) => ({
@@ -132,13 +130,11 @@ export const federatedGraphClients = pgTable(
     name: text('name').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }),
-    createdById: uuid('created_by_id')
-      .notNull()
-      .references(() => users.id, {
-        onDelete: 'cascade',
-      }),
+    createdById: uuid('created_by_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
     updatedById: uuid('updated_by_id').references(() => users.id, {
-      onDelete: 'cascade',
+      onDelete: 'set null',
     }),
   },
   (t) => ({
@@ -181,13 +177,11 @@ export const federatedGraphPersistedOperations = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }),
     operationContent: text('operation_content'),
-    createdById: uuid('created_by_id')
-      .notNull()
-      .references(() => users.id, {
-        onDelete: 'cascade',
-      }),
+    createdById: uuid('created_by_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
     updatedById: uuid('updated_by_id').references(() => users.id, {
-      onDelete: 'cascade',
+      onDelete: 'set null',
     }),
   },
   (t) => ({
@@ -843,7 +837,9 @@ export const apiKeys = pgTable(
     id: uuid('id').notNull().primaryKey().defaultRandom(),
     userId: uuid('user_id')
       .notNull()
-      .references(() => users.id),
+      .references(() => users.id, {
+        onDelete: 'cascade',
+      }),
     organizationId: uuid('organization_id')
       .notNull()
       .references(() => organizations.id, {
@@ -915,9 +911,9 @@ export const organizations = pgTable('organizations', {
   name: text('name').notNull(),
   slug: text('slug').notNull().unique(),
   inviteCode: text('invite_code'),
-  createdBy: uuid('user_id')
-    .references(() => users.id)
-    .notNull(),
+  createdBy: uuid('user_id').references(() => users.id, {
+    onDelete: 'set null',
+  }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -1316,9 +1312,10 @@ export const graphCompositions = pgTable('graph_compositions', {
   // The errors that occurred during the admission of the config. Only set when the schema was composable.
   admissionError: text('admission_error'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  createdBy: uuid('created_by').references(() => users.id, {
-    onDelete: 'cascade',
+  createdById: uuid('created_by_id').references(() => users.id, {
+    onDelete: 'set null',
   }),
+  createdByEmail: text('created_by_email'),
   isFeatureFlagComposition: boolean('is_feature_flag_composition').default(false).notNull(),
 });
 
@@ -1413,11 +1410,9 @@ export const discussionThread = pgTable('discussion_thread', {
   contentJson: customJson<JSONContent>('content_json'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }),
-  createdById: uuid('created_by_id')
-    .notNull()
-    .references(() => users.id, {
-      onDelete: 'cascade',
-    }),
+  createdById: uuid('created_by_id').references(() => users.id, {
+    onDelete: 'set null',
+  }),
   isDeleted: boolean('is_deleted').default(false).notNull(),
 });
 

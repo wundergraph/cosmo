@@ -24,12 +24,18 @@ export enum PlatformEventName {
    * @generated from enum value: APOLLO_MIGRATE_SUCCESS = 2;
    */
   APOLLO_MIGRATE_SUCCESS = 2,
+
+  /**
+   * @generated from enum value: USER_DELETE_SUCCESS = 3;
+   */
+  USER_DELETE_SUCCESS = 3,
 }
 // Retrieve enum metadata with: proto3.getEnumType(PlatformEventName)
 proto3.util.setEnumType(PlatformEventName, "wg.cosmo.notifications.PlatformEventName", [
   { no: 0, name: "USER_REGISTER_SUCCESS" },
   { no: 1, name: "APOLLO_MIGRATE_INIT" },
   { no: 2, name: "APOLLO_MIGRATE_SUCCESS" },
+  { no: 3, name: "USER_DELETE_SUCCESS" },
 ]);
 
 /**

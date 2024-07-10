@@ -188,7 +188,7 @@ export const FeatureFlagDetails = ({
           </div>
           <div className="flex-start flex max-w-[250px] flex-1 flex-col gap-2 ">
             <dt className="text-sm text-muted-foreground">Created By</dt>
-            <dd className="whitespace-nowrap text-sm">{createdBy || "-"}</dd>
+            <dd className="whitespace-nowrap text-sm">{createdBy || "unknown user"}</dd>
           </div>
           <div className="flex-start flex max-w-[250px] flex-1 flex-col gap-2 ">
             <dt className="text-sm text-muted-foreground">Created At</dt>

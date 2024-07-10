@@ -157,7 +157,7 @@ export const FeatureFlagsTable = ({
                       </div>
                     </TableCell>
                     <TableCell className="px-4 text-muted-foreground">
-                      {createdBy}
+                      {createdBy || 'unknown user'}
                     </TableCell>
                     <TableCell className="px-4 text-muted-foreground">
                       {createdAt

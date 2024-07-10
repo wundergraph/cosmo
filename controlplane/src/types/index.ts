@@ -188,7 +188,7 @@ export interface OrganizationDTO {
   id: string;
   name: string;
   slug: string;
-  creatorUserId: string;
+  creatorUserId?: string;
   createdAt: string;
   features?: Feature[];
   billing?: {
@@ -409,7 +409,7 @@ export interface PersistedOperationDTO {
   hash: string;
   filePath: string;
   createdAt: string;
-  createdBy: string;
+  createdBy?: string;
   lastUpdatedAt: string;
   lastUpdatedBy: string;
   contents: string;
@@ -478,7 +478,7 @@ export type DiscussionThreadDTO = {
   contentMarkdown: string | null;
   contentJson: unknown;
   updatedAt: Date | null;
-  createdById: string;
+  createdById: string | null;
   isDeleted: boolean;
 }[];
 export interface SubgraphLatencyResult {

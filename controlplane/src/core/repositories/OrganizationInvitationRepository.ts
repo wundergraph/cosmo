@@ -91,7 +91,7 @@ export class OrganizationInvitationRepository {
       id: org.id,
       name: org.name,
       slug: org.slug,
-      creatorUserId: org.creatorUserId,
+      creatorUserId: org.creatorUserId || undefined,
       createdAt: org.createdAt.toISOString(),
       invitedBy: org.invitedBy || undefined,
     }));
@@ -141,7 +141,7 @@ export class OrganizationInvitationRepository {
     inviterUserId: string;
   }) {
     await this.db.transaction(async (tx) => {
-      const userRepo = new UserRepository(tx);
+      const userRepo = new UserRepository(this.logger, tx);
 
       if (!input.dbUser) {
         await userRepo.addUser({

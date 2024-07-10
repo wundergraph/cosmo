@@ -1,8 +1,13 @@
+import { UserContext } from "@/components/app-provider";
+import { useLocalStorage } from "@/hooks/use-local-storage";
+import { checkUserAccess, cn } from "@/lib/utils";
+import { useQuery } from "@connectrpc/connect-query";
 import {
   Component2Icon,
   Cross1Icon,
   EnvelopeClosedIcon,
 } from "@radix-ui/react-icons";
+import { getBillingPlans } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { useRouter } from "next/router";
 import {
   Dispatch,
@@ -12,6 +17,8 @@ import {
   useMemo,
   useState,
 } from "react";
+import { AiOutlineAudit } from "react-icons/ai";
+import { MdOutlineFeaturedPlayList, MdOutlinePolicy } from "react-icons/md";
 import {
   PiBell,
   PiChartDonut,
@@ -19,19 +26,13 @@ import {
   PiGraphLight,
   PiKey,
   PiReceipt,
+  PiUserGear,
   PiUsers,
 } from "react-icons/pi";
 import { PageHeader } from "./head";
 import { LayoutProps } from "./layout";
-import { SideNav, NavLink } from "./sidenav";
+import { NavLink, SideNav } from "./sidenav";
 import { TitleLayout } from "./title-layout";
-import { checkUserAccess, cn } from "@/lib/utils";
-import { useLocalStorage } from "@/hooks/use-local-storage";
-import { useQuery } from "@connectrpc/connect-query";
-import { getBillingPlans } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { AiOutlineAudit } from "react-icons/ai";
-import { UserContext } from "@/components/app-provider";
-import { MdOutlineFeaturedPlayList, MdOutlinePolicy } from "react-icons/md";
 
 export const StarBanner = ({
   setDisableStarBanner,
@@ -179,6 +180,11 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         title: "Invitations",
         href: "/account/invitations",
         icon: <EnvelopeClosedIcon className="h-4 w-4" />,
+      },
+      {
+        title: "Manage",
+        href: "/account/manage",
+        icon: <PiUserGear className="h-4 w-4" />,
       },
     );
 

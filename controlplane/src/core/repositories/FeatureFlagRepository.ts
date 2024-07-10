@@ -344,7 +344,7 @@ export class FeatureFlagRepository {
 
     let createdBy = '';
     if (resp[0].creatorUserId) {
-      const userRepo = new UserRepository(this.db);
+      const userRepo = new UserRepository(this.logger, this.db);
       const user = await userRepo.byId(resp[0].creatorUserId);
       createdBy = user?.email || '';
     }
@@ -899,6 +899,7 @@ export class FeatureFlagRepository {
         compositionErrors: graphCompositions.compositionErrors,
         createdAt: graphCompositions.createdAt,
         createdBy: users.email,
+        createdByEmail: graphCompositions.createdByEmail,
         routerConfigSignature: graphCompositions.routerConfigSignature,
         admissionError: graphCompositions.admissionError,
         deploymentError: graphCompositions.deploymentError,
@@ -909,7 +910,7 @@ export class FeatureFlagRepository {
         federatedGraphsToFeatureFlagSchemaVersions,
         eq(federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId, schemaVersion.id),
       )
-      .leftJoin(users, eq(users.id, graphCompositions.createdBy))
+      .leftJoin(users, eq(users.id, graphCompositions.createdById))
       .where(eq(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId, baseSchemaVersionId))
       .execute();
 
@@ -928,7 +929,7 @@ export class FeatureFlagRepository {
         featureFlagName,
         createdAt: composition.createdAt.toISOString(),
         compositionErrors: composition.compositionErrors || undefined,
-        createdBy: composition.createdBy || undefined,
+        createdBy: composition.createdBy || composition.createdByEmail || undefined,
         routerConfigSignature: composition.routerConfigSignature || undefined,
         admissionError: composition.admissionError || undefined,
         deploymentError: composition.deploymentError || undefined,

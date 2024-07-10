@@ -1,8 +1,8 @@
 import { uid } from 'uid';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import Keycloak from '../src/core/services/Keycloak.js';
-import { UserTestData, afterAllSetup, beforeAllSetup } from '../src/core/test-util.js';
-import { SetupKeycloak, SetupTest, removeKeycloakSetup } from './test-util.js';
+import { afterAllSetup, beforeAllSetup, UserTestData } from '../src/core/test-util.js';
+import { SetupKeycloak, SetupTest } from './test-util.js';
 
 let dbname = '';
 let baseAddress = '';
@@ -30,7 +30,6 @@ describe('Scim server v2.0', (ctx) => {
   });
 
   afterAll(async () => {
-    await removeKeycloakSetup({ keycloakClient, realmName });
     await server?.close();
     await afterAllSetup(dbname);
   });
@@ -321,7 +320,6 @@ describe('Scim server when scim is not enabled v2.0', (ctx) => {
   });
 
   afterAll(async () => {
-    await removeKeycloakSetup({ keycloakClient, realmName });
     await server?.close();
     await afterAllSetup(dbname);
   });
@@ -358,7 +356,6 @@ describe('Scim server when scim is enabled, but no scim key', (ctx) => {
   });
 
   afterAll(async () => {
-    await removeKeycloakSetup({ keycloakClient, realmName });
     await server?.close();
     await afterAllSetup(dbname);
   });

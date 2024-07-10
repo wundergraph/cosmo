@@ -703,7 +703,7 @@ const ClientsPage: NextPageWithLayout = () => {
                           </p>
                         </TableCell>
                         <TableCell className="font-medium">
-                          {createdBy}
+                          {createdBy || "unknown user"}
                         </TableCell>
                         <TableCell className="font-medium">
                           <p

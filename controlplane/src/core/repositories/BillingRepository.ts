@@ -1,8 +1,8 @@
 import { and, asc, eq, not } from 'drizzle-orm';
 import type { DB } from '../../db/index.js';
 import { billingPlans, billingSubscriptions, organizationBilling } from '../../db/schema.js';
-
 import { BillingPlanDTO } from '../../types/index.js';
+import { BillingService } from '../services/BillingService.js';
 
 /**
  * BillingRepository for billing related operations.
@@ -68,5 +68,16 @@ export class BillingRepository {
     });
 
     return subscription;
+  }
+
+  public async cancelSubscription(organizationId: string) {
+    const billingService = new BillingService(this.db, this);
+
+    const subscription = await this.getActiveSubscriptionOfOrganization(organizationId);
+    if (!subscription) {
+      return;
+    }
+
+    await billingService.cancelSubscription(organizationId, subscription.id, 'Deleted by api');
   }
 }

@@ -3,31 +3,30 @@
 import { randomUUID } from 'node:crypto';
 import * as process from 'node:process';
 import postgres from 'postgres';
-import { seedTest } from '../core/test-util.js';
-import Keycloak from '../core/services/Keycloak.js';
-import { ApiKeyGenerator } from '../core/services/ApiGenerator.js';
 import { buildDatabaseConnectionConfig } from '../core/plugins/database.js';
+import Keycloak from '../core/services/Keycloak.js';
+import { seedTest } from '../core/test-util.js';
+import { getConfig } from './get-config.js';
 
-const realm = process.env.KC_REALM || 'cosmo';
-const loginRealm = process.env.KC_LOGIN_REALM || 'master';
-const adminUser = process.env.KC_ADMIN_USER || 'admin';
-const adminPassword = process.env.KC_ADMIN_PASSWORD || 'changeme';
-const clientId = process.env.KC_CLIENT_ID || 'studio';
-const apiUrl = process.env.KC_API_URL || 'http://localhost:8080';
-
-const apiKey = process.env.API_KEY || ApiKeyGenerator.generate();
-
-const userEmail = process.env.USER_EMAIL || 'foo@wundergraph.com';
-const userPassword = process.env.USER_PASSWORD || 'wunder@123';
-const userFirstName = process.env.USER_FIRST_NAME || 'foo';
-const userLastName = process.env.USER_LAST_NAME || 'bar';
-
-const organizationName = process.env.ORGANIZATION_NAME || 'wundergraph';
-const organizationSlug = process.env.ORGANIZATION_SLUG || 'wundergraph';
-const databaseConnectionUrl = process.env.DB_URL || 'postgresql://postgres:changeme@localhost:5432/controlplane';
-const databaseTlsCa = process.env.DB_TLS_CA;
-const databaseTlsCert = process.env.DB_TLS_CERT;
-const databaseTlsKey = process.env.DB_TLS_KEY;
+const {
+  realm,
+  loginRealm,
+  adminUser,
+  adminPassword,
+  clientId,
+  apiUrl,
+  apiKey,
+  userEmail,
+  userPassword,
+  userFirstName,
+  userLastName,
+  organizationName,
+  organizationSlug,
+  databaseConnectionUrl,
+  databaseTlsCa,
+  databaseTlsCert,
+  databaseTlsKey,
+} = getConfig();
 
 const keycloakClient = new Keycloak({
   apiUrl,
