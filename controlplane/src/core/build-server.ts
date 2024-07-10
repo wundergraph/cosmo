@@ -198,7 +198,7 @@ export default async function build(opts: BuildConfig) {
   const organizationRepository = new OrganizationRepository(logger, fastify.db, opts.stripe?.defaultPlanId);
   const orgInvitationRepository = new OrganizationInvitationRepository(logger, fastify.db, opts.stripe?.defaultPlanId);
   const apiKeyAuth = new ApiKeyAuthenticator(fastify.db, organizationRepository);
-  const userRepo = new UserRepository(fastify.db);
+  const userRepo = new UserRepository(logger, fastify.db);
   const apiKeyRepository = new ApiKeyRepository(fastify.db);
   const webAuth = new WebSessionAuthenticator(opts.auth.secret, userRepo);
   const graphKeyAuth = new GraphApiTokenAuthenticator(opts.auth.secret);

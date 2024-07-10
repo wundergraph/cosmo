@@ -42,6 +42,7 @@ import {
   DeleteOIDCProviderResponse,
   DeleteOrganizationResponse,
   DeleteRouterTokenResponse,
+  DeleteUserResponse,
   DeploymentError,
   EnableFeatureFlagResponse,
   EnableLintingForTheNamespaceResponse,
@@ -141,7 +142,7 @@ import {
   UpgradePlanResponse,
   WhoAmIResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { isValidUrl, joinLabel, routerConfigFromJsonString } from '@wundergraph/cosmo-shared';
+import { isValidUrl, joinLabel } from '@wundergraph/cosmo-shared';
 import { subHours } from 'date-fns';
 import { FastifyBaseLogger } from 'fastify';
 import { buildASTSchema, DocumentNode, parse } from 'graphql';
@@ -5292,7 +5293,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const userRepo = new UserRepository(opts.db);
+        const userRepo = new UserRepository(logger, opts.db);
         const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const orgInvitationRepo = new OrganizationInvitationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const auditLogRepo = new AuditLogRepository(opts.db);
@@ -5679,7 +5680,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const auditLogRepo = new AuditLogRepository(opts.db);
-        const userRepo = new UserRepository(opts.db);
+        const userRepo = new UserRepository(logger, opts.db);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -5766,13 +5767,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         // this will happen only when the user was invited but the user didn't login and the admin removed that user,
         // in this case the user will not have a personal org
         if (userMemberships.length === 0) {
-          // deleting the user from keycloak
-          await opts.keycloakClient.client.users.del({
+          await userRepo.deleteUser({
             id: user.id,
-            realm: opts.keycloakRealm,
+            keycloakClient: opts.keycloakClient,
+            keycloakRealm: opts.keycloakRealm,
           });
-          // deleting the user from the db
-          await userRepo.deleteUser({ id: user.id });
         }
 
         await auditLogRepo.addAuditLog({
@@ -5803,7 +5802,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const orgInvitationRepo = new OrganizationInvitationRepository(logger, opts.db, opts.billingDefaultPlanId);
-        const userRepo = new UserRepository(opts.db);
+        const userRepo = new UserRepository(logger, opts.db);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
@@ -5814,6 +5813,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             },
           };
         }
+
+        await opts.keycloakClient.authenticateClient();
 
         const keycloakUser = await opts.keycloakClient.client.users.find({
           max: 1,
@@ -5876,13 +5877,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         // this will happen only when the user was invited but the user didn't login and the admin removed that user,
         // in this case the user will not have a personal org
         if (userMemberships.length === 0 && userPendingInvitations.length === 0) {
-          // deleting the user from keycloak
-          await opts.keycloakClient.client.users.del({
+          await userRepo.deleteUser({
             id: user.id,
-            realm: opts.keycloakRealm,
+            keycloakClient: opts.keycloakClient,
+            keycloakRealm: opts.keycloakRealm,
           });
-          // deleting the user from the db
-          await userRepo.deleteUser({ id: user.id });
         }
 
         await auditLogRepo.addAuditLog({
@@ -5913,7 +5912,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const userRepo = new UserRepository(opts.db);
+        const userRepo = new UserRepository(logger, opts.db);
         const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
@@ -6398,6 +6397,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         logger = enrichLogger(ctx, logger, authContext);
 
         const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
+        const billingRepo = new BillingRepository(opts.db);
+        const oidcRepo = new OidcRepository(opts.db);
+        const oidcProvider = new OidcProvider();
+
         const memberships = await orgRepo.memberships({ userId: authContext.userId });
         const orgCount = memberships.length;
 
@@ -6447,38 +6450,30 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         await opts.keycloakClient.authenticateClient();
 
-        const organizationGroup = await opts.keycloakClient.client.groups.find({
-          max: 1,
-          search: org.slug,
-          realm: opts.keycloakRealm,
-        });
+        await billingRepo.cancelSubscription(authContext.organizationId);
 
-        if (organizationGroup.length === 0) {
-          throw new Error(`Organization group '${org.slug}' not found`);
+        const provider = await oidcRepo.getOidcProvider({ organizationId: authContext.organizationId });
+        if (provider) {
+          await oidcProvider.deleteOidcProvider({
+            kcClient: opts.keycloakClient,
+            kcRealm: opts.keycloakRealm,
+            organizationSlug: org.slug,
+            alias: provider.alias,
+          });
         }
 
-        await opts.keycloakClient.client.groups.del({
-          id: organizationGroup[0].id!,
+        await orgRepo.deleteOrganization(authContext.organizationId);
+
+        await opts.keycloakClient.deleteOrganizationGroup({
           realm: opts.keycloakRealm,
+          organizationSlug: org.slug,
         });
 
-        return opts.db.transaction(async (tx) => {
-          const orgRepo = new OrganizationRepository(logger, tx, opts.billingDefaultPlanId);
-          const billingRepo = new BillingRepository(tx);
-          const billingService = new BillingService(tx, billingRepo);
-
-          const subscription = await billingRepo.getActiveSubscriptionOfOrganization(authContext.organizationId);
-          if (subscription) {
-            await billingService.cancelSubscription(authContext.organizationId, subscription.id, 'Deleted by api');
-          }
-          await orgRepo.deleteOrganization(authContext.organizationId);
-
-          return {
-            response: {
-              code: EnumStatusCode.OK,
-            },
-          };
-        });
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
       });
     },
 
@@ -7296,12 +7291,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         await oidcProvider.deleteOidcProvider({
           kcClient: opts.keycloakClient,
           kcRealm: opts.keycloakRealm,
-          organizationId: authContext.organizationId,
           organizationSlug: authContext.organizationSlug,
           orgCreatorUserId: organization.creatorUserId,
           alias: provider.alias,
-          db: opts.db,
         });
+
+        await oidcRepo.deleteOidcProvider({ organizationId: authContext.organizationId });
 
         return {
           response: {
@@ -7506,7 +7501,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         logger = enrichLogger(ctx, logger, authContext);
 
         const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
-        const userRepo = new UserRepository(opts.db);
+        const userRepo = new UserRepository(logger, opts.db);
         const orgInvitationRepo = new OrganizationInvitationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
@@ -7663,7 +7658,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         logger = enrichLogger(ctx, logger, authContext);
 
         const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
-        const userRepo = new UserRepository(opts.db);
+        const userRepo = new UserRepository(logger, opts.db);
         const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
@@ -10688,7 +10683,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               contentJson: JSON.stringify(gd.thread[0].contentJson),
               createdAt: gd.thread[0].createdAt.toISOString(),
               updatedAt: gd.thread[0].updatedAt?.toISOString(),
-              createdBy: gd.thread[0].createdById,
+              createdBy: gd.thread[0].createdById ?? undefined,
               isDeleted: gd.thread[0].isDeleted,
             },
           })),
@@ -10848,7 +10843,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           contentJson: t.contentJson ? JSON.stringify(t.contentJson) : '',
           createdAt: t.createdAt.toISOString(),
           updatedAt: t.updatedAt?.toISOString(),
-          createdBy: t.createdById,
+          createdBy: t.createdById ?? undefined,
           isDeleted: t.isDeleted,
         }));
 
@@ -11346,6 +11341,53 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             baseSubgraphName: f.baseSubgraphName,
             baseSubgraphId: f.baseSubgraphId,
           })),
+        };
+      });
+    },
+
+    deleteUser: (req, ctx) => {
+      let logger = getLogger(ctx, opts.logger);
+
+      return handleError<PlainMessage<DeleteUserResponse>>(ctx, logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
+        const orgRepo = new OrganizationRepository(logger, opts.db);
+        const userRepo = new UserRepository(logger, opts.db);
+
+        // Check if user can be deleted
+        const { isSafe, unsafeOrganizations } = await orgRepo.canUserBeDeleted(authContext.userId);
+
+        if (!isSafe) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details:
+                'Cannot delete because you are the only admin of organizations with several members: ' +
+                unsafeOrganizations.map((o) => o.name).join(',') +
+                '.',
+            },
+          };
+        }
+
+        await opts.keycloakClient.authenticateClient();
+
+        // Delete the user
+        await userRepo.deleteUser({
+          id: authContext.userId,
+          keycloakClient: opts.keycloakClient,
+          keycloakRealm: opts.keycloakRealm,
+        });
+
+        opts.platformWebhooks.send(PlatformEventName.USER_DELETE_SUCCESS, {
+          user_id: authContext.userId,
+          user_email: authContext.userDisplayName,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
         };
       });
     },
