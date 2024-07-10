@@ -7,9 +7,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && npm run copy-html",
+    "build": "tsc && vite build",
     "preview": "vite preview",
-    "copy-html": "cp dist/index.html ../router/internal/graphiql/graphiql.html"
+    "copy-html": "cp dist/index.html ../router/internal/graphiql/graphiql.html",
+    "build:copy": "pnpm build && pnpm copy-html"
   },
   "author": {
     "name": "WunderGraph Maintainers",
