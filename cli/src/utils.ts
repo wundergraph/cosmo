@@ -1,5 +1,5 @@
 /* eslint-disable import/named */
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, writeSync } from 'node:fs';
 import { FederationResultContainer, Subgraph, federateSubgraphs } from '@wundergraph/composition';
 import boxen from 'boxen';
 import { buildClientSchema, printSchema } from 'graphql';
@@ -287,4 +287,11 @@ export const validateSubscriptionProtocols = ({
       );
     }
   }
+};
+
+/**
+ * Synchronously writes to the console.
+ */
+export const writeToConsole = (message: string) => {
+  writeSync(process.stdout.fd, message);
 };
