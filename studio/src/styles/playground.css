@@ -58,3 +58,7 @@ body.graphiql-dark [data-radix-popper-content-wrapper] {
 .graphiql-dialog-overlay {
   @apply bg-background/80 backdrop-blur-sm;
 }
+
+.graphiql-explorer-root > :first-child {
+  @apply !overflow-hidden;
+}
