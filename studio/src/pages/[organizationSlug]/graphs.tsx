@@ -53,7 +53,7 @@ const GraphToolbar = () => {
           </SelectGroup>
         </SelectContent>
       </Select>
-      <Button>
+      <Button asChild>
         <Link href={`/${org?.slug}/new?namespace=${namespace}`}>Create</Link>
       </Button>
     </Toolbar>
