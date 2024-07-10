@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.95.5](https://github.com/wundergraph/cosmo/compare/router@0.95.4...router@0.95.5) (2024-07-10)
+
+### Bug Fixes
+
+* playground explorer plugin crash ([#931](https://github.com/wundergraph/cosmo/issues/931)) ([ba10f16](https://github.com/wundergraph/cosmo/commit/ba10f165e2eb2ed6ee040ff981629ebb8b13ae16)) (@thisisnithin)
+
 ## [0.95.4](https://github.com/wundergraph/cosmo/compare/router@0.95.3...router@0.95.4) (2024-07-09)
 
 ### Bug Fixes
