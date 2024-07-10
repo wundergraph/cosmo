@@ -1,0 +1,33 @@
+name: Playground CI
+on:
+  pull_request:
+    paths:
+      - 'studio/**/*'
+      - '.github/workflows/playground-ci.yaml'
+
+concurrency:
+  group: ${{github.workflow}}-${{github.head_ref}}
+  cancel-in-progress: true
+
+env:
+  CI: true
+
+jobs:
+  build_test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/node
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check if git is not dirty after generating files
+        run: git diff --no-ext-diff --exit-code
+
+      - name: Build
+        run: pnpm run --filter ./playground build
