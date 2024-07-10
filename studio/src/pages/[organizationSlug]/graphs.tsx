@@ -15,20 +15,24 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Toolbar } from "@/components/ui/toolbar";
+import { useCurrentOrganization } from "@/hooks/use-current-organization";
 import { NextPageWithLayout } from "@/lib/page";
 import { useQuery } from "@connectrpc/connect-query";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getFederatedGraphs } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { capitalCase } from "change-case";
+import Link from "next/link";
 import { useRouter } from "next/router";
 import { useContext } from "react";
 
 const GraphToolbar = () => {
+  const org = useCurrentOrganization();
   const router = useRouter();
   const applyParams = useApplyParams();
 
   const type = (router.query.type as string) || "all-graphs";
+  const namespace = router.query.namespace;
 
   return (
     <Toolbar className="w-auto flex-nowrap py-0">
@@ -49,6 +53,9 @@ const GraphToolbar = () => {
           </SelectGroup>
         </SelectContent>
       </Select>
+      <Button>
+        <Link href={`/${org?.slug}/new?namespace=${namespace}`}>Create</Link>
+      </Button>
     </Toolbar>
   );
 };
