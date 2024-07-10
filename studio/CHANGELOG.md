@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.79.2](https://github.com/wundergraph/cosmo/compare/studio@0.79.1...studio@0.79.2) (2024-07-09)
+
+### Bug Fixes
+
+* upgrade next due to CVE-2024-34351 ([#925](https://github.com/wundergraph/cosmo/issues/925)) ([b03d41e](https://github.com/wundergraph/cosmo/commit/b03d41e2ea04b4c69397b6870675de4633b3e1a8)) (@StarpTech)
+
 ## [0.79.1](https://github.com/wundergraph/cosmo/compare/studio@0.79.0...studio@0.79.1) (2024-07-04)
 
 ### Bug Fixes
