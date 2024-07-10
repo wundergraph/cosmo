@@ -19,7 +19,7 @@ export class GraphCompositionRepository {
     compositionErrorString,
     routerConfigSignature,
     subgraphSchemaVersionIds,
-    composedBy,
+    composedById,
     admissionErrorString,
     deploymentErrorString,
     isFeatureFlagComposition,
@@ -28,17 +28,17 @@ export class GraphCompositionRepository {
     compositionErrorString: string;
     routerConfigSignature?: string;
     subgraphSchemaVersionIds: string[];
-    composedBy: string;
+    composedById: string;
     admissionErrorString?: string;
     deploymentErrorString?: string;
     isFeatureFlagComposition: boolean;
   }) {
     await this.db.transaction(async (tx) => {
       const actor = await tx.query.users.findFirst({
-        where: eq(users.id, composedBy),
+        where: eq(users.id, composedById),
       });
       if (!actor) {
-        throw new Error(`Could not find actor ${composedBy}`);
+        throw new Error(`Could not find actor ${composedById}`);
       }
 
       const insertedComposition = await tx
@@ -48,7 +48,7 @@ export class GraphCompositionRepository {
           compositionErrors: compositionErrorString,
           isComposable: compositionErrorString === '',
           routerConfigSignature,
-          createdById: composedBy,
+          createdById: composedById,
           createdByEmail: actor.email,
           deploymentError: deploymentErrorString,
           admissionError: admissionErrorString,
