@@ -5,7 +5,7 @@ import axios, { AxiosError, AxiosInstance } from 'axios';
 import axiosRetry, { exponentialDelay } from 'axios-retry';
 import { makeWebhookRequest } from './utils.js';
 
-interface UserRegister {
+interface User {
   user_id: string;
   user_email: string;
 }
@@ -19,9 +19,10 @@ interface ApolloMigrate {
 }
 
 interface EventMap {
-  [PlatformEventName.USER_REGISTER_SUCCESS]: UserRegister;
+  [PlatformEventName.USER_REGISTER_SUCCESS]: User;
   [PlatformEventName.APOLLO_MIGRATE_INIT]: ApolloMigrate;
   [PlatformEventName.APOLLO_MIGRATE_SUCCESS]: ApolloMigrate;
+  [PlatformEventName.USER_DELETE_SUCCESS]: User;
 }
 
 export type EventType<T extends keyof EventMap> = {
