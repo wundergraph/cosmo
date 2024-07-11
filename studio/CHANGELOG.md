@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.81.0](https://github.com/wundergraph/cosmo/compare/studio@0.80.0...studio@0.81.0) (2024-07-11)
+
+### Bug Fixes
+
+* remove REQUIRE_DEPRECATION_DATE lint rule ([#890](https://github.com/wundergraph/cosmo/issues/890)) ([1203d7f](https://github.com/wundergraph/cosmo/commit/1203d7f711c35f1bdd8a7ce6bec38dcd1093fff4)) (@JivusAyrus)
+
+### Features
+
+* create graph page ([#929](https://github.com/wundergraph/cosmo/issues/929)) ([1c45270](https://github.com/wundergraph/cosmo/commit/1c452709dfe309984d2fd08889ceac8c28f8ccba)) (@thisisnithin)
+
 # [0.80.0](https://github.com/wundergraph/cosmo/compare/studio@0.79.2...studio@0.80.0) (2024-07-10)
 
 ### Bug Fixes
