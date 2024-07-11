@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.93.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.93.0...controlplane@0.93.1) (2024-07-11)
+
+### Bug Fixes
+
+* remove REQUIRE_DEPRECATION_DATE lint rule ([#890](https://github.com/wundergraph/cosmo/issues/890)) ([1203d7f](https://github.com/wundergraph/cosmo/commit/1203d7f711c35f1bdd8a7ce6bec38dcd1093fff4)) (@JivusAyrus)
+
 # [0.93.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.92.2...controlplane@0.93.0) (2024-07-10)
 
 ### Features
