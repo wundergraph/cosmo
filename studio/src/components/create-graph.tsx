@@ -121,7 +121,7 @@ export const CreateGraphForm = ({
       },
       onError: () => {
         toast({
-          description: "Could not create  monograph. Please try again.",
+          description: "Could not create graph. Please try again.",
           duration: 3000,
         });
       },
