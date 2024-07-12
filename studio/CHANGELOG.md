@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.81.1](https://github.com/wundergraph/cosmo/compare/studio@0.81.0...studio@0.81.1) (2024-07-12)
+
+### Bug Fixes
+
+* playground crash on hard reload and better invalid headers error ([#934](https://github.com/wundergraph/cosmo/issues/934)) ([7306fb1](https://github.com/wundergraph/cosmo/commit/7306fb15f80a6371f59919cbb5890845d9ce6e74)) (@thisisnithin)
+
 # [0.81.0](https://github.com/wundergraph/cosmo/compare/studio@0.80.0...studio@0.81.0) (2024-07-11)
 
 ### Bug Fixes
