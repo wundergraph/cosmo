@@ -8,17 +8,17 @@ import { afterAllSetup, beforeAllSetup, UserTestData } from '../src/core/test-ut
 import { AuthContext } from '../src/types/index.js';
 import { SetupKeycloak, SetupTest } from './test-util.js';
 
-let dbname = '';
-let baseAddress = '';
-let realmName = '';
-let userTestData: UserTestData & AuthContext;
-let otherOrgUserTestData: (UserTestData & AuthContext) | undefined;
-let keycloakClient: Keycloak;
-let server: any;
-let client: PromiseClient<typeof PlatformService>;
-
 // https://developer.okta.com/docs/reference/scim/scim-20/
 describe('Scim server v2.0', (ctx) => {
+  let dbname = '';
+  let baseAddress = '';
+  let realmName = '';
+  let userTestData: UserTestData & AuthContext;
+  let otherOrgUserTestData: (UserTestData & AuthContext) | undefined;
+  let keycloakClient: Keycloak;
+  let server: any;
+  let client: PromiseClient<typeof PlatformService>;
+
   beforeAll(async () => {
     dbname = await beforeAllSetup();
 
@@ -190,12 +190,7 @@ describe('Scim server v2.0', (ctx) => {
       }),
     });
 
-     const createUserBody = await createUserResp.json();
-
-    // expect(createUserBody.detail).toBe('');
     expect(createUserResp.status).toBe(201);
-    // expect('').toBe(email);
-    // expect('').toBe(otherOrgUserTestData?.userId);
 
     const orgMembersResponse = await client.getOrganizationMembers({});
     const orgMembers = orgMembersResponse.members;
@@ -363,6 +358,13 @@ describe('Scim server v2.0', (ctx) => {
 });
 
 describe('Scim server when scim is not enabled v2.0', (ctx) => {
+  let dbname = '';
+  let baseAddress = '';
+  let realmName = '';
+  let userTestData: UserTestData & AuthContext;
+  let keycloakClient: Keycloak;
+  let server: any;
+
   beforeAll(async () => {
     dbname = await beforeAllSetup();
 
@@ -399,6 +401,13 @@ describe('Scim server when scim is not enabled v2.0', (ctx) => {
 });
 
 describe('Scim server when scim is enabled, but no scim key', (ctx) => {
+  let dbname = '';
+  let baseAddress = '';
+  let realmName = '';
+  let userTestData: UserTestData & AuthContext;
+  let keycloakClient: Keycloak;
+  let server: any;
+
   beforeAll(async () => {
     dbname = await beforeAllSetup();
 
