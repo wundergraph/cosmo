@@ -327,7 +327,12 @@ export class OrganizationRepository {
       })
       .from(organizationsMembers)
       .innerJoin(users, eq(users.id, organizationsMembers.userId))
-      .where(and(eq(organizationsMembers.organizationId, input.organizationID), eq(users.email, input.userEmail)))
+      .where(
+        and(
+          eq(organizationsMembers.organizationId, input.organizationID),
+          eq(users.email, input.userEmail.toLowerCase()),
+        ),
+      )
       .orderBy(asc(organizationsMembers.createdAt))
       .execute();
 
