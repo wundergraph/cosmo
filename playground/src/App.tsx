@@ -21,6 +21,17 @@ const graphiQLFetch = async (
   init: RequestInit,
 ) => {
   try {
+    const headers: Record<string, string> = {
+      ...(init.headers as Record<string, string>),
+    };
+
+    for (const headersKey in headers) {
+      // check invalid headers
+      if (!/^[\^`\-\w!#$%&'*+.|~]+$/.test(headersKey)) {
+        throw new TypeError(`Header name must be a valid HTTP token [${headersKey}]`);
+      }
+    }
+
     if (schema && clientValidationEnabled) {
       const query = JSON.parse(init.body as string)?.query as string;
 
@@ -194,23 +205,26 @@ export default function App() {
 
     if (header) {
       const logo = document.getElementsByClassName('graphiql-logo')[0];
-      logo.classList.add('hidden');
-      const div = document.createElement('div');
-      div.id = 'response-tabs';
-      div.className = 'flex items-center justify-center mx-2';
-      header.append(div);
+      if (logo) {
+        logo.classList.add('hidden');
+        const div = document.createElement('div');
+        div.id = 'response-tabs';
+        div.className = 'flex items-center justify-center mx-2';
+        header.append(div);
+      }
     }
 
     const responseSection = document.getElementsByClassName('graphiql-response')[0];
-    const responseSectionParent = responseSection.parentElement as any as HTMLDivElement;
-
-    if (responseSectionParent) {
-      responseSectionParent.id = 'response-parent';
-      responseSectionParent.classList.add('relative');
-      const div = document.createElement('div');
-      div.id = 'response-visualization';
-      div.className = 'flex flex-1 h-full w-full absolute invisible -z-50';
-      responseSectionParent.append(div);
+    if (responseSection) {
+      const responseSectionParent = responseSection.parentElement as any as HTMLDivElement;
+      if (responseSectionParent) {
+        responseSectionParent.id = 'response-parent';
+        responseSectionParent.classList.add('relative');
+        const div = document.createElement('div');
+        div.id = 'response-visualization';
+        div.className = 'flex flex-1 h-full w-full absolute invisible -z-50';
+        responseSectionParent.append(div);
+      }
     }
 
     const toolbar = document.getElementsByClassName('graphiql-toolbar')[0] as any as HTMLDivElement;
