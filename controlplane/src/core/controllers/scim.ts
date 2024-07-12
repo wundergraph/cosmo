@@ -277,49 +277,20 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
 
       const email = emails.find((e) => e.primary === true)?.value || userName;
 
-      const keycloakUsers = await opts.keycloakClient.client.users.find({
-        realm: opts.keycloakRealm,
-        email,
+      const orgMember = await opts.organizationRepository.getOrganizationMemberByEmail({
+        organizationID: authContext.organizationId,
+        userEmail: email,
       });
-
-      if (keycloakUsers.length > 0) {
+      if (orgMember) {
         return res.code(409).send(
           ScimError({
-            detail: 'User already exists in the database.',
+            detail: 'User is already a part of the organization.',
             status: 409,
           }),
         );
       }
 
-      const user = await opts.userRepository.byEmail(email);
-      if (user) {
-        return res.code(409).send(
-          ScimError({
-            detail: 'User already exists in the database.',
-            status: 409,
-          }),
-        );
-      }
-
-      let keycloakUserID = '';
-      try {
-        keycloakUserID = await opts.keycloakClient.addKeycloakUser({
-          realm: opts.keycloakRealm,
-          firstName: name.givenName,
-          lastName: name.familyName,
-          email,
-          password,
-          isPasswordTemp: false,
-        });
-      } catch (err: any) {
-        return res.code(500).send(
-          ScimError({
-            detail: err.responseData.errorMessage || err.message,
-            status: 500,
-          }),
-        );
-      }
-
+      // fecthing the org from keycloak
       const organizationGroups = await opts.keycloakClient.client.groups.find({
         max: 1,
         search: authContext.organizationSlug,
@@ -335,26 +306,112 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
         );
       }
 
-      const viewerGroup = await opts.keycloakClient.fetchChildGroup({
+      let viewerGroupId = '';
+      try {
+        // viewer group of that org
+        const viewerGroup = await opts.keycloakClient.fetchChildGroup({
+          realm: opts.keycloakRealm,
+          kcGroupId: organizationGroups[0].id!,
+          orgSlug: authContext.organizationSlug,
+          childGroupType: 'viewer',
+        });
+        viewerGroupId = viewerGroup.id!;
+      } catch (err: any) {
+        return res.code(500).send(
+          ScimError({
+            detail: err.message,
+            status: 500,
+          }),
+        );
+      }
+
+      const user = await opts.userRepository.byEmail(email);
+      const keycloakUsers = await opts.keycloakClient.client.users.find({
         realm: opts.keycloakRealm,
-        kcGroupId: organizationGroups[0].id!,
-        orgSlug: authContext.organizationSlug,
-        childGroupType: 'viewer',
+        email,
+        exact: true,
       });
+
+      if (user) {
+        if (keycloakUsers.length === 0) {
+          // return 500 as the user should exist on keycloak if it exists in the db
+          return res.code(500).send(
+            ScimError({
+              detail: `User '${user.email}' not found on keycloak`,
+              status: 500,
+            }),
+          );
+        } else {
+          await opts.keycloakClient.client.users.addToGroup({
+            id: user.id,
+            realm: opts.keycloakRealm,
+            groupId: viewerGroupId,
+          });
+
+          const newOrgMember = await opts.organizationRepository.addOrganizationMember({
+            userID: user.id,
+            organizationID: authContext.organizationId,
+          });
+
+          await opts.organizationRepository.addOrganizationMemberRoles({
+            memberID: newOrgMember.id,
+            roles: ['viewer'],
+          });
+
+          return res.code(201).send({
+            schemas: ['urn:ietf:params:scim:schemas:core:2.0:User'],
+            id: user.id,
+            userName: email,
+            name,
+            emails,
+            displayName,
+            locale,
+            externalId,
+            active,
+            groups,
+            meta: {
+              resourceType: 'User',
+            },
+          });
+        }
+      }
+
+      let keycloakUserID = '';
+      try {
+        if (keycloakUsers.length === 0) {
+          keycloakUserID = await opts.keycloakClient.addKeycloakUser({
+            realm: opts.keycloakRealm,
+            firstName: name.givenName,
+            lastName: name.familyName,
+            email,
+            password,
+            isPasswordTemp: false,
+          });
+        } else {
+          keycloakUserID = keycloakUsers[0].id!;
+        }
+      } catch (err: any) {
+        return res.code(500).send(
+          ScimError({
+            detail: err.responseData.errorMessage || err.message,
+            status: 500,
+          }),
+        );
+      }
 
       await opts.keycloakClient.client.users.addToGroup({
         id: keycloakUserID,
         realm: opts.keycloakRealm,
-        groupId: viewerGroup.id!,
+        groupId: viewerGroupId,
       });
 
       await opts.userRepository.addUser({ id: keycloakUserID, email });
-      const orgMember = await opts.organizationRepository.addOrganizationMember({
+      const newOrgMember = await opts.organizationRepository.addOrganizationMember({
         userID: keycloakUserID,
         organizationID: authContext.organizationId,
       });
       await opts.organizationRepository.addOrganizationMemberRoles({
-        memberID: orgMember.id,
+        memberID: newOrgMember.id,
         roles: ['viewer'],
       });
 
