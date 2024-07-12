@@ -13859,6 +13859,15 @@ packages:
     hasBin: true
     dependencies:
       jake: 10.8.7
+    dev: false
+
+  /ejs@3.1.9:
+    resolution: {integrity: sha512-rC+QVNMJWv+MtPgkt0y+0rVEIdbtxVADApW9JXrUVlzHetgcyczP/E7DJmWJ4fJCZF2cPcBk0laWO9ZHMG3DmQ==}
+    engines: {node: '>=0.10.0'}
+    hasBin: true
+    dependencies:
+      jake: 10.8.7
+    dev: true
 
   /electron-to-chromium@1.4.471:
     resolution: {integrity: sha512-GpmGRC1vTl60w/k6YpQ18pSiqnmr0j3un//5TV1idPi6aheNfkT1Ye71tMEabWyNDO6sBMgAR+95Eb0eUUr1tA==}
@@ -15021,11 +15030,11 @@ packages:
       builtins: 5.0.1
       eslint: 8.52.0
       eslint-plugin-es-x: 7.2.0(eslint@8.52.0)
-      ignore: 5.2.4
-      is-core-module: 2.12.1
+      ignore: 5.3.1
+      is-core-module: 2.13.1
       minimatch: 3.1.2
-      resolve: 1.22.2
-      semver: 7.5.4
+      resolve: 1.22.8
+      semver: 7.6.2
     dev: true
 
   /eslint-plugin-n@16.0.1(eslint@8.53.0):
@@ -15055,11 +15064,11 @@ packages:
       builtins: 5.0.1
       eslint: 8.57.0
       eslint-plugin-es-x: 7.2.0(eslint@8.57.0)
-      ignore: 5.2.4
-      is-core-module: 2.12.1
+      ignore: 5.3.1
+      is-core-module: 2.13.1
       minimatch: 3.1.2
-      resolve: 1.22.2
-      semver: 7.5.4
+      resolve: 1.22.8
+      semver: 7.6.2
     dev: true
 
   /eslint-plugin-node@11.1.0(eslint@8.52.0):
@@ -21416,6 +21425,12 @@ packages:
     dependencies:
       lru-cache: 6.0.0
 
+  /semver@7.6.2:
+    resolution: {integrity: sha512-FNAIBWCx9qcRhoHcgcJ0gvU7SN1lYU2ZXuSfl04bSC5OpvDHFyJCjdNHomPXxjQlCBU67YW64PzY7/VIEH7F2w==}
+    engines: {node: '>=10'}
+    hasBin: true
+    dev: true
+
   /sentence-case@3.0.4:
     resolution: {integrity: sha512-8LS0JInaQMCRoQ7YUytAo/xUu5W2XnQxV2HI/6uM6U7CITS1RqPElr30V6uIqyMKM9lJGRVFy5/4CuzcixNYSg==}
     dependencies:
@@ -23002,7 +23017,7 @@ packages:
       consola: 2.15.3
       dotenv: 16.4.5
       dotenv-expand: 8.0.3
-      ejs: 3.1.10
+      ejs: 3.1.9
       fast-glob: 3.3.2
       fs-extra: 10.1.0
       html-minifier-terser: 6.1.0
