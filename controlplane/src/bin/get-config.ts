@@ -1,4 +1,4 @@
-import { ApiKeyGenerator } from 'src/core/services/ApiGenerator.js';
+import { ApiKeyGenerator } from '../core/services/ApiGenerator.js';
 
 const getConfig = () => {
   return {
