@@ -52,9 +52,6 @@ func newHttpServer(opts *httpServerOptions) *httpServer {
 	}
 
 	server.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		n.Lock()
-		defer n.Unlock()
-
 		n.handler.ServeHTTP(w, r)
 	})
 
