@@ -607,7 +607,7 @@ func (s *graphServer) buildMux(ctx context.Context,
 		}
 	}
 
-	// Must be mounted after the websocket middleware to ensure that we only count non-websocket requests
+	// Must be mounted after the websocket middleware to ensure that we only count non-hijacked requests like WebSockets
 	httpRouter.Use(func(handler http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -744,8 +744,12 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 	}
 
 	// Ensure that we don't wait indefinitely for shutdown
-	ctx, cancel := context.WithTimeout(ctx, s.gracePeriod)
-	defer cancel()
+	if s.gracePeriod > 0 {
+		newCtx, cancel := context.WithTimeout(ctx, s.gracePeriod)
+		defer cancel()
+
+		ctx = newCtx
+	}
 
 	s.healthcheck.SetReady(false)
 

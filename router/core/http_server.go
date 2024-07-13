@@ -27,7 +27,6 @@ type httpServerOptions struct {
 	logger          *zap.Logger
 	tlsConfig       *TlsConfig
 	tlsServerConfig *tls.Config
-	handler         http.Handler
 	healthcheck     health.Checker
 	baseURL         string
 }
@@ -121,9 +120,7 @@ func (s *httpServer) Shutdown(ctx context.Context) error {
 	var err error
 
 	if s.graphServer != nil {
-		if err := s.shutdownGraphServer(ctx); err != nil {
-			err = errors.Join(err)
-		}
+		err = errors.Join(s.shutdownGraphServer(ctx))
 	}
 	if s.httpServer != nil {
 		if err := s.httpServer.Shutdown(ctx); err != nil {

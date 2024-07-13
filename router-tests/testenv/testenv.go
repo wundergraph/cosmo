@@ -593,6 +593,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithWithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation),
 		core.WithTLSConfig(testConfig.TLSConfig),
 		core.WithInstanceID("test-instance"),
+		core.WithGracePeriod(15 * time.Second),
 		core.WithIntrospection(true),
 		core.WithEvents(config.EventsConfiguration{
 			Providers: config.EventProviders{
@@ -778,7 +779,7 @@ func (e *Environment) SetExtraURLQueryValues(values url.Values) {
 }
 
 func (e *Environment) Shutdown() {
-	ctx, cancel := context.WithTimeout(e.Context, 10*time.Second)
+	ctx, cancel := context.WithTimeout(e.Context, 30*time.Second)
 	defer cancel()
 
 	// Gracefully shutdown router
