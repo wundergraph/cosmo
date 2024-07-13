@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	br "github.com/andybalholm/brotli"
+	"github.com/cloudflare/backoff"
 	"github.com/dgraph-io/ristretto"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -14,7 +15,6 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/internal/docker"
 	rjwt "github.com/wundergraph/cosmo/router/internal/jwt"
 	rmiddleware "github.com/wundergraph/cosmo/router/internal/middleware"
 	"github.com/wundergraph/cosmo/router/internal/recoveryhandler"
@@ -34,6 +34,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	oteltrace "go.opentelemetry.io/otel/trace"
+	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/exp/maps"
@@ -41,6 +42,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 const (
@@ -61,13 +63,14 @@ type (
 		kafka map[string]pubsub_datasource.KafkaPubSub
 	}
 
-	// server is the swappable implementation of the Router which is an HTTP server with middlewares.
+	// graphServer is the swappable implementation of a Graph instance which is an HTTP server with middlewares.
 	// Everytime a schema is updated, the old server is shutdown and a new server is created.
-	// For feature flags, a separate mux is created and dynamically switched based on the feature flag header or cookie.
-	// All server fields are shared between all feature muxes.
-	server struct {
+	// For feature flags, a graphql server has multiple mux and is dynamically switched based on the feature flag header or cookie.
+	// All fields are shared between all feature muxes.
+	graphServer struct {
 		Config
-		ctx                     context.Context
+		context                 context.Context
+		cancelFunc              context.CancelFunc
 		pubSubProviders         *EnginePubSubProviders
 		websocketStats          WebSocketsStatistics
 		playgroundHandler       func(http.Handler) http.Handler
@@ -78,19 +81,25 @@ type (
 		metricStore             rmetric.Store
 		baseRouterConfigVersion string
 		mux                     *chi.Mux
+		// inFlightRequests is used to track the number of requests currently being processed
+		// does not include websocket (hijacked) connections
+		inFlightRequests *atomic.Uint64
 	}
 )
 
-// newServer creates a new server instance.
-func newServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterConfig) (*server, error) {
-	s := &server{
-		ctx:                     ctx,
+// newGraphServer creates a new server instance.
+func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterConfig) (*graphServer, error) {
+	ctx, cancel := context.WithCancel(ctx)
+	s := &graphServer{
+		context:                 ctx,
+		cancelFunc:              cancel,
 		Config:                  r.Config,
 		websocketStats:          r.WebsocketStats,
 		metricStore:             rmetric.NewNoopMetrics(),
 		executionTransport:      newHTTPTransport(r.subgraphTransportOptions),
 		playgroundHandler:       r.playgroundHandler,
 		baseRouterConfigVersion: routerConfig.GetVersion(),
+		inFlightRequests:        &atomic.Uint64{},
 		pubSubProviders: &EnginePubSubProviders{
 			nats:  map[string]pubsub_datasource.NatsPubSub{},
 			kafka: map[string]pubsub_datasource.KafkaPubSub{},
@@ -162,11 +171,6 @@ func newServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterConfig
 		recoveryhandler.WithPrintStack(),
 	)
 
-	graphqlEndpointURL, err := url.JoinPath(r.baseURL, r.graphqlPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to join graphql endpoint url: %w", err)
-	}
-
 	httpRouter := chi.NewRouter()
 
 	/**
@@ -231,38 +235,12 @@ func newServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterConfig
 	httpRouter.Get(s.livenessCheckPath, r.healthcheck.Liveness())
 	httpRouter.Get(s.readinessCheckPath, r.healthcheck.Readiness())
 
-	/**
-	* Server logging after features has been initialized / disabled
-	 */
-
-	r.logger.Info("GraphQL endpoint",
-		zap.String("method", http.MethodPost),
-		zap.String("url", graphqlEndpointURL),
-	)
-
-	if s.localhostFallbackInsideDocker && docker.Inside() {
-		s.logger.Info("localhost fallback enabled, connections that fail to connect to localhost will be retried using host.docker.internal")
-	}
-
-	if s.developmentMode && s.engineExecutionConfiguration.EnableRequestTracing && s.graphApiToken == "" {
-		s.logger.Warn("Advanced Request Tracing (ART) is enabled in development mode but requires a graph token to work in production. For more information see https://cosmo-docs.wundergraph.com/router/advanced-request-tracing-art")
-	}
-
-	if s.redisClient != nil {
-		s.logger.Info("Rate limiting enabled",
-			zap.Int("rate", s.rateLimit.SimpleStrategy.Rate),
-			zap.Int("burst", s.rateLimit.SimpleStrategy.Burst),
-			zap.Duration("duration", s.Config.rateLimit.SimpleStrategy.Period),
-			zap.Bool("rejectExceeding", s.Config.rateLimit.SimpleStrategy.RejectExceedingRequests),
-		)
-	}
-
 	s.mux = httpRouter
 
 	return s, nil
 }
 
-func (s *server) buildMultiGraphHandler(ctx context.Context, baseMux *chi.Mux, featureFlagConfigs map[string]*nodev1.FeatureFlagRouterExecutionConfig) (http.HandlerFunc, error) {
+func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.Mux, featureFlagConfigs map[string]*nodev1.FeatureFlagRouterExecutionConfig) (http.HandlerFunc, error) {
 
 	if len(featureFlagConfigs) == 0 {
 		return baseMux.ServeHTTP, nil
@@ -309,7 +287,7 @@ func (s *server) buildMultiGraphHandler(ctx context.Context, baseMux *chi.Mux, f
 	}, nil
 }
 
-func (s *server) buildMux(ctx context.Context,
+func (s *graphServer) buildMux(ctx context.Context,
 	featureFlagName string,
 	routerConfigVersion string,
 	engineConfig *nodev1.EngineConfiguration,
@@ -629,6 +607,19 @@ func (s *server) buildMux(ctx context.Context,
 		}
 	}
 
+	// Must be mounted after the websocket middleware to ensure that we only count non-websocket requests
+	httpRouter.Use(func(handler http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+			// Counting like this is safe because according to the go http.ServeHTTP documentation
+			// the requests is guaranteed to be finished when ServeHTTP returns
+
+			s.inFlightRequests.Add(1)
+			defer s.inFlightRequests.Sub(1)
+
+			handler.ServeHTTP(w, r)
+		})
+	})
 	httpRouter.Use(graphqlPreHandler.Handler)
 
 	// Mount built global and custom modules
@@ -640,7 +631,7 @@ func (s *server) buildMux(ctx context.Context,
 	return httpRouter, nil
 }
 
-func (s *server) buildPubSubConfiguration(ctx context.Context, engineConfig *nodev1.EngineConfiguration, routerEngineCfg *RouterEngineConfiguration) error {
+func (s *graphServer) buildPubSubConfiguration(ctx context.Context, engineConfig *nodev1.EngineConfiguration, routerEngineCfg *RouterEngineConfiguration) error {
 
 	datasourceConfigurations := engineConfig.GetDatasourceConfigurations()
 	for _, datasourceConfiguration := range datasourceConfigurations {
@@ -712,14 +703,51 @@ func (s *server) buildPubSubConfiguration(ctx context.Context, engineConfig *nod
 	return nil
 }
 
-// Shutdown gracefully shutdown the server.
-func (s *server) Shutdown(ctx context.Context) error {
+// wait waits for all in-flight requests to finish. Similar to http.Server.Shutdown we wait in intervals + jitter
+// to make the shutdown process more efficient.
+func (s *graphServer) wait(ctx context.Context) error {
+	b := backoff.New(500*time.Millisecond, time.Millisecond)
+	defer b.Reset()
+
+	timer := time.NewTimer(b.Duration())
+	defer timer.Stop()
+
+	for {
+		if s.inFlightRequests.Load() == 0 {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-timer.C:
+			timer.Reset(b.Duration())
+		}
+	}
+}
+
+// Shutdown gracefully shutdown the server and waits for all in-flight requests to finish.
+// After all requests are done, it will shut down the metric store and runtime metrics.
+// Shutdown does cancel the context after all non-hijacked requests such as WebSockets has been handled.
+func (s *graphServer) Shutdown(ctx context.Context) error {
+	// Cancel the context after the shutdown is done
+	// to clean up resources like websocket connections, pools, etc.
+	defer s.cancelFunc()
+
+	s.logger.Info("Gracefully shutdown of graph server initiated",
+		zap.String("grace_period", s.gracePeriod.String()),
+		zap.String("config_version", s.baseRouterConfigVersion),
+	)
+
+	// Wait for all in-flight requests to finish
+	if err := s.wait(ctx); err != nil {
+		return err
+	}
+
+	// Ensure that we don't wait indefinitely for shutdown
+	ctx, cancel := context.WithTimeout(ctx, s.gracePeriod)
+	defer cancel()
 
 	s.healthcheck.SetReady(false)
-
-	s.logger.Info("Gracefully shutting down the router ...",
-		zap.String("grace_period", s.gracePeriod.String()),
-	)
 
 	var finalErr error
 

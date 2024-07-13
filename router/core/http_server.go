@@ -4,23 +4,22 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
-	"fmt"
 	"github.com/wundergraph/cosmo/router/pkg/health"
 	"go.uber.org/zap"
-	"net"
 	"net/http"
 	"sync"
 	"time"
 )
 
 type httpServer struct {
-	mu          sync.Mutex
+	sync.Mutex
 	httpServer  *http.Server
 	tlsConfig   *TlsConfig
 	logger      *zap.Logger
 	handler     http.Handler
 	healthcheck health.Checker
 	baseURL     string
+	graphServer *graphServer
 }
 
 type httpServerOptions struct {
@@ -34,26 +33,29 @@ type httpServerOptions struct {
 }
 
 func newHttpServer(opts *httpServerOptions) *httpServer {
-	s := &http.Server{
+	server := &http.Server{
 		Addr: opts.addr,
 		// https://ieftimov.com/posts/make-resilient-golang-net-http-servers-using-timeouts-deadlines-context-cancellation/
-		ReadTimeout:       1 * time.Minute,
-		WriteTimeout:      2 * time.Minute,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      60 * time.Second,
 		ReadHeaderTimeout: 20 * time.Second,
 		ErrorLog:          zap.NewStdLog(opts.logger),
 		TLSConfig:         opts.tlsServerConfig,
 	}
 
 	n := &httpServer{
-		httpServer:  s,
+		httpServer:  server,
 		tlsConfig:   opts.tlsConfig,
 		logger:      opts.logger,
-		mu:          sync.Mutex{},
+		Mutex:       sync.Mutex{},
 		healthcheck: opts.healthcheck,
 		baseURL:     opts.baseURL,
 	}
 
-	s.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n.Lock()
+		defer n.Unlock()
+
 		n.handler.ServeHTTP(w, r)
 	})
 
@@ -72,21 +74,32 @@ func (s *httpServer) BaseURL() string {
 	return s.baseURL
 }
 
-func (s *httpServer) ListenAndServe() error {
-	return s.listenAndServe()
-}
+func (s *httpServer) shutdownGraphServer(ctx context.Context) error {
 
-func (s *httpServer) SwapHandler(handler http.Handler) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.httpServer.ConnState = func(conn net.Conn, state http.ConnState) {
-		fmt.Println("Connection state changed to: ", state)
+	if s.handler == nil {
+		return nil
 	}
 
-	s.httpServer.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		handler.ServeHTTP(w, r)
-	})
+	return s.graphServer.Shutdown(ctx)
+}
+
+// SwapGraphServer swaps the current graph server with a new one. It will shut down the old server gracefully.
+// Because we swap the handler immediately, we can guarantee that no new requests will be served by the old graph server.
+// However, it is possible that there are still requests in flight that are being processed by the old graph server.
+// We wait until all requests are processed or timeout before shutting down the old graph server forcefully.
+// Websocket connections are closed after shutdown through context cancellation.
+func (s *httpServer) SwapGraphServer(ctx context.Context, svr *graphServer) {
+	s.graphServer = svr
+
+	if s.handler != nil {
+		if err := s.shutdownGraphServer(ctx); err != nil {
+			s.logger.Error("Failed to shutdown old graph", zap.Error(err))
+		}
+	}
+
+	s.Lock()
+	s.handler = svr.mux
+	s.Unlock()
 }
 
 // listenAndServe starts the server and blocks until the server is shutdown.
@@ -105,8 +118,21 @@ func (s *httpServer) listenAndServe() error {
 }
 
 func (s *httpServer) Shutdown(ctx context.Context) error {
-	if s.httpServer != nil {
-		return s.httpServer.Shutdown(ctx)
+	var err error
+
+	if s.graphServer != nil {
+		if err := s.shutdownGraphServer(ctx); err != nil {
+			err = errors.Join(err)
+		}
 	}
-	return nil
+	if s.httpServer != nil {
+		if err := s.httpServer.Shutdown(ctx); err != nil {
+			err = errors.Join(err)
+		}
+	}
+
+	s.graphServer = nil
+	s.handler = nil
+
+	return err
 }

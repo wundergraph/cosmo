@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 )
 
 func HTTP(next http.Handler) http.Handler {
@@ -22,6 +23,8 @@ func HTTPFunc(next http.HandlerFunc) http.HandlerFunc {
 		r.Body = io.NopCloser(bytes.NewReader(body))
 
 		contentType := r.Header.Get("Content-Type")
+
+		time.Sleep(10 * time.Second)
 
 		if len(body) > 0 {
 			if strings.Contains(contentType, "multipart/form-data") {

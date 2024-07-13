@@ -88,7 +88,7 @@ func Main() {
 
 	<-ctx.Done()
 
-	logger.Info("Graceful shutdown ...", zap.String("shutdown_delay", result.Config.ShutdownDelay.String()))
+	logger.Info("Graceful shutdown of router initiated", zap.String("shutdown_delay", result.Config.ShutdownDelay.String()))
 
 	// Enforce a maximum shutdown delay to avoid waiting forever
 	// Don't use the parent context that is canceled by the signal handler
@@ -97,6 +97,8 @@ func Main() {
 
 	if err := router.Shutdown(shutdownCtx); err != nil {
 		logger.Error("Could not shutdown server", zap.Error(err))
+	} else {
+		logger.Info("Router shutdown successfully")
 	}
 
 	profiler.Finish()

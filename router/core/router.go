@@ -7,7 +7,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/wundergraph/cosmo/router/internal/cdn"
+	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/graphiql"
+	"go.uber.org/atomic"
 	brotli "go.withmatt.com/connect-brotli"
 	"net"
 	"net/http"
@@ -67,7 +69,6 @@ type (
 	Router struct {
 		Config
 		httpServer        *httpServer
-		server            *server
 		modules           []Module
 		WebsocketStats    WebSocketsStatistics
 		playgroundHandler func(http.Handler) http.Handler
@@ -121,7 +122,7 @@ type (
 		gracePeriod              time.Duration
 		staticRouterConfig       *nodev1.RouterConfig
 		awsLambda                bool
-		shutdown                 bool
+		shutdown                 atomic.Bool
 		bootstrapped             bool
 		ipAnonymization          *IPAnonymizationConfig
 		listenAddr               string
@@ -459,25 +460,21 @@ func NewRouter(opts ...Option) (*Router, error) {
 	return r, nil
 }
 
-// tryUpgradeServer creates a new server and swaps the active server with the new one.
-func (r *Router) tryUpgradeServer(ctx context.Context, cfg *nodev1.RouterConfig) error {
-	// Rebuild server with new router config. In case of an error, we return early and keep the configuration running.
-	server, err := newServer(ctx, r, cfg)
+// newGraphServer creates a new server.
+func (r *Router) newServer(ctx context.Context, cfg *nodev1.RouterConfig) error {
+
+	server, err := newGraphServer(ctx, r, cfg)
 	if err != nil {
 		r.logger.Error("Failed to create a new server instance. Keeping old server running", zap.Error(err))
 		return err
 	}
 
-	r.server = server
-
-	r.httpServer.SwapHandler(server.mux)
+	r.httpServer.SwapGraphServer(ctx, server)
 
 	return nil
 }
 
 func (r *Router) listenAndServe(cfg *nodev1.RouterConfig) error {
-	prevVersion := r.server.baseRouterConfigVersion
-
 	r.logger.Info("Server listening and serving",
 		zap.String("listen_addr", r.listenAddr),
 		zap.Bool("playground", r.playground),
@@ -485,16 +482,17 @@ func (r *Router) listenAndServe(cfg *nodev1.RouterConfig) error {
 		zap.String("config_version", cfg.GetVersion()),
 	)
 
-	r.httpServer.healthcheck.SetReady(false)
+	// Mark the server as ready
+	r.httpServer.healthcheck.SetReady(true)
 
 	go func() {
+		// Mark the server as not ready when the server is stopped
+		defer r.httpServer.healthcheck.SetReady(false)
+
 		// This is a blocking call
 		if err := r.httpServer.listenAndServe(); err != nil {
 			r.logger.Error("Failed to start new server", zap.Error(err))
 		}
-		r.httpServer.healthcheck.SetReady(false)
-
-		r.logger.Info("Server stopped", zap.String("config_version", prevVersion))
 	}()
 
 	return nil
@@ -560,9 +558,9 @@ func (r *Router) initModules(ctx context.Context) error {
 // NewServer prepares a new server instance but does not start it. The method should only be used when you want to bootstrap
 // the server manually otherwise you can use Router.Start(). You're responsible for setting health checks status to ready with Server.HealthChecks().
 // The server can be shutdown with Router.Shutdown(). Use core.WithStaticRouterConfig to pass the initial config otherwise the Router will
-// try to fetch the config from the control plane. You can swap the router config by using Router.tryUpgradeServer().
+// try to fetch the config from the control plane. You can swap the router config by using Router.newGraphServer().
 func (r *Router) NewServer(ctx context.Context) (Server, error) {
-	if r.shutdown {
+	if r.shutdown.Load() {
 		return nil, fmt.Errorf("router is shutdown. Create a new instance with router.NewRouter()")
 	}
 
@@ -577,13 +575,12 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 		tlsServerConfig: r.tlsServerConfig,
 		healthcheck:     r.healthcheck,
 		baseURL:         r.baseURL,
-		handler:         nil,
 	})
 
 	// Start the server with the static config without polling
 	if r.staticRouterConfig != nil {
 		r.logger.Info("Static router config provided. Polling is disabled. Updating router config is only possible by providing a config.")
-		return nil, r.tryUpgradeServer(ctx, r.staticRouterConfig)
+		return r.httpServer, r.newServer(ctx, r.staticRouterConfig)
 	}
 
 	// when no static config is provided and no poller is configured, we can't start the server
@@ -596,7 +593,7 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 		return nil, fmt.Errorf("failed to get initial router config: %w", err)
 	}
 
-	if err := r.tryUpgradeServer(ctx, routerConfig); err != nil {
+	if err := r.newServer(ctx, routerConfig); err != nil {
 		r.logger.Error("Failed to start server with initial config", zap.Error(err))
 		return nil, err
 	}
@@ -748,7 +745,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 // Start starts the server. It does not block. The server can be shutdown with Router.Shutdown().
 // Not safe for concurrent use.
 func (r *Router) Start(ctx context.Context) error {
-	if r.shutdown {
+	if r.shutdown.Load() {
 		return fmt.Errorf("router is shutdown. Create a new instance with router.NewRouter()")
 	}
 
@@ -763,14 +760,13 @@ func (r *Router) Start(ctx context.Context) error {
 		tlsServerConfig: r.tlsServerConfig,
 		healthcheck:     r.healthcheck,
 		baseURL:         r.baseURL,
-		handler:         nil,
 	})
 
 	// Start the server with the static config without polling
 	if r.staticRouterConfig != nil {
 		r.logger.Info("Static router config  provided. Polling is disabled. Updating router config is only possible by providing a config.")
 
-		if err := r.tryUpgradeServer(ctx, r.staticRouterConfig); err != nil {
+		if err := r.newServer(ctx, r.staticRouterConfig); err != nil {
 			return err
 		}
 
@@ -787,8 +783,40 @@ func (r *Router) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to get initial router config: %w", err)
 	}
 
-	if err := r.tryUpgradeServer(ctx, routerConfig); err != nil {
+	if err := r.newServer(ctx, routerConfig); err != nil {
 		return err
+	}
+
+	if r.playground {
+		graphqlEndpointURL, err := url.JoinPath(r.baseURL, r.graphqlPath)
+		if err != nil {
+			return fmt.Errorf("failed to join graphql endpoint url: %w", err)
+		}
+		r.logger.Info("GraphQL endpoint",
+			zap.String("method", http.MethodPost),
+			zap.String("url", graphqlEndpointURL),
+		)
+	}
+
+	/**
+	* Server logging after features has been initialized / disabled
+	 */
+
+	if r.localhostFallbackInsideDocker && docker.Inside() {
+		r.logger.Info("localhost fallback enabled, connections that fail to connect to localhost will be retried using host.docker.internal")
+	}
+
+	if r.developmentMode && r.engineExecutionConfiguration.EnableRequestTracing && r.graphApiToken == "" {
+		r.logger.Warn("Advanced Request Tracing (ART) is enabled in development mode but requires a graph token to work in production. For more information see https://cosmo-docs.wundergraph.com/router/advanced-request-tracing-art")
+	}
+
+	if r.redisClient != nil {
+		r.logger.Info("Rate limiting enabled",
+			zap.Int("rate", r.rateLimit.SimpleStrategy.Rate),
+			zap.Int("burst", r.rateLimit.SimpleStrategy.Burst),
+			zap.Duration("duration", r.Config.rateLimit.SimpleStrategy.Period),
+			zap.Bool("rejectExceeding", r.Config.rateLimit.SimpleStrategy.RejectExceedingRequests),
+		)
 	}
 
 	if err := r.listenAndServe(routerConfig); err != nil {
@@ -799,12 +827,17 @@ func (r *Router) Start(ctx context.Context) error {
 	r.logger.Info("Polling for router config updates in the background")
 
 	r.configPoller.Subscribe(ctx, func(newConfig *nodev1.RouterConfig, oldVersion string) error {
-		r.logger.Info("Router execution config has changed, upgrading server",
+		r.logger.Info("Router execution config has changed, hot reloading server",
 			zap.String("old_version", oldVersion),
 			zap.String("new_version", newConfig.GetVersion()),
 		)
 
-		if err := r.tryUpgradeServer(ctx, newConfig); err != nil {
+		if r.shutdown.Load() {
+			r.logger.Warn("Router is in shutdown state. Skipping config update")
+			return nil
+		}
+
+		if err := r.newServer(ctx, newConfig); err != nil {
 			return err
 		}
 
@@ -818,11 +851,11 @@ func (r *Router) Start(ctx context.Context) error {
 // If the router is already shutdown, the method returns immediately without error. Not safe for concurrent use.
 func (r *Router) Shutdown(ctx context.Context) (err error) {
 
-	if r.shutdown {
+	if r.shutdown.Load() {
 		return nil
 	}
 
-	r.shutdown = true
+	r.shutdown.Swap(true)
 
 	if r.configPoller != nil {
 		if subErr := r.configPoller.Stop(ctx); subErr != nil {
