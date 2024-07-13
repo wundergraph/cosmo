@@ -4,6 +4,25 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.95.6](https://github.com/wundergraph/cosmo/compare/router@0.95.5...router@0.95.6) (2024-07-12)
+
+### Bug Fixes
+
+* playground crash on hard reload and better invalid headers error ([#934](https://github.com/wundergraph/cosmo/issues/934)) ([7306fb1](https://github.com/wundergraph/cosmo/commit/7306fb15f80a6371f59919cbb5890845d9ce6e74)) (@thisisnithin)
+
+## [0.95.5](https://github.com/wundergraph/cosmo/compare/router@0.95.4...router@0.95.5) (2024-07-10)
+
+### Bug Fixes
+
+* playground explorer plugin crash ([#931](https://github.com/wundergraph/cosmo/issues/931)) ([ba10f16](https://github.com/wundergraph/cosmo/commit/ba10f165e2eb2ed6ee040ff981629ebb8b13ae16)) (@thisisnithin)
+
+## [0.95.4](https://github.com/wundergraph/cosmo/compare/router@0.95.3...router@0.95.4) (2024-07-09)
+
+### Bug Fixes
+
+* close connection only after EOF and read error ([#919](https://github.com/wundergraph/cosmo/issues/919)) ([c2f87ef](https://github.com/wundergraph/cosmo/commit/c2f87ef228410fa39f8c1413401749fcd153222d)) (@StarpTech)
+* upgrade deps due to found CVEs ([#926](https://github.com/wundergraph/cosmo/issues/926)) ([fc6e615](https://github.com/wundergraph/cosmo/commit/fc6e6158e2e761489033acb667cd0b36920c2612)) (@StarpTech)
+
 ## [0.95.3](https://github.com/wundergraph/cosmo/compare/router@0.95.2...router@0.95.3) (2024-07-05)
 
 **Note:** Version bump only for package router

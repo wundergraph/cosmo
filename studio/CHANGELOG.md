@@ -4,6 +4,44 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.81.2](https://github.com/wundergraph/cosmo/compare/studio@0.81.1...studio@0.81.2) (2024-07-12)
+
+### Bug Fixes
+
+* scim server when adding existing user ([#935](https://github.com/wundergraph/cosmo/issues/935)) ([0265f2a](https://github.com/wundergraph/cosmo/commit/0265f2a99dd45d457b7056048d27abce49fbc08b)) (@JivusAyrus)
+
+## [0.81.1](https://github.com/wundergraph/cosmo/compare/studio@0.81.0...studio@0.81.1) (2024-07-12)
+
+### Bug Fixes
+
+* playground crash on hard reload and better invalid headers error ([#934](https://github.com/wundergraph/cosmo/issues/934)) ([7306fb1](https://github.com/wundergraph/cosmo/commit/7306fb15f80a6371f59919cbb5890845d9ce6e74)) (@thisisnithin)
+
+# [0.81.0](https://github.com/wundergraph/cosmo/compare/studio@0.80.0...studio@0.81.0) (2024-07-11)
+
+### Bug Fixes
+
+* remove REQUIRE_DEPRECATION_DATE lint rule ([#890](https://github.com/wundergraph/cosmo/issues/890)) ([1203d7f](https://github.com/wundergraph/cosmo/commit/1203d7f711c35f1bdd8a7ce6bec38dcd1093fff4)) (@JivusAyrus)
+
+### Features
+
+* create graph page ([#929](https://github.com/wundergraph/cosmo/issues/929)) ([1c45270](https://github.com/wundergraph/cosmo/commit/1c452709dfe309984d2fd08889ceac8c28f8ccba)) (@thisisnithin)
+
+# [0.80.0](https://github.com/wundergraph/cosmo/compare/studio@0.79.2...studio@0.80.0) (2024-07-10)
+
+### Bug Fixes
+
+* playground explorer plugin crash ([#931](https://github.com/wundergraph/cosmo/issues/931)) ([ba10f16](https://github.com/wundergraph/cosmo/commit/ba10f165e2eb2ed6ee040ff981629ebb8b13ae16)) (@thisisnithin)
+
+### Features
+
+* delete user ([#906](https://github.com/wundergraph/cosmo/issues/906)) ([5d438a1](https://github.com/wundergraph/cosmo/commit/5d438a1a2e1be610ff0e139efd692ed798daf677)) (@thisisnithin)
+
+## [0.79.2](https://github.com/wundergraph/cosmo/compare/studio@0.79.1...studio@0.79.2) (2024-07-09)
+
+### Bug Fixes
+
+* upgrade next due to CVE-2024-34351 ([#925](https://github.com/wundergraph/cosmo/issues/925)) ([b03d41e](https://github.com/wundergraph/cosmo/commit/b03d41e2ea04b4c69397b6870675de4633b3e1a8)) (@StarpTech)
+
 ## [0.79.1](https://github.com/wundergraph/cosmo/compare/studio@0.79.0...studio@0.79.1) (2024-07-04)
 
 ### Bug Fixes

@@ -2,7 +2,7 @@ import { PartialMessage } from '@bufbuild/protobuf';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { EventMeta, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
-import { HttpResponse, http } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
@@ -32,7 +32,7 @@ describe('Federated Graph', (ctx) => {
   afterEach(() => mockServer.resetHandlers());
 
   beforeAll(async () => {
-    mockServer.listen({ onUnhandledRequest: 'error' });
+    mockServer.listen({ onUnhandledRequest: 'bypass' });
     dbname = await beforeAllSetup();
   });
 
