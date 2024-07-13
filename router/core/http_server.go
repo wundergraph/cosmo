@@ -120,9 +120,7 @@ func (s *httpServer) Shutdown(ctx context.Context) error {
 		err = errors.Join(s.shutdownGraphServer(ctx))
 	}
 	if s.httpServer != nil {
-		if err := s.httpServer.Shutdown(ctx); err != nil {
-			err = errors.Join(err)
-		}
+		err = errors.Join(s.httpServer.Shutdown(ctx))
 	}
 
 	s.graphServer = nil
