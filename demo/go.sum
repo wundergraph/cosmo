@@ -160,6 +160,7 @@ github.com/wundergraph/cosmo/composition-go v0.0.0-20240124120900-5effe48a4a1d/g
 github.com/wundergraph/cosmo/router v0.0.0-20240705122303-9dbce2fc3ebe h1:GJI6CcNnpHKm626ncwEdjsYisGbB1Lib1yGE5B05AAs=
 github.com/wundergraph/cosmo/router v0.0.0-20240705122303-9dbce2fc3ebe/go.mod h1:ViY6FYHMXNEowmsXixiJh2/aCkpfy4VYYSQo9QurCwE=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.59 h1:kUes0NP6gW13ITBZJ5VN7P4/UMReedLVtI7Mt50dAuU=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.59/go.mod h1:YCJyt5TSr4luj4YWFGk93ayC/0KwHVEJmhgcNhcfLBc=
 github.com/xrash/smetrics v0.0.0-20231213231151-1d8dd44e695e h1:+SOyEddqYF09QP7vr7CgJ1eti3pY9Fn3LHO1M1r/0sI=
 github.com/xrash/smetrics v0.0.0-20231213231151-1d8dd44e695e/go.mod h1:N3UwUGtsrSj3ccvlPHLoLsHnpR27oXr4ZE984MbSER8=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=

@@ -49,7 +49,10 @@ func (r *queryResolver) Delay(ctx context.Context, response string, ms int) (str
 }
 
 // BigResponse is the resolver for the bigResponse field.
-func (r *queryResolver) BigResponse(ctx context.Context, bigObjects int, nestedObjects int, deeplyNestedObjects int) ([]*model.BigObject, error) {
+func (r *queryResolver) BigResponse(ctx context.Context, artificialDelay int, bigObjects int, nestedObjects int, deeplyNestedObjects int) ([]*model.BigObject, error) {
+	if artificialDelay > 0 {
+		time.Sleep(time.Duration(artificialDelay) * time.Millisecond)
+	}
 	big := make([]*model.BigObject, bigObjects)
 	for i := 0; i < bigObjects; i++ {
 		nested := make([]*model.NestedObject, nestedObjects)
@@ -67,6 +70,42 @@ func (r *queryResolver) BigResponse(ctx context.Context, bigObjects int, nestedO
 		}
 	}
 	return big, nil
+}
+
+var (
+	aBigObject = &model.ABigObject{
+		AFieldOnABigObject: "a field on a big object - lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur excepteur sint occaecat cupidatat non proident sunt in culpa qui officia deserunt mollit anim id est laborum",
+		BFieldOnABigObject: 1,
+		CFieldOnABigObject: true,
+		DFieldOnABigObject: 2,
+		EFieldOnABigObject: "e field on a big object - lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur excepteur sint occaecat cupidatat non proident sunt in culpa qui officia deserunt mollit anim id est laborum",
+		FFieldOnABigObject: 3,
+		GFieldOnABigObject: true,
+		HFieldOnABigObject: 4,
+		IFieldOnABigObject: "i field on a big object - lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur excepteur sint occaecat cupidatat non proident sunt in culpa qui officia deserunt mollit anim id est laborum",
+		JFieldOnABigObject: 5,
+		KFieldOnABigObject: true,
+		LFieldOnABigObject: 6,
+		MFieldOnABigObject: "m field on a big object - lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur excepteur sint occaecat cupidatat non proident sunt in culpa qui officia deserunt mollit anim id est laborum",
+		NFieldOnABigObject: 7,
+		OFieldOnABigObject: true,
+		PFieldOnABigObject: 8,
+		QFieldOnABigObject: "q field on a big object - lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur excepteur sint occaecat cupidatat non proident sunt in culpa qui officia deserunt mollit anim id est laborum",
+		RFieldOnABigObject: 9,
+		SFieldOnABigObject: true,
+		TFieldOnABigObject: 10,
+		UFieldOnABigObject: "u field on a big object - lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur excepteur sint occaecat cupidatat non proident sunt in culpa qui officia deserunt mollit anim id est laborum",
+		VFieldOnABigObject: 11,
+		WFieldOnABigObject: true,
+		XFieldOnABigObject: 12,
+		YFieldOnABigObject: "y field on a big object - lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur excepteur sint occaecat cupidatat non proident sunt in culpa qui officia deserunt mollit anim id est laborum",
+		ZFieldOnABigObject: 13,
+	}
+)
+
+// BigAbstractResponse is the resolver for the bigAbstractResponse field.
+func (r *queryResolver) BigAbstractResponse(ctx context.Context) (model.BigAbstractResponse, error) {
+	return aBigObject, nil
 }
 
 // HeaderValue is the resolver for the headerValue field.

@@ -182,6 +182,9 @@ func setupNatsServers(t testing.TB) (*NatsData, error) {
 	}
 	natsData.Server = natsServer
 	for range demoNatsProviders {
+		if !natsServer.ReadyForConnections(5 * time.Second) {
+			return nil, errors.New("nats server not ready")
+		}
 		natsConnection, err := nats.Connect(natsServer.ClientURL())
 		if err != nil {
 			return nil, err
