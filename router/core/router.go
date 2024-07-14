@@ -857,6 +857,14 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 
 	r.shutdown.Swap(true)
 
+	// Respect grace period
+	if r.gracePeriod > 0 {
+		ctxWithTimer, cancel := context.WithTimeout(ctx, r.gracePeriod)
+		defer cancel()
+
+		ctx = ctxWithTimer
+	}
+
 	if r.configPoller != nil {
 		if subErr := r.configPoller.Stop(ctx); subErr != nil {
 			err = errors.Join(err, fmt.Errorf("failed to stop config poller: %w", subErr))
@@ -864,14 +872,6 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 	}
 
 	if r.httpServer != nil {
-		// Respect grace period
-		if r.gracePeriod > 0 {
-			ctxWithTimer, cancel := context.WithTimeout(ctx, r.gracePeriod)
-			defer cancel()
-
-			ctx = ctxWithTimer
-		}
-
 		if subErr := r.httpServer.Shutdown(ctx); subErr != nil {
 			if errors.Is(err, context.DeadlineExceeded) {
 				r.logger.Warn(
@@ -879,9 +879,8 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 					zap.Duration("grace_period", r.gracePeriod),
 				)
 			}
-			err = errors.Join(err, fmt.Errorf("failed to shutdown primary server: %w", subErr))
+			err = errors.Join(err, fmt.Errorf("failed to shutdown router: %w", subErr))
 		}
-
 	}
 
 	var wg sync.WaitGroup

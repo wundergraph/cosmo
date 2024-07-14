@@ -68,7 +68,7 @@ type (
 	// For feature flags, a graphql server has multiple mux and is dynamically switched based on the feature flag header or cookie.
 	// All fields are shared between all feature muxes.
 	graphServer struct {
-		Config
+		*Config
 		context                 context.Context
 		cancelFunc              context.CancelFunc
 		pubSubProviders         *EnginePubSubProviders
@@ -93,7 +93,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	s := &graphServer{
 		context:                 ctx,
 		cancelFunc:              cancel,
-		Config:                  r.Config,
+		Config:                  &r.Config,
 		websocketStats:          r.WebsocketStats,
 		metricStore:             rmetric.NewNoopMetrics(),
 		executionTransport:      newHTTPTransport(r.subgraphTransportOptions),
@@ -750,8 +750,6 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 
 		ctx = newCtx
 	}
-
-	s.healthcheck.SetReady(false)
 
 	var finalErr error
 
