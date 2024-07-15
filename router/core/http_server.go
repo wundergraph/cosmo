@@ -86,9 +86,8 @@ func (s *httpServer) BaseURL() string {
 // We wait until all requests are processed or timeout before shutting down the old graph server forcefully.
 // Websocket connections are closed after shutdown through context cancellation. NOT SAFE FOR CONCURRENT USE.
 func (s *httpServer) SwapGraphServer(ctx context.Context, svr *graphServer) {
-	s.graphServer = svr
 
-	needShutdown := s.handler != nil
+	needsShutdown := s.handler != nil
 
 	// Swap the handler immediately, so we can shut down the old server in the same goroutine
 	// and no other config changes can happen in the meantime.
@@ -97,12 +96,14 @@ func (s *httpServer) SwapGraphServer(ctx context.Context, svr *graphServer) {
 	s.mu.Unlock()
 
 	// If the graph server is nil, we don't need to shutdown anything
-	// This is the case when the first graph server is started.
-	if needShutdown {
+	// This is the case when the router is starting for the first time
+	if needsShutdown {
 		if err := s.graphServer.Shutdown(ctx); err != nil {
 			s.logger.Error("Failed to shutdown old graph", zap.Error(err))
 		}
 	}
+
+	s.graphServer = svr
 }
 
 // listenAndServe starts the server and blocks until the server is shutdown.
