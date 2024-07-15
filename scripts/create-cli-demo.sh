@@ -18,5 +18,5 @@ wgc subgraph create products --namespace default --label team=B --routing-url ht
 SUBGRAPHS="employees family hobbies products"
 
 for subgraph in $SUBGRAPHS; do
-  wgc subgraph publish $subgraph --namespace default --schema ../demo/pkg/subgraphs/$subgraph/subgraph/schema.graphqls
+  wgc subgraph publish $subgraph --namespace default --schema ./demo/pkg/subgraphs/$subgraph/subgraph/schema.graphqls
 done
