@@ -4,7 +4,9 @@
         ${msg("termsTitle")}
     <#elseif section = "form">
         <div id="kc-terms-text">
-            ${kcSanitize(msg("termsText"))?no_esc}
+            <p>
+                Thank you for your interest in WunderGraph Cosmo! We're happy you're here.<br/><br/>In order to sign up for Cosmo, please read and accept the <a href="https://wundergraph.com/cosmo-managed-service-terms" target="_blank">Cosmo Terms of Use.</a>
+            </p>
         </div>
         <form class="form-actions" action="${url.loginAction}" method="POST">
             <div id="kc-form-buttons" class="space-y-4">
