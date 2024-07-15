@@ -187,9 +187,13 @@ const MemberCard = ({
   return (
     <TableRow>
       <TableCell>{email}</TableCell>
+      {acceptedInvite && (
+        <TableCell>
+          {active === false && <Badge variant="destructive">Disabled</Badge>}
+        </TableCell>
+      )}
       <TableCell>
         <div className="flex h-6 items-center justify-between gap-x-4 text-muted-foreground">
-          {active === false && <Badge variant="destructive">Disabled</Badge>}
           <div className={cn({ "pr-[14px]": isAdmin && isCurrentUser })}>
             {acceptedInvite && role ? (
               <span className="text-sm">{sentenceCase(role)}</span>
@@ -455,6 +459,7 @@ const AcceptedMembers = () => {
           <TableHeader>
             <TableRow>
               <TableHead className="w-full">Email</TableHead>
+              <TableHead className=""></TableHead>
               <TableHead className="">Role</TableHead>
             </TableRow>
           </TableHeader>

@@ -63,10 +63,6 @@ test("return the correct types with deprecated fields or args", async () => {
       ruleName: "REQUIRE_DEPRECATION_REASON",
       severityLevel: LintSeverity.warn,
     },
-    {
-      ruleName: "REQUIRE_DEPRECATION_DATE",
-      severityLevel: LintSeverity.warn,
-    },
   ];
   const countByCategory = countLintConfigsByCategory(
     lintIssues as LintConfig[],
@@ -76,5 +72,5 @@ test("return the correct types with deprecated fields or args", async () => {
   expect(countByCategory.length).toBe(3);
   expect(countByCategory[0]).toBe(11);
   expect(countByCategory[1]).toBe(0);
-  expect(countByCategory[2]).toBe(4);
+  expect(countByCategory[2]).toBe(3);
 });
