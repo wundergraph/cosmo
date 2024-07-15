@@ -68,7 +68,7 @@ type (
 	// Router is the main application instance.
 	Router struct {
 		Config
-		httpServer        *httpServer
+		httpServer        *server
 		modules           []Module
 		WebsocketStats    WebSocketsStatistics
 		playgroundHandler func(http.Handler) http.Handler
@@ -568,7 +568,7 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 		return nil, fmt.Errorf("failed to bootstrap application: %w", err)
 	}
 
-	r.httpServer = newHttpServer(&httpServerOptions{
+	r.httpServer = newServer(&httpServerOptions{
 		addr:            r.listenAddr,
 		logger:          r.logger,
 		tlsConfig:       r.tlsConfig,
@@ -753,7 +753,7 @@ func (r *Router) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to bootstrap application: %w", err)
 	}
 
-	r.httpServer = newHttpServer(&httpServerOptions{
+	r.httpServer = newServer(&httpServerOptions{
 		addr:            r.listenAddr,
 		logger:          r.logger,
 		tlsConfig:       r.tlsConfig,

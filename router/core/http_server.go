@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-type httpServer struct {
+type server struct {
 	mu          sync.RWMutex
 	httpServer  *http.Server
 	tlsConfig   *TlsConfig
@@ -31,8 +31,8 @@ type httpServerOptions struct {
 	baseURL         string
 }
 
-func newHttpServer(opts *httpServerOptions) *httpServer {
-	server := &http.Server{
+func newServer(opts *httpServerOptions) *server {
+	httpServer := &http.Server{
 		Addr: opts.addr,
 		// Covers the time from when the connection is accepted to when the request body is
 		// fully read (if you do read the body, otherwise to the end of the headers).
@@ -46,8 +46,8 @@ func newHttpServer(opts *httpServerOptions) *httpServer {
 		TLSConfig:    opts.tlsServerConfig,
 	}
 
-	n := &httpServer{
-		httpServer:  server,
+	n := &server{
+		httpServer:  httpServer,
 		tlsConfig:   opts.tlsConfig,
 		logger:      opts.logger,
 		mu:          sync.RWMutex{},
@@ -55,7 +55,7 @@ func newHttpServer(opts *httpServerOptions) *httpServer {
 		baseURL:     opts.baseURL,
 	}
 
-	server.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	httpServer.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Multiple requests can read the handler at the same time, but only one goroutine can write it.
 		// When swapping the graph server there might be in-flight requests that are still being processed
 		// but this is tolerable because we are waiting for them to finish before shutting down the old server.
@@ -68,15 +68,15 @@ func newHttpServer(opts *httpServerOptions) *httpServer {
 	return n
 }
 
-func (s *httpServer) HealthChecks() health.Checker {
+func (s *server) HealthChecks() health.Checker {
 	return s.healthcheck
 }
 
-func (s *httpServer) HttpServer() *http.Server {
+func (s *server) HttpServer() *http.Server {
 	return s.httpServer
 }
 
-func (s *httpServer) BaseURL() string {
+func (s *server) BaseURL() string {
 	return s.baseURL
 }
 
@@ -85,7 +85,7 @@ func (s *httpServer) BaseURL() string {
 // However, it is possible that there are still requests in flight that are being processed by the old graph server.
 // We wait until all requests are processed or timeout before shutting down the old graph server forcefully.
 // Websocket connections are closed after shutdown through context cancellation. NOT SAFE FOR CONCURRENT USE.
-func (s *httpServer) SwapGraphServer(ctx context.Context, svr *graphServer) {
+func (s *server) SwapGraphServer(ctx context.Context, svr *graphServer) {
 
 	needsShutdown := s.handler != nil
 
@@ -107,7 +107,7 @@ func (s *httpServer) SwapGraphServer(ctx context.Context, svr *graphServer) {
 }
 
 // listenAndServe starts the server and blocks until the server is shutdown.
-func (s *httpServer) listenAndServe() error {
+func (s *server) listenAndServe() error {
 	if s.tlsConfig != nil && s.tlsConfig.Enabled {
 		// Leave the cert and key empty to use the default ones
 		if err := s.httpServer.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -121,7 +121,7 @@ func (s *httpServer) listenAndServe() error {
 	return nil
 }
 
-func (s *httpServer) Shutdown(ctx context.Context) error {
+func (s *server) Shutdown(ctx context.Context) error {
 	var err error
 
 	if s.graphServer != nil {
