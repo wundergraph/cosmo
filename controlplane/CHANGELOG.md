@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.93.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.93.2...controlplane@0.93.3) (2024-07-12)
+
+### Bug Fixes
+
+* scim server when adding existing user ([#935](https://github.com/wundergraph/cosmo/issues/935)) ([0265f2a](https://github.com/wundergraph/cosmo/commit/0265f2a99dd45d457b7056048d27abce49fbc08b)) (@JivusAyrus)
+
+## [0.93.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.93.1...controlplane@0.93.2) (2024-07-12)
+
+### Bug Fixes
+
+* getConfig script imports ([#936](https://github.com/wundergraph/cosmo/issues/936)) ([2781c12](https://github.com/wundergraph/cosmo/commit/2781c1226a2d5ea989415c0ff241dc2f6584d49e)) (@thisisnithin)
+
 ## [0.93.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.93.0...controlplane@0.93.1) (2024-07-11)
 
 ### Bug Fixes
