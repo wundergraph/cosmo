@@ -119,6 +119,7 @@ type Config struct {
 	OtelResourceAttributes             []config.OtelResourceAttribute
 	MetricReader                       metric.Reader
 	PrometheusRegistry                 *prometheus.Registry
+	ShutdownDelay                      time.Duration
 }
 
 type SubgraphsConfig struct {
@@ -460,6 +461,10 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		productFgServer.Close()
 	}
 
+	if cfg.ShutdownDelay == 0 {
+		cfg.ShutdownDelay = 30 * time.Second
+	}
+
 	e := &Environment{
 		t:                     t,
 		graphQLPath:           graphQLPath,
@@ -476,6 +481,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		SubgraphRequestCount:  counters,
 		KafkaAdminClient:      kafkaAdminClient,
 		KafkaClient:           kafkaClient,
+		shutdownDelay:         cfg.ShutdownDelay,
 		shutdown:              atomic.NewBool(false),
 		Servers: []*httptest.Server{
 			employeesServer,
@@ -780,6 +786,7 @@ type Environment struct {
 	SubgraphRequestCount  *SubgraphRequestCount
 	KafkaAdminClient      *kadm.Client
 	KafkaClient           *kgo.Client
+	shutdownDelay         time.Duration
 
 	extraURLQueryValues url.Values
 }
@@ -797,12 +804,12 @@ func (e *Environment) Shutdown() {
 
 	e.shutdown.Store(true)
 
-	ctx, cancel := context.WithTimeout(e.Context, 30*time.Second)
+	ctx, cancel := context.WithTimeout(e.Context, e.shutdownDelay)
 	defer cancel()
 
 	// Gracefully shutdown router
 	err := e.Router.Shutdown(ctx)
-	if err != nil {
+	if err != nil && !errors.Is(err, context.DeadlineExceeded) {
 		e.t.Errorf("could not shutdown router: %s", err)
 	}
 
@@ -812,12 +819,10 @@ func (e *Environment) Shutdown() {
 	// Close all test servers
 	for _, s := range e.Servers {
 		s.CloseClientConnections()
-		s.Close()
 	}
 
 	// Close the CDN
 	e.CDN.CloseClientConnections()
-	e.CDN.Close()
 
 	// Close NATS
 	e.NatsConnectionDefault.Close()

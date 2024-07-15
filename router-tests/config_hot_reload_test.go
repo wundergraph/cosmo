@@ -176,6 +176,7 @@ func TestConfigHotReload(t *testing.T) {
 				go func() {
 					defer wg.Done()
 
+					// Create a new context for each request to ensure that the request is not cancelled by the shutdown
 					res, err := xEnv.MakeGraphQLRequestWithContext(context.Background(), testenv.GraphQLRequest{
 						Query: `{ employees { id } }`,
 					})
@@ -197,9 +198,68 @@ func TestConfigHotReload(t *testing.T) {
 		})
 	})
 
+	t.Run("Router grace period defines how long the shutdown can take until all client connections are closed immediately", func(t *testing.T) {
+
+		t.Parallel()
+
+		pm := ConfigPollerMock{
+			ready: make(chan struct{}),
+		}
+
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				// This is a very high delay to make sure that the shutdown is enforced by the grace period
+				GlobalDelay: time.Hour * 1,
+			},
+			RouterOptions: []core.Option{
+				// This results in a context.DeadlineExceeded error after the grace period
+				core.WithGracePeriod(time.Millisecond * 100),
+			},
+			RouterConfig: &testenv.RouterConfig{
+				ConfigPollerFactory: func(config *nodev1.RouterConfig) configpoller.ConfigPoller {
+					pm.initConfig = config
+					return &pm
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			wg := &sync.WaitGroup{}
+
+			wg.Add(1)
+
+			go func() {
+				defer wg.Done()
+
+				res, err := xEnv.MakeGraphQLRequestWithContext(context.Background(), testenv.GraphQLRequest{
+					Query: `{ employees { id } }`,
+				})
+				require.NoError(t, err)
+				require.Equal(t, res.Response.StatusCode, 200)
+				require.JSONEq(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at Path 'query'."}],"data":{"employees":null}}`, res.Body)
+			}()
+
+			// Let's wait a bit to make sure all requests are in flight
+			// otherwise the shutdown will be too fast and the wait-group will not be done fully
+			time.Sleep(time.Millisecond * 100)
+
+			xEnv.Shutdown()
+
+			wg.Wait()
+		})
+	})
+
 	t.Run("Swap config closes websockets connections of old graph instance immediately", func(t *testing.T) {
 
 		t.Parallel()
+
+		type currentTimePayload struct {
+			Data struct {
+				CurrentTime struct {
+					UnixTime  float64 `json:"unixTime"`
+					Timestamp string  `json:"timestamp"`
+				} `json:"currentTime"`
+			} `json:"data"`
+		}
 
 		pm := ConfigPollerMock{
 			ready: make(chan struct{}),
@@ -216,15 +276,6 @@ func TestConfigHotReload(t *testing.T) {
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
-			type currentTimePayload struct {
-				Data struct {
-					CurrentTime struct {
-						UnixTime  float64 `json:"unixTime"`
-						Timestamp string  `json:"timestamp"`
-					} `json:"currentTime"`
-				} `json:"data"`
-			}
 
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 			err := conn.WriteJSON(&testenv.WebSocketMessage{
@@ -258,7 +309,50 @@ func TestConfigHotReload(t *testing.T) {
 			require.ErrorAs(t, err, &wsErr)
 
 			require.NoError(t, conn.Close())
+
+			// Connecting again to the new graph instance should work
+
+			conn = xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+			err = conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
+			})
+			require.NoError(t, err)
+
+			// Read a result and store its timestamp, next result should be 1 second later
+			err = conn.ReadJSON(&msg)
+			require.NoError(t, err)
+			require.Equal(t, "1", msg.ID)
+			require.Equal(t, "next", msg.Type)
+			err = json.Unmarshal(msg.Payload, &payload)
+			require.NoError(t, err)
+
+			require.NoError(t, conn.Close())
 		})
+	})
+
+}
+
+func BenchmarkConfigHotReload(b *testing.B) {
+	pm := ConfigPollerMock{
+		ready: make(chan struct{}),
+	}
+
+	testenv.Run(&testing.T{}, &testenv.Config{
+		RouterConfig: &testenv.RouterConfig{
+			ConfigPollerFactory: func(config *nodev1.RouterConfig) configpoller.ConfigPoller {
+				pm.initConfig = config
+				return &pm
+			},
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
+		}
+
 	})
 
 }

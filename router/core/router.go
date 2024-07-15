@@ -463,6 +463,8 @@ func NewRouter(opts ...Option) (*Router, error) {
 // newGraphServer creates a new server.
 func (r *Router) newServer(ctx context.Context, cfg *nodev1.RouterConfig) error {
 
+	start := time.Now()
+
 	server, err := newGraphServer(ctx, r, cfg)
 	if err != nil {
 		r.logger.Error("Failed to create a new graph instance. Keeping old graph running", zap.Error(err))
@@ -470,6 +472,8 @@ func (r *Router) newServer(ctx context.Context, cfg *nodev1.RouterConfig) error 
 	}
 
 	r.httpServer.SwapGraphServer(ctx, server)
+
+	r.logger.Debug("New graph server swapped", zap.String("duration", time.Since(start).String()))
 
 	return nil
 }
