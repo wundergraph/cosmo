@@ -23,20 +23,20 @@ type planWithMetaData struct {
 
 type OperationPlanner struct {
 	sf        singleflight.Group
-	planCache ExecutionPlanCache
+	planCache ExecutionPlanCache[uint64, *planWithMetaData]
 	executor  *Executor
 }
 
-type ExecutionPlanCache interface {
+type ExecutionPlanCache[K any, V any] interface {
 	// Get the value from the cache
-	Get(key interface{}) (interface{}, bool)
+	Get(key K) (V, bool)
 	// Set the value in the cache with a cost. The cost depends on the cache implementation
-	Set(key, value interface{}, cost int64) bool
+	Set(key K, value V, cost int64) bool
 	// Close the cache and free resources
 	Close()
 }
 
-func NewNoopExecutionPlanCache() ExecutionPlanCache {
+func NewNoopExecutionPlanCache() ExecutionPlanCache[uint64, *planWithMetaData] {
 	return &noopExecutionPlanCache{}
 }
 
@@ -44,15 +44,15 @@ type noopExecutionPlanCache struct{}
 
 func (n *noopExecutionPlanCache) Close() {}
 
-func (n *noopExecutionPlanCache) Get(key interface{}) (interface{}, bool) {
+func (n *noopExecutionPlanCache) Get(key uint64) (*planWithMetaData, bool) {
 	return nil, false
 }
 
-func (n *noopExecutionPlanCache) Set(key, value interface{}, cost int64) bool {
+func (n *noopExecutionPlanCache) Set(key uint64, value *planWithMetaData, cost int64) bool {
 	return true
 }
 
-func NewOperationPlanner(executor *Executor, planCache ExecutionPlanCache) *OperationPlanner {
+func NewOperationPlanner(executor *Executor, planCache ExecutionPlanCache[uint64, *planWithMetaData]) *OperationPlanner {
 	return &OperationPlanner{
 		planCache: planCache,
 		executor:  executor,
@@ -131,7 +131,7 @@ func (p *OperationPlanner) Plan(operation *ParsedOperation, clientInfo *ClientIn
 	cachedPlan, ok := p.planCache.Get(operationID)
 	if ok && cachedPlan != nil {
 		// re-use a prepared plan
-		opContext.preparedPlan = cachedPlan.(*planWithMetaData)
+		opContext.preparedPlan = cachedPlan
 		opContext.planCacheHit = true
 	} else {
 		// prepare a new plan using single flight

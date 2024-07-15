@@ -125,4 +125,7 @@ require (
 	nhooyr.io/websocket v1.8.7 // indirect
 )
 
+// To fix race with ristretto.Close() https://github.com/dgraph-io/ristretto/pull/384
+replace github.com/dgraph-io/ristretto v0.1.1 => github.com/wundergraph/ristretto v0.0.0-20240715072905-d30a6481d4bf
+
 //replace github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2

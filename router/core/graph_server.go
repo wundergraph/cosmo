@@ -84,6 +84,7 @@ type (
 		// inFlightRequests is used to track the number of requests currently being processed
 		// does not include websocket (hijacked) connections
 		inFlightRequests *atomic.Uint64
+		graphMuxes       []*graphMux
 	}
 )
 
@@ -100,6 +101,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		playgroundHandler:       r.playgroundHandler,
 		baseRouterConfigVersion: routerConfig.GetVersion(),
 		inFlightRequests:        &atomic.Uint64{},
+		graphMuxes:              make([]*graphMux, 0, 1),
 		pubSubProviders: &EnginePubSubProviders{
 			nats:  map[string]pubsub_datasource.NatsPubSub{},
 			kafka: map[string]pubsub_datasource.KafkaPubSub{},
@@ -183,7 +185,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	httpRouter.Use(middleware.RealIP)
 	httpRouter.Use(cors.New(*s.corsOptions))
 
-	baseMux, err := s.buildMux(ctx, "", s.baseRouterConfigVersion, routerConfig.GetEngineConfig(), routerConfig.GetSubgraphs())
+	gm, err := s.buildGraphMux(ctx, "", s.baseRouterConfigVersion, routerConfig.GetEngineConfig(), routerConfig.GetSubgraphs())
 	if err != nil {
 		return nil, fmt.Errorf("failed to build base mux: %w", err)
 	}
@@ -193,7 +195,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		s.logger.Info("Feature flags enabled", zap.Strings("flags", maps.Keys(featureFlagConfigMap)))
 	}
 
-	multiGraphHandler, err := s.buildMultiGraphHandler(ctx, baseMux, featureFlagConfigMap)
+	multiGraphHandler, err := s.buildMultiGraphHandler(ctx, gm.mux, featureFlagConfigMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build feature flag handler: %w", err)
 	}
@@ -250,7 +252,7 @@ func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.M
 
 	// Build all the muxes for the feature flags in serial to avoid any race conditions
 	for featureFlagName, executionConfig := range featureFlagConfigs {
-		r, err := s.buildMux(ctx,
+		gm, err := s.buildGraphMux(ctx,
 			featureFlagName,
 			executionConfig.GetVersion(),
 			executionConfig.GetEngineConfig(),
@@ -259,7 +261,7 @@ func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.M
 		if err != nil {
 			return nil, fmt.Errorf("failed to build mux for feature flag '%s': %w", featureFlagName, err)
 		}
-		featureFlagToMux[featureFlagName] = r
+		featureFlagToMux[featureFlagName] = gm.mux
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -287,11 +289,25 @@ func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.M
 	}, nil
 }
 
-func (s *graphServer) buildMux(ctx context.Context,
+type graphMux struct {
+	mux       *chi.Mux
+	planCache ExecutionPlanCache[uint64, *planWithMetaData]
+}
+
+func (s *graphMux) Shutdown(_ context.Context) {
+	s.planCache.Close()
+}
+
+// buildGraphMux creates a new graph mux with the given feature flags and engine configuration.
+// It also creates a new execution plan cache for the mux. The mux is not mounted on the server.
+// The mux is appended internally to the graph server's list of muxes to clean up later when the server is swapped.
+func (s *graphServer) buildGraphMux(ctx context.Context,
 	featureFlagName string,
 	routerConfigVersion string,
 	engineConfig *nodev1.EngineConfiguration,
-	configSubgraphs []*nodev1.Subgraph) (*chi.Mux, error) {
+	configSubgraphs []*nodev1.Subgraph) (*graphMux, error) {
+
+	gm := &graphMux{}
 
 	httpRouter := chi.NewRouter()
 
@@ -323,30 +339,21 @@ func (s *graphServer) buildMux(ctx context.Context,
 	// the engine is smart enough to first do normalization and then hash the input
 	// this means that we can cache the normalized input and don't have to worry about
 	// different inputs that would generate the same execution plan
-	var planCache ExecutionPlanCache
 
 	if s.engineExecutionConfiguration.ExecutionPlanCacheSize > 0 {
-		planCacheConfig := &ristretto.Config{
+		planCacheConfig := &ristretto.Config[uint64, *planWithMetaData]{
 			MaxCost:     s.engineExecutionConfiguration.ExecutionPlanCacheSize,
 			NumCounters: s.engineExecutionConfiguration.ExecutionPlanCacheSize * 10,
 			BufferItems: 64,
 		}
 
-		planCache, err = ristretto.NewCache(planCacheConfig)
+		gm.planCache, err = ristretto.NewCache[uint64, *planWithMetaData](planCacheConfig)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create planner cache: %w", err)
 		}
 	} else {
-		planCache = NewNoopExecutionPlanCache()
+		gm.planCache = NewNoopExecutionPlanCache()
 	}
-
-	// Close the plan cache when the context is done.
-	// This is happening after the server is shutdown.
-	// This will stop all goroutines and free up resources
-	go func() {
-		<-ctx.Done()
-		planCache.Close()
-	}()
 
 	routerMetrics := NewRouterMetrics(&routerMetricsConfig{
 		metrics:             s.metricStore,
@@ -522,7 +529,7 @@ func (s *graphServer) buildMux(ctx context.Context,
 		PersistentOpClient:             s.cdnOperationClient,
 		EnablePersistedOperationsCache: s.engineExecutionConfiguration.EnablePersistedOperationsCache,
 	})
-	operationPlanner := NewOperationPlanner(executor, planCache)
+	operationPlanner := NewOperationPlanner(executor, gm.planCache)
 
 	authorizerOptions := &CosmoAuthorizerOptions{
 		FieldConfigurations:           engineConfig.FieldConfigurations,
@@ -628,7 +635,11 @@ func (s *graphServer) buildMux(ctx context.Context,
 
 	httpRouter.Post("/", graphqlHandler.ServeHTTP)
 
-	return httpRouter, nil
+	gm.mux = httpRouter
+
+	s.graphMuxes = append(s.graphMuxes, gm)
+
+	return gm, nil
 }
 
 func (s *graphServer) buildPubSubConfiguration(ctx context.Context, engineConfig *nodev1.EngineConfiguration, routerEngineCfg *RouterEngineConfiguration) error {
@@ -729,29 +740,36 @@ func (s *graphServer) wait(ctx context.Context) error {
 // After all requests are done, it will shut down the metric store and runtime metrics.
 // Shutdown does cancel the context after all non-hijacked requests such as WebSockets has been handled.
 func (s *graphServer) Shutdown(ctx context.Context) error {
-	// Cancel the context after the shutdown is done
+
+	// Cancel the context after the graceful shutdown is done
 	// to clean up resources like websocket connections, pools, etc.
 	defer s.cancelFunc()
 
-	s.logger.Info("Gracefully shutdown of graph server initiated",
-		zap.String("grace_period", s.gracePeriod.String()),
+	s.logger.Debug("Shutdown of graph server initiated. Waiting for in-flight requests to finish.",
 		zap.String("config_version", s.baseRouterConfigVersion),
 	)
 
-	// Wait for all in-flight requests to finish
+	var finalErr error
+
+	// Wait for all in-flight requests to finish.
+	// In the worst case, we wait until the context is done or all requests has timed out.
 	if err := s.wait(ctx); err != nil {
-		return err
+		s.logger.Error("Failed to wait for in-flight requests to finish", zap.Error(err))
+		finalErr = errors.Join(finalErr, err)
 	}
 
+	s.logger.Debug("Shutdown of graph server resources",
+		zap.String("grace_period", s.routerGracePeriod.String()),
+		zap.String("config_version", s.baseRouterConfigVersion),
+	)
+
 	// Ensure that we don't wait indefinitely for shutdown
-	if s.gracePeriod > 0 {
-		newCtx, cancel := context.WithTimeout(ctx, s.gracePeriod)
+	if s.routerGracePeriod > 0 {
+		newCtx, cancel := context.WithTimeout(ctx, s.routerGracePeriod)
 		defer cancel()
 
 		ctx = newCtx
 	}
-
-	var finalErr error
 
 	if s.metricStore != nil {
 		if err := s.metricStore.Shutdown(ctx); err != nil {
@@ -787,6 +805,11 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 				}
 			}
 		}
+	}
+
+	// Shutdown all graphs instances
+	for _, mux := range s.graphMuxes {
+		mux.Shutdown(ctx)
 	}
 
 	return finalErr

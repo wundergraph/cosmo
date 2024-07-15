@@ -93,6 +93,8 @@ github.com/coreos/go-systemd/v22 v22.5.0/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSV
 github.com/cpuguy83/go-md2man/v2 v2.0.2/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=
 github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.0-20210816181553-5444fa50b93d h1:1iy2qD6JEhHKKhUOA9IWs7mjco7lnw2qx8FsRI2wirE=
 github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.0-20210816181553-5444fa50b93d/go.mod h1:tmAIfUFEirG/Y8jhZ9M+h36obRZAk/1fcSpXwAVlfqE=
+github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13 h1:fAjc9m62+UWV/WAFKLNi6ZS0675eEUC9y3AlwSbQu1Y=
+github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13/go.mod h1:SqUrOPUnsFjfmXRMNPybcSiG0BgUW2AuFH8PAnS2iTw=
 github.com/dmarkham/enumer v1.5.9 h1:NM/1ma/AUNieHZg74w67GkHFBNB15muOt3sj486QVZk=
 github.com/dmarkham/enumer v1.5.9/go.mod h1:e4VILe2b1nYK3JKJpRmNdl5xbDQvELc6tQ8b+GsGk6E=
 github.com/docker/cli v23.0.3+incompatible h1:Zcse1DuDqBdgI7OQDV8Go7b83xLgfhW1eza4HfEdxpY=
@@ -282,6 +284,8 @@ github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.48/go.mod h1:YCJyt5TSr4luj4
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.49 h1:MJiSz5RhRH4MvYS6Y597RasRtrcMYQ4TpM/hvRtRJLo=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.49/go.mod h1:YCJyt5TSr4luj4YWFGk93ayC/0KwHVEJmhgcNhcfLBc=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.56/go.mod h1:YCJyt5TSr4luj4YWFGk93ayC/0KwHVEJmhgcNhcfLBc=
+github.com/wundergraph/ristretto v0.0.0-20240715072905-d30a6481d4bf h1:MdIFR6bTqsFtVykye/JQ42aeQgLFkY3AwAVAKA4S8uA=
+github.com/wundergraph/ristretto v0.0.0-20240715072905-d30a6481d4bf/go.mod h1:6LJywzE5Bt1eAjzHpcrnjv+cekP1M/GQY0jnyxxx2hA=
 github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=
 github.com/x448/float16 v0.8.4/go.mod h1:14CWIYCyZA/cWjXOioeEpHeN/83MdbZDRQHoFcYsOfg=
 github.com/xdg-go/pbkdf2 v1.0.0 h1:Su7DPu48wXMwC3bs7MCNG+z4FhcyEuz5dlvchbq0B0c=

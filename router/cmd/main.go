@@ -80,7 +80,7 @@ func Main() {
 
 	go func() {
 		if err := router.Start(routerCtx); err != nil {
-			logger.Error("Could not start server", zap.Error(err))
+			logger.Error("Could not start router", zap.Error(err))
 			// Stop the server if it fails to start
 			stop()
 		}
@@ -96,13 +96,13 @@ func Main() {
 	defer cancel()
 
 	if err := router.Shutdown(shutdownCtx); err != nil {
-		logger.Error("Could not shutdown server", zap.Error(err))
+		logger.Error("Could not shutdown router", zap.Error(err))
 	} else {
 		logger.Info("Router shutdown successfully")
 	}
 
 	profiler.Finish()
 
-	logger.Debug("Server exiting")
+	logger.Debug("Router exiting")
 	os.Exit(0)
 }

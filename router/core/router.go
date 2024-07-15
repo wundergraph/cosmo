@@ -119,7 +119,7 @@ type (
 		promMeterProvider        *sdkmetric.MeterProvider
 		gqlMetricsExporter       graphqlmetrics.SchemaUsageExporter
 		corsOptions              *cors.Config
-		gracePeriod              time.Duration
+		routerGracePeriod        time.Duration
 		staticRouterConfig       *nodev1.RouterConfig
 		awsLambda                bool
 		shutdown                 atomic.Bool
@@ -465,7 +465,7 @@ func (r *Router) newServer(ctx context.Context, cfg *nodev1.RouterConfig) error 
 
 	server, err := newGraphServer(ctx, r, cfg)
 	if err != nil {
-		r.logger.Error("Failed to create a new server instance. Keeping old server running", zap.Error(err))
+		r.logger.Error("Failed to create a new graph instance. Keeping old graph running", zap.Error(err))
 		return err
 	}
 
@@ -855,11 +855,11 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 		return nil
 	}
 
-	r.shutdown.Swap(true)
+	r.shutdown.Store(true)
 
 	// Respect grace period
-	if r.gracePeriod > 0 {
-		ctxWithTimer, cancel := context.WithTimeout(ctx, r.gracePeriod)
+	if r.routerGracePeriod > 0 {
+		ctxWithTimer, cancel := context.WithTimeout(ctx, r.routerGracePeriod)
 		defer cancel()
 
 		ctx = ctxWithTimer
@@ -876,7 +876,7 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 			if errors.Is(err, context.DeadlineExceeded) {
 				r.logger.Warn(
 					"Shutdown deadline exceeded. Router took too long to shutdown. Consider increasing the grace period",
-					zap.Duration("grace_period", r.gracePeriod),
+					zap.Duration("grace_period", r.routerGracePeriod),
 				)
 			}
 			err = errors.Join(err, fmt.Errorf("failed to shutdown router: %w", subErr))
@@ -1054,7 +1054,7 @@ func WithSelfRegistration(sr selfregister.SelfRegister) Option {
 
 func WithGracePeriod(timeout time.Duration) Option {
 	return func(r *Router) {
-		r.gracePeriod = timeout
+		r.routerGracePeriod = timeout
 	}
 }
 

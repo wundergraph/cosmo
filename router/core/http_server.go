@@ -12,7 +12,7 @@ import (
 )
 
 type httpServer struct {
-	sync.Mutex
+	mu          sync.RWMutex
 	httpServer  *http.Server
 	tlsConfig   *TlsConfig
 	logger      *zap.Logger
@@ -34,24 +34,34 @@ type httpServerOptions struct {
 func newHttpServer(opts *httpServerOptions) *httpServer {
 	server := &http.Server{
 		Addr: opts.addr,
-		// https://ieftimov.com/posts/make-resilient-golang-net-http-servers-using-timeouts-deadlines-context-cancellation/
-		ReadTimeout:       30 * time.Second,
-		WriteTimeout:      60 * time.Second,
-		ReadHeaderTimeout: 20 * time.Second,
-		ErrorLog:          zap.NewStdLog(opts.logger),
-		TLSConfig:         opts.tlsServerConfig,
+		// Covers the time from when the connection is accepted to when the request body is
+		// fully read (if you do read the body, otherwise to the end of the headers).
+		// It's implemented in net/http by calling SetReadDeadline immediately after Accept.
+		ReadTimeout: 1 * time.Minute,
+		// WriteTimeout normally covers the time from the end of the request header read to the end
+		// of the response write (a.k.a. the lifetime of the ServeHTTP), by calling
+		// SetWriteDeadline at the end of readRequest.
+		WriteTimeout: 2 * time.Minute,
+		ErrorLog:     zap.NewStdLog(opts.logger),
+		TLSConfig:    opts.tlsServerConfig,
 	}
 
 	n := &httpServer{
 		httpServer:  server,
 		tlsConfig:   opts.tlsConfig,
 		logger:      opts.logger,
-		Mutex:       sync.Mutex{},
+		mu:          sync.RWMutex{},
 		healthcheck: opts.healthcheck,
 		baseURL:     opts.baseURL,
 	}
 
 	server.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Multiple requests can read the handler at the same time, but only one goroutine can write it.
+		// When swapping the graph server there might be in-flight requests that are still being processed
+		// but this is tolerable because we are waiting for them to finish before shutting down the old server.
+		n.mu.RLock()
+		defer n.mu.RUnlock()
+
 		n.handler.ServeHTTP(w, r)
 	})
 
@@ -70,32 +80,29 @@ func (s *httpServer) BaseURL() string {
 	return s.baseURL
 }
 
-func (s *httpServer) shutdownGraphServer(ctx context.Context) error {
-
-	if s.handler == nil {
-		return nil
-	}
-
-	return s.graphServer.Shutdown(ctx)
-}
-
 // SwapGraphServer swaps the current graph server with a new one. It will shut down the old server gracefully.
 // Because we swap the handler immediately, we can guarantee that no new requests will be served by the old graph server.
 // However, it is possible that there are still requests in flight that are being processed by the old graph server.
 // We wait until all requests are processed or timeout before shutting down the old graph server forcefully.
-// Websocket connections are closed after shutdown through context cancellation.
+// Websocket connections are closed after shutdown through context cancellation. NOT SAFE FOR CONCURRENT USE.
 func (s *httpServer) SwapGraphServer(ctx context.Context, svr *graphServer) {
 	s.graphServer = svr
 
-	if s.handler != nil {
-		if err := s.shutdownGraphServer(ctx); err != nil {
+	needShutdown := s.handler != nil
+
+	// Swap the handler immediately, so we can shut down the old server in the same goroutine
+	// and no other config changes can happen in the meantime.
+	s.mu.Lock()
+	s.handler = svr.mux
+	s.mu.Unlock()
+
+	// If the graph server is nil, we don't need to shutdown anything
+	// This is the case when the first graph server is started.
+	if needShutdown {
+		if err := s.graphServer.Shutdown(ctx); err != nil {
 			s.logger.Error("Failed to shutdown old graph", zap.Error(err))
 		}
 	}
-
-	s.Lock()
-	s.handler = svr.mux
-	s.Unlock()
 }
 
 // listenAndServe starts the server and blocks until the server is shutdown.
@@ -117,7 +124,7 @@ func (s *httpServer) Shutdown(ctx context.Context) error {
 	var err error
 
 	if s.graphServer != nil {
-		err = errors.Join(s.shutdownGraphServer(ctx))
+		err = errors.Join(s.graphServer.Shutdown(ctx))
 	}
 	if s.httpServer != nil {
 		err = errors.Join(s.httpServer.Shutdown(ctx))

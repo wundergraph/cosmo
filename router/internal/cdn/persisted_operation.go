@@ -59,7 +59,7 @@ func (e *persistentOperationNotFoundError) Error() string {
 type cdnPersistedOperationsCache struct {
 	// cache is the backing store for the in-memory cache. Note
 	// that if the cache is disabled, this will be nil
-	cache *ristretto.Cache
+	cache *ristretto.Cache[string, []byte]
 }
 
 func (c *cdnPersistedOperationsCache) key(clientName string, operationHash []byte) string {
@@ -70,8 +70,7 @@ func (c *cdnPersistedOperationsCache) Get(clientName string, operationHash strin
 	// Since we're returning nil when the item is not found, we don't need to
 	// check the return value from the cache nor the type assertion
 	item, _ := c.cache.Get(c.key(clientName, unsafebytes.StringToBytes(operationHash)))
-	data, _ := item.([]byte)
-	return data
+	return item
 }
 
 func (c *cdnPersistedOperationsCache) Set(clientName, operationHash string, operationBody []byte) {
@@ -199,9 +198,9 @@ func NewPersistentOperationClient(endpoint string, token string, opts Persistent
 		return nil, err
 	}
 	cacheSize := int64(opts.CacheSize)
-	var cache *ristretto.Cache
+	var cache *ristretto.Cache[string, []byte]
 	if cacheSize > 0 {
-		cache, err = ristretto.NewCache(&ristretto.Config{
+		cache, err = ristretto.NewCache(&ristretto.Config[string, []byte]{
 			// assume an average of persistentAverageCacheEntrySize per operation, then
 			// multiply by 10 to obtain the recommended number of counters
 			NumCounters: (cacheSize * 10) / persistentAverageCacheEntrySize,
