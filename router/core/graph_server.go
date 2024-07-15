@@ -63,10 +63,10 @@ type (
 		kafka map[string]pubsub_datasource.KafkaPubSub
 	}
 
-	// graphServer is the swappable implementation of a Graph instance which is an HTTP server with middlewares.
-	// Everytime a schema is updated, the old server is shutdown and a new server is created.
+	// graphServer is the swappable implementation of a Graph instance which is an HTTP mux with middlewares.
+	// Everytime a schema is updated, the old graph server is shutdown and a new graph server is created.
 	// For feature flags, a graphql server has multiple mux and is dynamically switched based on the feature flag header or cookie.
-	// All fields are shared between all feature muxes.
+	// All fields are shared between all feature muxes. On shutdown, all graph instances are shutdown.
 	graphServer struct {
 		*Config
 		context                 context.Context
@@ -807,7 +807,8 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 		}
 	}
 
-	// Shutdown all graphs instances
+	// Shutdown all graphs muxes to release resources
+	// e.g. planner cache
 	for _, mux := range s.graphMuxes {
 		mux.Shutdown(ctx)
 	}
