@@ -119,6 +119,7 @@ type (
 		promMeterProvider        *sdkmetric.MeterProvider
 		gqlMetricsExporter       graphqlmetrics.SchemaUsageExporter
 		corsOptions              *cors.Config
+		setConfigVersionHeader   bool
 		routerGracePeriod        time.Duration
 		staticRouterConfig       *nodev1.RouterConfig
 		awsLambda                bool
@@ -1292,6 +1293,12 @@ func WithInstanceID(id string) Option {
 	}
 }
 
+func WithConfigVersionHeader(include bool) Option {
+	return func(r *Router) {
+		r.setConfigVersionHeader = include
+	}
+}
+
 func WithAnonymization(ipConfig *IPAnonymizationConfig) Option {
 	return func(r *Router) {
 		r.ipAnonymization = ipConfig
@@ -1304,7 +1311,7 @@ func WithWebSocketConfiguration(cfg *config.WebSocketConfiguration) Option {
 	}
 }
 
-func WithWithSubgraphErrorPropagation(cfg config.SubgraphErrorPropagationConfiguration) Option {
+func WithSubgraphErrorPropagation(cfg config.SubgraphErrorPropagationConfiguration) Option {
 	return func(r *Router) {
 		r.Config.subgraphErrorPropagation = cfg
 	}

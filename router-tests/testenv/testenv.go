@@ -594,7 +594,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithSecurityConfig(cfg.SecurityConfiguration),
 		core.WithCDN(cfg.CDN),
 		core.WithListenerAddr(listenerAddr),
-		core.WithWithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation),
+		core.WithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation),
 		core.WithTLSConfig(testConfig.TLSConfig),
 		core.WithInstanceID("test-instance"),
 		core.WithGracePeriod(15 * time.Second),

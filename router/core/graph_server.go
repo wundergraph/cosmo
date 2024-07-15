@@ -440,6 +440,12 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	httpRouter.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			r = r.WithContext(withSubgraphs(r.Context(), subgraphs))
+
+			// For debugging purposes, we can validate from what version of the config the request is coming from
+			if s.setConfigVersionHeader {
+				w.Header().Set("X-Router-Config-Version", routerConfigVersion)
+			}
+
 			h.ServeHTTP(w, r)
 		})
 	})

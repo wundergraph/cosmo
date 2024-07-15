@@ -51,6 +51,9 @@ func TestConfigHotReload(t *testing.T) {
 		}
 
 		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithConfigVersionHeader(true),
+			},
 			RouterConfig: &testenv.RouterConfig{
 				ConfigPollerFactory: func(config *nodev1.RouterConfig) configpoller.ConfigPoller {
 					pm.initConfig = config
@@ -61,16 +64,21 @@ func TestConfigHotReload(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id } }`,
 			})
+			require.Equal(t, res.Response.StatusCode, 200)
+			require.Equal(t, res.Response.Header.Get("X-Router-Config-Version"), "959e2804f7b01fdd813cad98e16f06e287150a2e")
 			require.JSONEq(t, employeesIDData, res.Body)
 
 			// Wait for the config poller to be ready
 			<-pm.ready
 
+			pm.initConfig.Version = "updated"
 			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
 
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id } }`,
 			})
+			require.Equal(t, res.Response.StatusCode, 200)
+			require.Equal(t, res.Response.Header.Get("X-Router-Config-Version"), "updated")
 			require.JSONEq(t, employeesIDData, res.Body)
 
 		})
@@ -89,6 +97,7 @@ func TestConfigHotReload(t *testing.T) {
 				GlobalDelay: time.Millisecond * 500,
 			},
 			RouterOptions: []core.Option{
+				core.WithConfigVersionHeader(true),
 				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
 					EnableSingleFlight:     false,
 					MaxConcurrentResolvers: 32,
@@ -113,6 +122,7 @@ func TestConfigHotReload(t *testing.T) {
 					Query: `{ employees { id } }`,
 				})
 				require.Equal(t, res.Response.StatusCode, 200)
+				require.Equal(t, res.Response.Header.Get("X-Router-Config-Version"), "959e2804f7b01fdd813cad98e16f06e287150a2e")
 				require.JSONEq(t, employeesIDData, res.Body)
 			}()
 
@@ -125,6 +135,7 @@ func TestConfigHotReload(t *testing.T) {
 					Query: `{ employees { id } }`,
 				})
 				require.Equal(t, res.Response.StatusCode, 200)
+				require.Equal(t, res.Response.Header.Get("X-Router-Config-Version"), "959e2804f7b01fdd813cad98e16f06e287150a2e")
 				require.JSONEq(t, employeesIDData, res.Body)
 			}()
 
@@ -135,12 +146,14 @@ func TestConfigHotReload(t *testing.T) {
 			<-pm.ready
 
 			// Swap config
+			pm.initConfig.Version = "updated"
 			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
 
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id } }`,
 			})
 			require.Equal(t, res.Response.StatusCode, 200)
+			require.Equal(t, res.Response.Header.Get("X-Router-Config-Version"), "updated")
 			require.JSONEq(t, employeesIDData, res.Body)
 
 			// Ensure that all requests are served successfully
