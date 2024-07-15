@@ -76,10 +76,6 @@ func (s *server) HttpServer() *http.Server {
 	return s.httpServer
 }
 
-func (s *server) BaseURL() string {
-	return s.baseURL
-}
-
 // SwapGraphServer swaps the current graph server with a new one. It will shut down the old server gracefully.
 // Because we swap the handler immediately, we can guarantee that no new requests will be served by the old graph server.
 // However, it is possible that there are still requests in flight that are being processed by the old graph server.

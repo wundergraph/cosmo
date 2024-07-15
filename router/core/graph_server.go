@@ -55,7 +55,6 @@ type (
 	Server interface {
 		HttpServer() *http.Server
 		HealthChecks() health.Checker
-		BaseURL() string
 	}
 
 	EnginePubSubProviders struct {

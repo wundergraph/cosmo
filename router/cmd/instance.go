@@ -5,10 +5,10 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 
 	"github.com/wundergraph/cosmo/router/internal/cdn"
-	"github.com/wundergraph/cosmo/router/internal/controlplane/configpoller"
-	"github.com/wundergraph/cosmo/router/internal/controlplane/selfregister"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
+	"github.com/wundergraph/cosmo/router/pkg/controlplane/selfregister"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"go.uber.org/automaxprocs/maxprocs"
 
