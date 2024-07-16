@@ -690,7 +690,7 @@ export class FederatedGraphRepository {
     clientSchema,
     compositionErrors,
     subgraphSchemaVersionIds,
-    composedBy,
+    composedById,
     schemaVersionId,
     isFeatureFlagComposition,
     featureFlagId,
@@ -701,7 +701,7 @@ export class FederatedGraphRepository {
     clientSchema?: string;
     compositionErrors?: Error[];
     subgraphSchemaVersionIds: string[];
-    composedBy: string;
+    composedById: string;
     isFeatureFlagComposition: boolean;
     featureFlagId: string;
   }) {
@@ -755,7 +755,7 @@ export class FederatedGraphRepository {
         fedGraphSchemaVersionId: insertedVersion[0].insertedId,
         subgraphSchemaVersionIds,
         compositionErrorString,
-        composedBy,
+        composedById,
         isFeatureFlagComposition,
       });
 
@@ -1117,7 +1117,7 @@ export class FederatedGraphRepository {
       throw new Error('Failed to create token');
     }
 
-    const userRepo = new UserRepository(this.db);
+    const userRepo = new UserRepository(this.logger, this.db);
     const user = await userRepo.byId(input.createdBy);
 
     if (!user) {
@@ -1525,7 +1525,7 @@ export class FederatedGraphRepository {
 
           const baseComposition = await composer.saveComposition({
             composedGraph,
-            composedBy: actorId,
+            composedById: actorId,
             isFeatureFlagComposition: subgraphsToCompose.isFeatureFlagComposition,
             federatedSchemaVersionId,
             routerExecutionConfig,
@@ -1585,7 +1585,7 @@ export class FederatedGraphRepository {
 
             const contractComposition = await composer.saveComposition({
               composedGraph: composedContract,
-              composedBy: actorId,
+              composedById: actorId,
               isFeatureFlagComposition: subgraphsToCompose.isFeatureFlagComposition,
               federatedSchemaVersionId: contractSchemaVersionId,
               routerExecutionConfig: contractRouterExecutionConfig,
@@ -1659,6 +1659,7 @@ export class FederatedGraphRepository {
           baseCompositionRouterExecutionConfig: baseCompositionData.routerExecutionConfig,
           baseCompositionSchemaVersionId: baseCompositionData.schemaVersionId,
           federatedGraphAdmissionWebhookURL: federatedGraphDTO.admissionWebhookURL,
+          federatedGraphAdmissionWebhookSecret: federatedGraphDTO.admissionWebhookSecret,
         });
 
         allDeploymentErrors.push(
@@ -1692,6 +1693,7 @@ export class FederatedGraphRepository {
             federatedGraphId: contractDTO.id,
             organizationId: this.organizationId,
             federatedGraphAdmissionWebhookURL: contractDTO.admissionWebhookURL,
+            federatedGraphAdmissionWebhookSecret: contractDTO.admissionWebhookSecret,
           });
 
           allDeploymentErrors.push(

@@ -9089,9 +9089,9 @@ export class Organization extends Message<Organization> {
   slug = "";
 
   /**
-   * @generated from field: string creatorUserId = 4;
+   * @generated from field: optional string creatorUserId = 4;
    */
-  creatorUserId = "";
+  creatorUserId?: string;
 
   /**
    * @generated from field: string createdAt = 5;
@@ -9109,7 +9109,7 @@ export class Organization extends Message<Organization> {
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "creatorUserId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "creatorUserId", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "createdAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
@@ -11540,9 +11540,9 @@ export class OrganizationInvite extends Message<OrganizationInvite> {
   slug = "";
 
   /**
-   * @generated from field: string creatorUserId = 4;
+   * @generated from field: optional string creatorUserId = 4;
    */
-  creatorUserId = "";
+  creatorUserId?: string;
 
   /**
    * @generated from field: string createdAt = 5;
@@ -11565,7 +11565,7 @@ export class OrganizationInvite extends Message<OrganizationInvite> {
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "creatorUserId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "creatorUserId", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "createdAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "invitedBy", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
@@ -14301,9 +14301,9 @@ export class DiscussionComment extends Message<DiscussionComment> {
   contentJson = "";
 
   /**
-   * @generated from field: string created_by = 3;
+   * @generated from field: optional string created_by = 3;
    */
-  createdBy = "";
+  createdBy?: string;
 
   /**
    * @generated from field: string created_at = 4;
@@ -14330,7 +14330,7 @@ export class DiscussionComment extends Message<DiscussionComment> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "content_json", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "created_by", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "created_by", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "created_at", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "updated_at", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "is_deleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
@@ -15917,6 +15917,74 @@ export class IsMemberLimitReachedResponse extends Message<IsMemberLimitReachedRe
 
   static equals(a: IsMemberLimitReachedResponse | PlainMessage<IsMemberLimitReachedResponse> | undefined, b: IsMemberLimitReachedResponse | PlainMessage<IsMemberLimitReachedResponse> | undefined): boolean {
     return proto3.util.equals(IsMemberLimitReachedResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.DeleteUserRequest
+ */
+export class DeleteUserRequest extends Message<DeleteUserRequest> {
+  constructor(data?: PartialMessage<DeleteUserRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.DeleteUserRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteUserRequest {
+    return new DeleteUserRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteUserRequest {
+    return new DeleteUserRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteUserRequest {
+    return new DeleteUserRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteUserRequest | PlainMessage<DeleteUserRequest> | undefined, b: DeleteUserRequest | PlainMessage<DeleteUserRequest> | undefined): boolean {
+    return proto3.util.equals(DeleteUserRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.DeleteUserResponse
+ */
+export class DeleteUserResponse extends Message<DeleteUserResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<DeleteUserResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.DeleteUserResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteUserResponse {
+    return new DeleteUserResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteUserResponse {
+    return new DeleteUserResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteUserResponse {
+    return new DeleteUserResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteUserResponse | PlainMessage<DeleteUserResponse> | undefined, b: DeleteUserResponse | PlainMessage<DeleteUserResponse> | undefined): boolean {
+    return proto3.util.equals(DeleteUserResponse, a, b);
   }
 }
 
