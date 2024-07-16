@@ -46,6 +46,9 @@ func (c *Poll) Subscribe(ctx context.Context, handler func()) {
 				c.ticker.Stop()
 				return
 			case <-c.ticker.C:
+				// If the current handler is still in progress
+				// the next tick will be skipped. This is how a timer
+				// is implemented in the standard library.
 				handler()
 			}
 		}
