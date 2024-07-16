@@ -23,11 +23,11 @@ importers:
         version: 3.3.2(@codemirror/language@6.0.0)(@types/node@20.12.12)(graphql@16.9.0)(react-dom@18.3.1)(react@18.3.1)
     devDependencies:
       '@bufbuild/buf':
-        specifier: ^1.32.2
-        version: 1.32.2
+        specifier: ^1.34.0
+        version: 1.34.0
       '@bufbuild/protoc-gen-es':
-        specifier: ^1.9.0
-        version: 1.9.0(@bufbuild/protobuf@1.9.0)
+        specifier: ^1.10.0
+        version: 1.10.0(@bufbuild/protobuf@1.9.0)
       '@commitlint/cli':
         specifier: 19.2.1
         version: 19.2.1(@types/node@20.12.12)(typescript@5.5.2)
@@ -39,10 +39,10 @@ importers:
         version: 1.4.1(@bufbuild/protobuf@1.9.0)(@connectrpc/connect@1.4.0)(@tanstack/react-query@5.37.1)(react-dom@18.3.1)(react@18.3.1)
       '@connectrpc/protoc-gen-connect-es':
         specifier: ^1.4.0
-        version: 1.4.0(@bufbuild/protoc-gen-es@1.9.0)(@connectrpc/connect@1.4.0)
+        version: 1.4.0(@bufbuild/protoc-gen-es@1.10.0)(@connectrpc/connect@1.4.0)
       '@connectrpc/protoc-gen-connect-query':
         specifier: ^1.4.1
-        version: 1.4.1(@bufbuild/protoc-gen-es@1.9.0)
+        version: 1.4.1(@bufbuild/protoc-gen-es@1.10.0)
       '@lerna-lite/cli':
         specifier: 3.3.1
         version: 3.3.1(@lerna-lite/publish@3.3.1)(@lerna-lite/version@3.3.1)(typescript@5.5.2)
@@ -2081,6 +2081,16 @@ packages:
     cpu: [arm64]
     os: [darwin]
     requiresBuild: true
+    dev: false
+    optional: true
+
+  /@bufbuild/buf-darwin-arm64@1.34.0:
+    resolution: {integrity: sha512-3+h/jSAr7H+KT8MWWRMbN/gQ87KlGLkTGwm4/mpry1ap9Thw/UdOrk5MfmbK3CRM/rlw4mAn1Egu/Q7R5eO98g==}
+    engines: {node: '>=12'}
+    cpu: [arm64]
+    os: [darwin]
+    requiresBuild: true
+    dev: true
     optional: true
 
   /@bufbuild/buf-darwin-x64@1.32.2:
@@ -2089,6 +2099,16 @@ packages:
     cpu: [x64]
     os: [darwin]
     requiresBuild: true
+    dev: false
+    optional: true
+
+  /@bufbuild/buf-darwin-x64@1.34.0:
+    resolution: {integrity: sha512-Jdm0COuA2CMKoef2H8rBsRnc16mJUmCQ2KvJH5otvFrMhzPmr1MUyicCybY26HXFD/6DcnbWZvf6W8LfDMMyGQ==}
+    engines: {node: '>=12'}
+    cpu: [x64]
+    os: [darwin]
+    requiresBuild: true
+    dev: true
     optional: true
 
   /@bufbuild/buf-linux-aarch64@1.32.2:
@@ -2097,6 +2117,16 @@ packages:
     cpu: [arm64]
     os: [linux]
     requiresBuild: true
+    dev: false
+    optional: true
+
+  /@bufbuild/buf-linux-aarch64@1.34.0:
+    resolution: {integrity: sha512-utSspJlPmVPh4Ugvn9k7MEEMHDZMI13jvwHkBE6wNSkYxxYTRR5zLHtmysaYQo51Fx+3ar6mL4HnhTqLrgO5GA==}
+    engines: {node: '>=12'}
+    cpu: [arm64]
+    os: [linux]
+    requiresBuild: true
+    dev: true
     optional: true
 
   /@bufbuild/buf-linux-x64@1.32.2:
@@ -2105,6 +2135,16 @@ packages:
     cpu: [x64]
     os: [linux]
     requiresBuild: true
+    dev: false
+    optional: true
+
+  /@bufbuild/buf-linux-x64@1.34.0:
+    resolution: {integrity: sha512-INCGsPLBL4aK2jHBMdZzEJUPv7f6f8skIUMMip7YdJl1nsIh27C/Dl7Q6A6/sv9IhYibWKAoxP7SuiOv2iTdEw==}
+    engines: {node: '>=12'}
+    cpu: [x64]
+    os: [linux]
+    requiresBuild: true
+    dev: true
     optional: true
 
   /@bufbuild/buf-win32-arm64@1.32.2:
@@ -2113,6 +2153,16 @@ packages:
     cpu: [arm64]
     os: [win32]
     requiresBuild: true
+    dev: false
+    optional: true
+
+  /@bufbuild/buf-win32-arm64@1.34.0:
+    resolution: {integrity: sha512-g1EogebjJ93bzmyn/fEi47tTz57M+7WYZ7/vX+DFXgLLYIxTWHDK4YN+3Hs+K7Sbx7KaVdsdEqof8xZ4WoVFnQ==}
+    engines: {node: '>=12'}
+    cpu: [arm64]
+    os: [win32]
+    requiresBuild: true
+    dev: true
     optional: true
 
   /@bufbuild/buf-win32-x64@1.32.2:
@@ -2121,6 +2171,16 @@ packages:
     cpu: [x64]
     os: [win32]
     requiresBuild: true
+    dev: false
+    optional: true
+
+  /@bufbuild/buf-win32-x64@1.34.0:
+    resolution: {integrity: sha512-0rPXP7pV7+2twhcpN8hDdgV68UCiazLRcMBjWKubwcSJhAP8jRLqSJv3VGnXmpdYPbYGDQ0htfcgLNUvzllRhQ==}
+    engines: {node: '>=12'}
+    cpu: [x64]
+    os: [win32]
+    requiresBuild: true
+    dev: true
     optional: true
 
   /@bufbuild/buf@1.32.2:
@@ -2135,9 +2195,44 @@ packages:
       '@bufbuild/buf-linux-x64': 1.32.2
       '@bufbuild/buf-win32-arm64': 1.32.2
       '@bufbuild/buf-win32-x64': 1.32.2
+    dev: false
+
+  /@bufbuild/buf@1.34.0:
+    resolution: {integrity: sha512-DR0P746bYiY7ziQTui0bKAvPa7ihCNxONWLtW54HQXvTkGnTc6C1keVaSz4UhNdSsBu/Xsj69GO9SizodfjUtQ==}
+    engines: {node: '>=12'}
+    hasBin: true
+    requiresBuild: true
+    optionalDependencies:
+      '@bufbuild/buf-darwin-arm64': 1.34.0
+      '@bufbuild/buf-darwin-x64': 1.34.0
+      '@bufbuild/buf-linux-aarch64': 1.34.0
+      '@bufbuild/buf-linux-x64': 1.34.0
+      '@bufbuild/buf-win32-arm64': 1.34.0
+      '@bufbuild/buf-win32-x64': 1.34.0
+    dev: true
+
+  /@bufbuild/protobuf@1.10.0:
+    resolution: {integrity: sha512-QDdVFLoN93Zjg36NoQPZfsVH9tZew7wKDKyV5qRdj8ntT4wQCOradQjRaTdwMhWUYsgKsvCINKKm87FdEk96Ag==}
+    dev: true
 
   /@bufbuild/protobuf@1.9.0:
     resolution: {integrity: sha512-W7gp8Q/v1NlCZLsv8pQ3Y0uCu/SHgXOVFK+eUluUKWXmsb6VHkpNx0apdOWWcDbB9sJoKeP8uPrjmehJz6xETQ==}
+
+  /@bufbuild/protoc-gen-es@1.10.0(@bufbuild/protobuf@1.9.0):
+    resolution: {integrity: sha512-zBYBsVT/ul4uZb6F+kD7/k4sWNHVVbEPfJwKi0FDr+9VJo8MKIofI6pkr5ksBLr4fi/74r+e/75Xi/0clL5dXg==}
+    engines: {node: '>=14'}
+    hasBin: true
+    peerDependencies:
+      '@bufbuild/protobuf': 1.10.0
+    peerDependenciesMeta:
+      '@bufbuild/protobuf':
+        optional: true
+    dependencies:
+      '@bufbuild/protobuf': 1.9.0
+      '@bufbuild/protoplugin': 1.10.0
+    transitivePeerDependencies:
+      - supports-color
+    dev: true
 
   /@bufbuild/protoc-gen-es@1.9.0(@bufbuild/protobuf@1.9.0):
     resolution: {integrity: sha512-LJy1nC3Jsfdhs9v48P7qF6YXIqh+usFhXSVzJDTmw0yKjxQ3CKBNISRtaMql/g9hb1MLRU6unHCcFfdz4HSO/Q==}
@@ -2151,6 +2246,16 @@ packages:
     dependencies:
       '@bufbuild/protobuf': 1.9.0
       '@bufbuild/protoplugin': 1.9.0
+    transitivePeerDependencies:
+      - supports-color
+    dev: true
+
+  /@bufbuild/protoplugin@1.10.0:
+    resolution: {integrity: sha512-u6NE4vL0lw1+EK4/PiE/SQB7fKO4LRJNTEScIXVOi2x88K/c8WKc/k0KyEaA0asVBMpwekJQZGnRyj04ZtN5Gg==}
+    dependencies:
+      '@bufbuild/protobuf': 1.10.0
+      '@typescript/vfs': 1.5.0
+      typescript: 4.5.2
     transitivePeerDependencies:
       - supports-color
     dev: true
@@ -3517,6 +3622,27 @@ packages:
     dependencies:
       '@bufbuild/protobuf': 1.9.0
 
+  /@connectrpc/protoc-gen-connect-es@1.4.0(@bufbuild/protoc-gen-es@1.10.0)(@connectrpc/connect@1.4.0):
+    resolution: {integrity: sha512-/7vQ8Q7mEBhV8qEVh/eifRQlQnf8EJ6weMwCD2DljVAQRlZYcW9SLxjYZhV1uM1ZZqQC7Cw2vvgXRg2XQswHBg==}
+    engines: {node: '>=16.0.0'}
+    hasBin: true
+    peerDependencies:
+      '@bufbuild/protoc-gen-es': ^1.7.2
+      '@connectrpc/connect': 1.4.0
+    peerDependenciesMeta:
+      '@bufbuild/protoc-gen-es':
+        optional: true
+      '@connectrpc/connect':
+        optional: true
+    dependencies:
+      '@bufbuild/protobuf': 1.9.0
+      '@bufbuild/protoc-gen-es': 1.10.0(@bufbuild/protobuf@1.9.0)
+      '@bufbuild/protoplugin': 1.9.0
+      '@connectrpc/connect': 1.4.0(@bufbuild/protobuf@1.9.0)
+    transitivePeerDependencies:
+      - supports-color
+    dev: true
+
   /@connectrpc/protoc-gen-connect-es@1.4.0(@bufbuild/protoc-gen-es@1.9.0)(@connectrpc/connect@1.4.0):
     resolution: {integrity: sha512-/7vQ8Q7mEBhV8qEVh/eifRQlQnf8EJ6weMwCD2DljVAQRlZYcW9SLxjYZhV1uM1ZZqQC7Cw2vvgXRg2XQswHBg==}
     engines: {node: '>=16.0.0'}
@@ -3538,7 +3664,7 @@ packages:
       - supports-color
     dev: true
 
-  /@connectrpc/protoc-gen-connect-query@1.4.1(@bufbuild/protoc-gen-es@1.9.0):
+  /@connectrpc/protoc-gen-connect-query@1.4.1(@bufbuild/protoc-gen-es@1.10.0):
     resolution: {integrity: sha512-L/x+f1x+GWgfsGvRs2XZjdX044cchIAiNOSWQFavOrfHadZD8Kb8qFykHHDj7Cw+7CyQ7+SeW5UxtIkBB1WB3Q==}
     engines: {node: '>=16'}
     hasBin: true
@@ -3549,7 +3675,7 @@ packages:
         optional: true
     dependencies:
       '@bufbuild/protobuf': 1.9.0
-      '@bufbuild/protoc-gen-es': 1.9.0(@bufbuild/protobuf@1.9.0)
+      '@bufbuild/protoc-gen-es': 1.10.0(@bufbuild/protobuf@1.9.0)
       '@bufbuild/protoplugin': 1.9.0
     transitivePeerDependencies:
       - supports-color
@@ -7006,7 +7132,7 @@ packages:
       '@types/react-dom':
         optional: true
     dependencies:
-      '@babel/runtime': 7.24.5
+      '@babel/runtime': 7.23.4
       '@radix-ui/react-compose-refs': 1.0.1(react@18.3.1)
       '@radix-ui/react-context': 1.0.1(react@18.3.1)
       '@radix-ui/react-primitive': 1.0.3(react-dom@18.3.1)(react@18.3.1)
@@ -7047,7 +7173,7 @@ packages:
       '@types/react':
         optional: true
     dependencies:
-      '@babel/runtime': 7.24.5
+      '@babel/runtime': 7.23.4
       react: 18.3.1
     dev: false
 
@@ -7108,7 +7234,7 @@ packages:
       '@types/react':
         optional: true
     dependencies:
-      '@babel/runtime': 7.24.5
+      '@babel/runtime': 7.23.4
       react: 18.3.1
     dev: false
 
@@ -7287,7 +7413,7 @@ packages:
       '@types/react':
         optional: true
     dependencies:
-      '@babel/runtime': 7.24.5
+      '@babel/runtime': 7.23.4
       react: 18.3.1
     dev: false
 
@@ -7710,7 +7836,7 @@ packages:
       '@types/react':
         optional: true
     dependencies:
-      '@babel/runtime': 7.24.5
+      '@babel/runtime': 7.23.4
       '@radix-ui/react-use-layout-effect': 1.0.1(react@18.3.1)
       react: 18.3.1
     dev: false
@@ -8102,7 +8228,7 @@ packages:
       '@types/react-dom':
         optional: true
     dependencies:
-      '@babel/runtime': 7.24.5
+      '@babel/runtime': 7.23.4
       '@radix-ui/react-primitive': 1.0.3(react-dom@18.3.1)(react@18.3.1)
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
@@ -8196,7 +8322,7 @@ packages:
       '@types/react-dom':
         optional: true
     dependencies:
-      '@babel/runtime': 7.24.5
+      '@babel/runtime': 7.23.4
       '@radix-ui/react-compose-refs': 1.0.1(react@18.3.1)
       '@radix-ui/react-use-layout-effect': 1.0.1(react@18.3.1)
       react: 18.3.1
@@ -8375,7 +8501,7 @@ packages:
       '@types/react-dom':
         optional: true
     dependencies:
-      '@babel/runtime': 7.24.5
+      '@babel/runtime': 7.23.4
       '@radix-ui/primitive': 1.0.1
       '@radix-ui/react-collection': 1.0.3(react-dom@18.3.1)(react@18.3.1)
       '@radix-ui/react-compose-refs': 1.0.1(react@18.3.1)
@@ -8811,7 +8937,7 @@ packages:
       '@types/react':
         optional: true
     dependencies:
-      '@babel/runtime': 7.24.5
+      '@babel/runtime': 7.23.4
       react: 18.3.1
     dev: false
 
@@ -8874,7 +9000,7 @@ packages:
       '@types/react':
         optional: true
     dependencies:
-      '@babel/runtime': 7.24.5
+      '@babel/runtime': 7.23.4
       '@radix-ui/react-use-callback-ref': 1.0.1(react@18.3.1)
       react: 18.3.1
     dev: false
@@ -9004,7 +9130,7 @@ packages:
       '@types/react':
         optional: true
     dependencies:
-      '@babel/runtime': 7.24.5
+      '@babel/runtime': 7.23.4
       react: 18.3.1
     dev: false
 
@@ -9127,7 +9253,7 @@ packages:
       '@types/react':
         optional: true
     dependencies:
-      '@babel/runtime': 7.24.5
+      '@babel/runtime': 7.23.4
       '@radix-ui/react-use-layout-effect': 1.0.1(react@18.3.1)
       react: 18.3.1
     dev: false
