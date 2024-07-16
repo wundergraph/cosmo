@@ -80,7 +80,9 @@ func (s *server) HttpServer() *http.Server {
 // Because we swap the handler immediately, we can guarantee that no new requests will be served by the old graph server.
 // However, it is possible that there are still requests in flight that are being processed by the old graph server.
 // We wait until all requests are processed or timeout before shutting down the old graph server forcefully.
-// Websocket connections are closed after shutdown through context cancellation. NOT SAFE FOR CONCURRENT USE.
+// Websocket connections are closed after shutdown through context cancellation. In the future, we might want to send
+// a complete message to the client and wait until in-flight messages are delivered before closing the connection.
+// NOT SAFE FOR CONCURRENT USE.
 func (s *server) SwapGraphServer(ctx context.Context, svr *graphServer) {
 
 	needsShutdown := s.handler != nil

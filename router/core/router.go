@@ -468,13 +468,17 @@ func (r *Router) newServer(ctx context.Context, cfg *nodev1.RouterConfig) error 
 
 	server, err := newGraphServer(ctx, r, cfg)
 	if err != nil {
-		r.logger.Error("Failed to create a new graph instance. Keeping old graph running", zap.Error(err))
+		r.logger.Error("Failed to create graph server. Keeping the old server", zap.Error(err))
 		return err
 	}
 
 	r.httpServer.SwapGraphServer(ctx, server)
 
-	r.logger.Debug("New graph server swapped", zap.String("duration", time.Since(start).String()))
+	r.logger.Debug(
+		"New graph server swapped",
+		zap.String("duration", time.Since(start).String()),
+		zap.String("config_version", cfg.GetVersion()),
+	)
 
 	return nil
 }
