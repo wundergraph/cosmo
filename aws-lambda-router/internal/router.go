@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/trace"
 	"go.uber.org/zap"
@@ -31,11 +32,20 @@ func NewRouter(opts ...Option) *core.Router {
 		opt(rc)
 	}
 
+
 	if rc.Logger == nil {
-		rc.Logger = zap.NewNop()
+	
+		rc.Logger = zap.NewExample()
+
+		defer rc.Logger.Sync()
 	}
 
 	logger := rc.Logger
+
+	result, err := config.LoadConfig("config.yaml", "")
+	if err != nil {
+		logger.Info("Could not load config.yaml", zap.Error(err))
+	}
 
 	routerConfig, err := execution_config.SerializeConfigFromFile(rc.RouterConfigPath)
 	if err != nil {
@@ -49,6 +59,16 @@ func NewRouter(opts ...Option) *core.Router {
 		core.WithStaticRouterConfig(routerConfig),
 		core.WithAwsLambdaRuntime(),
 		core.WithGraphApiToken(rc.GraphApiToken),
+	}
+
+	if(result != nil) {
+		cfg := &result.Config;
+
+		routerOpts = append(routerOpts, core.WithHeaderRules(cfg.Headers))
+		routerOpts = append(routerOpts, core.WithWithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation))
+		routerOpts = append(routerOpts, core.WithGraphQLPath(cfg.GraphQLPath))
+		routerOpts = append(routerOpts, core.WithPlaygroundPath(cfg.PlaygroundPath))
+
 	}
 
 	if rc.HttpPort != "" {

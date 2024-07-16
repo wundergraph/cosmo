@@ -10,7 +10,7 @@ build:
 	CGO_ENABLED=0 go build -trimpath -ldflags "-extldflags -static -X github.com/wundergraph/cosmo/aws-lambda-router/internal.Version=$(VERSION)" -a -o bootstrap cmd/main.go
 
 build-sam:
-	rm -rf .aws-sam && sam build --parallel && cp router.json .aws-sam/build/Api/router.json
+	rm -rf .aws-sam && sam build --parallel && cp router.json .aws-sam/build/Api/router.json && cp config.yaml .aws-sam/build/Api/config.yaml
 
 dev: build-sam
 	sam local start-api -p 3003 --shutdown
