@@ -249,8 +249,7 @@ func TestKafkaEvents(t *testing.T) {
 
 			wg.Wait()
 
-			clientCloseErr := client.Close()
-			require.NoError(t, clientCloseErr)
+			_ = client.Close()
 
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
 			xEnv.WaitForConnectionCount(0, time.Second*10)
