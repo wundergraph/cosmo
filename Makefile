@@ -2,12 +2,12 @@ all: dev-setup
 
 setup-build-tools:
 	go install github.com/bufbuild/buf/cmd/buf@v1.32.2
-	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.34.1
+	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.34.2
 	go install connectrpc.com/connect/cmd/protoc-gen-connect-go@v1.16.2
 
 setup-dev-tools: setup-build-tools
 	go install github.com/amacneil/dbmate/v2@v2.6.0
-	go install honnef.co/go/tools/cmd/staticcheck@2023.1.6
+	go install honnef.co/go/tools/cmd/staticcheck@2023.1.7
 	go install github.com/yannh/kubeconform/cmd/kubeconform@v0.6.3
 	go install github.com/norwoodj/helm-docs/cmd/helm-docs@v1.11.3
 
@@ -154,3 +154,11 @@ sync-go-workspace:
 	cd graphqlmetrics && go mod tidy
 	cd router-tests && make bump-deps
 	go work sync
+
+# Validates if any breaking changes has been introduced.
+# Compares the head of the branch with your local changes
+check-buf:
+	buf breaking --against '.git#branch=main'
+
+buf-lint:
+	buf lint

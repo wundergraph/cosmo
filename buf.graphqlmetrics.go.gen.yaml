@@ -1,17 +1,16 @@
-version: v1
+version: v2
 managed:
   enabled: true
-  go_package_prefix:
-    default: github.com/wundergraph/cosmo/graphqlmetrics/gen/proto
-    # Remove `except` field if googleapis is not used
-    except:
-      - buf.build/googleapis/googleapis
+  disable:
+    - file_option: go_package
+      module: buf.build/googleapis/googleapis
+  override:
+    - file_option: go_package_prefix
+      value: github.com/wundergraph/cosmo/graphqlmetrics/gen/proto
 plugins:
-  - plugin: connect-go
+  - local: protoc-gen-connect-go
     out: graphqlmetrics/gen/proto
-    opt:
-      - paths=source_relative
-  - plugin: go
+    opt: paths=source_relative
+  - local: protoc-gen-go
     out: graphqlmetrics/gen/proto
-    opt:
-      - paths=source_relative
+    opt: paths=source_relative
