@@ -296,18 +296,14 @@ func TestWebSockets(t *testing.T) {
 		authenticators := []authentication.Authenticator{authenticator}
 
 		testenv.Run(t, &testenv.Config{
+			ModifyWebsocketConfiguration: func(cfg *config.WebSocketConfiguration) {
+				cfg.Authentication.FromInitialPayload.Enabled = true
+				cfg.Enabled = true
+			},
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, true)),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
 					RejectOperationIfUnauthorized: false,
-				}),
-				core.WithWebSocketConfiguration(&config.WebSocketConfiguration{
-					Enabled: true,
-					Authentication: config.WebSocketAuthenticationConfiguration{
-						FromInitialPayload: config.InitialPayloadAuthenticationConfiguration{
-							Enabled: true,
-						},
-					},
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -360,23 +356,67 @@ func TestWebSockets(t *testing.T) {
 		authenticators := []authentication.Authenticator{authenticator}
 
 		testenv.Run(t, &testenv.Config{
+			ModifyWebsocketConfiguration: func(cfg *config.WebSocketConfiguration) {
+				cfg.Authentication.FromInitialPayload.Enabled = true
+				cfg.Enabled = true
+			},
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, true)),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
 					RejectOperationIfUnauthorized: false,
 				}),
-				core.WithWebSocketConfiguration(&config.WebSocketConfiguration{
-					Enabled: true,
-					Authentication: config.WebSocketAuthenticationConfiguration{
-						FromInitialPayload: config.InitialPayloadAuthenticationConfiguration{
-							Enabled: true,
-						},
-					},
-				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			require.NoError(t, err)
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+			err = conn.WriteJSON(testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id }}"}`),
+			})
+			require.NoError(t, err)
+
+			var res testenv.WebSocketMessage
+			err = conn.ReadJSON(&res)
+			require.NoError(t, err)
+			require.Equal(t, "error", res.Type)
+			payload, err := json.Marshal(res.Payload)
+			require.NoError(t, err)
+			require.JSONEq(t, `[{"message":"unauthorized"}]`, string(payload))
+
+			require.NoError(t, conn.Close())
+		})
+	})
+	t.Run("subscription with authorization via initial payload invalid token rejection", func(t *testing.T) {
+		t.Parallel()
+
+		authServer, err := jwks.NewServer(t)
+		require.NoError(t, err)
+		t.Cleanup(authServer.Close)
+		tokenDecoder, _ := authentication.NewJwksTokenDecoder(authServer.JWKSURL(), time.Second*5)
+		authOptions := authentication.WebsocketInitialPayloadAuthenticatorOptions{
+			TokenDecoder: tokenDecoder,
+			Key:          "Authorization",
+		}
+		authenticator, err := authentication.NewWebsocketInitialPayloadAuthenticator(authOptions)
+		require.NoError(t, err)
+		authenticators := []authentication.Authenticator{authenticator}
+
+		testenv.Run(t, &testenv.Config{
+			ModifyWebsocketConfiguration: func(cfg *config.WebSocketConfiguration) {
+				cfg.Authentication.FromInitialPayload.Enabled = true
+				cfg.Enabled = true
+			},
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
+					RejectOperationIfUnauthorized: false,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			require.NoError(t, err)
+			initialPayload := []byte(`{"Authorization": true }`)
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, initialPayload)
 			err = conn.WriteJSON(testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",

@@ -28,11 +28,19 @@ func (a *websocketInitialPayloadAuthenticator) Authenticate(ctx context.Context,
 	}
 
 	var initialPayloadMap map[string]interface{}
-	json.Unmarshal(initialPayload, &initialPayloadMap)
+	err := json.Unmarshal(initialPayload, &initialPayloadMap)
+	if err != nil {
+		errs = errors.Join(errs, fmt.Errorf("error parsing initial payload: %v", err))
+		return nil, errs
+	}
 	secretKey := strings.ToLower(a.key)
 	for key, tokenString := range initialPayloadMap {
 		if strings.ToLower(key) == secretKey {
-			authorization := tokenString.(string)
+			authorization, ok := tokenString.(string)
+			if !ok {
+				errs = errors.Join(errs, fmt.Errorf("JWT token is not a string"))
+				continue
+			}
 			for _, prefix := range a.headerValuePrefixes {
 				if strings.HasPrefix(authorization, prefix) {
 					authorization := strings.TrimSpace(authorization[len(prefix):])
