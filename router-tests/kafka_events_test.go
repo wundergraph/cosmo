@@ -97,10 +97,7 @@ func TestKafkaEvents(t *testing.T) {
 
 			go func() {
 				wg.Wait()
-				unsubscribeErr := client.Unsubscribe(subscriptionOneID)
-				require.NoError(t, unsubscribeErr)
-				clientCloseErr := client.Close()
-				require.NoError(t, clientCloseErr)
+				require.NoError(t, client.Close())
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
@@ -188,11 +185,7 @@ func TestKafkaEvents(t *testing.T) {
 
 			wg.Wait()
 
-			unsubscribeErr := client.Unsubscribe(subscriptionOneID)
-			require.NoError(t, unsubscribeErr)
-
-			clientCloseErr := client.Close()
-			require.NoError(t, clientCloseErr)
+			require.NoError(t, client.Close())
 
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
 			xEnv.WaitForConnectionCount(0, time.Second*10)
@@ -255,12 +248,6 @@ func TestKafkaEvents(t *testing.T) {
 			xEnv.WaitForMessagesSent(2, time.Second*10)
 
 			wg.Wait()
-
-			unsubscribeErr := client.Unsubscribe(subscriptionOneID)
-			require.NoError(t, unsubscribeErr)
-
-			unsubscribeErr = client.Unsubscribe(subscriptionTwoID)
-			require.NoError(t, unsubscribeErr)
 
 			clientCloseErr := client.Close()
 			require.NoError(t, clientCloseErr)
@@ -351,14 +338,7 @@ func TestKafkaEvents(t *testing.T) {
 
 			wg.Wait()
 
-			unsubscribeErr := client.Unsubscribe(subscriptionOneID)
-			require.NoError(t, unsubscribeErr)
-
-			unsubscribeErr = client.Unsubscribe(subscriptionTwoID)
-			require.NoError(t, unsubscribeErr)
-
-			clientCloseErr := client.Close()
-			require.NoError(t, clientCloseErr)
+			require.NoError(t, client.Close())
 
 			xEnv.WaitForMessagesSent(4, time.Second*10)
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
@@ -415,10 +395,7 @@ func TestKafkaEvents(t *testing.T) {
 
 			go func() {
 				wg.Wait()
-				unsubscribeErr := client.Unsubscribe(subscriptionOneID)
-				require.NoError(t, unsubscribeErr)
-				clientCloseErr := client.Close()
-				require.NoError(t, clientCloseErr)
+				require.NoError(t, client.Close())
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)

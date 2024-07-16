@@ -1120,6 +1120,11 @@ func TestWebSockets(t *testing.T) {
 			require.NotEqual(t, "", countHobID)
 
 			go func() {
+				defer func() {
+					if err := recover(); err != nil {
+						t.Errorf("panic: %v", err)
+					}
+				}()
 				require.NoError(t, client.Run())
 			}()
 
