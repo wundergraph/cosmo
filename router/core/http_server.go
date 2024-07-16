@@ -60,9 +60,10 @@ func newServer(opts *httpServerOptions) *server {
 		// When swapping the graph server there might be in-flight requests that are still being processed
 		// but this is tolerable because we are waiting for them to finish before shutting down the old server.
 		n.mu.RLock()
-		defer n.mu.RUnlock()
+		handler := n.handler
+		n.mu.RUnlock()
 
-		n.handler.ServeHTTP(w, r)
+		handler.ServeHTTP(w, r)
 	})
 
 	return n
