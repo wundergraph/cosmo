@@ -619,20 +619,27 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		}
 	}
 
-	// Must be mounted after the websocket middleware to ensure that we only count non-hijacked requests like WebSockets
-	httpRouter.Use(func(handler http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	httpRouter.Use(
+		// Responsible for handling regular GraphQL requests over HTTP not WebSockets
+		graphqlPreHandler.Handler,
+		// Must be mounted after the websocket middleware to ensure that we only count non-hijacked requests like WebSockets
+		func(handler http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-			// Counting like this is safe because according to the go http.ServeHTTP documentation
-			// the requests is guaranteed to be finished when ServeHTTP returns
+				opCtx := getOperationContext(r.Context())
 
-			s.inFlightRequests.Add(1)
-			defer s.inFlightRequests.Sub(1)
+				// We don't want to count any type of subscriptions e.g. SSE as in-flight requests because they are long-lived
+				if opCtx != nil && opCtx.opType != OperationTypeSubscription {
+					s.inFlightRequests.Add(1)
 
-			handler.ServeHTTP(w, r)
+					// Counting like this is safe because according to the go http.ServeHTTP documentation
+					// the requests is guaranteed to be finished when ServeHTTP returns
+					defer s.inFlightRequests.Sub(1)
+				}
+
+				handler.ServeHTTP(w, r)
+			})
 		})
-	})
-	httpRouter.Use(graphqlPreHandler.Handler)
 
 	// Mount built global and custom modules
 	// Needs to be mounted after the pre-handler to ensure that the request was parsed and authorized

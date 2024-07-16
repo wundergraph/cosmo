@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -79,10 +80,8 @@ func Main() {
 	defer routerCancel()
 
 	go func() {
-		if err := router.Start(routerCtx); err != nil {
-			logger.Error("Could not start router", zap.Error(err))
-			// Stop the server if it fails to start
-			stop()
+		if err = router.Start(routerCtx); err != nil {
+			logger.Fatal("Could not start router", zap.Error(err))
 		}
 	}()
 
@@ -95,8 +94,11 @@ func Main() {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), result.Config.ShutdownDelay)
 	defer cancel()
 
-	if err := router.Shutdown(shutdownCtx); err != nil {
-		logger.Error("Could not shutdown router", zap.Error(err))
+	if err = router.Shutdown(shutdownCtx); err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			logger.Warn("Router shutdown deadline exceeded. Consider increasing the shutdown delay")
+		}
+		logger.Fatal("Could not shutdown router gracefully", zap.Error(err))
 	} else {
 		logger.Info("Router shutdown successfully")
 	}

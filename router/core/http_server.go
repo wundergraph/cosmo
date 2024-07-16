@@ -33,15 +33,11 @@ type httpServerOptions struct {
 
 func newServer(opts *httpServerOptions) *server {
 	httpServer := &http.Server{
-		Addr: opts.addr,
-		// Covers the time from when the connection is accepted to when the request body is
-		// fully read (if you do read the body, otherwise to the end of the headers).
-		// It's implemented in net/http by calling SetReadDeadline immediately after Accept.
-		ReadTimeout: 1 * time.Minute,
-		// WriteTimeout normally covers the time from the end of the request header read to the end
-		// of the response write (a.k.a. the lifetime of the ServeHTTP), by calling
-		// SetWriteDeadline at the end of readRequest.
-		WriteTimeout: 2 * time.Minute,
+		Addr:        opts.addr,
+		ReadTimeout: 60 * time.Second,
+		// Disable write timeout to keep the connection open until the client closes it
+		// This is required for SSE (Server-Sent-Events) subscriptions to work correctly
+		WriteTimeout: 0,
 		ErrorLog:     zap.NewStdLog(opts.logger),
 		TLSConfig:    opts.tlsServerConfig,
 	}
