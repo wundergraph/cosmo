@@ -59,7 +59,7 @@ func (e *persistentOperationNotFoundError) Error() string {
 type cdnPersistedOperationsCache struct {
 	// cache is the backing store for the in-memory cache. Note
 	// that if the cache is disabled, this will be nil
-	cache *ristretto.Cache
+	cache *ristretto.Cache[string, []byte]
 }
 
 func (c *cdnPersistedOperationsCache) key(clientName string, operationHash []byte) string {
@@ -70,8 +70,7 @@ func (c *cdnPersistedOperationsCache) Get(clientName string, operationHash strin
 	// Since we're returning nil when the item is not found, we don't need to
 	// check the return value from the cache nor the type assertion
 	item, _ := c.cache.Get(c.key(clientName, unsafebytes.StringToBytes(operationHash)))
-	data, _ := item.([]byte)
-	return data
+	return item
 }
 
 func (c *cdnPersistedOperationsCache) Set(clientName, operationHash string, operationBody []byte) {
@@ -85,7 +84,7 @@ type PersistentOperationsOptions struct {
 	Logger    *zap.Logger
 }
 
-type PersistentOperationClient struct {
+type PersistedOperationClient struct {
 	cdnURL              *url.URL
 	authenticationToken string
 	// federatedGraphID is the ID of the federated graph that was obtained
@@ -99,7 +98,7 @@ type PersistentOperationClient struct {
 	logger          *zap.Logger
 }
 
-func (cdn *PersistentOperationClient) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error) {
+func (cdn *PersistedOperationClient) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error) {
 	if data := cdn.operationsCache.Get(clientName, sha256Hash); data != nil {
 		return data, nil
 	}
@@ -184,7 +183,7 @@ func (cdn *PersistentOperationClient) PersistedOperation(ctx context.Context, cl
 
 // NewPersistentOperationClient creates a new CDN client. URL is the URL of the CDN.
 // Token is the token used to authenticate with the CDN, the same as the GRAPH_API_TOKEN
-func NewPersistentOperationClient(endpoint string, token string, opts PersistentOperationsOptions) (*PersistentOperationClient, error) {
+func NewPersistentOperationClient(endpoint string, token string, opts PersistentOperationsOptions) (*PersistedOperationClient, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("invalid CDN URL %q: %w", endpoint, err)
@@ -199,9 +198,9 @@ func NewPersistentOperationClient(endpoint string, token string, opts Persistent
 		return nil, err
 	}
 	cacheSize := int64(opts.CacheSize)
-	var cache *ristretto.Cache
+	var cache *ristretto.Cache[string, []byte]
 	if cacheSize > 0 {
-		cache, err = ristretto.NewCache(&ristretto.Config{
+		cache, err = ristretto.NewCache(&ristretto.Config[string, []byte]{
 			// assume an average of persistentAverageCacheEntrySize per operation, then
 			// multiply by 10 to obtain the recommended number of counters
 			NumCounters: (cacheSize * 10) / persistentAverageCacheEntrySize,
@@ -212,7 +211,7 @@ func NewPersistentOperationClient(endpoint string, token string, opts Persistent
 			return nil, fmt.Errorf("initializing CDN cache: %v", err)
 		}
 	}
-	return &PersistentOperationClient{
+	return &PersistedOperationClient{
 		cdnURL:              u,
 		authenticationToken: token,
 		federatedGraphID:    url.PathEscape(claims.FederatedGraphID),
@@ -223,4 +222,8 @@ func NewPersistentOperationClient(endpoint string, token string, opts Persistent
 			cache: cache,
 		},
 	}, nil
+}
+
+func (cdn *PersistedOperationClient) Close() {
+	cdn.operationsCache.cache.Close()
 }

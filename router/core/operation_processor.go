@@ -72,7 +72,7 @@ var (
 type OperationParserOptions struct {
 	Executor                *Executor
 	MaxOperationSizeInBytes int64
-	PersistentOpClient      *cdn.PersistentOperationClient
+	PersistentOpClient      *cdn.PersistedOperationClient
 
 	EnablePersistedOperationsCache bool
 }
@@ -82,7 +82,7 @@ type OperationParserOptions struct {
 type OperationProcessor struct {
 	executor                *Executor
 	maxOperationSizeInBytes int64
-	cdn                     *cdn.PersistentOperationClient
+	cdn                     *cdn.PersistedOperationClient
 	parseKitPool            *sync.Pool
 	operationCache          *OperationCache
 }

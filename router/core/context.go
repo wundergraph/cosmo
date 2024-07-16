@@ -354,12 +354,20 @@ type OperationContext interface {
 
 var _ OperationContext = (*operationContext)(nil)
 
+type OperationType = string
+
+const (
+	OperationTypeQuery        OperationType = "query"
+	OperationTypeMutation     OperationType = "mutation"
+	OperationTypeSubscription OperationType = "subscription"
+)
+
 // operationContext contains information about the current GraphQL operation
 type operationContext struct {
 	// Name is the name of the operation
 	name string
 	// opType is the type of the operation (query, mutation, subscription)
-	opType string
+	opType OperationType
 	// Hash is the hash of the operation
 	hash uint64
 	// Content is the content of the operation

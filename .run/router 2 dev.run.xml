@@ -1,10 +1,11 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="router" type="GoApplicationRunConfiguration" factoryName="Go Application">
+  <configuration default="false" name="router 2 dev" type="GoApplicationRunConfiguration" factoryName="Go Application">
     <module name="cosmo" />
     <working_directory value="$PROJECT_DIR$/router" />
     <go_parameters value="-race" />
     <envs>
       <env name="CGO_ENABLED" value="0" />
+      <env name="LISTEN_ADDR" value="0.0.0.0:3003" />
     </envs>
     <EXTENSION ID="net.ashald.envfile">
       <option name="IS_ENABLED" value="false" />

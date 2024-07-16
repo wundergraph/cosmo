@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -79,28 +80,31 @@ func Main() {
 	defer routerCancel()
 
 	go func() {
-		if err := router.Start(routerCtx); err != nil {
-			logger.Error("Could not start server", zap.Error(err))
-			// Stop the server if it fails to start
-			stop()
+		if err = router.Start(routerCtx); err != nil {
+			logger.Fatal("Could not start router", zap.Error(err))
 		}
 	}()
 
 	<-ctx.Done()
 
-	logger.Info("Graceful shutdown ...", zap.String("shutdown_delay", result.Config.ShutdownDelay.String()))
+	logger.Info("Graceful shutdown of router initiated", zap.String("shutdown_delay", result.Config.ShutdownDelay.String()))
 
 	// Enforce a maximum shutdown delay to avoid waiting forever
 	// Don't use the parent context that is canceled by the signal handler
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), result.Config.ShutdownDelay)
 	defer cancel()
 
-	if err := router.Shutdown(shutdownCtx); err != nil {
-		logger.Error("Could not shutdown server", zap.Error(err))
+	if err = router.Shutdown(shutdownCtx); err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			logger.Warn("Router shutdown deadline exceeded. Consider increasing the shutdown delay")
+		}
+		logger.Fatal("Could not shutdown router gracefully", zap.Error(err))
+	} else {
+		logger.Info("Router shutdown successfully")
 	}
 
 	profiler.Finish()
 
-	logger.Debug("Server exiting")
+	logger.Debug("Router exiting")
 	os.Exit(0)
 }

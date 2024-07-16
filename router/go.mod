@@ -80,7 +80,6 @@ require (
 	github.com/go-playground/validator/v10 v10.20.0 // indirect
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
-	github.com/golang/glog v1.1.2 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.0 // indirect
@@ -124,5 +123,8 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	nhooyr.io/websocket v1.8.7 // indirect
 )
+
+// To fix race with ristretto.Close() https://github.com/dgraph-io/ristretto/pull/384
+replace github.com/dgraph-io/ristretto v0.1.1 => github.com/wundergraph/ristretto v0.0.0-20240715072905-d30a6481d4bf
 
 //replace github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2

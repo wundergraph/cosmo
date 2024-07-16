@@ -128,11 +128,11 @@ func (m *routerMetrics) ExportSchemaUsageInfo(operationContext *operationContext
 
 	var opType graphqlmetricsv1.OperationType
 	switch operationContext.opType {
-	case "query":
+	case OperationTypeQuery:
 		opType = graphqlmetricsv1.OperationType_QUERY
-	case "mutation":
+	case OperationTypeMutation:
 		opType = graphqlmetricsv1.OperationType_MUTATION
-	case "subscription":
+	case OperationTypeSubscription:
 		opType = graphqlmetricsv1.OperationType_SUBSCRIPTION
 	}
 
