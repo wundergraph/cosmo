@@ -7,16 +7,21 @@ import { createConnectTransport } from '@connectrpc/connect-node';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_connect';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
+import { formatISO, startOfTomorrow, startOfYear } from 'date-fns';
 import Fastify from 'fastify';
 import { pino } from 'pino';
-import { expect } from 'vitest';
 import postgres from 'postgres';
-import { formatISO, startOfTomorrow, startOfYear } from 'date-fns';
+import { expect } from 'vitest';
 import { BlobNotFoundError, BlobObject, BlobStorage } from '../src/core/blobstorage/index.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
+import ScimController from '../src/core/controllers/scim.js';
 import database from '../src/core/plugins/database.js';
 import fastifyRedis from '../src/core/plugins/redis.js';
+import { ApiKeyRepository } from '../src/core/repositories/ApiKeyRepository.js';
+import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
+import { UserRepository } from '../src/core/repositories/UserRepository.js';
 import routes from '../src/core/routes.js';
+import ApiKeyAuthenticator from '../src/core/services/ApiKeyAuthenticator.js';
 import { Authorization } from '../src/core/services/Authorization.js';
 import Keycloak from '../src/core/services/Keycloak.js';
 import Mailer from '../src/core/services/Mailer.js';
@@ -30,11 +35,6 @@ import {
 import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService.js';
 import { AIGraphReadmeQueue } from '../src/core/workers/AIGraphReadmeWorker.js';
 import { FeatureIds, Label } from '../src/types/index.js';
-import ScimController from '../src/core/controllers/scim.js';
-import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
-import { UserRepository } from '../src/core/repositories/UserRepository.js';
-import ApiKeyAuthenticator from '../src/core/services/ApiKeyAuthenticator.js';
-import { ApiKeyRepository } from '../src/core/repositories/ApiKeyRepository.js';
 
 export const DEFAULT_ROUTER_URL = 'http://localhost:3002';
 export const DEFAULT_SUBGRAPH_URL_ONE = 'http://localhost:4001';
@@ -135,7 +135,7 @@ export const SetupTest = async function ({
   });
 
   const organizationRepository = new OrganizationRepository(log, server.db, '');
-  const userRepository = new UserRepository(server.db);
+  const userRepository = new UserRepository(log, server.db);
   const apiKeyRepository = new ApiKeyRepository(server.db);
   const apiKeyAuth = new ApiKeyAuthenticator(server.db, organizationRepository);
   await server.register(ScimController, {
@@ -155,13 +155,55 @@ export const SetupTest = async function ({
 
   const queryConnection = postgres(databaseConnectionUrl);
 
+  const id = await SetupKeycloak({
+    keycloakClient,
+    realmName: realm,
+    userTestData: {
+      userId: users.adminAliceCompanyA.userId,
+      organizationId: users.adminAliceCompanyA.organizationId,
+      organizationName: users.adminAliceCompanyA.organizationName,
+      organizationSlug: users.adminAliceCompanyA.organizationSlug,
+      email: users.adminAliceCompanyA.email,
+      apiKey: users.adminAliceCompanyA.apiKey,
+      roles: ['admin'],
+    },
+  });
+  users.adminAliceCompanyA.userId = id;
   await seedTest(queryConnection, users.adminAliceCompanyA, createScimKey);
 
   if (enableMultiUsers) {
     if (users.adminBobCompanyA) {
+      const id = await addKeycloakUser({
+        keycloakClient,
+        realmName: realm,
+        userTestData: {
+          userId: users.adminBobCompanyA.userId,
+          organizationId: users.adminBobCompanyA.organizationId,
+          organizationName: users.adminBobCompanyA.organizationName,
+          organizationSlug: users.adminBobCompanyA.organizationSlug,
+          email: users.adminBobCompanyA.email,
+          apiKey: users.adminBobCompanyA.apiKey,
+          roles: ['admin'],
+        },
+      });
+      users.adminBobCompanyA.userId = id;
       await seedTest(queryConnection, users.adminBobCompanyA, createScimKey);
     }
     if (users.adminJimCompanyB) {
+      const id = await addKeycloakUser({
+        keycloakClient,
+        realmName: realm,
+        userTestData: {
+          userId: users.adminJimCompanyB.userId,
+          organizationId: users.adminJimCompanyB.organizationId,
+          organizationName: users.adminJimCompanyB.organizationName,
+          organizationSlug: users.adminJimCompanyB.organizationSlug,
+          email: users.adminJimCompanyB.email,
+          apiKey: users.adminJimCompanyB.apiKey,
+          roles: ['admin'],
+        },
+      });
+      users.adminJimCompanyB.userId = id;
       await seedTest(queryConnection, users.adminJimCompanyB, createScimKey);
     }
   }
@@ -227,24 +269,75 @@ export const SetupKeycloak = async ({
   realmName: string;
 }) => {
   await keycloakClient.authenticateClient();
-  await keycloakClient.client.realms.create({
-    realm: realmName,
-    enabled: true,
-    displayName: realmName,
-    registrationEmailAsUsername: true,
+
+  try {
+    await keycloakClient.client.realms.create({
+      realm: realmName,
+      enabled: true,
+      displayName: realmName,
+      registrationEmailAsUsername: true,
+    });
+  } catch (e: any) {
+    if (e.response?.status !== 409) {
+      e.message = `Failed to create keycloak realm: ${realmName}.` + e.message;
+      throw e;
+    }
+  }
+
+  const id = await addKeycloakUser({
+    keycloakClient,
+    userTestData,
+    realmName,
   });
-  const id = await keycloakClient.addKeycloakUser({
-    email: userTestData.email,
-    realm: realmName,
-    isPasswordTemp: false,
-    password: 'wunder@123',
-    id: userTestData.userId,
-  });
-  await keycloakClient.seedGroup({
-    realm: realmName,
-    userID: id,
-    organizationSlug: userTestData.organizationSlug,
-  });
+
+  return id;
+};
+
+export const addKeycloakUser = async ({
+  keycloakClient,
+  userTestData,
+  realmName,
+}: {
+  keycloakClient: Keycloak;
+  userTestData: UserTestData;
+  realmName: string;
+}) => {
+  await keycloakClient.authenticateClient();
+
+  let id = '';
+  try {
+    id = await keycloakClient.addKeycloakUser({
+      email: userTestData.email,
+      realm: realmName,
+      isPasswordTemp: false,
+      password: 'wunder@123',
+      id: userTestData.userId,
+    });
+  } catch (e: any) {
+    if (e.response?.status === 409) {
+      const res = await keycloakClient.client.users.find({
+        realm: realmName,
+        email: userTestData.email,
+      });
+      id = res[0].id!;
+    } else {
+      e.message = `Failed to add keycloak user: ${userTestData.email}.` + e.message;
+      throw e;
+    }
+  }
+  try {
+    await keycloakClient.seedGroup({
+      realm: realmName,
+      userID: id,
+      organizationSlug: userTestData.organizationSlug,
+    });
+  } catch (e: any) {
+    if (e.response?.status !== 409) {
+      e.message = `Failed to seed group: ${userTestData.organizationSlug}.` + e.message;
+      throw e;
+    }
+  }
+  return id;
 };
 
 export const removeKeycloakSetup = async ({

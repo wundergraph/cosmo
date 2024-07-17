@@ -4,6 +4,41 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.93.4](https://github.com/wundergraph/cosmo/compare/controlplane@0.93.3...controlplane@0.93.4) (2024-07-16)
+
+**Note:** Version bump only for package controlplane
+
+## [0.93.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.93.2...controlplane@0.93.3) (2024-07-12)
+
+### Bug Fixes
+
+* scim server when adding existing user ([#935](https://github.com/wundergraph/cosmo/issues/935)) ([0265f2a](https://github.com/wundergraph/cosmo/commit/0265f2a99dd45d457b7056048d27abce49fbc08b)) (@JivusAyrus)
+
+## [0.93.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.93.1...controlplane@0.93.2) (2024-07-12)
+
+### Bug Fixes
+
+* getConfig script imports ([#936](https://github.com/wundergraph/cosmo/issues/936)) ([2781c12](https://github.com/wundergraph/cosmo/commit/2781c1226a2d5ea989415c0ff241dc2f6584d49e)) (@thisisnithin)
+
+## [0.93.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.93.0...controlplane@0.93.1) (2024-07-11)
+
+### Bug Fixes
+
+* remove REQUIRE_DEPRECATION_DATE lint rule ([#890](https://github.com/wundergraph/cosmo/issues/890)) ([1203d7f](https://github.com/wundergraph/cosmo/commit/1203d7f711c35f1bdd8a7ce6bec38dcd1093fff4)) (@JivusAyrus)
+
+# [0.93.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.92.2...controlplane@0.93.0) (2024-07-10)
+
+### Features
+
+* delete user ([#906](https://github.com/wundergraph/cosmo/issues/906)) ([5d438a1](https://github.com/wundergraph/cosmo/commit/5d438a1a2e1be610ff0e139efd692ed798daf677)) (@thisisnithin)
+
+## [0.92.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.92.1...controlplane@0.92.2) (2024-07-09)
+
+### Bug Fixes
+
+* admission webhook controller not receiving secret ([#928](https://github.com/wundergraph/cosmo/issues/928)) ([9adb17e](https://github.com/wundergraph/cosmo/commit/9adb17ea24419c34dc0fe898d9f03bc2329fddf0)) (@thisisnithin)
+* upgrade deps due to found CVEs ([#926](https://github.com/wundergraph/cosmo/issues/926)) ([fc6e615](https://github.com/wundergraph/cosmo/commit/fc6e6158e2e761489033acb667cd0b36920c2612)) (@StarpTech)
+
 ## [0.92.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.92.0...controlplane@0.92.1) (2024-07-03)
 
 ### Bug Fixes

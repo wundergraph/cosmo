@@ -3,7 +3,6 @@ package graphiql
 import (
 	"github.com/stretchr/testify/assert"
 	"github.com/wundergraph/cosmo/router/internal/test"
-	"go.uber.org/zap"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -11,7 +10,6 @@ import (
 
 func TestHealthCheckHandler(t *testing.T) {
 	handler := NewPlayground(&PlaygroundOptions{
-		Log:        zap.NewNop(),
 		Html:       "test {{graphqlURL}}",
 		GraphqlURL: "/",
 	})

@@ -19,7 +19,7 @@ export class GraphCompositionRepository {
     compositionErrorString,
     routerConfigSignature,
     subgraphSchemaVersionIds,
-    composedBy,
+    composedById,
     admissionErrorString,
     deploymentErrorString,
     isFeatureFlagComposition,
@@ -28,12 +28,19 @@ export class GraphCompositionRepository {
     compositionErrorString: string;
     routerConfigSignature?: string;
     subgraphSchemaVersionIds: string[];
-    composedBy: string;
+    composedById: string;
     admissionErrorString?: string;
     deploymentErrorString?: string;
     isFeatureFlagComposition: boolean;
   }) {
     await this.db.transaction(async (tx) => {
+      const actor = await tx.query.users.findFirst({
+        where: eq(users.id, composedById),
+      });
+      if (!actor) {
+        throw new Error(`Could not find actor ${composedById}`);
+      }
+
       const insertedComposition = await tx
         .insert(graphCompositions)
         .values({
@@ -41,7 +48,8 @@ export class GraphCompositionRepository {
           compositionErrors: compositionErrorString,
           isComposable: compositionErrorString === '',
           routerConfigSignature,
-          createdBy: composedBy,
+          createdById: composedById,
+          createdByEmail: actor.email,
           deploymentError: deploymentErrorString,
           admissionError: admissionErrorString,
           isFeatureFlagComposition,
@@ -97,6 +105,7 @@ export class GraphCompositionRepository {
         compositionErrors: graphCompositions.compositionErrors,
         createdAt: graphCompositions.createdAt,
         createdBy: users.email,
+        createdByEmail: graphCompositions.createdByEmail,
         targetId: schemaVersion.targetId,
         routerConfigSignature: graphCompositions.routerConfigSignature,
         admissionError: graphCompositions.admissionError,
@@ -104,7 +113,7 @@ export class GraphCompositionRepository {
       })
       .from(graphCompositions)
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
-      .leftJoin(users, eq(graphCompositions.createdBy, users.id))
+      .leftJoin(users, eq(graphCompositions.createdById, users.id))
       .where(eq(graphCompositions.id, input.compositionId))
       .orderBy(desc(schemaVersion.createdAt))
       .execute();
@@ -126,7 +135,7 @@ export class GraphCompositionRepository {
       createdAt: composition.createdAt.toISOString(),
       isComposable: composition.isComposable || false,
       compositionErrors: composition.compositionErrors || undefined,
-      createdBy: composition.createdBy || undefined,
+      createdBy: composition.createdBy || composition.createdByEmail || undefined,
       routerConfigSignature: composition.routerConfigSignature || undefined,
       isLatestValid: isCurrentDeployed,
       admissionError: composition.admissionError || undefined,
@@ -148,6 +157,7 @@ export class GraphCompositionRepository {
         compositionErrors: graphCompositions.compositionErrors,
         createdAt: graphCompositions.createdAt,
         createdBy: users.email,
+        createdByEmail: graphCompositions.createdByEmail,
         targetId: schemaVersion.targetId,
         routerConfigSignature: graphCompositions.routerConfigSignature,
         admissionError: graphCompositions.admissionError,
@@ -155,7 +165,7 @@ export class GraphCompositionRepository {
       })
       .from(graphCompositions)
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
-      .leftJoin(users, eq(graphCompositions.createdBy, users.id))
+      .leftJoin(users, eq(graphCompositions.createdById, users.id))
       .where(eq(graphCompositions.schemaVersionId, input.schemaVersionId))
       .orderBy(desc(schemaVersion.createdAt))
       .execute();
@@ -177,7 +187,7 @@ export class GraphCompositionRepository {
       createdAt: composition.createdAt.toISOString(),
       isComposable: composition.isComposable || false,
       compositionErrors: composition.compositionErrors || undefined,
-      createdBy: composition.createdBy || undefined,
+      createdBy: composition.createdBy || composition.createdByEmail || undefined,
       isLatestValid: isCurrentDeployed,
       routerConfigSignature: composition.routerConfigSignature || undefined,
       admissionError: composition.admissionError || undefined,
@@ -256,13 +266,14 @@ export class GraphCompositionRepository {
         compositionErrors: graphCompositions.compositionErrors,
         createdAt: graphCompositions.createdAt,
         createdBy: users.email,
+        createdByEmail: graphCompositions.createdByEmail,
         routerConfigSignature: graphCompositions.routerConfigSignature,
         admissionError: graphCompositions.admissionError,
         deploymentError: graphCompositions.deploymentError,
       })
       .from(graphCompositions)
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
-      .leftJoin(users, eq(graphCompositions.createdBy, users.id))
+      .leftJoin(users, eq(graphCompositions.createdById, users.id))
       .where(and(...conditions))
       .orderBy(desc(schemaVersion.createdAt))
       .limit(limit)
@@ -280,7 +291,7 @@ export class GraphCompositionRepository {
         createdAt: r.createdAt.toISOString(),
         isComposable: r.isComposable || false,
         compositionErrors: r.compositionErrors || undefined,
-        createdBy: r.createdBy || undefined,
+        createdBy: r.createdBy || r.createdByEmail || undefined,
         isLatestValid: isCurrentDeployed,
         routerConfigSignature: r.routerConfigSignature || undefined,
         admissionError: r.admissionError || undefined,
@@ -316,7 +327,7 @@ export class GraphCompositionRepository {
       })
       .from(graphCompositions)
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
-      .leftJoin(users, eq(graphCompositions.createdBy, users.id))
+      .leftJoin(users, eq(graphCompositions.createdById, users.id))
       .where(and(...conditions))
       .execute();
 
