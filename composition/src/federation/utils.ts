@@ -1,9 +1,11 @@
-import { ConstDirectiveNode, DocumentNode, FieldDefinitionNode, GraphQLSchema } from 'graphql';
+import { ConstDirectiveNode, DocumentNode, GraphQLSchema } from 'graphql';
 import { FieldConfiguration } from '../router-configuration/router-configuration';
 import { InternalSubgraph, SubgraphConfig } from '../subgraph/subgraph';
 import { DefinitionWithFieldsData, FieldData } from '../schema-building/type-definition-data';
 import { AuthorizationData, EntityData, EntityInterfaceFederationData } from '../utils/utils';
 import { MultiGraph } from 'graphology';
+import { Graph } from '../resolvability-graph/graph';
+import { MutableFieldNode } from '../schema-building/ast';
 
 export type FederationFactoryOptions = {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
@@ -11,6 +13,7 @@ export type FederationFactoryOptions = {
   entityDataByTypeName: Map<string, EntityData>;
   entityInterfaceFederationDataByTypeName: Map<string, EntityInterfaceFederationData>;
   graph: MultiGraph;
+  internalGraph: Graph;
   internalSubgraphBySubgraphName: Map<string, InternalSubgraph>;
   warnings?: string[];
 };
@@ -75,7 +78,7 @@ export function newChildTagData(name: string): ChildTagData {
 
 export type InterfaceImplementationData = {
   data: DefinitionWithFieldsData;
-  clientSchemaFieldNodes: FieldDefinitionNode[];
+  clientSchemaFieldNodes: MutableFieldNode[];
 };
 
 export type SubscriptionFilterData = {
