@@ -6,11 +6,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/testcontainers/testcontainers-go"
 	"net/http"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/testcontainers/testcontainers-go"
 
 	"github.com/hasura/go-graphql-client"
 	"github.com/stretchr/testify/require"
