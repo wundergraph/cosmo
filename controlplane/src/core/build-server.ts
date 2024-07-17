@@ -52,7 +52,7 @@ export interface BuildConfig {
   };
   openaiAPIKey?: string;
   allowedOrigins?: string[];
-  prometheus: {
+  prometheus?: {
     enabled?: boolean;
     path?: string;
   };
@@ -147,7 +147,7 @@ export default async function build(opts: BuildConfig) {
    * Plugin registration
    */
 
-  if (opts.prometheus.enabled) {
+  if (opts.prometheus?.enabled) {
     // fastify-metrics does not support ESM, therefore the workaround ".default" import
     // see: https://github.com/SkeLLLa/fastify-metrics/issues/92
     await fastify.register(fastifyMetrics.default, {
