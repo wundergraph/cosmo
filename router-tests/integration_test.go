@@ -1296,7 +1296,7 @@ func TestWithOriginGraphQLErrorUnpropagated(t *testing.T) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `{ employees { id details { forename surname } notes } }`,
 		})
-		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at Path 'query'."}],"data":{"employees":null}}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at Path 'query'.","extensions":{"statusCode":200}}],"data":{"employees":null}}`, res.Body)
 	})
 }
 
