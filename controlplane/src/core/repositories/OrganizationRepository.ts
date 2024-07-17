@@ -25,9 +25,9 @@ import {
   billingSubscriptions,
 } from '../../db/schema.js';
 import { Feature, FeatureIds, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
-import { BillingService } from '../services/BillingService.js';
 import Keycloak from '../services/Keycloak.js';
 import OidcProvider from '../services/OidcProvider.js';
+import { getHighestPriorityRole } from '../util.js';
 import { BillingRepository } from './BillingRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { OidcRepository } from './OidcRepository.js';
@@ -219,6 +219,9 @@ export class OrganizationRepository {
           cancelAtPeriodEnd: billingSubscriptions.cancelAtPeriodEnd,
           currentPeriodEnd: billingSubscriptions.currentPeriodEnd,
         },
+        isDeactivated: organizations.isDeactivated,
+        deactivationReason: organizations.deactivationReason,
+        deactivationInitiatedAt: organizations.deactivationInitiatedAt,
       })
       .from(organizationsMembers)
       .innerJoin(organizations, eq(organizations.id, organizationsMembers.organizationId))
@@ -255,7 +258,13 @@ export class OrganizationRepository {
                 currentPeriodEnd: org.subscription.currentPeriodEnd?.toISOString(),
               }
             : undefined,
-        };
+          deactivation: org.isDeactivated
+            ? {
+                reason: org.deactivationReason,
+                initiatedAt: org.deactivationInitiatedAt,
+              }
+            : undefined,
+        } as OrganizationDTO & { roles: string[] };
       }),
     );
   }
@@ -1262,5 +1271,122 @@ export class OrganizationRepository {
       soloOrganizations: soloAdminSoloMemberOrgs,
       unsafeOrganizations: soloAdminManyMembersOrgs,
     };
+  }
+
+  /***
+   * Cancels Subscription
+   * Removes OIDC provider.
+   * Sets all members to viewer role in both keycloak and database.
+   * Removes any feature overrides
+   * Sets deactivated to true.
+   * TODO: Schedules deletion.
+   */
+  public async deactivateOrganization(input: {
+    organizationId: string;
+    reason?: string;
+    keycloakClient: Keycloak;
+    keycloakRealm: string;
+  }) {
+    const billingRepo = new BillingRepository(this.db);
+    await billingRepo.cancelSubscription(input.organizationId);
+
+    const org = await this.byId(input.organizationId);
+    if (!org) {
+      throw new Error('Organization not found');
+    }
+
+    const oidcRepo = new OidcRepository(this.db);
+    const oidcProvider = new OidcProvider();
+
+    const provider = await oidcRepo.getOidcProvider({ organizationId: input.organizationId });
+    if (provider) {
+      await oidcProvider.deleteOidcProvider({
+        kcClient: input.keycloakClient,
+        kcRealm: input.keycloakRealm,
+        organizationSlug: org.slug,
+        alias: provider.alias,
+      });
+    }
+
+    const organizationGroups = await input.keycloakClient.client.groups.find({
+      max: 1,
+      search: org.slug,
+      realm: input.keycloakRealm,
+      briefRepresentation: false,
+    });
+    const adminChildGroup = await input.keycloakClient.fetchChildGroup({
+      realm: input.keycloakRealm,
+      orgSlug: org.slug,
+      kcGroupId: organizationGroups[0].id!,
+      childGroupType: 'admin',
+    });
+    const devChildGroup = await input.keycloakClient.fetchChildGroup({
+      realm: input.keycloakRealm,
+      orgSlug: org.slug,
+      kcGroupId: organizationGroups[0].id!,
+      childGroupType: 'developer',
+    });
+    const viewerChildGroup = await input.keycloakClient.fetchChildGroup({
+      realm: input.keycloakRealm,
+      orgSlug: org.slug,
+      kcGroupId: organizationGroups[0].id!,
+      childGroupType: 'viewer',
+    });
+
+    const allMembers = await this.getMembers({ organizationID: input.organizationId });
+    for (const member of allMembers) {
+      await input.keycloakClient.client.users.delFromGroup({
+        id: member.userID!,
+        realm: input.keycloakRealm,
+        groupId: adminChildGroup.id!,
+      });
+
+      await input.keycloakClient.client.users.delFromGroup({
+        id: member.userID!,
+        realm: input.keycloakRealm,
+        groupId: devChildGroup.id!,
+      });
+
+      await input.keycloakClient.client.users.addToGroup({
+        id: member.userID,
+        realm: input.keycloakRealm,
+        groupId: viewerChildGroup.id!,
+      });
+    }
+
+    await this.db.transaction(async (tx) => {
+      const orgRepo = new OrganizationRepository(this.logger, tx, this.defaultBillingPlanId);
+      const oidcRepo = new OidcRepository(tx);
+
+      await oidcRepo.deleteOidcProvider({ organizationId: input.organizationId });
+
+      for (const member of allMembers) {
+        const userRoles = await this.getOrganizationMemberRoles({
+          userID: member.userID,
+          organizationID: input.organizationId,
+        });
+        const highPriorityRole = getHighestPriorityRole({ userRoles });
+
+        await orgRepo.updateUserRole({
+          organizationID: input.organizationId,
+          orgMemberID: member.orgMemberID,
+          role: 'viewer',
+          previousRole: highPriorityRole,
+        });
+      }
+
+      await tx
+        .delete(schema.organizationFeatures)
+        .where(eq(schema.organizationFeatures.organizationId, input.organizationId));
+
+      await tx
+        .update(schema.organizations)
+        .set({
+          isDeactivated: true,
+          deactivationInitiatedAt: new Date(),
+          deactivationReason: input.reason,
+        })
+        .where(eq(schema.organizations.id, input.organizationId));
+    });
   }
 }

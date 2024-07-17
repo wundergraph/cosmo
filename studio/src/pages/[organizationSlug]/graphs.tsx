@@ -35,7 +35,7 @@ const GraphToolbar = () => {
   const namespace = router.query.namespace;
 
   return (
-    <Toolbar className="w-auto flex-nowrap py-0">
+    <Toolbar className="py-0 md:w-auto">
       <Select
         value={type}
         onValueChange={(type) => {
