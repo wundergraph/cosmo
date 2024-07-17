@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gorilla/websocket"
 	"net"
 	"net/http"
 	"regexp"
@@ -15,6 +14,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/gorilla/websocket"
 
 	"github.com/alitto/pond"
 	"github.com/buger/jsonparser"
@@ -325,6 +326,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 			}
 			http.Error(handler.w, http.StatusText(statusCode), statusCode)
 			handler.writeErrorMessage(requestID, err)
+			handler.Close()
 			return
 		}
 		handler.r = validatedReq
