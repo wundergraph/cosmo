@@ -209,30 +209,23 @@ func releaseBuffer(buf *bytes.Buffer) {
 
 func (ct *CustomTransport) roundTripSingleFlight(req *http.Request) (*http.Response, error) {
 
-	var (
-		buf *bytes.Buffer
-	)
-
-	defer func() {
-		if buf != nil {
-			releaseBuffer(buf)
-		}
-	}()
-
 	// We need to use the single flight group to ensure that the request is only sent once
 	v, err, shared := ct.sf.Do(ct.singleFlightKey(req), func() (interface{}, error) {
 		res, err := ct.roundTripper.RoundTrip(req)
 		if err != nil {
 			return nil, err
 		}
-		buf = getBuffer()
+		buf := getBuffer()
+		defer releaseBuffer(buf)
 		_, err = buf.ReadFrom(res.Body)
 		if err != nil {
 			return nil, err
 		}
+		cp := make([]byte, buf.Len())
+		copy(cp, buf.Bytes())
 		return &responseWithBody{
 			res:  res,
-			body: buf.Bytes(),
+			body: cp,
 		}, nil
 	})
 	if err != nil {
