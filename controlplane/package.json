@@ -66,6 +66,7 @@
     "execa": "^8.0.1",
     "fastify": "^4.28.1",
     "fastify-graceful-shutdown": "^3.5.3",
+    "fastify-metrics": "^11.0.0",
     "fastify-plugin": "^4.5.1",
     "fastify-raw-body": "^4.3.0",
     "graphql": "^16.9.0",
