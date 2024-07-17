@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/go-retryablehttp"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/cdn"
-	"github.com/wundergraph/cosmo/router/internal/controlplane"
+	"github.com/wundergraph/cosmo/router/pkg/controlplane"
 	"go.uber.org/zap"
 )
 

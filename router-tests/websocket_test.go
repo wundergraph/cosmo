@@ -1197,6 +1197,8 @@ func TestWebSockets(t *testing.T) {
 			client := graphql.NewSubscriptionClient(xEnv.GraphQLSubscriptionURL()).
 				WithProtocol(graphql.GraphQLWS)
 
+			var wg sync.WaitGroup
+
 			var subscriptionCountEmp struct {
 				CountEmp int `graphql:"countEmp(max: $max, intervalMilliseconds: $interval)"`
 			}
@@ -1209,6 +1211,9 @@ func TestWebSockets(t *testing.T) {
 					"interval": 200,
 				}
 			)
+
+			wg.Add(1)
+
 			firstCountEmpID, err = client.Subscribe(&subscriptionCountEmp, map[string]interface{}{
 				"max":      5,
 				"interval": 100,
@@ -1218,12 +1223,19 @@ func TestWebSockets(t *testing.T) {
 				err := jsonutil.UnmarshalGraphQL(dataValue, &data)
 				require.NoError(t, err)
 				require.Equal(t, firstCountEmp, data.CountEmp)
+				if firstCountEmp == 5 {
+					wg.Done()
+					err = client.Unsubscribe(firstCountEmpID)
+					require.NoError(t, err)
+				}
 				firstCountEmp++
 
 				return nil
 			})
 			require.NoError(t, err)
 			require.NotEqual(t, "", firstCountEmpID)
+
+			wg.Add(1)
 
 			countEmpID, err = client.Subscribe(&subscriptionCountEmp, variables, func(dataValue []byte, errValue error) error {
 				require.NoError(t, errValue)
@@ -1232,6 +1244,7 @@ func TestWebSockets(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, countEmp, data.CountEmp)
 				if countEmp == 5 {
+					wg.Done()
 					err = client.Unsubscribe(countEmpID)
 					require.NoError(t, err)
 				}
@@ -1245,6 +1258,9 @@ func TestWebSockets(t *testing.T) {
 			var subscriptionCountEmp2 struct {
 				CountEmp int `graphql:"countEmp2(max: $max, intervalMilliseconds: $interval)"`
 			}
+
+			wg.Add(1)
+
 			countEmp2ID, err = client.Subscribe(&subscriptionCountEmp2, variables, func(dataValue []byte, errValue error) error {
 				require.NoError(t, errValue)
 				data := subscriptionCountEmp2
@@ -1252,6 +1268,7 @@ func TestWebSockets(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, countEmp2, data.CountEmp)
 				if countEmp2 == 5 {
+					wg.Done()
 					err = client.Unsubscribe(countEmp2ID)
 					require.NoError(t, err)
 				}
@@ -1265,6 +1282,9 @@ func TestWebSockets(t *testing.T) {
 			var subscriptionCountHob struct {
 				CountHob int `graphql:"countHob(max: $max, intervalMilliseconds: $interval)"`
 			}
+
+			wg.Add(1)
+
 			countHobID, err = client.Subscribe(&subscriptionCountHob, variables, func(dataValue []byte, errValue error) error {
 				require.NoError(t, errValue)
 				data := subscriptionCountHob
@@ -1272,6 +1292,7 @@ func TestWebSockets(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, countHob, data.CountHob)
 				if countHob == 5 {
+					wg.Done()
 					err = client.Unsubscribe(countHobID)
 					require.NoError(t, err)
 				}
@@ -1285,6 +1306,8 @@ func TestWebSockets(t *testing.T) {
 			go func() {
 				require.NoError(t, client.Run())
 			}()
+
+			wg.Wait()
 
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 			xEnv.WaitForConnectionCount(0, time.Second*5)
