@@ -6,6 +6,7 @@ import fastifyCors from '@fastify/cors';
 import { pino, stdTimeFunctions, LoggerOptions } from 'pino';
 import { compressionBrotli, compressionGzip } from '@connectrpc/connect-node';
 import fastifyGracefulShutdown from 'fastify-graceful-shutdown';
+import fastifyMetrics, { IMetricsPluginOptions } from 'fastify-metrics';
 import { App } from 'octokit';
 import { Worker } from 'bullmq';
 import routes from './routes.js';
@@ -141,6 +142,13 @@ export default async function build(opts: BuildConfig) {
   /**
    * Plugin registration
    */
+
+  // fastify-metrics does not support ESM, therefore the workaround ".default" import
+  // see: https://github.com/SkeLLLa/fastify-metrics/issues/92
+  await fastify.register(fastifyMetrics.default, {
+    endpoint: '/metrics',
+    defaultMetrics: { enabled: true },
+  });
 
   await fastify.register(fastifyGracefulShutdown, {
     timeout: 60_000,
