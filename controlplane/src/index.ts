@@ -11,6 +11,8 @@ const {
   PORT,
   HOST,
   ALLOWED_ORIGINS,
+  PROMETHEUS_ENABLED,
+  PROMETHEUS_HTTP_PATH,
   DB_URL,
   DB_TLS_CERT,
   DB_TLS_KEY,
@@ -59,6 +61,10 @@ const options: BuildConfig = {
     tls: DB_TLS_CA || DB_TLS_CERT || DB_TLS_KEY ? { ca: DB_TLS_CA, cert: DB_TLS_CERT, key: DB_TLS_KEY } : undefined,
   },
   allowedOrigins: ALLOWED_ORIGINS,
+  prometheus: {
+    enabled: PROMETHEUS_ENABLED,
+    path: PROMETHEUS_HTTP_PATH,
+  },
   production: process.env.NODE_ENV === 'production',
   clickhouseDsn: CLICKHOUSE_DSN,
   logger: {

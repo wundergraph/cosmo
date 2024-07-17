@@ -52,6 +52,10 @@ export interface BuildConfig {
   };
   openaiAPIKey?: string;
   allowedOrigins?: string[];
+  prometheus: {
+    enabled?: boolean;
+    path?: string;
+  };
   debugSQL?: boolean;
   production?: boolean;
   clickhouseDsn?: string;
@@ -143,12 +147,14 @@ export default async function build(opts: BuildConfig) {
    * Plugin registration
    */
 
-  // fastify-metrics does not support ESM, therefore the workaround ".default" import
-  // see: https://github.com/SkeLLLa/fastify-metrics/issues/92
-  await fastify.register(fastifyMetrics.default, {
-    endpoint: '/metrics',
-    defaultMetrics: { enabled: true },
-  });
+  if (opts.prometheus.enabled) {
+    // fastify-metrics does not support ESM, therefore the workaround ".default" import
+    // see: https://github.com/SkeLLLa/fastify-metrics/issues/92
+    await fastify.register(fastifyMetrics.default, {
+      endpoint: opts.prometheus.path,
+      defaultMetrics: { enabled: true },
+    });
+  }
 
   await fastify.register(fastifyGracefulShutdown, {
     timeout: 60_000,

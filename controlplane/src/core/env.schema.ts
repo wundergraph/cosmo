@@ -25,6 +25,14 @@ export const envVariables = z
       .transform((val) => Number.parseInt(val)),
     LOG_LEVEL: z.string().default('info'),
     /**
+     * Prometheus
+     */
+    PROMETHEUS_ENABLED: z
+      .string()
+      .transform((val) => val === 'true')
+      .default('true'),
+    PROMETHEUS_HTTP_PATH: z.string().default('/metrics'),
+    /**
      * Redis
      */
     REDIS_HOST: z.string().default('localhost'),
