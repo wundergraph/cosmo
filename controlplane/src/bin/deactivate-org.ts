@@ -2,12 +2,12 @@ import process from 'node:process';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { pino } from 'pino';
 import postgres from 'postgres';
-import { createRedisConnections } from 'src/core/plugins/redis.js';
 import { buildDatabaseConnectionConfig } from '../core/plugins/database.js';
 import { OrganizationRepository } from '../core/repositories/OrganizationRepository.js';
 import * as schema from '../db/schema.js';
 import Keycloak from '../core/services/Keycloak.js';
 import { createDeleteOrganizationWorker, DeleteOrganizationQueue } from '../core/workers/DeleteOrganizationWorker.js';
+import { createRedisConnections } from '../core/plugins/redis.js';
 import { getConfig } from './get-config.js';
 
 const {
