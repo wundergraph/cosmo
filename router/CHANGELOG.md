@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.96.0](https://github.com/wundergraph/cosmo/compare/router@0.95.7...router@0.96.0) (2024-07-18)
+
+### Features
+
+* improve JSON parsing & merging in the engine ([#937](https://github.com/wundergraph/cosmo/issues/937)) ([1717e16](https://github.com/wundergraph/cosmo/commit/1717e1659388f89cf3cc541c99b54bde5885fe17)) (@jensneuse)
+
+## [0.95.7](https://github.com/wundergraph/cosmo/compare/router@0.95.6...router@0.95.7) (2024-07-16)
+
+### Bug Fixes
+
+* router config hot reload ([#923](https://github.com/wundergraph/cosmo/issues/923)) ([4bbf689](https://github.com/wundergraph/cosmo/commit/4bbf689a3a54441c82ab5f9205851a4a7441cef6)) (@StarpTech)
+
 ## [0.95.6](https://github.com/wundergraph/cosmo/compare/router@0.95.5...router@0.95.6) (2024-07-12)
 
 ### Bug Fixes
