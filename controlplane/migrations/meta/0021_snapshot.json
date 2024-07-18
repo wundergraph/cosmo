@@ -1,10 +1,8 @@
 {
-  "id": "eaf7769b-89db-4316-b5b5-7031aea79bf1",
-  "prevId": "bbed50fc-1036-4f16-b245-e6143ca7b18d",
-  "version": "5",
-  "dialect": "pg",
+  "version": "7",
+  "dialect": "postgresql",
   "tables": {
-    "federated_graphs": {
+    "public.federated_graphs": {
       "name": "federated_graphs",
       "schema": "",
       "columns": {
@@ -66,7 +64,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "schema_check_change_action": {
+    "public.schema_check_change_action": {
       "name": "schema_check_change_action",
       "schema": "",
       "columns": {
@@ -135,7 +133,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "schema_check_composition": {
+    "public.schema_check_composition": {
       "name": "schema_check_composition",
       "schema": "",
       "columns": {
@@ -210,7 +208,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "schema_checks": {
+    "public.schema_checks": {
       "name": "schema_checks",
       "schema": "",
       "columns": {
@@ -274,7 +272,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "schema_versions": {
+    "public.schema_versions": {
       "name": "schema_versions",
       "schema": "",
       "columns": {
@@ -337,7 +335,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "schema_version_change_action": {
+    "public.schema_version_change_action": {
       "name": "schema_version_change_action",
       "schema": "",
       "columns": {
@@ -399,7 +397,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "subgraphs": {
+    "public.subgraphs": {
       "name": "subgraphs",
       "schema": "",
       "columns": {
@@ -461,7 +459,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "federated_subgraphs": {
+    "public.federated_subgraphs": {
       "name": "federated_subgraphs",
       "schema": "",
       "columns": {
@@ -518,7 +516,7 @@
       },
       "uniqueConstraints": {}
     },
-    "targets": {
+    "public.targets": {
       "name": "targets",
       "schema": "",
       "columns": {
@@ -557,18 +555,34 @@
       },
       "indexes": {
         "name_idx": {
-          "name": "name_idx",
           "columns": [
-            "name"
+            {
+              "expression": "name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": true
+          "with": {},
+          "name": "name_idx",
+          "isUnique": true,
+          "method": "btree",
+          "concurrently": false
         },
         "label_idx": {
-          "name": "label_idx",
           "columns": [
-            "labels"
+            {
+              "expression": "labels",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": false
+          "with": {},
+          "name": "label_idx",
+          "isUnique": false,
+          "method": "btree",
+          "concurrently": false
         }
       },
       "foreignKeys": {},
@@ -577,76 +591,80 @@
     }
   },
   "enums": {
-    "schema_change_type": {
+    "public.schema_change_type": {
       "name": "schema_change_type",
-      "values": {
-        "FIELD_ARGUMENT_DESCRIPTION_CHANGED": "FIELD_ARGUMENT_DESCRIPTION_CHANGED",
-        "FIELD_ARGUMENT_DEFAULT_CHANGED": "FIELD_ARGUMENT_DEFAULT_CHANGED",
-        "FIELD_ARGUMENT_TYPE_CHANGED": "FIELD_ARGUMENT_TYPE_CHANGED",
-        "DIRECTIVE_REMOVED": "DIRECTIVE_REMOVED",
-        "DIRECTIVE_ADDED": "DIRECTIVE_ADDED",
-        "DIRECTIVE_DESCRIPTION_CHANGED": "DIRECTIVE_DESCRIPTION_CHANGED",
-        "DIRECTIVE_LOCATION_ADDED": "DIRECTIVE_LOCATION_ADDED",
-        "DIRECTIVE_LOCATION_REMOVED": "DIRECTIVE_LOCATION_REMOVED",
-        "DIRECTIVE_ARGUMENT_ADDED": "DIRECTIVE_ARGUMENT_ADDED",
-        "DIRECTIVE_ARGUMENT_REMOVED": "DIRECTIVE_ARGUMENT_REMOVED",
-        "DIRECTIVE_ARGUMENT_DESCRIPTION_CHANGED": "DIRECTIVE_ARGUMENT_DESCRIPTION_CHANGED",
-        "DIRECTIVE_ARGUMENT_DEFAULT_VALUE_CHANGED": "DIRECTIVE_ARGUMENT_DEFAULT_VALUE_CHANGED",
-        "DIRECTIVE_ARGUMENT_TYPE_CHANGED": "DIRECTIVE_ARGUMENT_TYPE_CHANGED",
-        "ENUM_VALUE_REMOVED": "ENUM_VALUE_REMOVED",
-        "ENUM_VALUE_ADDED": "ENUM_VALUE_ADDED",
-        "ENUM_VALUE_DESCRIPTION_CHANGED": "ENUM_VALUE_DESCRIPTION_CHANGED",
-        "ENUM_VALUE_DEPRECATION_REASON_CHANGED": "ENUM_VALUE_DEPRECATION_REASON_CHANGED",
-        "ENUM_VALUE_DEPRECATION_REASON_ADDED": "ENUM_VALUE_DEPRECATION_REASON_ADDED",
-        "ENUM_VALUE_DEPRECATION_REASON_REMOVED": "ENUM_VALUE_DEPRECATION_REASON_REMOVED",
-        "FIELD_REMOVED": "FIELD_REMOVED",
-        "FIELD_ADDED": "FIELD_ADDED",
-        "FIELD_DESCRIPTION_CHANGED": "FIELD_DESCRIPTION_CHANGED",
-        "FIELD_DESCRIPTION_ADDED": "FIELD_DESCRIPTION_ADDED",
-        "FIELD_DESCRIPTION_REMOVED": "FIELD_DESCRIPTION_REMOVED",
-        "FIELD_DEPRECATION_ADDED": "FIELD_DEPRECATION_ADDED",
-        "FIELD_DEPRECATION_REMOVED": "FIELD_DEPRECATION_REMOVED",
-        "FIELD_DEPRECATION_REASON_CHANGED": "FIELD_DEPRECATION_REASON_CHANGED",
-        "FIELD_DEPRECATION_REASON_ADDED": "FIELD_DEPRECATION_REASON_ADDED",
-        "FIELD_DEPRECATION_REASON_REMOVED": "FIELD_DEPRECATION_REASON_REMOVED",
-        "FIELD_TYPE_CHANGED": "FIELD_TYPE_CHANGED",
-        "FIELD_ARGUMENT_ADDED": "FIELD_ARGUMENT_ADDED",
-        "FIELD_ARGUMENT_REMOVED": "FIELD_ARGUMENT_REMOVED",
-        "INPUT_FIELD_REMOVED": "INPUT_FIELD_REMOVED",
-        "INPUT_FIELD_ADDED": "INPUT_FIELD_ADDED",
-        "INPUT_FIELD_DESCRIPTION_ADDED": "INPUT_FIELD_DESCRIPTION_ADDED",
-        "INPUT_FIELD_DESCRIPTION_REMOVED": "INPUT_FIELD_DESCRIPTION_REMOVED",
-        "INPUT_FIELD_DESCRIPTION_CHANGED": "INPUT_FIELD_DESCRIPTION_CHANGED",
-        "INPUT_FIELD_DEFAULT_VALUE_CHANGED": "INPUT_FIELD_DEFAULT_VALUE_CHANGED",
-        "INPUT_FIELD_TYPE_CHANGED": "INPUT_FIELD_TYPE_CHANGED",
-        "OBJECT_TYPE_INTERFACE_ADDED": "OBJECT_TYPE_INTERFACE_ADDED",
-        "OBJECT_TYPE_INTERFACE_REMOVED": "OBJECT_TYPE_INTERFACE_REMOVED",
-        "SCHEMA_QUERY_TYPE_CHANGED": "SCHEMA_QUERY_TYPE_CHANGED",
-        "SCHEMA_MUTATION_TYPE_CHANGED": "SCHEMA_MUTATION_TYPE_CHANGED",
-        "SCHEMA_SUBSCRIPTION_TYPE_CHANGED": "SCHEMA_SUBSCRIPTION_TYPE_CHANGED",
-        "TYPE_REMOVED": "TYPE_REMOVED",
-        "TYPE_ADDED": "TYPE_ADDED",
-        "TYPE_KIND_CHANGED": "TYPE_KIND_CHANGED",
-        "TYPE_DESCRIPTION_CHANGED": "TYPE_DESCRIPTION_CHANGED",
-        "TYPE_DESCRIPTION_REMOVED": "TYPE_DESCRIPTION_REMOVED",
-        "TYPE_DESCRIPTION_ADDED": "TYPE_DESCRIPTION_ADDED",
-        "UNION_MEMBER_REMOVED": "UNION_MEMBER_REMOVED",
-        "UNION_MEMBER_ADDED": "UNION_MEMBER_ADDED"
-      }
+      "schema": "public",
+      "values": [
+        "FIELD_ARGUMENT_DESCRIPTION_CHANGED",
+        "FIELD_ARGUMENT_DEFAULT_CHANGED",
+        "FIELD_ARGUMENT_TYPE_CHANGED",
+        "DIRECTIVE_REMOVED",
+        "DIRECTIVE_ADDED",
+        "DIRECTIVE_DESCRIPTION_CHANGED",
+        "DIRECTIVE_LOCATION_ADDED",
+        "DIRECTIVE_LOCATION_REMOVED",
+        "DIRECTIVE_ARGUMENT_ADDED",
+        "DIRECTIVE_ARGUMENT_REMOVED",
+        "DIRECTIVE_ARGUMENT_DESCRIPTION_CHANGED",
+        "DIRECTIVE_ARGUMENT_DEFAULT_VALUE_CHANGED",
+        "DIRECTIVE_ARGUMENT_TYPE_CHANGED",
+        "ENUM_VALUE_REMOVED",
+        "ENUM_VALUE_ADDED",
+        "ENUM_VALUE_DESCRIPTION_CHANGED",
+        "ENUM_VALUE_DEPRECATION_REASON_CHANGED",
+        "ENUM_VALUE_DEPRECATION_REASON_ADDED",
+        "ENUM_VALUE_DEPRECATION_REASON_REMOVED",
+        "FIELD_REMOVED",
+        "FIELD_ADDED",
+        "FIELD_DESCRIPTION_CHANGED",
+        "FIELD_DESCRIPTION_ADDED",
+        "FIELD_DESCRIPTION_REMOVED",
+        "FIELD_DEPRECATION_ADDED",
+        "FIELD_DEPRECATION_REMOVED",
+        "FIELD_DEPRECATION_REASON_CHANGED",
+        "FIELD_DEPRECATION_REASON_ADDED",
+        "FIELD_DEPRECATION_REASON_REMOVED",
+        "FIELD_TYPE_CHANGED",
+        "FIELD_ARGUMENT_ADDED",
+        "FIELD_ARGUMENT_REMOVED",
+        "INPUT_FIELD_REMOVED",
+        "INPUT_FIELD_ADDED",
+        "INPUT_FIELD_DESCRIPTION_ADDED",
+        "INPUT_FIELD_DESCRIPTION_REMOVED",
+        "INPUT_FIELD_DESCRIPTION_CHANGED",
+        "INPUT_FIELD_DEFAULT_VALUE_CHANGED",
+        "INPUT_FIELD_TYPE_CHANGED",
+        "OBJECT_TYPE_INTERFACE_ADDED",
+        "OBJECT_TYPE_INTERFACE_REMOVED",
+        "SCHEMA_QUERY_TYPE_CHANGED",
+        "SCHEMA_MUTATION_TYPE_CHANGED",
+        "SCHEMA_SUBSCRIPTION_TYPE_CHANGED",
+        "TYPE_REMOVED",
+        "TYPE_ADDED",
+        "TYPE_KIND_CHANGED",
+        "TYPE_DESCRIPTION_CHANGED",
+        "TYPE_DESCRIPTION_REMOVED",
+        "TYPE_DESCRIPTION_ADDED",
+        "UNION_MEMBER_REMOVED",
+        "UNION_MEMBER_ADDED"
+      ]
     },
-    "target_type": {
+    "public.target_type": {
       "name": "target_type",
-      "values": {
-        "federated": "federated",
-        "subgraph": "subgraph",
-        "graph": "graph"
-      }
+      "schema": "public",
+      "values": [
+        "federated",
+        "subgraph",
+        "graph"
+      ]
     }
   },
   "schemas": {},
   "_meta": {
-    "columns": {},
     "schemas": {},
-    "tables": {}
-  }
+    "tables": {},
+    "columns": {}
+  },
+  "id": "eaf7769b-89db-4316-b5b5-7031aea79bf1",
+  "prevId": "bbed50fc-1036-4f16-b245-e6143ca7b18d"
 }

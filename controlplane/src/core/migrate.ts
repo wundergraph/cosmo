@@ -13,7 +13,6 @@ export async function RunMigration(databaseConnectionUrl: string, opts?: Databas
 
   await migrate(drizzle(migrationConnection), {
     migrationsFolder: 'migrations',
-    migrationsTable: 'migrations',
   });
 
   await migrationConnection.end({

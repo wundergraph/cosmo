@@ -34,7 +34,7 @@
     "graphql": "^16.9.0",
     "lodash": "^4.17.21",
     "pathe": "^1.1.1",
-    "vitest": "^1.6.0"
+    "vitest": "^2.0.3"
   },
   "devDependencies": {
     "@types/lodash": "^4.17.0",
