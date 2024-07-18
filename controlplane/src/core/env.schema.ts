@@ -32,6 +32,11 @@ export const envVariables = z
       .transform((val) => val === 'true')
       .default('true'),
     PROMETHEUS_HTTP_PATH: z.string().default('/metrics'),
+    PROMETHEUS_PORT: z
+      .string()
+      .default('8088')
+      .transform((val) => Number.parseInt(val)),
+    PROMETHEUS_HOST: z.string().default('localhost'),
     /**
      * Redis
      */

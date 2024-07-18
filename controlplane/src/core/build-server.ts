@@ -6,7 +6,6 @@ import fastifyCors from '@fastify/cors';
 import { pino, stdTimeFunctions, LoggerOptions } from 'pino';
 import { compressionBrotli, compressionGzip } from '@connectrpc/connect-node';
 import fastifyGracefulShutdown from 'fastify-graceful-shutdown';
-import fastifyMetrics, { IMetricsPluginOptions } from 'fastify-metrics';
 import { App } from 'octokit';
 import { Worker } from 'bullmq';
 import routes from './routes.js';
@@ -52,10 +51,6 @@ export interface BuildConfig {
   };
   openaiAPIKey?: string;
   allowedOrigins?: string[];
-  prometheus?: {
-    enabled?: boolean;
-    path?: string;
-  };
   debugSQL?: boolean;
   production?: boolean;
   clickhouseDsn?: string;
@@ -146,15 +141,6 @@ export default async function build(opts: BuildConfig) {
   /**
    * Plugin registration
    */
-
-  if (opts.prometheus?.enabled) {
-    // fastify-metrics does not support ESM, therefore the workaround ".default" import
-    // see: https://github.com/SkeLLLa/fastify-metrics/issues/92
-    await fastify.register(fastifyMetrics.default, {
-      endpoint: opts.prometheus.path,
-      defaultMetrics: { enabled: true },
-    });
-  }
 
   await fastify.register(fastifyGracefulShutdown, {
     timeout: 60_000,
