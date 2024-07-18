@@ -191,5 +191,14 @@ configuration:
   # -- URL of the CDN to use for serving router configs and persistent operations
   cdnBaseUrl: 'http://cosmo-cdn:8787'
 
+  # Use this section to disable/enable and configure prometheus metrics.
+  prometheus:
+    # -- Enables prometheus metrics support. Default is false.
+    enabled: false
+    # -- The port where metrics are exposed. Default is port 8088.
+    port: 8088
+    # -- The HTTP path where metrics are exposed. Default is "/metrics".
+    path: "/metrics"
+
 # -- Existing secret in the same namespace containing the ControlPlane Secrets. The secret keys have to match with current secret.
 existingSecret: ""
