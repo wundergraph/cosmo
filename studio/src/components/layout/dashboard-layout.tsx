@@ -215,7 +215,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
 
   return (
     <div className="2xl:flex 2xl:flex-1 2xl:flex-col 2xl:items-center">
-      {isStarBannerDisabled !== "true" && !isOrganizationDeactivated && (
+      {typeof window !== "undefined" && isStarBannerDisabled !== "true" && !isOrganizationDeactivated && (
         <StarBanner setDisableStarBanner={setDisableStarBanner} />
       )}
       <OrganizationBanner />
