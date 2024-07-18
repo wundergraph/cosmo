@@ -215,6 +215,8 @@ func (ct *CustomTransport) roundTripSingleFlight(req *http.Request) (*http.Respo
 		if err != nil {
 			return nil, err
 		}
+		// single flight is disallowed for mutations, including file uploads
+		// hence we don't need to worry about buffering the body here
 		buf := getBuffer()
 		defer releaseBuffer(buf)
 		_, err = buf.ReadFrom(res.Body)
@@ -260,7 +262,7 @@ func (ct *CustomTransport) singleFlightKey(req *http.Request) string {
 	defer pool.Hash64.Put(keyGen)
 
 	if bodyHash, ok := httpclient.BodyHashFromContext(req.Context()); ok {
-		_, _ = keyGen.Write([]byte(strconv.FormatUint(bodyHash, 10)))
+		_, _ = keyGen.WriteString(strconv.FormatUint(bodyHash, 10))
 	}
 
 	unsortedHeaders := make([]string, 0, len(req.Header))
