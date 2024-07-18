@@ -8,6 +8,7 @@ import {
 import { SQL, and, asc, eq, inArray, like, not, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
+import { addDays } from 'date-fns';
 import { MemberRole, NewOrganizationFeature } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
@@ -1391,8 +1392,17 @@ export class OrganizationRepository {
         .where(eq(schema.organizations.id, input.organizationId));
     });
 
-    await input.deleteOrganizationQueue.addJob({
-      organizationId: input.organizationId,
-    });
+    const now = new Date();
+    const oneMonthFromNow = addDays(now, 30);
+    const delay = Number(oneMonthFromNow) - Number(now);
+
+    await input.deleteOrganizationQueue.addJob(
+      {
+        organizationId: input.organizationId,
+      },
+      {
+        delay,
+      },
+    );
   }
 }

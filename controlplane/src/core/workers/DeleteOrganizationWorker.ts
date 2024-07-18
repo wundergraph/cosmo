@@ -1,4 +1,4 @@
-import { ConnectionOptions, Job, Queue, Worker } from 'bullmq';
+import { ConnectionOptions, Job, JobsOptions, Queue, Worker } from 'bullmq';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import pino from 'pino';
 import * as schema from '../../db/schema.js';
@@ -36,8 +36,8 @@ export class DeleteOrganizationQueue {
     });
   }
 
-  public async addJob(job: DeleteOrganizationInput) {
-    await this.queue.add(`organizations/${job.organizationId}`, job);
+  public async addJob(job: DeleteOrganizationInput, opts?: JobsOptions) {
+    await this.queue.add(`organizations/${job.organizationId}`, job, opts);
   }
 }
 
