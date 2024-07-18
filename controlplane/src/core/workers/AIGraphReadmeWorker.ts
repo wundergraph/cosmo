@@ -40,7 +40,15 @@ export class AIGraphReadmeQueue {
   }
 
   public async addJob(job: CreateReadmeInputEvent) {
-    await this.queue.add(`targets/${job.targetId}`, job);
+    await this.queue.add(`targets/${job.targetId}`, job, {
+      removeOnComplete: {
+        age: 3600, // keep up to 1 hour
+        count: 100, // keep up to 100 jobs
+      },
+      removeOnFail: {
+        age: 24 * 3600, // keep up to 24 hours
+      },
+    });
   }
 }
 
