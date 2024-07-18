@@ -2,9 +2,137 @@
 
 package model
 
+type BigAbstractResponse interface {
+	IsBigAbstractResponse()
+}
+
+type ABigObject struct {
+	AFieldOnABigObject string  `json:"aFieldOnABigObject"`
+	BFieldOnABigObject int     `json:"bFieldOnABigObject"`
+	CFieldOnABigObject bool    `json:"cFieldOnABigObject"`
+	DFieldOnABigObject float64 `json:"dFieldOnABigObject"`
+	EFieldOnABigObject string  `json:"eFieldOnABigObject"`
+	FFieldOnABigObject int     `json:"fFieldOnABigObject"`
+	GFieldOnABigObject bool    `json:"gFieldOnABigObject"`
+	HFieldOnABigObject float64 `json:"hFieldOnABigObject"`
+	IFieldOnABigObject string  `json:"iFieldOnABigObject"`
+	JFieldOnABigObject int     `json:"jFieldOnABigObject"`
+	KFieldOnABigObject bool    `json:"kFieldOnABigObject"`
+	LFieldOnABigObject float64 `json:"lFieldOnABigObject"`
+	MFieldOnABigObject string  `json:"mFieldOnABigObject"`
+	NFieldOnABigObject int     `json:"nFieldOnABigObject"`
+	OFieldOnABigObject bool    `json:"oFieldOnABigObject"`
+	PFieldOnABigObject float64 `json:"pFieldOnABigObject"`
+	QFieldOnABigObject string  `json:"qFieldOnABigObject"`
+	RFieldOnABigObject int     `json:"rFieldOnABigObject"`
+	SFieldOnABigObject bool    `json:"sFieldOnABigObject"`
+	TFieldOnABigObject float64 `json:"tFieldOnABigObject"`
+	UFieldOnABigObject string  `json:"uFieldOnABigObject"`
+	VFieldOnABigObject int     `json:"vFieldOnABigObject"`
+	WFieldOnABigObject bool    `json:"wFieldOnABigObject"`
+	XFieldOnABigObject float64 `json:"xFieldOnABigObject"`
+	YFieldOnABigObject string  `json:"yFieldOnABigObject"`
+	ZFieldOnABigObject int     `json:"zFieldOnABigObject"`
+}
+
+func (ABigObject) IsBigAbstractResponse() {}
+
+type BBigObject struct {
+	AFieldOnBBigObject string  `json:"aFieldOnBBigObject"`
+	BFieldOnBBigObject int     `json:"bFieldOnBBigObject"`
+	CFieldOnBBigObject bool    `json:"cFieldOnBBigObject"`
+	DFieldOnBBigObject float64 `json:"dFieldOnBBigObject"`
+	EFieldOnBBigObject string  `json:"eFieldOnBBigObject"`
+	FFieldOnBBigObject int     `json:"fFieldOnBBigObject"`
+	GFieldOnBBigObject bool    `json:"gFieldOnBBigObject"`
+	HFieldOnBBigObject float64 `json:"hFieldOnBBigObject"`
+	IFieldOnBBigObject string  `json:"iFieldOnBBigObject"`
+	JFieldOnBBigObject int     `json:"jFieldOnBBigObject"`
+	KFieldOnBBigObject bool    `json:"kFieldOnBBigObject"`
+	LFieldOnBBigObject float64 `json:"lFieldOnBBigObject"`
+	MFieldOnBBigObject string  `json:"mFieldOnBBigObject"`
+	NFieldOnBBigObject int     `json:"nFieldOnBBigObject"`
+	OFieldOnBBigObject bool    `json:"oFieldOnBBigObject"`
+	PFieldOnBBigObject float64 `json:"pFieldOnBBigObject"`
+	QFieldOnBBigObject string  `json:"qFieldOnBBigObject"`
+	RFieldOnBBigObject int     `json:"rFieldOnBBigObject"`
+	SFieldOnBBigObject bool    `json:"sFieldOnBBigObject"`
+	TFieldOnBBigObject float64 `json:"tFieldOnBBigObject"`
+	UFieldOnBBigObject string  `json:"uFieldOnBBigObject"`
+	VFieldOnBBigObject int     `json:"vFieldOnBBigObject"`
+	WFieldOnBBigObject bool    `json:"wFieldOnBBigObject"`
+	XFieldOnBBigObject float64 `json:"xFieldOnBBigObject"`
+	YFieldOnBBigObject string  `json:"yFieldOnBBigObject"`
+	ZFieldOnBBigObject int     `json:"zFieldOnBBigObject"`
+}
+
+func (BBigObject) IsBigAbstractResponse() {}
+
 type BigObject struct {
 	NestedObjects []*NestedObject `json:"nestedObjects"`
 }
+
+type CBigObject struct {
+	AFieldOnCBigObject string  `json:"aFieldOnCBigObject"`
+	BFieldOnCBigObject int     `json:"bFieldOnCBigObject"`
+	CFieldOnCBigObject bool    `json:"cFieldOnCBigObject"`
+	DFieldOnCBigObject float64 `json:"dFieldOnCBigObject"`
+	EFieldOnCBigObject string  `json:"eFieldOnCBigObject"`
+	FFieldOnCBigObject int     `json:"fFieldOnCBigObject"`
+	GFieldOnCBigObject bool    `json:"gFieldOnCBigObject"`
+	HFieldOnCBigObject float64 `json:"hFieldOnCBigObject"`
+	IFieldOnCBigObject string  `json:"iFieldOnCBigObject"`
+	JFieldOnCBigObject int     `json:"jFieldOnCBigObject"`
+	KFieldOnCBigObject bool    `json:"kFieldOnCBigObject"`
+	LFieldOnCBigObject float64 `json:"lFieldOnCBigObject"`
+	MFieldOnCBigObject string  `json:"mFieldOnCBigObject"`
+	NFieldOnCBigObject int     `json:"nFieldOnCBigObject"`
+	OFieldOnCBigObject bool    `json:"oFieldOnCBigObject"`
+	PFieldOnCBigObject float64 `json:"pFieldOnCBigObject"`
+	QFieldOnCBigObject string  `json:"qFieldOnCBigObject"`
+	RFieldOnCBigObject int     `json:"rFieldOnCBigObject"`
+	SFieldOnCBigObject bool    `json:"sFieldOnCBigObject"`
+	TFieldOnCBigObject float64 `json:"tFieldOnCBigObject"`
+	UFieldOnCBigObject string  `json:"uFieldOnCBigObject"`
+	VFieldOnCBigObject int     `json:"vFieldOnCBigObject"`
+	WFieldOnCBigObject bool    `json:"wFieldOnCBigObject"`
+	XFieldOnCBigObject float64 `json:"xFieldOnCBigObject"`
+	YFieldOnCBigObject string  `json:"yFieldOnCBigObject"`
+	ZFieldOnCBigObject int     `json:"zFieldOnCBigObject"`
+}
+
+func (CBigObject) IsBigAbstractResponse() {}
+
+type DBigObject struct {
+	AFieldOnDBigObject string  `json:"aFieldOnDBigObject"`
+	BFieldOnDBigObject int     `json:"bFieldOnDBigObject"`
+	CFieldOnDBigObject bool    `json:"cFieldOnDBigObject"`
+	DFieldOnDBigObject float64 `json:"dFieldOnDBigObject"`
+	EFieldOnDBigObject string  `json:"eFieldOnDBigObject"`
+	FFieldOnDBigObject int     `json:"fFieldOnDBigObject"`
+	GFieldOnDBigObject bool    `json:"gFieldOnDBigObject"`
+	HFieldOnDBigObject float64 `json:"hFieldOnDBigObject"`
+	IFieldOnDBigObject string  `json:"iFieldOnDBigObject"`
+	JFieldOnDBigObject int     `json:"jFieldOnDBigObject"`
+	KFieldOnDBigObject bool    `json:"kFieldOnDBigObject"`
+	LFieldOnDBigObject float64 `json:"lFieldOnDBigObject"`
+	MFieldOnDBigObject string  `json:"mFieldOnDBigObject"`
+	NFieldOnDBigObject int     `json:"nFieldOnDBigObject"`
+	OFieldOnDBigObject bool    `json:"oFieldOnDBigObject"`
+	PFieldOnDBigObject float64 `json:"pFieldOnDBigObject"`
+	QFieldOnDBigObject string  `json:"qFieldOnDBigObject"`
+	RFieldOnDBigObject int     `json:"rFieldOnDBigObject"`
+	SFieldOnDBigObject bool    `json:"sFieldOnDBigObject"`
+	TFieldOnDBigObject float64 `json:"tFieldOnDBigObject"`
+	UFieldOnDBigObject string  `json:"uFieldOnDBigObject"`
+	VFieldOnDBigObject int     `json:"vFieldOnDBigObject"`
+	WFieldOnDBigObject bool    `json:"wFieldOnDBigObject"`
+	XFieldOnDBigObject float64 `json:"xFieldOnDBigObject"`
+	YFieldOnDBigObject string  `json:"yFieldOnDBigObject"`
+	ZFieldOnDBigObject int     `json:"zFieldOnDBigObject"`
+}
+
+func (DBigObject) IsBigAbstractResponse() {}
 
 type DeeplyNestedObject struct {
 	AFieldOnDeeplyNestedObject string  `json:"aFieldOnDeeplyNestedObject"`
@@ -35,6 +163,37 @@ type DeeplyNestedObject struct {
 	ZFieldOnDeeplyNestedObject int     `json:"zFieldOnDeeplyNestedObject"`
 }
 
+type EBigObject struct {
+	AFieldOnEBigObject string  `json:"aFieldOnEBigObject"`
+	BFieldOnEBigObject int     `json:"bFieldOnEBigObject"`
+	CFieldOnEBigObject bool    `json:"cFieldOnEBigObject"`
+	DFieldOnEBigObject float64 `json:"dFieldOnEBigObject"`
+	EFieldOnEBigObject string  `json:"eFieldOnEBigObject"`
+	FFieldOnEBigObject int     `json:"fFieldOnEBigObject"`
+	GFieldOnEBigObject bool    `json:"gFieldOnEBigObject"`
+	HFieldOnEBigObject float64 `json:"hFieldOnEBigObject"`
+	IFieldOnEBigObject string  `json:"iFieldOnEBigObject"`
+	JFieldOnEBigObject int     `json:"jFieldOnEBigObject"`
+	KFieldOnEBigObject bool    `json:"kFieldOnEBigObject"`
+	LFieldOnEBigObject float64 `json:"lFieldOnEBigObject"`
+	MFieldOnEBigObject string  `json:"mFieldOnEBigObject"`
+	NFieldOnEBigObject int     `json:"nFieldOnEBigObject"`
+	OFieldOnEBigObject bool    `json:"oFieldOnEBigObject"`
+	PFieldOnEBigObject float64 `json:"pFieldOnEBigObject"`
+	QFieldOnEBigObject string  `json:"qFieldOnEBigObject"`
+	RFieldOnEBigObject int     `json:"rFieldOnEBigObject"`
+	SFieldOnEBigObject bool    `json:"sFieldOnEBigObject"`
+	TFieldOnEBigObject float64 `json:"tFieldOnEBigObject"`
+	UFieldOnEBigObject string  `json:"uFieldOnEBigObject"`
+	VFieldOnEBigObject int     `json:"vFieldOnEBigObject"`
+	WFieldOnEBigObject bool    `json:"wFieldOnEBigObject"`
+	XFieldOnEBigObject float64 `json:"xFieldOnEBigObject"`
+	YFieldOnEBigObject string  `json:"yFieldOnEBigObject"`
+	ZFieldOnEBigObject int     `json:"zFieldOnEBigObject"`
+}
+
+func (EBigObject) IsBigAbstractResponse() {}
+
 type Employee struct {
 	ID               int     `json:"id"`
 	FieldThrowsError *string `json:"fieldThrowsError,omitempty"`
@@ -42,15 +201,480 @@ type Employee struct {
 
 func (Employee) IsEntity() {}
 
+type FBigObject struct {
+	AFieldOnFBigObject string  `json:"aFieldOnFBigObject"`
+	BFieldOnFBigObject int     `json:"bFieldOnFBigObject"`
+	CFieldOnFBigObject bool    `json:"cFieldOnFBigObject"`
+	DFieldOnFBigObject float64 `json:"dFieldOnFBigObject"`
+	EFieldOnFBigObject string  `json:"eFieldOnFBigObject"`
+	FFieldOnFBigObject int     `json:"fFieldOnFBigObject"`
+	GFieldOnFBigObject bool    `json:"gFieldOnFBigObject"`
+	HFieldOnFBigObject float64 `json:"hFieldOnFBigObject"`
+	IFieldOnFBigObject string  `json:"iFieldOnFBigObject"`
+	JFieldOnFBigObject int     `json:"jFieldOnFBigObject"`
+	KFieldOnFBigObject bool    `json:"kFieldOnFBigObject"`
+	LFieldOnFBigObject float64 `json:"lFieldOnFBigObject"`
+	MFieldOnFBigObject string  `json:"mFieldOnFBigObject"`
+	NFieldOnFBigObject int     `json:"nFieldOnFBigObject"`
+	OFieldOnFBigObject bool    `json:"oFieldOnFBigObject"`
+	PFieldOnFBigObject float64 `json:"pFieldOnFBigObject"`
+	QFieldOnFBigObject string  `json:"qFieldOnFBigObject"`
+	RFieldOnFBigObject int     `json:"rFieldOnFBigObject"`
+	SFieldOnFBigObject bool    `json:"sFieldOnFBigObject"`
+	TFieldOnFBigObject float64 `json:"tFieldOnFBigObject"`
+	UFieldOnFBigObject string  `json:"uFieldOnFBigObject"`
+	VFieldOnFBigObject int     `json:"vFieldOnFBigObject"`
+	WFieldOnFBigObject bool    `json:"wFieldOnFBigObject"`
+	XFieldOnFBigObject float64 `json:"xFieldOnFBigObject"`
+	YFieldOnFBigObject string  `json:"yFieldOnFBigObject"`
+	ZFieldOnFBigObject int     `json:"zFieldOnFBigObject"`
+}
+
+func (FBigObject) IsBigAbstractResponse() {}
+
+type GBigObject struct {
+	AFieldOnGBigObject string  `json:"aFieldOnGBigObject"`
+	BFieldOnGBigObject int     `json:"bFieldOnGBigObject"`
+	CFieldOnGBigObject bool    `json:"cFieldOnGBigObject"`
+	DFieldOnGBigObject float64 `json:"dFieldOnGBigObject"`
+	EFieldOnGBigObject string  `json:"eFieldOnGBigObject"`
+	FFieldOnGBigObject int     `json:"fFieldOnGBigObject"`
+	GFieldOnGBigObject bool    `json:"gFieldOnGBigObject"`
+	HFieldOnGBigObject float64 `json:"hFieldOnGBigObject"`
+	IFieldOnGBigObject string  `json:"iFieldOnGBigObject"`
+	JFieldOnGBigObject int     `json:"jFieldOnGBigObject"`
+	KFieldOnGBigObject bool    `json:"kFieldOnGBigObject"`
+	LFieldOnGBigObject float64 `json:"lFieldOnGBigObject"`
+	MFieldOnGBigObject string  `json:"mFieldOnGBigObject"`
+	NFieldOnGBigObject int     `json:"nFieldOnGBigObject"`
+	OFieldOnGBigObject bool    `json:"oFieldOnGBigObject"`
+	PFieldOnGBigObject float64 `json:"pFieldOnGBigObject"`
+	QFieldOnGBigObject string  `json:"qFieldOnGBigObject"`
+	RFieldOnGBigObject int     `json:"rFieldOnGBigObject"`
+	SFieldOnGBigObject bool    `json:"sFieldOnGBigObject"`
+	TFieldOnGBigObject float64 `json:"tFieldOnGBigObject"`
+	UFieldOnGBigObject string  `json:"uFieldOnGBigObject"`
+	VFieldOnGBigObject int     `json:"vFieldOnGBigObject"`
+	WFieldOnGBigObject bool    `json:"wFieldOnGBigObject"`
+	XFieldOnGBigObject float64 `json:"xFieldOnGBigObject"`
+	YFieldOnGBigObject string  `json:"yFieldOnGBigObject"`
+	ZFieldOnGBigObject int     `json:"zFieldOnGBigObject"`
+}
+
+func (GBigObject) IsBigAbstractResponse() {}
+
+type HBigObject struct {
+	AFieldOnHBigObject string  `json:"aFieldOnHBigObject"`
+	BFieldOnHBigObject int     `json:"bFieldOnHBigObject"`
+	CFieldOnHBigObject bool    `json:"cFieldOnHBigObject"`
+	DFieldOnHBigObject float64 `json:"dFieldOnHBigObject"`
+	EFieldOnHBigObject string  `json:"eFieldOnHBigObject"`
+	FFieldOnHBigObject int     `json:"fFieldOnHBigObject"`
+	GFieldOnHBigObject bool    `json:"gFieldOnHBigObject"`
+	HFieldOnHBigObject float64 `json:"hFieldOnHBigObject"`
+	IFieldOnHBigObject string  `json:"iFieldOnHBigObject"`
+	JFieldOnHBigObject int     `json:"jFieldOnHBigObject"`
+	KFieldOnHBigObject bool    `json:"kFieldOnHBigObject"`
+	LFieldOnHBigObject float64 `json:"lFieldOnHBigObject"`
+	MFieldOnHBigObject string  `json:"mFieldOnHBigObject"`
+	NFieldOnHBigObject int     `json:"nFieldOnHBigObject"`
+	OFieldOnHBigObject bool    `json:"oFieldOnHBigObject"`
+	PFieldOnHBigObject float64 `json:"pFieldOnHBigObject"`
+	QFieldOnHBigObject string  `json:"qFieldOnHBigObject"`
+	RFieldOnHBigObject int     `json:"rFieldOnHBigObject"`
+	SFieldOnHBigObject bool    `json:"sFieldOnHBigObject"`
+	TFieldOnHBigObject float64 `json:"tFieldOnHBigObject"`
+	UFieldOnHBigObject string  `json:"uFieldOnHBigObject"`
+	VFieldOnHBigObject int     `json:"vFieldOnHBigObject"`
+	WFieldOnHBigObject bool    `json:"wFieldOnHBigObject"`
+	XFieldOnHBigObject float64 `json:"xFieldOnHBigObject"`
+	YFieldOnHBigObject string  `json:"yFieldOnHBigObject"`
+	ZFieldOnHBigObject int     `json:"zFieldOnHBigObject"`
+}
+
+func (HBigObject) IsBigAbstractResponse() {}
+
+type IBigObject struct {
+	AFieldOnIBigObject string  `json:"aFieldOnIBigObject"`
+	BFieldOnIBigObject int     `json:"bFieldOnIBigObject"`
+	CFieldOnIBigObject bool    `json:"cFieldOnIBigObject"`
+	DFieldOnIBigObject float64 `json:"dFieldOnIBigObject"`
+	EFieldOnIBigObject string  `json:"eFieldOnIBigObject"`
+	FFieldOnIBigObject int     `json:"fFieldOnIBigObject"`
+	GFieldOnIBigObject bool    `json:"gFieldOnIBigObject"`
+	HFieldOnIBigObject float64 `json:"hFieldOnIBigObject"`
+	IFieldOnIBigObject string  `json:"iFieldOnIBigObject"`
+	JFieldOnIBigObject int     `json:"jFieldOnIBigObject"`
+	KFieldOnIBigObject bool    `json:"kFieldOnIBigObject"`
+	LFieldOnIBigObject float64 `json:"lFieldOnIBigObject"`
+	MFieldOnIBigObject string  `json:"mFieldOnIBigObject"`
+	NFieldOnIBigObject int     `json:"nFieldOnIBigObject"`
+	OFieldOnIBigObject bool    `json:"oFieldOnIBigObject"`
+	PFieldOnIBigObject float64 `json:"pFieldOnIBigObject"`
+	QFieldOnIBigObject string  `json:"qFieldOnIBigObject"`
+	RFieldOnIBigObject int     `json:"rFieldOnIBigObject"`
+	SFieldOnIBigObject bool    `json:"sFieldOnIBigObject"`
+	TFieldOnIBigObject float64 `json:"tFieldOnIBigObject"`
+	UFieldOnIBigObject string  `json:"uFieldOnIBigObject"`
+	VFieldOnIBigObject int     `json:"vFieldOnIBigObject"`
+	WFieldOnIBigObject bool    `json:"wFieldOnIBigObject"`
+	XFieldOnIBigObject float64 `json:"xFieldOnIBigObject"`
+	YFieldOnIBigObject string  `json:"yFieldOnIBigObject"`
+	ZFieldOnIBigObject int     `json:"zFieldOnIBigObject"`
+}
+
+func (IBigObject) IsBigAbstractResponse() {}
+
+type JBigObject struct {
+	AFieldOnJBigObject string  `json:"aFieldOnJBigObject"`
+	BFieldOnJBigObject int     `json:"bFieldOnJBigObject"`
+	CFieldOnJBigObject bool    `json:"cFieldOnJBigObject"`
+	DFieldOnJBigObject float64 `json:"dFieldOnJBigObject"`
+	EFieldOnJBigObject string  `json:"eFieldOnJBigObject"`
+	FFieldOnJBigObject int     `json:"fFieldOnJBigObject"`
+	GFieldOnJBigObject bool    `json:"gFieldOnJBigObject"`
+	HFieldOnJBigObject float64 `json:"hFieldOnJBigObject"`
+	IFieldOnJBigObject string  `json:"iFieldOnJBigObject"`
+	JFieldOnJBigObject int     `json:"jFieldOnJBigObject"`
+	KFieldOnJBigObject bool    `json:"kFieldOnJBigObject"`
+	LFieldOnJBigObject float64 `json:"lFieldOnJBigObject"`
+	MFieldOnJBigObject string  `json:"mFieldOnJBigObject"`
+	NFieldOnJBigObject int     `json:"nFieldOnJBigObject"`
+	OFieldOnJBigObject bool    `json:"oFieldOnJBigObject"`
+	PFieldOnJBigObject float64 `json:"pFieldOnJBigObject"`
+	QFieldOnJBigObject string  `json:"qFieldOnJBigObject"`
+	RFieldOnJBigObject int     `json:"rFieldOnJBigObject"`
+	SFieldOnJBigObject bool    `json:"sFieldOnJBigObject"`
+	TFieldOnJBigObject float64 `json:"tFieldOnJBigObject"`
+	UFieldOnJBigObject string  `json:"uFieldOnJBigObject"`
+	VFieldOnJBigObject int     `json:"vFieldOnJBigObject"`
+	WFieldOnJBigObject bool    `json:"wFieldOnJBigObject"`
+	XFieldOnJBigObject float64 `json:"xFieldOnJBigObject"`
+	YFieldOnJBigObject string  `json:"yFieldOnJBigObject"`
+	ZFieldOnJBigObject int     `json:"zFieldOnJBigObject"`
+}
+
+func (JBigObject) IsBigAbstractResponse() {}
+
+type KBigObject struct {
+	AFieldOnKBigObject string  `json:"aFieldOnKBigObject"`
+	BFieldOnKBigObject int     `json:"bFieldOnKBigObject"`
+	CFieldOnKBigObject bool    `json:"cFieldOnKBigObject"`
+	DFieldOnKBigObject float64 `json:"dFieldOnKBigObject"`
+	EFieldOnKBigObject string  `json:"eFieldOnKBigObject"`
+	FFieldOnKBigObject int     `json:"fFieldOnKBigObject"`
+	GFieldOnKBigObject bool    `json:"gFieldOnKBigObject"`
+	HFieldOnKBigObject float64 `json:"hFieldOnKBigObject"`
+	IFieldOnKBigObject string  `json:"iFieldOnKBigObject"`
+	JFieldOnKBigObject int     `json:"jFieldOnKBigObject"`
+	KFieldOnKBigObject bool    `json:"kFieldOnKBigObject"`
+	LFieldOnKBigObject float64 `json:"lFieldOnKBigObject"`
+	MFieldOnKBigObject string  `json:"mFieldOnKBigObject"`
+	NFieldOnKBigObject int     `json:"nFieldOnKBigObject"`
+	OFieldOnKBigObject bool    `json:"oFieldOnKBigObject"`
+	PFieldOnKBigObject float64 `json:"pFieldOnKBigObject"`
+	QFieldOnKBigObject string  `json:"qFieldOnKBigObject"`
+	RFieldOnKBigObject int     `json:"rFieldOnKBigObject"`
+	SFieldOnKBigObject bool    `json:"sFieldOnKBigObject"`
+	TFieldOnKBigObject float64 `json:"tFieldOnKBigObject"`
+	UFieldOnKBigObject string  `json:"uFieldOnKBigObject"`
+	VFieldOnKBigObject int     `json:"vFieldOnKBigObject"`
+	WFieldOnKBigObject bool    `json:"wFieldOnKBigObject"`
+	XFieldOnKBigObject float64 `json:"xFieldOnKBigObject"`
+	YFieldOnKBigObject string  `json:"yFieldOnKBigObject"`
+	ZFieldOnKBigObject int     `json:"zFieldOnKBigObject"`
+}
+
+func (KBigObject) IsBigAbstractResponse() {}
+
+type LBigObject struct {
+	AFieldOnLBigObject string  `json:"aFieldOnLBigObject"`
+	BFieldOnLBigObject int     `json:"bFieldOnLBigObject"`
+	CFieldOnLBigObject bool    `json:"cFieldOnLBigObject"`
+	DFieldOnLBigObject float64 `json:"dFieldOnLBigObject"`
+	EFieldOnLBigObject string  `json:"eFieldOnLBigObject"`
+	FFieldOnLBigObject int     `json:"fFieldOnLBigObject"`
+	GFieldOnLBigObject bool    `json:"gFieldOnLBigObject"`
+	HFieldOnLBigObject float64 `json:"hFieldOnLBigObject"`
+	IFieldOnLBigObject string  `json:"iFieldOnLBigObject"`
+	JFieldOnLBigObject int     `json:"jFieldOnLBigObject"`
+	KFieldOnLBigObject bool    `json:"kFieldOnLBigObject"`
+	LFieldOnLBigObject float64 `json:"lFieldOnLBigObject"`
+	MFieldOnLBigObject string  `json:"mFieldOnLBigObject"`
+	NFieldOnLBigObject int     `json:"nFieldOnLBigObject"`
+	OFieldOnLBigObject bool    `json:"oFieldOnLBigObject"`
+	PFieldOnLBigObject float64 `json:"pFieldOnLBigObject"`
+	QFieldOnLBigObject string  `json:"qFieldOnLBigObject"`
+	RFieldOnLBigObject int     `json:"rFieldOnLBigObject"`
+	SFieldOnLBigObject bool    `json:"sFieldOnLBigObject"`
+	TFieldOnLBigObject float64 `json:"tFieldOnLBigObject"`
+	UFieldOnLBigObject string  `json:"uFieldOnLBigObject"`
+	VFieldOnLBigObject int     `json:"vFieldOnLBigObject"`
+	WFieldOnLBigObject bool    `json:"wFieldOnLBigObject"`
+	XFieldOnLBigObject float64 `json:"xFieldOnLBigObject"`
+	YFieldOnLBigObject string  `json:"yFieldOnLBigObject"`
+	ZFieldOnLBigObject int     `json:"zFieldOnLBigObject"`
+}
+
+func (LBigObject) IsBigAbstractResponse() {}
+
+type MBigObject struct {
+	AFieldOnMBigObject string  `json:"aFieldOnMBigObject"`
+	BFieldOnMBigObject int     `json:"bFieldOnMBigObject"`
+	CFieldOnMBigObject bool    `json:"cFieldOnMBigObject"`
+	DFieldOnMBigObject float64 `json:"dFieldOnMBigObject"`
+	EFieldOnMBigObject string  `json:"eFieldOnMBigObject"`
+	FFieldOnMBigObject int     `json:"fFieldOnMBigObject"`
+	GFieldOnMBigObject bool    `json:"gFieldOnMBigObject"`
+	HFieldOnMBigObject float64 `json:"hFieldOnMBigObject"`
+	IFieldOnMBigObject string  `json:"iFieldOnMBigObject"`
+	JFieldOnMBigObject int     `json:"jFieldOnMBigObject"`
+	KFieldOnMBigObject bool    `json:"kFieldOnMBigObject"`
+	LFieldOnMBigObject float64 `json:"lFieldOnMBigObject"`
+	MFieldOnMBigObject string  `json:"mFieldOnMBigObject"`
+	NFieldOnMBigObject int     `json:"nFieldOnMBigObject"`
+	OFieldOnMBigObject bool    `json:"oFieldOnMBigObject"`
+	PFieldOnMBigObject float64 `json:"pFieldOnMBigObject"`
+	QFieldOnMBigObject string  `json:"qFieldOnMBigObject"`
+	RFieldOnMBigObject int     `json:"rFieldOnMBigObject"`
+	SFieldOnMBigObject bool    `json:"sFieldOnMBigObject"`
+	TFieldOnMBigObject float64 `json:"tFieldOnMBigObject"`
+	UFieldOnMBigObject string  `json:"uFieldOnMBigObject"`
+	VFieldOnMBigObject int     `json:"vFieldOnMBigObject"`
+	WFieldOnMBigObject bool    `json:"wFieldOnMBigObject"`
+	XFieldOnMBigObject float64 `json:"xFieldOnMBigObject"`
+	YFieldOnMBigObject string  `json:"yFieldOnMBigObject"`
+	ZFieldOnMBigObject int     `json:"zFieldOnMBigObject"`
+}
+
+func (MBigObject) IsBigAbstractResponse() {}
+
+type NBigObject struct {
+	AFieldOnNBigObject string  `json:"aFieldOnNBigObject"`
+	BFieldOnNBigObject int     `json:"bFieldOnNBigObject"`
+	CFieldOnNBigObject bool    `json:"cFieldOnNBigObject"`
+	DFieldOnNBigObject float64 `json:"dFieldOnNBigObject"`
+	EFieldOnNBigObject string  `json:"eFieldOnNBigObject"`
+	FFieldOnNBigObject int     `json:"fFieldOnNBigObject"`
+	GFieldOnNBigObject bool    `json:"gFieldOnNBigObject"`
+	HFieldOnNBigObject float64 `json:"hFieldOnNBigObject"`
+	IFieldOnNBigObject string  `json:"iFieldOnNBigObject"`
+	JFieldOnNBigObject int     `json:"jFieldOnNBigObject"`
+	KFieldOnNBigObject bool    `json:"kFieldOnNBigObject"`
+	LFieldOnNBigObject float64 `json:"lFieldOnNBigObject"`
+	MFieldOnNBigObject string  `json:"mFieldOnNBigObject"`
+	NFieldOnNBigObject int     `json:"nFieldOnNBigObject"`
+	OFieldOnNBigObject bool    `json:"oFieldOnNBigObject"`
+	PFieldOnNBigObject float64 `json:"pFieldOnNBigObject"`
+	QFieldOnNBigObject string  `json:"qFieldOnNBigObject"`
+	RFieldOnNBigObject int     `json:"rFieldOnNBigObject"`
+	SFieldOnNBigObject bool    `json:"sFieldOnNBigObject"`
+	TFieldOnNBigObject float64 `json:"tFieldOnNBigObject"`
+	UFieldOnNBigObject string  `json:"uFieldOnNBigObject"`
+	VFieldOnNBigObject int     `json:"vFieldOnNBigObject"`
+	WFieldOnNBigObject bool    `json:"wFieldOnNBigObject"`
+	XFieldOnNBigObject float64 `json:"xFieldOnNBigObject"`
+	YFieldOnNBigObject string  `json:"yFieldOnNBigObject"`
+	ZFieldOnNBigObject int     `json:"zFieldOnNBigObject"`
+}
+
+func (NBigObject) IsBigAbstractResponse() {}
+
 type NestedObject struct {
 	DeeplyNestedObjects []*DeeplyNestedObject `json:"deeplyNestedObjects"`
 }
 
+type OBigObject struct {
+	AFieldOnOBigObject string  `json:"aFieldOnOBigObject"`
+	BFieldOnOBigObject int     `json:"bFieldOnOBigObject"`
+	CFieldOnOBigObject bool    `json:"cFieldOnOBigObject"`
+	DFieldOnOBigObject float64 `json:"dFieldOnOBigObject"`
+	EFieldOnOBigObject string  `json:"eFieldOnOBigObject"`
+	FFieldOnOBigObject int     `json:"fFieldOnOBigObject"`
+	GFieldOnOBigObject bool    `json:"gFieldOnOBigObject"`
+	HFieldOnOBigObject float64 `json:"hFieldOnOBigObject"`
+	IFieldOnOBigObject string  `json:"iFieldOnOBigObject"`
+	JFieldOnOBigObject int     `json:"jFieldOnOBigObject"`
+	KFieldOnOBigObject bool    `json:"kFieldOnOBigObject"`
+	LFieldOnOBigObject float64 `json:"lFieldOnOBigObject"`
+	MFieldOnOBigObject string  `json:"mFieldOnOBigObject"`
+	NFieldOnOBigObject int     `json:"nFieldOnOBigObject"`
+	OFieldOnOBigObject bool    `json:"oFieldOnOBigObject"`
+	PFieldOnOBigObject float64 `json:"pFieldOnOBigObject"`
+	QFieldOnOBigObject string  `json:"qFieldOnOBigObject"`
+	RFieldOnOBigObject int     `json:"rFieldOnOBigObject"`
+	SFieldOnOBigObject bool    `json:"sFieldOnOBigObject"`
+	TFieldOnOBigObject float64 `json:"tFieldOnOBigObject"`
+	UFieldOnOBigObject string  `json:"uFieldOnOBigObject"`
+	VFieldOnOBigObject int     `json:"vFieldOnOBigObject"`
+	WFieldOnOBigObject bool    `json:"wFieldOnOBigObject"`
+	XFieldOnOBigObject float64 `json:"xFieldOnOBigObject"`
+	YFieldOnOBigObject string  `json:"yFieldOnOBigObject"`
+	ZFieldOnOBigObject int     `json:"zFieldOnOBigObject"`
+}
+
+func (OBigObject) IsBigAbstractResponse() {}
+
+type PBigObject struct {
+	AFieldOnPBigObject string  `json:"aFieldOnPBigObject"`
+	BFieldOnPBigObject int     `json:"bFieldOnPBigObject"`
+	CFieldOnPBigObject bool    `json:"cFieldOnPBigObject"`
+	DFieldOnPBigObject float64 `json:"dFieldOnPBigObject"`
+	EFieldOnPBigObject string  `json:"eFieldOnPBigObject"`
+	FFieldOnPBigObject int     `json:"fFieldOnPBigObject"`
+	GFieldOnPBigObject bool    `json:"gFieldOnPBigObject"`
+	HFieldOnPBigObject float64 `json:"hFieldOnPBigObject"`
+	IFieldOnPBigObject string  `json:"iFieldOnPBigObject"`
+	JFieldOnPBigObject int     `json:"jFieldOnPBigObject"`
+	KFieldOnPBigObject bool    `json:"kFieldOnPBigObject"`
+	LFieldOnPBigObject float64 `json:"lFieldOnPBigObject"`
+	MFieldOnPBigObject string  `json:"mFieldOnPBigObject"`
+	NFieldOnPBigObject int     `json:"nFieldOnPBigObject"`
+	OFieldOnPBigObject bool    `json:"oFieldOnPBigObject"`
+	PFieldOnPBigObject float64 `json:"pFieldOnPBigObject"`
+	QFieldOnPBigObject string  `json:"qFieldOnPBigObject"`
+	RFieldOnPBigObject int     `json:"rFieldOnPBigObject"`
+	SFieldOnPBigObject bool    `json:"sFieldOnPBigObject"`
+	TFieldOnPBigObject float64 `json:"tFieldOnPBigObject"`
+	UFieldOnPBigObject string  `json:"uFieldOnPBigObject"`
+	VFieldOnPBigObject int     `json:"vFieldOnPBigObject"`
+	WFieldOnPBigObject bool    `json:"wFieldOnPBigObject"`
+	XFieldOnPBigObject float64 `json:"xFieldOnPBigObject"`
+	YFieldOnPBigObject string  `json:"yFieldOnPBigObject"`
+	ZFieldOnPBigObject int     `json:"zFieldOnPBigObject"`
+}
+
+func (PBigObject) IsBigAbstractResponse() {}
+
+type QBigObject struct {
+	AFieldOnQBigObject string  `json:"aFieldOnQBigObject"`
+	BFieldOnQBigObject int     `json:"bFieldOnQBigObject"`
+	CFieldOnQBigObject bool    `json:"cFieldOnQBigObject"`
+	DFieldOnQBigObject float64 `json:"dFieldOnQBigObject"`
+	EFieldOnQBigObject string  `json:"eFieldOnQBigObject"`
+	FFieldOnQBigObject int     `json:"fFieldOnQBigObject"`
+	GFieldOnQBigObject bool    `json:"gFieldOnQBigObject"`
+	HFieldOnQBigObject float64 `json:"hFieldOnQBigObject"`
+	IFieldOnQBigObject string  `json:"iFieldOnQBigObject"`
+	JFieldOnQBigObject int     `json:"jFieldOnQBigObject"`
+	KFieldOnQBigObject bool    `json:"kFieldOnQBigObject"`
+	LFieldOnQBigObject float64 `json:"lFieldOnQBigObject"`
+	MFieldOnQBigObject string  `json:"mFieldOnQBigObject"`
+	NFieldOnQBigObject int     `json:"nFieldOnQBigObject"`
+	OFieldOnQBigObject bool    `json:"oFieldOnQBigObject"`
+	PFieldOnQBigObject float64 `json:"pFieldOnQBigObject"`
+	QFieldOnQBigObject string  `json:"qFieldOnQBigObject"`
+	RFieldOnQBigObject int     `json:"rFieldOnQBigObject"`
+	SFieldOnQBigObject bool    `json:"sFieldOnQBigObject"`
+	TFieldOnQBigObject float64 `json:"tFieldOnQBigObject"`
+	UFieldOnQBigObject string  `json:"uFieldOnQBigObject"`
+	VFieldOnQBigObject int     `json:"vFieldOnQBigObject"`
+	WFieldOnQBigObject bool    `json:"wFieldOnQBigObject"`
+	XFieldOnQBigObject float64 `json:"xFieldOnQBigObject"`
+	YFieldOnQBigObject string  `json:"yFieldOnQBigObject"`
+	ZFieldOnQBigObject int     `json:"zFieldOnQBigObject"`
+}
+
+func (QBigObject) IsBigAbstractResponse() {}
+
 type Query struct {
 }
 
+type RBigObject struct {
+	AFieldOnRBigObject string  `json:"aFieldOnRBigObject"`
+	BFieldOnRBigObject int     `json:"bFieldOnRBigObject"`
+	CFieldOnRBigObject bool    `json:"cFieldOnRBigObject"`
+	DFieldOnRBigObject float64 `json:"dFieldOnRBigObject"`
+	EFieldOnRBigObject string  `json:"eFieldOnRBigObject"`
+	FFieldOnRBigObject int     `json:"fFieldOnRBigObject"`
+	GFieldOnRBigObject bool    `json:"gFieldOnRBigObject"`
+	HFieldOnRBigObject float64 `json:"hFieldOnRBigObject"`
+	IFieldOnRBigObject string  `json:"iFieldOnRBigObject"`
+	JFieldOnRBigObject int     `json:"jFieldOnRBigObject"`
+	KFieldOnRBigObject bool    `json:"kFieldOnRBigObject"`
+	LFieldOnRBigObject float64 `json:"lFieldOnRBigObject"`
+	MFieldOnRBigObject string  `json:"mFieldOnRBigObject"`
+	NFieldOnRBigObject int     `json:"nFieldOnRBigObject"`
+	OFieldOnRBigObject bool    `json:"oFieldOnRBigObject"`
+	PFieldOnRBigObject float64 `json:"pFieldOnRBigObject"`
+	QFieldOnRBigObject string  `json:"qFieldOnRBigObject"`
+	RFieldOnRBigObject int     `json:"rFieldOnRBigObject"`
+	SFieldOnRBigObject bool    `json:"sFieldOnRBigObject"`
+	TFieldOnRBigObject float64 `json:"tFieldOnRBigObject"`
+	UFieldOnRBigObject string  `json:"uFieldOnRBigObject"`
+	VFieldOnRBigObject int     `json:"vFieldOnRBigObject"`
+	WFieldOnRBigObject bool    `json:"wFieldOnRBigObject"`
+	XFieldOnRBigObject float64 `json:"xFieldOnRBigObject"`
+	YFieldOnRBigObject string  `json:"yFieldOnRBigObject"`
+	ZFieldOnRBigObject int     `json:"zFieldOnRBigObject"`
+}
+
+func (RBigObject) IsBigAbstractResponse() {}
+
+type SBigObject struct {
+	AFieldOnSBigObject string  `json:"aFieldOnSBigObject"`
+	BFieldOnSBigObject int     `json:"bFieldOnSBigObject"`
+	CFieldOnSBigObject bool    `json:"cFieldOnSBigObject"`
+	DFieldOnSBigObject float64 `json:"dFieldOnSBigObject"`
+	EFieldOnSBigObject string  `json:"eFieldOnSBigObject"`
+	FFieldOnSBigObject int     `json:"fFieldOnSBigObject"`
+	GFieldOnSBigObject bool    `json:"gFieldOnSBigObject"`
+	HFieldOnSBigObject float64 `json:"hFieldOnSBigObject"`
+	IFieldOnSBigObject string  `json:"iFieldOnSBigObject"`
+	JFieldOnSBigObject int     `json:"jFieldOnSBigObject"`
+	KFieldOnSBigObject bool    `json:"kFieldOnSBigObject"`
+	LFieldOnSBigObject float64 `json:"lFieldOnSBigObject"`
+	MFieldOnSBigObject string  `json:"mFieldOnSBigObject"`
+	NFieldOnSBigObject int     `json:"nFieldOnSBigObject"`
+	OFieldOnSBigObject bool    `json:"oFieldOnSBigObject"`
+	PFieldOnSBigObject float64 `json:"pFieldOnSBigObject"`
+	QFieldOnSBigObject string  `json:"qFieldOnSBigObject"`
+	RFieldOnSBigObject int     `json:"rFieldOnSBigObject"`
+	SFieldOnSBigObject bool    `json:"sFieldOnSBigObject"`
+	TFieldOnSBigObject float64 `json:"tFieldOnSBigObject"`
+	UFieldOnSBigObject string  `json:"uFieldOnSBigObject"`
+	VFieldOnSBigObject int     `json:"vFieldOnSBigObject"`
+	WFieldOnSBigObject bool    `json:"wFieldOnSBigObject"`
+	XFieldOnSBigObject float64 `json:"xFieldOnSBigObject"`
+	YFieldOnSBigObject string  `json:"yFieldOnSBigObject"`
+	ZFieldOnSBigObject int     `json:"zFieldOnSBigObject"`
+}
+
+func (SBigObject) IsBigAbstractResponse() {}
+
 type Subscription struct {
 }
+
+type TBigObject struct {
+	AFieldOnTBigObject string  `json:"aFieldOnTBigObject"`
+	BFieldOnTBigObject int     `json:"bFieldOnTBigObject"`
+	CFieldOnTBigObject bool    `json:"cFieldOnTBigObject"`
+	DFieldOnTBigObject float64 `json:"dFieldOnTBigObject"`
+	EFieldOnTBigObject string  `json:"eFieldOnTBigObject"`
+	FFieldOnTBigObject int     `json:"fFieldOnTBigObject"`
+	GFieldOnTBigObject bool    `json:"gFieldOnTBigObject"`
+	HFieldOnTBigObject float64 `json:"hFieldOnTBigObject"`
+	IFieldOnTBigObject string  `json:"iFieldOnTBigObject"`
+	JFieldOnTBigObject int     `json:"jFieldOnTBigObject"`
+	KFieldOnTBigObject bool    `json:"kFieldOnTBigObject"`
+	LFieldOnTBigObject float64 `json:"lFieldOnTBigObject"`
+	MFieldOnTBigObject string  `json:"mFieldOnTBigObject"`
+	NFieldOnTBigObject int     `json:"nFieldOnTBigObject"`
+	OFieldOnTBigObject bool    `json:"oFieldOnTBigObject"`
+	PFieldOnTBigObject float64 `json:"pFieldOnTBigObject"`
+	QFieldOnTBigObject string  `json:"qFieldOnTBigObject"`
+	RFieldOnTBigObject int     `json:"rFieldOnTBigObject"`
+	SFieldOnTBigObject bool    `json:"sFieldOnTBigObject"`
+	TFieldOnTBigObject float64 `json:"tFieldOnTBigObject"`
+	UFieldOnTBigObject string  `json:"uFieldOnTBigObject"`
+	VFieldOnTBigObject int     `json:"vFieldOnTBigObject"`
+	WFieldOnTBigObject bool    `json:"wFieldOnTBigObject"`
+	XFieldOnTBigObject float64 `json:"xFieldOnTBigObject"`
+	YFieldOnTBigObject string  `json:"yFieldOnTBigObject"`
+	ZFieldOnTBigObject int     `json:"zFieldOnTBigObject"`
+}
+
+func (TBigObject) IsBigAbstractResponse() {}
 
 type TimestampedString struct {
 	// The value of the string.
@@ -63,3 +687,189 @@ type TimestampedString struct {
 	Total          int                    `json:"total"`
 	InitialPayload map[string]interface{} `json:"initialPayload,omitempty"`
 }
+
+type UBigObject struct {
+	AFieldOnUBigObject string  `json:"aFieldOnUBigObject"`
+	BFieldOnUBigObject int     `json:"bFieldOnUBigObject"`
+	CFieldOnUBigObject bool    `json:"cFieldOnUBigObject"`
+	DFieldOnUBigObject float64 `json:"dFieldOnUBigObject"`
+	EFieldOnUBigObject string  `json:"eFieldOnUBigObject"`
+	FFieldOnUBigObject int     `json:"fFieldOnUBigObject"`
+	GFieldOnUBigObject bool    `json:"gFieldOnUBigObject"`
+	HFieldOnUBigObject float64 `json:"hFieldOnUBigObject"`
+	IFieldOnUBigObject string  `json:"iFieldOnUBigObject"`
+	JFieldOnUBigObject int     `json:"jFieldOnUBigObject"`
+	KFieldOnUBigObject bool    `json:"kFieldOnUBigObject"`
+	LFieldOnUBigObject float64 `json:"lFieldOnUBigObject"`
+	MFieldOnUBigObject string  `json:"mFieldOnUBigObject"`
+	NFieldOnUBigObject int     `json:"nFieldOnUBigObject"`
+	OFieldOnUBigObject bool    `json:"oFieldOnUBigObject"`
+	PFieldOnUBigObject float64 `json:"pFieldOnUBigObject"`
+	QFieldOnUBigObject string  `json:"qFieldOnUBigObject"`
+	RFieldOnUBigObject int     `json:"rFieldOnUBigObject"`
+	SFieldOnUBigObject bool    `json:"sFieldOnUBigObject"`
+	TFieldOnUBigObject float64 `json:"tFieldOnUBigObject"`
+	UFieldOnUBigObject string  `json:"uFieldOnUBigObject"`
+	VFieldOnUBigObject int     `json:"vFieldOnUBigObject"`
+	WFieldOnUBigObject bool    `json:"wFieldOnUBigObject"`
+	XFieldOnUBigObject float64 `json:"xFieldOnUBigObject"`
+	YFieldOnUBigObject string  `json:"yFieldOnUBigObject"`
+	ZFieldOnUBigObject int     `json:"zFieldOnUBigObject"`
+}
+
+func (UBigObject) IsBigAbstractResponse() {}
+
+type VBigObject struct {
+	AFieldOnVBigObject string  `json:"aFieldOnVBigObject"`
+	BFieldOnVBigObject int     `json:"bFieldOnVBigObject"`
+	CFieldOnVBigObject bool    `json:"cFieldOnVBigObject"`
+	DFieldOnVBigObject float64 `json:"dFieldOnVBigObject"`
+	EFieldOnVBigObject string  `json:"eFieldOnVBigObject"`
+	FFieldOnVBigObject int     `json:"fFieldOnVBigObject"`
+	GFieldOnVBigObject bool    `json:"gFieldOnVBigObject"`
+	HFieldOnVBigObject float64 `json:"hFieldOnVBigObject"`
+	IFieldOnVBigObject string  `json:"iFieldOnVBigObject"`
+	JFieldOnVBigObject int     `json:"jFieldOnVBigObject"`
+	KFieldOnVBigObject bool    `json:"kFieldOnVBigObject"`
+	LFieldOnVBigObject float64 `json:"lFieldOnVBigObject"`
+	MFieldOnVBigObject string  `json:"mFieldOnVBigObject"`
+	NFieldOnVBigObject int     `json:"nFieldOnVBigObject"`
+	OFieldOnVBigObject bool    `json:"oFieldOnVBigObject"`
+	PFieldOnVBigObject float64 `json:"pFieldOnVBigObject"`
+	QFieldOnVBigObject string  `json:"qFieldOnVBigObject"`
+	RFieldOnVBigObject int     `json:"rFieldOnVBigObject"`
+	SFieldOnVBigObject bool    `json:"sFieldOnVBigObject"`
+	TFieldOnVBigObject float64 `json:"tFieldOnVBigObject"`
+	UFieldOnVBigObject string  `json:"uFieldOnVBigObject"`
+	VFieldOnVBigObject int     `json:"vFieldOnVBigObject"`
+	WFieldOnVBigObject bool    `json:"wFieldOnVBigObject"`
+	XFieldOnVBigObject float64 `json:"xFieldOnVBigObject"`
+	YFieldOnVBigObject string  `json:"yFieldOnVBigObject"`
+	ZFieldOnVBigObject int     `json:"zFieldOnVBigObject"`
+}
+
+func (VBigObject) IsBigAbstractResponse() {}
+
+type WBigObject struct {
+	AFieldOnWBigObject string  `json:"aFieldOnWBigObject"`
+	BFieldOnWBigObject int     `json:"bFieldOnWBigObject"`
+	CFieldOnWBigObject bool    `json:"cFieldOnWBigObject"`
+	DFieldOnWBigObject float64 `json:"dFieldOnWBigObject"`
+	EFieldOnWBigObject string  `json:"eFieldOnWBigObject"`
+	FFieldOnWBigObject int     `json:"fFieldOnWBigObject"`
+	GFieldOnWBigObject bool    `json:"gFieldOnWBigObject"`
+	HFieldOnWBigObject float64 `json:"hFieldOnWBigObject"`
+	IFieldOnWBigObject string  `json:"iFieldOnWBigObject"`
+	JFieldOnWBigObject int     `json:"jFieldOnWBigObject"`
+	KFieldOnWBigObject bool    `json:"kFieldOnWBigObject"`
+	LFieldOnWBigObject float64 `json:"lFieldOnWBigObject"`
+	MFieldOnWBigObject string  `json:"mFieldOnWBigObject"`
+	NFieldOnWBigObject int     `json:"nFieldOnWBigObject"`
+	OFieldOnWBigObject bool    `json:"oFieldOnWBigObject"`
+	PFieldOnWBigObject float64 `json:"pFieldOnWBigObject"`
+	QFieldOnWBigObject string  `json:"qFieldOnWBigObject"`
+	RFieldOnWBigObject int     `json:"rFieldOnWBigObject"`
+	SFieldOnWBigObject bool    `json:"sFieldOnWBigObject"`
+	TFieldOnWBigObject float64 `json:"tFieldOnWBigObject"`
+	UFieldOnWBigObject string  `json:"uFieldOnWBigObject"`
+	VFieldOnWBigObject int     `json:"vFieldOnWBigObject"`
+	WFieldOnWBigObject bool    `json:"wFieldOnWBigObject"`
+	XFieldOnWBigObject float64 `json:"xFieldOnWBigObject"`
+	YFieldOnWBigObject string  `json:"yFieldOnWBigObject"`
+	ZFieldOnWBigObject int     `json:"zFieldOnWBigObject"`
+}
+
+func (WBigObject) IsBigAbstractResponse() {}
+
+type XBigObject struct {
+	AFieldOnXBigObject string  `json:"aFieldOnXBigObject"`
+	BFieldOnXBigObject int     `json:"bFieldOnXBigObject"`
+	CFieldOnXBigObject bool    `json:"cFieldOnXBigObject"`
+	DFieldOnXBigObject float64 `json:"dFieldOnXBigObject"`
+	EFieldOnXBigObject string  `json:"eFieldOnXBigObject"`
+	FFieldOnXBigObject int     `json:"fFieldOnXBigObject"`
+	GFieldOnXBigObject bool    `json:"gFieldOnXBigObject"`
+	HFieldOnXBigObject float64 `json:"hFieldOnXBigObject"`
+	IFieldOnXBigObject string  `json:"iFieldOnXBigObject"`
+	JFieldOnXBigObject int     `json:"jFieldOnXBigObject"`
+	KFieldOnXBigObject bool    `json:"kFieldOnXBigObject"`
+	LFieldOnXBigObject float64 `json:"lFieldOnXBigObject"`
+	MFieldOnXBigObject string  `json:"mFieldOnXBigObject"`
+	NFieldOnXBigObject int     `json:"nFieldOnXBigObject"`
+	OFieldOnXBigObject bool    `json:"oFieldOnXBigObject"`
+	PFieldOnXBigObject float64 `json:"pFieldOnXBigObject"`
+	QFieldOnXBigObject string  `json:"qFieldOnXBigObject"`
+	RFieldOnXBigObject int     `json:"rFieldOnXBigObject"`
+	SFieldOnXBigObject bool    `json:"sFieldOnXBigObject"`
+	TFieldOnXBigObject float64 `json:"tFieldOnXBigObject"`
+	UFieldOnXBigObject string  `json:"uFieldOnXBigObject"`
+	VFieldOnXBigObject int     `json:"vFieldOnXBigObject"`
+	WFieldOnXBigObject bool    `json:"wFieldOnXBigObject"`
+	XFieldOnXBigObject float64 `json:"xFieldOnXBigObject"`
+	YFieldOnXBigObject string  `json:"yFieldOnXBigObject"`
+	ZFieldOnXBigObject int     `json:"zFieldOnXBigObject"`
+}
+
+func (XBigObject) IsBigAbstractResponse() {}
+
+type YBigObject struct {
+	AFieldOnYBigObject string  `json:"aFieldOnYBigObject"`
+	BFieldOnYBigObject int     `json:"bFieldOnYBigObject"`
+	CFieldOnYBigObject bool    `json:"cFieldOnYBigObject"`
+	DFieldOnYBigObject float64 `json:"dFieldOnYBigObject"`
+	EFieldOnYBigObject string  `json:"eFieldOnYBigObject"`
+	FFieldOnYBigObject int     `json:"fFieldOnYBigObject"`
+	GFieldOnYBigObject bool    `json:"gFieldOnYBigObject"`
+	HFieldOnYBigObject float64 `json:"hFieldOnYBigObject"`
+	IFieldOnYBigObject string  `json:"iFieldOnYBigObject"`
+	JFieldOnYBigObject int     `json:"jFieldOnYBigObject"`
+	KFieldOnYBigObject bool    `json:"kFieldOnYBigObject"`
+	LFieldOnYBigObject float64 `json:"lFieldOnYBigObject"`
+	MFieldOnYBigObject string  `json:"mFieldOnYBigObject"`
+	NFieldOnYBigObject int     `json:"nFieldOnYBigObject"`
+	OFieldOnYBigObject bool    `json:"oFieldOnYBigObject"`
+	PFieldOnYBigObject float64 `json:"pFieldOnYBigObject"`
+	QFieldOnYBigObject string  `json:"qFieldOnYBigObject"`
+	RFieldOnYBigObject int     `json:"rFieldOnYBigObject"`
+	SFieldOnYBigObject bool    `json:"sFieldOnYBigObject"`
+	TFieldOnYBigObject float64 `json:"tFieldOnYBigObject"`
+	UFieldOnYBigObject string  `json:"uFieldOnYBigObject"`
+	VFieldOnYBigObject int     `json:"vFieldOnYBigObject"`
+	WFieldOnYBigObject bool    `json:"wFieldOnYBigObject"`
+	XFieldOnYBigObject float64 `json:"xFieldOnYBigObject"`
+	YFieldOnYBigObject string  `json:"yFieldOnYBigObject"`
+	ZFieldOnYBigObject int     `json:"zFieldOnYBigObject"`
+}
+
+func (YBigObject) IsBigAbstractResponse() {}
+
+type ZBigObject struct {
+	AFieldOnZBigObject string  `json:"aFieldOnZBigObject"`
+	BFieldOnZBigObject int     `json:"bFieldOnZBigObject"`
+	CFieldOnZBigObject bool    `json:"cFieldOnZBigObject"`
+	DFieldOnZBigObject float64 `json:"dFieldOnZBigObject"`
+	EFieldOnZBigObject string  `json:"eFieldOnZBigObject"`
+	FFieldOnZBigObject int     `json:"fFieldOnZBigObject"`
+	GFieldOnZBigObject bool    `json:"gFieldOnZBigObject"`
+	HFieldOnZBigObject float64 `json:"hFieldOnZBigObject"`
+	IFieldOnZBigObject string  `json:"iFieldOnZBigObject"`
+	JFieldOnZBigObject int     `json:"jFieldOnZBigObject"`
+	KFieldOnZBigObject bool    `json:"kFieldOnZBigObject"`
+	LFieldOnZBigObject float64 `json:"lFieldOnZBigObject"`
+	MFieldOnZBigObject string  `json:"mFieldOnZBigObject"`
+	NFieldOnZBigObject int     `json:"nFieldOnZBigObject"`
+	OFieldOnZBigObject bool    `json:"oFieldOnZBigObject"`
+	PFieldOnZBigObject float64 `json:"pFieldOnZBigObject"`
+	QFieldOnZBigObject string  `json:"qFieldOnZBigObject"`
+	RFieldOnZBigObject int     `json:"rFieldOnZBigObject"`
+	SFieldOnZBigObject bool    `json:"sFieldOnZBigObject"`
+	TFieldOnZBigObject float64 `json:"tFieldOnZBigObject"`
+	UFieldOnZBigObject string  `json:"uFieldOnZBigObject"`
+	VFieldOnZBigObject int     `json:"vFieldOnZBigObject"`
+	WFieldOnZBigObject bool    `json:"wFieldOnZBigObject"`
+	XFieldOnZBigObject float64 `json:"xFieldOnZBigObject"`
+	YFieldOnZBigObject string  `json:"yFieldOnZBigObject"`
+	ZFieldOnZBigObject int     `json:"zFieldOnZBigObject"`
+}
+
+func (ZBigObject) IsBigAbstractResponse() {}
