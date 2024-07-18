@@ -89,11 +89,9 @@ export const OrganizationBanner = () => {
       <p className="flex items-center gap-x-2 px-4 py-1.5">
         <ExclamationTriangleIcon className="flex-shrink-0" />
         <span className="flex gap-x-1 font-medium text-gray-950 dark:text-primary-foreground">
-          Your organization is deactivated.{" "}
-          {org.deactivation.reason ? `${org.deactivation.reason}.` : ""} You
-          have until{" "}
-          {formatDateTime(addDays(new Date(org.deactivation.initiatedAt), 30))}{" "}
-          before it is permanently deleted.
+          Your organization is deactivated and is in read-only mode.{" "}
+          {org.deactivation.reason ? `${org.deactivation.reason}.` : ""} It will be permanently deleted on{" "}
+          {formatDateTime(addDays(new Date(org.deactivation.initiatedAt), 30))}
         </span>
       </p>
     </div>

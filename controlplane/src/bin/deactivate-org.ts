@@ -2,10 +2,12 @@ import process from 'node:process';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { pino } from 'pino';
 import postgres from 'postgres';
+import { createRedisConnections } from 'src/core/plugins/redis.js';
 import { buildDatabaseConnectionConfig } from '../core/plugins/database.js';
 import { OrganizationRepository } from '../core/repositories/OrganizationRepository.js';
 import * as schema from '../db/schema.js';
 import Keycloak from '../core/services/Keycloak.js';
+import { createDeleteOrganizationWorker, DeleteOrganizationQueue } from '../core/workers/DeleteOrganizationWorker.js';
 import { getConfig } from './get-config.js';
 
 const {
@@ -20,6 +22,7 @@ const {
   databaseTlsCert,
   databaseTlsKey,
   organizationSlug,
+  redis,
 } = getConfig();
 const organizationId = process.env.ORGANIZATION_ID || '';
 const deactivationReason = process.env.ORGANIZATION_DEACTIVATION_REASON;
@@ -36,6 +39,18 @@ const queryConnection = postgres(databaseConnectionUrl, {
   max: 1,
 });
 const db = drizzle(queryConnection, { schema: { ...schema } });
+
+const { redisQueue, redisWorker } = await createRedisConnections({
+  host: redis.host!,
+  port: Number(redis.port),
+  password: redis.password,
+  tls: redis.tls,
+});
+
+await redisQueue.connect();
+await redisWorker.connect();
+await redisWorker.ping();
+await redisQueue.ping();
 
 const keycloakClient = new Keycloak({
   apiUrl,
@@ -59,12 +74,25 @@ if (org.id !== organizationId) {
   throw new Error('Id and slug mismatch');
 }
 
+const deleteOrganizationQueue = new DeleteOrganizationQueue(logger, redisQueue);
+
+const worker = createDeleteOrganizationWorker({
+  redisConnection: redisWorker,
+  db,
+  logger,
+  keycloakClient,
+  keycloakRealm: realm,
+});
+
 await orgRepo.deactivateOrganization({
   organizationId,
   reason: deactivationReason,
   keycloakClient,
   keycloakRealm: realm,
+  deleteOrganizationQueue,
 });
+
+await worker.close();
 
 // Close database connection
 await queryConnection.end({

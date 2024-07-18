@@ -28,6 +28,7 @@ import { Feature, FeatureIds, OrganizationDTO, OrganizationMemberDTO, WebhooksCo
 import Keycloak from '../services/Keycloak.js';
 import OidcProvider from '../services/OidcProvider.js';
 import { getHighestPriorityRole } from '../util.js';
+import { DeleteOrganizationQueue } from '../workers/DeleteOrganizationWorker.js';
 import { BillingRepository } from './BillingRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { OidcRepository } from './OidcRepository.js';
@@ -1279,13 +1280,14 @@ export class OrganizationRepository {
    * Sets all members to viewer role in both keycloak and database.
    * Removes any feature overrides
    * Sets deactivated to true.
-   * TODO: Schedules deletion.
+   * Schedules deletion.
    */
   public async deactivateOrganization(input: {
     organizationId: string;
     reason?: string;
     keycloakClient: Keycloak;
     keycloakRealm: string;
+    deleteOrganizationQueue: DeleteOrganizationQueue;
   }) {
     const billingRepo = new BillingRepository(this.db);
     await billingRepo.cancelSubscription(input.organizationId);
@@ -1387,6 +1389,10 @@ export class OrganizationRepository {
           deactivationReason: input.reason,
         })
         .where(eq(schema.organizations.id, input.organizationId));
+    });
+
+    await input.deleteOrganizationQueue.addJob({
+      organizationId: input.organizationId,
     });
   }
 }
