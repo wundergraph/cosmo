@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/hasura/go-graphql-client"
 	"github.com/stretchr/testify/require"
@@ -41,7 +42,10 @@ func TestKafkaEvents(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	kafkaContainer, err := kafka.RunContainer(ctx, testcontainers.WithImage("confluentinc/confluent-local:7.6.1"))
+	kafkaContainer, err := kafka.RunContainer(ctx,
+		testcontainers.WithImage("confluentinc/confluent-local:7.6.1"),
+		testcontainers.WithWaitStrategyAndDeadline(time.Second*30, wait.ForListeningPort("9093/tcp")),
+	)
 	require.NoError(t, err)
 
 	require.NoError(t, kafkaContainer.Start(ctx))
