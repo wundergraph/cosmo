@@ -10,6 +10,7 @@ import { App } from 'octokit';
 import { Worker } from 'bullmq';
 import routes from './routes.js';
 import fastifyHealth from './plugins/health.js';
+import fastifyMetrics, { MetricsPluginOptions } from './plugins/metrics.js';
 import fastifyDatabase from './plugins/database.js';
 import fastifyClickHouse from './plugins/clickhouse.js';
 import fastifyRedis from './plugins/redis.js';
@@ -49,6 +50,7 @@ export interface BuildConfig {
       key?: string; // e.g. string or '/path/to/my/client-key.pem'
     };
   };
+  prometheus: MetricsPluginOptions;
   openaiAPIKey?: string;
   allowedOrigins?: string[];
   debugSQL?: boolean;
@@ -147,6 +149,10 @@ export default async function build(opts: BuildConfig) {
   });
 
   await fastify.register(fastifyHealth);
+
+  if (opts.prometheus.enable) {
+    await fastify.register(fastifyMetrics, { ...opts.prometheus, logger });
+  }
 
   await fastify.register(fastifyDatabase, {
     databaseConnectionUrl: opts.database.url,

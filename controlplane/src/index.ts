@@ -4,7 +4,6 @@ import pino from 'pino';
 import 'dotenv/config';
 
 import build, { BuildConfig } from './core/build-server.js';
-import buildMetricsServer from './core/build-metrics-server.js';
 import { envVariables } from './core/env.schema.js';
 
 const {
@@ -66,6 +65,12 @@ const options: BuildConfig = {
   allowedOrigins: ALLOWED_ORIGINS,
   production: process.env.NODE_ENV === 'production',
   clickhouseDsn: CLICKHOUSE_DSN,
+  prometheus: {
+    enable: PROMETHEUS_ENABLED,
+    path: PROMETHEUS_HTTP_PATH,
+    host: PROMETHEUS_HOST,
+    port: PROMETHEUS_PORT,
+  },
   logger: {
     enabled: true,
     level: LOG_LEVEL as pino.LevelWithSilent,
@@ -145,20 +150,3 @@ await app.listen({
   host: HOST,
   port: PORT,
 });
-
-if (PROMETHEUS_ENABLED) {
-  const appMetrics = await buildMetricsServer({
-    prometheus: {
-      path: PROMETHEUS_HTTP_PATH,
-    },
-    logger: {
-      enabled: true,
-      level: LOG_LEVEL as pino.LevelWithSilent,
-    },
-  });
-
-  await appMetrics.listen({
-    host: PROMETHEUS_HOST,
-    port: PROMETHEUS_PORT,
-  });
-}
