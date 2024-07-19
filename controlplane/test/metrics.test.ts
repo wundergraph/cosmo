@@ -12,7 +12,7 @@ describe('Metrics endpoint', () => {
 
     await server.ready();
 
-    testContext.onTestFinished(async () => await server.close());
+    testContext.onTestFinished(() => server.close());
 
     const resp = await server.metricsServer.inject({ method: 'GET', url: '/metrics' });
 
@@ -24,7 +24,5 @@ describe('Metrics endpoint', () => {
     expect(resp.payload).toContain('process_resident_memory_bytes');
     expect(resp.payload).toContain('process_start_time_seconds');
     expect(resp.payload).toContain('nodejs_eventloop_lag_seconds');
-
-    await server.close();
   });
 });
