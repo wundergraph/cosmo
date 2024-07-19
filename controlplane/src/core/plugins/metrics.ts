@@ -29,7 +29,7 @@ export default fp<MetricsPluginOptions>(function (fastify, { path = '/metrics', 
     url: path,
     handler: function (request: FastifyRequest, reply: FastifyReply) {
       reply.header('Content-Type', registry.contentType);
-      return registry.metrics()
+      return registry.metrics();
     },
   });
 
