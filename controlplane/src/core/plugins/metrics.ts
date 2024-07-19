@@ -8,9 +8,6 @@ declare module 'fastify' {
     metricsServer: Fastify.FastifyInstance;
     startMetricsServer(opts: FastifyListenOptions): Promise<string>;
   }
-  interface FastifyReply {
-    promRegistry: Registry;
-  }
 }
 
 export interface MetricsPluginOptions {
@@ -19,25 +16,21 @@ export interface MetricsPluginOptions {
   path?: string;
 }
 
-const handler = async function (request: FastifyRequest, reply: FastifyReply) {
-  const metrics = await reply.promRegistry.metrics();
-  reply.send(metrics);
-};
-
 export default fp<MetricsPluginOptions>(function (fastify, { path = '/metrics', registry = new Registry() }, next) {
   const metricsLogger = fastify.log.child({ module: 'metrics' });
   const listener = Fastify({
     logger: metricsLogger,
   });
 
-  listener.decorateReply('promRegistry', registry);
-
   client.collectDefaultMetrics({ register: registry });
 
   listener.route({
     method: 'GET',
     url: path,
-    handler,
+    handler: async function (request: FastifyRequest, reply: FastifyReply) {
+      const metrics = await registry.metrics();
+      reply.send(metrics);
+    },
   });
 
   fastify.addHook('onClose', () => {
