@@ -1,8 +1,10 @@
-import client from 'prom-client';
+import client, { Registry } from 'prom-client';
 import fp from 'fastify-plugin';
 import Fastify, { FastifyRequest, FastifyReply } from 'fastify';
 
 import { Logger } from 'pino';
+
+const register = new Registry();
 
 export interface MetricsPluginOptions {
   enabled?: boolean;
@@ -13,7 +15,7 @@ export interface MetricsPluginOptions {
 }
 
 const handler = async function (request: FastifyRequest, reply: FastifyReply) {
-  const metrics = await client.register.metrics();
+  const metrics = await register.metrics();
   reply.send(metrics);
 };
 
@@ -24,12 +26,16 @@ export default fp<MetricsPluginOptions>(async function (fastify, opts) {
   });
 
   const collectDefaultMetrics = client.collectDefaultMetrics;
-  collectDefaultMetrics({});
+  collectDefaultMetrics({ register });
 
   await listener.route({
     method: 'GET',
     url: path,
     handler,
+  });
+
+  await fastify.addHook('onClose', async () => {
+    await listener.close();
   });
 
   await listener.listen({
