@@ -1,29 +1,30 @@
-import { describe, expect, test, beforeAll, afterAll } from 'vitest';
+import { describe, expect, test } from 'vitest';
 import Fastify from 'fastify';
 import metrics from '../src/core/plugins/metrics.js';
 
 describe('Metrics endpoint', () => {
-  let server: any;
-  const options = {
-    host: 'localhost',
-    path: '/metrics',
-    // note this can clash with other local running services
-    port: 9095,
-  };
-  beforeAll(async () => {
-    server = Fastify();
-    await server.register(metrics, options);
+  test('Should return base process and environment metrics', async (testContext) => {
+    const server = Fastify();
+
+    await server.register(metrics, {
+      path: '/metrics',
+    });
+
     await server.ready();
-  });
 
-  afterAll(async () => {
-    await server.close();
-  });
-  test('Should return 200', async (testContext) => {
-    testContext.onTestFailed(async () => await server.close());
-    const resp = await fetch(`http://${options.host}:${options.port}${options.path}`);
+    testContext.onTestFinished(async () => await server.close());
 
-    expect(resp.status).toBe(200);
+    const resp = await server.metricsServer.inject({ method: 'GET', url: '/metrics' });
+
+    expect(resp.statusCode).toBe(200);
+
+    expect(resp.payload).toContain('process_cpu_user_seconds_total');
+    expect(resp.payload).toContain('process_cpu_system_seconds_total');
+    expect(resp.payload).toContain('process_cpu_seconds_total');
+    expect(resp.payload).toContain('process_resident_memory_bytes');
+    expect(resp.payload).toContain('process_start_time_seconds');
+    expect(resp.payload).toContain('nodejs_eventloop_lag_seconds');
+
     await server.close();
   });
 });

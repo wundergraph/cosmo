@@ -50,7 +50,7 @@ export interface BuildConfig {
       key?: string; // e.g. string or '/path/to/my/client-key.pem'
     };
   };
-  prometheus?: MetricsPluginOptions;
+  prometheus?: MetricsOptions;
   openaiAPIKey?: string;
   allowedOrigins?: string[];
   debugSQL?: boolean;
@@ -108,6 +108,13 @@ export interface BuildConfig {
   };
 }
 
+export interface MetricsOptions {
+  enabled?: boolean;
+  path?: string;
+  host?: string;
+  port?: number;
+}
+
 const developmentLoggerOpts: LoggerOptions = {
   transport: {
     target: 'pino-pretty',
@@ -147,8 +154,13 @@ export default async function build(opts: BuildConfig) {
   await fastify.register(fastifyHealth);
 
   if (opts.prometheus?.enabled) {
-    const metricsLogger = logger.child({ module: 'metrics' });
-    await fastify.register(fastifyMetrics, { ...opts.prometheus, logger: metricsLogger });
+    await fastify.register(fastifyMetrics, {
+      path: opts.prometheus.path,
+    });
+    await fastify.metricsServer.listen({
+      host: opts.prometheus.host,
+      port: opts.prometheus.port,
+    });
   }
 
   await fastify.register(fastifyDatabase, {
