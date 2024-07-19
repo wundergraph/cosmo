@@ -144,10 +144,6 @@ export default async function build(opts: BuildConfig) {
    * Plugin registration
    */
 
-  await fastify.register(fastifyGracefulShutdown, {
-    timeout: 60_000,
-  });
-
   await fastify.register(fastifyHealth);
 
   if (opts.prometheus?.enabled) {
@@ -256,15 +252,6 @@ export default async function build(opts: BuildConfig) {
       }),
     );
   }
-
-  fastify.gracefulShutdown((signal, next) => {
-    fastify.log.debug('Shutting down bull workers');
-    for (const worker of bullWorkers) {
-      worker.close();
-    }
-    fastify.log.debug('Bull workers shut down');
-    next();
-  });
 
   // required to verify webhook payloads
   await fastify.register(import('fastify-raw-body'), {
@@ -400,6 +387,18 @@ export default async function build(opts: BuildConfig) {
     // We go with 32MiB to avoid allocating too much memory for large requests
     writeMaxBytes: 32 * 1024 * 1024,
     acceptCompression: [compressionBrotli, compressionGzip],
+  });
+
+  await fastify.register(fastifyGracefulShutdown, {
+    timeout: 60_000,
+  });
+
+  fastify.gracefulShutdown(async () => {
+    fastify.log.debug('Shutting down bull workers');
+
+    await Promise.all(bullWorkers.map((worker) => worker.close()));
+
+    fastify.log.debug('Bull workers shut down');
   });
 
   return fastify;
