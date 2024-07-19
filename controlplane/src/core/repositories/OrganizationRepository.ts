@@ -1396,7 +1396,7 @@ export class OrganizationRepository {
     const oneMonthFromNow = addDays(now, 30);
     const delay = Number(oneMonthFromNow) - Number(now);
 
-    await input.deleteOrganizationQueue.addJob(
+    return input.deleteOrganizationQueue.addJob(
       {
         organizationId: input.organizationId,
       },

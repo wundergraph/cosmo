@@ -36,8 +36,8 @@ export class DeleteOrganizationQueue {
     });
   }
 
-  public async addJob(job: DeleteOrganizationInput, opts?: JobsOptions) {
-    await this.queue.add(`organizations/${job.organizationId}`, job, opts);
+  public addJob(job: DeleteOrganizationInput, opts?: JobsOptions) {
+    return this.queue.add(`organizations/${job.organizationId}`, job, opts);
   }
 }
 
