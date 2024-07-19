@@ -66,7 +66,7 @@ const options: BuildConfig = {
   production: process.env.NODE_ENV === 'production',
   clickhouseDsn: CLICKHOUSE_DSN,
   prometheus: {
-    enable: PROMETHEUS_ENABLED,
+    enabled: PROMETHEUS_ENABLED,
     path: PROMETHEUS_HTTP_PATH,
     host: PROMETHEUS_HOST,
     port: PROMETHEUS_PORT,

@@ -50,7 +50,7 @@ export interface BuildConfig {
       key?: string; // e.g. string or '/path/to/my/client-key.pem'
     };
   };
-  prometheus: MetricsPluginOptions;
+  prometheus?: MetricsPluginOptions;
   openaiAPIKey?: string;
   allowedOrigins?: string[];
   debugSQL?: boolean;
@@ -150,7 +150,7 @@ export default async function build(opts: BuildConfig) {
 
   await fastify.register(fastifyHealth);
 
-  if (opts.prometheus.enable) {
+  if (opts.prometheus?.enabled) {
     await fastify.register(fastifyMetrics, { ...opts.prometheus, logger });
   }
 

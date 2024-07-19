@@ -5,7 +5,7 @@ import Fastify, { FastifyRequest, FastifyReply } from 'fastify';
 import { Logger } from 'pino';
 
 export interface MetricsPluginOptions {
-  enable?: boolean;
+  enabled?: boolean;
   logger?: Logger;
   path: string;
   port: number;
