@@ -280,7 +280,7 @@ func TestWebSockets(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 		})
 	})
-	t.Run("subscription with authorization via initial payload no-reject", func(t *testing.T) {
+	t.Run("subscription with authorization via initial payload with reject", func(t *testing.T) {
 		t.Parallel()
 
 		authServer, err := jwks.NewServer(t)
@@ -303,7 +303,7 @@ func TestWebSockets(t *testing.T) {
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, true)),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
-					RejectOperationIfUnauthorized: false,
+					RejectOperationIfUnauthorized: true,
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -340,7 +340,7 @@ func TestWebSockets(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 		})
 	})
-	t.Run("subscription with authorization via initial payload reject", func(t *testing.T) {
+	t.Run("subscription with authorization via initial payload no token with reject", func(t *testing.T) {
 		t.Parallel()
 
 		authServer, err := jwks.NewServer(t)
@@ -363,7 +363,7 @@ func TestWebSockets(t *testing.T) {
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, true)),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
-					RejectOperationIfUnauthorized: false,
+					RejectOperationIfUnauthorized: true,
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -387,7 +387,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, conn.Close())
 		})
 	})
-	t.Run("subscription with authorization via initial payload invalid token rejection", func(t *testing.T) {
+	t.Run("subscription with authorization via initial payload invalid token with reject", func(t *testing.T) {
 		t.Parallel()
 
 		authServer, err := jwks.NewServer(t)
