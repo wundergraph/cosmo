@@ -560,7 +560,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		EpollKqueuePollTimeout:         300 * time.Millisecond,
 		EpollKqueueConnBufferSize:      1,
 		WebSocketReadTimeout:           time.Millisecond * 100,
-		MaxConcurrentResolvers:         128,
+		MaxConcurrentResolvers:         32,
 		ExecutionPlanCacheSize:         1024,
 		EnablePersistedOperationsCache: true,
 	}

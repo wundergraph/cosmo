@@ -1275,7 +1275,7 @@
         },
         "execution_plan_cache_size": {
           "type": "integer",
-          "default": 10000,
+          "default": 1024,
           "description": "The size of the execution plan cache."
         },
         "minify_subgraph_operations": {
