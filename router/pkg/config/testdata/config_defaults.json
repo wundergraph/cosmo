@@ -186,7 +186,8 @@
       "ReportWebSocketConnections": false,
       "ReportMemoryUsage": false,
       "EnableResolverDebugging": false,
-      "EnablePersistedOperationsCacheResponseHeader": false
+      "EnablePersistedOperationsCacheResponseHeader": false,
+      "EnableNormalizationCacheResponseHeader": false
     },
     "EnableSingleFlight": true,
     "EnableRequestTracing": true,
@@ -196,9 +197,11 @@
     "EpollKqueuePollTimeout": 1000000000,
     "EpollKqueueConnBufferSize": 128,
     "WebSocketReadTimeout": 5000000000,
-    "ExecutionPlanCacheSize": 10000,
+    "ExecutionPlanCacheSize": 1024,
     "MinifySubgraphOperations": false,
-    "EnablePersistedOperationsCache": true
+    "EnablePersistedOperationsCache": true,
+    "EnableNormalizationCache": true,
+    "NormalizationCacheSize": 1024
   },
   "WebSocket": {
     "Enabled": true,

@@ -5,6 +5,12 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
+
 	br "github.com/andybalholm/brotli"
 	"github.com/cloudflare/backoff"
 	"github.com/dgraph-io/ristretto"
@@ -38,11 +44,6 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/exp/maps"
-	"io"
-	"net/http"
-	"net/url"
-	"strings"
-	"time"
 )
 
 const (
@@ -289,12 +290,16 @@ func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.M
 }
 
 type graphMux struct {
-	mux       *chi.Mux
-	planCache ExecutionPlanCache[uint64, *planWithMetaData]
+	mux                *chi.Mux
+	planCache          ExecutionPlanCache[uint64, *planWithMetaData]
+	normalizationCache *ristretto.Cache[uint64, NormalizationCacheEntry]
 }
 
 func (s *graphMux) Shutdown(_ context.Context) {
 	s.planCache.Close()
+	if s.normalizationCache != nil {
+		s.normalizationCache.Close()
+	}
 }
 
 // buildGraphMux creates a new graph mux with the given feature flags and engine configuration.
@@ -345,13 +350,24 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			NumCounters: s.engineExecutionConfiguration.ExecutionPlanCacheSize * 10,
 			BufferItems: 64,
 		}
-
 		gm.planCache, err = ristretto.NewCache[uint64, *planWithMetaData](planCacheConfig)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create planner cache: %w", err)
 		}
 	} else {
 		gm.planCache = NewNoopExecutionPlanCache()
+	}
+
+	if s.engineExecutionConfiguration.EnableNormalizationCache && s.engineExecutionConfiguration.NormalizationCacheSize > 0 {
+		normalizationCacheConfig := &ristretto.Config[uint64, NormalizationCacheEntry]{
+			MaxCost:     s.engineExecutionConfiguration.NormalizationCacheSize,
+			NumCounters: s.engineExecutionConfiguration.NormalizationCacheSize * 10,
+			BufferItems: 64,
+		}
+		gm.normalizationCache, err = ristretto.NewCache[uint64, NormalizationCacheEntry](normalizationCacheConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create normalization cache: %w", err)
+		}
 	}
 
 	routerMetrics := NewRouterMetrics(&routerMetricsConfig{
@@ -533,6 +549,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		MaxOperationSizeInBytes:        int64(s.routerTrafficConfig.MaxRequestBodyBytes),
 		PersistentOpClient:             s.cdnOperationClient,
 		EnablePersistedOperationsCache: s.engineExecutionConfiguration.EnablePersistedOperationsCache,
+		NormalizationCache:             gm.normalizationCache,
 	})
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
 
@@ -550,11 +567,12 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		Log:                                    s.logger,
 		EnableExecutionPlanCacheResponseHeader: s.engineExecutionConfiguration.EnableExecutionPlanCacheResponseHeader,
 		EnablePersistedOperationCacheResponseHeader: s.engineExecutionConfiguration.Debug.EnablePersistedOperationsCacheResponseHeader,
-		WebSocketStats:           s.websocketStats,
-		TracerProvider:           s.tracerProvider,
-		Authorizer:               NewCosmoAuthorizer(authorizerOptions),
-		SubgraphErrorPropagation: s.subgraphErrorPropagation,
-		EngineLoaderHooks:        NewEngineRequestHooks(s.metricStore),
+		EnableNormalizationCacheResponseHeader:      s.engineExecutionConfiguration.Debug.EnableNormalizationCacheResponseHeader,
+		WebSocketStats:                              s.websocketStats,
+		TracerProvider:                              s.tracerProvider,
+		Authorizer:                                  NewCosmoAuthorizer(authorizerOptions),
+		SubgraphErrorPropagation:                    s.subgraphErrorPropagation,
+		EngineLoaderHooks:                           NewEngineRequestHooks(s.metricStore),
 	}
 
 	if s.redisClient != nil {
