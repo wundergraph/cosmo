@@ -27,9 +27,9 @@ export default fp<MetricsPluginOptions>(function (fastify, { path = '/metrics', 
   listener.route({
     method: 'GET',
     url: path,
-    handler: async function (request: FastifyRequest, reply: FastifyReply) {
-      const metrics = await registry.metrics();
-      reply.send(metrics);
+    handler: function (request: FastifyRequest, reply: FastifyReply) {
+      reply.header('Content-Type', registry.contentType);
+      return registry.metrics()
     },
   });
 

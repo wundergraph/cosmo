@@ -17,6 +17,7 @@ describe('Metrics endpoint', () => {
     const resp = await server.metricsServer.inject({ method: 'GET', url: '/metrics' });
 
     expect(resp.statusCode).toBe(200);
+    expect(resp.headers['content-type']).toBe('text/plain; version=0.0.4; charset=utf-8');
 
     expect(resp.payload).toContain('process_cpu_user_seconds_total');
     expect(resp.payload).toContain('process_cpu_system_seconds_total');
