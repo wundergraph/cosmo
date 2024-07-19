@@ -17,7 +17,7 @@ spec:
       name: http
     {{ if .Values.configuration.prometheus.enabled }}
     - port: {{ .Values.configuration.prometheus.port }}
-      targetPort: http
+      targetPort: metrics
       protocol: TCP
       name: metrics
     {{- end }}

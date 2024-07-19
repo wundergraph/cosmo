@@ -195,6 +195,8 @@ configuration:
   prometheus:
     # -- Enables prometheus metrics support. Default is false.
     enabled: false
+    # -- The host to bind to defautls to 127.0.0.1 to avoid opening the metrics endpoint by default.
+    host: 127.0.0.1
     # -- The port where metrics are exposed. Default is port 8088.
     port: 8088
     # -- The HTTP path where metrics are exposed. Default is "/metrics".

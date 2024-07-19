@@ -30,6 +30,7 @@ data:
   redisPort: "{{ .Values.configuration.redisPort }}"
   prometheusEnabled: "{{ .Values.configuration.prometheus.enabled }}"
   {{ if .Values.configuration.prometheus.enabled }}
-  prometheusListenAddr: "0.0.0.0:{{ .Values.configuration.prometheus.port }}"
+  prometheusHost: "{{ .Values.configuration.prometheus.host }}"
+  prometheusPort: "{{ .Values.configuration.prometheus.port }}"
   prometheusPath: "{{ .Values.configuration.prometheus.path }}"
   {{- end }}
