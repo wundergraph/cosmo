@@ -1364,7 +1364,7 @@ export class OrganizationRepository {
       await oidcRepo.deleteOidcProvider({ organizationId: input.organizationId });
 
       for (const member of allMembers) {
-        const userRoles = await this.getOrganizationMemberRoles({
+        const userRoles = await orgRepo.getOrganizationMemberRoles({
           userID: member.userID,
           organizationID: input.organizationId,
         });

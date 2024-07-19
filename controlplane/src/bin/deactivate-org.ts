@@ -94,6 +94,9 @@ await orgRepo.deactivateOrganization({
 
 await worker.close();
 
+redisQueue.disconnect();
+redisWorker.disconnect();
+
 // Close database connection
 await queryConnection.end({
   timeout: 1,
