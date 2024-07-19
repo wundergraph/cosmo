@@ -1,14 +1,32 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { addSeconds, formatISO, subDays } from 'date-fns';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, Mock, test, vi } from 'vitest';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
+import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import { SchemaChangeType } from '../src/types/index.js';
 import { SetupTest } from './test-util.js';
 
 let dbname = '';
 
+vi.mock('../src/core/clickhouse/index.js', () => {
+  const ClickHouseClient = vi.fn();
+  ClickHouseClient.prototype.queryPromise = vi.fn();
+
+  return { ClickHouseClient };
+});
+
 describe('CheckSubgraphSchema', (ctx) => {
+  let chClient: ClickHouseClient;
+
+  beforeEach(() => {
+    chClient = new ClickHouseClient();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   beforeAll(async () => {
     dbname = await beforeAllSetup();
   });
@@ -188,6 +206,94 @@ describe('CheckSubgraphSchema', (ctx) => {
     });
     expect(checksResp.response?.code).toBe(EnumStatusCode.OK);
     expect(checksResp.checks?.length).toBe(1);
+
+    await server.close();
+  });
+
+  test('Should retrieve checked operations', async () => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+
+    const fedGraphName = genID('fedGraph');
+    const subgraphName = genID('subgraph');
+    const label = genUniqueLabel();
+
+    const initSchema = `
+type Query {
+  employees: [Employee!]!
+}
+
+type Employee {
+  id: Int!
+}
+`;
+
+    const modifiedSchema = `
+type Query {
+  employees: [Employee]
+}
+
+type Employee {
+  id: Int!
+}
+`;
+
+    const createFedGraphRes = await client.createFederatedGraph({
+      name: fedGraphName,
+      namespace: 'default',
+      routingUrl: 'http://localhost:8081',
+      labelMatchers: [joinLabel(label)],
+    });
+    expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
+
+    const createSubgraphRes = await client.createFederatedSubgraph({
+      name: subgraphName,
+      namespace: 'default',
+      labels: [label],
+      routingUrl: 'http://localhost:8081',
+    });
+    expect(createSubgraphRes.response?.code).toBe(EnumStatusCode.OK);
+
+    const publishResp = await client.publishFederatedSubgraph({
+      name: subgraphName,
+      namespace: 'default',
+      schema: initSchema,
+    });
+    expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
+
+    (chClient.queryPromise as Mock).mockResolvedValue([
+      {
+        operationHash: 'hash1',
+        operationName: 'op1',
+        operationType: 'query',
+        firstSeen: Date.now() / 1000,
+        lastSeen: Date.now() / 1000,
+      },
+      {
+        operationHash: 'hash2',
+        operationName: 'op2',
+        operationType: 'query',
+        firstSeen: Date.now() / 1000,
+        lastSeen: Date.now() / 1000,
+      },
+    ]);
+
+    const checkResp = await client.checkSubgraphSchema({
+      subgraphName,
+      namespace: 'default',
+      schema: Buffer.from(modifiedSchema),
+    });
+    expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkResp.breakingChanges.length).toBe(1);
+    expect(checkResp.operationUsageStats?.totalOperations).toBe(2);
+    expect(checkResp.operationUsageStats?.safeOperations).toBe(0);
+
+    const checkOperationsResp = await client.getCheckOperations({
+      checkId: checkResp.checkId,
+      graphName: fedGraphName,
+      namespace: 'default',
+    });
+    expect(checkOperationsResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkOperationsResp.operations.length).toBe(2);
 
     await server.close();
   });
