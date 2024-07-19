@@ -8794,8 +8794,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
           operations: affectedOperations.map((operation) => ({
             ...operation,
-            firstSeenAt: operation.firstSeenAt.toUTCString(),
-            lastSeenAt: operation.lastSeenAt.toUTCString(),
             impactingChanges: checkDetails.changes
               .filter(({ id }) => operation.schemaChangeIds.includes(id))
               .map((c) => ({
@@ -8805,7 +8803,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                 ),
               })),
             hasIgnoreAllOverride: ignoreAllOverrides.some((io) => io.hash === operation.hash),
-            isSafe: operation.isSafe,
           })),
           trafficCheckDays,
           createdAt: check.timestamp,
