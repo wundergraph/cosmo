@@ -147,7 +147,8 @@ export default async function build(opts: BuildConfig) {
   await fastify.register(fastifyHealth);
 
   if (opts.prometheus?.enabled) {
-    await fastify.register(fastifyMetrics, { ...opts.prometheus, logger });
+    const metricsLogger = logger.child({ module: 'metrics' });
+    await fastify.register(fastifyMetrics, { ...opts.prometheus, logger: metricsLogger });
   }
 
   await fastify.register(fastifyDatabase, {
