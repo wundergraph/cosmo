@@ -108,6 +108,7 @@ func (p *OperationPlanner) Plan(operation *ParsedOperation, clientInfo *ClientIn
 		extensions:                 operation.Request.Extensions,
 		protocol:                   protocol,
 		persistedOperationCacheHit: operation.PersistedOperationCacheHit,
+		normalizationCacheHit:      operation.NormalizationCacheHit,
 	}
 
 	if operation.IsPersistedOperation {

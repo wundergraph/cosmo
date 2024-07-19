@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"io"
 	"log"
 	"math/rand"
@@ -23,6 +22,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 
 	"github.com/nats-io/nats.go/jetstream"
 
@@ -548,10 +549,13 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		EnableSingleFlight:                     true,
 		EnableRequestTracing:                   true,
 		EnableExecutionPlanCacheResponseHeader: true,
+		EnableNormalizationCache:               true,
+		NormalizationCacheSize:                 1024,
 		Debug: config.EngineDebugConfiguration{
 			ReportWebSocketConnections:                   true,
 			PrintQueryPlans:                              false,
 			EnablePersistedOperationsCacheResponseHeader: true,
+			EnableNormalizationCacheResponseHeader:       true,
 		},
 		EpollKqueuePollTimeout:         300 * time.Millisecond,
 		EpollKqueueConnBufferSize:      1,
