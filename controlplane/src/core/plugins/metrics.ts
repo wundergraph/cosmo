@@ -17,7 +17,10 @@ export interface MetricsPluginOptions {
 }
 
 export default fp<MetricsPluginOptions>(function (fastify, { path = '/metrics', registry = new Registry() }, next) {
-  const metricsLogger = fastify.log.child({ module: 'metrics' });
+  const metricsLogger = fastify.log.child({
+    component: '@wundergraph/controlplane',
+    module: 'metrics',
+  });
   const listener = Fastify({
     logger: metricsLogger,
   });
