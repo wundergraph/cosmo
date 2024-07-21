@@ -66,7 +66,7 @@ func (f *EngineLoaderHooks) OnLoad(ctx context.Context, data resolve.OnLoadConfi
 
 	span.SetAttributes(
 		rotel.WgSubgraphID.String(data.DataSourceID),
-		rotel.WgAcquireResolverWaitTimeMs.Int64(data.ResolveAcquireTime.Milliseconds()),
+		rotel.WgAcquireResolverWaitTimeMs.Int64(data.ResolveAcquireWaitTime.Milliseconds()),
 	)
 
 	return ctx
