@@ -40,9 +40,9 @@ func NewEngineRequestHooks(metricStore metric.Provider) resolve.LoaderHooks {
 	}
 }
 
-func (f *EngineLoaderHooks) OnLoad(ctx context.Context, dataSourceID string) context.Context {
+func (f *EngineLoaderHooks) OnLoad(ctx context.Context, data resolve.OnLoadConfig) context.Context {
 
-	if resolve.IsIntrospectionDataSource(dataSourceID) {
+	if resolve.IsIntrospectionDataSource(data.DataSourceID) {
 		return ctx
 	}
 
@@ -59,21 +59,22 @@ func (f *EngineLoaderHooks) OnLoad(ctx context.Context, dataSourceID string) con
 
 	ctx, span := f.tracer.Start(ctx, "Engine - Fetch", trace.WithAttributes(baseAttributes...))
 
-	subgraph := reqContext.SubgraphByID(dataSourceID)
+	subgraph := reqContext.SubgraphByID(data.DataSourceID)
 	if subgraph != nil {
 		span.SetAttributes(rotel.WgSubgraphName.String(subgraph.Name))
 	}
 
 	span.SetAttributes(
-		rotel.WgSubgraphID.String(dataSourceID),
+		rotel.WgSubgraphID.String(data.DataSourceID),
+		rotel.WgAcquireResolverWaitTimeMs.Int64(data.ResolveAcquireTime.Milliseconds()),
 	)
 
 	return ctx
 }
 
-func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, dataSourceID string, err error) {
+func (f *EngineLoaderHooks) OnFinished(ctx context.Context, data resolve.OnFinishedConfig) {
 
-	if resolve.IsIntrospectionDataSource(dataSourceID) {
+	if resolve.IsIntrospectionDataSource(data.DataSourceID) {
 		return
 	}
 
@@ -86,11 +87,11 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, data
 	span := trace.SpanFromContext(ctx)
 	defer span.End()
 
-	activeSubgraph := reqContext.SubgraphByID(dataSourceID)
+	activeSubgraph := reqContext.SubgraphByID(data.DataSourceID)
 
 	baseAttributes := []attribute.KeyValue{
 		// Subgraph response status code
-		semconv.HTTPStatusCode(statusCode),
+		semconv.HTTPStatusCode(data.StatusCode),
 		rotel.WgComponentName.String("engine-loader"),
 		rotel.WgSubgraphID.String(activeSubgraph.Id),
 		rotel.WgSubgraphName.String(activeSubgraph.Name),
@@ -103,18 +104,18 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, data
 		baseAttributes = append(baseAttributes, attributes...)
 	}
 
-	if err != nil {
+	if data.Err != nil {
 
 		// Set error status. This is the fetch error from the engine
 		// Downstream errors are extracted from the subgraph response
-		span.SetStatus(codes.Error, err.Error())
-		span.RecordError(err)
+		span.SetStatus(codes.Error, data.Err.Error())
+		span.RecordError(data.Err)
 
 		var errorCodesAttr []string
 
 		var subgraphError *resolve.SubgraphError
 
-		if errors.As(err, &subgraphError) {
+		if errors.As(data.Err, &subgraphError) {
 
 			// Extract downstream errors
 			if len(subgraphError.DownstreamErrors) > 0 {
