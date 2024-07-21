@@ -104,7 +104,7 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 func isResponseOK(resp *http.Response) bool {
 	// Ensure we don't wait for no reason when subgraphs don't behave
 	// spec-compliant and returns a different status code than 200.
-	return resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices
+	return resp.StatusCode >= 200 && resp.StatusCode < 300
 }
 
 func IsRetryableError(err error, resp *http.Response) bool {
