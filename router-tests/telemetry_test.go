@@ -103,7 +103,7 @@ func TestTelemetry(t *testing.T) {
 
 			// Span attributes
 
-			require.Len(t, sn[1].Attributes(), 6)
+			require.Len(t, sn[1].Attributes(), 7)
 
 			require.Contains(t, sn[1].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[1].Attributes(), otel.WgRouterClusterName.String(""))
@@ -111,6 +111,7 @@ func TestTelemetry(t *testing.T) {
 			require.Contains(t, sn[1].Attributes(), otel.WgRouterConfigVersion.String("959e2804f7b01fdd813cad98e16f06e287150a2e"))
 			require.Contains(t, sn[1].Attributes(), otel.WgOperationName.String(""))
 			require.Contains(t, sn[1].Attributes(), otel.WgOperationType.String("query"))
+			require.Contains(t, sn[1].Attributes(), otel.WgNormalizationCacheHit.Bool(false))
 
 			require.Equal(t, "Operation - Validate", sn[2].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[2].SpanKind())
@@ -288,11 +289,12 @@ func TestTelemetry(t *testing.T) {
 
 			// Span attributes
 
-			require.Len(t, sn[6].Attributes(), 4)
+			require.Len(t, sn[6].Attributes(), 5)
 			require.Contains(t, sn[6].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[6].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[6].Attributes(), otel.WgFederatedGraphID.String("graph"))
 			require.Contains(t, sn[6].Attributes(), otel.WgRouterConfigVersion.String("959e2804f7b01fdd813cad98e16f06e287150a2e"))
+			require.Contains(t, sn[6].Attributes(), otel.WgAcquireResolverWaitTimeMs.Int64(0))
 
 			// Root Server middleware
 			require.Equal(t, "query unnamed", sn[7].Name())
@@ -1388,7 +1390,7 @@ func TestTelemetry(t *testing.T) {
 			require.Contains(t, sn[0].Attributes(), otel.WgFeatureFlag.String("myff"))
 
 			require.Equal(t, "Operation - Normalize", sn[1].Name())
-			require.Len(t, sn[1].Attributes(), 7)
+			require.Len(t, sn[1].Attributes(), 8)
 			require.Contains(t, sn[1].Attributes(), otel.WgRouterConfigVersion.String("982bb03cbf4043d03036b8517ee304ec7294ae76"))
 			require.Contains(t, sn[1].Attributes(), otel.WgFeatureFlag.String("myff"))
 
@@ -1413,7 +1415,7 @@ func TestTelemetry(t *testing.T) {
 			require.Contains(t, sn[5].Attributes(), otel.WgFeatureFlag.String("myff"))
 
 			require.Equal(t, "Operation - Execute", sn[6].Name())
-			require.Len(t, sn[6].Attributes(), 5)
+			require.Len(t, sn[6].Attributes(), 6)
 			require.Contains(t, sn[6].Attributes(), otel.WgRouterConfigVersion.String("982bb03cbf4043d03036b8517ee304ec7294ae76"))
 			require.Contains(t, sn[6].Attributes(), otel.WgFeatureFlag.String("myff"))
 

@@ -343,7 +343,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			trace.WithAttributes(attributes...),
 		)
 
-		err = operationKit.Normalize()
+		cached, err := operationKit.Normalize()
 		if err != nil {
 			finalErr = err
 
@@ -356,6 +356,8 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			writeOperationError(r, w, requestLogger, err)
 			return
 		}
+
+		engineNormalizeSpan.SetAttributes(otel.WgNormalizationCacheHit.Bool(cached))
 
 		if operationKit.parsedOperation.IsPersistedOperation {
 			engineNormalizeSpan.SetAttributes(otel.WgEnginePersistedOperationCacheHit.Bool(operationKit.parsedOperation.PersistedOperationCacheHit))

@@ -29,6 +29,8 @@ const (
 	WgSubgraphErrorExtendedCode        = attribute.Key("wg.subgraph.error.extended_code")
 	WgSubgraphErrorMessage             = attribute.Key("wg.subgraph.error.message")
 	WgFeatureFlag                      = attribute.Key("wg.feature_flag")
+	WgAcquireResolverWaitTimeMs        = attribute.Key("wg.engine.resolver.wait_time_ms")
+	WgNormalizationCacheHit            = attribute.Key("wg.engine.normalization_cache_hit")
 )
 
 var (

@@ -225,8 +225,8 @@ github.com/valyala/fastjson v1.6.4 h1:uAUNq9Z6ymTgGhcm0UynUAB6tlbakBrz6CQFax3BXV
 github.com/valyala/fastjson v1.6.4/go.mod h1:CLCAqky6SMuOcxStkYQvblddUtoRxhYMGLrsQns1aXY=
 github.com/vektah/gqlparser/v2 v2.5.11 h1:JJxLtXIoN7+3x6MBdtIP59TP1RANnY7pXOaDnADQSf8=
 github.com/vektah/gqlparser/v2 v2.5.11/go.mod h1:1rCcfwB2ekJofmluGWXMSEnPMZgbxzwj6FaZ/4OT8Cc=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.63 h1:CVPkj0NcTWeqFqZWAmx9oKrs+49yNwOtXMVmLl80gbA=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.63/go.mod h1:aukw9fSLqLLQz0tPe84ioUtcnnvdZ58ec9ByC6mz76c=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.64 h1:+XaG8GFSLoSKAEU19M6wDqt0+93TFSou0YgtLZVeSkU=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.64/go.mod h1:aukw9fSLqLLQz0tPe84ioUtcnnvdZ58ec9ByC6mz76c=
 github.com/wundergraph/ristretto v0.0.0-20240715072905-d30a6481d4bf h1:MdIFR6bTqsFtVykye/JQ42aeQgLFkY3AwAVAKA4S8uA=
 github.com/wundergraph/ristretto v0.0.0-20240715072905-d30a6481d4bf/go.mod h1:6LJywzE5Bt1eAjzHpcrnjv+cekP1M/GQY0jnyxxx2hA=
 github.com/yusufpapurcu/wmi v1.2.4 h1:zFUKzehAFReQwLys1b/iSMl+JQGSCSjtVqQn9bBrPo0=
