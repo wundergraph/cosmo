@@ -211,7 +211,7 @@ type EngineExecutionConfiguration struct {
 	EnableSingleFlight                     bool                     `default:"true" envconfig:"ENGINE_ENABLE_SINGLE_FLIGHT" yaml:"enable_single_flight"`
 	EnableRequestTracing                   bool                     `default:"true" envconfig:"ENGINE_ENABLE_REQUEST_TRACING" yaml:"enable_request_tracing"`
 	EnableExecutionPlanCacheResponseHeader bool                     `default:"false" envconfig:"ENGINE_ENABLE_EXECUTION_PLAN_CACHE_RESPONSE_HEADER" yaml:"enable_execution_plan_cache_response_header"`
-	MaxConcurrentResolvers                 int                      `default:"32" envconfig:"ENGINE_MAX_CONCURRENT_RESOLVERS" yaml:"max_concurrent_resolvers,omitempty"`
+	MaxConcurrentResolvers                 int                      `default:"256" envconfig:"ENGINE_MAX_CONCURRENT_RESOLVERS" yaml:"max_concurrent_resolvers,omitempty"`
 	EnableWebSocketEpollKqueue             bool                     `default:"true" envconfig:"ENGINE_ENABLE_WEBSOCKET_EPOLL_KQUEUE" yaml:"enable_websocket_epoll_kqueue"`
 	EpollKqueuePollTimeout                 time.Duration            `default:"1s" envconfig:"ENGINE_EPOLL_KQUEUE_POLL_TIMEOUT" yaml:"epoll_kqueue_poll_timeout,omitempty"`
 	EpollKqueueConnBufferSize              int                      `default:"128" envconfig:"ENGINE_EPOLL_KQUEUE_CONN_BUFFER_SIZE" yaml:"epoll_kqueue_conn_buffer_size,omitempty"`

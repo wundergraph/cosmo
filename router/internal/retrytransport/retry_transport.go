@@ -59,8 +59,8 @@ func NewRetryHTTPTransport(roundTripper http.RoundTripper, retryOptions RetryOpt
 func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 	resp, err := rt.RoundTripper.RoundTrip(req)
-	// Short circuit if the request was successful
-	if err == nil && resp.StatusCode == http.StatusOK {
+	// Short circuit if the request was successful.
+	if err == nil && isResponseOK(resp) {
 		return resp, nil
 	}
 
@@ -92,13 +92,19 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 		resp, err = rt.RoundTripper.RoundTrip(req)
 
 		// Short circuit if the request was successful
-		if err == nil && resp.StatusCode == http.StatusOK {
+		if err == nil && isResponseOK(resp) {
 			return resp, nil
 		}
 
 	}
 
 	return resp, err
+}
+
+func isResponseOK(resp *http.Response) bool {
+	// Ensure we don't wait for no reason when subgraphs don't behave
+	// spec-compliant and returns a different status code than 200.
+	return resp.StatusCode >= 200 && resp.StatusCode < 300
 }
 
 func IsRetryableError(err error, resp *http.Response) bool {
