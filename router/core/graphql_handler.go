@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"io"
 	"net/http"
 	"strings"
@@ -179,13 +180,15 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case *plan.SynchronousResponsePlan:
 		w.Header().Set("Content-Type", "application/json")
 		h.setDebugCacheHeaders(w, operationCtx)
-		err := h.executor.Resolver.ResolveGraphQLResponse(ctx, p.Response, nil, w)
+		resp, err := h.executor.Resolver.ResolveGraphQLResponse(ctx, p.Response, nil, w)
 		if err != nil {
 			requestLogger.Error("unable to resolve response", zap.Error(err))
 			trackResponseError(ctx.Context(), err)
 			h.WriteError(ctx, err, p.Response, w)
 			return
 		}
+		graphqlExecutionSpan.SetAttributes(rotel.WgAcquireResolverWaitTimeMs.Int64(resp.ResolveAcquireWaitTime.Milliseconds()))
+
 	case *plan.SubscriptionResponsePlan:
 		var (
 			writer resolve.SubscriptionResponseWriter
