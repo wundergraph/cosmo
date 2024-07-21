@@ -181,14 +181,14 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		h.setDebugCacheHeaders(w, operationCtx)
 		resp, err := h.executor.Resolver.ResolveGraphQLResponse(ctx, p.Response, nil, w)
+		graphqlExecutionSpan.SetAttributes(rotel.WgAcquireResolverWaitTimeMs.Int64(resp.ResolveAcquireWaitTime.Milliseconds()))
+
 		if err != nil {
 			requestLogger.Error("unable to resolve response", zap.Error(err))
 			trackResponseError(ctx.Context(), err)
 			h.WriteError(ctx, err, p.Response, w)
 			return
 		}
-		graphqlExecutionSpan.SetAttributes(rotel.WgAcquireResolverWaitTimeMs.Int64(resp.ResolveAcquireWaitTime.Milliseconds()))
-
 	case *plan.SubscriptionResponsePlan:
 		var (
 			writer resolve.SubscriptionResponseWriter
