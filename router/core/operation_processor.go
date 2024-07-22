@@ -355,17 +355,17 @@ func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo) error 
 
 // Normalize normalizes the operation. After normalization the normalized representation of the operation
 // and variables is available. Also, the final operation ID is generated.
-func (o *OperationKit) Normalize() error {
+func (o *OperationKit) Normalize() (bool, error) {
 	if o.parsedOperation.IsPersistedOperation {
 		return o.normalizePersistedOperation()
 	}
 	return o.normalizeNonPersistedOperation()
 }
 
-func (o *OperationKit) normalizePersistedOperation() (err error) {
+func (o *OperationKit) normalizePersistedOperation() (cached bool, err error) {
 	if o.parsedOperation.NormalizedRepresentation != "" {
 		// normalized operation was loaded from cache
-		return nil
+		return true, nil
 	}
 	skipIncludeNames := o.skipIncludeVariableNames()
 
@@ -391,7 +391,7 @@ func (o *OperationKit) normalizePersistedOperation() (err error) {
 	o.kit.doc.Input.Variables = o.parsedOperation.Request.Variables
 	o.kit.normalizer.NormalizeNamedOperation(o.kit.doc, o.operationParser.executor.ClientSchema, staticOperationName, report)
 	if report.HasErrors() {
-		return &reportError{
+		return false, &reportError{
 			report: report,
 		}
 	}
@@ -401,7 +401,7 @@ func (o *OperationKit) normalizePersistedOperation() (err error) {
 
 	originalVariables, err = o.populateDefaultVariablesFromExportedDefaults(exportedVariables, originalVariables)
 	if err != nil {
-		return errors.WithStack(fmt.Errorf("failed to set default values for variables: %w", err))
+		return false, errors.WithStack(fmt.Errorf("failed to set default values for variables: %w", err))
 	}
 
 	o.parsedOperation.Request.Variables = originalVariables
@@ -409,7 +409,7 @@ func (o *OperationKit) normalizePersistedOperation() (err error) {
 	// Hash the normalized operation with the static operation name to avoid different IDs for the same operation
 	err = o.kit.printer.Print(o.kit.doc, o.operationParser.executor.ClientSchema, o.kit.keyGen)
 	if err != nil {
-		return errors.WithStack(fmt.Errorf("failed to print normalized operation: %w", err))
+		return false, errors.WithStack(fmt.Errorf("failed to print normalized operation: %w", err))
 	}
 
 	// Generate the operation ID
@@ -420,7 +420,7 @@ func (o *OperationKit) normalizePersistedOperation() (err error) {
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = o.originalOperationNameRef
 	err = o.kit.printer.Print(o.kit.doc, o.operationParser.executor.ClientSchema, o.kit.normalizedOperation)
 	if err != nil {
-		return errors.WithStack(fmt.Errorf("failed to print normalized operation: %w", err))
+		return false, errors.WithStack(fmt.Errorf("failed to print normalized operation: %w", err))
 	}
 
 	// Set the normalized representation
@@ -430,7 +430,7 @@ func (o *OperationKit) normalizePersistedOperation() (err error) {
 		o.savePersistedOperationToCache(skipIncludeNames, exportedVariables)
 	}
 
-	return nil
+	return false, nil
 }
 
 type NormalizationCacheEntry struct {
@@ -440,7 +440,7 @@ type NormalizationCacheEntry struct {
 	exportedVariables        []byte
 }
 
-func (o *OperationKit) normalizeNonPersistedOperation() (err error) {
+func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error) {
 
 	skipIncludeVariableNames := o.skipIncludeVariableNames()
 	cacheKey := o.normalizationCacheKey(skipIncludeVariableNames)
@@ -453,9 +453,9 @@ func (o *OperationKit) normalizeNonPersistedOperation() (err error) {
 			o.parsedOperation.NormalizationCacheHit = true
 			o.parsedOperation.Request.Variables, err = o.populateDefaultVariablesFromExportedDefaults(entry.exportedVariables, o.parsedOperation.Request.Variables)
 			if err != nil {
-				return errors.WithStack(fmt.Errorf("failed to set default values for variables: %w", err))
+				return false, errors.WithStack(fmt.Errorf("failed to set default values for variables: %w", err))
 			}
-			return nil
+			return true, nil
 		}
 	}
 
@@ -485,7 +485,7 @@ func (o *OperationKit) normalizeNonPersistedOperation() (err error) {
 	o.kit.doc.Input.Variables = o.parsedOperation.Request.Variables
 	o.kit.normalizer.NormalizeNamedOperation(o.kit.doc, o.operationParser.executor.ClientSchema, staticOperationName, report)
 	if report.HasErrors() {
-		return &reportError{
+		return false, &reportError{
 			report: report,
 		}
 	}
@@ -497,7 +497,7 @@ func (o *OperationKit) normalizeNonPersistedOperation() (err error) {
 
 	originalVariables, err = o.populateDefaultVariablesFromExportedDefaults(exportedVariables, originalVariables)
 	if err != nil {
-		return errors.WithStack(fmt.Errorf("failed to set default values for variables: %w", err))
+		return false, errors.WithStack(fmt.Errorf("failed to set default values for variables: %w", err))
 	}
 
 	// reset with the original variables
@@ -507,7 +507,7 @@ func (o *OperationKit) normalizeNonPersistedOperation() (err error) {
 	// Hash the normalized operation with the static operation name & original variables to avoid different IDs for the same operation
 	err = o.kit.printer.Print(o.kit.doc, o.operationParser.executor.ClientSchema, o.kit.keyGen)
 	if err != nil {
-		return errors.WithStack(fmt.Errorf("failed to print normalized operation: %w", err))
+		return false, errors.WithStack(fmt.Errorf("failed to print normalized operation: %w", err))
 	}
 
 	// Generate the operation ID
@@ -517,7 +517,7 @@ func (o *OperationKit) normalizeNonPersistedOperation() (err error) {
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = o.originalOperationNameRef
 	err = o.kit.printer.Print(o.kit.doc, o.operationParser.executor.ClientSchema, o.kit.normalizedOperation)
 	if err != nil {
-		return errors.WithStack(fmt.Errorf("failed to print normalized operation: %w", err))
+		return false, errors.WithStack(fmt.Errorf("failed to print normalized operation: %w", err))
 	}
 
 	// Set the normalized representation
@@ -533,7 +533,7 @@ func (o *OperationKit) normalizeNonPersistedOperation() (err error) {
 		o.cache.normalizationCache.Set(cacheKey, entry, 1)
 	}
 
-	return nil
+	return false, nil
 }
 
 type normalizedOperationCacheEntry struct {
