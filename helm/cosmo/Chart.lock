@@ -22,7 +22,7 @@ dependencies:
   version: 12.8.0
 - name: keycloak
   repository: https://charts.bitnami.com/bitnami
-  version: 17.3.1
+  version: 21.7.1
 - name: clickhouse
   repository: https://charts.bitnami.com/bitnami
   version: 5.0.2
@@ -32,5 +32,5 @@ dependencies:
 - name: redis
   repository: https://charts.bitnami.com/bitnami
   version: 18.9.1
-digest: sha256:80b32cdc61e0ac9d64f291afdcfb8efa1bfbf985db686d779fbd1bfe97b1949d
-generated: "2024-04-10T10:52:54.566097+02:00"
+digest: sha256:2a7e77913d037f2b45525bee8e00cfa9938172149abbd311f12e5761d0f5eae5
+generated: "2024-07-19T17:13:04.492235+05:30"
