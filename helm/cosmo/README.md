@@ -54,6 +54,9 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | controlplane.configuration.debugSQL | bool | `false` |  |
 | controlplane.configuration.logLevel | string | `"debug"` |  |
 | controlplane.configuration.prometheus.enabled | bool | `false` | Enables prometheus metrics support. Default is false. |
+| controlplane.configuration.prometheus.gcp.enabled | bool | `false` | Enables gcp support . Default is false. |
+| controlplane.configuration.prometheus.gcp.interval | string | `"60s"` | Scrape interval. Default is "60s". |
+| controlplane.configuration.prometheus.gcp.timeout | string | `"50s"` | Scrape timeout. Default is "50s". |
 | controlplane.configuration.prometheus.host | string | `"127.0.0.1"` | The host to bind to defaults to 127.0.0.1 to avoid opening the metrics endpoint by default. |
 | controlplane.configuration.prometheus.path | string | `"/metrics"` | The HTTP path where metrics are exposed. Default is "/metrics". |
 | controlplane.configuration.prometheus.port | int | `8088` | The port where metrics are exposed. Default is port 8088. |
