@@ -1,4 +1,4 @@
-{{- if and .Values.configuration.prometheus.enabled .Values.configuration.prometheus.gcp.enabled -}}
+{{- if and .Values.configuration.prometheus.enabled .Values.configuration.prometheus.gcp_monitoring.enabled -}}
 {{- $fullName := include "controlplane.fullname" . -}}
 apiVersion: monitoring.googleapis.com/v1
 kind: PodMonitoring
@@ -13,7 +13,7 @@ spec:
   endpoints:
     - port: metrics
       path: {{ .Values.configuration.prometheus.path }}
-      interval: {{ .Values.configuration.prometheus.gcp.interval }}
-      timeout: {{ .Values.configuration.prometheus.gcp.timeout }}
+      interval: {{ .Values.configuration.prometheus.gcp_monitoring.interval }}
+      timeout: {{ .Values.configuration.prometheus.gcp_monitoring.timeout }}
   filterRunning: false
 {{- end }}

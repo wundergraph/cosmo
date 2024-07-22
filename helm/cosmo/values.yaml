@@ -125,7 +125,7 @@ controlplane:
       # -- The HTTP path where metrics are exposed. Default is "/metrics".
       path: "/metrics"
       # Use this section to disable/enable pod monitoring over [GCP managed collection](https://cloud.google.com/stackdriver/docs/managed-prometheus/setup-managed#config-mgd-collection).
-      gcp:
+      gcp_monitoring:
         # -- Enables gcp support . Default is false.
         enabled: false
         # -- Scrape interval. Default is "60s".
