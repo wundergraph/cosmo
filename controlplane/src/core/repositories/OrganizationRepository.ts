@@ -5,14 +5,17 @@ import {
   IntegrationConfig,
   IntegrationType,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { addDays } from 'date-fns';
 import { SQL, and, asc, eq, inArray, like, not, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
-import { addDays } from 'date-fns';
 import { MemberRole, NewOrganizationFeature } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
+  billingSubscriptions,
   integrationTypeEnum,
+  organizationBilling,
+  organizationFeatures,
   organizationIntegrations,
   organizationMemberRoles,
   organizationWebhooks,
@@ -21,14 +24,9 @@ import {
   slackIntegrationConfigs,
   slackSchemaUpdateEventConfigs,
   users,
-  organizationFeatures,
-  organizationBilling,
-  billingSubscriptions,
 } from '../../db/schema.js';
 import { Feature, FeatureIds, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
 import Keycloak from '../services/Keycloak.js';
-import OidcProvider from '../services/OidcProvider.js';
-import { getHighestPriorityRole } from '../util.js';
 import { DeleteOrganizationQueue } from '../workers/DeleteOrganizationWorker.js';
 import { BillingRepository } from './BillingRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
@@ -107,6 +105,9 @@ export class OrganizationRepository {
         subscription: {
           status: billingSubscriptions.status,
         },
+        isDeactivated: organizations.isDeactivated,
+        deactivationReason: organizations.deactivationReason,
+        deactivationInitiatedAt: organizations.deactivationInitiatedAt,
       })
       .from(organizations)
       .leftJoin(organizationBilling, eq(organizations.id, organizationBilling.organizationId))
@@ -137,6 +138,12 @@ export class OrganizationRepository {
             status: org[0].subscription.status,
           }
         : undefined,
+      deactivation: org[0].isDeactivated
+        ? {
+            reason: org[0].deactivationReason || undefined,
+            initiatedAt: org[0].deactivationInitiatedAt?.toISOString() ?? '',
+          }
+        : undefined,
     };
   }
 
@@ -154,6 +161,9 @@ export class OrganizationRepository {
         subscription: {
           status: billingSubscriptions.status,
         },
+        isDeactivated: organizations.isDeactivated,
+        deactivationReason: organizations.deactivationReason,
+        deactivationInitiatedAt: organizations.deactivationInitiatedAt,
       })
       .from(organizations)
       .leftJoin(organizationBilling, eq(organizations.id, organizationBilling.organizationId))
@@ -182,6 +192,12 @@ export class OrganizationRepository {
       subscription: org[0].subscription
         ? {
             status: org[0].subscription.status,
+          }
+        : undefined,
+      deactivation: org[0].isDeactivated
+        ? {
+            reason: org[0].deactivationReason || undefined,
+            initiatedAt: org[0].deactivationInitiatedAt?.toISOString() ?? '',
           }
         : undefined,
     };
@@ -262,11 +278,11 @@ export class OrganizationRepository {
             : undefined,
           deactivation: org.isDeactivated
             ? {
-                reason: org.deactivationReason,
-                initiatedAt: org.deactivationInitiatedAt,
+                reason: org.deactivationReason || undefined,
+                initiatedAt: org.deactivationInitiatedAt?.toISOString() ?? '',
               }
             : undefined,
-        } as OrganizationDTO & { roles: string[] };
+        };
       }),
     );
   }
@@ -1277,8 +1293,6 @@ export class OrganizationRepository {
 
   /***
    * Cancels Subscription
-   * Removes OIDC provider.
-   * Sets all members to viewer role in both keycloak and database.
    * Removes any feature overrides
    * Sets deactivated to true.
    * Schedules deletion.
@@ -1293,91 +1307,7 @@ export class OrganizationRepository {
     const billingRepo = new BillingRepository(this.db);
     await billingRepo.cancelSubscription(input.organizationId);
 
-    const org = await this.byId(input.organizationId);
-    if (!org) {
-      throw new Error('Organization not found');
-    }
-
-    const oidcRepo = new OidcRepository(this.db);
-    const oidcProvider = new OidcProvider();
-
-    const provider = await oidcRepo.getOidcProvider({ organizationId: input.organizationId });
-    if (provider) {
-      await oidcProvider.deleteOidcProvider({
-        kcClient: input.keycloakClient,
-        kcRealm: input.keycloakRealm,
-        organizationSlug: org.slug,
-        alias: provider.alias,
-      });
-    }
-
-    const organizationGroups = await input.keycloakClient.client.groups.find({
-      max: 1,
-      search: org.slug,
-      realm: input.keycloakRealm,
-      briefRepresentation: false,
-    });
-    const adminChildGroup = await input.keycloakClient.fetchChildGroup({
-      realm: input.keycloakRealm,
-      orgSlug: org.slug,
-      kcGroupId: organizationGroups[0].id!,
-      childGroupType: 'admin',
-    });
-    const devChildGroup = await input.keycloakClient.fetchChildGroup({
-      realm: input.keycloakRealm,
-      orgSlug: org.slug,
-      kcGroupId: organizationGroups[0].id!,
-      childGroupType: 'developer',
-    });
-    const viewerChildGroup = await input.keycloakClient.fetchChildGroup({
-      realm: input.keycloakRealm,
-      orgSlug: org.slug,
-      kcGroupId: organizationGroups[0].id!,
-      childGroupType: 'viewer',
-    });
-
-    const allMembers = await this.getMembers({ organizationID: input.organizationId });
-    for (const member of allMembers) {
-      await input.keycloakClient.client.users.delFromGroup({
-        id: member.userID!,
-        realm: input.keycloakRealm,
-        groupId: adminChildGroup.id!,
-      });
-
-      await input.keycloakClient.client.users.delFromGroup({
-        id: member.userID!,
-        realm: input.keycloakRealm,
-        groupId: devChildGroup.id!,
-      });
-
-      await input.keycloakClient.client.users.addToGroup({
-        id: member.userID,
-        realm: input.keycloakRealm,
-        groupId: viewerChildGroup.id!,
-      });
-    }
-
     await this.db.transaction(async (tx) => {
-      const orgRepo = new OrganizationRepository(this.logger, tx, this.defaultBillingPlanId);
-      const oidcRepo = new OidcRepository(tx);
-
-      await oidcRepo.deleteOidcProvider({ organizationId: input.organizationId });
-
-      for (const member of allMembers) {
-        const userRoles = await orgRepo.getOrganizationMemberRoles({
-          userID: member.userID,
-          organizationID: input.organizationId,
-        });
-        const highPriorityRole = getHighestPriorityRole({ userRoles });
-
-        await orgRepo.updateUserRole({
-          organizationID: input.organizationId,
-          orgMemberID: member.orgMemberID,
-          role: 'viewer',
-          previousRole: highPriorityRole,
-        });
-      }
-
       await tx
         .delete(schema.organizationFeatures)
         .where(eq(schema.organizationFeatures.organizationId, input.organizationId));
@@ -1404,5 +1334,25 @@ export class OrganizationRepository {
         delay,
       },
     );
+  }
+
+  public async reactivateOrganization(input: {
+    organizationId: string;
+    deleteOrganizationQueue: DeleteOrganizationQueue;
+  }) {
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(schema.organizations)
+        .set({
+          isDeactivated: false,
+          deactivationInitiatedAt: null,
+          deactivationReason: null,
+        })
+        .where(eq(schema.organizations.id, input.organizationId));
+    });
+
+    return input.deleteOrganizationQueue.removeJob({
+      organizationId: input.organizationId,
+    });
   }
 }

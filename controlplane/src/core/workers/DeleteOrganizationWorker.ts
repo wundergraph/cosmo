@@ -4,6 +4,8 @@ import pino from 'pino';
 import * as schema from '../../db/schema.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import Keycloak from '../services/Keycloak.js';
+import { OidcRepository } from '../repositories/OidcRepository.js';
+import OidcProvider from '../services/OidcProvider.js';
 
 const QueueName = 'organization.delete';
 const WorkerName = 'DeleteOrganizationWorker';
@@ -36,8 +38,19 @@ export class DeleteOrganizationQueue {
     });
   }
 
-  public addJob(job: DeleteOrganizationInput, opts?: JobsOptions) {
-    return this.queue.add(`organizations/${job.organizationId}`, job, opts);
+  public addJob(job: DeleteOrganizationInput, opts?: Omit<JobsOptions, 'jobId'>) {
+    return this.queue.add(job.organizationId, job, {
+      ...opts,
+      jobId: job.organizationId,
+    });
+  }
+
+  public removeJob(job: DeleteOrganizationInput) {
+    return this.queue.remove(job.organizationId);
+  }
+
+  public getJob(job: DeleteOrganizationInput) {
+    return this.queue.getJob(job.organizationId);
   }
 }
 
@@ -57,6 +70,8 @@ class DeleteOrganizationWorker {
   public async handler(job: Job<DeleteOrganizationInput>) {
     try {
       const orgRepo = new OrganizationRepository(this.input.logger, this.input.db);
+      const oidcRepo = new OidcRepository(this.input.db);
+      const oidcProvider = new OidcProvider();
 
       await this.input.keycloakClient.authenticateClient();
 
@@ -65,11 +80,28 @@ class DeleteOrganizationWorker {
         throw new Error('Organization not found');
       }
 
-      await orgRepo.deleteOrganization(job.data.organizationId);
+      const provider = await oidcRepo.getOidcProvider({ organizationId: job.data.organizationId });
+      if (provider) {
+        await oidcProvider.deleteOidcProvider({
+          kcClient: this.input.keycloakClient,
+          kcRealm: this.input.keycloakRealm,
+          organizationSlug: org.slug,
+          alias: provider.alias,
+        });
+      }
 
       await this.input.keycloakClient.deleteOrganizationGroup({
         realm: this.input.keycloakRealm,
         organizationSlug: org.slug,
+      });
+
+      await this.input.db.transaction(async (tx) => {
+        const orgRepo = new OrganizationRepository(this.input.logger, tx);
+        const oidcRepo = new OidcRepository(tx);
+
+        await oidcRepo.deleteOidcProvider({ organizationId: job.data.organizationId });
+
+        await orgRepo.deleteOrganization(job.data.organizationId);
       });
     } catch (err) {
       this.input.logger.error(err, `Failed to delete organization with id ${job.data.organizationId}`);

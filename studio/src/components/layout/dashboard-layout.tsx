@@ -88,7 +88,7 @@ export const OrganizationBanner = () => {
     <div className="flex w-full bg-gradient-to-r from-red-500 to-pink-400 text-xs lg:justify-center xl:text-sm">
       <p className="flex items-center gap-x-2 px-4 py-1.5">
         <ExclamationTriangleIcon className="flex-shrink-0" />
-        <span className="flex gap-x-1 font-medium text-gray-950 dark:text-primary-foreground">
+        <span className="flex gap-x-1 font-bold text-gray-950 dark:text-primary-foreground">
           Your organization is deactivated and is in read-only mode.{" "}
           {org.deactivation.reason ? `${org.deactivation.reason}.` : ""} It will be permanently deleted on{" "}
           {formatDateTime(addDays(new Date(org.deactivation.initiatedAt), 30))}

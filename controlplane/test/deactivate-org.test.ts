@@ -1,10 +1,10 @@
-import { setTimeout } from 'node:timers/promises';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { QueueEvents } from 'bullmq';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { afterAllSetup, beforeAllSetup, genID, TestUser } from '../src/core/test-util.js';
-import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
-import { createDeleteOrganizationWorker } from '../src/core/workers/DeleteOrganizationWorker.js';
 import { OidcRepository } from '../src/core/repositories/OidcRepository.js';
+import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
+import { afterAllSetup, beforeAllSetup, genID, TestUser } from '../src/core/test-util.js';
+import { createDeleteOrganizationWorker } from '../src/core/workers/DeleteOrganizationWorker.js';
 import { SetupTest } from './test-util.js';
 
 let dbname = '';
@@ -18,7 +18,7 @@ describe('Deactivate Organization', (ctx) => {
     await afterAllSetup(dbname);
   });
 
-  test('Should deactivate org by updating roles and scheduling deletion', async (testContext) => {
+  test('Should deactivate org and delete after scheduled', async (testContext) => {
     const { client, server, keycloakClient, realm, queues, users, authenticator } = await SetupTest({ dbname });
     const mainUserContext = users[TestUser.adminAliceCompanyA];
 
@@ -72,12 +72,8 @@ describe('Deactivate Organization', (ctx) => {
       deleteOrganizationQueue: queues.deleteOrganizationQueue,
     });
 
-    const roles = await orgRepo.getOrganizationMemberRoles({
-      userID: mainUserContext.userId,
-      organizationID: org!.id,
-    });
-    expect(roles).toHaveLength(1);
-    expect(roles[0]).toEqual('viewer');
+    await job.changeDelay(0);
+    await job.waitUntilFinished(new QueueEvents(job.queueName));
 
     const provider2 = await oidcRepo.getOidcProvider({ organizationId: org!.id });
     expect(provider2).toBeUndefined();
@@ -87,11 +83,70 @@ describe('Deactivate Organization', (ctx) => {
     });
     expect(idp2).toBeNull();
 
-    await job.changeDelay(0);
-    await setTimeout(2000);
-
     const orgAfterDeletion = await orgRepo.bySlug(orgName);
     expect(orgAfterDeletion).toBeNull();
+
+    await worker.close();
+
+    await server.close();
+  });
+
+  test('Should reactivate org and remove the scheduled deletion', async (testContext) => {
+    const { client, server, keycloakClient, realm, queues, users, authenticator } = await SetupTest({ dbname });
+    const mainUserContext = users[TestUser.adminAliceCompanyA];
+
+    const orgName = genID();
+    await client.createOrganization({
+      name: orgName,
+      slug: orgName,
+    });
+
+    const orgRepo = new OrganizationRepository(server.log, server.db);
+    const org = await orgRepo.bySlug(orgName);
+    expect(org).toBeDefined();
+
+    authenticator.changeUserWithSuppliedContext({
+      ...mainUserContext,
+      organizationId: org!.id,
+      organizationName: org!.name,
+      organizationSlug: org!.slug,
+    });
+
+    const worker = createDeleteOrganizationWorker({
+      redisConnection: server.redisForWorker,
+      db: server.db,
+      logger: server.log,
+      keycloakClient,
+      keycloakRealm: realm,
+    });
+
+    await orgRepo.deactivateOrganization({
+      organizationId: org!.id,
+      keycloakClient,
+      keycloakRealm: realm,
+      deleteOrganizationQueue: queues.deleteOrganizationQueue,
+    });
+
+    const activeJob = await queues.deleteOrganizationQueue.getJob({
+      organizationId: org!.id,
+    });
+    expect(activeJob).toBeDefined();
+
+    const deactivatedOrg = await orgRepo.bySlug(orgName);
+    expect(deactivatedOrg?.deactivation).toBeDefined();
+
+    await orgRepo.reactivateOrganization({
+      organizationId: org!.id,
+      deleteOrganizationQueue: queues.deleteOrganizationQueue,
+    });
+
+    const removedJob = await queues.deleteOrganizationQueue.getJob({
+      organizationId: org!.id,
+    });
+    expect(removedJob).toBeUndefined();
+
+    const reactivatedOrg = await orgRepo.bySlug(orgName);
+    expect(reactivatedOrg?.deactivation).toBeUndefined();
 
     await worker.close();
 
