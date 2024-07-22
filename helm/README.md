@@ -35,7 +35,19 @@ Ensure you have selected the right Kubernetes cluster with:
 kubectl cluster-info
 ```
 
-#### 1. Getting container images built
+#### 1. Create cluster
+
+```shell
+minikube start
+```
+
+#### 2. Enable ingress addon
+
+```shell
+minikube addons enable ingress
+```
+
+#### 3. Getting container images built
 
 For local development we're assuming you are building the container images locally rather than consuming the released versions from the container repository.
 
@@ -46,12 +58,12 @@ make docker-build-minikube # If you're running k8s on the same CPU architecture 
                            # If your cluster runs on a linux/amd64 architecture please update the Makefile accordingly
 ```
 
-#### 2. Install the Helm chart
+#### 4. Install the Helm chart
 
 For development, we recommend installing the Helm chart with Kapp the following command:
 
 ```shell
-make dev
+make deploy
 ```
 
 The provisioning will take a few seconds to bootstrap the whole cluster and seed the database with a default user and organization.
