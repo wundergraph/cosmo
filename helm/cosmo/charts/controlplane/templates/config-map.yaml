@@ -29,8 +29,8 @@ data:
   redisHost: "{{ .Values.configuration.redisHost }}"
   redisPort: "{{ .Values.configuration.redisPort }}"
   prometheusEnabled: "{{ .Values.configuration.prometheus.enabled }}"
-  {{ if .Values.configuration.prometheus.enabled }}
+  {{- if .Values.configuration.prometheus.enabled }}
   prometheusHost: "{{ .Values.configuration.prometheus.host }}"
   prometheusPort: "{{ .Values.configuration.prometheus.port }}"
   prometheusPath: "{{ .Values.configuration.prometheus.path }}"
-  {{- end }}
+  {{ end }}

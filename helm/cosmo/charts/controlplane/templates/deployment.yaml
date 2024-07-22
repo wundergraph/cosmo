@@ -321,7 +321,7 @@ spec:
                 configMapKeyRef:
                   name: {{ include "controlplane.fullname" . }}-configmap
                   key: prometheusEnabled
-            {{ if .Values.configuration.prometheus.enabled }}
+            {{- if .Values.configuration.prometheus.enabled }}
             - name: PROMETHEUS_HOST
               valueFrom:
                 configMapKeyRef:
@@ -337,7 +337,7 @@ spec:
                 configMapKeyRef:
                   name: {{ include "controlplane.fullname" . }}-configmap
                   key: prometheusPort
-            {{- end }}
+            {{ end }}
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}
