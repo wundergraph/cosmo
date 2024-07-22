@@ -1,9 +1,8 @@
 {{- if and .Values.configuration.prometheus.enabled .Values.configuration.prometheus.gcp_monitoring.enabled -}}
-{{- $fullName := include "controlplane.fullname" . -}}
 apiVersion: monitoring.googleapis.com/v1
 kind: PodMonitoring
 metadata:
-  name: {{ $fullName }}
+  name: {{ include "controlplane.fullname" . }}
   labels:
     {{- include "controlplane.labels" . | nindent 4 }}
 spec:
