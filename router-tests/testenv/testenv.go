@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"io"
 	"log"
 	"math/rand"
@@ -23,6 +22,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 
 	"github.com/nats-io/nats.go/jetstream"
 
@@ -190,10 +191,12 @@ func setupNatsServers(t testing.TB) (*NatsData, error) {
 	}
 	natsData.Server = natsServer
 	for range demoNatsProviders {
-		if !natsServer.ReadyForConnections(5 * time.Second) {
-			return nil, errors.New("nats server not ready")
-		}
-		natsConnection, err := nats.Connect(natsServer.ClientURL())
+		natsConnection, err := nats.Connect(
+			natsServer.ClientURL(),
+			nats.MaxReconnects(10),
+			nats.ReconnectWait(1*time.Second),
+			nats.Timeout(5*time.Second),
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -548,15 +551,18 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		EnableSingleFlight:                     true,
 		EnableRequestTracing:                   true,
 		EnableExecutionPlanCacheResponseHeader: true,
+		EnableNormalizationCache:               true,
+		NormalizationCacheSize:                 1024,
 		Debug: config.EngineDebugConfiguration{
 			ReportWebSocketConnections:                   true,
 			PrintQueryPlans:                              false,
 			EnablePersistedOperationsCacheResponseHeader: true,
+			EnableNormalizationCacheResponseHeader:       true,
 		},
 		EpollKqueuePollTimeout:         300 * time.Millisecond,
 		EpollKqueueConnBufferSize:      1,
 		WebSocketReadTimeout:           time.Millisecond * 100,
-		MaxConcurrentResolvers:         128,
+		MaxConcurrentResolvers:         32,
 		ExecutionPlanCacheSize:         1024,
 		EnablePersistedOperationsCache: true,
 	}

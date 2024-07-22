@@ -1262,6 +1262,10 @@
             "enable_persisted_operations_cache_response_header": {
               "type": "boolean",
               "description": "Enable the persisted operations cache response header. The persisted operations cache response header is used to cache the persisted operations in the client."
+            },
+            "enable_normalization_cache_response_header": {
+              "type": "boolean",
+              "description": "Enable the normalization cache response header. The normalization cache response header is used to cache the normalized operations in the client."
             }
           }
         },
@@ -1308,7 +1312,7 @@
         },
         "execution_plan_cache_size": {
           "type": "integer",
-          "default": 10000,
+          "default": 1024,
           "description": "The size of the execution plan cache."
         },
         "minify_subgraph_operations": {
@@ -1320,6 +1324,16 @@
           "type": "boolean",
           "default": true,
           "description": "Enable the persisted operations cache. The persisted operations cache is used to cache normalized persisted operations to improve performance."
+        },
+        "enable_normalization_cache": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the normalization cache. The normalization cache is used to cache normalized operations to improve performance."
+        },
+        "normalization_cache_size": {
+          "type": "integer",
+          "default": 1024,
+          "description": "The size of the normalization cache."
         }
       }
     },
