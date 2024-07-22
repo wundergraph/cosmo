@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.98.0](https://github.com/wundergraph/cosmo/compare/router@0.97.0...router@0.98.0) (2024-07-22)
+
+### Bug Fixes
+
+* optimize max concurrency for medium, high load, don't retry on 2xx status codes ([#950](https://github.com/wundergraph/cosmo/issues/950)) ([461946a](https://github.com/wundergraph/cosmo/commit/461946a1b6ef5a1a9b100ec806ba11580f15cadb)) (@StarpTech)
+
+### Features
+
+* expose normalization cache hit and acquire resolver wait time via otel ([#951](https://github.com/wundergraph/cosmo/issues/951)) ([e39437b](https://github.com/wundergraph/cosmo/commit/e39437b0164b99233bd182cda636cbc0392c556d)) (@StarpTech)
+
+# [0.97.0](https://github.com/wundergraph/cosmo/compare/router@0.96.0...router@0.97.0) (2024-07-19)
+
+### Features
+
+* implement normalization cache for non-persisted operations ([#949](https://github.com/wundergraph/cosmo/issues/949)) ([63fbe7b](https://github.com/wundergraph/cosmo/commit/63fbe7bee310767a50ec53de94352462ef8308a0)) (@jensneuse)
+
 # [0.96.0](https://github.com/wundergraph/cosmo/compare/router@0.95.7...router@0.96.0) (2024-07-18)
 
 ### Features

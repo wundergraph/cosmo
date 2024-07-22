@@ -677,7 +677,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 		return nil, nil, blocked
 	}
 
-	if err := operationKit.Normalize(); err != nil {
+	if _, err := operationKit.Normalize(); err != nil {
 		return nil, nil, err
 	}
 
@@ -768,7 +768,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 
 	switch p := operationCtx.preparedPlan.preparedPlan.(type) {
 	case *plan.SynchronousResponsePlan:
-		err = h.graphqlHandler.executor.Resolver.ResolveGraphQLResponse(resolveCtx, p.Response, nil, rw)
+		_, err = h.graphqlHandler.executor.Resolver.ResolveGraphQLResponse(resolveCtx, p.Response, nil, rw)
 		if err != nil {
 			h.logger.Warn("Resolving GraphQL response", zap.Error(err))
 			h.graphqlHandler.WriteError(resolveCtx, err, p.Response, rw)

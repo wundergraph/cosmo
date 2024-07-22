@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"io"
 	"net/http"
 	"strings"
@@ -36,6 +37,7 @@ var (
 const (
 	ExecutionPlanCacheHeader      = "X-WG-Execution-Plan-Cache"
 	PersistedOperationCacheHeader = "X-WG-Persisted-Operation-Cache"
+	NormalizationCacheHeader      = "X-WG-Normalization-Cache"
 )
 
 type ErrUpgradeFailed struct {
@@ -76,6 +78,7 @@ type HandlerOptions struct {
 	Log                                         *zap.Logger
 	EnableExecutionPlanCacheResponseHeader      bool
 	EnablePersistedOperationCacheResponseHeader bool
+	EnableNormalizationCacheResponseHeader      bool
 	WebSocketStats                              WebSocketsStatistics
 	TracerProvider                              trace.TracerProvider
 	Authorizer                                  *CosmoAuthorizer
@@ -91,7 +94,8 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		executor:                               opts.Executor,
 		enableExecutionPlanCacheResponseHeader: opts.EnableExecutionPlanCacheResponseHeader,
 		enablePersistedOperationCacheResponseHeader: opts.EnablePersistedOperationCacheResponseHeader,
-		websocketStats: opts.WebSocketStats,
+		enableNormalizationCacheResponseHeader:      opts.EnableNormalizationCacheResponseHeader,
+		websocketStats:                              opts.WebSocketStats,
 		tracer: opts.TracerProvider.Tracer(
 			"wundergraph/cosmo/router/graphql_handler",
 			trace.WithInstrumentationVersion("0.0.1"),
@@ -116,18 +120,20 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 // https://github.com/graphql/graphql-over-http/blob/main/spec/GraphQLOverHTTP.md#response
 
 type GraphQLHandler struct {
-	log                                         *zap.Logger
-	executor                                    *Executor
-	enableExecutionPlanCacheResponseHeader      bool
-	enablePersistedOperationCacheResponseHeader bool
-	websocketStats                              WebSocketsStatistics
-	tracer                                      trace.Tracer
-	authorizer                                  *CosmoAuthorizer
+	log            *zap.Logger
+	executor       *Executor
+	websocketStats WebSocketsStatistics
+	tracer         trace.Tracer
+	authorizer     *CosmoAuthorizer
+	rateLimiter    *CosmoRateLimiter
 
-	rateLimiter              *CosmoRateLimiter
 	rateLimitConfig          *config.RateLimitConfiguration
 	subgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
 	engineLoaderHooks        resolve.LoaderHooks
+
+	enableExecutionPlanCacheResponseHeader      bool
+	enablePersistedOperationCacheResponseHeader bool
+	enableNormalizationCacheResponseHeader      bool
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -173,22 +179,21 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch p := operationCtx.preparedPlan.preparedPlan.(type) {
 	case *plan.SynchronousResponsePlan:
 		w.Header().Set("Content-Type", "application/json")
-		h.setExecutionPlanCacheResponseHeader(w, operationCtx.planCacheHit)
-		h.setPersistedOperationCacheHeader(w, operationCtx.persistedOperationCacheHit)
-
-		err := h.executor.Resolver.ResolveGraphQLResponse(ctx, p.Response, nil, w)
+		h.setDebugCacheHeaders(w, operationCtx)
+		resp, err := h.executor.Resolver.ResolveGraphQLResponse(ctx, p.Response, nil, w)
 		if err != nil {
 			requestLogger.Error("unable to resolve response", zap.Error(err))
 			trackResponseError(ctx.Context(), err)
 			h.WriteError(ctx, err, p.Response, w)
 			return
 		}
+		graphqlExecutionSpan.SetAttributes(rotel.WgAcquireResolverWaitTimeMs.Int64(resp.ResolveAcquireWaitTime.Milliseconds()))
 	case *plan.SubscriptionResponsePlan:
 		var (
 			writer resolve.SubscriptionResponseWriter
 			ok     bool
 		)
-		h.setExecutionPlanCacheResponseHeader(w, operationCtx.planCacheHit)
+		h.setDebugCacheHeaders(w, operationCtx)
 		ctx, writer, ok = GetSubscriptionResponseWriter(ctx, ctx.Variables, r, w)
 		if !ok {
 			requestLogger.Error("unable to get subscription response writer", zap.Error(errCouldNotFlushResponse))
@@ -357,24 +362,26 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 	}
 }
 
-func (h *GraphQLHandler) setExecutionPlanCacheResponseHeader(w http.ResponseWriter, planCacheHit bool) {
-	if !h.enableExecutionPlanCacheResponseHeader {
-		return
+func (h *GraphQLHandler) setDebugCacheHeaders(w http.ResponseWriter, opCtx *operationContext) {
+	if h.enableNormalizationCacheResponseHeader {
+		if opCtx.normalizationCacheHit {
+			w.Header().Set(NormalizationCacheHeader, "HIT")
+		} else {
+			w.Header().Set(NormalizationCacheHeader, "MISS")
+		}
 	}
-	if planCacheHit {
-		w.Header().Set(ExecutionPlanCacheHeader, "HIT")
-	} else {
-		w.Header().Set(ExecutionPlanCacheHeader, "MISS")
+	if h.enablePersistedOperationCacheResponseHeader {
+		if opCtx.persistedOperationCacheHit {
+			w.Header().Set(PersistedOperationCacheHeader, "HIT")
+		} else {
+			w.Header().Set(PersistedOperationCacheHeader, "MISS")
+		}
 	}
-}
-
-func (h *GraphQLHandler) setPersistedOperationCacheHeader(w http.ResponseWriter, persistedOperationCacheHit bool) {
-	if !h.enablePersistedOperationCacheResponseHeader {
-		return
-	}
-	if persistedOperationCacheHit {
-		w.Header().Set(PersistedOperationCacheHeader, "HIT")
-	} else {
-		w.Header().Set(PersistedOperationCacheHeader, "MISS")
+	if h.enableExecutionPlanCacheResponseHeader {
+		if opCtx.planCacheHit {
+			w.Header().Set(ExecutionPlanCacheHeader, "HIT")
+		} else {
+			w.Header().Set(ExecutionPlanCacheHeader, "MISS")
+		}
 	}
 }
