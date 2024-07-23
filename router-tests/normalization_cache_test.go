@@ -84,6 +84,14 @@ func TestWithoutNormalizationCache(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "MISS", res.Response.Header.Get(core.NormalizationCacheHeader))
 		require.Equal(t, `{"data":{"employee":{"details":{"pets":[{"name":"Abby","__typename":"Dog","breed":"GOLDEN_RETRIEVER","class":"MAMMAL","gender":"FEMALE"},{"name":"Survivor","__typename":"Pony"}]}}}}`, res.Body)
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Query:         `query MyQuery($arg: [[String!]!]! = "a") {rootFieldWithNestedListArg(arg: $arg)}`,
+			Variables:     []byte(`{"arg": "b"}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"rootFieldWithNestedListArg":[["b"]]}}`, res.Body)
+		require.Equal(t, "MISS", res.Response.Header.Get(core.NormalizationCacheHeader))
 	})
 }
 
