@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.96.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.95.0...controlplane@0.96.0) (2024-07-23)
+
+### Features
+
+* instrument controlplane with metrics ([#943](https://github.com/wundergraph/cosmo/issues/943)) ([0e74d6c](https://github.com/wundergraph/cosmo/commit/0e74d6c9c7699a335bb56d74bfc0cf3b2fdbc70e)) (@AndreasZeissner)
+
+# [0.95.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.94.0...controlplane@0.95.0) (2024-07-23)
+
+### Bug Fixes
+
+* log commit check failure as warning instead of error ([#954](https://github.com/wundergraph/cosmo/issues/954)) ([47a1e84](https://github.com/wundergraph/cosmo/commit/47a1e840d0d4cb50d3667e3a35dd29f70e8ab813)) (@thisisnithin)
+
+### Features
+
+* organization deactivation ([#945](https://github.com/wundergraph/cosmo/issues/945)) ([af5cd41](https://github.com/wundergraph/cosmo/commit/af5cd41848c282027c6a07545bdb218edc946da5)) (@thisisnithin)
+
 # [0.94.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.93.6...controlplane@0.94.0) (2024-07-22)
 
 ### Features

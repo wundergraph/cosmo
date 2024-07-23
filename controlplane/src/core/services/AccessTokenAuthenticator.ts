@@ -48,13 +48,15 @@ export default class AccessTokenAuthenticator {
       organizationID: organization.id,
     });
 
+    const isOrganizationDeactivated = !!organization.deactivation;
+
     return {
       auth: 'access_token',
       organizationId: organization.id,
       organizationSlug: organization.slug,
       userId: userInfoData.sub,
       userDisplayName: userInfoData.email,
-      hasWriteAccess: checkUserAccess({ rolesToBe: ['admin', 'developer'], userRoles }),
+      hasWriteAccess: checkUserAccess({ rolesToBe: ['admin', 'developer'], userRoles }) && !isOrganizationDeactivated,
       isAdmin: userRoles.includes('admin'),
     };
   }
