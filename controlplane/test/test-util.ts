@@ -35,6 +35,7 @@ import {
 import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService.js';
 import { AIGraphReadmeQueue } from '../src/core/workers/AIGraphReadmeWorker.js';
 import { FeatureIds, Label } from '../src/types/index.js';
+import { DeleteOrganizationQueue } from '../src/core/workers/DeleteOrganizationWorker.js';
 
 export const DEFAULT_ROUTER_URL = 'http://localhost:3002';
 export const DEFAULT_SUBGRAPH_URL_ONE = 'http://localhost:4001';
@@ -107,6 +108,7 @@ export const SetupTest = async function ({
   });
 
   const readmeQueue = new AIGraphReadmeQueue(log, server.redisForQueue);
+  const deleteOrganizationQueue = new DeleteOrganizationQueue(log, server.redisForQueue);
 
   const blobStorage = new InMemoryBlobStorage();
   await server.register(fastifyConnectPlugin, {
@@ -130,7 +132,10 @@ export const SetupTest = async function ({
       blobStorage,
       mailerClient,
       authorizer: new Authorization(log),
-      readmeQueue,
+      queues: {
+        readmeQueue,
+        deleteOrganizationQueue,
+      },
     }),
   });
 
@@ -256,6 +261,10 @@ export const SetupTest = async function ({
     keycloakClient,
     authenticator,
     realm,
+    queues: {
+      deleteOrganizationQueue,
+      readmeQueue,
+    },
   };
 };
 

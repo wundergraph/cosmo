@@ -2626,7 +2626,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
           if (feature?.enabled) {
             try {
-              await opts.readmeQueue.addJob({
+              await opts.queues.readmeQueue.addJob({
                 organizationId: authContext.organizationId,
                 targetId: subgraphs[0].targetId,
                 type: 'subgraph',
@@ -2957,7 +2957,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
           if (feature?.enabled) {
             try {
-              await opts.readmeQueue.addJob({
+              await opts.queues.readmeQueue.addJob({
                 organizationId: authContext.organizationId,
                 targetId: subgraph.targetId,
                 type: 'subgraph',

@@ -18,10 +18,25 @@ const getConfig = () => {
 
     organizationName: process.env.ORGANIZATION_NAME || 'wundergraph',
     organizationSlug: process.env.ORGANIZATION_SLUG || 'wundergraph',
+
     databaseConnectionUrl: process.env.DB_URL || 'postgresql://postgres:changeme@localhost:5432/controlplane',
     databaseTlsCa: process.env.DB_TLS_CA,
     databaseTlsCert: process.env.DB_TLS_CERT,
     databaseTlsKey: process.env.DB_TLS_KEY,
+
+    redis: {
+      host: process.env.REDIS_HOST || 'localhost',
+      port: process.env.REDIS_PORT || 6379,
+      password: process.env.REDIS_PASSWORD,
+      tls:
+        process.env.REDIS_TLS_CERT || process.env.REDIS_TLS_KEY || process.env.REDIS_TLS_CA
+          ? {
+              cert: process.env.REDIS_TLS_CERT,
+              key: process.env.REDIS_TLS_KEY,
+              ca: process.env.REDIS_TLS_CA,
+            }
+          : undefined,
+    },
 
     webhookUrl: process.env.WEBHOOK_URL,
     webhookSecret: process.env.WEBHOOK_SECRET,
