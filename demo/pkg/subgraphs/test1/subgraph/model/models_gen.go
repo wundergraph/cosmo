@@ -2,6 +2,12 @@
 
 package model
 
+import (
+	"fmt"
+	"io"
+	"strconv"
+)
+
 type BigAbstractResponse interface {
 	IsBigAbstractResponse()
 }
@@ -324,6 +330,14 @@ type IBigObject struct {
 }
 
 func (IBigObject) IsBigAbstractResponse() {}
+
+type InputResponse struct {
+	Arg string `json:"arg"`
+}
+
+type InputType struct {
+	Arg string `json:"arg"`
+}
 
 type JBigObject struct {
 	AFieldOnJBigObject string  `json:"aFieldOnJBigObject"`
@@ -873,3 +887,46 @@ type ZBigObject struct {
 }
 
 func (ZBigObject) IsBigAbstractResponse() {}
+
+type EnumType string
+
+const (
+	EnumTypeA EnumType = "A"
+	EnumTypeB EnumType = "B"
+	EnumTypeC EnumType = "C"
+)
+
+var AllEnumType = []EnumType{
+	EnumTypeA,
+	EnumTypeB,
+	EnumTypeC,
+}
+
+func (e EnumType) IsValid() bool {
+	switch e {
+	case EnumTypeA, EnumTypeB, EnumTypeC:
+		return true
+	}
+	return false
+}
+
+func (e EnumType) String() string {
+	return string(e)
+}
+
+func (e *EnumType) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = EnumType(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid EnumType", str)
+	}
+	return nil
+}
+
+func (e EnumType) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
