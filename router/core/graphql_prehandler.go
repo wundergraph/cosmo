@@ -200,6 +200,11 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		// AFTER we're done with body (retrieved from parser.ReadBody())
 		buf := h.getBodyReadBuffer(r.ContentLength)
 
+		_, operationReadSpan := h.tracer.Start(r.Context(), "Operation - Read",
+			trace.WithSpanKind(trace.SpanKindInternal),
+			trace.WithAttributes(commonAttributes...),
+		)
+
 		if strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
 			if !h.fileUploadEnabled {
 				finalErr = &inputError{
@@ -208,6 +213,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				}
 				writeOperationError(r, w, requestLogger, finalErr)
 				h.releaseBodyReadBuffer(buf)
+				operationReadSpan.End()
 				return
 			}
 
@@ -219,6 +225,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				finalErr = err
 				writeOperationError(r, w, requestLogger, finalErr)
 				h.releaseBodyReadBuffer(buf)
+				operationReadSpan.End()
 				return
 			}
 
@@ -242,9 +249,16 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 				writeOperationError(r, w, requestLogger, err)
 				h.releaseBodyReadBuffer(buf)
+				operationReadSpan.End()
 				return
 			}
 		}
+
+		operationReadSpan.SetAttributes(
+			otel.WgGraphQLRequestSizeBytes.Int(len(body)),
+			otel.WgMultipartFilesCount.Int(len(files)),
+		)
+		operationReadSpan.End()
 
 		/**
 		 * Parse the operation
@@ -254,7 +268,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			traceTimings.StartParse()
 		}
 
-		_, engineParseSpan := h.tracer.Start(r.Context(), "Operation - Parse",
+		parseCtx, engineParseSpan := h.tracer.Start(r.Context(), "Operation - Parse",
 			trace.WithSpanKind(trace.SpanKindInternal),
 			trace.WithAttributes(commonAttributes...),
 			trace.WithAttributes(attributes...),
@@ -283,7 +297,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			}
 		}()
 
-		err = operationKit.Parse(r.Context(), clientInfo)
+		err = operationKit.Parse(parseCtx, clientInfo, commonAttributes)
 		if err != nil {
 			finalErr = err
 
@@ -510,9 +524,8 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		finalErr = requestContext.error
 
 		// Mark the root span of the router as failed, so we can easily identify failed requests
-		routerSpan = trace.SpanFromContext(newReq.Context())
 		if finalErr != nil {
-			rtrace.AttachErrToSpan(routerSpan, finalErr)
+			rtrace.AttachErrToSpan(trace.SpanFromContext(r.Context()), finalErr)
 		}
 	})
 }

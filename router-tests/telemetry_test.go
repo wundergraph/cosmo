@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
@@ -42,53 +43,34 @@ func TestTelemetry(t *testing.T) {
 			require.JSONEq(t, employeesIDData, res.Body)
 
 			sn := exporter.GetSpans().Snapshots()
-			require.Len(t, sn, 8, "expected 8 spans, got %d", len(sn))
+			require.Len(t, sn, 9, "expected 9 spans, got %d", len(sn))
 
 			/**
 			* Spans
 			 */
 
-			// Pre-Handler Operation steps
+			// Pre-Handler Operation Read
 
-			require.Equal(t, "Operation - Parse", sn[0].Name())
+			require.Equal(t, "Operation - Read", sn[0].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[0].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[0].Status())
-
-			// Span Resource attributes
-
-			rs := attribute.NewSet(sn[0].Resource().Attributes()...)
-
-			require.True(t, rs.HasValue("host.name"))
-			require.True(t, rs.HasValue("os.type"))
-			require.True(t, rs.HasValue("process.pid"))
-
-			require.NotEmpty(t, sn[0].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
-			require.Contains(t, sn[0].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
-			require.Contains(t, sn[0].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
-			require.Contains(t, sn[0].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
-			require.Contains(t, sn[0].Resource().Attributes(), attribute.String("service.version", "dev"))
-			require.Contains(t, sn[0].Resource().Attributes(), attribute.String("service.name", "cosmo-router"))
-
-			// Span attributes
-
-			require.Len(t, sn[0].Attributes(), 7)
+			require.Len(t, sn[0].Attributes(), 6)
 			require.Contains(t, sn[0].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[0].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[0].Attributes(), otel.WgFederatedGraphID.String("graph"))
 			require.Contains(t, sn[0].Attributes(), otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"))
-			require.Contains(t, sn[0].Attributes(), otel.WgClientName.String("unknown"))
-			require.Contains(t, sn[0].Attributes(), otel.WgClientVersion.String("missing"))
-			require.Contains(t, sn[0].Attributes(), otel.WgOperationProtocol.String("http"))
+			require.Contains(t, sn[0].Attributes(), otel.WgGraphQLRequestSizeBytes.Int64(38))
+			require.Contains(t, sn[0].Attributes(), otel.WgMultipartFilesCount.Int64(0))
 
-			require.Equal(t, "Operation - Normalize", sn[1].Name())
+			// Pre-Handler Operation Parse
+
+			require.Equal(t, "Operation - Parse", sn[1].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[1].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[1].Status())
 
 			// Span Resource attributes
 
-			rs = attribute.NewSet(sn[1].Resource().Attributes()...)
-
-			require.Len(t, sn[1].Resource().Attributes(), 9)
+			rs := attribute.NewSet(sn[1].Resource().Attributes()...)
 
 			require.True(t, rs.HasValue("host.name"))
 			require.True(t, rs.HasValue("os.type"))
@@ -104,16 +86,15 @@ func TestTelemetry(t *testing.T) {
 			// Span attributes
 
 			require.Len(t, sn[1].Attributes(), 7)
-
 			require.Contains(t, sn[1].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[1].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[1].Attributes(), otel.WgFederatedGraphID.String("graph"))
 			require.Contains(t, sn[1].Attributes(), otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"))
-			require.Contains(t, sn[1].Attributes(), otel.WgOperationName.String(""))
-			require.Contains(t, sn[1].Attributes(), otel.WgOperationType.String("query"))
-			require.Contains(t, sn[1].Attributes(), otel.WgNormalizationCacheHit.Bool(false))
+			require.Contains(t, sn[1].Attributes(), otel.WgClientName.String("unknown"))
+			require.Contains(t, sn[1].Attributes(), otel.WgClientVersion.String("missing"))
+			require.Contains(t, sn[1].Attributes(), otel.WgOperationProtocol.String("http"))
 
-			require.Equal(t, "Operation - Validate", sn[2].Name())
+			require.Equal(t, "Operation - Normalize", sn[2].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[2].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[2].Status())
 
@@ -136,16 +117,19 @@ func TestTelemetry(t *testing.T) {
 
 			// Span attributes
 
-			require.Len(t, sn[2].Attributes(), 4)
-
-			require.Equal(t, "Operation - Plan", sn[3].Name())
-			require.Equal(t, trace.SpanKindInternal, sn[3].SpanKind())
-			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[3].Status())
+			require.Len(t, sn[2].Attributes(), 7)
 
 			require.Contains(t, sn[2].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[2].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[2].Attributes(), otel.WgFederatedGraphID.String("graph"))
 			require.Contains(t, sn[2].Attributes(), otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"))
+			require.Contains(t, sn[2].Attributes(), otel.WgOperationName.String(""))
+			require.Contains(t, sn[2].Attributes(), otel.WgOperationType.String("query"))
+			require.Contains(t, sn[2].Attributes(), otel.WgNormalizationCacheHit.Bool(false))
+
+			require.Equal(t, "Operation - Validate", sn[3].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[3].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[3].Status())
 
 			// Span Resource attributes
 
@@ -166,18 +150,16 @@ func TestTelemetry(t *testing.T) {
 
 			// Span attributes
 
-			require.Len(t, sn[3].Attributes(), 6)
+			require.Len(t, sn[3].Attributes(), 4)
+
+			require.Equal(t, "Operation - Plan", sn[4].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[4].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[4].Status())
+
 			require.Contains(t, sn[3].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[3].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[3].Attributes(), otel.WgFederatedGraphID.String("graph"))
 			require.Contains(t, sn[3].Attributes(), otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"))
-			require.Contains(t, sn[3].Attributes(), otel.WgEngineRequestTracingEnabled.Bool(false))
-			require.Contains(t, sn[3].Attributes(), otel.WgEnginePlanCacheHit.Bool(false))
-
-			// Engine Transport
-			require.Equal(t, "query unnamed", sn[4].Name())
-			require.Equal(t, trace.SpanKindClient, sn[4].SpanKind())
-			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[4].Status())
 
 			// Span Resource attributes
 
@@ -198,35 +180,17 @@ func TestTelemetry(t *testing.T) {
 
 			// Span attributes
 
-			sa := attribute.NewSet(sn[4].Attributes()...)
-
-			require.Len(t, sn[4].Attributes(), 21)
-			require.True(t, sa.HasValue(semconv.HTTPURLKey))
-			require.True(t, sa.HasValue(semconv.NetPeerPortKey))
-
+			require.Len(t, sn[4].Attributes(), 6)
 			require.Contains(t, sn[4].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[4].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[4].Attributes(), otel.WgFederatedGraphID.String("graph"))
 			require.Contains(t, sn[4].Attributes(), otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"))
-			require.Contains(t, sn[4].Attributes(), otel.WgComponentName.String("engine-transport"))
-			require.Contains(t, sn[4].Attributes(), semconv.HTTPMethod("POST"))
-			require.Contains(t, sn[4].Attributes(), semconv.HTTPFlavorKey.String("1.1"))
-			require.Contains(t, sn[4].Attributes(), semconv.NetPeerName("127.0.0.1"))
-			require.Contains(t, sn[4].Attributes(), semconv.HTTPRequestContentLength(28))
-			require.Contains(t, sn[4].Attributes(), otel.WgClientName.String("unknown"))
-			require.Contains(t, sn[4].Attributes(), otel.WgClientVersion.String("missing"))
-			require.Contains(t, sn[4].Attributes(), otel.WgOperationName.String(""))
-			require.Contains(t, sn[4].Attributes(), otel.WgOperationType.String("query"))
-			require.Contains(t, sn[4].Attributes(), otel.WgOperationProtocol.String("http"))
-			require.Contains(t, sn[4].Attributes(), otel.WgOperationHash.String("14226210703439426856"))
-			require.Contains(t, sn[4].Attributes(), otel.WgSubgraphID.String("0"))
-			require.Contains(t, sn[4].Attributes(), otel.WgSubgraphName.String("employees"))
-			require.Contains(t, sn[4].Attributes(), semconv.HTTPStatusCode(200))
-			require.Contains(t, sn[4].Attributes(), semconv.HTTPResponseContentLength(117))
+			require.Contains(t, sn[4].Attributes(), otel.WgEngineRequestTracingEnabled.Bool(false))
+			require.Contains(t, sn[4].Attributes(), otel.WgEnginePlanCacheHit.Bool(false))
 
-			// Engine Loader Hooks
-			require.Equal(t, "Engine - Fetch", sn[5].Name())
-			require.Equal(t, trace.SpanKindInternal, sn[5].SpanKind())
+			// Engine Transport
+			require.Equal(t, "query unnamed", sn[5].Name())
+			require.Equal(t, trace.SpanKindClient, sn[5].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[5].Status())
 
 			// Span Resource attributes
@@ -248,25 +212,34 @@ func TestTelemetry(t *testing.T) {
 
 			// Span attributes
 
-			require.Len(t, sn[5].Attributes(), 14)
+			sa := attribute.NewSet(sn[5].Attributes()...)
 
-			require.Contains(t, sn[5].Attributes(), otel.WgSubgraphID.String("0"))
-			require.Contains(t, sn[5].Attributes(), otel.WgSubgraphName.String("employees"))
-			require.Contains(t, sn[5].Attributes(), semconv.HTTPStatusCode(200))
-			require.Contains(t, sn[5].Attributes(), otel.WgComponentName.String("engine-loader"))
+			require.Len(t, sn[5].Attributes(), 21)
+			require.True(t, sa.HasValue(semconv.HTTPURLKey))
+			require.True(t, sa.HasValue(semconv.NetPeerPortKey))
+
+			require.Contains(t, sn[5].Attributes(), otel.WgRouterVersion.String("dev"))
+			require.Contains(t, sn[5].Attributes(), otel.WgRouterClusterName.String(""))
+			require.Contains(t, sn[5].Attributes(), otel.WgFederatedGraphID.String("graph"))
+			require.Contains(t, sn[5].Attributes(), otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"))
+			require.Contains(t, sn[5].Attributes(), otel.WgComponentName.String("engine-transport"))
+			require.Contains(t, sn[5].Attributes(), semconv.HTTPMethod("POST"))
+			require.Contains(t, sn[5].Attributes(), semconv.HTTPFlavorKey.String("1.1"))
+			require.Contains(t, sn[5].Attributes(), semconv.NetPeerName("127.0.0.1"))
+			require.Contains(t, sn[5].Attributes(), semconv.HTTPRequestContentLength(28))
 			require.Contains(t, sn[5].Attributes(), otel.WgClientName.String("unknown"))
 			require.Contains(t, sn[5].Attributes(), otel.WgClientVersion.String("missing"))
 			require.Contains(t, sn[5].Attributes(), otel.WgOperationName.String(""))
 			require.Contains(t, sn[5].Attributes(), otel.WgOperationType.String("query"))
 			require.Contains(t, sn[5].Attributes(), otel.WgOperationProtocol.String("http"))
 			require.Contains(t, sn[5].Attributes(), otel.WgOperationHash.String("14226210703439426856"))
-			require.Contains(t, sn[5].Attributes(), otel.WgRouterVersion.String("dev"))
-			require.Contains(t, sn[5].Attributes(), otel.WgRouterClusterName.String(""))
-			require.Contains(t, sn[5].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[5].Attributes(), otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"))
+			require.Contains(t, sn[5].Attributes(), otel.WgSubgraphID.String("0"))
+			require.Contains(t, sn[5].Attributes(), otel.WgSubgraphName.String("employees"))
+			require.Contains(t, sn[5].Attributes(), semconv.HTTPStatusCode(200))
+			require.Contains(t, sn[5].Attributes(), semconv.HTTPResponseContentLength(117))
 
-			// GraphQL handler
-			require.Equal(t, "Operation - Execute", sn[6].Name())
+			// Engine Loader Hooks
+			require.Equal(t, "Engine - Fetch", sn[6].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[6].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[6].Status())
 
@@ -289,16 +262,26 @@ func TestTelemetry(t *testing.T) {
 
 			// Span attributes
 
-			require.Len(t, sn[6].Attributes(), 5)
+			require.Len(t, sn[6].Attributes(), 14)
+
+			require.Contains(t, sn[6].Attributes(), otel.WgSubgraphID.String("0"))
+			require.Contains(t, sn[6].Attributes(), otel.WgSubgraphName.String("employees"))
+			require.Contains(t, sn[6].Attributes(), semconv.HTTPStatusCode(200))
+			require.Contains(t, sn[6].Attributes(), otel.WgComponentName.String("engine-loader"))
+			require.Contains(t, sn[6].Attributes(), otel.WgClientName.String("unknown"))
+			require.Contains(t, sn[6].Attributes(), otel.WgClientVersion.String("missing"))
+			require.Contains(t, sn[6].Attributes(), otel.WgOperationName.String(""))
+			require.Contains(t, sn[6].Attributes(), otel.WgOperationType.String("query"))
+			require.Contains(t, sn[6].Attributes(), otel.WgOperationProtocol.String("http"))
+			require.Contains(t, sn[6].Attributes(), otel.WgOperationHash.String("14226210703439426856"))
 			require.Contains(t, sn[6].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[6].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[6].Attributes(), otel.WgFederatedGraphID.String("graph"))
 			require.Contains(t, sn[6].Attributes(), otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"))
-			require.Contains(t, sn[6].Attributes(), otel.WgAcquireResolverWaitTimeMs.Int64(0))
 
-			// Root Server middleware
-			require.Equal(t, "query unnamed", sn[7].Name())
-			require.Equal(t, trace.SpanKindServer, sn[7].SpanKind())
+			// GraphQL handler
+			require.Equal(t, "Operation - Execute", sn[7].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[7].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[7].Status())
 
 			// Span Resource attributes
@@ -318,9 +301,40 @@ func TestTelemetry(t *testing.T) {
 			require.Contains(t, sn[7].Resource().Attributes(), attribute.String("service.version", "dev"))
 			require.Contains(t, sn[7].Resource().Attributes(), attribute.String("service.name", "cosmo-router"))
 
-			sa = attribute.NewSet(sn[7].Attributes()...)
+			// Span attributes
 
-			require.Len(t, sn[7].Attributes(), 26)
+			require.Len(t, sn[7].Attributes(), 5)
+			require.Contains(t, sn[7].Attributes(), otel.WgRouterVersion.String("dev"))
+			require.Contains(t, sn[7].Attributes(), otel.WgRouterClusterName.String(""))
+			require.Contains(t, sn[7].Attributes(), otel.WgFederatedGraphID.String("graph"))
+			require.Contains(t, sn[7].Attributes(), otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"))
+			require.Contains(t, sn[7].Attributes(), otel.WgAcquireResolverWaitTimeMs.Int64(0))
+
+			// Root Server middleware
+			require.Equal(t, "query unnamed", sn[8].Name())
+			require.Equal(t, trace.SpanKindServer, sn[8].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[8].Status())
+
+			// Span Resource attributes
+
+			rs = attribute.NewSet(sn[8].Resource().Attributes()...)
+
+			require.Len(t, sn[8].Resource().Attributes(), 9)
+
+			require.True(t, rs.HasValue("host.name"))
+			require.True(t, rs.HasValue("os.type"))
+			require.True(t, rs.HasValue("process.pid"))
+
+			require.NotEmpty(t, sn[8].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
+			require.Contains(t, sn[8].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
+			require.Contains(t, sn[8].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
+			require.Contains(t, sn[8].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
+			require.Contains(t, sn[8].Resource().Attributes(), attribute.String("service.version", "dev"))
+			require.Contains(t, sn[8].Resource().Attributes(), attribute.String("service.name", "cosmo-router"))
+
+			sa = attribute.NewSet(sn[8].Attributes()...)
+
+			require.Len(t, sn[8].Attributes(), 26)
 			require.True(t, sa.HasValue(semconv.NetHostPortKey))
 			require.True(t, sa.HasValue(semconv.NetSockPeerAddrKey))
 			require.True(t, sa.HasValue(semconv.NetSockPeerPortKey))
@@ -331,24 +345,24 @@ func TestTelemetry(t *testing.T) {
 			require.True(t, sa.HasValue("http.read_bytes"))
 			require.True(t, sa.HasValue("http.wrote_bytes"))
 
-			require.Contains(t, sn[7].Attributes(), semconv.HTTPMethod("POST"))
-			require.Contains(t, sn[7].Attributes(), semconv.HTTPScheme("http"))
-			require.Contains(t, sn[7].Attributes(), semconv.HTTPFlavorKey.String("1.1"))
-			require.Contains(t, sn[7].Attributes(), semconv.NetHostName("localhost"))
-			require.Contains(t, sn[7].Attributes(), otel.WgRouterVersion.String("dev"))
-			require.Contains(t, sn[7].Attributes(), otel.WgRouterClusterName.String(""))
-			require.Contains(t, sn[7].Attributes(), otel.WgComponentName.String("router-server"))
-			require.Contains(t, sn[7].Attributes(), otel.WgRouterRootSpan.Bool(true))
-			require.Contains(t, sn[7].Attributes(), semconv.HTTPTarget("/graphql"))
-			require.Contains(t, sn[7].Attributes(), otel.WgClientName.String("unknown"))
-			require.Contains(t, sn[7].Attributes(), otel.WgClientVersion.String("missing"))
-			require.Contains(t, sn[7].Attributes(), otel.WgOperationProtocol.String("http"))
-			require.Contains(t, sn[7].Attributes(), otel.WgOperationName.String(""))
-			require.Contains(t, sn[7].Attributes(), otel.WgOperationType.String("query"))
-			require.Contains(t, sn[7].Attributes(), otel.WgOperationContent.String("{employees {id}}"))
-			require.Contains(t, sn[7].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[7].Attributes(), otel.WgOperationHash.String("14226210703439426856"))
-			require.Contains(t, sn[7].Attributes(), semconv.HTTPStatusCode(200))
+			require.Contains(t, sn[8].Attributes(), semconv.HTTPMethod("POST"))
+			require.Contains(t, sn[8].Attributes(), semconv.HTTPScheme("http"))
+			require.Contains(t, sn[8].Attributes(), semconv.HTTPFlavorKey.String("1.1"))
+			require.Contains(t, sn[8].Attributes(), semconv.NetHostName("localhost"))
+			require.Contains(t, sn[8].Attributes(), otel.WgRouterVersion.String("dev"))
+			require.Contains(t, sn[8].Attributes(), otel.WgRouterClusterName.String(""))
+			require.Contains(t, sn[8].Attributes(), otel.WgComponentName.String("router-server"))
+			require.Contains(t, sn[8].Attributes(), otel.WgRouterRootSpan.Bool(true))
+			require.Contains(t, sn[8].Attributes(), semconv.HTTPTarget("/graphql"))
+			require.Contains(t, sn[8].Attributes(), otel.WgClientName.String("unknown"))
+			require.Contains(t, sn[8].Attributes(), otel.WgClientVersion.String("missing"))
+			require.Contains(t, sn[8].Attributes(), otel.WgOperationProtocol.String("http"))
+			require.Contains(t, sn[8].Attributes(), otel.WgOperationName.String(""))
+			require.Contains(t, sn[8].Attributes(), otel.WgOperationType.String("query"))
+			require.Contains(t, sn[8].Attributes(), otel.WgOperationContent.String("{employees {id}}"))
+			require.Contains(t, sn[8].Attributes(), otel.WgFederatedGraphID.String("graph"))
+			require.Contains(t, sn[8].Attributes(), otel.WgOperationHash.String("14226210703439426856"))
+			require.Contains(t, sn[8].Attributes(), semconv.HTTPStatusCode(200))
 
 			/**
 			* Metrics
@@ -618,6 +632,63 @@ func TestTelemetry(t *testing.T) {
 		})
 	})
 
+	t.Run("Trace persisted operation", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+			MetricReader:  metricReader,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := make(http.Header)
+			header.Add("graphql-client-name", "my-client")
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				OperationName: []byte(`"MyQuery"`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "listArgQuery"}}`),
+				Header:        header,
+				Variables:     []byte(`{"arg": "a"}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, `{"data":{"rootFieldWithListArg":["a"]}}`, res.Body)
+			require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+
+			sn := exporter.GetSpans().Snapshots()
+
+			require.Len(t, sn, 10, "expected 10 spans, got %d", len(sn))
+			require.Equal(t, "Operation - Load from CDN", sn[1].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[1].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[1].Status())
+			require.Contains(t, sn[1].Attributes(), otel.WgRouterVersion.String("dev"))
+			require.Contains(t, sn[1].Attributes(), otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"))
+			require.Contains(t, sn[1].Attributes(), otel.WgRouterClusterName.String(""))
+			require.Contains(t, sn[1].Attributes(), otel.WgFederatedGraphID.String("graph"))
+			require.Contains(t, sn[1].Attributes(), semconv.HTTPStatusCode(200))
+
+			// The parent of "Load from CDN" should be "Parse"
+			require.Equal(t, "Operation - Parse", sn[2].Name())
+			require.Equal(t, sn[1].Parent().SpanID(), sn[2].SpanContext().SpanID())
+
+			exporter.Reset()
+
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				OperationName: []byte(`"MyQuery"`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "listArgQuery"}}`),
+				Header:        header,
+				Variables:     []byte(`{"arg": "a"}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, `{"data":{"rootFieldWithListArg":["a"]}}`, res.Body)
+			require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+
+			sn = exporter.GetSpans().Snapshots()
+
+			require.Len(t, sn, 9, "expected 9 spans, got %d", len(sn))
+			require.Equal(t, "Operation - Parse", sn[1].Name())
+		})
+	})
+
 	t.Run("Custom span and resource attributes are attached to all metrics and spans / from header", func(t *testing.T) {
 		t.Parallel()
 
@@ -652,64 +723,64 @@ func TestTelemetry(t *testing.T) {
 			require.JSONEq(t, employeesIDData, res.Body)
 
 			sn := exporter.GetSpans().Snapshots()
-			require.Len(t, sn, 8, "expected 8 spans, got %d", len(sn))
+			require.Len(t, sn, 9, "expected 9 spans, got %d", len(sn))
 
 			/**
 			* Spans
 			 */
 
 			// Pre-Handler Operation steps
-			require.Equal(t, "Operation - Parse", sn[0].Name())
-			require.Equal(t, trace.SpanKindInternal, sn[0].SpanKind())
-			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[0].Status())
-			require.Contains(t, sn[0].Attributes(), attribute.String("custom", "value"))
-			require.Contains(t, sn[0].Resource().Attributes(), attribute.String("custom.resource", "value"))
-
-			require.Equal(t, "Operation - Normalize", sn[1].Name())
+			require.Equal(t, "Operation - Parse", sn[1].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[1].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[1].Status())
 			require.Contains(t, sn[1].Attributes(), attribute.String("custom", "value"))
 			require.Contains(t, sn[1].Resource().Attributes(), attribute.String("custom.resource", "value"))
 
-			require.Equal(t, "Operation - Validate", sn[2].Name())
+			require.Equal(t, "Operation - Normalize", sn[2].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[2].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[2].Status())
 			require.Contains(t, sn[2].Attributes(), attribute.String("custom", "value"))
 			require.Contains(t, sn[2].Resource().Attributes(), attribute.String("custom.resource", "value"))
 
-			require.Equal(t, "Operation - Plan", sn[3].Name())
+			require.Equal(t, "Operation - Validate", sn[3].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[3].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[3].Status())
 			require.Contains(t, sn[3].Attributes(), attribute.String("custom", "value"))
 			require.Contains(t, sn[3].Resource().Attributes(), attribute.String("custom.resource", "value"))
 
-			// Engine Transport
-			require.Equal(t, "query unnamed", sn[4].Name())
-			require.Equal(t, trace.SpanKindClient, sn[4].SpanKind())
+			require.Equal(t, "Operation - Plan", sn[4].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[4].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[4].Status())
 			require.Contains(t, sn[4].Attributes(), attribute.String("custom", "value"))
 			require.Contains(t, sn[4].Resource().Attributes(), attribute.String("custom.resource", "value"))
 
-			// Engine Loader Hooks
-			require.Equal(t, "Engine - Fetch", sn[5].Name())
-			require.Equal(t, trace.SpanKindInternal, sn[5].SpanKind())
+			// Engine Transport
+			require.Equal(t, "query unnamed", sn[5].Name())
+			require.Equal(t, trace.SpanKindClient, sn[5].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[5].Status())
 			require.Contains(t, sn[5].Attributes(), attribute.String("custom", "value"))
 			require.Contains(t, sn[5].Resource().Attributes(), attribute.String("custom.resource", "value"))
 
-			// GraphQL handler
-			require.Equal(t, "Operation - Execute", sn[6].Name())
+			// Engine Loader Hooks
+			require.Equal(t, "Engine - Fetch", sn[6].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[6].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[6].Status())
 			require.Contains(t, sn[6].Attributes(), attribute.String("custom", "value"))
 			require.Contains(t, sn[6].Resource().Attributes(), attribute.String("custom.resource", "value"))
 
-			// Root Server middleware
-			require.Equal(t, "query unnamed", sn[7].Name())
-			require.Equal(t, trace.SpanKindServer, sn[7].SpanKind())
+			// GraphQL handler
+			require.Equal(t, "Operation - Execute", sn[7].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[7].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[7].Status())
 			require.Contains(t, sn[7].Attributes(), attribute.String("custom", "value"))
 			require.Contains(t, sn[7].Resource().Attributes(), attribute.String("custom.resource", "value"))
+
+			// Root Server middleware
+			require.Equal(t, "query unnamed", sn[8].Name())
+			require.Equal(t, trace.SpanKindServer, sn[8].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[8].Status())
+			require.Contains(t, sn[8].Attributes(), attribute.String("custom", "value"))
+			require.Contains(t, sn[8].Resource().Attributes(), attribute.String("custom.resource", "value"))
 
 			/**
 			* Metrics
@@ -1021,64 +1092,64 @@ func TestTelemetry(t *testing.T) {
 			require.JSONEq(t, employeesIDData, res.Body)
 
 			sn := exporter.GetSpans().Snapshots()
-			require.Len(t, sn, 8, "expected 8 spans, got %d", len(sn))
+			require.Len(t, sn, 9, "expected 9 spans, got %d", len(sn))
 
 			/**
 			* Spans
 			 */
 
 			// Pre-Handler Operation steps
-			require.Equal(t, "Operation - Parse", sn[0].Name())
-			require.Equal(t, trace.SpanKindInternal, sn[0].SpanKind())
-			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[0].Status())
-			require.Contains(t, sn[0].Attributes(), attribute.String("custom", "value"))
-			require.Contains(t, sn[0].Resource().Attributes(), attribute.String("custom.resource", "value"))
-
-			require.Equal(t, "Operation - Normalize", sn[1].Name())
+			require.Equal(t, "Operation - Parse", sn[1].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[1].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[1].Status())
 			require.Contains(t, sn[1].Attributes(), attribute.String("custom", "value"))
 			require.Contains(t, sn[1].Resource().Attributes(), attribute.String("custom.resource", "value"))
 
-			require.Equal(t, "Operation - Validate", sn[2].Name())
+			require.Equal(t, "Operation - Normalize", sn[2].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[2].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[2].Status())
 			require.Contains(t, sn[2].Attributes(), attribute.String("custom", "value"))
 			require.Contains(t, sn[2].Resource().Attributes(), attribute.String("custom.resource", "value"))
 
-			require.Equal(t, "Operation - Plan", sn[3].Name())
+			require.Equal(t, "Operation - Validate", sn[3].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[3].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[3].Status())
 			require.Contains(t, sn[3].Attributes(), attribute.String("custom", "value"))
 			require.Contains(t, sn[3].Resource().Attributes(), attribute.String("custom.resource", "value"))
 
-			// Engine Transport
-			require.Equal(t, "query unnamed", sn[4].Name())
-			require.Equal(t, trace.SpanKindClient, sn[4].SpanKind())
+			require.Equal(t, "Operation - Plan", sn[4].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[4].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[4].Status())
 			require.Contains(t, sn[4].Attributes(), attribute.String("custom", "value"))
 			require.Contains(t, sn[4].Resource().Attributes(), attribute.String("custom.resource", "value"))
 
-			// Engine Loader Hooks
-			require.Equal(t, "Engine - Fetch", sn[5].Name())
-			require.Equal(t, trace.SpanKindInternal, sn[5].SpanKind())
+			// Engine Transport
+			require.Equal(t, "query unnamed", sn[5].Name())
+			require.Equal(t, trace.SpanKindClient, sn[5].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[5].Status())
 			require.Contains(t, sn[5].Attributes(), attribute.String("custom", "value"))
 			require.Contains(t, sn[5].Resource().Attributes(), attribute.String("custom.resource", "value"))
 
-			// GraphQL handler
-			require.Equal(t, "Operation - Execute", sn[6].Name())
+			// Engine Loader Hooks
+			require.Equal(t, "Engine - Fetch", sn[6].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[6].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[6].Status())
 			require.Contains(t, sn[6].Attributes(), attribute.String("custom", "value"))
 			require.Contains(t, sn[6].Resource().Attributes(), attribute.String("custom.resource", "value"))
 
-			// Root Server middleware
-			require.Equal(t, "query unnamed", sn[7].Name())
-			require.Equal(t, trace.SpanKindServer, sn[7].SpanKind())
+			// GraphQL handler
+			require.Equal(t, "Operation - Execute", sn[7].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[7].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[7].Status())
 			require.Contains(t, sn[7].Attributes(), attribute.String("custom", "value"))
 			require.Contains(t, sn[7].Resource().Attributes(), attribute.String("custom.resource", "value"))
+
+			// Root Server middleware
+			require.Equal(t, "query unnamed", sn[8].Name())
+			require.Equal(t, trace.SpanKindServer, sn[8].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[8].Status())
+			require.Contains(t, sn[8].Attributes(), attribute.String("custom", "value"))
+			require.Contains(t, sn[8].Resource().Attributes(), attribute.String("custom.resource", "value"))
 
 			/**
 			* Metrics
@@ -1378,52 +1449,52 @@ func TestTelemetry(t *testing.T) {
 			require.JSONEq(t, employeesIDData, res.Body)
 
 			sn := exporter.GetSpans().Snapshots()
-			require.Len(t, sn, 8, "expected 8 spans, got %d", len(sn))
+			require.Len(t, sn, 9, "expected 9 spans, got %d", len(sn))
 
 			/**
 			* Spans
 			 */
 
-			require.Equal(t, "Operation - Parse", sn[0].Name())
-			require.Len(t, sn[0].Attributes(), 8)
-			require.Contains(t, sn[0].Attributes(), otel.WgRouterConfigVersion.String("ecd663825511c47ad364d57e6668f8f7fa158c14"))
-			require.Contains(t, sn[0].Attributes(), otel.WgFeatureFlag.String("myff"))
-
-			require.Equal(t, "Operation - Normalize", sn[1].Name())
+			require.Equal(t, "Operation - Parse", sn[1].Name())
 			require.Len(t, sn[1].Attributes(), 8)
 			require.Contains(t, sn[1].Attributes(), otel.WgRouterConfigVersion.String("ecd663825511c47ad364d57e6668f8f7fa158c14"))
 			require.Contains(t, sn[1].Attributes(), otel.WgFeatureFlag.String("myff"))
 
-			require.Equal(t, "Operation - Validate", sn[2].Name())
-			require.Len(t, sn[2].Attributes(), 5)
+			require.Equal(t, "Operation - Normalize", sn[2].Name())
+			require.Len(t, sn[2].Attributes(), 8)
 			require.Contains(t, sn[2].Attributes(), otel.WgRouterConfigVersion.String("ecd663825511c47ad364d57e6668f8f7fa158c14"))
 			require.Contains(t, sn[2].Attributes(), otel.WgFeatureFlag.String("myff"))
 
-			require.Equal(t, "Operation - Plan", sn[3].Name())
-			require.Len(t, sn[3].Attributes(), 7)
+			require.Equal(t, "Operation - Validate", sn[3].Name())
+			require.Len(t, sn[3].Attributes(), 5)
 			require.Contains(t, sn[3].Attributes(), otel.WgRouterConfigVersion.String("ecd663825511c47ad364d57e6668f8f7fa158c14"))
 			require.Contains(t, sn[3].Attributes(), otel.WgFeatureFlag.String("myff"))
 
-			require.Equal(t, "query unnamed", sn[4].Name())
-			require.Len(t, sn[4].Attributes(), 22)
+			require.Equal(t, "Operation - Plan", sn[4].Name())
+			require.Len(t, sn[4].Attributes(), 7)
 			require.Contains(t, sn[4].Attributes(), otel.WgRouterConfigVersion.String("ecd663825511c47ad364d57e6668f8f7fa158c14"))
 			require.Contains(t, sn[4].Attributes(), otel.WgFeatureFlag.String("myff"))
 
-			require.Equal(t, "Engine - Fetch", sn[5].Name())
-			require.Len(t, sn[5].Attributes(), 15)
+			require.Equal(t, "query unnamed", sn[5].Name())
+			require.Len(t, sn[5].Attributes(), 22)
 			require.Contains(t, sn[5].Attributes(), otel.WgRouterConfigVersion.String("ecd663825511c47ad364d57e6668f8f7fa158c14"))
 			require.Contains(t, sn[5].Attributes(), otel.WgFeatureFlag.String("myff"))
 
-			require.Equal(t, "Operation - Execute", sn[6].Name())
-			require.Len(t, sn[6].Attributes(), 6)
+			require.Equal(t, "Engine - Fetch", sn[6].Name())
+			require.Len(t, sn[6].Attributes(), 15)
 			require.Contains(t, sn[6].Attributes(), otel.WgRouterConfigVersion.String("ecd663825511c47ad364d57e6668f8f7fa158c14"))
 			require.Contains(t, sn[6].Attributes(), otel.WgFeatureFlag.String("myff"))
 
-			require.Equal(t, "query unnamed", sn[7].Name())
-			require.Len(t, sn[7].Attributes(), 27)
-
+			require.Equal(t, "Operation - Execute", sn[7].Name())
+			require.Len(t, sn[7].Attributes(), 6)
 			require.Contains(t, sn[7].Attributes(), otel.WgRouterConfigVersion.String("ecd663825511c47ad364d57e6668f8f7fa158c14"))
 			require.Contains(t, sn[7].Attributes(), otel.WgFeatureFlag.String("myff"))
+
+			require.Equal(t, "query unnamed", sn[8].Name())
+			require.Len(t, sn[8].Attributes(), 27)
+
+			require.Contains(t, sn[8].Attributes(), otel.WgRouterConfigVersion.String("ecd663825511c47ad364d57e6668f8f7fa158c14"))
+			require.Contains(t, sn[8].Attributes(), otel.WgFeatureFlag.String("myff"))
 
 			/**
 			* Metrics
@@ -1709,52 +1780,52 @@ func TestTelemetry(t *testing.T) {
 			require.JSONEq(t, employeesIDData, res.Body)
 
 			sn := exporter.GetSpans().Snapshots()
-			require.Len(t, sn, 8, "expected 8 spans, got %d", len(sn))
+			require.Len(t, sn, 9, "expected 9 spans, got %d", len(sn))
 
 			// Pre-Handler Operation steps
-			require.Equal(t, "Operation - Parse", sn[0].Name())
-			require.Equal(t, trace.SpanKindInternal, sn[0].SpanKind())
-			require.Equal(t, sn[0].Parent().SpanID(), sn[7].SpanContext().SpanID())
-			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[0].Status())
-
-			require.Equal(t, "Operation - Normalize", sn[1].Name())
+			require.Equal(t, "Operation - Parse", sn[1].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[1].SpanKind())
-			require.Equal(t, sn[1].Parent().SpanID(), sn[7].SpanContext().SpanID())
+			require.Equal(t, sn[1].Parent().SpanID(), sn[8].SpanContext().SpanID())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[1].Status())
 
-			require.Equal(t, "Operation - Validate", sn[2].Name())
+			require.Equal(t, "Operation - Normalize", sn[2].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[2].SpanKind())
-			require.Equal(t, sn[2].Parent().SpanID(), sn[7].SpanContext().SpanID())
+			require.Equal(t, sn[2].Parent().SpanID(), sn[8].SpanContext().SpanID())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[2].Status())
 
-			require.Equal(t, "Operation - Plan", sn[3].Name())
+			require.Equal(t, "Operation - Validate", sn[3].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[3].SpanKind())
-			require.Equal(t, sn[3].Parent().SpanID(), sn[7].SpanContext().SpanID())
+			require.Equal(t, sn[3].Parent().SpanID(), sn[8].SpanContext().SpanID())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[3].Status())
 
-			// Engine Transport
-			require.Equal(t, "query myQuery", sn[4].Name())
-			require.Equal(t, trace.SpanKindClient, sn[4].SpanKind())
-			require.Equal(t, sn[4].Parent().SpanID(), sn[5].SpanContext().SpanID())
+			require.Equal(t, "Operation - Plan", sn[4].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[4].SpanKind())
+			require.Equal(t, sn[4].Parent().SpanID(), sn[8].SpanContext().SpanID())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[4].Status())
 
-			// Engine Loader Hooks
-			require.Equal(t, "Engine - Fetch", sn[5].Name())
+			// Engine Transport
+			require.Equal(t, "query myQuery", sn[5].Name())
+			require.Equal(t, trace.SpanKindClient, sn[5].SpanKind())
 			require.Equal(t, sn[5].Parent().SpanID(), sn[6].SpanContext().SpanID())
-			require.Equal(t, trace.SpanKindInternal, sn[5].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[5].Status())
 
-			// GraphQL handler
-			require.Equal(t, "Operation - Execute", sn[6].Name())
-			require.Equal(t, trace.SpanKindInternal, sn[6].SpanKind())
+			// Engine Loader Hooks
+			require.Equal(t, "Engine - Fetch", sn[6].Name())
 			require.Equal(t, sn[6].Parent().SpanID(), sn[7].SpanContext().SpanID())
+			require.Equal(t, trace.SpanKindInternal, sn[6].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[6].Status())
 
-			// Root Server middleware
-			require.Equal(t, "query myQuery", sn[7].Name())
-			require.Equal(t, sn[7].ChildSpanCount(), 5)
-			require.Equal(t, trace.SpanKindServer, sn[7].SpanKind())
+			// GraphQL handler
+			require.Equal(t, "Operation - Execute", sn[7].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[7].SpanKind())
+			require.Equal(t, sn[7].Parent().SpanID(), sn[8].SpanContext().SpanID())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[7].Status())
+
+			// Root Server middleware
+			require.Equal(t, "query myQuery", sn[8].Name())
+			require.Equal(t, sn[8].ChildSpanCount(), 6)
+			require.Equal(t, trace.SpanKindServer, sn[8].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[8].Status())
 		})
 	})
 
@@ -1776,52 +1847,52 @@ func TestTelemetry(t *testing.T) {
 			require.JSONEq(t, employeesIDData, res.Body)
 
 			sn := exporter.GetSpans().Snapshots()
-			require.Len(t, sn, 8, "expected 8 spans, got %d", len(sn))
+			require.Len(t, sn, 9, "expected 9 spans, got %d", len(sn))
 
 			// Pre-Handler Operation steps
-			require.Equal(t, "Operation - Parse", sn[0].Name())
-			require.Equal(t, trace.SpanKindInternal, sn[0].SpanKind())
-			require.Equal(t, sn[0].Parent().SpanID(), sn[7].SpanContext().SpanID())
-			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[0].Status())
-
-			require.Equal(t, "Operation - Normalize", sn[1].Name())
+			require.Equal(t, "Operation - Parse", sn[1].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[1].SpanKind())
-			require.Equal(t, sn[1].Parent().SpanID(), sn[7].SpanContext().SpanID())
+			require.Equal(t, sn[1].Parent().SpanID(), sn[8].SpanContext().SpanID())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[1].Status())
 
-			require.Equal(t, "Operation - Validate", sn[2].Name())
+			require.Equal(t, "Operation - Normalize", sn[2].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[2].SpanKind())
-			require.Equal(t, sn[2].Parent().SpanID(), sn[7].SpanContext().SpanID())
+			require.Equal(t, sn[2].Parent().SpanID(), sn[8].SpanContext().SpanID())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[2].Status())
 
-			require.Equal(t, "Operation - Plan", sn[3].Name())
+			require.Equal(t, "Operation - Validate", sn[3].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[3].SpanKind())
-			require.Equal(t, sn[3].Parent().SpanID(), sn[7].SpanContext().SpanID())
+			require.Equal(t, sn[3].Parent().SpanID(), sn[8].SpanContext().SpanID())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[3].Status())
 
-			// Engine Transport
-			require.Equal(t, "query myQuery", sn[4].Name())
-			require.Equal(t, trace.SpanKindClient, sn[4].SpanKind())
-			require.Equal(t, sn[4].Parent().SpanID(), sn[5].SpanContext().SpanID())
+			require.Equal(t, "Operation - Plan", sn[4].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[4].SpanKind())
+			require.Equal(t, sn[4].Parent().SpanID(), sn[8].SpanContext().SpanID())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[4].Status())
 
-			// Engine Loader Hooks
-			require.Equal(t, "Engine - Fetch", sn[5].Name())
+			// Engine Transport
+			require.Equal(t, "query myQuery", sn[5].Name())
+			require.Equal(t, trace.SpanKindClient, sn[5].SpanKind())
 			require.Equal(t, sn[5].Parent().SpanID(), sn[6].SpanContext().SpanID())
-			require.Equal(t, trace.SpanKindInternal, sn[5].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[5].Status())
 
-			// GraphQL handler
-			require.Equal(t, "Operation - Execute", sn[6].Name())
-			require.Equal(t, trace.SpanKindInternal, sn[6].SpanKind())
+			// Engine Loader Hooks
+			require.Equal(t, "Engine - Fetch", sn[6].Name())
 			require.Equal(t, sn[6].Parent().SpanID(), sn[7].SpanContext().SpanID())
+			require.Equal(t, trace.SpanKindInternal, sn[6].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[6].Status())
 
-			// Root Server middleware
-			require.Equal(t, "query myQuery", sn[7].Name())
-			require.Equal(t, sn[7].ChildSpanCount(), 5)
-			require.Equal(t, trace.SpanKindServer, sn[7].SpanKind())
+			// GraphQL handler
+			require.Equal(t, "Operation - Execute", sn[7].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[7].SpanKind())
+			require.Equal(t, sn[7].Parent().SpanID(), sn[8].SpanContext().SpanID())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[7].Status())
+
+			// Root Server middleware
+			require.Equal(t, "query myQuery", sn[8].Name())
+			require.Equal(t, sn[8].ChildSpanCount(), 6)
+			require.Equal(t, trace.SpanKindServer, sn[8].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[8].Status())
 		})
 	})
 
@@ -1861,52 +1932,52 @@ func TestTelemetry(t *testing.T) {
 			require.JSONEq(t, employeesIDData, res.Body)
 
 			sn := exporter.GetSpans().Snapshots()
-			require.Len(t, sn, 8, "expected 8 spans, got %d", len(sn))
+			require.Len(t, sn, 9, "expected 9 spans, got %d", len(sn))
 
 			// Pre-Handler Operation steps
-			require.Equal(t, "Operation - Parse", sn[0].Name())
-			require.Equal(t, trace.SpanKindInternal, sn[0].SpanKind())
-			require.Equal(t, sn[0].Parent().SpanID(), sn[7].SpanContext().SpanID())
-			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[0].Status())
-
-			require.Equal(t, "Operation - Normalize", sn[1].Name())
+			require.Equal(t, "Operation - Parse", sn[1].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[1].SpanKind())
-			require.Equal(t, sn[1].Parent().SpanID(), sn[7].SpanContext().SpanID())
+			require.Equal(t, sn[1].Parent().SpanID(), sn[8].SpanContext().SpanID())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[1].Status())
 
-			require.Equal(t, "Operation - Validate", sn[2].Name())
+			require.Equal(t, "Operation - Normalize", sn[2].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[2].SpanKind())
-			require.Equal(t, sn[2].Parent().SpanID(), sn[7].SpanContext().SpanID())
+			require.Equal(t, sn[2].Parent().SpanID(), sn[8].SpanContext().SpanID())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[2].Status())
 
-			require.Equal(t, "Operation - Plan", sn[3].Name())
+			require.Equal(t, "Operation - Validate", sn[3].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[3].SpanKind())
-			require.Equal(t, sn[3].Parent().SpanID(), sn[7].SpanContext().SpanID())
+			require.Equal(t, sn[3].Parent().SpanID(), sn[8].SpanContext().SpanID())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[3].Status())
 
-			// Engine Transport
-			require.Equal(t, "query myQuery", sn[4].Name())
-			require.Equal(t, trace.SpanKindClient, sn[4].SpanKind())
-			require.Equal(t, sn[4].Parent().SpanID(), sn[5].SpanContext().SpanID())
+			require.Equal(t, "Operation - Plan", sn[4].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[4].SpanKind())
+			require.Equal(t, sn[4].Parent().SpanID(), sn[8].SpanContext().SpanID())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[4].Status())
 
-			// Engine Loader Hooks
-			require.Equal(t, "Engine - Fetch", sn[5].Name())
+			// Engine Transport
+			require.Equal(t, "query myQuery", sn[5].Name())
+			require.Equal(t, trace.SpanKindClient, sn[5].SpanKind())
 			require.Equal(t, sn[5].Parent().SpanID(), sn[6].SpanContext().SpanID())
-			require.Equal(t, trace.SpanKindInternal, sn[5].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[5].Status())
 
-			// GraphQL handler
-			require.Equal(t, "Operation - Execute", sn[6].Name())
-			require.Equal(t, trace.SpanKindInternal, sn[6].SpanKind())
+			// Engine Loader Hooks
+			require.Equal(t, "Engine - Fetch", sn[6].Name())
 			require.Equal(t, sn[6].Parent().SpanID(), sn[7].SpanContext().SpanID())
+			require.Equal(t, trace.SpanKindInternal, sn[6].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[6].Status())
 
-			// Root Server middleware
-			require.Equal(t, "query myQuery", sn[7].Name())
-			require.Equal(t, sn[7].ChildSpanCount(), 5)
-			require.Equal(t, trace.SpanKindServer, sn[7].SpanKind())
+			// GraphQL handler
+			require.Equal(t, "Operation - Execute", sn[7].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[7].SpanKind())
+			require.Equal(t, sn[7].Parent().SpanID(), sn[8].SpanContext().SpanID())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[7].Status())
+
+			// Root Server middleware
+			require.Equal(t, "query myQuery", sn[8].Name())
+			require.Equal(t, sn[8].ChildSpanCount(), 6)
+			require.Equal(t, trace.SpanKindServer, sn[8].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[8].Status())
 		})
 	})
 
@@ -1928,26 +1999,26 @@ func TestTelemetry(t *testing.T) {
 			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '3' at Path 'query.employees.@'."}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
 			sn := exporter.GetSpans().Snapshots()
 
-			require.Len(t, sn, 10, "expected 10 spans, got %d", len(sn))
+			require.Len(t, sn, 11, "expected 11 spans, got %d", len(sn))
 
-			require.Equal(t, "Engine - Fetch", sn[5].Name())
-			require.Equal(t, trace.SpanKindInternal, sn[5].SpanKind())
-			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[5].Status())
+			require.Equal(t, "Engine - Fetch", sn[6].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[6].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[6].Status())
 
-			require.Equal(t, "Engine - Fetch", sn[7].Name())
-			require.Equal(t, trace.SpanKindInternal, sn[7].SpanKind())
-			require.Equal(t, codes.Error, sn[7].Status().Code)
-			require.Contains(t, sn[7].Status().Description, "connect: connection refused\nFailed to fetch from Subgraph '3' at Path: 'query.employees.@'.")
+			require.Equal(t, "Engine - Fetch", sn[8].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[8].SpanKind())
+			require.Equal(t, codes.Error, sn[8].Status().Code)
+			require.Contains(t, sn[8].Status().Description, "connect: connection refused\nFailed to fetch from Subgraph '3' at Path: 'query.employees.@'.")
 
-			events := sn[7].Events()
+			events := sn[8].Events()
 			require.Len(t, events, 1, "expected 1 event because the GraphQL request failed")
 			require.Equal(t, "exception", events[0].Name)
 
 			// Validate if the root span has the correct status and error
-			require.Equal(t, "query unnamed", sn[9].Name())
-			require.Equal(t, trace.SpanKindServer, sn[9].SpanKind())
-			require.Equal(t, codes.Error, sn[9].Status().Code)
-			require.Contains(t, sn[9].Status().Description, "connect: connection refused\nFailed to fetch from Subgraph '3' at Path: 'query.employees.@'.")
+			require.Equal(t, "query unnamed", sn[10].Name())
+			require.Equal(t, trace.SpanKindServer, sn[10].SpanKind())
+			require.Equal(t, codes.Error, sn[10].Status().Code)
+			require.Contains(t, sn[10].Status().Description, "connect: connection refused\nFailed to fetch from Subgraph '3' at Path: 'query.employees.@'.")
 
 		})
 	})
@@ -1974,14 +2045,14 @@ func TestTelemetry(t *testing.T) {
 			})
 			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '3' at Path 'query.employees.@'.","extensions":{"errors":[{"message":"Unauthorized","path":["foo"],"extensions":{"code":"UNAUTHORIZED"}},{"message":"MyErrorMessage","path":["bar"],"extensions":{"code":"YOUR_ERROR_CODE"}}],"statusCode":403}}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
 			sn := exporter.GetSpans().Snapshots()
-			require.Len(t, sn, 10, "expected 10 spans, got %d", len(sn))
+			require.Len(t, sn, 11, "expected 11 spans, got %d", len(sn))
 
 			// The request to the employees subgraph succeeded
-			require.Equal(t, "Engine - Fetch", sn[5].Name())
-			require.Equal(t, trace.SpanKindInternal, sn[5].SpanKind())
-			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[5].Status())
+			require.Equal(t, "Engine - Fetch", sn[6].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[6].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[6].Status())
 
-			given := attribute.NewSet(sn[5].Attributes()...)
+			given := attribute.NewSet(sn[6].Attributes()...)
 			want := attribute.NewSet([]attribute.KeyValue{
 				semconv.HTTPStatusCode(200),
 				otel.WgClientName.String("unknown"),
@@ -2002,10 +2073,10 @@ func TestTelemetry(t *testing.T) {
 			require.True(t, given.Equals(&want))
 
 			// The request to the products subgraph failed with a 403 status code
-			require.Equal(t, "Engine - Fetch", sn[7].Name())
-			require.Equal(t, trace.SpanKindInternal, sn[7].SpanKind())
+			require.Equal(t, "Engine - Fetch", sn[8].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[8].SpanKind())
 
-			given = attribute.NewSet(sn[7].Attributes()...)
+			given = attribute.NewSet(sn[8].Attributes()...)
 			want = attribute.NewSet([]attribute.KeyValue{
 				otel.WgSubgraphName.String("products"),
 				otel.WgSubgraphID.String("3"),
@@ -2031,9 +2102,9 @@ func TestTelemetry(t *testing.T) {
 Downstream errors:
 1. Subgraph error at Path 'foo', Message: Unauthorized, Extension Code: UNAUTHORIZED.
 2. Subgraph error at Path 'bar', Message: MyErrorMessage, Extension Code: YOUR_ERROR_CODE.
-`}, sn[7].Status())
+`}, sn[8].Status())
 
-			events := sn[7].Events()
+			events := sn[8].Events()
 			require.Len(t, events, 3, "expected 2 events, one for the fetch and one two downstream GraphQL errors")
 			require.Equal(t, "exception", events[0].Name)
 
@@ -2050,10 +2121,10 @@ Downstream errors:
 			}, events[2].Attributes)
 
 			// Validate if the root span has the correct status and error
-			require.Equal(t, "query myQuery", sn[9].Name())
-			require.Equal(t, trace.SpanKindServer, sn[9].SpanKind())
-			require.Equal(t, codes.Error, sn[9].Status().Code)
-			require.Contains(t, sn[9].Status().Description, `Failed to fetch from Subgraph '3' at Path: 'query.employees.@'.
+			require.Equal(t, "query myQuery", sn[10].Name())
+			require.Equal(t, trace.SpanKindServer, sn[10].SpanKind())
+			require.Equal(t, codes.Error, sn[10].Status().Code)
+			require.Contains(t, sn[10].Status().Description, `Failed to fetch from Subgraph '3' at Path: 'query.employees.@'.
 Downstream errors:
 1. Subgraph error at Path 'foo', Message: Unauthorized, Extension Code: UNAUTHORIZED.
 2. Subgraph error at Path 'bar', Message: MyErrorMessage, Extension Code: YOUR_ERROR_CODE.
@@ -2074,23 +2145,23 @@ Downstream errors:
 			require.Equal(t, `{"errors":[{"message":"unexpected literal - got: UNDEFINED want one of: [ENUM TYPE UNION QUERY INPUT EXTEND SCHEMA SCALAR FRAGMENT INTERFACE DIRECTIVE]","locations":[{"line":1,"column":1}]}],"data":null}`, res.Body)
 			sn := exporter.GetSpans().Snapshots()
 
-			require.Len(t, sn, 2, "expected 2 spans, got %d", len(sn))
+			require.Len(t, sn, 3, "expected 3 spans, got %d", len(sn))
 
-			require.Equal(t, "Operation - Parse", sn[0].Name())
-			require.Equal(t, trace.SpanKindInternal, sn[0].SpanKind())
-			require.Equal(t, codes.Error, sn[0].Status().Code)
-			require.Contains(t, sn[0].Status().Description, "unexpected literal - got: UNDEFINED want one of: [ENUM TYPE UNION QUERY INPUT EXTEND SCHEMA SCALAR FRAGMENT INTERFACE DIRECTIVE]")
-
-			events := sn[0].Events()
-			require.Len(t, events, 1, "expected 1 event because the GraphQL parsing failed")
-			require.Equal(t, "exception", events[0].Name)
-
-			require.Equal(t, "POST /graphql", sn[1].Name())
-			require.Equal(t, trace.SpanKindServer, sn[1].SpanKind())
+			require.Equal(t, "Operation - Parse", sn[1].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[1].SpanKind())
 			require.Equal(t, codes.Error, sn[1].Status().Code)
 			require.Contains(t, sn[1].Status().Description, "unexpected literal - got: UNDEFINED want one of: [ENUM TYPE UNION QUERY INPUT EXTEND SCHEMA SCALAR FRAGMENT INTERFACE DIRECTIVE]")
 
-			events = sn[1].Events()
+			events := sn[1].Events()
+			require.Len(t, events, 1, "expected 1 event because the GraphQL parsing failed")
+			require.Equal(t, "exception", events[0].Name)
+
+			require.Equal(t, "POST /graphql", sn[2].Name())
+			require.Equal(t, trace.SpanKindServer, sn[2].SpanKind())
+			require.Equal(t, codes.Error, sn[2].Status().Code)
+			require.Contains(t, sn[2].Status().Description, "unexpected literal - got: UNDEFINED want one of: [ENUM TYPE UNION QUERY INPUT EXTEND SCHEMA SCALAR FRAGMENT INTERFACE DIRECTIVE]")
+
+			events = sn[2].Events()
 			require.Len(t, events, 1, "expected 1 event because the GraphQL request failed")
 			require.Equal(t, "exception", events[0].Name)
 		})
@@ -2109,30 +2180,30 @@ Downstream errors:
 			require.Equal(t, `{"errors":[{"message":"field: employeesTypeNotExist not defined on type: Query","path":["query","employeesTypeNotExist"]}],"data":null}`, res.Body)
 			sn := exporter.GetSpans().Snapshots()
 
-			require.Len(t, sn, 3, "expected 3 spans, got %d", len(sn))
+			require.Len(t, sn, 4, "expected 4 spans, got %d", len(sn))
 
-			require.Equal(t, "Operation - Parse", sn[0].Name())
-			require.Equal(t, trace.SpanKindInternal, sn[0].SpanKind())
-			require.Equal(t, codes.Unset, sn[0].Status().Code)
-			require.Empty(t, sn[0].Status().Description)
-
-			require.Empty(t, sn[0].Events())
-
-			require.Equal(t, "Operation - Normalize", sn[1].Name())
+			require.Equal(t, "Operation - Parse", sn[1].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[1].SpanKind())
-			require.Equal(t, codes.Error, sn[1].Status().Code)
-			require.Equal(t, sn[1].Status().Description, "field: employeesTypeNotExist not defined on type: Query")
+			require.Equal(t, codes.Unset, sn[1].Status().Code)
+			require.Empty(t, sn[1].Status().Description)
 
-			events := sn[1].Events()
+			require.Empty(t, sn[1].Events())
+
+			require.Equal(t, "Operation - Normalize", sn[2].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[2].SpanKind())
+			require.Equal(t, codes.Error, sn[2].Status().Code)
+			require.Equal(t, sn[2].Status().Description, "field: employeesTypeNotExist not defined on type: Query")
+
+			events := sn[2].Events()
 			require.Len(t, events, 1, "expected 1 event because the GraphQL normalization failed")
 			require.Equal(t, "exception", events[0].Name)
 
-			require.Equal(t, "query foo", sn[2].Name())
-			require.Equal(t, trace.SpanKindServer, sn[2].SpanKind())
-			require.Equal(t, codes.Error, sn[2].Status().Code)
-			require.Contains(t, sn[2].Status().Description, "field: employeesTypeNotExist not defined on type: Query")
+			require.Equal(t, "query foo", sn[3].Name())
+			require.Equal(t, trace.SpanKindServer, sn[3].SpanKind())
+			require.Equal(t, codes.Error, sn[3].Status().Code)
+			require.Contains(t, sn[3].Status().Description, "field: employeesTypeNotExist not defined on type: Query")
 
-			events = sn[2].Events()
+			events = sn[3].Events()
 			require.Len(t, events, 1, "expected 1 event because the GraphQL request failed")
 			require.Equal(t, "exception", events[0].Name)
 		})

@@ -143,7 +143,7 @@ func TestOperationParser(t *testing.T) {
 			kit, err := parser.NewKitFromReader(strings.NewReader(tc.Input))
 			assert.NoError(t, err)
 
-			err = kit.Parse(context.Background(), clientInfo)
+			err = kit.Parse(context.Background(), clientInfo, nil)
 
 			if err != nil {
 				require.EqualError(t, tc.ExpectedError, err.Error())
@@ -208,7 +208,7 @@ func TestOperationParserExtensions(t *testing.T) {
 			kit, err := parser.NewKitFromReader(strings.NewReader(tc.Input))
 			assert.NoError(t, err)
 
-			err = kit.Parse(context.Background(), clientInfo)
+			err = kit.Parse(context.Background(), clientInfo, nil)
 			isInputError := errors.As(err, &inputError)
 			if tc.Valid {
 				assert.False(t, isInputError, "expected invalid extensions to not return an input error, got %s", err)

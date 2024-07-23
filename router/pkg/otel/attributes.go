@@ -31,6 +31,8 @@ const (
 	WgFeatureFlag                      = attribute.Key("wg.feature_flag")
 	WgAcquireResolverWaitTimeMs        = attribute.Key("wg.engine.resolver.wait_time_ms")
 	WgNormalizationCacheHit            = attribute.Key("wg.engine.normalization_cache_hit")
+	WgGraphQLRequestSizeBytes          = attribute.Key("wg.graphql.request.size_bytes")
+	WgMultipartFilesCount              = attribute.Key("wg.multipart.files_count")
 )
 
 var (

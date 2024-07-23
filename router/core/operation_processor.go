@@ -15,17 +15,17 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/pkg/errors"
 	"github.com/valyala/fastjson"
-	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/variablesvalidation"
-
 	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/pool"
+	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/variablesvalidation"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 var (
@@ -77,7 +77,7 @@ var (
 type OperationParserOptions struct {
 	Executor                *Executor
 	MaxOperationSizeInBytes int64
-	PersistentOpClient      *cdn.PersistedOperationClient
+	PersistentOpClient      *cdn.PersistedOperationsClient
 
 	EnablePersistedOperationsCache bool
 	NormalizationCache             *ristretto.Cache[uint64, NormalizationCacheEntry]
@@ -88,7 +88,7 @@ type OperationParserOptions struct {
 type OperationProcessor struct {
 	executor                *Executor
 	maxOperationSizeInBytes int64
-	cdn                     *cdn.PersistedOperationClient
+	cdn                     *cdn.PersistedOperationsClient
 	parseKitPool            *sync.Pool
 	operationCache          *OperationCache
 }
@@ -163,7 +163,7 @@ func (o *OperationKit) Free() {
 	o.operationParser.freeKit(o.kit)
 }
 
-func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo) error {
+func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo, commonTraceAttributes []attribute.KeyValue) error {
 	var (
 		operationCount                  = 0
 		anonymousOperationCount         = 0
@@ -252,7 +252,7 @@ func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo) error 
 		if fromCache {
 			return nil
 		}
-		persistedOperationData, err := o.operationParser.cdn.PersistedOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
+		persistedOperationData, err := o.operationParser.cdn.PersistedOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, commonTraceAttributes)
 		if err != nil {
 			return err
 		}

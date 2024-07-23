@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gorilla/websocket"
 	"net"
 	"net/http"
 	"regexp"
@@ -15,6 +14,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/gorilla/websocket"
 
 	"github.com/alitto/pond"
 	"github.com/buger/jsonparser"
@@ -669,7 +670,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 		return nil, nil, err
 	}
 
-	if err := operationKit.Parse(h.ctx, h.clientInfo); err != nil {
+	if err := operationKit.Parse(h.ctx, h.clientInfo, baseAttributesFromContext(h.ctx)); err != nil {
 		return nil, nil, err
 	}
 
