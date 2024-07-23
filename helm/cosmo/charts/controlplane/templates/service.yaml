@@ -15,5 +15,11 @@ spec:
       targetPort: http
       protocol: TCP
       name: http
+    {{ if .Values.configuration.prometheus.enabled }}
+    - port: {{ .Values.configuration.prometheus.port }}
+      targetPort: metrics
+      protocol: TCP
+      name: metrics
+    {{- end }}
   selector:
     {{- include "controlplane.selectorLabels" . | nindent 4 }}
