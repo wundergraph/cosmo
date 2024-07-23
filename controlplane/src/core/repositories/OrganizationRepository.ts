@@ -107,7 +107,7 @@ export class OrganizationRepository {
         },
         isDeactivated: organizations.isDeactivated,
         deactivationReason: organizations.deactivationReason,
-        deactivationInitiatedAt: organizations.deactivationInitiatedAt,
+        deactivatedAt: organizations.deactivatedAt,
       })
       .from(organizations)
       .leftJoin(organizationBilling, eq(organizations.id, organizationBilling.organizationId))
@@ -141,7 +141,7 @@ export class OrganizationRepository {
       deactivation: org[0].isDeactivated
         ? {
             reason: org[0].deactivationReason || undefined,
-            initiatedAt: org[0].deactivationInitiatedAt?.toISOString() ?? '',
+            initiatedAt: org[0].deactivatedAt?.toISOString() ?? '',
           }
         : undefined,
     };
@@ -163,7 +163,7 @@ export class OrganizationRepository {
         },
         isDeactivated: organizations.isDeactivated,
         deactivationReason: organizations.deactivationReason,
-        deactivationInitiatedAt: organizations.deactivationInitiatedAt,
+        deactivatedAt: organizations.deactivatedAt,
       })
       .from(organizations)
       .leftJoin(organizationBilling, eq(organizations.id, organizationBilling.organizationId))
@@ -197,7 +197,7 @@ export class OrganizationRepository {
       deactivation: org[0].isDeactivated
         ? {
             reason: org[0].deactivationReason || undefined,
-            initiatedAt: org[0].deactivationInitiatedAt?.toISOString() ?? '',
+            initiatedAt: org[0].deactivatedAt?.toISOString() ?? '',
           }
         : undefined,
     };
@@ -239,7 +239,7 @@ export class OrganizationRepository {
         },
         isDeactivated: organizations.isDeactivated,
         deactivationReason: organizations.deactivationReason,
-        deactivationInitiatedAt: organizations.deactivationInitiatedAt,
+        deactivatedAt: organizations.deactivatedAt,
       })
       .from(organizationsMembers)
       .innerJoin(organizations, eq(organizations.id, organizationsMembers.organizationId))
@@ -279,7 +279,7 @@ export class OrganizationRepository {
           deactivation: org.isDeactivated
             ? {
                 reason: org.deactivationReason || undefined,
-                initiatedAt: org.deactivationInitiatedAt?.toISOString() ?? '',
+                initiatedAt: org.deactivatedAt?.toISOString() ?? '',
               }
             : undefined,
         };
@@ -1316,7 +1316,7 @@ export class OrganizationRepository {
         .update(schema.organizations)
         .set({
           isDeactivated: true,
-          deactivationInitiatedAt: new Date(),
+          deactivatedAt: new Date(),
           deactivationReason: input.reason,
         })
         .where(eq(schema.organizations.id, input.organizationId));
@@ -1345,7 +1345,7 @@ export class OrganizationRepository {
         .update(schema.organizations)
         .set({
           isDeactivated: false,
-          deactivationInitiatedAt: null,
+          deactivatedAt: null,
           deactivationReason: null,
         })
         .where(eq(schema.organizations.id, input.organizationId));

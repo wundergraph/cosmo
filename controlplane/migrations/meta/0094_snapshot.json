@@ -1,10 +1,10 @@
 {
-  "id": "185cca92-e6a9-4ba6-961b-f3a225941ebe",
+  "id": "d2a85e0d-87a8-40f9-8697-b0666b9fade6",
   "prevId": "dbf5249c-50ee-456d-ba59-567b5ad55b76",
-  "version": "5",
-  "dialect": "pg",
+  "version": "7",
+  "dialect": "postgresql",
   "tables": {
-    "api_key_permissions": {
+    "public.api_key_permissions": {
       "name": "api_key_permissions",
       "schema": "",
       "columns": {
@@ -47,7 +47,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "api_key_resources": {
+    "public.api_key_resources": {
       "name": "api_key_resources",
       "schema": "",
       "columns": {
@@ -103,7 +103,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "api_keys": {
+    "public.api_keys": {
       "name": "api_keys",
       "schema": "",
       "columns": {
@@ -162,10 +162,23 @@
         "apikey_name_idx": {
           "name": "apikey_name_idx",
           "columns": [
-            "name",
-            "organization_id"
+            {
+              "expression": "name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": true
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -207,7 +220,7 @@
         }
       }
     },
-    "audit_logs": {
+    "public.audit_logs": {
       "name": "audit_logs",
       "schema": "",
       "columns": {
@@ -323,7 +336,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "billing_plans": {
+    "public.billing_plans": {
       "name": "billing_plans",
       "schema": "",
       "columns": {
@@ -377,7 +390,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "billing_subscriptions": {
+    "public.billing_subscriptions": {
       "name": "billing_subscriptions",
       "schema": "",
       "columns": {
@@ -402,6 +415,7 @@
         "status": {
           "name": "status",
           "type": "status",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
@@ -492,7 +506,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "contracts": {
+    "public.contracts": {
       "name": "contracts",
       "schema": "",
       "columns": {
@@ -614,7 +628,7 @@
         }
       }
     },
-    "discussion_thread": {
+    "public.discussion_thread": {
       "name": "discussion_thread",
       "schema": "",
       "columns": {
@@ -702,7 +716,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "discussions": {
+    "public.discussions": {
       "name": "discussions",
       "schema": "",
       "columns": {
@@ -778,7 +792,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "feature_flags_to_feature_subgraphs": {
+    "public.feature_flags_to_feature_subgraphs": {
       "name": "feature_flags_to_feature_subgraphs",
       "schema": "",
       "columns": {
@@ -835,7 +849,7 @@
       },
       "uniqueConstraints": {}
     },
-    "feature_flags": {
+    "public.feature_flags": {
       "name": "feature_flags",
       "schema": "",
       "columns": {
@@ -942,7 +956,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "feature_subgraphs_to_base_subgraphs": {
+    "public.feature_subgraphs_to_base_subgraphs": {
       "name": "feature_subgraphs_to_base_subgraphs",
       "schema": "",
       "columns": {
@@ -999,7 +1013,7 @@
       },
       "uniqueConstraints": {}
     },
-    "federated_graph_clients": {
+    "public.federated_graph_clients": {
       "name": "federated_graph_clients",
       "schema": "",
       "columns": {
@@ -1102,7 +1116,7 @@
         }
       }
     },
-    "federated_graph_persisted_operations": {
+    "public.federated_graph_persisted_operations": {
       "name": "federated_graph_persisted_operations",
       "schema": "",
       "columns": {
@@ -1256,7 +1270,7 @@
         }
       }
     },
-    "federated_graphs": {
+    "public.federated_graphs": {
       "name": "federated_graphs",
       "schema": "",
       "columns": {
@@ -1337,7 +1351,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "federated_graphs_to_feature_flag_schema_versions": {
+    "public.federated_graphs_to_feature_flag_schema_versions": {
       "name": "federated_graphs_to_feature_flag_schema_versions",
       "schema": "",
       "columns": {
@@ -1433,7 +1447,7 @@
       },
       "uniqueConstraints": {}
     },
-    "git_installations": {
+    "public.git_installations": {
       "name": "git_installations",
       "schema": "",
       "columns": {
@@ -1460,6 +1474,7 @@
         "type": {
           "name": "type",
           "type": "git_installation_type",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
@@ -1493,7 +1508,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "graph_api_tokens": {
+    "public.graph_api_tokens": {
       "name": "graph_api_tokens",
       "schema": "",
       "columns": {
@@ -1552,10 +1567,23 @@
         "graphApiToken_name_idx": {
           "name": "graphApiToken_name_idx",
           "columns": [
-            "name",
-            "federated_graph_id"
+            {
+              "expression": "name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "federated_graph_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": true
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -1610,7 +1638,7 @@
         }
       }
     },
-    "graph_composition_subgraphs": {
+    "public.graph_composition_subgraphs": {
       "name": "graph_composition_subgraphs",
       "schema": "",
       "columns": {
@@ -1673,7 +1701,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "graph_compositions": {
+    "public.graph_compositions": {
       "name": "graph_compositions",
       "schema": "",
       "columns": {
@@ -1780,7 +1808,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "graph_request_keys": {
+    "public.graph_request_keys": {
       "name": "graph_request_keys",
       "schema": "",
       "columns": {
@@ -1877,7 +1905,7 @@
         }
       }
     },
-    "namespace_lint_check_config": {
+    "public.namespace_lint_check_config": {
       "name": "namespace_lint_check_config",
       "schema": "",
       "columns": {
@@ -1897,12 +1925,14 @@
         "lint_rule": {
           "name": "lint_rule",
           "type": "lint_rules",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
         "severity_level": {
           "name": "severity_level",
           "type": "lint_severity",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
@@ -1933,7 +1963,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "namespaces": {
+    "public.namespaces": {
       "name": "namespaces",
       "schema": "",
       "columns": {
@@ -2011,7 +2041,7 @@
         }
       }
     },
-    "oidc_providers": {
+    "public.oidc_providers": {
       "name": "oidc_providers",
       "schema": "",
       "columns": {
@@ -2074,7 +2104,7 @@
         }
       }
     },
-    "operation_change_overrides": {
+    "public.operation_change_overrides": {
       "name": "operation_change_overrides",
       "schema": "",
       "columns": {
@@ -2106,6 +2136,7 @@
         "change_type": {
           "name": "change_type",
           "type": "schema_change_type",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
@@ -2133,12 +2164,35 @@
         "hash_change_idx": {
           "name": "hash_change_idx",
           "columns": [
-            "hash",
-            "namespace_id",
-            "change_type",
-            "path"
+            {
+              "expression": "hash",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "namespace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "change_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "path",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": true
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -2159,7 +2213,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "operation_ignore_all_overrides": {
+    "public.operation_ignore_all_overrides": {
       "name": "operation_ignore_all_overrides",
       "schema": "",
       "columns": {
@@ -2206,10 +2260,23 @@
         "hash_namespace_ignore_idx": {
           "name": "hash_namespace_ignore_idx",
           "columns": [
-            "hash",
-            "namespace_id"
+            {
+              "expression": "hash",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "namespace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": true
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -2230,7 +2297,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "organization_billing": {
+    "public.organization_billing": {
       "name": "organization_billing",
       "schema": "",
       "columns": {
@@ -2264,16 +2331,32 @@
         "organization_billing_idx": {
           "name": "organization_billing_idx",
           "columns": [
-            "organization_id"
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": true
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         },
         "organization_billing_stripe_idx": {
           "name": "organization_billing_stripe_idx",
           "columns": [
-            "stripe_customer_id"
+            {
+              "expression": "stripe_customer_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": true
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -2294,7 +2377,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "organization_features": {
+    "public.organization_features": {
       "name": "organization_features",
       "schema": "",
       "columns": {
@@ -2335,10 +2418,23 @@
         "organization_feature_idx": {
           "name": "organization_feature_idx",
           "columns": [
-            "organization_id",
-            "feature"
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "feature",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": true
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -2359,7 +2455,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "organization_integrations": {
+    "public.organization_integrations": {
       "name": "organization_integrations",
       "schema": "",
       "columns": {
@@ -2391,6 +2487,7 @@
         "type": {
           "name": "type",
           "type": "integration_type",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
@@ -2406,10 +2503,23 @@
         "organization_integration_idx": {
           "name": "organization_integration_idx",
           "columns": [
-            "organization_id",
-            "name"
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": true
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -2430,7 +2540,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "organization_invitations": {
+    "public.organization_invitations": {
       "name": "organization_invitations",
       "schema": "",
       "columns": {
@@ -2519,7 +2629,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "organization_member_roles": {
+    "public.organization_member_roles": {
       "name": "organization_member_roles",
       "schema": "",
       "columns": {
@@ -2539,6 +2649,7 @@
         "role": {
           "name": "role",
           "type": "member_role",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         }
@@ -2547,10 +2658,23 @@
         "organization_member_role_idx": {
           "name": "organization_member_role_idx",
           "columns": [
-            "organization_member_id",
-            "role"
+            {
+              "expression": "organization_member_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "role",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": true
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -2571,7 +2695,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "organization_webhook_configs": {
+    "public.organization_webhook_configs": {
       "name": "organization_webhook_configs",
       "schema": "",
       "columns": {
@@ -2633,7 +2757,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "organizations": {
+    "public.organizations": {
       "name": "organizations",
       "schema": "",
       "columns": {
@@ -2688,8 +2812,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "deactivation_initiated_at": {
-          "name": "deactivation_initiated_at",
+        "deactivated_at": {
+          "name": "deactivated_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
@@ -2722,7 +2846,7 @@
         }
       }
     },
-    "organization_members": {
+    "public.organization_members": {
       "name": "organization_members",
       "schema": "",
       "columns": {
@@ -2757,17 +2881,38 @@
         "organization_member_idx": {
           "name": "organization_member_idx",
           "columns": [
-            "id"
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": true
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         },
         "unique_organization_member_idx": {
           "name": "unique_organization_member_idx",
           "columns": [
-            "user_id",
-            "organization_id"
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": true
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -2801,7 +2946,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "schema_check_change_action": {
+    "public.schema_check_change_action": {
       "name": "schema_check_change_action",
       "schema": "",
       "columns": {
@@ -2821,6 +2966,7 @@
         "change_type": {
           "name": "change_type",
           "type": "schema_change_type",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": false
         },
@@ -2870,7 +3016,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "schema_check_change_operation_usage": {
+    "public.schema_check_change_operation_usage": {
       "name": "schema_check_change_operation_usage",
       "schema": "",
       "columns": {
@@ -2970,7 +3116,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "schema_check_composition": {
+    "public.schema_check_composition": {
       "name": "schema_check_composition",
       "schema": "",
       "columns": {
@@ -3051,7 +3197,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "schema_check_federated_graphs": {
+    "public.schema_check_federated_graphs": {
       "name": "schema_check_federated_graphs",
       "schema": "",
       "columns": {
@@ -3106,7 +3252,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "schema_check_lint_action": {
+    "public.schema_check_lint_action": {
       "name": "schema_check_lint_action",
       "schema": "",
       "columns": {
@@ -3126,6 +3272,7 @@
         "lint_rule_type": {
           "name": "lint_rule_type",
           "type": "lint_rules",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": false
         },
@@ -3175,7 +3322,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "schema_checks": {
+    "public.schema_checks": {
       "name": "schema_checks",
       "schema": "",
       "columns": {
@@ -3273,7 +3420,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "schema_versions": {
+    "public.schema_versions": {
       "name": "schema_versions",
       "schema": "",
       "columns": {
@@ -3335,7 +3482,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "schema_version_change_action": {
+    "public.schema_version_change_action": {
       "name": "schema_version_change_action",
       "schema": "",
       "columns": {
@@ -3355,6 +3502,7 @@
         "change_type": {
           "name": "change_type",
           "type": "schema_change_type",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
@@ -3397,7 +3545,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "sessions": {
+    "public.sessions": {
       "name": "sessions",
       "schema": "",
       "columns": {
@@ -3479,7 +3627,7 @@
         }
       }
     },
-    "slack_installations": {
+    "public.slack_installations": {
       "name": "slack_installations",
       "schema": "",
       "columns": {
@@ -3550,11 +3698,29 @@
         "slack_installations_idx": {
           "name": "slack_installations_idx",
           "columns": [
-            "organization_id",
-            "slack_organization_id",
-            "slack_channel_id"
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "slack_organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "slack_channel_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": true
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -3575,7 +3741,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "slack_integration_configs": {
+    "public.slack_integration_configs": {
       "name": "slack_integration_configs",
       "schema": "",
       "columns": {
@@ -3618,7 +3784,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "slack_schema_update_event_configs": {
+    "public.slack_schema_update_event_configs": {
       "name": "slack_schema_update_event_configs",
       "schema": "",
       "columns": {
@@ -3675,7 +3841,7 @@
       },
       "uniqueConstraints": {}
     },
-    "subgraph_members": {
+    "public.subgraph_members": {
       "name": "subgraph_members",
       "schema": "",
       "columns": {
@@ -3710,10 +3876,23 @@
         "unique_subgraph_member_idx": {
           "name": "unique_subgraph_member_idx",
           "columns": [
-            "user_id",
-            "subgraph_id"
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "subgraph_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": true
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -3747,7 +3926,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "subgraphs": {
+    "public.subgraphs": {
       "name": "subgraphs",
       "schema": "",
       "columns": {
@@ -3773,6 +3952,7 @@
         "subscription_protocol": {
           "name": "subscription_protocol",
           "type": "subscription_protocol",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
           "default": "'ws'"
@@ -3780,6 +3960,7 @@
         "websocket_subprotocol": {
           "name": "websocket_subprotocol",
           "type": "websocket_subprotocol",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
           "default": "'auto'"
@@ -3843,7 +4024,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "federated_subgraphs": {
+    "public.federated_subgraphs": {
       "name": "federated_subgraphs",
       "schema": "",
       "columns": {
@@ -3900,7 +4081,7 @@
       },
       "uniqueConstraints": {}
     },
-    "target_label_matchers": {
+    "public.target_label_matchers": {
       "name": "target_label_matchers",
       "schema": "",
       "columns": {
@@ -3936,7 +4117,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "targets": {
+    "public.targets": {
       "name": "targets",
       "schema": "",
       "columns": {
@@ -3956,6 +4137,7 @@
         "type": {
           "name": "type",
           "type": "target_type",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
@@ -4001,12 +4183,35 @@
         "organization_name_idx": {
           "name": "organization_name_idx",
           "columns": [
-            "organization_id",
-            "type",
-            "name",
-            "namespace_id"
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "namespace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": true
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -4053,7 +4258,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "users": {
+    "public.users": {
       "name": "users",
       "schema": "",
       "columns": {
@@ -4103,7 +4308,7 @@
         }
       }
     },
-    "webhook_graph_schema_update": {
+    "public.webhook_graph_schema_update": {
       "name": "webhook_graph_schema_update",
       "schema": "",
       "columns": {
@@ -4162,152 +4367,163 @@
     }
   },
   "enums": {
-    "git_installation_type": {
+    "public.git_installation_type": {
       "name": "git_installation_type",
-      "values": {
-        "PERSONAL": "PERSONAL",
-        "ORGANIZATION": "ORGANIZATION"
-      }
+      "schema": "public",
+      "values": [
+        "PERSONAL",
+        "ORGANIZATION"
+      ]
     },
-    "integration_type": {
+    "public.integration_type": {
       "name": "integration_type",
-      "values": {
-        "slack": "slack"
-      }
+      "schema": "public",
+      "values": [
+        "slack"
+      ]
     },
-    "lint_rules": {
+    "public.lint_rules": {
       "name": "lint_rules",
-      "values": {
-        "FIELD_NAMES_SHOULD_BE_CAMEL_CASE": "FIELD_NAMES_SHOULD_BE_CAMEL_CASE",
-        "TYPE_NAMES_SHOULD_BE_PASCAL_CASE": "TYPE_NAMES_SHOULD_BE_PASCAL_CASE",
-        "SHOULD_NOT_HAVE_TYPE_PREFIX": "SHOULD_NOT_HAVE_TYPE_PREFIX",
-        "SHOULD_NOT_HAVE_TYPE_SUFFIX": "SHOULD_NOT_HAVE_TYPE_SUFFIX",
-        "SHOULD_NOT_HAVE_INPUT_PREFIX": "SHOULD_NOT_HAVE_INPUT_PREFIX",
-        "SHOULD_HAVE_INPUT_SUFFIX": "SHOULD_HAVE_INPUT_SUFFIX",
-        "SHOULD_NOT_HAVE_ENUM_PREFIX": "SHOULD_NOT_HAVE_ENUM_PREFIX",
-        "SHOULD_NOT_HAVE_ENUM_SUFFIX": "SHOULD_NOT_HAVE_ENUM_SUFFIX",
-        "SHOULD_NOT_HAVE_INTERFACE_PREFIX": "SHOULD_NOT_HAVE_INTERFACE_PREFIX",
-        "SHOULD_NOT_HAVE_INTERFACE_SUFFIX": "SHOULD_NOT_HAVE_INTERFACE_SUFFIX",
-        "ENUM_VALUES_SHOULD_BE_UPPER_CASE": "ENUM_VALUES_SHOULD_BE_UPPER_CASE",
-        "ORDER_FIELDS": "ORDER_FIELDS",
-        "ORDER_ENUM_VALUES": "ORDER_ENUM_VALUES",
-        "ORDER_DEFINITIONS": "ORDER_DEFINITIONS",
-        "ALL_TYPES_REQUIRE_DESCRIPTION": "ALL_TYPES_REQUIRE_DESCRIPTION",
-        "DISALLOW_CASE_INSENSITIVE_ENUM_VALUES": "DISALLOW_CASE_INSENSITIVE_ENUM_VALUES",
-        "NO_TYPENAME_PREFIX_IN_TYPE_FIELDS": "NO_TYPENAME_PREFIX_IN_TYPE_FIELDS",
-        "REQUIRE_DEPRECATION_REASON": "REQUIRE_DEPRECATION_REASON"
-      }
+      "schema": "public",
+      "values": [
+        "FIELD_NAMES_SHOULD_BE_CAMEL_CASE",
+        "TYPE_NAMES_SHOULD_BE_PASCAL_CASE",
+        "SHOULD_NOT_HAVE_TYPE_PREFIX",
+        "SHOULD_NOT_HAVE_TYPE_SUFFIX",
+        "SHOULD_NOT_HAVE_INPUT_PREFIX",
+        "SHOULD_HAVE_INPUT_SUFFIX",
+        "SHOULD_NOT_HAVE_ENUM_PREFIX",
+        "SHOULD_NOT_HAVE_ENUM_SUFFIX",
+        "SHOULD_NOT_HAVE_INTERFACE_PREFIX",
+        "SHOULD_NOT_HAVE_INTERFACE_SUFFIX",
+        "ENUM_VALUES_SHOULD_BE_UPPER_CASE",
+        "ORDER_FIELDS",
+        "ORDER_ENUM_VALUES",
+        "ORDER_DEFINITIONS",
+        "ALL_TYPES_REQUIRE_DESCRIPTION",
+        "DISALLOW_CASE_INSENSITIVE_ENUM_VALUES",
+        "NO_TYPENAME_PREFIX_IN_TYPE_FIELDS",
+        "REQUIRE_DEPRECATION_REASON"
+      ]
     },
-    "lint_severity": {
+    "public.lint_severity": {
       "name": "lint_severity",
-      "values": {
-        "warn": "warn",
-        "error": "error"
-      }
+      "schema": "public",
+      "values": [
+        "warn",
+        "error"
+      ]
     },
-    "member_role": {
+    "public.member_role": {
       "name": "member_role",
-      "values": {
-        "admin": "admin",
-        "developer": "developer",
-        "viewer": "viewer"
-      }
+      "schema": "public",
+      "values": [
+        "admin",
+        "developer",
+        "viewer"
+      ]
     },
-    "schema_change_type": {
+    "public.schema_change_type": {
       "name": "schema_change_type",
-      "values": {
-        "FIELD_ARGUMENT_DESCRIPTION_CHANGED": "FIELD_ARGUMENT_DESCRIPTION_CHANGED",
-        "FIELD_ARGUMENT_DEFAULT_CHANGED": "FIELD_ARGUMENT_DEFAULT_CHANGED",
-        "FIELD_ARGUMENT_TYPE_CHANGED": "FIELD_ARGUMENT_TYPE_CHANGED",
-        "DIRECTIVE_REMOVED": "DIRECTIVE_REMOVED",
-        "DIRECTIVE_ADDED": "DIRECTIVE_ADDED",
-        "DIRECTIVE_DESCRIPTION_CHANGED": "DIRECTIVE_DESCRIPTION_CHANGED",
-        "DIRECTIVE_LOCATION_ADDED": "DIRECTIVE_LOCATION_ADDED",
-        "DIRECTIVE_LOCATION_REMOVED": "DIRECTIVE_LOCATION_REMOVED",
-        "DIRECTIVE_ARGUMENT_ADDED": "DIRECTIVE_ARGUMENT_ADDED",
-        "DIRECTIVE_ARGUMENT_REMOVED": "DIRECTIVE_ARGUMENT_REMOVED",
-        "DIRECTIVE_ARGUMENT_DESCRIPTION_CHANGED": "DIRECTIVE_ARGUMENT_DESCRIPTION_CHANGED",
-        "DIRECTIVE_ARGUMENT_DEFAULT_VALUE_CHANGED": "DIRECTIVE_ARGUMENT_DEFAULT_VALUE_CHANGED",
-        "DIRECTIVE_ARGUMENT_TYPE_CHANGED": "DIRECTIVE_ARGUMENT_TYPE_CHANGED",
-        "ENUM_VALUE_REMOVED": "ENUM_VALUE_REMOVED",
-        "ENUM_VALUE_ADDED": "ENUM_VALUE_ADDED",
-        "ENUM_VALUE_DESCRIPTION_CHANGED": "ENUM_VALUE_DESCRIPTION_CHANGED",
-        "ENUM_VALUE_DEPRECATION_REASON_CHANGED": "ENUM_VALUE_DEPRECATION_REASON_CHANGED",
-        "ENUM_VALUE_DEPRECATION_REASON_ADDED": "ENUM_VALUE_DEPRECATION_REASON_ADDED",
-        "ENUM_VALUE_DEPRECATION_REASON_REMOVED": "ENUM_VALUE_DEPRECATION_REASON_REMOVED",
-        "FIELD_REMOVED": "FIELD_REMOVED",
-        "FIELD_ADDED": "FIELD_ADDED",
-        "FIELD_DESCRIPTION_CHANGED": "FIELD_DESCRIPTION_CHANGED",
-        "FIELD_DESCRIPTION_ADDED": "FIELD_DESCRIPTION_ADDED",
-        "FIELD_DESCRIPTION_REMOVED": "FIELD_DESCRIPTION_REMOVED",
-        "FIELD_DEPRECATION_ADDED": "FIELD_DEPRECATION_ADDED",
-        "FIELD_DEPRECATION_REMOVED": "FIELD_DEPRECATION_REMOVED",
-        "FIELD_DEPRECATION_REASON_CHANGED": "FIELD_DEPRECATION_REASON_CHANGED",
-        "FIELD_DEPRECATION_REASON_ADDED": "FIELD_DEPRECATION_REASON_ADDED",
-        "FIELD_DEPRECATION_REASON_REMOVED": "FIELD_DEPRECATION_REASON_REMOVED",
-        "FIELD_TYPE_CHANGED": "FIELD_TYPE_CHANGED",
-        "FIELD_ARGUMENT_ADDED": "FIELD_ARGUMENT_ADDED",
-        "FIELD_ARGUMENT_REMOVED": "FIELD_ARGUMENT_REMOVED",
-        "INPUT_FIELD_REMOVED": "INPUT_FIELD_REMOVED",
-        "INPUT_FIELD_ADDED": "INPUT_FIELD_ADDED",
-        "INPUT_FIELD_DESCRIPTION_ADDED": "INPUT_FIELD_DESCRIPTION_ADDED",
-        "INPUT_FIELD_DESCRIPTION_REMOVED": "INPUT_FIELD_DESCRIPTION_REMOVED",
-        "INPUT_FIELD_DESCRIPTION_CHANGED": "INPUT_FIELD_DESCRIPTION_CHANGED",
-        "INPUT_FIELD_DEFAULT_VALUE_CHANGED": "INPUT_FIELD_DEFAULT_VALUE_CHANGED",
-        "INPUT_FIELD_TYPE_CHANGED": "INPUT_FIELD_TYPE_CHANGED",
-        "OBJECT_TYPE_INTERFACE_ADDED": "OBJECT_TYPE_INTERFACE_ADDED",
-        "OBJECT_TYPE_INTERFACE_REMOVED": "OBJECT_TYPE_INTERFACE_REMOVED",
-        "SCHEMA_QUERY_TYPE_CHANGED": "SCHEMA_QUERY_TYPE_CHANGED",
-        "SCHEMA_MUTATION_TYPE_CHANGED": "SCHEMA_MUTATION_TYPE_CHANGED",
-        "SCHEMA_SUBSCRIPTION_TYPE_CHANGED": "SCHEMA_SUBSCRIPTION_TYPE_CHANGED",
-        "TYPE_REMOVED": "TYPE_REMOVED",
-        "TYPE_ADDED": "TYPE_ADDED",
-        "TYPE_KIND_CHANGED": "TYPE_KIND_CHANGED",
-        "TYPE_DESCRIPTION_CHANGED": "TYPE_DESCRIPTION_CHANGED",
-        "TYPE_DESCRIPTION_REMOVED": "TYPE_DESCRIPTION_REMOVED",
-        "TYPE_DESCRIPTION_ADDED": "TYPE_DESCRIPTION_ADDED",
-        "UNION_MEMBER_REMOVED": "UNION_MEMBER_REMOVED",
-        "UNION_MEMBER_ADDED": "UNION_MEMBER_ADDED"
-      }
+      "schema": "public",
+      "values": [
+        "FIELD_ARGUMENT_DESCRIPTION_CHANGED",
+        "FIELD_ARGUMENT_DEFAULT_CHANGED",
+        "FIELD_ARGUMENT_TYPE_CHANGED",
+        "DIRECTIVE_REMOVED",
+        "DIRECTIVE_ADDED",
+        "DIRECTIVE_DESCRIPTION_CHANGED",
+        "DIRECTIVE_LOCATION_ADDED",
+        "DIRECTIVE_LOCATION_REMOVED",
+        "DIRECTIVE_ARGUMENT_ADDED",
+        "DIRECTIVE_ARGUMENT_REMOVED",
+        "DIRECTIVE_ARGUMENT_DESCRIPTION_CHANGED",
+        "DIRECTIVE_ARGUMENT_DEFAULT_VALUE_CHANGED",
+        "DIRECTIVE_ARGUMENT_TYPE_CHANGED",
+        "ENUM_VALUE_REMOVED",
+        "ENUM_VALUE_ADDED",
+        "ENUM_VALUE_DESCRIPTION_CHANGED",
+        "ENUM_VALUE_DEPRECATION_REASON_CHANGED",
+        "ENUM_VALUE_DEPRECATION_REASON_ADDED",
+        "ENUM_VALUE_DEPRECATION_REASON_REMOVED",
+        "FIELD_REMOVED",
+        "FIELD_ADDED",
+        "FIELD_DESCRIPTION_CHANGED",
+        "FIELD_DESCRIPTION_ADDED",
+        "FIELD_DESCRIPTION_REMOVED",
+        "FIELD_DEPRECATION_ADDED",
+        "FIELD_DEPRECATION_REMOVED",
+        "FIELD_DEPRECATION_REASON_CHANGED",
+        "FIELD_DEPRECATION_REASON_ADDED",
+        "FIELD_DEPRECATION_REASON_REMOVED",
+        "FIELD_TYPE_CHANGED",
+        "FIELD_ARGUMENT_ADDED",
+        "FIELD_ARGUMENT_REMOVED",
+        "INPUT_FIELD_REMOVED",
+        "INPUT_FIELD_ADDED",
+        "INPUT_FIELD_DESCRIPTION_ADDED",
+        "INPUT_FIELD_DESCRIPTION_REMOVED",
+        "INPUT_FIELD_DESCRIPTION_CHANGED",
+        "INPUT_FIELD_DEFAULT_VALUE_CHANGED",
+        "INPUT_FIELD_TYPE_CHANGED",
+        "OBJECT_TYPE_INTERFACE_ADDED",
+        "OBJECT_TYPE_INTERFACE_REMOVED",
+        "SCHEMA_QUERY_TYPE_CHANGED",
+        "SCHEMA_MUTATION_TYPE_CHANGED",
+        "SCHEMA_SUBSCRIPTION_TYPE_CHANGED",
+        "TYPE_REMOVED",
+        "TYPE_ADDED",
+        "TYPE_KIND_CHANGED",
+        "TYPE_DESCRIPTION_CHANGED",
+        "TYPE_DESCRIPTION_REMOVED",
+        "TYPE_DESCRIPTION_ADDED",
+        "UNION_MEMBER_REMOVED",
+        "UNION_MEMBER_ADDED"
+      ]
     },
-    "subscription_protocol": {
+    "public.subscription_protocol": {
       "name": "subscription_protocol",
-      "values": {
-        "ws": "ws",
-        "sse": "sse",
-        "sse_post": "sse_post"
-      }
+      "schema": "public",
+      "values": [
+        "ws",
+        "sse",
+        "sse_post"
+      ]
     },
-    "status": {
+    "public.status": {
       "name": "status",
-      "values": {
-        "incomplete": "incomplete",
-        "incomplete_expired": "incomplete_expired",
-        "trialing": "trialing",
-        "active": "active",
-        "past_due": "past_due",
-        "canceled": "canceled",
-        "unpaid": "unpaid",
-        "paused": "paused"
-      }
+      "schema": "public",
+      "values": [
+        "incomplete",
+        "incomplete_expired",
+        "trialing",
+        "active",
+        "past_due",
+        "canceled",
+        "unpaid",
+        "paused"
+      ]
     },
-    "target_type": {
+    "public.target_type": {
       "name": "target_type",
-      "values": {
-        "federated": "federated",
-        "subgraph": "subgraph"
-      }
+      "schema": "public",
+      "values": [
+        "federated",
+        "subgraph"
+      ]
     },
-    "websocket_subprotocol": {
+    "public.websocket_subprotocol": {
       "name": "websocket_subprotocol",
-      "values": {
-        "auto": "auto",
-        "graphql-ws": "graphql-ws",
-        "graphql-transport-ws": "graphql-transport-ws"
-      }
+      "schema": "public",
+      "values": [
+        "auto",
+        "graphql-ws",
+        "graphql-transport-ws"
+      ]
     }
   },
   "schemas": {},
+  "sequences": {},
   "_meta": {
     "columns": {},
     "schemas": {},
