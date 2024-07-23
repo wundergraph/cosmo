@@ -201,6 +201,10 @@ export interface OrganizationDTO {
     currentPeriodEnd?: string;
     cancelAtPeriodEnd?: boolean;
   };
+  deactivation?: {
+    reason?: string;
+    initiatedAt: string;
+  };
 }
 
 export interface UserDTO {

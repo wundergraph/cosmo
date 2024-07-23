@@ -58,6 +58,8 @@ export default class ApiKeyAuthenticator {
       })
       .where(eq(schema.apiKeys.id, apiKeyModel.id));
 
+    const isOrganizationDeactivated = !!organization.deactivation;
+
     return {
       auth: 'api_key',
       userId: apiKeyModel.userId,
@@ -66,7 +68,7 @@ export default class ApiKeyAuthenticator {
       organizationSlug: organization.slug,
       // sending true as the api key has admin permissions
       isAdmin: true,
-      hasWriteAccess: true,
+      hasWriteAccess: !isOrganizationDeactivated,
     };
   }
 }

@@ -61,6 +61,10 @@ export interface Organization {
     cancelAtPeriodEnd: boolean;
     trialEnd: string;
   };
+  deactivation?: {
+    reason?: string;
+    initiatedAt: string;
+  };
 }
 
 export interface Session {

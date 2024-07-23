@@ -915,6 +915,9 @@ export const organizations = pgTable('organizations', {
     onDelete: 'set null',
   }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  isDeactivated: boolean('is_deactivated').default(false),
+  deactivationReason: text('deactivation_reason'),
+  deactivatedAt: timestamp('deactivated_at', { withTimezone: true }),
 });
 
 export const organizationBilling = pgTable(

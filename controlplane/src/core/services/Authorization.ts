@@ -45,6 +45,14 @@ export class Authorization {
     const authorization = headers.get('authorization');
     const token = authorization?.replace(/^bearer\s+/i, '');
 
+    const org = await orgRepo.byId(organizationId);
+    if (!org) {
+      throw new Error(`Organization ${organizationId} not found`);
+    }
+    if (org.deactivation) {
+      throw new Error(`The organization is deactivated and is in read-only mode`);
+    }
+
     /**
      * We check if the organization has the rbac feature enabled.
      * If it is not enabled, we return because the user is authorized to perform all the actions.

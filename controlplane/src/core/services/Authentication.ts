@@ -86,12 +86,14 @@ export class Authentication implements Authenticator {
         organizationID: organization.id,
       });
 
+      const isOrganizationDeactivated = !!organization.deactivation;
+
       const userContext: AuthContext = {
         auth: user.auth,
         userId: user.userId,
         organizationId: organization.id,
         organizationSlug: organization.slug,
-        hasWriteAccess: checkUserAccess({ rolesToBe: ['admin', 'developer'], userRoles }),
+        hasWriteAccess: checkUserAccess({ rolesToBe: ['admin', 'developer'], userRoles }) && !isOrganizationDeactivated,
         isAdmin: userRoles.includes('admin'),
         userDisplayName: user.userDisplayName,
       };
