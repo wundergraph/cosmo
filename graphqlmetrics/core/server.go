@@ -19,9 +19,15 @@ type Server struct {
 	logger         *zap.Logger
 	jwtSecret      []byte
 	metricsService graphqlmetricsv1connect.GraphQLMetricsServiceHandler
+
+	metricConfig *rmetric.Config
+	instanceID   string
+
+	prometheusServer *http.Server
 }
 
 func NewServer(metricsService graphqlmetricsv1connect.GraphQLMetricsServiceHandler, opts ...Option) *Server {
+	ctx := context.Background()
 	s := &Server{
 		metricsService: metricsService,
 		listenAddr:     ":4005",
@@ -32,12 +38,12 @@ func NewServer(metricsService graphqlmetricsv1connect.GraphQLMetricsServiceHandl
 		opt(s)
 	}
 
-	s.bootstrap()
+	s.bootstrap(ctx)
 
 	return s
 }
 
-func (s *Server) bootstrap() {
+func (s *Server) bootstrap(ctx context.Context) {
 	mux := http.NewServeMux()
 	path, handler := graphqlmetricsv1connect.NewGraphQLMetricsServiceHandler(
 		s.metricsService,
@@ -57,6 +63,21 @@ func (s *Server) bootstrap() {
 		ReadHeaderTimeout: 20 * time.Second,
 		Handler:           mux,
 		ErrorLog:          zap.NewStdLog(s.logger),
+	}
+
+	if s.metricConfig.Prometheus.Enabled {
+		s.instanceID = "graphqlmetrics"
+		_, registry, err := rmetric.NewPrometheusMeterProvider(ctx, rmetric.DefaultConfig("dev"), s.instanceID)
+		if err != nil {
+			panic(fmt.Errorf("failed to create Prometheus exporter: %w", err))
+		}
+
+		s.prometheusServer = rmetric.NewPrometheusServer(s.logger, s.metricConfig.Prometheus.ListenAddr, s.metricConfig.Prometheus.Path, registry)
+		go func() {
+			if err := s.prometheusServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				s.logger.Error("Failed to start Prometheus server", zap.Error(err))
+			}
+		}()
 	}
 }
 
@@ -99,5 +120,11 @@ func WithListenAddr(addr string) Option {
 func WithJwtSecret(secret []byte) Option {
 	return func(s *Server) {
 		s.jwtSecret = secret
+	}
+}
+
+func WithMetrics(cfg *rmetric.Config) Option {
+	return func(s *Server) {
+		s.metricConfig = cfg
 	}
 }
