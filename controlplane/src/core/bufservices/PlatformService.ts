@@ -2271,7 +2271,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               composedGraphs: result.compositions.map((c) => c.name),
             });
           } catch (e) {
-            logger.error(e, 'Error creating commit check');
+            logger.warn(e, 'Error creating commit check');
           }
         }
 
