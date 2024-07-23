@@ -16,6 +16,7 @@ import { BlobStorage } from './blobstorage/index.js';
 import Mailer from './services/Mailer.js';
 import { Authorization } from './services/Authorization.js';
 import { AIGraphReadmeQueue } from './workers/AIGraphReadmeWorker.js';
+import { DeleteOrganizationQueue } from './workers/DeleteOrganizationWorker.js';
 
 export interface RouterOptions {
   db: PostgresJsDatabase<typeof schema>;
@@ -36,7 +37,10 @@ export interface RouterOptions {
   mailerClient?: Mailer;
   billingDefaultPlanId?: string;
   openaiApiKey?: string;
-  readmeQueue: AIGraphReadmeQueue;
+  queues: {
+    readmeQueue: AIGraphReadmeQueue;
+    deleteOrganizationQueue: DeleteOrganizationQueue;
+  };
   stripeSecretKey?: string;
   cdnBaseUrl: string;
 }

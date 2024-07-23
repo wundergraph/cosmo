@@ -39,6 +39,7 @@ import { UserRepository } from './repositories/UserRepository.js';
 import { AIGraphReadmeQueue, createAIGraphReadmeWorker } from './workers/AIGraphReadmeWorker.js';
 import { fastifyLoggerId } from './util.js';
 import { ApiKeyRepository } from './repositories/ApiKeyRepository.js';
+import { createDeleteOrganizationWorker, DeleteOrganizationQueue } from './workers/DeleteOrganizationWorker.js';
 
 export interface BuildConfig {
   logger: LoggerOptions;
@@ -266,6 +267,17 @@ export default async function build(opts: BuildConfig) {
     );
   }
 
+  const deleteOrganizationQueue = new DeleteOrganizationQueue(logger, fastify.redisForQueue);
+  bullWorkers.push(
+    createDeleteOrganizationWorker({
+      redisConnection: fastify.redisForWorker,
+      db: fastify.db,
+      logger,
+      keycloakClient,
+      keycloakRealm: opts.keycloak.realm,
+    }),
+  );
+
   // required to verify webhook payloads
   await fastify.register(import('fastify-raw-body'), {
     field: 'rawBody',
@@ -383,7 +395,10 @@ export default async function build(opts: BuildConfig) {
       mailerClient,
       billingDefaultPlanId: opts.stripe?.defaultPlanId,
       openaiApiKey: opts.openaiAPIKey,
-      readmeQueue,
+      queues: {
+        readmeQueue,
+        deleteOrganizationQueue,
+      },
       stripeSecretKey: opts.stripe?.secret,
       admissionWebhookJWTSecret: opts.admissionWebhook.secret,
       cdnBaseUrl: opts.cdnBaseUrl,
