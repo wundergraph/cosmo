@@ -2,7 +2,7 @@
 
 For a detailed deployment guide of the chart, including the full documentation, see the [DEV.md](DEV.md) file.
 
-![Version: 0.2.0](https://img.shields.io/badge/Version-0.2.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
+![Version: 0.3.0](https://img.shields.io/badge/Version-0.3.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
 
 This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle GraphQL API Management Solution.
 
@@ -53,6 +53,13 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | controlplane.configuration.databaseUrl | string | `"postgres://postgres:changeme@cosmo-postgresql:5432/controlplane"` |  |
 | controlplane.configuration.debugSQL | bool | `false` |  |
 | controlplane.configuration.logLevel | string | `"debug"` |  |
+| controlplane.configuration.prometheus.enabled | bool | `false` | Enables prometheus metrics support. Default is false. |
+| controlplane.configuration.prometheus.gcp_monitoring.enabled | bool | `false` | Enables gcp support . Default is false. |
+| controlplane.configuration.prometheus.gcp_monitoring.interval | string | `"60s"` | Scrape interval. Default is "60s". |
+| controlplane.configuration.prometheus.gcp_monitoring.timeout | string | `"50s"` | Scrape timeout. Default is "50s". |
+| controlplane.configuration.prometheus.host | string | `"127.0.0.1"` | The host to bind to defaults to 127.0.0.1 to avoid opening the metrics endpoint by default. |
+| controlplane.configuration.prometheus.path | string | `"/metrics"` | The HTTP path where metrics are exposed. Default is "/metrics". |
+| controlplane.configuration.prometheus.port | int | `8088` | The port where metrics are exposed. Default is port 8088. |
 | controlplane.configuration.redisHost | string | `"cosmo-redis-master"` |  |
 | controlplane.configuration.redisPort | int | `6379` |  |
 | controlplane.configuration.s3StorageUrl | string | `"http://minio:changeme@cosmo-minio:9000/cosmo"` |  |
