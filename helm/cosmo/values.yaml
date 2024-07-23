@@ -233,8 +233,6 @@ keycloak:
 # ClickHouse for the Cosmo Controlplane & Collectors
 # https://artifacthub.io/packages/helm/bitnami/clickhouse
 clickhouse:
-  image:
-    tag: '23.8.3'
   shards: 1
   # 1 replica for development
   replicaCount: 1
