@@ -10,6 +10,7 @@ import { App } from 'octokit';
 import { Worker } from 'bullmq';
 import routes from './routes.js';
 import fastifyHealth from './plugins/health.js';
+import fastifyMetrics, { MetricsPluginOptions } from './plugins/metrics.js';
 import fastifyDatabase from './plugins/database.js';
 import fastifyClickHouse from './plugins/clickhouse.js';
 import fastifyRedis from './plugins/redis.js';
@@ -38,6 +39,7 @@ import { UserRepository } from './repositories/UserRepository.js';
 import { AIGraphReadmeQueue, createAIGraphReadmeWorker } from './workers/AIGraphReadmeWorker.js';
 import { fastifyLoggerId } from './util.js';
 import { ApiKeyRepository } from './repositories/ApiKeyRepository.js';
+import { createDeleteOrganizationWorker, DeleteOrganizationQueue } from './workers/DeleteOrganizationWorker.js';
 
 export interface BuildConfig {
   logger: LoggerOptions;
@@ -49,6 +51,7 @@ export interface BuildConfig {
       key?: string; // e.g. string or '/path/to/my/client-key.pem'
     };
   };
+  prometheus?: MetricsOptions;
   openaiAPIKey?: string;
   allowedOrigins?: string[];
   debugSQL?: boolean;
@@ -106,6 +109,13 @@ export interface BuildConfig {
   };
 }
 
+export interface MetricsOptions {
+  enabled?: boolean;
+  path?: string;
+  host?: string;
+  port?: number;
+}
+
 const developmentLoggerOpts: LoggerOptions = {
   transport: {
     target: 'pino-pretty',
@@ -143,6 +153,16 @@ export default async function build(opts: BuildConfig) {
    */
 
   await fastify.register(fastifyHealth);
+
+  if (opts.prometheus?.enabled) {
+    await fastify.register(fastifyMetrics, {
+      path: opts.prometheus.path,
+    });
+    await fastify.metricsServer.listen({
+      host: opts.prometheus.host,
+      port: opts.prometheus.port,
+    });
+  }
 
   await fastify.register(fastifyDatabase, {
     databaseConnectionUrl: opts.database.url,
@@ -246,6 +266,17 @@ export default async function build(opts: BuildConfig) {
       }),
     );
   }
+
+  const deleteOrganizationQueue = new DeleteOrganizationQueue(logger, fastify.redisForQueue);
+  bullWorkers.push(
+    createDeleteOrganizationWorker({
+      redisConnection: fastify.redisForWorker,
+      db: fastify.db,
+      logger,
+      keycloakClient,
+      keycloakRealm: opts.keycloak.realm,
+    }),
+  );
 
   // required to verify webhook payloads
   await fastify.register(import('fastify-raw-body'), {
@@ -364,7 +395,10 @@ export default async function build(opts: BuildConfig) {
       mailerClient,
       billingDefaultPlanId: opts.stripe?.defaultPlanId,
       openaiApiKey: opts.openaiAPIKey,
-      readmeQueue,
+      queues: {
+        readmeQueue,
+        deleteOrganizationQueue,
+      },
       stripeSecretKey: opts.stripe?.secret,
       admissionWebhookJWTSecret: opts.admissionWebhook.secret,
       cdnBaseUrl: opts.cdnBaseUrl,

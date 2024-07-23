@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.82.0](https://github.com/wundergraph/cosmo/compare/studio@0.81.4...studio@0.82.0) (2024-07-23)
+
+### Features
+
+* organization deactivation ([#945](https://github.com/wundergraph/cosmo/issues/945)) ([af5cd41](https://github.com/wundergraph/cosmo/commit/af5cd41848c282027c6a07545bdb218edc946da5)) (@thisisnithin)
+
 ## [0.81.4](https://github.com/wundergraph/cosmo/compare/studio@0.81.3...studio@0.81.4) (2024-07-18)
 
 **Note:** Version bump only for package studio

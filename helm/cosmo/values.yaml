@@ -114,6 +114,25 @@ controlplane:
     s3StorageUrl: 'http://minio:changeme@cosmo-minio:9000/cosmo'
     cdnBaseUrl: 'http://cosmo-cdn:8787'
 
+    # Use this section to disable/enable and configure prometheus metrics.
+    prometheus:
+      # -- Enables prometheus metrics support. Default is false.
+      enabled: false
+      # -- The host to bind to defaults to 127.0.0.1 to avoid opening the metrics endpoint by default.
+      host: 127.0.0.1
+      # -- The port where metrics are exposed. Default is port 8088.
+      port: 8088
+      # -- The HTTP path where metrics are exposed. Default is "/metrics".
+      path: "/metrics"
+      # Use this section to disable/enable pod monitoring over [GCP managed collection](https://cloud.google.com/stackdriver/docs/managed-prometheus/setup-managed#config-mgd-collection).
+      gcp_monitoring:
+        # -- Enables gcp support . Default is false.
+        enabled: false
+        # -- Scrape interval. Default is "60s".
+        interval: 60s
+        # -- Scrape timeout. Default is "50s".
+        timeout: 50s
+
 # Cosmo Router. For more options, please refer to the CHART.md
 router:
   terminationGracePeriodSeconds: 60
