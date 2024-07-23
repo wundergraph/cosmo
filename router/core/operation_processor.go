@@ -114,11 +114,6 @@ type OperationCache struct {
 	normalizationCache *ristretto.Cache[uint64, NormalizationCacheEntry]
 }
 
-type persistedOperationMetadata struct {
-	skipIncludeVariableNames []string
-	listVariableNames        []string
-}
-
 // OperationKit provides methods to parse, normalize and validate operations.
 // After each step, the operation is available as a ParsedOperation.
 // It must be created for each request and freed after the request is done.
