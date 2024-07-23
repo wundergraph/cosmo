@@ -127,7 +127,7 @@ const Organizations = () => {
 
 interface SideNavLayoutProps extends LayoutProps {
   links?: Partial<NavLink>[];
-  disableStarBanner?: "false" | "true";
+  isBannerDisplayed?: boolean;
 }
 
 export const SideNav = (props: SideNavLayoutProps) => {
@@ -141,10 +141,8 @@ export const SideNav = (props: SideNavLayoutProps) => {
         className={cn(
           "z-40 flex min-w-[210px] flex-shrink-0 flex-col bg-background pt-4 lg:px-3 lg:pb-4",
           {
-            "lg:h-[calc(100vh-32px)]":
-              props.disableStarBanner && props.disableStarBanner === "false",
-            "lg:h-screen":
-              !props.disableStarBanner || props.disableStarBanner === "true",
+            "lg:h-[calc(100vh-32px)]": props.isBannerDisplayed,
+            "lg:h-screen": !props.isBannerDisplayed,
           },
         )}
       >
