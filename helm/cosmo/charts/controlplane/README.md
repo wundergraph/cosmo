@@ -33,6 +33,7 @@ WunderGraph Cosmo Controlplane
 | configuration.githubAppWebhookSecret | string | `""` |  |
 | configuration.logLevel | string | `"info"` |  |
 | configuration.openAiApiKey | string | `""` |  |
+| configuration.prometheus | object | `{"enabled":false,"gcp_monitoring":{"enabled":false,"interval":"60s","timeout":"50s"},"host":"127.0.0.1","path":"/metrics","port":8088}` | Use this section to disable/enable and configure prometheus metrics. |
 | configuration.prometheus.enabled | bool | `false` | Enables prometheus metrics support. Default is false. |
 | configuration.prometheus.gcp_monitoring.enabled | bool | `false` | Enables gcp support . Default is false. |
 | configuration.prometheus.gcp_monitoring.interval | string | `"60s"` | Scrape interval. Default is "60s". |
@@ -66,6 +67,10 @@ WunderGraph Cosmo Controlplane
 | imagePullSecrets | list | `[]` |  |
 | ingress.hosts | string | `nil` |  |
 | ingress.tls | list | `[]` |  |
+| jobs | object | `{"activateOrganization":{"enabled":false,"id":"123","slug":"foo"},"deactivateOrganization":{"enabled":false,"id":"123","reason":"","slug":"foo"},"deleteUser":{"enabled":false,"id":"123"}}` | Configure jobs to be executed in the control plane |
+| jobs.activateOrganization | object | `{"enabled":false,"id":"123","slug":"foo"}` | Used to activate an organization and remove the scheduled deletion |
+| jobs.deactivateOrganization | object | `{"enabled":false,"id":"123","reason":"","slug":"foo"}` | Used to deactivate an organization with a reason and schedule deletion |
+| jobs.deleteUser | object | `{"enabled":false,"id":"123"}` | Used to delete the user |
 | nameOverride | string | `""` | String to partially override common.names.fullname template (will maintain the release name) |
 | nodeSelector | object | `{}` |  |
 | podAnnotations | object | `{}` |  |
