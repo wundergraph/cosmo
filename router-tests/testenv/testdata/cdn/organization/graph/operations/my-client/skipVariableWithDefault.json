@@ -1,0 +1,4 @@
+{
+  "version": 1,
+  "body": "query MyQuery($yes: Boolean! = true) { employee(id: 1) { details { forename surname @include(if: $yes) } } }"
+}

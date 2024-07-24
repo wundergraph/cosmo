@@ -1,7 +1,6 @@
 import { nsToTime } from "@/lib/insights-helpers";
 import {
   Service,
-  getSpanName,
   mapServiceName,
   mapSpanKind,
   mapStatusCode,
@@ -221,24 +220,12 @@ function Node({
                       }}
                       className="truncate text-start text-xs"
                     >
-                      {getSpanName(
-                        span.spanName,
-                        span.attributes?.httpTarget || "",
-                        span.attributes?.httpURL || "",
-                        span.attributes?.httpMethod || "",
-                      )}
+                      {span.spanName}
                     </div>
                   </TooltipTrigger>
                   <TooltipContent className="max-w-lg">
                     <div className="flex flex-col space-y-3">
-                      <div>
-                        {getSpanName(
-                          span.spanName,
-                          span.attributes?.httpTarget || "",
-                          span.attributes?.httpURL || "",
-                          span.attributes?.httpMethod || "",
-                        )}
-                      </div>
+                      <div>{span.spanName}</div>
                     </div>
                   </TooltipContent>
                 </Tooltip>

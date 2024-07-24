@@ -6,17 +6,18 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/cdn"
-	"github.com/wundergraph/cosmo/router/internal/docker"
-	"github.com/wundergraph/cosmo/router/internal/graphiql"
-	"go.uber.org/atomic"
-	brotli "go.withmatt.com/connect-brotli"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/internal/cdn"
+	"github.com/wundergraph/cosmo/router/internal/docker"
+	"github.com/wundergraph/cosmo/router/internal/graphiql"
+	"go.uber.org/atomic"
+	brotli "go.withmatt.com/connect-brotli"
 
 	"github.com/nats-io/nuid"
 	"github.com/redis/go-redis/v9"
@@ -138,7 +139,7 @@ type (
 		readinessCheckPath       string
 		livenessCheckPath        string
 		cdnConfig                config.CDNConfiguration
-		cdnOperationClient       *cdn.PersistedOperationClient
+		cdnOperationClient       *cdn.PersistedOperationsClient
 		eventsConfig             config.EventsConfiguration
 		prometheusServer         *http.Server
 		modulesConfig            map[string]interface{}
@@ -440,17 +441,6 @@ func NewRouter(opts ...Option) (*Router, error) {
 		})
 	}
 
-	if r.graphApiToken != "" {
-		cdnPersistentOpClient, err := cdn.NewPersistentOperationClient(r.cdnConfig.URL, r.graphApiToken, cdn.PersistentOperationsOptions{
-			CacheSize: r.cdnConfig.CacheSize.Uint64(),
-			Logger:    r.logger,
-		})
-		if err != nil {
-			return nil, err
-		}
-		r.cdnOperationClient = cdnPersistentOpClient
-	}
-
 	for _, source := range r.eventsConfig.Providers.Nats {
 		r.logger.Info("Nats Event source enabled", zap.String("providerID", source.ID), zap.String("url", source.URL))
 	}
@@ -692,6 +682,18 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			r.otlpMeterProvider = mp
 		}
 
+	}
+
+	if r.graphApiToken != "" {
+		cdnPersistentOpClient, err := cdn.NewPersistentOperationClient(r.cdnConfig.URL, r.graphApiToken, cdn.PersistentOperationsOptions{
+			CacheSize:     r.cdnConfig.CacheSize.Uint64(),
+			Logger:        r.logger,
+			TraceProvider: r.tracerProvider,
+		})
+		if err != nil {
+			return err
+		}
+		r.cdnOperationClient = cdnPersistentOpClient
 	}
 
 	r.gqlMetricsExporter = graphqlmetrics.NewNoopExporter()

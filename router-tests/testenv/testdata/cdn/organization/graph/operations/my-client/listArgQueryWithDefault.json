@@ -1,0 +1,4 @@
+{
+  "version": 1,
+  "body": "query MyQuery($arg: [String!]! = \"a\") {rootFieldWithListArg(arg: $arg)}"
+}
