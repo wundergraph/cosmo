@@ -74,7 +74,7 @@ var (
 	_ InputError = invalidExtensionsTypeError(0)
 )
 
-type OperationParserOptions struct {
+type OperationProcessorOptions struct {
 	Executor                *Executor
 	MaxOperationSizeInBytes int64
 	PersistentOpClient      *cdn.PersistedOperationsClient
@@ -124,7 +124,7 @@ type OperationKit struct {
 	data                     []byte
 	operationDefinitionRef   int
 	originalOperationNameRef ast.ByteSliceReference
-	operationParser          *OperationProcessor
+	operationProcessor       *OperationProcessor
 	kit                      *parseKit
 	parsedOperation          *ParsedOperation
 }
@@ -149,7 +149,7 @@ type GraphQLRequestExtensionsPersistedQuery struct {
 // It allocates resources that need to be freed by calling OperationKit.Free()
 func NewOperationKit(processor *OperationProcessor, data []byte, files []httpclient.File) *OperationKit {
 	return &OperationKit{
-		operationParser:        processor,
+		operationProcessor:     processor,
 		kit:                    processor.getKit(),
 		operationDefinitionRef: -1,
 		data:                   data,
@@ -162,7 +162,7 @@ func NewOperationKit(processor *OperationProcessor, data []byte, files []httpcli
 
 // Free releases the resources used by the OperationKit
 func (o *OperationKit) Free() {
-	o.operationParser.freeKit(o.kit)
+	o.operationProcessor.freeKit(o.kit)
 }
 
 // UnmarshalOperation loads the operation from the request body and unmarshal it into the ParsedOperation
@@ -241,7 +241,7 @@ func (o *OperationKit) UnmarshalOperation() error {
 // FetchPersistedOperation fetches the persisted operation from the cache or the client. If the operation is fetched from the cache it returns true.
 // UnmarshalOperation must be called before calling this method.
 func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *ClientInfo, commonTraceAttributes []attribute.KeyValue) (bool, error) {
-	if o.operationParser.persistedOperationClient == nil {
+	if o.operationProcessor.persistedOperationClient == nil {
 		return false, &inputError{
 			message:    "could not resolve persisted query, feature is not configured",
 			statusCode: http.StatusOK,
@@ -257,7 +257,7 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 	if fromCache {
 		return true, nil
 	}
-	persistedOperationData, err := o.operationParser.persistedOperationClient.PersistedOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, commonTraceAttributes)
+	persistedOperationData, err := o.operationProcessor.persistedOperationClient.PersistedOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, commonTraceAttributes)
 	if err != nil {
 		return false, err
 	}
@@ -406,7 +406,7 @@ func (o *OperationKit) normalizePersistedOperation() (cached bool, err error) {
 
 	report := &operationreport.Report{}
 	o.kit.doc.Input.Variables = o.parsedOperation.Request.Variables
-	o.kit.normalizer.NormalizeNamedOperation(o.kit.doc, o.operationParser.executor.ClientSchema, staticOperationName, report)
+	o.kit.normalizer.NormalizeNamedOperation(o.kit.doc, o.operationProcessor.executor.ClientSchema, staticOperationName, report)
 	if report.HasErrors() {
 		return false, &reportError{
 			report: report,
@@ -424,7 +424,7 @@ func (o *OperationKit) normalizePersistedOperation() (cached bool, err error) {
 	o.parsedOperation.Request.Variables = originalVariables
 
 	// Hash the normalized operation with the static operation name to avoid different IDs for the same operation
-	err = o.kit.printer.Print(o.kit.doc, o.operationParser.executor.ClientSchema, o.kit.keyGen)
+	err = o.kit.printer.Print(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.keyGen)
 	if err != nil {
 		return false, errors.WithStack(fmt.Errorf("failed to print normalized operation: %w", err))
 	}
@@ -437,7 +437,7 @@ func (o *OperationKit) normalizePersistedOperation() (cached bool, err error) {
 
 	// Print the operation with the original operation name
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = o.originalOperationNameRef
-	err = o.kit.printer.Print(o.kit.doc, o.operationParser.executor.ClientSchema, o.kit.normalizedOperation)
+	err = o.kit.printer.Print(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.normalizedOperation)
 	if err != nil {
 		return false, errors.WithStack(fmt.Errorf("failed to print normalized operation: %w", err))
 	}
@@ -514,7 +514,7 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 	// normalize the operation
 	report := &operationreport.Report{}
 	o.kit.doc.Input.Variables = o.parsedOperation.Request.Variables
-	o.kit.normalizer.NormalizeNamedOperation(o.kit.doc, o.operationParser.executor.ClientSchema, staticOperationName, report)
+	o.kit.normalizer.NormalizeNamedOperation(o.kit.doc, o.operationProcessor.executor.ClientSchema, staticOperationName, report)
 	if report.HasErrors() {
 		return false, &reportError{
 			report: report,
@@ -536,7 +536,7 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 	o.kit.doc.Input.Variables = originalVariables
 
 	// Hash the normalized operation with the static operation name & original variables to avoid different IDs for the same operation
-	err = o.kit.printer.Print(o.kit.doc, o.operationParser.executor.ClientSchema, o.kit.keyGen)
+	err = o.kit.printer.Print(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.keyGen)
 	if err != nil {
 		return false, errors.WithStack(fmt.Errorf("failed to print normalized operation: %w", err))
 	}
@@ -547,7 +547,7 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 
 	// Print the operation with the original operation name
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = o.originalOperationNameRef
-	err = o.kit.printer.Print(o.kit.doc, o.operationParser.executor.ClientSchema, o.kit.normalizedOperation)
+	err = o.kit.printer.Print(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.normalizedOperation)
 	if err != nil {
 		return false, errors.WithStack(fmt.Errorf("failed to print normalized operation: %w", err))
 	}
@@ -737,7 +737,7 @@ func (o *OperationKit) writeSkipIncludeCacheKeyToKeyGen(skipIncludeVariableNames
 // Validate validates the operation variables.
 func (o *OperationKit) Validate() error {
 	if o.kit.cachedDoc != nil {
-		err := o.kit.variablesValidator.Validate(o.kit.cachedDoc, o.operationParser.executor.ClientSchema, o.parsedOperation.Request.Variables)
+		err := o.kit.variablesValidator.Validate(o.kit.cachedDoc, o.operationProcessor.executor.ClientSchema, o.parsedOperation.Request.Variables)
 		if err != nil {
 			return &inputError{
 				message:    err.Error(),
@@ -746,7 +746,7 @@ func (o *OperationKit) Validate() error {
 		}
 		return nil
 	}
-	err := o.kit.variablesValidator.Validate(o.kit.doc, o.operationParser.executor.ClientSchema, o.parsedOperation.Request.Variables)
+	err := o.kit.variablesValidator.Validate(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.parsedOperation.Request.Variables)
 	if err != nil {
 		return &inputError{
 			message:    err.Error(),
@@ -846,7 +846,7 @@ func (o *OperationKit) skipIncludeVariableNames() []string {
 	return names
 }
 
-func NewOperationProcessor(opts OperationParserOptions) *OperationProcessor {
+func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 	processor := &OperationProcessor{
 		executor:                 opts.Executor,
 		maxOperationSizeInBytes:  opts.MaxOperationSizeInBytes,

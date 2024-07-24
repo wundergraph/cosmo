@@ -19,7 +19,7 @@ func TestOperationProcessorPersistentOperations(t *testing.T) {
 		Resolver:        nil,
 		RenameTypeNames: nil,
 	}
-	parser := NewOperationProcessor(OperationParserOptions{
+	parser := NewOperationProcessor(OperationProcessorOptions{
 		Executor:                executor,
 		MaxOperationSizeInBytes: 10 << 20,
 	})
@@ -72,7 +72,7 @@ func TestOperationProcessor(t *testing.T) {
 		Resolver:        nil,
 		RenameTypeNames: nil,
 	}
-	parser := NewOperationProcessor(OperationParserOptions{
+	parser := NewOperationProcessor(OperationProcessorOptions{
 		Executor:                executor,
 		MaxOperationSizeInBytes: 10 << 20,
 	})
@@ -208,7 +208,7 @@ func TestOperationProcessorUnmarshalExtensions(t *testing.T) {
 		Resolver:        nil,
 		RenameTypeNames: nil,
 	}
-	parser := NewOperationProcessor(OperationParserOptions{
+	parser := NewOperationProcessor(OperationProcessorOptions{
 		Executor:                executor,
 		MaxOperationSizeInBytes: 10 << 20,
 	})

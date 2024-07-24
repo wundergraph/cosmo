@@ -544,7 +544,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
 	}
 
-	operationParser := NewOperationProcessor(OperationParserOptions{
+	operationProcessor := NewOperationProcessor(OperationProcessorOptions{
 		Executor:                       executor,
 		MaxOperationSizeInBytes:        int64(s.routerTrafficConfig.MaxRequestBodyBytes),
 		PersistentOpClient:             s.cdnOperationClient,
@@ -596,7 +596,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		Logger:                      s.logger,
 		Executor:                    executor,
 		Metrics:                     routerMetrics,
-		OperationProcessor:          operationParser,
+		OperationProcessor:          operationProcessor,
 		Planner:                     operationPlanner,
 		AccessController:            s.accessController,
 		OperationBlocker:            operationBlocker,
@@ -613,7 +613,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
 		wsMiddleware := NewWebsocketMiddleware(ctx, WebsocketMiddlewareOptions{
-			OperationProcessor:         operationParser,
+			OperationProcessor:         operationProcessor,
 			OperationBlocker:           operationBlocker,
 			Planner:                    operationPlanner,
 			GraphQLHandler:             graphqlHandler,
