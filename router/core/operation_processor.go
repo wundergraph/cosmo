@@ -846,7 +846,7 @@ func (o *OperationKit) skipIncludeVariableNames() []string {
 	return names
 }
 
-func NewOperationParser(opts OperationParserOptions) *OperationProcessor {
+func NewOperationProcessor(opts OperationParserOptions) *OperationProcessor {
 	processor := &OperationProcessor{
 		executor:                 opts.Executor,
 		maxOperationSizeInBytes:  opts.MaxOperationSizeInBytes,

@@ -544,7 +544,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
 	}
 
-	operationParser := NewOperationParser(OperationParserOptions{
+	operationParser := NewOperationProcessor(OperationParserOptions{
 		Executor:                       executor,
 		MaxOperationSizeInBytes:        int64(s.routerTrafficConfig.MaxRequestBodyBytes),
 		PersistentOpClient:             s.cdnOperationClient,

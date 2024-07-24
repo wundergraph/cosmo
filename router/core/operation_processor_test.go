@@ -12,14 +12,14 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 )
 
-func TestOperationParser(t *testing.T) {
+func TestOperationProcessorPersistentOperations(t *testing.T) {
 	executor := &Executor{
 		PlanConfig:      plan.Configuration{},
 		RouterSchema:    nil,
 		Resolver:        nil,
 		RenameTypeNames: nil,
 	}
-	parser := NewOperationParser(OperationParserOptions{
+	parser := NewOperationProcessor(OperationParserOptions{
 		Executor:                executor,
 		MaxOperationSizeInBytes: 10 << 20,
 	})
@@ -27,6 +27,55 @@ func TestOperationParser(t *testing.T) {
 		Name:    "test",
 		Version: "1.0.0",
 	}
+	testCases := []struct {
+		ExpectedType  string
+		ExpectedError error
+		Input         string
+		Variables     string
+	}{
+		/**
+		 * Test cases persist operation
+		 */
+		{
+			Input:         `{"operationName": "test", "variables": {"foo": "bar"}, "extensions": {"persistedQuery": {"version": 1, "sha256Hash": "does-not-exist"}}}`,
+			Variables:     `{"foo": "bar"}`,
+			ExpectedError: errors.New("could not resolve persisted query, feature is not configured"),
+		},
+	}
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.Input, func(t *testing.T) {
+			kit, err := parser.NewKitFromReader(strings.NewReader(tc.Input))
+			require.NoError(t, err)
+
+			err = kit.UnmarshalOperation()
+			require.NoError(t, err)
+
+			_, err = kit.FetchPersistedOperation(context.Background(), clientInfo, nil)
+
+			if err != nil {
+				require.EqualError(t, tc.ExpectedError, err.Error())
+			} else if kit.parsedOperation != nil {
+				require.Equal(t, tc.ExpectedType, kit.parsedOperation.Type)
+				require.JSONEq(t, tc.Variables, string(kit.parsedOperation.Request.Variables))
+				require.Equal(t, uint64(0), kit.parsedOperation.ID)
+				require.Equal(t, "", kit.parsedOperation.NormalizedRepresentation)
+			}
+		})
+	}
+}
+
+func TestOperationProcessor(t *testing.T) {
+	executor := &Executor{
+		PlanConfig:      plan.Configuration{},
+		RouterSchema:    nil,
+		Resolver:        nil,
+		RenameTypeNames: nil,
+	}
+	parser := NewOperationProcessor(OperationParserOptions{
+		Executor:                executor,
+		MaxOperationSizeInBytes: 10 << 20,
+	})
 	testCases := []struct {
 		ExpectedType  string
 		ExpectedError error
@@ -128,22 +177,17 @@ func TestOperationParser(t *testing.T) {
 			Variables:     `{"foo": "bar"}`,
 			ExpectedError: nil,
 		},
-		/**
-		 * Test cases persist operation
-		 */
-		{
-			Input:         `{"operationName": "test", "variables": {"foo": "bar"}, "extensions": {"persistedQuery": {"version": 1, "sha256Hash": "does-not-exist"}}}`,
-			Variables:     `{"foo": "bar"}`,
-			ExpectedError: errors.New("could not resolve persisted query, feature is not configured"),
-		},
 	}
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.Input, func(t *testing.T) {
 			kit, err := parser.NewKitFromReader(strings.NewReader(tc.Input))
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
-			err = kit.Parse(context.Background(), clientInfo, nil)
+			err = kit.UnmarshalOperation()
+			require.NoError(t, err)
+
+			err = kit.Parse()
 
 			if err != nil {
 				require.EqualError(t, tc.ExpectedError, err.Error())
@@ -157,21 +201,17 @@ func TestOperationParser(t *testing.T) {
 	}
 }
 
-func TestOperationParserExtensions(t *testing.T) {
+func TestOperationProcessorUnmarshalExtensions(t *testing.T) {
 	executor := &Executor{
 		PlanConfig:      plan.Configuration{},
 		RouterSchema:    nil,
 		Resolver:        nil,
 		RenameTypeNames: nil,
 	}
-	parser := NewOperationParser(OperationParserOptions{
+	parser := NewOperationProcessor(OperationParserOptions{
 		Executor:                executor,
 		MaxOperationSizeInBytes: 10 << 20,
 	})
-	clientInfo := &ClientInfo{
-		Name:    "test",
-		Version: "1.0.0",
-	}
 	testCases := []struct {
 		Input string
 		Valid bool
@@ -206,9 +246,10 @@ func TestOperationParserExtensions(t *testing.T) {
 		tc := tc
 		t.Run(tc.Input, func(t *testing.T) {
 			kit, err := parser.NewKitFromReader(strings.NewReader(tc.Input))
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
-			err = kit.Parse(context.Background(), clientInfo, nil)
+			err = kit.UnmarshalOperation()
+
 			isInputError := errors.As(err, &inputError)
 			if tc.Valid {
 				assert.False(t, isInputError, "expected invalid extensions to not return an input error, got %s", err)
