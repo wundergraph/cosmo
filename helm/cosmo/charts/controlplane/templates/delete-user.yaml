@@ -30,7 +30,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       containers:
-        - name: delete_user
+        - name: delete-user
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ include "controlplane.image" . }}"
