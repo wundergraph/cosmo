@@ -62,6 +62,59 @@ func TestNormalizationCache(t *testing.T) {
 	})
 }
 
+func TestDefaultValuesForSkipInclude(t *testing.T) {
+	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Query:         `query MyQuery($yes: Boolean! = true) { employee(id: 1) { details { forename surname @include(if: $yes) } } }`,
+			Variables:     []byte(`{}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"employee":{"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+		require.Equal(t, "MISS", res.Response.Header.Get(core.NormalizationCacheHeader))
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Query:         `query MyQuery($yes: Boolean! = true) { employee(id: 1) { details { forename surname @include(if: $yes) } } }`,
+			Variables:     []byte(`{}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"employee":{"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+		require.Equal(t, "HIT", res.Response.Header.Get(core.NormalizationCacheHeader))
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Query:         `query MyQuery($yes: Boolean! = true) { employee(id: 1) { details { forename surname @include(if: $yes) } } }`,
+			Variables:     []byte(`{"yes": false}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"employee":{"details":{"forename":"Jens"}}}}`, res.Body)
+		require.Equal(t, "MISS", res.Response.Header.Get(core.NormalizationCacheHeader))
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Query:         `query MyQuery($yes: Boolean! = true) { employee(id: 1) { details { forename surname @include(if: $yes) } } }`,
+			Variables:     []byte(`{"yes": false}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"employee":{"details":{"forename":"Jens"}}}}`, res.Body)
+		require.Equal(t, "HIT", res.Response.Header.Get(core.NormalizationCacheHeader))
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Query:         `query MyQuery($yes: Boolean! = true) { employee(id: 1) { details { forename surname @include(if: $yes) } } }`,
+			Variables:     []byte(`{"yes": true}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"employee":{"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+		require.Equal(t, "MISS", res.Response.Header.Get(core.NormalizationCacheHeader))
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Query:         `query MyQuery($yes: Boolean! = true) { employee(id: 1) { details { forename surname @include(if: $yes) } } }`,
+			Variables:     []byte(`{"yes": true}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"employee":{"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+		require.Equal(t, "HIT", res.Response.Header.Get(core.NormalizationCacheHeader))
+	})
+}
+
 func TestWithoutNormalizationCache(t *testing.T) {
 	testenv.Run(t, &testenv.Config{
 		ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {

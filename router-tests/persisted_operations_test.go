@@ -282,6 +282,67 @@ func TestPersistedOperationCacheWithVariables(t *testing.T) {
 	})
 }
 
+func TestPersistedOperationCacheWithVariablesAndDefaultValues(t *testing.T) {
+	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		header := make(http.Header)
+		header.Add("graphql-client-name", "my-client")
+		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "skipVariableWithDefault"}}`),
+			Header:        header,
+			Variables:     []byte(`{}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		require.Equal(t, `{"data":{"employee":{"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "skipVariableWithDefault"}}`),
+			Header:        header,
+			Variables:     []byte(`{}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		require.Equal(t, `{"data":{"employee":{"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "skipVariableWithDefault"}}`),
+			Header:        header,
+			Variables:     []byte(`{"yes":false}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"employee":{"details":{"forename":"Jens"}}}}`, res.Body)
+		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "skipVariableWithDefault"}}`),
+			Header:        header,
+			Variables:     []byte(`{"yes":false}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"employee":{"details":{"forename":"Jens"}}}}`, res.Body)
+		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "skipVariableWithDefault"}}`),
+			Header:        header,
+			Variables:     []byte(`{"yes":true}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"employee":{"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "skipVariableWithDefault"}}`),
+			Header:        header,
+			Variables:     []byte(`{"yes":true}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"employee":{"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+	})
+}
+
 func TestPersistedOperationCacheWithVariablesCoercion(t *testing.T) {
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 		header := make(http.Header)

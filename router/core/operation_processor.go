@@ -95,8 +95,10 @@ type OperationProcessor struct {
 
 // parseKit is a helper struct to parse, normalize and validate operations
 type parseKit struct {
+	skipReuse           bool
 	parser              *astparser.Parser
 	doc                 *ast.Document
+	cachedDoc           *ast.Document
 	keyGen              *xxhash.Digest
 	normalizer          *astnormalization.OperationNormalizer
 	printer             *astprinter.Printer
@@ -446,6 +448,7 @@ type NormalizationCacheEntry struct {
 	exportedVariables        []byte
 	listVariableNames        []string
 	listVariableNameWraps    []int
+	doc                      *ast.Document
 }
 
 func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error) {
@@ -455,6 +458,7 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 	if o.cache != nil && o.cache.normalizationCache != nil {
 		entry, ok := o.cache.normalizationCache.Get(cacheKey)
 		if ok {
+			o.kit.cachedDoc = entry.doc
 			o.parsedOperation.NormalizedRepresentation = entry.normalizedRepresentation
 			o.parsedOperation.ID = entry.operationID
 			o.parsedOperation.Type = entry.operationType
@@ -548,8 +552,12 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 			exportedVariables:        exportedVariables,
 			listVariableNames:        listVariableNames,
 			listVariableNameWraps:    listVariableNameWraps,
+			doc:                      o.kit.doc,
 		}
 		o.cache.normalizationCache.Set(cacheKey, entry, 1)
+		// we typically re-use the kit, but in this case we're sharing the doc across requests for validation
+		// as such, we don't want to return and re-use the kit for future requests, so we're setting it to skipReuse true
+		o.kit.skipReuse = true
 	}
 
 	return false, nil
@@ -697,7 +705,7 @@ func (o *OperationKit) writeSkipIncludeCacheKeyToKeyGen(skipIncludeVariableNames
 	for i := range skipIncludeVariableNames {
 		value := o.parsedOperation.Variables.Get(skipIncludeVariableNames[i])
 		if value == nil {
-			_, _ = o.kit.keyGen.WriteString("f")
+			_, _ = o.kit.keyGen.WriteString("x")
 			continue
 		}
 		switch value.Type() {
@@ -706,13 +714,23 @@ func (o *OperationKit) writeSkipIncludeCacheKeyToKeyGen(skipIncludeVariableNames
 		case fastjson.TypeFalse:
 			_, _ = o.kit.keyGen.WriteString("f")
 		default:
-			_, _ = o.kit.keyGen.WriteString("f")
+			_, _ = o.kit.keyGen.WriteString("x")
 		}
 	}
 }
 
 // Validate validates the operation variables.
 func (o *OperationKit) Validate() error {
+	if o.kit.cachedDoc != nil {
+		err := o.kit.variablesValidator.Validate(o.kit.cachedDoc, o.operationParser.executor.ClientSchema, o.parsedOperation.Request.Variables)
+		if err != nil {
+			return &inputError{
+				message:    err.Error(),
+				statusCode: http.StatusOK,
+			}
+		}
+		return nil
+	}
 	err := o.kit.variablesValidator.Validate(o.kit.doc, o.operationParser.executor.ClientSchema, o.parsedOperation.Request.Variables)
 	if err != nil {
 		return &inputError{
@@ -860,6 +878,11 @@ func (p *OperationProcessor) getKit() *parseKit {
 }
 
 func (p *OperationProcessor) freeKit(kit *parseKit) {
+	if kit.skipReuse {
+		kit.skipReuse = false
+		kit.doc = ast.NewSmallDocument()
+	}
+	kit.cachedDoc = nil
 	kit.keyGen.Reset()
 	kit.doc.Reset()
 	kit.normalizedOperation.Reset()
