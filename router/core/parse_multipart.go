@@ -32,11 +32,11 @@ func NewMultipartParser(operationProcessor *OperationProcessor, maxUploadFiles i
 
 func (p *MultipartParser) RemoveAll() (err error) {
 	for _, file := range p.fileHandlers {
-		err = errors.Join(file.Close())
-		err = errors.Join(os.Remove(file.Name()))
+		err = errors.Join(err, file.Close())
+		err = errors.Join(err, os.Remove(file.Name()))
 	}
 	if p.form != nil {
-		err = errors.Join(p.form.RemoveAll())
+		err = errors.Join(err, p.form.RemoveAll())
 	}
 	return err
 }
