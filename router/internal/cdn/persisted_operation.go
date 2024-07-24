@@ -113,7 +113,7 @@ func (cdn *PersistedOperationsClient) PersistedOperation(ctx context.Context, cl
 	}
 
 	ctx, span := cdn.tracer.Start(ctx, "Load Persisted Operation",
-		trace.WithSpanKind(trace.SpanKindInternal),
+		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(attributes...),
 	)
 	defer span.End()

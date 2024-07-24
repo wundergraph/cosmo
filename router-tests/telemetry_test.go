@@ -656,7 +656,7 @@ func TestTelemetry(t *testing.T) {
 
 			require.Len(t, sn, 10, "expected 10 spans, got %d", len(sn))
 			require.Equal(t, "Load Persisted Operation", sn[1].Name())
-			require.Equal(t, trace.SpanKindInternal, sn[1].SpanKind())
+			require.Equal(t, trace.SpanKindClient, sn[1].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[1].Status())
 			require.Contains(t, sn[1].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[1].Attributes(), otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"))
