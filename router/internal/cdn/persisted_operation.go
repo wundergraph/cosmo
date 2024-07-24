@@ -146,7 +146,7 @@ func (cdn *PersistedOperationsClient) PersistedOperation(ctx context.Context, cl
 	}
 	defer resp.Body.Close()
 
-	span.SetAttributes(semconv.HTTPStatusCodeKey.Int(resp.StatusCode))
+	span.SetAttributes(semconv.HTTPStatusCode(resp.StatusCode))
 
 	if resp.StatusCode != http.StatusOK {
 		if resp.StatusCode == http.StatusNotFound {
