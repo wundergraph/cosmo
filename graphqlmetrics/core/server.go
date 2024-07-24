@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
+	"github.com/wundergraph/cosmo/graphqlmetrics/pkg/telemetry"
+	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.uber.org/zap"
 	brotli "go.withmatt.com/connect-brotli"
 	"net/http"
@@ -27,7 +30,6 @@ type Server struct {
 }
 
 func NewServer(metricsService graphqlmetricsv1connect.GraphQLMetricsServiceHandler, opts ...Option) *Server {
-	ctx := context.Background()
 	s := &Server{
 		metricsService: metricsService,
 		listenAddr:     ":4005",
@@ -38,22 +40,39 @@ func NewServer(metricsService graphqlmetricsv1connect.GraphQLMetricsServiceHandl
 		opt(s)
 	}
 
-	s.bootstrap(ctx)
+	s.bootstrap()
 
 	return s
 }
 
-func (s *Server) bootstrap(ctx context.Context) {
+func (s *Server) bootstrap() {
 	mux := http.NewServeMux()
+
+	tp, err := telemetry.InitTracer()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() {
+		if err := tp.Shutdown(context.Background()); err != nil {
+			s.logger.Error("Error shutting down tracer provider", zap.Error(err))
+		}
+	}()
+
 	path, handler := graphqlmetricsv1connect.NewGraphQLMetricsServiceHandler(
 		s.metricsService,
 		// Brotli compression support.
 		brotli.WithCompression(),
 	)
-	mux.Handle("/health", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+	healthHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-	}))
-	mux.Handle(path, authenticate(s.jwtSecret, s.logger, handler))
+	})
+
+	metricsServiceHandler := otelhttp.NewHandler(handler, "graphqlmetrics", otelhttp.WithTracerProvider(tp))
+	healthServiceHandler := otelhttp.NewHandler(healthHandler, "health", otelhttp.WithTracerProvider(tp))
+
+	mux.Handle("/health", healthServiceHandler)
+	mux.Handle(path, authenticate(s.jwtSecret, s.logger, metricsServiceHandler))
 
 	s.server = &http.Server{
 		Addr: s.listenAddr,
@@ -66,18 +85,14 @@ func (s *Server) bootstrap(ctx context.Context) {
 	}
 
 	if s.metricConfig.Prometheus.Enabled {
+		ctx := context.Background()
 		s.instanceID = "graphqlmetrics"
 		_, registry, err := rmetric.NewPrometheusMeterProvider(ctx, rmetric.DefaultConfig("dev"), s.instanceID)
 		if err != nil {
-			panic(fmt.Errorf("failed to create Prometheus exporter: %w", err))
+			s.logger.Error("Failed to create Prometheus exporter", zap.Error(err))
 		}
 
 		s.prometheusServer = rmetric.NewPrometheusServer(s.logger, s.metricConfig.Prometheus.ListenAddr, s.metricConfig.Prometheus.Path, registry)
-		go func() {
-			if err := s.prometheusServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-				s.logger.Error("Failed to start Prometheus server", zap.Error(err))
-			}
-		}()
 	}
 }
 
@@ -100,6 +115,30 @@ func (s *Server) Shutdown(ctx context.Context) error {
 
 	if err := s.server.Shutdown(ctx); err != nil {
 		s.logger.Error("Could not shutdown server", zap.Error(err))
+	}
+
+	return nil
+}
+
+func (s *Server) ShutdownPrometheusServer(ctx context.Context) error {
+	if s.prometheusServer == nil {
+		return errors.New("prometheus server was not initialized")
+	}
+
+	if err := s.prometheusServer.Shutdown(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Server) StartPrometheusServer() error {
+	if s.prometheusServer == nil {
+		return errors.New("prometheus server was not initialized")
+	}
+
+	if err := s.prometheusServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		return err
 	}
 
 	return nil

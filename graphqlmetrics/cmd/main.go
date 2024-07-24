@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"errors"
+	"net/http"
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/amacneil/dbmate/v2/pkg/dbmate"
 	_ "github.com/amacneil/dbmate/v2/pkg/driver/clickhouse"
@@ -138,6 +140,16 @@ func main() {
 		}
 	}()
 
+	if metricsConfig.IsEnabled() {
+		if metricsConfig.Prometheus.Enabled {
+			go func() {
+				if err := svr.StartPrometheusServer(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+					logger.Error("Failed to start Prometheus server", zap.Error(err))
+				}
+			}()
+		}
+	}
+
 	logger.Info("Server started", zap.String("listen_addr", cfg.ListenAddr))
 
 	<-ctx.Done()
@@ -151,6 +163,14 @@ func main() {
 		defer wg.Done()
 		ms.Shutdown(cfg.ShutdownDelay)
 	}()
+
+	if metricsConfig.IsEnabled() {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			svr.ShutdownPrometheusServer(context.Background())
+		}()
+	}
 
 	// enforce a maximum shutdown delay
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownDelay)
