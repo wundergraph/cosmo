@@ -238,18 +238,19 @@ export default function App() {
     setIsMounted(true);
   }, [isMounted]);
 
-  useEffect(() => {
-    const getSchema = async () => {
-      const res = await fetch(url, {
-        body: JSON.stringify({
-          operationName: 'IntrospectionQuery',
-          query: getIntrospectionQuery(),
-        }),
-        method: 'POST',
-      });
-      setSchema(buildClientSchema((await res.json()).data));
-    };
+  const getSchema = async (headersArg?: string) => {
+    const res = await fetch(url, {
+      body: JSON.stringify({
+        operationName: 'IntrospectionQuery',
+        query: getIntrospectionQuery(),
+      }),
+      method: 'POST',
+      headers: JSON.parse(headersArg || headers),
+    });
+    setSchema(buildClientSchema((await res.json()).data));
+  };
 
+  useEffect(() => {
     if (schema) {
       return;
     }
@@ -287,7 +288,10 @@ export default function App() {
             showPersistHeadersSettings={false}
             fetcher={fetcher}
             headers={headers}
-            onEditHeaders={setHeaders}
+            onEditHeaders={(value) => {
+              setHeaders(value);
+              getSchema(value);
+            }}
             plugins={[
               explorerPlugin({
                 showAttribution: false,
