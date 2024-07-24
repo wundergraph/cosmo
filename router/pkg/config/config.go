@@ -420,6 +420,26 @@ type SubgraphErrorPropagationConfiguration struct {
 	OmitExtensions       bool                         `yaml:"omit_extensions" default:"false" envconfig:"SUBGRAPH_ERROR_PROPAGATION_OMIT_EXTENSIONS"`
 }
 
+type ExecutionConfigS3Provider struct {
+	Endpoint  string `yaml:"endpoint"`
+	AccessKey string `yaml:"access_key"`
+	SecretKey string `yaml:"secret_key"`
+	Bucket    string `yaml:"bucket"`
+	Region    string `yaml:"region"`
+	Prefix    string `yaml:"prefix"`
+}
+
+type ExecutionConfigFileProvider struct {
+	Path  string `yaml:"path"`
+	Watch bool   `yaml:"watch"`
+}
+
+type ExecutionConfig struct {
+	Provider     string                      `yaml:"provider"`
+	S3Provider   ExecutionConfigS3Provider   `yaml:"s3_provider,inline"`
+	FileProvider ExecutionConfigFileProvider `yaml:"file_provider,inline"`
+}
+
 type Config struct {
 	Version string `yaml:"version,omitempty" ignored:"true"`
 
@@ -473,6 +493,8 @@ type Config struct {
 	WebSocket WebSocketConfiguration `yaml:"websocket,omitempty"`
 
 	SubgraphErrorPropagation SubgraphErrorPropagationConfiguration `yaml:"subgraph_error_propagation"`
+
+	ExecutionConfig ExecutionConfig `yaml:"execution_config"`
 }
 
 type LoadResult struct {

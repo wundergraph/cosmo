@@ -28,6 +28,88 @@
         }
       }
     },
+    "execution_config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable the execution config. The execution config is used to configure the router. The default value is true."
+        },
+        "provider": {
+          "type": "string",
+          "description": "The provider of the execution config. The supported providers are 'file' and 's3'.",
+          "enum": ["file", "s3"]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "provider": { "const": "s3" }
+            }
+          },
+          "then": {
+            "type": "object",
+            "required": ["bucket"],
+            "properties": {
+              "enabled": {
+                "type": "boolean",
+                "description": "Enable the S3 provider. The S3 provider is used to download the execution config from the S3 bucket. The default value is false."
+              },
+              "bucket": {
+                "type": "string",
+                "description": "The name of the S3 bucket. The S3 bucket is used to store the execution config."
+              },
+              "region": {
+                "type": "string",
+                "description": "The region of the S3 bucket. The region is used to specify the region of the S3 bucket."
+              },
+              "access_key": {
+                "type": "string",
+                "description": "The access key of the S3 bucket. The access key ID is used to authenticate with the S3 bucket."
+              },
+              "secret_key": {
+                "type": "string",
+                "description": "The secret key of the S3 bucket. The secret access key is used to authenticate with the S3 bucket."
+              },
+              "endpoint": {
+                "type": "string",
+                "description": "The endpoint of the S3 bucket. The endpoint is used to specify the endpoint of the S3 bucket."
+              },
+              "prefix": {
+                "type": "string",
+                "description": "The prefix of the execution config. The prefix is used to specify the prefix of the execution config in the S3 bucket."
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "provider": { "const": "file" }
+            }
+          },
+          "then": {
+            "type": "object",
+            "required": ["path"],
+            "properties": {
+              "enabled": {
+                "type": "boolean",
+                "description": "Enable the file provider. The file provider is used to load the execution config from the file system. The default value is false."
+              },
+              "path": {
+                "type": "string",
+                "description": "The path to the execution config. The path is used to specify the URL of the execution config."
+              },
+              "watch": {
+                "type": "boolean",
+                "description": "Enable the watch mode. The watch mode is used to watch the execution config for changes. The default value is false."
+              }
+            }
+          }
+        }
+      ]
+    },
     "graphql_metrics": {
       "type": "object",
       "additionalProperties": false,
@@ -142,9 +224,7 @@
             "allow_list": {
               "type": "array",
               "description": "The names of the headers to forward. The default value is 'Authorization'.",
-              "default": [
-                "Authorization"
-              ],
+              "default": ["Authorization"],
               "items": {
                 "type": "string"
               }
@@ -163,9 +243,7 @@
             "allow_list": {
               "type": "array",
               "description": "The names of the query parameters to forward. The default value is 'Authorization'.",
-              "default": [
-                "Authorization"
-              ],
+              "default": ["Authorization"],
               "items": {
                 "type": "string"
               }

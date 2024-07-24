@@ -4,3 +4,9 @@
 # This file is used to debugging purposes only.
 
 version: "1"
+
+execution_config:
+  provider: "s3"
+  enabled: true
+  endpoint: "http://localhost:9000"
+  bucket: "router"
