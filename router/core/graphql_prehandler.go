@@ -200,11 +200,6 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		// AFTER we're done with body (retrieved from parser.ReadBody())
 		buf := h.getBodyReadBuffer(r.ContentLength)
 
-		_, operationReadSpan := h.tracer.Start(r.Context(), "Operation - Read",
-			trace.WithSpanKind(trace.SpanKindInternal),
-			trace.WithAttributes(commonAttributes...),
-		)
-
 		if strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
 			if !h.fileUploadEnabled {
 				finalErr = &inputError{
@@ -213,9 +208,13 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				}
 				writeOperationError(r, w, requestLogger, finalErr)
 				h.releaseBodyReadBuffer(buf)
-				operationReadSpan.End()
 				return
 			}
+
+			_, readMultiPartSpan := h.tracer.Start(r.Context(), "HTTP - Read Multipart",
+				trace.WithSpanKind(trace.SpanKindInternal),
+				trace.WithAttributes(commonAttributes...),
+			)
 
 			multipartParser := NewMultipartParser(h.operationProcessor, h.maxUploadFiles, h.maxUploadFileSize)
 
@@ -225,15 +224,28 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				finalErr = err
 				writeOperationError(r, w, requestLogger, finalErr)
 				h.releaseBodyReadBuffer(buf)
-				operationReadSpan.End()
+				readMultiPartSpan.End()
 				return
 			}
 
+			readMultiPartSpan.SetAttributes(
+				otel.HTTPRequestUploadFileCount.Int(len(files)),
+			)
+
+			readMultiPartSpan.End()
+
 			// Cleanup all files. Must happen in here, so it is run after response is sent.
 			defer func() {
-				multipartParser.RemoveAll()
+				if err := multipartParser.RemoveAll(); err != nil {
+					requestLogger.Error("failed to remove files after multipart request", zap.Error(err))
+				}
 			}()
 		} else {
+			_, readOperationBodySpan := h.tracer.Start(r.Context(), "HTTP - Read Body",
+				trace.WithSpanKind(trace.SpanKindInternal),
+				trace.WithAttributes(commonAttributes...),
+			)
+
 			var err error
 			body, err = h.operationProcessor.ReadBody(buf, r.Body)
 			if err != nil {
@@ -249,40 +261,23 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 				writeOperationError(r, w, requestLogger, err)
 				h.releaseBodyReadBuffer(buf)
-				operationReadSpan.End()
+				readOperationBodySpan.End()
 				return
 			}
-		}
 
-		operationReadSpan.SetAttributes(
-			otel.WgGraphQLRequestSizeBytes.Int(len(body)),
-			otel.WgMultipartFilesCount.Int(len(files)),
-		)
-		operationReadSpan.End()
+			readOperationBodySpan.End()
+		}
 
 		/**
-		 * Parse the operation
+		 * Load and Parse the operation. Optionally, we will fetch the persisted operation from the CDN
 		 */
-
-		if !traceOptions.ExcludeParseStats {
-			traceTimings.StartParse()
-		}
-
-		parseCtx, engineParseSpan := h.tracer.Start(r.Context(), "Operation - Parse",
-			trace.WithSpanKind(trace.SpanKindInternal),
-			trace.WithAttributes(commonAttributes...),
-			trace.WithAttributes(attributes...),
-		)
 
 		operationKit, err := h.operationProcessor.NewKit(body, files)
 		if err != nil {
 			finalErr = err
 
-			rtrace.AttachErrToSpan(engineParseSpan, err)
 			// Mark the root span of the router as failed, so we can easily identify failed requests
 			rtrace.AttachErrToSpan(routerSpan, err)
-
-			engineParseSpan.End()
 
 			writeOperationError(r, w, requestLogger, err)
 			h.releaseBodyReadBuffer(buf)
@@ -297,28 +292,73 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			}
 		}()
 
-		err = operationKit.Parse(parseCtx, clientInfo, commonAttributes)
-		if err != nil {
+		if err := operationKit.UnmarshalOperation(); err != nil {
 			finalErr = err
 
-			rtrace.AttachErrToSpan(engineParseSpan, err)
 			// Mark the root span of the router as failed, so we can easily identify failed requests
 			rtrace.AttachErrToSpan(routerSpan, err)
-
-			engineParseSpan.End()
 
 			writeOperationError(r, w, requestLogger, err)
 			h.releaseBodyReadBuffer(buf)
 			return
 		}
 
-		engineParseSpan.End()
+		var skipParse bool
 
-		if !traceOptions.ExcludeParseStats {
-			traceTimings.EndParse()
+		if operationKit.parsedOperation.IsPersistedOperation {
+			skipParse, err = operationKit.FetchPersistedOperation(r.Context(), clientInfo, commonAttributes)
+			if err != nil {
+				finalErr = err
+
+				// Mark the root span of the router as failed, so we can easily identify failed requests
+				rtrace.AttachErrToSpan(routerSpan, err)
+
+				writeOperationError(r, w, requestLogger, err)
+				h.releaseBodyReadBuffer(buf)
+				return
+			}
+		}
+
+		// If the persistent operation is already in the cache, we skip the parse step
+		// because the operation was already parsed. This is a performance optimization, and we
+		// can do it because we know that the persisted operation is immutable (identified by the hash)
+		if !skipParse {
+			_, engineParseSpan := h.tracer.Start(r.Context(), "Operation - Parse",
+				trace.WithSpanKind(trace.SpanKindInternal),
+				trace.WithAttributes(commonAttributes...),
+				trace.WithAttributes(attributes...),
+			)
+
+			if !traceOptions.ExcludeParseStats {
+				traceTimings.StartParse()
+			}
+
+			err = operationKit.Parse()
+			if err != nil {
+				finalErr = err
+
+				rtrace.AttachErrToSpan(engineParseSpan, err)
+				// Mark the root span of the router as failed, so we can easily identify failed requests
+				rtrace.AttachErrToSpan(routerSpan, err)
+
+				engineParseSpan.End()
+
+				writeOperationError(r, w, requestLogger, err)
+				h.releaseBodyReadBuffer(buf)
+				return
+			}
+
+			if !traceOptions.ExcludeParseStats {
+				traceTimings.EndParse()
+			}
+
+			engineParseSpan.End()
 		}
 
 		h.releaseBodyReadBuffer(buf)
+
+		// Set the router span name after we have the operation name
+		routerSpan.SetName(GetSpanName(operationKit.parsedOperation.Request.OperationName, operationKit.parsedOperation.Type))
 
 		if blockedErr := h.operationBlocker.OperationIsBlocked(operationKit.parsedOperation); blockedErr != nil {
 			// Mark the root span of the router as failed, so we can easily identify failed requests
@@ -327,9 +367,6 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			writeRequestErrors(r, w, http.StatusOK, graphqlerrors.RequestErrorsFromError(blockedErr), requestLogger)
 			return
 		}
-
-		// Set the router span name after we have the operation name
-		routerSpan.SetName(GetSpanName(operationKit.parsedOperation.Request.OperationName, operationKit.parsedOperation.Type))
 
 		attributes = []attribute.KeyValue{
 			otel.WgOperationName.String(operationKit.parsedOperation.Request.OperationName),

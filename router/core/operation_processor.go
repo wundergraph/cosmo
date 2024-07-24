@@ -86,11 +86,11 @@ type OperationParserOptions struct {
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
 // It should be only instantiated once and shared across requests
 type OperationProcessor struct {
-	executor                *Executor
-	maxOperationSizeInBytes int64
-	cdn                     *cdn.PersistedOperationsClient
-	parseKitPool            *sync.Pool
-	operationCache          *OperationCache
+	executor                 *Executor
+	maxOperationSizeInBytes  int64
+	persistedOperationClient *cdn.PersistedOperationsClient
+	parseKitPool             *sync.Pool
+	operationCache           *OperationCache
 }
 
 // parseKit is a helper struct to parse, normalize and validate operations
@@ -165,13 +165,8 @@ func (o *OperationKit) Free() {
 	o.operationParser.freeKit(o.kit)
 }
 
-func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo, commonTraceAttributes []attribute.KeyValue) error {
-	var (
-		operationCount                  = 0
-		anonymousOperationCount         = 0
-		anonymousOperationDefinitionRef = -1
-	)
-
+// UnmarshalOperation loads the operation from the request body and unmarshal it into the ParsedOperation
+func (o *OperationKit) UnmarshalOperation() error {
 	err := json.Unmarshal(o.data, &o.parsedOperation.Request)
 	if err != nil {
 		return &inputError{
@@ -237,31 +232,50 @@ func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo, common
 	}
 
 	if o.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil && len(o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash) > 0 {
-		if o.operationParser.cdn == nil {
-			return &inputError{
-				message:    "could not resolve persisted query, feature is not configured",
-				statusCode: http.StatusOK,
-			}
-		}
 		o.parsedOperation.IsPersistedOperation = true
-		fromCache, err := o.loadPersistedOperationFromCache()
-		if err != nil {
-			return &inputError{
-				statusCode: http.StatusInternalServerError,
-				message:    "error loading persisted operation from cache",
-			}
-		}
-		if fromCache {
-			return nil
-		}
-		persistedOperationData, err := o.operationParser.cdn.PersistedOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, commonTraceAttributes)
-		if err != nil {
-			return err
-		}
-		// it's important to make a copy of the persisted operation data, because it's used in the cache
-		// we might modify it later, so we don't want to modify the cached data
-		o.parsedOperation.Request.Query = string(persistedOperationData)
 	}
+
+	return nil
+}
+
+// FetchPersistedOperation fetches the persisted operation from the cache or the client. If the operation is fetched from the cache it returns true.
+// UnmarshalOperation must be called before calling this method.
+func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *ClientInfo, commonTraceAttributes []attribute.KeyValue) (bool, error) {
+	if o.operationParser.persistedOperationClient == nil {
+		return false, &inputError{
+			message:    "could not resolve persisted query, feature is not configured",
+			statusCode: http.StatusOK,
+		}
+	}
+	fromCache, err := o.loadPersistedOperationFromCache()
+	if err != nil {
+		return false, &inputError{
+			statusCode: http.StatusInternalServerError,
+			message:    "error loading persisted operation from cache",
+		}
+	}
+	if fromCache {
+		return true, nil
+	}
+	persistedOperationData, err := o.operationParser.persistedOperationClient.PersistedOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, commonTraceAttributes)
+	if err != nil {
+		return false, err
+	}
+	// it's important to make a copy of the persisted operation data, because it's used in the cache
+	// we might modify it later, so we don't want to modify the cached data
+	o.parsedOperation.Request.Query = string(persistedOperationData)
+
+	return false, nil
+}
+
+// Parse parses the operation, populate the document and set the operation type.
+// UnmarshalOperation must be called before calling this method.
+func (o *OperationKit) Parse() error {
+	var (
+		operationCount                  = 0
+		anonymousOperationCount         = 0
+		anonymousOperationDefinitionRef = -1
+	)
 
 	if len(o.parsedOperation.Request.Query) == 0 {
 		return &inputError{
@@ -352,6 +366,7 @@ func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo, common
 	// Replace the operation name with a static name to avoid different IDs for the same operation
 	replaceOperationName := o.kit.doc.Input.AppendInputBytes(staticOperationName)
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = replaceOperationName
+
 	return nil
 }
 
@@ -833,9 +848,9 @@ func (o *OperationKit) skipIncludeVariableNames() []string {
 
 func NewOperationParser(opts OperationParserOptions) *OperationProcessor {
 	processor := &OperationProcessor{
-		executor:                opts.Executor,
-		maxOperationSizeInBytes: opts.MaxOperationSizeInBytes,
-		cdn:                     opts.PersistentOpClient,
+		executor:                 opts.Executor,
+		maxOperationSizeInBytes:  opts.MaxOperationSizeInBytes,
+		persistedOperationClient: opts.PersistentOpClient,
 		parseKitPool: &sync.Pool{
 			New: func() interface{} {
 				return &parseKit{

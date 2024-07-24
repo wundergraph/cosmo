@@ -30,14 +30,15 @@ func NewMultipartParser(operationProcessor *OperationProcessor, maxUploadFiles i
 	}
 }
 
-func (p *MultipartParser) RemoveAll() {
+func (p *MultipartParser) RemoveAll() (err error) {
 	for _, file := range p.fileHandlers {
-		file.Close()
-		os.Remove(file.Name())
+		errors.Join(file.Close())
+		errors.Join(os.Remove(file.Name()))
 	}
 	if p.form != nil {
-		p.form.RemoveAll()
+		errors.Join(p.form.RemoveAll())
 	}
+	return
 }
 
 func (p *MultipartParser) processInMemoryFile(filePart []*multipart.FileHeader, file multipart.File) error {

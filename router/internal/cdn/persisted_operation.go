@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	semconv12 "go.opentelemetry.io/otel/semconv/v1.12.0"
 	"io"
 	"net/http"
 	"net/url"
@@ -22,8 +23,7 @@ import (
 )
 
 const (
-	PersistedOperationNotFoundErrorCode = "PersistedQueryNotFound"
-	persistentAverageCacheEntrySize     = 4 * 1024 // 4kb
+	persistentAverageCacheEntrySize = 4 * 1024 // 4kb
 )
 
 var (
@@ -112,7 +112,7 @@ func (cdn *PersistedOperationsClient) PersistedOperation(ctx context.Context, cl
 		return data, nil
 	}
 
-	ctx, span := cdn.tracer.Start(ctx, "Operation - Load from CDN",
+	ctx, span := cdn.tracer.Start(ctx, "Load Persisted Operation",
 		trace.WithSpanKind(trace.SpanKindInternal),
 		trace.WithAttributes(attributes...),
 	)
@@ -130,6 +130,12 @@ func (cdn *PersistedOperationsClient) PersistedOperation(ctx context.Context, cl
 		return nil, err
 	}
 
+	span.SetAttributes(
+		semconv.HTTPURL(req.URL.String()),
+		semconv.HTTPMethod(http.MethodGet),
+		semconv12.HTTPHostKey.String(req.Host),
+	)
+
 	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
 	req.Header.Add("Authorization", "Bearer "+cdn.authenticationToken)
 	req.Header.Set("Accept-Encoding", "gzip")
@@ -140,7 +146,7 @@ func (cdn *PersistedOperationsClient) PersistedOperation(ctx context.Context, cl
 	}
 	defer resp.Body.Close()
 
-	span.SetAttributes(semconv.HTTPStatusCode(resp.StatusCode))
+	span.SetAttributes(semconv.HTTPStatusCodeKey.Int(resp.StatusCode))
 
 	if resp.StatusCode != http.StatusOK {
 		if resp.StatusCode == http.StatusNotFound {

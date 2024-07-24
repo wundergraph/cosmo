@@ -51,16 +51,14 @@ func TestTelemetry(t *testing.T) {
 
 			// Pre-Handler Operation Read
 
-			require.Equal(t, "Operation - Read", sn[0].Name())
+			require.Equal(t, "HTTP - Read Body", sn[0].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[0].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[0].Status())
-			require.Len(t, sn[0].Attributes(), 6)
+			require.Len(t, sn[0].Attributes(), 4)
 			require.Contains(t, sn[0].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[0].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[0].Attributes(), otel.WgFederatedGraphID.String("graph"))
 			require.Contains(t, sn[0].Attributes(), otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"))
-			require.Contains(t, sn[0].Attributes(), otel.WgGraphQLRequestSizeBytes.Int64(38))
-			require.Contains(t, sn[0].Attributes(), otel.WgMultipartFilesCount.Int64(0))
 
 			// Pre-Handler Operation Parse
 
@@ -657,18 +655,18 @@ func TestTelemetry(t *testing.T) {
 			sn := exporter.GetSpans().Snapshots()
 
 			require.Len(t, sn, 10, "expected 10 spans, got %d", len(sn))
-			require.Equal(t, "Operation - Load from CDN", sn[1].Name())
+			require.Equal(t, "Load Persisted Operation", sn[1].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[1].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[1].Status())
 			require.Contains(t, sn[1].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[1].Attributes(), otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"))
 			require.Contains(t, sn[1].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[1].Attributes(), otel.WgFederatedGraphID.String("graph"))
+			require.Contains(t, sn[1].Attributes(), semconv.HTTPMethod(http.MethodGet))
 			require.Contains(t, sn[1].Attributes(), semconv.HTTPStatusCode(200))
 
-			// The parent of "Load from CDN" should be "Parse"
-			require.Equal(t, "Operation - Parse", sn[2].Name())
-			require.Equal(t, sn[1].Parent().SpanID(), sn[2].SpanContext().SpanID())
+			// Ensure the persisted operation span is a child of the root span
+			require.Equal(t, sn[1].Parent().SpanID(), sn[9].SpanContext().SpanID())
 
 			exporter.Reset()
 
@@ -684,8 +682,8 @@ func TestTelemetry(t *testing.T) {
 
 			sn = exporter.GetSpans().Snapshots()
 
-			require.Len(t, sn, 9, "expected 9 spans, got %d", len(sn))
-			require.Equal(t, "Operation - Parse", sn[1].Name())
+			require.Len(t, sn, 8, "expected 8 spans, got %d", len(sn))
+			require.NotEqualf(t, "Load Persisted Operation", sn[1].Name(), "excepted no span because it was a cache hit")
 		})
 	})
 
