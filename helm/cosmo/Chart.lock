@@ -19,18 +19,18 @@ dependencies:
   version: ^0
 - name: postgresql
   repository: https://charts.bitnami.com/bitnami
-  version: 12.8.0
+  version: 12.12.10
 - name: keycloak
   repository: https://charts.bitnami.com/bitnami
   version: 21.7.1
 - name: clickhouse
   repository: https://charts.bitnami.com/bitnami
-  version: 5.0.2
+  version: 5.3.1
 - name: minio
   repository: https://charts.bitnami.com/bitnami
-  version: 12.10.0
+  version: 14.6.25
 - name: redis
   repository: https://charts.bitnami.com/bitnami
-  version: 18.9.1
-digest: sha256:2a7e77913d037f2b45525bee8e00cfa9938172149abbd311f12e5761d0f5eae5
-generated: "2024-07-19T17:13:04.492235+05:30"
+  version: 19.3.3
+digest: sha256:5cad46df3af623eb9b400f50862861e28af36a2ff669ce3808b2614515497740
+generated: "2024-07-23T13:46:28.360453+02:00"
