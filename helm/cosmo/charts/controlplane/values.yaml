@@ -191,7 +191,7 @@ configuration:
   # -- URL of the CDN to use for serving router configs and persistent operations
   cdnBaseUrl: 'http://cosmo-cdn:8787'
 
-  # Use this section to disable/enable and configure prometheus metrics.
+  # -- Use this section to disable/enable and configure prometheus metrics.
   prometheus:
     # -- Enables prometheus metrics support. Default is false.
     enabled: false
@@ -212,3 +212,21 @@ configuration:
 
 # -- Existing secret in the same namespace containing the ControlPlane Secrets. The secret keys have to match with current secret.
 existingSecret: ""
+
+# -- Configure jobs to be executed in the control plane
+jobs:
+  # -- Used to deactivate an organization with a reason and schedule deletion
+  deactivateOrganization:
+    enabled: false
+    slug: 'foo'
+    id: '123'
+    reason: ''
+  # -- Used to activate an organization and remove the scheduled deletion
+  activateOrganization:
+    enabled: false
+    slug: 'foo'
+    id: '123'
+  # -- Used to delete the user
+  deleteUser:
+    enabled: false
+    id: '123'
