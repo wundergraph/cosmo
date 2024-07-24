@@ -5,21 +5,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	semconv12 "go.opentelemetry.io/otel/semconv/v1.12.0"
-	"io"
-	"net/http"
-	"net/url"
-	"time"
-
 	"github.com/buger/jsonparser"
 	"github.com/dgraph-io/ristretto"
 	"github.com/wundergraph/cosmo/router/internal/jwt"
 	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv12 "go.opentelemetry.io/otel/semconv/v1.12.0"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
+	"io"
+	"net/http"
+	"net/url"
 )
 
 const (
@@ -65,7 +63,6 @@ type cdnPersistedOperationsCache struct {
 	// cache is the backing store for the in-memory cache. Note
 	// that if the cache is disabled, this will be nil
 	cache *ristretto.Cache[string, []byte]
-	ttl   time.Duration
 }
 
 func (c *cdnPersistedOperationsCache) key(clientName string, operationHash []byte) string {
@@ -80,14 +77,13 @@ func (c *cdnPersistedOperationsCache) Get(clientName string, operationHash strin
 }
 
 func (c *cdnPersistedOperationsCache) Set(clientName, operationHash string, operationBody []byte) {
-	c.cache.SetWithTTL(c.key(clientName, unsafebytes.StringToBytes(operationHash)), operationBody, int64(len(operationBody)), c.ttl)
+	c.cache.Set(c.key(clientName, unsafebytes.StringToBytes(operationHash)), operationBody, int64(len(operationBody)))
 }
 
 type PersistentOperationsOptions struct {
 	// CacheSize indicates the in-memory cache size, in bytes. If 0, no in-memory
 	// cache is used.
 	CacheSize     uint64
-	TTL           time.Duration
 	Logger        *zap.Logger
 	TraceProvider *sdktrace.TracerProvider
 }
