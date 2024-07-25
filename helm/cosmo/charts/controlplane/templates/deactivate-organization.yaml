@@ -2,10 +2,11 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: "{{ include "controlplane.fullname" . }}-deactivate-organization-{{ .Values.jobs.deactivateOrganization.id }}"
+  name: "{{ include "controlplane.fullname" . }}-deactivate-org-{{ trunc 8 .Values.jobs.deactivateOrganization.id }}"
   labels:
     {{- include "controlplane.labels" . | nindent 4 }}
   annotations:
+    organization-id: {{ .Values.jobs.deactivateOrganization.id }}
     # Run the job after installing the helm chart
     "helm.sh/hook": post-install,post-upgrade
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded

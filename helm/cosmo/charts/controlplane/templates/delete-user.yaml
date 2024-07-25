@@ -2,10 +2,11 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: "{{ include "controlplane.fullname" . }}-delete-user-{{ .Values.jobs.deleteUser.id }}"
+  name: "{{ include "controlplane.fullname" . }}-delete-user-{{ trunc 8 .Values.jobs.deleteUser.id }}"
   labels:
     {{- include "controlplane.labels" . | nindent 4 }}
   annotations:
+    "user-id": {{ .Values.jobs.deleteUser.id }}
     # Run the job after installing the helm chart
     "helm.sh/hook": post-install,post-upgrade
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
