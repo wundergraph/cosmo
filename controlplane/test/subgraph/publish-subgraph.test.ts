@@ -85,7 +85,7 @@ describe('Publish subgraph tests', () => {
     expect(publishFederatedSubgraphResp.response?.details).toBe(
       'The subgraph was originally created as a regular subgraph.' +
       ' A regular subgraph cannot be retroactively changed into an Event-Driven Graph (EDG).' +
-      ' Please create a new Event-Driven subgraph with the -edg flag.',
+      ' Please create a new Event-Driven subgraph with the --edg flag.',
     );
 
     await server.close();

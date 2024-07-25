@@ -57,7 +57,6 @@ describe('Create feature subgraph tests', () => {
     await server.close();
   });
 
-
   test('that an error is returned if the base graph does not exist in the same namespace', async () => {
     const { client, server } = await SetupTest({ dbname });
 
@@ -78,7 +77,9 @@ describe('Create feature subgraph tests', () => {
     });
 
     expect(featureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR);
-    expect(featureSubgraphResponse.response?.details).toBe(`Base subgraph "${subgraphName}" does not exist in the namespace "${namespace}".`);
+    expect(featureSubgraphResponse.response?.details).toBe(
+      `Base subgraph "${subgraphName}" does not exist in the namespace "${namespace}".`,
+    );
 
     await server.close();
   });
@@ -114,8 +115,9 @@ describe('Create feature subgraph tests', () => {
     });
 
     expect(featureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
-    expect(featureSubgraphResponse.response?.details)
-      .toBe(`A subgraph with the name "${subgraphName}" already exists in the namespace "default".`);
+    expect(featureSubgraphResponse.response?.details).toBe(
+      `A subgraph with the name "${subgraphName}" already exists in the namespace "default".`,
+    );
 
     await server.close();
   });
@@ -137,8 +139,9 @@ describe('Create feature subgraph tests', () => {
     });
 
     expect(featureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
-    expect(featureSubgraphResponse.response?.details)
-      .toBe(`A subgraph with the name "${subgraphNameTwo}" already exists in the namespace "default".`);
+    expect(featureSubgraphResponse.response?.details).toBe(
+      `A subgraph with the name "${subgraphNameTwo}" already exists in the namespace "default".`,
+    );
 
     await server.close();
   });
@@ -166,8 +169,73 @@ describe('Create feature subgraph tests', () => {
       baseSubgraphName: subgraphNameOne,
     });
     expect(featureSubgraphResponseTwo.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
-    expect(featureSubgraphResponseTwo.response?.details)
-      .toBe(`A feature subgraph with the name "${featureSubgraphName}" already exists in the namespace "default".`);
+    expect(featureSubgraphResponseTwo.response?.details).toBe(
+      `A feature subgraph with the name "${featureSubgraphName}" already exists in the namespace "default".`,
+    );
+
+    await server.close();
+  });
+
+  test('that a feature subgraph can be created and published with one command.', async () => {
+    const { client, server } = await SetupTest({ dbname });
+
+    const subgraphNameOne = genID('subgraphOne');
+    const featureSubgraphName = genID('featureSubgraphOne');
+
+    await createSubgraph(client, subgraphNameOne, DEFAULT_SUBGRAPH_URL_ONE);
+
+    const featureSubgraphResponseOne = await client.publishFederatedSubgraph({
+      name: featureSubgraphName,
+      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      isFeatureSubgraph: true,
+      baseSubgraphName: subgraphNameOne,
+      schema: 'type Query { hello: String }',
+    });
+    expect(featureSubgraphResponseOne.response?.code).toBe(EnumStatusCode.OK);
+
+    await server.close();
+  });
+
+  test('that a feature subgraph with out base subgraph cannot be created and published with one command.', async () => {
+    const { client, server } = await SetupTest({ dbname });
+
+    const subgraphNameOne = genID('subgraphOne');
+    const featureSubgraphName = genID('featureSubgraphOne');
+
+    await createSubgraph(client, subgraphNameOne, DEFAULT_SUBGRAPH_URL_ONE);
+
+    const featureSubgraphResponseOne = await client.publishFederatedSubgraph({
+      name: featureSubgraphName,
+      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      isFeatureSubgraph: true,
+      schema: 'type Query { hello: String }',
+    });
+    expect(featureSubgraphResponseOne.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
+    expect(featureSubgraphResponseOne.response?.details).toBe(
+      `Feature Subgraph ${featureSubgraphName} not found. If intended to create and publish, please pass the name of the base subgraph with --subgraph option.`,
+    );
+
+    await server.close();
+  });
+
+  test('that a feature subgraph with out a valid routing url cannot be created and published with one command.', async () => {
+    const { client, server } = await SetupTest({ dbname });
+
+    const subgraphNameOne = genID('subgraphOne');
+    const featureSubgraphName = genID('featureSubgraphOne');
+
+    await createSubgraph(client, subgraphNameOne, DEFAULT_SUBGRAPH_URL_ONE);
+
+    const featureSubgraphResponseOne = await client.publishFederatedSubgraph({
+      name: featureSubgraphName,
+      isFeatureSubgraph: true,
+      baseSubgraphName: subgraphNameOne,
+      schema: 'type Query { hello: String }',
+    });
+    expect(featureSubgraphResponseOne.response?.code).toBe(EnumStatusCode.ERR);
+    expect(featureSubgraphResponseOne.response?.details).toBe(
+      `A valid, non-empty routing URL is required to create and publish a feature subgraph.`,
+    );
 
     await server.close();
   });
