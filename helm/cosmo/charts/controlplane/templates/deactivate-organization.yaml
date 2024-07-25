@@ -2,7 +2,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: "{{ include "controlplane.fullname" . }}-deactivate-organization-{{ .Values.jobs.deactivateOrganization.id }}}-{{ now | unixEpoch }}"
+  name: "{{ include "controlplane.fullname" . }}-deactivate-organization-{{ .Values.jobs.deactivateOrganization.id }}"
   labels:
     {{- include "controlplane.labels" . | nindent 4 }}
   annotations:
