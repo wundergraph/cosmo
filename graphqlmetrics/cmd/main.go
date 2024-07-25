@@ -167,7 +167,9 @@ func main() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			svr.ShutdownPrometheusServer(context.Background())
+			if err := svr.ShutdownPrometheusServer(context.Background()); err != nil {
+				logger.Error("Could not shutdown prometheus server", zap.Error(err))
+			}
 		}()
 	}
 
