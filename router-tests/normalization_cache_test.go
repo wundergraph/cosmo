@@ -62,6 +62,59 @@ func TestNormalizationCache(t *testing.T) {
 	})
 }
 
+func TestDefaultValuesForSkipInclude(t *testing.T) {
+	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Query:         `query MyQuery($yes: Boolean! = true) { employee(id: 1) { details { forename surname @include(if: $yes) } } }`,
+			Variables:     []byte(`{}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"employee":{"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+		require.Equal(t, "MISS", res.Response.Header.Get(core.NormalizationCacheHeader))
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Query:         `query MyQuery($yes: Boolean! = true) { employee(id: 1) { details { forename surname @include(if: $yes) } } }`,
+			Variables:     []byte(`{}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"employee":{"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+		require.Equal(t, "HIT", res.Response.Header.Get(core.NormalizationCacheHeader))
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Query:         `query MyQuery($yes: Boolean! = true) { employee(id: 1) { details { forename surname @include(if: $yes) } } }`,
+			Variables:     []byte(`{"yes": false}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"employee":{"details":{"forename":"Jens"}}}}`, res.Body)
+		require.Equal(t, "MISS", res.Response.Header.Get(core.NormalizationCacheHeader))
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Query:         `query MyQuery($yes: Boolean! = true) { employee(id: 1) { details { forename surname @include(if: $yes) } } }`,
+			Variables:     []byte(`{"yes": false}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"employee":{"details":{"forename":"Jens"}}}}`, res.Body)
+		require.Equal(t, "HIT", res.Response.Header.Get(core.NormalizationCacheHeader))
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Query:         `query MyQuery($yes: Boolean! = true) { employee(id: 1) { details { forename surname @include(if: $yes) } } }`,
+			Variables:     []byte(`{"yes": true}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"employee":{"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+		require.Equal(t, "MISS", res.Response.Header.Get(core.NormalizationCacheHeader))
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Query:         `query MyQuery($yes: Boolean! = true) { employee(id: 1) { details { forename surname @include(if: $yes) } } }`,
+			Variables:     []byte(`{"yes": true}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"employee":{"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+		require.Equal(t, "HIT", res.Response.Header.Get(core.NormalizationCacheHeader))
+	})
+}
+
 func TestWithoutNormalizationCache(t *testing.T) {
 	testenv.Run(t, &testenv.Config{
 		ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
@@ -84,5 +137,147 @@ func TestWithoutNormalizationCache(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "MISS", res.Response.Header.Get(core.NormalizationCacheHeader))
 		require.Equal(t, `{"data":{"employee":{"details":{"pets":[{"name":"Abby","__typename":"Dog","breed":"GOLDEN_RETRIEVER","class":"MAMMAL","gender":"FEMALE"},{"name":"Survivor","__typename":"Pony"}]}}}}`, res.Body)
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Query:         `query MyQuery($arg: [[String!]!]! = "a") {rootFieldWithNestedListArg(arg: $arg)}`,
+			Variables:     []byte(`{"arg": "b"}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"rootFieldWithNestedListArg":[["b"]]}}`, res.Body)
+		require.Equal(t, "MISS", res.Response.Header.Get(core.NormalizationCacheHeader))
+	})
+}
+
+func TestWithInputListCoercion(t *testing.T) {
+	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Query:         `query MyQuery($arg: [String!]!) {rootFieldWithListArg(arg: $arg)}`,
+			Variables:     []byte(`{"arg": "a"}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"rootFieldWithListArg":["a"]}}`, res.Body)
+		require.Equal(t, "MISS", res.Response.Header.Get(core.NormalizationCacheHeader))
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Query:         `query MyQuery($arg: [String!]!) {rootFieldWithListArg(arg: $arg)}`,
+			Variables:     []byte(`{"arg": "a"}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"rootFieldWithListArg":["a"]}}`, res.Body)
+		require.Equal(t, "HIT", res.Response.Header.Get(core.NormalizationCacheHeader))
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Query:         `query MyQuery($arg: [String!]!) {rootFieldWithListArg(arg: $arg)}`,
+			Variables:     []byte(`{"arg": "a"}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"rootFieldWithListArg":["a"]}}`, res.Body)
+		require.Equal(t, "HIT", res.Response.Header.Get(core.NormalizationCacheHeader))
+
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Query:         `query MyQuery($arg: [String!]! = "a") {rootFieldWithListArg(arg: $arg)}`,
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"rootFieldWithListArg":["a"]}}`, res.Body)
+		require.Equal(t, "MISS", res.Response.Header.Get(core.NormalizationCacheHeader))
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Query:         `query MyQuery($arg: [String!]! = "a") {rootFieldWithListArg(arg: $arg)}`,
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"rootFieldWithListArg":["a"]}}`, res.Body)
+		require.Equal(t, "HIT", res.Response.Header.Get(core.NormalizationCacheHeader))
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Query:         `query MyQuery($arg: [String!]! = "a") {rootFieldWithListArg(arg: $arg)}`,
+			Variables:     []byte(`{"arg": "b"}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"rootFieldWithListArg":["b"]}}`, res.Body)
+		require.Equal(t, "HIT", res.Response.Header.Get(core.NormalizationCacheHeader))
+
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Query:         `query MyQuery($arg: [EnumType!]!) {rootFieldWithListOfEnumArg(arg: $arg)}`,
+			Variables:     []byte(`{"arg": "A"}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"rootFieldWithListOfEnumArg":["A"]}}`, res.Body)
+		require.Equal(t, "MISS", res.Response.Header.Get(core.NormalizationCacheHeader))
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Query:         `query MyQuery($arg: [EnumType!]!) {rootFieldWithListOfEnumArg(arg: $arg)}`,
+			Variables:     []byte(`{"arg": "B"}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"rootFieldWithListOfEnumArg":["B"]}}`, res.Body)
+		require.Equal(t, "HIT", res.Response.Header.Get(core.NormalizationCacheHeader))
+
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Query:         `query MyQuery($arg: [InputType!]!) {rootFieldWithListOfInputArg(arg: $arg){arg}}`,
+			Variables:     []byte(`{"arg": {"arg": "a"}}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"rootFieldWithListOfInputArg":[{"arg":"a"}]}}`, res.Body)
+		require.Equal(t, "MISS", res.Response.Header.Get(core.NormalizationCacheHeader))
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Query:         `query MyQuery($arg: [InputType!]!) {rootFieldWithListOfInputArg(arg: $arg){arg}}`,
+			Variables:     []byte(`{"arg": {"arg": "b"}}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"rootFieldWithListOfInputArg":[{"arg":"b"}]}}`, res.Body)
+		require.Equal(t, "HIT", res.Response.Header.Get(core.NormalizationCacheHeader))
+
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Query:         `query MyQuery($arg: [[String!]!]!) {rootFieldWithNestedListArg(arg: $arg)}`,
+			Variables:     []byte(`{"arg": "a"}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"rootFieldWithNestedListArg":[["a"]]}}`, res.Body)
+		require.Equal(t, "MISS", res.Response.Header.Get(core.NormalizationCacheHeader))
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Query:         `query MyQuery($arg: [[String!]!]!) {rootFieldWithNestedListArg(arg: $arg)}`,
+			Variables:     []byte(`{"arg": "a"}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"rootFieldWithNestedListArg":[["a"]]}}`, res.Body)
+		require.Equal(t, "HIT", res.Response.Header.Get(core.NormalizationCacheHeader))
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Query:         `query MyQuery($arg: [[String!]!]!) {rootFieldWithNestedListArg(arg: $arg)}`,
+			Variables:     []byte(`{"arg": "b"}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"rootFieldWithNestedListArg":[["b"]]}}`, res.Body)
+		require.Equal(t, "HIT", res.Response.Header.Get(core.NormalizationCacheHeader))
+
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Query:         `query MyQuery($arg: [[String!]!]! = "a") {rootFieldWithNestedListArg(arg: $arg)}`,
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"rootFieldWithNestedListArg":[["a"]]}}`, res.Body)
+		require.Equal(t, "MISS", res.Response.Header.Get(core.NormalizationCacheHeader))
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Query:         `query MyQuery($arg: [[String!]!]! = "a") {rootFieldWithNestedListArg(arg: $arg)}`,
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"rootFieldWithNestedListArg":[["a"]]}}`, res.Body)
+		require.Equal(t, "HIT", res.Response.Header.Get(core.NormalizationCacheHeader))
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Query:         `query MyQuery($arg: [[String!]!]! = "a") {rootFieldWithNestedListArg(arg: $arg)}`,
+			Variables:     []byte(`{"arg": "b"}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"rootFieldWithNestedListArg":[["b"]]}}`, res.Body)
+		require.Equal(t, "HIT", res.Response.Header.Get(core.NormalizationCacheHeader))
 	})
 }
