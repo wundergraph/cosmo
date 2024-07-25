@@ -34,6 +34,8 @@ import { useRouter } from "next/router";
 import React, { useEffect } from "react";
 import { PiCheck } from "react-icons/pi";
 
+const billingContactLink = process.env.NEXT_PUBLIC_BILLING_CONTACT_LINK;
+
 const getPrice = (price?: number) => {
   switch (price) {
     case 0:
@@ -143,6 +145,17 @@ const BillingPage: NextPageWithLayout = () => {
             </div>
 
             <div className="mt-auto flex flex-col">
+              {billingContactLink && plan.price > 0 && (
+                <div className="pb-6">
+                  <a
+                    href={billingContactLink}
+                    target="_blank"
+                    className="font-mono text-xs tracking-tight text-gray-200 underline decoration-dotted underline-offset-4 hover:text-gray-300"
+                  >
+                    Need a custom plan?
+                  </a>
+                </div>
+              )}
               <UpgradeButton
                 plan={plan}
                 hasSubscription={
