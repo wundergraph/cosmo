@@ -5,7 +5,6 @@ import (
 	"errors"
 	"github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	"github.com/wundergraph/cosmo/graphqlmetrics/pkg/telemetry"
-	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.uber.org/zap"
 	brotli "go.withmatt.com/connect-brotli"
@@ -23,9 +22,7 @@ type Server struct {
 	jwtSecret      []byte
 	metricsService graphqlmetricsv1connect.GraphQLMetricsServiceHandler
 
-	metricConfig *rmetric.Config
-	instanceID   string
-
+	metricConfig     *telemetry.Config
 	prometheusServer *http.Server
 }
 
@@ -48,31 +45,45 @@ func NewServer(metricsService graphqlmetricsv1connect.GraphQLMetricsServiceHandl
 func (s *Server) bootstrap() {
 	mux := http.NewServeMux()
 
-	tp, err := telemetry.InitTracer()
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer func() {
-		if err := tp.Shutdown(context.Background()); err != nil {
-			s.logger.Error("Error shutting down tracer provider", zap.Error(err))
-		}
-	}()
-
 	path, handler := graphqlmetricsv1connect.NewGraphQLMetricsServiceHandler(
 		s.metricsService,
 		// Brotli compression support.
 		brotli.WithCompression(),
 	)
-
 	healthHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	metricsServiceHandler := otelhttp.NewHandler(handler, "graphqlmetrics", otelhttp.WithTracerProvider(tp))
-	healthServiceHandler := otelhttp.NewHandler(healthHandler, "health", otelhttp.WithTracerProvider(tp))
+	if s.metricConfig.OpenTelemetry.Enabled {
+		tp, err := s.metricConfig.NewTracerProvider()
+		if err != nil {
+			s.logger.Error("Error creating tracing provider", zap.Error(err))
+		}
+		defer func() {
+			if err := tp.Shutdown(context.Background()); err != nil {
+				s.logger.Error("Error shutting down tracer provider", zap.Error(err))
+			}
+		}()
+		handler = otelhttp.NewHandler(handler, "graphqlmetrics", otelhttp.WithTracerProvider(tp))
+	}
 
-	mux.Handle("/health", healthServiceHandler)
-	mux.Handle(path, authenticate(s.jwtSecret, s.logger, metricsServiceHandler))
+	mux.Handle("/health", healthHandler)
+	mux.Handle(path, authenticate(s.jwtSecret, s.logger, handler))
+
+	if s.metricConfig.Prometheus.Enabled {
+		mp, registry, err := s.metricConfig.NewPrometheusMeterProvider()
+		if err != nil {
+			s.logger.Error("Failed to create Prometheus exporter", zap.Error(err))
+		}
+
+		defer func() {
+			if err := mp.Shutdown(context.Background()); err != nil {
+				s.logger.Error("Error shutting down metrics provider", zap.Error(err))
+			}
+		}()
+
+		s.prometheusServer = telemetry.NewPrometheusServer(s.logger, s.metricConfig.Prometheus.ListenAddr, s.metricConfig.Prometheus.Path, registry)
+	}
 
 	s.server = &http.Server{
 		Addr: s.listenAddr,
@@ -82,17 +93,6 @@ func (s *Server) bootstrap() {
 		ReadHeaderTimeout: 20 * time.Second,
 		Handler:           mux,
 		ErrorLog:          zap.NewStdLog(s.logger),
-	}
-
-	if s.metricConfig.Prometheus.Enabled {
-		ctx := context.Background()
-		s.instanceID = "graphqlmetrics"
-		_, registry, err := rmetric.NewPrometheusMeterProvider(ctx, rmetric.DefaultConfig("dev"), s.instanceID)
-		if err != nil {
-			s.logger.Error("Failed to create Prometheus exporter", zap.Error(err))
-		}
-
-		s.prometheusServer = rmetric.NewPrometheusServer(s.logger, s.metricConfig.Prometheus.ListenAddr, s.metricConfig.Prometheus.Path, registry)
 	}
 }
 
@@ -162,7 +162,7 @@ func WithJwtSecret(secret []byte) Option {
 	}
 }
 
-func WithMetrics(cfg *rmetric.Config) Option {
+func WithMetrics(cfg *telemetry.Config) Option {
 	return func(s *Server) {
 		s.metricConfig = cfg
 	}

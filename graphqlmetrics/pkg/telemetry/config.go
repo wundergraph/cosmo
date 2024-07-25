@@ -1,17 +1,16 @@
 package telemetry
 
 import (
-	"context"
+	"net/http"
+	"regexp"
+	"time"
 
-	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/prometheus"
-	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
-	"go.opentelemetry.io/otel/propagation"
-	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/resource"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/otel/attribute"
+	"go.uber.org/zap"
 )
 
 const (
@@ -22,46 +21,76 @@ const (
 // NewTelemetryConfig creates a rmetric.Config without the OTEL export enabled
 // this is done to reuse the config from the cosmo-router which is already
 // implementing OTEL data
-func NewTelemetryConfig(prometheusConfig rmetric.PrometheusConfig) *rmetric.Config {
-	return &rmetric.Config{
+func NewTelemetryConfig(prometheusConfig PrometheusConfig) *Config {
+	return &Config{
 		Name:       DefaultServerName,
 		Version:    serviceVersion,
 		Prometheus: prometheusConfig,
 	}
 }
 
-func InitTracer() (*sdktrace.TracerProvider, error) {
-	// Create stdout exporter to be able to retrieve
-	// the collected spans.
-	exporter, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
-	if err != nil {
-		return nil, err
-	}
-
-	// For the demonstration, use sdktrace.AlwaysSample sampler to sample all traces.
-	// In a production application, use sdktrace.ProbabilitySampler with a desired probability.
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithBatcher(exporter),
-		sdktrace.WithResource(resource.NewWithAttributes(semconv.SchemaURL, semconv.ServiceName("ExampleService"))),
-	)
-	otel.SetTracerProvider(tp)
-	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
-	return tp, err
+type OpenTelemetry struct {
+	Enabled bool
 }
 
-func InitMeter() (*prometheus.Exporter, func(context.Context) error) {
-	exporter, err := prometheus.New()
-	if err != nil {
-		panic(err)
+// Config represents the configuration for the agent.
+type Config struct {
+	// Name represents the service name for metrics. The default value is cosmo-router.
+	Name string
+
+	// Version represents the service version for metrics. The default value is dev.
+	Version string
+
+	// OpenTelemetry includes the OpenTelemetry configuration
+	OpenTelemetry OpenTelemetry
+
+	// Prometheus includes the Prometheus configuration
+	Prometheus PrometheusConfig
+
+	// AttributesMapper added to the global attributes for all metrics.
+	AttributesMapper func(req *http.Request) []attribute.KeyValue
+
+	// ResourceAttributes added to the global resource attributes for all metrics.
+	ResourceAttributes []attribute.KeyValue
+}
+
+type PrometheusConfig struct {
+	Enabled    bool
+	ListenAddr string
+	Path       string
+	// Metrics to exclude from Prometheus exporter
+	ExcludeMetrics []*regexp.Regexp
+	// Metric labels to exclude from Prometheus exporter
+	ExcludeMetricLabels []*regexp.Regexp
+	// TestRegistry is used for testing purposes. If set, the registry will be used instead of the default one.
+	TestRegistry *prometheus.Registry
+}
+
+func (c *Config) IsEnabled() bool {
+	return c.Prometheus.Enabled
+}
+
+func NewPrometheusServer(logger *zap.Logger, listenAddr string, path string, registry *prometheus.Registry) *http.Server {
+	r := chi.NewRouter()
+	r.Use(middleware.Recoverer)
+	r.Handle(path, promhttp.HandlerFor(registry, promhttp.HandlerOpts{
+		EnableOpenMetrics: true,
+		ErrorLog:          zap.NewStdLog(logger),
+		Registry:          registry,
+		Timeout:           10 * time.Second,
+	}))
+
+	svr := &http.Server{
+		Addr:              listenAddr,
+		ReadTimeout:       1 * time.Minute,
+		WriteTimeout:      1 * time.Minute,
+		ReadHeaderTimeout: 2 * time.Second,
+		IdleTimeout:       30 * time.Second,
+		ErrorLog:          zap.NewStdLog(logger),
+		Handler:           r,
 	}
 
-	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(exporter),
-		sdkmetric.WithResource(resource.NewWithAttributes(
-			semconv.SchemaURL,
-			semconv.ServiceNameKey.String("example-service"),
-		)),
-	)
-	otel.SetMeterProvider(mp)
-	return exporter, mp.Shutdown
+	logger.Info("Prometheus metrics enabled", zap.String("listen_addr", svr.Addr), zap.String("endpoint", path))
+
+	return svr
 }

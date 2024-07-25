@@ -11,7 +11,6 @@ import (
 	"github.com/wundergraph/cosmo/graphqlmetrics/core"
 	"github.com/wundergraph/cosmo/graphqlmetrics/internal/logging"
 	"github.com/wundergraph/cosmo/graphqlmetrics/pkg/telemetry"
-	"github.com/wundergraph/cosmo/router/pkg/metric"
 	"go.uber.org/automaxprocs/maxprocs"
 	"go.uber.org/zap"
 	"log"
@@ -116,11 +115,11 @@ func main() {
 	ms := core.NewMetricsService(logger, conn)
 
 	metricsConfig := telemetry.NewTelemetryConfig(
-		metric.PrometheusConfig{
+		telemetry.PrometheusConfig{
 			Enabled:    cfg.IsPrometheusEnabled,
 			ListenAddr: cfg.PrometheusListenAddr,
 			Path:       cfg.PrometheusPath,
-			// TODO: implement behaviour for running tests
+			// TODO: enable in tests
 			// TestRegistry: &prometheus.Registry{},
 		},
 	)
