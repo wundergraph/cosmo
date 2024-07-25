@@ -1,0 +1,117 @@
+{{ if .Values.jobs.deleteUser.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  # We truncate the user id to keep within 52 characters for the name. We add the full id in the annotations.
+  name: "{{ include "controlplane.fullname" . }}-delete-user-{{ trunc 8 .Values.jobs.deleteUser.id }}"
+  labels:
+    {{- include "controlplane.labels" . | nindent 4 }}
+  annotations:
+    "user-id": {{ .Values.jobs.deleteUser.id }}
+    # Run the job after installing the helm chart
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    # Support for k14s.io. This annotation ensure that the job is run after the postgresql and keycloak deployment
+    kapp.k14s.io/change-rule.postgres: "upsert after upserting cosmo.apps.postgresql.wundergraph.com/deployment"
+    kapp.k14s.io/change-rule.keycloak: "upsert after upserting cosmo.apps.keycloak.wundergraph.com/deployment"
+spec:
+  backoffLimit: 10
+  parallelism: 1
+  # 2 days
+  ttlSecondsAfterFinished: 172800
+  template:
+    metadata:
+      name: "{{ include "controlplane.fullname" . }}-delete-user"
+      labels:
+        {{- include "controlplane.labels" . | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: delete-user
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ include "controlplane.image" . }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: KC_REALM
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: keycloakRealm
+            - name: KC_LOGIN_REALM
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: keycloakLoginRealm
+            - name: KC_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: keycloakApiUrl
+            - name: KC_ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: keycloakAdminUser
+            - name: KC_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: keycloakAdminPassword
+            - name: KC_CLIENT_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: keycloakClientId
+
+            - name: DB_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: databaseUrl
+            {{- if .Values.configuration.databaseTlsCert }}
+            - name: DB_TLS_CERT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: databaseTlsCert
+            {{- end }}
+            {{- if .Values.configuration.databaseTlsCa }}
+            - name: DB_TLS_CA
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: databaseTlsCa
+            {{- end }}
+            {{- if .Values.configuration.databaseTlsKey }}
+            - name: DB_TLS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: databaseTlsKey
+            {{- end }}
+
+            {{- if .Values.configuration.webhookUrl }}
+            - name: WEBHOOK_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: webhookUrl
+            {{- end }}
+            {{- if .Values.configuration.webhookSecret }}
+            - name: WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: webhookSecret
+            {{- end }}
+
+            - name: USER_ID
+              value: "{{ .Values.jobs.deleteUser.id }}"
+          args:
+            - "/app/dist/bin/delete-user.js"
+{{- end }}
