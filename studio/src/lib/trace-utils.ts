@@ -3,30 +3,6 @@ export interface Service {
   color: string;
 }
 
-export const getSpanName = (
-  spanName: string,
-  httpTarget: string,
-  httpURL: string,
-  httpMethod: string
-) => {
-  // Span kind: server
-  if (httpTarget != "") {
-    try {
-      return `${httpMethod} ${
-        new URL(httpTarget, "http://127.0.0.1").pathname
-      }`;
-    } catch (e) {}
-  } else {
-    // span kind: client
-    try {
-      return `${httpMethod} ${new URL(httpURL).pathname}`;
-    } catch (e) {}
-  }
-
-  // fallback
-  return spanName;
-};
-
 export const enum ServiceKeys {
   Router = "wundergraph-cosmo-router",
 }
