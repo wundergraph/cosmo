@@ -1,29 +1,71 @@
 package telemetry
 
 import (
+	"context"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
 )
 
+const (
+	// WithEndpoint respects the following environment variables:
+	// OTEL_EXPORTER_OTLP_ENDPOINT
+	// OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+	DefaultGrpcTelemetryEndpoint = "cosmo-otel.wundergraph.com"
+)
+
+func buildResourceOptions() resource.Option {
+	return resource.WithAttributes(
+		attribute.String("wg.component.name", DefaultServerName),
+		attribute.String("wg.component.version", serviceVersion),
+	)
+}
+
+func newOtlpTraceGrpcClient() otlptrace.Client {
+	return otlptracegrpc.NewClient(
+		otlptracegrpc.WithEndpoint(DefaultGrpcTelemetryEndpoint),
+		otlptracegrpc.WithCompressor("gzip"),
+	)
+}
+
+func newTraceExporter() (*otlptrace.Exporter, error) {
+	return otlptrace.New(
+		context.Background(),
+		newOtlpTraceGrpcClient(),
+	)
+}
+
 func (c *Config) NewTracerProvider() (*sdktrace.TracerProvider, error) {
-	exporter, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
+	exporter, err := newTraceExporter()
+	if err != nil {
+		return nil, err
+	}
+
+	resources, err := resource.New(
+		context.Background(),
+		buildResourceOptions(),
+	)
+
 	if err != nil {
 		return nil, err
 	}
 
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithBatcher(exporter),
-		sdktrace.WithResource(resource.NewWithAttributes(semconv.SchemaURL, semconv.ServiceName(c.Name))),
+		sdktrace.WithSpanProcessor(sdktrace.NewBatchSpanProcessor(exporter)),
+		sdktrace.WithSyncer(exporter),
+		sdktrace.WithResource(resources),
 	)
 
 	otel.SetTracerProvider(tp)
