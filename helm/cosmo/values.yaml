@@ -114,7 +114,7 @@ controlplane:
     s3StorageUrl: 'http://minio:changeme@cosmo-minio:9000/cosmo'
     cdnBaseUrl: 'http://cosmo-cdn:8787'
 
-    # Use this section to disable/enable and configure prometheus metrics.
+    # Use this section to configure prometheus metrics.
     prometheus:
       # -- Enables prometheus metrics support. Default is false.
       enabled: false
@@ -125,7 +125,7 @@ controlplane:
       # -- The HTTP path where metrics are exposed. Default is "/metrics".
       path: "/metrics"
       # Use this section to disable/enable pod monitoring over [GCP managed collection](https://cloud.google.com/stackdriver/docs/managed-prometheus/setup-managed#config-mgd-collection).
-      gcp_monitoring:
+      gcpMonitoring:
         # -- Enables gcp support . Default is false.
         enabled: false
         # -- Scrape interval. Default is "60s".
