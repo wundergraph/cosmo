@@ -2,6 +2,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
+  # We truncate the organization id to keep within 52 characters for the name. We add the full id in the annotations.
   name: "{{ include "controlplane.fullname" . }}-deactivate-org-{{ trunc 8 .Values.jobs.deactivateOrganization.id }}"
   labels:
     {{- include "controlplane.labels" . | nindent 4 }}
