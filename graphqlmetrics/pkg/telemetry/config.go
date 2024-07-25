@@ -3,14 +3,9 @@ package telemetry
 import (
 	"net/http"
 	"regexp"
-	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/otel/attribute"
-	"go.uber.org/zap"
 )
 
 const (
@@ -29,6 +24,7 @@ func NewTelemetryConfig(prometheusConfig PrometheusConfig) *Config {
 	}
 }
 
+// used to enable tracing later on
 type OpenTelemetry struct {
 	Enabled bool
 }
@@ -66,31 +62,8 @@ type PrometheusConfig struct {
 	TestRegistry *prometheus.Registry
 }
 
+// currently only exporting metrics for prometheus is supported
+// tracing will be added and tested in a later PR
 func (c *Config) IsEnabled() bool {
 	return c.Prometheus.Enabled
-}
-
-func NewPrometheusServer(logger *zap.Logger, listenAddr string, path string, registry *prometheus.Registry) *http.Server {
-	r := chi.NewRouter()
-	r.Use(middleware.Recoverer)
-	r.Handle(path, promhttp.HandlerFor(registry, promhttp.HandlerOpts{
-		EnableOpenMetrics: true,
-		ErrorLog:          zap.NewStdLog(logger),
-		Registry:          registry,
-		Timeout:           10 * time.Second,
-	}))
-
-	svr := &http.Server{
-		Addr:              listenAddr,
-		ReadTimeout:       1 * time.Minute,
-		WriteTimeout:      1 * time.Minute,
-		ReadHeaderTimeout: 2 * time.Second,
-		IdleTimeout:       30 * time.Second,
-		ErrorLog:          zap.NewStdLog(logger),
-		Handler:           r,
-	}
-
-	logger.Info("Prometheus metrics enabled", zap.String("listen_addr", svr.Addr), zap.String("endpoint", path))
-
-	return svr
 }
