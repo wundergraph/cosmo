@@ -2,22 +2,22 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: "{{ include "controlplane.fullname" . }}-activate-organization-{{ now | unixEpoch }}"
+  name: "{{ include "controlplane.fullname" . }}-activate-organization-{{ .Values.jobs.activateOrganization.id }}}-{{ now | unixEpoch }}"
   labels:
     {{- include "controlplane.labels" . | nindent 4 }}
   annotations:
-    # Run the job before installing the helm chart
+    # Run the job after installing the helm chart
     "helm.sh/hook": post-install,post-upgrade
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
-    # Support for k14s.io. This annotation ensure that the job is run after the postgresql and keycloak deployment
+    # Support for k14s.io. This annotation ensure that the job is run after the postgresql, keycloak and redis deployment
     kapp.k14s.io/change-rule.postgres: "upsert after upserting cosmo.apps.postgresql.wundergraph.com/deployment"
-    {{- if .Values.global.keycloak.enabled }}
     kapp.k14s.io/change-rule.keycloak: "upsert after upserting cosmo.apps.keycloak.wundergraph.com/deployment"
-    {{- end }}
+    kapp.k14s.io/change-rule.redis: "upsert after upserting cosmo.apps.redis.wundergraph.com/deployment"
 spec:
   backoffLimit: 10
   parallelism: 1
-  ttlSecondsAfterFinished: 360
+  # 2 days
+  ttlSecondsAfterFinished: 172800
   template:
     metadata:
       name: "{{ include "controlplane.fullname" . }}-activate-organization"

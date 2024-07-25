@@ -191,7 +191,7 @@ configuration:
   # -- URL of the CDN to use for serving router configs and persistent operations
   cdnBaseUrl: 'http://cosmo-cdn:8787'
 
-  # -- Use this section to disable/enable and configure prometheus metrics.
+  # -- Use this section to configure prometheus metrics.
   prometheus:
     # -- Enables prometheus metrics support. Default is false.
     enabled: false
@@ -202,7 +202,7 @@ configuration:
     # -- The HTTP path where metrics are exposed. Default is "/metrics".
     path: "/metrics"
     # Use this section to disable/enable pod monitoring over [GCP managed collection](https://cloud.google.com/stackdriver/docs/managed-prometheus/setup-managed#config-mgd-collection).
-    gcp_monitoring:
+    gcpMonitoring:
       # -- Enables gcp support . Default is false.
       enabled: false
       # -- Scrape interval. Default is "60s".
@@ -217,16 +217,25 @@ existingSecret: ""
 jobs:
   # -- Used to deactivate an organization with a reason and schedule deletion
   deactivateOrganization:
+    # -- Enables the job to be run
     enabled: false
+    # -- The slug of the organization
     slug: 'foo'
+    # -- The unique identifier of the organization
     id: '123'
+    # -- The reason for deactivation
     reason: ''
   # -- Used to activate an organization and remove the scheduled deletion
   activateOrganization:
+    # -- Enables the job to be run
     enabled: false
+    # -- The slug of the organization
     slug: 'foo'
+    # -- The unique identifier of the organization
     id: '123'
   # -- Used to delete the user
   deleteUser:
+    # -- Enables the job to be run
     enabled: false
+    # -- The unique identifier of the user
     id: '123'

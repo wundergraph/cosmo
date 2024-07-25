@@ -33,11 +33,11 @@ WunderGraph Cosmo Controlplane
 | configuration.githubAppWebhookSecret | string | `""` |  |
 | configuration.logLevel | string | `"info"` |  |
 | configuration.openAiApiKey | string | `""` |  |
-| configuration.prometheus | object | `{"enabled":false,"gcp_monitoring":{"enabled":false,"interval":"60s","timeout":"50s"},"host":"127.0.0.1","path":"/metrics","port":8088}` | Use this section to disable/enable and configure prometheus metrics. |
+| configuration.prometheus | object | `{"enabled":false,"gcpMonitoring":{"enabled":false,"interval":"60s","timeout":"50s"},"host":"127.0.0.1","path":"/metrics","port":8088}` | Use this section to configure prometheus metrics. |
 | configuration.prometheus.enabled | bool | `false` | Enables prometheus metrics support. Default is false. |
-| configuration.prometheus.gcp_monitoring.enabled | bool | `false` | Enables gcp support . Default is false. |
-| configuration.prometheus.gcp_monitoring.interval | string | `"60s"` | Scrape interval. Default is "60s". |
-| configuration.prometheus.gcp_monitoring.timeout | string | `"50s"` | Scrape timeout. Default is "50s". |
+| configuration.prometheus.gcpMonitoring.enabled | bool | `false` | Enables gcp support . Default is false. |
+| configuration.prometheus.gcpMonitoring.interval | string | `"60s"` | Scrape interval. Default is "60s". |
+| configuration.prometheus.gcpMonitoring.timeout | string | `"50s"` | Scrape timeout. Default is "50s". |
 | configuration.prometheus.host | string | `"127.0.0.1"` | The host to bind to defautls to 127.0.0.1 to avoid opening the metrics endpoint by default. |
 | configuration.prometheus.path | string | `"/metrics"` | The HTTP path where metrics are exposed. Default is "/metrics". |
 | configuration.prometheus.port | int | `8088` | The port where metrics are exposed. Default is port 8088. |
@@ -69,8 +69,17 @@ WunderGraph Cosmo Controlplane
 | ingress.tls | list | `[]` |  |
 | jobs | object | `{"activateOrganization":{"enabled":false,"id":"123","slug":"foo"},"deactivateOrganization":{"enabled":false,"id":"123","reason":"","slug":"foo"},"deleteUser":{"enabled":false,"id":"123"}}` | Configure jobs to be executed in the control plane |
 | jobs.activateOrganization | object | `{"enabled":false,"id":"123","slug":"foo"}` | Used to activate an organization and remove the scheduled deletion |
+| jobs.activateOrganization.enabled | bool | `false` | Enables the job to be run |
+| jobs.activateOrganization.id | string | `"123"` | The unique identifier of the organization |
+| jobs.activateOrganization.slug | string | `"foo"` | The slug of the organization |
 | jobs.deactivateOrganization | object | `{"enabled":false,"id":"123","reason":"","slug":"foo"}` | Used to deactivate an organization with a reason and schedule deletion |
+| jobs.deactivateOrganization.enabled | bool | `false` | Enables the job to be run |
+| jobs.deactivateOrganization.id | string | `"123"` | The unique identifier of the organization |
+| jobs.deactivateOrganization.reason | string | `""` | The reason for deactivation |
+| jobs.deactivateOrganization.slug | string | `"foo"` | The slug of the organization |
 | jobs.deleteUser | object | `{"enabled":false,"id":"123"}` | Used to delete the user |
+| jobs.deleteUser.enabled | bool | `false` | Enables the job to be run |
+| jobs.deleteUser.id | string | `"123"` | The unique identifier of the user |
 | nameOverride | string | `""` | String to partially override common.names.fullname template (will maintain the release name) |
 | nodeSelector | object | `{}` |  |
 | podAnnotations | object | `{}` |  |
