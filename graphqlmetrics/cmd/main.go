@@ -140,13 +140,11 @@ func main() {
 	}()
 
 	if metricsConfig.IsEnabled() {
-		if metricsConfig.Prometheus.Enabled {
-			go func() {
-				if err := svr.StartPrometheusServer(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-					logger.Error("Failed to start Prometheus server", zap.Error(err))
-				}
-			}()
-		}
+		go func() {
+			if err := svr.StartPrometheusServer(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				logger.Error("Failed to start Prometheus server", zap.Error(err))
+			}
+		}()
 	}
 
 	logger.Info("Server started", zap.String("listen_addr", cfg.ListenAddr))
