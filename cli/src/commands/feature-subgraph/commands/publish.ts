@@ -6,10 +6,7 @@ import ora from 'ora';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import {
-  parseGraphQLSubscriptionProtocol,
-  parseGraphQLWebsocketSubprotocol,
-} from '@wundergraph/cosmo-shared';
+import { parseGraphQLSubscriptionProtocol, parseGraphQLWebsocketSubprotocol } from '@wundergraph/cosmo-shared';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { getBaseHeaders } from '../../../core/config.js';
 import { validateSubscriptionProtocols } from '../../../utils.js';
@@ -29,22 +26,22 @@ export default (opts: BaseCommandOptions) => {
   command.option(
     '-r, --routing-url <url>',
     'The routing URL of the feature subgraph. This is the URL at which the feature subgraph will be accessible.' +
-      ' This parameter is always ignored if the feature subgraph has already been created.'
+      ' This parameter is always ignored if the feature subgraph has already been created.',
   );
   command.option(
     '--subscription-url [url]',
     'The url used for subscriptions. If empty, it defaults to same url used for routing.' +
-      ' This parameter is always ignored if the feature subgraph has already been created.'
+      ' This parameter is always ignored if the feature subgraph has already been created.',
   );
   command.option(
     '--subscription-protocol <protocol>',
     'The protocol to use when subscribing to the feature subgraph. The supported protocols are ws, sse, and sse_post.' +
-      ' This parameter is always ignored if the feature subgraph has already been created.'
+      ' This parameter is always ignored if the feature subgraph has already been created.',
   );
   command.option(
     '--websocket-subprotocol <protocol>',
     websocketSubprotocolDescription +
-      ' This parameter is always ignored if the feature subgraph has already been created.'
+      ' This parameter is always ignored if the feature subgraph has already been created.',
   );
   command.option(
     '--fail-on-composition-error',
@@ -56,8 +53,10 @@ export default (opts: BaseCommandOptions) => {
     'If set, the command will fail if the admission webhook fails.',
     false,
   );
-  command.option('--subgraph <subgraph>', 'The base subgraph name for which the feature subgraph is to be created' +
-    ' This parameter is always ignored if the feature subgraph has already been created.'
+  command.option(
+    '--subgraph <subgraph>',
+    'The base subgraph name for which the feature subgraph is to be created' +
+      ' This parameter is always ignored if the feature subgraph has already been created.',
   );
 
   command.action(async (name, options) => {
@@ -111,7 +110,9 @@ export default (opts: BaseCommandOptions) => {
 
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {
-        spinner.succeed(resp?.hasChanged === false ? 'No new changes to publish.' : 'Feature subgraph published successfully.');
+        spinner.succeed(
+          resp?.hasChanged === false ? 'No new changes to publish.' : 'Feature subgraph published successfully.',
+        );
 
         break;
       }
