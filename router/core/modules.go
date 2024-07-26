@@ -19,6 +19,7 @@ var (
 
 // ModuleRequestContext is the interface that provides the context for a single origin request.
 type ModuleRequestContext interface {
+	// RequestContext shared across all modules
 	RequestContext
 	// SendError returns the most recent error occurred while trying to make the origin request.
 	SendError() error
