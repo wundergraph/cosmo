@@ -73,7 +73,7 @@ if (!user || !user.id || !user.email) {
 const { isSafe, soloOrganizations, unsafeOrganizations } = await orgRepo.canUserBeDeleted(user.id);
 
 console.log(`soloOrganizations=${JSON.stringify(soloOrganizations)}\n`);
-console.log(`unsafeOrganizations=${JSON.stringify(soloOrganizations)}\n`);
+console.log(`unsafeOrganizations=${JSON.stringify(unsafeOrganizations)}\n`);
 
 if (!isSafe) {
   throw new Error('Cannot delete user because they are the only admin of an organization with several members.');
