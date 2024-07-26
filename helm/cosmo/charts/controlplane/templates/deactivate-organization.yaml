@@ -106,11 +106,13 @@ spec:
                 configMapKeyRef:
                   name: {{ include "controlplane.fullname" . }}-configmap
                   key: redisPort
+            {{- if .Values.configuration.redisPassword }}
             - name: REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ include "controlplane.secretName" . }}
                   key: redisPassword
+            {{- end }}
             {{- if .Values.configuration.redisTlsCert }}
             - name: REDIS_TLS_CERT
               valueFrom:
@@ -118,14 +120,14 @@ spec:
                   name: {{ include "controlplane.secretName" . }}
                   key: redisTlsCert
             {{- end }}
-            {{- if .Values.configuration.redisTlsCert }}
+            {{- if .Values.configuration.redisTlsKey }}
             - name: REDIS_TLS_KEY
               valueFrom:
                 secretKeyRef:
                   name: {{ include "controlplane.secretName" . }}
                   key: redisTlsKey
             {{- end }}
-            {{- if .Values.configuration.redisTlsCert }}
+            {{- if .Values.configuration.redisTlsCa }}
             - name: REDIS_TLS_CA
               valueFrom:
                 secretKeyRef:

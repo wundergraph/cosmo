@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.83.0](https://github.com/wundergraph/cosmo/compare/studio@0.82.1...studio@0.83.0) (2024-07-26)
+
+### Bug Fixes
+
+* hydration on studio ([#965](https://github.com/wundergraph/cosmo/issues/965)) ([3af8223](https://github.com/wundergraph/cosmo/commit/3af8223cd55221643e6746b5043706a466f1b363)) (@thisisnithin)
+
+### Features
+
+* add link to billing to request custom limits ([#962](https://github.com/wundergraph/cosmo/issues/962)) ([ba64b9b](https://github.com/wundergraph/cosmo/commit/ba64b9b97b6ffa5ce91be0568960087ac2a460c9)) (@StarpTech)
+
 ## [0.82.1](https://github.com/wundergraph/cosmo/compare/studio@0.82.0...studio@0.82.1) (2024-07-24)
 
 ### Bug Fixes
