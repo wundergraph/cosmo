@@ -142,9 +142,7 @@
             "allow_list": {
               "type": "array",
               "description": "The names of the headers to forward. The default value is 'Authorization'.",
-              "default": [
-                "Authorization"
-              ],
+              "default": ["Authorization"],
               "items": {
                 "type": "string"
               }
@@ -163,9 +161,7 @@
             "allow_list": {
               "type": "array",
               "description": "The names of the query parameters to forward. The default value is 'Authorization'.",
-              "default": [
-                "Authorization"
-              ],
+              "default": ["Authorization"],
               "items": {
                 "type": "string"
               }
@@ -176,6 +172,47 @@
           "type": "boolean",
           "default": true,
           "description": "Forward the initial payload in the extensions payload when starting a subscription on a Subgraph. The default value is true."
+        },
+        "authentication": {
+          "type": "object",
+          "description": "The configuration used to authenticate the WebSocket connections.",
+          "additionalProperties": false,
+          "properties": {
+            "from_initial_payload": {
+              "type": "object",
+              "description": "The configuration used to tell the Router to look for the JWT (JSON Web Token) in the initial payload of the WebSocket Connection.",
+              "additionalProperties": false,
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "default": "Authorization",
+                  "description": "The name of the property holding the JWT (JSON Web Token) value. The default value is 'Authorization'"
+                },
+                "enabled": {
+                  "type": "boolean",
+                  "description": "This configuration indicates if the Router should look for the JWT (JSON Web Token) in the initial payload of the WebSocket Connection. The default value is 'false'.",
+                  "default": false
+                },
+                "export_token_to_client_request_header": {
+                  "type": "object",
+                  "description": "The configuration used to export the JWT (JSON Web Token) to the client request header.",
+                  "additionalProperties": false,
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "This configuration indicates if the Router will export the JWT (JSON Web Token) to the client request header. The default value is 'false'.",
+                      "default": true
+                    },
+                    "header_key": {
+                      "type": "string",
+                      "description": "The name of the header property that will have the JWT (JSON Web Token) value. The default value is 'Authorization'",
+                      "default": "Authorization"
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },

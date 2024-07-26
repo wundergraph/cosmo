@@ -221,7 +221,17 @@
         "Authorization"
       ]
     },
-    "ForwardInitialPayload": true
+    "ForwardInitialPayload": true,
+    "Authentication": {
+      "FromInitialPayload": {
+        "Enabled": false,
+        "Key": "Authorization",
+        "ExportTokenToRequestHeader": {
+          "Enabled": true,
+          "HeaderKey": "Authorization"
+        }
+      }
+    }
   },
   "SubgraphErrorPropagation": {
     "Enabled": false,
