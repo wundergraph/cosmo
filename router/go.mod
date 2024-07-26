@@ -8,7 +8,7 @@ require (
 	connectrpc.com/connect v1.16.2
 	github.com/MicahParks/keyfunc/v2 v2.1.0
 	github.com/alitto/pond v1.8.3
-	github.com/andybalholm/brotli v1.1.0
+	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/buger/jsonparser v1.1.1
 	github.com/cespare/xxhash/v2 v2.2.0
 	github.com/cloudflare/backoff v0.0.0-20161212185259-647f3cdfc87a
@@ -65,6 +65,7 @@ require (
 )
 
 require (
+	github.com/klauspost/compress v1.17.9
 	github.com/valyala/fastjson v1.6.4
 	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8
 )
@@ -89,7 +90,6 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/jensneuse/byte-template v0.0.0-20200214152254-4f3cf06e5c68 // indirect
 	github.com/kingledion/go-tools v0.6.0 // indirect
-	github.com/klauspost/compress v1.17.8 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
