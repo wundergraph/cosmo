@@ -2,12 +2,13 @@ package core
 
 import (
 	"context"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
-	"go.opentelemetry.io/otel/attribute"
 	"net/http"
 	"net/url"
 	"sync"
 	"time"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	ctrace "github.com/wundergraph/cosmo/router/pkg/trace"
@@ -354,12 +355,20 @@ type OperationContext interface {
 
 var _ OperationContext = (*operationContext)(nil)
 
+type OperationType = string
+
+const (
+	OperationTypeQuery        OperationType = "query"
+	OperationTypeMutation     OperationType = "mutation"
+	OperationTypeSubscription OperationType = "subscription"
+)
+
 // operationContext contains information about the current GraphQL operation
 type operationContext struct {
 	// Name is the name of the operation
 	name string
 	// opType is the type of the operation (query, mutation, subscription)
-	opType string
+	opType OperationType
 	// Hash is the hash of the operation
 	hash uint64
 	// Content is the content of the operation
@@ -368,14 +377,16 @@ type operationContext struct {
 	files      []httpclient.File
 	clientInfo *ClientInfo
 	// preparedPlan is the prepared plan of the operation
-	preparedPlan               *planWithMetaData
-	traceOptions               resolve.TraceOptions
-	planCacheHit               bool
-	initialPayload             []byte
-	extensions                 []byte
-	persistedID                string
-	protocol                   OperationProtocol
+	preparedPlan   *planWithMetaData
+	traceOptions   resolve.TraceOptions
+	planCacheHit   bool
+	initialPayload []byte
+	extensions     []byte
+	persistedID    string
+	protocol       OperationProtocol
+
 	persistedOperationCacheHit bool
+	normalizationCacheHit      bool
 }
 
 func (o *operationContext) Variables() []byte {

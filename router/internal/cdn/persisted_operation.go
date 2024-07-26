@@ -5,20 +5,23 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
-	"net/http"
-	"net/url"
-
 	"github.com/buger/jsonparser"
 	"github.com/dgraph-io/ristretto"
 	"github.com/wundergraph/cosmo/router/internal/jwt"
 	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
+	"go.opentelemetry.io/otel/attribute"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv12 "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
+	"io"
+	"net/http"
+	"net/url"
 )
 
 const (
-	PersistedOperationNotFoundErrorCode = "PersistedQueryNotFound"
-	persistentAverageCacheEntrySize     = 4 * 1024 // 4kb
+	persistentAverageCacheEntrySize = 4 * 1024 // 4kb
 )
 
 var (
@@ -59,7 +62,7 @@ func (e *persistentOperationNotFoundError) Error() string {
 type cdnPersistedOperationsCache struct {
 	// cache is the backing store for the in-memory cache. Note
 	// that if the cache is disabled, this will be nil
-	cache *ristretto.Cache
+	cache *ristretto.Cache[string, []byte]
 }
 
 func (c *cdnPersistedOperationsCache) key(clientName string, operationHash []byte) string {
@@ -70,8 +73,7 @@ func (c *cdnPersistedOperationsCache) Get(clientName string, operationHash strin
 	// Since we're returning nil when the item is not found, we don't need to
 	// check the return value from the cache nor the type assertion
 	item, _ := c.cache.Get(c.key(clientName, unsafebytes.StringToBytes(operationHash)))
-	data, _ := item.([]byte)
-	return data
+	return item
 }
 
 func (c *cdnPersistedOperationsCache) Set(clientName, operationHash string, operationBody []byte) {
@@ -81,11 +83,12 @@ func (c *cdnPersistedOperationsCache) Set(clientName, operationHash string, oper
 type PersistentOperationsOptions struct {
 	// CacheSize indicates the in-memory cache size, in bytes. If 0, no in-memory
 	// cache is used.
-	CacheSize uint64
-	Logger    *zap.Logger
+	CacheSize     uint64
+	Logger        *zap.Logger
+	TraceProvider *sdktrace.TracerProvider
 }
 
-type PersistentOperationClient struct {
+type PersistedOperationsClient struct {
 	cdnURL              *url.URL
 	authenticationToken string
 	// federatedGraphID is the ID of the federated graph that was obtained
@@ -97,12 +100,20 @@ type PersistentOperationClient struct {
 	httpClient      *http.Client
 	operationsCache *cdnPersistedOperationsCache
 	logger          *zap.Logger
+	tracer          trace.Tracer
 }
 
-func (cdn *PersistentOperationClient) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error) {
+func (cdn *PersistedOperationsClient) PersistedOperation(ctx context.Context, clientName string, sha256Hash string, attributes []attribute.KeyValue) ([]byte, error) {
 	if data := cdn.operationsCache.Get(clientName, sha256Hash); data != nil {
 		return data, nil
 	}
+
+	ctx, span := cdn.tracer.Start(ctx, "Load Persisted Operation",
+		trace.WithSpanKind(trace.SpanKindClient),
+		trace.WithAttributes(attributes...),
+	)
+	defer span.End()
+
 	operationPath := fmt.Sprintf("/%s/%s/operations/%s/%s.json",
 		cdn.organizationID,
 		cdn.federatedGraphID,
@@ -115,6 +126,12 @@ func (cdn *PersistentOperationClient) PersistedOperation(ctx context.Context, cl
 		return nil, err
 	}
 
+	span.SetAttributes(
+		semconv.HTTPURL(req.URL.String()),
+		semconv.HTTPMethod(http.MethodGet),
+		semconv12.HTTPHostKey.String(req.Host),
+	)
+
 	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
 	req.Header.Add("Authorization", "Bearer "+cdn.authenticationToken)
 	req.Header.Set("Accept-Encoding", "gzip")
@@ -124,6 +141,8 @@ func (cdn *PersistentOperationClient) PersistedOperation(ctx context.Context, cl
 		return nil, err
 	}
 	defer resp.Body.Close()
+
+	span.SetAttributes(semconv.HTTPStatusCode(resp.StatusCode))
 
 	if resp.StatusCode != http.StatusOK {
 		if resp.StatusCode == http.StatusNotFound {
@@ -184,7 +203,7 @@ func (cdn *PersistentOperationClient) PersistedOperation(ctx context.Context, cl
 
 // NewPersistentOperationClient creates a new CDN client. URL is the URL of the CDN.
 // Token is the token used to authenticate with the CDN, the same as the GRAPH_API_TOKEN
-func NewPersistentOperationClient(endpoint string, token string, opts PersistentOperationsOptions) (*PersistentOperationClient, error) {
+func NewPersistentOperationClient(endpoint string, token string, opts PersistentOperationsOptions) (*PersistedOperationsClient, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("invalid CDN URL %q: %w", endpoint, err)
@@ -199,9 +218,9 @@ func NewPersistentOperationClient(endpoint string, token string, opts Persistent
 		return nil, err
 	}
 	cacheSize := int64(opts.CacheSize)
-	var cache *ristretto.Cache
+	var cache *ristretto.Cache[string, []byte]
 	if cacheSize > 0 {
-		cache, err = ristretto.NewCache(&ristretto.Config{
+		cache, err = ristretto.NewCache(&ristretto.Config[string, []byte]{
 			// assume an average of persistentAverageCacheEntrySize per operation, then
 			// multiply by 10 to obtain the recommended number of counters
 			NumCounters: (cacheSize * 10) / persistentAverageCacheEntrySize,
@@ -212,15 +231,23 @@ func NewPersistentOperationClient(endpoint string, token string, opts Persistent
 			return nil, fmt.Errorf("initializing CDN cache: %v", err)
 		}
 	}
-	return &PersistentOperationClient{
+	return &PersistedOperationsClient{
 		cdnURL:              u,
 		authenticationToken: token,
 		federatedGraphID:    url.PathEscape(claims.FederatedGraphID),
 		organizationID:      url.PathEscape(claims.OrganizationID),
 		httpClient:          newRetryableHTTPClient(opts.Logger),
 		logger:              opts.Logger,
+		tracer: opts.TraceProvider.Tracer(
+			"wundergraph/cosmo/router/cdn_persisted_operations_client",
+			trace.WithInstrumentationVersion("0.0.1"),
+		),
 		operationsCache: &cdnPersistedOperationsCache{
 			cache: cache,
 		},
 	}, nil
+}
+
+func (cdn *PersistedOperationsClient) Close() {
+	cdn.operationsCache.cache.Close()
 }

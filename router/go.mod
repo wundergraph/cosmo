@@ -39,7 +39,7 @@ require (
 	github.com/tidwall/gjson v1.17.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/twmb/franz-go v1.16.1
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.59
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.66
 	// Do not upgrade, it renames attributes we rely on
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/contrib/propagators/b3 v1.23.0
@@ -64,7 +64,10 @@ require (
 	google.golang.org/protobuf v1.34.1
 )
 
-require golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8
+require (
+	github.com/valyala/fastjson v1.6.4
+	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8
+)
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -73,14 +76,12 @@ require (
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/fatih/color v1.16.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/gin-gonic/gin v1.10.0 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-playground/validator/v10 v10.20.0 // indirect
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
-	github.com/golang/glog v1.1.2 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.0 // indirect
@@ -122,7 +123,10 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240102182953-50ed04b92917 // indirect
 	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	nhooyr.io/websocket v1.8.7 // indirect
+	nhooyr.io/websocket v1.8.11 // indirect
 )
+
+// To fix race with ristretto.Close() https://github.com/dgraph-io/ristretto/pull/384
+replace github.com/dgraph-io/ristretto v0.1.1 => github.com/wundergraph/ristretto v0.0.0-20240715072905-d30a6481d4bf
 
 //replace github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2

@@ -5,13 +5,17 @@ import {
   IntegrationConfig,
   IntegrationType,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { addDays } from 'date-fns';
 import { SQL, and, asc, eq, inArray, like, not, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { MemberRole, NewOrganizationFeature } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
+  billingSubscriptions,
   integrationTypeEnum,
+  organizationBilling,
+  organizationFeatures,
   organizationIntegrations,
   organizationMemberRoles,
   organizationWebhooks,
@@ -20,14 +24,10 @@ import {
   slackIntegrationConfigs,
   slackSchemaUpdateEventConfigs,
   users,
-  organizationFeatures,
-  organizationBilling,
-  billingSubscriptions,
 } from '../../db/schema.js';
 import { Feature, FeatureIds, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
-import { BillingService } from '../services/BillingService.js';
 import Keycloak from '../services/Keycloak.js';
-import OidcProvider from '../services/OidcProvider.js';
+import { DeleteOrganizationQueue } from '../workers/DeleteOrganizationWorker.js';
 import { BillingRepository } from './BillingRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { OidcRepository } from './OidcRepository.js';
@@ -105,6 +105,9 @@ export class OrganizationRepository {
         subscription: {
           status: billingSubscriptions.status,
         },
+        isDeactivated: organizations.isDeactivated,
+        deactivationReason: organizations.deactivationReason,
+        deactivatedAt: organizations.deactivatedAt,
       })
       .from(organizations)
       .leftJoin(organizationBilling, eq(organizations.id, organizationBilling.organizationId))
@@ -135,6 +138,12 @@ export class OrganizationRepository {
             status: org[0].subscription.status,
           }
         : undefined,
+      deactivation: org[0].isDeactivated
+        ? {
+            reason: org[0].deactivationReason || undefined,
+            initiatedAt: org[0].deactivatedAt?.toISOString() ?? '',
+          }
+        : undefined,
     };
   }
 
@@ -152,6 +161,9 @@ export class OrganizationRepository {
         subscription: {
           status: billingSubscriptions.status,
         },
+        isDeactivated: organizations.isDeactivated,
+        deactivationReason: organizations.deactivationReason,
+        deactivatedAt: organizations.deactivatedAt,
       })
       .from(organizations)
       .leftJoin(organizationBilling, eq(organizations.id, organizationBilling.organizationId))
@@ -180,6 +192,12 @@ export class OrganizationRepository {
       subscription: org[0].subscription
         ? {
             status: org[0].subscription.status,
+          }
+        : undefined,
+      deactivation: org[0].isDeactivated
+        ? {
+            reason: org[0].deactivationReason || undefined,
+            initiatedAt: org[0].deactivatedAt?.toISOString() ?? '',
           }
         : undefined,
     };
@@ -219,6 +237,9 @@ export class OrganizationRepository {
           cancelAtPeriodEnd: billingSubscriptions.cancelAtPeriodEnd,
           currentPeriodEnd: billingSubscriptions.currentPeriodEnd,
         },
+        isDeactivated: organizations.isDeactivated,
+        deactivationReason: organizations.deactivationReason,
+        deactivatedAt: organizations.deactivatedAt,
       })
       .from(organizationsMembers)
       .innerJoin(organizations, eq(organizations.id, organizationsMembers.organizationId))
@@ -253,6 +274,12 @@ export class OrganizationRepository {
                 trialEnd: org.subscription.trialEnd?.toISOString(),
                 cancelAtPeriodEnd: org.subscription.cancelAtPeriodEnd,
                 currentPeriodEnd: org.subscription.currentPeriodEnd?.toISOString(),
+              }
+            : undefined,
+          deactivation: org.isDeactivated
+            ? {
+                reason: org.deactivationReason || undefined,
+                initiatedAt: org.deactivatedAt?.toISOString() ?? '',
               }
             : undefined,
         };
@@ -327,7 +354,12 @@ export class OrganizationRepository {
       })
       .from(organizationsMembers)
       .innerJoin(users, eq(users.id, organizationsMembers.userId))
-      .where(and(eq(organizationsMembers.organizationId, input.organizationID), eq(users.email, input.userEmail)))
+      .where(
+        and(
+          eq(organizationsMembers.organizationId, input.organizationID),
+          eq(users.email, input.userEmail.toLowerCase()),
+        ),
+      )
       .orderBy(asc(organizationsMembers.createdAt))
       .execute();
 
@@ -1257,5 +1289,70 @@ export class OrganizationRepository {
       soloOrganizations: soloAdminSoloMemberOrgs,
       unsafeOrganizations: soloAdminManyMembersOrgs,
     };
+  }
+
+  /***
+   * Cancels Subscription
+   * Removes any feature overrides
+   * Sets deactivated to true.
+   * Schedules deletion.
+   */
+  public async deactivateOrganization(input: {
+    organizationId: string;
+    reason?: string;
+    keycloakClient: Keycloak;
+    keycloakRealm: string;
+    deleteOrganizationQueue: DeleteOrganizationQueue;
+  }) {
+    const billingRepo = new BillingRepository(this.db);
+    await billingRepo.cancelSubscription(input.organizationId);
+
+    await this.db.transaction(async (tx) => {
+      await tx
+        .delete(schema.organizationFeatures)
+        .where(eq(schema.organizationFeatures.organizationId, input.organizationId));
+
+      await tx
+        .update(schema.organizations)
+        .set({
+          isDeactivated: true,
+          deactivatedAt: new Date(),
+          deactivationReason: input.reason,
+        })
+        .where(eq(schema.organizations.id, input.organizationId));
+    });
+
+    const now = new Date();
+    const oneMonthFromNow = addDays(now, 30);
+    const delay = Number(oneMonthFromNow) - Number(now);
+
+    return input.deleteOrganizationQueue.addJob(
+      {
+        organizationId: input.organizationId,
+      },
+      {
+        delay,
+      },
+    );
+  }
+
+  public async reactivateOrganization(input: {
+    organizationId: string;
+    deleteOrganizationQueue: DeleteOrganizationQueue;
+  }) {
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(schema.organizations)
+        .set({
+          isDeactivated: false,
+          deactivatedAt: null,
+          deactivationReason: null,
+        })
+        .where(eq(schema.organizations.id, input.organizationId));
+    });
+
+    return input.deleteOrganizationQueue.removeJob({
+      organizationId: input.organizationId,
+    });
   }
 }

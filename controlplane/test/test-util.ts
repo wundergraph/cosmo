@@ -35,6 +35,7 @@ import {
 import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService.js';
 import { AIGraphReadmeQueue } from '../src/core/workers/AIGraphReadmeWorker.js';
 import { FeatureIds, Label } from '../src/types/index.js';
+import { DeleteOrganizationQueue } from '../src/core/workers/DeleteOrganizationWorker.js';
 
 export const DEFAULT_ROUTER_URL = 'http://localhost:3002';
 export const DEFAULT_SUBGRAPH_URL_ONE = 'http://localhost:4001';
@@ -107,6 +108,7 @@ export const SetupTest = async function ({
   });
 
   const readmeQueue = new AIGraphReadmeQueue(log, server.redisForQueue);
+  const deleteOrganizationQueue = new DeleteOrganizationQueue(log, server.redisForQueue);
 
   const blobStorage = new InMemoryBlobStorage();
   await server.register(fastifyConnectPlugin, {
@@ -130,7 +132,10 @@ export const SetupTest = async function ({
       blobStorage,
       mailerClient,
       authorizer: new Authorization(log),
-      readmeQueue,
+      queues: {
+        readmeQueue,
+        deleteOrganizationQueue,
+      },
     }),
   });
 
@@ -155,8 +160,7 @@ export const SetupTest = async function ({
 
   const queryConnection = postgres(databaseConnectionUrl);
 
-  await seedTest(queryConnection, users.adminAliceCompanyA, createScimKey);
-  await SetupKeycloak({
+  const id = await SetupKeycloak({
     keycloakClient,
     realmName: realm,
     userTestData: {
@@ -169,12 +173,42 @@ export const SetupTest = async function ({
       roles: ['admin'],
     },
   });
+  users.adminAliceCompanyA.userId = id;
+  await seedTest(queryConnection, users.adminAliceCompanyA, createScimKey);
 
   if (enableMultiUsers) {
     if (users.adminBobCompanyA) {
+      const id = await addKeycloakUser({
+        keycloakClient,
+        realmName: realm,
+        userTestData: {
+          userId: users.adminBobCompanyA.userId,
+          organizationId: users.adminBobCompanyA.organizationId,
+          organizationName: users.adminBobCompanyA.organizationName,
+          organizationSlug: users.adminBobCompanyA.organizationSlug,
+          email: users.adminBobCompanyA.email,
+          apiKey: users.adminBobCompanyA.apiKey,
+          roles: ['admin'],
+        },
+      });
+      users.adminBobCompanyA.userId = id;
       await seedTest(queryConnection, users.adminBobCompanyA, createScimKey);
     }
     if (users.adminJimCompanyB) {
+      const id = await addKeycloakUser({
+        keycloakClient,
+        realmName: realm,
+        userTestData: {
+          userId: users.adminJimCompanyB.userId,
+          organizationId: users.adminJimCompanyB.organizationId,
+          organizationName: users.adminJimCompanyB.organizationName,
+          organizationSlug: users.adminJimCompanyB.organizationSlug,
+          email: users.adminJimCompanyB.email,
+          apiKey: users.adminJimCompanyB.apiKey,
+          roles: ['admin'],
+        },
+      });
+      users.adminJimCompanyB.userId = id;
       await seedTest(queryConnection, users.adminJimCompanyB, createScimKey);
     }
   }
@@ -227,6 +261,10 @@ export const SetupTest = async function ({
     keycloakClient,
     authenticator,
     realm,
+    queues: {
+      deleteOrganizationQueue,
+      readmeQueue,
+    },
   };
 };
 
@@ -254,6 +292,26 @@ export const SetupKeycloak = async ({
       throw e;
     }
   }
+
+  const id = await addKeycloakUser({
+    keycloakClient,
+    userTestData,
+    realmName,
+  });
+
+  return id;
+};
+
+export const addKeycloakUser = async ({
+  keycloakClient,
+  userTestData,
+  realmName,
+}: {
+  keycloakClient: Keycloak;
+  userTestData: UserTestData;
+  realmName: string;
+}) => {
+  await keycloakClient.authenticateClient();
 
   let id = '';
   try {

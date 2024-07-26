@@ -4,12 +4,9 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-
-	"go.uber.org/zap"
 )
 
 type PlaygroundOptions struct {
-	Log        *zap.Logger
 	Html       string
 	GraphqlURL string
 }

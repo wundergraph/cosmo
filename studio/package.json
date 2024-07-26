@@ -1,6 +1,6 @@
 {
   "name": "studio",
-  "version": "0.79.2",
+  "version": "0.83.0",
   "private": true,
   "license": "Apache-2.0",
   "description": "WunderGraph Cosmo Studio",
@@ -30,9 +30,6 @@
     "@connectrpc/connect": "^1.4.0",
     "@connectrpc/connect-query": "^1.4.1",
     "@connectrpc/connect-web": "^1.4.0",
-    "@graphiql/plugin-explorer": "^3.0.3",
-    "@graphiql/react": "^0.22.3",
-    "@graphiql/toolkit": "^0.9.1",
     "@headlessui/react": "^1.7.15",
     "@heroicons/react": "^2.0.18",
     "@hookform/resolvers": "^3.3.1",
@@ -82,7 +79,6 @@
     "date-fns-tz": "^2.0.0",
     "framer-motion": "^11.0.3",
     "fuse.js": "^7.0.0",
-    "graphiql": "^3.3.1",
     "graphql": "^16.9.0",
     "graphql-ws": "^5.14.1",
     "js-cookie": "^3.0.5",
@@ -99,7 +95,7 @@
     "react-day-picker": "^8.8.0",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.45.1",
-    "react-icons": "^5.0.1",
+    "react-icons": "^5.2.1",
     "react-markdown": "^9.0.1",
     "react-move-hook": "^0.1.2",
     "react-resizable-panels": "^1.0.5",
@@ -137,6 +133,6 @@
     "postcss": "8.4.38",
     "prettier-plugin-tailwindcss": "^0.5.6",
     "typescript": "5.5.2",
-    "vitest": "^1.6.0"
+    "vitest": "^2.0.3"
   }
 }

@@ -195,20 +195,13 @@ enum ProductNamesEnum {
 `;
 
     const rules: { severity: LintSeverityLevel; ruleName: LintRuleEnum }[] = [
-      { severity: 'warn', ruleName: LintRules.REQUIRE_DEPRECATION_DATE },
       { severity: 'warn', ruleName: LintRules.REQUIRE_DEPRECATION_REASON },
     ];
 
     const schemaLinter = new SchemaLinter();
     const lintIssues = schemaLinter.schemaLintCheck({ schema, rulesInput: rules });
-    expect(lintIssues.warnings.length).toBe(2);
+    expect(lintIssues.warnings.length).toBe(1);
     expect(lintIssues.warnings).toStrictEqual([
-      {
-        lintRuleType: 'REQUIRE_DEPRECATION_DATE',
-        severity: 0,
-        message: 'Directive "@deprecated" must have a deletion date for field "b" in type "B"',
-        issueLocation: { line: 2, column: 14, endLine: 2, endColumn: 24 },
-      },
       {
         lintRuleType: 'REQUIRE_DEPRECATION_REASON',
         severity: 0,

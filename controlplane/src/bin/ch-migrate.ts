@@ -10,17 +10,11 @@ if (!CLICKHOUSE_DSN) {
 console.log(`Migrating ClickHouse database`);
 
 try {
-  const { stdout } = await execa('dbmate', [
-    '--wait',
-    '--wait-timeout',
-    '30s',
-    '-u',
-    CLICKHOUSE_DSN,
-    '--no-dump-schema',
-    '-d',
-    'clickhouse/migrations',
-    'up',
-  ]);
+  const { stdout } = await execa(
+    'dbmate',
+    ['--wait', '--wait-timeout', '30s', '-u', CLICKHOUSE_DSN, '--no-dump-schema', '-d', 'clickhouse/migrations', 'up'],
+    { encoding: 'utf8' },
+  );
   console.log(stdout);
   console.log(`ClickHouse database migrated`);
 } catch (error: any) {

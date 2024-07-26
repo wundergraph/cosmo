@@ -15,12 +15,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gorilla/websocket"
+
 	"github.com/alitto/pond"
 	"github.com/buger/jsonparser"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
-	"github.com/gorilla/websocket"
 	"github.com/tidwall/gjson"
 	"github.com/wundergraph/cosmo/router/internal/epoller"
 	"github.com/wundergraph/cosmo/router/internal/wsproto"
@@ -56,84 +57,91 @@ type WebsocketMiddlewareOptions struct {
 
 func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions) func(http.Handler) http.Handler {
 
-	return func(next http.Handler) http.Handler {
-		handler := &WebsocketHandler{
-			ctx:                ctx,
-			next:               next,
-			operationProcessor: opts.OperationProcessor,
-			operationBlocker:   opts.OperationBlocker,
-			planner:            opts.Planner,
-			graphqlHandler:     opts.GraphQLHandler,
-			metrics:            opts.Metrics,
-			accessController:   opts.AccessController,
-			logger:             opts.Logger,
-			stats:              opts.Stats,
-			readTimeout:        opts.ReadTimeout,
-			config:             opts.WebSocketConfiguration,
-		}
-		if opts.WebSocketConfiguration != nil && opts.WebSocketConfiguration.AbsintheProtocol.Enabled {
-			handler.absintheHandlerEnabled = true
-			handler.absintheHandlerPath = opts.WebSocketConfiguration.AbsintheProtocol.HandlerPath
-		}
-		if opts.WebSocketConfiguration.ForwardUpgradeHeaders.Enabled {
-			handler.forwardUpgradeHeadersConfig.enabled = true
-			for _, str := range opts.WebSocketConfiguration.ForwardUpgradeHeaders.AllowList {
-				if detectNonRegex.MatchString(str) {
-					canonicalHeaderKey := http.CanonicalHeaderKey(str)
-					handler.forwardUpgradeHeadersConfig.staticAllowList = append(handler.forwardUpgradeHeadersConfig.staticAllowList, canonicalHeaderKey)
-				} else {
-					re, err := regexp.Compile(str)
-					if err != nil {
-						opts.Logger.Warn("Invalid regex in forward upgrade headers allow list", zap.String("regex", str), zap.Error(err))
-						continue
-					}
-					handler.forwardUpgradeHeadersConfig.regexAllowList = append(handler.forwardUpgradeHeadersConfig.regexAllowList, re)
-				}
-			}
-			handler.forwardUpgradeHeadersConfig.withStaticAllowList = len(handler.forwardUpgradeHeadersConfig.staticAllowList) > 0
-			handler.forwardUpgradeHeadersConfig.withRegexAllowList = len(handler.forwardUpgradeHeadersConfig.regexAllowList) > 0
-		}
-		if opts.WebSocketConfiguration.ForwardUpgradeQueryParams.Enabled {
-			handler.forwardQueryParamsConfig.enabled = true
-			for _, str := range opts.WebSocketConfiguration.ForwardUpgradeQueryParams.AllowList {
-				if detectNonRegex.MatchString(str) {
-					handler.forwardQueryParamsConfig.staticAllowList = append(handler.forwardQueryParamsConfig.staticAllowList, str)
-				} else {
-					re, err := regexp.Compile(str)
-					if err != nil {
-						opts.Logger.Warn("Invalid regex in forward upgrade query params allow list", zap.String("regex", str), zap.Error(err))
-						continue
-					}
-					handler.forwardQueryParamsConfig.regexAllowList = append(handler.forwardQueryParamsConfig.regexAllowList, re)
-				}
-			}
-			handler.forwardQueryParamsConfig.withStaticAllowList = len(handler.forwardQueryParamsConfig.staticAllowList) > 0
-			handler.forwardQueryParamsConfig.withRegexAllowList = len(handler.forwardQueryParamsConfig.regexAllowList) > 0
-		}
-		handler.handlerPool = pond.New(
-			64,
-			0,
-			pond.Context(ctx),
-			pond.IdleTimeout(time.Second*30),
-			pond.Strategy(pond.Lazy()),
-			pond.MinWorkers(8),
-		)
-		if opts.EnableWebSocketEpollKqueue {
-			poller, err := epoller.NewPoller(opts.EpollKqueueConnBufferSize, opts.EpollKqueuePollTimeout)
-			if err == nil {
-				opts.Logger.Debug("Epoll is available")
+	handlerPool := pond.New(
+		64,
+		0,
+		pond.Context(ctx),
+		pond.IdleTimeout(time.Second*30),
+		pond.Strategy(pond.Lazy()),
+		pond.MinWorkers(8),
+	)
 
-				handler.epoll = poller
-				handler.connections = make(map[int]*WebSocketConnectionHandler)
-				go handler.runPoller()
+	handler := &WebsocketHandler{
+		ctx:                ctx,
+		operationProcessor: opts.OperationProcessor,
+		operationBlocker:   opts.OperationBlocker,
+		planner:            opts.Planner,
+		graphqlHandler:     opts.GraphQLHandler,
+		metrics:            opts.Metrics,
+		accessController:   opts.AccessController,
+		logger:             opts.Logger,
+		stats:              opts.Stats,
+		readTimeout:        opts.ReadTimeout,
+		config:             opts.WebSocketConfiguration,
+		handlerPool:        handlerPool,
+	}
+	if opts.WebSocketConfiguration != nil && opts.WebSocketConfiguration.AbsintheProtocol.Enabled {
+		handler.absintheHandlerEnabled = true
+		handler.absintheHandlerPath = opts.WebSocketConfiguration.AbsintheProtocol.HandlerPath
+	}
+	if opts.WebSocketConfiguration.ForwardUpgradeHeaders.Enabled {
+		handler.forwardUpgradeHeadersConfig.enabled = true
+		for _, str := range opts.WebSocketConfiguration.ForwardUpgradeHeaders.AllowList {
+			if detectNonRegex.MatchString(str) {
+				canonicalHeaderKey := http.CanonicalHeaderKey(str)
+				handler.forwardUpgradeHeadersConfig.staticAllowList = append(handler.forwardUpgradeHeadersConfig.staticAllowList, canonicalHeaderKey)
 			} else {
-				opts.Logger.Warn("Epoll is only available on Linux and MacOS. Falling back to synchronous handling.")
+				re, err := regexp.Compile(str)
+				if err != nil {
+					opts.Logger.Warn("Invalid regex in forward upgrade headers allow list", zap.String("regex", str), zap.Error(err))
+					continue
+				}
+				handler.forwardUpgradeHeadersConfig.regexAllowList = append(handler.forwardUpgradeHeadersConfig.regexAllowList, re)
 			}
-		} else {
-			opts.Logger.Debug("Epoll is disabled by configuration")
 		}
+		handler.forwardUpgradeHeadersConfig.withStaticAllowList = len(handler.forwardUpgradeHeadersConfig.staticAllowList) > 0
+		handler.forwardUpgradeHeadersConfig.withRegexAllowList = len(handler.forwardUpgradeHeadersConfig.regexAllowList) > 0
+	}
+	if opts.WebSocketConfiguration.ForwardUpgradeQueryParams.Enabled {
+		handler.forwardQueryParamsConfig.enabled = true
+		for _, str := range opts.WebSocketConfiguration.ForwardUpgradeQueryParams.AllowList {
+			if detectNonRegex.MatchString(str) {
+				handler.forwardQueryParamsConfig.staticAllowList = append(handler.forwardQueryParamsConfig.staticAllowList, str)
+			} else {
+				re, err := regexp.Compile(str)
+				if err != nil {
+					opts.Logger.Warn("Invalid regex in forward upgrade query params allow list", zap.String("regex", str), zap.Error(err))
+					continue
+				}
+				handler.forwardQueryParamsConfig.regexAllowList = append(handler.forwardQueryParamsConfig.regexAllowList, re)
+			}
+		}
+		handler.forwardQueryParamsConfig.withStaticAllowList = len(handler.forwardQueryParamsConfig.staticAllowList) > 0
+		handler.forwardQueryParamsConfig.withRegexAllowList = len(handler.forwardQueryParamsConfig.regexAllowList) > 0
+	}
+	if opts.EnableWebSocketEpollKqueue {
+		poller, err := epoller.NewPoller(opts.EpollKqueueConnBufferSize, opts.EpollKqueuePollTimeout)
+		if err == nil {
+			opts.Logger.Debug("Epoll is available")
 
-		return handler
+			handler.epoll = poller
+			handler.connections = make(map[int]*WebSocketConnectionHandler)
+			go handler.runPoller()
+		} else {
+			opts.Logger.Warn("Epoll is only available on Linux and MacOS. Falling back to synchronous handling.")
+		}
+	} else {
+		opts.Logger.Debug("Epoll is disabled by configuration")
+	}
+
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if !websocket.IsWebSocketUpgrade(r) {
+				next.ServeHTTP(w, r)
+				return
+			}
+			handler.handleUpgradeRequest(w, r)
+		})
 	}
 }
 
@@ -193,7 +201,6 @@ func (c *wsConnectionWrapper) Close() error {
 type WebsocketHandler struct {
 	ctx                context.Context
 	config             *config.WebSocketConfiguration
-	next               http.Handler
 	operationProcessor *OperationProcessor
 	operationBlocker   *OperationBlocker
 	planner            *OperationPlanner
@@ -218,14 +225,6 @@ type WebsocketHandler struct {
 
 	forwardUpgradeHeadersConfig forwardConfig
 	forwardQueryParamsConfig    forwardConfig
-}
-
-func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if !websocket.IsWebSocketUpgrade(r) {
-		h.next.ServeHTTP(w, r)
-		return
-	}
-	h.handleUpgradeRequest(w, r)
 }
 
 func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.Request) {
@@ -671,15 +670,33 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 		return nil, nil, err
 	}
 
-	if err := operationKit.Parse(h.ctx, h.clientInfo); err != nil {
+	if err := operationKit.UnmarshalOperation(); err != nil {
 		return nil, nil, err
+	}
+
+	var skipParse bool
+
+	if operationKit.parsedOperation.IsPersistedOperation {
+		skipParse, err = operationKit.FetchPersistedOperation(h.ctx, h.clientInfo, baseAttributesFromContext(h.ctx))
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	// If the persistent operation is already in the cache, we skip the parse step
+	// because the operation was already parsed. This is a performance optimization, and we
+	// can do it because we know that the persisted operation is immutable (identified by the hash)
+	if !skipParse {
+		if err := operationKit.Parse(); err != nil {
+			return nil, nil, err
+		}
 	}
 
 	if blocked := h.operationBlocker.OperationIsBlocked(operationKit.parsedOperation); blocked != nil {
 		return nil, nil, blocked
 	}
 
-	if err := operationKit.Normalize(); err != nil {
+	if _, err := operationKit.Normalize(); err != nil {
 		return nil, nil, err
 	}
 
@@ -770,7 +787,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 
 	switch p := operationCtx.preparedPlan.preparedPlan.(type) {
 	case *plan.SynchronousResponsePlan:
-		err = h.graphqlHandler.executor.Resolver.ResolveGraphQLResponse(resolveCtx, p.Response, nil, rw)
+		_, err = h.graphqlHandler.executor.Resolver.ResolveGraphQLResponse(resolveCtx, p.Response, nil, rw)
 		if err != nil {
 			h.logger.Warn("Resolving GraphQL response", zap.Error(err))
 			h.graphqlHandler.WriteError(resolveCtx, err, p.Response, rw)

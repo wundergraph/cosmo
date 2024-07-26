@@ -201,6 +201,10 @@ export interface OrganizationDTO {
     currentPeriodEnd?: string;
     cancelAtPeriodEnd?: boolean;
   };
+  deactivation?: {
+    reason?: string;
+    initiatedAt: string;
+  };
 }
 
 export interface UserDTO {
@@ -530,7 +534,6 @@ export const LintRules: LintRuleType = {
   DISALLOW_CASE_INSENSITIVE_ENUM_VALUES: 'DISALLOW_CASE_INSENSITIVE_ENUM_VALUES',
   NO_TYPENAME_PREFIX_IN_TYPE_FIELDS: 'NO_TYPENAME_PREFIX_IN_TYPE_FIELDS',
   REQUIRE_DEPRECATION_REASON: 'REQUIRE_DEPRECATION_REASON',
-  REQUIRE_DEPRECATION_DATE: 'REQUIRE_DEPRECATION_DATE',
 };
 
 export type Severity = 1 | 2;

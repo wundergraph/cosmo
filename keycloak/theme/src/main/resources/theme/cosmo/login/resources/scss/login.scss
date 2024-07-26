@@ -13,7 +13,7 @@ body,
 }
 
 #kc-page-title {
-  @apply font-semibold text-left;
+  @apply font-semibold text-left text-2xl;
 }
 
 #kc-header,
@@ -168,11 +168,11 @@ div.kc-logo-text span {
   @apply text-xs text-red-700;
 }
 
-.pf-c-dropdown__menu {
+.pf-v5-c-dropdown__menu {
   @apply hidden -mt-2.5;
 }
 
-.pf-c-dropdown__menu:hover {
+.pf-v5-c-dropdown__menu:hover {
   @apply block;
 }
 
@@ -180,7 +180,7 @@ div.kc-logo-text span {
   @apply font-medium text-pink-600 hover:text-pink-500;
 }
 
-#kc-current-locale-link:hover + .pf-c-dropdown__menu {
+#kc-current-locale-link:hover + .pf-v5-c-dropdown__menu {
   @apply block;
 }
 
@@ -201,7 +201,7 @@ div.kc-logo-text span {
 }
 
 #kc-terms-text {
-  margin-bottom: 40px;
+  margin-bottom: 24px;
   text-align: justify;
   a {
     @apply text-pink-600 hover:text-pink-700 no-underline;
@@ -214,15 +214,15 @@ div.kc-logo-text span {
   }
 }
 
-.pf-c-button {
+.pf-v5-c-button {
   @apply w-full flex py-2 px-4 border border-transparent rounded-md justify-center text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-50;
 }
 
-.pf-c-button.pf-m-primary {
+.pf-v5-c-button.pf-v5-m-primary {
   @apply shadow-sm text-white bg-pink-600 hover:bg-pink-700;
 }
 
-.pf-c-button.btn-default {
+.pf-v5-c-button.btn-default {
   @apply shadow-none bg-none bg-white text-pink-600 hover:text-pink-500;
 }
 
