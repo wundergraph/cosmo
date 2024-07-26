@@ -65,7 +65,7 @@ func TestPrometheusExport(t *testing.T) {
 				tt.svr.logger.Error("Could not start prometheus server", zap.Error(err))
 			}
 		}()
-		defer tt.svr.Shutdown(context.Background())
+		defer tt.svr.ShutdownPrometheusServer(context.Background())
 
 		time.Sleep(100 * time.Millisecond)
 
