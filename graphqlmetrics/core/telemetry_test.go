@@ -57,7 +57,6 @@ func TestPrometheusExport(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt.svr.Bootstrap()
 		// as the server setup is all encapsulated within main,
 		// at least check, if the new code is covered and if the
 		// handlers for the prometheus server are registered
