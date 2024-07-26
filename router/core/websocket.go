@@ -711,8 +711,26 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 		return nil, nil, err
 	}
 
-	if err := operationKit.Parse(h.ctx, h.clientInfo); err != nil {
+	if err := operationKit.UnmarshalOperation(); err != nil {
 		return nil, nil, err
+	}
+
+	var skipParse bool
+
+	if operationKit.parsedOperation.IsPersistedOperation {
+		skipParse, err = operationKit.FetchPersistedOperation(h.ctx, h.clientInfo, baseAttributesFromContext(h.ctx))
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	// If the persistent operation is already in the cache, we skip the parse step
+	// because the operation was already parsed. This is a performance optimization, and we
+	// can do it because we know that the persisted operation is immutable (identified by the hash)
+	if !skipParse {
+		if err := operationKit.Parse(); err != nil {
+			return nil, nil, err
+		}
 	}
 
 	if blocked := h.operationBlocker.OperationIsBlocked(operationKit.parsedOperation); blocked != nil {
