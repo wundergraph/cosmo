@@ -1,4 +1,3 @@
-import { MultiGraph } from 'graphology';
 import {
   BREAK,
   buildASTSchema,
@@ -202,7 +201,6 @@ export class FederationFactory {
   entityInterfaceFederationDataByTypeName: Map<string, EntityInterfaceFederationData>;
   errors: Error[] = [];
   fieldConfigurationByFieldPath = new Map<string, FieldConfiguration>();
-  graph: MultiGraph;
   graphEdges = new Set<string>();
   graphPaths = new Map<string, boolean>();
   inaccessiblePaths = new Set<string>();
@@ -237,7 +235,6 @@ export class FederationFactory {
     this.concreteTypeNamesByAbstractTypeName = options.concreteTypeNamesByAbstractTypeName;
     this.entityDataByTypeName = options.entityDataByTypeName;
     this.entityInterfaceFederationDataByTypeName = options.entityInterfaceFederationDataByTypeName;
-    this.graph = options.graph;
     this.internalSubgraphBySubgraphName = options.internalSubgraphBySubgraphName;
     this.internalGraph = options.internalGraph;
     this.warnings = options.warnings || [];
@@ -2599,7 +2596,6 @@ function initializeFederationFactory(subgraphs: Subgraph[]): FederationFactoryRe
     concreteTypeNamesByAbstractTypeName,
     entityDataByTypeName,
     errors,
-    graph,
     internalSubgraphBySubgraphName,
     internalGraph,
     warnings,
@@ -2658,7 +2654,6 @@ function initializeFederationFactory(subgraphs: Subgraph[]): FederationFactoryRe
       concreteTypeNamesByAbstractTypeName,
       entityDataByTypeName,
       entityInterfaceFederationDataByTypeName,
-      graph,
       internalSubgraphBySubgraphName,
       internalGraph,
       warnings,

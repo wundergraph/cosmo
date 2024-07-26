@@ -223,7 +223,6 @@ import {
   isTypeValidImplementation,
   ObjectData,
 } from '../schema-building/utils';
-import { MultiGraph } from 'graphology';
 import { getTypeNodeNamedTypeName, ObjectLikeTypeNode } from '../schema-building/ast';
 import { InvalidRootTypeFieldEventsDirectiveData } from '../errors/utils';
 import { Graph } from '../resolvability-graph/graph';
@@ -258,7 +257,6 @@ export type BatchNormalizationContainer = {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
   concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>;
   entityDataByTypeName: Map<string, EntityData>;
-  graph: MultiGraph;
   internalSubgraphBySubgraphName: Map<string, InternalSubgraph>;
   internalGraph: Graph;
   errors?: Error[];
@@ -270,21 +268,16 @@ export function normalizeSubgraphFromString(subgraphSDL: string): NormalizationR
   if (error || !documentNode) {
     return { errors: [subgraphInvalidSyntaxError(error)] };
   }
-  const normalizationFactory = new NormalizationFactory(new MultiGraph(), new Graph());
+  const normalizationFactory = new NormalizationFactory(new Graph());
   return normalizationFactory.normalize(documentNode);
 }
 
 export function normalizeSubgraph(
   document: DocumentNode,
   subgraphName?: string,
-  graph?: MultiGraph,
   internalGraph?: Graph,
 ): NormalizationResultContainer {
-  const normalizationFactory = new NormalizationFactory(
-    graph || new MultiGraph(),
-    internalGraph || new Graph(),
-    subgraphName,
-  );
+  const normalizationFactory = new NormalizationFactory(internalGraph || new Graph(), subgraphName);
   return normalizationFactory.normalize(document);
 }
 
@@ -301,7 +294,6 @@ export class NormalizationFactory {
   entityDataByTypeName = new Map<string, EntityData>();
   entityInterfaceDataByTypeName = new Map<string, EntityInterfaceSubgraphData>();
   eventsConfigurations = new Map<string, EventConfiguration[]>();
-  graph: MultiGraph;
   interfaceTypeNamesWithAuthorizationDirectives = new Set<string>();
   internalGraph: Graph;
   isCurrentParentExtension = false;
@@ -329,11 +321,10 @@ export class NormalizationFactory {
   subgraphName: string;
   warnings: string[] = [];
 
-  constructor(graph: MultiGraph, internalGraph: Graph, subgraphName?: string) {
+  constructor(internalGraph: Graph, subgraphName?: string) {
     for (const [baseDirectiveName, baseDirectiveDefinition] of BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME) {
       this.directiveDefinitionByDirectiveName.set(baseDirectiveName, baseDirectiveDefinition);
     }
-    this.graph = graph;
     this.subgraphName = subgraphName || N_A;
     this.internalGraph = internalGraph;
     this.internalGraph.setSubgraphName(this.subgraphName);
@@ -1916,7 +1907,6 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
       recordSubgraphName(subgraph.name, subgraphNames, nonUniqueSubgraphNames);
     }
   }
-  const graph = new MultiGraph();
   const internalGraph = new Graph();
   for (let i = 0; i < subgraphs.length; i++) {
     const subgraph = subgraphs[i];
@@ -1924,12 +1914,7 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
     if (!subgraph.name) {
       invalidNameErrorMessages.push(invalidSubgraphNameErrorMessage(i, subgraphName));
     }
-    const { errors, normalizationResult } = normalizeSubgraph(
-      subgraph.definitions,
-      subgraph.name,
-      graph,
-      internalGraph,
-    );
+    const { errors, normalizationResult } = normalizeSubgraph(subgraph.definitions, subgraph.name, internalGraph);
     if (errors) {
       validationErrors.push(subgraphValidationError(subgraphName, errors));
       continue;
@@ -2042,7 +2027,6 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
       concreteTypeNamesByAbstractTypeName,
       entityDataByTypeName,
       errors: allErrors,
-      graph,
       internalSubgraphBySubgraphName,
       internalGraph,
       ...(warnings.length > 0 ? { warnings } : {}),
@@ -2071,7 +2055,6 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
     authorizationDataByParentTypeName,
     concreteTypeNamesByAbstractTypeName,
     entityDataByTypeName,
-    graph,
     internalSubgraphBySubgraphName: internalSubgraphBySubgraphName,
     internalGraph,
     ...(warnings.length > 0 ? { warnings } : {}),

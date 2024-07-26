@@ -3,7 +3,6 @@ import { FieldConfiguration } from '../router-configuration/router-configuration
 import { InternalSubgraph, SubgraphConfig } from '../subgraph/subgraph';
 import { DefinitionWithFieldsData, FieldData } from '../schema-building/type-definition-data';
 import { AuthorizationData, EntityData, EntityInterfaceFederationData } from '../utils/utils';
-import { MultiGraph } from 'graphology';
 import { Graph } from '../resolvability-graph/graph';
 import { MutableFieldNode } from '../schema-building/ast';
 
@@ -12,7 +11,6 @@ export type FederationFactoryOptions = {
   concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>;
   entityDataByTypeName: Map<string, EntityData>;
   entityInterfaceFederationDataByTypeName: Map<string, EntityInterfaceFederationData>;
-  graph: MultiGraph;
   internalGraph: Graph;
   internalSubgraphBySubgraphName: Map<string, InternalSubgraph>;
   warnings?: string[];

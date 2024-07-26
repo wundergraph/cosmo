@@ -21,7 +21,7 @@ export class Graph {
   resolvableFieldNamesByRelativeFieldPathByEntityNodeName = new Map<string, Map<string, NodeResolutionData>>();
   nodeResolutionDataByFieldPath = new Map<string, NodeResolutionData>();
   unresolvableFieldPaths = new Set<string>();
-  unresolvableFieldPathsByEntityNodeName = new Map<string, Set<string>>();
+  failureResultByEntityNodeName = new Map<string, EntityResolvabilityFailure>();
   walkerIndex = -1;
 
   constructor() {}
@@ -134,11 +134,12 @@ export class Graph {
     const nestedEntityNodeNamesBySharedFieldPathByParentNodeName = new Map<string, Map<string, Set<string>>>();
     for (const [sharedFieldPath, entityNodeNames] of entityNodeNamesBySharedFieldPath) {
       const isFieldShared = entityNodeNames.size > 1;
-      let failure: EntityResolvabilityFailure | undefined;
+      let failureResult: EntityResolvabilityFailure | undefined;
       // If it's a shared field, the path needs to be assessed collectively
       const sharedResolvableFieldNamesByRelativeFieldPath = isFieldShared
         ? new Map<string, NodeResolutionData>()
         : undefined;
+      const unresolvableSharedFieldPaths = new Set<string>();
       for (const entityNodeName of entityNodeNames) {
         const entityNode = this.nodeByNodeName.get(entityNodeName);
         if (!entityNode) {
@@ -148,28 +149,14 @@ export class Graph {
           this.resolvableFieldNamesByRelativeFieldPathByEntityNodeName.get(entityNodeName);
         if (resolvableFieldNamesByRelativeFieldPath) {
           // If at least one of the referenced entities is always fully resolvable, the path is resolvable.
-          if (!this.unresolvableFieldPathsByEntityNodeName.has(entityNodeName)) {
-            failure = undefined;
+          const entityFailureResult = this.failureResultByEntityNodeName.get(entityNodeName);
+          if (!entityFailureResult) {
+            failureResult = undefined;
             break;
           }
           // If the path is shared, it must be assessed collectively
           if (!isFieldShared) {
-            return {
-              entityAncestorData: {
-                fieldSetsByTargetSubgraphName: getOrThrowError(
-                  this.entityDataNodes,
-                  entityNode.typeName,
-                  'entityDataNodes',
-                ).fieldSetsByTargetSubgraphName,
-                subgraphName: entityNode.subgraphName,
-                typeName: entityNode.typeName,
-              },
-              nodeName: entityNodeName,
-              parentFieldPathForEntityReference: [sharedFieldPath],
-              success: false,
-              typeName: entityNode.typeName,
-              unresolvableFieldPaths: this.unresolvableFieldPathsByEntityNodeName.get(entityNodeName)!,
-            };
+            return entityFailureResult;
           }
         }
         const interSubgraphNodes = this.nodesByTypeName.get(entityNode.typeName) || [];
@@ -186,14 +173,15 @@ export class Graph {
             this.resolvableFieldNamesByRelativeFieldPathByEntityNodeName,
           walkerIndex: (this.walkerIndex += 1),
           sharedResolvableFieldNamesByRelativeFieldPath,
+          unresolvableSharedFieldPaths,
         });
         walker.visitEntityNode(entityNode);
         if (walker.unresolvableFieldPaths.size > 0) {
-          if (isFieldShared && walker.unresolvableSharedFieldPaths.size < 1) {
-            failure = undefined;
+          if (isFieldShared && unresolvableSharedFieldPaths.size < 1) {
+            failureResult = undefined;
             break;
           }
-          failure = {
+          failureResult = {
             entityAncestorData: {
               fieldSetsByTargetSubgraphName: getOrThrowError(
                 this.entityDataNodes,
@@ -207,23 +195,23 @@ export class Graph {
             parentFieldPathForEntityReference: [sharedFieldPath],
             success: false,
             typeName: entityNode.typeName,
-            unresolvableFieldPaths: walker.unresolvableFieldPaths,
+            unresolvableFieldPaths: isFieldShared ? unresolvableSharedFieldPaths : walker.unresolvableFieldPaths,
           };
-          this.unresolvableFieldPathsByEntityNodeName.set(entityNodeName, walker.unresolvableFieldPaths);
+          this.failureResultByEntityNodeName.set(entityNodeName, failureResult);
           continue;
         }
         // In a shared path, only a single instance need succeed
-        failure = undefined;
+        failureResult = undefined;
         break;
       }
-      if (failure) {
+      if (failureResult) {
         if (isFieldShared && sharedResolvableFieldNamesByRelativeFieldPath) {
           this.resolvableFieldNamesByRelativeFieldPathByEntityNodeName.set(
-            failure.nodeName,
+            failureResult.nodeName,
             sharedResolvableFieldNamesByRelativeFieldPath,
           );
         }
-        return failure;
+        return failureResult;
       }
     }
     if (nestedEntityNodeNamesBySharedFieldPathByParentNodeName.size > 0) {
@@ -366,11 +354,12 @@ export class Graph {
 }
 
 type WalkerOptions = {
-  walkerIndex: number;
-  resolvableFieldNamesByRelativeFieldPathByEntityNodeName: Map<string, Map<string, NodeResolutionData>>;
-  originNode: GraphNode;
   entityNodeNamesBySharedFieldPath: Map<string, Set<string>>;
   interSubgraphNodes: Array<GraphNode>;
+  originNode: GraphNode;
+  resolvableFieldNamesByRelativeFieldPathByEntityNodeName: Map<string, Map<string, NodeResolutionData>>;
+  unresolvableSharedFieldPaths: Set<string>;
+  walkerIndex: number;
   sharedResolvableFieldNamesByRelativeFieldPath?: Map<string, NodeResolutionData>;
 };
 
@@ -380,8 +369,8 @@ class Walker {
   originNode: GraphNode;
   resolvableFieldNamesByRelativeFieldPath: Map<string, NodeResolutionData>;
   resolvableFieldNamesByRelativeFieldPathByEntityNodeName: Map<string, Map<string, NodeResolutionData>>;
-  unresolvableSharedFieldPaths = new Set<string>();
   unresolvableFieldPaths = new Set<string>();
+  unresolvableSharedFieldPaths: Set<string>;
   walkerIndex: number;
   sharedResolvableFieldNamesByRelativeFieldPath?: Map<string, NodeResolutionData>;
 
@@ -389,9 +378,10 @@ class Walker {
     entityNodeNamesBySharedFieldPath,
     interSubgraphNodes,
     originNode,
-    sharedResolvableFieldNamesByRelativeFieldPath,
     resolvableFieldNamesByRelativeFieldPathByEntityNodeName,
+    unresolvableSharedFieldPaths,
     walkerIndex,
+    sharedResolvableFieldNamesByRelativeFieldPath,
   }: WalkerOptions) {
     this.entityNodeNamesBySharedFieldPath = entityNodeNamesBySharedFieldPath;
     this.interSubgraphNodes = interSubgraphNodes;
@@ -403,6 +393,7 @@ class Walker {
       originNode.nodeName,
       () => new Map<string, NodeResolutionData>(),
     );
+    this.unresolvableSharedFieldPaths = unresolvableSharedFieldPaths;
     this.walkerIndex = walkerIndex;
     this.sharedResolvableFieldNamesByRelativeFieldPath = sharedResolvableFieldNamesByRelativeFieldPath;
   }
