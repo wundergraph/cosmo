@@ -119,8 +119,6 @@ func main() {
 			Enabled:    cfg.IsPrometheusEnabled,
 			ListenAddr: cfg.PrometheusListenAddr,
 			Path:       cfg.PrometheusPath,
-			// TODO: enable in tests
-			// TestRegistry: &prometheus.Registry{},
 		},
 	)
 
