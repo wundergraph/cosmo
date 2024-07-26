@@ -1,6 +1,5 @@
 import { ConstDirectiveNode, ConstValueNode, FieldDefinitionNode, Kind, StringValueNode } from 'graphql';
 import { FIELD, REQUIRES_SCOPES, SCOPES, UNION } from './string-constants';
-import { MultiGraph } from 'graphology';
 import { invalidKeyFatalError } from '../errors/errors';
 import { EnumTypeNode, InterfaceTypeNode, ObjectTypeNode, ScalarTypeNode, stringToNameNode } from '../ast/utils';
 import { FieldConfiguration } from '../router-configuration/router-configuration';
@@ -348,42 +347,6 @@ class StackSet {
       this.set.delete(value);
     }
   }
-}
-
-export function hasSimplePath(graph: MultiGraph, source: string, target: string): boolean {
-  if (!graph.hasNode(source) || !graph.hasNode(target)) {
-    return false;
-  }
-
-  const stack = [graph.outboundNeighbors(source)];
-  const visited = new StackSet(source);
-  let children, child;
-
-  while (stack.length > 0) {
-    children = stack[stack.length - 1];
-    child = children.pop();
-
-    if (!child) {
-      stack.pop();
-      continue;
-    }
-    if (visited.has(child)) {
-      continue;
-    }
-
-    if (child === target) {
-      return true;
-    }
-
-    visited.push(child);
-
-    const outboundNeighbours = graph.outboundNeighbors(child);
-    if (outboundNeighbours.length < 0) {
-      continue;
-    }
-    stack.push(outboundNeighbours);
-  }
-  return false;
 }
 
 export function getValueOrDefault<K, V>(map: Map<K, V>, key: K, constructor: () => V): V {
