@@ -12,7 +12,9 @@ require (
 	github.com/buger/jsonparser v1.1.1
 	github.com/cespare/xxhash/v2 v2.2.0
 	github.com/cloudflare/backoff v0.0.0-20161212185259-647f3cdfc87a
-	github.com/dgraph-io/ristretto v0.1.1
+	// References to main that includes the fix for the race with ristretto.Close()
+	// Link: https://github.com/dgraph-io/ristretto/pull/384
+	github.com/dgraph-io/ristretto v0.1.2-0.20240723054643-f5997484152c
 	github.com/dustin/go-humanize v1.0.1
 	github.com/go-chi/chi/v5 v5.0.11
 	github.com/go-redis/redis_rate/v10 v10.0.1
@@ -125,8 +127,5 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	nhooyr.io/websocket v1.8.11 // indirect
 )
-
-// To fix race with ristretto.Close() https://github.com/dgraph-io/ristretto/pull/384
-replace github.com/dgraph-io/ristretto v0.1.1 => github.com/wundergraph/ristretto v0.0.0-20240715072905-d30a6481d4bf
 
 //replace github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
