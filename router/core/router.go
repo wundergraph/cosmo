@@ -63,6 +63,8 @@ var CompressibleContentTypes = []string{
 	"application/rss+xml",
 	"image/svg+xml",
 	"application/graphql",
+	"application/graphql-response+json",
+	"application/graphql+json",
 }
 
 type (
