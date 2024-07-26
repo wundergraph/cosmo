@@ -1916,6 +1916,29 @@ func TestTelemetry(t *testing.T) {
 		})
 	})
 
+	t.Run("Client TraceID is respected with parent based sampler", func(t *testing.T) {
+		t.Parallel()
+
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query myQuery { employees { id } }`,
+				Header: map[string][]string{
+					// traceparent header without sample flag set
+					"traceparent": {"00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203332-01"}, // 01 = sampled
+				},
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			sn := exporter.GetSpans().Snapshots()
+			require.Len(t, sn, 8, "expected 8 spans, got %d", len(sn))
+			require.Equal(t, "0af7651916cd43dd8448eb211c80319c", sn[0].SpanContext().TraceID().String())
+		})
+	})
+
 	t.Run("Trace named operation with parent-child relationship", func(t *testing.T) {
 		t.Parallel()
 
