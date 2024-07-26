@@ -39,12 +39,14 @@ import { formatDateTime } from "@/lib/format-date";
 import { addDays } from "date-fns";
 
 export const StarBanner = ({
+  isDisabled,
   setDisableStarBanner,
 }: {
+  isDisabled: boolean;
   setDisableStarBanner: Dispatch<SetStateAction<string>>;
 }) => {
   return (
-    <div className="flex h-8 justify-center">
+    <div className={cn("flex h-8 justify-center", isDisabled && "hidden")}>
       <div className="flex w-screen bg-gradient-to-r from-purple-500 to-pink-400 text-xs lg:justify-center xl:text-sm">
         <a
           href="//github.com/wundergraph/cosmo"
@@ -90,7 +92,8 @@ export const OrganizationBanner = () => {
         <ExclamationTriangleIcon className="flex-shrink-0" />
         <span className="flex gap-x-1 font-bold text-gray-950 dark:text-primary-foreground">
           Your organization is deactivated and is in read-only mode.{" "}
-          {org.deactivation.reason ? `${org.deactivation.reason}.` : ""} It will be permanently deleted on{" "}
+          {org.deactivation.reason ? `${org.deactivation.reason}.` : ""} It will
+          be permanently deleted on{" "}
           {formatDateTime(addDays(new Date(org.deactivation.initiatedAt), 30))}
         </span>
       </p>
@@ -103,10 +106,15 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
   const user = useContext(UserContext);
   const organizationSlug = router.query.organizationSlug as string;
 
-  const [isStarBannerDisabled, setDisableStarBanner] = useLocalStorage(
+  const [isStarBannerDisabled, setIsStarBannerDisabled] = useState(true);
+  const [isStarBannerDisabledOnClient, setDisableStarBanner] = useLocalStorage(
     "disableStarBanner",
     "false",
   );
+  useEffect(() => {
+    setIsStarBannerDisabled(isStarBannerDisabledOnClient === "true");
+  }, [isStarBannerDisabledOnClient]);
+
   const isOrganizationDeactivated = !!user?.currentOrganization.deactivation;
 
   const isBannerDisplayed = isOrganizationDeactivated || !isStarBannerDisabled;
@@ -215,9 +223,10 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
 
   return (
     <div className="2xl:flex 2xl:flex-1 2xl:flex-col 2xl:items-center">
-      {typeof window !== "undefined" && isStarBannerDisabled !== "true" && !isOrganizationDeactivated && (
-        <StarBanner setDisableStarBanner={setDisableStarBanner} />
-      )}
+      <StarBanner
+        isDisabled={isStarBannerDisabled && !isOrganizationDeactivated}
+        setDisableStarBanner={setDisableStarBanner}
+      />
       <OrganizationBanner />
       <div
         className={cn(
