@@ -1,9 +1,6 @@
 -- migrate:up
 
--- This view is used to forward the runtime router gauge metrics from the otel_metrics_gauge table to the router_metrics_30 table
--- Data can't be aggregated because the metrics can be cumulative or delta.
-
-CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.router_gauge_metrics_1_30_mv TO cosmo.router_metrics_30 AS
+CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.router_sum_metrics_1_30_mv TO cosmo.router_metrics_30 AS
 SELECT
     TimeUnix as Timestamp,
     ResourceAttributes[ 'process.pid' ] as ProcessID,
@@ -18,7 +15,7 @@ SELECT
     toLowCardinality(MetricName) as MetricName,
     Value as MetricValue
 FROM
-    cosmo.otel_metrics_gauge
+    cosmo.otel_metrics_sum
 WHERE
     ScopeName = 'cosmo.router.runtime'
 ORDER BY
@@ -26,4 +23,3 @@ ORDER BY
 
 -- migrate:down
 
-DROP VIEW IF EXISTS cosmo.router_gauge_metrics_1_30_mv
