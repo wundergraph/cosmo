@@ -51,7 +51,7 @@ const (
 	Redact IPAnonymizationMethod = "redact"
 )
 
-var CustomCompressibleContentTypes = []string{
+var CompressibleContentTypes = []string{
 	"text/html",
 	"text/css",
 	"text/plain",
@@ -63,6 +63,8 @@ var CustomCompressibleContentTypes = []string{
 	"application/rss+xml",
 	"image/svg+xml",
 	"application/graphql",
+	"application/graphql-response+json",
+	"application/graphql+json",
 }
 
 type (
