@@ -467,6 +467,12 @@ const RoutersPage: NextPageWithLayout = () => {
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    state: {
+      pagination: {
+        pageIndex: 0,
+        pageSize: 100,
+      },
+    },
   });
 
   if (isLoading) {
