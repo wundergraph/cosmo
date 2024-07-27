@@ -159,16 +159,6 @@ func main() {
 		ms.Shutdown(cfg.ShutdownDelay)
 	}()
 
-	if metricsConfig.IsEnabled() {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			if err := svr.ShutdownPrometheusServer(context.Background()); err != nil {
-				logger.Error("Could not shutdown prometheus server", zap.Error(err))
-			}
-		}()
-	}
-
 	// enforce a maximum shutdown delay
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownDelay)
 	defer cancel()

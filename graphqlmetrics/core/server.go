@@ -117,10 +117,16 @@ func (s *Server) Shutdown(ctx context.Context) error {
 		s.logger.Error("Could not shutdown server", zap.Error(err))
 	}
 
+	if s.prometheusServer != nil {
+		if err := s.shutdownPrometheusServer(ctx); err != nil {
+			s.logger.Error("Could not shutdown prometheus server", zap.Error(err))
+		}
+	}
+
 	return nil
 }
 
-func (s *Server) ShutdownPrometheusServer(ctx context.Context) error {
+func (s *Server) shutdownPrometheusServer(ctx context.Context) error {
 	if s.prometheusServer == nil {
 		return errors.New("prometheus server was not initialized")
 	}
