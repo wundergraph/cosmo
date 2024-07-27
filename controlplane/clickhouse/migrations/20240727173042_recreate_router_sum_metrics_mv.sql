@@ -1,5 +1,7 @@
 -- migrate:up
 
+-- In this migration we removed aggregation of the metrics because we don't know its temporalities
+
 CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.router_sum_metrics_1_30_mv TO cosmo.router_metrics_30 AS
 SELECT
     TimeUnix as Timestamp,
