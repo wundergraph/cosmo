@@ -8,11 +8,13 @@ require (
 	connectrpc.com/connect v1.16.2
 	github.com/MicahParks/keyfunc/v2 v2.1.0
 	github.com/alitto/pond v1.8.3
-	github.com/andybalholm/brotli v1.1.0
+	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/buger/jsonparser v1.1.1
 	github.com/cespare/xxhash/v2 v2.2.0
 	github.com/cloudflare/backoff v0.0.0-20161212185259-647f3cdfc87a
-	github.com/dgraph-io/ristretto v0.1.1
+	// References to main that includes the fix for the race with ristretto.Close()
+	// Link: https://github.com/dgraph-io/ristretto/pull/384
+	github.com/dgraph-io/ristretto v0.1.2-0.20240723054643-f5997484152c
 	github.com/dustin/go-humanize v1.0.1
 	github.com/go-chi/chi/v5 v5.0.11
 	github.com/go-redis/redis_rate/v10 v10.0.1
@@ -32,6 +34,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.18.0
 	github.com/redis/go-redis/v9 v9.4.0
+	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/sebdah/goldie/v2 v2.5.3
 	github.com/shirou/gopsutil/v3 v3.24.3
 	github.com/stretchr/testify v1.9.0
@@ -64,7 +67,7 @@ require (
 )
 
 require (
-	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
+	github.com/klauspost/compress v1.17.9
 	github.com/valyala/fastjson v1.6.4
 	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8
 )
@@ -89,7 +92,6 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/jensneuse/byte-template v0.0.0-20200214152254-4f3cf06e5c68 // indirect
 	github.com/kingledion/go-tools v0.6.0 // indirect
-	github.com/klauspost/compress v1.17.8 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
@@ -125,8 +127,5 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	nhooyr.io/websocket v1.8.11 // indirect
 )
-
-// To fix race with ristretto.Close() https://github.com/dgraph-io/ristretto/pull/384
-replace github.com/dgraph-io/ristretto v0.1.1 => github.com/wundergraph/ristretto v0.0.0-20240715072905-d30a6481d4bf
 
 //replace github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
