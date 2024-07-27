@@ -3,13 +3,16 @@ package core
 import (
 	"context"
 	"errors"
+	"net/http"
+	"time"
+
 	"github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	"github.com/wundergraph/cosmo/graphqlmetrics/pkg/telemetry"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/zap"
 	brotli "go.withmatt.com/connect-brotli"
-	"net/http"
-	"time"
 )
 
 // Option defines the method to customize Server.
@@ -24,6 +27,9 @@ type Server struct {
 
 	metricConfig     *telemetry.Config
 	prometheusServer *http.Server
+
+	meterProvider *sdkmetric.MeterProvider
+	traceProvider *sdktrace.TracerProvider
 }
 
 func NewServer(metricsService graphqlmetricsv1connect.GraphQLMetricsServiceHandler, opts ...Option) *Server {
@@ -59,11 +65,8 @@ func (s *Server) bootstrap() {
 		if err != nil {
 			s.logger.Error("Error creating tracing provider", zap.Error(err))
 		}
-		defer func() {
-			if err := tp.Shutdown(context.Background()); err != nil {
-				s.logger.Error("Error shutting down tracer provider", zap.Error(err))
-			}
-		}()
+
+		s.traceProvider = tp
 		handler = otelhttp.NewHandler(handler, "graphqlmetrics", otelhttp.WithTracerProvider(tp))
 	}
 
@@ -76,12 +79,7 @@ func (s *Server) bootstrap() {
 			s.logger.Error("Failed to create Prometheus exporter", zap.Error(err))
 		}
 
-		defer func() {
-			if err := mp.Shutdown(context.Background()); err != nil {
-				s.logger.Error("Error shutting down metrics provider", zap.Error(err))
-			}
-		}()
-
+		s.meterProvider = mp
 		s.prometheusServer = telemetry.NewPrometheusServer(s.logger, s.metricConfig.Prometheus.ListenAddr, s.metricConfig.Prometheus.Path, registry)
 	}
 
@@ -115,6 +113,18 @@ func (s *Server) Shutdown(ctx context.Context) error {
 
 	if err := s.server.Shutdown(ctx); err != nil {
 		s.logger.Error("Could not shutdown server", zap.Error(err))
+	}
+
+	if s.traceProvider != nil {
+		if err := s.traceProvider.Shutdown(ctx); err != nil {
+			s.logger.Error("Error shutting down trace provider", zap.Error(err))
+		}
+	}
+
+	if s.meterProvider != nil {
+		if err := s.meterProvider.Shutdown(ctx); err != nil {
+			s.logger.Error("Error shutting down meter provider", zap.Error(err))
+		}
 	}
 
 	if s.prometheusServer != nil {
