@@ -1,6 +1,7 @@
 package telemetry
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -11,7 +12,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/otel"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/resource"
+
+	sdkresource "go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.uber.org/zap"
 
@@ -63,15 +65,27 @@ func (c *Config) NewPrometheusMeterProvider() (*sdkmetric.MeterProvider, *promet
 	)
 
 	if err != nil {
-		panic(err)
+		return nil, nil, err
+	}
+
+	resource, err := sdkresource.New(
+		context.TODO(),
+		sdkresource.WithTelemetrySDK(),
+		sdkresource.WithProcessPID(),
+		sdkresource.WithOSType(),
+		sdkresource.WithHost(),
+		sdkresource.WithAttributes(
+			semconv.ServiceNameKey.String(c.Name),
+		),
+	)
+
+	if err != nil {
+		return nil, nil, err
 	}
 
 	mp := sdkmetric.NewMeterProvider(
 		sdkmetric.WithReader(promExporter),
-		sdkmetric.WithResource(resource.NewWithAttributes(
-			semconv.SchemaURL,
-			semconv.ServiceNameKey.String(c.Name),
-		)),
+		sdkmetric.WithResource(resource),
 	)
 
 	otel.SetMeterProvider(mp)
