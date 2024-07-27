@@ -1934,7 +1934,7 @@ func TestTelemetry(t *testing.T) {
 			require.JSONEq(t, employeesIDData, res.Body)
 
 			sn := exporter.GetSpans().Snapshots()
-			require.Len(t, sn, 8, "expected 9 spans, got %d", len(sn))
+			require.Len(t, sn, 9, "expected 9 spans, got %d", len(sn))
 			require.Equal(t, "0af7651916cd43dd8448eb211c80319c", sn[0].SpanContext().TraceID().String())
 		})
 	})
