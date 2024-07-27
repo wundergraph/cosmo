@@ -2,14 +2,14 @@ package integration
 
 import (
 	"bytes"
-	"compress/flate"
 	"compress/gzip"
 	"encoding/json"
+	"github.com/buger/jsonparser"
 	"io"
 	"net/http"
+	"strings"
 	"testing"
 
-	"github.com/andybalholm/brotli"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 )
@@ -25,21 +25,6 @@ func decompressGzip(t *testing.T, body io.Reader) []byte {
 	return data
 }
 
-func decompressDeflate(t *testing.T, body io.Reader) []byte {
-	dr := flate.NewReader(body)
-	defer dr.Close()
-	data, err := io.ReadAll(dr)
-	require.NoError(t, err)
-	return data
-}
-
-func decompressBrotli(t *testing.T, body io.Reader) []byte {
-	br := brotli.NewReader(body)
-	data, err := io.ReadAll(br)
-	require.NoError(t, err)
-	return data
-}
-
 func decompressNone(t *testing.T, body io.Reader) []byte {
 	data, err := io.ReadAll(body)
 	require.NoError(t, err)
@@ -49,24 +34,41 @@ func decompressNone(t *testing.T, body io.Reader) []byte {
 func TestResponseCompression(t *testing.T) {
 	t.Parallel()
 
+	employeesIdDataMinSizeGzip := `{"data":{"employees":[{"id":1}` + strings.Repeat(`,{"id":1}`, 200) + `]}}`
+
 	testCases := []struct {
 		name           string
 		encoding       string
 		decompressFunc func(t *testing.T, body io.Reader) []byte
 		expectEncoding bool
+		responseData   string
 	}{
-		{"gzip", "gzip", decompressGzip, true},
-		{"deflate", "deflate", decompressDeflate, true},
-		{"brotli", "br", decompressBrotli, true},
-		{"identity", "identity", decompressNone, false}, // NO Encoding
-		{"zstd", "zstd", decompressNone, false},         // Unsuported Encoding
+		{"gzip with min size", "gzip", decompressGzip, true, employeesIdDataMinSizeGzip},     // Gzip Encoding with min size
+		{"no gzip because request is too small", "", decompressGzip, false, employeesIdData}, // No Gzip Encoding because of min size
+		{"identity", "identity", decompressNone, false, employeesIdData},                     // NO Encoding
+		{"zstd", "zstd", decompressNone, false, employeesIdData},                             // Unsuported Encoding
 	}
 
 	for _, tc := range testCases {
 		tc := tc // capture range variable
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel() // mark the subtest as parallel
-			testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			testenv.Run(t, &testenv.Config{
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{
+						Middleware: func(handler http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								w.Header().Set("Content-Type", "application/json")
+								data, err := io.ReadAll(r.Body)
+								require.NoError(t, err)
+								_, dt, _, _ := jsonparser.Get(data, "extensions", "persistedQuery")
+								require.Equal(t, jsonparser.NotExist, dt)
+								_, _ = w.Write([]byte(tc.responseData))
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
 				headers := http.Header{
 					"Content-Type": []string{"application/json"},
 				}
@@ -87,13 +89,12 @@ func TestResponseCompression(t *testing.T) {
 
 				if tc.expectEncoding {
 					require.Equal(t, tc.encoding, res.Header.Get("Content-Encoding"))
+					decompressedBody := tc.decompressFunc(t, res.Body)
+					require.JSONEq(t, tc.responseData, string(decompressedBody))
 				} else {
 					require.Empty(t, res.Header.Get("Content-Encoding"))
 				}
 				require.Contains(t, res.Header.Get("Content-Type"), "application/json")
-
-				decompressedBody := tc.decompressFunc(t, res.Body)
-				require.JSONEq(t, employeesIdData, string(decompressedBody))
 			})
 		})
 	}
