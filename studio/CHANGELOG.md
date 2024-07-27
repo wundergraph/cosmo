@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.83.1](https://github.com/wundergraph/cosmo/compare/studio@0.83.0...studio@0.83.1) (2024-07-27)
+
+### Bug Fixes
+
+* increase page size for router page ([#969](https://github.com/wundergraph/cosmo/issues/969)) ([b09fc3b](https://github.com/wundergraph/cosmo/commit/b09fc3bfc9ceeca297f480c28bff7477991b103c)) (@StarpTech)
+
 # [0.83.0](https://github.com/wundergraph/cosmo/compare/studio@0.82.1...studio@0.83.0) (2024-07-26)
 
 ### Bug Fixes
