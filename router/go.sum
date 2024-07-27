@@ -229,8 +229,6 @@ github.com/vektah/gqlparser/v2 v2.5.11 h1:JJxLtXIoN7+3x6MBdtIP59TP1RANnY7pXOaDnA
 github.com/vektah/gqlparser/v2 v2.5.11/go.mod h1:1rCcfwB2ekJofmluGWXMSEnPMZgbxzwj6FaZ/4OT8Cc=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.66 h1:82Q13hifV6joW9cjAQmWylWP1JEB2/ceF8gBThczakw=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.66/go.mod h1:aukw9fSLqLLQz0tPe84ioUtcnnvdZ58ec9ByC6mz76c=
-github.com/wundergraph/ristretto v0.0.0-20240715072905-d30a6481d4bf h1:MdIFR6bTqsFtVykye/JQ42aeQgLFkY3AwAVAKA4S8uA=
-github.com/wundergraph/ristretto v0.0.0-20240715072905-d30a6481d4bf/go.mod h1:6LJywzE5Bt1eAjzHpcrnjv+cekP1M/GQY0jnyxxx2hA=
 github.com/yusufpapurcu/wmi v1.2.4 h1:zFUKzehAFReQwLys1b/iSMl+JQGSCSjtVqQn9bBrPo0=
 github.com/yusufpapurcu/wmi v1.2.4/go.mod h1:SBZ9tNy3G9/m5Oi98Zks0QjeHVDvuK0qfxQmPyzfmi0=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1 h1:aFJWCqJMNjENlcleuuOkGAPH82y0yULBScfXcIEdS24=

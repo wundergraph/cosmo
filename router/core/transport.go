@@ -102,9 +102,14 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 	}
 }
 
+// RoundTrip of the engine upstream requests. The handler is called concurrently for each request.
+// Be aware that multiple modules can be active at the same time. Must be concurrency safe.
 func (ct *CustomTransport) RoundTrip(req *http.Request) (resp *http.Response, err error) {
 
-	reqContext := getRequestContext(req.Context())
+	moduleContext := &moduleRequestContext{
+		requestContext: getRequestContext(req.Context()),
+		sendError:      nil,
+	}
 
 	done := ct.measureSubgraphMetrics(req)
 	defer func() {
@@ -113,7 +118,7 @@ func (ct *CustomTransport) RoundTrip(req *http.Request) (resp *http.Response, er
 
 	if ct.preHandlers != nil {
 		for _, preHandler := range ct.preHandlers {
-			r, resp := preHandler(req, reqContext)
+			r, resp := preHandler(req, moduleContext)
 			// Non nil response means the handler decided to skip sending the request
 			if resp != nil {
 				return resp, nil
@@ -126,7 +131,7 @@ func (ct *CustomTransport) RoundTrip(req *http.Request) (resp *http.Response, er
 		resp, err = ct.roundTripper.RoundTrip(req)
 		if err == nil && ct.isUpgradeError(req, resp) {
 			err := &ErrUpgradeFailed{StatusCode: resp.StatusCode}
-			if subgraph := reqContext.ActiveSubgraph(req); subgraph != nil {
+			if subgraph := moduleContext.ActiveSubgraph(req); subgraph != nil {
 				err.SubgraphID = subgraph.Id
 			}
 			return nil, err
@@ -137,12 +142,12 @@ func (ct *CustomTransport) RoundTrip(req *http.Request) (resp *http.Response, er
 
 	// Set the error on the request context so that it can be checked by the post handlers
 	if err != nil {
-		reqContext.sendError = err
+		moduleContext.sendError = err
 	}
 
 	if ct.postHandlers != nil {
 		for _, postHandler := range ct.postHandlers {
-			newResp := postHandler(resp, reqContext)
+			newResp := postHandler(resp, moduleContext)
 			// Abort with the first handler that returns a non-nil response
 			if newResp != nil {
 				return newResp, nil

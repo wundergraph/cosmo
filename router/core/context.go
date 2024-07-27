@@ -64,9 +64,6 @@ type RequestContext interface {
 	// Operation is the GraphQL operation
 	Operation() OperationContext
 
-	// SendError returns the most recent error occurred while trying to make the origin request.
-	SendError() error
-
 	// Set is used to store a new key/value pair exclusively for this context.
 	Set(string, any)
 
@@ -142,14 +139,8 @@ type requestContext struct {
 	request *http.Request
 	// operation is the GraphQL operation context
 	operation *operationContext
-	// sendError returns the most recent error occurred while trying to make the origin request.
-	sendError error
 	// subgraphs is the list of subgraphs taken from the router config
 	subgraphs []Subgraph
-}
-
-func (c *requestContext) SendError() error {
-	return c.sendError
 }
 
 func (c *requestContext) Operation() OperationContext {
