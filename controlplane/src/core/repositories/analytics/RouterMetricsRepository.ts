@@ -42,8 +42,8 @@ export class RouterMetricsRepository {
                from cosmo.router_metrics_30
                where
                  Timestamp >= now() - interval 45 second AND
-                 OrganizationID = '${input.organizationId}' AND
                  FederatedGraphID = '${input.federatedGraphId}' AND
+                 OrganizationID = '${input.organizationId}' AND
                  ServiceInstanceID = '${input.serviceInstanceId}' AND
                  MetricName in ('server.uptime', 'process.runtime.go.mem.heap_alloc', 'process.cpu.usage')
                order by Timestamp desc
