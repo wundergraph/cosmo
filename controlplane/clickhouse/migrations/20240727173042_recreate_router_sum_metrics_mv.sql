@@ -19,7 +19,7 @@ FROM
 WHERE
     ScopeName = 'cosmo.router.runtime'
 ORDER BY
-    TimeUnix DESC;
+    Timestamp DESC;
 
 -- migrate:down
 
