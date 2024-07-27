@@ -1,8 +1,7 @@
 -- migrate:up
 
--- This table is used to store metrics for the router service
--- The metrics are inserted by multiple materialized views and serve as optimized tables for querying
--- based on the federated graph, organization, config version, service instance, and time range
+-- This table is used to speed up queries for router metrics. It stores the metrics for the last 30 days.
+-- The metrics are inserted by multiple materialized views and the FederatedGraphID id is used as primary key.
 
 CREATE TABLE IF NOT EXISTS cosmo.router_metrics_30 (
    Timestamp DateTime('UTC') CODEC (Delta(4), ZSTD(3)),
