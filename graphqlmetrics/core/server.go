@@ -8,7 +8,6 @@ import (
 
 	"github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	"github.com/wundergraph/cosmo/graphqlmetrics/pkg/telemetry"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/zap"
@@ -60,19 +59,6 @@ func (s *Server) bootstrap(ctx context.Context) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	if s.metricConfig.OpenTelemetry.Enabled {
-		tp, err := s.metricConfig.NewTracerProvider()
-		if err != nil {
-			s.logger.Error("Error creating tracing provider", zap.Error(err))
-		}
-
-		s.traceProvider = tp
-		handler = otelhttp.NewHandler(handler, "graphqlmetrics", otelhttp.WithTracerProvider(tp))
-	}
-
-	mux.Handle("/health", healthHandler)
-	mux.Handle(path, authenticate(s.jwtSecret, s.logger, handler))
-
 	if s.metricConfig.Prometheus.Enabled {
 		mp, registry, err := s.metricConfig.NewPrometheusMeterProvider(ctx)
 		if err != nil {
@@ -81,7 +67,12 @@ func (s *Server) bootstrap(ctx context.Context) {
 
 		s.meterProvider = mp
 		s.prometheusServer = telemetry.NewPrometheusServer(s.logger, s.metricConfig.Prometheus.ListenAddr, s.metricConfig.Prometheus.Path, registry)
+		handler = s.metricConfig.PrometheusMiddleware(handler)
 	}
+
+	// attach metrics middleware
+	mux.Handle("/health", healthHandler)
+	mux.Handle(path, authenticate(s.jwtSecret, s.logger, handler))
 
 	s.server = &http.Server{
 		Addr: s.listenAddr,

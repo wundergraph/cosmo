@@ -9,6 +9,10 @@ const (
 	serviceVersion    = "dev"
 )
 
+type CustomMetrics struct {
+	MetricsServiceAccessCounter *prometheus.CounterVec
+}
+
 // NewTelemetryConfig creates the config to be used for the
 // telemetry inside graphqlmetrics.
 func NewTelemetryConfig(prometheusConfig PrometheusConfig) *Config {
@@ -29,6 +33,8 @@ type Config struct {
 	Prometheus PrometheusConfig
 	// OpenTelemetry used to enable tracing
 	OpenTelemetry OpenTelemetry
+	// CustomPrometheusMetrics to be collected
+	CustomMetrics CustomMetrics
 }
 
 type OpenTelemetry struct {

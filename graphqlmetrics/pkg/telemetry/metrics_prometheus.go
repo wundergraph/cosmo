@@ -54,10 +54,20 @@ func (c *Config) NewPrometheusMeterProvider(ctx context.Context) (*sdkmetric.Met
 		registry = prometheus.NewRegistry()
 	}
 
+	c.CustomMetrics.MetricsServiceAccessCounter = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "api_access_count",
+			Help: "Number of times the API endpoint is accessed by an organization",
+		},
+		[]string{"endpoint", "organizationID"},
+	)
+
 	registry.MustRegister(collectors.NewGoCollector())
 
 	// Only available on Linux and Windows systems
 	registry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+	// Counter for how often the metrics service was called
+	registry.MustRegister(c.CustomMetrics.MetricsServiceAccessCounter)
 
 	promExporter, err := otelprom.New(
 		otelprom.WithoutUnits(),
@@ -90,4 +100,20 @@ func (c *Config) NewPrometheusMeterProvider(ctx context.Context) (*sdkmetric.Met
 
 	otel.SetMeterProvider(mp)
 	return mp, registry, nil
+}
+
+func (c *Config) PrometheusMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		organizationID := r.URL.Query().Get("OrganizationID")
+		if organizationID == "" {
+			organizationID = "unknown"
+		}
+
+		c.CustomMetrics.MetricsServiceAccessCounter.With(prometheus.Labels{
+			"endpoint":       r.URL.Path,
+			"organizationID": organizationID,
+		},
+		).Inc()
+		next.ServeHTTP(w, r)
+	})
 }
