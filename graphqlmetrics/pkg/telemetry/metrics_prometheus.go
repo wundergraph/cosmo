@@ -43,6 +43,15 @@ func NewPrometheusServer(logger *zap.Logger, listenAddr string, path string, reg
 
 	return svr
 }
+func (c *Config) initializeCustomMetrics() {
+	c.CustomMetrics.MetricsServiceAccessCounter = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "api_access_count",
+			Help: "Number of times the API endpoint is accessed by an organization",
+		},
+		[]string{"endpoint", "organizationID"},
+	)
+}
 
 func (c *Config) NewPrometheusMeterProvider(ctx context.Context) (*sdkmetric.MeterProvider, *prometheus.Registry, error) {
 	var registry *prometheus.Registry
@@ -53,16 +62,10 @@ func (c *Config) NewPrometheusMeterProvider(ctx context.Context) (*sdkmetric.Met
 		registry = prometheus.NewRegistry()
 	}
 
-	c.CustomMetrics.MetricsServiceAccessCounter = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "api_access_count",
-			Help: "Number of times the API endpoint is accessed by an organization",
-		},
-		[]string{"endpoint", "organizationID"},
-	)
+	c.initializeCustomMetrics()
 
+	// Default go process metrics
 	registry.MustRegister(collectors.NewGoCollector())
-
 	// Only available on Linux and Windows systems
 	registry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 	// Counter for how often the metrics service was called
