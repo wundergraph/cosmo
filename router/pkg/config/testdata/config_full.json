@@ -342,5 +342,10 @@
     "RewritePaths": true,
     "OmitLocations": true,
     "OmitExtensions": false
+  },
+  "ExecutionConfig": {
+    "Provider": "",
+    "FromS3": null,
+    "FromFile": null
   }
 }

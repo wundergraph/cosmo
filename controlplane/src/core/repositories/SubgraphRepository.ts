@@ -17,6 +17,7 @@ import {
   subgraphsToFederatedGraph,
   targets,
   users,
+  federatedGraphs,
 } from '../../db/schema.js';
 import {
   FederatedGraphDTO,
@@ -395,6 +396,15 @@ export class SubgraphRepository {
         );
       }
 
+      // update the readme of the subgraph
+      if (data.readme !== undefined) {
+        await targetRepo.updateReadmeOfTarget({ id: data.targetId, readme: data.readme });
+      }
+
+      if (updatedFederatedGraphs.length == 0) {
+        return;
+      }
+
       const { compositionErrors: cErrors, deploymentErrors: dErrors } = await fedGraphRepo.composeAndDeployGraphs({
         federatedGraphs: updatedFederatedGraphs.filter((g) => !g.contract),
         blobStorage,
@@ -404,11 +414,6 @@ export class SubgraphRepository {
 
       compositionErrors.push(...cErrors);
       deploymentErrors.push(...dErrors);
-
-      // update the readme of the subgraph
-      if (data.readme !== undefined) {
-        await targetRepo.updateReadmeOfTarget({ id: data.targetId, readme: data.readme });
-      }
     });
 
     return {

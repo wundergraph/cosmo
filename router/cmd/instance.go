@@ -2,9 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/cdn"
+	"github.com/wundergraph/cosmo/router/internal/s3"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 
-	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
@@ -45,19 +46,46 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		if err != nil {
 			logger.Fatal("Could not read router config", zap.Error(err), zap.String("path", cfg.RouterConfigPath))
 		}
-	} else if cfg.Graph.Token != "" {
-		routerCDN, err := cdn.NewRouterConfigClient(cfg.CDN.URL, cfg.Graph.Token, cdn.RouterConfigOptions{
-			Logger:       logger,
-			SignatureKey: cfg.Graph.SignKey,
-		})
-		if err != nil {
-			return nil, err
+	} else {
+		var client configpoller.RouterConfigClient
+
+		if cfg.ExecutionConfig.FromS3 != nil && cfg.ExecutionConfig.FromS3.Enabled {
+
+			client, err = s3.NewRouterConfigClient(cfg.ExecutionConfig.FromS3.Endpoint, &s3.Options{
+				AccessKeyID:     cfg.ExecutionConfig.FromS3.AccessKey,
+				SecretAccessKey: cfg.ExecutionConfig.FromS3.SecretKey,
+				BucketName:      cfg.ExecutionConfig.FromS3.Bucket,
+				Region:          cfg.ExecutionConfig.FromS3.Region,
+				ObjectPath:      cfg.ExecutionConfig.FromS3.ObjectPath,
+				UseSSL:          cfg.ExecutionConfig.FromS3.UseSSL,
+			})
+			if err != nil {
+				return nil, err
+			}
+			logger.Info("Polling for router config updates from S3 in the background",
+				zap.String("bucket", cfg.ExecutionConfig.FromS3.Bucket),
+				zap.String("region", cfg.ExecutionConfig.FromS3.Region),
+				zap.String("objectPath", cfg.ExecutionConfig.FromS3.ObjectPath),
+			)
+		} else {
+			if cfg.Graph.Token == "" {
+				return nil, fmt.Errorf("router config provider 'cdn' is not supported without a graph token")
+			}
+			client, err = cdn.NewRouterConfigClient(cfg.CDN.URL, cfg.Graph.Token, cdn.RouterConfigOptions{
+				Logger:       logger,
+				SignatureKey: cfg.Graph.SignKey,
+			})
+			if err != nil {
+				return nil, err
+			}
+
+			logger.Info("Polling for router config updates from CDN in the background", zap.String("url", cfg.CDN.URL))
 		}
 
 		configPoller = configpoller.New(cfg.ControlplaneURL, cfg.Graph.Token,
 			configpoller.WithLogger(logger),
 			configpoller.WithPollInterval(cfg.PollInterval),
-			configpoller.WithCDNClient(routerCDN),
+			configpoller.WithClient(client),
 		)
 	}
 

@@ -25,16 +25,19 @@ type ConfigPollerMock struct {
 	ready        chan struct{}
 }
 
-func (c *ConfigPollerMock) Subscribe(ctx context.Context, handler func(newConfig *nodev1.RouterConfig, oldVersion string) error) {
+func (c *ConfigPollerMock) Subscribe(_ context.Context, handler func(newConfig *nodev1.RouterConfig, oldVersion string) error) {
 	c.updateConfig = handler
 	close(c.ready)
 }
 
-func (c *ConfigPollerMock) GetRouterConfig(ctx context.Context) (*nodev1.RouterConfig, error) {
-	return c.initConfig, nil
+func (c *ConfigPollerMock) GetRouterConfig(_ context.Context) (*configpoller.RouterConfigResult, error) {
+	result := &configpoller.RouterConfigResult{
+		Config: c.initConfig,
+	}
+	return result, nil
 }
 
-func (c *ConfigPollerMock) Stop(ctx context.Context) error {
+func (c *ConfigPollerMock) Stop(_ context.Context) error {
 	return nil
 }
 

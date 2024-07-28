@@ -6,17 +6,18 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/cdn"
-	"github.com/wundergraph/cosmo/router/internal/docker"
-	"github.com/wundergraph/cosmo/router/internal/graphiql"
-	"go.uber.org/atomic"
-	brotli "go.withmatt.com/connect-brotli"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/internal/cdn"
+	"github.com/wundergraph/cosmo/router/internal/docker"
+	"github.com/wundergraph/cosmo/router/internal/graphiql"
+	"go.uber.org/atomic"
+	brotli "go.withmatt.com/connect-brotli"
 
 	"github.com/nats-io/nuid"
 	"github.com/redis/go-redis/v9"
@@ -138,7 +139,7 @@ type (
 		readinessCheckPath       string
 		livenessCheckPath        string
 		cdnConfig                config.CDNConfiguration
-		cdnOperationClient       *cdn.PersistedOperationClient
+		cdnOperationClient       cdn.PersistedOperationClient
 		eventsConfig             config.EventsConfiguration
 		prometheusServer         *http.Server
 		modulesConfig            map[string]interface{}
@@ -601,12 +602,12 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 		return nil, fmt.Errorf("config fetcher not provided. Please provide a static router config instead")
 	}
 
-	routerConfig, err := r.configPoller.GetRouterConfig(ctx)
+	cfg, err := r.configPoller.GetRouterConfig(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get initial router config: %w", err)
 	}
 
-	if err := r.newServer(ctx, routerConfig); err != nil {
+	if err := r.newServer(ctx, cfg.Config); err != nil {
 		r.logger.Error("Failed to start server with initial config", zap.Error(err))
 		return nil, err
 	}
@@ -791,12 +792,12 @@ func (r *Router) Start(ctx context.Context) error {
 		return fmt.Errorf("config fetcher not provided. Please provide a static router config instead")
 	}
 
-	routerConfig, err := r.configPoller.GetRouterConfig(ctx)
+	cfg, err := r.configPoller.GetRouterConfig(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get initial router config: %w", err)
 	}
 
-	if err := r.newServer(ctx, routerConfig); err != nil {
+	if err := r.newServer(ctx, cfg.Config); err != nil {
 		return err
 	}
 
@@ -832,12 +833,10 @@ func (r *Router) Start(ctx context.Context) error {
 		)
 	}
 
-	if err := r.listenAndServe(routerConfig); err != nil {
+	if err := r.listenAndServe(cfg.Config); err != nil {
 		r.logger.Error("Failed to start server with initial config", zap.Error(err))
 		return err
 	}
-
-	r.logger.Info("Polling for router config updates in the background")
 
 	r.configPoller.Subscribe(ctx, func(newConfig *nodev1.RouterConfig, oldVersion string) error {
 		r.logger.Info("Router execution config has changed, hot reloading server",

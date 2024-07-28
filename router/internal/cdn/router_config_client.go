@@ -11,13 +11,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/internal/jwt"
-	"github.com/wundergraph/cosmo/router/pkg/execution_config"
-	"go.uber.org/zap"
+	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
+	"hash"
 	"io"
 	"net/http"
 	"net/url"
+	"time"
+
+	"github.com/wundergraph/cosmo/router/internal/jwt"
+	"github.com/wundergraph/cosmo/router/pkg/execution_config"
+	"go.uber.org/zap"
 )
 
 const (
@@ -34,7 +37,7 @@ type RouterConfigOptions struct {
 	SignatureKey string
 }
 
-type RouterConfigClient struct {
+type routerConfigClient struct {
 	cdnURL              *url.URL
 	authenticationToken string
 	// federatedGraphID is the ID of the federated graph that was obtained
@@ -43,10 +46,9 @@ type RouterConfigClient struct {
 	// organizationID is the ID of the organization for this graph that was obtained
 	// from the token, already url-escaped
 	organizationID string
-	// signatureKey is the private key used to validate the signature of the received config
-	signatureKey string
-	httpClient   *http.Client
-	logger       *zap.Logger
+	httpClient     *http.Client
+	logger         *zap.Logger
+	hash           hash.Hash
 }
 
 type RouterConfigNotFoundError interface {
@@ -70,7 +72,8 @@ func (e *routerConfigNotFoundError) Error() string {
 	return fmt.Sprintf("router config of the federated graph %s not found. This is expected if you have not deployed any subgraphs yet", e.federatedGraphId)
 }
 
-func (cdn *RouterConfigClient) RouterConfig(ctx context.Context, version string) (*nodev1.RouterConfig, error) {
+func (cdn *routerConfigClient) RouterConfig(ctx context.Context, version string, modifiedSince time.Time) (*configpoller.RouterConfigResult, error) {
+
 	routerConfigPath := fmt.Sprintf("/%s/%s/routerconfigs/latest.json",
 		cdn.organizationID,
 		cdn.federatedGraphID,
@@ -108,14 +111,11 @@ func (cdn *RouterConfigClient) RouterConfig(ctx context.Context, version string)
 		if resp.StatusCode == http.StatusUnauthorized {
 			return nil, errors.New("could not authenticate against CDN")
 		}
-
 		if resp.StatusCode == http.StatusBadRequest {
 			return nil, errors.New("bad request")
 		}
-
 		if resp.StatusCode == http.StatusNotModified {
-			// indicates that the CDN has no updates for us
-			return nil, nil
+			return nil, configpoller.ErrConfigNotModified
 		}
 
 		return nil, fmt.Errorf("unexpected status code when loading router config, statusCode: %d", resp.StatusCode)
@@ -154,7 +154,7 @@ func (cdn *RouterConfigClient) RouterConfig(ctx context.Context, version string)
 	* If a signature key is set, we need to validate the signature of the received config
 	 */
 
-	if cdn.signatureKey != "" {
+	if cdn.hash != nil {
 
 		configSignature := resp.Header.Get(sigResponseHeaderName)
 		if configSignature == "" {
@@ -166,11 +166,11 @@ func (cdn *RouterConfigClient) RouterConfig(ctx context.Context, version string)
 		}
 
 		// create a signature of the received config body
-		hasher := hmac.New(sha256.New, []byte(cdn.signatureKey))
-		if _, err := hasher.Write(body); err != nil {
+		if _, err := cdn.hash.Write(body); err != nil {
 			return nil, fmt.Errorf("could not write config body to hmac: %w", err)
 		}
-		dataHmac := hasher.Sum(nil)
+		dataHmac := cdn.hash.Sum(nil)
+		cdn.hash.Reset()
 
 		// compare received signature with the one we calculated with the private signature key
 		rawSignature, err := base64.StdEncoding.DecodeString(configSignature)
@@ -192,12 +192,15 @@ func (cdn *RouterConfigClient) RouterConfig(ctx context.Context, version string)
 		)
 	}
 
-	return routerConfig, nil
+	res := &configpoller.RouterConfigResult{}
+	res.Config = routerConfig
+
+	return res, nil
 }
 
 // NewRouterConfigClient creates a new CDN client. URL is the URL of the CDN.
 // Token is the token used to authenticate with the CDN, the same as the GRAPH_API_TOKEN
-func NewRouterConfigClient(endpoint string, token string, opts RouterConfigOptions) (*RouterConfigClient, error) {
+func NewRouterConfigClient(endpoint string, token string, opts RouterConfigOptions) (configpoller.RouterConfigClient, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("invalid CDN URL %q: %w", endpoint, err)
@@ -212,13 +215,18 @@ func NewRouterConfigClient(endpoint string, token string, opts RouterConfigOptio
 		return nil, err
 	}
 
-	return &RouterConfigClient{
+	c := &routerConfigClient{
 		cdnURL:              u,
 		authenticationToken: token,
 		federatedGraphID:    url.PathEscape(claims.FederatedGraphID),
 		organizationID:      url.PathEscape(claims.OrganizationID),
 		httpClient:          newRetryableHTTPClient(opts.Logger),
 		logger:              opts.Logger,
-		signatureKey:        opts.SignatureKey,
-	}, nil
+	}
+
+	if opts.SignatureKey != "" {
+		c.hash = hmac.New(sha256.New, []byte(opts.SignatureKey))
+	}
+
+	return c, nil
 }

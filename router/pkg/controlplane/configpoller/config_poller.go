@@ -2,17 +2,27 @@ package configpoller
 
 import (
 	"context"
-	"net/http"
+	"errors"
 	"time"
 
-	"github.com/hashicorp/go-retryablehttp"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane"
 	"go.uber.org/zap"
 )
 
 type Option func(cp *configPoller)
+
+var ErrConfigNotModified = errors.New("config not modified")
+
+type RouterConfigResult struct {
+	Config  *nodev1.RouterConfig
+	Version string
+	ETag    string
+}
+
+type RouterConfigClient interface {
+	RouterConfig(ctx context.Context, version string, modifiedSince time.Time) (*RouterConfigResult, error)
+}
 
 type ConfigPoller interface {
 	// Subscribe subscribes to the config poller with a handler function that will be invoked
@@ -22,7 +32,7 @@ type ConfigPoller interface {
 	// GetRouterConfig returns the latest router config from the CDN
 	// If the Config is nil, no new config is available and the current config should be used.
 	// and updates the latest router config version. This method is only used for the initial config
-	GetRouterConfig(ctx context.Context) (*nodev1.RouterConfig, error)
+	GetRouterConfig(ctx context.Context) (*RouterConfigResult, error)
 	// Stop stops the config poller. After calling stop, the config poller cannot be used again.
 	Stop(ctx context.Context) error
 }
@@ -32,9 +42,10 @@ type configPoller struct {
 	controlplaneEndpoint      string
 	logger                    *zap.Logger
 	latestRouterConfigVersion string
+	latestRouterConfigDate    time.Time
 	poller                    controlplane.Poller
 	pollInterval              time.Duration
-	cdnConfigClient           *cdn.RouterConfigClient
+	cdnConfigClient           RouterConfigClient
 }
 
 func New(endpoint, token string, opts ...Option) ConfigPoller {
@@ -49,17 +60,6 @@ func New(endpoint, token string, opts ...Option) ConfigPoller {
 
 	if c.logger == nil {
 		c.logger = zap.NewNop()
-	}
-
-	retryClient := retryablehttp.NewClient()
-	retryClient.RetryWaitMax = 60 * time.Second
-	retryClient.RetryMax = 5
-	retryClient.Backoff = retryablehttp.DefaultBackoff
-	retryClient.Logger = nil
-	retryClient.RequestLogHook = func(_ retryablehttp.Logger, _ *http.Request, retry int) {
-		if retry > 0 {
-			c.logger.Info("Fetch router config from controlplane", zap.Int("retry", retry))
-		}
 	}
 
 	c.poller = controlplane.NewPoll(c.pollInterval)
@@ -90,7 +90,7 @@ func (c *configPoller) Subscribe(ctx context.Context, handler func(newConfig *no
 			return
 		}
 
-		newVersion := cfg.GetVersion()
+		newVersion := cfg.Config.GetVersion()
 		latestVersion := c.latestRouterConfigVersion
 
 		// If the version hasn't changed, don't invoke the handler
@@ -99,31 +99,34 @@ func (c *configPoller) Subscribe(ctx context.Context, handler func(newConfig *no
 			return
 		}
 
-		if err := handler(cfg, c.latestRouterConfigVersion); err != nil {
+		if err := handler(cfg.Config, c.latestRouterConfigVersion); err != nil {
 			c.logger.Error("Error invoking config poll handler", zap.Error(err))
 			return
 		}
 
-		// only update the version if the handler was invoked successfully
-		c.latestRouterConfigVersion = cfg.GetVersion()
+		// Only update the versions if the handler was invoked successfully
+		c.latestRouterConfigVersion = cfg.Config.GetVersion()
+		c.latestRouterConfigDate = time.Now().UTC()
 	})
 }
 
-func (c *configPoller) getRouterConfig(ctx context.Context) (*nodev1.RouterConfig, error) {
-	cfg, err := c.cdnConfigClient.RouterConfig(ctx, c.latestRouterConfigVersion)
+func (c *configPoller) getRouterConfig(ctx context.Context) (*RouterConfigResult, error) {
+	config, err := c.cdnConfigClient.RouterConfig(ctx, c.latestRouterConfigVersion, c.latestRouterConfigDate)
 	if err != nil {
+		if errors.Is(err, ErrConfigNotModified) {
+			return nil, nil
+		}
 		return nil, err
 	}
-
-	return cfg, nil
+	return config, nil
 }
 
-// GetRouterConfig returns the latest router config from the CDN first, if not found then it fetches from the controlplane.
-// Not safe for concurrent use.
-func (c *configPoller) GetRouterConfig(ctx context.Context) (*nodev1.RouterConfig, error) {
+// GetRouterConfig fetches the latest router config from the provider. Not safe for concurrent use.
+func (c *configPoller) GetRouterConfig(ctx context.Context) (*RouterConfigResult, error) {
 	cfg, err := c.getRouterConfig(ctx)
 	if err == nil {
-		c.latestRouterConfigVersion = cfg.GetVersion()
+		c.latestRouterConfigVersion = cfg.Config.GetVersion()
+		c.latestRouterConfigDate = time.Now().UTC()
 	}
 	return cfg, err
 }
@@ -140,7 +143,7 @@ func WithPollInterval(interval time.Duration) Option {
 	}
 }
 
-func WithCDNClient(cdnConfigClient *cdn.RouterConfigClient) Option {
+func WithClient(cdnConfigClient RouterConfigClient) Option {
 	return func(s *configPoller) {
 		s.cdnConfigClient = cdnConfigClient
 	}

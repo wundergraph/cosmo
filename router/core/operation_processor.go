@@ -77,7 +77,7 @@ var (
 type OperationParserOptions struct {
 	Executor                *Executor
 	MaxOperationSizeInBytes int64
-	PersistentOpClient      *cdn.PersistedOperationClient
+	PersistentOpClient      cdn.PersistedOperationClient
 
 	EnablePersistedOperationsCache bool
 	NormalizationCache             *ristretto.Cache[uint64, NormalizationCacheEntry]
@@ -88,7 +88,7 @@ type OperationParserOptions struct {
 type OperationProcessor struct {
 	executor                *Executor
 	maxOperationSizeInBytes int64
-	cdn                     *cdn.PersistedOperationClient
+	persistentOpClient      cdn.PersistedOperationClient
 	parseKitPool            *sync.Pool
 	operationCache          *OperationCache
 }
@@ -235,7 +235,7 @@ func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo) error 
 	}
 
 	if o.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil && len(o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash) > 0 {
-		if o.operationParser.cdn == nil {
+		if o.operationParser.persistentOpClient == nil {
 			return &inputError{
 				message:    "could not resolve persisted query, feature is not configured",
 				statusCode: http.StatusOK,
@@ -252,7 +252,7 @@ func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo) error 
 		if fromCache {
 			return nil
 		}
-		persistedOperationData, err := o.operationParser.cdn.PersistedOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
+		persistedOperationData, err := o.operationParser.persistentOpClient.PersistedOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
 		if err != nil {
 			return err
 		}
@@ -736,7 +736,7 @@ func NewOperationParser(opts OperationParserOptions) *OperationProcessor {
 	processor := &OperationProcessor{
 		executor:                opts.Executor,
 		maxOperationSizeInBytes: opts.MaxOperationSizeInBytes,
-		cdn:                     opts.PersistentOpClient,
+		persistentOpClient:      opts.PersistentOpClient,
 		parseKitPool: &sync.Pool{
 			New: func() interface{} {
 				return &parseKit{
