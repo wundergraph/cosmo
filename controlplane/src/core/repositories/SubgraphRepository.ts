@@ -32,7 +32,7 @@ import { BlobStorage } from '../blobstorage/index.js';
 import { hasLabelsChanged, normalizeLabels } from '../util.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
-import { FeatureFlagRepository, FeatureFlagWithFeatureSubgraphs } from './FeatureFlagRepository.js';
+import { FeatureFlagRepository } from './FeatureFlagRepository.js';
 
 type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
 

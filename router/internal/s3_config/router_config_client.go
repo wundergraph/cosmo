@@ -2,14 +2,11 @@ package s3_config
 
 import (
 	"context"
-	"crypto/md5"
-	"encoding/hex"
 	"errors"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
-	"hash"
 	"io"
 	"net/http"
 	"time"
@@ -18,9 +15,8 @@ import (
 type Option func(*ConfigClient)
 
 type ConfigClient struct {
-	client   *minio.Client
-	etagHash hash.Hash
-	options  *Options
+	client  *minio.Client
+	options *Options
 }
 
 type Options struct {
@@ -35,8 +31,7 @@ type Options struct {
 func NewRouterConfigClient(endpoint string, options *Options) (configpoller.RouterConfigClient, error) {
 
 	client := &ConfigClient{
-		etagHash: md5.New(),
-		options:  options,
+		options: options,
 	}
 
 	minioClient, err := minio.New(endpoint, &minio.Options{
@@ -84,11 +79,6 @@ func (c ConfigClient) RouterConfig(ctx context.Context, version string, modified
 		return nil, err
 	}
 
-	if _, err := c.etagHash.Write(body); err != nil {
-		return nil, err
-	}
-	defer c.etagHash.Reset()
-
 	routerConfig, err := execution_config.SerializeConfigBytes(body)
 	if err != nil {
 		return nil, err
@@ -96,7 +86,6 @@ func (c ConfigClient) RouterConfig(ctx context.Context, version string, modified
 
 	result := &configpoller.RouterConfigResult{}
 	result.Config = routerConfig
-	result.ETag = hex.EncodeToString(c.etagHash.Sum(nil))
 
 	return result, nil
 }
