@@ -62,8 +62,8 @@ func (c ConfigClient) RouterConfig(ctx context.Context, version string, modified
 		// See https://docs.aws.amazon.com/AmazonS3/latest/API/API_Object.html#AmazonS3-Type-Object-ETag
 		//
 		// The downside of our approach is that the config uploader is responsible to check if the config has changed
-		// in order to avoid extra requests. On the controlplane, we don't deploy the config when the subgraph hasn't changed.
-		// Even in the worst case, the server would not swap the config unless the router config version hasn't changed.
+		// in order to safe bandwidth. On the controlplane, we don't deploy the config when the subgraph hasn't changed.
+		// Even in the worst case, the server will not swap the config unless the router config version hasn't changed.
 		if err := options.SetModified(modifiedSince); err != nil {
 			return nil, err
 		}
