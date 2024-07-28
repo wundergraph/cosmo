@@ -53,7 +53,7 @@ func TestExposingPrometheusMetrics(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			svr := NewServer(msvc,
-				WithListenAddr("0.0.0.0:4007"),
+				WithListenAddr("0.0.0.0:0"),
 				WithMetrics(&telemetry.Config{
 					Prometheus: tt.prom,
 				}))
