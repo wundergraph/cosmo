@@ -63,7 +63,7 @@ func (c ConfigClient) RouterConfig(ctx context.Context, version string, modified
 		//
 		// The downside of our approach is that the config uploader is responsible to check if the config has changed
 		// in order to safe bandwidth. On the controlplane, we don't deploy the config when the subgraph hasn't changed.
-		// Even in the worst case, the server will not swap the config unless the router config version hasn't changed.
+		// Even in the worst case, the server will not swap the config unless the router config version has changed.
 		if err := options.SetModified(modifiedSince); err != nil {
 			return nil, err
 		}
