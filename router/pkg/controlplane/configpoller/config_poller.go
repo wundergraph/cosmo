@@ -15,9 +15,10 @@ type Option func(cp *configPoller)
 var ErrConfigNotModified = errors.New("config not modified")
 
 type RouterConfigResult struct {
-	Config  *nodev1.RouterConfig
-	Version string
-	ETag    string
+	// Config is the marshaled router config
+	Config *nodev1.RouterConfig
+	// ETag is the ETag of the config. Only set if the config is fetched from the S3 client
+	ETag string
 }
 
 type RouterConfigClient interface {

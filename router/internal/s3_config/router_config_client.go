@@ -1,4 +1,4 @@
-package s3
+package s3_config
 
 import (
 	"context"
@@ -57,6 +57,13 @@ func (c ConfigClient) RouterConfig(ctx context.Context, version string, modified
 	options := minio.GetObjectOptions{}
 
 	if !modifiedSince.IsZero() {
+		// Using the time is much easier because the etag can be computed in different ways (CRC, MD5 ...).
+		// Additionally, there are several ways when an etag is handled differently e.g. multipart upload
+		// See https://docs.aws.amazon.com/AmazonS3/latest/API/API_Object.html#AmazonS3-Type-Object-ETag
+		//
+		// The downside of our approach is that the config uploader is responsible to check if the config has changed
+		// in order to avoid extra requests. On the controlplane, we don't deploy the config when the subgraph hasn't changed.
+		// Even in the worst case, the server would not swap the config unless the router config version hasn't changed.
 		if err := options.SetModified(modifiedSince); err != nil {
 			return nil, err
 		}

@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/wundergraph/cosmo/router/internal/cdn"
-	"github.com/wundergraph/cosmo/router/internal/s3"
+	"github.com/wundergraph/cosmo/router/internal/s3_config"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
@@ -51,7 +51,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 
 		if cfg.ExecutionConfig.FromS3 != nil && cfg.ExecutionConfig.FromS3.Enabled {
 
-			client, err = s3.NewRouterConfigClient(cfg.ExecutionConfig.FromS3.Endpoint, &s3.Options{
+			client, err = s3_config.NewRouterConfigClient(cfg.ExecutionConfig.FromS3.Endpoint, &s3_config.Options{
 				AccessKeyID:     cfg.ExecutionConfig.FromS3.AccessKey,
 				SecretAccessKey: cfg.ExecutionConfig.FromS3.SecretKey,
 				BucketName:      cfg.ExecutionConfig.FromS3.Bucket,
