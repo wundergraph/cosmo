@@ -67,10 +67,11 @@ func (s *Server) bootstrap(ctx context.Context) {
 
 		s.meterProvider = mp
 		s.prometheusServer = telemetry.NewPrometheusServer(s.logger, s.metricConfig.Prometheus.ListenAddr, s.metricConfig.Prometheus.Path, registry)
+
+		// attach metrics middleware
 		handler = s.metricConfig.PrometheusMiddleware(handler)
 	}
 
-	// attach metrics middleware
 	mux.Handle("/health", healthHandler)
 	mux.Handle(path, authenticate(s.jwtSecret, s.logger, handler))
 
