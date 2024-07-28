@@ -66,6 +66,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 				zap.String("bucket", cfg.ExecutionConfig.FromS3.Bucket),
 				zap.String("region", cfg.ExecutionConfig.FromS3.Region),
 				zap.String("objectPath", cfg.ExecutionConfig.FromS3.ObjectPath),
+				zap.String("interval", cfg.PollInterval.String()),
 			)
 		} else {
 			if cfg.Graph.Token == "" {
@@ -79,7 +80,10 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 				return nil, err
 			}
 
-			logger.Info("Polling for router config updates from CDN in the background", zap.String("url", cfg.CDN.URL))
+			logger.Info("Polling for router config updates from CDN in the background",
+				zap.String("url", cfg.CDN.URL),
+				zap.String("interval", cfg.PollInterval.String()),
+			)
 		}
 
 		configPoller = configpoller.New(cfg.ControlplaneURL, cfg.Graph.Token,
