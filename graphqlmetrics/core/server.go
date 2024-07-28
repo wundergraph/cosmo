@@ -32,7 +32,7 @@ type Server struct {
 	traceProvider *sdktrace.TracerProvider
 }
 
-func NewServer(metricsService graphqlmetricsv1connect.GraphQLMetricsServiceHandler, opts ...Option) *Server {
+func NewServer(ctx context.Context, metricsService graphqlmetricsv1connect.GraphQLMetricsServiceHandler, opts ...Option) *Server {
 	s := &Server{
 		metricsService: metricsService,
 		listenAddr:     ":4005",
@@ -43,12 +43,12 @@ func NewServer(metricsService graphqlmetricsv1connect.GraphQLMetricsServiceHandl
 		opt(s)
 	}
 
-	s.bootstrap()
+	s.bootstrap(ctx)
 
 	return s
 }
 
-func (s *Server) bootstrap() {
+func (s *Server) bootstrap(ctx context.Context) {
 	mux := http.NewServeMux()
 
 	path, handler := graphqlmetricsv1connect.NewGraphQLMetricsServiceHandler(
@@ -74,7 +74,7 @@ func (s *Server) bootstrap() {
 	mux.Handle(path, authenticate(s.jwtSecret, s.logger, handler))
 
 	if s.metricConfig.Prometheus.Enabled {
-		mp, registry, err := s.metricConfig.NewPrometheusMeterProvider()
+		mp, registry, err := s.metricConfig.NewPrometheusMeterProvider(ctx)
 		if err != nil {
 			s.logger.Error("Failed to create Prometheus exporter", zap.Error(err))
 		}

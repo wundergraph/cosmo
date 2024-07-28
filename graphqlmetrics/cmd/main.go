@@ -123,6 +123,7 @@ func main() {
 	)
 
 	svr := core.NewServer(
+		ctx,
 		ms,
 		core.WithJwtSecret([]byte(cfg.IngestJWTSecret)),
 		core.WithListenAddr(cfg.ListenAddr),

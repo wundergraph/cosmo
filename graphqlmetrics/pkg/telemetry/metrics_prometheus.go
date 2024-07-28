@@ -45,7 +45,7 @@ func NewPrometheusServer(logger *zap.Logger, listenAddr string, path string, reg
 	return svr
 }
 
-func (c *Config) NewPrometheusMeterProvider() (*sdkmetric.MeterProvider, *prometheus.Registry, error) {
+func (c *Config) NewPrometheusMeterProvider(ctx context.Context) (*sdkmetric.MeterProvider, *prometheus.Registry, error) {
 	var registry *prometheus.Registry
 
 	if c.Prometheus.TestRegistry != nil {
@@ -69,7 +69,7 @@ func (c *Config) NewPrometheusMeterProvider() (*sdkmetric.MeterProvider, *promet
 	}
 
 	resource, err := sdkresource.New(
-		context.TODO(),
+		ctx,
 		sdkresource.WithTelemetrySDK(),
 		sdkresource.WithProcessPID(),
 		sdkresource.WithOSType(),

@@ -31,18 +31,20 @@ func TestExposingPrometheusMetrics(t *testing.T) {
 		{
 			name: "enabled",
 			prom: telemetry.PrometheusConfig{
-				Enabled:    true,
-				ListenAddr: "0.0.0.0:8089",
-				Path:       "/metrics",
+				Enabled:      true,
+				ListenAddr:   "0.0.0.0:8089",
+				Path:         "/metrics",
+				TestRegistry: prometheus.NewRegistry(),
 			},
 			statusCode: 200,
 		},
 		{
 			name: "disabled",
 			prom: telemetry.PrometheusConfig{
-				Enabled:    false,
-				ListenAddr: "0.0.0.0:8089",
-				Path:       "/metrics",
+				Enabled:      false,
+				ListenAddr:   "0.0.0.0:8089",
+				Path:         "/metrics",
+				TestRegistry: prometheus.NewRegistry(),
 			},
 			statusCode: -1,
 		},
@@ -50,9 +52,10 @@ func TestExposingPrometheusMetrics(t *testing.T) {
 
 	db := test.GetTestDatabase(t)
 	msvc := NewMetricsService(zap.NewNop(), db)
+	ctx := context.Background()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svr := NewServer(msvc,
+			svr := NewServer(ctx, msvc,
 				WithListenAddr("0.0.0.0:0"),
 				WithMetrics(&telemetry.Config{
 					Prometheus: tt.prom,
