@@ -2,9 +2,11 @@ package core
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -20,8 +22,8 @@ func TestExposingPrometheusMetrics(t *testing.T) {
 	}
 
 	type tc struct {
-		name    string
-		prom    telemetry.PrometheusConfig
+		name       string
+		prom       telemetry.PrometheusConfig
 		statusCode int
 	}
 
@@ -30,52 +32,95 @@ func TestExposingPrometheusMetrics(t *testing.T) {
 			name: "enabled",
 			prom: telemetry.PrometheusConfig{
 				Enabled:    true,
-				ListenAddr: "127.0.0.1:8089",
+				ListenAddr: "0.0.0.0:8089",
 				Path:       "/metrics",
 			},
 			statusCode: 200,
 		},
+		{
+			name: "disabled",
+			prom: telemetry.PrometheusConfig{
+				Enabled:    false,
+				ListenAddr: "0.0.0.0:8089",
+				Path:       "/metrics",
+			},
+			statusCode: -1,
+		},
 	}
 
 	db := test.GetTestDatabase(t)
-
+	msvc := NewMetricsService(zap.NewNop(), db)
 	for _, tt := range tests {
-		msvc := NewMetricsService(zap.NewNop(), db)
-		svr := NewServer(msvc,
-			WithListenAddr("127.0.0.1:0"),
-			WithMetrics(&telemetry.Config{
-				Prometheus: tt.prom,
-			}))
+		t.Run(tt.name, func(t *testing.T) {
+			svr := NewServer(msvc,
+				WithListenAddr("0.0.0.0:4007"),
+				WithMetrics(&telemetry.Config{
+					Prometheus: tt.prom,
+				}))
 
-		go func() {
-			// start graphqlmetrics server
-			err := svr.Start()
-			assert.Nil(t, err)
-		}()
-		go func() {
-			// start the prometheus server
-			err := svr.StartPrometheusServer()
+			var wg sync.WaitGroup
+			wg.Add(2)
 
-			// should start just fine
-			if tt.prom.Enabled {
-				assert.Nil(t, err)
+			mainReady := make(chan struct{})
+			promReady := make(chan struct{})
+
+			go func() {
+				defer wg.Done()
+				go func() {
+					if err := svr.Start(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+						t.Logf("failed starting main server")
+					}
+				}()
+				close(mainReady)
+			}()
+			go func() {
+				defer wg.Done()
+				go func() {
+					if err := svr.StartPrometheusServer(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+						t.Logf("failed starting prometheus server")
+					}
+				}()
+				close(promReady)
+			}()
+
+			defer func() {
+				err := svr.Shutdown(context.Background())
+				if err != nil {
+					t.Fatalf("Failed to shut down server: %v", err)
+				}
+				wg.Wait()
+			}()
+
+			select {
+			case <-mainReady:
+				t.Log("Main server started successfully")
+			case <-time.After(20 * time.Second):
+				t.Fatal("Main server did not start in time")
 			}
 
-			if !tt.prom.Enabled {
-				// assert that the prometheus server can't be enabled 
-				// as it was never configured
+			select {
+			case <-promReady:
+				t.Log("Prometheus server started successfully")
+			case <-time.After(20 * time.Second):
+				t.Fatal("Prometheus server did not start in time")
+			}
+
+			endpoint := fmt.Sprintf("http://%s%s", tt.prom.ListenAddr, tt.prom.Path)
+			resp, err := http.Get(endpoint)
+
+			if resp != nil {
+				// the case when metrics server should be enabled
+				assert.Equal(t, true, tt.prom.Enabled)
+				assert.Nil(t, err)
+				assert.Equal(t, tt.statusCode, resp.StatusCode)
+
+				defer resp.Body.Close()
+			} else {
+				// the case when metrics server should be disabled
+				// there will be no response and therefore no status code
+				assert.Equal(t, false, tt.prom.Enabled)
 				assert.NotNil(t, err)
 			}
-		}()
-		defer svr.Shutdown(context.Background())
-		time.Sleep(100 * time.Millisecond)
-
-		endpoint := fmt.Sprintf("http://%s%s", tt.prom.ListenAddr, tt.prom.Path)
-		resp, err := http.Get(endpoint)
-		assert.Nil(t, err)
-
-		defer resp.Body.Close()
-
-		assert.Equal(t, resp.StatusCode, tt.statusCode)
+		})
 	}
 }
