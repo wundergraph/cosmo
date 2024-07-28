@@ -4,82 +4,78 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
-	"connectrpc.com/connect"
+	"github.com/stretchr/testify/assert"
 	"github.com/wundergraph/cosmo/graphqlmetrics/pkg/telemetry"
+	"github.com/wundergraph/cosmo/graphqlmetrics/test"
 	"go.uber.org/zap"
-
-	v1 "github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1"
 )
 
-type mockMS struct{}
+func TestExposingPrometheusMetrics(t *testing.T) {
+	if os.Getenv("INT_TESTS") != "true" {
+		t.Skip("Skipping integration tests")
+	}
 
-func (ms *mockMS) PublishGraphQLMetrics(context.Context, *connect.Request[v1.PublishGraphQLRequestMetricsRequest]) (*connect.Response[v1.PublishOperationCoverageReportResponse], error) {
-	return nil, nil
-}
-
-func TestPrometheusExport(t *testing.T) {
-	ms := &mockMS{}
-	type test struct {
-		svr     *Server
+	type tc struct {
 		name    string
-		wantErr bool
+		prom    telemetry.PrometheusConfig
+		statusCode int
 	}
-	tests := []test{
+
+	tests := []tc{
 		{
-			name: "with-prometheus-server-enabled",
-			svr: NewServer(ms, WithMetrics(
-				telemetry.NewTelemetryConfig(
-					telemetry.PrometheusConfig{
-						Enabled:    true,
-						ListenAddr: "127.0.0.1:8089",
-						Path:       "/metrics",
-					},
-				),
-			)),
-			wantErr: false,
-		},
-		{
-			name: "without-prometheus-server-enabled",
-			svr: NewServer(ms, WithMetrics(
-				telemetry.NewTelemetryConfig(
-					telemetry.PrometheusConfig{
-						Enabled:    false,
-						ListenAddr: "127.0.0.1:8089",
-						Path:       "/metrics",
-					},
-				),
-			)),
-			wantErr: true,
+			name: "enabled",
+			prom: telemetry.PrometheusConfig{
+				Enabled:    true,
+				ListenAddr: "127.0.0.1:8089",
+				Path:       "/metrics",
+			},
+			statusCode: 200,
 		},
 	}
+
+	db := test.GetTestDatabase(t)
 
 	for _, tt := range tests {
-		// as the server setup is all encapsulated within main,
-		// at least check, if the new code is covered and if the
-		// handlers for the prometheus server are registered
+		msvc := NewMetricsService(zap.NewNop(), db)
+		svr := NewServer(msvc,
+			WithListenAddr("127.0.0.1:0"),
+			WithMetrics(&telemetry.Config{
+				Prometheus: tt.prom,
+			}))
+
 		go func() {
-			if err := tt.svr.StartPrometheusServer(); err != nil {
-				tt.svr.logger.Error("Could not start prometheus server", zap.Error(err))
+			// start graphqlmetrics server
+			err := svr.Start()
+			assert.Nil(t, err)
+		}()
+		go func() {
+			// start the prometheus server
+			err := svr.StartPrometheusServer()
+
+			// should start just fine
+			if tt.prom.Enabled {
+				assert.Nil(t, err)
+			}
+
+			if !tt.prom.Enabled {
+				// assert that the prometheus server can't be enabled 
+				// as it was never configured
+				assert.NotNil(t, err)
 			}
 		}()
-		defer tt.svr.ShutdownPrometheusServer(context.Background())
-
+		defer svr.Shutdown(context.Background())
 		time.Sleep(100 * time.Millisecond)
 
-		endpoint := fmt.Sprintf("http://%s%s", tt.svr.metricConfig.Prometheus.ListenAddr, tt.svr.metricConfig.Prometheus.Path)
+		endpoint := fmt.Sprintf("http://%s%s", tt.prom.ListenAddr, tt.prom.Path)
 		resp, err := http.Get(endpoint)
+		assert.Nil(t, err)
 
-		if err != nil {
-			t.Fatalf("Failed to get /metrics endpoint: %v", err)
-		}
 		defer resp.Body.Close()
 
-		// Check the response status code
-		if tt.wantErr && (resp.StatusCode != http.StatusOK) {
-			t.Fatalf("Expected status code 200, got %v", resp.StatusCode)
-		}
+		assert.Equal(t, resp.StatusCode, tt.statusCode)
 	}
 }
