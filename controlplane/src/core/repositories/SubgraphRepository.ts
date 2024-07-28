@@ -17,7 +17,6 @@ import {
   subgraphsToFederatedGraph,
   targets,
   users,
-  federatedGraphs,
 } from '../../db/schema.js';
 import {
   FederatedGraphDTO,
