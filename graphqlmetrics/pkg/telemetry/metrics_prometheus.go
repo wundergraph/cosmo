@@ -10,7 +10,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"go.opentelemetry.io/otel"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 
 	sdkresource "go.opentelemetry.io/otel/sdk/resource"
@@ -98,7 +97,6 @@ func (c *Config) NewPrometheusMeterProvider(ctx context.Context) (*sdkmetric.Met
 		sdkmetric.WithResource(resource),
 	)
 
-	otel.SetMeterProvider(mp)
 	return mp, registry, nil
 }
 
