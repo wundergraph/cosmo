@@ -265,7 +265,20 @@ jobs:
 
 ### Implementation
 
-The implementation is the same as Proposal-1.
+#### Create Job
+
+- This job will create a new feature flag and create/publish a feature subgraph to override the changed subgraph.
+- This job will only run when the PR is opened or reopened.
+
+#### Update Job
+
+- This job will publish the new changes in the latest commit to the feature subgraph created.
+- This job will only run on each new commit to the PR.
+
+#### Destroy Job
+
+- This job will destroy the feature flag and the feature subgraph used for the preview of this PR.
+- This job will only run when the PR is closed/merged.
 
 ### Limitations
 
