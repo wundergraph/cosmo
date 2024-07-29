@@ -86,7 +86,7 @@ func (c *Config) NewPrometheusMeterProvider(ctx context.Context) (*sdkmetric.Met
 		sdkresource.WithProcessPID(),
 		sdkresource.WithOSType(),
 		sdkresource.WithHost(),
-		sdkresource.WithSchemaURL(semconv.SchemaURL),
+		// sdkresource.WithSchemaURL(semconv.SchemaURL),
 		sdkresource.WithAttributes(
 			semconv.ServiceVersionKey.String(c.Version),
 			semconv.ServiceNameKey.String(c.Name),
