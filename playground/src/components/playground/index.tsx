@@ -177,7 +177,7 @@ const PlaygroundPortal = () => {
   );
 };
 
-export const Playground = (input: { routingUrl?: string; disableLogo: boolean }) => {
+export const Playground = (input: { routingUrl?: string; disableLogo?: boolean }) => {
   const url = input.routingUrl || import.meta.env.VITE_ROUTING_URL || '{{graphqlURL}}';
 
   const [isMounted, setIsMounted] = useState(false);
