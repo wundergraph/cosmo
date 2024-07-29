@@ -7,7 +7,7 @@ import dts from 'vite-plugin-dts';
 export default ({ mode }) => {
   process.env = { ...process.env, ...loadEnv(mode, process.cwd()) };
 
-  const isLibrary = process.env.VITE_IS_LIBRARY === 'true';
+  const singleFileOutput = process.env.VITE_SINGLE_FILE_OUTPUT === 'true';
 
   // https://vitejs.dev/config/
   return defineConfig({
@@ -17,16 +17,16 @@ export default ({ mode }) => {
       commonjsOptions: {
         transformMixedEsModules: true,
       },
-      lib: isLibrary
+      lib: !singleFileOutput
         ? {
             entry: path.resolve(__dirname, './src/index.ts'),
             name: '@wundergraph/playground',
             fileName: (format) => `index.${format}.js`,
           }
         : false,
-      sourcemap: isLibrary,
+      sourcemap: !singleFileOutput,
       emptyOutDir: true,
-      rollupOptions: isLibrary
+      rollupOptions: !singleFileOutput
         ? {
             external: ['react', 'react-dom'],
             output: {
@@ -38,7 +38,7 @@ export default ({ mode }) => {
           }
         : undefined,
     },
-    plugins: [react(), isLibrary ? dts() : viteSingleFile()],
+    plugins: [react(), !singleFileOutput ? dts() : viteSingleFile()],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
