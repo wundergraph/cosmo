@@ -2,8 +2,13 @@ package main
 
 import (
 	"context"
-	"errors"
-	"net/http"
+	"log"
+	"net/url"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
+
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/amacneil/dbmate/v2/pkg/dbmate"
 	_ "github.com/amacneil/dbmate/v2/pkg/driver/clickhouse"
@@ -13,12 +18,6 @@ import (
 	"github.com/wundergraph/cosmo/graphqlmetrics/pkg/telemetry"
 	"go.uber.org/automaxprocs/maxprocs"
 	"go.uber.org/zap"
-	"log"
-	"net/url"
-	"os"
-	"os/signal"
-	"sync"
-	"syscall"
 )
 
 func main() {
