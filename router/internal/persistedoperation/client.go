@@ -1,6 +1,9 @@
 package persistedoperation
 
-import "context"
+import (
+	"context"
+	"go.opentelemetry.io/otel/attribute"
+)
 
 type PersistentOperationNotFoundError interface {
 	error
@@ -9,6 +12,6 @@ type PersistentOperationNotFoundError interface {
 }
 
 type Client interface {
-	PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error)
+	PersistedOperation(ctx context.Context, clientName string, sha256Hash string, attributes []attribute.KeyValue) ([]byte, error)
 	Close()
 }

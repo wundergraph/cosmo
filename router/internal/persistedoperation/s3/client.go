@@ -6,6 +6,7 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
+	"go.opentelemetry.io/otel/attribute"
 	"io"
 )
 
@@ -13,10 +14,10 @@ type Option func(*Client)
 
 type Client struct {
 	client  *minio.Client
-	options *ClientOptions
+	options *Options
 }
 
-type ClientOptions struct {
+type Options struct {
 	AccessKeyID      string
 	SecretAccessKey  string
 	Region           string
@@ -26,7 +27,7 @@ type ClientOptions struct {
 }
 
 // NewClient creates a new S3 client that can be used to retrieve persisted operations
-func NewClient(endpoint string, options *ClientOptions) (persistedoperation.Client, error) {
+func NewClient(endpoint string, options *Options) (persistedoperation.Client, error) {
 
 	client := &Client{
 		options: options,
@@ -45,7 +46,7 @@ func NewClient(endpoint string, options *ClientOptions) (persistedoperation.Clie
 	return client, nil
 }
 
-func (c Client) PersistedOperation(ctx context.Context, _clientName string, sha256Hash string) ([]byte, error) {
+func (c Client) PersistedOperation(ctx context.Context, clientName, sha256Hash string, attributes []attribute.KeyValue) ([]byte, error) {
 
 	objectPath := fmt.Sprintf("%s/%s", c.options.ObjectPathPrefix, sha256Hash)
 	reader, err := c.client.GetObject(ctx, c.options.BucketName, objectPath, minio.GetObjectOptions{})

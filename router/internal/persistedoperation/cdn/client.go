@@ -7,9 +7,6 @@ import (
 	"fmt"
 	"github.com/wundergraph/cosmo/router/internal/httpclient"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
-	"io"
-	"net/http"
-	"net/url"
 
 	"github.com/buger/jsonparser"
 	"github.com/dgraph-io/ristretto"

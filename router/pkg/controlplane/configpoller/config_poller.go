@@ -70,30 +70,51 @@ func (c *configPoller) Stop(_ context.Context) error {
 func (c *configPoller) Subscribe(ctx context.Context, handler func(newConfig *nodev1.RouterConfig, _ string) error) {
 
 	c.poller.Subscribe(ctx, func() {
+
+		start := time.Now()
+
 		cfg, err := c.getRouterConfig(ctx)
 		if err != nil {
-			c.logger.Sugar().Errorf("Could not fetch for config update. Trying again in %s", c.pollInterval.String())
+			if errors.Is(err, ErrConfigNotModified) {
+				c.logger.Debug("No new router config available. Trying again ...",
+					zap.String("poll_interval", c.pollInterval.String()),
+					zap.String("fetch_time", time.Since(start).String()),
+				)
+				return
+			}
+			c.logger.Error("Error fetching router config", zap.Error(err))
 			return
 		}
 
-		if cfg == nil {
-			c.logger.Sugar().Debugf("No new router config available. Trying again in %s", c.pollInterval.String())
-			return
-		}
+		c.logger.Debug("Fetched router config", zap.String("version", cfg.Config.GetVersion()))
 
 		newVersion := cfg.Config.GetVersion()
 		latestVersion := c.latestRouterConfigVersion
 
 		// If the version hasn't changed, don't invoke the handler
 		if newVersion == latestVersion {
-			c.logger.Info("Router config version has not changed, skipping handler invocation")
+			c.logger.Debug("Router config version has not changed, skipping handler invocation")
 			return
 		}
+
+		c.logger.Info("Router execution config has changed, hot reloading server",
+			zap.String("old_version", latestVersion),
+			zap.String("new_version", newVersion),
+			zap.String("fetch_time", time.Since(start).String()),
+		)
+
+		start = time.Now()
 
 		if err := handler(cfg.Config, c.latestRouterConfigVersion); err != nil {
 			c.logger.Error("Error invoking config poll handler", zap.Error(err))
 			return
 		}
+
+		c.logger.Debug(
+			"New graph server swapped",
+			zap.String("duration", time.Since(start).String()),
+			zap.String("config_version", newVersion),
+		)
 
 		// Only update the versions if the handler was invoked successfully
 		c.latestRouterConfigVersion = cfg.Config.GetVersion()
@@ -104,9 +125,6 @@ func (c *configPoller) Subscribe(ctx context.Context, handler func(newConfig *no
 func (c *configPoller) getRouterConfig(ctx context.Context) (*routerconfig.Response, error) {
 	config, err := c.configClient.RouterConfig(ctx, c.latestRouterConfigVersion, c.latestRouterConfigDate)
 	if err != nil {
-		if errors.Is(err, ErrConfigNotModified) {
-			return nil, nil
-		}
 		return nil, err
 	}
 	return config, nil

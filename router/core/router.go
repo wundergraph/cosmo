@@ -142,7 +142,7 @@ type (
 		readinessCheckPath       string
 		livenessCheckPath        string
 		cdnConfig                config.CDNConfiguration
-		cdnOperationClient       *cdn.PersistedOperationsClient
+		persistedOperationClient persistedoperation.Client
 		eventsConfig             config.EventsConfiguration
 		prometheusServer         *http.Server
 		modulesConfig            map[string]interface{}
@@ -456,9 +456,6 @@ func NewRouter(opts ...Option) (*Router, error) {
 
 // newGraphServer creates a new server.
 func (r *Router) newServer(ctx context.Context, cfg *nodev1.RouterConfig) error {
-
-	start := time.Now()
-
 	server, err := newGraphServer(ctx, r, cfg)
 	if err != nil {
 		r.logger.Error("Failed to create graph server. Keeping the old server", zap.Error(err))
@@ -466,12 +463,6 @@ func (r *Router) newServer(ctx context.Context, cfg *nodev1.RouterConfig) error 
 	}
 
 	r.httpServer.SwapGraphServer(ctx, server)
-
-	r.logger.Debug(
-		"New graph server swapped",
-		zap.String("duration", time.Since(start).String()),
-		zap.String("config_version", cfg.GetVersion()),
-	)
 
 	return nil
 }
@@ -688,7 +679,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	}
 
 	if r.graphApiToken != "" {
-		cdnPersistentOpClient, err := cdn.NewPersistentOperationClient(r.cdnConfig.URL, r.graphApiToken, cdn.PersistentOperationsOptions{
+		cdnPersistentOpClient, err := cdn.NewClient(r.cdnConfig.URL, r.graphApiToken, cdn.Options{
 			CacheSize:     r.cdnConfig.CacheSize.Uint64(),
 			Logger:        r.logger,
 			TraceProvider: r.tracerProvider,
@@ -696,7 +687,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		r.cdnOperationClient = cdnPersistentOpClient
+		r.persistedOperationClient = cdnPersistentOpClient
 	}
 
 	r.gqlMetricsExporter = graphqlmetrics.NewNoopExporter()
@@ -843,11 +834,6 @@ func (r *Router) Start(ctx context.Context) error {
 	}
 
 	r.configPoller.Subscribe(ctx, func(newConfig *nodev1.RouterConfig, oldVersion string) error {
-		r.logger.Info("Router execution config has changed, hot reloading server",
-			zap.String("old_version", oldVersion),
-			zap.String("new_version", newConfig.GetVersion()),
-		)
-
 		if r.shutdown.Load() {
 			r.logger.Warn("Router is in shutdown state. Skipping config update")
 			return nil
