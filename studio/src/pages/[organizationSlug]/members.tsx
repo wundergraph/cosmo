@@ -2,7 +2,6 @@ import { useApplyParams } from "@/components/analytics/use-apply-params";
 import { UserContext } from "@/components/app-provider";
 import { EmptyState } from "@/components/empty-state";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,17 +39,17 @@ import { useUser } from "@/hooks/use-user";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn, getHighestPriorityRole } from "@/lib/utils";
 import {
+  createConnectQueryKey,
+  useMutation,
+  useQuery,
+} from "@connectrpc/connect-query";
+import {
   EllipsisVerticalIcon,
   ExclamationTriangleIcon,
   UserPlusIcon,
 } from "@heroicons/react/24/outline";
 import { Cross1Icon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  useQuery,
-  useMutation,
-  createConnectQueryKey,
-} from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getOrganizationMembers,
@@ -64,8 +63,7 @@ import {
 import { sentenceCase } from "change-case";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useContext, useEffect, useState } from "react";
-import { HiOutlineDotsVertical } from "react-icons/hi";
+import { useContext, useState } from "react";
 import { useDebounce } from "use-debounce";
 import { z } from "zod";
 
@@ -505,6 +503,10 @@ const MembersToolbar = () => {
 
   const limitReached = data?.limitReached ?? false;
 
+  if (!isAdmin) {
+    return null;
+  }
+
   return (
     <Toolbar className="w-auto">
       <Dialog>
@@ -515,13 +517,16 @@ const MembersToolbar = () => {
         </DialogTrigger>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Invite Member</DialogTitle>
+            <DialogTitle>
+              {!limitReached ? "Invite Member" : "User limit reached"}
+            </DialogTitle>
             <DialogDescription>
-              Send an invite to an email id to invite them into your
-              organization
+              {!limitReached
+                ? "Send an invite to an email id to invite them into your organization"
+                : `You have added ${data?.memberCount} of ${usersFeature?.limit} users, please upgrade your account to increase your limits.`}
             </DialogDescription>
           </DialogHeader>
-          {!limitReached && isAdmin && (
+          {!limitReached && (
             <InviteForm
               onSuccess={() => {
                 const pendingKey = createConnectQueryKey(
@@ -540,19 +545,10 @@ const MembersToolbar = () => {
               }}
             />
           )}
-          {limitReached && isAdmin && (
-            <Alert className="flex flex-col gap-y-4">
-              <div className="flex-1">
-                <AlertTitle>User limit reached</AlertTitle>
-                <AlertDescription>
-                  You&apos;ve added {data?.memberCount} of {usersFeature?.limit}{" "}
-                  users, please upgrade your account to increase your limits.
-                </AlertDescription>
-              </div>
-              <Button variant="outline" asChild>
-                <Link href={`/${organizationSlug}/billing`}>View plans</Link>
-              </Button>
-            </Alert>
+          {limitReached && (
+            <Button variant="outline" asChild>
+              <Link href={`/${organizationSlug}/billing`}>View plans</Link>
+            </Button>
           )}
         </DialogContent>
       </Dialog>
@@ -562,7 +558,6 @@ const MembersToolbar = () => {
 
 const MembersPage: NextPageWithLayout = () => {
   const router = useRouter();
-  const user = useUser();
   const tab = router.query.tab || "current";
 
   const applyParams = useApplyParams();
@@ -571,7 +566,7 @@ const MembersPage: NextPageWithLayout = () => {
 
   const { limit, offset } = usePaginationParams();
 
-  const { data, refetch } = useQuery(getPendingOrganizationMembers, {
+  const { data } = useQuery(getPendingOrganizationMembers, {
     pagination: {
       limit,
       offset,
