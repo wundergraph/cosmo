@@ -47,9 +47,3 @@ type PrometheusConfig struct {
 	Path         string
 	TestRegistry *prometheus.Registry
 }
-
-// currently only exporting metrics for prometheus is supported
-// tracing will be added and tested in a later PR
-func (c *Config) IsEnabled() bool {
-	return c.Prometheus.Enabled
-}

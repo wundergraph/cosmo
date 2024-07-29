@@ -91,13 +91,24 @@ func (s *Server) bootstrap(ctx context.Context) {
 	}
 }
 
-func (s *Server) Start() error {
+func (s *Server) Start(stop context.CancelFunc) error {
 	if s.server == nil {
 		return errors.New("server not initialized")
 	}
 
-	if err := s.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		return err
+	go func() {
+		if err := s.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			s.logger.Error("Could not start server", zap.Error(err))
+			stop()
+		}
+	}()
+
+	if s.metricConfig.Prometheus.Enabled {
+		go func() {
+			if err := s.startPrometheusServer(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				s.logger.Error("Could not start prometheus server", zap.Error(err))
+			}
+		}()
 	}
 
 	return nil
@@ -145,7 +156,7 @@ func (s *Server) shutdownPrometheusServer(ctx context.Context) error {
 	return nil
 }
 
-func (s *Server) StartPrometheusServer() error {
+func (s *Server) startPrometheusServer() error {
 	if s.prometheusServer == nil {
 		return errors.New("prometheus server was not initialized")
 	}

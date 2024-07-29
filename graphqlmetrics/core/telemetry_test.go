@@ -7,8 +7,9 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
-	"sync"
+	"syscall"
 	"testing"
 	"time"
 
@@ -60,7 +61,15 @@ func TestExposingPrometheusMetrics(t *testing.T) {
 
 	db := test.GetTestDatabase(t)
 	msvc := NewMetricsService(zap.NewNop(), db)
-	ctx := context.Background()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt,
+		syscall.SIGHUP,  // process is detached from terminal
+		syscall.SIGTERM, // default for kill
+		syscall.SIGKILL,
+		syscall.SIGQUIT, // ctrl + \
+		syscall.SIGINT,  // ctrl+c
+	)
+	defer stop()
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			svr := NewServer(ctx, msvc,
@@ -69,52 +78,19 @@ func TestExposingPrometheusMetrics(t *testing.T) {
 					Prometheus: tt.prom,
 				}))
 
-			var wg sync.WaitGroup
-			wg.Add(2)
-
-			mainReady := make(chan struct{})
-			promReady := make(chan struct{})
-
 			go func() {
-				defer wg.Done()
-				go func() {
-					if err := svr.Start(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-						t.Logf("failed starting main server")
-					}
-				}()
-				close(mainReady)
-			}()
-			go func() {
-				defer wg.Done()
-				go func() {
-					if err := svr.StartPrometheusServer(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-						t.Logf("failed starting prometheus server")
-					}
-				}()
-				close(promReady)
+				if err := svr.Start(stop); err != nil && !errors.Is(err, http.ErrServerClosed) {
+					t.Logf("failed starting main server")
+				}
 			}()
 
 			defer func() {
-				err := svr.Shutdown(context.Background())
+				err := svr.Shutdown(ctx)
 				if err != nil {
 					t.Fatalf("Failed to shut down server: %v", err)
 				}
-				wg.Wait()
 			}()
-
-			select {
-			case <-mainReady:
-				t.Log("Main server started successfully")
-			case <-time.After(20 * time.Second):
-				t.Fatal("Main server did not start in time")
-			}
-
-			select {
-			case <-promReady:
-				t.Log("Prometheus server started successfully")
-			case <-time.After(20 * time.Second):
-				t.Fatal("Prometheus server did not start in time")
-			}
+			time.Sleep(2 * time.Second)
 
 			endpoint := fmt.Sprintf("http://%s%s", tt.prom.ListenAddr, tt.prom.Path)
 			resp, err := http.Get(endpoint)
@@ -149,9 +125,17 @@ func TestValidateExposedMetrics(t *testing.T) {
 		TestRegistry: registry,
 	}
 
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt,
+		syscall.SIGHUP,  // process is detached from terminal
+		syscall.SIGTERM, // default for kill
+		syscall.SIGKILL,
+		syscall.SIGQUIT, // ctrl + \
+		syscall.SIGINT,  // ctrl+c
+	)
+	defer stop()
+
 	db := test.GetTestDatabase(t)
 	msvc := NewMetricsService(zap.NewNop(), db)
-	ctx := context.Background()
 
 	ingestJWTSecret := "fkczyomvdprgvtmvkuhvprxuggkbgwld"
 	serverEndpoint := "0.0.0.0:4006"
@@ -162,52 +146,19 @@ func TestValidateExposedMetrics(t *testing.T) {
 			Prometheus: prom,
 		}))
 
-	var wg sync.WaitGroup
-	wg.Add(2)
-
-	mainReady := make(chan struct{})
-	promReady := make(chan struct{})
-
 	go func() {
-		defer wg.Done()
-		go func() {
-			if err := svr.Start(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-				t.Logf("failed starting main server")
-			}
-		}()
-		close(mainReady)
+		if err := svr.Start(stop); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			t.Logf("failed starting main server")
+		}
 	}()
-	go func() {
-		defer wg.Done()
-		go func() {
-			if err := svr.StartPrometheusServer(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-				t.Logf("failed starting prometheus server")
-			}
-		}()
-		close(promReady)
-	}()
-
 	defer func() {
 		err := svr.Shutdown(context.Background())
 		if err != nil {
 			t.Fatalf("Failed to shut down server: %v", err)
 		}
-		wg.Wait()
 	}()
 
-	select {
-	case <-mainReady:
-		t.Log("Main server started successfully")
-	case <-time.After(20 * time.Second):
-		t.Fatal("Main server did not start in time")
-	}
-
-	select {
-	case <-promReady:
-		t.Log("Prometheus server started successfully")
-	case <-time.After(20 * time.Second):
-		t.Fatal("Prometheus server did not start in time")
-	}
+	time.Sleep(2 * time.Second)
 
 	t.Run("get default process metrics", func(t *testing.T) {
 		endpoint := fmt.Sprintf("http://%s%s", prom.ListenAddr, prom.Path)
