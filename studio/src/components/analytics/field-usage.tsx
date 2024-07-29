@@ -76,11 +76,7 @@ export const FieldUsage = ({
   const { range, dateRange } = useAnalyticsQueryState();
 
   const { data, ticks, domain, timeFormatter } = useChartData(
-    range
-      ? range
-      : dateRange
-      ? differenceInHours(dateRange.end, dateRange.start)
-      : undefined,
+    range ? range : differenceInHours(dateRange.end, dateRange.start),
     usageData.requestSeries,
   );
 
