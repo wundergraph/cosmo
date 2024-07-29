@@ -3,6 +3,10 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"sync"
+	"testing"
+	"time"
+
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -10,9 +14,6 @@ import (
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
-	"sync"
-	"testing"
-	"time"
 )
 
 var (
@@ -68,7 +69,7 @@ func TestConfigHotReload(t *testing.T) {
 				Query: `{ employees { id } }`,
 			})
 			require.Equal(t, res.Response.StatusCode, 200)
-			require.Equal(t, res.Response.Header.Get("X-Router-Config-Version"), "959e2804f7b01fdd813cad98e16f06e287150a2e")
+			require.Equal(t, "5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf", res.Response.Header.Get("X-Router-Config-Version"))
 			require.JSONEq(t, employeesIDData, res.Body)
 
 			// Wait for the config poller to be ready
@@ -125,7 +126,7 @@ func TestConfigHotReload(t *testing.T) {
 					Query: `{ employees { id } }`,
 				})
 				require.Equal(t, res.Response.StatusCode, 200)
-				require.Equal(t, res.Response.Header.Get("X-Router-Config-Version"), "959e2804f7b01fdd813cad98e16f06e287150a2e")
+				require.Equal(t, "5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf", res.Response.Header.Get("X-Router-Config-Version"))
 				require.JSONEq(t, employeesIDData, res.Body)
 			}()
 
@@ -138,7 +139,7 @@ func TestConfigHotReload(t *testing.T) {
 					Query: `{ employees { id } }`,
 				})
 				require.Equal(t, res.Response.StatusCode, 200)
-				require.Equal(t, res.Response.Header.Get("X-Router-Config-Version"), "959e2804f7b01fdd813cad98e16f06e287150a2e")
+				require.Equal(t, "5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf", res.Response.Header.Get("X-Router-Config-Version"))
 				require.JSONEq(t, employeesIDData, res.Body)
 			}()
 

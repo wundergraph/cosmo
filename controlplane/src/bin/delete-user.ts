@@ -1,5 +1,4 @@
 import process from 'node:process';
-import fs from 'node:fs';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { pino } from 'pino';
 import postgres from 'postgres';
@@ -28,7 +27,6 @@ const {
 } = getConfig();
 
 const userId = process.env.USER_ID || '';
-const githubOutputPath = process.env.GITHUB_OUTPUT;
 
 // Establish database connection
 const connectionConfig = await buildDatabaseConnectionConfig({
@@ -74,11 +72,8 @@ if (!user || !user.id || !user.email) {
 // Check if user can be deleted
 const { isSafe, soloOrganizations, unsafeOrganizations } = await orgRepo.canUserBeDeleted(user.id);
 
-// Write to github actions output
-if (githubOutputPath) {
-  fs.appendFileSync(githubOutputPath, `soloOrganizations=${JSON.stringify(soloOrganizations)}\n`);
-  fs.appendFileSync(githubOutputPath, `unsafeOrganizations=${JSON.stringify(soloOrganizations)}\n`);
-}
+console.log(`soloOrganizations=${JSON.stringify(soloOrganizations)}\n`);
+console.log(`unsafeOrganizations=${JSON.stringify(unsafeOrganizations)}\n`);
 
 if (!isSafe) {
   throw new Error('Cannot delete user because they are the only admin of an organization with several members.');

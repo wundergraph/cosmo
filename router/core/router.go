@@ -52,7 +52,7 @@ const (
 	Redact IPAnonymizationMethod = "redact"
 )
 
-var CustomCompressibleContentTypes = []string{
+var CompressibleContentTypes = []string{
 	"text/html",
 	"text/css",
 	"text/plain",
@@ -64,6 +64,8 @@ var CustomCompressibleContentTypes = []string{
 	"application/rss+xml",
 	"image/svg+xml",
 	"application/graphql",
+	"application/graphql-response+json",
+	"application/graphql+json",
 }
 
 type (
@@ -140,7 +142,7 @@ type (
 		readinessCheckPath       string
 		livenessCheckPath        string
 		cdnConfig                config.CDNConfiguration
-		persistedOperationClient persistedoperation.Client
+		cdnOperationClient       *cdn.PersistedOperationsClient
 		eventsConfig             config.EventsConfiguration
 		prometheusServer         *http.Server
 		modulesConfig            map[string]interface{}
@@ -442,17 +444,6 @@ func NewRouter(opts ...Option) (*Router, error) {
 		})
 	}
 
-	if r.graphApiToken != "" {
-		cdnPersistentOpClient, err := cdn.NewClient(r.cdnConfig.URL, r.graphApiToken, cdn.Options{
-			CacheSize: r.cdnConfig.CacheSize.Uint64(),
-			Logger:    r.logger,
-		})
-		if err != nil {
-			return nil, err
-		}
-		r.persistedOperationClient = cdnPersistentOpClient
-	}
-
 	for _, source := range r.eventsConfig.Providers.Nats {
 		r.logger.Info("Nats Event source enabled", zap.String("providerID", source.ID), zap.String("url", source.URL))
 	}
@@ -694,6 +685,18 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			r.otlpMeterProvider = mp
 		}
 
+	}
+
+	if r.graphApiToken != "" {
+		cdnPersistentOpClient, err := cdn.NewPersistentOperationClient(r.cdnConfig.URL, r.graphApiToken, cdn.PersistentOperationsOptions{
+			CacheSize:     r.cdnConfig.CacheSize.Uint64(),
+			Logger:        r.logger,
+			TraceProvider: r.tracerProvider,
+		})
+		if err != nil {
+			return err
+		}
+		r.cdnOperationClient = cdnPersistentOpClient
 	}
 
 	r.gqlMetricsExporter = graphqlmetrics.NewNoopExporter()

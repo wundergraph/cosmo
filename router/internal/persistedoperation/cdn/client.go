@@ -15,7 +15,15 @@ import (
 	"github.com/dgraph-io/ristretto"
 	"github.com/wundergraph/cosmo/router/internal/jwt"
 	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
+	"go.opentelemetry.io/otel/attribute"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv12 "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
+	"io"
+	"net/http"
+	"net/url"
 )
 
 const (
@@ -75,8 +83,9 @@ func (c *cdnPersistedOperationsCache) Set(clientName, operationHash string, oper
 type Options struct {
 	// CacheSize indicates the in-memory cache size, in bytes. If 0, no in-memory
 	// cache is used.
-	CacheSize uint64
-	Logger    *zap.Logger
+	CacheSize     uint64
+	Logger        *zap.Logger
+	TraceProvider *sdktrace.TracerProvider
 }
 
 type client struct {
@@ -91,12 +100,20 @@ type client struct {
 	httpClient      *http.Client
 	operationsCache *cdnPersistedOperationsCache
 	logger          *zap.Logger
+	tracer          trace.Tracer
 }
 
-func (cdn *client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error) {
+func (cdn *client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string, attributes []attribute.KeyValue) ([]byte, error) {
 	if data := cdn.operationsCache.Get(clientName, sha256Hash); data != nil {
 		return data, nil
 	}
+
+	ctx, span := cdn.tracer.Start(ctx, "Load Persisted Operation",
+		trace.WithSpanKind(trace.SpanKindClient),
+		trace.WithAttributes(attributes...),
+	)
+	defer span.End()
+
 	operationPath := fmt.Sprintf("/%s/%s/operations/%s/%s.json",
 		cdn.organizationID,
 		cdn.federatedGraphID,
@@ -109,6 +126,12 @@ func (cdn *client) PersistedOperation(ctx context.Context, clientName string, sh
 		return nil, err
 	}
 
+	span.SetAttributes(
+		semconv.HTTPURL(req.URL.String()),
+		semconv.HTTPMethod(http.MethodGet),
+		semconv12.HTTPHostKey.String(req.Host),
+	)
+
 	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
 	req.Header.Add("Authorization", "Bearer "+cdn.authenticationToken)
 	req.Header.Set("Accept-Encoding", "gzip")
@@ -118,6 +141,8 @@ func (cdn *client) PersistedOperation(ctx context.Context, clientName string, sh
 		return nil, err
 	}
 	defer resp.Body.Close()
+
+	span.SetAttributes(semconv.HTTPStatusCode(resp.StatusCode))
 
 	if resp.StatusCode != http.StatusOK {
 		if resp.StatusCode == http.StatusNotFound {
@@ -215,7 +240,11 @@ func NewClient(endpoint string, token string, opts Options) (persistedoperation.
 		federatedGraphID:    url.PathEscape(claims.FederatedGraphID),
 		organizationID:      url.PathEscape(claims.OrganizationID),
 		httpClient:          httpclient.NewRetryableHTTPClient(logger),
-		logger:              opts.Logger,
+		logger:              logger,
+		tracer: opts.TraceProvider.Tracer(
+			"wundergraph/cosmo/router/cdn_persisted_operations_client",
+			trace.WithInstrumentationVersion("0.0.1"),
+		),
 		operationsCache: &cdnPersistedOperationsCache{
 			cache: cache,
 		},

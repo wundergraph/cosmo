@@ -4,6 +4,19 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.98.2](https://github.com/wundergraph/cosmo/compare/router@0.98.1...router@0.98.2) (2024-07-27)
+
+### Bug Fixes
+
+* race for sendError, add test for sampling ([#967](https://github.com/wundergraph/cosmo/issues/967)) ([6d67207](https://github.com/wundergraph/cosmo/commit/6d67207ef55e888126a73eec40007b0ad2d65976)) (@StarpTech)
+* remove slow brotli compression and use optimized gzip middleware ([#968](https://github.com/wundergraph/cosmo/issues/968)) ([1049be5](https://github.com/wundergraph/cosmo/commit/1049be552ccaf3ecee99b8970efd951a82c35054)) (@StarpTech)
+
+## [0.98.1](https://github.com/wundergraph/cosmo/compare/router@0.98.0...router@0.98.1) (2024-07-24)
+
+### Bug Fixes
+
+* variable list coercion with normalization cache ([#956](https://github.com/wundergraph/cosmo/issues/956)) ([104ebe8](https://github.com/wundergraph/cosmo/commit/104ebe8f49b6975d10e897d767fb8d627e54145e)) (@jensneuse)
+
 # [0.98.0](https://github.com/wundergraph/cosmo/compare/router@0.97.0...router@0.98.0) (2024-07-22)
 
 ### Bug Fixes

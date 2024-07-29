@@ -5,13 +5,13 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"io"
+	"github.com/klauspost/compress/gzhttp"
+	"github.com/klauspost/compress/gzip"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
-	br "github.com/andybalholm/brotli"
 	"github.com/cloudflare/backoff"
 	"github.com/dgraph-io/ristretto"
 	"github.com/go-chi/chi/v5"
@@ -200,19 +200,24 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		return nil, fmt.Errorf("failed to build feature flag handler: %w", err)
 	}
 
-	brCompressor := middleware.NewCompressor(5, CustomCompressibleContentTypes...)
-	brCompressor.SetEncoder("br", func(w io.Writer, level int) io.Writer {
-		return br.NewWriterLevel(w, level)
-	})
+	wrapper, err := gzhttp.NewWrapper(
+		gzhttp.MinSize(1024), // 1KB
+		gzhttp.CompressionLevel(gzip.DefaultCompression),
+		gzhttp.ContentTypes(CompressibleContentTypes),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create gzip wrapper: %w", err)
+	}
 
 	/**
 	* A group where we can selectively apply middlewares to the graphql endpoint
 	 */
 	httpRouter.Group(func(cr chi.Router) {
 
-		// We are applying it conditionally because brotli compressing the 3MB playground is very slow
-		cr.Use(middleware.Compress(5, CustomCompressibleContentTypes...))
-		cr.Use(brCompressor.Handler)
+		// We are applying it conditionally because compressing 3MB playground is still slow even with stdlib gzip
+		cr.Use(func(h http.Handler) http.Handler {
+			return wrapper(h)
+		})
 
 		// Mount the feature flag handler. It calls the base mux if no feature flag is set.
 		cr.Mount(r.graphqlPath, multiGraphHandler)
@@ -544,7 +549,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
 	}
 
-	operationParser := NewOperationParser(OperationParserOptions{
+	operationProcessor := NewOperationProcessor(OperationProcessorOptions{
 		Executor:                       executor,
 		MaxOperationSizeInBytes:        int64(s.routerTrafficConfig.MaxRequestBodyBytes),
 		PersistedOperationClient:       s.persistedOperationClient,
@@ -596,7 +601,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		Logger:                      s.logger,
 		Executor:                    executor,
 		Metrics:                     routerMetrics,
-		OperationProcessor:          operationParser,
+		OperationProcessor:          operationProcessor,
 		Planner:                     operationPlanner,
 		AccessController:            s.accessController,
 		OperationBlocker:            operationBlocker,
@@ -613,7 +618,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
 		wsMiddleware := NewWebsocketMiddleware(ctx, WebsocketMiddlewareOptions{
-			OperationProcessor:         operationParser,
+			OperationProcessor:         operationProcessor,
 			OperationBlocker:           operationBlocker,
 			Planner:                    operationPlanner,
 			GraphQLHandler:             graphqlHandler,
