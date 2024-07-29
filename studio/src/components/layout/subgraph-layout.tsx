@@ -1,10 +1,26 @@
-import { cn } from "@/lib/utils";
 import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandSeparator,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { useQuery } from "@connectrpc/connect-query";
+import { ChartBarIcon } from "@heroicons/react/24/outline";
+import {
+  CaretSortIcon,
+  CheckIcon,
   ExclamationTriangleIcon,
   FileTextIcon,
   HomeIcon,
 } from "@radix-ui/react-icons";
-import { useQuery } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getSubgraphByName,
@@ -15,27 +31,17 @@ import {
   Subgraph,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { useRouter } from "next/router";
-import { Fragment, createContext, useMemo } from "react";
+import { Fragment, createContext, useMemo, useState } from "react";
 import { PiChat, PiGraphLight } from "react-icons/pi";
 import { EmptyState } from "../empty-state";
+import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
+import { Link } from "../ui/link";
 import { Loader } from "../ui/loader";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
 import { TitleLayoutProps } from "./graph-layout";
 import { PageHeader } from "./head";
 import { LayoutProps } from "./layout";
 import { NavLink, SideNav } from "./sidenav";
-import { ChartBarIcon } from "@heroicons/react/24/outline";
-import { Badge } from "../ui/badge";
-import { Link } from "../ui/link";
 
 export interface SubgraphContextProps {
   subgraph: GetSubgraphByNameResponse["graph"];
@@ -143,6 +149,8 @@ export const SubgraphSelect = () => {
   const slug = router.query.subgraphSlug as string;
   const namespace = router.query.namespace as string;
 
+  const [open, setOpen] = useState(false);
+
   const selected = data?.graphs.find(
     (g) => g.name === slug && g.namespace === namespace,
   );
@@ -163,46 +171,69 @@ export const SubgraphSelect = () => {
   );
 
   return (
-    <Select
-      value={selected?.id}
-      onValueChange={(gID) => {
-        const graph = data?.graphs.find((g) => g.id === gID);
-        router.push({
-          pathname: router.pathname,
-          query: {
-            ...router.query,
-            namespace: graph?.namespace,
-            subgraphSlug: graph?.name,
-          },
-        });
-      }}
-    >
-      <SelectTrigger
-        value={slug}
-        className="flex h-8 w-auto gap-x-2 border-0 bg-transparent pl-3 pr-1 text-muted-foreground shadow-none data-[state=open]:bg-accent data-[state=open]:text-accent-foreground hover:bg-accent hover:text-accent-foreground focus:ring-0"
-      >
-        <SelectValue aria-label={selected?.name}>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          role="combobox"
+          aria-expanded={open}
+          className="flex h-8 w-auto gap-x-2 border-0 bg-transparent pl-3 pr-1 text-muted-foreground shadow-none data-[state=open]:bg-accent data-[state=open]:text-accent-foreground hover:bg-accent hover:text-accent-foreground focus:ring-0"
+        >
           {selected?.name}{" "}
           <Badge variant="secondary">{selected?.namespace}</Badge>
-        </SelectValue>
-      </SelectTrigger>
-      <SelectContent className="min-w-[200px]">
-        {Object.entries(groupedGraphs ?? {}).map(([namespace, graphs]) => {
-          return (
-            <SelectGroup key={namespace}>
-              <SelectLabel>{namespace}</SelectLabel>
-              {graphs.map(({ id, name }) => {
+          <CaretSortIcon className="h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="min-w-[200px] p-0">
+        <Command className="max-h-[calc(var(--radix-popover-content-available-height)_-24px)]">
+          <CommandInput placeholder="Search subgraph..." className="h-9" />
+          <CommandEmpty>No subgraph found.</CommandEmpty>
+          <div className="scrollbar-custom h-full overflow-y-auto">
+            {Object.entries(groupedGraphs ?? {}).map(
+              ([namespace, graphs], index) => {
                 return (
-                  <SelectItem key={id} value={id}>
-                    {name}
-                  </SelectItem>
+                  <CommandGroup key={namespace} heading={namespace}>
+                    {graphs.map((graph) => {
+                      return (
+                        <CommandItem
+                          onSelect={() => {
+                            router.push({
+                              pathname: router.pathname,
+                              query: {
+                                ...router.query,
+                                namespace: graph?.namespace,
+                                subgraphSlug: graph?.name,
+                              },
+                            });
+                            setOpen(false);
+                          }}
+                          className="pl-4"
+                          key={graph.id}
+                          value={`${namespace}.${graph.name}`}
+                        >
+                          {graph.name}
+                          <CheckIcon
+                            className={cn(
+                              "ml-auto h-4 w-4",
+                              graph.id === selected?.id
+                                ? "opacity-100"
+                                : "opacity-0",
+                            )}
+                          />
+                        </CommandItem>
+                      );
+                    })}
+                    {index !==
+                      Object.entries(groupedGraphs ?? {}).length - 1 && (
+                      <CommandSeparator className="mt-2" />
+                    )}
+                  </CommandGroup>
                 );
-              })}
-            </SelectGroup>
-          );
-        })}
-      </SelectContent>
-    </Select>
+              },
+            )}
+          </div>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 };
 
