@@ -6,6 +6,8 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/cdn"
 	"net"
 	"net/http"
 	"net/url"
@@ -13,7 +15,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/graphiql"
 	"go.uber.org/atomic"
@@ -139,7 +140,7 @@ type (
 		readinessCheckPath       string
 		livenessCheckPath        string
 		cdnConfig                config.CDNConfiguration
-		cdnOperationClient       cdn.PersistedOperationClient
+		persistedOperationClient persistedoperation.Client
 		eventsConfig             config.EventsConfiguration
 		prometheusServer         *http.Server
 		modulesConfig            map[string]interface{}
@@ -442,14 +443,14 @@ func NewRouter(opts ...Option) (*Router, error) {
 	}
 
 	if r.graphApiToken != "" {
-		cdnPersistentOpClient, err := cdn.NewPersistentOperationClient(r.cdnConfig.URL, r.graphApiToken, cdn.PersistentOperationsOptions{
+		cdnPersistentOpClient, err := cdn.NewClient(r.cdnConfig.URL, r.graphApiToken, cdn.Options{
 			CacheSize: r.cdnConfig.CacheSize.Uint64(),
 			Logger:    r.logger,
 		})
 		if err != nil {
 			return nil, err
 		}
-		r.cdnOperationClient = cdnPersistentOpClient
+		r.persistedOperationClient = cdnPersistentOpClient
 	}
 
 	for _, source := range r.eventsConfig.Providers.Nats {
@@ -984,8 +985,8 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 	}()
 
 	// Shutdown the CDN operation client and free up resources
-	if r.cdnOperationClient != nil {
-		r.cdnOperationClient.Close()
+	if r.persistedOperationClient != nil {
+		r.persistedOperationClient.Close()
 	}
 
 	wg.Wait()

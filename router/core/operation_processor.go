@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"io"
 	"net/http"
 	"slices"
@@ -18,7 +19,6 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/variablesvalidation"
 
-	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
@@ -75,9 +75,9 @@ var (
 )
 
 type OperationParserOptions struct {
-	Executor                *Executor
-	MaxOperationSizeInBytes int64
-	PersistentOpClient      cdn.PersistedOperationClient
+	Executor                 *Executor
+	MaxOperationSizeInBytes  int64
+	PersistedOperationClient persistedoperation.Client
 
 	EnablePersistedOperationsCache bool
 	NormalizationCache             *ristretto.Cache[uint64, NormalizationCacheEntry]
@@ -86,11 +86,11 @@ type OperationParserOptions struct {
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
 // It should be only instantiated once and shared across requests
 type OperationProcessor struct {
-	executor                *Executor
-	maxOperationSizeInBytes int64
-	persistentOpClient      cdn.PersistedOperationClient
-	parseKitPool            *sync.Pool
-	operationCache          *OperationCache
+	executor                 *Executor
+	maxOperationSizeInBytes  int64
+	persistedOperationClient persistedoperation.Client
+	parseKitPool             *sync.Pool
+	operationCache           *OperationCache
 }
 
 // parseKit is a helper struct to parse, normalize and validate operations
@@ -235,7 +235,7 @@ func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo) error 
 	}
 
 	if o.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil && len(o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash) > 0 {
-		if o.operationParser.persistentOpClient == nil {
+		if o.operationParser.persistedOperationClient == nil {
 			return &inputError{
 				message:    "could not resolve persisted query, feature is not configured",
 				statusCode: http.StatusOK,
@@ -252,7 +252,7 @@ func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo) error 
 		if fromCache {
 			return nil
 		}
-		persistedOperationData, err := o.operationParser.persistentOpClient.PersistedOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
+		persistedOperationData, err := o.operationParser.persistedOperationClient.PersistedOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
 		if err != nil {
 			return err
 		}
@@ -734,9 +734,9 @@ func (o *OperationKit) skipIncludeVariableNames() []string {
 
 func NewOperationParser(opts OperationParserOptions) *OperationProcessor {
 	processor := &OperationProcessor{
-		executor:                opts.Executor,
-		maxOperationSizeInBytes: opts.MaxOperationSizeInBytes,
-		persistentOpClient:      opts.PersistentOpClient,
+		executor:                 opts.Executor,
+		maxOperationSizeInBytes:  opts.MaxOperationSizeInBytes,
+		persistedOperationClient: opts.PersistedOperationClient,
 		parseKitPool: &sync.Pool{
 			New: func() interface{} {
 				return &parseKit{

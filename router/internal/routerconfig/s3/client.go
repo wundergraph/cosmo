@@ -1,10 +1,11 @@
-package s3_config
+package s3
 
 import (
 	"context"
 	"errors"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/wundergraph/cosmo/router/internal/routerconfig"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"io"
@@ -12,14 +13,14 @@ import (
 	"time"
 )
 
-type Option func(*ConfigClient)
+type Option func(*Client)
 
-type ConfigClient struct {
+type Client struct {
 	client  *minio.Client
-	options *Options
+	options *ClientOptions
 }
 
-type Options struct {
+type ClientOptions struct {
 	AccessKeyID     string
 	SecretAccessKey string
 	Region          string
@@ -28,9 +29,9 @@ type Options struct {
 	ObjectPath      string
 }
 
-func NewRouterConfigClient(endpoint string, options *Options) (configpoller.RouterConfigClient, error) {
+func NewClient(endpoint string, options *ClientOptions) (routerconfig.Client, error) {
 
-	client := &ConfigClient{
+	client := &Client{
 		options: options,
 	}
 
@@ -47,7 +48,7 @@ func NewRouterConfigClient(endpoint string, options *Options) (configpoller.Rout
 	return client, nil
 }
 
-func (c ConfigClient) RouterConfig(ctx context.Context, version string, modifiedSince time.Time) (*configpoller.RouterConfigResult, error) {
+func (c Client) RouterConfig(ctx context.Context, version string, modifiedSince time.Time) (*routerconfig.Response, error) {
 
 	options := minio.GetObjectOptions{}
 
@@ -84,7 +85,7 @@ func (c ConfigClient) RouterConfig(ctx context.Context, version string, modified
 		return nil, err
 	}
 
-	result := &configpoller.RouterConfigResult{}
+	result := &routerconfig.Response{}
 	result.Config = routerConfig
 
 	return result, nil

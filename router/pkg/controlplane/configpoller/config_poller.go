@@ -3,6 +3,7 @@ package configpoller
 import (
 	"context"
 	"errors"
+	"github.com/wundergraph/cosmo/router/internal/routerconfig"
 	"time"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -14,17 +15,6 @@ type Option func(cp *configPoller)
 
 var ErrConfigNotModified = errors.New("config not modified")
 
-type RouterConfigResult struct {
-	// Config is the marshaled router config
-	Config *nodev1.RouterConfig
-	// ETag is the ETag of the config. Only set if the config is fetched from the S3 client
-	ETag string
-}
-
-type RouterConfigClient interface {
-	RouterConfig(ctx context.Context, version string, modifiedSince time.Time) (*RouterConfigResult, error)
-}
-
 type ConfigPoller interface {
 	// Subscribe subscribes to the config poller with a handler function that will be invoked
 	// with the latest router config and the previous version string. If the handler takes longer than the poll interval
@@ -33,7 +23,7 @@ type ConfigPoller interface {
 	// GetRouterConfig returns the latest router config from the CDN
 	// If the Config is nil, no new config is available and the current config should be used.
 	// and updates the latest router config version. This method is only used for the initial config
-	GetRouterConfig(ctx context.Context) (*RouterConfigResult, error)
+	GetRouterConfig(ctx context.Context) (*routerconfig.Response, error)
 	// Stop stops the config poller. After calling stop, the config poller cannot be used again.
 	Stop(ctx context.Context) error
 }
@@ -46,7 +36,7 @@ type configPoller struct {
 	latestRouterConfigDate    time.Time
 	poller                    controlplane.Poller
 	pollInterval              time.Duration
-	cdnConfigClient           RouterConfigClient
+	configClient              routerconfig.Client
 }
 
 func New(endpoint, token string, opts ...Option) ConfigPoller {
@@ -111,8 +101,8 @@ func (c *configPoller) Subscribe(ctx context.Context, handler func(newConfig *no
 	})
 }
 
-func (c *configPoller) getRouterConfig(ctx context.Context) (*RouterConfigResult, error) {
-	config, err := c.cdnConfigClient.RouterConfig(ctx, c.latestRouterConfigVersion, c.latestRouterConfigDate)
+func (c *configPoller) getRouterConfig(ctx context.Context) (*routerconfig.Response, error) {
+	config, err := c.configClient.RouterConfig(ctx, c.latestRouterConfigVersion, c.latestRouterConfigDate)
 	if err != nil {
 		if errors.Is(err, ErrConfigNotModified) {
 			return nil, nil
@@ -123,7 +113,7 @@ func (c *configPoller) getRouterConfig(ctx context.Context) (*RouterConfigResult
 }
 
 // GetRouterConfig fetches the latest router config from the provider. Not safe for concurrent use.
-func (c *configPoller) GetRouterConfig(ctx context.Context) (*RouterConfigResult, error) {
+func (c *configPoller) GetRouterConfig(ctx context.Context) (*routerconfig.Response, error) {
 	cfg, err := c.getRouterConfig(ctx)
 	if err == nil {
 		c.latestRouterConfigVersion = cfg.Config.GetVersion()
@@ -144,8 +134,8 @@ func WithPollInterval(interval time.Duration) Option {
 	}
 }
 
-func WithClient(cdnConfigClient RouterConfigClient) Option {
+func WithClient(cdnConfigClient routerconfig.Client) Option {
 	return func(s *configPoller) {
-		s.cdnConfigClient = cdnConfigClient
+		s.configClient = cdnConfigClient
 	}
 }

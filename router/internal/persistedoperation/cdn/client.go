@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/httpclient"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"io"
 	"net/http"
 	"net/url"
@@ -16,14 +18,8 @@ import (
 	"go.uber.org/zap"
 )
 
-type PersistedOperationClient interface {
-	PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error)
-	Close()
-}
-
 const (
-	PersistedOperationNotFoundErrorCode = "PersistedQueryNotFound"
-	persistentAverageCacheEntrySize     = 4 * 1024 // 4kb
+	persistentAverageCacheEntrySize = 4 * 1024 // 4kb
 )
 
 var (
@@ -37,12 +33,6 @@ const (
 	persistedOperationKeyIndexVersion = iota
 	persistedOperationKeyIndexBody
 )
-
-type PersistentOperationNotFoundError interface {
-	error
-	ClientName() string
-	Sha256Hash() string
-}
 
 type persistentOperationNotFoundError struct {
 	clientName string
@@ -82,14 +72,14 @@ func (c *cdnPersistedOperationsCache) Set(clientName, operationHash string, oper
 	c.cache.Set(c.key(clientName, unsafebytes.StringToBytes(operationHash)), operationBody, int64(len(operationBody)))
 }
 
-type PersistentOperationsOptions struct {
+type Options struct {
 	// CacheSize indicates the in-memory cache size, in bytes. If 0, no in-memory
 	// cache is used.
 	CacheSize uint64
 	Logger    *zap.Logger
 }
 
-type persistedOperationClient struct {
+type client struct {
 	cdnURL              *url.URL
 	authenticationToken string
 	// federatedGraphID is the ID of the federated graph that was obtained
@@ -103,7 +93,7 @@ type persistedOperationClient struct {
 	logger          *zap.Logger
 }
 
-func (cdn *persistedOperationClient) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error) {
+func (cdn *client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error) {
 	if data := cdn.operationsCache.Get(clientName, sha256Hash); data != nil {
 		return data, nil
 	}
@@ -186,9 +176,9 @@ func (cdn *persistedOperationClient) PersistedOperation(ctx context.Context, cli
 	return unescaped, nil
 }
 
-// NewPersistentOperationClient creates a new CDN client. URL is the URL of the CDN.
+// NewClient creates a new CDN client. URL is the URL of the CDN.
 // Token is the token used to authenticate with the CDN, the same as the GRAPH_API_TOKEN
-func NewPersistentOperationClient(endpoint string, token string, opts PersistentOperationsOptions) (PersistedOperationClient, error) {
+func NewClient(endpoint string, token string, opts Options) (persistedoperation.Client, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("invalid CDN URL %q: %w", endpoint, err)
@@ -216,12 +206,15 @@ func NewPersistentOperationClient(endpoint string, token string, opts Persistent
 			return nil, fmt.Errorf("initializing CDN cache: %v", err)
 		}
 	}
-	return &persistedOperationClient{
+
+	logger := opts.Logger.With(zap.String("component", "persisted_operation_client"))
+
+	return &client{
 		cdnURL:              u,
 		authenticationToken: token,
 		federatedGraphID:    url.PathEscape(claims.FederatedGraphID),
 		organizationID:      url.PathEscape(claims.OrganizationID),
-		httpClient:          newRetryableHTTPClient(opts.Logger),
+		httpClient:          httpclient.NewRetryableHTTPClient(logger),
 		logger:              opts.Logger,
 		operationsCache: &cdnPersistedOperationsCache{
 			cache: cache,
@@ -229,6 +222,6 @@ func NewPersistentOperationClient(endpoint string, token string, opts Persistent
 	}, nil
 }
 
-func (cdn *persistedOperationClient) Close() {
+func (cdn *client) Close() {
 	cdn.operationsCache.cache.Close()
 }

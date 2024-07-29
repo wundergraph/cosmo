@@ -2,8 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/cdn"
-	"github.com/wundergraph/cosmo/router/internal/s3_config"
+	"github.com/wundergraph/cosmo/router/internal/routerconfig"
+	"github.com/wundergraph/cosmo/router/internal/routerconfig/cdn"
+	"github.com/wundergraph/cosmo/router/internal/routerconfig/s3"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
@@ -47,11 +48,11 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 			logger.Fatal("Could not read router config", zap.Error(err), zap.String("path", cfg.RouterConfigPath))
 		}
 	} else {
-		var client configpoller.RouterConfigClient
+		var client routerconfig.Client
 
 		if cfg.ExecutionConfig.FromS3 != nil && cfg.ExecutionConfig.FromS3.Enabled {
 
-			client, err = s3_config.NewRouterConfigClient(cfg.ExecutionConfig.FromS3.Endpoint, &s3_config.Options{
+			client, err = s3.NewClient(cfg.ExecutionConfig.FromS3.Endpoint, &s3.ClientOptions{
 				AccessKeyID:     cfg.ExecutionConfig.FromS3.AccessKey,
 				SecretAccessKey: cfg.ExecutionConfig.FromS3.SecretKey,
 				BucketName:      cfg.ExecutionConfig.FromS3.Bucket,
@@ -72,7 +73,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 			if cfg.Graph.Token == "" {
 				return nil, fmt.Errorf("router config provider 'cdn' is not supported without a graph token")
 			}
-			client, err = cdn.NewRouterConfigClient(cfg.CDN.URL, cfg.Graph.Token, cdn.RouterConfigOptions{
+			client, err = cdn.NewClient(cfg.CDN.URL, cfg.Graph.Token, cdn.ClientOptions{
 				Logger:       logger,
 				SignatureKey: cfg.Graph.SignKey,
 			})
