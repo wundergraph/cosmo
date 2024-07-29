@@ -191,6 +191,10 @@ subgraphs:
 
 The implementation is the same as Proposal-1, the only difference is that the feature flag is created when the PR is labeled with `cosmo-preview` and destroyed when the PR is unlabeled with `cosmo-preview` or when the pr is closed.
 
+## Pros
+
+- As the feature flag is created only when the PR is labeled with `cosmo-preview`, the feature flag is not created for every PR. This can be useful as all the PRs might not need a preview.
+
 ### Limitations
 
 - The comso.yaml file should not be changed after the PR is labeled with `cosmo-preview`, if changed for the preview to work as expected, the PR has to be unlabeled and relabeled with `cosmo-preview`.
@@ -282,5 +286,5 @@ jobs:
 
 ### Limitations
 
-- Can only have one feature flag per PR.
+- Can only have one feature flag per action.
 - Can only have one subgraph per feature flag.
