@@ -147,15 +147,15 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *zap.Logger, err error) {
 	var reportErr ReportError
 	var inputErr InputError
-	var poNotFoundErr persistedoperation.PersistentOperationNotFoundError
+	var poNotFoundErr *persistedoperation.PersistentOperationNotFoundError
 	switch {
 	case errors.As(err, &inputErr):
 		requestLogger.Debug(inputErr.Error())
 		writeRequestErrors(r, w, inputErr.StatusCode(), graphqlerrors.RequestErrorsFromError(err), requestLogger)
 	case errors.As(err, &poNotFoundErr):
 		requestLogger.Debug("persisted operation not found",
-			zap.String("sha256Hash", poNotFoundErr.Sha256Hash()),
-			zap.String("clientName", poNotFoundErr.ClientName()))
+			zap.String("sha256Hash", poNotFoundErr.Sha256Hash),
+			zap.String("clientName", poNotFoundErr.ClientName))
 		writeRequestErrors(r, w, http.StatusBadRequest, graphqlerrors.RequestErrorsFromError(errors.New("persisted Query not found")), requestLogger)
 	case errors.As(err, &reportErr):
 		report := reportErr.Report()

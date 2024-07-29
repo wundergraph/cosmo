@@ -3,6 +3,7 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 	"sync"
 	"testing"
 	"time"
@@ -31,8 +32,8 @@ func (c *ConfigPollerMock) Subscribe(_ context.Context, handler func(newConfig *
 	close(c.ready)
 }
 
-func (c *ConfigPollerMock) GetRouterConfig(_ context.Context) (*configpoller.RouterConfigResult, error) {
-	result := &configpoller.RouterConfigResult{
+func (c *ConfigPollerMock) GetRouterConfig(_ context.Context) (*routerconfig.Response, error) {
+	result := &routerconfig.Response{
 		Config: c.initConfig,
 	}
 	return result, nil

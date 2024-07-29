@@ -5,14 +5,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/httpclient"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
-
 	"github.com/buger/jsonparser"
-	"github.com/dgraph-io/ristretto"
+	"github.com/wundergraph/cosmo/router/internal/httpclient"
 	"github.com/wundergraph/cosmo/router/internal/jwt"
-	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv12 "go.opentelemetry.io/otel/semconv/v1.12.0"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
@@ -21,10 +19,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-)
-
-const (
-	persistentAverageCacheEntrySize = 4 * 1024 // 4kb
 )
 
 var (
@@ -39,48 +33,7 @@ const (
 	persistedOperationKeyIndexBody
 )
 
-type persistentOperationNotFoundError struct {
-	clientName string
-	sha256Hash string
-}
-
-func (e *persistentOperationNotFoundError) ClientName() string {
-	return e.clientName
-}
-
-func (e *persistentOperationNotFoundError) Sha256Hash() string {
-	return string(e.sha256Hash)
-}
-
-func (e *persistentOperationNotFoundError) Error() string {
-	return fmt.Sprintf("operation %s for client %s not found", e.sha256Hash, e.clientName)
-}
-
-type cdnPersistedOperationsCache struct {
-	// cache is the backing store for the in-memory cache. Note
-	// that if the cache is disabled, this will be nil
-	cache *ristretto.Cache[string, []byte]
-}
-
-func (c *cdnPersistedOperationsCache) key(clientName string, operationHash []byte) string {
-	return clientName + unsafebytes.BytesToString(operationHash)
-}
-
-func (c *cdnPersistedOperationsCache) Get(clientName string, operationHash string) []byte {
-	// Since we're returning nil when the item is not found, we don't need to
-	// check the return value from the cache nor the type assertion
-	item, _ := c.cache.Get(c.key(clientName, unsafebytes.StringToBytes(operationHash)))
-	return item
-}
-
-func (c *cdnPersistedOperationsCache) Set(clientName, operationHash string, operationBody []byte) {
-	c.cache.Set(c.key(clientName, unsafebytes.StringToBytes(operationHash)), operationBody, int64(len(operationBody)))
-}
-
 type Options struct {
-	// CacheSize indicates the in-memory cache size, in bytes. If 0, no in-memory
-	// cache is used.
-	CacheSize     uint64
 	Logger        *zap.Logger
 	TraceProvider *sdktrace.TracerProvider
 }
@@ -93,23 +46,33 @@ type client struct {
 	federatedGraphID string
 	// organizationID is the ID of the organization for this graph that was obtained
 	// from the token, already url-escaped
-	organizationID  string
-	httpClient      *http.Client
-	operationsCache *cdnPersistedOperationsCache
-	logger          *zap.Logger
-	tracer          trace.Tracer
+	organizationID string
+	httpClient     *http.Client
+	logger         *zap.Logger
+	tracer         trace.Tracer
 }
 
 func (cdn *client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string, attributes []attribute.KeyValue) ([]byte, error) {
-	if data := cdn.operationsCache.Get(clientName, sha256Hash); data != nil {
-		return data, nil
-	}
 
 	ctx, span := cdn.tracer.Start(ctx, "Load Persisted Operation",
 		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(attributes...),
 	)
 	defer span.End()
+
+	content, err := cdn.persistedOperation(ctx, clientName, sha256Hash, attributes)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return nil, err
+	}
+
+	return content, nil
+}
+
+func (cdn *client) persistedOperation(ctx context.Context, clientName string, sha256Hash string, attributes []attribute.KeyValue) ([]byte, error) {
+
+	span := trace.SpanFromContext(ctx)
 
 	operationPath := fmt.Sprintf("/%s/%s/operations/%s/%s.json",
 		cdn.organizationID,
@@ -142,10 +105,12 @@ func (cdn *client) PersistedOperation(ctx context.Context, clientName string, sh
 	span.SetAttributes(semconv.HTTPStatusCode(resp.StatusCode))
 
 	if resp.StatusCode != http.StatusOK {
+		span.SetStatus(codes.Error, fmt.Sprintf("unexpected status code when loading persisted operation, statusCode: %d", resp.StatusCode))
+
 		if resp.StatusCode == http.StatusNotFound {
-			return nil, &persistentOperationNotFoundError{
-				clientName: clientName,
-				sha256Hash: sha256Hash,
+			return nil, &persistedoperation.PersistentOperationNotFoundError{
+				ClientName: clientName,
+				Sha256Hash: sha256Hash,
 			}
 		}
 		if resp.StatusCode == http.StatusUnauthorized {
@@ -190,12 +155,7 @@ func (cdn *client) PersistedOperation(ctx context.Context, clientName string, sh
 		return nil, fmt.Errorf("invalid persisted operation version %q", string(operationVersion))
 	}
 
-	unescaped, err := jsonparser.Unescape(operationBody, nil)
-	if err != nil {
-		return nil, fmt.Errorf("error unescaping persisted operation body: %w", err)
-	}
-	cdn.operationsCache.Set(clientName, sha256Hash, unescaped)
-	return unescaped, nil
+	return operationBody, nil
 }
 
 // NewClient creates a new CDN client. URL is the URL of the CDN.
@@ -214,20 +174,6 @@ func NewClient(endpoint string, token string, opts Options) (persistedoperation.
 	if err != nil {
 		return nil, err
 	}
-	cacheSize := int64(opts.CacheSize)
-	var cache *ristretto.Cache[string, []byte]
-	if cacheSize > 0 {
-		cache, err = ristretto.NewCache(&ristretto.Config[string, []byte]{
-			// assume an average of persistentAverageCacheEntrySize per operation, then
-			// multiply by 10 to obtain the recommended number of counters
-			NumCounters: (cacheSize * 10) / persistentAverageCacheEntrySize,
-			MaxCost:     cacheSize,
-			BufferItems: 64,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("initializing CDN cache: %v", err)
-		}
-	}
 
 	logger := opts.Logger.With(zap.String("component", "persisted_operation_client"))
 
@@ -242,12 +188,7 @@ func NewClient(endpoint string, token string, opts Options) (persistedoperation.
 			"wundergraph/cosmo/router/cdn_persisted_operations_client",
 			trace.WithInstrumentationVersion("0.0.1"),
 		),
-		operationsCache: &cdnPersistedOperationsCache{
-			cache: cache,
-		},
 	}, nil
 }
 
-func (cdn *client) Close() {
-	cdn.operationsCache.cache.Close()
-}
+func (cdn *client) Close() {}

@@ -3,7 +3,7 @@ package configpoller
 import (
 	"context"
 	"errors"
-	"github.com/wundergraph/cosmo/router/internal/routerconfig"
+	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 	"time"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"

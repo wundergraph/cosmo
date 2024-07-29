@@ -12,15 +12,15 @@ import (
 	"errors"
 	"fmt"
 	"github.com/wundergraph/cosmo/router/internal/httpclient"
-	"github.com/wundergraph/cosmo/router/internal/routerconfig"
+	"github.com/wundergraph/cosmo/router/internal/jwt"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
+	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 	"hash"
 	"io"
 	"net/http"
 	"net/url"
 	"time"
 
-	"github.com/wundergraph/cosmo/router/internal/jwt"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"go.uber.org/zap"
 )
@@ -34,7 +34,7 @@ var (
 	ErrInvalidSignature       = errors.New("invalid config signature, potential tampering detected")
 )
 
-type ClientOptions struct {
+type Options struct {
 	Logger       *zap.Logger
 	SignatureKey string
 }
@@ -67,6 +67,41 @@ func (e *routerConfigNotFoundError) FederatedGraphId() string {
 
 func (e *routerConfigNotFoundError) Error() string {
 	return fmt.Sprintf("router config of the federated graph %s not found. This is expected if you have not deployed any subgraphs yet", e.federatedGraphId)
+}
+
+// NewClient creates a new CDN client. URL is the URL of the CDN.
+// Token is the token used to authenticate with the CDN, the same as the GRAPH_API_TOKEN
+func NewClient(endpoint string, token string, opts *Options) (routerconfig.Client, error) {
+	u, err := url.Parse(endpoint)
+	if err != nil {
+		return nil, fmt.Errorf("invalid CDN URL %q: %w", endpoint, err)
+	}
+
+	if opts.Logger == nil {
+		opts.Logger = zap.NewNop()
+	}
+
+	claims, err := jwt.ExtractFederatedGraphTokenClaims(token)
+	if err != nil {
+		return nil, err
+	}
+
+	logger := opts.Logger.With(zap.String("component", "router_config_client"))
+
+	c := &Client{
+		cdnURL:              u,
+		authenticationToken: token,
+		federatedGraphID:    url.PathEscape(claims.FederatedGraphID),
+		organizationID:      url.PathEscape(claims.OrganizationID),
+		httpClient:          httpclient.NewRetryableHTTPClient(logger),
+		logger:              opts.Logger,
+	}
+
+	if opts.SignatureKey != "" {
+		c.hash = hmac.New(sha256.New, []byte(opts.SignatureKey))
+	}
+
+	return c, nil
 }
 
 func (cdn *Client) RouterConfig(ctx context.Context, version string, modifiedSince time.Time) (*routerconfig.Response, error) {
@@ -193,39 +228,4 @@ func (cdn *Client) RouterConfig(ctx context.Context, version string, modifiedSin
 	res.Config = routerConfig
 
 	return res, nil
-}
-
-// NewClient creates a new CDN client. URL is the URL of the CDN.
-// Token is the token used to authenticate with the CDN, the same as the GRAPH_API_TOKEN
-func NewClient(endpoint string, token string, opts ClientOptions) (routerconfig.Client, error) {
-	u, err := url.Parse(endpoint)
-	if err != nil {
-		return nil, fmt.Errorf("invalid CDN URL %q: %w", endpoint, err)
-	}
-
-	if opts.Logger == nil {
-		opts.Logger = zap.NewNop()
-	}
-
-	claims, err := jwt.ExtractFederatedGraphTokenClaims(token)
-	if err != nil {
-		return nil, err
-	}
-
-	logger := opts.Logger.With(zap.String("component", "router_config_client"))
-
-	c := &Client{
-		cdnURL:              u,
-		authenticationToken: token,
-		federatedGraphID:    url.PathEscape(claims.FederatedGraphID),
-		organizationID:      url.PathEscape(claims.OrganizationID),
-		httpClient:          httpclient.NewRetryableHTTPClient(logger),
-		logger:              opts.Logger,
-	}
-
-	if opts.SignatureKey != "" {
-		c.hash = hmac.New(sha256.New, []byte(opts.SignatureKey))
-	}
-
-	return c, nil
 }

@@ -2,10 +2,10 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/routerconfig"
-	"github.com/wundergraph/cosmo/router/internal/routerconfig/cdn"
-	"github.com/wundergraph/cosmo/router/internal/routerconfig/s3"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
+	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
+	"github.com/wundergraph/cosmo/router/pkg/routerconfig/cdn"
+	"github.com/wundergraph/cosmo/router/pkg/routerconfig/s3"
 
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -73,7 +73,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 			if cfg.Graph.Token == "" {
 				return nil, fmt.Errorf("router config provider 'cdn' is not supported without a graph token")
 			}
-			client, err = cdn.NewClient(cfg.CDN.URL, cfg.Graph.Token, cdn.ClientOptions{
+			client, err = cdn.NewClient(cfg.CDN.URL, cfg.Graph.Token, &cdn.Options{
 				Logger:       logger,
 				SignatureKey: cfg.Graph.SignKey,
 			})

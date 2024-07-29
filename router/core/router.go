@@ -678,18 +678,6 @@ func (r *Router) bootstrap(ctx context.Context) error {
 
 	}
 
-	if r.graphApiToken != "" {
-		cdnPersistentOpClient, err := cdn.NewClient(r.cdnConfig.URL, r.graphApiToken, cdn.Options{
-			CacheSize:     r.cdnConfig.CacheSize.Uint64(),
-			Logger:        r.logger,
-			TraceProvider: r.tracerProvider,
-		})
-		if err != nil {
-			return err
-		}
-		r.persistedOperationClient = cdnPersistentOpClient
-	}
-
 	r.gqlMetricsExporter = graphqlmetrics.NewNoopExporter()
 
 	if r.graphqlMetricsConfig.Enabled {
@@ -741,6 +729,24 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			Html:       graphiql.PlaygroundHTML(),
 			GraphqlURL: r.graphqlWebURL,
 		})
+	}
+
+	if r.graphApiToken != "" {
+		cdnClient, err := cdn.NewClient(r.cdnConfig.URL, r.graphApiToken, cdn.Options{
+			Logger:        r.logger,
+			TraceProvider: r.tracerProvider,
+		})
+		if err != nil {
+			return err
+		}
+		r.persistedOperationClient, err = persistedoperation.NewClient(&persistedoperation.Options{
+			CacheSize:      r.cdnConfig.CacheSize.Uint64(),
+			Logger:         r.logger,
+			ProviderClient: cdnClient,
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	// Modules are only initialized once and not on every config change
