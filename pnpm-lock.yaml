@@ -857,9 +857,6 @@ importers:
       '@wundergraph/cosmo-connect':
         specifier: workspace:*
         version: link:../connect
-      '@wundergraph/playground':
-        specifier: workspace:*
-        version: link:../playground
       bowser:
         specifier: ^2.11.0
         version: 2.11.0
