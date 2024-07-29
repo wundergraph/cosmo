@@ -177,7 +177,11 @@ const PlaygroundPortal = () => {
   );
 };
 
-export const Playground = (input: { routingUrl?: string; disableLogo?: boolean }) => {
+export const Playground = (input: {
+  routingUrl?: string;
+  hideLogo?: boolean;
+  theme?: 'light' | 'dark' | undefined;
+}) => {
   const url = input.routingUrl || import.meta.env.VITE_ROUTING_URL || '{{graphqlURL}}';
 
   const [isMounted, setIsMounted] = useState(false);
@@ -197,7 +201,7 @@ export const Playground = (input: { routingUrl?: string; disableLogo?: boolean }
 
     const sidebar = document.getElementsByClassName('graphiql-sidebar-section')[0];
 
-    if (sidebar && !input.disableLogo) {
+    if (sidebar && !input.hideLogo) {
       const logo = document.createElement('div');
       logo.id = 'graphiql-wg-logo';
       sidebar.prepend(logo);
@@ -283,21 +287,20 @@ export const Playground = (input: { routingUrl?: string; disableLogo?: boolean }
           setClientValidationEnabled,
         }}
       >
-        <div className="h-screen w-screen">
-          <GraphiQL
-            shouldPersistHeaders
-            showPersistHeadersSettings={false}
-            fetcher={fetcher}
-            headers={headers}
-            onEditHeaders={setHeaders}
-            plugins={[
-              explorerPlugin({
-                showAttribution: false,
-              }),
-            ]}
-          />
-          {isMounted && <PlaygroundPortal />}
-        </div>
+        <GraphiQL
+          shouldPersistHeaders
+          showPersistHeadersSettings={false}
+          fetcher={fetcher}
+          headers={headers}
+          onEditHeaders={setHeaders}
+          plugins={[
+            explorerPlugin({
+              showAttribution: false,
+            }),
+          ]}
+          forcedTheme={input.theme}
+        />
+        {isMounted && <PlaygroundPortal />}
       </TraceContext.Provider>
     </TooltipProvider>
   );
