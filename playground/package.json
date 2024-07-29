@@ -1,20 +1,39 @@
 {
-  "name": "playground",
+  "name": "@wundergraph/playground",
   "version": "0.0.0",
-  "private": true,
-  "license": "Apache-2.0",
   "description": "Standalone custom graphiql",
+  "author": {
+    "name": "WunderGraph Maintainers",
+    "email": "info@wundergraph.com"
+  },
+  "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "url": "https://github.com/wundergraph/cosmo"
+  },
   "type": "module",
+  "main": "dist/index.umd.js",
+  "types": "dist/index.d.ts",
+  "module": "dist/index.es.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.es.js",
+      "require": "./dist/index.umd.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./styles": "./dist/style.css"
+  },
+  "files": [
+    "/dist"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "copy-html": "cp dist/index.html ../router/internal/graphiql/graphiql.html",
     "build:copy": "pnpm build && pnpm copy-html"
-  },
-  "author": {
-    "name": "WunderGraph Maintainers",
-    "email": "info@wundergraph.com"
   },
   "dependencies": {
     "@heroicons/react": "^2.0.18",
@@ -38,7 +57,8 @@
     "react-dom": "^18.3.1",
     "react-icons": "^4.12.0",
     "react-move-hook": "^0.1.2",
-    "reactflow": "^11.10.1"
+    "reactflow": "^11.10.1",
+    "vite-plugin-dts": "4.0.0-beta.1"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.10",
