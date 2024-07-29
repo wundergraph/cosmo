@@ -238,25 +238,21 @@ export default function App() {
     setIsMounted(true);
   }, [isMounted]);
 
-  const getSchema = async (headersArg?: string) => {
+  const getSchema = async () => {
     const res = await fetch(url, {
       body: JSON.stringify({
         operationName: 'IntrospectionQuery',
         query: getIntrospectionQuery(),
       }),
       method: 'POST',
-      headers: JSON.parse(headersArg || headers),
+      headers: JSON.parse(headers),
     });
     setSchema(buildClientSchema((await res.json()).data));
   };
 
   useEffect(() => {
-    if (schema) {
-      return;
-    }
-
     getSchema();
-  }, []);
+  }, [headers]);
 
   const fetcher = useMemo(() => {
     const onFetch = (response: any) => {
@@ -290,7 +286,6 @@ export default function App() {
             headers={headers}
             onEditHeaders={(value) => {
               setHeaders(value);
-              getSchema(value);
             }}
             plugins={[
               explorerPlugin({
