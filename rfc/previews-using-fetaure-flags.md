@@ -5,13 +5,21 @@ author: Suvij Surya
 
 This RFC proposes a way to create a Supergraph Preview for every pull request. This would allow developers to test their changes before merging them.
 
-## Motivation
+## Introduction
 
 When developing a new feature, it's important to test it in a production-like environment. By creating a preview for every pull request, developers can test their changes in a production-like environment before merging them.
 
 With Graph Feature Flags, you can set up your continuous integration pipeline to deploy a new feature subgraph and feature flag for every pull request. This way, you can create one composition for every pull request without having to deploy a whole new set of subgraphs. All we need is a staging environment that's deployed from all main branches of your subgraphs. With graph feature flags, we can then "override" the subgraphs for a specific pull request.
 
+## Motivation
+
+Creating a Supergraph Preview for every pull request ensures that developers can thoroughly test their changes in an environment that closely mirrors production. This practice reduces the risk of introducing bugs or breaking changes when merging code, leading to more stable and reliable releases.
+
 ## Proposal-1
+
+### Introduction
+
+This proposal creates and handles feature flags and feature subgraphs for each pull request using a predefined configuration file (cosmo.yaml). This approach uses the actions on the PR as triggers to create, update, and destroy the feature flags and feature subgraphs.
 
 ```yaml
 # feature-flags-preview.yaml
@@ -113,6 +121,10 @@ subgraphs:
 
 ## Proposal-2
 
+### Introduction
+
+This proposal introduces an on-demand approach for creating supergraph previews by using GitHub labels. This method provides flexibility, allowing developers to request previews only for specific pull requests by labeling them accordingly.
+
 ```yaml
 # feature-flags-preview.yaml
 on:
@@ -202,8 +214,11 @@ The implementation is the same as Proposal-1, the only difference is that the fe
 
 ## Proposal-3
 
-```yaml
+### Introduction
 
+This proposal simplifies the process by handling a single feature subgraph per feature flag and using direct parameters instead of a configuration file. This approach is more straightforward but less flexible, suitable for cases where only one subgraph needs to be previewed per PR.
+
+```yaml
 # feature-flags-preview.yaml
 on:
   pull_request:
