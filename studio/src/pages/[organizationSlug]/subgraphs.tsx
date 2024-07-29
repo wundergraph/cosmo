@@ -120,35 +120,33 @@ const SubgraphsDashboardPage: NextPageWithLayout = () => {
   }
 
   return (
-    <div className="flex h-full flex-col gap-y-4">
+    <div className="flex h-full flex-col">
       <SubgraphPageTabs />
-      <div>
-        <div className="relative mb-4">
-          <MagnifyingGlassIcon className="absolute bottom-0 left-3 top-0 my-auto" />
-          <Input
-            placeholder="Search by name"
-            className="pl-8 pr-10"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              applyParams({ search: e.target.value });
+      <div className="relative mb-4 mt-8">
+        <MagnifyingGlassIcon className="absolute bottom-0 left-3 top-0 my-auto" />
+        <Input
+          placeholder="Search by name"
+          className="pl-8 pr-10"
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            applyParams({ search: e.target.value });
+          }}
+        />
+        {search && (
+          <Button
+            variant="ghost"
+            className="absolute bottom-0 right-0 top-0 my-auto rounded-l-none"
+            onClick={() => {
+              setSearch("");
+              applyParams({ search: null });
             }}
-          />
-          {search && (
-            <Button
-              variant="ghost"
-              className="absolute bottom-0 right-0 top-0 my-auto rounded-l-none"
-              onClick={() => {
-                setSearch("");
-                applyParams({ search: null });
-              }}
-            >
-              <Cross1Icon />
-            </Button>
-          )}
-        </div>
-        {content}
+          >
+            <Cross1Icon />
+          </Button>
+        )}
       </div>
+      {content}
     </div>
   );
 };

@@ -44,7 +44,8 @@ export const Pagination = ({
         <Select
           value={`${limit}`}
           onValueChange={(value) => {
-            applyNewParams({ pageSize: value });
+            // Reset page when size changes because the number of pages may not be the same
+            applyNewParams({ pageSize: value, page: "1" });
           }}
         >
           <SelectTrigger className="h-8 w-[70px]">
