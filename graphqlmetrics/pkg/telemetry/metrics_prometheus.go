@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/prometheus/client_golang/prometheus"
@@ -43,13 +44,14 @@ func NewPrometheusServer(logger *zap.Logger, listenAddr string, path string, reg
 
 	return svr
 }
+
 func (c *Config) initializeCustomMetrics() {
 	c.CustomMetrics.MetricsServiceAccessCounter = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "api_access_count",
+			Name: "http_request_count",
 			Help: "Number of times the API endpoint is accessed by an organization",
 		},
-		[]string{"endpoint", "organizationID"},
+		[]string{Endpoint, OrganizationID},
 	)
 }
 
@@ -105,18 +107,13 @@ func (c *Config) NewPrometheusMeterProvider(ctx context.Context) (*sdkmetric.Met
 	return mp, registry, nil
 }
 
-func (c *Config) PrometheusMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		organizationID := r.URL.Query().Get("OrganizationID")
-		if organizationID == "" {
-			organizationID = "unknown"
-		}
-
-		c.CustomMetrics.MetricsServiceAccessCounter.With(prometheus.Labels{
-			"endpoint":       r.URL.Path,
-			"organizationID": organizationID,
+func (c *Config) PrometheusUnaryInterceptor() connect.UnaryInterceptorFunc {
+	return connect.UnaryInterceptorFunc(
+		func(next connect.UnaryFunc) connect.UnaryFunc {
+			return connect.UnaryFunc(func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+				res, err := next(ctx, req)
+				return res, err
+			})
 		},
-		).Inc()
-		next.ServeHTTP(w, r)
-	})
+	)
 }

@@ -12,11 +12,15 @@ import (
 	"testing"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
+	graphqlmetricsv1 "github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1"
+	"github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	"github.com/wundergraph/cosmo/graphqlmetrics/pkg/telemetry"
 	"github.com/wundergraph/cosmo/graphqlmetrics/test"
 	"go.uber.org/zap"
+	brotli "go.withmatt.com/connect-brotli"
 )
 
 func TestExposingPrometheusMetrics(t *testing.T) {
@@ -146,8 +150,11 @@ func TestValidateExposedMetrics(t *testing.T) {
 	msvc := NewMetricsService(zap.NewNop(), db)
 	ctx := context.Background()
 
+	ingestJWTSecret := "fkczyomvdprgvtmvkuhvprxuggkbgwld"
+	serverEndpoint := "0.0.0.0:4006"
 	svr := NewServer(ctx, msvc,
-		WithListenAddr("0.0.0.0:0"),
+		WithListenAddr(serverEndpoint),
+		WithJwtSecret([]byte(ingestJWTSecret)),
 		WithMetrics(&telemetry.Config{
 			Prometheus: prom,
 		}))
@@ -264,5 +271,27 @@ func TestValidateExposedMetrics(t *testing.T) {
 		for _, m := range expectedMetrics {
 			assert.True(t, strings.Contains(metrics, m))
 		}
+	})
+
+	t.Run("test counter metrics", func(t *testing.T) {
+		// this token was generated using the local secret and is therefore already corrupted
+		bearerToken := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmZWRlcmF0ZWRHcmFwaElEIjoiZmVkMTIzIiwib3JnYW5pemF0aW9uSUQiOiJvcmcxMjMiLCJpYXQiOjE3MjIyNTU5NTR9.8mxFEDqmzmmhPVfKedzTuUUM4VxvPnsPP5N3_8fnecY"
+		client := graphqlmetricsv1connect.NewGraphQLMetricsServiceClient(
+			http.DefaultClient,
+			fmt.Sprintf("http://%s", serverEndpoint),
+			brotli.WithCompression(),
+			connect.WithSendCompression(brotli.Name),
+		)
+
+		req := &connect.Request[graphqlmetricsv1.PublishGraphQLRequestMetricsRequest]{}
+		req.Header().Add("Authorization", fmt.Sprintf("Bearer %s", bearerToken))
+
+		ctx := setClaims(ctx, &GraphAPITokenClaims{
+			FederatedGraphID: "fed123",
+			OrganizationID:   "org123",
+		})
+		res, err := client.PublishGraphQLMetrics(ctx, req)
+		assert.NotNil(t, res)
+		assert.Nil(t, err)
 	})
 }

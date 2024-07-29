@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	"github.com/wundergraph/cosmo/graphqlmetrics/pkg/telemetry"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
@@ -49,28 +50,32 @@ func NewServer(ctx context.Context, metricsService graphqlmetricsv1connect.Graph
 
 func (s *Server) bootstrap(ctx context.Context) {
 	mux := http.NewServeMux()
-
-	path, handler := graphqlmetricsv1connect.NewGraphQLMetricsServiceHandler(
-		s.metricsService,
-		// Brotli compression support.
-		brotli.WithCompression(),
-	)
-	healthHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
+	var interceptors = []connect.Interceptor{}
 
 	if s.metricConfig.Prometheus.Enabled {
 		mp, registry, err := s.metricConfig.NewPrometheusMeterProvider(ctx)
 		if err != nil {
 			s.logger.Error("Failed to create Prometheus exporter", zap.Error(err))
 		}
-
 		s.meterProvider = mp
 		s.prometheusServer = telemetry.NewPrometheusServer(s.logger, s.metricConfig.Prometheus.ListenAddr, s.metricConfig.Prometheus.Path, registry)
 
-		// attach metrics middleware
-		handler = s.metricConfig.PrometheusMiddleware(handler)
+		interceptors = append(
+			interceptors,
+			s.metricConfig.PrometheusUnaryInterceptor(),
+		)
 	}
+
+	path, handler := graphqlmetricsv1connect.NewGraphQLMetricsServiceHandler(
+		s.metricsService,
+		// Brotli compression support.
+		brotli.WithCompression(),
+		connect.WithInterceptors(interceptors...),
+	)
+
+	healthHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
 
 	mux.Handle("/health", healthHandler)
 	mux.Handle(path, authenticate(s.jwtSecret, s.logger, handler))
