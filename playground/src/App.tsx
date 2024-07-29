@@ -284,9 +284,7 @@ export default function App() {
             showPersistHeadersSettings={false}
             fetcher={fetcher}
             headers={headers}
-            onEditHeaders={(value) => {
-              setHeaders(value);
-            }}
+            onEditHeaders={setHeaders}
             plugins={[
               explorerPlugin({
                 showAttribution: false,
