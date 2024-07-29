@@ -14,6 +14,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/prometheus/client_golang/prometheus"
+	io_prometheus_client "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
@@ -139,11 +140,13 @@ func TestValidateExposedMetrics(t *testing.T) {
 	if os.Getenv("INT_TESTS") != "true" {
 		t.Skip("Skipping integration tests")
 	}
+
+	registry := prometheus.NewRegistry()
 	prom := telemetry.PrometheusConfig{
 		Enabled:      true,
 		ListenAddr:   "0.0.0.0:8090",
 		Path:         "/metrics",
-		TestRegistry: prometheus.NewRegistry(),
+		TestRegistry: registry,
 	}
 
 	db := test.GetTestDatabase(t)
@@ -293,5 +296,22 @@ func TestValidateExposedMetrics(t *testing.T) {
 		res, err := client.PublishGraphQLMetrics(ctx, req)
 		assert.NotNil(t, res)
 		assert.Nil(t, err)
+		mf, err := registry.Gather()
+		assert.NoError(t, err)
+
+		requestTotal := findMetricFamilyByName(mf, "graphqlmetrics_http_requests_total")
+
+		metric := requestTotal.GetMetric()[0]
+		count := metric.Counter.GetValue()
+		assert.Equal(t, float64(1), count)
 	})
+}
+
+func findMetricFamilyByName(mf []*io_prometheus_client.MetricFamily, name string) *io_prometheus_client.MetricFamily {
+	for _, m := range mf {
+		if m.GetName() == name {
+			return m
+		}
+	}
+	return nil
 }

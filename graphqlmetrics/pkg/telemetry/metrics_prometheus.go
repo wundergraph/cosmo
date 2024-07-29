@@ -48,10 +48,10 @@ func NewPrometheusServer(logger *zap.Logger, listenAddr string, path string, reg
 func (c *Config) initializeCustomMetrics() {
 	c.CustomMetrics.MetricsServiceAccessCounter = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "http_request_count",
-			Help: "Number of times the API endpoint is accessed by an organization",
+			Name: "graphqlmetrics_http_requests_total",
+			Help: "Total number of times an endpoint was accessed.",
 		},
-		[]string{Endpoint, OrganizationID},
+		[]string{Endpoint},
 	)
 }
 
@@ -112,6 +112,10 @@ func (c *Config) PrometheusUnaryInterceptor() connect.UnaryInterceptorFunc {
 		func(next connect.UnaryFunc) connect.UnaryFunc {
 			return connect.UnaryFunc(func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 				res, err := next(ctx, req)
+
+				c.CustomMetrics.MetricsServiceAccessCounter.With(prometheus.Labels{
+					Endpoint: req.Peer().Addr,
+				}).Inc()
 				return res, err
 			})
 		},
