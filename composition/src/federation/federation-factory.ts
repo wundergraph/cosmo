@@ -1,13 +1,4 @@
-import {
-  BREAK,
-  buildASTSchema,
-  DirectiveDefinitionNode,
-  DocumentNode,
-  GraphQLSchema,
-  Kind,
-  NamedTypeNode,
-  visit,
-} from 'graphql';
+import { buildASTSchema, DirectiveDefinitionNode, DocumentNode, GraphQLSchema, Kind, NamedTypeNode } from 'graphql';
 import {
   getTypeNodeNamedTypeName,
   MutableEnumValueNode,
@@ -15,7 +6,7 @@ import {
   MutableInputValueNode,
   MutableTypeDefinitionNode,
 } from '../schema-building/ast';
-import { isKindAbstract, safeParse, stringToNamedTypeNode, stringToNameNode } from '../ast/utils';
+import { stringToNamedTypeNode, stringToNameNode } from '../ast/utils';
 import {
   allChildDefinitionsAreInaccessibleError,
   federationFactoryInitializationFatalError,
@@ -67,6 +58,7 @@ import {
   newParentTagData,
   ParentTagData,
   SubscriptionFilterData,
+  validateImplicitFieldSets,
 } from './utils';
 import { InternalSubgraph, Subgraph, SubgraphConfig } from '../subgraph/subgraph';
 import {
@@ -142,7 +134,7 @@ import {
   TAG_DEFINITION,
 } from '../utils/constants';
 import { batchNormalize } from '../normalization/normalization-factory';
-import { getNormalizedFieldSet, isNodeQuery } from '../normalization/utils';
+import { isNodeQuery } from '../normalization/utils';
 import {
   ChildData,
   DefinitionWithFieldsData,
@@ -155,7 +147,6 @@ import {
   NodeData,
   ObjectDefinitionData,
   ParentDefinitionData,
-  ParentWithFieldsData,
   PersistedDirectiveDefinitionData,
   ScalarDefinitionData,
   UnionDefinitionData,
@@ -184,7 +175,7 @@ import {
 } from '../schema-building/utils';
 import { ObjectExtensionData } from '../schema-building/type-extension-data';
 
-import { createMultiGraphAndRenameRootTypes } from './walkers';
+import { renameRootTypes } from './walkers';
 import { cloneDeep } from 'lodash';
 import { getLeastRestrictiveMergedTypeNode, getMostRestrictiveMergedTypeNode } from '../schema-building/type-merging';
 import { ConstDirectiveNode, ConstObjectValueNode } from 'graphql/index';
@@ -380,130 +371,39 @@ export class FederationFactory {
       entityData.typeName,
       'internalSubgraph.configurationDataByParentTypeName',
     );
-    const keyFieldNames = new Set<string>();
     const implicitKeys: RequiredFieldConfiguration[] = [];
     const graphNode = this.internalGraph.nodeByNodeName.get(`${this.currentSubgraphName}.${entityData.typeName}`);
     // Any errors in the field sets would be caught when evaluating the explicit entities, so they are ignored here
-    for (const fieldSet of entityData.keyFieldSets) {
-      // Create a new selection set so that the value can be parsed as a new DocumentNode
-      const { error, documentNode } = safeParse('{' + fieldSet + '}');
-      if (error || !documentNode) {
-        // This would be caught as an error elsewhere
+    validateImplicitFieldSets({
+      configurationData,
+      fieldSets: entityData.keyFieldSets,
+      implicitKeys,
+      objectData,
+      parentDefinitionDataByTypeName,
+      parentExtensionDataByTypeName,
+      graphNode,
+    });
+    for (const [typeName, entityInterfaceFederationData] of this.entityInterfaceFederationDataByTypeName) {
+      if (!entityInterfaceFederationData.concreteTypeNames?.has(entityData.typeName)) {
         continue;
       }
-      const parentDatas: ParentWithFieldsData[] = [objectData];
-      const definedFields: Set<string>[] = [];
-      let currentDepth = -1;
-      let shouldDefineSelectionSet = true;
-      let shouldAddKeyFieldSet = true;
-      visit(documentNode, {
-        Argument: {
-          enter() {
-            // Fields that define arguments are never allowed in a key FieldSet
-            // However, at this stage, it actually means the argument is undefined on the field
-            shouldAddKeyFieldSet = false;
-            return BREAK;
-          },
-        },
-        Field: {
-          enter(node) {
-            const parentData = parentDatas[currentDepth];
-            // If an object-like was just visited, a selection set should have been entered
-            if (shouldDefineSelectionSet) {
-              shouldAddKeyFieldSet = false;
-              return BREAK;
-            }
-            const fieldName = node.name.value;
-            const fieldData = parentData.fieldDataByFieldName.get(fieldName);
-            // undefined if the field does not exist on the parent
-            if (!fieldData || fieldData.argumentDataByArgumentName.size || definedFields[currentDepth].has(fieldName)) {
-              shouldAddKeyFieldSet = false;
-              return BREAK;
-            }
-            definedFields[currentDepth].add(fieldName);
-            // Depth 0 is the original parent type
-            // If a field is external, but it's part of a key FieldSet, it will be included in the root configuration
-            if (currentDepth === 0) {
-              keyFieldNames.add(fieldName);
-            }
-            const namedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
-            // The base scalars are not in the parents map
-            if (BASE_SCALARS.has(namedTypeName)) {
-              return;
-            }
-            // The child could itself be a parent and could exist as an object extension
-            const fieldNamedTypeData =
-              parentDefinitionDataByTypeName.get(namedTypeName) || parentExtensionDataByTypeName.get(namedTypeName);
-            if (!fieldNamedTypeData) {
-              shouldAddKeyFieldSet = false;
-              return BREAK;
-            }
-            if (
-              fieldNamedTypeData.kind === Kind.OBJECT_TYPE_DEFINITION ||
-              fieldNamedTypeData.kind === Kind.OBJECT_TYPE_EXTENSION
-            ) {
-              shouldDefineSelectionSet = true;
-              parentDatas.push(fieldNamedTypeData);
-              return;
-            }
-            // interfaces and unions are invalid in a key directive
-            if (isKindAbstract(fieldNamedTypeData.kind)) {
-              shouldAddKeyFieldSet = false;
-              return BREAK;
-            }
-          },
-        },
-        InlineFragment: {
-          enter() {
-            shouldAddKeyFieldSet = false;
-            return BREAK;
-          },
-        },
-        SelectionSet: {
-          enter() {
-            if (!shouldDefineSelectionSet) {
-              shouldAddKeyFieldSet = false;
-              return BREAK;
-            }
-            currentDepth += 1;
-            shouldDefineSelectionSet = false;
-            if (currentDepth < 0 || currentDepth >= parentDatas.length) {
-              shouldAddKeyFieldSet = false;
-              return BREAK;
-            }
-            definedFields.push(new Set<string>());
-          },
-          leave() {
-            if (shouldDefineSelectionSet) {
-              shouldAddKeyFieldSet = false;
-              return BREAK;
-            }
-            // Empty selection sets would be a parse error, so it is unnecessary to handle them
-            currentDepth -= 1;
-            parentDatas.pop();
-            definedFields.pop();
-          },
-        },
-      });
-      if (!shouldAddKeyFieldSet) {
+      const interfaceObjectEntityData = this.entityDataByTypeName.get(typeName);
+      if (!interfaceObjectEntityData) {
         continue;
       }
-      // Add any top-level fields that compose the key in case they are external
-      addIterableValuesToSet(keyFieldNames, configurationData.fieldNames);
-      const normalizedFieldSet = getNormalizedFieldSet(documentNode);
-      implicitKeys.push({
-        fieldName: '',
-        selectionSet: normalizedFieldSet,
-        disableEntityResolver: true,
+      validateImplicitFieldSets({
+        configurationData,
+        fieldSets: interfaceObjectEntityData.keyFieldSets,
+        implicitKeys,
+        objectData,
+        parentDefinitionDataByTypeName,
+        parentExtensionDataByTypeName,
+        graphNode,
       });
-      if (graphNode) {
-        graphNode.satisfiedFieldSets.add(normalizedFieldSet);
-      }
     }
     if (implicitKeys.length < 1) {
       return;
     }
-
     if (!configurationData.keys || configurationData.keys.length < 1) {
       configurationData.isRootNode = true;
       configurationData.keys = implicitKeys;
@@ -540,129 +440,20 @@ export class FederationFactory {
       entityData.typeName,
       'internalSubgraph.configurationDataByParentTypeName',
     );
-    const keyFieldNames = new Set<string>();
     const implicitKeys: RequiredFieldConfiguration[] = [];
     // Any errors in the field sets would be caught when evaluating the explicit entities, so they are ignored here
-    for (const fieldSet of entityData.keyFieldSets) {
-      // Create a new selection set so that the value can be parsed as a new DocumentNode
-      const { error, documentNode } = safeParse('{' + fieldSet + '}');
-      if (error || !documentNode) {
-        // This would be caught as an error elsewhere
-        continue;
-      }
-      const parentDatas: ParentWithFieldsData[] = [interfaceObjectData];
-      const definedFields: Set<string>[] = [];
-      let currentDepth = -1;
-      let shouldDefineSelectionSet = true;
-      let shouldAddKeyFieldSet = true;
-      visit(documentNode, {
-        Argument: {
-          enter() {
-            // Fields that define arguments are never allowed in a key FieldSet
-            // However, at this stage, it actually means the argument is undefined on the field
-            shouldAddKeyFieldSet = false;
-            return BREAK;
-          },
-        },
-        Field: {
-          enter(node) {
-            const parentData = parentDatas[currentDepth];
-            // If an object-like was just visited, a selection set should have been entered
-            if (shouldDefineSelectionSet) {
-              shouldAddKeyFieldSet = false;
-              return BREAK;
-            }
-            const fieldName = node.name.value;
-            const fieldData = parentData.fieldDataByFieldName.get(fieldName);
-            // undefined if the field does not exist on the parent
-            if (!fieldData || fieldData.argumentDataByArgumentName.size || definedFields[currentDepth].has(fieldName)) {
-              shouldAddKeyFieldSet = false;
-              return BREAK;
-            }
-            definedFields[currentDepth].add(fieldName);
-            // Depth 0 is the original parent type
-            // If a field is external, but it's part of a key FieldSet, it will be included in the root configuration
-            if (currentDepth === 0) {
-              keyFieldNames.add(fieldName);
-            }
-            const namedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
-            // The base scalars are not in the parents map
-            if (BASE_SCALARS.has(namedTypeName)) {
-              return;
-            }
-            // The child could itself be a parent and could exist as an object extension
-            const fieldNamedTypeData =
-              parentDefinitionDataByTypeName.get(namedTypeName) || parentExtensionDataByTypeName.get(namedTypeName);
-            if (!fieldNamedTypeData) {
-              shouldAddKeyFieldSet = false;
-              return BREAK;
-            }
-            if (
-              fieldNamedTypeData.kind === Kind.OBJECT_TYPE_DEFINITION ||
-              fieldNamedTypeData.kind === Kind.OBJECT_TYPE_EXTENSION
-            ) {
-              shouldDefineSelectionSet = true;
-              parentDatas.push(fieldNamedTypeData);
-              return;
-            }
-            // interfaces and unions are invalid in a key directive
-            if (isKindAbstract(fieldNamedTypeData.kind)) {
-              shouldAddKeyFieldSet = false;
-              return BREAK;
-            }
-          },
-        },
-        InlineFragment: {
-          enter() {
-            shouldAddKeyFieldSet = false;
-            return BREAK;
-          },
-        },
-        SelectionSet: {
-          enter() {
-            if (!shouldDefineSelectionSet) {
-              shouldAddKeyFieldSet = false;
-              return BREAK;
-            }
-            currentDepth += 1;
-            shouldDefineSelectionSet = false;
-            if (currentDepth < 0 || currentDepth >= parentDatas.length) {
-              shouldAddKeyFieldSet = false;
-              return BREAK;
-            }
-            definedFields.push(new Set<string>());
-          },
-          leave() {
-            if (shouldDefineSelectionSet) {
-              shouldAddKeyFieldSet = false;
-              return BREAK;
-            }
-            // Empty selection sets would be a parse error, so it is unnecessary to handle them
-            currentDepth -= 1;
-            parentDatas.pop();
-            definedFields.pop();
-          },
-        },
-      });
-      if (!shouldAddKeyFieldSet) {
-        continue;
-      }
-      // Add any top-level fields that compose the key in case they are external
-      addIterableValuesToSet(keyFieldNames, configurationData.fieldNames);
-      const normalizedFieldSet = getNormalizedFieldSet(documentNode);
-      implicitKeys.push({
-        fieldName: '',
-        selectionSet: normalizedFieldSet,
-        disableEntityResolver: true,
-      });
-      if (graphNode) {
-        graphNode.satisfiedFieldSets.add(normalizedFieldSet);
-      }
-    }
+    validateImplicitFieldSets({
+      configurationData,
+      fieldSets: entityData.keyFieldSets,
+      implicitKeys,
+      objectData: interfaceObjectData,
+      parentDefinitionDataByTypeName,
+      parentExtensionDataByTypeName,
+      graphNode,
+    });
     if (implicitKeys.length < 1) {
       return;
     }
-
     if (!configurationData.keys || configurationData.keys.length < 1) {
       configurationData.isRootNode = true;
       configurationData.keys = implicitKeys;
@@ -1383,7 +1174,7 @@ export class FederationFactory {
       subgraphNumber += 1;
       this.currentSubgraphName = internalSubgraph.name;
       this.isVersionTwo ||= internalSubgraph.isVersionTwo;
-      createMultiGraphAndRenameRootTypes(this, internalSubgraph);
+      renameRootTypes(this, internalSubgraph);
       for (const parentDefinitionData of internalSubgraph.parentDefinitionDataByTypeName.values()) {
         this.upsertParentDefinitionData(parentDefinitionData, internalSubgraph.name);
       }
@@ -2345,16 +2136,19 @@ export class FederationFactory {
     this.pushParentDefinitionDataToDocumentDefinitions(definitionsWithInterfaces);
     this.validateInterfaceImplementationsAndPushToDocumentDefinitions(definitionsWithInterfaces);
     this.validateQueryRootType();
-    // return any composition errors before checking whether all fields are resolvable
+    // Return any composition errors before checking whether all fields are resolvable
     if (this.errors.length > 0) {
       return { errors: this.errors };
     }
     /* Resolvability evaluations are not necessary for contracts because the source graph resolvability checks must
      * have already completed without error. */
     const warnings = this.warnings.length > 0 ? { warnings: this.warnings } : {};
-    const resolvabilityErrors = this.internalGraph.validate();
-    if (resolvabilityErrors.length > 0) {
-      return { errors: resolvabilityErrors, ...warnings };
+    // Resolvability checks are unnecessary for a single subgraph
+    if (this.internalSubgraphBySubgraphName.size > 1) {
+      const resolvabilityErrors = this.internalGraph.validate();
+      if (resolvabilityErrors.length > 0) {
+        return { errors: resolvabilityErrors, ...warnings };
+      }
     }
     if (this.errors.length > 0) {
       return { errors: this.errors, ...warnings };

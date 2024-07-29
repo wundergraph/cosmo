@@ -12,7 +12,7 @@ import { operationTypeNodeToDefaultType } from '../ast/utils';
 import { ObjectExtensionData } from '../schema-building/type-extension-data';
 import { renameNamedTypeName } from '../schema-building/type-merging';
 
-export function createMultiGraphAndRenameRootTypes(ff: FederationFactory, subgraph: InternalSubgraph) {
+export function renameRootTypes(ff: FederationFactory, subgraph: InternalSubgraph) {
   let parentData: ParentWithFieldsData | undefined;
   let isParentRootType = false;
   let overriddenFieldNames: Set<string> | undefined;
@@ -40,15 +40,8 @@ export function createMultiGraphAndRenameRootTypes(ff: FederationFactory, subgra
         if (overriddenFieldNames?.has(fieldName)) {
           // overridden fields should not trigger shareable errors
           fieldData.isShareableBySubgraphName.delete(subgraph.name);
-          return false;
         }
-        // If the parent node is never an entity, add the child edge
-        // Otherwise, only add the child edge if the child is a field on a subgraph where the object is an entity
-        // TODO resolvable false
-        const entity = ff.entityDataByTypeName.get(parentTypeName);
-        if (entity && !entity.fieldNames.has(fieldName)) {
-          return false;
-        }
+        return false;
       },
     },
     InterfaceTypeDefinition: {

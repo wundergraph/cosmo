@@ -295,7 +295,7 @@ export class Graph {
     if (node.headToTailEdges.size < 1) {
       return;
     }
-    if (node.entityEdges.length > 0) {
+    if (node.hasEntitySiblings) {
       getValueOrDefault(this.entityNodeNamesBySharedFieldPath, fieldPath, () => new Set<string>()).add(node.nodeName);
       return;
     }

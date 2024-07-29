@@ -104,6 +104,11 @@ describe('Field resolvability tests', () => {
 
   test('that unresolvable fields return an error #2.1', () => {
     const fieldPath = 'query.entity';
+    const entityAncestorData: EntityAncestorData = {
+      fieldSetsByTargetSubgraphName: new Map<string, Set<string>>(),
+      subgraphName: 'subgraph-w',
+      typeName: 'Entity',
+    };
     const rootFieldData = newRootFieldData('Query', 'entity', new Set<string>(['subgraph-w']));
     const unresolvableFieldData: UnresolvableFieldData = {
       fieldName: 'nestedObject',
@@ -120,13 +125,18 @@ describe('Field resolvability tests', () => {
     expect(errors![0]).toStrictEqual(
       unresolvablePathError(
         unresolvableFieldData,
-        generateResolvabilityErrorReasons({ rootFieldData, unresolvableFieldData }),
+        generateResolvabilityErrorReasons({ entityAncestorData, rootFieldData, unresolvableFieldData }),
       ),
     );
   });
 
   test('that unresolvable fields return an error #2.2', () => {
     const fieldPath = 'query.entity';
+    const entityAncestorData: EntityAncestorData = {
+      fieldSetsByTargetSubgraphName: new Map<string, Set<string>>(),
+      subgraphName: 'subgraph-w',
+      typeName: 'Entity',
+    };
     const rootFieldData = newRootFieldData('Query', 'entity', new Set<string>(['subgraph-w']));
     const unresolvableFieldData: UnresolvableFieldData = {
       fieldName: 'nestedObject',
@@ -143,7 +153,7 @@ describe('Field resolvability tests', () => {
     expect(errors![0]).toStrictEqual(
       unresolvablePathError(
         unresolvableFieldData,
-        generateResolvabilityErrorReasons({ rootFieldData, unresolvableFieldData }),
+        generateResolvabilityErrorReasons({ entityAncestorData, rootFieldData, unresolvableFieldData }),
       ),
     );
   });
@@ -584,6 +594,11 @@ describe('Field resolvability tests', () => {
 
   test('that an error is returned if a field cannot be accessed by an entity subgraph jump', () => {
     const fieldPath = 'query.entity';
+    const entityAncestorData: EntityAncestorData = {
+      fieldSetsByTargetSubgraphName: new Map<string, Set<string>>(),
+      subgraphName: 'subgraph-ae',
+      typeName: 'Entity',
+    };
     const rootFieldData = newRootFieldData('Query', 'entity', new Set<string>(['subgraph-ae']));
     const unresolvableFieldData: UnresolvableFieldData = {
       fieldName: 'name',
@@ -600,7 +615,7 @@ describe('Field resolvability tests', () => {
     expect(errors![0]).toStrictEqual(
       unresolvablePathError(
         unresolvableFieldData,
-        generateResolvabilityErrorReasons({ rootFieldData, unresolvableFieldData }),
+        generateResolvabilityErrorReasons({ entityAncestorData, rootFieldData, unresolvableFieldData }),
       ),
     );
   });
@@ -1052,6 +1067,64 @@ describe('Field resolvability tests', () => {
 
           type Query {
             entityOne: EntityOne!
+          }
+          
+          scalar openfed__Scope
+    `,
+      ),
+    );
+  });
+
+  test('that shared entity fields frm a root field do not produce false positives', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphBF, subgraphBG]);
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(
+        versionTwoRouterDefinitions +
+          `
+          type Entity {
+            age: Int!
+            id: ID!
+            idTwo: ID!
+            name: String!
+          }
+
+          type Query {
+            entity: Entity!
+          }
+          
+          scalar openfed__Scope
+    `,
+      ),
+    );
+  });
+
+  test('that interface objects satisfied by implicit keys do not produce false positives', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphBH, subgraphBI]);
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(
+        versionTwoRouterDefinitions +
+          `
+          type Entity implements Interface {
+            id: ID!
+            isNew: Boolean!
+            name: String!
+            object: Object!
+          }
+          
+          interface Interface {
+            id: ID!
+            isNew: Boolean!
+            object: Object!
+          }
+          
+          type Object {
+            id: ID!
+          }
+
+          type Query {
+            entity: Entity!
           }
           
           scalar openfed__Scope
@@ -2096,6 +2169,73 @@ const subgraphBE: Subgraph = {
     type Object @key(fields: "id") {
       id: ID!
       age: Int!
+    }
+  `),
+};
+
+const subgraphBF: Subgraph = {
+  name: 'subgraph-bf',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entity: Entity! @shareable
+    }
+    
+    type Entity @key(fields: "id") {
+      id: ID!
+      name: String!
+    }
+  `),
+};
+
+const subgraphBG: Subgraph = {
+  name: 'subgraph-bg',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entity: Entity! @shareable
+    }
+    
+    type Entity @key(fields: "id idTwo") {
+      id: ID!
+      idTwo: ID!
+      age: Int!
+    }
+  `),
+};
+
+const subgraphBH: Subgraph = {
+  name: 'subgraph-bh',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entity: Entity! @shareable
+    }
+    
+    interface Interface @key(fields: "id object { id }") {
+      id: ID!
+      object: Object!
+    }
+    
+    type Entity implements Interface @key(fields: "id object { id }") {
+      id: ID!
+      name: String!
+      object: Object!
+    }
+    
+    type Object {
+      id: ID!
+    }
+  `),
+};
+
+const subgraphBI: Subgraph = {
+  name: 'subgraph-bi',
+  url: '',
+  definitions: parse(`
+    type Interface @key(fields: "id") @interfaceObject {
+      id: ID!
+      isNew: Boolean!
     }
   `),
 };
