@@ -14,13 +14,11 @@ const (
 )
 
 func defaultAttributes(req connect.AnyRequest) []attribute.KeyValue {
-	var attributes []attribute.KeyValue
-
-	attributes = append(attributes, WgOperationName.String(req.Spec().Procedure))
-	attributes = append(attributes, WgOperationMethod.String(req.HTTPMethod()))
-	attributes = append(attributes, WgOperationProtocol.String(req.Peer().Protocol))
-
-	return attributes
+	return []attribute.KeyValue{
+		WgOperationName.String(req.Spec().Procedure),
+		WgOperationMethod.String(req.HTTPMethod()),
+		WgOperationProtocol.String(req.Peer().Protocol),
+	}
 }
 
 func (c *Config) ObservabilityInterceptor() connect.UnaryInterceptorFunc {
