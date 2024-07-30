@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	DefaultServerName = "cosmo-graphqlmetrics"
-	serviceVersion    = "dev"
+	DefaultServerName     = "cosmo-graphqlmetrics"
+	defaultServiceVersion = "dev"
 )
 
 type CustomMetrics struct {
@@ -18,7 +18,11 @@ type CustomMetrics struct {
 
 // NewTelemetryConfig creates the config to be used for the
 // telemetry inside graphqlmetrics.
-func NewTelemetryConfig(prometheusConfig PrometheusConfig) *Config {
+func NewTelemetryConfig(serviceVersion string, prometheusConfig PrometheusConfig) *Config {
+	if serviceVersion == "" {
+		serviceVersion = defaultServiceVersion
+	}
+
 	return &Config{
 		Name:       DefaultServerName,
 		Version:    serviceVersion,

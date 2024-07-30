@@ -114,6 +114,7 @@ func main() {
 	ms := core.NewMetricsService(logger, conn)
 
 	metricsConfig := telemetry.NewTelemetryConfig(
+		"",
 		telemetry.PrometheusConfig{
 			Enabled:    cfg.IsPrometheusEnabled,
 			ListenAddr: cfg.PrometheusListenAddr,
