@@ -8,6 +8,10 @@ import (
 	"fmt"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/cdn"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/s3"
+	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
+	configCDNProvider "github.com/wundergraph/cosmo/router/pkg/routerconfig/cdn"
+	configs3Provider "github.com/wundergraph/cosmo/router/pkg/routerconfig/s3"
 	"net"
 	"net/http"
 	"net/url"
@@ -111,56 +115,65 @@ type (
 		ClientAuth *TlsClientAuthConfig
 	}
 
+	RouterConfigPollerConfig struct {
+		config.ExecutionConfig
+		PollInterval    time.Duration
+		GraphSignKey    string
+		ControlPlaneURL string
+	}
+
 	// Config defines the configuration options for the Router.
 	Config struct {
-		clusterName              string
-		instanceID               string
-		logger                   *zap.Logger
-		traceConfig              *rtrace.Config
-		metricConfig             *rmetric.Config
-		tracerProvider           *sdktrace.TracerProvider
-		otlpMeterProvider        *sdkmetric.MeterProvider
-		promMeterProvider        *sdkmetric.MeterProvider
-		gqlMetricsExporter       graphqlmetrics.SchemaUsageExporter
-		corsOptions              *cors.Config
-		setConfigVersionHeader   bool
-		routerGracePeriod        time.Duration
-		staticRouterConfig       *nodev1.RouterConfig
-		awsLambda                bool
-		shutdown                 atomic.Bool
-		bootstrapped             bool
-		ipAnonymization          *IPAnonymizationConfig
-		listenAddr               string
-		baseURL                  string
-		graphqlWebURL            string
-		playgroundPath           string
-		graphqlPath              string
-		playground               bool
-		introspection            bool
-		graphApiToken            string
-		healthCheckPath          string
-		readinessCheckPath       string
-		livenessCheckPath        string
-		cdnConfig                config.CDNConfiguration
-		persistedOperationClient persistedoperation.Client
-		eventsConfig             config.EventsConfiguration
-		prometheusServer         *http.Server
-		modulesConfig            map[string]interface{}
-		routerMiddlewares        []func(http.Handler) http.Handler
-		preOriginHandlers        []TransportPreHandler
-		postOriginHandlers       []TransportPostHandler
-		headerRuleEngine         *HeaderRuleEngine
-		headerRules              config.HeaderRules
-		subgraphTransportOptions *SubgraphTransportOptions
-		graphqlMetricsConfig     *GraphQLMetricsConfig
-		routerTrafficConfig      *config.RouterTrafficConfiguration
-		fileUploadConfig         *config.FileUpload
-		accessController         *AccessController
-		retryOptions             retrytransport.RetryOptions
-		redisClient              *redis.Client
-		processStartTime         time.Time
-		developmentMode          bool
-		healthcheck              health.Checker
+		clusterName               string
+		instanceID                string
+		logger                    *zap.Logger
+		traceConfig               *rtrace.Config
+		metricConfig              *rmetric.Config
+		tracerProvider            *sdktrace.TracerProvider
+		otlpMeterProvider         *sdkmetric.MeterProvider
+		promMeterProvider         *sdkmetric.MeterProvider
+		gqlMetricsExporter        graphqlmetrics.SchemaUsageExporter
+		corsOptions               *cors.Config
+		setConfigVersionHeader    bool
+		routerGracePeriod         time.Duration
+		staticRouterConfig        *nodev1.RouterConfig
+		awsLambda                 bool
+		shutdown                  atomic.Bool
+		bootstrapped              bool
+		ipAnonymization           *IPAnonymizationConfig
+		listenAddr                string
+		baseURL                   string
+		graphqlWebURL             string
+		playgroundPath            string
+		graphqlPath               string
+		playground                bool
+		introspection             bool
+		graphApiToken             string
+		healthCheckPath           string
+		readinessCheckPath        string
+		livenessCheckPath         string
+		routerConfigPollerConfig  *RouterConfigPollerConfig
+		cdnConfig                 config.CDNConfiguration
+		persistedOperationClient  persistedoperation.Client
+		persistedOperationsConfig config.PersistedOperationsConfig
+		eventsConfig              config.EventsConfiguration
+		prometheusServer          *http.Server
+		modulesConfig             map[string]interface{}
+		routerMiddlewares         []func(http.Handler) http.Handler
+		preOriginHandlers         []TransportPreHandler
+		postOriginHandlers        []TransportPostHandler
+		headerRuleEngine          *HeaderRuleEngine
+		headerRules               config.HeaderRules
+		subgraphTransportOptions  *SubgraphTransportOptions
+		graphqlMetricsConfig      *GraphQLMetricsConfig
+		routerTrafficConfig       *config.RouterTrafficConfiguration
+		fileUploadConfig          *config.FileUpload
+		accessController          *AccessController
+		retryOptions              retrytransport.RetryOptions
+		redisClient               *redis.Client
+		processStartTime          time.Time
+		developmentMode           bool
+		healthcheck               health.Checker
 		// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
 		localhostFallbackInsideDocker bool
 
@@ -732,21 +745,154 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	}
 
 	if r.graphApiToken != "" {
-		cdnClient, err := cdn.NewClient(r.cdnConfig.URL, r.graphApiToken, cdn.Options{
-			Logger:        r.logger,
-			TraceProvider: r.tracerProvider,
-		})
-		if err != nil {
-			return err
+
+		var client persistedoperation.Client
+
+		if r.persistedOperationsConfig.StorageProviders.CDN != nil &&
+			r.persistedOperationsConfig.StorageProviders.CDN.Enabled {
+
+			c, err := cdn.NewClient(r.persistedOperationsConfig.StorageProviders.CDN.URL, r.graphApiToken, cdn.Options{
+				Logger:        r.logger,
+				TraceProvider: r.tracerProvider,
+			})
+			if err != nil {
+				return err
+			}
+			client = c
+
+			r.logger.Info("Fetching persisted operations from CDN",
+				zap.String("url", r.persistedOperationsConfig.StorageProviders.CDN.URL),
+			)
+		} else if r.persistedOperationsConfig.StorageProviders.S3 != nil &&
+			r.persistedOperationsConfig.StorageProviders.S3.Enabled {
+
+			c, err := s3.NewClient(r.persistedOperationsConfig.StorageProviders.S3.Endpoint, &s3.Options{
+				AccessKeyID:      r.persistedOperationsConfig.StorageProviders.S3.AccessKey,
+				SecretAccessKey:  r.persistedOperationsConfig.StorageProviders.S3.SecretKey,
+				Region:           r.persistedOperationsConfig.StorageProviders.S3.Region,
+				UseSSL:           r.persistedOperationsConfig.StorageProviders.S3.Secure,
+				BucketName:       r.persistedOperationsConfig.StorageProviders.S3.Bucket,
+				ObjectPathPrefix: r.persistedOperationsConfig.StorageProviders.S3.ObjectPrefix,
+				TraceProvider:    r.tracerProvider,
+			})
+			if err != nil {
+				return err
+			}
+			client = c
+
+			r.logger.Info("Fetching persisted operations from S3",
+				zap.String("bucket", r.persistedOperationsConfig.StorageProviders.S3.Bucket),
+				zap.String("region", r.persistedOperationsConfig.StorageProviders.S3.Region),
+				zap.String("objectPrefix", r.persistedOperationsConfig.StorageProviders.S3.ObjectPrefix),
+			)
+		} else if client == nil {
+			c, err := cdn.NewClient(r.cdnConfig.URL, r.graphApiToken, cdn.Options{
+				Logger:        r.logger,
+				TraceProvider: r.tracerProvider,
+			})
+			if err != nil {
+				return err
+			}
+			client = c
+
+			r.logger.Info("Fetching persisted operations from CDN",
+				zap.String("url", r.cdnConfig.URL),
+			)
 		}
-		r.persistedOperationClient, err = persistedoperation.NewClient(&persistedoperation.Options{
-			CacheSize:      r.cdnConfig.CacheSize.Uint64(),
+
+		// For backwards compatibility with cdn config field
+		cacheSize := r.persistedOperationsConfig.Cache.Size.Uint64()
+		if cacheSize == 0 {
+			cacheSize = r.cdnConfig.CacheSize.Uint64()
+		}
+
+		c, err := persistedoperation.NewClient(&persistedoperation.Options{
+			CacheSize:      cacheSize,
 			Logger:         r.logger,
-			ProviderClient: cdnClient,
+			ProviderClient: client,
 		})
 		if err != nil {
 			return err
 		}
+		r.persistedOperationClient = c
+	}
+
+	var client routerconfig.Client
+
+	if r.configPoller == nil && r.routerConfigPollerConfig != nil {
+
+		if r.routerConfigPollerConfig.ExecutionConfig.StorageProviders.S3 != nil &&
+			r.routerConfigPollerConfig.ExecutionConfig.StorageProviders.S3.Enabled {
+
+			c, err := configs3Provider.NewClient(r.routerConfigPollerConfig.ExecutionConfig.StorageProviders.S3.Endpoint, &configs3Provider.ClientOptions{
+				AccessKeyID:     r.routerConfigPollerConfig.ExecutionConfig.StorageProviders.S3.AccessKey,
+				SecretAccessKey: r.routerConfigPollerConfig.ExecutionConfig.StorageProviders.S3.SecretKey,
+				BucketName:      r.routerConfigPollerConfig.ExecutionConfig.StorageProviders.S3.Bucket,
+				Region:          r.routerConfigPollerConfig.ExecutionConfig.StorageProviders.S3.Region,
+				ObjectPath:      r.routerConfigPollerConfig.ExecutionConfig.StorageProviders.S3.ObjectPath,
+				Secure:          r.routerConfigPollerConfig.ExecutionConfig.StorageProviders.S3.Secure,
+			})
+			if err != nil {
+				return err
+			}
+			client = c
+
+			r.logger.Info("Polling for router config updates from S3 in the background",
+				zap.String("bucket", r.routerConfigPollerConfig.ExecutionConfig.StorageProviders.S3.Bucket),
+				zap.String("region", r.routerConfigPollerConfig.ExecutionConfig.StorageProviders.S3.Region),
+				zap.String("objectPath", r.routerConfigPollerConfig.ExecutionConfig.StorageProviders.S3.ObjectPath),
+				zap.String("interval", r.routerConfigPollerConfig.PollInterval.String()),
+			)
+		}
+
+		if r.routerConfigPollerConfig.ExecutionConfig.StorageProviders.CDN != nil &&
+			r.routerConfigPollerConfig.ExecutionConfig.StorageProviders.CDN.Enabled {
+
+			if r.graphApiToken == "" {
+				return errors.New("graph token is required to fetch router config from CDN")
+			}
+
+			c, err := configCDNProvider.NewClient(
+				r.routerConfigPollerConfig.ExecutionConfig.StorageProviders.CDN.URL,
+				r.graphApiToken,
+				&configCDNProvider.Options{
+					Logger:       r.logger,
+					SignatureKey: r.routerConfigPollerConfig.GraphSignKey,
+				})
+			if err != nil {
+				return err
+			}
+			client = c
+
+			r.logger.Info("Polling for router config updates from CDN in the background",
+				zap.String("url", r.routerConfigPollerConfig.ExecutionConfig.StorageProviders.CDN.URL),
+				zap.String("interval", r.routerConfigPollerConfig.PollInterval.String()),
+			)
+		} else if client == nil {
+			if r.graphApiToken == "" {
+				return errors.New("graph token is required to fetch router config from CDN")
+			}
+
+			c, err := configCDNProvider.NewClient(r.cdnConfig.URL, r.graphApiToken, &configCDNProvider.Options{
+				Logger:       r.logger,
+				SignatureKey: r.routerConfigPollerConfig.GraphSignKey,
+			})
+			if err != nil {
+				return err
+			}
+			client = c
+			r.logger.Info("Polling for router config updates from CDN in the background",
+				zap.String("url", r.cdnConfig.URL),
+				zap.String("interval", r.routerConfigPollerConfig.PollInterval.String()),
+			)
+		}
+
+		r.configPoller = configpoller.New(r.routerConfigPollerConfig.ControlPlaneURL, r.graphApiToken,
+			configpoller.WithLogger(r.logger),
+			configpoller.WithPollInterval(r.routerConfigPollerConfig.PollInterval),
+			configpoller.WithClient(client),
+		)
+
 	}
 
 	// Modules are only initialized once and not on every config change
@@ -1048,24 +1194,28 @@ func WithPlaygroundPath(p string) Option {
 	}
 }
 
+// WithConfigPoller sets the poller client to fetch the router config. If not set, WithConfigPollerConfig should be set.
 func WithConfigPoller(cf configpoller.ConfigPoller) Option {
 	return func(r *Router) {
 		r.configPoller = cf
 	}
 }
 
+// WithSelfRegistration sets the self registration client to register the router with the control plane.
 func WithSelfRegistration(sr selfregister.SelfRegister) Option {
 	return func(r *Router) {
 		r.selfRegister = sr
 	}
 }
 
+// WithGracePeriod sets the grace period for the router to shutdown.
 func WithGracePeriod(timeout time.Duration) Option {
 	return func(r *Router) {
 		r.routerGracePeriod = timeout
 	}
 }
 
+// WithMetrics sets the metrics configuration for the router.
 func WithMetrics(cfg *rmetric.Config) Option {
 	return func(r *Router) {
 		r.metricConfig = cfg
@@ -1319,6 +1469,18 @@ func WithSubgraphErrorPropagation(cfg config.SubgraphErrorPropagationConfigurati
 func WithTLSConfig(cfg *TlsConfig) Option {
 	return func(r *Router) {
 		r.tlsConfig = cfg
+	}
+}
+
+func WithConfigPollerConfig(cfg *RouterConfigPollerConfig) Option {
+	return func(r *Router) {
+		r.routerConfigPollerConfig = cfg
+	}
+}
+
+func WithPersistedOperationsConfig(cfg config.PersistedOperationsConfig) Option {
+	return func(r *Router) {
+		r.persistedOperationsConfig = cfg
 	}
 }
 

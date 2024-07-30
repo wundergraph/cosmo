@@ -3,11 +3,15 @@ package persistedoperation
 import (
 	"context"
 	"fmt"
-	"github.com/buger/jsonparser"
 	"github.com/dgraph-io/ristretto"
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 )
+
+type PersistedOperation struct {
+	Version int    `json:"version"`
+	Body    string `json:"body"`
+}
 
 type PersistentOperationNotFoundError struct {
 	ClientName string
@@ -75,13 +79,9 @@ func (c client) PersistedOperation(ctx context.Context, clientName string, sha25
 		return nil, err
 	}
 
-	unescaped, err := jsonparser.Unescape(content, nil)
-	if err != nil {
-		return nil, fmt.Errorf("error unescaping persisted operation body: %w", err)
-	}
-	c.cache.Set(clientName, sha256Hash, unescaped)
+	c.cache.Set(clientName, sha256Hash, content)
 
-	return unescaped, nil
+	return content, nil
 }
 
 func (c client) Close() {}

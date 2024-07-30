@@ -420,27 +420,59 @@ type SubgraphErrorPropagationConfiguration struct {
 	OmitExtensions       bool                         `yaml:"omit_extensions" envDefault:"false" env:"SUBGRAPH_ERROR_PROPAGATION_OMIT_EXTENSIONS"`
 }
 
-type ExecutionConfigS3Provider struct {
-	Enabled    bool   `yaml:"enabled,omitempty"`
-	Endpoint   string `yaml:"endpoint,omitempty"`
-	AccessKey  string `yaml:"access_key,omitempty"`
-	SecretKey  string `yaml:"secret_key,omitempty"`
-	Bucket     string `yaml:"bucket,omitempty"`
-	Region     string `yaml:"region,omitempty"`
-	ObjectPath string `yaml:"object_path,omitempty"`
-	UseSSL     bool   `yaml:"use_ssl,omitempty"`
+type PersistedOperationsS3Provider struct {
+	Enabled      bool   `yaml:"enabled,omitempty" envDefault:"false" env:"PERSISTED_OPERATIONS_S3_PROVIDER_ENABLED"`
+	Endpoint     string `yaml:"endpoint,omitempty" env:"PERSISTED_OPERATIONS_S3_PROVIDER_ENDPOINT"`
+	AccessKey    string `yaml:"access_key,omitempty" env:"PERSISTED_OPERATIONS_S3_PROVIDER_ACCESS_KEY"`
+	SecretKey    string `yaml:"secret_key,omitempty" env:"PERSISTED_OPERATIONS_S3_PROVIDER_SECRET"`
+	Bucket       string `yaml:"bucket,omitempty" env:"PERSISTED_OPERATIONS_S3_PROVIDER_BUCKET"`
+	Region       string `yaml:"region,omitempty" env:"PERSISTED_OPERATIONS_S3_PROVIDER_REGION"`
+	ObjectPrefix string `yaml:"object_prefix,omitempty" env:"PERSISTED_OPERATIONS_S3_PROVIDER_OBJECT_PREFIX"`
+	Secure       bool   `yaml:"secure,omitempty" envDefault:"true" env:"PERSISTED_OPERATIONS_S3_PROVIDER_SECURE"`
 }
 
-type ExecutionConfigFileProvider struct {
-	Enabled bool   `yaml:"enabled,omitempty"`
-	Path    string `yaml:"path,omitempty"`
-	Watch   bool   `yaml:"watch,omitempty"`
+type PersistedOperationsCDNProvider struct {
+	Enabled bool   `yaml:"enabled,omitempty" envDefault:"true" env:"PERSISTED_OPERATIONS_CDN_PROVIDER_ENABLED"`
+	URL     string `yaml:"url,omitempty" env:"PERSISTED_OPERATIONS_CDN_PROVIDER_URL" envDefault:"https://cosmo-cdn.wundergraph.com"`
+}
+
+type ExecutionConfigS3Provider struct {
+	Enabled    bool   `yaml:"enabled,omitempty" envDefault:"false" env:"EXECUTION_CONFIG_S3_PROVIDER_ENABLED"`
+	Endpoint   string `yaml:"endpoint,omitempty" env:"EXECUTION_CONFIG_S3_PROVIDER_ENDPOINT"`
+	AccessKey  string `yaml:"access_key,omitempty" env:"EXECUTION_CONFIG_S3_PROVIDER_ACCESS_KEY"`
+	SecretKey  string `yaml:"secret_key,omitempty" env:"EXECUTION_CONFIG_S3_PROVIDER_SECRET_KEY"`
+	Bucket     string `yaml:"bucket,omitempty" env:"EXECUTION_CONFIG_S3_PROVIDER_BUCKET"`
+	Region     string `yaml:"region,omitempty" env:"EXECUTION_CONFIG_S3_PROVIDER_REGION"`
+	ObjectPath string `yaml:"object_path,omitempty" env:"EXECUTION_CONFIG_S3_PROVIDER_OBJECT_PATH"`
+	Secure     bool   `yaml:"secure,omitempty" env:"EXECUTION_CONFIG_S3_PROVIDER_SECURE"`
+}
+
+type ExecutionConfigCDNProvider struct {
+	Enabled bool   `yaml:"enabled,omitempty" envDefault:"true" env:"EXECUTION_CONFIG_CDN_PROVIDER_ENABLED"`
+	URL     string `yaml:"url,omitempty" env:"EXECUTION_CONFIG_CDN_PROVIDER_URL"`
+}
+
+type ExecutionConfigStorageProviders struct {
+	S3  *ExecutionConfigS3Provider  `yaml:"s3,omitempty"`
+	CDN *ExecutionConfigCDNProvider `yaml:"cdn,omitempty"`
 }
 
 type ExecutionConfig struct {
-	Provider string                       `yaml:"provider,omitempty"`
-	FromS3   *ExecutionConfigS3Provider   `yaml:"from_s3,omitempty"`
-	FromFile *ExecutionConfigFileProvider `yaml:"from_file,omitempty"`
+	StorageProviders ExecutionConfigStorageProviders `yaml:"storage_providers,omitempty"`
+}
+
+type PersistedOperationsStorageProviders struct {
+	S3  *PersistedOperationsS3Provider  `yaml:"s3,omitempty"`
+	CDN *PersistedOperationsCDNProvider `yaml:"cdn,omitempty"`
+}
+
+type PersistedOperationsCacheConfig struct {
+	Size BytesString `yaml:"size,omitempty" env:"PERSISTED_OPERATIONS_CACHE_SIZE" envDefault:"100MB"`
+}
+
+type PersistedOperationsConfig struct {
+	Cache            PersistedOperationsCacheConfig      `yaml:"cache"`
+	StorageProviders PersistedOperationsStorageProviders `yaml:"storage_providers,omitempty"`
 }
 
 type Config struct {
@@ -497,7 +529,8 @@ type Config struct {
 
 	SubgraphErrorPropagation SubgraphErrorPropagationConfiguration `yaml:"subgraph_error_propagation"`
 
-	ExecutionConfig ExecutionConfig `yaml:"execution_config"`
+	ExecutionConfig           ExecutionConfig           `yaml:"execution_config"`
+	PersistedOperationsConfig PersistedOperationsConfig `yaml:"persisted_operations"`
 }
 
 type LoadResult struct {

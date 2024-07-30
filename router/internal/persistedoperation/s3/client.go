@@ -2,6 +2,7 @@ package s3
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -73,7 +74,7 @@ func (c Client) PersistedOperation(ctx context.Context, clientName, sha256Hash s
 }
 
 func (c Client) persistedOperation(ctx context.Context, clientName, sha256Hash string, attributes []attribute.KeyValue) ([]byte, error) {
-	objectPath := fmt.Sprintf("%s/%s", c.options.ObjectPathPrefix, sha256Hash)
+	objectPath := fmt.Sprintf("%s/%s.json", c.options.ObjectPathPrefix, sha256Hash)
 	reader, err := c.client.GetObject(ctx, c.options.BucketName, objectPath, minio.GetObjectOptions{})
 	if err != nil {
 		return nil, err
@@ -85,7 +86,13 @@ func (c Client) persistedOperation(ctx context.Context, clientName, sha256Hash s
 		return nil, err
 	}
 
-	return body, nil
+	var po persistedoperation.PersistedOperation
+	err = json.Unmarshal(body, &po)
+	if err != nil {
+		return nil, err
+	}
+
+	return []byte(po.Body), nil
 }
 
 func (c Client) Close() {}

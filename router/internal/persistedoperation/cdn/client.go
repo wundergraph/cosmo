@@ -5,7 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/buger/jsonparser"
+	"github.com/goccy/go-json"
 	"github.com/wundergraph/cosmo/router/internal/httpclient"
 	"github.com/wundergraph/cosmo/router/internal/jwt"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
@@ -19,18 +19,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-)
-
-var (
-	persistedOperationKeys = [][]string{
-		{"version"},
-		{"body"},
-	}
-)
-
-const (
-	persistedOperationKeyIndexVersion = iota
-	persistedOperationKeyIndexBody
 )
 
 type Options struct {
@@ -138,24 +126,13 @@ func (cdn *client) persistedOperation(ctx context.Context, clientName string, sh
 		return nil, errors.New("could not read the response body. " + err.Error())
 	}
 
-	var (
-		operationVersion []byte
-		operationBody    []byte
-	)
-	jsonparser.EachKey(body, func(idx int, value []byte, vt jsonparser.ValueType, err error) {
-		switch idx {
-		case persistedOperationKeyIndexVersion:
-			operationVersion = value
-		case persistedOperationKeyIndexBody:
-			operationBody = value
-		}
-	}, persistedOperationKeys...)
-
-	if len(operationVersion) != 1 || operationVersion[0] != '1' {
-		return nil, fmt.Errorf("invalid persisted operation version %q", string(operationVersion))
+	var po persistedoperation.PersistedOperation
+	err = json.Unmarshal(body, &po)
+	if err != nil {
+		return nil, err
 	}
 
-	return operationBody, nil
+	return []byte(po.Body), nil
 }
 
 // NewClient creates a new CDN client. URL is the URL of the CDN.

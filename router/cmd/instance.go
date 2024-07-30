@@ -2,16 +2,12 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/execution_config"
-	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
-	"github.com/wundergraph/cosmo/router/pkg/routerconfig/cdn"
-	"github.com/wundergraph/cosmo/router/pkg/routerconfig/s3"
-
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/selfregister"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
+	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"go.uber.org/automaxprocs/maxprocs"
 
 	"github.com/wundergraph/cosmo/router/core"
@@ -47,57 +43,11 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		if err != nil {
 			logger.Fatal("Could not read router config", zap.Error(err), zap.String("path", cfg.RouterConfigPath))
 		}
-	} else {
-		var client routerconfig.Client
-
-		if cfg.ExecutionConfig.FromS3 != nil && cfg.ExecutionConfig.FromS3.Enabled {
-
-			client, err = s3.NewClient(cfg.ExecutionConfig.FromS3.Endpoint, &s3.ClientOptions{
-				AccessKeyID:     cfg.ExecutionConfig.FromS3.AccessKey,
-				SecretAccessKey: cfg.ExecutionConfig.FromS3.SecretKey,
-				BucketName:      cfg.ExecutionConfig.FromS3.Bucket,
-				Region:          cfg.ExecutionConfig.FromS3.Region,
-				ObjectPath:      cfg.ExecutionConfig.FromS3.ObjectPath,
-				UseSSL:          cfg.ExecutionConfig.FromS3.UseSSL,
-			})
-			if err != nil {
-				return nil, err
-			}
-			logger.Info("Polling for router config updates from S3 in the background",
-				zap.String("bucket", cfg.ExecutionConfig.FromS3.Bucket),
-				zap.String("region", cfg.ExecutionConfig.FromS3.Region),
-				zap.String("objectPath", cfg.ExecutionConfig.FromS3.ObjectPath),
-				zap.String("interval", cfg.PollInterval.String()),
-			)
-		} else {
-			if cfg.Graph.Token == "" {
-				return nil, fmt.Errorf("router config provider 'cdn' is not supported without a graph token")
-			}
-			client, err = cdn.NewClient(cfg.CDN.URL, cfg.Graph.Token, &cdn.Options{
-				Logger:       logger,
-				SignatureKey: cfg.Graph.SignKey,
-			})
-			if err != nil {
-				return nil, err
-			}
-
-			logger.Info("Polling for router config updates from CDN in the background",
-				zap.String("url", cfg.CDN.URL),
-				zap.String("interval", cfg.PollInterval.String()),
+		if cfg.RouterRegistration {
+			selfRegister = selfregister.New(cfg.ControlplaneURL, cfg.Graph.Token,
+				selfregister.WithLogger(logger),
 			)
 		}
-
-		configPoller = configpoller.New(cfg.ControlplaneURL, cfg.Graph.Token,
-			configpoller.WithLogger(logger),
-			configpoller.WithPollInterval(cfg.PollInterval),
-			configpoller.WithClient(client),
-		)
-	}
-
-	if cfg.RouterRegistration && cfg.Graph.Token != "" {
-		selfRegister = selfregister.New(cfg.ControlplaneURL, cfg.Graph.Token,
-			selfregister.WithLogger(logger),
-		)
 	}
 
 	var authenticators []authentication.Authenticator
@@ -132,6 +82,13 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		core.WithIntrospection(cfg.IntrospectionEnabled),
 		core.WithPlayground(cfg.PlaygroundEnabled),
 		core.WithGraphApiToken(cfg.Graph.Token),
+		core.WithPersistedOperationsConfig(cfg.PersistedOperationsConfig),
+		core.WithConfigPollerConfig(&core.RouterConfigPollerConfig{
+			ControlPlaneURL: cfg.ControlplaneURL,
+			GraphSignKey:    cfg.Graph.SignKey,
+			PollInterval:    cfg.PollInterval,
+			ExecutionConfig: cfg.ExecutionConfig,
+		}),
 		core.WithGraphQLPath(cfg.GraphQLPath),
 		core.WithModulesConfig(cfg.Modules),
 		core.WithGracePeriod(cfg.GracePeriod),

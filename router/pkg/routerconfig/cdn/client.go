@@ -72,6 +72,10 @@ func (e *routerConfigNotFoundError) Error() string {
 // NewClient creates a new CDN client. URL is the URL of the CDN.
 // Token is the token used to authenticate with the CDN, the same as the GRAPH_API_TOKEN
 func NewClient(endpoint string, token string, opts *Options) (routerconfig.Client, error) {
+	if token == "" {
+		return nil, errors.New("token is required for CDN config provider")
+	}
+
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("invalid CDN URL %q: %w", endpoint, err)

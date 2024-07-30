@@ -24,7 +24,7 @@ type ClientOptions struct {
 	AccessKeyID     string
 	SecretAccessKey string
 	Region          string
-	UseSSL          bool
+	Secure          bool
 	BucketName      string
 	ObjectPath      string
 }
@@ -38,7 +38,7 @@ func NewClient(endpoint string, options *ClientOptions) (routerconfig.Client, er
 	minioClient, err := minio.New(endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(options.AccessKeyID, options.SecretAccessKey, ""),
 		Region: options.Region,
-		Secure: options.UseSSL,
+		Secure: options.Secure,
 	})
 	if err != nil {
 		return nil, err

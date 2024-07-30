@@ -28,71 +28,168 @@
         }
       }
     },
+    "persisted_operations": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The configuration for the persisted operations. When no provider is specified, the router will fallback to the Cosmo CDN provider to download the persisted operations.",
+      "properties": {
+        "cache": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "size": {
+              "type": "string",
+              "default": "100MB",
+              "bytes": {
+                "minimum": "10MB"
+              },
+              "format": "bytes-string",
+              "description": "The size of the cache used. The default value is 100MB."
+            }
+          }
+        },
+        "storage_providers": {
+          "oneOf": [
+            {
+              "required": ["cdn"]
+            },
+            {
+              "required": ["s3"]
+            }
+          ],
+          "properties": {
+            "cdn": {
+              "type": "object",
+              "required": ["url"],
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Enable the CDN provider. The CDN provider is used to download the persistent operation config from the CDN. The default value is true."
+                },
+                "url": {
+                  "type": "string",
+                  "description": "The URL of the CDN. The URL is specified as a string with the format 'scheme://host:port'."
+                }
+              }
+            },
+            "s3": {
+              "type": "object",
+              "required": ["bucket"],
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable the S3 provider. The S3 provider is used to download the execution config from the S3 bucket. The default value is false."
+                },
+                "bucket": {
+                  "type": "string",
+                  "description": "The name of the S3 bucket. The S3 bucket is used to store the execution config."
+                },
+                "region": {
+                  "type": "string",
+                  "description": "The region of the S3 bucket. The region is used to specify the region of the S3 bucket."
+                },
+                "access_key": {
+                  "type": "string",
+                  "description": "The access key of the S3 bucket. The access key ID is used to authenticate with the S3 bucket."
+                },
+                "secret_key": {
+                  "type": "string",
+                  "description": "The secret key of the S3 bucket. The secret access key is used to authenticate with the S3 bucket."
+                },
+                "endpoint": {
+                  "type": "string",
+                  "description": "The endpoint of the S3 bucket. The endpoint is used to specify the endpoint of the S3 bucket."
+                },
+                "object_prefix": {
+                  "type": "string",
+                  "description": "The prefix of the object in the S3 bucket. The prefix is put in front of the operation SHA256 hash. /<prefix>/<sha256>.json"
+                },
+                "secure": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Enable the secure connection. The secure connection is used to establish a secure connection with the S3 bucket."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "execution_config": {
       "type": "object",
+      "additionalProperties": false,
+      "description": "The configuration for the execution config. If no provider is specified, the router will fallback to the Cosmo CDN provider to download the execution config.",
       "properties": {
-        "enabled": {
-          "type": "boolean",
-          "description": "Enable the execution config. The execution config is used to configure the router. The default value is true."
-        },
-        "from_file": {
-          "type": "object",
-          "required": ["path"],
-          "additionalProperties": false,
-          "properties": {
-            "enabled": {
-              "type": "boolean",
-              "description": "Enable the file provider. The file provider is used to load the execution config from the file system. The default value is false."
+        "storage_providers": {
+          "oneOf": [
+            {
+              "required": ["cdn"]
             },
-            "path": {
-              "type": "string",
-              "description": "The path to the execution config. The path is used to specify the URL of the execution config."
-            },
-            "watch": {
-              "type": "boolean",
-              "description": "Enable the watch mode. The watch mode is used to watch the execution config for changes. The default value is false."
+            {
+              "required": ["s3"]
             }
-          }
-        },
-        "from_s3": {
-          "type": "object",
-          "required": ["bucket"],
-          "additionalProperties": false,
-          "properties": {
-            "enabled": {
-              "type": "boolean",
-              "description": "Enable the S3 provider. The S3 provider is used to download the execution config from the S3 bucket. The default value is false."
-            },
-            "bucket": {
-              "type": "string",
-              "description": "The name of the S3 bucket. The S3 bucket is used to store the execution config."
-            },
-            "region": {
-              "type": "string",
-              "description": "The region of the S3 bucket. The region is used to specify the region of the S3 bucket."
-            },
-            "access_key": {
-              "type": "string",
-              "description": "The access key of the S3 bucket. The access key ID is used to authenticate with the S3 bucket."
-            },
-            "secret_key": {
-              "type": "string",
-              "description": "The secret key of the S3 bucket. The secret access key is used to authenticate with the S3 bucket."
-            },
-            "endpoint": {
-              "type": "string",
-              "description": "The endpoint of the S3 bucket. The endpoint is used to specify the endpoint of the S3 bucket."
-            },
-            "object_path": {
-              "type": "string",
-              "description": "The path to the execution config in the S3 bucket. The path is used to download the execution config from the S3 bucket."
-            },
-            "use_ssl": {
-              "type": "boolean",
-              "default": true,
-              "description": "Enable the SSL. The SSL is used to secure the connection to the S3 bucket. The default value is true."
+          ],
+            "properties": {
+              "cdn": {
+                "type": "object",
+                "required": ["url"],
+                "additionalProperties": false,
+                "properties": {
+                  "enabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enable the CDN provider. The CDN provider is used to download the router execution config from the CDN. The default value is true."
+                  },
+                  "url": {
+                    "type": "string",
+                    "description": "The URL of the CDN. The URL is specified as a string with the format 'scheme://host:port'."
+                  }
+                }
+              },
+              "s3": {
+                "type": "object",
+                "required": ["bucket"],
+                "additionalProperties": false,
+                "properties": {
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "Enable the S3 provider. The S3 provider is used to download the execution config from the S3 bucket. The default value is false."
+                  },
+                  "bucket": {
+                    "type": "string",
+                    "description": "The name of the S3 bucket. The S3 bucket is used to store the execution config."
+                  },
+                  "region": {
+                    "type": "string",
+                    "description": "The region of the S3 bucket. The region is used to specify the region of the S3 bucket."
+                  },
+                  "access_key": {
+                    "type": "string",
+                    "description": "The access key of the S3 bucket. The access key ID is used to authenticate with the S3 bucket."
+                  },
+                  "secret_key": {
+                    "type": "string",
+                    "description": "The secret key of the S3 bucket. The secret access key is used to authenticate with the S3 bucket."
+                  },
+                  "endpoint": {
+                    "type": "string",
+                    "description": "The endpoint of the S3 bucket. The endpoint is used to specify the endpoint of the S3 bucket."
+                  },
+                  "object_path": {
+                    "type": "string",
+                    "description": "The path to the execution config in the S3 bucket. The path is used to download the execution config from the S3 bucket."
+                  },
+                  "secure": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enable the secure connection. The secure connection is used to establish a secure connection with the S3 bucket."
+                  }
+                }
+              }
             }
-          }
         }
       }
     },
@@ -995,6 +1092,7 @@
     },
     "cdn": {
       "type": "object",
+      "deprecationMessage": "The CDN is deprecated. Please use the execution_config and persisted_operations instead.",
       "description": "The configuration for the CDN. The CDN is used to fetch the schema and configurations from the CDN.",
       "additionalProperties": false,
       "properties": {
@@ -1148,6 +1246,7 @@
     "router_config_path": {
       "type": "string",
       "format": "file-path",
+      "deprecationMessage": "The router_config_path is deprecated. Please use the execution_config instead.",
       "description": "The path of the router execution config file. This file contains the information how your graph is resolved and configured. The path is specified as a string with the format 'path/to/file'."
     },
     "router_registration": {

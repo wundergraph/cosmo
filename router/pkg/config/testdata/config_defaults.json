@@ -232,8 +232,18 @@
     "OmitExtensions": false
   },
   "ExecutionConfig": {
-    "Provider": "",
-    "FromS3": null,
-    "FromFile": null
+    "StorageProvider": {
+      "S3": null,
+      "CDN": null
+    }
+  },
+  "PersistedOperationsConfig": {
+    "Cache": {
+      "Size": 100000000
+    },
+    "StorageProvider": {
+      "S3": null,
+      "CDN": null
+    }
   }
 }
