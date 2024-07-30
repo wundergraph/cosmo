@@ -113,8 +113,8 @@ func TestExposingPrometheusMetrics(t *testing.T) {
 			if resp != nil {
 				defer resp.Body.Close()
 				// the case when metrics server should be enabled
+				require.Nil(t, err)
 				assert.Equal(t, true, tt.prom.Enabled)
-				assert.Nil(t, err)
 				assert.Equal(t, tt.statusCode, resp.StatusCode)
 
 			} else {
@@ -182,14 +182,12 @@ func TestValidateExposedMetrics(t *testing.T) {
 	t.Run("get default process metrics", func(t *testing.T) {
 		endpoint := fmt.Sprintf("http://%s%s", prom.ListenAddr, prom.Path)
 		resp, err := http.Get(endpoint)
-
-		assert.Nil(t, err)
+		require.Nil(t, err)
 		assert.NotNil(t, resp)
-
 		defer resp.Body.Close()
 
 		b, err := io.ReadAll(resp.Body)
-		assert.Nil(t, err)
+		require.Nil(t, err)
 
 		metrics := string(b)
 
