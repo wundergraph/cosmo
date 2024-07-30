@@ -400,7 +400,7 @@ export class SubgraphRepository {
         await targetRepo.updateReadmeOfTarget({ id: data.targetId, readme: data.readme });
       }
 
-      if (updatedFederatedGraphs.length == 0) {
+      if (updatedFederatedGraphs.length === 0) {
         return;
       }
 
