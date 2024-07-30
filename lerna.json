@@ -27,7 +27,8 @@
     "keycloak",
     "cdn-server",
     "cdn-server/cdn",
-    "aws-lambda-router"
+    "aws-lambda-router",
+    "playground"
   ],
   "npmClient": "pnpm",
   "loglevel": "verbose"

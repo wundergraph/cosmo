@@ -1,20 +1,39 @@
 {
-  "name": "playground",
+  "name": "@wundergraph/playground",
   "version": "0.0.0",
-  "private": true,
+  "description": "Cosmo Playground built on top of graphiql",
+  "author": {
+    "name": "WunderGraph Maintainers",
+    "email": "info@wundergraph.com"
+  },
   "license": "Apache-2.0",
-  "description": "Standalone custom graphiql",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "url": "https://github.com/wundergraph/cosmo"
+  },
   "type": "module",
+  "main": "dist/index.umd.js",
+  "types": "dist/index.d.ts",
+  "module": "dist/index.es.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.es.js",
+      "require": "./dist/index.umd.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./styles": "./dist/style.css"
+  },
+  "files": [
+    "/dist"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "copy-html": "cp dist/index.html ../router/internal/graphiql/graphiql.html",
-    "build:copy": "pnpm build && pnpm copy-html"
-  },
-  "author": {
-    "name": "WunderGraph Maintainers",
-    "email": "info@wundergraph.com"
+    "build:router": "VITE_SINGLE_FILE_OUTPUT=true pnpm build && pnpm copy-html"
   },
   "dependencies": {
     "@heroicons/react": "^2.0.18",
@@ -56,6 +75,7 @@
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.5.2",
     "vite": "^5.3.2",
+    "vite-plugin-dts": "4.0.0-beta.1",
     "vite-plugin-html": "^3.2.2",
     "vite-plugin-singlefile": "^2.0.2"
   }
