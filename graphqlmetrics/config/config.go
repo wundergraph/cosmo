@@ -35,6 +35,8 @@ type Config struct {
 	IsPrometheusEnabled  bool   `default:"false" envconfig:"PROMETHEUS_ENABLED"`
 	PrometheusListenAddr string `default:"127.0.0.1:8088" envconfig:"PROMETHEUS_LISTEN_ADDR"`
 	PrometheusPath       string `default:"/metrics" envconfig:"PROMETHEUS_PATH"`
+
+	IsOpentelemetryEnabled bool `default:"false" envconfig:"OPENTELEMETRY_ENABLED"`
 }
 
 func LoadConfig() (*Config, error) {

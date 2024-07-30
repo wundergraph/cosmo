@@ -119,6 +119,10 @@ func main() {
 			ListenAddr: cfg.PrometheusListenAddr,
 			Path:       cfg.PrometheusPath,
 		},
+		telemetry.OpenTelemetry{
+			Enabled:   cfg.IsOpentelemetryEnabled,
+			Exporters: []*telemetry.OpenTelemetryExporter{},
+		},
 	)
 
 	svr := core.NewServer(

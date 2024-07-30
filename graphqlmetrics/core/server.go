@@ -7,8 +7,10 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	"github.com/wundergraph/cosmo/graphqlmetrics/pkg/telemetry"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/zap"
@@ -27,6 +29,7 @@ type Server struct {
 
 	metricConfig     *telemetry.Config
 	prometheusServer *http.Server
+	registry         *prometheus.Registry
 
 	meterProvider *sdkmetric.MeterProvider
 	traceProvider *sdktrace.TracerProvider
@@ -52,14 +55,17 @@ func (s *Server) bootstrap(ctx context.Context) {
 	mux := http.NewServeMux()
 	var interceptors = []connect.Interceptor{}
 
-	if s.metricConfig.Prometheus.Enabled {
+	if s.metricConfig.IsEnabled() {
 		mp, registry, err := s.metricConfig.NewPrometheusMeterProvider(ctx)
 		if err != nil {
 			s.logger.Error("Failed to create Prometheus exporter", zap.Error(err))
 		}
 		s.meterProvider = mp
-		s.prometheusServer = telemetry.NewPrometheusServer(s.logger, s.metricConfig.Prometheus.ListenAddr, s.metricConfig.Prometheus.Path, registry)
+		s.registry = registry
+	}
 
+	if s.metricConfig.Prometheus.Enabled {
+		s.prometheusServer = telemetry.NewPrometheusServer(s.logger, s.metricConfig.Prometheus.ListenAddr, s.metricConfig.Prometheus.Path, s.registry)
 		interceptors = append(
 			interceptors,
 			s.metricConfig.PrometheusUnaryInterceptor(),
@@ -76,6 +82,21 @@ func (s *Server) bootstrap(ctx context.Context) {
 	healthHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
+
+	if s.metricConfig.OpenTelemetry.Enabled {
+		tp, err := s.metricConfig.NewTracerProvider(ctx)
+		if err != nil {
+			s.logger.Error("Failed to start tracer provider", zap.Error(err))
+		}
+
+		s.traceProvider = tp
+		opts := []otelhttp.Option{
+			otelhttp.WithTracerProvider(s.traceProvider),
+			otelhttp.WithMeterProvider(s.meterProvider),
+		}
+
+		handler = otelhttp.NewHandler(handler, "PublishGraphQLMetrics", opts...)
+	}
 
 	mux.Handle("/health", healthHandler)
 	mux.Handle(path, authenticate(s.jwtSecret, s.logger, handler))
