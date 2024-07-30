@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.99.0](https://github.com/wundergraph/cosmo/compare/router@0.98.2...router@0.99.0) (2024-07-30)
+
+### Bug Fixes
+
+* client side validation for router playground ([#976](https://github.com/wundergraph/cosmo/issues/976)) ([9a276d8](https://github.com/wundergraph/cosmo/commit/9a276d8124cb8d102081c86fb39542158542200a)) (@JivusAyrus)
+
+### Features
+
+* package playground as library ([#975](https://github.com/wundergraph/cosmo/issues/975)) ([dc6ff32](https://github.com/wundergraph/cosmo/commit/dc6ff3274dc1db50283fa58d14051538df4af192)) (@thisisnithin)
+
 ## [0.98.2](https://github.com/wundergraph/cosmo/compare/router@0.98.1...router@0.98.2) (2024-07-27)
 
 ### Bug Fixes
