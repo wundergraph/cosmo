@@ -10,9 +10,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	"github.com/wundergraph/cosmo/graphqlmetrics/pkg/telemetry"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/attribute"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/zap"
 	brotli "go.withmatt.com/connect-brotli"
 )
@@ -32,7 +31,6 @@ type Server struct {
 	registry         *prometheus.Registry
 
 	meterProvider *sdkmetric.MeterProvider
-	traceProvider *sdktrace.TracerProvider
 }
 
 func NewServer(ctx context.Context, metricsService graphqlmetricsv1connect.GraphQLMetricsServiceHandler, opts ...Option) *Server {
@@ -62,6 +60,15 @@ func (s *Server) bootstrap(ctx context.Context) {
 		}
 		s.meterProvider = mp
 		s.registry = registry
+
+		baseAttributes := []attribute.KeyValue{}
+
+		metricsStore, err := telemetry.NewPromMetricStore(s.logger, s.meterProvider, baseAttributes)
+		if err != nil {
+			s.logger.Error("Failed to create metric store", zap.Error(err))
+		}
+
+		s.metricConfig.MetricStore = metricsStore
 	}
 
 	if s.metricConfig.Prometheus.Enabled {
@@ -82,21 +89,6 @@ func (s *Server) bootstrap(ctx context.Context) {
 	healthHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-
-	if s.metricConfig.OpenTelemetry.Enabled {
-		tp, err := s.metricConfig.NewTracerProvider(ctx)
-		if err != nil {
-			s.logger.Error("Failed to start tracer provider", zap.Error(err))
-		}
-
-		s.traceProvider = tp
-		opts := []otelhttp.Option{
-			otelhttp.WithTracerProvider(s.traceProvider),
-			otelhttp.WithMeterProvider(s.meterProvider),
-		}
-
-		handler = otelhttp.NewHandler(handler, "PublishGraphQLMetrics", opts...)
-	}
 
 	mux.Handle("/health", healthHandler)
 	mux.Handle(path, authenticate(s.jwtSecret, s.logger, handler))
@@ -142,12 +134,6 @@ func (s *Server) Shutdown(ctx context.Context) error {
 
 	if err := s.server.Shutdown(ctx); err != nil {
 		s.logger.Error("Could not shutdown server", zap.Error(err))
-	}
-
-	if s.traceProvider != nil {
-		if err := s.traceProvider.Shutdown(ctx); err != nil {
-			s.logger.Error("Error shutting down trace provider", zap.Error(err))
-		}
 	}
 
 	if s.meterProvider != nil {

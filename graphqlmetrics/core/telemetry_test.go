@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/phayes/freeport"
 	"github.com/prometheus/client_golang/prometheus"
 	io_prometheus_client "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
@@ -21,7 +22,6 @@ import (
 	"github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	"github.com/wundergraph/cosmo/graphqlmetrics/pkg/telemetry"
 	"github.com/wundergraph/cosmo/graphqlmetrics/test"
-	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.uber.org/zap"
 	brotli "go.withmatt.com/connect-brotli"
 )
@@ -46,6 +46,10 @@ func TestExposingPrometheusMetrics(t *testing.T) {
 		t.Skip("Skipping integration tests")
 	}
 
+	freePort, err := freeport.GetFreePort()
+	assert.Nil(t, err)
+	prometheusListenAddr := fmt.Sprintf("0.0.0.0:%v", freePort)
+
 	type tc struct {
 		name       string
 		prom       telemetry.PrometheusConfig
@@ -57,7 +61,7 @@ func TestExposingPrometheusMetrics(t *testing.T) {
 			name: "enabled",
 			prom: telemetry.PrometheusConfig{
 				Enabled:      true,
-				ListenAddr:   "0.0.0.0:8089",
+				ListenAddr:   prometheusListenAddr,
 				Path:         "/metrics",
 				TestRegistry: prometheus.NewRegistry(),
 			},
@@ -67,7 +71,7 @@ func TestExposingPrometheusMetrics(t *testing.T) {
 			name: "disabled",
 			prom: telemetry.PrometheusConfig{
 				Enabled:      false,
-				ListenAddr:   "0.0.0.0:8089",
+				ListenAddr:   prometheusListenAddr,
 				Path:         "/metrics",
 				TestRegistry: prometheus.NewRegistry(),
 			},
@@ -127,10 +131,18 @@ func TestValidateExposedMetrics(t *testing.T) {
 		t.Skip("Skipping integration tests")
 	}
 
+	prometheusServerPort, err := freeport.GetFreePort()
+	assert.Nil(t, err)
+	prometheusListenAddr := fmt.Sprintf("0.0.0.0:%v", prometheusServerPort)
+
+	mainServerPort, err := freeport.GetFreePort()
+	assert.Nil(t, err)
+	mainListenAddr := fmt.Sprintf("0.0.0.0:%v", mainServerPort)
+
 	registry := prometheus.NewRegistry()
 	prom := telemetry.PrometheusConfig{
 		Enabled:      true,
-		ListenAddr:   "0.0.0.0:8090",
+		ListenAddr:   prometheusListenAddr,
 		Path:         "/metrics",
 		TestRegistry: registry,
 	}
@@ -142,9 +154,8 @@ func TestValidateExposedMetrics(t *testing.T) {
 	msvc := NewMetricsService(zap.NewNop(), db)
 
 	ingestJWTSecret := "fkczyomvdprgvtmvkuhvprxuggkbgwld"
-	serverEndpoint := "0.0.0.0:4006"
 	svr := NewServer(ctx, msvc,
-		WithListenAddr(serverEndpoint),
+		WithListenAddr(mainListenAddr),
 		WithJwtSecret([]byte(ingestJWTSecret)),
 		WithMetrics(&telemetry.Config{
 			Prometheus: prom,
@@ -235,7 +246,7 @@ func TestValidateExposedMetrics(t *testing.T) {
 		// this token was generated using the local secret and is therefore already corrupted
 		client := graphqlmetricsv1connect.NewGraphQLMetricsServiceClient(
 			http.DefaultClient,
-			fmt.Sprintf("http://%s", serverEndpoint),
+			fmt.Sprintf("http://%s", mainListenAddr),
 			brotli.WithCompression(),
 			connect.WithSendCompression(brotli.Name),
 		)
@@ -247,92 +258,20 @@ func TestValidateExposedMetrics(t *testing.T) {
 			FederatedGraphID: "fed123",
 			OrganizationID:   "org123",
 		})
+
 		res, err := client.PublishGraphQLMetrics(ctx, req)
-		assert.NotNil(t, res)
 		assert.Nil(t, err)
-		mf, err := registry.Gather()
-		assert.NoError(t, err)
+		assert.NotNil(t, res)
 
-		requestTotal := findMetricFamilyByName(mf, "graphqlmetrics_http_requests_total")
+		metrics, err := registry.Gather()
+		assert.NotNil(t, metrics)
+		assert.Nil(t, err)
 
-		metric := requestTotal.GetMetric()[0]
+		fmt.Println(metrics)
+		requestCount := findMetricFamilyByName(metrics, "http_requests_total")
+		metric := requestCount.GetMetric()[0]
 		count := metric.Counter.GetValue()
 		assert.Equal(t, float64(1), count)
-	})
-}
-
-func TestTracing(t *testing.T) {
-	if os.Getenv("INT_TESTS") != "true" {
-		t.Skip("Skipping integration tests")
-	}
-
-	exporter := newInMemoryExporter(t)
-	otel := telemetry.OpenTelemetry{
-		Enabled:    true,
-		Exporters:  []*telemetry.OpenTelemetryExporter{},
-		TestReader: nil,
-		Config: &telemetry.ProviderConfig{
-			Logger:            zap.NewNop(),
-			ServiceInstanceID: "graphqlmetrics-testing-instance",
-			IPAnonymization: &telemetry.IPAnonymizationConfig{
-				Enabled: true,
-				Method:  telemetry.Redact,
-			},
-			MemoryExporter: exporter,
-		},
-	}
-
-	ctx, stop := newServerCtx()
-	defer stop()
-
-	db := test.GetTestDatabase(t)
-	msvc := NewMetricsService(zap.NewNop(), db)
-
-	ingestJWTSecret := "fkczyomvdprgvtmvkuhvprxuggkbgwld"
-	serverEndpoint := "0.0.0.0:4006"
-	svr := NewServer(ctx, msvc,
-		WithListenAddr(serverEndpoint),
-		WithJwtSecret([]byte(ingestJWTSecret)),
-		WithMetrics(&telemetry.Config{
-			OpenTelemetry: otel,
-		}))
-
-	go func() {
-		if err := svr.Start(stop); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			t.Logf("failed starting main server")
-		}
-	}()
-	defer func() {
-		err := svr.Shutdown(context.Background())
-		if err != nil {
-			t.Fatalf("Failed to shut down server: %v", err)
-		}
-	}()
-
-	time.Sleep(2 * time.Second)
-
-	client := graphqlmetricsv1connect.NewGraphQLMetricsServiceClient(
-		http.DefaultClient,
-		fmt.Sprintf("http://%s", serverEndpoint),
-		brotli.WithCompression(),
-		connect.WithSendCompression(brotli.Name),
-	)
-
-	t.Run("tracer-provider-setup", func(t *testing.T) {
-		exporter.Reset()
-
-		req := &connect.Request[graphqlmetricsv1.PublishGraphQLRequestMetricsRequest]{}
-		req.Header().Add("Authorization", fmt.Sprintf("Bearer %s", bearerToken))
-
-		ctx := setClaims(ctx, &GraphAPITokenClaims{
-			FederatedGraphID: "fed123",
-			OrganizationID:   "org123",
-		})
-		res, err := client.PublishGraphQLMetrics(ctx, req)
-		assert.NotNil(t, res)
-		assert.Nil(t, err)
-
-		assert.Len(t, exporter.GetSpans(), 1)
 	})
 }
 
@@ -343,12 +282,4 @@ func findMetricFamilyByName(mf []*io_prometheus_client.MetricFamily, name string
 		}
 	}
 	return nil
-}
-
-func newInMemoryExporter(t *testing.T) *tracetest.InMemoryExporter {
-	me := tracetest.NewInMemoryExporter()
-	t.Cleanup(func() {
-		me.Reset()
-	})
-	return me
 }
