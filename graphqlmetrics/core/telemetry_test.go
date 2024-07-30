@@ -333,8 +333,6 @@ func TestTracing(t *testing.T) {
 		assert.Nil(t, err)
 
 		assert.Len(t, exporter.GetSpans(), 1)
-
-		fmt.Println(exporter.GetSpans())
 	})
 }
 
