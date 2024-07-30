@@ -125,9 +125,6 @@ func TestExposingPrometheusMetrics(t *testing.T) {
 			}
 		})
 	}
-	t.Cleanup(func() {
-
-	})
 }
 
 func TestValidateExposedMetrics(t *testing.T) {
