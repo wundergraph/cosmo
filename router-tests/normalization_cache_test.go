@@ -279,5 +279,33 @@ func TestWithInputListCoercion(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, `{"data":{"rootFieldWithNestedListArg":[["b"]]}}`, res.Body)
 		require.Equal(t, "HIT", res.Response.Header.Get(core.NormalizationCacheHeader))
+
+		// nested lists enum
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Query:         `query MyQuery($arg: InputArg!) {rootFieldWithInput(arg: $arg)}`,
+			Variables:     []byte(`{"arg":{"enums":"A"}}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"rootFieldWithInput":"A"}}`, res.Body)
+		require.Equal(t, "MISS", res.Response.Header.Get(core.NormalizationCacheHeader))
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Query:         `query MyQuery($arg: InputArg!) {rootFieldWithInput(arg: $arg)}`,
+			Variables:     []byte(`{"arg":{"enums":"B"}}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"rootFieldWithInput":"B"}}`, res.Body)
+		require.Equal(t, "HIT", res.Response.Header.Get(core.NormalizationCacheHeader))
+
+		// nested lists string
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Query:         `query MyQuery($arg: InputArg!) {rootFieldWithInput(arg: $arg)}`,
+			Variables:     []byte(`{"arg":{"strings":"a"}}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"rootFieldWithInput":"a"}}`, res.Body)
+		require.Equal(t, "HIT", res.Response.Header.Get(core.NormalizationCacheHeader))
 	})
 }

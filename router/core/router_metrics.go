@@ -1,9 +1,10 @@
 package core
 
 import (
+	"strconv"
+
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	"go.opentelemetry.io/otel/attribute"
-	"strconv"
 
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"

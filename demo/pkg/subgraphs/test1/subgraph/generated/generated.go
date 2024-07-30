@@ -599,6 +599,7 @@ type ComplexityRoot struct {
 		HeaderValue                 func(childComplexity int, name string) int
 		InitPayloadValue            func(childComplexity int, key string) int
 		InitialPayload              func(childComplexity int) int
+		RootFieldWithInput          func(childComplexity int, arg model.InputArg) int
 		RootFieldWithListArg        func(childComplexity int, arg []string) int
 		RootFieldWithListOfEnumArg  func(childComplexity int, arg []model.EnumType) int
 		RootFieldWithListOfInputArg func(childComplexity int, arg []*model.InputType) int
@@ -902,6 +903,7 @@ type QueryResolver interface {
 	RootFieldWithNestedListArg(ctx context.Context, arg [][]string) ([][]string, error)
 	RootFieldWithListOfInputArg(ctx context.Context, arg []*model.InputType) ([]*model.InputResponse, error)
 	RootFieldWithListOfEnumArg(ctx context.Context, arg []model.EnumType) ([]model.EnumType, error)
+	RootFieldWithInput(ctx context.Context, arg model.InputArg) (string, error)
 }
 type SubscriptionResolver interface {
 	HeaderValue(ctx context.Context, name string, repeat *int) (<-chan *model.TimestampedString, error)
@@ -4314,6 +4316,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.InitialPayload(childComplexity), true
 
+	case "Query.rootFieldWithInput":
+		if e.complexity.Query.RootFieldWithInput == nil {
+			break
+		}
+
+		args, err := ec.field_Query_rootFieldWithInput_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.RootFieldWithInput(childComplexity, args["arg"].(model.InputArg)), true
+
 	case "Query.rootFieldWithListArg":
 		if e.complexity.Query.RootFieldWithListArg == nil {
 			break
@@ -6112,6 +6126,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	rc := graphql.GetOperationContext(ctx)
 	ec := executionContext{rc, e, 0, 0, make(chan graphql.DeferredResult)}
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
+		ec.unmarshalInputInputArg,
 		ec.unmarshalInputInputType,
 	)
 	first := true
@@ -6237,6 +6252,14 @@ type Query {
     rootFieldWithNestedListArg(arg: [[String!]!]!): [[String!]!]!
     rootFieldWithListOfInputArg(arg: [InputType!]!): [InputResponse!]!
     rootFieldWithListOfEnumArg(arg: [EnumType!]!): [EnumType!]!
+    rootFieldWithInput(arg: InputArg!): String!
+}
+
+input InputArg {
+    enums: [EnumType!]
+    enum: EnumType
+    string: String
+    strings: [String!]
 }
 
 enum EnumType {
@@ -7289,6 +7312,21 @@ func (ec *executionContext) field_Query_initPayloadValue_args(ctx context.Contex
 		}
 	}
 	args["key"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_rootFieldWithInput_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.InputArg
+	if tmp, ok := rawArgs["arg"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("arg"))
+		arg0, err = ec.unmarshalNInputArg2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋtest1ᚋsubgraphᚋmodelᚐInputArg(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["arg"] = arg0
 	return args, nil
 }
 
@@ -28911,6 +28949,61 @@ func (ec *executionContext) fieldContext_Query_rootFieldWithListOfEnumArg(ctx co
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_rootFieldWithInput(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_rootFieldWithInput(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().RootFieldWithInput(rctx, fc.Args["arg"].(model.InputArg))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_rootFieldWithInput(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_rootFieldWithInput_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query__entities(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Query__entities(ctx, field)
 	if err != nil {
@@ -41753,6 +41846,54 @@ func (ec *executionContext) fieldContext___Type_specifiedByURL(ctx context.Conte
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputInputArg(ctx context.Context, obj interface{}) (model.InputArg, error) {
+	var it model.InputArg
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"enums", "enum", "string", "strings"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "enums":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("enums"))
+			data, err := ec.unmarshalOEnumType2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋtest1ᚋsubgraphᚋmodelᚐEnumTypeᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Enums = data
+		case "enum":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("enum"))
+			data, err := ec.unmarshalOEnumType2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋtest1ᚋsubgraphᚋmodelᚐEnumType(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Enum = data
+		case "string":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("string"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.String = data
+		case "strings":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("strings"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Strings = data
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputInputType(ctx context.Context, obj interface{}) (model.InputType, error) {
 	var it model.InputType
 	asMap := map[string]interface{}{}
@@ -45402,6 +45543,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "rootFieldWithInput":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_rootFieldWithInput(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "_entities":
 			field := field
 
@@ -47635,6 +47798,11 @@ func (ec *executionContext) marshalNFloat2float64(ctx context.Context, sel ast.S
 	return graphql.WrapContextMarshaler(ctx, res)
 }
 
+func (ec *executionContext) unmarshalNInputArg2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋtest1ᚋsubgraphᚋmodelᚐInputArg(ctx context.Context, v interface{}) (model.InputArg, error) {
+	res, err := ec.unmarshalInputInputArg(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) marshalNInputResponse2ᚕᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋtest1ᚋsubgraphᚋmodelᚐInputResponseᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.InputResponse) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
@@ -48410,6 +48578,89 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	}
 	res := graphql.MarshalBoolean(*v)
 	return res
+}
+
+func (ec *executionContext) unmarshalOEnumType2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋtest1ᚋsubgraphᚋmodelᚐEnumTypeᚄ(ctx context.Context, v interface{}) ([]model.EnumType, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []interface{}
+	if v != nil {
+		vSlice = graphql.CoerceList(v)
+	}
+	var err error
+	res := make([]model.EnumType, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNEnumType2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋtest1ᚋsubgraphᚋmodelᚐEnumType(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalOEnumType2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋtest1ᚋsubgraphᚋmodelᚐEnumTypeᚄ(ctx context.Context, sel ast.SelectionSet, v []model.EnumType) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNEnumType2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋtest1ᚋsubgraphᚋmodelᚐEnumType(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) unmarshalOEnumType2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋtest1ᚋsubgraphᚋmodelᚐEnumType(ctx context.Context, v interface{}) (*model.EnumType, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(model.EnumType)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOEnumType2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋtest1ᚋsubgraphᚋmodelᚐEnumType(ctx context.Context, sel ast.SelectionSet, v *model.EnumType) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
 }
 
 func (ec *executionContext) unmarshalOInt2ᚖint(ctx context.Context, v interface{}) (*int, error) {

@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/wundergraph/cosmo/demo/pkg/injector"
@@ -101,6 +102,27 @@ func (r *queryResolver) RootFieldWithListOfInputArg(ctx context.Context, arg []*
 // RootFieldWithListOfEnumArg is the resolver for the rootFieldWithListOfEnumArg field.
 func (r *queryResolver) RootFieldWithListOfEnumArg(ctx context.Context, arg []model.EnumType) ([]model.EnumType, error) {
 	return arg, nil
+}
+
+// RootFieldWithInput is the resolver for the rootFieldWithInput field.
+func (r *queryResolver) RootFieldWithInput(ctx context.Context, arg model.InputArg) (string, error) {
+	if arg.String != nil {
+		return *arg.String, nil
+	}
+	if len(arg.Strings) > 0 {
+		return strings.Join(arg.Strings, ","), nil
+	}
+	if arg.Enum != nil {
+		return arg.Enum.String(), nil
+	}
+	if len(arg.Enums) > 0 {
+		var res []string
+		for _, e := range arg.Enums {
+			res = append(res, e.String())
+		}
+		return strings.Join(res, ","), nil
+	}
+	return "empty arg", nil
 }
 
 // HeaderValue is the resolver for the headerValue field.

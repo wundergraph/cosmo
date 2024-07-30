@@ -66,7 +66,7 @@ func TestConfigHotReload(t *testing.T) {
 				Query: `{ employees { id } }`,
 			})
 			require.Equal(t, res.Response.StatusCode, 200)
-			require.Equal(t, "5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf", res.Response.Header.Get("X-Router-Config-Version"))
+			require.Equal(t, xEnv.RouterConfigVersionMain(), res.Response.Header.Get("X-Router-Config-Version"))
 			require.JSONEq(t, employeesIDData, res.Body)
 
 			// Wait for the config poller to be ready
@@ -123,7 +123,7 @@ func TestConfigHotReload(t *testing.T) {
 					Query: `{ employees { id } }`,
 				})
 				require.Equal(t, res.Response.StatusCode, 200)
-				require.Equal(t, "5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf", res.Response.Header.Get("X-Router-Config-Version"))
+				require.Equal(t, xEnv.RouterConfigVersionMain(), res.Response.Header.Get("X-Router-Config-Version"))
 				require.JSONEq(t, employeesIDData, res.Body)
 			}()
 
@@ -136,7 +136,7 @@ func TestConfigHotReload(t *testing.T) {
 					Query: `{ employees { id } }`,
 				})
 				require.Equal(t, res.Response.StatusCode, 200)
-				require.Equal(t, "5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf", res.Response.Header.Get("X-Router-Config-Version"))
+				require.Equal(t, xEnv.RouterConfigVersionMain(), res.Response.Header.Get("X-Router-Config-Version"))
 				require.JSONEq(t, employeesIDData, res.Body)
 			}()
 

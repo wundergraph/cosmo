@@ -408,6 +408,20 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			return
 		}
 
+		err = operationKit.CoerceListVariables()
+		if err != nil {
+			finalErr = err
+
+			rtrace.AttachErrToSpan(engineNormalizeSpan, err)
+			// Mark the root span of the router as failed, so we can easily identify failed requests
+			rtrace.AttachErrToSpan(routerSpan, err)
+
+			engineNormalizeSpan.End()
+
+			writeOperationError(r, w, requestLogger, err)
+			return
+		}
+
 		engineNormalizeSpan.SetAttributes(otel.WgNormalizationCacheHit.Bool(cached))
 
 		if operationKit.parsedOperation.IsPersistedOperation {

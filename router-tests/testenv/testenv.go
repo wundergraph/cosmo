@@ -472,23 +472,24 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	e := &Environment{
-		t:                     t,
-		graphQLPath:           graphQLPath,
-		absinthePath:          absinthePath,
-		Context:               ctx,
-		cancel:                cancel,
-		Router:                rr,
-		RouterURL:             rr.BaseURL(),
-		RouterClient:          client.StandardClient(),
-		CDN:                   cdn,
-		NatsServer:            natsData.Server,
-		NatsConnectionDefault: natsData.Connections[0],
-		NatsConnectionMyNats:  natsData.Connections[1],
-		SubgraphRequestCount:  counters,
-		KafkaAdminClient:      kafkaAdminClient,
-		KafkaClient:           kafkaClient,
-		shutdownDelay:         cfg.ShutdownDelay,
-		shutdown:              atomic.NewBool(false),
+		t:                       t,
+		routerConfigVersionMain: routerConfig.Version,
+		graphQLPath:             graphQLPath,
+		absinthePath:            absinthePath,
+		Context:                 ctx,
+		cancel:                  cancel,
+		Router:                  rr,
+		RouterURL:               rr.BaseURL(),
+		RouterClient:            client.StandardClient(),
+		CDN:                     cdn,
+		NatsServer:              natsData.Server,
+		NatsConnectionDefault:   natsData.Connections[0],
+		NatsConnectionMyNats:    natsData.Connections[1],
+		SubgraphRequestCount:    counters,
+		KafkaAdminClient:        kafkaAdminClient,
+		KafkaClient:             kafkaClient,
+		shutdownDelay:           cfg.ShutdownDelay,
+		shutdown:                atomic.NewBool(false),
 		Servers: []*httptest.Server{
 			employeesServer,
 			familyServer,
@@ -499,6 +500,13 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 			moodServer,
 			countriesServer,
 		},
+	}
+
+	if routerConfig.FeatureFlagConfigs != nil {
+		myFF, ok := routerConfig.FeatureFlagConfigs.ConfigByFeatureFlagName["myff"]
+		if ok {
+			e.routerConfigVersionMyFF = myFF.Version
+		}
 	}
 
 	e.WaitForServer(ctx, e.RouterURL+"/health/live", 100, 10)
@@ -798,6 +806,17 @@ type Environment struct {
 	shutdownDelay         time.Duration
 
 	extraURLQueryValues url.Values
+
+	routerConfigVersionMain string
+	routerConfigVersionMyFF string
+}
+
+func (e *Environment) RouterConfigVersionMain() string {
+	return e.routerConfigVersionMain
+}
+
+func (e *Environment) RouterConfigVersionMyFF() string {
+	return e.routerConfigVersionMyFF
 }
 
 func (e *Environment) SetExtraURLQueryValues(values url.Values) {
