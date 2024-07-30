@@ -246,7 +246,7 @@ func TestValidateExposedMetrics(t *testing.T) {
 		}
 	})
 
-	t.Run("test counter metrics", func(t *testing.T) {
+	t.Run("publishing metrics should increase the http_requests_total", func(t *testing.T) {
 		client := graphqlmetricsv1connect.NewGraphQLMetricsServiceClient(
 			http.DefaultClient,
 			fmt.Sprintf("http://%s", mainListenAddr),
