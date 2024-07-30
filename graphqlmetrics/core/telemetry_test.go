@@ -48,7 +48,7 @@ func TestExposingPrometheusMetrics(t *testing.T) {
 
 	freePort, err := freeport.GetFreePort()
 	assert.Nil(t, err)
-	prometheusListenAddr := fmt.Sprintf("0.0.0.0:%v", freePort)
+	prometheusListenAddr := fmt.Sprintf("0.0.0.0:%d", freePort)
 
 	type tc struct {
 		name       string
@@ -133,11 +133,11 @@ func TestValidateExposedMetrics(t *testing.T) {
 
 	prometheusServerPort, err := freeport.GetFreePort()
 	assert.Nil(t, err)
-	prometheusListenAddr := fmt.Sprintf("0.0.0.0:%v", prometheusServerPort)
+	prometheusListenAddr := fmt.Sprintf("0.0.0.0:%d", prometheusServerPort)
 
 	mainServerPort, err := freeport.GetFreePort()
 	assert.Nil(t, err)
-	mainListenAddr := fmt.Sprintf("0.0.0.0:%v", mainServerPort)
+	mainListenAddr := fmt.Sprintf("0.0.0.0:%d", mainServerPort)
 
 	registry := prometheus.NewRegistry()
 	prom := telemetry.PrometheusConfig{
