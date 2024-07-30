@@ -411,6 +411,26 @@ func TestPersistedOperationCacheWithVariablesCoercion(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, `{"data":{"rootFieldWithListArg":["c"]}}`, res.Body)
 		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+
+		// nested list of enums
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "nestedEnum"}}`),
+			Header:        header,
+			Variables:     []byte(`{"arg":{"enums":"A"}}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"rootFieldWithInput":"A"}}`, res.Body)
+		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "nestedEnum"}}`),
+			Header:        header,
+			Variables:     []byte(`{"arg":{"enums":"B"}}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"rootFieldWithInput":"B"}}`, res.Body)
+		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 	})
 }
 
