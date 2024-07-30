@@ -31,7 +31,7 @@
     "persisted_operations": {
       "type": "object",
       "additionalProperties": false,
-      "description": "The configuration for the persisted operations. When no provider is specified, the router will fallback to the Cosmo CDN provider to download the persisted operations.",
+      "description": "The configuration for the persisted operations.",
       "properties": {
         "cache": {
           "type": "object",
@@ -48,7 +48,8 @@
             }
           }
         },
-        "storage_providers": {
+        "storage_provider": {
+          "description": "The storage provider for persisted operation. Only one provider can be active. When no provider is specified, the router will fallback to the Cosmo CDN provider to download the persisted operations.",
           "oneOf": [
             {
               "required": ["cdn"]
@@ -63,14 +64,10 @@
               "required": ["url"],
               "additionalProperties": false,
               "properties": {
-                "enabled": {
-                  "type": "boolean",
-                  "default": true,
-                  "description": "Enable the CDN provider. The CDN provider is used to download the persistent operation config from the CDN. The default value is true."
-                },
                 "url": {
                   "type": "string",
-                  "description": "The URL of the CDN. The URL is specified as a string with the format 'scheme://host:port'."
+                  "description": "The URL of the CDN. The URL is specified as a string with the format 'scheme://host:port'.",
+                  "default": "https://cosmo-cdn.wundergraph.com"
                 }
               }
             },
@@ -79,10 +76,6 @@
               "required": ["bucket"],
               "additionalProperties": false,
               "properties": {
-                "enabled": {
-                  "type": "boolean",
-                  "description": "Enable the S3 provider. The S3 provider is used to download the execution config from the S3 bucket. The default value is false."
-                },
                 "bucket": {
                   "type": "string",
                   "description": "The name of the S3 bucket. The S3 bucket is used to store the execution config."
@@ -121,9 +114,10 @@
     "execution_config": {
       "type": "object",
       "additionalProperties": false,
-      "description": "The configuration for the execution config. If no provider is specified, the router will fallback to the Cosmo CDN provider to download the execution config.",
+      "description": "The configuration for the execution config.",
       "properties": {
-        "storage_providers": {
+        "storage_provider": {
+          "description": "The storage provider for the execution config. Only one provider can be active. When no provider is specified, the router will fallback to the Cosmo CDN provider to download the execution config.",
           "oneOf": [
             {
               "required": ["cdn"]
@@ -138,14 +132,10 @@
                 "required": ["url"],
                 "additionalProperties": false,
                 "properties": {
-                  "enabled": {
-                    "type": "boolean",
-                    "default": true,
-                    "description": "Enable the CDN provider. The CDN provider is used to download the router execution config from the CDN. The default value is true."
-                  },
                   "url": {
                     "type": "string",
-                    "description": "The URL of the CDN. The URL is specified as a string with the format 'scheme://host:port'."
+                    "description": "The URL of the CDN. The URL is specified as a string with the format 'scheme://host:port'.",
+                    "default": "https://cosmo-cdn.wundergraph.com"
                   }
                 }
               },
@@ -154,10 +144,6 @@
                 "required": ["bucket"],
                 "additionalProperties": false,
                 "properties": {
-                  "enabled": {
-                    "type": "boolean",
-                    "description": "Enable the S3 provider. The S3 provider is used to download the execution config from the S3 bucket. The default value is false."
-                  },
                   "bucket": {
                     "type": "string",
                     "description": "The name of the S3 bucket. The S3 bucket is used to store the execution config."

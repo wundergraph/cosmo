@@ -748,10 +748,9 @@ func (r *Router) bootstrap(ctx context.Context) error {
 
 		var client persistedoperation.Client
 
-		if r.persistedOperationsConfig.StorageProviders.CDN != nil &&
-			r.persistedOperationsConfig.StorageProviders.CDN.Enabled {
+		if r.persistedOperationsConfig.StorageProvider.CDN != nil {
 
-			c, err := cdn.NewClient(r.persistedOperationsConfig.StorageProviders.CDN.URL, r.graphApiToken, cdn.Options{
+			c, err := cdn.NewClient(r.persistedOperationsConfig.StorageProvider.CDN.URL, r.graphApiToken, cdn.Options{
 				Logger:        r.logger,
 				TraceProvider: r.tracerProvider,
 			})
@@ -761,18 +760,17 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			client = c
 
 			r.logger.Info("Fetching persisted operations from CDN",
-				zap.String("url", r.persistedOperationsConfig.StorageProviders.CDN.URL),
+				zap.String("url", r.persistedOperationsConfig.StorageProvider.CDN.URL),
 			)
-		} else if r.persistedOperationsConfig.StorageProviders.S3 != nil &&
-			r.persistedOperationsConfig.StorageProviders.S3.Enabled {
+		} else if r.persistedOperationsConfig.StorageProvider.S3 != nil {
 
-			c, err := s3.NewClient(r.persistedOperationsConfig.StorageProviders.S3.Endpoint, &s3.Options{
-				AccessKeyID:      r.persistedOperationsConfig.StorageProviders.S3.AccessKey,
-				SecretAccessKey:  r.persistedOperationsConfig.StorageProviders.S3.SecretKey,
-				Region:           r.persistedOperationsConfig.StorageProviders.S3.Region,
-				UseSSL:           r.persistedOperationsConfig.StorageProviders.S3.Secure,
-				BucketName:       r.persistedOperationsConfig.StorageProviders.S3.Bucket,
-				ObjectPathPrefix: r.persistedOperationsConfig.StorageProviders.S3.ObjectPrefix,
+			c, err := s3.NewClient(r.persistedOperationsConfig.StorageProvider.S3.Endpoint, &s3.Options{
+				AccessKeyID:      r.persistedOperationsConfig.StorageProvider.S3.AccessKey,
+				SecretAccessKey:  r.persistedOperationsConfig.StorageProvider.S3.SecretKey,
+				Region:           r.persistedOperationsConfig.StorageProvider.S3.Region,
+				UseSSL:           r.persistedOperationsConfig.StorageProvider.S3.Secure,
+				BucketName:       r.persistedOperationsConfig.StorageProvider.S3.Bucket,
+				ObjectPathPrefix: r.persistedOperationsConfig.StorageProvider.S3.ObjectPrefix,
 				TraceProvider:    r.tracerProvider,
 			})
 			if err != nil {
@@ -781,9 +779,9 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			client = c
 
 			r.logger.Info("Fetching persisted operations from S3",
-				zap.String("bucket", r.persistedOperationsConfig.StorageProviders.S3.Bucket),
-				zap.String("region", r.persistedOperationsConfig.StorageProviders.S3.Region),
-				zap.String("objectPrefix", r.persistedOperationsConfig.StorageProviders.S3.ObjectPrefix),
+				zap.String("bucket", r.persistedOperationsConfig.StorageProvider.S3.Bucket),
+				zap.String("region", r.persistedOperationsConfig.StorageProvider.S3.Region),
+				zap.String("objectPrefix", r.persistedOperationsConfig.StorageProvider.S3.ObjectPrefix),
 			)
 		} else if client == nil {
 			c, err := cdn.NewClient(r.cdnConfig.URL, r.graphApiToken, cdn.Options{
@@ -821,39 +819,14 @@ func (r *Router) bootstrap(ctx context.Context) error {
 
 	if r.configPoller == nil && r.routerConfigPollerConfig != nil {
 
-		if r.routerConfigPollerConfig.ExecutionConfig.StorageProviders.S3 != nil &&
-			r.routerConfigPollerConfig.ExecutionConfig.StorageProviders.S3.Enabled {
-
-			c, err := configs3Provider.NewClient(r.routerConfigPollerConfig.ExecutionConfig.StorageProviders.S3.Endpoint, &configs3Provider.ClientOptions{
-				AccessKeyID:     r.routerConfigPollerConfig.ExecutionConfig.StorageProviders.S3.AccessKey,
-				SecretAccessKey: r.routerConfigPollerConfig.ExecutionConfig.StorageProviders.S3.SecretKey,
-				BucketName:      r.routerConfigPollerConfig.ExecutionConfig.StorageProviders.S3.Bucket,
-				Region:          r.routerConfigPollerConfig.ExecutionConfig.StorageProviders.S3.Region,
-				ObjectPath:      r.routerConfigPollerConfig.ExecutionConfig.StorageProviders.S3.ObjectPath,
-				Secure:          r.routerConfigPollerConfig.ExecutionConfig.StorageProviders.S3.Secure,
-			})
-			if err != nil {
-				return err
-			}
-			client = c
-
-			r.logger.Info("Polling for router config updates from S3 in the background",
-				zap.String("bucket", r.routerConfigPollerConfig.ExecutionConfig.StorageProviders.S3.Bucket),
-				zap.String("region", r.routerConfigPollerConfig.ExecutionConfig.StorageProviders.S3.Region),
-				zap.String("objectPath", r.routerConfigPollerConfig.ExecutionConfig.StorageProviders.S3.ObjectPath),
-				zap.String("interval", r.routerConfigPollerConfig.PollInterval.String()),
-			)
-		}
-
-		if r.routerConfigPollerConfig.ExecutionConfig.StorageProviders.CDN != nil &&
-			r.routerConfigPollerConfig.ExecutionConfig.StorageProviders.CDN.Enabled {
+		if r.routerConfigPollerConfig.ExecutionConfig.StorageProvider.CDN != nil {
 
 			if r.graphApiToken == "" {
 				return errors.New("graph token is required to fetch router config from CDN")
 			}
 
 			c, err := configCDNProvider.NewClient(
-				r.routerConfigPollerConfig.ExecutionConfig.StorageProviders.CDN.URL,
+				r.routerConfigPollerConfig.ExecutionConfig.StorageProvider.CDN.URL,
 				r.graphApiToken,
 				&configCDNProvider.Options{
 					Logger:       r.logger,
@@ -865,7 +838,28 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			client = c
 
 			r.logger.Info("Polling for router config updates from CDN in the background",
-				zap.String("url", r.routerConfigPollerConfig.ExecutionConfig.StorageProviders.CDN.URL),
+				zap.String("url", r.routerConfigPollerConfig.ExecutionConfig.StorageProvider.CDN.URL),
+				zap.String("interval", r.routerConfigPollerConfig.PollInterval.String()),
+			)
+		} else if r.routerConfigPollerConfig.ExecutionConfig.StorageProvider.S3 != nil {
+
+			c, err := configs3Provider.NewClient(r.routerConfigPollerConfig.ExecutionConfig.StorageProvider.S3.Endpoint, &configs3Provider.ClientOptions{
+				AccessKeyID:     r.routerConfigPollerConfig.ExecutionConfig.StorageProvider.S3.AccessKey,
+				SecretAccessKey: r.routerConfigPollerConfig.ExecutionConfig.StorageProvider.S3.SecretKey,
+				BucketName:      r.routerConfigPollerConfig.ExecutionConfig.StorageProvider.S3.Bucket,
+				Region:          r.routerConfigPollerConfig.ExecutionConfig.StorageProvider.S3.Region,
+				ObjectPath:      r.routerConfigPollerConfig.ExecutionConfig.StorageProvider.S3.ObjectPath,
+				Secure:          r.routerConfigPollerConfig.ExecutionConfig.StorageProvider.S3.Secure,
+			})
+			if err != nil {
+				return err
+			}
+			client = c
+
+			r.logger.Info("Polling for router config updates from S3 in the background",
+				zap.String("bucket", r.routerConfigPollerConfig.ExecutionConfig.StorageProvider.S3.Bucket),
+				zap.String("region", r.routerConfigPollerConfig.ExecutionConfig.StorageProvider.S3.Region),
+				zap.String("objectPath", r.routerConfigPollerConfig.ExecutionConfig.StorageProvider.S3.ObjectPath),
 				zap.String("interval", r.routerConfigPollerConfig.PollInterval.String()),
 			)
 		} else if client == nil {

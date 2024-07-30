@@ -421,7 +421,6 @@ type SubgraphErrorPropagationConfiguration struct {
 }
 
 type PersistedOperationsS3Provider struct {
-	Enabled      bool   `yaml:"enabled,omitempty" envDefault:"false" env:"PERSISTED_OPERATIONS_S3_PROVIDER_ENABLED"`
 	Endpoint     string `yaml:"endpoint,omitempty" env:"PERSISTED_OPERATIONS_S3_PROVIDER_ENDPOINT"`
 	AccessKey    string `yaml:"access_key,omitempty" env:"PERSISTED_OPERATIONS_S3_PROVIDER_ACCESS_KEY"`
 	SecretKey    string `yaml:"secret_key,omitempty" env:"PERSISTED_OPERATIONS_S3_PROVIDER_SECRET"`
@@ -432,12 +431,10 @@ type PersistedOperationsS3Provider struct {
 }
 
 type PersistedOperationsCDNProvider struct {
-	Enabled bool   `yaml:"enabled,omitempty" envDefault:"true" env:"PERSISTED_OPERATIONS_CDN_PROVIDER_ENABLED"`
-	URL     string `yaml:"url,omitempty" env:"PERSISTED_OPERATIONS_CDN_PROVIDER_URL" envDefault:"https://cosmo-cdn.wundergraph.com"`
+	URL string `yaml:"url,omitempty" env:"PERSISTED_OPERATIONS_CDN_PROVIDER_URL" envDefault:"https://cosmo-cdn.wundergraph.com"`
 }
 
 type ExecutionConfigS3Provider struct {
-	Enabled    bool   `yaml:"enabled,omitempty" envDefault:"false" env:"EXECUTION_CONFIG_S3_PROVIDER_ENABLED"`
 	Endpoint   string `yaml:"endpoint,omitempty" env:"EXECUTION_CONFIG_S3_PROVIDER_ENDPOINT"`
 	AccessKey  string `yaml:"access_key,omitempty" env:"EXECUTION_CONFIG_S3_PROVIDER_ACCESS_KEY"`
 	SecretKey  string `yaml:"secret_key,omitempty" env:"EXECUTION_CONFIG_S3_PROVIDER_SECRET_KEY"`
@@ -448,20 +445,19 @@ type ExecutionConfigS3Provider struct {
 }
 
 type ExecutionConfigCDNProvider struct {
-	Enabled bool   `yaml:"enabled,omitempty" envDefault:"true" env:"EXECUTION_CONFIG_CDN_PROVIDER_ENABLED"`
-	URL     string `yaml:"url,omitempty" env:"EXECUTION_CONFIG_CDN_PROVIDER_URL"`
+	URL string `yaml:"url,omitempty" env:"EXECUTION_CONFIG_CDN_PROVIDER_URL"`
 }
 
-type ExecutionConfigStorageProviders struct {
+type ExecutionConfigStorageProvider struct {
 	S3  *ExecutionConfigS3Provider  `yaml:"s3,omitempty"`
 	CDN *ExecutionConfigCDNProvider `yaml:"cdn,omitempty"`
 }
 
 type ExecutionConfig struct {
-	StorageProviders ExecutionConfigStorageProviders `yaml:"storage_providers,omitempty"`
+	StorageProvider ExecutionConfigStorageProvider `yaml:"storage_provider,omitempty"`
 }
 
-type PersistedOperationsStorageProviders struct {
+type PersistedOperationsStorageProvider struct {
 	S3  *PersistedOperationsS3Provider  `yaml:"s3,omitempty"`
 	CDN *PersistedOperationsCDNProvider `yaml:"cdn,omitempty"`
 }
@@ -471,8 +467,8 @@ type PersistedOperationsCacheConfig struct {
 }
 
 type PersistedOperationsConfig struct {
-	Cache            PersistedOperationsCacheConfig      `yaml:"cache"`
-	StorageProviders PersistedOperationsStorageProviders `yaml:"storage_providers,omitempty"`
+	Cache           PersistedOperationsCacheConfig     `yaml:"cache"`
+	StorageProvider PersistedOperationsStorageProvider `yaml:"storage_provider,omitempty"`
 }
 
 type Config struct {
