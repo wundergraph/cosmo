@@ -1132,6 +1132,11 @@ describe('Field resolvability tests', () => {
       ),
     );
   });
+
+  test('that an error is returned if an interface object cannot be reached', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphBH, subgraphBJ]);
+    expect(errors).toBeDefined();
+  });
 });
 
 const subgraphA: Subgraph = {
@@ -2234,6 +2239,17 @@ const subgraphBI: Subgraph = {
   url: '',
   definitions: parse(`
     type Interface @key(fields: "id") @interfaceObject {
+      id: ID!
+      isNew: Boolean!
+    }
+  `),
+};
+
+const subgraphBJ: Subgraph = {
+  name: 'subgraph-bi',
+  url: '',
+  definitions: parse(`
+    type Interface @key(fields: "id", resolvable: false) @interfaceObject {
       id: ID!
       isNew: Boolean!
     }

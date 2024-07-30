@@ -54,6 +54,7 @@ import {
   FederationResultContainer,
   FederationResultContainerWithContracts,
   InterfaceImplementationData,
+  InterfaceObjectForInternalGraphOptions,
   newChildTagData,
   newParentTagData,
   ParentTagData,
@@ -1201,41 +1202,46 @@ export class FederationFactory {
     }
   }
 
-  handleInterfaceObjectForInternalGraph(
-    internalSubgraph: InternalSubgraph,
-    subgraphName: string,
-    interfaceObjectData: EntityInterfaceFederationData,
-  ) {
-    this.internalGraph.setSubgraphName(subgraphName);
-    const interfaceObjectNode = this.internalGraph.addOrUpdateNode(interfaceObjectData.typeName, { isAbstract: true });
-    for (const entityTypeName of interfaceObjectData.concreteTypeNames || []) {
-      const entityNode = this.internalGraph.addOrUpdateNode(entityTypeName);
-      const entityDataNode = this.internalGraph.addEntityDataNode(entityTypeName);
-      for (const satisfiedFieldSet of interfaceObjectNode.satisfiedFieldSets) {
-        entityNode.satisfiedFieldSets.add(satisfiedFieldSet);
+  handleInterfaceObjectForInternalGraph({
+    entityData,
+    internalSubgraph,
+    interfaceObjectData,
+    interfaceObjectNode,
+    resolvableKeyFieldSets,
+    subgraphName,
+  }: InterfaceObjectForInternalGraphOptions) {
+    const entityGraphNode = this.internalGraph.addOrUpdateNode(entityData.typeName);
+    const entityDataNode = this.internalGraph.addEntityDataNode(entityData.typeName);
+    for (const satisfiedFieldSet of interfaceObjectNode.satisfiedFieldSets) {
+      entityGraphNode.satisfiedFieldSets.add(satisfiedFieldSet);
+      if (resolvableKeyFieldSets.has(satisfiedFieldSet)) {
         entityDataNode.addTargetSubgraphByFieldSet(satisfiedFieldSet, subgraphName);
       }
-      const fieldDatas = interfaceObjectData.fieldDatasBySubgraphName.get(subgraphName);
-      for (const { name, namedTypeName } of fieldDatas || []) {
-        this.internalGraph.addEdge(entityNode, this.internalGraph.addOrUpdateNode(namedTypeName), name);
-      }
-      this.internalGraph.addEdge(interfaceObjectNode, entityNode, entityTypeName, true);
-      this.addValidPrimaryKeyTargetsFromInterfaceObject(
-        internalSubgraph,
-        interfaceObjectNode.typeName,
-        getOrThrowError(this.entityDataByTypeName, entityTypeName, 'entityDataByTypeName'),
-        entityNode,
-      );
     }
+    const fieldDatas = interfaceObjectData.fieldDatasBySubgraphName.get(subgraphName);
+    for (const { name, namedTypeName } of fieldDatas || []) {
+      this.internalGraph.addEdge(entityGraphNode, this.internalGraph.addOrUpdateNode(namedTypeName), name);
+    }
+    this.internalGraph.addEdge(interfaceObjectNode, entityGraphNode, entityData.typeName, true);
+    this.addValidPrimaryKeyTargetsFromInterfaceObject(
+      internalSubgraph,
+      interfaceObjectNode.typeName,
+      entityData,
+      entityGraphNode,
+    );
   }
 
   handleEntityInterfaces() {
-    for (const [typeName, entityInterfaceData] of this.entityInterfaceFederationDataByTypeName) {
+    for (const [entityInterfaceTypeName, entityInterfaceData] of this.entityInterfaceFederationDataByTypeName) {
       subtractSourceSetFromTargetSet(
         entityInterfaceData.interfaceFieldNames,
         entityInterfaceData.interfaceObjectFieldNames,
       );
-      const entityInterface = getOrThrowError(this.parentDefinitionDataByTypeName, typeName, PARENT_DEFINITION_DATA);
+      const entityInterface = getOrThrowError(
+        this.parentDefinitionDataByTypeName,
+        entityInterfaceTypeName,
+        PARENT_DEFINITION_DATA,
+      );
       if (entityInterface.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
         // TODO error
         continue;
@@ -1247,11 +1253,15 @@ export class FederationFactory {
           'internalSubgraphBySubgraphName',
         );
         const configurationDataMap = internalSubgraph.configurationDataByParentTypeName;
-        const concreteTypeNames = this.concreteTypeNamesByAbstractTypeName.get(typeName);
+        const concreteTypeNames = this.concreteTypeNamesByAbstractTypeName.get(entityInterfaceTypeName);
         if (!concreteTypeNames) {
           continue;
         }
-        const interfaceObjectConfiguration = getOrThrowError(configurationDataMap, typeName, 'configurationDataMap');
+        const interfaceObjectConfiguration = getOrThrowError(
+          configurationDataMap,
+          entityInterfaceTypeName,
+          'configurationDataMap',
+        );
         const keys = interfaceObjectConfiguration.keys;
         if (!keys) {
           // TODO no keys error
@@ -1260,6 +1270,8 @@ export class FederationFactory {
         interfaceObjectConfiguration.entityInterfaceConcreteTypeNames = entityInterfaceData.concreteTypeNames;
         const fieldNames = interfaceObjectConfiguration.fieldNames;
         const authorizationData = this.authorizationDataByParentTypeName.get(entityInterfaceData.typeName);
+        this.internalGraph.setSubgraphName(subgraphName);
+        const interfaceObjectNode = this.internalGraph.addOrUpdateNode(entityInterfaceTypeName, { isAbstract: true });
         for (const concreteTypeName of concreteTypeNames) {
           if (configurationDataMap.has(concreteTypeName)) {
             // error TODO
@@ -1291,17 +1303,18 @@ export class FederationFactory {
             continue;
           }
           // The subgraph locations of the interface object must be added to the concrete types that implement it
-          const entityData = this.entityDataByTypeName.get(concreteTypeName);
-          if (entityData) {
-            // TODO error if not an entity
-            entityData.subgraphNames.add(subgraphName);
-          }
+          const entityData = getOrThrowError(this.entityDataByTypeName, concreteTypeName, 'entityDataByTypeName');
+          entityData.subgraphNames.add(subgraphName);
           const configurationData: ConfigurationData = {
             fieldNames,
             isRootNode: true,
             keys,
             typeName: concreteTypeName,
           };
+          const resolvableKeyFieldSets = new Set<string>();
+          for (const key of keys.filter((k) => !k.disableEntityResolver)) {
+            resolvableKeyFieldSets.add(key.selectionSet);
+          }
           for (const fieldName of entityInterfaceData.interfaceObjectFieldNames) {
             const existingFieldData = concreteTypeData.fieldDataByFieldName.get(fieldName);
             if (existingFieldData) {
@@ -1311,13 +1324,20 @@ export class FederationFactory {
             const interfaceFieldData = getOrThrowError(
               entityInterface.fieldDataByFieldName,
               fieldName,
-              `${typeName}.fieldDataByFieldName`,
+              `${entityInterfaceTypeName}.fieldDataByFieldName`,
             );
             concreteTypeData.fieldDataByFieldName.set(fieldName, { ...interfaceFieldData });
           }
           configurationDataMap.set(concreteTypeName, configurationData);
+          this.handleInterfaceObjectForInternalGraph({
+            internalSubgraph,
+            subgraphName,
+            interfaceObjectData: entityInterfaceData,
+            interfaceObjectNode,
+            resolvableKeyFieldSets,
+            entityData,
+          });
         }
-        this.handleInterfaceObjectForInternalGraph(internalSubgraph, subgraphName, entityInterfaceData);
       }
     }
   }

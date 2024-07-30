@@ -112,6 +112,15 @@ export type VisitFieldSetOptions = {
   graphNode?: GraphNode;
 };
 
+export type InterfaceObjectForInternalGraphOptions = {
+  entityData: EntityData;
+  interfaceObjectData: EntityInterfaceFederationData;
+  interfaceObjectNode: GraphNode;
+  internalSubgraph: InternalSubgraph;
+  resolvableKeyFieldSets: Set<string>;
+  subgraphName: string;
+};
+
 export function validateImplicitFieldSets({
   configurationData,
   fieldSets,
