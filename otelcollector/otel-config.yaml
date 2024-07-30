@@ -60,5 +60,5 @@ service:
       exporters: [clickhouse]
   telemetry:
     metrics:
-      level: ${OTEL_PROMETHEUS_LEVEL}
-      address: ${OTEL_PROMETHEUS_LISTEN_ADDR}
+      level: ${PROMETHEUS_LEVEL}
+      address: ${PROMETHEUS_LISTEN_ADDR}
