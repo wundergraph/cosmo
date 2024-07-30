@@ -261,12 +261,12 @@ func TestValidateExposedMetrics(t *testing.T) {
 		})
 
 		res, err := client.PublishGraphQLMetrics(ctx, req)
-		assert.Nil(t, err)
+		require.Nil(t, err)
 		assert.NotNil(t, res)
 
 		metrics, err := registry.Gather()
+		require.Nil(t, err)
 		assert.NotNil(t, metrics)
-		assert.Nil(t, err)
 
 		requestCount := findMetricFamilyByName(metrics, "http_requests_total")
 		metric := requestCount.GetMetric()[0]
