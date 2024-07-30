@@ -238,24 +238,21 @@ export default function App() {
     setIsMounted(true);
   }, [isMounted]);
 
+  const getSchema = async () => {
+    const res = await fetch(url, {
+      body: JSON.stringify({
+        operationName: 'IntrospectionQuery',
+        query: getIntrospectionQuery(),
+      }),
+      method: 'POST',
+      headers: JSON.parse(headers),
+    });
+    setSchema(buildClientSchema((await res.json()).data));
+  };
+
   useEffect(() => {
-    const getSchema = async () => {
-      const res = await fetch(url, {
-        body: JSON.stringify({
-          operationName: 'IntrospectionQuery',
-          query: getIntrospectionQuery(),
-        }),
-        method: 'POST',
-      });
-      setSchema(buildClientSchema((await res.json()).data));
-    };
-
-    if (schema) {
-      return;
-    }
-
     getSchema();
-  }, []);
+  }, [headers]);
 
   const fetcher = useMemo(() => {
     const onFetch = (response: any) => {
