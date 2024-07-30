@@ -18,6 +18,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	io_prometheus_client "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	"github.com/wundergraph/cosmo/graphqlmetrics/pkg/telemetry"
@@ -47,7 +48,7 @@ func TestExposingPrometheusMetrics(t *testing.T) {
 	}
 
 	freePort, err := freeport.GetFreePort()
-	assert.Nil(t, err)
+	require.Nil(t, err)
 	prometheusListenAddr := fmt.Sprintf("0.0.0.0:%d", freePort)
 
 	type tc struct {
@@ -110,12 +111,12 @@ func TestExposingPrometheusMetrics(t *testing.T) {
 			resp, err := http.Get(endpoint)
 
 			if resp != nil {
+				defer resp.Body.Close()
 				// the case when metrics server should be enabled
 				assert.Equal(t, true, tt.prom.Enabled)
 				assert.Nil(t, err)
 				assert.Equal(t, tt.statusCode, resp.StatusCode)
 
-				defer resp.Body.Close()
 			} else {
 				// the case when metrics server should be disabled
 				// there will be no response and therefore no status code
@@ -124,6 +125,9 @@ func TestExposingPrometheusMetrics(t *testing.T) {
 			}
 		})
 	}
+	t.Cleanup(func() {
+
+	})
 }
 
 func TestValidateExposedMetrics(t *testing.T) {
@@ -132,11 +136,11 @@ func TestValidateExposedMetrics(t *testing.T) {
 	}
 
 	prometheusServerPort, err := freeport.GetFreePort()
-	assert.Nil(t, err)
+	require.Nil(t, err)
 	prometheusListenAddr := fmt.Sprintf("0.0.0.0:%d", prometheusServerPort)
 
 	mainServerPort, err := freeport.GetFreePort()
-	assert.Nil(t, err)
+	require.Nil(t, err)
 	mainListenAddr := fmt.Sprintf("0.0.0.0:%d", mainServerPort)
 
 	registry := prometheus.NewRegistry()
