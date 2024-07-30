@@ -267,7 +267,6 @@ func TestValidateExposedMetrics(t *testing.T) {
 		assert.NotNil(t, metrics)
 		assert.Nil(t, err)
 
-		fmt.Println(metrics)
 		requestCount := findMetricFamilyByName(metrics, "http_requests_total")
 		metric := requestCount.GetMetric()[0]
 		count := metric.Counter.GetValue()
