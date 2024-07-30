@@ -349,7 +349,7 @@ const CreateAPIKeyDialog = ({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent
                           align="start"
-                          className="scrollbar-custom max-h-[calc(var(--radix-dropdown-menu-content-available-height)_-24px)] overflow-y-auto"
+                          className="scrollbar-custom max-h-[min(calc(var(--radix-dropdown-menu-content-available-height)_-24px),384px)] overflow-y-auto"
                         >
                           {Object.entries(groupedFederatedGraphs ?? {}).map(
                             ([namespace, graphs]) => {
@@ -413,7 +413,7 @@ const CreateAPIKeyDialog = ({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent
                           align="start"
-                          className="scrollbar-custom max-h-[calc(var(--radix-dropdown-menu-content-available-height)_-24px)] overflow-y-auto"
+                          className="scrollbar-custom max-h-[min(calc(var(--radix-dropdown-menu-content-available-height)_-24px),384px)] overflow-y-auto"
                         >
                           {Object.entries(groupedSubgraphs ?? {}).map(
                             ([namespace, graphs]) => {
