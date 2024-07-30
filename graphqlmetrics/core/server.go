@@ -75,7 +75,7 @@ func (s *Server) bootstrap(ctx context.Context) {
 		s.prometheusServer = telemetry.NewPrometheusServer(s.logger, s.metricConfig.Prometheus.ListenAddr, s.metricConfig.Prometheus.Path, s.registry)
 		interceptors = append(
 			interceptors,
-			s.metricConfig.PrometheusUnaryInterceptor(),
+			s.metricConfig.ObservabilityInterceptor(),
 		)
 	}
 
