@@ -2,7 +2,6 @@ package telemetry
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
-	"go.opentelemetry.io/otel/attribute"
 
 	otelmetric "go.opentelemetry.io/otel/metric"
 )
@@ -30,7 +29,7 @@ func NewTelemetryConfig(serviceVersion string, prometheusConfig PrometheusConfig
 	}
 }
 
-// Config represents the configuration for the agent.
+// Config represents the telemetry configuration.
 type Config struct {
 	// Name represents the service name for metrics. The default value is cosmo-router.
 	Name string
@@ -38,11 +37,9 @@ type Config struct {
 	Version string
 	// Prometheus includes the Prometheus configuration
 	Prometheus PrometheusConfig
-	// CustomPrometheusMetrics to be collected
+	// CustomMetrics to be collected
 	CustomMetrics CustomMetrics
-
-	ResourceAttributes []attribute.KeyValue
-
+	// MetricStore the store to collect the metrics in
 	MetricStore Provider
 }
 
