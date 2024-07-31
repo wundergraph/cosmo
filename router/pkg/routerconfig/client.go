@@ -9,8 +9,6 @@ import (
 type Response struct {
 	// Config is the marshaled router config
 	Config *nodev1.RouterConfig
-	// ETag is the ETag of the config. Only set if the config is fetched from the S3 client
-	ETag string
 }
 
 type Client interface {
