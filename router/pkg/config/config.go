@@ -602,12 +602,6 @@ func LoadConfig(configFilePath string, envOverride string) (*LoadResult, error) 
 		return nil, err
 	}
 
-	// Custom validation for the config
-
-	if cfg.Config.RouterConfigPath == "" && cfg.Config.Graph.Token == "" {
-		return nil, fmt.Errorf("either router config path or graph token must be provided")
-	}
-
 	// Post-process the config
 
 	if cfg.Config.DevelopmentMode {

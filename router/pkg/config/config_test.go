@@ -11,14 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestConfigRequiredValues(t *testing.T) {
-	f := createTempFileFromFixture(t, `
-version: "1"
-`)
-	_, err := LoadConfig(f, "")
-	require.ErrorContains(t, err, "either router config path or graph token must be provided")
-}
-
 func TestTokenNotRequiredWhenPassingStaticConfig(t *testing.T) {
 	f := createTempFileFromFixture(t, `
 version: "1"

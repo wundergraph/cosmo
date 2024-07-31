@@ -445,7 +445,9 @@ func NewRouter(opts ...Option) (*Router, error) {
 			}
 		}
 
-		r.logger.Warn("No graph token provided. The following features are disabled. Not recommended for Production.", zap.Strings("features", disabledFeatures))
+		r.logger.Warn("No graph token provided. The following Cosmo Cloud features are disabled. Not recommended for Production.",
+			zap.Strings("features", disabledFeatures),
+		)
 	}
 
 	if r.developmentMode {
@@ -762,81 +764,81 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		cdnProviders[provider.ID] = provider
 	}
 
-	if r.graphApiToken != "" {
+	var pClient persistedoperation.Client
 
-		var client persistedoperation.Client
+	if provider, ok := cdnProviders[r.persistedOperationsConfig.Storage.ProviderID]; ok {
 
-		if provider, ok := cdnProviders[r.persistedOperationsConfig.Storage.ProviderID]; ok {
-
-			c, err := cdn.NewClient(provider.URL, r.graphApiToken, cdn.Options{
-				Logger:        r.logger,
-				TraceProvider: r.tracerProvider,
-			})
-			if err != nil {
-				return err
-			}
-			client = c
-
-			r.logger.Info("Fetching persisted operations from CDN",
-				zap.String("providerID", provider.ID),
-			)
-		} else if provider, ok := s3Providers[r.persistedOperationsConfig.Storage.ProviderID]; ok {
-
-			c, err := s3.NewClient(provider.Endpoint, &s3.Options{
-				AccessKeyID:      provider.AccessKey,
-				SecretAccessKey:  provider.SecretKey,
-				Region:           provider.Region,
-				UseSSL:           provider.Secure,
-				BucketName:       provider.Bucket,
-				ObjectPathPrefix: r.persistedOperationsConfig.Storage.ObjectPrefix,
-				TraceProvider:    r.tracerProvider,
-			})
-			if err != nil {
-				return err
-			}
-			client = c
-
-			r.logger.Info("Fetching persisted operations from S3 storage",
-				zap.String("providerID", provider.ID),
-			)
-		} else {
-
-			if r.persistedOperationsConfig.Storage.ProviderID != "" {
-				return fmt.Errorf("unknown storage provider id '%s' for persisted operations", r.persistedOperationsConfig.Storage.ProviderID)
-			}
-
-			c, err := cdn.NewClient(r.cdnConfig.URL, r.graphApiToken, cdn.Options{
-				Logger:        r.logger,
-				TraceProvider: r.tracerProvider,
-			})
-			if err != nil {
-				return err
-			}
-			client = c
-
-			r.logger.Debug("Default to Cosmo CDN as persisted operations provider",
-				zap.String("url", r.cdnConfig.URL),
-			)
-		}
-
-		// For backwards compatibility with cdn config field
-		cacheSize := r.persistedOperationsConfig.Cache.Size.Uint64()
-		if cacheSize <= 0 {
-			cacheSize = r.cdnConfig.CacheSize.Uint64()
-		}
-
-		c, err := persistedoperation.NewClient(&persistedoperation.Options{
-			CacheSize:      cacheSize,
-			Logger:         r.logger,
-			ProviderClient: client,
+		c, err := cdn.NewClient(provider.URL, r.graphApiToken, cdn.Options{
+			Logger:        r.logger,
+			TraceProvider: r.tracerProvider,
 		})
 		if err != nil {
 			return err
 		}
-		r.persistedOperationClient = c
+		pClient = c
+
+		r.logger.Info("Fetching persisted operations from CDN",
+			zap.String("providerID", provider.ID),
+		)
+	} else if provider, ok := s3Providers[r.persistedOperationsConfig.Storage.ProviderID]; ok {
+
+		c, err := s3.NewClient(provider.Endpoint, &s3.Options{
+			AccessKeyID:      provider.AccessKey,
+			SecretAccessKey:  provider.SecretKey,
+			Region:           provider.Region,
+			UseSSL:           provider.Secure,
+			BucketName:       provider.Bucket,
+			ObjectPathPrefix: r.persistedOperationsConfig.Storage.ObjectPrefix,
+			TraceProvider:    r.tracerProvider,
+		})
+		if err != nil {
+			return err
+		}
+		pClient = c
+
+		r.logger.Info("Fetching persisted operations from S3 storage",
+			zap.String("providerID", provider.ID),
+		)
+	} else {
+		if r.persistedOperationsConfig.Storage.ProviderID != "" {
+			return fmt.Errorf("unknown storage provider id '%s' for persisted operations", r.persistedOperationsConfig.Storage.ProviderID)
+		}
+
+		if r.graphApiToken == "" {
+			return errors.New("graph token is required to fetch router config from CDN")
+		}
+
+		c, err := cdn.NewClient(r.cdnConfig.URL, r.graphApiToken, cdn.Options{
+			Logger:        r.logger,
+			TraceProvider: r.tracerProvider,
+		})
+		if err != nil {
+			return err
+		}
+		pClient = c
+
+		r.logger.Debug("Default to Cosmo CDN as persisted operations provider",
+			zap.String("url", r.cdnConfig.URL),
+		)
 	}
 
-	var client routerconfig.Client
+	// For backwards compatibility with cdn config field
+	cacheSize := r.persistedOperationsConfig.Cache.Size.Uint64()
+	if cacheSize <= 0 {
+		cacheSize = r.cdnConfig.CacheSize.Uint64()
+	}
+
+	c, err := persistedoperation.NewClient(&persistedoperation.Options{
+		CacheSize:      cacheSize,
+		Logger:         r.logger,
+		ProviderClient: pClient,
+	})
+	if err != nil {
+		return err
+	}
+	r.persistedOperationClient = c
+
+	var rClient routerconfig.Client
 
 	if r.configPoller == nil && r.routerConfigPollerConfig != nil {
 
@@ -856,7 +858,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
-			client = c
+			rClient = c
 
 			r.logger.Info("Polling for router config updates from CDN in the background",
 				zap.String("providerID", provider.ID),
@@ -875,7 +877,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
-			client = c
+			rClient = c
 
 			r.logger.Info("Polling for router config updates from S3 storage in the background",
 				zap.String("providerID", provider.ID),
@@ -897,7 +899,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
-			client = c
+			rClient = c
 			r.logger.Debug("Default to Cosmo CDN as router config provider",
 				zap.String("url", r.cdnConfig.URL),
 			)
@@ -906,7 +908,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.configPoller = configpoller.New(r.graphApiToken,
 			configpoller.WithLogger(r.logger),
 			configpoller.WithPollInterval(r.routerConfigPollerConfig.PollInterval),
-			configpoller.WithClient(client),
+			configpoller.WithClient(rClient),
 		)
 
 	}
