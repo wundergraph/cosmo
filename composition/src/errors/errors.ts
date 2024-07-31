@@ -815,7 +815,7 @@ export function invalidConfigurationDataErrorMessage(typeName: string, fieldName
   );
 }
 
-export function unknownProvidesEntityErrorMessage(fieldPath: string, responseType: string): string {
+export function unknownProvidedObjectErrorMessage(fieldPath: string, responseType: string): string {
   return (
     ` A @provides directive is declared on "${fieldPath}".\n` +
     ` However, the response type "${responseType}" object or object extension definition was not found.`
