@@ -152,7 +152,7 @@ func NewClient(endpoint string, token string, opts Options) (persistedoperation.
 		return nil, err
 	}
 
-	logger := opts.Logger.With(zap.String("component", "persisted_operation_client"))
+	logger := opts.Logger.With(zap.String("component", "persisted_operations_client"))
 
 	return &client{
 		cdnURL:              u,
