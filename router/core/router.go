@@ -799,7 +799,12 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			r.logger.Info("Fetching persisted operations from S3 storage",
 				zap.String("providerID", provider.ID),
 			)
-		} else if client == nil {
+		} else {
+
+			if r.persistedOperationsConfig.Storage.ProviderID != "" {
+				return fmt.Errorf("unknown storage provider id '%s' for persisted operations", r.persistedOperationsConfig.Storage.ProviderID)
+			}
+
 			c, err := cdn.NewClient(r.cdnConfig.URL, r.graphApiToken, cdn.Options{
 				Logger:        r.logger,
 				TraceProvider: r.tracerProvider,
@@ -876,7 +881,11 @@ func (r *Router) bootstrap(ctx context.Context) error {
 				zap.String("providerID", provider.ID),
 				zap.String("interval", r.routerConfigPollerConfig.PollInterval.String()),
 			)
-		} else if client == nil {
+		} else {
+			if r.routerConfigPollerConfig.Storage.ProviderID != "" {
+				return fmt.Errorf("unknown storage provider id '%s' for execution config", r.routerConfigPollerConfig.Storage.ProviderID)
+			}
+
 			if r.graphApiToken == "" {
 				return errors.New("graph token is required to fetch router config from CDN")
 			}
