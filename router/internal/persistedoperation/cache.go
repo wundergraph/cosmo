@@ -2,7 +2,6 @@ package persistedoperation
 
 import (
 	"github.com/dgraph-io/ristretto"
-	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 )
 
 const (
@@ -15,17 +14,17 @@ type OperationsCache struct {
 	Cache *ristretto.Cache[string, []byte]
 }
 
-func (c *OperationsCache) key(clientName string, operationHash []byte) string {
-	return clientName + unsafebytes.BytesToString(operationHash)
+func (c *OperationsCache) key(clientName string, operationHash string) string {
+	return clientName + operationHash
 }
 
 func (c *OperationsCache) Get(clientName string, operationHash string) []byte {
 	// Since we're returning nil when the item is not found, we don't need to
 	// check the return value from the cache nor the type assertion
-	item, _ := c.Cache.Get(c.key(clientName, unsafebytes.StringToBytes(operationHash)))
+	item, _ := c.Cache.Get(c.key(clientName, operationHash))
 	return item
 }
 
 func (c *OperationsCache) Set(clientName, operationHash string, operationBody []byte) {
-	c.Cache.Set(c.key(clientName, unsafebytes.StringToBytes(operationHash)), operationBody, int64(len(operationBody)))
+	c.Cache.Set(c.key(clientName, operationHash), operationBody, int64(len(operationBody)))
 }
