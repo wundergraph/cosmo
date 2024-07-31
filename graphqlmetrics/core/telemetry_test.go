@@ -94,8 +94,9 @@ func TestExposingPrometheusMetrics(t *testing.T) {
 				}))
 
 			go func() {
-				if err := svr.Start(stop); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				if err := svr.Start(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 					t.Logf("failed starting main server")
+					stop()
 				}
 			}()
 
@@ -163,8 +164,9 @@ func TestValidateExposedMetrics(t *testing.T) {
 		}))
 
 	go func() {
-		if err := svr.Start(stop); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := svr.Start(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			t.Logf("failed starting main server")
+			stop()
 		}
 	}()
 	defer func() {

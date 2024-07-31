@@ -104,7 +104,7 @@ func (s *Server) bootstrap(ctx context.Context) {
 	}
 }
 
-func (s *Server) Start(stop context.CancelFunc) error {
+func (s *Server) Start() error {
 	if s.server == nil {
 		return errors.New("server not initialized")
 	}
@@ -112,7 +112,6 @@ func (s *Server) Start(stop context.CancelFunc) error {
 	go func() {
 		if err := s.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			s.logger.Error("Could not start server", zap.Error(err))
-			stop()
 		}
 	}()
 

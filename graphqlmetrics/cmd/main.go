@@ -132,8 +132,9 @@ func main() {
 	)
 
 	go func() {
-		if err := svr.Start(stop); err != nil {
+		if err := svr.Start(); err != nil {
 			logger.Error("Could not start server", zap.Error(err))
+			stop()
 		}
 	}()
 
