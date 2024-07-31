@@ -182,7 +182,7 @@ func TestValidateExposedMetrics(t *testing.T) {
 		endpoint := fmt.Sprintf("http://%s%s", prom.ListenAddr, prom.Path)
 		resp, err := http.Get(endpoint)
 		require.Nil(t, err)
-		assert.NotNil(t, resp)
+		require.NotNil(t, resp)
 		defer resp.Body.Close()
 
 		b, err := io.ReadAll(resp.Body)
@@ -190,7 +190,7 @@ func TestValidateExposedMetrics(t *testing.T) {
 
 		metrics := string(b)
 
-		assert.NotNil(t, metrics)
+		require.NotNil(t, metrics)
 
 		expectedMetrics := []string{
 			"promhttp_metric_handler_errors_total",
@@ -239,7 +239,7 @@ func TestValidateExposedMetrics(t *testing.T) {
 		}
 
 		for _, m := range expectedMetrics {
-			assert.True(t, strings.Contains(metrics, m))
+			require.True(t, strings.Contains(metrics, m))
 		}
 	})
 
