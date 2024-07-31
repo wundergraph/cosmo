@@ -1,9 +1,9 @@
 import { ConstDirectiveNode, ConstValueNode, FieldDefinitionNode, Kind, StringValueNode } from 'graphql';
 import { FIELD, REQUIRES_SCOPES, SCOPES, UNION } from './string-constants';
-import { MultiGraph } from 'graphology';
 import { invalidKeyFatalError } from '../errors/errors';
 import { EnumTypeNode, InterfaceTypeNode, ObjectTypeNode, ScalarTypeNode, stringToNameNode } from '../ast/utils';
 import { FieldConfiguration } from '../router-configuration/router-configuration';
+import { FieldData } from '../schema-building/type-definition-data';
 
 export function areSetsEqual<T>(set: Set<T>, other: Set<T>): boolean {
   if (set.size !== other.size) {
@@ -70,9 +70,7 @@ export function doSetsIntersect<T>(set: Set<T>, other: Set<T>): boolean {
 
 export function subtractSourceSetFromTargetSet<T>(source: Set<T>, target: Set<T>) {
   for (const entry of source) {
-    if (target.has(entry)) {
-      target.delete(entry);
-    }
+    target.delete(entry);
   }
 }
 
@@ -221,7 +219,44 @@ export type InvalidArgument = {
   typeString: string;
 };
 
+export type SimpleFieldData = {
+  name: string;
+  namedTypeName: string;
+};
+
+export function fieldDatasToSimpleFieldDatas(fieldDatas: IterableIterator<FieldData>): Array<SimpleFieldData> {
+  const simpleFieldDatas: Array<SimpleFieldData> = [];
+  for (const { name, namedTypeName } of fieldDatas) {
+    simpleFieldDatas.push({ name, namedTypeName });
+  }
+  return simpleFieldDatas;
+}
+
+// Only used to assess the output type of field definitions for graph selection set rendering
+export function isNodeLeaf(kind?: Kind) {
+  // Base scalars are not added to parent definition data
+  if (!kind) {
+    return true;
+  }
+  switch (kind) {
+    case Kind.OBJECT_TYPE_DEFINITION:
+    case Kind.INTERFACE_TYPE_DEFINITION:
+    case Kind.UNION_TYPE_DEFINITION:
+      return false;
+    default:
+      return true;
+  }
+}
+
+export type GraphFieldData = {
+  name: string;
+  namedTypeName: string;
+  isLeaf: boolean;
+  subgraphNames: Set<string>;
+};
+
 export type EntityInterfaceSubgraphData = {
+  fieldDatas: Array<SimpleFieldData>;
   interfaceFieldNames: Set<string>;
   interfaceObjectFieldNames: Set<string>;
   isInterfaceObject: boolean;
@@ -231,6 +266,7 @@ export type EntityInterfaceSubgraphData = {
 
 // The accumulation of all EntityInterfaceSubgraphData for the type name
 export type EntityInterfaceFederationData = {
+  fieldDatasBySubgraphName: Map<string, Array<SimpleFieldData>>;
   interfaceFieldNames: Set<string>;
   interfaceObjectFieldNames: Set<string>;
   interfaceObjectSubgraphs: Set<string>;
@@ -243,6 +279,10 @@ export function newEntityInterfaceFederationData(
   subgraphName: string,
 ): EntityInterfaceFederationData {
   return {
+    fieldDatasBySubgraphName: new Map<string, Array<SimpleFieldData>>().set(
+      subgraphName,
+      entityInterfaceData.fieldDatas,
+    ),
     interfaceFieldNames: new Set<string>(entityInterfaceData.interfaceFieldNames),
     interfaceObjectFieldNames: new Set<string>(entityInterfaceData.interfaceObjectFieldNames),
     interfaceObjectSubgraphs: new Set<string>(entityInterfaceData.isInterfaceObject ? [subgraphName] : []),
@@ -259,6 +299,7 @@ export function upsertEntityInterfaceFederationData(
   subgraphData: EntityInterfaceSubgraphData,
   subgraphName: string,
 ): boolean {
+  federationData.fieldDatasBySubgraphName.set(subgraphName, subgraphData.fieldDatas);
   addIterableValuesToSet(subgraphData.interfaceFieldNames, federationData.interfaceFieldNames);
   addIterableValuesToSet(subgraphData.interfaceObjectFieldNames, federationData.interfaceObjectFieldNames);
   // interface objects should not define any concrete types
@@ -306,42 +347,6 @@ class StackSet {
       this.set.delete(value);
     }
   }
-}
-
-export function hasSimplePath(graph: MultiGraph, source: string, target: string): boolean {
-  if (!graph.hasNode(source) || !graph.hasNode(target)) {
-    return false;
-  }
-
-  const stack = [graph.outboundNeighbors(source)];
-  const visited = new StackSet(source);
-  let children, child;
-
-  while (stack.length > 0) {
-    children = stack[stack.length - 1];
-    child = children.pop();
-
-    if (!child) {
-      stack.pop();
-      continue;
-    }
-    if (visited.has(child)) {
-      continue;
-    }
-
-    if (child === target) {
-      return true;
-    }
-
-    visited.push(child);
-
-    const outboundNeighbours = graph.outboundNeighbors(child);
-    if (outboundNeighbours.length < 0) {
-      continue;
-    }
-    stack.push(outboundNeighbours);
-  }
-  return false;
 }
 
 export function getValueOrDefault<K, V>(map: Map<K, V>, key: K, constructor: () => V): V {
@@ -608,4 +613,12 @@ export function getSingleSetEntry<T>(set: Set<T>): T | undefined {
   for (const entry of set) {
     return entry;
   }
+}
+
+export function add<T>(set: Set<T>, key: T): boolean {
+  if (set.has(key)) {
+    return false;
+  }
+  set.add(key);
+  return true;
 }
