@@ -161,10 +161,9 @@ github.com/vektah/gqlparser/v2 v2.5.11 h1:JJxLtXIoN7+3x6MBdtIP59TP1RANnY7pXOaDnA
 github.com/vektah/gqlparser/v2 v2.5.11/go.mod h1:1rCcfwB2ekJofmluGWXMSEnPMZgbxzwj6FaZ/4OT8Cc=
 github.com/wundergraph/cosmo/composition-go v0.0.0-20240124120900-5effe48a4a1d h1:NEUrhuqOaTO1dpW8pz2tu6dKbQAqFvgiF/m4NXdzZm0=
 github.com/wundergraph/cosmo/composition-go v0.0.0-20240124120900-5effe48a4a1d/go.mod h1:9I3gPMAlAY+m1/cFL20iN7XHTyuZd3VT5ijccdU/FsI=
-github.com/wundergraph/cosmo/router v0.0.0-20240730104143-9a276d8124cb h1:3Tn6x28A5rLgcytqFp2Xl5xHcNpoWqdeObcwXZgCpsk=
-github.com/wundergraph/cosmo/router v0.0.0-20240730104143-9a276d8124cb/go.mod h1:0FOIMzc1cY8c4rUczyhmI2es84HGoEJV2MIbDbiEWzg=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.67 h1:kfLN8cjyicMCKtfhqL2CCUiltR/J8bhE5/424bq/ddc=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.67/go.mod h1:SGhUbJH/qL629M8MEixNsfIqpZOHkDrZIAHzPS+LLRs=
+github.com/wundergraph/cosmo/router v0.0.0-20240730132010-9cf37161de15 h1:+TzR5h2Kttk5nXwlCw3ghbyAo/TxaxwjdsYbOwb97tQ=
+github.com/wundergraph/cosmo/router v0.0.0-20240730132010-9cf37161de15/go.mod h1:mVxfcZ9F8TY0sAmCIl4nTS1m5bTgFxifcBqk5v5N0qk=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.68 h1:oAMrjXanQnvORIos+FYbRH2Mq813YxDZdKP+gEUKQDo=
 github.com/xrash/smetrics v0.0.0-20231213231151-1d8dd44e695e h1:+SOyEddqYF09QP7vr7CgJ1eti3pY9Fn3LHO1M1r/0sI=
 github.com/xrash/smetrics v0.0.0-20231213231151-1d8dd44e695e/go.mod h1:N3UwUGtsrSj3ccvlPHLoLsHnpR27oXr4ZE984MbSER8=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
