@@ -2,22 +2,38 @@ package telemetry
 
 import (
 	"context"
+	"strings"
 
 	"connectrpc.com/connect"
 	"go.opentelemetry.io/otel/attribute"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
-const (
-	WgOperationName     = attribute.Key("wg.operation.name")
-	WgOperationMethod   = attribute.Key("wg.operation.method")
-	WgOperationProtocol = attribute.Key("wg.operation.protocol")
-)
+func splitRequestSpec(procedure string) (string, string) {
+	parts := strings.Split(procedure, "/")
+	var serviceName, methodName string
+	if len(parts) > 1 {
+		serviceName = parts[0]
+		methodName = parts[1]
+	} else {
+		methodName = procedure
+	}
+	return serviceName, methodName
+}
 
 func defaultAttributes(req connect.AnyRequest) []attribute.KeyValue {
+	serviceName, methodName := splitRequestSpec(req.Spec().Procedure)
+	host := req.Header().Get("Host")
+	httpMethod := req.HTTPMethod()
+	protocol := req.Peer().Protocol
+
 	return []attribute.KeyValue{
-		WgOperationName.String(req.Spec().Procedure),
-		WgOperationMethod.String(req.HTTPMethod()),
-		WgOperationProtocol.String(req.Peer().Protocol),
+		semconv.RPCSystemConnectRPC,
+		semconv.RPCServiceKey.String(serviceName),
+		semconv.RPCMethodKey.String(methodName),
+		semconv.HostName(host),
+		semconv.NetworkProtocolName(protocol),
+		semconv.HTTPRequestMethodKey.String(httpMethod),
 	}
 }
 
@@ -26,8 +42,17 @@ func (c *Config) ObservabilityInterceptor() connect.UnaryInterceptorFunc {
 		func(next connect.UnaryFunc) connect.UnaryFunc {
 			return connect.UnaryFunc(func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 				res, err := next(ctx, req)
+
+				// connect.CodeOK does not exist
+				var statusCode int = 0
+				if err != nil {
+					statusCode = int(connect.CodeOf(err))
+				}
+
 				attributes := defaultAttributes(req)
+				attributes = append(attributes, semconv.RPCGRPCStatusCodeKey.Int(statusCode))
 				c.MetricStore.MeasureRequestCount(ctx, attributes...)
+
 				return res, err
 			})
 		},
