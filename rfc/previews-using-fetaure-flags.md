@@ -9,7 +9,7 @@ This RFC proposes a way to create a Supergraph Preview for every pull request. T
 
 When developing a new feature, it's important to test it in a production-like environment. By creating a preview for every pull request, developers can test their changes in a production-like environment before merging them.
 
-With Graph Feature Flags, you can set up your continuous integration pipeline to deploy a new feature subgraph and feature flag for every pull request. This way, you can create one composition for every pull request without having to deploy a whole new set of subgraphs. All we need is a staging environment that's deployed from all main branches of your subgraphs. With graph feature flags, we can then "override" the subgraphs for a specific pull request.
+With [Graph Feature Flags](https://cosmo-docs.wundergraph.com/concepts/feature-flags), you can set up your continuous integration pipeline to deploy a new feature subgraph and feature flag for every pull request. This way, you can create one composition for every pull request without having to deploy a whole new set of subgraphs. All we need is a staging environment that's deployed from all main branches of your subgraphs. With graph feature flags, we can then "override" the subgraphs for a specific pull request.
 
 ## Motivation
 
