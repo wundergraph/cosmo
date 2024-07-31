@@ -816,7 +816,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 
 		// For backwards compatibility with cdn config field
 		cacheSize := r.persistedOperationsConfig.Cache.Size.Uint64()
-		if cacheSize == 0 {
+		if cacheSize <= 0 {
 			cacheSize = r.cdnConfig.CacheSize.Uint64()
 		}
 
