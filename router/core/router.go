@@ -750,14 +750,14 @@ func (r *Router) bootstrap(ctx context.Context) error {
 
 	for _, provider := range r.storageProviders.S3 {
 		if _, ok := s3Providers[provider.ID]; ok {
-			return fmt.Errorf("duplicate s3 provider with id: %s", provider.ID)
+			return fmt.Errorf("duplicate s3 storage provider with id '%s'", provider.ID)
 		}
 		s3Providers[provider.ID] = provider
 	}
 
 	for _, provider := range r.storageProviders.CDN {
 		if _, ok := cdnProviders[provider.ID]; ok {
-			return fmt.Errorf("duplicate cdn provider with id: %s", provider.ID)
+			return fmt.Errorf("duplicate cdn storage provider with id '%s'", provider.ID)
 		}
 		cdnProviders[provider.ID] = provider
 	}
