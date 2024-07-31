@@ -13,8 +13,9 @@ func splitRequestSpec(procedure string) (string, string) {
 	parts := strings.Split(procedure, "/")
 	var serviceName, methodName string
 	if len(parts) > 1 {
-		serviceName = parts[0]
-		methodName = parts[1]
+		// /wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService/
+		serviceName = parts[1]
+		methodName = parts[2]
 	} else {
 		methodName = procedure
 	}

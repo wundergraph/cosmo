@@ -259,16 +259,58 @@ func TestValidateExposedMetrics(t *testing.T) {
 
 		res, err := client.PublishGraphQLMetrics(ctx, req)
 		require.Nil(t, err)
-		assert.NotNil(t, res)
+		require.NotNil(t, res)
 
 		metrics, err := registry.Gather()
 		require.Nil(t, err)
-		assert.NotNil(t, metrics)
+		require.NotNil(t, metrics)
 
 		requestCount := findMetricFamilyByName(metrics, "http_requests_total")
 		metric := requestCount.GetMetric()[0]
 		count := metric.Counter.GetValue()
 		assert.Equal(t, float64(1), count)
+
+		labels := metric.Label
+
+		expectedLabels := []*io_prometheus_client.LabelPair{
+			{
+				Name:  PointerOf("host_name"),
+				Value: PointerOf(mainListenAddr),
+			},
+			{
+				Name:  PointerOf("http_request_method"),
+				Value: PointerOf("POST"),
+			},
+			{
+				Name:  PointerOf("network_protocol_name"),
+				Value: PointerOf("connect"),
+			},
+			{
+				Name:  PointerOf("otel_scope_name"),
+				Value: PointerOf("cosmo.graphqlmetrics.prometheus"),
+			},
+			{
+				Name:  PointerOf("otel_scope_version"),
+				Value: PointerOf("0.0.1"),
+			},
+			{
+				Name:  PointerOf("rpc_grpc_status_code"),
+				Value: PointerOf("0"),
+			},
+			{
+				Name:  PointerOf("rpc_method"),
+				Value: PointerOf("PublishGraphQLMetrics"),
+			},
+			{
+				Name:  PointerOf("rpc_service"),
+				Value: PointerOf("wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService"),
+			},
+			{
+				Name:  PointerOf("rpc_system"),
+				Value: PointerOf("connect_rpc"),
+			},
+		}
+		require.Equal(t, expectedLabels, labels)
 	})
 }
 
@@ -279,4 +321,8 @@ func findMetricFamilyByName(mf []*io_prometheus_client.MetricFamily, name string
 		}
 	}
 	return nil
+}
+
+func PointerOf[T any](t T) *T {
+	return &t
 }
