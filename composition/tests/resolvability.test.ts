@@ -19,7 +19,7 @@ import {
   versionOneRouterDefinitions,
   versionTwoRouterDefinitions,
 } from './utils/utils';
-import { newRootFieldData, UnresolvableFieldData } from '../src/resolvability-graph/utils';
+import { newRootFieldData, UnresolvableFieldData } from '../src';
 
 describe('Field resolvability tests', () => {
   test('that shared queries that return a nested type that is only resolvable over multiple subgraphs are valid', () => {
@@ -1134,8 +1134,71 @@ describe('Field resolvability tests', () => {
   });
 
   test('that an error is returned if an interface object cannot be reached', () => {
-    const { errors, federationResult } = federateSubgraphs([subgraphBH, subgraphBJ]);
+    const fieldPath = 'query.entity';
+    const entityAncestorData: EntityAncestorData = {
+      fieldSetsByTargetSubgraphName: new Map<string, Set<string>>(),
+      subgraphName: 'subgraph-bh',
+      typeName: 'Entity',
+    };
+    const rootFieldData = newRootFieldData('Query', 'entity', new Set<string>(['subgraph-bh']));
+    const unresolvableFieldData: UnresolvableFieldData = {
+      fieldName: 'isNew',
+      selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
+        isLeaf: true,
+        name: 'isNew',
+      } as GraphFieldData),
+      subgraphNames: new Set<string>(['subgraph-bi']),
+      typeName: 'Entity',
+    };
+    const { errors } = federateSubgraphs([subgraphBH, subgraphBJ]);
     expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
+    expect(errors![0]).toStrictEqual(
+      unresolvablePathError(
+        unresolvableFieldData,
+        generateResolvabilityErrorReasons({ entityAncestorData, rootFieldData, unresolvableFieldData }),
+      ),
+    );
+  });
+
+  test('that a shared entity field cycle is resolvable', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphBK, subgraphBL]);
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(
+        versionTwoRouterDefinitions +
+          `
+          type EntityOne {
+            age: Int!
+            entityTwo: EntityTwo!
+            id: ID!
+            name: String!
+          }
+      
+          type EntityThree {
+            age: Int!
+            entityTwo: EntityTwo!
+            id: ID!
+            idTwo: ID!
+            name: String!
+          }
+      
+          type EntityTwo {
+            age: Int!
+            entityThree: EntityThree!
+            id: ID!
+            idTwo: ID!
+            name: String!
+          }
+          
+          type Query {
+            entity: EntityOne!
+          }
+      
+          scalar openfed__Scope
+    `,
+      ),
+    );
   });
 });
 
@@ -2252,6 +2315,58 @@ const subgraphBJ: Subgraph = {
     type Interface @key(fields: "id", resolvable: false) @interfaceObject {
       id: ID!
       isNew: Boolean!
+    }
+  `),
+};
+
+const subgraphBK: Subgraph = {
+  name: 'subgraph-bk',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entity: EntityOne!
+    }
+    
+    type EntityOne @key(fields: "id") {
+      id: ID!
+      name: String!
+      entityTwo: EntityTwo! @shareable
+    }
+    
+    type EntityTwo @key(fields: "id") {
+      id: ID!
+      name: String!
+      entityThree: EntityThree! @shareable
+    }
+    
+    type EntityThree @key(fields: "id") {
+      id: ID!
+      name: String!
+      entityTwo: EntityTwo! @shareable
+    }
+  `),
+};
+
+const subgraphBL: Subgraph = {
+  name: 'subgraph-bl',
+  url: '',
+  definitions: parse(`
+    type EntityOne @key(fields: "id") {
+      id: ID!
+      age: Int!
+      entityTwo: EntityTwo! @shareable
+    }
+    
+    type EntityTwo @key(fields: "idTwo") {
+      idTwo: ID!
+      age: Int!
+      entityThree: EntityThree! @shareable
+    }
+    
+    type EntityThree @key(fields: "idTwo") {
+      idTwo: ID!
+      age: Int!
+      entityTwo: EntityTwo! @shareable
     }
   `),
 };

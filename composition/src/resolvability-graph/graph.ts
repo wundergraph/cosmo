@@ -135,11 +135,25 @@ export class Graph {
     for (const [sharedFieldPath, entityNodeNames] of entityNodeNamesBySharedFieldPath) {
       const isFieldShared = entityNodeNames.size > 1;
       let failureResult: EntityResolvabilityFailure | undefined;
-      // If it's a shared field, the path needs to be assessed collectively
+      /* In the event of a shared entity field, the validation changes slightly.
+       * The fields are linked through a mutual entity ancestor, and may/may not have additional routing through a key.
+       * In this case, the following must occur:
+       * 1. sharedResolvableFieldNamesByRelativeFieldPath will be created and passed to ensure the resolvability of
+       * paths are assessed collectively, rather than by a single instance of the shared fields
+       * */
       const sharedResolvableFieldNamesByRelativeFieldPath = isFieldShared
         ? new Map<string, NodeResolutionData>()
         : undefined;
+      /*
+       * 2. unresolvableSharedFieldPaths is used to determine whether there are still unresolvable paths even after
+       * all shared fields have been analysed.
+       * */
       const unresolvableSharedFieldPaths = new Set<string>();
+      /*
+       * 3. nestedEntityNodeNamesBySharedFieldPath should be a reference to the same set, to ensure nested shared fields
+       * are analysed as shared fields when moving deeper.
+       * */
+      const sharedNestedEntityNodeNamesBySharedFieldPath = new Map<string, Set<string>>();
       for (const entityNodeName of entityNodeNames) {
         const entityNode = this.nodeByNodeName.get(entityNodeName);
         if (!entityNode) {
@@ -163,7 +177,7 @@ export class Graph {
         const nestedEntityNodeNamesBySharedFieldPath = getValueOrDefault(
           nestedEntityNodeNamesBySharedFieldPathByParentNodeName,
           entityNodeName,
-          () => new Map<string, Set<string>>(),
+          () => (isFieldShared ? sharedNestedEntityNodeNamesBySharedFieldPath : new Map<string, Set<string>>()),
         );
         const walker = new Walker({
           interSubgraphNodes,
