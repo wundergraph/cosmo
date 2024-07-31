@@ -58,3 +58,7 @@ service:
       # Order is important here. Otherwise, the attributes processor will not be able to read the attributes from the auth context.
       processors: [attributes/from_auth_context, batch]
       exporters: [clickhouse]
+  telemetry:
+    metrics:
+      level: ${PROMETHEUS_LEVEL}
+      address: ${PROMETHEUS_LISTEN_ADDR}

@@ -19,5 +19,11 @@ spec:
       targetPort: healthcheck
       protocol: TCP
       name: healthcheck
+    {{- if and .Values.configuration.prometheus.enabled (not (eq .Values.configuration.prometheus.level "none")) }}
+    - port: {{ .Values.configuration.prometheus.port }}
+      targetPort: metrics
+      protocol: TCP
+      name: metrics
+    {{- end }}
   selector:
     {{- include "otelcollector.selectorLabels" . | nindent 4 }}

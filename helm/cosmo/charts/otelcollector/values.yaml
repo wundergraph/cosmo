@@ -140,3 +140,21 @@ existingSecret: ""
 
 configuration:
   clickhouseDsn: "clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4"
+  # -- Use this section to configure prometheus metrics.
+  prometheus:
+    # -- Enables prometheus metrics support. Default is false.
+    enabled: false
+    # -- The host to bind to defautls to 127.0.0.1 to avoid opening the metrics endpoint by default.
+    host: 127.0.0.1
+    # -- The port where metrics are exposed. Default is port 8088.
+    port: 8088
+    # -- The level of telemetry to be collected. Default is "basic". One of "none", "basic", "normal", "detailed".
+    level: basic
+    # Use this section to disable/enable pod monitoring over [GCP managed collection](https://cloud.google.com/stackdriver/docs/managed-prometheus/setup-managed#config-mgd-collection).
+    gcpMonitoring:
+      # -- Enables gcp support . Default is false.
+      enabled: false
+      # -- Scrape interval. Default is "60s".
+      interval: 60s
+      # -- Scrape timeout. Default is "50s".
+      timeout: 50s

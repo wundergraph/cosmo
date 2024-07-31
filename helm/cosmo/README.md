@@ -142,6 +142,13 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | minio.service.ports.minio | int | `9000` |  |
 | minio.service.ports.minio_admin | int | `9001` |  |
 | otelcollector.configuration.clickhouseDsn | string | `"clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4"` |  |
+| otelcollector.configuration.prometheus.enabled | bool | `false` | Enables prometheus metrics support. Default is false. |
+| otelcollector.configuration.prometheus.gcpMonitoring.enabled | bool | `false` | Enables gcp support . Default is false. |
+| otelcollector.configuration.prometheus.gcpMonitoring.interval | string | `"60s"` | Scrape interval. Default is "60s". |
+| otelcollector.configuration.prometheus.gcpMonitoring.timeout | string | `"50s"` | Scrape timeout. Default is "50s". |
+| otelcollector.configuration.prometheus.host | string | `"127.0.0.1"` | The host to bind to defautls to 127.0.0.1 to avoid opening the metrics endpoint by default. |
+| otelcollector.configuration.prometheus.level | string | `"normal"` | The level of telemetry to be collected. Default is "basic". One of "none", "basic", "normal", "detailed". |
+| otelcollector.configuration.prometheus.port | int | `8088` | The port where metrics are exposed. Default is port 8088. |
 | postgresql.auth.database | string | `"controlplane"` |  |
 | postgresql.auth.password | string | `"changeme"` |  |
 | postgresql.auth.username | string | `"postgres"` |  |
