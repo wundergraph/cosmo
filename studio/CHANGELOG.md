@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.83.3](https://github.com/wundergraph/cosmo/compare/studio@0.83.2...studio@0.83.3) (2024-07-31)
+
+### Bug Fixes
+
+* api keys graphs dropdown ui ([#979](https://github.com/wundergraph/cosmo/issues/979)) ([9cf3716](https://github.com/wundergraph/cosmo/commit/9cf37161de151a719c752f29572819b89a265063)) (@JivusAyrus)
+
 ## [0.83.2](https://github.com/wundergraph/cosmo/compare/studio@0.83.1...studio@0.83.2) (2024-07-30)
 
 ### Bug Fixes
