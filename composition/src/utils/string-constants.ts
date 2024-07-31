@@ -54,10 +54,12 @@ export const INPUT_OBJECT_UPPER = 'INPUT_OBJECT';
 export const INT_SCALAR = 'Int';
 export const INTERFACE_UPPER = 'INTERFACE';
 export const INTERFACE_OBJECT = 'interfaceObject';
+export const KEY = 'key';
 export const LINK = 'link';
 export const LIST = 'list';
+export const LITERAL_SPACE = ' ';
+export const LITERAL_NEW_LINE = '\n';
 export const NUMBER = 'number';
-export const KEY = 'key';
 export const MUTATION = 'Mutation';
 export const MUTATION_UPPER = 'MUTATION';
 export const PROVIDER_TYPE_KAFKA = 'kafka';
@@ -132,7 +134,7 @@ export const EXECUTABLE_DIRECTIVE_LOCATIONS = new Set<string>([
   SUBSCRIPTION_UPPER,
 ]);
 export const IGNORED_PARENT_DIRECTIVES = new Set<string>([AUTHENTICATED, EXTENDS, REQUIRES_SCOPES]);
-export const ROOT_TYPES = new Set<string>([MUTATION, QUERY, SUBSCRIPTION]);
+export const ROOT_TYPE_NAMES = new Set<string>([MUTATION, QUERY, SUBSCRIPTION]);
 export const EVENT_DIRECTIVE_NAMES = new Set<string>([
   EDFS_KAFKA_PUBLISH,
   EDFS_KAFKA_SUBSCRIBE,
@@ -144,3 +146,4 @@ export const STREAM_CONFIGURATION_FIELD_NAMES = new Set<string>([CONSUMER_NAME, 
 export const PERSISTED_CLIENT_DIRECTIVES = new Set<string>([AUTHENTICATED, DEPRECATED, REQUIRES_SCOPES]);
 export const SUBSCRIPTION_FILTER_INPUT_NAMES = new Set<string>([AND_UPPER, IN_UPPER, NOT_UPPER, OR_UPPER]);
 export const SUBSCRIPTION_FILTER_LIST_INPUT_NAMES = new Set<string>([AND_UPPER, OR_UPPER]);
+export type RootTypeName = 'Mutation' | 'Query' | 'Subscription';

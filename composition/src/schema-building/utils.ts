@@ -114,7 +114,7 @@ import {
   QUERY,
   REASON,
   REQUIRES_SCOPES,
-  ROOT_TYPES,
+  ROOT_TYPE_NAMES,
   SHAREABLE,
   STRING_SCALAR,
   SUBSCRIPTION,
@@ -976,7 +976,7 @@ export function addUnionExtensionDataByNode(
 }
 
 export function isTypeNameRootType(typeName: string, operationByTypeName: Map<string, OperationTypeNode>) {
-  return ROOT_TYPES.has(typeName) || operationByTypeName.has(typeName);
+  return ROOT_TYPE_NAMES.has(typeName) || operationByTypeName.has(typeName);
 }
 
 export function getRenamedRootTypeName(typeName: string, operationByTypeName: Map<string, OperationTypeNode>): string {

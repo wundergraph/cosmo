@@ -281,12 +281,6 @@ importers:
       '@graphql-tools/utils':
         specifier: ^10.1.0
         version: 10.1.0(graphql@16.9.0)
-      graphology:
-        specifier: ^0.25.1
-        version: 0.25.1(graphology-types@0.24.7)
-      graphology-simple-path:
-        specifier: ^0.2.0
-        version: 0.2.0(graphology-types@0.24.7)
       graphql:
         specifier: 16.9.0
         version: 16.9.0
@@ -16585,38 +16579,6 @@ packages:
       lodash: 4.17.21
     dev: false
 
-  /graphology-simple-path@0.2.0(graphology-types@0.24.7):
-    resolution: {integrity: sha512-4cGMWbVuJM0zlKDUx6dS6JGGLddizDPe8PsTokXVz2eTeHYg07qa5TgwIco15ta2RMM05+xy8N1mFnpS85y0kw==}
-    peerDependencies:
-      graphology-types: '>=0.20.0'
-    dependencies:
-      graphology-types: 0.24.7
-      graphology-utils: 1.8.0(graphology-types@0.24.7)
-      mnemonist: 0.39.5
-    dev: false
-
-  /graphology-types@0.24.7:
-    resolution: {integrity: sha512-tdcqOOpwArNjEr0gNQKCXwaNCWnQJrog14nJNQPeemcLnXQUUGrsCWpWkVKt46zLjcS6/KGoayeJfHHyPDlvwA==}
-    dev: false
-
-  /graphology-utils@1.8.0(graphology-types@0.24.7):
-    resolution: {integrity: sha512-Pa7SW30OMm8fVtyH49b3GJ/uxlMHGfXly50wIhlcc7ZoX9ahZa7sPBz+obo4WZClrRV6wh3tIu0GJoI42eao1A==}
-    peerDependencies:
-      graphology-types: '>=0.19.0'
-    dependencies:
-      graphology-types: 0.24.7
-    dev: false
-
-  /graphology@0.25.1(graphology-types@0.24.7):
-    resolution: {integrity: sha512-yYA7BJCcXN2DrKNQQ9Qf22zBHm/yTbyBR71T1MYBbGtywNHsv0QZtk8zaR6zxNcp2hCCZayUkHp9DyMSZCpoxQ==}
-    peerDependencies:
-      graphology-types: '>=0.24.0'
-    dependencies:
-      events: 3.3.0
-      graphology-types: 0.24.7
-      obliterator: 2.0.4
-    dev: false
-
   /graphql-config@4.5.0(@types/node@18.19.21)(graphql@16.9.0):
     resolution: {integrity: sha512-x6D0/cftpLUJ0Ch1e5sj1TZn6Wcxx4oMfmhaG9shM0DKajA9iR+j1z86GSTQ19fShbGvrSSvbIQsHku6aQ6BBw==}
     engines: {node: '>= 10.0.0'}
@@ -18942,12 +18904,6 @@ packages:
       pkg-types: 1.1.3
       ufo: 1.5.4
     dev: true
-
-  /mnemonist@0.39.5:
-    resolution: {integrity: sha512-FPUtkhtJ0efmEFGpU14x7jGbTB+s18LrzRL2KgoWz9YvcY3cPomz8tih01GbHwnGk/OmkOKfqd/RAQoc8Lm7DQ==}
-    dependencies:
-      obliterator: 2.0.4
-    dev: false
 
   /mnemonist@0.39.6:
     resolution: {integrity: sha512-A/0v5Z59y63US00cRSLiloEIw3t5G+MiKz4BhX21FI+YBJXBOGW0ohFxTxO08dsOYlzxo87T7vGfZKYp2bcAWA==}

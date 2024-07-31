@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
-import { ConfigurationData, FieldConfiguration, ROOT_TYPES } from '@wundergraph/composition';
+import { ConfigurationData, FieldConfiguration, ROOT_TYPE_NAMES } from '@wundergraph/composition';
 import { GraphQLSchema, lexicographicSortSchema } from 'graphql';
 import {
   GraphQLSubscriptionProtocol,
@@ -136,7 +136,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       // Query/Mutation/Subscription. Filter rootNodes in place
       // while moving items that do not pass the filter to childNodes.
       const isRootTypeNode = (node: TypeField) => {
-        return ROOT_TYPES.has(node.typeName);
+        return ROOT_TYPE_NAMES.has(node.typeName);
       };
       let ii = 0;
       let filtered = 0;

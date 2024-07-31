@@ -28,9 +28,9 @@ import {
   INTERFACE_UPPER,
   MUTATION_UPPER,
   OBJECT_UPPER,
+  PERIOD,
   QUERY,
   QUERY_UPPER,
-  ROOT_TYPES,
   SCALAR_UPPER,
   SCHEMA_UPPER,
   SUBSCRIPTION_UPPER,
@@ -326,22 +326,22 @@ function validateNonRepeatableFieldSet(
           return;
         }
         // The child could itself be a parent and could exist as an object extension
-        const childContainer =
+        const namedTypeData =
           factory.parentDefinitionDataByTypeName.get(namedTypeName) ||
           factory.parentExtensionDataByTypeName.get(namedTypeName);
-        if (!childContainer) {
+        if (!namedTypeData) {
           // Should not be possible to receive this error
           errorMessage = unknownTypeInFieldSetErrorMessage(fieldSet, fieldPath, namedTypeName);
           return BREAK;
         }
         if (
-          childContainer.kind === Kind.OBJECT_TYPE_DEFINITION ||
-          childContainer.kind === Kind.OBJECT_TYPE_EXTENSION ||
-          childContainer.kind === Kind.INTERFACE_TYPE_DEFINITION ||
-          childContainer.kind === Kind.UNION_TYPE_DEFINITION
+          namedTypeData.kind === Kind.OBJECT_TYPE_DEFINITION ||
+          namedTypeData.kind === Kind.OBJECT_TYPE_EXTENSION ||
+          namedTypeData.kind === Kind.INTERFACE_TYPE_DEFINITION ||
+          namedTypeData.kind === Kind.UNION_TYPE_DEFINITION
         ) {
           shouldDefineSelectionSet = true;
-          parentDatas.push(childContainer);
+          parentDatas.push(namedTypeData);
           return;
         }
       },
@@ -468,10 +468,15 @@ function validateKeyFieldSets(
   nonResolvableByKeyFieldSet: Map<string, boolean>,
   fieldNames: Set<string>,
 ): RequiredFieldConfiguration[] | undefined {
+  const isEntityInterface = nf.entityInterfaceDataByTypeName.has(entityParentData.name);
   const entityTypeName = entityParentData.name;
   const errorMessages: string[] = [];
   const configurations: RequiredFieldConfiguration[] = [];
   const keyFieldNames = new Set<string>();
+  const allKeyFieldSetPaths: Array<Set<string>> = [];
+  // If the key is on an entity interface/interface object, an entity data node should not be propagated
+  const entityDataNode = isEntityInterface ? undefined : nf.internalGraph.addEntityDataNode(entityParentData.name);
+  const graphNode = nf.internalGraph.addOrUpdateNode(entityParentData.name);
   for (const [fieldSet, disableEntityResolver] of nonResolvableByKeyFieldSet) {
     // Create a new selection set so that the value can be parsed as a new DocumentNode
     const { error, documentNode } = safeParse('{' + fieldSet + '}');
@@ -480,7 +485,9 @@ function validateKeyFieldSets(
       continue;
     }
     const parentWithFieldsDatas: ParentWithFieldsData[] = [entityParentData];
-    const definedFields: Set<string>[] = [];
+    const definedFields: Array<Set<string>> = [];
+    const currentPath: Array<string> = [];
+    const keyFieldSetPaths = new Set<string>();
     let currentDepth = -1;
     let shouldDefineSelectionSet = true;
     let lastFieldName = '';
@@ -501,7 +508,7 @@ function validateKeyFieldSets(
       },
       Field: {
         enter(node) {
-          const grandparentContainer = parentWithFieldsDatas[currentDepth - 1];
+          const grandparentData = parentWithFieldsDatas[currentDepth - 1];
           const parentData = parentWithFieldsDatas[currentDepth];
           const parentTypeName = parentData.name;
           // If an object-like was just visited, a selection set should have been entered
@@ -509,7 +516,7 @@ function validateKeyFieldSets(
             errorMessages.push(
               invalidSelectionSetErrorMessage(
                 fieldSet,
-                `${grandparentContainer.name}.${lastFieldName}`,
+                `${grandparentData.name}.${lastFieldName}`,
                 parentTypeName,
                 kindToTypeString(parentData.kind),
               ),
@@ -533,6 +540,7 @@ function validateKeyFieldSets(
             errorMessages.push(duplicateFieldInFieldSetErrorMessage(fieldSet, fieldPath));
             return BREAK;
           }
+          currentPath.push(fieldName);
           // Fields that form part of an entity key are intrinsically shareable
           fieldData.isShareableBySubgraphName.set(nf.subgraphName, true);
           definedFields[currentDepth].add(fieldName);
@@ -554,6 +562,8 @@ function validateKeyFieldSets(
           const namedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
           // The base scalars are not in the parents map
           if (BASE_SCALARS.has(namedTypeName)) {
+            keyFieldSetPaths.add(currentPath.join(PERIOD));
+            currentPath.pop();
             return;
           }
           // The child could itself be a parent and could exist as an object extension
@@ -581,6 +591,8 @@ function validateKeyFieldSets(
             );
             return BREAK;
           }
+          keyFieldSetPaths.add(currentPath.join(PERIOD));
+          currentPath.pop();
         },
       },
       InlineFragment: {
@@ -641,18 +653,28 @@ function validateKeyFieldSets(
         },
       },
     });
-    if (!errorMessages.length) {
-      configurations.push({
-        fieldName: '',
-        selectionSet: getNormalizedFieldSet(documentNode),
-        ...(disableEntityResolver ? { disableEntityResolver: true } : {}),
-      });
+    if (errorMessages.length > 0) {
+      continue;
     }
+    const normalizedFieldSet = getNormalizedFieldSet(documentNode);
+    configurations.push({
+      fieldName: '',
+      selectionSet: normalizedFieldSet,
+      ...(disableEntityResolver ? { disableEntityResolver: true } : {}),
+    });
+    graphNode.satisfiedFieldSets.add(normalizedFieldSet);
+    if (disableEntityResolver) {
+      continue;
+    }
+    entityDataNode?.addTargetSubgraphByFieldSet(normalizedFieldSet, nf.subgraphName);
+    allKeyFieldSetPaths.push(keyFieldSetPaths);
   }
   if (errorMessages.length) {
     nf.errors.push(invalidKeyDirectivesError(entityTypeName, errorMessages));
     return;
   }
+  // todo
+  // nf.internalGraph.addEntityNode(entityTypeName, allKeyFieldSetPaths);
   if (configurations.length) {
     return configurations;
   }
@@ -700,7 +722,7 @@ function getFieldSetParent(
 }
 
 function validateProvidesOrRequires(
-  factory: NormalizationFactory,
+  nf: NormalizationFactory,
   parentData: ParentWithFieldsData,
   fieldSetByFieldName: Map<string, string>,
   fieldSetDirective: FieldSetDirective,
@@ -714,7 +736,7 @@ function validateProvidesOrRequires(
      If it isn't, the @provides directive does not make sense and can be ignored.
     */
     const { fieldSetParentContainer, errorString } = getFieldSetParent(
-      factory,
+      nf,
       fieldSetDirective,
       parentData,
       fieldName,
@@ -729,7 +751,7 @@ function validateProvidesOrRequires(
       continue;
     }
     const { errorMessage, configuration } = validateNonRepeatableFieldSet(
-      factory,
+      nf,
       fieldSetParentContainer,
       fieldSet,
       fieldName,
@@ -746,7 +768,7 @@ function validateProvidesOrRequires(
     throw invalidConfigurationResultFatalError(fieldPath);
   }
   if (errorMessages.length) {
-    factory.errors.push(invalidProvidesOrRequiresDirectivesError(fieldSetDirective, errorMessages));
+    nf.errors.push(invalidProvidesOrRequiresDirectivesError(fieldSetDirective, errorMessages));
     return;
   }
   if (configurations.length) {
@@ -754,40 +776,37 @@ function validateProvidesOrRequires(
   }
 }
 
-export function validateAndAddDirectivesWithFieldSetToConfigurationData(
+export function validateAndAddFieldSetDirectivesToConfigurationData(
   factory: NormalizationFactory,
-  parentContainer: ParentWithFieldsData,
+  parentData: ParentWithFieldsData,
   fieldSetData: FieldSetData,
 ) {
   const configurationData = getOrThrowError(
     factory.configurationDataByParentTypeName,
-    parentContainer.name,
+    parentData.name,
     'configurationDataMap',
   );
   const keys = validateKeyFieldSets(
     factory,
-    parentContainer,
+    parentData,
     fieldSetData.isUnresolvableByKeyFieldSet,
     configurationData.fieldNames,
   );
   if (keys) {
     configurationData.keys = keys;
+    const keyFieldSets = new Set<string>();
+    for (const requiredFieldConfiguration of keys) {
+      if (requiredFieldConfiguration.disableEntityResolver) {
+        continue;
+      }
+      keyFieldSets.add(requiredFieldConfiguration.selectionSet);
+    }
   }
-  const provides = validateProvidesOrRequires(
-    factory,
-    parentContainer,
-    fieldSetData.provides,
-    FieldSetDirective.PROVIDES,
-  );
+  const provides = validateProvidesOrRequires(factory, parentData, fieldSetData.provides, FieldSetDirective.PROVIDES);
   if (provides) {
     configurationData.provides = provides;
   }
-  const requires = validateProvidesOrRequires(
-    factory,
-    parentContainer,
-    fieldSetData.requires,
-    FieldSetDirective.REQUIRES,
-  );
+  const requires = validateProvidesOrRequires(factory, parentData, fieldSetData.requires, FieldSetDirective.REQUIRES);
   if (requires) {
     configurationData.requires = requires;
   }

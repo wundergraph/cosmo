@@ -234,44 +234,6 @@ export function extractExecutableDirectiveLocations(
   return set;
 }
 
-export function addConcreteTypesForImplementedInterfaces(
-  node: ObjectTypeDefinitionNode | ObjectTypeExtensionNode | InterfaceTypeDefinitionNode,
-  abstractToConcreteTypeNames: Map<string, Set<string>>,
-) {
-  if (!node.interfaces || node.interfaces.length < 1) {
-    return;
-  }
-  const concreteTypeName = node.name.value;
-  for (const iFace of node.interfaces) {
-    const interfaceName = iFace.name.value;
-    const concreteTypes = abstractToConcreteTypeNames.get(interfaceName);
-    if (concreteTypes) {
-      concreteTypes.add(concreteTypeName);
-    } else {
-      abstractToConcreteTypeNames.set(interfaceName, new Set<string>([concreteTypeName]));
-    }
-  }
-}
-
-export function addConcreteTypesForUnion(
-  node: UnionTypeDefinitionNode | UnionTypeExtensionNode,
-  abstractToConcreteTypeNames: Map<string, Set<string>>,
-) {
-  if (!node.types || node.types.length < 1) {
-    return;
-  }
-  const unionName = node.name.value;
-  for (const member of node.types) {
-    const memberName = member.name.value;
-    const concreteTypes = abstractToConcreteTypeNames.get(unionName);
-    if (concreteTypes) {
-      concreteTypes.add(memberName);
-    } else {
-      abstractToConcreteTypeNames.set(unionName, new Set<string>([memberName]));
-    }
-  }
-}
-
 export function formatDescription(description?: StringValueNode): StringValueNode | undefined {
   if (!description) {
     return description;
