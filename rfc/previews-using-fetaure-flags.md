@@ -4,6 +4,7 @@ author: Suvij Surya
 ---
 
 This RFC proposes a way to create a Supergraph Preview for every pull request. This would allow developers to test their changes before merging them.
+This would be a github action managed by the WunderGraph Cosmo team.
 
 ## Introduction
 
