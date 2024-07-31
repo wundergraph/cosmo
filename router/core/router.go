@@ -781,7 +781,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		}
 		pClient = c
 
-		r.logger.Info("Fetching persisted operations from CDN",
+		r.logger.Info("Use CDN as storage provider for persisted operations",
 			zap.String("providerID", provider.ID),
 		)
 	} else if provider, ok := s3Providers[r.persistedOperationsConfig.Storage.ProviderID]; ok {
@@ -800,7 +800,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		}
 		pClient = c
 
-		r.logger.Info("Fetching persisted operations from S3 storage",
+		r.logger.Info("Use S3 as storage provider for persisted operations",
 			zap.String("providerID", provider.ID),
 		)
 	} else if r.graphApiToken != "" {

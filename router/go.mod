@@ -110,6 +110,7 @@ require (
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/r3labs/sse/v2 v2.8.1 // indirect
 	github.com/rs/xid v1.5.0 // indirect
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1 // indirect
 	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect

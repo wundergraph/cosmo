@@ -2,10 +2,9 @@ package config
 
 import (
 	"fmt"
+	"github.com/goccy/go-yaml"
 	"os"
 	"time"
-
-	"github.com/goccy/go-yaml"
 
 	"github.com/caarlos0/env/v11"
 	"github.com/joho/godotenv"
@@ -573,33 +572,29 @@ func LoadConfig(configFilePath string, envOverride string) (*LoadResult, error) 
 		}
 	}
 
-	// Expand environment variables in the config file
-	// and unmarshal it into the config struct
+	if configFileBytes != nil {
+		// Expand environment variables in the config file
+		// and unmarshal it into the config struct
 
-	configYamlData := os.ExpandEnv(string(configFileBytes))
-	if err := yaml.Unmarshal([]byte(configYamlData), &cfg.Config); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal router config: %w", err)
-	}
+		configYamlData := os.ExpandEnv(string(configFileBytes))
+		if err := yaml.Unmarshal([]byte(configYamlData), &cfg.Config); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal router config: %w", err)
+		}
 
-	// Marshal the config back to yaml to respect default values, expansion and
-	// to create a YAML representing only the values that are actually set
+		// Validate the config against the JSON schema
 
-	configFileBytes, err = yaml.Marshal(cfg.Config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal router config: %w", err)
-	}
+		configFileBytes = []byte(configYamlData)
 
-	// Validate the config against the JSON schema
+		err = ValidateConfig(configFileBytes, JSONSchema)
+		if err != nil {
+			return nil, fmt.Errorf("router config validation error: %w", err)
+		}
 
-	err = ValidateConfig(configFileBytes, JSONSchema)
-	if err != nil {
-		return nil, fmt.Errorf("failed to validate router config: %w", err)
-	}
+		// Unmarshal the final config
 
-	// Unmarshal the final config
-
-	if err := yaml.Unmarshal(configFileBytes, &cfg.Config); err != nil {
-		return nil, err
+		if err := yaml.Unmarshal(configFileBytes, &cfg.Config); err != nil {
+			return nil, err
+		}
 	}
 
 	// Post-process the config
