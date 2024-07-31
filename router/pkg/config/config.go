@@ -420,46 +420,42 @@ type SubgraphErrorPropagationConfiguration struct {
 	OmitExtensions       bool                         `yaml:"omit_extensions" envDefault:"false" env:"SUBGRAPH_ERROR_PROPAGATION_OMIT_EXTENSIONS"`
 }
 
-type PersistedOperationsS3Provider struct {
-	Endpoint     string `yaml:"endpoint,omitempty" env:"PERSISTED_OPERATIONS_S3_PROVIDER_ENDPOINT"`
-	AccessKey    string `yaml:"access_key,omitempty" env:"PERSISTED_OPERATIONS_S3_PROVIDER_ACCESS_KEY"`
-	SecretKey    string `yaml:"secret_key,omitempty" env:"PERSISTED_OPERATIONS_S3_PROVIDER_SECRET"`
-	Bucket       string `yaml:"bucket,omitempty" env:"PERSISTED_OPERATIONS_S3_PROVIDER_BUCKET"`
-	Region       string `yaml:"region,omitempty" env:"PERSISTED_OPERATIONS_S3_PROVIDER_REGION"`
-	ObjectPrefix string `yaml:"object_prefix,omitempty" env:"PERSISTED_OPERATIONS_S3_PROVIDER_OBJECT_PREFIX"`
-	Secure       bool   `yaml:"secure,omitempty" envDefault:"true" env:"PERSISTED_OPERATIONS_S3_PROVIDER_SECURE"`
+type StorageProviders struct {
+	S3  []S3StorageProvider  `yaml:"s3,omitempty"`
+	CDN []CDNStorageProvider `yaml:"cdn,omitempty"`
+}
+
+type PersistedOperationsStorageConfig struct {
+	ProviderID   string `yaml:"provider_id,omitempty" env:"PERSISTED_OPERATIONS_STORAGE_PROVIDER_ID"`
+	ObjectPrefix string `yaml:"object_prefix,omitempty" env:"PERSISTED_OPERATIONS_STORAGE_OBJECT_PREFIX"`
+}
+
+type S3StorageProvider struct {
+	ID        string `yaml:"id,omitempty"`
+	Endpoint  string `yaml:"endpoint,omitempty"`
+	AccessKey string `yaml:"access_key,omitempty"`
+	SecretKey string `yaml:"secret_key,omitempty"`
+	Bucket    string `yaml:"bucket,omitempty"`
+	Region    string `yaml:"region,omitempty"`
+	Secure    bool   `yaml:"secure,omitempty"`
+}
+
+type CDNStorageProvider struct {
+	ID  string `yaml:"id,omitempty"`
+	URL string `yaml:"url,omitempty" envDefault:"https://cosmo-cdn.wundergraph.com"`
 }
 
 type PersistedOperationsCDNProvider struct {
-	URL string `yaml:"url,omitempty" env:"PERSISTED_OPERATIONS_CDN_PROVIDER_URL" envDefault:"https://cosmo-cdn.wundergraph.com"`
+	URL string `yaml:"url,omitempty" envDefault:"https://cosmo-cdn.wundergraph.com"`
 }
 
-type ExecutionConfigS3Provider struct {
-	Endpoint   string `yaml:"endpoint,omitempty" env:"EXECUTION_CONFIG_S3_PROVIDER_ENDPOINT"`
-	AccessKey  string `yaml:"access_key,omitempty" env:"EXECUTION_CONFIG_S3_PROVIDER_ACCESS_KEY"`
-	SecretKey  string `yaml:"secret_key,omitempty" env:"EXECUTION_CONFIG_S3_PROVIDER_SECRET_KEY"`
-	Bucket     string `yaml:"bucket,omitempty" env:"EXECUTION_CONFIG_S3_PROVIDER_BUCKET"`
-	Region     string `yaml:"region,omitempty" env:"EXECUTION_CONFIG_S3_PROVIDER_REGION"`
-	ObjectPath string `yaml:"object_path,omitempty" env:"EXECUTION_CONFIG_S3_PROVIDER_OBJECT_PATH"`
-	Secure     bool   `yaml:"secure,omitempty" env:"EXECUTION_CONFIG_S3_PROVIDER_SECURE"`
-}
-
-type ExecutionConfigCDNProvider struct {
-	URL string `yaml:"url,omitempty" env:"EXECUTION_CONFIG_CDN_PROVIDER_URL"`
-}
-
-type ExecutionConfigStorageProvider struct {
-	S3  *ExecutionConfigS3Provider  `yaml:"s3,omitempty"`
-	CDN *ExecutionConfigCDNProvider `yaml:"cdn,omitempty"`
+type ExecutionConfigStorageConfig struct {
+	ProviderID string `yaml:"provider_id,omitempty" env:"EXECUTION_CONFIG_STORAGE_PROVIDER_ID"`
+	ObjectPath string `yaml:"object_path,omitempty" env:"EXECUTION_CONFIG_STORAGE_OBJECT_PATH"`
 }
 
 type ExecutionConfig struct {
-	StorageProvider ExecutionConfigStorageProvider `yaml:"storage_provider,omitempty"`
-}
-
-type PersistedOperationsStorageProvider struct {
-	S3  *PersistedOperationsS3Provider  `yaml:"s3,omitempty"`
-	CDN *PersistedOperationsCDNProvider `yaml:"cdn,omitempty"`
+	Storage ExecutionConfigStorageConfig `yaml:"storage,omitempty"`
 }
 
 type PersistedOperationsCacheConfig struct {
@@ -467,8 +463,8 @@ type PersistedOperationsCacheConfig struct {
 }
 
 type PersistedOperationsConfig struct {
-	Cache           PersistedOperationsCacheConfig     `yaml:"cache"`
-	StorageProvider PersistedOperationsStorageProvider `yaml:"storage_provider,omitempty"`
+	Cache   PersistedOperationsCacheConfig   `yaml:"cache"`
+	Storage PersistedOperationsStorageConfig `yaml:"storage"`
 }
 
 type Config struct {
@@ -525,6 +521,7 @@ type Config struct {
 
 	SubgraphErrorPropagation SubgraphErrorPropagationConfiguration `yaml:"subgraph_error_propagation"`
 
+	StorageProviders          StorageProviders          `yaml:"storage_providers"`
 	ExecutionConfig           ExecutionConfig           `yaml:"execution_config"`
 	PersistedOperationsConfig PersistedOperationsConfig `yaml:"persisted_operations"`
 }

@@ -83,6 +83,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		core.WithPlayground(cfg.PlaygroundEnabled),
 		core.WithGraphApiToken(cfg.Graph.Token),
 		core.WithPersistedOperationsConfig(cfg.PersistedOperationsConfig),
+		core.WithStorageProviders(cfg.StorageProviders),
 		core.WithConfigPollerConfig(&core.RouterConfigPollerConfig{
 			ControlPlaneURL: cfg.ControlplaneURL,
 			GraphSignKey:    cfg.Graph.SignKey,

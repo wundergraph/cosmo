@@ -156,6 +156,7 @@ type (
 		cdnConfig                 config.CDNConfiguration
 		persistedOperationClient  persistedoperation.Client
 		persistedOperationsConfig config.PersistedOperationsConfig
+		storageProviders          config.StorageProviders
 		eventsConfig              config.EventsConfiguration
 		prometheusServer          *http.Server
 		modulesConfig             map[string]interface{}
@@ -744,13 +745,30 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		})
 	}
 
+	s3Providers := map[string]config.S3StorageProvider{}
+	cdnProviders := map[string]config.CDNStorageProvider{}
+
+	for _, provider := range r.storageProviders.S3 {
+		if _, ok := s3Providers[provider.ID]; ok {
+			return fmt.Errorf("duplicate s3 provider with id: %s", provider.ID)
+		}
+		s3Providers[provider.ID] = provider
+	}
+
+	for _, provider := range r.storageProviders.CDN {
+		if _, ok := cdnProviders[provider.ID]; ok {
+			return fmt.Errorf("duplicate cdn provider with id: %s", provider.ID)
+		}
+		cdnProviders[provider.ID] = provider
+	}
+
 	if r.graphApiToken != "" {
 
 		var client persistedoperation.Client
 
-		if r.persistedOperationsConfig.StorageProvider.CDN != nil {
+		if provider, ok := cdnProviders[r.persistedOperationsConfig.Storage.ProviderID]; ok {
 
-			c, err := cdn.NewClient(r.persistedOperationsConfig.StorageProvider.CDN.URL, r.graphApiToken, cdn.Options{
+			c, err := cdn.NewClient(provider.URL, r.graphApiToken, cdn.Options{
 				Logger:        r.logger,
 				TraceProvider: r.tracerProvider,
 			})
@@ -760,17 +778,17 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			client = c
 
 			r.logger.Info("Fetching persisted operations from CDN",
-				zap.String("url", r.persistedOperationsConfig.StorageProvider.CDN.URL),
+				zap.String("providerID", provider.ID),
 			)
-		} else if r.persistedOperationsConfig.StorageProvider.S3 != nil {
+		} else if provider, ok := s3Providers[r.persistedOperationsConfig.Storage.ProviderID]; ok {
 
-			c, err := s3.NewClient(r.persistedOperationsConfig.StorageProvider.S3.Endpoint, &s3.Options{
-				AccessKeyID:      r.persistedOperationsConfig.StorageProvider.S3.AccessKey,
-				SecretAccessKey:  r.persistedOperationsConfig.StorageProvider.S3.SecretKey,
-				Region:           r.persistedOperationsConfig.StorageProvider.S3.Region,
-				UseSSL:           r.persistedOperationsConfig.StorageProvider.S3.Secure,
-				BucketName:       r.persistedOperationsConfig.StorageProvider.S3.Bucket,
-				ObjectPathPrefix: r.persistedOperationsConfig.StorageProvider.S3.ObjectPrefix,
+			c, err := s3.NewClient(provider.Endpoint, &s3.Options{
+				AccessKeyID:      provider.AccessKey,
+				SecretAccessKey:  provider.SecretKey,
+				Region:           provider.Region,
+				UseSSL:           provider.Secure,
+				BucketName:       provider.Bucket,
+				ObjectPathPrefix: r.persistedOperationsConfig.Storage.ObjectPrefix,
 				TraceProvider:    r.tracerProvider,
 			})
 			if err != nil {
@@ -778,10 +796,8 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			}
 			client = c
 
-			r.logger.Info("Fetching persisted operations from S3",
-				zap.String("bucket", r.persistedOperationsConfig.StorageProvider.S3.Bucket),
-				zap.String("region", r.persistedOperationsConfig.StorageProvider.S3.Region),
-				zap.String("objectPrefix", r.persistedOperationsConfig.StorageProvider.S3.ObjectPrefix),
+			r.logger.Info("Fetching persisted operations from S3 storage",
+				zap.String("providerID", provider.ID),
 			)
 		} else if client == nil {
 			c, err := cdn.NewClient(r.cdnConfig.URL, r.graphApiToken, cdn.Options{
@@ -793,7 +809,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			}
 			client = c
 
-			r.logger.Info("Fetching persisted operations from CDN",
+			r.logger.Debug("Default to Cosmo CDN as persisted operations provider",
 				zap.String("url", r.cdnConfig.URL),
 			)
 		}
@@ -819,14 +835,14 @@ func (r *Router) bootstrap(ctx context.Context) error {
 
 	if r.configPoller == nil && r.routerConfigPollerConfig != nil {
 
-		if r.routerConfigPollerConfig.ExecutionConfig.StorageProvider.CDN != nil {
+		if provider, ok := cdnProviders[r.routerConfigPollerConfig.Storage.ProviderID]; ok {
 
 			if r.graphApiToken == "" {
 				return errors.New("graph token is required to fetch router config from CDN")
 			}
 
 			c, err := configCDNProvider.NewClient(
-				r.routerConfigPollerConfig.ExecutionConfig.StorageProvider.CDN.URL,
+				provider.URL,
 				r.graphApiToken,
 				&configCDNProvider.Options{
 					Logger:       r.logger,
@@ -838,28 +854,26 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			client = c
 
 			r.logger.Info("Polling for router config updates from CDN in the background",
-				zap.String("url", r.routerConfigPollerConfig.ExecutionConfig.StorageProvider.CDN.URL),
+				zap.String("providerID", provider.ID),
 				zap.String("interval", r.routerConfigPollerConfig.PollInterval.String()),
 			)
-		} else if r.routerConfigPollerConfig.ExecutionConfig.StorageProvider.S3 != nil {
+		} else if provider, ok := s3Providers[r.routerConfigPollerConfig.Storage.ProviderID]; ok {
 
-			c, err := configs3Provider.NewClient(r.routerConfigPollerConfig.ExecutionConfig.StorageProvider.S3.Endpoint, &configs3Provider.ClientOptions{
-				AccessKeyID:     r.routerConfigPollerConfig.ExecutionConfig.StorageProvider.S3.AccessKey,
-				SecretAccessKey: r.routerConfigPollerConfig.ExecutionConfig.StorageProvider.S3.SecretKey,
-				BucketName:      r.routerConfigPollerConfig.ExecutionConfig.StorageProvider.S3.Bucket,
-				Region:          r.routerConfigPollerConfig.ExecutionConfig.StorageProvider.S3.Region,
-				ObjectPath:      r.routerConfigPollerConfig.ExecutionConfig.StorageProvider.S3.ObjectPath,
-				Secure:          r.routerConfigPollerConfig.ExecutionConfig.StorageProvider.S3.Secure,
+			c, err := configs3Provider.NewClient(provider.Endpoint, &configs3Provider.ClientOptions{
+				AccessKeyID:     provider.AccessKey,
+				SecretAccessKey: provider.SecretKey,
+				BucketName:      provider.Bucket,
+				Region:          provider.Region,
+				ObjectPath:      r.routerConfigPollerConfig.Storage.ObjectPath,
+				Secure:          provider.Secure,
 			})
 			if err != nil {
 				return err
 			}
 			client = c
 
-			r.logger.Info("Polling for router config updates from S3 in the background",
-				zap.String("bucket", r.routerConfigPollerConfig.ExecutionConfig.StorageProvider.S3.Bucket),
-				zap.String("region", r.routerConfigPollerConfig.ExecutionConfig.StorageProvider.S3.Region),
-				zap.String("objectPath", r.routerConfigPollerConfig.ExecutionConfig.StorageProvider.S3.ObjectPath),
+			r.logger.Info("Polling for router config updates from S3 storage in the background",
+				zap.String("providerID", provider.ID),
 				zap.String("interval", r.routerConfigPollerConfig.PollInterval.String()),
 			)
 		} else if client == nil {
@@ -875,13 +889,12 @@ func (r *Router) bootstrap(ctx context.Context) error {
 				return err
 			}
 			client = c
-			r.logger.Info("Polling for router config updates from CDN in the background",
+			r.logger.Debug("Default to Cosmo CDN as router config provider",
 				zap.String("url", r.cdnConfig.URL),
-				zap.String("interval", r.routerConfigPollerConfig.PollInterval.String()),
 			)
 		}
 
-		r.configPoller = configpoller.New(r.routerConfigPollerConfig.ControlPlaneURL, r.graphApiToken,
+		r.configPoller = configpoller.New(r.graphApiToken,
 			configpoller.WithLogger(r.logger),
 			configpoller.WithPollInterval(r.routerConfigPollerConfig.PollInterval),
 			configpoller.WithClient(client),
@@ -1475,6 +1488,12 @@ func WithConfigPollerConfig(cfg *RouterConfigPollerConfig) Option {
 func WithPersistedOperationsConfig(cfg config.PersistedOperationsConfig) Option {
 	return func(r *Router) {
 		r.persistedOperationsConfig = cfg
+	}
+}
+
+func WithStorageProviders(cfg config.StorageProviders) Option {
+	return func(r *Router) {
+		r.storageProviders = cfg
 	}
 }
 

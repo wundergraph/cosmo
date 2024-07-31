@@ -343,19 +343,23 @@
     "OmitLocations": true,
     "OmitExtensions": false
   },
+  "StorageProviders": {
+    "S3": null,
+    "CDN": null
+  },
   "ExecutionConfig": {
-    "StorageProvider": {
-      "S3": null,
-      "CDN": null
+    "Storage": {
+      "ProviderID": "",
+      "ObjectPath": ""
     }
   },
   "PersistedOperationsConfig": {
     "Cache": {
       "Size": 100000000
     },
-    "StorageProvider": {
-      "S3": null,
-      "CDN": null
+    "Storage": {
+      "ProviderID": "",
+      "ObjectPrefix": ""
     }
   }
 }

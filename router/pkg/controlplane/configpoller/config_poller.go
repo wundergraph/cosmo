@@ -30,7 +30,6 @@ type ConfigPoller interface {
 
 type configPoller struct {
 	graphApiToken             string
-	controlplaneEndpoint      string
 	logger                    *zap.Logger
 	latestRouterConfigVersion string
 	latestRouterConfigDate    time.Time
@@ -39,10 +38,9 @@ type configPoller struct {
 	configClient              routerconfig.Client
 }
 
-func New(endpoint, token string, opts ...Option) ConfigPoller {
+func New(token string, opts ...Option) ConfigPoller {
 	c := &configPoller{
-		controlplaneEndpoint: endpoint,
-		graphApiToken:        token,
+		graphApiToken: token,
 	}
 
 	for _, opt := range opts {
