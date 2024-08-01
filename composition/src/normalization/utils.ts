@@ -58,7 +58,7 @@ import {
   unexpectedArgumentErrorMessage,
   unexpectedDirectiveLocationError,
   unknownInlineFragmentTypeConditionErrorMessage,
-  unknownProvidesEntityErrorMessage,
+  unknownProvidedObjectErrorMessage,
   unknownTypeInFieldSetErrorMessage,
   unparsableFieldSetErrorMessage,
   unparsableFieldSetSelectionErrorMessage,
@@ -687,7 +687,7 @@ enum FieldSetDirective {
 
 type FieldSetParentResult = {
   errorString?: string;
-  fieldSetParentContainer?: ParentWithFieldsData;
+  fieldSetParentData?: ParentWithFieldsData;
 };
 
 function getFieldSetParent(
@@ -698,7 +698,7 @@ function getFieldSetParent(
   parentTypeName: string,
 ): FieldSetParentResult {
   if (fieldSetDirective !== FieldSetDirective.PROVIDES) {
-    return factory.entityDataByTypeName.has(parentTypeName) ? { fieldSetParentContainer: parentData } : {};
+    return factory.entityDataByTypeName.has(parentTypeName) ? { fieldSetParentData: parentData } : {};
   }
   const fieldData = getOrThrowError(
     parentData.fieldDataByFieldName,
@@ -707,18 +707,15 @@ function getFieldSetParent(
   );
   const fieldNamedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
 
-  if (!factory.entityDataByTypeName.has(fieldNamedTypeName)) {
-    return {};
-  }
   const childData =
     factory.parentDefinitionDataByTypeName.get(fieldNamedTypeName) ||
     factory.parentExtensionDataByTypeName.get(fieldNamedTypeName);
   if (!childData || (childData.kind !== Kind.OBJECT_TYPE_DEFINITION && childData.kind !== Kind.OBJECT_TYPE_EXTENSION)) {
     return {
-      errorString: unknownProvidesEntityErrorMessage(`${parentTypeName}.${fieldName}`, fieldNamedTypeName),
+      errorString: unknownProvidedObjectErrorMessage(`${parentTypeName}.${fieldName}`, fieldNamedTypeName),
     };
   }
-  return { fieldSetParentContainer: childData };
+  return { fieldSetParentData: childData };
 }
 
 function validateProvidesOrRequires(
@@ -735,7 +732,7 @@ function validateProvidesOrRequires(
      Consequently, at that time, it is unknown whether the named type is an entity.
      If it isn't, the @provides directive does not make sense and can be ignored.
     */
-    const { fieldSetParentContainer, errorString } = getFieldSetParent(
+    const { fieldSetParentData, errorString } = getFieldSetParent(
       nf,
       fieldSetDirective,
       parentData,
@@ -747,15 +744,10 @@ function validateProvidesOrRequires(
       errorMessages.push(errorString);
       continue;
     }
-    if (!fieldSetParentContainer) {
+    if (!fieldSetParentData) {
       continue;
     }
-    const { errorMessage, configuration } = validateNonRepeatableFieldSet(
-      nf,
-      fieldSetParentContainer,
-      fieldSet,
-      fieldName,
-    );
+    const { errorMessage, configuration } = validateNonRepeatableFieldSet(nf, fieldSetParentData, fieldSet, fieldName);
     if (errorMessage) {
       errorMessages.push(` On "${parentTypeName}.${fieldName}" —` + errorMessage);
       continue;
