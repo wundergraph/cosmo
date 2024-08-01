@@ -34,8 +34,9 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		return nil, fmt.Errorf("could not set max GOMAXPROCS: %w", err)
 	}
 
-	// Automatically set GOMEMLIMIT to reduce OOM cases. The user can still override
-	// this value with the GOMEMLIMIT environment variable.
+	// Automatically set GOMEMLIMIT to 90% of the available memory.
+	// This is an effort to prevent the router from being killed by OOM (Out Of Memory)
+	// when the system is under memory pressure e.g. when GC is not able to free memory fast enough.
 	// More details: https://tip.golang.org/doc/gc-guide#Memory_limit
 	mLimit, err := memlimit.SetGoMemLimitWithOpts(
 		memlimit.WithRatio(0.9),
