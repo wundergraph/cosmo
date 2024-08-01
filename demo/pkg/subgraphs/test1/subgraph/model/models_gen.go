@@ -331,6 +331,13 @@ type IBigObject struct {
 
 func (IBigObject) IsBigAbstractResponse() {}
 
+type InputArg struct {
+	Enums   []EnumType `json:"enums,omitempty"`
+	Enum    *EnumType  `json:"enum,omitempty"`
+	String  *string    `json:"string,omitempty"`
+	Strings []string   `json:"strings,omitempty"`
+}
+
 type InputResponse struct {
 	Arg string `json:"arg"`
 }

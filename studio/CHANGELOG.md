@@ -4,6 +4,20 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.83.3](https://github.com/wundergraph/cosmo/compare/studio@0.83.2...studio@0.83.3) (2024-07-31)
+
+### Bug Fixes
+
+* api keys graphs dropdown ui ([#979](https://github.com/wundergraph/cosmo/issues/979)) ([9cf3716](https://github.com/wundergraph/cosmo/commit/9cf37161de151a719c752f29572819b89a265063)) (@JivusAyrus)
+
+## [0.83.2](https://github.com/wundergraph/cosmo/compare/studio@0.83.1...studio@0.83.2) (2024-07-30)
+
+### Bug Fixes
+
+* broken pagination on page size change and subgraphs table with many items ([#978](https://github.com/wundergraph/cosmo/issues/978)) ([b20b00e](https://github.com/wundergraph/cosmo/commit/b20b00e892c683d068ff7a210bad4a4ead38bb52)) (@thisisnithin)
+* invite members modal and subgraph selector ([#974](https://github.com/wundergraph/cosmo/issues/974)) ([61b417c](https://github.com/wundergraph/cosmo/commit/61b417c15bdf0081e67eb4e20cb5f5d06c0255ea)) (@thisisnithin)
+* tick formatter for custom date ranges ([#980](https://github.com/wundergraph/cosmo/issues/980)) ([fd4ca77](https://github.com/wundergraph/cosmo/commit/fd4ca77baf062feca3b1976d2f3d145a0204e843)) (@JivusAyrus)
+
 ## [0.83.1](https://github.com/wundergraph/cosmo/compare/studio@0.83.0...studio@0.83.1) (2024-07-27)
 
 ### Bug Fixes

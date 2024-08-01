@@ -104,6 +104,7 @@ type parseKit struct {
 	printer             *astprinter.Printer
 	normalizedOperation *bytes.Buffer
 	variablesValidator  *variablesvalidation.VariablesValidator
+	inputListCoercion   *astnormalization.ListInputCoercion
 }
 
 type OperationCache struct {
@@ -379,6 +380,21 @@ func (o *OperationKit) Normalize() (bool, error) {
 	return o.normalizeNonPersistedOperation()
 }
 
+func (o *OperationKit) CoerceListVariables() (err error) {
+	if o.kit.cachedDoc != nil {
+		o.parsedOperation.Request.Variables, err = o.kit.inputListCoercion.CoerceInput(o.kit.cachedDoc, o.operationProcessor.executor.ClientSchema, o.parsedOperation.Request.Variables)
+		if err != nil {
+			return errors.WithStack(fmt.Errorf("coerceListVariables: %w", err))
+		}
+		return nil
+	}
+	o.parsedOperation.Request.Variables, err = o.kit.inputListCoercion.CoerceInput(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.parsedOperation.Request.Variables)
+	if err != nil {
+		return errors.WithStack(fmt.Errorf("coerceListVariables: %w", err))
+	}
+	return nil
+}
+
 func (o *OperationKit) normalizePersistedOperation() (cached bool, err error) {
 	if o.parsedOperation.NormalizedRepresentation != "" {
 		// normalized operation was loaded from cache
@@ -418,7 +434,7 @@ func (o *OperationKit) normalizePersistedOperation() (cached bool, err error) {
 
 	originalVariables, err = o.populateDefaultVariablesFromExportedDefaults(exportedVariables, originalVariables)
 	if err != nil {
-		return false, errors.WithStack(fmt.Errorf("failed to set default values for variables: %w", err))
+		return false, errors.WithStack(fmt.Errorf("normalizePersistedOperation: %w", err))
 	}
 
 	o.parsedOperation.Request.Variables = originalVariables
@@ -426,31 +442,25 @@ func (o *OperationKit) normalizePersistedOperation() (cached bool, err error) {
 	// Hash the normalized operation with the static operation name to avoid different IDs for the same operation
 	err = o.kit.printer.Print(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.keyGen)
 	if err != nil {
-		return false, errors.WithStack(fmt.Errorf("failed to print normalized operation: %w", err))
+		return false, errors.WithStack(fmt.Errorf("normalizePersistedOperation failed generating operation hash: %w", err))
 	}
 
 	// Generate the operation ID
 	o.parsedOperation.ID = o.kit.keyGen.Sum64()
 	o.kit.keyGen.Reset()
 
-	listVariableNames, listVariableNameWraps := o.extractListVariableNamesFromDoc()
-
 	// Print the operation with the original operation name
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = o.originalOperationNameRef
 	err = o.kit.printer.Print(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.normalizedOperation)
 	if err != nil {
-		return false, errors.WithStack(fmt.Errorf("failed to print normalized operation: %w", err))
+		return false, errors.WithStack(fmt.Errorf("normalizePersistedOperation failed printing operation: %w", err))
 	}
 
 	// Set the normalized representation
 	o.parsedOperation.NormalizedRepresentation = o.kit.normalizedOperation.String()
-	err = o.coerceListVariables(listVariableNames, listVariableNameWraps)
-	if err != nil {
-		return false, errors.WithStack(fmt.Errorf("failed to coerce list variables: %w", err))
-	}
 
 	if o.cache != nil && o.cache.persistedOperationCache != nil {
-		o.savePersistedOperationToCache(skipIncludeNames, listVariableNames, listVariableNameWraps, exportedVariables)
+		o.savePersistedOperationToCache(skipIncludeNames, exportedVariables)
 	}
 
 	return false, nil
@@ -461,8 +471,6 @@ type NormalizationCacheEntry struct {
 	normalizedRepresentation string
 	operationType            string
 	exportedVariables        []byte
-	listVariableNames        []string
-	listVariableNameWraps    []int
 	doc                      *ast.Document
 }
 
@@ -480,11 +488,7 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 			o.parsedOperation.NormalizationCacheHit = true
 			o.parsedOperation.Request.Variables, err = o.populateDefaultVariablesFromExportedDefaults(entry.exportedVariables, o.parsedOperation.Request.Variables)
 			if err != nil {
-				return false, errors.WithStack(fmt.Errorf("failed to set default values for variables: %w", err))
-			}
-			err = o.coerceListVariables(entry.listVariableNames, entry.listVariableNameWraps)
-			if err != nil {
-				return false, errors.WithStack(fmt.Errorf("failed to coerce list variables: %w", err))
+				return false, errors.WithStack(fmt.Errorf("normalizeNonPersistedOperation (cached): %w", err))
 			}
 			return true, nil
 		}
@@ -528,7 +532,7 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 
 	originalVariables, err = o.populateDefaultVariablesFromExportedDefaults(exportedVariables, originalVariables)
 	if err != nil {
-		return false, errors.WithStack(fmt.Errorf("failed to set default values for variables: %w", err))
+		return false, errors.WithStack(fmt.Errorf("normalizeNonPersistedOperation (uncached): %w", err))
 	}
 
 	// reset with the original variables
@@ -538,35 +542,28 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 	// Hash the normalized operation with the static operation name & original variables to avoid different IDs for the same operation
 	err = o.kit.printer.Print(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.keyGen)
 	if err != nil {
-		return false, errors.WithStack(fmt.Errorf("failed to print normalized operation: %w", err))
+		return false, errors.WithStack(fmt.Errorf("normalizeNonPersistedOperation (uncached) failed generating operation hash: %w", err))
 	}
 
 	// Generate the operation ID
 	o.parsedOperation.ID = o.kit.keyGen.Sum64()
-	listVariableNames, listVariableNameWraps := o.extractListVariableNamesFromDoc()
 
 	// Print the operation with the original operation name
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = o.originalOperationNameRef
 	err = o.kit.printer.Print(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.normalizedOperation)
 	if err != nil {
-		return false, errors.WithStack(fmt.Errorf("failed to print normalized operation: %w", err))
+		return false, errors.WithStack(fmt.Errorf("normalizeNonPersistedOperation (uncached) failed printing operation: %w", err))
 	}
 
 	// Set the normalized representation
 	o.parsedOperation.NormalizedRepresentation = o.kit.normalizedOperation.String()
-	err = o.coerceListVariables(listVariableNames, listVariableNameWraps)
-	if err != nil {
-		return false, errors.WithStack(fmt.Errorf("failed to coerce list variables: %w", err))
-	}
 
 	if o.cache != nil && o.cache.normalizationCache != nil {
 		entry := NormalizationCacheEntry{
 			operationID:              o.parsedOperation.ID,
 			normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
 			operationType:            o.parsedOperation.Type,
-			exportedVariables:        exportedVariables,
-			listVariableNames:        listVariableNames,
-			listVariableNameWraps:    listVariableNameWraps,
+			exportedVariables:        o.nullifyExportedVariables(exportedVariables),
 			doc:                      o.kit.doc,
 		}
 		o.cache.normalizationCache.Set(cacheKey, entry, 1)
@@ -578,13 +575,32 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 	return false, nil
 }
 
+// nullifyExportedVariables returns nil if the variables are nil or don't contain any meaningful data
+// by the definition of the GraphQL specification, variables must be a map
+// this means that the minimum meaningful variables are {"a":0}
+// so if we have less than 7 characters, we return nil because we don't need to store the variables in the cache
+// as we will discard them anyways
+// keep in mind that we're solely using the exported variables, which contain default variables,
+// to populate the variables with defaults if we've got a normalization cache hit
+// consequently, we don't need to store anything in the cache if the variables are empty-ish
+//
+// in addition, if we're nullifying the exported variables in case of a cache miss
+// we can immediately skip parsing them and trying to set defaults from them if they're nil (early return)
+func (o *OperationKit) nullifyExportedVariables(variables []byte) []byte {
+	if variables == nil {
+		return nil
+	}
+	if len(variables) < 7 {
+		return nil
+	}
+	return variables
+}
+
 type normalizedOperationCacheEntry struct {
 	operationID              uint64
 	normalizedRepresentation string
 	operationType            string
 	exportedVariables        []byte
-	listVariableNames        []string
-	listVariableNameWraps    []int
 }
 
 func (o *OperationKit) loadPersistedOperationFromCache() (ok bool, err error) {
@@ -610,11 +626,7 @@ func (o *OperationKit) loadPersistedOperationFromCache() (ok bool, err error) {
 	o.parsedOperation.Type = entry.operationType
 	o.parsedOperation.Request.Variables, err = o.populateDefaultVariablesFromExportedDefaults(entry.exportedVariables, o.parsedOperation.Request.Variables)
 	if err != nil {
-		return false, errors.WithStack(fmt.Errorf("failed to set default values for variables: %w", err))
-	}
-	err = o.coerceListVariables(entry.listVariableNames, entry.listVariableNameWraps)
-	if err != nil {
-		return false, errors.WithStack(fmt.Errorf("failed to coerce list variables: %w", err))
+		return false, errors.WithStack(fmt.Errorf("loadPersistedOperationFromCache: %w", err))
 	}
 
 	o.kit.doc.Input.ResetInputString(entry.normalizedRepresentation)
@@ -631,6 +643,10 @@ func (o *OperationKit) loadPersistedOperationFromCache() (ok bool, err error) {
 
 // populateDefaultVariablesFromExportedDefaults iterates through the exported default variables and sets missing ones in the variables
 func (o *OperationKit) populateDefaultVariablesFromExportedDefaults(exportedVariables, override []byte) ([]byte, error) {
+	exportedVariables = o.nullifyExportedVariables(exportedVariables)
+	if exportedVariables == nil {
+		return override, nil
+	}
 	err := jsonparser.ObjectEach(exportedVariables, func(key []byte, value []byte, dataType jsonparser.ValueType, offset int) (err error) {
 		if v := o.parsedOperation.Variables.Get(unsafebytes.BytesToString(key)); v != nil {
 			return nil
@@ -647,7 +663,7 @@ func (o *OperationKit) populateDefaultVariablesFromExportedDefaults(exportedVari
 		return
 	})
 	if err != nil {
-		return nil, errors.WithStack(fmt.Errorf("failed to set default values for variables: %w", err))
+		return nil, errors.WithStack(fmt.Errorf("populateDefaultVariablesFromExportedDefaults failed: %w, input: '%s'", err, exportedVariables))
 	}
 	return override, nil
 }
@@ -666,15 +682,13 @@ func (o *OperationKit) jsonIsNull(variables []byte) bool {
 	return value.Type() == fastjson.TypeNull
 }
 
-func (o *OperationKit) savePersistedOperationToCache(skipIncludeVariableNames, listVariableNames []string, listVariableNameWraps []int, exportedVariables []byte) {
+func (o *OperationKit) savePersistedOperationToCache(skipIncludeVariableNames []string, exportedVariables []byte) {
 	cacheKey := o.generatePersistedOperationCacheKey(skipIncludeVariableNames)
 	entry := normalizedOperationCacheEntry{
 		operationID:              o.parsedOperation.ID,
 		normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
 		operationType:            o.parsedOperation.Type,
 		exportedVariables:        make([]byte, len(exportedVariables)),
-		listVariableNames:        listVariableNames,
-		listVariableNameWraps:    listVariableNameWraps,
 	}
 	copy(entry.exportedVariables, exportedVariables)
 
@@ -756,64 +770,6 @@ func (o *OperationKit) Validate() error {
 	return nil
 }
 
-func (o *OperationKit) extractListVariableNamesFromDoc() ([]string, []int) {
-	for i := range o.kit.doc.OperationDefinitions {
-		nameRef := o.kit.doc.OperationDefinitions[i].Name
-		name := o.kit.doc.Input.ByteSliceString(nameRef)
-		if name != "O" {
-			continue
-		}
-		refs := o.kit.doc.OperationDefinitions[i].VariableDefinitions.Refs
-		listVariables := make([]string, 0, len(refs))
-		listVariableDepth := make([]int, 0, len(refs))
-		for j := range refs {
-			isList := o.kit.doc.TypeIsList(o.kit.doc.VariableDefinitions[j].Type)
-			if !isList {
-				continue
-			}
-			listVariables = append(listVariables, o.kit.doc.VariableDefinitionNameString(j))
-			listVariableDepth = append(listVariableDepth, o.kit.doc.TypeNumberOfListWraps(o.kit.doc.VariableDefinitions[j].Type))
-		}
-		return listVariables, listVariableDepth
-	}
-	return nil, nil
-}
-
-func (o *OperationKit) coerceListVariables(listVariableNames []string, listVariableNameWraps []int) (err error) {
-	if len(listVariableNames) == 0 {
-		return
-	}
-	o.parsedOperation.Variables.Visit(func(key []byte, v *fastjson.Value) {
-		strKey := unsafebytes.BytesToString(key)
-		i := slices.Index(listVariableNames, strKey)
-		if i == -1 {
-			return
-		}
-		switch v.Type() {
-		case fastjson.TypeArray:
-			return
-		case fastjson.TypeNull:
-			return
-		default:
-			wraps := listVariableNameWraps[i]
-			arr := fastjson.MustParse(`[]`)
-			arr.SetArrayItem(0, v)
-			for j := 1; j < wraps; j++ {
-				parent := fastjson.MustParse(`[]`)
-				parent.SetArrayItem(0, arr)
-				arr = parent
-			}
-			list := arr.MarshalTo(nil)
-			o.parsedOperation.Request.Variables, err = jsonparser.Set(o.parsedOperation.Request.Variables, list, strKey)
-			if err != nil {
-				return
-			}
-		}
-	})
-	o.kit.doc.Input.Variables = o.parsedOperation.Request.Variables
-	return
-}
-
 var (
 	literalIF = []byte("if")
 )
@@ -867,6 +823,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 					printer:             &astprinter.Printer{},
 					normalizedOperation: &bytes.Buffer{},
 					variablesValidator:  variablesvalidation.NewVariablesValidator(),
+					inputListCoercion:   astnormalization.NewListInputCoercion(),
 				}
 			},
 		},
