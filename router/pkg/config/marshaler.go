@@ -10,16 +10,18 @@ import (
 
 type RegExArray []*regexp.Regexp
 
-func (b *RegExArray) Decode(value string) error {
+func (b *RegExArray) UnmarshalText(value []byte) error {
 
 	// Reset the array to not merge environment variables
 	*b = nil
 
-	if value == "" {
+	if len(value) == 0 {
 		return nil
 	}
 
-	regStrings := strings.Split(value, ",")
+	text := string(value)
+
+	regStrings := strings.Split(text, ",")
 
 	for _, regString := range regStrings {
 		reg, err := regexp.Compile(regString)
@@ -37,7 +39,7 @@ func (b *RegExArray) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if err := unmarshal(&s); err != nil {
 		return err
 	}
-	return b.Decode(strings.Join(s, ","))
+	return b.UnmarshalText([]byte(strings.Join(s, ",")))
 }
 
 func (b RegExArray) MarshalYAML() (interface{}, error) {
@@ -55,8 +57,8 @@ func (b BytesString) Uint64() uint64 {
 	return uint64(b)
 }
 
-func (b *BytesString) Decode(value string) error {
-	decoded, err := humanize.ParseBytes(value)
+func (b *BytesString) UnmarshalText(value []byte) error {
+	decoded, err := humanize.ParseBytes(string(value))
 	if err != nil {
 		return fmt.Errorf("could not parse bytes string: %w", err)
 	}
@@ -71,7 +73,7 @@ func (b *BytesString) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if err := unmarshal(&s); err != nil {
 		return err
 	}
-	return b.Decode(s)
+	return b.UnmarshalText([]byte(s))
 }
 
 func (b BytesString) MarshalYAML() (interface{}, error) {
