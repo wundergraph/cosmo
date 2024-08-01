@@ -39,10 +39,11 @@ func TestNamedPropagateHeaderRule(t *testing.T) {
 	assert.Nil(t, err)
 
 	updatedClientReq, _ := ht.OnOriginRequest(originReq, &requestContext{
-		logger:         zap.NewNop(),
-		responseWriter: rr,
-		request:        clientReq,
-		operation:      &operationContext{},
+		logger:           zap.NewNop(),
+		responseWriter:   rr,
+		request:          clientReq,
+		operation:        &operationContext{},
+		subgraphResolver: NewSubgraphResolver(nil),
 	})
 
 	assert.Equal(t, "test1", updatedClientReq.Header.Get("X-Test-1"))
@@ -75,10 +76,11 @@ func TestReNamedPropagateHeaderRule(t *testing.T) {
 	assert.Nil(t, err)
 
 	updatedClientReq, _ := ht.OnOriginRequest(originReq, &requestContext{
-		logger:         zap.NewNop(),
-		responseWriter: rr,
-		request:        clientReq,
-		operation:      &operationContext{},
+		logger:           zap.NewNop(),
+		responseWriter:   rr,
+		request:          clientReq,
+		operation:        &operationContext{},
+		subgraphResolver: NewSubgraphResolver(nil),
 	})
 
 	assert.Equal(t, "test1", updatedClientReq.Header.Get("X-Test-Renamed"))
@@ -118,10 +120,11 @@ func TestReNamedMatchingPropagateHeaderRule(t *testing.T) {
 	assert.Nil(t, err)
 
 	updatedClientReq, _ := ht.OnOriginRequest(originReq, &requestContext{
-		logger:         zap.NewNop(),
-		responseWriter: rr,
-		request:        clientReq,
-		operation:      &operationContext{},
+		logger:           zap.NewNop(),
+		responseWriter:   rr,
+		request:          clientReq,
+		operation:        &operationContext{},
+		subgraphResolver: NewSubgraphResolver(nil),
 	})
 
 	assert.Equal(t, "test1", updatedClientReq.Header.Get("X-Test-Renamed-1"))
@@ -156,10 +159,11 @@ func TestRegexPropagateHeaderRule(t *testing.T) {
 	assert.Nil(t, err)
 
 	updatedClientReq, _ := ht.OnOriginRequest(originReq, &requestContext{
-		logger:         zap.NewNop(),
-		responseWriter: rr,
-		request:        clientReq,
-		operation:      &operationContext{},
+		logger:           zap.NewNop(),
+		responseWriter:   rr,
+		request:          clientReq,
+		operation:        &operationContext{},
+		subgraphResolver: NewSubgraphResolver(nil),
 	})
 
 	assert.Equal(t, "test1", updatedClientReq.Header.Get("X-Test-1"))
@@ -191,10 +195,11 @@ func TestNamedPropagateDefaultValue(t *testing.T) {
 	assert.Nil(t, err)
 
 	updatedClientReq, _ := ht.OnOriginRequest(originReq, &requestContext{
-		logger:         zap.NewNop(),
-		responseWriter: rr,
-		request:        clientReq,
-		operation:      &operationContext{},
+		logger:           zap.NewNop(),
+		responseWriter:   rr,
+		request:          clientReq,
+		operation:        &operationContext{},
+		subgraphResolver: NewSubgraphResolver(nil),
 	})
 
 	assert.Equal(t, "default", updatedClientReq.Header.Get("X-Test-1"))
@@ -228,10 +233,11 @@ func TestSkipHopHeadersRegex(t *testing.T) {
 	assert.Nil(t, err)
 
 	updatedClientReq, _ := ht.OnOriginRequest(originReq, &requestContext{
-		logger:         zap.NewNop(),
-		responseWriter: rr,
-		request:        clientReq,
-		operation:      &operationContext{},
+		logger:           zap.NewNop(),
+		responseWriter:   rr,
+		request:          clientReq,
+		operation:        &operationContext{},
+		subgraphResolver: NewSubgraphResolver(nil),
 	})
 
 	for _, header := range hopHeaders {
