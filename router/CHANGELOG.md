@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.100.0](https://github.com/wundergraph/cosmo/compare/router@0.99.3...router@0.100.0) (2024-08-01)
+
+### Features
+
+* implement s3 provider for config and persistent operations ([#971](https://github.com/wundergraph/cosmo/issues/971)) ([e3206ff](https://github.com/wundergraph/cosmo/commit/e3206fff9c1796a64173be350445514f26db9296)) (@StarpTech)
+* set GOMEMLIMIT automatically ([#987](https://github.com/wundergraph/cosmo/issues/987)) ([11b5723](https://github.com/wundergraph/cosmo/commit/11b572317566395192263f8c7c81886a858f5e5e)) (@StarpTech)
+
 ## [0.99.3](https://github.com/wundergraph/cosmo/compare/router@0.99.2...router@0.99.3) (2024-08-01)
 
 **Note:** Version bump only for package router

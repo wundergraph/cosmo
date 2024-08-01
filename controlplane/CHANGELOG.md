@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.98.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.97.2...controlplane@0.98.0) (2024-08-01)
+
+### Bug Fixes
+
+* don't aggregate router sum metrics table, optimize router metrics queries ([#970](https://github.com/wundergraph/cosmo/issues/970)) ([7908a0f](https://github.com/wundergraph/cosmo/commit/7908a0f3e5a942d74f820dc64ad2079e1a420e18)) (@StarpTech)
+
+### Features
+
+* implement s3 provider for config and persistent operations ([#971](https://github.com/wundergraph/cosmo/issues/971)) ([e3206ff](https://github.com/wundergraph/cosmo/commit/e3206fff9c1796a64173be350445514f26db9296)) (@StarpTech)
+
 ## [0.97.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.97.1...controlplane@0.97.2) (2024-07-31)
 
 **Note:** Version bump only for package controlplane
