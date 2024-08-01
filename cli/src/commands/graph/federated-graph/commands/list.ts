@@ -8,7 +8,7 @@ import { join } from 'pathe';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
 import { getBaseHeaders } from '../../../../core/config.js';
 import program from '../../../index.js';
-import { writeToConsole } from '../../../../utils.js';
+import { writeToConsoleSync } from '../../../../utils.js';
 
 type OutputFile = {
   name: string;
@@ -67,7 +67,7 @@ export default (opts: BaseCommandOptions) => {
     }
 
     if (options.raw) {
-      writeToConsole(JSON.stringify(resp.graphs));
+      writeToConsoleSync(JSON.stringify(resp.graphs));
       process.exit(0);
     }
 

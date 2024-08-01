@@ -290,8 +290,9 @@ export const validateSubscriptionProtocols = ({
 };
 
 /**
- * Synchronously writes to the console.
+ * Ensures that all data is written synchronously to the console before the next operation.
+ * console.log() can have asynchronous behavior in Node.js environments.
  */
-export const writeToConsole = (message: string) => {
+export const writeToConsoleSync = (message: string) => {
   writeSync(process.stdout.fd, message);
 };

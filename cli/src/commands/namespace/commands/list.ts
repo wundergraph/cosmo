@@ -5,7 +5,7 @@ import pc from 'picocolors';
 import Table from 'cli-table3';
 import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
-import { writeToConsole } from '../../../utils.js';
+import { writeToConsoleSync } from '../../../utils.js';
 
 type OutputFile = {
   id: string;
@@ -42,7 +42,7 @@ export default (opts: BaseCommandOptions) => {
     }
 
     if (options.raw) {
-      writeToConsole(JSON.stringify(resp.namespaces));
+      writeToConsoleSync(JSON.stringify(resp.namespaces));
       return;
     }
 
