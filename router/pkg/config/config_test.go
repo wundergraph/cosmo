@@ -312,6 +312,25 @@ persisted_operations:
 	_, err := LoadConfig(f, "")
 	var js *jsonschema.ValidationError
 	require.NoError(t, err, &js)
+
+	f = createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  cdn:
+    - url: https://cosmo-cdn.wundergraph.com
+      id: cdn
+
+persisted_operations:
+  cache:
+    size: 100MB
+  storage:
+    provider_id: cdn
+    object_prefix: "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/operations/foo"
+`)
+	_, err = LoadConfig(f, "")
+	js = &jsonschema.ValidationError{}
+	require.NoError(t, err, &js)
 }
 
 func TestInvalidPersistedOperations(t *testing.T) {
@@ -360,6 +379,23 @@ execution_config:
 `)
 	_, err := LoadConfig(f, "")
 	var js *jsonschema.ValidationError
+	require.NoError(t, err, &js)
+
+	f = createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  cdn:
+    - url: https://cosmo-cdn.wundergraph.com
+      id: cdn
+
+execution_config:
+  storage:
+    provider_id: cdn
+    object_path: "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/routerconfigs/latest.json"
+`)
+	_, err = LoadConfig(f, "")
+	js = &jsonschema.ValidationError{}
 	require.NoError(t, err, &js)
 }
 

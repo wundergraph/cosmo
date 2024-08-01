@@ -747,6 +747,20 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		})
 	}
 
+	if err := r.buildClients(); err != nil {
+		return err
+	}
+
+	// Modules are only initialized once and not on every config change
+	if err := r.initModules(ctx); err != nil {
+		return fmt.Errorf("failed to init user modules: %w", err)
+	}
+
+	return nil
+}
+
+// buildClients initializes the storage clients for persisted operations and router config.
+func (r *Router) buildClients() error {
 	s3Providers := map[string]config.S3StorageProvider{}
 	cdnProviders := map[string]config.CDNStorageProvider{}
 
@@ -836,6 +850,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
 	r.persistedOperationClient = c
 
 	var rClient routerconfig.Client
@@ -911,11 +926,6 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			configpoller.WithClient(rClient),
 		)
 
-	}
-
-	// Modules are only initialized once and not on every config change
-	if err := r.initModules(ctx); err != nil {
-		return fmt.Errorf("failed to init user modules: %w", err)
 	}
 
 	return nil
