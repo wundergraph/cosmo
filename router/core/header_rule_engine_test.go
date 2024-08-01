@@ -290,23 +290,27 @@ func TestSubgraphNamedHeaderRule(t *testing.T) {
 	sg1Url, _ := url.Parse("http://subgraph-1.local")
 	sg2Url, _ := url.Parse("http://subgraph-2.local")
 
-	ctx := &requestContext{
-		logger:         zap.NewNop(),
-		responseWriter: rr,
-		request:        clientReq,
-		operation:      &operationContext{},
-		subgraphs: []Subgraph{
-			{
-				Name: "subgraph-1",
-				Id:   "subgraph-1",
-				Url:  sg1Url,
-			},
-			{
-				Name: "subgraph-2",
-				Id:   "subgraph-2",
-				Url:  sg2Url,
-			},
+	subgraphResolver := NewSubgraphResolver([]Subgraph{
+		{
+			Name:      "subgraph-1",
+			Id:        "subgraph-1",
+			Url:       sg1Url,
+			UrlString: sg1Url.String(),
 		},
+		{
+			Name:      "subgraph-2",
+			Id:        "subgraph-2",
+			Url:       sg2Url,
+			UrlString: sg2Url.String(),
+		},
+	})
+
+	ctx := &requestContext{
+		logger:           zap.NewNop(),
+		responseWriter:   rr,
+		request:          clientReq,
+		operation:        &operationContext{},
+		subgraphResolver: subgraphResolver,
 	}
 
 	originReq1, err := http.NewRequest("POST", "http://subgraph-1.local", nil)
@@ -348,18 +352,21 @@ func TestSubgraphRenameNamedHeaderRule(t *testing.T) {
 
 	sg1Url, _ := url.Parse("http://subgraph-1.local")
 
-	ctx := &requestContext{
-		logger:         zap.NewNop(),
-		responseWriter: rr,
-		request:        clientReq,
-		operation:      &operationContext{},
-		subgraphs: []Subgraph{
-			{
-				Name: "subgraph-1",
-				Id:   "subgraph-1",
-				Url:  sg1Url,
-			},
+	subgraphResolver := NewSubgraphResolver([]Subgraph{
+		{
+			Name:      "subgraph-1",
+			Id:        "subgraph-1",
+			Url:       sg1Url,
+			UrlString: sg1Url.String(),
 		},
+	})
+
+	ctx := &requestContext{
+		logger:           zap.NewNop(),
+		responseWriter:   rr,
+		request:          clientReq,
+		operation:        &operationContext{},
+		subgraphResolver: subgraphResolver,
 	}
 
 	originReq1, err := http.NewRequest("POST", "http://subgraph-1.local", nil)
@@ -403,18 +410,21 @@ func TestSubgraphRenameWithDefaultHeaderRule(t *testing.T) {
 
 	sg1Url, _ := url.Parse("http://subgraph-1.local")
 
-	ctx := &requestContext{
-		logger:         zap.NewNop(),
-		responseWriter: rr,
-		request:        clientReq,
-		operation:      &operationContext{},
-		subgraphs: []Subgraph{
-			{
-				Name: "subgraph-1",
-				Id:   "subgraph-1",
-				Url:  sg1Url,
-			},
+	subgraphResolver := NewSubgraphResolver([]Subgraph{
+		{
+			Name:      "subgraph-1",
+			Id:        "subgraph-1",
+			Url:       sg1Url,
+			UrlString: sg1Url.String(),
 		},
+	})
+
+	ctx := &requestContext{
+		logger:           zap.NewNop(),
+		responseWriter:   rr,
+		request:          clientReq,
+		operation:        &operationContext{},
+		subgraphResolver: subgraphResolver,
 	}
 
 	originReq1, err := http.NewRequest("POST", "http://subgraph-1.local", nil)
@@ -458,18 +468,21 @@ func TestSubgraphRenameMatchedHeaderRule(t *testing.T) {
 
 	sg1Url, _ := url.Parse("http://subgraph-1.local")
 
-	ctx := &requestContext{
-		logger:         zap.NewNop(),
-		responseWriter: rr,
-		request:        clientReq,
-		operation:      &operationContext{},
-		subgraphs: []Subgraph{
-			{
-				Name: "subgraph-1",
-				Id:   "subgraph-1",
-				Url:  sg1Url,
-			},
+	subgraphResolver := NewSubgraphResolver([]Subgraph{
+		{
+			Name:      "subgraph-1",
+			Id:        "subgraph-1",
+			Url:       sg1Url,
+			UrlString: sg1Url.String(),
 		},
+	})
+
+	ctx := &requestContext{
+		logger:           zap.NewNop(),
+		responseWriter:   rr,
+		request:          clientReq,
+		operation:        &operationContext{},
+		subgraphResolver: subgraphResolver,
 	}
 
 	originReq1, err := http.NewRequest("POST", "http://subgraph-1.local", nil)
