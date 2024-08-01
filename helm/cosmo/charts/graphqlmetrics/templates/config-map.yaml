@@ -11,3 +11,8 @@ metadata:
 data:
   listenAddr: "{{ .Values.configuration.listenAddr }}"
   logLevel: "{{ .Values.configuration.logLevel }}"
+  prometheusEnabled: "{{ .Values.configuration.prometheus.enabled }}"
+  {{- if .Values.configuration.prometheus.enabled }}
+  prometheusListenAddr: "{{ .Values.configuration.prometheus.host }}:{{ .Values.configuration.prometheus.port }}"
+  prometheusPath: "{{ .Values.configuration.prometheus.path }}"
+  {{ end }}

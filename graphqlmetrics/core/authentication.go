@@ -1,35 +1,14 @@
 package core
 
 import (
-	"context"
 	"fmt"
-	"github.com/golang-jwt/jwt/v5"
-	"go.uber.org/zap"
 	"net/http"
 	"strings"
+
+	"github.com/golang-jwt/jwt/v5"
+	utils "github.com/wundergraph/cosmo/graphqlmetrics/pkg/utils"
+	"go.uber.org/zap"
 )
-
-type GraphAPITokenClaims struct {
-	OrganizationID   string `json:"organization_id"`
-	FederatedGraphID string `json:"federated_graph_id"`
-	jwt.RegisteredClaims
-}
-
-type claimsContextKey string
-
-const claimsKey claimsContextKey = "claims"
-
-func getClaims(ctx context.Context) (*GraphAPITokenClaims, error) {
-	claims, ok := ctx.Value(claimsKey).(*GraphAPITokenClaims)
-	if !ok {
-		return nil, fmt.Errorf("could not get claims from context")
-	}
-	return claims, nil
-}
-
-func setClaims(ctx context.Context, claims *GraphAPITokenClaims) context.Context {
-	return context.WithValue(ctx, claimsKey, claims)
-}
 
 func authenticate(jwtSecret []byte, logger *zap.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -40,7 +19,7 @@ func authenticate(jwtSecret []byte, logger *zap.Logger, next http.Handler) http.
 			return
 		}
 
-		token, err := jwt.ParseWithClaims(parts[1], &GraphAPITokenClaims{}, func(token *jwt.Token) (interface{}, error) {
+		token, err := jwt.ParseWithClaims(parts[1], &utils.GraphAPITokenClaims{}, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 			}
@@ -58,13 +37,13 @@ func authenticate(jwtSecret []byte, logger *zap.Logger, next http.Handler) http.
 			return
 		}
 
-		claims, ok := token.Claims.(*GraphAPITokenClaims)
+		claims, ok := token.Claims.(*utils.GraphAPITokenClaims)
 		if !ok {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 
-		r = r.WithContext(setClaims(r.Context(), claims))
+		r = r.WithContext(utils.SetClaims(r.Context(), claims))
 
 		next.ServeHTTP(w, r)
 	})
