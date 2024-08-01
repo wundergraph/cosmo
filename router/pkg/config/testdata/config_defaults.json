@@ -57,6 +57,7 @@
       "Content-Type"
     ],
     "AllowCredentials": true,
+    "AllowWildcard": true,
     "MaxAge": 300000000000
   },
   "Cluster": {
