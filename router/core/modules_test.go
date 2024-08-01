@@ -21,7 +21,6 @@ func TestNoError(t *testing.T) {
 		responseWriter: rr,
 		request:        req,
 		operation:      nil,
-		subgraphs:      nil,
 	}
 
 	WriteResponseError(requestContext, nil)
@@ -43,7 +42,6 @@ func TestSingleError(t *testing.T) {
 		responseWriter: rr,
 		request:        req,
 		operation:      nil,
-		subgraphs:      nil,
 	}
 
 	WriteResponseError(requestContext, errors.New("test"))

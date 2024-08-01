@@ -5,12 +5,13 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"github.com/klauspost/compress/gzhttp"
-	"github.com/klauspost/compress/gzip"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/klauspost/compress/gzhttp"
+	"github.com/klauspost/compress/gzip"
 
 	"github.com/cloudflare/backoff"
 	"github.com/dgraph-io/ristretto"
@@ -457,10 +458,11 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		requestLoggerOpts...,
 	)
 
-	// Enrich the request context with the subgraphs information which is required for custom modules and tracing
+	// Enrich the request context with the subgraph information which is required for custom modules and tracing
+	subgraphResolver := NewSubgraphResolver(subgraphs)
 	httpRouter.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			r = r.WithContext(withSubgraphs(r.Context(), subgraphs))
+			r = r.WithContext(withSubgraphResolver(r.Context(), subgraphResolver))
 
 			// For debugging purposes, we can validate from what version of the config the request is coming from
 			if s.setConfigVersionHeader {
@@ -857,6 +859,9 @@ func configureSubgraphOverwrites(
 	overrideRoutingURLConfig config.OverrideRoutingURLConfiguration,
 	overrides config.OverridesConfiguration,
 ) ([]Subgraph, error) {
+	var (
+		err error
+	)
 	subgraphs := make([]Subgraph, 0, len(configSubgraphs))
 	for _, sg := range configSubgraphs {
 
@@ -866,12 +871,11 @@ func configureSubgraphOverwrites(
 		}
 
 		// Validate subgraph url. Note that it can be empty if the subgraph is virtual
-		parsedURL, err := url.Parse(sg.RoutingUrl)
+		subgraph.Url, err = url.Parse(sg.RoutingUrl)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse subgraph url '%s': %w", sg.RoutingUrl, err)
 		}
-
-		subgraph.Url = parsedURL
+		subgraph.UrlString = subgraph.Url.String()
 
 		overrideURL, ok := overrideRoutingURLConfig.Subgraphs[sg.Name]
 		overrideSubgraph, overrideSubgraphOk := overrides.Subgraphs[sg.Name]
@@ -920,12 +924,11 @@ func configureSubgraphOverwrites(
 		// check if the subgraph is overridden
 		if ok || overrideSubgraphOk {
 			if overrideURL != "" {
-				parsedURL, err := url.Parse(overrideURL)
+				subgraph.Url, err = url.Parse(overrideURL)
 				if err != nil {
 					return nil, fmt.Errorf("failed to parse override url '%s': %w", overrideURL, err)
 				}
-
-				subgraph.Url = parsedURL
+				subgraph.UrlString = subgraph.Url.String()
 			}
 
 			// Override datasource urls
