@@ -2,15 +2,16 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/execution_config"
-
-	"github.com/wundergraph/cosmo/router/internal/cdn"
+	"github.com/KimMachineGun/automemlimit/memlimit"
+	"github.com/dustin/go-humanize"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/selfregister"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
+	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"go.uber.org/automaxprocs/maxprocs"
+	"os"
 
 	"github.com/wundergraph/cosmo/router/core"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -33,6 +34,28 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		return nil, fmt.Errorf("could not set max GOMAXPROCS: %w", err)
 	}
 
+	// Automatically set GOMEMLIMIT to 90% of the available memory.
+	// This is an effort to prevent the router from being killed by OOM (Out Of Memory)
+	// when the system is under memory pressure e.g. when GC is not able to free memory fast enough.
+	// More details: https://tip.golang.org/doc/gc-guide#Memory_limit
+	mLimit, err := memlimit.SetGoMemLimitWithOpts(
+		memlimit.WithRatio(0.9),
+		memlimit.WithProvider(
+			memlimit.ApplyFallback(
+				memlimit.FromCgroupHybrid,
+				memlimit.FromSystem,
+			),
+		),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("could not set memory limit: %w", err)
+	}
+	if mLimit > 0 {
+		params.Logger.Info("GOMEMLIMIT set automatically", zap.String("limit", humanize.Bytes(uint64(mLimit))))
+	} else if os.Getenv("GOMEMLIMIT") != "" {
+		params.Logger.Info("GOMEMLIMIT set by user", zap.String("limit", os.Getenv("GOMEMLIMIT")))
+	}
+
 	var routerConfig *nodev1.RouterConfig
 	var configPoller configpoller.ConfigPoller
 	var selfRegister selfregister.SelfRegister
@@ -45,26 +68,11 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		if err != nil {
 			logger.Fatal("Could not read router config", zap.Error(err), zap.String("path", cfg.RouterConfigPath))
 		}
-	} else if cfg.Graph.Token != "" {
-		routerCDN, err := cdn.NewRouterConfigClient(cfg.CDN.URL, cfg.Graph.Token, cdn.RouterConfigOptions{
-			Logger:       logger,
-			SignatureKey: cfg.Graph.SignKey,
-		})
-		if err != nil {
-			return nil, err
+		if cfg.RouterRegistration {
+			selfRegister = selfregister.New(cfg.ControlplaneURL, cfg.Graph.Token,
+				selfregister.WithLogger(logger),
+			)
 		}
-
-		configPoller = configpoller.New(cfg.ControlplaneURL, cfg.Graph.Token,
-			configpoller.WithLogger(logger),
-			configpoller.WithPollInterval(cfg.PollInterval),
-			configpoller.WithCDNClient(routerCDN),
-		)
-	}
-
-	if cfg.RouterRegistration && cfg.Graph.Token != "" {
-		selfRegister = selfregister.New(cfg.ControlplaneURL, cfg.Graph.Token,
-			selfregister.WithLogger(logger),
-		)
 	}
 
 	var authenticators []authentication.Authenticator
@@ -99,6 +107,14 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		core.WithIntrospection(cfg.IntrospectionEnabled),
 		core.WithPlayground(cfg.PlaygroundEnabled),
 		core.WithGraphApiToken(cfg.Graph.Token),
+		core.WithPersistedOperationsConfig(cfg.PersistedOperationsConfig),
+		core.WithStorageProviders(cfg.StorageProviders),
+		core.WithConfigPollerConfig(&core.RouterConfigPollerConfig{
+			ControlPlaneURL: cfg.ControlplaneURL,
+			GraphSignKey:    cfg.Graph.SignKey,
+			PollInterval:    cfg.PollInterval,
+			ExecutionConfig: cfg.ExecutionConfig,
+		}),
 		core.WithGraphQLPath(cfg.GraphQLPath),
 		core.WithModulesConfig(cfg.Modules),
 		core.WithGracePeriod(cfg.GracePeriod),
