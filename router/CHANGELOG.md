@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.100.1](https://github.com/wundergraph/cosmo/compare/router@0.100.0...router@0.100.1) (2024-08-01)
+
+### Bug Fixes
+
+* config poller is not required when static config is passed ([#995](https://github.com/wundergraph/cosmo/issues/995)) ([e5ba812](https://github.com/wundergraph/cosmo/commit/e5ba812eaec05dca91d4b0d8b066b7f2ff0651b3)) (@StarpTech)
+* wrong otelhttp used ([#996](https://github.com/wundergraph/cosmo/issues/996)) ([6b322f6](https://github.com/wundergraph/cosmo/commit/6b322f62359da48336c7c9f4c07eac750db93907)) (@StarpTech)
+
 # [0.100.0](https://github.com/wundergraph/cosmo/compare/router@0.99.3...router@0.100.0) (2024-08-01)
 
 ### Features
