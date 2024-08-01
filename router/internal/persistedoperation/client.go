@@ -84,4 +84,6 @@ func (c client) PersistedOperation(ctx context.Context, clientName string, sha25
 	return content, nil
 }
 
-func (c client) Close() {}
+func (c client) Close() {
+	c.providerClient.Close()
+}
