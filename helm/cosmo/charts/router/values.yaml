@@ -23,8 +23,10 @@ fullnameOverride: ""
 
 # -- Allows to set additional environment / runtime variables on the container. Useful for global application non-specific settings.
 extraEnvVars: []
-  # Recommended for production to mitigate the risk of OOM kills. Requires Go 1.19+.
-  # Keep the value lower than the maximum memory limit you set. E.g. if you have 3GB memory limit, set this to 2750MiB.
+  # Is set automatically by the router but can be overridden if needed.
+  # GOMEMLIMIT is not compatible with dynamic pod resource requests introduced in Kubernetes 2.27 alpha.
+  # For more information see https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/
+  # Set the limit to around 90% of the max memory limit set in the pod spec. In this example, the limit is set to 2750MiB.
 #  - name: GOMEMLIMIT
 #    value: "2750MiB"
 
