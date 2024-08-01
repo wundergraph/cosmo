@@ -45,6 +45,10 @@ jobs:
       - name: Check if git is not dirty after generating files
         run: git diff --no-ext-diff --exit-code
 
+      - uses: ./.github/actions/go-mod-tidy
+        with:
+          working-directory: ./aws-lambda-router
+
       - name: Install dependencies
         working-directory: ./aws-lambda-router
         run: go mod download

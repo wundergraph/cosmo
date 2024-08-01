@@ -57,6 +57,10 @@ jobs:
       - name: Check if git is not dirty after generating files
         run: git diff --no-ext-diff --exit-code
 
+      - uses: ./.github/actions/go-mod-tidy
+        with:
+          working-directory: ./graphqlmetrics
+
       - name: Install dependencies
         working-directory: ./graphqlmetrics
         run: go mod download
