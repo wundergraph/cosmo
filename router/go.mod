@@ -19,22 +19,20 @@ require (
 	github.com/go-chi/chi/v5 v5.0.11
 	github.com/go-redis/redis_rate/v10 v10.0.1
 	github.com/gobwas/ws v1.3.1
-	github.com/goccy/go-json v0.10.2
-	github.com/goccy/go-yaml v1.11.3
+	github.com/goccy/go-json v0.10.3
+	github.com/goccy/go-yaml v1.12.0
 	github.com/golang-jwt/jwt/v5 v5.2.0
 	github.com/gorilla/websocket v1.5.1
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-retryablehttp v0.7.7
 	github.com/jensneuse/abstractlogger v0.0.4
 	github.com/joho/godotenv v1.5.1
-	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/nats-io/nats.go v1.35.0
 	github.com/nats-io/nuid v1.0.1
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.18.0
 	github.com/redis/go-redis/v9 v9.4.0
-	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/sebdah/goldie/v2 v2.5.3
 	github.com/shirou/gopsutil/v3 v3.24.3
 	github.com/stretchr/testify v1.9.0
@@ -67,9 +65,13 @@ require (
 )
 
 require (
+	github.com/caarlos0/env/v11 v11.1.0
 	github.com/klauspost/compress v1.17.9
+	github.com/minio/minio-go/v7 v7.0.74
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1
 	github.com/valyala/fastjson v1.6.4
 	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8
+	golang.org/x/text v0.16.0
 )
 
 require (
@@ -79,6 +81,7 @@ require (
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/fatih/color v1.16.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
+	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
@@ -92,10 +95,12 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/jensneuse/byte-template v0.0.0-20200214152254-4f3cf06e5c68 // indirect
 	github.com/kingledion/go-tools v0.6.0 // indirect
+	github.com/klauspost/cpuid/v2 v2.2.8 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
+	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/nats-io/nkeys v0.4.7 // indirect
 	github.com/phf/go-queue v0.0.0-20170504031614-9abe38d0371d // indirect
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
@@ -105,6 +110,8 @@ require (
 	github.com/prometheus/common v0.45.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/r3labs/sse/v2 v2.8.1 // indirect
+	github.com/rs/xid v1.5.0 // indirect
+	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1 // indirect
 	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
@@ -119,7 +126,6 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.24.0 // indirect
 	golang.org/x/net v0.26.0 // indirect
-	golang.org/x/text v0.16.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240102182953-50ed04b92917 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240102182953-50ed04b92917 // indirect

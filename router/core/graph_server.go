@@ -554,7 +554,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	operationProcessor := NewOperationProcessor(OperationProcessorOptions{
 		Executor:                       executor,
 		MaxOperationSizeInBytes:        int64(s.routerTrafficConfig.MaxRequestBodyBytes),
-		PersistentOpClient:             s.cdnOperationClient,
+		PersistedOperationClient:       s.persistedOperationClient,
 		EnablePersistedOperationsCache: s.engineExecutionConfiguration.EnablePersistedOperationsCache,
 		NormalizationCache:             gm.normalizationCache,
 	})

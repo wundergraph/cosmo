@@ -32,7 +32,7 @@ import { BlobStorage } from '../blobstorage/index.js';
 import { hasLabelsChanged, normalizeLabels } from '../util.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
-import { FeatureFlagRepository, FeatureFlagWithFeatureSubgraphs } from './FeatureFlagRepository.js';
+import { FeatureFlagRepository } from './FeatureFlagRepository.js';
 
 type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
 
@@ -395,6 +395,15 @@ export class SubgraphRepository {
         );
       }
 
+      // update the readme of the subgraph
+      if (data.readme !== undefined) {
+        await targetRepo.updateReadmeOfTarget({ id: data.targetId, readme: data.readme });
+      }
+
+      if (updatedFederatedGraphs.length === 0) {
+        return;
+      }
+
       const { compositionErrors: cErrors, deploymentErrors: dErrors } = await fedGraphRepo.composeAndDeployGraphs({
         federatedGraphs: updatedFederatedGraphs.filter((g) => !g.contract),
         blobStorage,
@@ -404,11 +413,6 @@ export class SubgraphRepository {
 
       compositionErrors.push(...cErrors);
       deploymentErrors.push(...dErrors);
-
-      // update the readme of the subgraph
-      if (data.readme !== undefined) {
-        await targetRepo.updateReadmeOfTarget({ id: data.targetId, readme: data.readme });
-      }
     });
 
     return {

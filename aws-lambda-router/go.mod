@@ -4,7 +4,7 @@ require (
 	github.com/akrylysov/algnhsa v1.1.0
 	github.com/aws/aws-lambda-go v1.43.0
 	github.com/stretchr/testify v1.9.0
-	github.com/wundergraph/cosmo/router v0.0.0-20240730132010-9cf37161de15
+	github.com/wundergraph/cosmo/router v0.0.0-20240801104758-99f210100af7
 	go.uber.org/zap v1.26.0
 )
 
@@ -34,8 +34,8 @@ require (
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/gobwas/ws v1.3.1 // indirect
-	github.com/goccy/go-json v0.10.2 // indirect
-	github.com/goccy/go-yaml v1.11.3 // indirect
+	github.com/goccy/go-json v0.10.3 // indirect
+	github.com/goccy/go-yaml v1.12.0 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/uuid v1.6.0 // indirect

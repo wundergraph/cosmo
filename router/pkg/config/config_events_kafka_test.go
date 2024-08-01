@@ -75,7 +75,7 @@ events:
 `)
 
 	_, err := LoadConfig(f, "")
-	require.ErrorContains(t, err, "missing properties: 'password'")
+	require.ErrorContains(t, err, "router config validation error: jsonschema validation failed with 'https://raw.githubusercontent.com/wundergraph/cosmo/main/router/pkg/config/config.schema.json#'\n- at '/events/providers/kafka/0/authentication': oneOf failed, none matched\n  - at '/events/providers/kafka/0/authentication/sasl_plain': missing property 'password'")
 }
 
 func TestInvalidAuthenticatedKafkaProviderWithoutUsernameSaslPlain(t *testing.T) {
@@ -98,7 +98,7 @@ events:
 `)
 
 	_, err := LoadConfig(f, "")
-	require.ErrorContains(t, err, "missing properties: 'username'")
+	require.ErrorContains(t, err, "router config validation error: jsonschema validation failed with 'https://raw.githubusercontent.com/wundergraph/cosmo/main/router/pkg/config/config.schema.json#'\n- at '/events/providers/kafka/0/authentication': oneOf failed, none matched\n  - at '/events/providers/kafka/0/authentication/sasl_plain': missing property 'username'")
 }
 
 func createTempFileFromFixture(t *testing.T, fixture string) string {

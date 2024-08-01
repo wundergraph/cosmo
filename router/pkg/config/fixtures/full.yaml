@@ -19,10 +19,8 @@ poll_interval: 10s
 health_check_path: "/health"
 readiness_check_path: "/health/ready"
 liveness_check_path: "/health/live"
-router_config_path: ""
 router_registration: true
 graphql_path: /graphql
-config_path: /config.json
 dev_mode: false
 instance_id: ""
 graphql_metrics:
@@ -256,3 +254,27 @@ websocket:
     enabled: true
     allow_list:
       - "Authorization"
+
+storage_providers:
+  s3:
+    - id: "s3"
+      endpoint: "localhost:10000"
+      bucket: "cosmo"
+      access_key: "Pj6opX3288YukriGCzIr"
+      secret_key: "WNMg9X4fzMva18henO6XLX4qRHEArwYdT7Yt84w9"
+      region: "us-east-1"
+      secure: false
+
+persisted_operations:
+  cache:
+    size: 100MB
+  storage:
+    provider_id: s3
+    object_prefix: "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/operations/foo"
+
+execution_config:
+  storage:
+    provider_id: s3
+    object_path: "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/routerconfigs/latest.json"
+
+router_config_path: "latest.json"

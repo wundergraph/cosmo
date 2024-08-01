@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"io"
 	"net/http"
 	"slices"
@@ -15,7 +16,6 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/pkg/errors"
 	"github.com/valyala/fastjson"
-	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
@@ -75,9 +75,9 @@ var (
 )
 
 type OperationProcessorOptions struct {
-	Executor                *Executor
-	MaxOperationSizeInBytes int64
-	PersistentOpClient      *cdn.PersistedOperationsClient
+	Executor                 *Executor
+	MaxOperationSizeInBytes  int64
+	PersistedOperationClient persistedoperation.Client
 
 	EnablePersistedOperationsCache bool
 	NormalizationCache             *ristretto.Cache[uint64, NormalizationCacheEntry]
@@ -88,7 +88,7 @@ type OperationProcessorOptions struct {
 type OperationProcessor struct {
 	executor                 *Executor
 	maxOperationSizeInBytes  int64
-	persistedOperationClient *cdn.PersistedOperationsClient
+	persistedOperationClient persistedoperation.Client
 	parseKitPool             *sync.Pool
 	operationCache           *OperationCache
 }
@@ -806,7 +806,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 	processor := &OperationProcessor{
 		executor:                 opts.Executor,
 		maxOperationSizeInBytes:  opts.MaxOperationSizeInBytes,
-		persistedOperationClient: opts.PersistentOpClient,
+		persistedOperationClient: opts.PersistedOperationClient,
 		parseKitPool: &sync.Pool{
 			New: func() interface{} {
 				return &parseKit{
