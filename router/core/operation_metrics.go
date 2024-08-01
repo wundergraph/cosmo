@@ -2,9 +2,10 @@ package core
 
 import (
 	"context"
-	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"strconv"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/pkg/otel"
 
 	"go.uber.org/zap"
 

@@ -8,8 +8,10 @@ import (
 	"net/url"
 	"sort"
 	"strconv"
+	"sync"
 	"time"
 
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
 	"github.com/wundergraph/cosmo/router/pkg/metric"
@@ -19,7 +21,6 @@ import (
 
 	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
-	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/pool"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -101,9 +102,14 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 	}
 }
 
+// RoundTrip of the engine upstream requests. The handler is called concurrently for each request.
+// Be aware that multiple modules can be active at the same time. Must be concurrency safe.
 func (ct *CustomTransport) RoundTrip(req *http.Request) (resp *http.Response, err error) {
 
-	reqContext := getRequestContext(req.Context())
+	moduleContext := &moduleRequestContext{
+		requestContext: getRequestContext(req.Context()),
+		sendError:      nil,
+	}
 
 	done := ct.measureSubgraphMetrics(req)
 	defer func() {
@@ -112,7 +118,7 @@ func (ct *CustomTransport) RoundTrip(req *http.Request) (resp *http.Response, er
 
 	if ct.preHandlers != nil {
 		for _, preHandler := range ct.preHandlers {
-			r, resp := preHandler(req, reqContext)
+			r, resp := preHandler(req, moduleContext)
 			// Non nil response means the handler decided to skip sending the request
 			if resp != nil {
 				return resp, nil
@@ -125,7 +131,7 @@ func (ct *CustomTransport) RoundTrip(req *http.Request) (resp *http.Response, er
 		resp, err = ct.roundTripper.RoundTrip(req)
 		if err == nil && ct.isUpgradeError(req, resp) {
 			err := &ErrUpgradeFailed{StatusCode: resp.StatusCode}
-			if subgraph := reqContext.ActiveSubgraph(req); subgraph != nil {
+			if subgraph := moduleContext.ActiveSubgraph(req); subgraph != nil {
 				err.SubgraphID = subgraph.Id
 			}
 			return nil, err
@@ -136,12 +142,12 @@ func (ct *CustomTransport) RoundTrip(req *http.Request) (resp *http.Response, er
 
 	// Set the error on the request context so that it can be checked by the post handlers
 	if err != nil {
-		reqContext.sendError = err
+		moduleContext.sendError = err
 	}
 
 	if ct.postHandlers != nil {
 		for _, postHandler := range ct.postHandlers {
-			newResp := postHandler(resp, reqContext)
+			newResp := postHandler(resp, moduleContext)
 			// Abort with the first handler that returns a non-nil response
 			if newResp != nil {
 				return newResp, nil
@@ -189,68 +195,44 @@ func (ct *CustomTransport) allowSingleFlight(req *http.Request) bool {
 	return true
 }
 
+var (
+	ctBufPool = &sync.Pool{
+		New: func() any {
+			return &bytes.Buffer{}
+		},
+	}
+)
+
+func getBuffer() *bytes.Buffer {
+	return ctBufPool.Get().(*bytes.Buffer)
+}
+
+func releaseBuffer(buf *bytes.Buffer) {
+	buf.Reset()
+	ctBufPool.Put(buf)
+}
+
 func (ct *CustomTransport) roundTripSingleFlight(req *http.Request) (*http.Response, error) {
 
-	var (
-		buf *bytes.Buffer
-	)
-
-	if req.ContentLength > 0 {
-		buf = bytes.NewBuffer(make([]byte, 0, req.ContentLength))
-	} else {
-		buf = bytes.NewBuffer(make([]byte, 0, 1024))
-	}
-
-	keyGen := pool.Hash64.Get()
-	defer pool.Hash64.Put(keyGen)
-
-	// Hash the request body
-	if req.Body != nil {
-		_, err := buf.ReadFrom(req.Body)
-		if err != nil {
-			return nil, err
-		}
-		body := buf.Bytes()
-		_, err = keyGen.Write(body)
-		if err != nil {
-			return nil, err
-		}
-		// Restore the body
-		req.Body = io.NopCloser(buf)
-	}
-
-	unsortedHeaders := make([]string, 0, len(req.Header))
-
-	for key := range req.Header {
-		value := req.Header.Get(key)
-		unsortedHeaders = append(unsortedHeaders, key+value)
-	}
-
-	sort.Strings(unsortedHeaders)
-	for i := range unsortedHeaders {
-		_, err := keyGen.Write(unsafebytes.StringToBytes(unsortedHeaders[i]))
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	sum := keyGen.Sum64()
-	key := strconv.FormatUint(sum, 10)
-
 	// We need to use the single flight group to ensure that the request is only sent once
-	v, err, shared := ct.sf.Do(key, func() (interface{}, error) {
+	v, err, shared := ct.sf.Do(ct.singleFlightKey(req), func() (interface{}, error) {
 		res, err := ct.roundTripper.RoundTrip(req)
 		if err != nil {
 			return nil, err
 		}
-		buf.Reset()
+		// single flight is disallowed for mutations, including file uploads
+		// hence we don't need to worry about buffering the body here
+		buf := getBuffer()
+		defer releaseBuffer(buf)
 		_, err = buf.ReadFrom(res.Body)
 		if err != nil {
 			return nil, err
 		}
+		cp := make([]byte, buf.Len())
+		copy(cp, buf.Bytes())
 		return &responseWithBody{
 			res:  res,
-			body: buf.Bytes(),
+			body: cp,
 		}, nil
 	})
 	if err != nil {
@@ -278,6 +260,30 @@ func (ct *CustomTransport) roundTripSingleFlight(req *http.Request) (*http.Respo
 	res.Body = io.NopCloser(bytes.NewReader(rwb.body))
 
 	return res, nil
+}
+
+func (ct *CustomTransport) singleFlightKey(req *http.Request) string {
+	keyGen := pool.Hash64.Get()
+	defer pool.Hash64.Put(keyGen)
+
+	if bodyHash, ok := httpclient.BodyHashFromContext(req.Context()); ok {
+		_, _ = keyGen.WriteString(strconv.FormatUint(bodyHash, 10))
+	}
+
+	unsortedHeaders := make([]string, 0, len(req.Header))
+
+	for key := range req.Header {
+		value := req.Header.Get(key)
+		unsortedHeaders = append(unsortedHeaders, key+value)
+	}
+
+	sort.Strings(unsortedHeaders)
+	for i := range unsortedHeaders {
+		_, _ = keyGen.WriteString(unsortedHeaders[i])
+	}
+
+	sum := keyGen.Sum64()
+	return strconv.FormatUint(sum, 10)
 }
 
 type TransportFactory struct {

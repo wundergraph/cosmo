@@ -1,9 +1,10 @@
 package core
 
 import (
+	"strconv"
+
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	"go.opentelemetry.io/otel/attribute"
-	"strconv"
 
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
@@ -128,11 +129,11 @@ func (m *routerMetrics) ExportSchemaUsageInfo(operationContext *operationContext
 
 	var opType graphqlmetricsv1.OperationType
 	switch operationContext.opType {
-	case "query":
+	case OperationTypeQuery:
 		opType = graphqlmetricsv1.OperationType_QUERY
-	case "mutation":
+	case OperationTypeMutation:
 		opType = graphqlmetricsv1.OperationType_MUTATION
-	case "subscription":
+	case OperationTypeSubscription:
 		opType = graphqlmetricsv1.OperationType_SUBSCRIPTION
 	}
 

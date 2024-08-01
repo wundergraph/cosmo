@@ -28,6 +28,128 @@
         }
       }
     },
+    "storage_providers": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The configuration for the storage providers. Storage providers can be used to store the persisted operations and the execution config.",
+      "properties": {
+        "cdn": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["url", "id"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "The ID of the storage provider. The ID is used to identify the storage provider in the configuration."
+              },
+              "url": {
+                "type": "string",
+                "description": "The URL of the CDN. The URL is specified as a string with the format 'scheme://host:port'.",
+                "default": "https://cosmo-cdn.wundergraph.com"
+              }
+            }
+          }
+        },
+        "s3": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["bucket", "id"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "The ID of the storage provider. The ID is used to identify the storage provider in the configuration."
+              },
+              "bucket": {
+                "type": "string",
+                "description": "The name of the S3 bucket. The S3 bucket is used to store the execution config."
+              },
+              "region": {
+                "type": "string",
+                "description": "The region of the S3 bucket. The region is used to specify the region of the S3 bucket."
+              },
+              "access_key": {
+                "type": "string",
+                "description": "The access key of the S3 bucket. The access key ID is used to authenticate with the S3 bucket."
+              },
+              "secret_key": {
+                "type": "string",
+                "description": "The secret key of the S3 bucket. The secret access key is used to authenticate with the S3 bucket."
+              },
+              "endpoint": {
+                "type": "string",
+                "description": "The endpoint of the S3 bucket. The endpoint is used to specify the endpoint of the S3 bucket."
+              },
+              "secure": {
+                "type": "boolean",
+                "default": true,
+                "description": "Enable the secure connection. The secure connection is used to establish a secure connection with the S3 bucket."
+              }
+            }
+          }
+        }
+      }
+    },
+    "persisted_operations": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The configuration for the persisted operations.",
+      "properties": {
+        "cache": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "size": {
+              "type": "string",
+              "default": "100MB",
+              "bytes": {
+                "minimum": "10MB"
+              },
+              "format": "bytes-string",
+              "description": "The size of the cache used. The default value is 100MB."
+            }
+          }
+        },
+        "storage": {
+          "description": "The storage provider for persisted operation. Only one provider can be active. When no provider is specified, the router will fallback to the Cosmo CDN provider to download the persisted operations.",
+          "required": ["provider_id", "object_prefix"],
+          "properties": {
+            "provider_id": {
+              "description": "The ID of the storage provider. The ID must match the ID of the storage provider in the storage_providers section.",
+              "type": "string"
+            },
+            "object_prefix": {
+              "type": "string",
+              "description": "The prefix of the object in the storage provider location. The prefix is put in front of the operation SHA256 hash. /<prefix>/<sha256>.json"
+            }
+          }
+        }
+      }
+    },
+    "execution_config": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The configuration for the execution config.",
+      "properties": {
+        "storage": {
+          "description": "The storage provider for the execution config. Only one provider can be active. When no provider is specified, the router will fallback to the Cosmo CDN provider to download the execution config.",
+          "required": ["provider_id", "object_path"],
+          "properties": {
+            "provider_id": {
+              "description": "The ID of the storage provider. The ID must match the ID of the storage provider in the storage_providers section.",
+              "type": "string"
+            },
+            "object_path": {
+              "type": "string",
+              "description": "The path to the execution config in the storage provider. The path is used to download the execution config from the S3 bucket."
+            }
+          }
+        }
+      }
+    },
     "graphql_metrics": {
       "type": "object",
       "additionalProperties": false,
@@ -142,9 +264,7 @@
             "allow_list": {
               "type": "array",
               "description": "The names of the headers to forward. The default value is 'Authorization'.",
-              "default": [
-                "Authorization"
-              ],
+              "default": ["Authorization"],
               "items": {
                 "type": "string"
               }
@@ -163,9 +283,7 @@
             "allow_list": {
               "type": "array",
               "description": "The names of the query parameters to forward. The default value is 'Authorization'.",
-              "default": [
-                "Authorization"
-              ],
+              "default": ["Authorization"],
               "items": {
                 "type": "string"
               }
@@ -931,6 +1049,7 @@
     },
     "cdn": {
       "type": "object",
+      "deprecationMessage": "The CDN is deprecated. Please use the execution_config and persisted_operations instead.",
       "description": "The configuration for the CDN. The CDN is used to fetch the schema and configurations from the CDN.",
       "additionalProperties": false,
       "properties": {
@@ -982,7 +1101,9 @@
                     "type": "object",
                     "oneOf": [
                       {
+                        "type": "object",
                         "required": ["token"],
+                        "additionalProperties": false,
                         "properties": {
                           "token": {
                             "type": "string",
@@ -992,6 +1113,7 @@
                       },
                       {
                         "type": "object",
+                        "additionalProperties": false,
                         "properties": {
                           "user_info": {
                             "type": "object",
@@ -1081,14 +1203,10 @@
         }
       }
     },
-    "config_path": {
-      "type": "string",
-      "format": "file-path",
-      "description": "The path of the router configuration file. The path is specified as a string with the format 'path/to/file'."
-    },
     "router_config_path": {
       "type": "string",
       "format": "file-path",
+      "deprecationMessage": "The router_config_path is deprecated. Please use the execution_config instead.",
       "description": "The path of the router execution config file. This file contains the information how your graph is resolved and configured. The path is specified as a string with the format 'path/to/file'."
     },
     "router_registration": {
@@ -1225,6 +1343,10 @@
             "enable_persisted_operations_cache_response_header": {
               "type": "boolean",
               "description": "Enable the persisted operations cache response header. The persisted operations cache response header is used to cache the persisted operations in the client."
+            },
+            "enable_normalization_cache_response_header": {
+              "type": "boolean",
+              "description": "Enable the normalization cache response header. The normalization cache response header is used to cache the normalized operations in the client."
             }
           }
         },
@@ -1271,7 +1393,7 @@
         },
         "execution_plan_cache_size": {
           "type": "integer",
-          "default": 10000,
+          "default": 1024,
           "description": "The size of the execution plan cache."
         },
         "minify_subgraph_operations": {
@@ -1283,6 +1405,16 @@
           "type": "boolean",
           "default": true,
           "description": "Enable the persisted operations cache. The persisted operations cache is used to cache normalized persisted operations to improve performance."
+        },
+        "enable_normalization_cache": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the normalization cache. The normalization cache is used to cache normalized operations to improve performance."
+        },
+        "normalization_cache_size": {
+          "type": "integer",
+          "default": 1024,
+          "description": "The size of the normalization cache."
         }
       }
     },

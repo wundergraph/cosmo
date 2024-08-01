@@ -17,6 +17,24 @@ var (
 	modulesMu sync.RWMutex
 )
 
+// ModuleRequestContext is the interface that provides the context for a single origin request.
+type ModuleRequestContext interface {
+	// RequestContext shared across all modules
+	RequestContext
+	// SendError returns the most recent error occurred while trying to make the origin request.
+	SendError() error
+}
+
+type moduleRequestContext struct {
+	*requestContext
+	sendError error
+}
+
+// SendError returns the most recent error occurred while trying to make the origin request.
+func (m *moduleRequestContext) SendError() error {
+	return m.sendError
+}
+
 type ModuleID string
 
 type ModuleInfo struct {

@@ -15,7 +15,7 @@ import {
   StrikethroughIcon,
 } from "@radix-ui/react-icons";
 import Placeholder from "@tiptap/extension-placeholder";
-import { EditorContent, useEditor, type Editor } from "@tiptap/react";
+import { type Editor, EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
@@ -226,14 +226,14 @@ export const CommentCard = ({
       <div className="mb-1 flex items-start gap-x-2">
         <Avatar className="relative h-6 w-6 cursor-pointer">
           <AvatarFallback className="rounded-full bg-gradient-to-r from-indigo-500 to-pink-500 text-xs text-white">
-            {author?.email[0]}
+            {author?.email[0] ?? "-"}
           </AvatarFallback>
         </Avatar>
         <div className="flex w-full flex-col">
           <div className="flex w-full items-start">
             <div className="flex flex-wrap items-center gap-x-2">
               <h4 className="text-sm font-semibold">
-                {author?.email ?? "unknown author"}
+                {author?.email ?? "unknown user"}
               </h4>
               <div className="flex items-center gap-2">
                 <p className="text-xs text-muted-foreground">

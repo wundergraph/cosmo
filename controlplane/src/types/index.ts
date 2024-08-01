@@ -188,7 +188,7 @@ export interface OrganizationDTO {
   id: string;
   name: string;
   slug: string;
-  creatorUserId: string;
+  creatorUserId?: string;
   createdAt: string;
   features?: Feature[];
   billing?: {
@@ -200,6 +200,10 @@ export interface OrganizationDTO {
     trialEnd?: string;
     currentPeriodEnd?: string;
     cancelAtPeriodEnd?: boolean;
+  };
+  deactivation?: {
+    reason?: string;
+    initiatedAt: string;
   };
 }
 
@@ -409,7 +413,7 @@ export interface PersistedOperationDTO {
   hash: string;
   filePath: string;
   createdAt: string;
-  createdBy: string;
+  createdBy?: string;
   lastUpdatedAt: string;
   lastUpdatedBy: string;
   contents: string;
@@ -478,7 +482,7 @@ export type DiscussionThreadDTO = {
   contentMarkdown: string | null;
   contentJson: unknown;
   updatedAt: Date | null;
-  createdById: string;
+  createdById: string | null;
   isDeleted: boolean;
 }[];
 export interface SubgraphLatencyResult {
@@ -530,7 +534,6 @@ export const LintRules: LintRuleType = {
   DISALLOW_CASE_INSENSITIVE_ENUM_VALUES: 'DISALLOW_CASE_INSENSITIVE_ENUM_VALUES',
   NO_TYPENAME_PREFIX_IN_TYPE_FIELDS: 'NO_TYPENAME_PREFIX_IN_TYPE_FIELDS',
   REQUIRE_DEPRECATION_REASON: 'REQUIRE_DEPRECATION_REASON',
-  REQUIRE_DEPRECATION_DATE: 'REQUIRE_DEPRECATION_DATE',
 };
 
 export type Severity = 1 | 2;

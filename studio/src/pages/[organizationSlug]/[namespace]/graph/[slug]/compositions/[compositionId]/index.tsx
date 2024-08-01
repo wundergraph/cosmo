@@ -300,7 +300,7 @@ export const CompositionDetails = ({
 
           <div className="flex-start flex max-w-[250px] flex-1 flex-col gap-2 ">
             <dt className="text-sm text-muted-foreground">Triggered By</dt>
-            <dd className="whitespace-nowrap text-sm">{createdBy || "-"}</dd>
+            <dd className="whitespace-nowrap text-sm">{createdBy}</dd>
           </div>
 
           <div className="flex-start flex max-w-[200px] flex-1 flex-col gap-2 ">

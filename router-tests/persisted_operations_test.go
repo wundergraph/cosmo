@@ -282,6 +282,158 @@ func TestPersistedOperationCacheWithVariables(t *testing.T) {
 	})
 }
 
+func TestPersistedOperationCacheWithVariablesAndDefaultValues(t *testing.T) {
+	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		header := make(http.Header)
+		header.Add("graphql-client-name", "my-client")
+		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "skipVariableWithDefault"}}`),
+			Header:        header,
+			Variables:     []byte(`{}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		require.Equal(t, `{"data":{"employee":{"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "skipVariableWithDefault"}}`),
+			Header:        header,
+			Variables:     []byte(`{}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		require.Equal(t, `{"data":{"employee":{"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "skipVariableWithDefault"}}`),
+			Header:        header,
+			Variables:     []byte(`{"yes":false}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"employee":{"details":{"forename":"Jens"}}}}`, res.Body)
+		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "skipVariableWithDefault"}}`),
+			Header:        header,
+			Variables:     []byte(`{"yes":false}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"employee":{"details":{"forename":"Jens"}}}}`, res.Body)
+		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "skipVariableWithDefault"}}`),
+			Header:        header,
+			Variables:     []byte(`{"yes":true}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"employee":{"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "skipVariableWithDefault"}}`),
+			Header:        header,
+			Variables:     []byte(`{"yes":true}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"employee":{"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+	})
+}
+
+func TestPersistedOperationCacheWithVariablesCoercion(t *testing.T) {
+	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		header := make(http.Header)
+		header.Add("graphql-client-name", "my-client")
+		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "listArgQuery"}}`),
+			Header:        header,
+			Variables:     []byte(`{"arg": "a"}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"rootFieldWithListArg":["a"]}}`, res.Body)
+		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "listArgQuery"}}`),
+			Header:        header,
+			Variables:     []byte(`{"arg": "a"}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"rootFieldWithListArg":["a"]}}`, res.Body)
+		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "listArgQuery"}}`),
+			Header:        header,
+			Variables:     []byte(`{"arg": "b"}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"rootFieldWithListArg":["b"]}}`, res.Body)
+		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "listArgQueryWithDefault"}}`),
+			Header:        header,
+			Variables:     []byte(`{}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"rootFieldWithListArg":["a"]}}`, res.Body)
+		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "listArgQueryWithDefault"}}`),
+			Header:        header,
+			Variables:     []byte(`{}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"rootFieldWithListArg":["a"]}}`, res.Body)
+		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "listArgQueryWithDefault"}}`),
+			Header:        header,
+			Variables:     []byte(`{"arg": "b"}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"rootFieldWithListArg":["b"]}}`, res.Body)
+		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "listArgQueryWithDefault"}}`),
+			Header:        header,
+			Variables:     []byte(`{"arg": ["c"]}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"rootFieldWithListArg":["c"]}}`, res.Body)
+		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+
+		// nested list of enums
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "nestedEnum"}}`),
+			Header:        header,
+			Variables:     []byte(`{"arg":{"enums":"A"}}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"rootFieldWithInput":"A"}}`, res.Body)
+		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"MyQuery"`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "nestedEnum"}}`),
+			Header:        header,
+			Variables:     []byte(`{"arg":{"enums":"B"}}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"data":{"rootFieldWithInput":"B"}}`, res.Body)
+		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+	})
+}
+
 func BenchmarkPersistedOperationCacheEnabled(b *testing.B) {
 	expected := `{"data":{"employees":[{"details":{"forename":"Jens","hasChildren":true,"location":{"key":{"name":"Germany"}},"maritalStatus":"MARRIED","middlename":"","nationality":"GERMAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":null,"surname":"Neuse"}},{"details":{"forename":"Dustin","hasChildren":false,"location":{"key":{"name":"Germany"}},"maritalStatus":"ENGAGED","middlename":"Klaus","nationality":"GERMAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":null,"surname":"Deus"}},{"details":{"forename":"Stefan","hasChildren":false,"location":{"key":{"name":"America"}},"maritalStatus":"ENGAGED","middlename":"","nationality":"AMERICAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":[{"class":"REPTILE","gender":"UNKNOWN","name":"Snappy","__typename":"Alligator","dangerous":"yes"}],"surname":"Avram"}},{"details":{"forename":"Björn","hasChildren":true,"location":{"key":{"name":"Germany"}},"maritalStatus":"MARRIED","middlename":"Volker","nationality":"GERMAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":[{"class":"MAMMAL","gender":"FEMALE","name":"Abby","__typename":"Dog","breed":"GOLDEN_RETRIEVER"},{"class":"MAMMAL","gender":"MALE","name":"Survivor","__typename":"Pony"}],"surname":"Schwenzer"}},{"details":{"forename":"Sergiy","hasChildren":false,"location":{"key":{"name":"Ukraine"}},"maritalStatus":"ENGAGED","middlename":"","nationality":"UKRAINIAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":[{"class":"MAMMAL","gender":"FEMALE","name":"Blotch","__typename":"Cat","type":"STREET"},{"class":"MAMMAL","gender":"MALE","name":"Grayone","__typename":"Cat","type":"STREET"},{"class":"MAMMAL","gender":"MALE","name":"Rusty","__typename":"Cat","type":"STREET"},{"class":"MAMMAL","gender":"FEMALE","name":"Manya","__typename":"Cat","type":"HOME"},{"class":"MAMMAL","gender":"MALE","name":"Peach","__typename":"Cat","type":"STREET"},{"class":"MAMMAL","gender":"MALE","name":"Panda","__typename":"Cat","type":"HOME"},{"class":"MAMMAL","gender":"FEMALE","name":"Mommy","__typename":"Cat","type":"STREET"},{"class":"MAMMAL","gender":"FEMALE","name":"Terry","__typename":"Cat","type":"HOME"},{"class":"MAMMAL","gender":"FEMALE","name":"Tilda","__typename":"Cat","type":"HOME"},{"class":"MAMMAL","gender":"MALE","name":"Vasya","__typename":"Cat","type":"HOME"}],"surname":"Petrunin"}},{"details":{"forename":"Suvij","hasChildren":false,"location":{"key":{"name":"India"}},"maritalStatus":null,"middlename":"","nationality":"INDIAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":null,"surname":"Surya"}},{"details":{"forename":"Nithin","hasChildren":false,"location":{"key":{"name":"India"}},"maritalStatus":null,"middlename":"","nationality":"INDIAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":null,"surname":"Kumar"}},{"details":{"forename":"Eelco","hasChildren":false,"location":{"key":{"name":"Netherlands"}},"maritalStatus":null,"middlename":"","nationality":"DUTCH","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":[{"class":"MAMMAL","gender":"UNKNOWN","name":"Vanson","__typename":"Mouse"}],"surname":"Wiersma"}},{"details":{"forename":"Alexandra","hasChildren":true,"location":{"key":{"name":"Germany"}},"maritalStatus":"MARRIED","middlename":"","nationality":"GERMAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":null,"surname":"Neuse"}},{"details":{"forename":"David","hasChildren":false,"location":{"key":{"name":"England"}},"maritalStatus":"MARRIED","middlename":null,"nationality":"ENGLISH","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":[{"class":"MAMMAL","gender":"FEMALE","name":"Pepper","__typename":"Cat","type":"HOME"}],"surname":"Stutt"}}]}}`
 

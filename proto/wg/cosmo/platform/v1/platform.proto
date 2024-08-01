@@ -1187,7 +1187,7 @@ message Organization {
   string id = 1;
   string name = 2;
   string slug = 3;
-  string creatorUserId = 4;
+  optional string creatorUserId = 4;
   string createdAt = 5;
 }
 
@@ -1488,7 +1488,7 @@ message OrganizationInvite{
   string id = 1;
   string name = 2;
   string slug = 3;
-  string creatorUserId = 4;
+  optional string creatorUserId = 4;
   string createdAt = 5;
   optional string invitedBy = 6;
 }
@@ -1835,7 +1835,7 @@ message Discussion {
 message DiscussionComment {
   string id = 1;
   string content_json = 2;
-  string created_by = 3;
+  optional string created_by = 3;
   string created_at = 4;
   optional string updated_at = 5;
   bool is_deleted = 6;
@@ -2017,6 +2017,12 @@ message IsMemberLimitReachedResponse {
   Response response = 1;
   bool limit_reached = 2;
   int32 member_count = 3;
+}
+
+message DeleteUserRequest {}
+
+message DeleteUserResponse {
+  Response response = 1;
 }
 
 message CreateFeatureFlagRequest {
@@ -2296,6 +2302,8 @@ service PlatformService {
   // DeleteIntegration deletes an organization web integration hook
   rpc DeleteIntegration(DeleteIntegrationRequest) returns (DeleteIntegrationResponse) {}
 
+  // DeleteUser deletes the user
+  rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse) {}
   // DeleteOrganization deletes an organization
   rpc DeleteOrganization(DeleteOrganizationRequest) returns (DeleteOrganizationResponse) {}
   // LeaveOrganization removes a member from the organization

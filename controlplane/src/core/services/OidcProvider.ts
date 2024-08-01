@@ -82,22 +82,16 @@ export default class OidcProvider {
   public async deleteOidcProvider({
     kcClient,
     kcRealm,
-    organizationId,
     organizationSlug,
     orgCreatorUserId,
     alias,
-    db,
   }: {
     kcClient: Keycloak;
     kcRealm: string;
-    organizationId: string;
     organizationSlug: string;
-    orgCreatorUserId: string;
+    orgCreatorUserId?: string;
     alias: string;
-    db: PostgresJsDatabase<typeof schema>;
   }) {
-    const oidcRepo = new OidcRepository(db);
-
     const keycloakUsers = await kcClient.getKeycloakSsoLoggedInUsers({
       realm: kcRealm,
       alias,
@@ -133,7 +127,5 @@ export default class OidcProvider {
       realm: kcRealm,
       alias,
     });
-
-    await oidcRepo.deleteOidcProvider({ organizationId });
   }
 }

@@ -404,14 +404,14 @@ export class Composer {
    */
   async saveComposition({
     composedGraph,
-    composedBy,
+    composedById,
     isFeatureFlagComposition,
     federatedSchemaVersionId,
     routerExecutionConfig,
     featureFlagId,
   }: {
     composedGraph: ComposedFederatedGraph;
-    composedBy: string;
+    composedById: string;
     isFeatureFlagComposition: boolean;
     federatedSchemaVersionId: UUID;
     routerExecutionConfig?: RouterConfig;
@@ -427,7 +427,7 @@ export class Composer {
       clientSchema: composedGraph.federatedClientSchema,
       subgraphSchemaVersionIds: composedGraph.subgraphs.map((s) => s.schemaVersionId!),
       compositionErrors: composedGraph.errors,
-      composedBy,
+      composedById,
       schemaVersionId: federatedSchemaVersionId,
       isFeatureFlagComposition,
       featureFlagId,

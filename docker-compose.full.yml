@@ -111,7 +111,7 @@ services:
   # Infrastructure services
 
   clickhouse:
-    image: clickhouse/clickhouse-server:${DC_CLICKHOUSE_VERSION:-24.1}
+    image: clickhouse/clickhouse-server:${DC_CLICKHOUSE_VERSION:-24.2.2}
     environment:
       CLICKHOUSE_DB: ${CLICKHOUSE_DATABASE:-cosmo}
       CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
@@ -171,17 +171,16 @@ services:
       - postgres
 
   minio:
-    image: quay.io/minio/minio:${DC_MINIO_VERSION:-RELEASE.2023-11-06T22-26-08Z}
+    image: bitnami/minio:${DC_MINIO_VERSION:-2024.7.16-debian-12-r0}
     environment:
       - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minio}
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-changeme}
+      - MINIO_DEFAULT_BUCKETS=cosmo
     ports:
       - '10000:9000'
       - '10001:9001'
     volumes:
-      - minio:/data
-      - ./docker/minio/entrypoint.sh:/entrypoint.sh
-    entrypoint: /entrypoint.sh
+      - minio:/bitnami/minio/data
     restart: unless-stopped
     networks:
       - primary
@@ -238,6 +237,8 @@ services:
     environment:
       CLICKHOUSE_ENDPOINT: 'clickhouse://${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-changeme}@clickhouse:9000/${CLICKHOUSE_DATABASE:-cosmo}?dial_timeout=15s&compress=lz4'
       OTEL_INGEST_JWT_SECRET: ${OTEL_INGEST_JWT_SECRET:-fkczyomvdprgvtmvkuhvprxuggkbgwld}
+      PROMETHEUS_LISTEN_ADDR: ${PROMETHEUS_LISTEN_ADDR:-127.0.0.1:8088}
+      PROMETHEUS_LEVEL: ${PROMETHEUS_LEVEL:-none}
     ports:
       - '4318:4318'
     restart: unless-stopped

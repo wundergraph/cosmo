@@ -1,0 +1,5 @@
+version: v2
+modules:
+  - path: proto
+lint:
+  disallow_comment_ignores: true

@@ -37,7 +37,7 @@ export interface Organization {
   name: string;
   slug: string;
   plan?: string;
-  creatorUserId: string;
+  creatorUserId?: string;
   roles: string[];
   createdAt: string;
   features: {
@@ -60,6 +60,10 @@ export interface Organization {
     currentPeriodEnd: string;
     cancelAtPeriodEnd: boolean;
     trialEnd: string;
+  };
+  deactivation?: {
+    reason?: string;
+    initiatedAt: string;
   };
 }
 

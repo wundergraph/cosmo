@@ -4,6 +4,100 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.98.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.97.2...controlplane@0.98.0) (2024-08-01)
+
+### Bug Fixes
+
+* don't aggregate router sum metrics table, optimize router metrics queries ([#970](https://github.com/wundergraph/cosmo/issues/970)) ([7908a0f](https://github.com/wundergraph/cosmo/commit/7908a0f3e5a942d74f820dc64ad2079e1a420e18)) (@StarpTech)
+
+### Features
+
+* implement s3 provider for config and persistent operations ([#971](https://github.com/wundergraph/cosmo/issues/971)) ([e3206ff](https://github.com/wundergraph/cosmo/commit/e3206fff9c1796a64173be350445514f26db9296)) (@StarpTech)
+
+## [0.97.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.97.1...controlplane@0.97.2) (2024-07-31)
+
+**Note:** Version bump only for package controlplane
+
+## [0.97.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.97.0...controlplane@0.97.1) (2024-07-26)
+
+### Bug Fixes
+
+* org activation jobs and delete user script ([#966](https://github.com/wundergraph/cosmo/issues/966)) ([a81b4a5](https://github.com/wundergraph/cosmo/commit/a81b4a57ab5702703fd6218d90c200c5a8a543f5)) (@thisisnithin)
+
+# [0.97.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.96.1...controlplane@0.97.0) (2024-07-25)
+
+### Features
+
+* k8 jobs for user deletion and org activation ([#958](https://github.com/wundergraph/cosmo/issues/958)) ([c216414](https://github.com/wundergraph/cosmo/commit/c216414fac9e582548073e87cfeb1c795315122a)) (@thisisnithin)
+
+## [0.96.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.96.0...controlplane@0.96.1) (2024-07-24)
+
+### Bug Fixes
+
+* variable list coercion with normalization cache ([#956](https://github.com/wundergraph/cosmo/issues/956)) ([104ebe8](https://github.com/wundergraph/cosmo/commit/104ebe8f49b6975d10e897d767fb8d627e54145e)) (@jensneuse)
+
+# [0.96.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.95.0...controlplane@0.96.0) (2024-07-23)
+
+### Features
+
+* instrument controlplane with metrics ([#943](https://github.com/wundergraph/cosmo/issues/943)) ([0e74d6c](https://github.com/wundergraph/cosmo/commit/0e74d6c9c7699a335bb56d74bfc0cf3b2fdbc70e)) (@AndreasZeissner)
+
+# [0.95.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.94.0...controlplane@0.95.0) (2024-07-23)
+
+### Bug Fixes
+
+* log commit check failure as warning instead of error ([#954](https://github.com/wundergraph/cosmo/issues/954)) ([47a1e84](https://github.com/wundergraph/cosmo/commit/47a1e840d0d4cb50d3667e3a35dd29f70e8ab813)) (@thisisnithin)
+
+### Features
+
+* organization deactivation ([#945](https://github.com/wundergraph/cosmo/issues/945)) ([af5cd41](https://github.com/wundergraph/cosmo/commit/af5cd41848c282027c6a07545bdb218edc946da5)) (@thisisnithin)
+
+# [0.94.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.93.6...controlplane@0.94.0) (2024-07-22)
+
+### Features
+
+* expose normalization cache hit and acquire resolver wait time via otel ([#951](https://github.com/wundergraph/cosmo/issues/951)) ([e39437b](https://github.com/wundergraph/cosmo/commit/e39437b0164b99233bd182cda636cbc0392c556d)) (@StarpTech)
+
+## [0.93.6](https://github.com/wundergraph/cosmo/compare/controlplane@0.93.5...controlplane@0.93.6) (2024-07-19)
+
+### Bug Fixes
+
+* incorrect typecast on timestamp from db ([#948](https://github.com/wundergraph/cosmo/issues/948)) ([471fa45](https://github.com/wundergraph/cosmo/commit/471fa456ab9f3f2a567162f3ea60fe8f5cc31bbb)) (@thisisnithin)
+
+## [0.93.5](https://github.com/wundergraph/cosmo/compare/controlplane@0.93.4...controlplane@0.93.5) (2024-07-18)
+
+### Bug Fixes
+
+* **controlplane:** graceful hutdown ([#946](https://github.com/wundergraph/cosmo/issues/946)) ([4da7df1](https://github.com/wundergraph/cosmo/commit/4da7df12e19a6c1efde479f1b211e19b659afbfd)) (@StarpTech)
+
+## [0.93.4](https://github.com/wundergraph/cosmo/compare/controlplane@0.93.3...controlplane@0.93.4) (2024-07-16)
+
+**Note:** Version bump only for package controlplane
+
+## [0.93.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.93.2...controlplane@0.93.3) (2024-07-12)
+
+### Bug Fixes
+
+* scim server when adding existing user ([#935](https://github.com/wundergraph/cosmo/issues/935)) ([0265f2a](https://github.com/wundergraph/cosmo/commit/0265f2a99dd45d457b7056048d27abce49fbc08b)) (@JivusAyrus)
+
+## [0.93.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.93.1...controlplane@0.93.2) (2024-07-12)
+
+### Bug Fixes
+
+* getConfig script imports ([#936](https://github.com/wundergraph/cosmo/issues/936)) ([2781c12](https://github.com/wundergraph/cosmo/commit/2781c1226a2d5ea989415c0ff241dc2f6584d49e)) (@thisisnithin)
+
+## [0.93.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.93.0...controlplane@0.93.1) (2024-07-11)
+
+### Bug Fixes
+
+* remove REQUIRE_DEPRECATION_DATE lint rule ([#890](https://github.com/wundergraph/cosmo/issues/890)) ([1203d7f](https://github.com/wundergraph/cosmo/commit/1203d7f711c35f1bdd8a7ce6bec38dcd1093fff4)) (@JivusAyrus)
+
+# [0.93.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.92.2...controlplane@0.93.0) (2024-07-10)
+
+### Features
+
+* delete user ([#906](https://github.com/wundergraph/cosmo/issues/906)) ([5d438a1](https://github.com/wundergraph/cosmo/commit/5d438a1a2e1be610ff0e139efd692ed798daf677)) (@thisisnithin)
+
 ## [0.92.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.92.1...controlplane@0.92.2) (2024-07-09)
 
 ### Bug Fixes

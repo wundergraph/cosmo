@@ -5,13 +5,17 @@ import {
   IntegrationConfig,
   IntegrationType,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { addDays } from 'date-fns';
 import { SQL, and, asc, eq, inArray, like, not, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { MemberRole, NewOrganizationFeature } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
+  billingSubscriptions,
   integrationTypeEnum,
+  organizationBilling,
+  organizationFeatures,
   organizationIntegrations,
   organizationMemberRoles,
   organizationWebhooks,
@@ -20,13 +24,13 @@ import {
   slackIntegrationConfigs,
   slackSchemaUpdateEventConfigs,
   users,
-  organizationFeatures,
-  organizationBilling,
-  billingSubscriptions,
 } from '../../db/schema.js';
 import { Feature, FeatureIds, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
+import Keycloak from '../services/Keycloak.js';
+import { DeleteOrganizationQueue } from '../workers/DeleteOrganizationWorker.js';
 import { BillingRepository } from './BillingRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
+import { OidcRepository } from './OidcRepository.js';
 
 /**
  * Repository for organization related operations.
@@ -63,7 +67,7 @@ export class OrganizationRepository {
       id: insertedOrg[0].id,
       name: insertedOrg[0].name,
       slug: insertedOrg[0].slug,
-      creatorUserId: insertedOrg[0].createdBy,
+      creatorUserId: insertedOrg[0].createdBy || undefined,
       createdAt: insertedOrg[0].createdAt.toISOString(),
     };
 
@@ -101,6 +105,9 @@ export class OrganizationRepository {
         subscription: {
           status: billingSubscriptions.status,
         },
+        isDeactivated: organizations.isDeactivated,
+        deactivationReason: organizations.deactivationReason,
+        deactivatedAt: organizations.deactivatedAt,
       })
       .from(organizations)
       .leftJoin(organizationBilling, eq(organizations.id, organizationBilling.organizationId))
@@ -119,7 +126,7 @@ export class OrganizationRepository {
       id: org[0].id,
       name: org[0].name,
       slug: org[0].slug,
-      creatorUserId: org[0].creatorUserId,
+      creatorUserId: org[0].creatorUserId || undefined,
       createdAt: org[0].createdAt.toISOString(),
       billing: plan
         ? {
@@ -129,6 +136,12 @@ export class OrganizationRepository {
       subscription: org[0].subscription
         ? {
             status: org[0].subscription.status,
+          }
+        : undefined,
+      deactivation: org[0].isDeactivated
+        ? {
+            reason: org[0].deactivationReason || undefined,
+            initiatedAt: org[0].deactivatedAt?.toISOString() ?? '',
           }
         : undefined,
     };
@@ -148,6 +161,9 @@ export class OrganizationRepository {
         subscription: {
           status: billingSubscriptions.status,
         },
+        isDeactivated: organizations.isDeactivated,
+        deactivationReason: organizations.deactivationReason,
+        deactivatedAt: organizations.deactivatedAt,
       })
       .from(organizations)
       .leftJoin(organizationBilling, eq(organizations.id, organizationBilling.organizationId))
@@ -166,7 +182,7 @@ export class OrganizationRepository {
       id: org[0].id,
       name: org[0].name,
       slug: org[0].slug,
-      creatorUserId: org[0].creatorUserId,
+      creatorUserId: org[0].creatorUserId || undefined,
       createdAt: org[0].createdAt.toISOString(),
       billing: plan
         ? {
@@ -176,6 +192,12 @@ export class OrganizationRepository {
       subscription: org[0].subscription
         ? {
             status: org[0].subscription.status,
+          }
+        : undefined,
+      deactivation: org[0].isDeactivated
+        ? {
+            reason: org[0].deactivationReason || undefined,
+            initiatedAt: org[0].deactivatedAt?.toISOString() ?? '',
           }
         : undefined,
     };
@@ -215,6 +237,9 @@ export class OrganizationRepository {
           cancelAtPeriodEnd: billingSubscriptions.cancelAtPeriodEnd,
           currentPeriodEnd: billingSubscriptions.currentPeriodEnd,
         },
+        isDeactivated: organizations.isDeactivated,
+        deactivationReason: organizations.deactivationReason,
+        deactivatedAt: organizations.deactivatedAt,
       })
       .from(organizationsMembers)
       .innerJoin(organizations, eq(organizations.id, organizationsMembers.organizationId))
@@ -231,7 +256,7 @@ export class OrganizationRepository {
           id: org.id,
           name: org.name,
           slug: org.slug,
-          creatorUserId: org.creatorUserId,
+          creatorUserId: org.creatorUserId || undefined,
           createdAt: org.createdAt.toISOString(),
           roles: await this.getOrganizationMemberRoles({
             userID: input.userId,
@@ -249,6 +274,12 @@ export class OrganizationRepository {
                 trialEnd: org.subscription.trialEnd?.toISOString(),
                 cancelAtPeriodEnd: org.subscription.cancelAtPeriodEnd,
                 currentPeriodEnd: org.subscription.currentPeriodEnd?.toISOString(),
+              }
+            : undefined,
+          deactivation: org.isDeactivated
+            ? {
+                reason: org.deactivationReason || undefined,
+                initiatedAt: org.deactivatedAt?.toISOString() ?? '',
               }
             : undefined,
         };
@@ -323,7 +354,12 @@ export class OrganizationRepository {
       })
       .from(organizationsMembers)
       .innerJoin(users, eq(users.id, organizationsMembers.userId))
-      .where(and(eq(organizationsMembers.organizationId, input.organizationID), eq(users.email, input.userEmail)))
+      .where(
+        and(
+          eq(organizationsMembers.organizationId, input.organizationID),
+          eq(users.email, input.userEmail.toLowerCase()),
+        ),
+      )
       .orderBy(asc(organizationsMembers.createdAt))
       .execute();
 
@@ -812,8 +848,14 @@ export class OrganizationRepository {
     return result[0];
   }
 
-  public deleteOrganization(organizationID: string) {
-    return this.db.delete(organizations).where(eq(organizations.id, organizationID)).execute();
+  public deleteOrganization(organizationId: string) {
+    return this.db.transaction(async (tx) => {
+      const oidcRepo = new OidcRepository(tx);
+      await oidcRepo.deleteOidcProvider({ organizationId });
+
+      // Delete organization from db
+      await this.db.delete(organizations).where(eq(organizations.id, organizationId)).execute();
+    });
   }
 
   public async updateUserRole(input: {
@@ -1189,5 +1231,128 @@ export class OrganizationRepository {
     }
 
     return list;
+  }
+
+  public async adminMemberships({ userId }: { userId: string }) {
+    const orgs = await this.memberships({ userId });
+
+    const orgsWhereUserIsAdmin = orgs.filter((o) => o.roles.includes('admin'));
+
+    // We need to track these orgs to delete them since the user is the only member.
+    const soloAdminSoloMemberOrgs: OrganizationDTO[] = [];
+
+    // A user who is an admin can only be deleted if the organization has another admin as well.
+    // We keep track of cases where the user is the only admin to inform the actor
+    const soloAdminManyMembersOrgs: OrganizationDTO[] = [];
+
+    for (const org of orgsWhereUserIsAdmin) {
+      const members = await this.getMembers({
+        organizationID: org.id,
+      });
+
+      if (members.length === 1) {
+        soloAdminSoloMemberOrgs.push(org);
+        continue;
+      }
+
+      const admins = members.filter((m) => m.roles.includes('admin'));
+      if (admins.length === 1) {
+        soloAdminManyMembersOrgs.push(org);
+      }
+    }
+
+    return {
+      soloAdminSoloMemberOrgs,
+      soloAdminManyMembersOrgs,
+      memberships: orgs,
+    };
+  }
+
+  /***
+   * Checks if the user can be deleted.
+   * It returns with isSafe=false if the user is the only admin of one or more multi member organizations along with said organizations.
+   * It also returns organizations where the user is the only member.
+   */
+  public async canUserBeDeleted(id: string): Promise<{
+    isSafe: boolean;
+    soloOrganizations: OrganizationDTO[];
+    unsafeOrganizations: OrganizationDTO[];
+  }> {
+    const { soloAdminManyMembersOrgs, soloAdminSoloMemberOrgs } = await this.adminMemberships({
+      userId: id,
+    });
+
+    const isSafe = soloAdminManyMembersOrgs.length === 0;
+
+    return {
+      isSafe,
+      soloOrganizations: soloAdminSoloMemberOrgs,
+      unsafeOrganizations: soloAdminManyMembersOrgs,
+    };
+  }
+
+  /***
+   * Cancels Subscription
+   * Removes any feature overrides
+   * Sets deactivated to true.
+   * Schedules deletion.
+   */
+  public async deactivateOrganization(input: {
+    organizationId: string;
+    reason?: string;
+    keycloakClient: Keycloak;
+    keycloakRealm: string;
+    deleteOrganizationQueue: DeleteOrganizationQueue;
+  }) {
+    const billingRepo = new BillingRepository(this.db);
+    await billingRepo.cancelSubscription(input.organizationId);
+
+    await this.db.transaction(async (tx) => {
+      await tx
+        .delete(schema.organizationFeatures)
+        .where(eq(schema.organizationFeatures.organizationId, input.organizationId));
+
+      await tx
+        .update(schema.organizations)
+        .set({
+          isDeactivated: true,
+          deactivatedAt: new Date(),
+          deactivationReason: input.reason,
+        })
+        .where(eq(schema.organizations.id, input.organizationId));
+    });
+
+    const now = new Date();
+    const oneMonthFromNow = addDays(now, 30);
+    const delay = Number(oneMonthFromNow) - Number(now);
+
+    return input.deleteOrganizationQueue.addJob(
+      {
+        organizationId: input.organizationId,
+      },
+      {
+        delay,
+      },
+    );
+  }
+
+  public async reactivateOrganization(input: {
+    organizationId: string;
+    deleteOrganizationQueue: DeleteOrganizationQueue;
+  }) {
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(schema.organizations)
+        .set({
+          isDeactivated: false,
+          deactivatedAt: null,
+          deactivationReason: null,
+        })
+        .where(eq(schema.organizations.id, input.organizationId));
+    });
+
+    return input.deleteOrganizationQueue.removeJob({
+      organizationId: input.organizationId,
+    });
   }
 }
