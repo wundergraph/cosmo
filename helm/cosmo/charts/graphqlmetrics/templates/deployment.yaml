@@ -52,6 +52,11 @@ spec:
             - name: http
               containerPort: {{ .Values.service.port }}
               protocol: TCP
+            {{ if .Values.configuration.prometheus.enabled }}
+            - name: metrics
+              containerPort: {{ .Values.configuration.prometheus.port }}
+              protocol: TCP
+            {{- end }}
           env:
             {{- if .Values.extraEnvVars }}
             {{- toYaml .Values.extraEnvVars | nindent 12 }}
@@ -76,6 +81,23 @@ spec:
                 configMapKeyRef:
                   name: {{ include "graphqlmetrics.fullname" . }}-configmap
                   key: logLevel
+            - name: PROMETHEUS_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "graphqlmetrics.fullname" . }}-configmap
+                  key: prometheusEnabled
+            {{- if .Values.configuration.prometheus.enabled }}
+            - name: PROMETHEUS_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "graphqlmetrics.fullname" . }}-configmap
+                  key: prometheusPath
+            - name: PROMETHEUS_LISTEN_ADDR
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "graphqlmetrics.fullname" . }}-configmap
+                  key: prometheusListenAddr
+            {{ end }}
           livenessProbe:
             httpGet:
               path: /health
@@ -110,4 +132,3 @@ spec:
       {{- if .Values.terminationGracePeriodSeconds }}
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       {{- end }}
-

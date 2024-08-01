@@ -2,20 +2,22 @@ package main
 
 import (
 	"context"
-	"github.com/ClickHouse/clickhouse-go/v2"
-	"github.com/amacneil/dbmate/v2/pkg/dbmate"
-	_ "github.com/amacneil/dbmate/v2/pkg/driver/clickhouse"
-	"github.com/wundergraph/cosmo/graphqlmetrics/config"
-	"github.com/wundergraph/cosmo/graphqlmetrics/core"
-	"github.com/wundergraph/cosmo/graphqlmetrics/internal/logging"
-	"go.uber.org/automaxprocs/maxprocs"
-	"go.uber.org/zap"
 	"log"
 	"net/url"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
+
+	"github.com/ClickHouse/clickhouse-go/v2"
+	"github.com/amacneil/dbmate/v2/pkg/dbmate"
+	_ "github.com/amacneil/dbmate/v2/pkg/driver/clickhouse"
+	"github.com/wundergraph/cosmo/graphqlmetrics/config"
+	"github.com/wundergraph/cosmo/graphqlmetrics/core"
+	"github.com/wundergraph/cosmo/graphqlmetrics/internal/logging"
+	"github.com/wundergraph/cosmo/graphqlmetrics/pkg/telemetry"
+	"go.uber.org/automaxprocs/maxprocs"
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -111,11 +113,22 @@ func main() {
 
 	ms := core.NewMetricsService(logger, conn)
 
+	metricsConfig := telemetry.NewTelemetryConfig(
+		core.Version,
+		telemetry.PrometheusConfig{
+			Enabled:    cfg.IsPrometheusEnabled,
+			ListenAddr: cfg.PrometheusListenAddr,
+			Path:       cfg.PrometheusPath,
+		},
+	)
+
 	svr := core.NewServer(
+		ctx,
 		ms,
 		core.WithJwtSecret([]byte(cfg.IngestJWTSecret)),
 		core.WithListenAddr(cfg.ListenAddr),
 		core.WithLogger(logger),
+		core.WithMetrics(metricsConfig),
 	)
 
 	go func() {

@@ -103,6 +103,13 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | global.studio.port | int | `3000` |  |
 | global.studio.webUrl | string | `"http://studio.wundergraph.local"` |  |
 | graphqlmetrics.configuration.clickhouseDsn | string | `"clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4"` |  |
+| graphqlmetrics.configuration.prometheus.enabled | bool | `false` | Enables prometheus metrics support. Default is false. |
+| graphqlmetrics.configuration.prometheus.gcpMonitoring.enabled | bool | `false` | Enables gcp support . Default is false. |
+| graphqlmetrics.configuration.prometheus.gcpMonitoring.interval | string | `"60s"` | Scrape interval. Default is "60s". |
+| graphqlmetrics.configuration.prometheus.gcpMonitoring.timeout | string | `"50s"` | Scrape timeout. Default is "50s". |
+| graphqlmetrics.configuration.prometheus.host | string | `"127.0.0.1"` | The host to bind to defaults to 127.0.0.1 to avoid opening the metrics endpoint by default. |
+| graphqlmetrics.configuration.prometheus.path | string | `"/metrics"` | The HTTP path where metrics are exposed. Default is "/metrics". |
+| graphqlmetrics.configuration.prometheus.port | int | `8088` | The port where metrics are exposed. Default is port 8088. |
 | ingress.annotations | object | `{}` |  |
 | ingress.enabled | bool | `true` |  |
 | keycloak.auth.adminPassword | string | `"changeme"` |  |

@@ -1,20 +1,22 @@
 package core
 
 import (
-	"connectrpc.com/connect"
 	"context"
 	"errors"
 	"fmt"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+
+	"connectrpc.com/connect"
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/alitto/pond"
 	"github.com/avast/retry-go"
 	lru "github.com/hashicorp/golang-lru/v2"
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1"
+	utils "github.com/wundergraph/cosmo/graphqlmetrics/pkg/utils"
 	"go.uber.org/zap"
-	"sort"
-	"strconv"
-	"strings"
-	"time"
 )
 
 var (
@@ -89,7 +91,7 @@ func (s *MetricsService) saveOperations(ctx context.Context, insertTime time.Tim
 }
 
 // saveUsageMetrics saves the usage metrics to the storage in a batch
-func (s *MetricsService) saveUsageMetrics(ctx context.Context, insertTime time.Time, claims *GraphAPITokenClaims, schemaUsage []*graphqlmetricsv1.SchemaUsageInfo) (int, error) {
+func (s *MetricsService) saveUsageMetrics(ctx context.Context, insertTime time.Time, claims *utils.GraphAPITokenClaims, schemaUsage []*graphqlmetricsv1.SchemaUsageInfo) (int, error) {
 
 	metricBatch, err := s.conn.PrepareBatch(ctx, `INSERT INTO gql_metrics_schema_usage`)
 	if err != nil {
@@ -210,7 +212,7 @@ func (s *MetricsService) PublishGraphQLMetrics(
 	requestLogger := s.logger.With(zap.String("procedure", req.Spec().Procedure))
 	res := connect.NewResponse(&graphqlmetricsv1.PublishOperationCoverageReportResponse{})
 
-	claims, err := getClaims(ctx)
+	claims, err := utils.GetClaims(ctx)
 	if err != nil {
 		return nil, errNotAuthenticated
 	}
