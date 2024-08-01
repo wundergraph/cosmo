@@ -41,6 +41,7 @@ export class RouterMetricsRepository {
                  MetricName
                from cosmo.router_metrics_30
                where
+                 Timestamp >= now() - interval 45 second AND
                  FederatedGraphID = '${input.federatedGraphId}' AND
                  OrganizationID = '${input.organizationId}' AND
                  ServiceInstanceID = '${input.serviceInstanceId}' AND
