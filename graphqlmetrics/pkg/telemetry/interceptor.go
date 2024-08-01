@@ -7,6 +7,13 @@ import (
 	"connectrpc.com/connect"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+
+	utils "github.com/wundergraph/cosmo/graphqlmetrics/pkg/utils"
+)
+
+const (
+	WgFederatedGraphId = attribute.Key("wg.federated_graph.id")
+	WgOrganizationId   = attribute.Key("wg.organization.id")
 )
 
 func splitRequestSpec(procedure string) (string, string) {
@@ -38,19 +45,36 @@ func defaultAttributes(req connect.AnyRequest) []attribute.KeyValue {
 	}
 }
 
+func checkIfClaimsAreSet(claims *utils.GraphAPITokenClaims) bool {
+	return claims.FederatedGraphID == "" || claims.OrganizationID == ""
+}
+
 func (c *Config) ObservabilityInterceptor() connect.UnaryInterceptorFunc {
 	return connect.UnaryInterceptorFunc(
 		func(next connect.UnaryFunc) connect.UnaryFunc {
 			return connect.UnaryFunc(func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
-				res, err := next(ctx, req)
-
+				attributes := defaultAttributes(req)
 				// connect.CodeOK does not exist
 				var statusCode int = 0
+
+				claims, err := utils.GetClaims(ctx)
+				if err != nil || checkIfClaimsAreSet(claims) {
+					// handling this error will happen in the service itself
+					statusCode = int(connect.CodeInvalidArgument)
+
+					attributes = append(attributes, WgFederatedGraphId.String(claims.FederatedGraphID))
+					attributes = append(attributes, WgOrganizationId.String(claims.OrganizationID))
+				} else {
+					attributes = append(attributes, WgFederatedGraphId.String(claims.FederatedGraphID))
+					attributes = append(attributes, WgOrganizationId.String(claims.OrganizationID))
+				}
+
+				res, err := next(ctx, req)
+
 				if err != nil {
 					statusCode = int(connect.CodeOf(err))
 				}
 
-				attributes := defaultAttributes(req)
 				attributes = append(attributes, semconv.RPCGRPCStatusCodeKey.Int(statusCode))
 				c.MetricStore.MeasureRequestCount(ctx, attributes...)
 

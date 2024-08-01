@@ -29,7 +29,8 @@ import (
 
 const (
 	// this token was generated using the local secret and is therefore already corrupted
-	bearerToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmZWRlcmF0ZWRHcmFwaElEIjoiZmVkMTIzIiwib3JnYW5pemF0aW9uSUQiOiJvcmcxMjMiLCJpYXQiOjE3MjIyNTU5NTR9.8mxFEDqmzmmhPVfKedzTuUUM4VxvPnsPP5N3_8fnecY"
+	bearerToken     = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJvcmdhbml6YXRpb25faWQiOiJvcmcxMjMiLCJmZWRlcmF0ZWRfZ3JhcGhfaWQiOiJmZWQxMjMiLCJpYXQiOjE3MjI1MDcyMTJ9.wtblSf4hTEcE8CaKwNyvHo2C8y7EAUHxEbCP6rGerXM"
+	ingestJWTSecret = "fkczyomvdprgvtmvkuhvprxuggkbgwld"
 )
 
 func newServerCtx() (context.Context, context.CancelFunc) {
@@ -155,7 +156,6 @@ func TestValidateExposedMetrics(t *testing.T) {
 	db := test.GetTestDatabase(t)
 	msvc := NewMetricsService(zap.NewNop(), db)
 
-	ingestJWTSecret := "fkczyomvdprgvtmvkuhvprxuggkbgwld"
 	svr := NewServer(ctx, msvc,
 		WithListenAddr(mainListenAddr),
 		WithJwtSecret([]byte(ingestJWTSecret)),
@@ -254,12 +254,7 @@ func TestValidateExposedMetrics(t *testing.T) {
 		req := &connect.Request[graphqlmetricsv1.PublishGraphQLRequestMetricsRequest]{}
 		req.Header().Add("Authorization", fmt.Sprintf("Bearer %s", bearerToken))
 
-		ctx := setClaims(ctx, &GraphAPITokenClaims{
-			FederatedGraphID: "fed123",
-			OrganizationID:   "org123",
-		})
-
-		res, err := client.PublishGraphQLMetrics(ctx, req)
+		res, err := client.PublishGraphQLMetrics(context.Background(), req)
 		require.Nil(t, err)
 		require.NotNil(t, res)
 
@@ -310,6 +305,137 @@ func TestValidateExposedMetrics(t *testing.T) {
 			{
 				Name:  PointerOf("rpc_system"),
 				Value: PointerOf("connect_rpc"),
+			},
+			{
+				Name:  PointerOf("wg_federated_graph_id"),
+				Value: PointerOf("fed123"),
+			},
+			{
+				Name:  PointerOf("wg_organization_id"),
+				Value: PointerOf("org123"),
+			},
+		}
+		require.Equal(t, expectedLabels, labels)
+	})
+}
+
+func TestValidateExposedAttirbutesWithoutClaims(t *testing.T) {
+	if os.Getenv("INT_TESTS") != "true" {
+		t.Skip("Skipping integration tests")
+	}
+
+	prometheusServerPort, err := freeport.GetFreePort()
+	require.Nil(t, err)
+	prometheusListenAddr := fmt.Sprintf("0.0.0.0:%d", prometheusServerPort)
+
+	mainServerPort, err := freeport.GetFreePort()
+	require.Nil(t, err)
+	mainListenAddr := fmt.Sprintf("0.0.0.0:%d", mainServerPort)
+
+	registry := prometheus.NewRegistry()
+	prom := telemetry.PrometheusConfig{
+		Enabled:      true,
+		ListenAddr:   prometheusListenAddr,
+		Path:         "/metrics",
+		TestRegistry: registry,
+	}
+
+	ctx, stop := newServerCtx()
+	defer stop()
+
+	db := test.GetTestDatabase(t)
+	msvc := NewMetricsService(zap.NewNop(), db)
+
+	svr := NewServer(ctx, msvc,
+		WithListenAddr(mainListenAddr),
+		WithJwtSecret([]byte(ingestJWTSecret)),
+		WithMetrics(&telemetry.Config{
+			Prometheus: prom,
+		}))
+
+	go func() {
+		if err := svr.Start(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			t.Logf("failed starting main server")
+			stop()
+		}
+	}()
+	defer func() {
+		err := svr.Shutdown(context.Background())
+		if err != nil {
+			t.Fatalf("Failed to shut down server: %v", err)
+		}
+	}()
+
+	time.Sleep(2 * time.Second)
+
+	t.Run("publishing metrics without having proper claims should indicate this in the rpc_grpc_status_code", func(t *testing.T) {
+		client := graphqlmetricsv1connect.NewGraphQLMetricsServiceClient(
+			http.DefaultClient,
+			fmt.Sprintf("http://%s", mainListenAddr),
+			brotli.WithCompression(),
+			connect.WithSendCompression(brotli.Name),
+		)
+
+		req := &connect.Request[graphqlmetricsv1.PublishGraphQLRequestMetricsRequest]{}
+		req.Header().Add("Authorization", fmt.Sprintf("Bearer %s", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJvcmdhbml6YXRpb25faWQiOiIiLCJmZWRlcmF0ZWRfZ3JhcGhfaWQiOiIiLCJpYXQiOjE3MjI1MDgzNDF9.7-u_kUlRDbRRGDi7rACZyE38pQzA5n8_4iDGKLRkHIw"))
+
+		res, err := client.PublishGraphQLMetrics(context.Background(), req)
+		require.Nil(t, err)
+		require.NotNil(t, res)
+
+		metrics, err := registry.Gather()
+		require.Nil(t, err)
+		require.NotNil(t, metrics)
+
+		requestCount := findMetricFamilyByName(metrics, "http_requests_total")
+		metric := requestCount.GetMetric()[0]
+
+		labels := metric.Label
+
+		expectedLabels := []*io_prometheus_client.LabelPair{
+			{
+				Name:  PointerOf("host_name"),
+				Value: PointerOf(mainListenAddr),
+			},
+			{
+				Name:  PointerOf("http_request_method"),
+				Value: PointerOf("POST"),
+			},
+			{
+				Name:  PointerOf("network_protocol_name"),
+				Value: PointerOf("connect"),
+			},
+			{
+				Name:  PointerOf("otel_scope_name"),
+				Value: PointerOf("cosmo.graphqlmetrics.prometheus"),
+			},
+			{
+				Name:  PointerOf("otel_scope_version"),
+				Value: PointerOf("0.0.1"),
+			},
+			{
+				Name:  PointerOf("rpc_grpc_status_code"),
+				Value: PointerOf("3"),
+			},
+			{
+				Name:  PointerOf("rpc_method"),
+				Value: PointerOf("PublishGraphQLMetrics"),
+			},
+			{
+				Name:  PointerOf("rpc_service"),
+				Value: PointerOf("wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService"),
+			},
+			{
+				Name:  PointerOf("rpc_system"),
+				Value: PointerOf("connect_rpc"),
+			},
+			{
+				Name:  PointerOf("wg_federated_graph_id"),
+				Value: PointerOf(""),
+			},
+			{
+				Name:  PointerOf("wg_organization_id"),
+				Value: PointerOf(""),
 			},
 		}
 		require.Equal(t, expectedLabels, labels)
