@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/KimMachineGun/automemlimit/memlimit"
+	"github.com/dustin/go-humanize"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
@@ -9,6 +11,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"go.uber.org/automaxprocs/maxprocs"
+	"os"
 
 	"github.com/wundergraph/cosmo/router/core"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -29,6 +32,27 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 	_, err := maxprocs.Set(maxprocs.Logger(params.Logger.Sugar().Debugf))
 	if err != nil {
 		return nil, fmt.Errorf("could not set max GOMAXPROCS: %w", err)
+	}
+
+	// Automatically set GOMEMLIMIT to reduce OOM cases. The user can still override
+	// this value with the GOMEMLIMIT environment variable.
+	// More details: https://tip.golang.org/doc/gc-guide#Memory_limit
+	mLimit, err := memlimit.SetGoMemLimitWithOpts(
+		memlimit.WithRatio(0.9),
+		memlimit.WithProvider(
+			memlimit.ApplyFallback(
+				memlimit.FromCgroupHybrid,
+				memlimit.FromSystem,
+			),
+		),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("could not set memory limit: %w", err)
+	}
+	if mLimit > 0 {
+		params.Logger.Info("GOMEMLIMIT set automatically", zap.String("limit", humanize.Bytes(uint64(mLimit))))
+	} else if os.Getenv("GOMEMLIMIT") != "" {
+		params.Logger.Info("GOMEMLIMIT set by user", zap.String("limit", os.Getenv("GOMEMLIMIT")))
 	}
 
 	var routerConfig *nodev1.RouterConfig
