@@ -1,4 +1,4 @@
-package cdn
+package httpclient
 
 import (
 	"github.com/hashicorp/go-retryablehttp"
@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func newRetryableHTTPClient(logger *zap.Logger) *http.Client {
+func NewRetryableHTTPClient(logger *zap.Logger) *http.Client {
 	retryClient := retryablehttp.NewClient()
 	retryClient.RetryWaitMax = 60 * time.Second
 	retryClient.RetryMax = 5
@@ -15,7 +15,7 @@ func newRetryableHTTPClient(logger *zap.Logger) *http.Client {
 	retryClient.Logger = nil
 	retryClient.RequestLogHook = func(_ retryablehttp.Logger, _ *http.Request, retry int) {
 		if retry > 0 {
-			logger.Info("Fetch router config from CDN", zap.Int("retry", retry))
+			logger.Info("Retry request", zap.Int("retry", retry))
 		}
 	}
 

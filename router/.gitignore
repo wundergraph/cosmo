@@ -1,3 +1,6 @@
 /router
 __debug_bin
 __schemas/config.json
+
+# debug vscode
+__debug_bin*
