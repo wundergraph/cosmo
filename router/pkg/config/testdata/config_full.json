@@ -7,8 +7,8 @@
   },
   "Telemetry": {
     "ServiceName": "cosmo-router",
-    "Attributes": [],
-    "ResourceAttributes": [],
+    "Attributes": null,
+    "ResourceAttributes": null,
     "Tracing": {
       "Enabled": true,
       "SamplingRate": 1,
@@ -19,7 +19,7 @@
           "Exporter": "http",
           "Endpoint": "https://my-otel-collector.example.com",
           "HTTPPath": "/v1/traces",
-          "Headers": null,
+          "Headers": {},
           "BatchTimeout": 10000000000,
           "ExportTimeout": 30000000000
         }
@@ -263,7 +263,7 @@
       ]
     }
   },
-  "RouterConfigPath": "",
+  "RouterConfigPath": "latest.json",
   "RouterRegistration": true,
   "OverrideRoutingURL": {
     "Subgraphs": {
@@ -298,19 +298,22 @@
       "ReportWebSocketConnections": false,
       "ReportMemoryUsage": false,
       "EnableResolverDebugging": false,
-      "EnablePersistedOperationsCacheResponseHeader": false
+      "EnablePersistedOperationsCacheResponseHeader": false,
+      "EnableNormalizationCacheResponseHeader": false
     },
     "EnableSingleFlight": true,
     "EnableRequestTracing": true,
     "EnableExecutionPlanCacheResponseHeader": false,
-    "MaxConcurrentResolvers": 1024,
+    "MaxConcurrentResolvers": 32,
     "EnableWebSocketEpollKqueue": true,
     "EpollKqueuePollTimeout": 1000000000,
     "EpollKqueueConnBufferSize": 128,
-    "WebSocketReadTimeout": 1000000000,
-    "ExecutionPlanCacheSize": 10000,
+    "WebSocketReadTimeout": 5000000000,
+    "ExecutionPlanCacheSize": 1024,
     "MinifySubgraphOperations": false,
-    "EnablePersistedOperationsCache": true
+    "EnablePersistedOperationsCache": true,
+    "EnableNormalizationCache": true,
+    "NormalizationCacheSize": 1024
   },
   "WebSocket": {
     "Enabled": true,
@@ -339,5 +342,34 @@
     "RewritePaths": true,
     "OmitLocations": true,
     "OmitExtensions": false
+  },
+  "StorageProviders": {
+    "S3": [
+      {
+        "ID": "s3",
+        "Endpoint": "localhost:10000",
+        "AccessKey": "Pj6opX3288YukriGCzIr",
+        "SecretKey": "WNMg9X4fzMva18henO6XLX4qRHEArwYdT7Yt84w9",
+        "Bucket": "cosmo",
+        "Region": "us-east-1",
+        "Secure": false
+      }
+    ],
+    "CDN": null
+  },
+  "ExecutionConfig": {
+    "Storage": {
+      "ProviderID": "s3",
+      "ObjectPath": "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/routerconfigs/latest.json"
+    }
+  },
+  "PersistedOperationsConfig": {
+    "Cache": {
+      "Size": 100000000
+    },
+    "Storage": {
+      "ProviderID": "s3",
+      "ObjectPrefix": "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/operations/foo"
+    }
   }
 }

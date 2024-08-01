@@ -47,18 +47,22 @@ export const NamespaceSelector = ({
     setNamespaces(data.namespaces.map((ns) => ns.name));
   }, [applyParams, data, namespace, setNamespaces]);
 
-  if (!namespaceParam && !!namespace) {
-    applyParams({
-      namespace,
-    });
-  }
+  useEffect(() => {
+    if (!namespaceParam && !!namespace) {
+      applyParams({
+        namespace,
+      });
+    }
+  }, [namespace, namespaceParam, applyParams]);
 
   return (
     <Select
       value={namespace}
       onValueChange={(namespace) => {
         if (shouldRedirect) {
-          router.push(`/${organizationSlug}/feature-flags?namespace=${namespace}`)
+          router.push(
+            `/${organizationSlug}/feature-flags?namespace=${namespace}`,
+          );
         } else {
           applyParams({ namespace });
         }

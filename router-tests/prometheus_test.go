@@ -88,7 +88,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -135,7 +135,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -189,7 +189,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -236,7 +236,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -302,7 +302,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -349,7 +349,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -415,7 +415,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -466,7 +466,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -584,7 +584,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -635,7 +635,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -693,7 +693,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -744,7 +744,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -814,7 +814,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -865,7 +865,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -935,7 +935,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -990,7 +990,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -1105,7 +1105,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -1156,7 +1156,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -1214,7 +1214,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -1265,7 +1265,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -1335,7 +1335,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -1386,7 +1386,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -1456,7 +1456,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -1511,7 +1511,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -1615,7 +1615,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -1683,7 +1683,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("959e2804f7b01fdd813cad98e16f06e287150a2e"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -1782,7 +1782,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("982bb03cbf4043d03036b8517ee304ec7294ae76"),
+					Value: PointerOf(xEnv.RouterConfigVersionMyFF()),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -1833,7 +1833,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("982bb03cbf4043d03036b8517ee304ec7294ae76"),
+					Value: PointerOf(xEnv.RouterConfigVersionMyFF()),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -1891,7 +1891,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("982bb03cbf4043d03036b8517ee304ec7294ae76"),
+					Value: PointerOf(xEnv.RouterConfigVersionMyFF()),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -1942,7 +1942,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("982bb03cbf4043d03036b8517ee304ec7294ae76"),
+					Value: PointerOf(xEnv.RouterConfigVersionMyFF()),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -2012,7 +2012,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("982bb03cbf4043d03036b8517ee304ec7294ae76"),
+					Value: PointerOf(xEnv.RouterConfigVersionMyFF()),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -2063,7 +2063,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("982bb03cbf4043d03036b8517ee304ec7294ae76"),
+					Value: PointerOf(xEnv.RouterConfigVersionMyFF()),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -2133,7 +2133,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("982bb03cbf4043d03036b8517ee304ec7294ae76"),
+					Value: PointerOf(xEnv.RouterConfigVersionMyFF()),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),
@@ -2188,7 +2188,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf("982bb03cbf4043d03036b8517ee304ec7294ae76"),
+					Value: PointerOf(xEnv.RouterConfigVersionMyFF()),
 				},
 				{
 					Name:  PointerOf("wg_router_version"),

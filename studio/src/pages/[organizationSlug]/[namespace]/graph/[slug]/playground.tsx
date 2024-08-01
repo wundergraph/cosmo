@@ -90,6 +90,13 @@ const graphiQLFetch = async (
 
     let hasTraceHeader = false;
     for (const headersKey in headers) {
+      // check invalid headers
+      if (!/^[\^`\-\w!#$%&'*+.|~]+$/.test(headersKey)) {
+        throw new TypeError(
+          `Header name must be a valid HTTP token [${headersKey}]`,
+        );
+      }
+
       if (headersKey.toLowerCase() === "x-wg-trace") {
         hasTraceHeader = headers[headersKey] === "true";
         break;
@@ -542,25 +549,29 @@ const PlaygroundPage: NextPageWithLayout = () => {
 
     if (header) {
       const logo = document.getElementsByClassName("graphiql-logo")[0];
-      logo.classList.add("hidden");
-      const div = document.createElement("div");
-      div.id = "response-tabs";
-      div.className = "flex items-center justify-center mx-2";
-      header.append(div);
+      if (logo) {
+        logo.classList.add("hidden");
+        const div = document.createElement("div");
+        div.id = "response-tabs";
+        div.className = "flex items-center justify-center mx-2";
+        header.append(div);
+      }
     }
 
     const responseSection =
       document.getElementsByClassName("graphiql-response")[0];
-    const responseSectionParent =
-      responseSection.parentElement as any as HTMLDivElement;
+    if (responseSection) {
+      const responseSectionParent =
+        responseSection.parentElement as any as HTMLDivElement;
 
-    if (responseSectionParent) {
-      responseSectionParent.id = "response-parent";
-      responseSectionParent.classList.add("relative");
-      const div = document.createElement("div");
-      div.id = "response-visualization";
-      div.className = "flex flex-1 h-full w-full absolute invisible -z-50";
-      responseSectionParent.append(div);
+      if (responseSectionParent) {
+        responseSectionParent.id = "response-parent";
+        responseSectionParent.classList.add("relative");
+        const div = document.createElement("div");
+        div.id = "response-visualization";
+        div.className = "flex flex-1 h-full w-full absolute invisible -z-50";
+        responseSectionParent.append(div);
+      }
     }
 
     const toolbar = document.getElementsByClassName(
@@ -581,8 +592,10 @@ const PlaygroundPage: NextPageWithLayout = () => {
     const sidebarSection = document.getElementsByClassName(
       "graphiql-sidebar-section",
     )[1];
-    const children = Array.from(sidebarSection.childNodes.values());
-    sidebarSection.removeChild(children[2]);
+    if (sidebarSection) {
+      const children = Array.from(sidebarSection.childNodes.values());
+      sidebarSection.removeChild(children[2]);
+    }
 
     setIsMounted(true);
   }, [isMounted]);

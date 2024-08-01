@@ -7,13 +7,13 @@
   },
   "Telemetry": {
     "ServiceName": "cosmo-router",
-    "Attributes": [],
-    "ResourceAttributes": [],
+    "Attributes": null,
+    "ResourceAttributes": null,
     "Tracing": {
       "Enabled": true,
       "SamplingRate": 1,
       "ParentBasedSampler": true,
-      "Exporters": [],
+      "Exporters": null,
       "Propagation": {
         "TraceContext": true,
         "Jaeger": false,
@@ -27,7 +27,7 @@
       "OTLP": {
         "Enabled": true,
         "RouterRuntime": true,
-        "Exporters": []
+        "Exporters": null
       },
       "Prometheus": {
         "Enabled": true,
@@ -163,10 +163,10 @@
   "RouterConfigPath": "",
   "RouterRegistration": true,
   "OverrideRoutingURL": {
-    "Subgraphs": {}
+    "Subgraphs": null
   },
   "Overrides": {
-    "Subgraphs": {}
+    "Subgraphs": null
   },
   "SecurityConfiguration": {
     "BlockMutations": false,
@@ -186,19 +186,22 @@
       "ReportWebSocketConnections": false,
       "ReportMemoryUsage": false,
       "EnableResolverDebugging": false,
-      "EnablePersistedOperationsCacheResponseHeader": false
+      "EnablePersistedOperationsCacheResponseHeader": false,
+      "EnableNormalizationCacheResponseHeader": false
     },
     "EnableSingleFlight": true,
     "EnableRequestTracing": true,
     "EnableExecutionPlanCacheResponseHeader": false,
-    "MaxConcurrentResolvers": 32,
+    "MaxConcurrentResolvers": 256,
     "EnableWebSocketEpollKqueue": true,
     "EpollKqueuePollTimeout": 1000000000,
     "EpollKqueueConnBufferSize": 128,
     "WebSocketReadTimeout": 5000000000,
-    "ExecutionPlanCacheSize": 10000,
+    "ExecutionPlanCacheSize": 1024,
     "MinifySubgraphOperations": false,
-    "EnablePersistedOperationsCache": true
+    "EnablePersistedOperationsCache": true,
+    "EnableNormalizationCache": true,
+    "NormalizationCacheSize": 1024
   },
   "WebSocket": {
     "Enabled": true,
@@ -227,5 +230,24 @@
     "RewritePaths": true,
     "OmitLocations": true,
     "OmitExtensions": false
+  },
+  "StorageProviders": {
+    "S3": null,
+    "CDN": null
+  },
+  "ExecutionConfig": {
+    "Storage": {
+      "ProviderID": "",
+      "ObjectPath": ""
+    }
+  },
+  "PersistedOperationsConfig": {
+    "Cache": {
+      "Size": 100000000
+    },
+    "Storage": {
+      "ProviderID": "",
+      "ObjectPrefix": ""
+    }
   }
 }

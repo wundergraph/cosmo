@@ -137,5 +137,25 @@ configuration:
   logLevel: "info"
   listenAddr: "0.0.0.0:4005"
 
+  # -- Use this section to configure prometheus metrics.
+  prometheus:
+    # -- Enables prometheus metrics support. Default is false.
+    enabled: false
+    # -- The host to bind to defautls to 127.0.0.1 to avoid opening the metrics endpoint by default.
+    host: 127.0.0.1
+    # -- The port where metrics are exposed. Default is port 8088.
+    port: 8088
+    # -- The HTTP path where metrics are exposed. Default is "/metrics".
+    path: "/metrics"
+    # Use this section to disable/enable pod monitoring over [GCP managed collection](https://cloud.google.com/stackdriver/docs/managed-prometheus/setup-managed#config-mgd-collection).
+    gcpMonitoring:
+      # -- Enables gcp support . Default is false.
+      enabled: false
+      # -- Scrape interval. Default is "60s".
+      interval: 60s
+      # -- Scrape timeout. Default is "50s".
+      timeout: 50s
+
+
 # -- Existing secret in the same namespace containing the graphqlmetrics Secrets - clickhouseDsn,jwtSecret. The secret keys have to match with current secret.
 existingSecret: ""

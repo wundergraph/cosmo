@@ -4,6 +4,84 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.83.4](https://github.com/wundergraph/cosmo/compare/studio@0.83.3...studio@0.83.4) (2024-08-01)
+
+### Bug Fixes
+
+* don't aggregate router sum metrics table, optimize router metrics queries ([#970](https://github.com/wundergraph/cosmo/issues/970)) ([7908a0f](https://github.com/wundergraph/cosmo/commit/7908a0f3e5a942d74f820dc64ad2079e1a420e18)) (@StarpTech)
+
+## [0.83.3](https://github.com/wundergraph/cosmo/compare/studio@0.83.2...studio@0.83.3) (2024-07-31)
+
+### Bug Fixes
+
+* api keys graphs dropdown ui ([#979](https://github.com/wundergraph/cosmo/issues/979)) ([9cf3716](https://github.com/wundergraph/cosmo/commit/9cf37161de151a719c752f29572819b89a265063)) (@JivusAyrus)
+
+## [0.83.2](https://github.com/wundergraph/cosmo/compare/studio@0.83.1...studio@0.83.2) (2024-07-30)
+
+### Bug Fixes
+
+* broken pagination on page size change and subgraphs table with many items ([#978](https://github.com/wundergraph/cosmo/issues/978)) ([b20b00e](https://github.com/wundergraph/cosmo/commit/b20b00e892c683d068ff7a210bad4a4ead38bb52)) (@thisisnithin)
+* invite members modal and subgraph selector ([#974](https://github.com/wundergraph/cosmo/issues/974)) ([61b417c](https://github.com/wundergraph/cosmo/commit/61b417c15bdf0081e67eb4e20cb5f5d06c0255ea)) (@thisisnithin)
+* tick formatter for custom date ranges ([#980](https://github.com/wundergraph/cosmo/issues/980)) ([fd4ca77](https://github.com/wundergraph/cosmo/commit/fd4ca77baf062feca3b1976d2f3d145a0204e843)) (@JivusAyrus)
+
+## [0.83.1](https://github.com/wundergraph/cosmo/compare/studio@0.83.0...studio@0.83.1) (2024-07-27)
+
+### Bug Fixes
+
+* increase page size for router page ([#969](https://github.com/wundergraph/cosmo/issues/969)) ([b09fc3b](https://github.com/wundergraph/cosmo/commit/b09fc3bfc9ceeca297f480c28bff7477991b103c)) (@StarpTech)
+
+# [0.83.0](https://github.com/wundergraph/cosmo/compare/studio@0.82.1...studio@0.83.0) (2024-07-26)
+
+### Bug Fixes
+
+* hydration on studio ([#965](https://github.com/wundergraph/cosmo/issues/965)) ([3af8223](https://github.com/wundergraph/cosmo/commit/3af8223cd55221643e6746b5043706a466f1b363)) (@thisisnithin)
+
+### Features
+
+* add link to billing to request custom limits ([#962](https://github.com/wundergraph/cosmo/issues/962)) ([ba64b9b](https://github.com/wundergraph/cosmo/commit/ba64b9b97b6ffa5ce91be0568960087ac2a460c9)) (@StarpTech)
+
+## [0.82.1](https://github.com/wundergraph/cosmo/compare/studio@0.82.0...studio@0.82.1) (2024-07-24)
+
+### Bug Fixes
+
+* variable list coercion with normalization cache ([#956](https://github.com/wundergraph/cosmo/issues/956)) ([104ebe8](https://github.com/wundergraph/cosmo/commit/104ebe8f49b6975d10e897d767fb8d627e54145e)) (@jensneuse)
+
+# [0.82.0](https://github.com/wundergraph/cosmo/compare/studio@0.81.4...studio@0.82.0) (2024-07-23)
+
+### Features
+
+* organization deactivation ([#945](https://github.com/wundergraph/cosmo/issues/945)) ([af5cd41](https://github.com/wundergraph/cosmo/commit/af5cd41848c282027c6a07545bdb218edc946da5)) (@thisisnithin)
+
+## [0.81.4](https://github.com/wundergraph/cosmo/compare/studio@0.81.3...studio@0.81.4) (2024-07-18)
+
+**Note:** Version bump only for package studio
+
+## [0.81.3](https://github.com/wundergraph/cosmo/compare/studio@0.81.2...studio@0.81.3) (2024-07-16)
+
+**Note:** Version bump only for package studio
+
+## [0.81.2](https://github.com/wundergraph/cosmo/compare/studio@0.81.1...studio@0.81.2) (2024-07-12)
+
+### Bug Fixes
+
+* scim server when adding existing user ([#935](https://github.com/wundergraph/cosmo/issues/935)) ([0265f2a](https://github.com/wundergraph/cosmo/commit/0265f2a99dd45d457b7056048d27abce49fbc08b)) (@JivusAyrus)
+
+## [0.81.1](https://github.com/wundergraph/cosmo/compare/studio@0.81.0...studio@0.81.1) (2024-07-12)
+
+### Bug Fixes
+
+* playground crash on hard reload and better invalid headers error ([#934](https://github.com/wundergraph/cosmo/issues/934)) ([7306fb1](https://github.com/wundergraph/cosmo/commit/7306fb15f80a6371f59919cbb5890845d9ce6e74)) (@thisisnithin)
+
+# [0.81.0](https://github.com/wundergraph/cosmo/compare/studio@0.80.0...studio@0.81.0) (2024-07-11)
+
+### Bug Fixes
+
+* remove REQUIRE_DEPRECATION_DATE lint rule ([#890](https://github.com/wundergraph/cosmo/issues/890)) ([1203d7f](https://github.com/wundergraph/cosmo/commit/1203d7f711c35f1bdd8a7ce6bec38dcd1093fff4)) (@JivusAyrus)
+
+### Features
+
+* create graph page ([#929](https://github.com/wundergraph/cosmo/issues/929)) ([1c45270](https://github.com/wundergraph/cosmo/commit/1c452709dfe309984d2fd08889ceac8c28f8ccba)) (@thisisnithin)
+
 # [0.80.0](https://github.com/wundergraph/cosmo/compare/studio@0.79.2...studio@0.80.0) (2024-07-10)
 
 ### Bug Fixes

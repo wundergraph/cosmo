@@ -228,9 +228,11 @@ const RouterPage: React.FC<{ router: Router }> = ({ router }) => {
                 Process Uptime
               </div>
               <div>
-                {formatDistanceToNow(
-                  subSeconds(new Date(), parseInt(router.uptimeSeconds)),
-                )}
+                {router.uptimeSeconds
+                  ? formatDistanceToNow(
+                      subSeconds(new Date(), parseInt(router.uptimeSeconds)),
+                    )
+                  : "N/A"}
               </div>
             </li>
             <li className="flex justify-between py-4 text-sm">
@@ -238,9 +240,14 @@ const RouterPage: React.FC<{ router: Router }> = ({ router }) => {
                 Server Uptime
               </div>
               <div>
-                {formatDistanceToNow(
-                  subSeconds(new Date(), parseInt(router.serverUptimeSeconds)),
-                )}
+                {router.serverUptimeSeconds
+                  ? formatDistanceToNow(
+                      subSeconds(
+                        new Date(),
+                        parseInt(router.serverUptimeSeconds),
+                      ),
+                    )
+                  : "N/A"}
               </div>
             </li>
             <li className="flex justify-between py-4 text-sm">
@@ -286,7 +293,7 @@ const RouterPage: React.FC<{ router: Router }> = ({ router }) => {
           <ul className="divide-y">
             <li className="flex justify-between py-4 text-sm">
               <div className="font-semibold text-muted-foreground">
-                Memory Usage
+                Memory (Heap)
               </div>
               <div>
                 {prettyBytes(router.memoryUsageMb * 1024 * 1024, {
@@ -460,6 +467,12 @@ const RoutersPage: NextPageWithLayout = () => {
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    state: {
+      pagination: {
+        pageIndex: 0,
+        pageSize: 100,
+      },
+    },
   });
 
   if (isLoading) {

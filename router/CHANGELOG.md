@@ -4,6 +4,87 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.100.0](https://github.com/wundergraph/cosmo/compare/router@0.99.3...router@0.100.0) (2024-08-01)
+
+### Features
+
+* implement s3 provider for config and persistent operations ([#971](https://github.com/wundergraph/cosmo/issues/971)) ([e3206ff](https://github.com/wundergraph/cosmo/commit/e3206fff9c1796a64173be350445514f26db9296)) (@StarpTech)
+* set GOMEMLIMIT automatically ([#987](https://github.com/wundergraph/cosmo/issues/987)) ([11b5723](https://github.com/wundergraph/cosmo/commit/11b572317566395192263f8c7c81886a858f5e5e)) (@StarpTech)
+
+## [0.99.3](https://github.com/wundergraph/cosmo/compare/router@0.99.2...router@0.99.3) (2024-08-01)
+
+**Note:** Version bump only for package router
+
+## [0.99.2](https://github.com/wundergraph/cosmo/compare/router@0.99.1...router@0.99.2) (2024-07-31)
+
+### Bug Fixes
+
+* excessive memory usage for big responses by disabling big pre-al… ([#986](https://github.com/wundergraph/cosmo/issues/986)) ([9aa5f29](https://github.com/wundergraph/cosmo/commit/9aa5f29cbaa12797753f280e49d32b6eed7c11b5)) (@jensneuse)
+* routing url in router playground ([#985](https://github.com/wundergraph/cosmo/issues/985)) ([5029ddc](https://github.com/wundergraph/cosmo/commit/5029ddc34e5015b2d309c8f89f7511fc670c2696)) (@thisisnithin)
+
+## [0.99.1](https://github.com/wundergraph/cosmo/compare/router@0.99.0...router@0.99.1) (2024-07-30)
+
+### Bug Fixes
+
+* input coercion for nested values ([#981](https://github.com/wundergraph/cosmo/issues/981)) ([5494e5f](https://github.com/wundergraph/cosmo/commit/5494e5f3075db7795c100c927001a4baae212c68)) (@jensneuse)
+
+# [0.99.0](https://github.com/wundergraph/cosmo/compare/router@0.98.2...router@0.99.0) (2024-07-30)
+
+### Bug Fixes
+
+* client side validation for router playground ([#976](https://github.com/wundergraph/cosmo/issues/976)) ([9a276d8](https://github.com/wundergraph/cosmo/commit/9a276d8124cb8d102081c86fb39542158542200a)) (@JivusAyrus)
+
+### Features
+
+* package playground as library ([#975](https://github.com/wundergraph/cosmo/issues/975)) ([dc6ff32](https://github.com/wundergraph/cosmo/commit/dc6ff3274dc1db50283fa58d14051538df4af192)) (@thisisnithin)
+
+## [0.98.2](https://github.com/wundergraph/cosmo/compare/router@0.98.1...router@0.98.2) (2024-07-27)
+
+### Bug Fixes
+
+* race for sendError, add test for sampling ([#967](https://github.com/wundergraph/cosmo/issues/967)) ([6d67207](https://github.com/wundergraph/cosmo/commit/6d67207ef55e888126a73eec40007b0ad2d65976)) (@StarpTech)
+* remove slow brotli compression and use optimized gzip middleware ([#968](https://github.com/wundergraph/cosmo/issues/968)) ([1049be5](https://github.com/wundergraph/cosmo/commit/1049be552ccaf3ecee99b8970efd951a82c35054)) (@StarpTech)
+
+## [0.98.1](https://github.com/wundergraph/cosmo/compare/router@0.98.0...router@0.98.1) (2024-07-24)
+
+### Bug Fixes
+
+* variable list coercion with normalization cache ([#956](https://github.com/wundergraph/cosmo/issues/956)) ([104ebe8](https://github.com/wundergraph/cosmo/commit/104ebe8f49b6975d10e897d767fb8d627e54145e)) (@jensneuse)
+
+# [0.98.0](https://github.com/wundergraph/cosmo/compare/router@0.97.0...router@0.98.0) (2024-07-22)
+
+### Bug Fixes
+
+* optimize max concurrency for medium, high load, don't retry on 2xx status codes ([#950](https://github.com/wundergraph/cosmo/issues/950)) ([461946a](https://github.com/wundergraph/cosmo/commit/461946a1b6ef5a1a9b100ec806ba11580f15cadb)) (@StarpTech)
+
+### Features
+
+* expose normalization cache hit and acquire resolver wait time via otel ([#951](https://github.com/wundergraph/cosmo/issues/951)) ([e39437b](https://github.com/wundergraph/cosmo/commit/e39437b0164b99233bd182cda636cbc0392c556d)) (@StarpTech)
+
+# [0.97.0](https://github.com/wundergraph/cosmo/compare/router@0.96.0...router@0.97.0) (2024-07-19)
+
+### Features
+
+* implement normalization cache for non-persisted operations ([#949](https://github.com/wundergraph/cosmo/issues/949)) ([63fbe7b](https://github.com/wundergraph/cosmo/commit/63fbe7bee310767a50ec53de94352462ef8308a0)) (@jensneuse)
+
+# [0.96.0](https://github.com/wundergraph/cosmo/compare/router@0.95.7...router@0.96.0) (2024-07-18)
+
+### Features
+
+* improve JSON parsing & merging in the engine ([#937](https://github.com/wundergraph/cosmo/issues/937)) ([1717e16](https://github.com/wundergraph/cosmo/commit/1717e1659388f89cf3cc541c99b54bde5885fe17)) (@jensneuse)
+
+## [0.95.7](https://github.com/wundergraph/cosmo/compare/router@0.95.6...router@0.95.7) (2024-07-16)
+
+### Bug Fixes
+
+* router config hot reload ([#923](https://github.com/wundergraph/cosmo/issues/923)) ([4bbf689](https://github.com/wundergraph/cosmo/commit/4bbf689a3a54441c82ab5f9205851a4a7441cef6)) (@StarpTech)
+
+## [0.95.6](https://github.com/wundergraph/cosmo/compare/router@0.95.5...router@0.95.6) (2024-07-12)
+
+### Bug Fixes
+
+* playground crash on hard reload and better invalid headers error ([#934](https://github.com/wundergraph/cosmo/issues/934)) ([7306fb1](https://github.com/wundergraph/cosmo/commit/7306fb15f80a6371f59919cbb5890845d9ce6e74)) (@thisisnithin)
+
 ## [0.95.5](https://github.com/wundergraph/cosmo/compare/router@0.95.4...router@0.95.5) (2024-07-10)
 
 ### Bug Fixes

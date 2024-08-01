@@ -4,6 +4,42 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.18.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.17.3...aws-lambda-router@0.18.0) (2024-08-01)
+
+### Features
+
+* implement s3 provider for config and persistent operations ([#971](https://github.com/wundergraph/cosmo/issues/971)) ([e3206ff](https://github.com/wundergraph/cosmo/commit/e3206fff9c1796a64173be350445514f26db9296)) (@StarpTech)
+
+## [0.17.3](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.17.2...aws-lambda-router@0.17.3) (2024-07-31)
+
+### Bug Fixes
+
+* excessive memory usage for big responses by disabling big pre-al… ([#986](https://github.com/wundergraph/cosmo/issues/986)) ([9aa5f29](https://github.com/wundergraph/cosmo/commit/9aa5f29cbaa12797753f280e49d32b6eed7c11b5)) (@jensneuse)
+
+## [0.17.2](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.17.1...aws-lambda-router@0.17.2) (2024-07-30)
+
+### Bug Fixes
+
+* input coercion for nested values ([#981](https://github.com/wundergraph/cosmo/issues/981)) ([5494e5f](https://github.com/wundergraph/cosmo/commit/5494e5f3075db7795c100c927001a4baae212c68)) (@jensneuse)
+
+## [0.17.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.17.0...aws-lambda-router@0.17.1) (2024-07-24)
+
+### Bug Fixes
+
+* variable list coercion with normalization cache ([#956](https://github.com/wundergraph/cosmo/issues/956)) ([104ebe8](https://github.com/wundergraph/cosmo/commit/104ebe8f49b6975d10e897d767fb8d627e54145e)) (@jensneuse)
+
+# [0.17.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.16.0...aws-lambda-router@0.17.0) (2024-07-22)
+
+### Features
+
+* expose normalization cache hit and acquire resolver wait time via otel ([#951](https://github.com/wundergraph/cosmo/issues/951)) ([e39437b](https://github.com/wundergraph/cosmo/commit/e39437b0164b99233bd182cda636cbc0392c556d)) (@StarpTech)
+
+# [0.16.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.15.5...aws-lambda-router@0.16.0) (2024-07-18)
+
+### Features
+
+* improve JSON parsing & merging in the engine ([#937](https://github.com/wundergraph/cosmo/issues/937)) ([1717e16](https://github.com/wundergraph/cosmo/commit/1717e1659388f89cf3cc541c99b54bde5885fe17)) (@jensneuse)
+
 ## [0.15.5](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.15.4...aws-lambda-router@0.15.5) (2024-07-09)
 
 ### Bug Fixes

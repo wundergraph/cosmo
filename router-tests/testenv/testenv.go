@@ -23,6 +23,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
+
 	"github.com/nats-io/nats.go/jetstream"
 
 	"github.com/twmb/franz-go/pkg/kadm"
@@ -92,8 +94,14 @@ func Bench(b *testing.B, cfg *Config, f func(b *testing.B, xEnv *Environment)) {
 	f(b, env)
 }
 
+type RouterConfig struct {
+	StaticConfig        *nodev1.RouterConfig
+	ConfigPollerFactory func(config *nodev1.RouterConfig) configpoller.ConfigPoller
+}
+
 type Config struct {
 	Subgraphs                          SubgraphsConfig
+	RouterConfig                       *RouterConfig
 	RouterOptions                      []core.Option
 	OverrideGraphQLPath                string
 	OverrideAbsinthePath               string
@@ -112,6 +120,7 @@ type Config struct {
 	OtelResourceAttributes             []config.OtelResourceAttribute
 	MetricReader                       metric.Reader
 	PrometheusRegistry                 *prometheus.Registry
+	ShutdownDelay                      time.Duration
 }
 
 type SubgraphsConfig struct {
@@ -182,7 +191,12 @@ func setupNatsServers(t testing.TB) (*NatsData, error) {
 	}
 	natsData.Server = natsServer
 	for range demoNatsProviders {
-		natsConnection, err := nats.Connect(natsServer.ClientURL())
+		natsConnection, err := nats.Connect(
+			natsServer.ClientURL(),
+			nats.MaxReconnects(10),
+			nats.ReconnectWait(1*time.Second),
+			nats.Timeout(5*time.Second),
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -384,9 +398,6 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		return nil, err
 	}
 
-	svr, err := rr.NewServer(ctx)
-	require.NoError(t, err)
-
 	if cfg.TLSConfig != nil && cfg.TLSConfig.Enabled {
 
 		cert, err := tls.LoadX509KeyPair(cfg.TLSConfig.CertFile, cfg.TLSConfig.KeyFile)
@@ -413,14 +424,8 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	go func() {
-		if cfg.TLSConfig != nil && cfg.TLSConfig.Enabled {
-			if err := svr.HttpServer().ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
-				t.Errorf("could not start tls router: %s", err)
-			}
-		} else {
-			if err := svr.HttpServer().ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-				t.Errorf("could not start router: %s", err)
-			}
+		if err := rr.Start(ctx); err != nil {
+			t.Fatal("Could not start router", zap.Error(err))
 		}
 	}()
 
@@ -462,22 +467,29 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		productFgServer.Close()
 	}
 
+	if cfg.ShutdownDelay == 0 {
+		cfg.ShutdownDelay = 30 * time.Second
+	}
+
 	e := &Environment{
-		t:                     t,
-		graphQLPath:           graphQLPath,
-		absinthePath:          absinthePath,
-		Context:               ctx,
-		cancel:                cancel,
-		Router:                rr,
-		RouterURL:             svr.BaseURL(),
-		RouterClient:          client.StandardClient(),
-		CDN:                   cdn,
-		NatsServer:            natsData.Server,
-		NatsConnectionDefault: natsData.Connections[0],
-		NatsConnectionMyNats:  natsData.Connections[1],
-		SubgraphRequestCount:  counters,
-		KafkaAdminClient:      kafkaAdminClient,
-		KafkaClient:           kafkaClient,
+		t:                       t,
+		routerConfigVersionMain: routerConfig.Version,
+		graphQLPath:             graphQLPath,
+		absinthePath:            absinthePath,
+		Context:                 ctx,
+		cancel:                  cancel,
+		Router:                  rr,
+		RouterURL:               rr.BaseURL(),
+		RouterClient:            client.StandardClient(),
+		CDN:                     cdn,
+		NatsServer:              natsData.Server,
+		NatsConnectionDefault:   natsData.Connections[0],
+		NatsConnectionMyNats:    natsData.Connections[1],
+		SubgraphRequestCount:    counters,
+		KafkaAdminClient:        kafkaAdminClient,
+		KafkaClient:             kafkaClient,
+		shutdownDelay:           cfg.ShutdownDelay,
+		shutdown:                atomic.NewBool(false),
 		Servers: []*httptest.Server{
 			employeesServer,
 			familyServer,
@@ -488,6 +500,13 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 			moodServer,
 			countriesServer,
 		},
+	}
+
+	if routerConfig.FeatureFlagConfigs != nil {
+		myFF, ok := routerConfig.FeatureFlagConfigs.ConfigByFeatureFlagName["myff"]
+		if ok {
+			e.routerConfigVersionMyFF = myFF.Version
+		}
 	}
 
 	e.WaitForServer(ctx, e.RouterURL+"/health/live", 100, 10)
@@ -540,15 +559,18 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		EnableSingleFlight:                     true,
 		EnableRequestTracing:                   true,
 		EnableExecutionPlanCacheResponseHeader: true,
+		EnableNormalizationCache:               true,
+		NormalizationCacheSize:                 1024,
 		Debug: config.EngineDebugConfiguration{
 			ReportWebSocketConnections:                   true,
 			PrintQueryPlans:                              false,
 			EnablePersistedOperationsCacheResponseHeader: true,
+			EnableNormalizationCacheResponseHeader:       true,
 		},
 		EpollKqueuePollTimeout:         300 * time.Millisecond,
 		EpollKqueueConnBufferSize:      1,
 		WebSocketReadTimeout:           time.Millisecond * 100,
-		MaxConcurrentResolvers:         128,
+		MaxConcurrentResolvers:         32,
 		ExecutionPlanCacheSize:         1024,
 		EnablePersistedOperationsCache: true,
 	}
@@ -581,7 +603,6 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	}
 
 	routerOpts := []core.Option{
-		core.WithStaticRouterConfig(routerConfig),
 		core.WithLogger(zapLogger),
 		core.WithGraphApiToken(graphApiToken),
 		core.WithDevelopmentMode(true),
@@ -590,9 +611,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithSecurityConfig(cfg.SecurityConfiguration),
 		core.WithCDN(cfg.CDN),
 		core.WithListenerAddr(listenerAddr),
-		core.WithWithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation),
+		core.WithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation),
 		core.WithTLSConfig(testConfig.TLSConfig),
 		core.WithInstanceID("test-instance"),
+		core.WithGracePeriod(15 * time.Second),
 		core.WithIntrospection(true),
 		core.WithEvents(config.EventsConfiguration{
 			Providers: config.EventProviders{
@@ -602,6 +624,18 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		}),
 	}
 	routerOpts = append(routerOpts, testConfig.RouterOptions...)
+
+	if testConfig.RouterConfig != nil {
+		if testConfig.RouterConfig.StaticConfig != nil {
+			routerOpts = append(routerOpts, core.WithStaticRouterConfig(testConfig.RouterConfig.StaticConfig))
+		} else if testConfig.RouterConfig.ConfigPollerFactory != nil {
+			routerOpts = append(routerOpts, core.WithConfigPoller(testConfig.RouterConfig.ConfigPollerFactory(routerConfig)))
+		} else {
+			return nil, errors.New("router config is nil")
+		}
+	} else if routerConfig != nil {
+		routerOpts = append(routerOpts, core.WithStaticRouterConfig(routerConfig))
+	}
 
 	if testConfig.TraceExporter != nil {
 		c := core.TraceConfigFromTelemetry(&config.Telemetry{
@@ -752,10 +786,10 @@ func gqlURL(srv *httptest.Server) string {
 }
 
 type Environment struct {
-	t            testing.TB
-	graphQLPath  string
-	absinthePath string
-
+	t                     testing.TB
+	graphQLPath           string
+	absinthePath          string
+	shutdown              *atomic.Bool
 	Context               context.Context
 	cancel                context.CancelCauseFunc
 	Router                *core.Router
@@ -769,21 +803,41 @@ type Environment struct {
 	SubgraphRequestCount  *SubgraphRequestCount
 	KafkaAdminClient      *kadm.Client
 	KafkaClient           *kgo.Client
+	shutdownDelay         time.Duration
 
 	extraURLQueryValues url.Values
+
+	routerConfigVersionMain string
+	routerConfigVersionMyFF string
+}
+
+func (e *Environment) RouterConfigVersionMain() string {
+	return e.routerConfigVersionMain
+}
+
+func (e *Environment) RouterConfigVersionMyFF() string {
+	return e.routerConfigVersionMyFF
 }
 
 func (e *Environment) SetExtraURLQueryValues(values url.Values) {
 	e.extraURLQueryValues = values
 }
 
+// Shutdown closes all resources associated with the test environment. Can be called multiple times but will only
+// shut down resources once.
 func (e *Environment) Shutdown() {
-	ctx, cancel := context.WithTimeout(e.Context, 10*time.Second)
+	if e.shutdown.Load() {
+		return
+	}
+
+	e.shutdown.Store(true)
+
+	ctx, cancel := context.WithTimeout(e.Context, e.shutdownDelay)
 	defer cancel()
 
 	// Gracefully shutdown router
 	err := e.Router.Shutdown(ctx)
-	if err != nil {
+	if err != nil && !errors.Is(err, context.DeadlineExceeded) {
 		e.t.Errorf("could not shutdown router: %s", err)
 	}
 
@@ -793,12 +847,10 @@ func (e *Environment) Shutdown() {
 	// Close all test servers
 	for _, s := range e.Servers {
 		s.CloseClientConnections()
-		s.Close()
 	}
 
 	// Close the CDN
 	e.CDN.CloseClientConnections()
-	e.CDN.Close()
 
 	// Close NATS
 	e.NatsConnectionDefault.Close()
@@ -875,10 +927,14 @@ func (e *Environment) MakeGraphQLRequestOK(request GraphQLRequest) *TestResponse
 	return resp
 }
 
-func (e *Environment) MakeGraphQLRequest(request GraphQLRequest) (*TestResponse, error) {
+func (e *Environment) MakeGraphQLRequestWithContext(ctx context.Context, request GraphQLRequest) (*TestResponse, error) {
+	return e.makeGraphQLRequest(ctx, request)
+}
+
+func (e *Environment) makeGraphQLRequest(ctx context.Context, request GraphQLRequest) (*TestResponse, error) {
 	data, err := json.Marshal(request)
 	require.NoError(e.t, err)
-	req, err := http.NewRequestWithContext(e.Context, http.MethodPost, e.GraphQLRequestURL(), bytes.NewReader(data))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, e.GraphQLRequestURL(), bytes.NewReader(data))
 	if err != nil {
 		return nil, err
 	}
@@ -903,6 +959,10 @@ func (e *Environment) MakeGraphQLRequest(request GraphQLRequest) (*TestResponse,
 		Response: resp,
 		Proto:    resp.Proto,
 	}, nil
+}
+
+func (e *Environment) MakeGraphQLRequest(request GraphQLRequest) (*TestResponse, error) {
+	return e.makeGraphQLRequest(e.Context, request)
 }
 
 func (e *Environment) MakeGraphQLRequestAsMultipartForm(request GraphQLRequest) (*TestResponse, error) {
