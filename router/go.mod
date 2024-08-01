@@ -65,6 +65,7 @@ require (
 )
 
 require (
+	github.com/KimMachineGun/automemlimit v0.6.1
 	github.com/caarlos0/env/v11 v11.1.0
 	github.com/klauspost/compress v1.17.9
 	github.com/minio/minio-go/v7 v7.0.74
@@ -75,7 +76,6 @@ require (
 )
 
 require (
-	github.com/KimMachineGun/automemlimit v0.6.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/cilium/ebpf v0.9.1 // indirect
