@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.83.4](https://github.com/wundergraph/cosmo/compare/studio@0.83.3...studio@0.83.4) (2024-08-01)
+
+### Bug Fixes
+
+* don't aggregate router sum metrics table, optimize router metrics queries ([#970](https://github.com/wundergraph/cosmo/issues/970)) ([7908a0f](https://github.com/wundergraph/cosmo/commit/7908a0f3e5a942d74f820dc64ad2079e1a420e18)) (@StarpTech)
+
 ## [0.83.3](https://github.com/wundergraph/cosmo/compare/studio@0.83.2...studio@0.83.3) (2024-07-31)
 
 ### Bug Fixes
