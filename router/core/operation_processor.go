@@ -575,11 +575,21 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 	return false, nil
 }
 
+// nullifyExportedVariables returns nil if the variables are nil or don't contain any meaningful data
+// by the definition of the GraphQL specification, variables must be a map
+// this means that the minimum meaningful variables are {"a":0}
+// so if we have less than 7 characters, we return nil because we don't need to store the variables in the cache
+// as we will discard them anyways
+// keep in mind that we're solely using the exported variables, which contain default variables,
+// to populate the variables with defaults if we've got a normalization cache hit
+// consequently, we don't need to store anything in the cache if the variables are empty-ish
+//
+// in addition, if we're nullifying the exported variables in case of a cache miss
+// we can immediately skip parsing them and trying to set defaults from them if they're nil (early return)
 func (o *OperationKit) nullifyExportedVariables(variables []byte) []byte {
 	if variables == nil {
 		return nil
 	}
-	// min meaningful variables = {"a":1}
 	if len(variables) < 7 {
 		return nil
 	}
@@ -633,11 +643,8 @@ func (o *OperationKit) loadPersistedOperationFromCache() (ok bool, err error) {
 
 // populateDefaultVariablesFromExportedDefaults iterates through the exported default variables and sets missing ones in the variables
 func (o *OperationKit) populateDefaultVariablesFromExportedDefaults(exportedVariables, override []byte) ([]byte, error) {
+	exportedVariables = o.nullifyExportedVariables(exportedVariables)
 	if exportedVariables == nil {
-		return override, nil
-	}
-	if len(exportedVariables) < 7 {
-		// min meaningful variables = {"a":1}
 		return override, nil
 	}
 	err := jsonparser.ObjectEach(exportedVariables, func(key []byte, value []byte, dataType jsonparser.ValueType, offset int) (err error) {
