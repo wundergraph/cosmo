@@ -98,18 +98,19 @@ type OperationProcessor struct {
 
 // parseKit is a helper struct to parse, normalize and validate operations
 type parseKit struct {
-	i                   int
-	skipReuse           bool
-	parser              *astparser.Parser
-	doc                 *ast.Document
-	cachedDoc           *ast.Document
-	keyGen              *xxhash.Digest
-	normalizer          *astnormalization.OperationNormalizer
-	printer             *astprinter.Printer
-	normalizedOperation *bytes.Buffer
-	variablesValidator  *variablesvalidation.VariablesValidator
-	inputListCoercion   *astnormalization.ListInputCoercion
-	variablesParser     *fastjson.Parser
+	i                       int
+	skipReuse               bool
+	parser                  *astparser.Parser
+	doc                     *ast.Document
+	cachedDoc               *ast.Document
+	keyGen                  *xxhash.Digest
+	normalizer              *astnormalization.OperationNormalizer
+	printer                 *astprinter.Printer
+	normalizedOperation     *bytes.Buffer
+	variablesValidator      *variablesvalidation.VariablesValidator
+	inputListCoercion       *astnormalization.ListInputCoercion
+	variablesParser         *fastjson.Parser
+	exportedVariablesParser *fastjson.Parser
 }
 
 type OperationCache struct {
@@ -473,9 +474,14 @@ func (o *OperationKit) normalizePersistedOperation() (cached bool, err error) {
 }
 
 func (o *OperationKit) deleteNonSkipIncludeVariables(variables []byte, skipIncludeNames []string) ([]byte, error) {
-	variables = o.nullifyVariables(variables)
 	if variables == nil {
 		return []byte("{}"), nil
+	}
+	switch unsafebytes.BytesToString(variables) {
+	case "null", "":
+		return []byte("{}"), nil
+	case "{}":
+		return variables, nil
 	}
 	value, err := o.kit.variablesParser.ParseBytes(variables)
 	if err != nil {
@@ -676,29 +682,36 @@ func (o *OperationKit) loadPersistedOperationFromCache() (ok bool, err error) {
 
 // populateDefaultVariablesFromExportedDefaults iterates through the exported default variables and sets missing ones in the variables
 func (o *OperationKit) populateDefaultVariablesFromExportedDefaults(exportedVariables, override []byte) ([]byte, error) {
-	exportedVariables = o.nullifyVariables(exportedVariables)
 	if exportedVariables == nil {
 		return override, nil
 	}
-	err := jsonparser.ObjectEach(exportedVariables, func(key []byte, value []byte, dataType jsonparser.ValueType, offset int) (err error) {
-		if v := o.parsedOperation.Variables.Get(unsafebytes.BytesToString(key)); v != nil {
-			return nil
-		}
-		if dataType == jsonparser.String {
-			stringValue := make([]byte, len(value)+2)
-			stringValue[0] = '"'
-			copy(stringValue[1:], value)
-			stringValue[len(stringValue)-1] = '"'
-			override, err = jsonparser.Set(override, stringValue, unsafebytes.BytesToString(key))
-		} else {
-			override, err = jsonparser.Set(override, value, unsafebytes.BytesToString(key))
-		}
-		return
-	})
-	if err != nil {
-		return nil, errors.WithStack(fmt.Errorf("populateDefaultVariablesFromExportedDefaults failed: %w, input: '%s'", err, exportedVariables))
+	switch unsafebytes.BytesToString(exportedVariables) {
+	case "null", "", "{}":
+		return override, nil
 	}
-	return override, nil
+	in, err := o.kit.exportedVariablesParser.ParseBytes(exportedVariables)
+	if err != nil {
+		return nil, errors.WithStack(fmt.Errorf("populateDefaultVariablesFromExportedDefaults failed parsing exportedVariables: %w, input: %s", err, exportedVariables))
+	}
+	if in.Type() != fastjson.TypeObject {
+		return nil, errors.WithStack(fmt.Errorf("populateDefaultVariablesFromExportedDefaults: exportedVariables must be an object"))
+	}
+	out, err := o.kit.variablesParser.ParseBytes(override)
+	if err != nil {
+		return nil, errors.WithStack(fmt.Errorf("populateDefaultVariablesFromExportedDefaults failed parsing override: %w, %s", err, override))
+	}
+	if out.Type() != fastjson.TypeObject {
+		return nil, errors.WithStack(fmt.Errorf("populateDefaultVariablesFromExportedDefaults: override must be an object"))
+	}
+	inObject, outObject := in.GetObject(), out.GetObject()
+	inObject.Visit(func(key []byte, v *fastjson.Value) {
+		if out.Exists(unsafebytes.BytesToString(key)) {
+			return
+		}
+		outObject.Set(string(key), v)
+	})
+	result := out.MarshalTo(nil)
+	return result, nil
 }
 
 func (o *OperationKit) jsonIsNull(variables []byte) bool {
@@ -848,11 +861,12 @@ func createParseKit(i int) *parseKit {
 			astnormalization.WithRemoveNotMatchingOperationDefinitions(),
 			astnormalization.WithRemoveUnusedVariables(),
 		),
-		printer:             &astprinter.Printer{},
-		normalizedOperation: &bytes.Buffer{},
-		variablesValidator:  variablesvalidation.NewVariablesValidator(),
-		inputListCoercion:   astnormalization.NewListInputCoercion(),
-		variablesParser:     &fastjson.Parser{},
+		printer:                 &astprinter.Printer{},
+		normalizedOperation:     &bytes.Buffer{},
+		variablesValidator:      variablesvalidation.NewVariablesValidator(),
+		inputListCoercion:       astnormalization.NewListInputCoercion(),
+		variablesParser:         &fastjson.Parser{},
+		exportedVariablesParser: &fastjson.Parser{},
 	}
 }
 
