@@ -593,6 +593,7 @@
       "properties": {
         "enabled": {
           "type": "boolean",
+          "description": "Set this to enable/disable the CORS middleware. It is enabled by default. When disabled, the rest of the properties for CORS have no effect.",
           "default": true
         },
         "allow_origins": {
