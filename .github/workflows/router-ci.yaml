@@ -55,12 +55,12 @@ jobs:
         with:
           cache-dependency-path: router/go.sum
 
-      - name: Install tools
-        run: make setup-build-tools
-
       - uses: ./.github/actions/go-mod-tidy
         with:
           working-directory: ./router
+
+      - name: Install tools
+        run: make setup-build-tools
 
       - name: Generate code
         run: make generate-go
