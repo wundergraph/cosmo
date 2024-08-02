@@ -43,6 +43,7 @@
     "CollectorEndpoint": "https://cosmo-metrics.wundergraph.com"
   },
   "CORS": {
+    "Enabled": true,
     "AllowOrigins": [
       "*"
     ],
