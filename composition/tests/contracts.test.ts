@@ -1,5 +1,4 @@
-import { federateSubgraphs, federateSubgraphsContract, federateSubgraphsWithContracts, Subgraph } from '../src';
-import { parse } from 'graphql';
+import { federateSubgraphs, federateSubgraphsContract, federateSubgraphsWithContracts, parse, Subgraph } from '../src';
 import { describe, expect, test } from 'vitest';
 import {
   normalizeString,

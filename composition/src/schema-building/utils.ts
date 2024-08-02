@@ -1644,46 +1644,57 @@ export function addValidPersistedDirectiveDefinitionNodeByData(
   });
 }
 
-export function isShareabilityOfAllFieldInstancesValid(fieldData: FieldData): boolean {
-  let shareableFields = 0;
+type InvalidFieldNames = {
+  byShareable: Set<string>;
+  subgraphNamesByExternalFieldName: Map<string, Array<string>>;
+};
+
+export function newInvalidFieldNames() {
+  return {
+    byShareable: new Set<string>(),
+    subgraphNamesByExternalFieldName: new Map<string, Array<string>>,
+  };
+}
+
+export function validateExternalAndShareable(fieldData: FieldData, invalidFieldNames: InvalidFieldNames) {
+  // fieldData.subgraphNames.size is not used due to overridden fields
+  const instances = fieldData.isShareableBySubgraphName.size;
+  let externalFieldSubgraphNames: Array<string> = [];
   let unshareableFields = 0;
   for (const [subgraphName, isShareable] of fieldData.isShareableBySubgraphName) {
     /*
-      shareability is ignored if:
-      1. the field is external
-      2. the field is overridden by another subgraph (in which case it has not been upserted)
-    */
+     * shareability is ignored if:
+     * 1. the field is external
+     * 2. the field is overridden by another subgraph (in which case it has not been upserted)
+     */
     if (fieldData.isExternalBySubgraphName.get(subgraphName)) {
+      externalFieldSubgraphNames.push(subgraphName);
       continue;
     }
     if (isShareable) {
-      if (unshareableFields) {
-        return false;
-      }
-      shareableFields += 1;
       continue;
     }
     unshareableFields += 1;
-    if (shareableFields || unshareableFields > 1) {
-      return false;
-    }
   }
-  return true;
-}
-
-export function isFieldExternalInAllMutualSubgraphs(subgraphs: Set<string>, fieldData: FieldData): boolean {
-  const mutualSubgraphs = getAllMutualEntries(subgraphs, fieldData.subgraphNames);
-  if (mutualSubgraphs.size < 1) {
-    return false;
+  switch (unshareableFields) {
+    case 0:
+      // At least one instance of a field must be non-external
+      if (instances === externalFieldSubgraphNames.length) {
+        invalidFieldNames.subgraphNamesByExternalFieldName.set(fieldData.name, externalFieldSubgraphNames);
+      }
+      return;
+    case 1:
+      // The field can be unshareable if it's the only one
+      if (instances === 1) {
+        return;
+      }
+      if (instances - externalFieldSubgraphNames.length !== 1) {
+        invalidFieldNames.byShareable.add(fieldData.name);
+      }
+      return;
+    default:
+      invalidFieldNames.byShareable.add(fieldData.name);
   }
-  for (const mutualSubgraph of mutualSubgraphs) {
-    const isExternal = fieldData.isExternalBySubgraphName.get(mutualSubgraph);
-    if (isExternal) {
-      continue;
-    }
-    return false;
-  }
-  return true;
 }
 
 export enum MergeMethod {
@@ -1734,7 +1745,7 @@ export function isTypeValidImplementation(
 }
 
 export function isNodeDataInaccessible(data: NodeData | ObjectExtensionData): boolean {
-  return data.persistedDirectivesData.directives.has(INACCESSIBLE);
+  return data.persistedDirectivesData.directives.has(INACCESSIBLE) || data.directivesByDirectiveName.has(INACCESSIBLE);
 }
 
 export function isLeafKind(kind: Kind): boolean {

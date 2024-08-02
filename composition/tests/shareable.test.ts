@@ -5,6 +5,7 @@ import {
   invalidRepeatedDirectiveErrorMessage,
   normalizeSubgraph,
   normalizeSubgraphFromString,
+  parse,
   SHAREABLE,
   Subgraph,
 } from '../src';
@@ -14,7 +15,6 @@ import {
   versionTwoDirectiveDefinitions,
   versionTwoRouterDefinitions,
 } from './utils/utils';
-import { parse } from 'graphql';
 
 describe('@shareable directive tests', () => {
   describe('Normalization tests', () => {

@@ -1,25 +1,25 @@
 import { describe, expect, test } from 'vitest';
 import {
-  EXTERNAL,
+  allExternalFieldsError,
+  EXTERNAL, externalInterfaceFieldsError,
   federateSubgraphs,
   invalidDirectiveError,
   invalidRepeatedDirectiveErrorMessage,
   normalizeSubgraph,
   normalizeSubgraphFromString,
+  parse,
   Subgraph,
 } from '../src';
-import { parse } from 'graphql';
 import {
   baseDirectiveDefinitions,
   normalizeString,
   schemaToSortedNormalizedString,
-  versionTwoDirectiveDefinitions,
   versionTwoRouterDefinitions,
 } from './utils/utils';
 
 describe('@external directive tests', () => {
   describe('Normalization tests', () => {
-    // TODO external validation  (fieldset/interfaces)
+    // TODO external validation  (fieldset)
     test('that @external declared on the object level applies to its defined fields #1.1', () => {
       const { errors, normalizationResult } = normalizeSubgraphFromString(`
         type Object {
@@ -142,6 +142,35 @@ describe('@external directive tests', () => {
           invalidRepeatedDirectiveErrorMessage(EXTERNAL, 'Entity.field'),
         ]),
       ]);
+    });
+
+    test('that an error is returned if an interface field is declared @external', () => {
+      const { errors } = normalizeSubgraph(parse(`
+        interface Interface {
+          name: String! @external
+        }`));
+      expect(errors).toBeDefined();
+      expect(errors).toHaveLength(1);
+      expect(errors![0]).toStrictEqual(
+        externalInterfaceFieldsError('Interface', ['name']),
+      );
+    });
+
+    test('that an error is returned if an extension interface field is declared @external', () => {
+      const { errors } = normalizeSubgraph(parse(`
+        interface Interface {
+          name: String!
+        }
+        
+        extend interface Interface {
+          age: Int! @external
+        }
+      `));
+      expect(errors).toBeDefined();
+      expect(errors).toHaveLength(1);
+      expect(errors![0]).toStrictEqual(
+        externalInterfaceFieldsError('Interface', ['age']),
+      );
     });
   });
 
@@ -499,6 +528,18 @@ describe('@external directive tests', () => {
         ),
       );
     });
+
+    test('that an error is returned if all instances of a field are declared @external #1', () => {
+      const { errors } = federateSubgraphs([subgraphH, subgraphI]);
+      expect(errors).toBeDefined();
+      expect(errors).toHaveLength(1);
+      expect(errors![0]).toStrictEqual(
+        allExternalFieldsError(
+          'Entity',
+          new Map<string, Array<string>>([['name', ['subgraph-h', 'subgraph-i']]]),
+        )
+      );
+    });
   });
 });
 
@@ -624,6 +665,32 @@ const subgraphG: Subgraph = {
     type Entity @key(fields: "id") {
       id: ID!
       field: String! @external @external
+    }
+  `),
+};
+
+const subgraphH: Subgraph = {
+  name: 'subgraph-h',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entity: Entity!
+    }
+
+    type Entity @key(fields: "id") {
+      id: ID!
+      name: String! @external
+    }
+  `),
+};
+
+const subgraphI: Subgraph = {
+  name: 'subgraph-i',
+  url: '',
+  definitions: parse(`
+    extend type Entity @key(fields: "id") {
+      id: ID! @external
+      name: String! @external
     }
   `),
 };

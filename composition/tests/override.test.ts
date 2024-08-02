@@ -1,5 +1,4 @@
-import { describe, expect, test } from 'vitest';
-import { Kind, parse } from 'graphql';
+import {describe, expect, test} from 'vitest';
 import {
   batchNormalize,
   ConfigurationData,
@@ -11,14 +10,16 @@ import {
   invalidDirectiveError,
   invalidDirectiveLocationErrorMessage,
   invalidFieldShareabilityError,
+  invalidOverrideTargetSubgraphNameWarning,
   normalizeSubgraph,
   ObjectDefinitionData,
+  OVERRIDE,
+  parse,
   Subgraph,
   subgraphValidationError,
 } from '../src';
-import { normalizeString, schemaToSortedNormalizedString, versionTwoRouterDefinitions } from './utils/utils';
-import { OVERRIDE } from '../src/utils/string-constants';
-import { invalidOverrideTargetSubgraphNameWarning } from '../src/warnings/warnings';
+import {normalizeString, schemaToSortedNormalizedString, versionTwoRouterDefinitions} from './utils/utils';
+import {Kind} from "graphql";
 
 describe('@override directive tests', () => {
   test('that a warning is returned if @override targets an unknown subgraph name', () => {

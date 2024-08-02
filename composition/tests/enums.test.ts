@@ -1,5 +1,4 @@
-import { federateSubgraphs, incompatibleSharedEnumError, Subgraph } from '../src';
-import { parse } from 'graphql';
+import { federateSubgraphs, incompatibleSharedEnumError, parse, Subgraph } from '../src';
 import { describe, expect, test } from 'vitest';
 import {
   normalizeString,

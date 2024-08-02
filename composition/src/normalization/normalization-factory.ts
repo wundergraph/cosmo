@@ -84,6 +84,7 @@ import {
   duplicateOverriddenFieldsError,
   equivalentSourceAndTargetOverrideErrorMessage,
   expectedEntityError,
+  externalInterfaceFieldsError,
   incompatibleExtensionError,
   incompatibleExtensionKindsError,
   invalidArgumentsError,
@@ -1568,12 +1569,17 @@ export class NormalizationFactory {
         case Kind.OBJECT_TYPE_DEFINITION:
           const extensionWithFieldsData = parentExtensionData as ExtensionWithFieldsData;
           const operationTypeNode = this.operationTypeNodeByTypeName.get(extensionTypeName);
+          const isObject = parentDefinitionData.kind === Kind.OBJECT_TYPE_DEFINITION;
+          const externalInterfaceFieldNames: Array<string> = [];
           if (operationTypeNode) {
             configurationData.isRootNode = true;
             extensionWithFieldsData.fieldDataByFieldName.delete(SERVICE_FIELD);
             extensionWithFieldsData.fieldDataByFieldName.delete(ENTITIES_FIELD);
           }
           for (const [fieldName, fieldData] of extensionWithFieldsData.fieldDataByFieldName) {
+            if (!isObject && fieldData.isExternalBySubgraphName.get(this.subgraphName)) {
+              externalInterfaceFieldNames.push(fieldName);
+            }
             if (fieldData.argumentDataByArgumentName.size > 0) {
               // Arguments can only be fully validated once all parents types are known
               this.validateArguments(fieldData, `${extensionTypeName}.${fieldName}`);
@@ -1602,6 +1608,9 @@ export class NormalizationFactory {
               extensionWithFieldsData,
             ),
           );
+          if (externalInterfaceFieldNames.length > 0) {
+            this.errors.push(externalInterfaceFieldsError(extensionTypeName, externalInterfaceFieldNames));
+          }
           // Interfaces and objects must define at least one field
           if (
             parentDefinitionData.fieldDataByFieldName.size < 1 &&
@@ -1669,20 +1678,22 @@ export class NormalizationFactory {
         case Kind.OBJECT_TYPE_DEFINITION:
           const isEntity = this.entityDataByTypeName.has(parentTypeName);
           const operationTypeNode = this.operationTypeNodeByTypeName.get(parentTypeName);
+          const isObject = parentDefinitionData.kind === Kind.OBJECT_TYPE_DEFINITION;
           if (operationTypeNode) {
             parentDefinitionData.fieldDataByFieldName.delete(SERVICE_FIELD);
             parentDefinitionData.fieldDataByFieldName.delete(ENTITIES_FIELD);
           }
-          if (this.parentsWithChildArguments.has(parentTypeName)) {
-            if (
-              parentDefinitionData.kind !== Kind.OBJECT_TYPE_DEFINITION &&
-              parentDefinitionData.kind !== Kind.INTERFACE_TYPE_DEFINITION
-            ) {
-              continue;
-            }
+          if (this.parentsWithChildArguments.has(parentTypeName) || !isObject) {
+            const externalInterfaceFieldNames: Array<string> = [];
             for (const [fieldName, fieldData] of parentDefinitionData.fieldDataByFieldName) {
+              if (!isObject && fieldData.isExternalBySubgraphName.get(this.subgraphName)) {
+                externalInterfaceFieldNames.push(fieldName);
+              }
               // Arguments can only be fully validated once all parents types are known
               this.validateArguments(fieldData, `${parentTypeName}.${fieldName}`);
+            }
+            if (externalInterfaceFieldNames.length > 0) {
+              this.errors.push(externalInterfaceFieldsError(parentTypeName, externalInterfaceFieldNames));
             }
           }
           const newParentTypeName =

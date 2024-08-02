@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { federateSubgraphs, FieldData, invalidFieldShareabilityError, ObjectDefinitionData, Subgraph } from '../src';
+import { federateSubgraphs, FieldData, invalidFieldShareabilityError, ObjectDefinitionData, parse, Subgraph } from '../src';
 import {
   documentNodeToNormalizedString,
   normalizeString,
@@ -7,7 +7,6 @@ import {
   versionOnePersistedBaseSchema,
   versionTwoRouterDefinitions,
 } from './utils/utils';
-import { parse } from 'graphql';
 
 describe('V2 Directives Tests', () => {
   test('that external fields do not produce shareable errors', () => {

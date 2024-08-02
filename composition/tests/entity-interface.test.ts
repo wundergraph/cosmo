@@ -2,7 +2,7 @@ import {
   ConfigurationData,
   EntityInterfaceFederationData,
   federateSubgraphs,
-  InvalidEntityInterface,
+  InvalidEntityInterface, SimpleFieldData,
   Subgraph,
   undefinedEntityInterfaceImplementationsError,
 } from '../src';
@@ -157,6 +157,7 @@ describe('Entity Interface Tests', () => {
           [
             'Interface',
             {
+              fieldDatasBySubgraphName: new Map<string, Array<SimpleFieldData>>(),
               interfaceFieldNames: new Set<string>(['id', 'name', 'age', 'isEntity']),
               interfaceObjectFieldNames: new Set<string>(),
               interfaceObjectSubgraphs: new Set<string>(),

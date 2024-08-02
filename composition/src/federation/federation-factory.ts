@@ -9,6 +9,7 @@ import {
 import { stringToNamedTypeNode, stringToNameNode } from '../ast/utils';
 import {
   allChildDefinitionsAreInaccessibleError,
+  allExternalFieldsError,
   federationFactoryInitializationFatalError,
   fieldTypeMergeFatalError,
   inaccessibleQueryRootTypeError,
@@ -165,14 +166,15 @@ import {
   getValidFieldArgumentNodes,
   isLeafKind,
   isNodeDataInaccessible,
-  isShareabilityOfAllFieldInstancesValid,
   isTypeRequired,
   isTypeValidImplementation,
   MergeMethod,
+  newInvalidFieldNames,
   pushAuthorizationDirectives,
   setLongestDescription,
   setMutualExecutableLocations,
   upsertPersistedDirectivesData,
+  validateExternalAndShareable,
 } from '../schema-building/utils';
 import { ObjectExtensionData } from '../schema-building/type-extension-data';
 
@@ -1495,7 +1497,7 @@ export class FederationFactory {
           const fieldNodes: MutableFieldNode[] = [];
           const clientSchemaFieldNodes: MutableFieldNode[] = [];
           const graphFieldDataByFieldName = new Map<string, GraphFieldData>();
-          const invalidFieldNames = new Set<string>();
+          const invalidFieldNames = newInvalidFieldNames();
           const isObject = parentDefinitionData.kind === Kind.OBJECT_TYPE_DEFINITION;
           for (const [fieldName, fieldData] of parentDefinitionData.fieldDataByFieldName) {
             pushAuthorizationDirectives(fieldData, this.authorizationDataByParentTypeName.get(parentTypeName));
@@ -1505,8 +1507,8 @@ export class FederationFactory {
               this.fieldConfigurationByFieldPath,
               this.errors,
             );
-            if (isObject && !isShareabilityOfAllFieldInstancesValid(fieldData)) {
-              invalidFieldNames.add(fieldName);
+            if (isObject) {
+              validateExternalAndShareable(fieldData, invalidFieldNames);
             }
             fieldNodes.push(
               getNodeWithPersistedDirectivesByFieldData(
@@ -1522,8 +1524,13 @@ export class FederationFactory {
             clientSchemaFieldNodes.push(getClientSchemaFieldNodeByFieldData(fieldData));
             graphFieldDataByFieldName.set(fieldName, this.fieldDataToGraphFieldData(fieldData));
           }
-          if (isObject && invalidFieldNames.size > 0) {
-            this.errors.push(invalidFieldShareabilityError(parentDefinitionData, invalidFieldNames));
+          if (isObject) {
+            if (invalidFieldNames.byShareable.size > 0) {
+              this.errors.push(invalidFieldShareabilityError(parentDefinitionData, invalidFieldNames.byShareable));
+            }
+            if (invalidFieldNames.subgraphNamesByExternalFieldName.size > 0) {
+              this.errors.push(allExternalFieldsError(parentTypeName, invalidFieldNames.subgraphNamesByExternalFieldName));
+            }
           }
           parentDefinitionData.node.fields = fieldNodes;
           this.internalGraph.initializeNode(parentTypeName, graphFieldDataByFieldName);

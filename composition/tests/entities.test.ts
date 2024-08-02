@@ -3,15 +3,18 @@ import {
   duplicateDirectiveArgumentDefinitionsErrorMessage,
   federateSubgraphs,
   FieldData,
+  FIELDS,
   invalidDirectiveError,
   invalidFieldShareabilityError,
+  KEY,
   normalizeSubgraph,
   ObjectDefinitionData,
+  parse,
   Subgraph,
   undefinedRequiredArgumentsErrorMessage,
   unexpectedDirectiveArgumentErrorMessage,
 } from '../src';
-import { describe, expect, test } from 'vitest';
+import {describe, expect, test} from 'vitest';
 import {
   documentNodeToNormalizedString,
   normalizeString,
@@ -20,8 +23,6 @@ import {
   versionOneRouterDefinitions,
   versionTwoRouterDefinitions,
 } from './utils/utils';
-import { parse } from 'graphql';
-import { FIELDS, KEY } from '../src/utils/string-constants';
 
 describe('Entity tests', () => {
   describe('Entity normalization tests', () => {

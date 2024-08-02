@@ -1515,3 +1515,25 @@ export function unresolvablePathError(
     reasons.join(`\n - `);
   return new Error(message);
 }
+
+export function allExternalFieldsError(typeName: string, subgraphNamesByFieldName: Map<string, Array<string>>): Error {
+  let message = `The object "${typeName}" is invalid because the following field definition`
+    + (subgraphNamesByFieldName.size > 1 ? 's are' : ' is') + ` declared @external on all instances of that field:\n`;
+    for (const [fieldName, subgraphNames] of subgraphNamesByFieldName) {
+      message += ` "${fieldName}" in subgraph` + (subgraphNames.length > 1 ? 's' : '') + ` "`
+        + subgraphNames.join(QUOTATION_JOIN) +`"\n`;
+    }
+  message += `At least one instance of a field definition must always be resolvable (and therefore not declared @external).`;
+  return new Error(message);
+}
+
+export function externalInterfaceFieldsError(typeName: string, fieldNames: Array<string>): Error {
+  return new Error(
+    `The interface "${typeName}" is invalid because the following field definition`
+    + (fieldNames.length > 1 ? 's are' : ' is') + ` declared @external:\n "`
+    + fieldNames.join(QUOTATION_JOIN) + `"\n`
+    + `Interface fields should not be declared @external. This is because interface fields do not resolve directly,` +
+    ` but the @external directive relates to whether a field instance can be resolved` +
+    ` by the subgraph in which it is defined.`
+  );
+}
