@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"io"
 	"net/http"
 	"slices"
 	"sync"
+
+	"github.com/tidwall/sjson"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 
 	"github.com/buger/jsonparser"
 	"github.com/cespare/xxhash/v2"
@@ -105,6 +107,7 @@ type parseKit struct {
 	normalizedOperation *bytes.Buffer
 	variablesValidator  *variablesvalidation.VariablesValidator
 	inputListCoercion   *astnormalization.ListInputCoercion
+	variablesParser     *fastjson.Parser
 }
 
 type OperationCache struct {
@@ -194,7 +197,13 @@ func (o *OperationKit) UnmarshalOperation() error {
 		}
 		if o.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil {
 			// Delete persistedQuery from extensions to avoid it being passed to the subgraphs
-			o.parsedOperation.Request.Extensions = jsonparser.Delete(o.parsedOperation.Request.Extensions, "persistedQuery")
+			o.parsedOperation.Request.Extensions, err = sjson.DeleteBytes(o.parsedOperation.Request.Extensions, "persistedQuery")
+			if err != nil {
+				return &inputError{
+					message:    fmt.Sprintf("error deleting persistedQuery from extensions: %s", err),
+					statusCode: http.StatusBadRequest,
+				}
+			}
 		}
 	}
 	if o.parsedOperation.Request.Variables != nil {
@@ -410,15 +419,10 @@ func (o *OperationKit) normalizePersistedOperation() (cached bool, err error) {
 	originalVariables := make([]byte, len(o.parsedOperation.Request.Variables))
 	copy(originalVariables, o.parsedOperation.Request.Variables)
 
-	o.parsedOperation.Variables.Visit(func(key []byte, v *fastjson.Value) {
-		keyStr := unsafebytes.BytesToString(key)
-		for i := range skipIncludeNames {
-			if keyStr == skipIncludeNames[i] {
-				return
-			}
-		}
-		o.parsedOperation.Request.Variables = jsonparser.Delete(o.parsedOperation.Request.Variables, keyStr)
-	})
+	o.parsedOperation.Request.Variables, err = o.deleteNonSkipIncludeVariables(o.parsedOperation.Request.Variables, skipIncludeNames)
+	if err != nil {
+		return false, errors.WithStack(fmt.Errorf("normalizePersistedOperation: %w", err))
+	}
 
 	report := &operationreport.Report{}
 	o.kit.doc.Input.Variables = o.parsedOperation.Request.Variables
@@ -466,6 +470,38 @@ func (o *OperationKit) normalizePersistedOperation() (cached bool, err error) {
 	return false, nil
 }
 
+func (o *OperationKit) deleteNonSkipIncludeVariables(variables []byte, skipIncludeNames []string) ([]byte, error) {
+	variables = o.nullifyVariables(variables)
+	if variables == nil {
+		return []byte("{}"), nil
+	}
+	value, err := o.kit.variablesParser.ParseBytes(variables)
+	if err != nil {
+		return nil, errors.WithStack(fmt.Errorf("deleteNonSkipIncludeVariables: %w", err))
+	}
+	if value.Type() != fastjson.TypeObject {
+		return nil, errors.WithStack(fmt.Errorf("deleteNonSkipIncludeVariables: variables must be an object"))
+	}
+	object := value.GetObject()
+	deleteKeys := make([]string, 0)
+	object.Visit(func(key []byte, v *fastjson.Value) {
+		keyStr := unsafebytes.BytesToString(key)
+		for i := range skipIncludeNames {
+			if keyStr == skipIncludeNames[i] {
+				return
+			}
+		}
+		deleteKeys = append(deleteKeys, keyStr)
+	})
+	if len(deleteKeys) == 0 {
+		return variables, nil
+	}
+	for _, key := range deleteKeys {
+		value.Del(key)
+	}
+	return value.MarshalTo(nil), nil
+}
+
 type NormalizationCacheEntry struct {
 	operationID              uint64
 	normalizedRepresentation string
@@ -505,15 +541,10 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 	// remove variables that are used in skip or include directives
 	// these are just regular default values, so we can remove them
 	// we only want to normalize the operation with variables that have an impact on the operation shape (skip or include directives)
-	o.parsedOperation.Variables.Visit(func(key []byte, v *fastjson.Value) {
-		keyStr := unsafebytes.BytesToString(key)
-		for i := range skipIncludeVariableNames {
-			if keyStr == skipIncludeVariableNames[i] {
-				return
-			}
-		}
-		o.parsedOperation.Request.Variables = jsonparser.Delete(o.parsedOperation.Request.Variables, keyStr)
-	})
+	o.parsedOperation.Request.Variables, err = o.deleteNonSkipIncludeVariables(o.parsedOperation.Request.Variables, skipIncludeVariableNames)
+	if err != nil {
+		return false, errors.WithStack(fmt.Errorf("normalizeNonPersistedOperation (uncached): %w", err))
+	}
 
 	// normalize the operation
 	report := &operationreport.Report{}
@@ -563,7 +594,7 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 			operationID:              o.parsedOperation.ID,
 			normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
 			operationType:            o.parsedOperation.Type,
-			exportedVariables:        o.nullifyExportedVariables(exportedVariables),
+			exportedVariables:        o.nullifyVariables(exportedVariables),
 			doc:                      o.kit.doc,
 		}
 		o.cache.normalizationCache.Set(cacheKey, entry, 1)
@@ -575,7 +606,7 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 	return false, nil
 }
 
-// nullifyExportedVariables returns nil if the variables are nil or don't contain any meaningful data
+// nullifyVariables returns nil if the variables are nil or don't contain any meaningful data
 // by the definition of the GraphQL specification, variables must be a map
 // this means that the minimum meaningful variables are {"a":0}
 // so if we have less than 7 characters, we return nil because we don't need to store the variables in the cache
@@ -586,7 +617,7 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 //
 // in addition, if we're nullifying the exported variables in case of a cache miss
 // we can immediately skip parsing them and trying to set defaults from them if they're nil (early return)
-func (o *OperationKit) nullifyExportedVariables(variables []byte) []byte {
+func (o *OperationKit) nullifyVariables(variables []byte) []byte {
 	if variables == nil {
 		return nil
 	}
@@ -643,7 +674,7 @@ func (o *OperationKit) loadPersistedOperationFromCache() (ok bool, err error) {
 
 // populateDefaultVariablesFromExportedDefaults iterates through the exported default variables and sets missing ones in the variables
 func (o *OperationKit) populateDefaultVariablesFromExportedDefaults(exportedVariables, override []byte) ([]byte, error) {
-	exportedVariables = o.nullifyExportedVariables(exportedVariables)
+	exportedVariables = o.nullifyVariables(exportedVariables)
 	if exportedVariables == nil {
 		return override, nil
 	}
@@ -824,6 +855,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 					normalizedOperation: &bytes.Buffer{},
 					variablesValidator:  variablesvalidation.NewVariablesValidator(),
 					inputListCoercion:   astnormalization.NewListInputCoercion(),
+					variablesParser:     &fastjson.Parser{},
 				}
 			},
 		},
