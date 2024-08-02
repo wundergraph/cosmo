@@ -2,9 +2,10 @@ package config
 
 import (
 	"fmt"
-	"github.com/goccy/go-yaml"
 	"os"
 	"time"
+
+	"github.com/goccy/go-yaml"
 
 	"github.com/caarlos0/env/v11"
 	"github.com/joho/godotenv"
@@ -221,6 +222,7 @@ type EngineExecutionConfiguration struct {
 	EnablePersistedOperationsCache         bool                     `envDefault:"true" env:"ENGINE_ENABLE_PERSISTED_OPERATIONS_CACHE" yaml:"enable_persisted_operations_cache"`
 	EnableNormalizationCache               bool                     `envDefault:"true" env:"ENGINE_ENABLE_NORMALIZATION_CACHE" yaml:"enable_normalization_cache"`
 	NormalizationCacheSize                 int64                    `envDefault:"1024" env:"ENGINE_NORMALIZATION_CACHE_SIZE" yaml:"normalization_cache_size,omitempty"`
+	ParseKitPoolSize                       int                      `envDefault:"8" env:"ENGINE_PARSEKIT_POOL_SIZE" yaml:"parsekit_pool_size,omitempty"`
 }
 
 type SecurityConfiguration struct {
