@@ -857,7 +857,8 @@ func (r *Router) buildClients() error {
 
 	var rClient routerconfig.Client
 
-	if r.configPoller == nil && r.routerConfigPollerConfig != nil {
+	// Poller is only initialized when a config poller is configured and the router is not started with a static config
+	if r.staticRouterConfig == nil && r.routerConfigPollerConfig != nil && r.configPoller == nil {
 
 		if provider, ok := cdnProviders[r.routerConfigPollerConfig.Storage.ProviderID]; ok {
 
@@ -1255,6 +1256,7 @@ func WithMetrics(cfg *rmetric.Config) Option {
 // CorsDefaultOptions returns the default CORS options for the rs/cors package.
 func CorsDefaultOptions() *cors.Config {
 	return &cors.Config{
+		Enabled:      true,
 		AllowOrigins: []string{"*"},
 		AllowMethods: []string{
 			http.MethodHead,
