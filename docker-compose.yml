@@ -112,7 +112,7 @@ services:
     ports:
       - '4317:4317' # otlpgrpc
       - '4318:4318' # otlphttp
-      - '8088:8088' # prometheus metrics
+      - '8089:8088' # prometheus metrics
     restart: unless-stopped
     depends_on:
       - clickhouse
