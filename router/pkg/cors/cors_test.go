@@ -15,7 +15,9 @@ import (
 
 func newTestRouter(config Config) *chi.Mux {
 	router := chi.NewRouter()
-	router.Use(New(config))
+	if config.Enabled == true {
+		router.Use(New(config))
+	}
 	router.Get("/", func(writer http.ResponseWriter, request *http.Request) {
 		writer.WriteHeader(http.StatusOK)
 		writer.Write([]byte("get"))
@@ -407,5 +409,25 @@ func TestWildcard(t *testing.T) {
 	assert.Equal(t, 403, w.Code)
 
 	w = performRequest(router, "GET", "https://github.com")
+	assert.Equal(t, 200, w.Code)
+}
+
+func TestDisabled(t *testing.T) {
+	config := Config{
+		Enabled:       true,
+		AllowOrigins:  []string{"https://api.*"},
+		AllowMethods:  []string{"GET"},
+		AllowWildcard: true,
+	}
+
+	router := newTestRouter(config)
+
+	w := performRequest(router, "GET", "https://a.test.com")
+	assert.Equal(t, 403, w.Code)
+
+	config.Enabled = false
+	router = newTestRouter(config)
+
+	w = performRequest(router, "GET", "https://a.test.com")
 	assert.Equal(t, 200, w.Code)
 }
