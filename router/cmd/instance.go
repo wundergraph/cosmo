@@ -152,6 +152,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 			cfg.TrafficShaping.All.BackoffJitterRetry.Interval,
 		),
 		core.WithCors(&cors.Config{
+			Enabled:          cfg.CORS.Enabled,
 			AllowOrigins:     cfg.CORS.AllowOrigins,
 			AllowMethods:     cfg.CORS.AllowMethods,
 			AllowCredentials: cfg.CORS.AllowCredentials,
