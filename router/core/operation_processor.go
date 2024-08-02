@@ -857,6 +857,9 @@ func createParseKit(i int) *parseKit {
 }
 
 func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
+	if opts.ParseKitPoolSize <= 0 {
+		opts.ParseKitPoolSize = 1
+	}
 	processor := &OperationProcessor{
 		executor:                 opts.Executor,
 		maxOperationSizeInBytes:  opts.MaxOperationSizeInBytes,

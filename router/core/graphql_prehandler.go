@@ -274,10 +274,6 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		operationKit, err := h.operationProcessor.NewKit(body, files)
 		if err != nil {
-			// the kit must be freed before we're doing io operations
-			// the kit is bound to the number of CPUs, and we must not hold onto it while doing IO operations
-			operationKit.Free()
-			operationKit = nil
 			finalErr = err
 
 			// Mark the root span of the router as failed, so we can easily identify failed requests
