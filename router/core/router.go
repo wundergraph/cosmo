@@ -1254,6 +1254,7 @@ func WithMetrics(cfg *rmetric.Config) Option {
 // CorsDefaultOptions returns the default CORS options for the rs/cors package.
 func CorsDefaultOptions() *cors.Config {
 	return &cors.Config{
+		Enabled:      true,
 		AllowOrigins: []string{"*"},
 		AllowMethods: []string{
 			http.MethodHead,
