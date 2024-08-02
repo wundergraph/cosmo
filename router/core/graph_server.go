@@ -559,6 +559,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		PersistedOperationClient:       s.persistedOperationClient,
 		EnablePersistedOperationsCache: s.engineExecutionConfiguration.EnablePersistedOperationsCache,
 		NormalizationCache:             gm.normalizationCache,
+		ParseKitPoolSize:               s.engineExecutionConfiguration.ParseKitPoolSize,
 	})
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
 
