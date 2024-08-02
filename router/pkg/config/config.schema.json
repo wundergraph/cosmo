@@ -529,7 +529,7 @@
                       },
                       "path": {
                         "type": "string",
-                        "description": "The path to which the metrics are exported.",
+                        "description": "The path to which the metrics are exported. This is ignored when using 'grpc' as exporter and can be omitted.",
                         "default": "/v1/metrics",
                         "format": "x-uri"
                       },
