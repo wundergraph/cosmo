@@ -184,7 +184,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	httpRouter.Use(rmiddleware.RequestSize(int64(s.routerTrafficConfig.MaxRequestBodyBytes)))
 	httpRouter.Use(middleware.RequestID)
 	httpRouter.Use(middleware.RealIP)
-	if s.corsOptions.Enabled == true {
+	if s.corsOptions.Enabled {
 		httpRouter.Use(cors.New(*s.corsOptions))
 	}
 
