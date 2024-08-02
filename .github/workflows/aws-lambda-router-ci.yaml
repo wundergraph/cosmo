@@ -39,15 +39,15 @@ jobs:
       - name: Install tools
         run: make setup-build-tools
 
+      - uses: ./.github/actions/go-mod-tidy
+        with:
+          working-directory: ./aws-lambda-router
+
       - name: Generate code
         run: make generate-go
 
       - name: Check if git is not dirty after generating files
         run: git diff --no-ext-diff --exit-code
-
-      - uses: ./.github/actions/go-mod-tidy
-        with:
-          working-directory: ./aws-lambda-router
 
       - name: Install dependencies
         working-directory: ./aws-lambda-router
