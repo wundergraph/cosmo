@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"runtime"
 	"strings"
 	"time"
 
@@ -551,12 +552,24 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
 	}
 
+	parseKitPoolSize := runtime.NumCPU()
+	// we need some concurrency e.g. in case we're loading a persisted operation from the CDN
+	// otherwise, the parse kit pool does only CPU bound work, so it's not beneficial to have more workers than CPUs
+	// 4 seems to be a good default, e.g. in case you only have 1-2 CPUs
+	if parseKitPoolSize < 4 {
+		parseKitPoolSize = 4
+		s.logger.Info("Initializing Operation Processor with ParseKit Pool Size 4 (default)")
+	} else {
+		s.logger.Info("Initializing Operation Processor with ParseKit Pool Size derived by available CPUs", zap.Int("pool_size", parseKitPoolSize))
+	}
+
 	operationProcessor := NewOperationProcessor(OperationProcessorOptions{
 		Executor:                       executor,
 		MaxOperationSizeInBytes:        int64(s.routerTrafficConfig.MaxRequestBodyBytes),
 		PersistedOperationClient:       s.persistedOperationClient,
 		EnablePersistedOperationsCache: s.engineExecutionConfiguration.EnablePersistedOperationsCache,
 		NormalizationCache:             gm.normalizationCache,
+		ParseKitPoolSize:               parseKitPoolSize,
 	})
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
 

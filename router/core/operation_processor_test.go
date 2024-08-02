@@ -22,6 +22,7 @@ func TestOperationProcessorPersistentOperations(t *testing.T) {
 	parser := NewOperationProcessor(OperationProcessorOptions{
 		Executor:                executor,
 		MaxOperationSizeInBytes: 10 << 20,
+		ParseKitPoolSize:        4,
 	})
 	clientInfo := &ClientInfo{
 		Name:    "test",
@@ -75,6 +76,7 @@ func TestOperationProcessor(t *testing.T) {
 	parser := NewOperationProcessor(OperationProcessorOptions{
 		Executor:                executor,
 		MaxOperationSizeInBytes: 10 << 20,
+		ParseKitPoolSize:        4,
 	})
 	testCases := []struct {
 		ExpectedType  string
@@ -211,6 +213,7 @@ func TestOperationProcessorUnmarshalExtensions(t *testing.T) {
 	parser := NewOperationProcessor(OperationProcessorOptions{
 		Executor:                executor,
 		MaxOperationSizeInBytes: 10 << 20,
+		ParseKitPoolSize:        4,
 	})
 	testCases := []struct {
 		Input string

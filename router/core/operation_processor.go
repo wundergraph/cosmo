@@ -9,15 +9,14 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/tidwall/sjson"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
-
 	"github.com/buger/jsonparser"
 	"github.com/cespare/xxhash/v2"
 	"github.com/dgraph-io/ristretto"
 	"github.com/goccy/go-json"
 	"github.com/pkg/errors"
+	"github.com/tidwall/sjson"
 	"github.com/valyala/fastjson"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
@@ -83,6 +82,7 @@ type OperationProcessorOptions struct {
 
 	EnablePersistedOperationsCache bool
 	NormalizationCache             *ristretto.Cache[uint64, NormalizationCacheEntry]
+	ParseKitPoolSize               int
 }
 
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
@@ -91,12 +91,14 @@ type OperationProcessor struct {
 	executor                 *Executor
 	maxOperationSizeInBytes  int64
 	persistedOperationClient persistedoperation.Client
-	parseKitPool             *sync.Pool
 	operationCache           *OperationCache
+	parseKits                map[int]*parseKit
+	parseKitSemaphore        chan int
 }
 
 // parseKit is a helper struct to parse, normalize and validate operations
 type parseKit struct {
+	i                   int
 	skipReuse           bool
 	parser              *astparser.Parser
 	doc                 *ast.Document
@@ -833,32 +835,38 @@ func (o *OperationKit) skipIncludeVariableNames() []string {
 	return names
 }
 
+func createParseKit(i int) *parseKit {
+	return &parseKit{
+		i:      i,
+		parser: astparser.NewParser(),
+		doc:    ast.NewSmallDocument(),
+		keyGen: xxhash.New(),
+		normalizer: astnormalization.NewWithOpts(
+			astnormalization.WithExtractVariables(),
+			astnormalization.WithInlineFragmentSpreads(),
+			astnormalization.WithRemoveFragmentDefinitions(),
+			astnormalization.WithRemoveNotMatchingOperationDefinitions(),
+			astnormalization.WithRemoveUnusedVariables(),
+		),
+		printer:             &astprinter.Printer{},
+		normalizedOperation: &bytes.Buffer{},
+		variablesValidator:  variablesvalidation.NewVariablesValidator(),
+		inputListCoercion:   astnormalization.NewListInputCoercion(),
+		variablesParser:     &fastjson.Parser{},
+	}
+}
+
 func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 	processor := &OperationProcessor{
 		executor:                 opts.Executor,
 		maxOperationSizeInBytes:  opts.MaxOperationSizeInBytes,
 		persistedOperationClient: opts.PersistedOperationClient,
-		parseKitPool: &sync.Pool{
-			New: func() interface{} {
-				return &parseKit{
-					parser: astparser.NewParser(),
-					doc:    ast.NewSmallDocument(),
-					keyGen: xxhash.New(),
-					normalizer: astnormalization.NewWithOpts(
-						astnormalization.WithExtractVariables(),
-						astnormalization.WithInlineFragmentSpreads(),
-						astnormalization.WithRemoveFragmentDefinitions(),
-						astnormalization.WithRemoveNotMatchingOperationDefinitions(),
-						astnormalization.WithRemoveUnusedVariables(),
-					),
-					printer:             &astprinter.Printer{},
-					normalizedOperation: &bytes.Buffer{},
-					variablesValidator:  variablesvalidation.NewVariablesValidator(),
-					inputListCoercion:   astnormalization.NewListInputCoercion(),
-					variablesParser:     &fastjson.Parser{},
-				}
-			},
-		},
+		parseKits:                make(map[int]*parseKit, opts.ParseKitPoolSize),
+		parseKitSemaphore:        make(chan int, opts.ParseKitPoolSize),
+	}
+	for i := 0; i < opts.ParseKitPoolSize; i++ {
+		processor.parseKitSemaphore <- i
+		processor.parseKits[i] = createParseKit(i)
 	}
 	if opts.EnablePersistedOperationsCache {
 		processor.operationCache = &OperationCache{
@@ -878,7 +886,8 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 }
 
 func (p *OperationProcessor) getKit() *parseKit {
-	return p.parseKitPool.Get().(*parseKit)
+	i := <-p.parseKitSemaphore
+	return p.parseKits[i]
 }
 
 func (p *OperationProcessor) freeKit(kit *parseKit) {
@@ -890,7 +899,14 @@ func (p *OperationProcessor) freeKit(kit *parseKit) {
 	kit.keyGen.Reset()
 	kit.doc.Reset()
 	kit.normalizedOperation.Reset()
-	p.parseKitPool.Put(kit)
+	// because we're re-using the kit, and we're having a static number of kits based on the number of CPUs
+	// we're resetting the doc, parser, and buffer for the normalized operation if they grow too large (>1MB of query size)
+	if cap(kit.doc.Input.RawBytes) > 1024*1024 {
+		kit.doc = ast.NewSmallDocument()
+		kit.parser = astparser.NewParser()
+		kit.normalizedOperation = &bytes.Buffer{}
+	}
+	p.parseKitSemaphore <- kit.i
 }
 
 func (p *OperationProcessor) entityTooLarge() error {
