@@ -178,7 +178,7 @@ func (o *OperationKit) UnmarshalOperation() error {
 	err := json.Compact(buf, o.data)
 	if err != nil {
 		return &inputError{
-			message:    fmt.Sprintf("error parsing request body: %s", err),
+			message:    fmt.Sprintf("error compacting request body: %s", err),
 			statusCode: http.StatusBadRequest,
 		}
 	}
