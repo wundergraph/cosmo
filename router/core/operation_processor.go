@@ -174,7 +174,16 @@ func (o *OperationKit) Free() {
 
 // UnmarshalOperation loads the operation from the request body and unmarshal it into the ParsedOperation
 func (o *OperationKit) UnmarshalOperation() error {
-	err := json.Unmarshal(o.data, &o.parsedOperation.Request)
+	buf := bytes.NewBuffer(make([]byte, len(o.data))[:0])
+	err := json.Compact(buf, o.data)
+	if err != nil {
+		return &inputError{
+			message:    fmt.Sprintf("error parsing request body: %s", err),
+			statusCode: http.StatusBadRequest,
+		}
+	}
+	o.data = buf.Bytes()
+	err = json.Unmarshal(o.data, &o.parsedOperation.Request)
 	if err != nil {
 		return &inputError{
 			message:    fmt.Sprintf("error parsing request body: %s", err),
