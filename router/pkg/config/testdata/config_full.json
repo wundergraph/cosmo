@@ -315,7 +315,7 @@
     "EnablePersistedOperationsCache": true,
     "EnableNormalizationCache": true,
     "NormalizationCacheSize": 1024,
-    "ParseKitPoolSize": 8
+    "ParseKitPoolSize": 16
   },
   "WebSocket": {
     "Enabled": true,

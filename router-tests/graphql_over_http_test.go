@@ -90,7 +90,7 @@ func TestGraphQLOverHTTPCompatibility(t *testing.T) {
 			require.Equal(t, http.StatusBadRequest, res.StatusCode)
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"error parsing request body: invalid character 'q' looking for beginning of value"}],"data":null}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"error parsing request body: unexpected character 'q'"}],"data":null}`, string(data))
 		})
 		t.Run("malformed JSON variant should return 400", func(t *testing.T) {
 			header := http.Header{
@@ -103,7 +103,7 @@ func TestGraphQLOverHTTPCompatibility(t *testing.T) {
 			require.Equal(t, http.StatusBadRequest, res.StatusCode)
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"error parsing request body: invalid character '{' looking for beginning of value"}],"data":null}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"error parsing request body: json: invalid character { as string"}],"data":null}`, string(data))
 		})
 		t.Run("malformed JSON variant #2 should return 400", func(t *testing.T) {
 			header := http.Header{
@@ -129,7 +129,7 @@ func TestGraphQLOverHTTPCompatibility(t *testing.T) {
 			require.Equal(t, http.StatusBadRequest, res.StatusCode)
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"error parsing variables: cannot parse JSON: cannot parse object: cannot parse object value: cannot parse object: cannot parse object value: cannot parse number: unexpected char: \"G\"; unparsed tail: \"GERMAN}}\""}],"data":null}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"error parsing request body: unexpected character 'G'"}],"data":null}`, string(data))
 		})
 		t.Run("missing variables should return 200 OK with validation errors response", func(t *testing.T) {
 			header := http.Header{
@@ -182,6 +182,19 @@ func TestGraphQLOverHTTPCompatibility(t *testing.T) {
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, `{"errors":[{"message":"Variable \"$criteria\" of required type \"SearchInput!\" was not provided."}],"data":null}`, string(data))
+		})
+		t.Run("request with spaces and tabs should be 200 ok", func(t *testing.T) {
+			header := http.Header{
+				"Content-Type": []string{"application/json"},
+				"Accept":       []string{"application/json"},
+			}
+			body := []byte("{\n\"query\":\"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}\"\n,\t\"variables\"\n\t:\n\t{\"criteria\":\n\t{\"nationality\"\n\t:\n\t\"GERMAN\"}}\n}")
+			res, err := xEnv.MakeRequest("POST", "/graphql", header, bytes.NewReader(body))
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, string(data))
 		})
 	})
 }
