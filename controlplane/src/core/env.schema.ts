@@ -30,7 +30,7 @@ export const envVariables = z
     PROMETHEUS_ENABLED: z
       .string()
       .transform((val) => val === 'true')
-      .default('true'),
+      .default('false'),
     PROMETHEUS_HTTP_PATH: z.string().default('/metrics'),
     PROMETHEUS_PORT: z
       .string()
