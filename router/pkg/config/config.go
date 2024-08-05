@@ -456,7 +456,12 @@ type ExecutionConfigStorageConfig struct {
 	ObjectPath string `yaml:"object_path,omitempty" env:"EXECUTION_CONFIG_STORAGE_OBJECT_PATH"`
 }
 
+type ExecutionConfigLocalConfig struct {
+	Path string `yaml:"path,omitempty" env:"EXECUTION_CONFIG_PATH"`
+}
+
 type ExecutionConfig struct {
+	Local   ExecutionConfigLocalConfig   `yaml:"local,omitempty"`
 	Storage ExecutionConfigStorageConfig `yaml:"storage,omitempty"`
 }
 
