@@ -378,8 +378,8 @@ importers:
         specifier: ^10.1.2
         version: 10.1.2(graphql@16.9.0)
       '@keycloak/keycloak-admin-client':
-        specifier: ^24.0.5
-        version: 24.0.5
+        specifier: ^25.0.2
+        version: 25.0.2
       '@octokit/webhooks-types':
         specifier: ^7.5.0
         version: 7.5.0
@@ -5832,8 +5832,8 @@ packages:
     resolution: {integrity: sha512-Lg3PnLp0QXpxwLIAuuJboLeRaIhrgJjeuh797QADg3xz8wGLugQOS5DpsE8A6i6Adgzf+bacllkKZG3J0tGfDw==}
     dev: true
 
-  /@keycloak/keycloak-admin-client@24.0.5:
-    resolution: {integrity: sha512-SXDVtQ3ov7GQbxXq51Uq8lzhwzQwNg6XiY50ZA9whuUe2t/0zPT4Zd/LcULcjweIjSNWWgfbDyN1E3yRSL8Qqw==}
+  /@keycloak/keycloak-admin-client@25.0.2:
+    resolution: {integrity: sha512-rHlJ1bQYQKLA3fnIktYZqofQP9imSPTia0yX7329fTpJ49A2MoPduAEFNsTa9QJIPHcuz2TBgZ6eI5NnfaP6/w==}
     engines: {node: '>=18'}
     dependencies:
       camelize-ts: 3.0.0
