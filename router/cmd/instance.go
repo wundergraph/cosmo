@@ -63,10 +63,10 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 	cfg := params.Config
 	logger := params.Logger
 
-	if cfg.ExecutionConfig.Local.Path != "" {
-		executionConfig, err := execution_config.SerializeConfigFromFile(cfg.ExecutionConfig.Local.Path)
+	if cfg.ExecutionConfig.File.Path != "" {
+		executionConfig, err := execution_config.SerializeConfigFromFile(cfg.ExecutionConfig.File.Path)
 		if err != nil {
-			logger.Fatal("Could not read execution config", zap.Error(err), zap.String("path", cfg.ExecutionConfig.Local.Path))
+			logger.Fatal("Could not read execution config", zap.Error(err), zap.String("path", cfg.ExecutionConfig.File.Path))
 		}
 		routerConfig = executionConfig
 	} else if cfg.RouterConfigPath != "" {

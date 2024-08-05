@@ -420,7 +420,7 @@ execution_config:
 	_, err := LoadConfig(f, "")
 	var js *jsonschema.ValidationError
 	require.ErrorAs(t, err, &js)
-	require.Equal(t, js.Causes[0].Error(), "at '/execution_config': anyOf failed\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config/storage': missing property 'object_path'")
+	require.Equal(t, js.Causes[0].Error(), "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config/storage': missing property 'object_path'")
 }
 
 func TestValidLocalExecutionConfig(t *testing.T) {
@@ -428,14 +428,14 @@ func TestValidLocalExecutionConfig(t *testing.T) {
 version: "1"
 
 execution_config: 
-  local: 
+  file: 
     path: "router-json"
 `)
 	_, err := LoadConfig(f, "")
 	require.NoError(t, err)
 }
 
-func TestInvalidLocalExecutionConfig(t *testing.T) {
+func TestInvalidFileExecutionConfig(t *testing.T) {
 	f := createTempFileFromFixture(t, `
 version: "1"
 
@@ -449,7 +449,7 @@ storage_providers:
       secure: false
 
 execution_config:
-  local: 
+  file: 
     path: "router-json"
   storage: # Cannot have both local and storage
     provider_id: s3
@@ -458,6 +458,6 @@ execution_config:
 	_, err := LoadConfig(f, "")
 	var js *jsonschema.ValidationError
 	require.ErrorAs(t, err, &js)
-	require.Equal(t, js.Causes[0].Error(), "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config': additional properties 'local' not allowed")
+	require.Equal(t, js.Causes[0].Error(), "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config': additional properties 'file' not allowed")
 
 }

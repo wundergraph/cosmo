@@ -137,10 +137,11 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "local": {
+            "file": {
               "type": "object",
-              "description": "The local execution config. The local execution config is used to load the execution config from the local file system. It has precedence over the storage provider.",
+              "description": "The configuration for the execution config file. The config file is used to load the execution config from the local file system. The file has precedence over the storage provider.",
               "additionalProperties": false,
+              "required": ["path"],
               "properties": {
                 "path": {
                   "type": "string",

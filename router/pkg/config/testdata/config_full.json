@@ -360,7 +360,7 @@
     "CDN": null
   },
   "ExecutionConfig": {
-    "Local": {
+    "File": {
       "Path": ""
     },
     "Storage": {
