@@ -50,6 +50,7 @@ describe('Authentication', (ctx) => {
       },
       s3StorageUrl: 'http://localhost:9000',
       mailer: {
+        smtpEnabled: false,
         smtpHost: '',
         smtpPort: 587,
         smtpUsername: '',
