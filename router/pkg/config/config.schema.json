@@ -529,7 +529,7 @@
                       },
                       "path": {
                         "type": "string",
-                        "description": "The path to which the metrics are exported.",
+                        "description": "The path to which the metrics are exported. This is ignored when using 'grpc' as exporter and can be omitted.",
                         "default": "/v1/metrics",
                         "format": "x-uri"
                       },
@@ -591,6 +591,11 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Set this to enable/disable the CORS middleware. It is enabled by default. When disabled, the rest of the properties for CORS have no effect.",
+          "default": true
+        },
         "allow_origins": {
           "type": "array",
           "description": "The allowed origins. The default value is to allow all origins. The value can be a list of origins or the wildcard '*'.",
@@ -1415,6 +1420,11 @@
           "type": "integer",
           "default": 1024,
           "description": "The size of the normalization cache."
+        },
+        "parsekit_pool_size":{
+          "type": "integer",
+          "default": 8,
+          "description": "The size of the ParseKit pool. The ParseKit pool provides re-usable Resources for parsing, normalizing, validating and planning GraphQL Operations. Setting the pool size to a value much higher than the number of CPU Threads available will not improve performance, but only increase memory usage."
         }
       }
     },
