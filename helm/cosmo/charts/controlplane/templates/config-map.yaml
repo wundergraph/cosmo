@@ -29,6 +29,10 @@ data:
   redisHost: "{{ .Values.configuration.redisHost }}"
   redisPort: "{{ .Values.configuration.redisPort }}"
   prometheusEnabled: "{{ .Values.configuration.prometheus.enabled }}"
+  smtpHost: "{{ .Values.configuration.smtpHost }}"
+  smtpPort: "{{ .Values.configuration.smtpPort }}"
+  smtpSecure: "{{ .Values.configuration.smtpSecure }}"
+  smtpRequireTls: "{{ .Values.configuration.smtpRequireTls }}"
   {{- if .Values.configuration.prometheus.enabled }}
   prometheusHost: "{{ .Values.configuration.prometheus.host }}"
   prometheusPort: "{{ .Values.configuration.prometheus.port }}"
