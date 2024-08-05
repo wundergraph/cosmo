@@ -457,7 +457,7 @@ type ExecutionConfigStorage struct {
 }
 
 type ExecutionConfigFile struct {
-	Path string `yaml:"path,omitempty" env:"EXECUTION_CONFIG_PATH"`
+	Path string `yaml:"path,omitempty" env:"EXECUTION_CONFIG_FILE_PATH"`
 }
 
 type ExecutionConfig struct {
