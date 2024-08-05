@@ -8,7 +8,6 @@ import { compressionBrotli, compressionGzip } from '@connectrpc/connect-node';
 import fastifyGracefulShutdown from 'fastify-graceful-shutdown';
 import { App } from 'octokit';
 import { Worker } from 'bullmq';
-import { MailerParams } from '../types/index.js';
 import routes from './routes.js';
 import fastifyHealth from './plugins/health.js';
 import fastifyMetrics, { MetricsPluginOptions } from './plugins/metrics.js';
