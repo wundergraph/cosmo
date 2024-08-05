@@ -252,14 +252,14 @@ spec:
                 configMapKeyRef:
                   name: {{ include "controlplane.fullname" . }}-configmap
                   key: smtpHost
-            {{- if .Values.configuration.smtpSecure }}
+            {{- if .Values.configuration.smtp.secure }}
             - name: SMTP_SECURE
               valueFrom:
                 configMapKeyRef:
                   name: {{ include "controlplane.fullname" . }}-configmap
                   key: smtpSecure
             {{- end }}
-            {{- if .Values.configuration.smtpRequireTls }}
+            {{- if .Values.configuration.smtp.requireTls }}
             - name: SMTP_REQUIRE_TLS
               valueFrom:
                 configMapKeyRef:
