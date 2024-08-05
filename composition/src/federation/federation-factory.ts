@@ -346,7 +346,8 @@ export class FederationFactory {
     return interfaces;
   }
 
-  addValidPrimaryKeyTargetsToEntityData(entityData?: EntityData) {
+  addValidPrimaryKeyTargetsToEntityData(typeName: string) {
+    const entityData = this.entityDataByTypeName.get(typeName);
     if (!entityData) {
       return;
     }
@@ -370,7 +371,7 @@ export class FederationFactory {
       );
     }
     const configurationData = getOrThrowError(
-      internalSubgraph.configurationDataByParentTypeName,
+      internalSubgraph.configurationDataByTypeName,
       entityData.typeName,
       'internalSubgraph.configurationDataByParentTypeName',
     );
@@ -378,13 +379,14 @@ export class FederationFactory {
     const graphNode = this.internalGraph.nodeByNodeName.get(`${this.currentSubgraphName}.${entityData.typeName}`);
     // Any errors in the field sets would be caught when evaluating the explicit entities, so they are ignored here
     validateImplicitFieldSets({
+      conditionalFieldDataByCoordinates: internalSubgraph.conditionalFieldDataByCoordinates,
       configurationData,
       fieldSets: entityData.keyFieldSets,
+      graphNode,
       implicitKeys,
       objectData,
       parentDefinitionDataByTypeName,
       parentExtensionDataByTypeName,
-      graphNode,
     });
     for (const [typeName, entityInterfaceFederationData] of this.entityInterfaceFederationDataByTypeName) {
       if (!entityInterfaceFederationData.concreteTypeNames?.has(entityData.typeName)) {
@@ -395,6 +397,7 @@ export class FederationFactory {
         continue;
       }
       validateImplicitFieldSets({
+        conditionalFieldDataByCoordinates: internalSubgraph.conditionalFieldDataByCoordinates,
         configurationData,
         fieldSets: interfaceObjectEntityData.keyFieldSets,
         implicitKeys,
@@ -439,13 +442,14 @@ export class FederationFactory {
       );
     }
     const configurationData = getOrThrowError(
-      internalSubgraph.configurationDataByParentTypeName,
+      internalSubgraph.configurationDataByTypeName,
       entityData.typeName,
       'internalSubgraph.configurationDataByParentTypeName',
     );
     const implicitKeys: RequiredFieldConfiguration[] = [];
     // Any errors in the field sets would be caught when evaluating the explicit entities, so they are ignored here
     validateImplicitFieldSets({
+      conditionalFieldDataByCoordinates: internalSubgraph.conditionalFieldDataByCoordinates,
       configurationData,
       fieldSets: entityData.keyFieldSets,
       implicitKeys,
@@ -1254,7 +1258,7 @@ export class FederationFactory {
           subgraphName,
           'internalSubgraphBySubgraphName',
         );
-        const configurationDataMap = internalSubgraph.configurationDataByParentTypeName;
+        const configurationDataMap = internalSubgraph.configurationDataByTypeName;
         const concreteTypeNames = this.concreteTypeNamesByAbstractTypeName.get(entityInterfaceTypeName);
         if (!concreteTypeNames) {
           continue;
@@ -1529,7 +1533,9 @@ export class FederationFactory {
               this.errors.push(invalidFieldShareabilityError(parentDefinitionData, invalidFieldNames.byShareable));
             }
             if (invalidFieldNames.subgraphNamesByExternalFieldName.size > 0) {
-              this.errors.push(allExternalFieldsError(parentTypeName, invalidFieldNames.subgraphNamesByExternalFieldName));
+              this.errors.push(
+                allExternalFieldsError(parentTypeName, invalidFieldNames.subgraphNamesByExternalFieldName),
+              );
             }
           }
           parentDefinitionData.node.fields = fieldNodes;
@@ -2194,7 +2200,7 @@ export class FederationFactory {
     const subgraphConfigBySubgraphName = new Map<string, SubgraphConfig>();
     for (const subgraph of this.internalSubgraphBySubgraphName.values()) {
       subgraphConfigBySubgraphName.set(subgraph.name, {
-        configurationDataMap: subgraph.configurationDataByParentTypeName,
+        configurationDataByTypeName: subgraph.configurationDataByTypeName,
         schema: subgraph.schema,
       });
     }
@@ -2377,7 +2383,7 @@ export class FederationFactory {
     const subgraphConfigBySubgraphName = new Map<string, SubgraphConfig>();
     for (const subgraph of this.internalSubgraphBySubgraphName.values()) {
       subgraphConfigBySubgraphName.set(subgraph.name, {
-        configurationDataMap: subgraph.configurationDataByParentTypeName,
+        configurationDataByTypeName: subgraph.configurationDataByTypeName,
         schema: subgraph.schema,
       });
     }

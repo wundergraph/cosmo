@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'vitest';
 import {
   allExternalFieldsError,
-  EXTERNAL, externalInterfaceFieldsError,
+  EXTERNAL,
+  externalInterfaceFieldsError,
   federateSubgraphs,
   invalidDirectiveError,
   invalidRepeatedDirectiveErrorMessage,
@@ -145,19 +146,20 @@ describe('@external directive tests', () => {
     });
 
     test('that an error is returned if an interface field is declared @external', () => {
-      const { errors } = normalizeSubgraph(parse(`
+      const { errors } = normalizeSubgraph(
+        parse(`
         interface Interface {
           name: String! @external
-        }`));
+        }`),
+      );
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
-      expect(errors![0]).toStrictEqual(
-        externalInterfaceFieldsError('Interface', ['name']),
-      );
+      expect(errors![0]).toStrictEqual(externalInterfaceFieldsError('Interface', ['name']));
     });
 
     test('that an error is returned if an extension interface field is declared @external', () => {
-      const { errors } = normalizeSubgraph(parse(`
+      const { errors } = normalizeSubgraph(
+        parse(`
         interface Interface {
           name: String!
         }
@@ -165,12 +167,11 @@ describe('@external directive tests', () => {
         extend interface Interface {
           age: Int! @external
         }
-      `));
+      `),
+      );
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
-      expect(errors![0]).toStrictEqual(
-        externalInterfaceFieldsError('Interface', ['age']),
-      );
+      expect(errors![0]).toStrictEqual(externalInterfaceFieldsError('Interface', ['age']));
     });
   });
 
@@ -534,10 +535,7 @@ describe('@external directive tests', () => {
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
-        allExternalFieldsError(
-          'Entity',
-          new Map<string, Array<string>>([['name', ['subgraph-h', 'subgraph-i']]]),
-        )
+        allExternalFieldsError('Entity', new Map<string, Array<string>>([['name', ['subgraph-h', 'subgraph-i']]])),
       );
     });
   });

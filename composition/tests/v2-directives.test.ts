@@ -1,5 +1,12 @@
 import { describe, expect, test } from 'vitest';
-import { federateSubgraphs, FieldData, invalidFieldShareabilityError, ObjectDefinitionData, parse, Subgraph } from '../src';
+import {
+  federateSubgraphs,
+  FieldData,
+  invalidFieldShareabilityError,
+  ObjectDefinitionData,
+  parse,
+  Subgraph,
+} from '../src';
 import {
   documentNodeToNormalizedString,
   normalizeString,

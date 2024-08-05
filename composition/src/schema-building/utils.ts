@@ -42,6 +42,7 @@ import {
   NodeData,
   ObjectDefinitionData,
   ParentDefinitionData,
+  ParentWithFieldsData,
   PersistedDirectiveDefinitionData,
   PersistedDirectivesData,
   ScalarDefinitionData,
@@ -134,7 +135,6 @@ import {
   AuthorizationData,
   generateRequiresScopesDirective,
   generateSimpleDirective,
-  getAllMutualEntries,
   getEntriesNotInHashSet,
   getValueOrDefault,
   InvalidRequiredInputValueData,
@@ -145,7 +145,11 @@ import {
   INHERITABLE_DIRECTIVE_NAMES,
   V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME,
 } from '../utils/constants';
-import { FieldConfiguration, SubscriptionFilterValue } from '../router-configuration/router-configuration';
+import {
+  FieldConfiguration,
+  FieldSetCondition,
+  SubscriptionFilterValue,
+} from '../router-configuration/router-configuration';
 import { printTypeNode } from '@graphql-tools/merge';
 
 export type ObjectData = ObjectDefinitionData | ObjectExtensionData;
@@ -1652,7 +1656,7 @@ type InvalidFieldNames = {
 export function newInvalidFieldNames() {
   return {
     byShareable: new Set<string>(),
-    subgraphNamesByExternalFieldName: new Map<string, Array<string>>,
+    subgraphNamesByExternalFieldName: new Map<string, Array<string>>(),
   };
 }
 
@@ -1778,4 +1782,32 @@ export function getSubscriptionFilterValue(
       return null;
     }
   }
+}
+
+export function getParentTypeName(parentData: ParentWithFieldsData): string {
+  switch (parentData.kind) {
+    case Kind.OBJECT_TYPE_DEFINITION:
+    // intentional fallthrough
+    case Kind.OBJECT_TYPE_EXTENSION:
+      return parentData.renamedTypeName;
+    default:
+      return parentData.name;
+  }
+}
+
+export enum FieldSetDirective {
+  PROVIDES = 'provides',
+  REQUIRES = 'requires',
+}
+
+export type ConditionalFieldData = {
+  providedBy: Array<FieldSetCondition>;
+  requiredBy: Array<FieldSetCondition>;
+};
+
+export function newConditionalFieldData(): ConditionalFieldData {
+  return {
+    providedBy: [],
+    requiredBy: [],
+  };
 }

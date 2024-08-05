@@ -1,9 +1,10 @@
 import {
-  federateSubgraphs, invalidUnionMemberTypeError,
+  federateSubgraphs,
+  invalidUnionMemberTypeError,
   noDefinedUnionMembersError,
   normalizeSubgraph,
   Subgraph,
-  subgraphValidationError
+  subgraphValidationError,
 } from '../src';
 import { parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
@@ -39,13 +40,13 @@ describe('Union tests', () => {
 
   describe('Federation tests', () => {
     test('that unions merge by union #1.1', () => {
-      const {errors, federationResult} = federateSubgraphs([subgraphA, subgraphB]);
+      const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
       expect(errors).toBeUndefined();
       const federatedGraph = federationResult!.federatedGraphAST;
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
           versionOneRouterDefinitions +
-          `
+            `
       type Bulbasaur {
         name: String!
       }
@@ -81,13 +82,13 @@ describe('Union tests', () => {
     });
 
     test('that unions merge by union #1.2', () => {
-      const {errors, federationResult} = federateSubgraphs([subgraphB, subgraphA]);
+      const { errors, federationResult } = federateSubgraphs([subgraphB, subgraphA]);
       expect(errors).toBeUndefined();
       const federatedGraph = federationResult!.federatedGraphAST;
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
           versionOneRouterDefinitions +
-          `
+            `
       type Bulbasaur {
         name: String!
       }
@@ -123,24 +124,24 @@ describe('Union tests', () => {
     });
 
     test('that an error is returned if a union has no members #1.1', () => {
-      const {errors} = federateSubgraphs([subgraphB, subgraphC]);
+      const { errors } = federateSubgraphs([subgraphB, subgraphC]);
       expect(errors).toBeDefined();
       expect(errors![0]).toStrictEqual(subgraphValidationError('subgraph-c', [noDefinedUnionMembersError('Starters')]));
     });
 
     test('that an error is returned if a union has no members #1.1', () => {
-      const {errors} = federateSubgraphs([subgraphC, subgraphB]);
+      const { errors } = federateSubgraphs([subgraphC, subgraphB]);
       expect(errors).toBeDefined();
       expect(errors![0]).toStrictEqual(subgraphValidationError('subgraph-c', [noDefinedUnionMembersError('Starters')]));
     });
 
     test('that union extensions federate correctly #1.1', () => {
-      const {errors, federationResult} = federateSubgraphs([subgraphD, subgraphE]);
+      const { errors, federationResult } = federateSubgraphs([subgraphD, subgraphE]);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
           versionOneRouterDefinitions +
-          `
+            `
         """
           001 Kanto
         """
@@ -215,12 +216,12 @@ describe('Union tests', () => {
     });
 
     test('that union extensions federate correctly #1.2', () => {
-      const {errors, federationResult} = federateSubgraphs([subgraphE, subgraphD]);
+      const { errors, federationResult } = federateSubgraphs([subgraphE, subgraphD]);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
           versionOneRouterDefinitions +
-          `
+            `
         """
           001 Kanto
         """

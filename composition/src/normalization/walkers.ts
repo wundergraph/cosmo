@@ -501,8 +501,6 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
               existingFieldSet.requires,
               fieldData.directivesByDirectiveName.get(REQUIRES),
             );
-            // @provides only makes sense on entities, but the field can be encountered before the type definition
-            // When the FieldSet is evaluated, it will be checked whether the field is an entity.
             extractFieldSetValue(
               nf.childName,
               existingFieldSet.provides,
@@ -516,14 +514,8 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
         if (!providesDirectives) {
           return;
         }
-        const fieldSetContainer = getValueOrDefault(
-          nf.fieldSetDataByTypeName,
-          nf.originalParentTypeName,
-          newFieldSetData,
-        );
-        // @provides only makes sense on entities, but the field can be encountered before the type definition
-        // When the FieldSet is evaluated, it will be checked whether the field is an entity.
-        extractFieldSetValue(nf.childName, fieldSetContainer.provides, providesDirectives);
+        const fieldSetData = getValueOrDefault(nf.fieldSetDataByTypeName, nf.originalParentTypeName, newFieldSetData);
+        extractFieldSetValue(nf.childName, fieldSetData.provides, providesDirectives);
       },
       leave() {
         nf.childName = '';

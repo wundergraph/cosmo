@@ -50,7 +50,7 @@ describe('events Configuration tests', () => {
       const { errors, normalizationResult } = normalizeSubgraphFromString(subgraphStringA);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
+      expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Query',
@@ -174,7 +174,7 @@ describe('events Configuration tests', () => {
       const { errors, normalizationResult } = normalizeSubgraphFromString(subgraphStringB);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
+      expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Subscription',
@@ -211,7 +211,7 @@ describe('events Configuration tests', () => {
       const { errors, normalizationResult } = normalizeSubgraphFromString(subgraphStringC);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
+      expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Query',
@@ -397,7 +397,7 @@ describe('events Configuration tests', () => {
       const { errors, normalizationResult } = normalizeSubgraph(subgraphU.definitions, subgraphU.name);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
+      expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',

@@ -2,8 +2,11 @@ import { describe, expect, test } from 'vitest';
 import {
   abstractTypeInKeyFieldSetErrorMessage,
   argumentsInKeyFieldSetErrorMessage,
+  ConditionalFieldData,
   ConfigurationData,
   duplicateFieldInFieldSetErrorMessage,
+  federateSubgraphs,
+  FieldSetDirective,
   invalidInlineFragmentTypeConditionErrorMessage,
   invalidInlineFragmentTypeErrorMessage,
   invalidKeyDirectivesError,
@@ -11,14 +14,19 @@ import {
   invalidSelectionOnUnionErrorMessage,
   invalidSelectionSetDefinitionErrorMessage,
   invalidSelectionSetErrorMessage,
+  nonExternalConditionalFieldError,
+  normalizeSubgraph,
   normalizeSubgraphFromString,
+  parse,
+  PROVIDES,
+  REQUIRES,
+  Subgraph,
   undefinedFieldInFieldSetErrorMessage,
   unexpectedArgumentErrorMessage,
   unparsableFieldSetErrorMessage,
 } from '../src';
-import { PROVIDES, REQUIRES } from '../src/utils/string-constants';
 
-describe('openfed_FieldSet Tests', () => {
+describe('openfed_FieldSet tests', () => {
   describe('@key FieldSets', () => {
     test('that a complex key FieldSet is validated', () => {
       const { errors, normalizationResult } = normalizeSubgraphFromString(`
@@ -342,7 +350,7 @@ describe('openfed_FieldSet Tests', () => {
       `);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
+      expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Object',
@@ -369,7 +377,7 @@ describe('openfed_FieldSet Tests', () => {
       `);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
+      expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Object',
@@ -436,7 +444,7 @@ describe('openfed_FieldSet Tests', () => {
       `);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
+      expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Object',
@@ -490,7 +498,7 @@ describe('openfed_FieldSet Tests', () => {
       `);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
+      expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Object',
@@ -585,7 +593,7 @@ describe('openfed_FieldSet Tests', () => {
       `);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
+      expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Object',
@@ -697,7 +705,7 @@ describe('openfed_FieldSet Tests', () => {
       `);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
+      expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Object',
@@ -746,7 +754,7 @@ describe('openfed_FieldSet Tests', () => {
       `);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
+      expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Object',
@@ -778,6 +786,135 @@ describe('openfed_FieldSet Tests', () => {
         ]),
       );
     });
+
+    test('that a @provides directive produces the correct conditional field datas', () => {
+      const { errors, normalizationResult } = normalizeSubgraph(subgraphA.definitions, subgraphA.name);
+      expect(errors).toBeUndefined();
+      expect(normalizationResult!.conditionalFieldDataByCoordinates).toStrictEqual(
+        new Map<string, ConditionalFieldData>([
+          [
+            'NestedObject.age',
+            {
+              providedBy: [
+                {
+                  fieldCoordinatesPath: ['Query.entity', 'Entity.object', 'Object.nestedObject', 'NestedObject.age'],
+                  fieldPath: ['entity', 'object', 'nestedObject', 'age'],
+                },
+                {
+                  fieldCoordinatesPath: ['Query.entities', 'Entity.object', 'Object.nestedObject', 'NestedObject.age'],
+                  fieldPath: ['entities', 'object', 'nestedObject', 'age'],
+                },
+              ],
+              requiredBy: [],
+            },
+          ],
+          [
+            'NestedObject.name',
+            {
+              providedBy: [
+                {
+                  fieldCoordinatesPath: ['Query.entity', 'Entity.object', 'Object.nestedObject', 'NestedObject.name'],
+                  fieldPath: ['entity', 'object', 'nestedObject', 'name'],
+                },
+                {
+                  fieldCoordinatesPath: ['Query.entities', 'Entity.object', 'Object.nestedObject', 'NestedObject.name'],
+                  fieldPath: ['entities', 'object', 'nestedObject', 'name'],
+                },
+              ],
+              requiredBy: [],
+            },
+          ],
+        ]),
+      );
+    });
+
+    test('that a @provides directive on a renamed root type produces the correct conditional field datas', () => {
+      const { errors, normalizationResult } = normalizeSubgraph(subgraphB.definitions, subgraphB.name);
+      expect(errors).toBeUndefined();
+      expect(normalizationResult!.conditionalFieldDataByCoordinates).toStrictEqual(
+        new Map<string, ConditionalFieldData>([
+          [
+            'NestedObject.age',
+            {
+              providedBy: [
+                {
+                  fieldCoordinatesPath: ['Query.entity', 'Entity.object', 'Object.nestedObject', 'NestedObject.age'],
+                  fieldPath: ['entity', 'object', 'nestedObject', 'age'],
+                },
+                {
+                  fieldCoordinatesPath: ['Query.entities', 'Entity.object', 'Object.nestedObject', 'NestedObject.age'],
+                  fieldPath: ['entities', 'object', 'nestedObject', 'age'],
+                },
+              ],
+              requiredBy: [],
+            },
+          ],
+          [
+            'NestedObject.name',
+            {
+              providedBy: [
+                {
+                  fieldCoordinatesPath: ['Query.entity', 'Entity.object', 'Object.nestedObject', 'NestedObject.name'],
+                  fieldPath: ['entity', 'object', 'nestedObject', 'name'],
+                },
+                {
+                  fieldCoordinatesPath: ['Query.entities', 'Entity.object', 'Object.nestedObject', 'NestedObject.name'],
+                  fieldPath: ['entities', 'object', 'nestedObject', 'name'],
+                },
+              ],
+              requiredBy: [],
+            },
+          ],
+        ]),
+      );
+    });
+
+    test('that an error is returned if provided field in a v2 subgraph is not @external and has no @external ancestor', () => {
+      const { errors, normalizationResult } = normalizeSubgraph(subgraphC.definitions, subgraphC.name);
+      expect(errors).toBeDefined();
+      expect(errors).toHaveLength(4);
+      expect(errors![0]).toStrictEqual(
+        nonExternalConditionalFieldError(
+          `Query.entity`,
+          `subgraph-c`,
+          `NestedObject.age`,
+          `object { nestedObject { age name } }`,
+          FieldSetDirective.PROVIDES,
+        ),
+      );
+      expect(errors![1]).toStrictEqual(
+        nonExternalConditionalFieldError(
+          `Query.entity`,
+          `subgraph-c`,
+          `NestedObject.name`,
+          `object { nestedObject { age name } }`,
+          FieldSetDirective.PROVIDES,
+        ),
+      );
+      expect(errors![2]).toStrictEqual(
+        nonExternalConditionalFieldError(
+          `Query.entities`,
+          `subgraph-c`,
+          `NestedObject.age`,
+          `object { nestedObject { age name } }`,
+          FieldSetDirective.PROVIDES,
+        ),
+      );
+      expect(errors![3]).toStrictEqual(
+        nonExternalConditionalFieldError(
+          `Query.entities`,
+          `subgraph-c`,
+          `NestedObject.name`,
+          `object { nestedObject { age name } }`,
+          FieldSetDirective.PROVIDES,
+        ),
+      );
+    });
+
+    // TODO
+    test('that an error is returned if a field is part of both a @provides and @key FieldSet', () => {
+      // TODO
+    });
   });
 
   describe('@requires FieldSets', () => {
@@ -790,7 +927,7 @@ describe('openfed_FieldSet Tests', () => {
       `);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
+      expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Object',
@@ -814,7 +951,7 @@ describe('openfed_FieldSet Tests', () => {
       `);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
+      expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -866,7 +1003,7 @@ describe('openfed_FieldSet Tests', () => {
       `);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
+      expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -910,7 +1047,7 @@ describe('openfed_FieldSet Tests', () => {
       `);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
+      expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -993,7 +1130,7 @@ describe('openfed_FieldSet Tests', () => {
       `);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
+      expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -1090,7 +1227,7 @@ describe('openfed_FieldSet Tests', () => {
       `);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
+      expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -1129,7 +1266,7 @@ describe('openfed_FieldSet Tests', () => {
       `);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
+      expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -1154,4 +1291,380 @@ describe('openfed_FieldSet Tests', () => {
       );
     });
   });
+
+  describe('Router configuration tests', () => {
+    test('that a field that forms part of a @requires field set cannot be used as an implicit key', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphD, subgraphE]);
+      expect(errors).toBeUndefined();
+      const d = federationResult!.subgraphConfigBySubgraphName.get(subgraphD.name);
+      expect(d!.configurationDataByTypeName).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['entity']),
+              isRootNode: true,
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id', 'name', 'object']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+                {
+                  disableEntityResolver: true,
+                  fieldName: '',
+                  selectionSet: 'id object { nestedObject { id } }',
+                },
+              ],
+              requires: [
+                {
+                  fieldName: 'name',
+                  selectionSet: 'object { nestedObject { name } }',
+                },
+              ],
+              typeName: 'Entity',
+            },
+          ],
+          [
+            'Object',
+            {
+              fieldNames: new Set<string>(['nestedObject']),
+              isRootNode: false,
+              typeName: 'Object',
+            },
+          ],
+          [
+            'NestedObject',
+            {
+              externalFieldNames: new Set<string>(['name']),
+              fieldNames: new Set<string>(['id']),
+              isRootNode: false,
+              typeName: 'NestedObject',
+            },
+          ],
+        ]),
+      );
+      expect(d).toBeDefined();
+      const e = federationResult!.subgraphConfigBySubgraphName.get(subgraphE.name);
+      expect(e).toBeDefined();
+      expect(e!.configurationDataByTypeName).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id', 'object', 'age']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id object { nestedObject { id } }',
+                },
+                {
+                  fieldName: '',
+                  selectionSet: 'id object { nestedObject { name } }',
+                },
+                {
+                  disableEntityResolver: true,
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Entity',
+            },
+          ],
+          [
+            'Object',
+            {
+              fieldNames: new Set<string>(['nestedObject']),
+              isRootNode: false,
+              typeName: 'Object',
+            },
+          ],
+          [
+            'NestedObject',
+            {
+              fieldNames: new Set<string>(['id', 'name']),
+              isRootNode: false,
+              typeName: 'NestedObject',
+            },
+          ],
+        ]),
+      );
+    });
+
+    test('that non-external v1 fields that form part of a @requires field set are treated as non-conditional', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphE, subgraphF]);
+      expect(errors).toBeUndefined();
+      const e = federationResult!.subgraphConfigBySubgraphName.get(subgraphE.name);
+      expect(e).toBeDefined();
+      expect(e!.configurationDataByTypeName).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id', 'object', 'age']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id object { nestedObject { id } }',
+                },
+                {
+                  fieldName: '',
+                  selectionSet: 'id object { nestedObject { name } }',
+                },
+                {
+                  disableEntityResolver: true,
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Entity',
+            },
+          ],
+          [
+            'Object',
+            {
+              fieldNames: new Set<string>(['nestedObject']),
+              isRootNode: false,
+              typeName: 'Object',
+            },
+          ],
+          [
+            'NestedObject',
+            {
+              fieldNames: new Set<string>(['id', 'name']),
+              isRootNode: false,
+              typeName: 'NestedObject',
+            },
+          ],
+        ]),
+      );
+      const f = federationResult!.subgraphConfigBySubgraphName.get(subgraphF.name);
+      expect(f).toBeDefined();
+      expect(f!.configurationDataByTypeName).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['entity']),
+              isRootNode: true,
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id', 'name', 'object']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+                {
+                  disableEntityResolver: true,
+                  fieldName: '',
+                  selectionSet: 'id object { nestedObject { id } }',
+                },
+                {
+                  disableEntityResolver: true,
+                  fieldName: '',
+                  selectionSet: 'id object { nestedObject { name } }',
+                },
+              ],
+              requires: [
+                {
+                  fieldName: 'name',
+                  selectionSet: 'object { nestedObject { name } }',
+                },
+              ],
+              typeName: 'Entity',
+            },
+          ],
+          [
+            'Object',
+            {
+              fieldNames: new Set<string>(['nestedObject']),
+              isRootNode: false,
+              typeName: 'Object',
+            },
+          ],
+          [
+            'NestedObject',
+            {
+              fieldNames: new Set<string>(['id', 'name']),
+              isRootNode: false,
+              typeName: 'NestedObject',
+            },
+          ],
+        ]),
+      );
+    });
+  });
 });
+
+const subgraphA: Subgraph = {
+  name: 'subgraph-a',
+  url: '',
+  definitions: parse(`
+    type Query @shareable {
+      entity: Entity! @provides(fields: "object { nestedObject { age name } }")
+      entities: [Entity!]! @provides(fields: "object { nestedObject { age name } }")
+    }
+    
+    type Entity @key(fields: "id") {
+      id: ID!
+      object: Object!
+    }
+    
+    type Object {
+      nestedObject: NestedObject!
+    }
+    
+    type NestedObject {
+      age: Int! @external
+      name: String! @external
+    }
+  `),
+};
+
+const subgraphB: Subgraph = {
+  name: 'subgraph-b',
+  url: '',
+  definitions: parse(`
+    schema {
+      query: Queries
+    }
+    
+    type Queries @shareable {
+      entity: Entity! @provides(fields: "object { nestedObject { age name } }")
+      entities: [Entity!]! @provides(fields: "object { nestedObject { age name } }")
+    }
+    
+    type Entity @key(fields: "id") {
+      id: ID!
+      object: Object!
+    }
+    
+    type Object {
+      nestedObject: NestedObject!
+    }
+    
+    type NestedObject {
+      age: Int! @external
+      name: String! @external
+    }
+  `),
+};
+
+const subgraphC: Subgraph = {
+  name: 'subgraph-c',
+  url: '',
+  definitions: parse(`
+    schema {
+      query: Queries
+    }
+    
+    type Queries @shareable {
+      entity: Entity! @provides(fields: "object { nestedObject { age name } }")
+      entities: [Entity!]! @provides(fields: "object { nestedObject { age name } }")
+    }
+    
+    type Entity @key(fields: "id") {
+      id: ID!
+      object: Object!
+    }
+    
+    type Object {
+      nestedObject: NestedObject!
+    }
+    
+    type NestedObject {
+      age: Int!
+      name: String!
+    }
+  `),
+};
+
+const subgraphD: Subgraph = {
+  name: 'subgraph-d',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entity: Entity!
+    }
+    
+    type Entity @key(fields: "id") {
+      id: ID!
+      name: String! @requires(fields: "object { nestedObject { name } }")
+      object: Object! @shareable
+    }
+    
+    type Object {
+      nestedObject: NestedObject! @shareable
+    }
+    
+    type NestedObject @shareable {
+      id: ID!
+      name: String! @external
+    }
+  `),
+};
+
+const subgraphE: Subgraph = {
+  name: 'subgraph-e',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id object { nestedObject { id } }") @key(fields: "id object { nestedObject { name } }") {
+      id: ID!
+      object: Object!
+      age: Int!
+    }
+    
+    type Object {
+      nestedObject: NestedObject!
+    }
+    
+    type NestedObject {
+      id: ID!
+      name: String!
+    }
+  `),
+};
+
+const subgraphF: Subgraph = {
+  name: 'subgraph-f',
+  url: '',
+  definitions: parse(`
+    schema {
+      query: Queries  
+    }
+    
+    type Queries {
+      entity: Entity!
+    }
+    
+    type Entity @key(fields: "id") {
+      id: ID!
+      name: String! @requires(fields: "object { nestedObject { name } }")
+      object: Object!
+    }
+    
+    type Object {
+      nestedObject: NestedObject!
+    }
+    
+    type NestedObject {
+      id: ID!
+      name: String!
+    }
+  `),
+};

@@ -42,7 +42,7 @@ describe('Router Config Builder', () => {
       subscriptionProtocol: 'ws',
       websocketSubprotocol: 'auto',
       schema: accountsSubgraphConfig!.schema,
-      configurationDataMap: accountsSubgraphConfig!.configurationDataMap,
+      configurationDataByTypeName: accountsSubgraphConfig!.configurationDataByTypeName,
     };
     const products: ComposedSubgraph = {
       id: '1',
@@ -55,7 +55,7 @@ describe('Router Config Builder', () => {
       subscriptionProtocol: 'ws',
       websocketSubprotocol: 'auto',
       schema: productsSubgraphConfig!.schema,
-      configurationDataMap: productsSubgraphConfig!.configurationDataMap,
+      configurationDataByTypeName: productsSubgraphConfig!.configurationDataByTypeName,
     };
     const reviews: ComposedSubgraph = {
       id: '2',
@@ -68,7 +68,7 @@ describe('Router Config Builder', () => {
       subscriptionProtocol: 'ws',
       websocketSubprotocol: 'auto',
       schema: reviewsSubgraphConfig!.schema,
-      configurationDataMap: reviewsSubgraphConfig!.configurationDataMap,
+      configurationDataByTypeName: reviewsSubgraphConfig!.configurationDataByTypeName,
     };
     const inventory: ComposedSubgraph = {
       id: '3',
@@ -81,7 +81,7 @@ describe('Router Config Builder', () => {
       subscriptionProtocol: 'ws',
       websocketSubprotocol: 'auto',
       schema: inventorySubgraphConfig!.schema,
-      configurationDataMap: inventorySubgraphConfig!.configurationDataMap,
+      configurationDataByTypeName: inventorySubgraphConfig!.configurationDataByTypeName,
     };
     const routerConfig = buildRouterConfig({
       // if the federatedClientSDL is empty, it is not added to the config
@@ -118,7 +118,7 @@ describe('Router Config Builder', () => {
       subscriptionUrl: '',
       subscriptionProtocol: 'ws',
       schema: accountsSubgraphConfig!.schema,
-      configurationDataMap: accountsSubgraphConfig!.configurationDataMap,
+      configurationDataByTypeName: accountsSubgraphConfig!.configurationDataByTypeName,
     };
     const products: ComposedSubgraph = {
       id: '1',
@@ -130,7 +130,7 @@ describe('Router Config Builder', () => {
       subscriptionUrl: '',
       subscriptionProtocol: 'ws',
       schema: productsSubgraphConfig!.schema,
-      configurationDataMap: productsSubgraphConfig!.configurationDataMap,
+      configurationDataByTypeName: productsSubgraphConfig!.configurationDataByTypeName,
     };
     const routerConfig = buildRouterConfig({
       // if the federatedClientSDL is empty, it is not added to the config
@@ -169,7 +169,7 @@ describe('Router Config Builder', () => {
       subscriptionUrl: '',
       subscriptionProtocol: 'ws',
       schema: accountsSubgraphConfig!.schema,
-      configurationDataMap: accountsSubgraphConfig!.configurationDataMap,
+      configurationDataByTypeName: accountsSubgraphConfig!.configurationDataByTypeName,
     };
     const products: ComposedSubgraph = {
       id: '1',
@@ -181,7 +181,7 @@ describe('Router Config Builder', () => {
       subscriptionUrl: '',
       subscriptionProtocol: 'ws',
       schema: productsSubgraphConfig!.schema,
-      configurationDataMap: productsSubgraphConfig!.configurationDataMap,
+      configurationDataByTypeName: productsSubgraphConfig!.configurationDataByTypeName,
     };
     const routerConfig = buildRouterConfig({
       // if the federatedClientSDL is empty, it is not added to the config
@@ -220,7 +220,7 @@ describe('Router Config Builder', () => {
       subscriptionUrl: '',
       subscriptionProtocol: 'ws',
       schema: accountsSubgraphConfig!.schema,
-      configurationDataMap: accountsSubgraphConfig!.configurationDataMap,
+      configurationDataByTypeName: accountsSubgraphConfig!.configurationDataByTypeName,
     };
     const products: ComposedSubgraph = {
       id: '1',
@@ -232,7 +232,7 @@ describe('Router Config Builder', () => {
       subscriptionUrl: '',
       subscriptionProtocol: 'ws',
       schema: productsSubgraphConfig!.schema,
-      configurationDataMap: productsSubgraphConfig!.configurationDataMap,
+      configurationDataByTypeName: productsSubgraphConfig!.configurationDataByTypeName,
     };
     const routerConfig = buildRouterConfig({
       // if the federatedClientSDL is empty, it is not added to the config
@@ -277,6 +277,6 @@ describe('Router Config Builder', () => {
       error = e;
     }
     expect(error).toBeDefined();
-    expect(error).toStrictEqual(normalizationFailureError('ConfigurationDataMap'));
+    expect(error).toStrictEqual(normalizationFailureError('ConfigurationDataByTypeName'));
   });
 });

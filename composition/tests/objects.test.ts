@@ -74,7 +74,7 @@ describe('Object tests', () => {
       `);
 
       expect(errors).toBeUndefined();
-      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
+      expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Object',

@@ -1077,6 +1077,92 @@ export class TypeField extends Message<TypeField> {
 }
 
 /**
+ * @generated from message wg.cosmo.node.v1.FieldCoordinates
+ */
+export class FieldCoordinates extends Message<FieldCoordinates> {
+  /**
+   * @generated from field: string field_name = 1;
+   */
+  fieldName = "";
+
+  /**
+   * @generated from field: string type_name = 2;
+   */
+  typeName = "";
+
+  constructor(data?: PartialMessage<FieldCoordinates>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.FieldCoordinates";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "field_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "type_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FieldCoordinates {
+    return new FieldCoordinates().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FieldCoordinates {
+    return new FieldCoordinates().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FieldCoordinates {
+    return new FieldCoordinates().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FieldCoordinates | PlainMessage<FieldCoordinates> | undefined, b: FieldCoordinates | PlainMessage<FieldCoordinates> | undefined): boolean {
+    return proto3.util.equals(FieldCoordinates, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.FieldSetCondition
+ */
+export class FieldSetCondition extends Message<FieldSetCondition> {
+  /**
+   * @generated from field: repeated wg.cosmo.node.v1.FieldCoordinates field_coordinates_path = 1;
+   */
+  fieldCoordinatesPath: FieldCoordinates[] = [];
+
+  /**
+   * @generated from field: repeated string field_path = 2;
+   */
+  fieldPath: string[] = [];
+
+  constructor(data?: PartialMessage<FieldSetCondition>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.FieldSetCondition";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "field_coordinates_path", kind: "message", T: FieldCoordinates, repeated: true },
+    { no: 2, name: "field_path", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FieldSetCondition {
+    return new FieldSetCondition().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FieldSetCondition {
+    return new FieldSetCondition().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FieldSetCondition {
+    return new FieldSetCondition().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FieldSetCondition | PlainMessage<FieldSetCondition> | undefined, b: FieldSetCondition | PlainMessage<FieldSetCondition> | undefined): boolean {
+    return proto3.util.equals(FieldSetCondition, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.node.v1.RequiredField
  */
 export class RequiredField extends Message<RequiredField> {
@@ -1100,6 +1186,11 @@ export class RequiredField extends Message<RequiredField> {
    */
   disableEntityResolver = false;
 
+  /**
+   * @generated from field: repeated wg.cosmo.node.v1.FieldSetCondition conditions = 5;
+   */
+  conditions: FieldSetCondition[] = [];
+
   constructor(data?: PartialMessage<RequiredField>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1112,6 +1203,7 @@ export class RequiredField extends Message<RequiredField> {
     { no: 2, name: "field_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "selection_set", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "disable_entity_resolver", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 5, name: "conditions", kind: "message", T: FieldSetCondition, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RequiredField {

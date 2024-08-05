@@ -47,8 +47,8 @@ import {
   SUBSCRIPTION,
   UNION_UPPER,
 } from '../utils/string-constants';
-import {duplicateInterfaceError} from '../errors/errors';
-import {ObjectLikeTypeNode} from '../schema-building/ast';
+import { duplicateInterfaceError } from '../errors/errors';
+import { ObjectLikeTypeNode } from '../schema-building/ast';
 
 export function isObjectLikeNodeEntity(node: ObjectLikeTypeNode): boolean {
   if (!node.directives?.length) {
