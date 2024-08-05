@@ -52,7 +52,7 @@ export class OpenAIGraphql {
     return { readme: response.choices[0].message.content ?? '' };
   }
 
-  public async fixSDL(input: { sdl: string; checkResult: string }): Promise<{ sdl: string }> {
+  public fixSDL(input: { sdl: string; checkResult: string }): Promise<{ sdl: string }> {
     const run = () => this._fixSDL(input);
     return pRetry(run, { retries: 3 });
   }
