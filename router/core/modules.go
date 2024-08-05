@@ -70,11 +70,19 @@ func RegisterModule(instance Module) {
 	modules[string(mod.ID)] = mod
 }
 
-// Sorts the modules by priority
+// SortModules sorts the modules by priority
 func SortModules(modules map[string]ModuleInfo) []ModuleInfo {
 	var moduleList []ModuleInfo
+	hasPriority := false
 	for _, module := range modules {
 		moduleList = append(moduleList, module)
+		if module.Priority != 0 {
+			hasPriority = true
+		}
+	}
+
+	if !hasPriority {
+		return moduleList
 	}
 
 	sort.Slice(moduleList, func(x, y int) bool {
