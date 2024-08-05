@@ -233,10 +233,14 @@ const Block = ({
 
   const [newDiscussionLine, setNewDiscussionLine] = useState(-1);
 
-  const { data, refetch } = useQuery(getAllDiscussions, {
-    schemaVersionId: versionId,
-    targetId,
-  });
+  const { data, refetch } = useQuery(
+    getAllDiscussions,
+    {
+      schemaVersionId: versionId,
+      targetId: targetId,
+    },
+    { enabled: !!targetId },
+  );
 
   const { data: membersData } = useQuery(getOrganizationMembers);
 

@@ -522,10 +522,14 @@ const TypeDiscussions = ({
 
   const applyParams = useApplyParams();
 
-  const { data, isLoading, error, refetch } = useQuery(getAllDiscussions, {
-    targetId: graphData?.graph?.targetId,
-    schemaVersionId,
-  });
+  const { data, isLoading, error, refetch } = useQuery(
+    getAllDiscussions,
+    {
+      targetId: graphData?.graph?.targetId,
+      schemaVersionId,
+    },
+    { enabled: !!graphData?.graph?.targetId },
+  );
 
   const { data: membersData } = useQuery(getOrganizationMembers);
 
