@@ -112,11 +112,7 @@ export const envVariables = z
     SMTP_USERNAME: z.string().optional(),
     SMTP_PASSWORD: z.string().optional(),
     SMTP_HOST: z.string().optional(),
-    SMTP_PORT: z
-      .string()
-      .optional()
-      .default('') // here to avoid possible type of number | "" | undefined type
-      .transform((val) => Number.parseInt(val)),
+    SMTP_PORT: z.coerce.number().optional(),
     SMTP_SECURE: z
       .string()
       .optional()
