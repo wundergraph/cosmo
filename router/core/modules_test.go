@@ -3,9 +3,6 @@ package core
 import (
 	"errors"
 	"github.com/stretchr/testify/assert"
-	"github.com/wundergraph/cosmo/router-tests/testenv"
-	"github.com/wundergraph/cosmo/router/cmd/custom/module"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 	"io"
 	"net/http/httptest"
 	"testing"
@@ -57,14 +54,6 @@ func TestSingleError(t *testing.T) {
 }
 
 func TestSortingModulesByPriority(t *testing.T) {
-	cfg := config.Config{
-		Modules: map[string]interface{}{
-			"myModule": module.MyModule{
-				Value: 1,
-			},
-		},
-	}
-
 	modulesW := make(map[string]ModuleInfo)
 	modulesW["module1_0"] = ModuleInfo{
 		ID: "module1_0",
@@ -126,28 +115,24 @@ func TestSortingModulesByPriority(t *testing.T) {
 		},
 	}
 
-	testenv.Run(t, &testenv.Config{RouterOptions: []Option{
-		WithModulesConfig(cfg.Modules),
-	}}, func(t *testing.T, xEnv *testenv.Environment) {
-		sortedModulesW := sortModules(modulesW)
-		assert.Equal(t, 2, len(sortedModulesW))
+	sortedModulesW := sortModules(modulesW)
+	assert.Equal(t, 2, len(sortedModulesW))
 
-		sortedModulesX := sortModules(modulesX)
-		assert.Equal(t, ModuleID("module1_1"), sortedModulesX[0].ID)
-		assert.Equal(t, 1, sortedModulesX[0].Priority)
-		assert.Equal(t, ModuleID("module2_2"), sortedModulesX[1].ID)
-		assert.Equal(t, 2, sortedModulesX[1].Priority)
+	sortedModulesX := sortModules(modulesX)
+	assert.Equal(t, ModuleID("module1_1"), sortedModulesX[0].ID)
+	assert.Equal(t, 1, sortedModulesX[0].Priority)
+	assert.Equal(t, ModuleID("module2_2"), sortedModulesX[1].ID)
+	assert.Equal(t, 2, sortedModulesX[1].Priority)
 
-		sortedModulesY := sortModules(modulesY)
-		assert.Equal(t, ModuleID("module2_1"), sortedModulesY[0].ID)
-		assert.Equal(t, 1, sortedModulesY[0].Priority)
-		assert.Equal(t, ModuleID("module1_2"), sortedModulesY[1].ID)
-		assert.Equal(t, 2, sortedModulesY[1].Priority)
+	sortedModulesY := sortModules(modulesY)
+	assert.Equal(t, ModuleID("module2_1"), sortedModulesY[0].ID)
+	assert.Equal(t, 1, sortedModulesY[0].Priority)
+	assert.Equal(t, ModuleID("module1_2"), sortedModulesY[1].ID)
+	assert.Equal(t, 2, sortedModulesY[1].Priority)
 
-		sortedModulesZ := sortModules(modulesZ)
-		assert.Equal(t, ModuleID("module2_2"), sortedModulesZ[0].ID)
-		assert.Equal(t, 2, sortedModulesZ[0].Priority)
-		assert.Equal(t, ModuleID("module1_0"), sortedModulesZ[1].ID)
-		assert.Equal(t, 0, sortedModulesZ[1].Priority)
-	})
+	sortedModulesZ := sortModules(modulesZ)
+	assert.Equal(t, ModuleID("module2_2"), sortedModulesZ[0].ID)
+	assert.Equal(t, 2, sortedModulesZ[0].Priority)
+	assert.Equal(t, ModuleID("module1_0"), sortedModulesZ[1].ID)
+	assert.Equal(t, 0, sortedModulesZ[1].Priority)
 }
