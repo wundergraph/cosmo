@@ -4,13 +4,14 @@ import (
 	"errors"
 	"strconv"
 
+	"golang.org/x/sync/singleflight"
+
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/postprocess"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-	"golang.org/x/sync/singleflight"
 
 	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 )
@@ -22,30 +23,36 @@ type planWithMetaData struct {
 
 type OperationPlanner struct {
 	sf        singleflight.Group
-	planCache ExecutionPlanCache
+	planCache ExecutionPlanCache[uint64, *planWithMetaData]
 	executor  *Executor
 }
 
-type ExecutionPlanCache interface {
-	Get(key interface{}) (interface{}, bool)
-	Set(key, value interface{}, cost int64) bool
+type ExecutionPlanCache[K any, V any] interface {
+	// Get the value from the cache
+	Get(key K) (V, bool)
+	// Set the value in the cache with a cost. The cost depends on the cache implementation
+	Set(key K, value V, cost int64) bool
+	// Close the cache and free resources
+	Close()
 }
 
-func NewNoopExecutionPlanCache() ExecutionPlanCache {
+func NewNoopExecutionPlanCache() ExecutionPlanCache[uint64, *planWithMetaData] {
 	return &noopExecutionPlanCache{}
 }
 
 type noopExecutionPlanCache struct{}
 
-func (n *noopExecutionPlanCache) Get(key interface{}) (interface{}, bool) {
+func (n *noopExecutionPlanCache) Close() {}
+
+func (n *noopExecutionPlanCache) Get(key uint64) (*planWithMetaData, bool) {
 	return nil, false
 }
 
-func (n *noopExecutionPlanCache) Set(key, value interface{}, cost int64) bool {
+func (n *noopExecutionPlanCache) Set(key uint64, value *planWithMetaData, cost int64) bool {
 	return true
 }
 
-func NewOperationPlanner(executor *Executor, planCache ExecutionPlanCache) *OperationPlanner {
+func NewOperationPlanner(executor *Executor, planCache ExecutionPlanCache[uint64, *planWithMetaData]) *OperationPlanner {
 	return &OperationPlanner{
 		planCache: planCache,
 		executor:  executor,
@@ -60,8 +67,8 @@ func (p *OperationPlanner) preparePlan(requestOperationName []byte, requestOpera
 
 	validation := astvalidation.DefaultOperationValidator()
 
-	// validate the document before planning
-	state := validation.Validate(&doc, p.executor.Definition, &report)
+	// validate the document against client schema before planning
+	state := validation.Validate(&doc, p.executor.ClientSchema, &report)
 	if state != astvalidation.Valid {
 		return nil, &reportError{report: &report}
 	}
@@ -72,7 +79,8 @@ func (p *OperationPlanner) preparePlan(requestOperationName []byte, requestOpera
 	}
 
 	// create and postprocess the plan
-	preparedPlan := planner.Plan(&doc, p.executor.Definition, unsafebytes.BytesToString(requestOperationName), &report)
+	// planning uses the router schema
+	preparedPlan := planner.Plan(&doc, p.executor.RouterSchema, unsafebytes.BytesToString(requestOperationName), &report)
 	if report.HasErrors() {
 		return nil, &reportError{report: &report}
 	}
@@ -82,23 +90,29 @@ func (p *OperationPlanner) preparePlan(requestOperationName []byte, requestOpera
 	return &planWithMetaData{
 		preparedPlan:      preparedPlan,
 		operationDocument: &doc,
-		schemaDocument:    p.executor.Definition,
+		schemaDocument:    p.executor.RouterSchema,
 	}, nil
 }
 
 func (p *OperationPlanner) Plan(operation *ParsedOperation, clientInfo *ClientInfo, protocol OperationProtocol, traceOptions resolve.TraceOptions) (*operationContext, error) {
 
 	opContext := &operationContext{
-		name:         operation.Name,
-		opType:       operation.Type,
-		content:      operation.NormalizedRepresentation,
-		hash:         operation.ID,
-		clientInfo:   clientInfo,
-		variables:    operation.Variables,
-		traceOptions: traceOptions,
-		extensions:   operation.Extensions,
-		persistedID:  operation.PersistedID,
-		protocol:     protocol,
+		name:                       operation.Request.OperationName,
+		opType:                     operation.Type,
+		content:                    operation.NormalizedRepresentation,
+		hash:                       operation.ID,
+		clientInfo:                 clientInfo,
+		variables:                  operation.Request.Variables,
+		files:                      operation.Files,
+		traceOptions:               traceOptions,
+		extensions:                 operation.Request.Extensions,
+		protocol:                   protocol,
+		persistedOperationCacheHit: operation.PersistedOperationCacheHit,
+		normalizationCacheHit:      operation.NormalizationCacheHit,
+	}
+
+	if operation.IsPersistedOperation {
+		opContext.persistedID = operation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
 	}
 
 	if traceOptions.Enable {
@@ -118,7 +132,7 @@ func (p *OperationPlanner) Plan(operation *ParsedOperation, clientInfo *ClientIn
 	cachedPlan, ok := p.planCache.Get(operationID)
 	if ok && cachedPlan != nil {
 		// re-use a prepared plan
-		opContext.preparedPlan = cachedPlan.(*planWithMetaData)
+		opContext.preparedPlan = cachedPlan
 		opContext.planCacheHit = true
 	} else {
 		// prepare a new plan using single flight

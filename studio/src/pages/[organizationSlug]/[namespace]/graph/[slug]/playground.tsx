@@ -1,8 +1,8 @@
 import { CodeViewer } from "@/components/code-viewer";
 import {
+  getGraphLayout,
   GraphContext,
   GraphPageLayout,
-  getGraphLayout,
 } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
 import { TraceContext, TraceView } from "@/components/playground/trace-view";
@@ -28,7 +28,10 @@ import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -38,16 +41,18 @@ import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { NextPageWithLayout } from "@/lib/page";
 import { parseSchema } from "@/lib/schema-helpers";
+import { cn } from "@/lib/utils";
 import { explorerPlugin } from "@graphiql/plugin-explorer";
 import { createGraphiQLFetcher } from "@graphiql/toolkit";
 import { SparklesIcon } from "@heroicons/react/24/outline";
-import { MobileIcon } from "@radix-ui/react-icons";
+import { Component2Icon, MobileIcon } from "@radix-ui/react-icons";
 import { TooltipContent, TooltipTrigger } from "@radix-ui/react-tooltip";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getClients,
   getFederatedGraphSDLByName,
+  getSubgraphSDLFromLatestComposition,
   publishPersistedOperations,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import {
@@ -56,20 +61,27 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import crypto from "crypto";
 import { GraphiQL } from "graphiql";
+import { GraphQLSchema, parse, validate } from "graphql";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/router";
-import { useContext, useEffect, useMemo, useState } from "react";
+import { ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { FaNetworkWired } from "react-icons/fa";
 import { FiSave } from "react-icons/fi";
-import { PiBracketsCurly, PiDevices } from "react-icons/pi";
+import { PiBracketsCurly, PiDevices, PiGraphLight } from "react-icons/pi";
+import { TbDevicesCheck } from "react-icons/tb";
 import { z } from "zod";
+import { useApplyParams } from "@/components/analytics/use-apply-params";
+import { MdOutlineFeaturedPlayList } from "react-icons/md";
 
 const graphiQLFetch = async (
   onFetch: any,
   graphRequestToken: string,
+  schema: GraphQLSchema | null,
+  clientValidationEnabled: boolean,
   url: URL,
   init: RequestInit,
+  featureFlagName?: string,
 ) => {
   try {
     const headers: Record<string, string> = {
@@ -78,6 +90,13 @@ const graphiQLFetch = async (
 
     let hasTraceHeader = false;
     for (const headersKey in headers) {
+      // check invalid headers
+      if (!/^[\^`\-\w!#$%&'*+.|~]+$/.test(headersKey)) {
+        throw new TypeError(
+          `Header name must be a valid HTTP token [${headersKey}]`,
+        );
+      }
+
       if (headersKey.toLowerCase() === "x-wg-trace") {
         hasTraceHeader = headers[headersKey] === "true";
         break;
@@ -87,6 +106,36 @@ const graphiQLFetch = async (
     // add token if trace header is present
     if (hasTraceHeader) {
       headers["X-WG-Token"] = graphRequestToken;
+    }
+
+    if (featureFlagName) {
+      headers["X-Feature-Flag"] = featureFlagName;
+    }
+
+    if (schema && clientValidationEnabled) {
+      const query = JSON.parse(init.body as string)?.query;
+      const errors = validate(schema, parse(query));
+
+      if (errors.length > 0) {
+        const responseData = {
+          message:
+            "Client-side validation failed. The request was not sent to the Router.",
+          errors: errors.map((e) => ({
+            message: e.message,
+            path: e.path,
+            locations: e.locations,
+          })),
+        };
+
+        const response = new Response(JSON.stringify(responseData), {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        onFetch(await response.clone().json());
+        return response;
+      }
     }
 
     const response = await fetch(url, {
@@ -126,8 +175,7 @@ const PersistOperation = () => {
 
   const { toast } = useToast();
 
-  const { mutate, isPending } = useMutation({
-    ...publishPersistedOperations.useMutation(),
+  const { mutate, isPending } = useMutation(publishPersistedOperations, {
     onSuccess(data) {
       if (data.response?.code !== EnumStatusCode.OK) {
         toast({
@@ -158,12 +206,10 @@ const PersistOperation = () => {
     },
   });
 
-  const { data, refetch } = useQuery(
-    getClients.useQuery({
-      fedGraphName: slug,
-      namespace,
-    }),
-  );
+  const { data, refetch } = useQuery(getClients, {
+    fedGraphName: slug,
+    namespace,
+  });
 
   useEffect(() => {
     if (isOpen) {
@@ -385,18 +431,51 @@ const ResponseTabs = () => {
   );
 };
 
+const ToggleClientValidation = () => {
+  const { clientValidationEnabled, setClientValidationEnabled } =
+    useContext(TraceContext);
+
+  return (
+    <Tooltip delayDuration={100}>
+      <TooltipTrigger asChild>
+        <Button
+          onClick={() => setClientValidationEnabled(!clientValidationEnabled)}
+          variant="ghost"
+          size="icon"
+          className="graphiql-toolbar-button"
+        >
+          <TbDevicesCheck
+            className={cn("graphiql-toolbar-icon", {
+              "text-success": clientValidationEnabled,
+            })}
+          />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent className="rounded-md border bg-background px-2 py-1">
+        {clientValidationEnabled
+          ? "Client-side validation enabled"
+          : "Client-side validation disabled"}
+      </TooltipContent>
+    </Tooltip>
+  );
+};
+
 const PlaygroundPortal = () => {
   const tabDiv = document.getElementById("response-tabs");
   const visDiv = document.getElementById("response-visualization");
   const saveDiv = document.getElementById("save-button");
+  const toggleClientValidation = document.getElementById(
+    "toggle-client-validation",
+  );
 
-  if (!tabDiv || !visDiv || !saveDiv) return null;
+  if (!tabDiv || !visDiv || !saveDiv || !toggleClientValidation) return null;
 
   return (
     <>
       {createPortal(<ResponseTabs />, tabDiv)}
       {createPortal(<TraceView />, visDiv)}
       {createPortal(<PersistOperation />, saveDiv)}
+      {createPortal(<ToggleClientValidation />, toggleClientValidation)}
     </>
   );
 };
@@ -408,16 +487,45 @@ const PlaygroundPage: NextPageWithLayout = () => {
 
   const graphContext = useContext(GraphContext);
 
-  const { data, isLoading } = useQuery(
-    getFederatedGraphSDLByName.useQuery({
+  const loadSchemaGraphId =
+    (router.query.load as string) || graphContext?.graph?.id || "";
+  const type = (router.query.type as string) || "graph";
+
+  const { data, isLoading: isLoadingGraphSchema } = useQuery(
+    getFederatedGraphSDLByName,
+    {
       name: graphContext?.graph?.name,
       namespace: graphContext?.graph?.namespace,
-    }),
+      featureFlagName:
+        type === "featureFlag"
+          ? graphContext?.featureFlagsInLatestValidComposition.find(
+              (f) => f.id === loadSchemaGraphId,
+            )?.name
+          : undefined,
+    },
   );
 
+  const { data: subgraphData, isLoading: isLoadingSubgraphSchema } = useQuery(
+    getSubgraphSDLFromLatestComposition,
+    {
+      name: graphContext?.subgraphs.find((s) => s.id === loadSchemaGraphId)
+        ?.name,
+      fedGraphName: graphContext?.graph?.name,
+      namespace: graphContext?.graph?.namespace,
+    },
+    {
+      enabled:
+        !!loadSchemaGraphId &&
+        loadSchemaGraphId !== graphContext?.graph?.id &&
+        type === "subgraph",
+    },
+  );
+
+  const isLoading = isLoadingGraphSchema || isLoadingSubgraphSchema;
+
   const schema = useMemo(() => {
-    return parseSchema(data?.sdl);
-  }, [data?.sdl]);
+    return parseSchema(subgraphData?.sdl || data?.clientSchema);
+  }, [data?.clientSchema, subgraphData?.sdl]);
 
   const [query, setQuery] = useState<string | undefined>(
     operation ? decodeURIComponent(operation) : undefined,
@@ -426,6 +534,8 @@ const PlaygroundPage: NextPageWithLayout = () => {
   "X-WG-TRACE" : "true"
 }`);
   const [response, setResponse] = useState<string>("");
+
+  const [clientValidationEnabled, setClientValidationEnabled] = useState(true);
 
   const [isGraphiqlRendered, setIsGraphiqlRendered] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -439,25 +549,29 @@ const PlaygroundPage: NextPageWithLayout = () => {
 
     if (header) {
       const logo = document.getElementsByClassName("graphiql-logo")[0];
-      logo.classList.add("hidden");
-      const div = document.createElement("div");
-      div.id = "response-tabs";
-      div.className = "flex items-center justify-center mx-2";
-      header.append(div);
+      if (logo) {
+        logo.classList.add("hidden");
+        const div = document.createElement("div");
+        div.id = "response-tabs";
+        div.className = "flex items-center justify-center mx-2";
+        header.append(div);
+      }
     }
 
     const responseSection =
       document.getElementsByClassName("graphiql-response")[0];
-    const responseSectionParent =
-      responseSection.parentElement as any as HTMLDivElement;
+    if (responseSection) {
+      const responseSectionParent =
+        responseSection.parentElement as any as HTMLDivElement;
 
-    if (responseSectionParent) {
-      responseSectionParent.id = "response-parent";
-      responseSectionParent.classList.add("relative");
-      const div = document.createElement("div");
-      div.id = "response-visualization";
-      div.className = "flex flex-1 h-full w-full absolute invisible -z-50";
-      responseSectionParent.append(div);
+      if (responseSectionParent) {
+        responseSectionParent.id = "response-parent";
+        responseSectionParent.classList.add("relative");
+        const div = document.createElement("div");
+        div.id = "response-visualization";
+        div.className = "flex flex-1 h-full w-full absolute invisible -z-50";
+        responseSectionParent.append(div);
+      }
     }
 
     const toolbar = document.getElementsByClassName(
@@ -465,9 +579,22 @@ const PlaygroundPage: NextPageWithLayout = () => {
     )[0] as any as HTMLDivElement;
 
     if (toolbar) {
-      const div = document.createElement("div");
-      div.id = "save-button";
-      toolbar.append(div);
+      const saveButton = document.createElement("div");
+      saveButton.id = "save-button";
+      toolbar.append(saveButton);
+
+      const toggleClientValidation = document.createElement("div");
+      toggleClientValidation.id = "toggle-client-validation";
+      toolbar.append(toggleClientValidation);
+    }
+
+    // remove settings button
+    const sidebarSection = document.getElementsByClassName(
+      "graphiql-sidebar-section",
+    )[1];
+    if (sidebarSection) {
+      const children = Array.from(sidebarSection.childNodes.values());
+      sidebarSection.removeChild(children[2]);
     }
 
     setIsMounted(true);
@@ -512,24 +639,63 @@ const PlaygroundPage: NextPageWithLayout = () => {
     }
   }, [query, isGraphiqlRendered]);
 
+  const { routingUrl, subscriptionUrl } = useMemo(() => {
+    if (!loadSchemaGraphId || type === "graph" || type === "featureFlag") {
+      const url = graphContext?.graph?.routingURL ?? "";
+      return { routingUrl: url, subscriptionUrl: url.replace("http", "ws") };
+    }
+
+    const subgraph = graphContext?.subgraphs?.find(
+      (s) => s.id === loadSchemaGraphId,
+    );
+    if (!subgraph) {
+      return { routingUrl: "", subscriptionUrl: "" };
+    }
+
+    return {
+      routingUrl: subgraph.routingURL,
+      subscriptionUrl: subgraph.subscriptionUrl,
+    };
+  }, [
+    graphContext?.graph?.routingURL,
+    graphContext?.subgraphs,
+    loadSchemaGraphId,
+    type,
+  ]);
+
   const fetcher = useMemo(() => {
     const onFetch = (response: any) => {
       setResponse(JSON.stringify(response));
     };
 
-    const url = graphContext?.graph?.routingURL ?? "";
     return createGraphiQLFetcher({
-      url: url,
-      subscriptionUrl: url.replace("http", "ws"),
+      url: routingUrl,
+      subscriptionUrl: subscriptionUrl,
       fetch: (...args) =>
         graphiQLFetch(
           onFetch,
           graphContext?.graphRequestToken!,
+          schema,
+          clientValidationEnabled,
           args[0] as URL,
           args[1] as RequestInit,
+          type === "featureFlag"
+            ? graphContext?.featureFlagsInLatestValidComposition.find(
+                (f) => f.id === loadSchemaGraphId,
+              )?.name
+            : undefined,
         ),
     });
-  }, [graphContext?.graph?.routingURL, graphContext?.graphRequestToken]);
+  }, [
+    routingUrl,
+    subscriptionUrl,
+    graphContext?.graphRequestToken,
+    graphContext?.featureFlagsInLatestValidComposition,
+    schema,
+    clientValidationEnabled,
+    type,
+    loadSchemaGraphId,
+  ]);
 
   const { theme } = useTheme();
 
@@ -557,6 +723,8 @@ const PlaygroundPage: NextPageWithLayout = () => {
         headers,
         response,
         subgraphs: graphContext.subgraphs,
+        clientValidationEnabled,
+        setClientValidationEnabled,
       }}
     >
       <div className="hidden h-full flex-1 pl-2.5 md:flex">
@@ -593,13 +761,104 @@ const PlaygroundPage: NextPageWithLayout = () => {
   );
 };
 
-PlaygroundPage.getLayout = (page: React.ReactNode) => {
+const ConfigSelect = () => {
+  const router = useRouter();
+
+  const graphContext = useContext(GraphContext);
+  const subgraphs = graphContext?.subgraphs;
+  const featureFlags = graphContext?.featureFlagsInLatestValidComposition;
+
+  const selected =
+    (router.query.load as string) || graphContext?.graph?.id || "";
+  const type = (router.query.type as string) || "graph";
+
+  const applyParams = useApplyParams();
+
+  return (
+    <div className="ml-1 flex items-center gap-x-2 pl-3">
+      <span className="text-sm text-muted-foreground">
+        Querying{" "}
+        {type === "featureFlag"
+          ? "Feature flag"
+          : type === "subgraph"
+          ? "Subgraph"
+          : "Graph"}{" "}
+        :
+      </span>
+      <Select
+        value={`{ "load": "${selected}", "type": "${type}" }`}
+        onValueChange={(value) => {
+          applyParams(JSON.parse(value));
+        }}
+      >
+        <SelectTrigger className="ml-1 mr-4 flex h-8 w-auto gap-x-2 border-0 bg-transparent pl-3 pr-1 shadow-none data-[state=open]:bg-accent data-[state=open]:text-accent-foreground hover:bg-accent hover:text-accent-foreground focus:ring-0 md:ml-0">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
+              <PiGraphLight className="h-3 w-3" /> Graph
+            </SelectLabel>
+            <SelectItem
+              value={`{ "load": "${
+                graphContext?.graph?.id ?? ""
+              }", "type": "graph" }`}
+            >
+              {graphContext?.graph?.name}
+            </SelectItem>
+          </SelectGroup>
+
+          {featureFlags && featureFlags.length > 0 && (
+            <>
+              <SelectSeparator />
+              <SelectGroup>
+                <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
+                  <MdOutlineFeaturedPlayList className="h-3 w-3" /> Feature
+                  Flags
+                </SelectLabel>
+                {featureFlags.map(({ name, id }) => (
+                  <SelectItem
+                    key={id}
+                    value={`{ "load": "${id}", "type": "featureFlag" }`}
+                  >
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </>
+          )}
+          {subgraphs && subgraphs.length > 0 && (
+            <>
+              <SelectSeparator />
+              <SelectGroup>
+                <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
+                  <Component2Icon className="h-3 w-3" /> Subgraphs
+                </SelectLabel>
+                {subgraphs.map(({ name, id }) => (
+                  <SelectItem
+                    key={id}
+                    value={`{ "load": "${id}", "type": "subgraph" }`}
+                  >
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </>
+          )}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+};
+
+PlaygroundPage.getLayout = (page: ReactNode) => {
   return getGraphLayout(
     <PageHeader title="Playground | Studio">
       <GraphPageLayout
         title="Playground"
         subtitle="Execute queries against your graph"
         noPadding
+        toolbar={<ConfigSelect />}
       >
         {page}
       </GraphPageLayout>

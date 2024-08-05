@@ -22,9 +22,11 @@ nameOverride: ""
 fullnameOverride: ""
 
 # -- Allows to set additional environment / runtime variables on the container. Useful for global application non-specific settings.
-extraEnvVars:
-  # Recommended for production to mitigate the risk of OOM kills. Requires Go 1.19+.
-  # Keep the value lower than the maximum memory limit you set. E.g. if you have 3GB memory limit, set this to 2750MiB.
+extraEnvVars: []
+  # Is set automatically by the router but can be overridden if needed.
+  # GOMEMLIMIT is not compatible with dynamic pod resource requests introduced in Kubernetes 2.27 alpha.
+  # For more information see https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/
+  # Set the limit to around 90% of the max memory limit set in the pod spec. In this example, the limit is set to 2750MiB.
 #  - name: GOMEMLIMIT
 #    value: "2750MiB"
 
@@ -83,6 +85,30 @@ ingress:
   #  - secretName: chart-example-tls
   #    hosts:
   #      - chart-example.local
+
+# -- Sets the [istio gateway](https://istio.io/latest/docs/reference/config/networking/gateway/) load balancer to expose the virtual service
+# -- Requires Istio v1.5 or greater
+istioGateway:
+  # -- enable the istioGateway - often used in conjunction with istioVirtualService to expose services via an istio gateway deployment
+  enabled: false
+  # -- Selectors for the Gateway deployment
+  selector: {}
+  # -- Annotations for the Gateway
+  annotations: {}
+  # -- List of hosts that the gateway can serve
+  hosts: []
+    # -- Hostname the Gateway can serve
+    # - host: router.wundergraph.local
+    # -- The name of the secret that holds the TLS certs including the CA certificates
+    #   credentialName: istio-ingressgateway-certs
+
+# -- Sets the [virtual service](https://istio.io/latest/docs/reference/config/networking/virtual-service/) to route a Gateway to the router
+# -- Requires Istio v1.5 or greater
+istioVirtualService:
+  # -- enable an Istio VirtualService
+  enabled: false
+  # -- Annotations for the VirtualService
+  annotations: {}
 
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
@@ -152,7 +178,7 @@ global:
 # Only in that way, we guarantee that sensitive information are stored as secrets in the cluster.
 
 # -- The name of the configmap to use for the router configuration. The key "config.yaml" is required in the configmap.
-# -- If this is set, the commonConfiguration section is ignored.
+# If this is set, the commonConfiguration section is ignored.
 existingConfigmap: ""
 
 # -- Existing secret in the same namespace containing the graphApiToken. The secret key has to match with current secret.
@@ -160,7 +186,8 @@ existingSecret: ""
 
 # Use this section to pass the graphApiToken or to configure simple settings.
 # -- You can use this to provide the router configuration via yaml. Values here have precedence over the configurations section.
-# -- For a full list of available configuration options, see https://cosmo-docs.wundergraph.com/router/configuration
+# For a full list of available configuration options, see https://cosmo-docs.wundergraph.com/router/configuration
+# This value is processed with the helm `tpl` function allowing referencing of variables and inclusion of templates
 commonConfiguration: |-
   version: "1"
   log_level: "info"
@@ -170,7 +197,7 @@ configuration:
   # -- The router token is used to authenticate the router against the controlplane (required)
   graphApiToken: "replace-me"
   # -- The execution config file to statically configure the router. If set, polling of the config is disabled.
-  # -- If your config exceeds 1MB (Kubernetes limit), you have to mount it as a file and set the path in routerConfigPath instead
+  # If your config exceeds 1MB (Kubernetes limit), you have to mount it as a file and set the path in routerConfigPath instead
   executionConfig: ""
   # -- The log level of the router. Default to info if not set.
   logLevel: "info"
@@ -185,5 +212,14 @@ configuration:
   #-- The URL of the Cosmo CDN. Should be internal to the cluster. Default to cloud if not set.
   cdnUrl: ""
   # -- The path to the router execution config file. Before, you have to mount the file as a volume and set the path here.
-  # -- A possible to solution could be to use an init container to download the file from a CDN. If set, polling of the config is disabled.
+  # A possible to solution could be to use an init container to download the file from a CDN. If set, polling of the config is disabled.
   routerConfigPath: ""
+
+  # Use this section to disable/enable and configure prometheus metrics.
+  prometheus:
+    # -- Enables prometheus metrics support. Default is true.
+    enabled: true
+    # -- The port where metrics are exposed. Default is port 8088.
+    port: 8088
+    # -- The HTTP path where metrics are exposed. Default is "/metrics".
+    path: "/metrics"

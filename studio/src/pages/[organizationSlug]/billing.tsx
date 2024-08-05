@@ -21,7 +21,7 @@ import { getStripe } from "@/lib/stripe";
 import { cn } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { AlertDialogDescription } from "@radix-ui/react-alert-dialog";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   createBillingPortalSession,
@@ -33,6 +33,8 @@ import { GetBillingPlansResponse_BillingPlan } from "@wundergraph/cosmo-connect/
 import { useRouter } from "next/router";
 import React, { useEffect } from "react";
 import { PiCheck } from "react-icons/pi";
+
+const billingContactLink = process.env.NEXT_PUBLIC_BILLING_CONTACT_LINK;
 
 const getPrice = (price?: number) => {
   switch (price) {
@@ -62,9 +64,7 @@ const BillingPage: NextPageWithLayout = () => {
     }
   }, [router.query.success, toast]);
 
-  const { data, isLoading, error, refetch } = useQuery({
-    ...getBillingPlans.useQuery(),
-  });
+  const { data, isLoading, error, refetch } = useQuery(getBillingPlans);
 
   const currentPlan = useCurrentPlan();
 
@@ -145,6 +145,17 @@ const BillingPage: NextPageWithLayout = () => {
             </div>
 
             <div className="mt-auto flex flex-col">
+              {billingContactLink && plan.price > 0 && (
+                <div className="pb-6">
+                  <a
+                    href={billingContactLink}
+                    target="_blank"
+                    className="font-mono text-xs tracking-tight text-gray-200 underline decoration-dotted underline-offset-4 hover:text-gray-300"
+                  >
+                    Need a custom plan?
+                  </a>
+                </div>
+              )}
               <UpgradeButton
                 plan={plan}
                 hasSubscription={
@@ -166,9 +177,7 @@ const BillingPage: NextPageWithLayout = () => {
 
 const useBillingPortal = () => {
   const router = useRouter();
-  const { mutateAsync, isPending } = useMutation(
-    createBillingPortalSession.useMutation(),
-  );
+  const { mutateAsync, isPending } = useMutation(createBillingPortalSession);
 
   const openPortal = async () => {
     if (isPending) return;
@@ -266,12 +275,9 @@ const UpgradeButton = ({
 }) => {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
-  const { mutateAsync, isPending } = useMutation(
-    createCheckoutSession.useMutation(),
-  );
-  const { mutateAsync: upgradeAsync, isPending: isUpgrading } = useMutation(
-    upgradePlan.useMutation(),
-  );
+  const { mutateAsync, isPending } = useMutation(createCheckoutSession);
+  const { mutateAsync: upgradeAsync, isPending: isUpgrading } =
+    useMutation(upgradePlan);
 
   const { toast } = useToast();
 

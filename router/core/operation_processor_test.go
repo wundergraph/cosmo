@@ -8,28 +8,77 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/buger/jsonparser"
 	"github.com/stretchr/testify/assert"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
-	"go.uber.org/zap"
 )
 
-func TestOperationParser(t *testing.T) {
+func TestOperationProcessorPersistentOperations(t *testing.T) {
 	executor := &Executor{
 		PlanConfig:      plan.Configuration{},
-		Definition:      nil,
+		RouterSchema:    nil,
 		Resolver:        nil,
 		RenameTypeNames: nil,
 	}
-	parser := NewOperationParser(OperationParserOptions{
+	parser := NewOperationProcessor(OperationProcessorOptions{
 		Executor:                executor,
 		MaxOperationSizeInBytes: 10 << 20,
+		ParseKitPoolSize:        4,
 	})
 	clientInfo := &ClientInfo{
 		Name:    "test",
 		Version: "1.0.0",
 	}
-	log := zap.NewNop()
+	testCases := []struct {
+		ExpectedType  string
+		ExpectedError error
+		Input         string
+		Variables     string
+	}{
+		/**
+		 * Test cases persist operation
+		 */
+		{
+			Input:         `{"operationName": "test", "variables": {"foo": "bar"}, "extensions": {"persistedQuery": {"version": 1, "sha256Hash": "does-not-exist"}}}`,
+			Variables:     `{"foo": "bar"}`,
+			ExpectedError: errors.New("could not resolve persisted query, feature is not configured"),
+		},
+	}
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.Input, func(t *testing.T) {
+			kit, err := parser.NewKitFromReader(strings.NewReader(tc.Input))
+			require.NoError(t, err)
+			defer kit.Free()
+
+			err = kit.UnmarshalOperation()
+			require.NoError(t, err)
+
+			_, err = kit.FetchPersistedOperation(context.Background(), clientInfo, nil)
+
+			if err != nil {
+				require.EqualError(t, tc.ExpectedError, err.Error())
+			} else if kit.parsedOperation != nil {
+				require.Equal(t, tc.ExpectedType, kit.parsedOperation.Type)
+				require.JSONEq(t, tc.Variables, string(kit.parsedOperation.Request.Variables))
+				require.Equal(t, uint64(0), kit.parsedOperation.ID)
+				require.Equal(t, "", kit.parsedOperation.NormalizedRepresentation)
+			}
+		})
+	}
+}
+
+func TestOperationProcessor(t *testing.T) {
+	executor := &Executor{
+		PlanConfig:      plan.Configuration{},
+		RouterSchema:    nil,
+		Resolver:        nil,
+		RenameTypeNames: nil,
+	}
+	parser := NewOperationProcessor(OperationProcessorOptions{
+		Executor:                executor,
+		MaxOperationSizeInBytes: 10 << 20,
+		ParseKitPoolSize:        4,
+	})
 	testCases := []struct {
 		ExpectedType  string
 		ExpectedError error
@@ -40,9 +89,9 @@ func TestOperationParser(t *testing.T) {
 		 * Test cases parse simple
 		 */
 		{
-			Input:         `{"query":"query { employees { name } }"`,
+			Input:         `{"query":"query { initialPayload(repeat:3) }", "variables": {"foo": "bar"}}`,
 			ExpectedType:  "query",
-			Variables:     `{}`,
+			Variables:     `{"foo": "bar"}`,
 			ExpectedError: nil,
 		},
 		/**
@@ -90,7 +139,7 @@ func TestOperationParser(t *testing.T) {
 			ExpectedError: nil,
 		},
 		{
-			Input:         `{"query":"query { initialPayload(repeat:3) }", "variables": {"foo": {"bar": "baz"}}`,
+			Input:         `{"query":"query { initialPayload(repeat:3) }", "variables": {"foo": {"bar": "baz"}}}`,
 			ExpectedType:  "query",
 			Variables:     `{"foo": {"bar": "baz"}}`,
 			ExpectedError: nil,
@@ -131,28 +180,24 @@ func TestOperationParser(t *testing.T) {
 			Variables:     `{"foo": "bar"}`,
 			ExpectedError: nil,
 		},
-		/**
-		 * Test cases persist operation
-		 */
-		{
-			Input:         `{"operationName": "test", "variables": {"foo": "bar"}, "extensions": {"persistedQuery": {"version": 1, "sha256Hash": "does-not-exist"}}}`,
-			Variables:     `{"foo": "bar"}`,
-			ExpectedError: errors.New("could not resolve persisted query, feature is not configured"),
-		},
 	}
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.Input, func(t *testing.T) {
 			kit, err := parser.NewKitFromReader(strings.NewReader(tc.Input))
-			assert.NoError(t, err)
+			require.NoError(t, err)
+			defer kit.Free()
 
-			err = kit.Parse(context.Background(), clientInfo, log)
+			err = kit.UnmarshalOperation()
+			require.NoError(t, err)
+
+			err = kit.Parse()
 
 			if err != nil {
 				require.EqualError(t, tc.ExpectedError, err.Error())
 			} else if kit.parsedOperation != nil {
 				require.Equal(t, tc.ExpectedType, kit.parsedOperation.Type)
-				require.JSONEq(t, tc.Variables, string(kit.parsedOperation.Variables))
+				require.JSONEq(t, tc.Variables, string(kit.parsedOperation.Request.Variables))
 				require.Equal(t, uint64(0), kit.parsedOperation.ID)
 				require.Equal(t, "", kit.parsedOperation.NormalizedRepresentation)
 			}
@@ -160,38 +205,33 @@ func TestOperationParser(t *testing.T) {
 	}
 }
 
-func TestOperationParserExtensions(t *testing.T) {
+func TestOperationProcessorUnmarshalExtensions(t *testing.T) {
 	executor := &Executor{
 		PlanConfig:      plan.Configuration{},
-		Definition:      nil,
+		RouterSchema:    nil,
 		Resolver:        nil,
 		RenameTypeNames: nil,
 	}
-	parser := NewOperationParser(OperationParserOptions{
+	parser := NewOperationProcessor(OperationProcessorOptions{
 		Executor:                executor,
 		MaxOperationSizeInBytes: 10 << 20,
+		ParseKitPoolSize:        4,
 	})
-	clientInfo := &ClientInfo{
-		Name:    "test",
-		Version: "1.0.0",
-	}
-	log := zap.NewNop()
 	testCases := []struct {
-		Input     string
-		ValueType jsonparser.ValueType
-		Valid     bool
+		Input string
+		Valid bool
 	}{
 		{
-			Input:     `{"query":"subscription { initialPayload(repeat:3) }","extensions":"this_is_not_valid"}`,
-			ValueType: jsonparser.String,
+			Input: `{"query":"subscription { initialPayload(repeat:3) }","extensions":"this_is_not_valid"}`,
 		},
 		{
-			Input:     `{"query":"subscription { initialPayload(repeat:3) }","extensions":42}`,
-			ValueType: jsonparser.Number,
+			Input: `{"query":"subscription { initialPayload(repeat:3) }","extensions":42}`,
 		},
 		{
-			Input:     `{"query":"subscription { initialPayload(repeat:3) }","extensions":true}`,
-			ValueType: jsonparser.Boolean,
+			Input: `{"query":"subscription { initialPayload(repeat:3) }","extensions":true}`,
+		},
+		{
+			Input: `{"query":"subscription { initialPayload(repeat:3) }","extensions":{"foo":bar}}`,
 		},
 		{
 			Input: `{"query":"subscription { initialPayload(repeat:3) }","extensions":{}}`,
@@ -211,16 +251,16 @@ func TestOperationParserExtensions(t *testing.T) {
 		tc := tc
 		t.Run(tc.Input, func(t *testing.T) {
 			kit, err := parser.NewKitFromReader(strings.NewReader(tc.Input))
-			assert.NoError(t, err)
+			require.NoError(t, err)
+			defer kit.Free()
 
-			err = kit.Parse(context.Background(), clientInfo, log)
+			err = kit.UnmarshalOperation()
+
 			isInputError := errors.As(err, &inputError)
 			if tc.Valid {
 				assert.False(t, isInputError, "expected invalid extensions to not return an input error, got %s", err)
 			} else {
 				assert.True(t, isInputError, "expected invalid extensions to return an input error, got %s", err)
-				assert.Contains(t, err.Error(), "extensions", "expected error to contain extensions")
-				assert.Contains(t, err.Error(), tc.ValueType.String(), "expected error to contain value type name")
 			}
 		})
 	}

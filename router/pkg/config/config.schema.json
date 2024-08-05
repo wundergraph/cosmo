@@ -6,9 +6,7 @@
     "version": {
       "type": "string",
       "description": "The version of the configuration file. This is used to ensure that the configuration file is compatible.",
-      "enum": [
-        "1"
-      ]
+      "enum": ["1"]
     },
     "instance_id": {
       "type": "string",
@@ -27,6 +25,128 @@
           "minLength": 32,
           "maxLength": 32,
           "description": "The key used to verify the graph config signature when downloading from the CDN. The same key was used to create the signature in the admission webhook '/validate-config'. If the key is not set, the router will not verify the graph configuration. The key must be a 32 byte long string."
+        }
+      }
+    },
+    "storage_providers": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The configuration for the storage providers. Storage providers can be used to store the persisted operations and the execution config.",
+      "properties": {
+        "cdn": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["url", "id"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "The ID of the storage provider. The ID is used to identify the storage provider in the configuration."
+              },
+              "url": {
+                "type": "string",
+                "description": "The URL of the CDN. The URL is specified as a string with the format 'scheme://host:port'.",
+                "default": "https://cosmo-cdn.wundergraph.com"
+              }
+            }
+          }
+        },
+        "s3": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["bucket", "id"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "The ID of the storage provider. The ID is used to identify the storage provider in the configuration."
+              },
+              "bucket": {
+                "type": "string",
+                "description": "The name of the S3 bucket. The S3 bucket is used to store the execution config."
+              },
+              "region": {
+                "type": "string",
+                "description": "The region of the S3 bucket. The region is used to specify the region of the S3 bucket."
+              },
+              "access_key": {
+                "type": "string",
+                "description": "The access key of the S3 bucket. The access key ID is used to authenticate with the S3 bucket."
+              },
+              "secret_key": {
+                "type": "string",
+                "description": "The secret key of the S3 bucket. The secret access key is used to authenticate with the S3 bucket."
+              },
+              "endpoint": {
+                "type": "string",
+                "description": "The endpoint of the S3 bucket. The endpoint is used to specify the endpoint of the S3 bucket."
+              },
+              "secure": {
+                "type": "boolean",
+                "default": true,
+                "description": "Enable the secure connection. The secure connection is used to establish a secure connection with the S3 bucket."
+              }
+            }
+          }
+        }
+      }
+    },
+    "persisted_operations": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The configuration for the persisted operations.",
+      "properties": {
+        "cache": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "size": {
+              "type": "string",
+              "default": "100MB",
+              "bytes": {
+                "minimum": "10MB"
+              },
+              "format": "bytes-string",
+              "description": "The size of the cache used. The default value is 100MB."
+            }
+          }
+        },
+        "storage": {
+          "description": "The storage provider for persisted operation. Only one provider can be active. When no provider is specified, the router will fallback to the Cosmo CDN provider to download the persisted operations.",
+          "required": ["provider_id", "object_prefix"],
+          "properties": {
+            "provider_id": {
+              "description": "The ID of the storage provider. The ID must match the ID of the storage provider in the storage_providers section.",
+              "type": "string"
+            },
+            "object_prefix": {
+              "type": "string",
+              "description": "The prefix of the object in the storage provider location. The prefix is put in front of the operation SHA256 hash. /<prefix>/<sha256>.json"
+            }
+          }
+        }
+      }
+    },
+    "execution_config": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The configuration for the execution config.",
+      "properties": {
+        "storage": {
+          "description": "The storage provider for the execution config. Only one provider can be active. When no provider is specified, the router will fallback to the Cosmo CDN provider to download the execution config.",
+          "required": ["provider_id", "object_path"],
+          "properties": {
+            "provider_id": {
+              "description": "The ID of the storage provider. The ID must match the ID of the storage provider in the storage_providers section.",
+              "type": "string"
+            },
+            "object_path": {
+              "type": "string",
+              "description": "The path to the execution config in the storage provider. The path is used to download the execution config from the S3 bucket."
+            }
+          }
         }
       }
     },
@@ -78,9 +198,7 @@
               "type": "object",
               "description": "The configuration for the client authentication. The client authentication is used to authenticate the clients using the provided certificate.",
               "additionalProperties": false,
-              "required": [
-                "cert_file"
-              ],
+              "required": ["cert_file"],
               "properties": {
                 "required": {
                   "type": "boolean",
@@ -103,10 +221,7 @@
             }
           },
           "then": {
-            "required": [
-              "cert_file",
-              "key_file"
-            ]
+            "required": ["cert_file", "key_file"]
           }
         }
       }
@@ -138,14 +253,42 @@
           }
         },
         "forward_upgrade_headers": {
-          "type": "boolean",
-          "default": true,
-          "description": "Forward upgrade request Headers in the extensions payload when starting a subscription on a Subgraph. The default value is true."
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Forward upgrade request headers in the extensions payload when starting a subscription on a Subgraph. The default value is true."
+            },
+            "allow_list": {
+              "type": "array",
+              "description": "The names of the headers to forward. The default value is 'Authorization'.",
+              "default": ["Authorization"],
+              "items": {
+                "type": "string"
+              }
+            }
+          }
         },
         "forward_upgrade_query_params": {
-          "type": "boolean",
-          "default": true,
-          "description": "Forward upgrade request query parameters in the extensions payload when starting a subscription on a Subgraph. The default value is true."
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Forward upgrade request query parameters in the extensions payload when starting a subscription on a Subgraph. The default value is true."
+            },
+            "allow_list": {
+              "type": "array",
+              "description": "The names of the query parameters to forward. The default value is 'Authorization'.",
+              "default": ["Authorization"],
+              "items": {
+                "type": "string"
+              }
+            }
+          }
         },
         "forward_initial_payload": {
           "type": "boolean",
@@ -172,10 +315,7 @@
               "type": "string",
               "default": "redact",
               "description": "The method used to anonymize the IP addresses. The supported methods are 'redact' and 'hash'. The default value is 'redact'. The 'redact' method replaces the IP addresses with the string '[REDACTED]'. The 'hash' method hashes the IP addresses using the SHA-256 algorithm.",
-              "enum": [
-                "redact",
-                "hash"
-              ]
+              "enum": ["redact", "hash"]
             }
           }
         }
@@ -191,27 +331,91 @@
           "description": "The name of the service. The name is used to identify the service in the traces and metrics. The default value is 'cosmo-router'.",
           "default": "cosmo-router"
         },
+        "resource_attributes": {
+          "type": "array",
+          "description": "The resource attributes to add to OTEL metrics and traces. The resource attributes identify the entity producing the traces and metrics. Because Prometheus metrics rely on the OpenTelemetry metrics, the resource attributes are also added to the Prometheus target_info metric.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["key", "value"],
+            "properties": {
+              "key": {
+                "type": "string",
+                "description": "The key of the attribute."
+              },
+              "value": {
+                "type": "string",
+                "description": "The value of the attribute."
+              }
+            }
+          }
+        },
+        "attributes": {
+          "type": "array",
+          "description": "The attributes to add to OTEL metrics and traces. Because Prometheus metrics rely on the OpenTelemetry metrics, the attributes are also added to the Prometheus metrics.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["key"],
+            "properties": {
+              "key": {
+                "type": "string",
+                "description": "The key of the attribute."
+              },
+              "default": {
+                "type": "string",
+                "description": "The default value of the attribute. If the value is not set, value_from is used. If both value and value_from are set, value_from has precedence and in case of a missing value_from, the default value is used."
+              },
+              "value_from": {
+                "type": "object",
+                "description": "Defines a source for the attribute value e.g. from a request header. If both default and value_from are set, value_from has precedence.",
+                "additionalProperties": false,
+                "properties": {
+                  "request_header": {
+                    "type": "string",
+                    "description": "The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used."
+                  }
+                }
+              }
+            }
+          }
+        },
         "tracing": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
             "enabled": {
-              "type": "boolean"
+              "type": "boolean",
+              "default": false
             },
             "sampling_rate": {
               "type": "number",
               "description": "The sampling rate for the traces. The value must be between 0 and 1. If the value is 0, no traces will be sampled. If the value is 1, all traces will be sampled. The default value is 1.",
+              "default": 1,
               "minimum": 0,
               "maximum": 1
+            },
+            "parent_based_sampler": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable the parent-based sampler. The parent-based sampler is used to sample the traces based on the parent trace. The default value is true."
+            },
+            "export_graphql_variables": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable the export of the GraphQL variables. The GraphQL variables are exported with the traces. The default value is false to avoid leaking sensitive information."
+            },
+            "with_new_root": {
+              "type": "boolean",
+              "default": false,
+              "description": "Specifies that the router span should be treated as a root Span. Any existing parent span context will be ignored when defining the Span's trace identifiers. This is useful when the router must be the entry point of the trace."
             },
             "exporters": {
               "type": "array",
               "description": "The exporters to use to export the traces. If no exporters are specified, the default Cosmo Cloud exporter is used. If you override, please make sure to include the default exporter.",
               "items": {
                 "type": "object",
-                "required": [
-                  "endpoint"
-                ],
+                "required": ["endpoint"],
                 "additionalProperties": false,
                 "properties": {
                   "disabled": {
@@ -221,10 +425,7 @@
                     "type": "string",
                     "description": "The exporter to use for the traces. The supported exporters are 'http' and 'grpc'.",
                     "default": "http",
-                    "enum": [
-                      "http",
-                      "grpc"
-                    ]
+                    "enum": ["http", "grpc"]
                   },
                   "endpoint": {
                     "type": "string"
@@ -283,13 +484,6 @@
                   "description": "Enable the baggage propagation. See https://www.w3.org/TR/baggage/ for more information."
                 }
               }
-            },
-            "export_graphql_variables": {
-              "type": "boolean",
-              "description": "Enable the export of the GraphQL variables. The GraphQL variables are exported with the traces."
-            },
-            "with_new_root": {
-              "type": "boolean"
             }
           }
         },
@@ -327,10 +521,7 @@
                         "type": "string",
                         "description": "The exporter protocol to use to export metrics. The supported exporters are 'http' and 'grpc'.",
                         "default": "http",
-                        "enum": [
-                          "http",
-                          "grpc"
-                        ]
+                        "enum": ["http", "grpc"]
                       },
                       "endpoint": {
                         "type": "string",
@@ -338,7 +529,7 @@
                       },
                       "path": {
                         "type": "string",
-                        "description": "The path to which the metrics are exported.",
+                        "description": "The path to which the metrics are exported. This is ignored when using 'grpc' as exporter and can be omitted.",
                         "default": "/v1/metrics",
                         "format": "x-uri"
                       },
@@ -350,10 +541,7 @@
                         }
                       }
                     },
-                    "required": [
-                      "exporter",
-                      "endpoint"
-                    ]
+                    "required": ["exporter", "endpoint"]
                   }
                 }
               }
@@ -403,35 +591,26 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Set this to enable/disable the CORS middleware. It is enabled by default. When disabled, the rest of the properties for CORS have no effect.",
+          "default": true
+        },
         "allow_origins": {
           "type": "array",
           "description": "The allowed origins. The default value is to allow all origins. The value can be a list of origins or the wildcard '*'.",
-          "default": [
-            "*"
-          ],
+          "default": ["*"],
           "items": {
             "type": "string"
           }
         },
         "allow_methods": {
           "type": "array",
-          "default": [
-            "GET",
-            "POST",
-            "HEAD"
-          ],
+          "default": ["GET", "POST", "HEAD"],
           "description": "The allowed HTTP methods. The default value is to allow the methods 'GET', 'POST', and 'HEAD'.",
           "items": {
             "type": "string",
-            "enum": [
-              "GET",
-              "POST",
-              "HEAD",
-              "PUT",
-              "DELETE",
-              "PATCH",
-              "OPTIONS"
-            ]
+            "enum": ["GET", "POST", "HEAD", "PUT", "DELETE", "PATCH", "OPTIONS"]
           }
         },
         "allow_headers": {
@@ -507,14 +686,7 @@
     },
     "log_level": {
       "type": "string",
-      "enum": [
-        "debug",
-        "info",
-        "warning",
-        "error",
-        "fatal",
-        "panic"
-      ],
+      "enum": ["debug", "info", "warning", "error", "fatal", "panic"],
       "description": "The log level. The log level is used to control the verbosity of the logs. The default value is 'info'.",
       "default": "info"
     },
@@ -574,6 +746,30 @@
       "format": "x-uri",
       "default": "/",
       "description": "The path of the GraphQL Playground. The GraphQL Playground is a web-based GraphQL IDE that allows you to interact with the GraphQL API. The default value is '/'."
+    },
+    "file_upload": {
+      "type": "object",
+      "description": "The configuration for file upload. Configure whether it should be enabled along with file size and number of files.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "max_file_size": {
+          "type": "string",
+          "bytes": {
+            "minimum": "1MB"
+          },
+          "description": "The maximum size of a file that can be uploaded. The size is specified as a string with a number and a unit, e.g. 10KB, 1MB, 1GB. The supported units are 'KB', 'MB', 'GB'."
+        },
+        "max_files": {
+          "type": "integer",
+          "default": 10,
+          "minimum": 1,
+          "description": "The maximum number of files that can be uploaded."
+        }
+      }
     },
     "traffic_shaping": {
       "type": "object",
@@ -648,9 +844,7 @@
                 "algorithm": {
                   "type": "string",
                   "description": "The algorithm used to calculate the retry interval. The supported algorithms are 'backoff_jitter'.",
-                  "enum": [
-                    "backoff_jitter"
-                  ]
+                  "enum": ["backoff_jitter"]
                 },
                 "max_attempts": {
                   "type": "integer",
@@ -745,9 +939,7 @@
                   "header_names": {
                     "type": "array",
                     "description": "The names of the headers. The headers are used to extract the token from the request. The default value is 'Authorization'",
-                    "default": [
-                      "Authorization"
-                    ],
+                    "default": ["Authorization"],
                     "items": {
                       "type": "string"
                     }
@@ -755,9 +947,7 @@
                   "header_value_prefixes": {
                     "type": "array",
                     "description": "The prefixes of the header values. The prefixes are used to extract the token from the header value. The default value is 'Bearer'",
-                    "default": [
-                      "Bearer"
-                    ],
+                    "default": ["Bearer"],
                     "items": {
                       "type": "string"
                     }
@@ -771,14 +961,10 @@
                     "default": "1m"
                   }
                 },
-                "required": [
-                  "url"
-                ]
+                "required": ["url"]
               }
             },
-            "required": [
-              "name"
-            ]
+            "required": ["name"]
           }
         }
       }
@@ -807,9 +993,7 @@
         },
         "strategy": {
           "type": "string",
-          "enum": [
-            "simple"
-          ],
+          "enum": ["simple"],
           "description": "The strategy used to enforce the rate limit. The supported strategies are 'simple'."
         },
         "simple_strategy": {
@@ -838,25 +1022,17 @@
               "description": "Reject the requests that exceed the rate limit. If the value is true, the requests that exceed the rate limit are rejected."
             }
           },
-          "required": [
-            "rate",
-            "burst",
-            "period"
-          ]
+          "required": ["rate", "burst", "period"]
         },
         "storage": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "addr": {
+            "url": {
               "type": "string",
-              "description": "The url of the redis server. The url is specified as a string with the format 'scheme://host:port'.",
-              "format": "url",
-              "default": "localhost:6379"
-            },
-            "password": {
-              "type": "string",
-              "description": "The password of the redis server."
+              "description": "The connection URL. The value is specified as a string with the format 'scheme://host:port'.",
+              "default": "redis://localhost:6379",
+              "format": "url"
             },
             "key_prefix": {
               "type": "string",
@@ -878,6 +1054,7 @@
     },
     "cdn": {
       "type": "object",
+      "deprecationMessage": "The CDN is deprecated. Please use the execution_config and persisted_operations instead.",
       "description": "The configuration for the CDN. The CDN is used to fetch the schema and configurations from the CDN.",
       "additionalProperties": false,
       "properties": {
@@ -902,21 +1079,22 @@
       "description": "The configuration for EDFS. See https://cosmo-docs.wundergraph.com/router/event-driven-federated-subscriptions-edfs for more information.",
       "additionalProperties": false,
       "properties": {
-        "sources": {
+        "providers": {
           "type": "object",
-          "description": "The provider configuration by source name",
-          "additionalProperties": {
-            "oneOf": [
-              {
+          "description": "The provider configuration. The provider configuration is used to configure the event-driven federated subscriptions.",
+          "additionalProperties": false,
+          "properties": {
+            "nats": {
+              "type": "array",
+              "description": "The NATS configuration. The NATS is used to configure the event-driven federated subscriptions.",
+              "items": {
                 "type": "object",
+                "required": ["id", "url"],
                 "additionalProperties": false,
-                "required": ["provider", "url"],
                 "properties": {
-                  "provider": {
-                    "description": "The events provider. Supported providers include: \"NATS\"",
-                    "enum": [
-                      "NATS"
-                    ]
+                  "id": {
+                    "type": "string",
+                    "description": "The provider ID. The provider ID is used to identify the provider in the configuration."
                   },
                   "url": {
                     "type": "string",
@@ -924,16 +1102,13 @@
                     "format": "url"
                   },
                   "authentication": {
-                    "type": "object",
                     "description": "Authentication configuration for the NATS provider.",
-                    "unevaluatedProperties": false,
-                    "properties": {
-                    },
+                    "type": "object",
                     "oneOf": [
                       {
                         "type": "object",
-                        "additionalProperties": false,
                         "required": ["token"],
+                        "additionalProperties": false,
                         "properties": {
                           "token": {
                             "type": "string",
@@ -944,15 +1119,22 @@
                       {
                         "type": "object",
                         "additionalProperties": false,
-                        "required": ["username", "password"],
                         "properties": {
-                          "username": {
-                            "type": "string",
-                            "description": "The username for username/password-based authentication."
-                          },
-                          "password": {
-                            "type": "string",
-                            "description": "The password for username/password-based authentication."
+                          "user_info": {
+                            "type": "object",
+                            "description": "Userinfo configuration for the NATS provider.",
+                            "additionalProperties": false,
+                            "required": ["username", "password"],
+                            "properties": {
+                              "username": {
+                                "type": "string",
+                                "description": "The username for username/password-based authentication."
+                              },
+                              "password": {
+                                "type": "string",
+                                "description": "The password for username/password-based authentication."
+                              }
+                            }
                           }
                         }
                       }
@@ -960,19 +1142,76 @@
                   }
                 }
               }
-            ]
+            },
+            "kafka": {
+              "type": "array",
+              "description": "The Kafka configuration. The Kafka is used to configure the event-driven federated subscriptions.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["id", "brokers"],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "The provider ID. The provider ID is used to identify the provider in the configuration."
+                  },
+                  "brokers": {
+                    "type": "array",
+                    "description": "The list of Kafka brokers. The brokers are used to connect to the Kafka provider.",
+                    "items": {
+                      "type": "string",
+                      "format": "hostname-port"
+                    }
+                  },
+                  "tls": {
+                    "type": "object",
+                    "description": "TLS configuration for the Kafka provider. If enabled, it uses SystemCertPool for RootCAs by default.",
+                    "additionalProperties": false,
+                    "properties": {
+                      "enabled": {
+                        "type": "boolean",
+                        "description": "Enables the TLS."
+                      }
+                    }
+                  },
+                  "authentication": {
+                    "type": "object",
+                    "description": "SASL Authentication configuration for the Kafka provider.",
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "sasl_plain": {
+                            "type": "object",
+                            "description": "Plain SASL Authentication configuration for the Kafka provider.",
+                            "additionalProperties": false,
+                            "required": ["username", "password"],
+                            "properties": {
+                              "username": {
+                                "type": "string",
+                                "description": "The username for plain SASL authentication."
+                              },
+                              "password": {
+                                "type": "string",
+                                "description": "The password for plain SASL authentication."
+                              }
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
           }
         }
       }
     },
-    "config_path": {
-      "type": "string",
-      "format": "file-path",
-      "description": "The path of the router configuration file. The path is specified as a string with the format 'path/to/file'."
-    },
     "router_config_path": {
       "type": "string",
       "format": "file-path",
+      "deprecationMessage": "The router_config_path is deprecated. Please use the execution_config instead.",
       "description": "The path of the router execution config file. This file contains the information how your graph is resolved and configured. The path is specified as a string with the format 'path/to/file'."
     },
     "router_registration": {
@@ -982,7 +1221,8 @@
     },
     "override_routing_url": {
       "type": "object",
-      "description": "The configuration for the override routing URL. The override routing URL is used to override the routing URL for subgraphs.",
+      "description": "The configuration for the override routing URL. The override routing URL is used to override the routing URL for subgraphs. Please use the overrides section because this option is deprecated",
+      "deprecated": true,
       "additionalProperties": false,
       "properties": {
         "subgraphs": {
@@ -992,6 +1232,40 @@
             "type": "string",
             "description": "The URL of the subgraph. The URL is used to override the routing URL for the subgraph.",
             "format": "http-url"
+          }
+        }
+      }
+    },
+    "overrides": {
+      "type": "object",
+      "description": "The configuration to override subgraph config. The config is used to override the config for subgraphs.",
+      "additionalProperties": false,
+      "properties": {
+        "subgraphs": {
+          "type": "object",
+          "description": "The configuration for the subgraphs. The subgraphs are used to override the config for the subgraphs.",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "routing_url": {
+                "type": "string",
+                "description": "The URL of the subgraph. The URL is used to override the routing URL for the subgraph.",
+                "format": "http-url"
+              },
+              "subscription_url": {
+                "type": "string",
+                "description": "The Subscription URL of the subgraph. The URL is used to override the subscription URL for the subgraph.",
+                "format": "http-url"
+              },
+              "subscription_protocol": {
+                "type": "string",
+                "description": "The Subscription protocol of the subgraph. The protocol is used to override the subscription protocol for the subgraph."
+              },
+              "subscription_websocket_subprotocol": {
+                "type": "string",
+                "description": "The Websocket subprotocol of the subgraph. The protocol is used to override the Websocket subprotocol for the subgraph."
+              }
+            }
           }
         }
       }
@@ -1070,6 +1344,14 @@
             "enable_resolver_debugging": {
               "type": "boolean",
               "description": "Enable verbose debug logging for the Resolver."
+            },
+            "enable_persisted_operations_cache_response_header": {
+              "type": "boolean",
+              "description": "Enable the persisted operations cache response header. The persisted operations cache response header is used to cache the persisted operations in the client."
+            },
+            "enable_normalization_cache_response_header": {
+              "type": "boolean",
+              "description": "Enable the normalization cache response header. The normalization cache response header is used to cache the normalized operations in the client."
             }
           }
         },
@@ -1090,7 +1372,7 @@
         "max_concurrent_resolvers": {
           "type": "integer",
           "description": "The maximum number of concurrent resolvers.",
-          "default": 1024
+          "default": 32
         },
         "enable_websocket_epoll_kqueue": {
           "type": "boolean",
@@ -1116,8 +1398,33 @@
         },
         "execution_plan_cache_size": {
           "type": "integer",
-          "default": 10000,
+          "default": 1024,
           "description": "The size of the execution plan cache."
+        },
+        "minify_subgraph_operations": {
+          "type": "boolean",
+          "default": false,
+          "description": "Minify the subgraph operations. If the value is true, GraphQL Operations get minified after planning. This reduces the amount of GraphQL AST nodes the Subgraph has to parse, which ultimately saves CPU time and memory, resulting in faster response times."
+        },
+        "enable_persisted_operations_cache": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the persisted operations cache. The persisted operations cache is used to cache normalized persisted operations to improve performance."
+        },
+        "enable_normalization_cache": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the normalization cache. The normalization cache is used to cache normalized operations to improve performance."
+        },
+        "normalization_cache_size": {
+          "type": "integer",
+          "default": 1024,
+          "description": "The size of the normalization cache."
+        },
+        "parsekit_pool_size":{
+          "type": "integer",
+          "default": 8,
+          "description": "The size of the ParseKit pool. The ParseKit pool provides re-usable Resources for parsing, normalizing, validating and planning GraphQL Operations. Setting the pool size to a value much higher than the number of CPU Threads available will not improve performance, but only increase memory usage."
         }
       }
     },
@@ -1129,12 +1436,33 @@
         "enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Enable error propagation. If the value is true, Subgraph errors will be propagated to the client."
+          "description": "Enable error propagation. If the value is true (default: false), Subgraph errors will be propagated to the client."
         },
-        "status_codes": {
-            "type": "boolean",
-            "default": false,
-            "description": "Propagate Subgraph status codes. If the value is true, Subgraph Response status codes will be propagated to the client."
+        "mode": {
+          "type": "string",
+          "enum": ["wrapped", "pass-through"],
+          "default": "wrapped",
+          "description": "The mode of error propagation. The supported modes are 'wrapped' (default) and 'pass-through'. The 'wrapped' mode wraps the error in a custom error object to hide internals. The 'pass-through' mode returns the error as is from the Subgraph."
+        },
+        "rewrite_paths": {
+          "type": "boolean",
+          "default": true,
+          "description": "Rewrite the paths of the Subgraph errors. If the value is true (default), the paths of the Subgraph errors will be rewritten to match the Schema of the Federated Graph."
+        },
+        "omit_locations": {
+          "type": "boolean",
+          "default": true,
+          "description": "Omit the location field of Subgraph errors. If the value is true (default), the location field of Subgraph errors will be omitted. This is useful because the locations of a Subgraph error is internal to the Subgraph and not relevant to the client."
+        },
+        "omit_extensions": {
+          "type": "boolean",
+          "default": false,
+          "description": "Omit the extensions field of Subgraph errors. If the value is true (default: false), the extensions field of Subgraph errors will be omitted. This is useful in case you want to avoid leaking internal information to the client. Some users of GraphQL leverage the errors.extensions.code field to implement error handling logic in the client, in which case you might want to set this to false."
+        },
+        "propagate_status_codes": {
+          "type": "boolean",
+          "default": false,
+          "description": "Propagate Subgraph status codes. If the value is true (default: false), Subgraph Response status codes will be propagated to the client in the errors.extensions.code field."
         }
       }
     }
@@ -1147,39 +1475,32 @@
       "properties": {
         "op": {
           "type": "string",
-          "enum": [
-            "propagate"
-          ],
-          "examples": [
-            "propagate"
-          ],
+          "enum": ["propagate"],
+          "examples": ["propagate"],
           "description": "The operation to perform on the header. The supported operations are 'propagate'. The 'propagate' operation is used to propagate the header to the subgraphs."
         },
         "matching": {
           "type": "string",
-          "examples": [
-            "(?i)^X-Custom-.*"
-          ],
+          "examples": ["(?i)^X-Custom-.*"],
           "description": "The matching rule for the header. The matching rule is a regular expression that is used to match the header. Can't be used with 'named'."
         },
         "named": {
           "type": "string",
-          "examples": [
-            "X-Test-Header"
-          ],
+          "examples": ["X-Test-Header"],
           "description": "The name of the header to match. Use the canonical version e.g. X-Test-Header. Can't be used with 'matching'."
+        },
+        "rename": {
+          "type": "string",
+          "examples": ["X-Rename-Test-Header"],
+          "description": "Rename is used to  rename the named or the matching headers. It can be used with either the named or the matching."
         },
         "default": {
           "type": "string",
-          "examples": [
-            "default-value"
-          ],
+          "examples": ["default-value"],
           "description": "The default value of the header in case it is not present in the request."
         }
       },
-      "required": [
-        "op"
-      ]
+      "required": ["op"]
     }
   }
 }

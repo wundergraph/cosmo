@@ -8,9 +8,9 @@ import { checkUserAccess, cn } from "@/lib/utils";
 import {
   ChevronDoubleRightIcon,
   CommandLineIcon,
+  DocumentArrowDownIcon,
 } from "@heroicons/react/24/outline";
 import { Component2Icon } from "@radix-ui/react-icons";
-import { useMutation } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { migrateFromApollo } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { FederatedGraph } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
@@ -55,6 +55,8 @@ import {
   TooltipTrigger,
 } from "./ui/tooltip";
 import { useToast } from "./ui/use-toast";
+import { useMutation } from "@connectrpc/connect-query";
+import { GraphContext } from '@/components/layout/graph-layout';
 
 // this is required to render a blank line with LineChart
 const fallbackData = [
@@ -110,7 +112,7 @@ const MigrationDialog = ({
 
   const { toast } = useToast();
 
-  const { mutate } = useMutation(migrateFromApollo.useMutation());
+  const { mutate } = useMutation(migrateFromApollo);
 
   const [open, setOpen] = useState(migrate || false);
 
@@ -120,6 +122,7 @@ const MigrationDialog = ({
       {
         apiKey: data.apiKey,
         variantName: data.variantName,
+        namespace: router.query.namespace as string,
       },
       {
         onSuccess: (d) => {
@@ -159,7 +162,7 @@ const MigrationDialog = ({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         className={cn({
-          "h-[254px]": !isEmptyState,
+          "min-h-[254px]": !isEmptyState,
         })}
       >
         <Card className="flex h-full flex-col justify-center gap-y-2 bg-transparent p-4 group-hover:border-ring dark:hover:border-input-active ">
@@ -286,7 +289,6 @@ export const RunRouterCommand = ({
   --rm \\
   -p 3002:3002 \\
   --add-host=host.docker.internal:host-gateway \\
-  --platform=linux/amd64 \\
   --pull always \\
   -e DEV_MODE=true \\
   -e LISTEN_ADDR=0.0.0.0:3002 \\
@@ -300,7 +302,6 @@ export const RunRouterCommand = ({
       <span>{`  --rm \\`}</span>
       <span>{`  -p 3002:3002 \\`}</span>
       <span>{`  --add-host=host.docker.internal:host-gateway \\`}</span>
-      <span>{`  --platform=linux/amd64 \\`}</span>
       <span>{`  -e pull=always \\`}</span>
       <span>{`  -e DEV_MODE=true \\`}</span>
       <span>{`  -e LISTEN_ADDR=0.0.0.0:3002 \\`}</span>
@@ -310,7 +311,9 @@ export const RunRouterCommand = ({
           {token ? (
             token
           ) : (
-            <span className="font-bold text-white">{"<graph-api-token>"}</span>
+            <span className="font-bold text-secondary-foreground">
+              {"<graph-api-token>"}
+            </span>
           )}{" "}
           \
         </span>
@@ -380,7 +383,9 @@ export const RunRouterCommand = ({
               <div className="flex items-center justify-between rounded border border-input bg-background p-4">
                 <code className="break-word whitespace-pre-wrap rounded font-mono text-xs leading-normal text-muted-foreground">
                   {`npx wgc router token create `}
-                  <span className="font-bold text-white">{"<name>"}</span>
+                  <span className="font-bold text-secondary-foreground">
+                    {"<name>"}
+                  </span>
                   {` ${namespace ? `-n ${namespace}` : ""} -g ${graphName}`}
                 </code>
                 <Button
@@ -595,17 +600,22 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
 
         <div className="mt-3 flex flex-1 flex-col items-start px-6">
           <div className="text-base font-semibold">{graph.name}</div>
-          <p
-            className={cn(
-              "mb-5 truncate pt-1 text-xs text-gray-500 dark:text-gray-400",
-              {
-                italic: !graph.routingURL,
-              },
-            )}
-          >
-            {parsedURL()}
-          </p>
-          <div className="mb-3 flex flex-wrap items-center gap-x-5">
+          <Tooltip delayDuration={100}>
+            <TooltipTrigger asChild>
+              <p
+                className={cn(
+                  "w-full truncate pt-1 text-xs text-gray-500 dark:text-gray-400",
+                  {
+                    italic: !graph.routingURL,
+                  },
+                )}
+              >
+                {parsedURL()}
+              </p>
+            </TooltipTrigger>
+            <TooltipContent>{parsedURL()}</TooltipContent>
+          </Tooltip>
+          <div className="mb-3 mt-5 flex flex-wrap items-center gap-x-5 gap-y-2">
             <div className="flex items-center gap-x-2">
               {graph.supportsFederation ? (
                 <Component2Icon className="h-4 w-4 text-[#0284C7]" />
@@ -636,10 +646,17 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
                 <TooltipContent>{`${totalErrors} errors in the last 4 hours.`}</TooltipContent>
               </Tooltip>
             </TooltipProvider>
+
+            {graph.contract && (
+              <div className="flex items-center gap-x-2 text-sm">
+                <DocumentArrowDownIcon className="h-4 w-4 text-primary" />
+                Contract
+              </div>
+            )}
           </div>
           <TooltipProvider>
             <Tooltip delayDuration={200}>
-              <TooltipTrigger className="mt-auto flex items-start text-xs">
+              <TooltipTrigger className="flex items-start text-xs">
                 <div className="flex h-4 w-4 items-center justify-center">
                   <ComposeStatusBulb
                     validGraph={graph.isComposable && !!graph.lastUpdatedAt}
@@ -666,6 +683,7 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
                   isComposable={graph.isComposable}
                   lastUpdatedAt={graph.lastUpdatedAt}
                   subgraphsCount={graph.connectedSubgraphs}
+                  isContract={!!graph.contract}
                 />
               </TooltipContent>
             </Tooltip>

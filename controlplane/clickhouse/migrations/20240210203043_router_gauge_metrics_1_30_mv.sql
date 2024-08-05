@@ -1,6 +1,7 @@
 -- migrate:up
 
--- This view is used to forward the gauge metrics from the otel_metrics_gauge table to the router_metrics_30 table
+-- This view is used to forward the runtime router gauge metrics from the otel_metrics_gauge table to the router_metrics_30 table
+-- Data can't be aggregated because the metrics can be cumulative or delta.
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.router_gauge_metrics_1_30_mv TO cosmo.router_metrics_30 AS
 SELECT
@@ -13,8 +14,8 @@ SELECT
     toLowCardinality(ResourceAttributes[ 'service.version' ]) as ServiceVersion,
     ResourceAttributes[ 'service.instance.id' ] as ServiceInstanceID,
     toLowCardinality(Attributes[ 'wg.router.cluster.name' ]) as ClusterName,
-    ResourceAttributes[ 'host.name' ] as Hostname,
-    MetricName as MetricName,
+    toLowCardinality(ResourceAttributes[ 'host.name' ]) as Hostname,
+    toLowCardinality(MetricName) as MetricName,
     Value as MetricValue
 FROM
     cosmo.otel_metrics_gauge

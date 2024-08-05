@@ -16,8 +16,8 @@ import { describe, expect, test } from 'vitest';
 import {
   normalizeString,
   schemaToSortedNormalizedString,
-  versionOneSchemaQueryAndPersistedDirectiveDefinitions,
-  versionTwoSchemaQueryAndPersistedDirectiveDefinitions,
+  versionOneRouterDefinitions,
+  versionTwoRouterDefinitions,
 } from './utils/utils';
 import { FIELD } from '../src/utils/string-constants';
 
@@ -34,7 +34,7 @@ describe('Argument federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+        versionTwoRouterDefinitions +
           `
         type Object {
           field(input: String): String
@@ -57,7 +57,7 @@ describe('Argument federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+        versionTwoRouterDefinitions +
           `
       type Object {
         field(input: Float!): String
@@ -81,7 +81,7 @@ describe('Argument federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+        versionTwoRouterDefinitions +
           `
       type Object {
         field(input: Int): String
@@ -105,7 +105,7 @@ describe('Argument federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+        versionTwoRouterDefinitions +
           `
       type Object {
         field(input: Boolean = false): String
@@ -173,7 +173,7 @@ describe('Argument federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+        versionTwoRouterDefinitions +
           `
       interface Interface {
         field(optionalInAll: Boolean, requiredInAll: Int!, requiredOrOptionalInAll: String!): String
@@ -269,7 +269,7 @@ describe('Argument federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+        versionOneRouterDefinitions +
           `
       type Entity implements Interface @tag(name: "subgraph-f") {
         field(
@@ -312,6 +312,56 @@ describe('Argument federation tests', () => {
       subgraphValidationError('subgraph', [
         incompatibleInputValueDefaultValueTypeError('argument "input"', 'Object.field(input: ...)', 'String', '1'),
       ]),
+    );
+  });
+
+  test('that the @deperecated directive is persisted on arguments in the federated schema #1.1', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphG, subgraphH]);
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(
+        versionOneRouterDefinitions +
+          `
+        type Entity implements Identifiable {
+          field("""one"""one: Int!three: String @deprecated(reason: "Just because")"""two"""two: String): String
+          id: Int!
+          test: Float!
+        }
+
+        interface Identifiable {
+          id: Int!
+        }
+        
+        type Query {
+          entity: Entity!
+        }
+    `,
+      ),
+    );
+  });
+
+  test('that the @deperecated directive is persisted on arguments in the federated schema #1.2', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphH, subgraphG]);
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(
+        versionOneRouterDefinitions +
+          `
+        type Entity implements Identifiable {
+          field("""one"""one: Int!three: String @deprecated(reason: "Just because")"""two"""two: String): String
+          id: Int!
+          test: Float!
+        }
+
+        interface Identifiable {
+          id: Int!
+        }
+        
+        type Query {
+          entity: Entity!
+        }
+    `,
+      ),
     );
   });
 });
@@ -433,6 +483,36 @@ const subgraphF: Subgraph = {
     extend type Entity @key(fields: "id") @tag(name: "subgraph-f") {
       id: ID!
         field(one: Int = null @tag(name: "extension"), two: Int = null @tag(name: "extension"), three: String = null @deprecated(reason: "just because"), four: String = null): String
+    }
+  `),
+};
+
+const subgraphG: Subgraph = {
+  name: 'subgraph-g',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entity: Entity!
+    }
+    
+    interface Identifiable {
+      id: Int!
+    }
+    
+    type Entity implements Identifiable @key(fields: "id") {
+      id: Int!
+      field("one" one: Int!, "two" two: String, three: String @deprecated(reason: "Just because")): String
+    }
+  `),
+};
+
+const subgraphH: Subgraph = {
+  name: 'subgraph-h',
+  url: '',
+  definitions: parse(`
+    extend type Entity @key(fields: "id") {
+      id: Int!
+      test: Float!
     }
   `),
 };

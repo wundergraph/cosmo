@@ -1,3 +1,4 @@
+import { useCurrentOrganization } from "@/hooks/use-current-organization";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { cn } from "@/lib/utils";
 import { Fragment } from "react";
@@ -21,14 +22,17 @@ export const TitleLayout = ({
   children,
   breadcrumbs,
 }: TitleLayoutProps) => {
-  const [disableStarBanner] = useLocalStorage("disableStarBanner", "false");
+  const org = useCurrentOrganization();
+
+  const [isStarBannerDisabled] = useLocalStorage("disableStarBanner", "false");
+  const isOrganizationDeactivated = !!org?.deactivation;
+  const isBannerDisplayed = isOrganizationDeactivated || !isStarBannerDisabled;
 
   return (
     <div
       className={cn("flex flex-col", {
-        "h-[calc(100vh_-_136px)] lg:h-[calc(100vh_-_32px)]":
-          disableStarBanner === "false",
-        "h-[calc(100vh_-_104px)] lg:h-screen": disableStarBanner !== "false",
+        "h-[calc(100vh_-_136px)] lg:h-[calc(100vh_-_32px)]": isBannerDisplayed,
+        "h-[calc(100vh_-_104px)] lg:h-screen": !isBannerDisplayed,
       })}
     >
       <div className="flex w-full flex-wrap items-center justify-between gap-4 border-b bg-background py-4">

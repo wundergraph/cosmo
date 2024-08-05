@@ -23,14 +23,15 @@
         { "id": "tracing-retention", "limit": 7 },
         { "id": "changelog-retention", "limit": 7 },
         { "id": "breaking-change-retention", "limit": 7 },
-        { "id": "trace-sampling-rate", "limit": 0.1 }
+        { "id": "trace-sampling-rate", "limit": 0.1 },
+        { "id": "feature-flags", "limit": 0 }
       ]
     },
     "launch@1": {
       "name": "Launch",
       "price": 499,
       "active": true,
-      "stripePriceId": "price_1OOfANKHknvMloVzGQsIPwBP",
+      "stripePriceId": "price_1OMuHkKHknvMloVzmo5roKDD",
       "weight": 1,
       "features": [
         { "id": "router", "description": "Self-Hosted Router" },
@@ -45,27 +46,37 @@
           "description": "Up to 100M Requests per month",
           "limit": 100
         },
+        {
+          "id": "retention",
+          "description": "7 days of Data Retention",
+          "limit": 14
+        },
         { "id": "support", "description": "Email Support" },
         { "id": "analytics-retention", "limit": 7 },
         { "id": "tracing-retention", "limit": 7 },
         { "id": "changelog-retention", "limit": 7 },
         { "id": "breaking-change-retention", "limit": 7 },
-        { "id": "trace-sampling-rate", "limit": 0.2 }
+        { "id": "trace-sampling-rate", "limit": 0.2 },
+        {
+          "id": "feature-flags",
+          "description": "1 Feature Flag",
+          "limit": 1
+        }
       ]
     },
     "scale@1": {
       "name": "Scale",
-      "price": 999,
+      "price": 3499,
       "active": true,
-      "stripePriceId": "price_1OOfA8KHknvMloVz2OZrmrqI",
+      "stripePriceId": "price_1P3MCcKHknvMloVzs1ehNEUr",
       "weight": 2,
       "features": [
         { "id": "router", "description": "Self-Hosted Router" },
         { "id": "users", "description": "25 Users", "limit": 25 },
         {
           "id": "federated-graphs",
-          "description": "3 Federated Graphs",
-          "limit": 3
+          "description": "5 Federated Graphs",
+          "limit": 5
         },
         {
           "id": "requests",
@@ -85,7 +96,15 @@
         { "id": "tracing-retention", "limit": 14 },
         { "id": "changelog-retention", "limit": 14 },
         { "id": "breaking-change-retention", "limit": 14 },
-        { "id": "trace-sampling-rate", "limit": 0.3 }
+        { "id": "trace-sampling-rate", "limit": 0.3 },
+        { "id": "rbac", "description": "Resource-based Access Control" },
+        { "id": "sso", "description": "Single Sign-On (SSO)" },
+        { "id": "oidc" },
+        {
+          "id": "feature-flags",
+          "description": "3 Feature Flags",
+          "limit": 3
+        }
       ]
     },
     "enterprise": {
@@ -95,7 +114,7 @@
       "weight": 3,
       "features": [
         { "id": "router", "description": "Self-Hosted Enterprise Router" },
-        { "id": "users", "description": "Unlimited Users", "limit": 100 },
+        { "id": "users", "description": "Unlimited Users", "limit": 200 },
         {
           "id": "federated-graphs",
           "description": "Unlimited Federated Graphs",
@@ -108,10 +127,10 @@
         },
         {
           "id": "retention",
-          "description": "Unlimited days of Data Retention",
+          "description": "Unlimited Days of Data Retention",
           "limit": 365
         },
-        { "id": "rbac", "description": "Role-based Access Control" },
+        { "id": "rbac", "description": "Resource-based Access Control" },
         { "id": "sla", "description": "99.99% SLA" },
         { "id": "sso", "description": "Single Sign-On (SSO)" },
         { "id": "security", "description": "Advanced Security & Compliance" },
@@ -121,7 +140,9 @@
         { "id": "changelog-retention", "limit": 30 },
         { "id": "breaking-change-retention", "limit": 90 },
         { "id": "trace-sampling-rate", "limit": 0.1 },
-        { "id": "oidc" }
+        { "id": "oidc" },
+        { "id": "scim", "description": "System for Cross-Domain Identity Management (SCIM)" },
+        { "id": "feature-flags", "description": "Custom Number of Feature Flags", "limit": 10 }
       ]
     }
   }

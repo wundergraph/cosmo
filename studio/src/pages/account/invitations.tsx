@@ -9,7 +9,8 @@ import {
   ExclamationTriangleIcon,
   InformationCircleIcon,
 } from "@heroicons/react/24/outline";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   acceptOrDeclineInvitation,
@@ -28,10 +29,8 @@ const InvitationCard = ({
   invitedBy?: string;
 }) => {
   const router = useRouter();
-  const { mutate, isPending } = useMutation(
-    acceptOrDeclineInvitation.useMutation(),
-  );
-  const { refetch } = useQuery(getInvitations.useQuery());
+  const { mutate, isPending } = useMutation(acceptOrDeclineInvitation);
+  const { refetch } = useQuery(getInvitations);
   const { toast } = useToast();
   const client = useQueryClient();
   const [accepted, setAccepted] = useState<boolean | undefined>();
@@ -110,9 +109,7 @@ const InvitationCard = ({
 };
 
 const InvitationsPage: NextPageWithLayout = () => {
-  const { data, isLoading, error, refetch } = useQuery(
-    getInvitations.useQuery(),
-  );
+  const { data, isLoading, error, refetch } = useQuery(getInvitations);
 
   if (isLoading) return <Loader fullscreen />;
 

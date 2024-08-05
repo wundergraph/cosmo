@@ -7,8 +7,8 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
 
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphql"
 	"go.uber.org/zap"
 )
 
@@ -16,6 +16,24 @@ var (
 	modules   = make(map[string]ModuleInfo)
 	modulesMu sync.RWMutex
 )
+
+// ModuleRequestContext is the interface that provides the context for a single origin request.
+type ModuleRequestContext interface {
+	// RequestContext shared across all modules
+	RequestContext
+	// SendError returns the most recent error occurred while trying to make the origin request.
+	SendError() error
+}
+
+type moduleRequestContext struct {
+	*requestContext
+	sendError error
+}
+
+// SendError returns the most recent error occurred while trying to make the origin request.
+func (m *moduleRequestContext) SendError() error {
+	return m.sendError
+}
 
 type ModuleID string
 
@@ -106,13 +124,13 @@ type ModuleContext struct {
 // Please never write errors directly to the http.ResponseWriter. The function takes care of logging and tracking
 // the error in the underlying telemetry system.
 func WriteResponseError(ctx RequestContext, err error) {
-	var errs graphql.RequestErrors
+	var errs graphqlerrors.RequestErrors
 
 	if err != nil {
-		errs = graphql.RequestErrorsFromError(err)
+		errs = graphqlerrors.RequestErrorsFromError(err)
 	} else {
-		errs = graphql.RequestErrorsFromError(errors.New("Internal Error"))
+		errs = graphqlerrors.RequestErrorsFromError(errors.New("Internal Error"))
 	}
 
-	writeRequestErrors(ctx.Request().Context(), ctx.Request(), ctx.ResponseWriter(), http.StatusInternalServerError, errs, ctx.Logger())
+	writeRequestErrors(ctx.Request(), ctx.ResponseWriter(), http.StatusInternalServerError, errs, ctx.Logger())
 }

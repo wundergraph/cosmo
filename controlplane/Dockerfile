@@ -1,4 +1,6 @@
-FROM node:lts as builder
+FROM --platform=${BUILDPLATFORM} node:lts AS builder
+
+ARG TARGETARCH
 
 WORKDIR /app
 
@@ -22,13 +24,13 @@ RUN pnpm buf generate --template buf.ts.gen.yaml
 
 RUN pnpm run --filter=./connect --filter=./shared --filter=./controlplane --filter=./composition build
 
-RUN curl -fsSL -o /usr/local/bin/dbmate https://github.com/amacneil/dbmate/releases/download/v2.6.0/dbmate-linux-amd64 && \
+RUN curl -fsSL -o /usr/local/bin/dbmate https://github.com/amacneil/dbmate/releases/download/v2.6.0/dbmate-linux-${TARGETARCH} && \
     chmod +x /usr/local/bin/dbmate
 
 # Deploy
 RUN pnpm --filter=./controlplane --prod deploy pruned
 
-FROM node:lts-alpine
+FROM --platform=${BUILDPLATFORM} node:lts-alpine
 
 WORKDIR /app
 

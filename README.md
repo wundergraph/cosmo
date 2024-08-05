@@ -12,6 +12,19 @@
 <hr />
 </div>
 
+## We're hiring!
+
+<br/>
+
+Are you interested in working on graphql-go-tools, the "Engine" of Cosmo Router?
+We're looking for experienced Go developers and DevOps or Platform Engineering specialists to help us run Cosmo Cloud.
+If you're more interested in working with Customers on their GraphQL Strategy,
+we also offer Solution Architect positions.
+
+Check out the [currently open positions](https://wundergraph.com/jobs#open-positions).
+
+## Overview
+
 <br/>
 
 WunderGraph Cosmo is the full Lifecycle API Management for (Federated) GraphQL. Schema Registry, composition checks, analytics, metrics, tracing and routing. Deploy 100% on-prem or use our [Managed Service](https://cosmo.wundergraph.com/login). Apache 2.0 licensed, no vendor-lock. The platform consists of the following components:
@@ -77,7 +90,7 @@ Please copy the variables to `.env` (the same for studio but with `.env.local`) 
 Bootstrapping your development environment is easy. Just run the following commands in order:
 
 ```shell
-# 1️⃣ Setup the repository and start all services (Wait a few seconds until Keycloak is ready)
+# 1️⃣ Setup the repository, build libraries and start all services (Wait a few seconds until Keycloak is ready)
 make
 
 # 2️⃣ Run migrations and seed the database
@@ -111,6 +124,8 @@ Your API key to access the platform is: `cosmo_669b576aaadc10ee1ae81d9193425705`
 ```shell
 export COSMO_API_KEY=cosmo_669b576aaadc10ee1ae81d9193425705
 export COSMO_API_URL=http://localhost:3001
+export KC_API_URL=http://localhost:8080
+export CDN_URL=http://localhost:11000
 
 cd cli && pnpm wgc -h
 ```

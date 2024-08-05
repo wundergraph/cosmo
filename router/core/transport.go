@@ -8,7 +8,11 @@ import (
 	"net/url"
 	"sort"
 	"strconv"
+	"sync"
 	"time"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
@@ -17,7 +21,6 @@ import (
 
 	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
-	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/pool"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -33,7 +36,7 @@ type CustomTransport struct {
 	roundTripper http.RoundTripper
 	preHandlers  []TransportPreHandler
 	postHandlers []TransportPostHandler
-	metricStore  metric.Store
+	metricStore  metric.Provider
 	logger       *zap.Logger
 
 	sf *singleflight.Group
@@ -43,7 +46,7 @@ func NewCustomTransport(
 	logger *zap.Logger,
 	roundTripper http.RoundTripper,
 	retryOptions retrytransport.RetryOptions,
-	metricStore metric.Store,
+	metricStore metric.Provider,
 	enableSingleFlight bool,
 ) *CustomTransport {
 
@@ -65,12 +68,16 @@ func NewCustomTransport(
 func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err error, resp *http.Response) {
 
 	reqContext := getRequestContext(req.Context())
-	baseFields := setAttributesFromOperationContext(reqContext.operation)
+	baseFields := getAttributesFromOperationContext(reqContext.operation)
 
 	activeSubgraph := reqContext.ActiveSubgraph(req)
 	if activeSubgraph != nil {
 		baseFields = append(baseFields, otel.WgSubgraphName.String(activeSubgraph.Name))
 		baseFields = append(baseFields, otel.WgSubgraphID.String(activeSubgraph.Id))
+	}
+
+	if attributes := baseAttributesFromContext(req.Context()); attributes != nil {
+		baseFields = append(baseFields, attributes...)
 	}
 
 	inFlightDone := ct.metricStore.MeasureInFlight(req.Context(), baseFields...)
@@ -79,6 +86,8 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 	operationStartTime := time.Now()
 
 	return func(err error, resp *http.Response) {
+		defer inFlightDone()
+
 		if err != nil {
 			baseFields = append(baseFields, otel.WgRequestError.Bool(true))
 		}
@@ -90,14 +99,17 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 			baseFields = append(baseFields, semconv.HTTPStatusCode(resp.StatusCode))
 			ct.metricStore.MeasureResponseSize(req.Context(), resp.ContentLength, baseFields...)
 		}
-
-		inFlightDone()
 	}
 }
 
+// RoundTrip of the engine upstream requests. The handler is called concurrently for each request.
+// Be aware that multiple modules can be active at the same time. Must be concurrency safe.
 func (ct *CustomTransport) RoundTrip(req *http.Request) (resp *http.Response, err error) {
 
-	reqContext := getRequestContext(req.Context())
+	moduleContext := &moduleRequestContext{
+		requestContext: getRequestContext(req.Context()),
+		sendError:      nil,
+	}
 
 	done := ct.measureSubgraphMetrics(req)
 	defer func() {
@@ -106,7 +118,7 @@ func (ct *CustomTransport) RoundTrip(req *http.Request) (resp *http.Response, er
 
 	if ct.preHandlers != nil {
 		for _, preHandler := range ct.preHandlers {
-			r, resp := preHandler(req, reqContext)
+			r, resp := preHandler(req, moduleContext)
 			// Non nil response means the handler decided to skip sending the request
 			if resp != nil {
 				return resp, nil
@@ -119,7 +131,7 @@ func (ct *CustomTransport) RoundTrip(req *http.Request) (resp *http.Response, er
 		resp, err = ct.roundTripper.RoundTrip(req)
 		if err == nil && ct.isUpgradeError(req, resp) {
 			err := &ErrUpgradeFailed{StatusCode: resp.StatusCode}
-			if subgraph := reqContext.ActiveSubgraph(req); subgraph != nil {
+			if subgraph := moduleContext.ActiveSubgraph(req); subgraph != nil {
 				err.SubgraphID = subgraph.Id
 			}
 			return nil, err
@@ -130,12 +142,12 @@ func (ct *CustomTransport) RoundTrip(req *http.Request) (resp *http.Response, er
 
 	// Set the error on the request context so that it can be checked by the post handlers
 	if err != nil {
-		reqContext.sendError = err
+		moduleContext.sendError = err
 	}
 
 	if ct.postHandlers != nil {
 		for _, postHandler := range ct.postHandlers {
-			newResp := postHandler(resp, reqContext)
+			newResp := postHandler(resp, moduleContext)
 			// Abort with the first handler that returns a non-nil response
 			if newResp != nil {
 				return newResp, nil
@@ -183,61 +195,44 @@ func (ct *CustomTransport) allowSingleFlight(req *http.Request) bool {
 	return true
 }
 
+var (
+	ctBufPool = &sync.Pool{
+		New: func() any {
+			return &bytes.Buffer{}
+		},
+	}
+)
+
+func getBuffer() *bytes.Buffer {
+	return ctBufPool.Get().(*bytes.Buffer)
+}
+
+func releaseBuffer(buf *bytes.Buffer) {
+	buf.Reset()
+	ctBufPool.Put(buf)
+}
+
 func (ct *CustomTransport) roundTripSingleFlight(req *http.Request) (*http.Response, error) {
-	keyGen := pool.Hash64.Get()
-	defer pool.Hash64.Put(keyGen)
-
-	// Hash the request body
-	if req.Body != nil {
-		executionBuf := pool.BytesBuffer.Get()
-		defer executionBuf.Reset()
-		if _, err := io.Copy(executionBuf, req.Body); err != nil {
-			return nil, err
-		}
-		body := executionBuf.Bytes()
-		_, err := keyGen.Write(body)
-		if err != nil {
-			return nil, err
-		}
-		// Restore the body
-		req.Body = io.NopCloser(bytes.NewReader(body))
-	}
-
-	unsortedHeaders := make([]string, 0, len(req.Header))
-
-	for key := range req.Header {
-		value := req.Header.Get(key)
-		unsortedHeaders = append(unsortedHeaders, key+value)
-	}
-
-	sort.Strings(unsortedHeaders)
-	for i := range unsortedHeaders {
-		_, err := keyGen.Write(unsafebytes.StringToBytes(unsortedHeaders[i]))
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	sum := keyGen.Sum64()
-	key := strconv.FormatUint(sum, 10)
 
 	// We need to use the single flight group to ensure that the request is only sent once
-	v, err, shared := ct.sf.Do(key, func() (interface{}, error) {
+	v, err, shared := ct.sf.Do(ct.singleFlightKey(req), func() (interface{}, error) {
 		res, err := ct.roundTripper.RoundTrip(req)
 		if err != nil {
 			return nil, err
 		}
-		executionBuf := pool.BytesBuffer.Get()
-		defer executionBuf.Reset()
+		// single flight is disallowed for mutations, including file uploads
+		// hence we don't need to worry about buffering the body here
+		buf := getBuffer()
+		defer releaseBuffer(buf)
+		_, err = buf.ReadFrom(res.Body)
 		if err != nil {
 			return nil, err
 		}
-		if _, err := io.Copy(executionBuf, res.Body); err != nil {
-			return nil, err
-		}
+		cp := make([]byte, buf.Len())
+		copy(cp, buf.Bytes())
 		return &responseWithBody{
 			res:  res,
-			body: executionBuf.Bytes(),
+			body: cp,
 		}, nil
 	})
 	if err != nil {
@@ -267,14 +262,39 @@ func (ct *CustomTransport) roundTripSingleFlight(req *http.Request) (*http.Respo
 	return res, nil
 }
 
+func (ct *CustomTransport) singleFlightKey(req *http.Request) string {
+	keyGen := pool.Hash64.Get()
+	defer pool.Hash64.Put(keyGen)
+
+	if bodyHash, ok := httpclient.BodyHashFromContext(req.Context()); ok {
+		_, _ = keyGen.WriteString(strconv.FormatUint(bodyHash, 10))
+	}
+
+	unsortedHeaders := make([]string, 0, len(req.Header))
+
+	for key := range req.Header {
+		value := req.Header.Get(key)
+		unsortedHeaders = append(unsortedHeaders, key+value)
+	}
+
+	sort.Strings(unsortedHeaders)
+	for i := range unsortedHeaders {
+		_, _ = keyGen.WriteString(unsortedHeaders[i])
+	}
+
+	sum := keyGen.Sum64()
+	return strconv.FormatUint(sum, 10)
+}
+
 type TransportFactory struct {
 	preHandlers                   []TransportPreHandler
 	postHandlers                  []TransportPostHandler
 	retryOptions                  retrytransport.RetryOptions
 	requestTimeout                time.Duration
 	localhostFallbackInsideDocker bool
-	metricStore                   metric.Store
+	metricStore                   metric.Provider
 	logger                        *zap.Logger
+	tracerProvider                *sdktrace.TracerProvider
 }
 
 var _ ApiTransportFactory = TransportFactory{}
@@ -285,8 +305,9 @@ type TransportOptions struct {
 	RetryOptions                  retrytransport.RetryOptions
 	RequestTimeout                time.Duration
 	LocalhostFallbackInsideDocker bool
-	MetricStore                   metric.Store
+	MetricStore                   metric.Provider
 	Logger                        *zap.Logger
+	TracerProvider                *sdktrace.TracerProvider
 }
 
 func NewTransport(opts *TransportOptions) *TransportFactory {
@@ -298,6 +319,7 @@ func NewTransport(opts *TransportOptions) *TransportFactory {
 		localhostFallbackInsideDocker: opts.LocalhostFallbackInsideDocker,
 		metricStore:                   opts.MetricStore,
 		logger:                        opts.Logger,
+		tracerProvider:                opts.TracerProvider,
 	}
 }
 
@@ -310,18 +332,23 @@ func (t TransportFactory) RoundTripper(enableSingleFlight bool, transport http.R
 		[]otelhttp.Option{
 			otelhttp.WithSpanNameFormatter(SpanNameFormatter),
 			otelhttp.WithSpanOptions(otrace.WithAttributes(otel.EngineTransportAttribute)),
+			otelhttp.WithTracerProvider(t.tracerProvider),
 		},
 		trace.WithPreHandler(func(r *http.Request) {
 			span := otrace.SpanFromContext(r.Context())
 			reqContext := getRequestContext(r.Context())
 			operation := reqContext.operation
 
-			commonAttributeValues := setAttributesFromOperationContext(operation)
+			commonAttributeValues := getAttributesFromOperationContext(operation)
 
 			subgraph := reqContext.ActiveSubgraph(r)
 			if subgraph != nil {
 				commonAttributeValues = append(commonAttributeValues, otel.WgSubgraphID.String(subgraph.Id))
 				commonAttributeValues = append(commonAttributeValues, otel.WgSubgraphName.String(subgraph.Name))
+			}
+
+			if attributes := baseAttributesFromContext(r.Context()); attributes != nil {
+				commonAttributeValues = append(commonAttributeValues, attributes...)
 			}
 
 			span.SetAttributes(commonAttributeValues...)

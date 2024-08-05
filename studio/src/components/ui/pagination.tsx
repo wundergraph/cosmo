@@ -38,13 +38,14 @@ export const Pagination = ({
   );
 
   return (
-    <div className="mr-2 flex justify-end">
+    <div className="flex justify-end">
       <div className="flex items-center space-x-2">
         <p className="text-sm font-medium">Rows per page</p>
         <Select
           value={`${limit}`}
           onValueChange={(value) => {
-            applyNewParams({ pageSize: value });
+            // Reset page when size changes because the number of pages may not be the same
+            applyNewParams({ pageSize: value, page: "1" });
           }}
         >
           <SelectTrigger className="h-8 w-[70px]">

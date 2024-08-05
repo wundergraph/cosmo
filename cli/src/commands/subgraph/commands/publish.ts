@@ -6,9 +6,15 @@ import ora from 'ora';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { parseGraphQLSubscriptionProtocol, splitLabel } from '@wundergraph/cosmo-shared';
+import {
+  parseGraphQLSubscriptionProtocol,
+  parseGraphQLWebsocketSubprotocol,
+  splitLabel,
+} from '@wundergraph/cosmo-shared';
 import { BaseCommandOptions } from '../../../core/types/types.js';
-import { baseHeaders } from '../../../core/config.js';
+import { getBaseHeaders } from '../../../core/config.js';
+import { validateSubscriptionProtocols } from '../../../utils.js';
+import { websocketSubprotocolDescription } from '../../../constants.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('publish');
@@ -23,24 +29,34 @@ export default (opts: BaseCommandOptions) => {
   command.option('-n, --namespace [string]', 'The namespace of the subgraph.');
   command.option(
     '-r, --routing-url <url>',
-    'The routing url of your subgraph. This is the url that the subgraph will be accessible at (Only required to create the subgraph).',
+    'The routing URL of the subgraph. This is the URL at which the subgraph will be accessible.' +
+      ' This parameter is always ignored if the subgraph has already been created.' +
+      ' Required if the subgraph is not an Event-Driven Graph.' +
+      ' Returns an error if the subgraph is an Event-Driven Graph.',
   );
   command.option(
     '--label [labels...]',
-    'The labels to apply to the subgraph. The labels are passed in the format <key>=<value> <key>=<value>. Required to create the subgraph. This will overwrite existing labels.',
+    'The labels to apply to the subgraph. The labels are passed in the format <key>=<value> <key>=<value>.' +
+      ' This parameter is always ignored if the subgraph has already been created.',
     [],
   );
   command.option(
-    '--unset-labels',
-    'This will remove all labels. It will not add new labels if both this and --labels option is passed.',
-  );
-  command.option(
     '--subscription-url [url]',
-    'The url used for subscriptions. If empty, it defaults to same url used for routing.',
+    'The url used for subscriptions. If empty, it defaults to same url used for routing.' +
+      ' This parameter is always ignored if the subgraph has already been created.' +
+      ' Returns an error if the subgraph is an Event-Driven Graph.',
   );
   command.option(
     '--subscription-protocol <protocol>',
-    'The protocol to use when subscribing to the subgraph. The supported protocols are ws, sse, and sse_post.',
+    'The protocol to use when subscribing to the subgraph. The supported protocols are ws, sse, and sse_post.' +
+      ' This parameter is always ignored if the subgraph has already been created.' +
+      ' Returns an error if the subgraph is an Event-Driven Graph.',
+  );
+  command.option(
+    '--websocket-subprotocol <protocol>',
+    websocketSubprotocolDescription +
+      ' This parameter is always ignored if the subgraph has already been created.' +
+      ' Returns an error if the subgraph is an Event-Driven Graph.',
   );
   command.option(
     '--fail-on-composition-error',
@@ -71,6 +87,11 @@ export default (opts: BaseCommandOptions) => {
       );
     }
 
+    validateSubscriptionProtocols({
+      subscriptionProtocol: options.subscriptionProtocol,
+      websocketSubprotocol: options.websocketSubprotocol,
+    });
+
     const spinner = ora('Subgraph is being published...').start();
 
     const resp = await opts.client.platform.publishFederatedSubgraph(
@@ -85,17 +106,19 @@ export default (opts: BaseCommandOptions) => {
         subscriptionProtocol: options.subscriptionProtocol
           ? parseGraphQLSubscriptionProtocol(options.subscriptionProtocol)
           : undefined,
+        websocketSubprotocol: options.websocketSubprotocol
+          ? parseGraphQLWebsocketSubprotocol(options.websocketSubprotocol)
+          : undefined,
         labels: options.label.map((label: string) => splitLabel(label)),
-        unsetLabels: !!options.unsetLabels,
       },
       {
-        headers: baseHeaders,
+        headers: getBaseHeaders(),
       },
     );
 
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {
-        spinner.succeed('Subgraph published successfully.');
+        spinner.succeed(resp?.hasChanged === false ? 'No new changes to publish.' : 'Subgraph published successfully.');
 
         break;
       }
@@ -106,9 +129,10 @@ export default (opts: BaseCommandOptions) => {
           head: [
             pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
             pc.bold(pc.white('NAMESPACE')),
+            pc.bold(pc.white('FEATURE_FLAG')),
             pc.bold(pc.white('ERROR_MESSAGE')),
           ],
-          colWidths: [30, 30, 120],
+          colWidths: [30, 30, 30, 120],
           wordWrap: true,
         });
 
@@ -123,6 +147,7 @@ export default (opts: BaseCommandOptions) => {
           compositionErrorsTable.push([
             compositionError.federatedGraphName,
             compositionError.namespace,
+            compositionError.featureFlag || '-',
             compositionError.message,
           ]);
         }
@@ -167,7 +192,7 @@ export default (opts: BaseCommandOptions) => {
         break;
       }
       default: {
-        spinner.fail(`Failed to update subgraph.`);
+        spinner.fail(`Failed to publish subgraph "${name}".`);
         if (resp.response?.details) {
           console.error(pc.red(pc.bold(resp.response?.details)));
         }

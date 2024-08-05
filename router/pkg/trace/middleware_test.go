@@ -3,6 +3,7 @@ package trace
 import (
 	"github.com/go-chi/chi/v5"
 	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -19,7 +20,9 @@ func TestWrapHttpHandler(t *testing.T) {
 
 	t.Run("create a span for every request", func(t *testing.T) {
 		exporter := tracetest.NewInMemoryExporter(t)
-		h := NewMiddleware()
+		h := NewMiddleware(nil,
+			otelhttp.WithTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))),
+		)
 
 		router := chi.NewRouter()
 
@@ -67,7 +70,9 @@ func TestWrapHttpHandler(t *testing.T) {
 
 		for _, test := range statusCodeTests {
 			router := chi.NewRouter()
-			h := NewMiddleware()
+			h := NewMiddleware(nil,
+				otelhttp.WithTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))),
+			)
 
 			statusCode := test.statusCode
 

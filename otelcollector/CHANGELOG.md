@@ -4,6 +4,40 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.17.0](https://github.com/wundergraph/cosmo/compare/otelcollector@0.16.0...otelcollector@0.17.0) (2024-08-01)
+
+### Features
+
+* **otelcollector:** enable prometheus support for otelcollector and export it ([#984](https://github.com/wundergraph/cosmo/issues/984)) ([786391f](https://github.com/wundergraph/cosmo/commit/786391fc48def4648558042ef2cb05c99b010a7e)) (@AndreasZeissner)
+
+# [0.16.0](https://github.com/wundergraph/cosmo/compare/otelcollector@0.15.0...otelcollector@0.16.0) (2024-07-03)
+
+### Features
+
+* feature flags ([#853](https://github.com/wundergraph/cosmo/issues/853)) ([5461bb5](https://github.com/wundergraph/cosmo/commit/5461bb5a529decd51a1b22be0a5301936b8ad392)) (@JivusAyrus)
+
+# [0.15.0](https://github.com/wundergraph/cosmo/compare/otelcollector@0.14.1...otelcollector@0.15.0) (2024-06-06)
+
+### Features
+
+* allow to add custom OTEL attributes ([#856](https://github.com/wundergraph/cosmo/issues/856)) ([634fa85](https://github.com/wundergraph/cosmo/commit/634fa858f3ae437b1ebe46f39ed10195c0966885)) (@StarpTech)
+
+## [0.14.1](https://github.com/wundergraph/cosmo/compare/otelcollector@0.14.0...otelcollector@0.14.1) (2024-05-22)
+
+**Note:** Version bump only for package otelcollector
+
+# [0.14.0](https://github.com/wundergraph/cosmo/compare/otelcollector@0.13.0...otelcollector@0.14.0) (2024-04-12)
+
+### Features
+
+* upgrade otelcollector to 0.98.0 ([#727](https://github.com/wundergraph/cosmo/issues/727)) ([d6d02d1](https://github.com/wundergraph/cosmo/commit/d6d02d13ed5be508ada9809f98cd64ceaaa755e3)) (@StarpTech)
+
+# [0.13.0](https://github.com/wundergraph/cosmo/compare/otelcollector@0.12.0...otelcollector@0.13.0) (2024-03-24)
+
+### Features
+
+* multi platform docker builds ([#665](https://github.com/wundergraph/cosmo/issues/665)) ([4c24d70](https://github.com/wundergraph/cosmo/commit/4c24d7075bd48cd946a1037bffc0c4fcaef74289)) (@StarpTech)
+
 # [0.12.0](https://github.com/wundergraph/cosmo/compare/otelcollector@0.11.2...otelcollector@0.12.0) (2024-02-18)
 
 ### Features

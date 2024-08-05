@@ -23,7 +23,7 @@ data:
       "ssoSessionIdleTimeoutRememberMe": 0,
       "ssoSessionMaxLifespanRememberMe": 0,
       "offlineSessionIdleTimeout": 2592000,
-      "offlineSessionMaxLifespanEnabled": false,
+      "offlineSessionMaxLifespanEnabled": true,
       "offlineSessionMaxLifespan": 5184000,
       "clientSessionIdleTimeout": 0,
       "clientSessionMaxLifespan": 0,

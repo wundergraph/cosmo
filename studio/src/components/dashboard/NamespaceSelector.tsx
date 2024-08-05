@@ -1,11 +1,11 @@
-import { useLocalStorage } from "@/hooks/use-local-storage";
 import { docsBaseURL } from "@/lib/constants";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
 import { getNamespaces } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useContext, useEffect, useState } from "react";
 import { useApplyParams } from "../analytics/use-apply-params";
+import { UserContext } from "../app-provider";
 import {
   Select,
   SelectContent,
@@ -16,50 +16,56 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
-import { Toolbar } from "../ui/toolbar";
-import { UserContext } from "../app-provider";
 
-export const NamespaceSelector = () => {
+export const NamespaceSelector = ({
+  shouldRedirect,
+}: {
+  shouldRedirect?: boolean;
+}) => {
   const user = useContext(UserContext);
   const router = useRouter();
+  const organizationSlug = router.query.organizationSlug as string;
   const namespaceParam = router.query.namespace as string;
 
   const [namespaces, setNamespaces] = useState(["default"]);
+  const [namespace, setNamespace] = useState(namespaceParam || "default");
 
-  // Retrieve the stored namespace from local storage
-  const [namespace, setNamespace] = useLocalStorage(
-    "namespace",
-    namespaceParam || "default",
-  );
+  const { data, refetch } = useQuery(getNamespaces);
 
-  const { data } = useQuery({
-    ...getNamespaces.useQuery(),
-    queryKey: [user?.currentOrganization.slug || "", "GetNamespaces", {}],
-  });
+  const applyParams = useApplyParams();
 
   useEffect(() => {
     if (!data || data.namespaces.length === 0) return;
 
     if (!data.namespaces.some((ns) => ns.name === namespace)) {
       setNamespace("default");
+      applyParams({
+        namespace: "default",
+      });
     }
 
     setNamespaces(data.namespaces.map((ns) => ns.name));
-  }, [data, namespace, setNamespace]);
+  }, [applyParams, data, namespace, setNamespaces]);
 
-  const applyParams = useApplyParams();
-
-  if (!namespaceParam && !!namespace) {
-    applyParams({
-      namespace,
-    });
-  }
+  useEffect(() => {
+    if (!namespaceParam && !!namespace) {
+      applyParams({
+        namespace,
+      });
+    }
+  }, [namespace, namespaceParam, applyParams]);
 
   return (
     <Select
       value={namespace}
       onValueChange={(namespace) => {
-        applyParams({ namespace });
+        if (shouldRedirect) {
+          router.push(
+            `/${organizationSlug}/feature-flags?namespace=${namespace}`,
+          );
+        } else {
+          applyParams({ namespace });
+        }
         setNamespace(namespace);
       }}
     >

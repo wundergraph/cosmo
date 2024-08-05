@@ -36,6 +36,8 @@ type (
 		Config            *Config
 		ServiceInstanceID string
 		IPAnonymization   *IPAnonymizationConfig
+		// MemoryExporter is used for testing purposes
+		MemoryExporter sdktrace.SpanExporter
 	}
 )
 
@@ -44,7 +46,7 @@ const (
 	Redact IPAnonymizationMethod = "redact"
 )
 
-func createExporter(log *zap.Logger, exp *Exporter) (sdktrace.SpanExporter, error) {
+func createExporter(log *zap.Logger, exp *ExporterConfig) (sdktrace.SpanExporter, error) {
 	u, err := url.Parse(exp.Endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("invalid OpenTelemetry endpoint: %w", err)
@@ -112,6 +114,7 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 		resource.WithAttributes(semconv.ServiceNameKey.String(config.Config.Name)),
 		resource.WithAttributes(semconv.ServiceVersionKey.String(config.Config.Version)),
 		resource.WithAttributes(semconv.ServiceInstanceID(config.ServiceInstanceID)),
+		resource.WithAttributes(config.Config.ResourceAttributes...),
 		resource.WithProcessPID(),
 		resource.WithOSType(),
 		resource.WithTelemetrySDK(),
@@ -133,14 +136,25 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 			AttributePerEventCountLimit: sdktrace.DefaultEventCountLimit,
 			AttributePerLinkCountLimit:  sdktrace.DefaultAttributePerLinkCountLimit,
 		}),
-		sdktrace.WithSampler(
-			sdktrace.ParentBased(
-				sdktrace.TraceIDRatioBased(config.Config.Sampler),
-				// By default, when the parent span is sampled, the child span will be sampled.
-			),
-		),
 		// Record information about this application in a Resource.
 		sdktrace.WithResource(r),
+	}
+
+	if config.Config.ParentBasedSampler {
+		opts = append(opts,
+			sdktrace.WithSampler(
+				sdktrace.ParentBased(
+					sdktrace.TraceIDRatioBased(config.Config.Sampler),
+					// By default, when the parent span is sampled, the child span will be sampled.
+				),
+			),
+		)
+	} else {
+		opts = append(opts,
+			sdktrace.WithSampler(
+				sdktrace.TraceIDRatioBased(config.Config.Sampler),
+			),
+		)
 	}
 
 	if config.IPAnonymization != nil && config.IPAnonymization.Enabled {
@@ -172,42 +186,49 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 	}
 
 	if config.Config.Enabled {
-		for _, exp := range config.Config.Exporters {
-			if exp.Disabled {
-				continue
-			}
 
-			// Default to OLTP HTTP
-			if exp.Exporter == "" {
-				exp.Exporter = otelconfig.ExporterOLTPHTTP
-			}
+		// Either memory exporter or the configured exporters are used.
+		if config.MemoryExporter != nil {
+			opts = append(opts, sdktrace.WithSyncer(config.MemoryExporter))
+		} else {
+			for _, exp := range config.Config.Exporters {
+				if exp.Disabled {
+					continue
+				}
 
-			exporter, err := createExporter(config.Logger, exp)
-			if err != nil {
-				config.Logger.Error("creating exporter", zap.Error(err))
-				return nil, err
-			}
+				// Default to OLTP HTTP
+				if exp.Exporter == "" {
+					exp.Exporter = otelconfig.ExporterOLTPHTTP
+				}
 
-			batchTimeout := exp.BatchTimeout
-			if batchTimeout == 0 {
-				batchTimeout = DefaultBatchTimeout
-			}
+				exporter, err := createExporter(config.Logger, exp)
+				if err != nil {
+					config.Logger.Error("creating exporter", zap.Error(err))
+					return nil, err
+				}
 
-			exportTimeout := exp.ExportTimeout
-			if exportTimeout == 0 {
-				exportTimeout = DefaultExportTimeout
-			}
+				batchTimeout := exp.BatchTimeout
+				if batchTimeout == 0 {
+					batchTimeout = DefaultBatchTimeout
+				}
 
-			// Always be sure to batch in production.
-			opts = append(opts,
-				sdktrace.WithBatcher(exporter,
-					sdktrace.WithBatchTimeout(batchTimeout),
-					sdktrace.WithExportTimeout(exportTimeout),
-					sdktrace.WithMaxExportBatchSize(512),
-					sdktrace.WithMaxQueueSize(2048),
-				),
-			)
+				exportTimeout := exp.ExportTimeout
+				if exportTimeout == 0 {
+					exportTimeout = DefaultExportTimeout
+				}
+
+				// Always be sure to batch in production.
+				opts = append(opts,
+					sdktrace.WithBatcher(exporter,
+						sdktrace.WithBatchTimeout(batchTimeout),
+						sdktrace.WithExportTimeout(exportTimeout),
+						sdktrace.WithMaxExportBatchSize(512),
+						sdktrace.WithMaxQueueSize(2048),
+					),
+				)
+			}
 		}
+
 	}
 
 	tp := sdktrace.NewTracerProvider(opts...)

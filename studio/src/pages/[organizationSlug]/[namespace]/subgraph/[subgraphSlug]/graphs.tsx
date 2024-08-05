@@ -24,15 +24,18 @@ import {
 import { useSubgraph } from "@/hooks/use-subgraph";
 import { docsBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
-import { CommandLineIcon } from "@heroicons/react/24/outline";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
+import {
+  CommandLineIcon,
+  ExclamationTriangleIcon,
+} from "@heroicons/react/24/outline";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getFederatedGraphsBySubgraphLabels } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { FederatedGraph } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { PiWarningCircle } from "react-icons/pi";
 
 export const Empty = ({ labels }: { labels: string[] }) => {
   const router = useRouter();
@@ -70,8 +73,10 @@ export const Empty = ({ labels }: { labels: string[] }) => {
 
 export const FederatedGraphsTable = ({
   graphs,
+  noFeatureSubgraphs,
 }: {
-  graphs: FederatedGraph[];
+  graphs: { federatedGraph: FederatedGraph; isConnected?: boolean }[];
+  noFeatureSubgraphs?: boolean;
 }) => {
   const router = useRouter();
   const organizationSlug = router.query.organizationSlug;
@@ -95,27 +100,57 @@ export const FederatedGraphsTable = ({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="px-4">Name</TableHead>
-            <TableHead className="w-4/12 px-4">Url</TableHead>
-            <TableHead className="w-4/12 px-4">Label Matchers</TableHead>
+            <TableHead className="w-80 px-4">Name</TableHead>
+            <TableHead className="w-3/12 px-4">Url</TableHead>
+            <TableHead className="w-3/12 px-4">Label Matchers</TableHead>
             <TableHead className="w-2/12 px-4">Last Published</TableHead>
             <TableHead className="w-1/12"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {graphs.map(
-            ({ name, routingURL, lastUpdatedAt, labelMatchers, namespace }) => {
+            ({
+              federatedGraph: {
+                name,
+                routingURL,
+                lastUpdatedAt,
+                labelMatchers,
+                namespace,
+              },
+              isConnected,
+            }) => {
               const path = `/${organizationSlug}/${namespace}/graph/${name}`;
               return (
                 <TableRow
                   key={name}
-                  className="group py-1 even:bg-secondary/20 hover:bg-secondary/40"
+                  className="group cursor-pointer py-1 hover:bg-secondary/30"
+                  onClick={() => router.push(path)}
                 >
-                  <TableCell className="px-4 font-medium">{name}</TableCell>
-                  <TableCell className="px-4 text-muted-foreground hover:text-current">
-                    <Link target="_blank" rel="noreferrer" href={routingURL}>
-                      {routingURL}
-                    </Link>
+                  <TableCell className="flex items-center gap-x-2 px-4 font-medium">
+                    <>
+                      <div className="w-48">{name}</div>
+                      {isConnected === false && (
+                        <Tooltip delayDuration={200}>
+                          <TooltipTrigger>
+                            <Badge
+                              variant="destructive"
+                              className="flex items-center gap-x-2"
+                            >
+                              <>Action required</>
+                              <PiWarningCircle className="h-4 w-4 flex-shrink-0 text-red-500" />
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent className="w-64">
+                            {noFeatureSubgraphs
+                              ? `This feature flag does not contain any feature subgraphs, so won't be considered during composition.`
+                              : `The federated graph does not include one of the base subgraphs of the feature subgraphs that the feature flag relies on for composition.`}
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </>
+                  </TableCell>
+                  <TableCell className="px-4 text-muted-foreground">
+                    {routingURL}
                   </TableCell>
                   <TableCell className="px-4">
                     <div className="flex space-x-2">
@@ -169,13 +204,16 @@ const FederatedGraphsPage: NextPageWithLayout = () => {
   const subgraphSlug = router.query.subgraphSlug as string;
   const namespace = router.query.namespace as string;
 
-  const { data, error, refetch, isLoading } = useQuery({
-    ...getFederatedGraphsBySubgraphLabels.useQuery({
+  const { data, error, refetch, isLoading } = useQuery(
+    getFederatedGraphsBySubgraphLabels,
+    {
       subgraphName: subgraphSlug,
       namespace,
-    }),
-    enabled: !!subgraphSlug,
-  });
+    },
+    {
+      enabled: !!subgraphSlug,
+    },
+  );
 
   if (isLoading) {
     return <Loader fullscreen />;
@@ -194,7 +232,15 @@ const FederatedGraphsPage: NextPageWithLayout = () => {
     );
   }
 
-  return <FederatedGraphsTable graphs={data.graphs} />;
+  return (
+    <FederatedGraphsTable
+      graphs={data.graphs.map((g) => {
+        return {
+          federatedGraph: g,
+        };
+      })}
+    />
+  );
 };
 
 FederatedGraphsPage.getLayout = (page) =>

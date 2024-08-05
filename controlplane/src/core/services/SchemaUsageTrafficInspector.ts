@@ -34,7 +34,7 @@ export class SchemaUsageTrafficInspector {
 
   /**
    * Inspect the usage of a schema change in the last X days on real traffic and return the
-   * affected operations.
+   * affected operations. We will consider all available compositions.
    */
   public async inspect(
     changes: InspectorSchemaChange[],
@@ -113,7 +113,7 @@ export class SchemaUsageTrafficInspector {
   }
 
   /**
-   * Convert schema changes to inspector changes. Throws an error if a change is not supported.
+   * Convert schema changes to inspector changes. Will ignore a change if it is not inspectable.
    * Ultimately, will result in a breaking change because the change is not inspectable with the current implementation.
    */
   public schemaChangesToInspectorChanges(
@@ -204,7 +204,9 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
     case ChangeType.DirectiveArgumentDefaultValueChanged:
     case ChangeType.DirectiveArgumentTypeChanged:
     case ChangeType.DirectiveLocationRemoved: {
-      throw new Error(`Directive or schema root type changes are not inspectable`);
+      // We cannot inspect these changes. We want to return null instead of throwing an error.
+      // This is so that other changes that we can in fact inspect are not skipped over in the schema check.
+      return null;
     }
     // Safe to ignore
     case ChangeType.DirectiveAdded:

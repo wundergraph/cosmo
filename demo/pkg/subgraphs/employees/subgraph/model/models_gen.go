@@ -37,8 +37,9 @@ type City struct {
 }
 
 type Consultancy struct {
-	Upc  string    `json:"upc"`
-	Lead *Employee `json:"lead"`
+	Upc             string    `json:"upc"`
+	Lead            *Employee `json:"lead"`
+	IsLeadAvailable *bool     `json:"isLeadAvailable,omitempty"`
 }
 
 func (Consultancy) IsProducts() {}
@@ -86,13 +87,18 @@ type Details struct {
 }
 
 type Employee struct {
-	Details   *Details `json:"details"`
-	ID        int      `json:"id"`
-	Tag       string   `json:"tag"`
-	Role      RoleType `json:"role"`
-	Notes     *string  `json:"notes,omitempty"`
-	UpdatedAt string   `json:"updatedAt"`
-	StartDate string   `json:"startDate"`
+	Details               *Details      `json:"details"`
+	ID                    int           `json:"id"`
+	Tag                   string        `json:"tag"`
+	Role                  RoleType      `json:"role"`
+	Notes                 *string       `json:"notes,omitempty"`
+	UpdatedAt             string        `json:"updatedAt"`
+	StartDate             string        `json:"startDate"`
+	CurrentMood           Mood          `json:"currentMood"`
+	DerivedMood           Mood          `json:"derivedMood"`
+	IsAvailable           bool          `json:"isAvailable"`
+	RootFieldThrowsError  *string       `json:"rootFieldThrowsError,omitempty"`
+	RootFieldErrorWrapper *ErrorWrapper `json:"rootFieldErrorWrapper,omitempty"`
 }
 
 func (Employee) IsIdentifiable() {}
@@ -139,6 +145,11 @@ func (this Engineer) GetEmployees() []*Employee {
 	return interfaceSlice
 }
 
+type ErrorWrapper struct {
+	OkField    *string `json:"okField,omitempty"`
+	ErrorField *string `json:"errorField,omitempty"`
+}
+
 type Marketer struct {
 	Departments []Department `json:"departments"`
 	Title       []string     `json:"title"`
@@ -175,6 +186,9 @@ func (this Marketer) GetEmployees() []*Employee {
 		interfaceSlice = append(interfaceSlice, concrete)
 	}
 	return interfaceSlice
+}
+
+type Mutation struct {
 }
 
 type Operator struct {
@@ -216,6 +230,9 @@ func (this Operator) GetEmployees() []*Employee {
 	return interfaceSlice
 }
 
+type Query struct {
+}
+
 type Sdk struct {
 	Upc       string      `json:"upc"`
 	Engineers []*Employee `json:"engineers"`
@@ -238,6 +255,9 @@ func (this Sdk) GetEngineers() []*Employee {
 }
 
 func (Sdk) IsEntity() {}
+
+type Subscription struct {
+}
 
 type Time struct {
 	UnixTime  int    `json:"unixTime"`
@@ -327,6 +347,47 @@ func (e *EngineerType) UnmarshalGQL(v interface{}) error {
 }
 
 func (e EngineerType) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+type Mood string
+
+const (
+	MoodHappy Mood = "HAPPY"
+	MoodSad   Mood = "SAD"
+)
+
+var AllMood = []Mood{
+	MoodHappy,
+	MoodSad,
+}
+
+func (e Mood) IsValid() bool {
+	switch e {
+	case MoodHappy, MoodSad:
+		return true
+	}
+	return false
+}
+
+func (e Mood) String() string {
+	return string(e)
+}
+
+func (e *Mood) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = Mood(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid Mood", str)
+	}
+	return nil
+}
+
+func (e Mood) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 

@@ -3,7 +3,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { Label } from '../src/types/index.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
-import { createFederatedGraph, createSubgraph, SetupTest } from './test-util.js';
+import { createFederatedGraph, createThenPublishSubgraph, SetupTest } from './test-util.js';
 
 let dbname = '';
 
@@ -27,8 +27,8 @@ describe('Labels', (ctx) => {
 
     const subgraphSchemaSDL = 'type Query { hello: String! }';
 
-    await createSubgraph(client, subgraph1Name, 'default', subgraphSchemaSDL, [label1], 'http://localhost:8081');
-    await createSubgraph(client, subgraph2Name, 'default', subgraphSchemaSDL, [label2], 'http://localhost:8082');
+    await createThenPublishSubgraph(client, subgraph1Name, 'default', subgraphSchemaSDL, [label1], 'http://localhost:8081');
+    await createThenPublishSubgraph(client, subgraph2Name, 'default', subgraphSchemaSDL, [label2], 'http://localhost:8082');
 
     const createFedGraphRes = await client.createFederatedGraph({
       name: fedGraphName,
@@ -201,7 +201,7 @@ describe('Labels', (ctx) => {
 
     const subgraphSchemaSDL = 'type Query { hello: String! }';
 
-    await createSubgraph(
+    await createThenPublishSubgraph(
       client,
       subgraph1Name,
       'default',
@@ -209,7 +209,7 @@ describe('Labels', (ctx) => {
       [labelTeamA, labelProviderAWS, labelEnvProd],
       'http://localhost:8081',
     );
-    await createSubgraph(
+    await createThenPublishSubgraph(
       client,
       subgraph2Name,
       'default',
@@ -217,7 +217,7 @@ describe('Labels', (ctx) => {
       [labelTeamB, labelEnvProd],
       'http://localhost:8082',
     );
-    await createSubgraph(
+    await createThenPublishSubgraph(
       client,
       subgraph3Name,
       'default',
@@ -539,7 +539,7 @@ describe('Labels', (ctx) => {
       labels: [label1],
     });
 
-    // fedGraph1 should have 1 subgraphs and fedGraph2 should have 1 subgraph
+    // fedGraph1 should have 1 subgraph and fedGraph2 should have 1 subgraph
     const graph1AfterSet = await client.getFederatedGraphByName({
       name: fedGraph1Name,
       namespace: 'default',

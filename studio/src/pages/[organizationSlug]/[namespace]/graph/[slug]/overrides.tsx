@@ -32,7 +32,7 @@ import {
   ExclamationTriangleIcon,
   InformationCircleIcon,
 } from "@heroicons/react/24/outline";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
 import {
   ColumnDef,
   createColumnHelper,
@@ -78,13 +78,17 @@ const OverridesPage: NextPageWithLayout = () => {
     return `/${organizationSlug}/${namespace}/graph/${slug}/analytics/traces?filterState=${filterState}`;
   };
 
-  const { data, isLoading, error, refetch } = useQuery({
-    ...getAllOverrides.useQuery({
+  const { data, isLoading, error, refetch } = useQuery(
+    getAllOverrides,
+    {
       graphName: graphContext?.graph?.name,
       namespace: graphContext?.graph?.namespace,
-    }),
-    enabled: !!graphContext?.graph?.name,
-  });
+    },
+    {
+      placeholderData: (prev) => prev,
+      enabled: !!graphContext?.graph?.name,
+    },
+  );
 
   const applyParams = useApplyParams();
 

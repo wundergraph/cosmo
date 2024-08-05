@@ -9,19 +9,21 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"regexp"
+	"slices"
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/gorilla/websocket"
 
 	"github.com/alitto/pond"
 	"github.com/buger/jsonparser"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
-	"github.com/gorilla/websocket"
 	"github.com/tidwall/gjson"
 	"github.com/wundergraph/cosmo/router/internal/epoller"
-	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/cosmo/router/internal/wsproto"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
@@ -54,43 +56,92 @@ type WebsocketMiddlewareOptions struct {
 }
 
 func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		handler := &WebsocketHandler{
-			ctx:                ctx,
-			next:               next,
-			operationProcessor: opts.OperationProcessor,
-			operationBlocker:   opts.OperationBlocker,
-			planner:            opts.Planner,
-			graphqlHandler:     opts.GraphQLHandler,
-			metrics:            opts.Metrics,
-			accessController:   opts.AccessController,
-			logger:             opts.Logger,
-			stats:              opts.Stats,
-			readTimeout:        opts.ReadTimeout,
-			config:             opts.WebSocketConfiguration,
-		}
-		if opts.WebSocketConfiguration != nil && opts.WebSocketConfiguration.AbsintheProtocol.Enabled {
-			handler.absintheHandlerEnabled = true
-			handler.absintheHandlerPath = opts.WebSocketConfiguration.AbsintheProtocol.HandlerPath
-		}
-		handler.handlerPool = pond.New(
-			64,
-			0,
-			pond.Context(ctx),
-			pond.IdleTimeout(time.Second*30),
-			pond.Strategy(pond.Lazy()),
-			pond.MinWorkers(8),
-		)
-		if opts.EnableWebSocketEpollKqueue {
-			poller, err := epoller.NewPoller(opts.EpollKqueueConnBufferSize, opts.EpollKqueuePollTimeout)
-			if err == nil {
-				handler.epoll = poller
-				handler.connections = make(map[int]*WebSocketConnectionHandler)
-				go handler.runPoller()
+
+	handlerPool := pond.New(
+		64,
+		0,
+		pond.Context(ctx),
+		pond.IdleTimeout(time.Second*30),
+		pond.Strategy(pond.Lazy()),
+		pond.MinWorkers(8),
+	)
+
+	handler := &WebsocketHandler{
+		ctx:                ctx,
+		operationProcessor: opts.OperationProcessor,
+		operationBlocker:   opts.OperationBlocker,
+		planner:            opts.Planner,
+		graphqlHandler:     opts.GraphQLHandler,
+		metrics:            opts.Metrics,
+		accessController:   opts.AccessController,
+		logger:             opts.Logger,
+		stats:              opts.Stats,
+		readTimeout:        opts.ReadTimeout,
+		config:             opts.WebSocketConfiguration,
+		handlerPool:        handlerPool,
+	}
+	if opts.WebSocketConfiguration != nil && opts.WebSocketConfiguration.AbsintheProtocol.Enabled {
+		handler.absintheHandlerEnabled = true
+		handler.absintheHandlerPath = opts.WebSocketConfiguration.AbsintheProtocol.HandlerPath
+	}
+	if opts.WebSocketConfiguration.ForwardUpgradeHeaders.Enabled {
+		handler.forwardUpgradeHeadersConfig.enabled = true
+		for _, str := range opts.WebSocketConfiguration.ForwardUpgradeHeaders.AllowList {
+			if detectNonRegex.MatchString(str) {
+				canonicalHeaderKey := http.CanonicalHeaderKey(str)
+				handler.forwardUpgradeHeadersConfig.staticAllowList = append(handler.forwardUpgradeHeadersConfig.staticAllowList, canonicalHeaderKey)
+			} else {
+				re, err := regexp.Compile(str)
+				if err != nil {
+					opts.Logger.Warn("Invalid regex in forward upgrade headers allow list", zap.String("regex", str), zap.Error(err))
+					continue
+				}
+				handler.forwardUpgradeHeadersConfig.regexAllowList = append(handler.forwardUpgradeHeadersConfig.regexAllowList, re)
 			}
 		}
+		handler.forwardUpgradeHeadersConfig.withStaticAllowList = len(handler.forwardUpgradeHeadersConfig.staticAllowList) > 0
+		handler.forwardUpgradeHeadersConfig.withRegexAllowList = len(handler.forwardUpgradeHeadersConfig.regexAllowList) > 0
+	}
+	if opts.WebSocketConfiguration.ForwardUpgradeQueryParams.Enabled {
+		handler.forwardQueryParamsConfig.enabled = true
+		for _, str := range opts.WebSocketConfiguration.ForwardUpgradeQueryParams.AllowList {
+			if detectNonRegex.MatchString(str) {
+				handler.forwardQueryParamsConfig.staticAllowList = append(handler.forwardQueryParamsConfig.staticAllowList, str)
+			} else {
+				re, err := regexp.Compile(str)
+				if err != nil {
+					opts.Logger.Warn("Invalid regex in forward upgrade query params allow list", zap.String("regex", str), zap.Error(err))
+					continue
+				}
+				handler.forwardQueryParamsConfig.regexAllowList = append(handler.forwardQueryParamsConfig.regexAllowList, re)
+			}
+		}
+		handler.forwardQueryParamsConfig.withStaticAllowList = len(handler.forwardQueryParamsConfig.staticAllowList) > 0
+		handler.forwardQueryParamsConfig.withRegexAllowList = len(handler.forwardQueryParamsConfig.regexAllowList) > 0
+	}
+	if opts.EnableWebSocketEpollKqueue {
+		poller, err := epoller.NewPoller(opts.EpollKqueueConnBufferSize, opts.EpollKqueuePollTimeout)
+		if err == nil {
+			opts.Logger.Debug("Epoll is available")
 
-		return handler
+			handler.epoll = poller
+			handler.connections = make(map[int]*WebSocketConnectionHandler)
+			go handler.runPoller()
+		} else {
+			opts.Logger.Warn("Epoll is only available on Linux and MacOS. Falling back to synchronous handling.")
+		}
+	} else {
+		opts.Logger.Debug("Epoll is disabled by configuration")
+	}
+
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if !websocket.IsWebSocketUpgrade(r) {
+				next.ServeHTTP(w, r)
+				return
+			}
+			handler.handleUpgradeRequest(w, r)
+		})
 	}
 }
 
@@ -150,7 +201,6 @@ func (c *wsConnectionWrapper) Close() error {
 type WebsocketHandler struct {
 	ctx                context.Context
 	config             *config.WebSocketConfiguration
-	next               http.Handler
 	operationProcessor *OperationProcessor
 	operationBlocker   *OperationBlocker
 	planner            *OperationPlanner
@@ -172,14 +222,9 @@ type WebsocketHandler struct {
 
 	absintheHandlerEnabled bool
 	absintheHandlerPath    string
-}
 
-func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if !websocket.IsWebSocketUpgrade(r) {
-		h.next.ServeHTTP(w, r)
-		return
-	}
-	h.handleUpgradeRequest(w, r)
+	forwardUpgradeHeadersConfig forwardConfig
+	forwardQueryParamsConfig    forwardConfig
 }
 
 func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.Request) {
@@ -238,21 +283,23 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	}
 
 	handler := NewWebsocketConnectionHandler(h.ctx, WebSocketConnectionHandlerOptions{
-		OperationProcessor: h.operationProcessor,
-		OperationBlocker:   h.operationBlocker,
-		Planner:            h.planner,
-		GraphQLHandler:     h.graphqlHandler,
-		Metrics:            h.metrics,
-		ResponseWriter:     w,
-		Request:            r,
-		Connection:         conn,
-		Protocol:           protocol,
-		Logger:             h.logger,
-		Stats:              h.stats,
-		ConnectionID:       h.connectionIDs.Inc(),
-		ClientInfo:         clientInfo,
-		InitRequestID:      requestID,
-		Config:             h.config,
+		OperationProcessor:    h.operationProcessor,
+		OperationBlocker:      h.operationBlocker,
+		Planner:               h.planner,
+		GraphQLHandler:        h.graphqlHandler,
+		Metrics:               h.metrics,
+		ResponseWriter:        w,
+		Request:               r,
+		Connection:            conn,
+		Protocol:              protocol,
+		Logger:                h.logger,
+		Stats:                 h.stats,
+		ConnectionID:          h.connectionIDs.Inc(),
+		ClientInfo:            clientInfo,
+		InitRequestID:         requestID,
+		Config:                h.config,
+		ForwardUpgradeHeaders: h.forwardUpgradeHeadersConfig,
+		ForwardQueryParams:    h.forwardQueryParamsConfig,
 	})
 	err = handler.Initialize()
 	if err != nil {
@@ -510,22 +557,24 @@ type graphqlError struct {
 }
 
 type WebSocketConnectionHandlerOptions struct {
-	Config             *config.WebSocketConfiguration
-	OperationProcessor *OperationProcessor
-	OperationBlocker   *OperationBlocker
-	Planner            *OperationPlanner
-	GraphQLHandler     *GraphQLHandler
-	Metrics            RouterMetrics
-	ResponseWriter     http.ResponseWriter
-	Request            *http.Request
-	Connection         *wsConnectionWrapper
-	Protocol           wsproto.Proto
-	Logger             *zap.Logger
-	Stats              WebSocketsStatistics
-	ConnectionID       int64
-	RequestContext     context.Context
-	ClientInfo         *ClientInfo
-	InitRequestID      string
+	Config                *config.WebSocketConfiguration
+	OperationProcessor    *OperationProcessor
+	OperationBlocker      *OperationBlocker
+	Planner               *OperationPlanner
+	GraphQLHandler        *GraphQLHandler
+	Metrics               RouterMetrics
+	ResponseWriter        http.ResponseWriter
+	Request               *http.Request
+	Connection            *wsConnectionWrapper
+	Protocol              wsproto.Proto
+	Logger                *zap.Logger
+	Stats                 WebSocketsStatistics
+	ConnectionID          int64
+	RequestContext        context.Context
+	ClientInfo            *ClientInfo
+	InitRequestID         string
+	ForwardUpgradeHeaders forwardConfig
+	ForwardQueryParams    forwardConfig
 }
 
 type WebSocketConnectionHandler struct {
@@ -552,31 +601,45 @@ type WebSocketConnectionHandler struct {
 	subscriptions   sync.Map
 	stats           WebSocketsStatistics
 
-	forwardUpgradeRequestHeaders     bool
-	forwardUpgradeRequestQueryParams bool
-	forwardInitialPayload            bool
+	forwardInitialPayload bool
+
+	forwardUpgradeHeaders *forwardConfig
+	forwardQueryParams    *forwardConfig
 }
 
+type forwardConfig struct {
+	enabled             bool
+	withStaticAllowList bool
+	staticAllowList     []string
+	withRegexAllowList  bool
+	regexAllowList      []*regexp.Regexp
+}
+
+var (
+	detectNonRegex = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
+)
+
 func NewWebsocketConnectionHandler(ctx context.Context, opts WebSocketConnectionHandlerOptions) *WebSocketConnectionHandler {
+
 	return &WebSocketConnectionHandler{
-		ctx:                              ctx,
-		operationProcessor:               opts.OperationProcessor,
-		operationBlocker:                 opts.OperationBlocker,
-		planner:                          opts.Planner,
-		graphqlHandler:                   opts.GraphQLHandler,
-		metrics:                          opts.Metrics,
-		w:                                opts.ResponseWriter,
-		r:                                opts.Request,
-		conn:                             opts.Connection,
-		protocol:                         opts.Protocol,
-		logger:                           opts.Logger,
-		connectionID:                     opts.ConnectionID,
-		stats:                            opts.Stats,
-		clientInfo:                       opts.ClientInfo,
-		initRequestID:                    opts.InitRequestID,
-		forwardUpgradeRequestHeaders:     opts.Config != nil && opts.Config.ForwardUpgradeHeaders,
-		forwardUpgradeRequestQueryParams: opts.Config != nil && opts.Config.ForwardUpgradeQueryParams,
-		forwardInitialPayload:            opts.Config != nil && opts.Config.ForwardInitialPayload,
+		ctx:                   ctx,
+		operationProcessor:    opts.OperationProcessor,
+		operationBlocker:      opts.OperationBlocker,
+		planner:               opts.Planner,
+		graphqlHandler:        opts.GraphQLHandler,
+		metrics:               opts.Metrics,
+		w:                     opts.ResponseWriter,
+		r:                     opts.Request,
+		conn:                  opts.Connection,
+		protocol:              opts.Protocol,
+		logger:                opts.Logger,
+		connectionID:          opts.ConnectionID,
+		stats:                 opts.Stats,
+		clientInfo:            opts.ClientInfo,
+		initRequestID:         opts.InitRequestID,
+		forwardUpgradeHeaders: &opts.ForwardUpgradeHeaders,
+		forwardQueryParams:    &opts.ForwardQueryParams,
+		forwardInitialPayload: opts.Config != nil && opts.Config.ForwardInitialPayload,
 	}
 }
 
@@ -601,21 +664,43 @@ func (h *WebSocketConnectionHandler) writeErrorMessage(operationID string, err e
 }
 
 func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperation, *operationContext, error) {
-	operationKit, err := h.operationProcessor.NewKit(payload)
-	defer operationKit.Free()
+	operationKit, err := h.operationProcessor.NewKit(payload, nil)
 	if err != nil {
 		return nil, nil, err
 	}
+	defer operationKit.Free()
 
-	if err := operationKit.Parse(h.ctx, h.clientInfo, h.logger); err != nil {
+	if err := operationKit.UnmarshalOperation(); err != nil {
 		return nil, nil, err
+	}
+
+	var skipParse bool
+
+	if operationKit.parsedOperation.IsPersistedOperation {
+		skipParse, err = operationKit.FetchPersistedOperation(h.ctx, h.clientInfo, baseAttributesFromContext(h.ctx))
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	// If the persistent operation is already in the cache, we skip the parse step
+	// because the operation was already parsed. This is a performance optimization, and we
+	// can do it because we know that the persisted operation is immutable (identified by the hash)
+	if !skipParse {
+		if err := operationKit.Parse(); err != nil {
+			return nil, nil, err
+		}
 	}
 
 	if blocked := h.operationBlocker.OperationIsBlocked(operationKit.parsedOperation); blocked != nil {
 		return nil, nil, blocked
 	}
 
-	if err := operationKit.Normalize(); err != nil {
+	if _, err := operationKit.Normalize(); err != nil {
+		return nil, nil, err
+	}
+
+	if err := operationKit.CoerceListVariables(); err != nil {
 		return nil, nil, err
 	}
 
@@ -644,7 +729,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 		return
 	}
 
-	if h.forwardUpgradeRequestHeaders && h.upgradeRequestHeaders != nil {
+	if h.forwardUpgradeHeaders.enabled && h.upgradeRequestHeaders != nil {
 		if operationCtx.extensions == nil {
 			operationCtx.extensions = json.RawMessage("{}")
 		}
@@ -655,7 +740,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 			return
 		}
 	}
-	if h.forwardUpgradeRequestQueryParams && h.upgradeRequestQueryParams != nil {
+	if h.forwardQueryParams.enabled && h.upgradeRequestQueryParams != nil {
 		if operationCtx.extensions == nil {
 			operationCtx.extensions = json.RawMessage("{}")
 		}
@@ -678,7 +763,6 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 			return
 		}
 	}
-
 	resolveCtx := &resolve.Context{
 		Variables: operationCtx.Variables(),
 		Request: resolve.Request{
@@ -688,6 +772,9 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 		RenameTypeNames: h.graphqlHandler.executor.RenameTypeNames,
 		TracingOptions:  operationCtx.traceOptions,
 		Extensions:      operationCtx.extensions,
+	}
+	if h.forwardInitialPayload && operationCtx.initialPayload != nil {
+		resolveCtx.InitialPayload = operationCtx.initialPayload
 	}
 	resolveCtx = resolveCtx.WithContext(withRequestContext(h.ctx, buildRequestContext(nil, h.r, operationCtx, h.logger)))
 	if h.graphqlHandler.authorizer != nil {
@@ -704,12 +791,10 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 
 	switch p := operationCtx.preparedPlan.preparedPlan.(type) {
 	case *plan.SynchronousResponsePlan:
-		err = h.graphqlHandler.executor.Resolver.ResolveGraphQLResponse(resolveCtx, p.Response, nil, rw)
+		_, err = h.graphqlHandler.executor.Resolver.ResolveGraphQLResponse(resolveCtx, p.Response, nil, rw)
 		if err != nil {
 			h.logger.Warn("Resolving GraphQL response", zap.Error(err))
-			buf := pool.GetBytesBuffer()
-			defer pool.PutBytesBuffer(buf)
-			h.graphqlHandler.WriteError(resolveCtx, err, p.Response, rw, buf)
+			h.graphqlHandler.WriteError(resolveCtx, err, p.Response, rw)
 		}
 		_ = rw.Flush()
 		rw.Complete()
@@ -717,9 +802,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 		err = h.graphqlHandler.executor.Resolver.AsyncResolveGraphQLSubscription(resolveCtx, p.Response, rw.SubscriptionResponseWriter(), id)
 		if err != nil {
 			h.logger.Warn("Resolving GraphQL subscription", zap.Error(err))
-			buf := pool.GetBytesBuffer()
-			defer pool.PutBytesBuffer(buf)
-			h.graphqlHandler.WriteError(resolveCtx, err, p.Response.Response, rw, buf)
+			h.graphqlHandler.WriteError(resolveCtx, err, p.Response.Response, rw)
 			return
 		}
 	}
@@ -796,24 +879,32 @@ func (h *WebSocketConnectionHandler) Initialize() (err error) {
 		_ = h.requestError(fmt.Errorf("error initializing session"))
 		return err
 	}
-	if h.forwardUpgradeRequestQueryParams {
+	if h.forwardQueryParams.enabled {
 		query := h.r.URL.Query()
-		if len(query) != 0 {
-			h.upgradeRequestQueryParams, err = json.Marshal(query)
+		params := make(map[string]string, len(query))
+		for k := range query {
+			if !h.ignoreQueryParameter(k) {
+				params[k] = query.Get(k)
+			}
+		}
+		if len(params) != 0 {
+			h.upgradeRequestQueryParams, err = json.Marshal(params)
 			if err != nil {
 				return err
 			}
 		}
 	}
-	if h.forwardUpgradeRequestHeaders {
-		header := make(http.Header, len(h.r.Header))
-		for k, v := range h.r.Header {
+	if h.forwardUpgradeHeaders.enabled {
+		header := make(map[string]string, len(h.r.Header))
+		for k := range h.r.Header {
 			if h.ignoreHeader(k) {
 				continue
 			}
-			header[k] = v
+			header[k] = h.r.Header.Get(k)
 		}
-		h.upgradeRequestHeaders, err = json.Marshal(header)
+		if len(header) > 0 {
+			h.upgradeRequestHeaders, err = json.Marshal(header)
+		}
 		if err != nil {
 			return err
 		}
@@ -821,22 +912,36 @@ func (h *WebSocketConnectionHandler) Initialize() (err error) {
 	return nil
 }
 
-func (h *WebSocketConnectionHandler) ignoreHeader(k string) bool {
-	switch k {
-	case "Sec-Websocket-Protocol",
-		"Sec-Websocket-Version",
-		"Sec-Websocket-Key",
-		"Sec-Websocket-Extensions",
-		"Upgrade",
-		"Connection",
-		"Host",
-		"Origin",
-		"Pragma",
-		"Cache-Control",
-		"Accept-Encoding":
-		return true
+func (h *WebSocketConnectionHandler) ignoreQueryParameter(k string) bool {
+	if h.forwardQueryParams.withStaticAllowList {
+		if slices.Contains(h.forwardQueryParams.staticAllowList, k) {
+			return false
+		}
 	}
-	return false
+	if h.forwardQueryParams.withRegexAllowList {
+		for _, re := range h.forwardQueryParams.regexAllowList {
+			if re.MatchString(k) {
+				return false
+			}
+		}
+	}
+	return h.forwardQueryParams.withStaticAllowList || h.forwardQueryParams.withRegexAllowList
+}
+
+func (h *WebSocketConnectionHandler) ignoreHeader(k string) bool {
+	if h.forwardUpgradeHeaders.withStaticAllowList {
+		if slices.Contains(h.forwardUpgradeHeaders.staticAllowList, k) {
+			return false
+		}
+	}
+	if h.forwardUpgradeHeaders.withRegexAllowList {
+		for _, re := range h.forwardUpgradeHeaders.regexAllowList {
+			if re.MatchString(k) {
+				return false
+			}
+		}
+	}
+	return h.forwardUpgradeHeaders.withStaticAllowList || h.forwardUpgradeHeaders.withRegexAllowList
 }
 
 func (h *WebSocketConnectionHandler) Complete(rw *websocketResponseWriter) {

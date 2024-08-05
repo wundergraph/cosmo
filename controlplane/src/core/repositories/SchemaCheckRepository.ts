@@ -239,8 +239,12 @@ export class SchemaCheckRepository {
           hash: schema.schemaCheckChangeActionOperationUsage.hash,
           name: schema.schemaCheckChangeActionOperationUsage.name,
           type: schema.schemaCheckChangeActionOperationUsage.type,
-          firstSeenAt: sql<Date>`min(${schema.schemaCheckChangeActionOperationUsage.firstSeenAt})`,
-          lastSeenAt: sql<Date>`max(${schema.schemaCheckChangeActionOperationUsage.lastSeenAt})`,
+          firstSeenAt: sql`min(${schema.schemaCheckChangeActionOperationUsage.firstSeenAt})`.mapWith({
+            mapFromDriverValue: (value) => new Date(value).toUTCString(),
+          }),
+          lastSeenAt: sql`max(${schema.schemaCheckChangeActionOperationUsage.lastSeenAt})`.mapWith({
+            mapFromDriverValue: (value) => new Date(value).toUTCString(),
+          }),
           schemaChangeIds: sql<
             string[]
           >`array_agg(${schema.schemaCheckChangeActionOperationUsage.schemaCheckChangeActionId})`,
@@ -271,6 +275,7 @@ export class SchemaCheckRepository {
             federatedTargetId: composition.targetID,
             schemaCheckId: data.schemaCheckID,
             composedSchemaSDL: composition.composedSchema,
+            clientSchema: composition.federatedClientSchema,
             compositionErrors: composition.errors?.map((e) => e.toString()).join('\n'),
           })),
         )

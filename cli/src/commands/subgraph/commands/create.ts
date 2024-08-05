@@ -1,13 +1,19 @@
-import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { parseGraphQLSubscriptionProtocol, splitLabel } from '@wundergraph/cosmo-shared';
+import {
+  parseGraphQLSubscriptionProtocol,
+  parseGraphQLWebsocketSubprotocol,
+  splitLabel,
+} from '@wundergraph/cosmo-shared';
 import { Command, program } from 'commander';
+import ora from 'ora';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
-import ora from 'ora';
-import { baseHeaders } from '../../../core/config.js';
+import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
+import { validateSubscriptionProtocols } from '../../../utils.js';
+import { websocketSubprotocolDescription } from '../../../constants.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('create');
@@ -17,9 +23,11 @@ export default (opts: BaseCommandOptions) => {
     'The name of the subgraph to create. It is usually in the format of <org>.<service.name> and is used to uniquely identify your subgraph.',
   );
   command.option('-n, --namespace [string]', 'The namespace of the subgraph.');
-  command.requiredOption(
+  command.option(
     '-r, --routing-url <url>',
-    'The routing url of your subgraph. This is the url that the subgraph will be accessible at.',
+    'The routing URL of your subgraph. This is the url at which the subgraph will be accessible.' +
+      ' Required unless the event-driven-graph flag is set.' +
+      ' Returns an error if the event-driven-graph flag is set.',
   );
   command.option(
     '--label [labels...]',
@@ -27,13 +35,24 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option(
     '--subscription-url [url]',
-    'The url used for subscriptions. If empty, it defaults to same url used for routing.',
+    'The URL used for subscriptions. If empty, it defaults to same url used for routing.' +
+      ' Returns an error if the event-driven-graph flag is set.',
   );
   command.option(
     '--subscription-protocol <protocol>',
-    'The protocol to use when subscribing to the subgraph. The supported protocols are ws, sse, and sse_post.',
+    'The protocol to use when subscribing to the subgraph. The supported protocols are ws, sse, and sse_post.' +
+      ' Returns an error if the event-driven-graph flag is set.',
+  );
+  command.option(
+    '--websocket-subprotocol <protocol>',
+    websocketSubprotocolDescription + ' Returns an error if the event-driven-graph flag is set.',
   );
   command.option('--readme <path-to-readme>', 'The markdown file which describes the subgraph.');
+  command.option(
+    '-edg, --event-driven-graph',
+    'Set whether the subgraph is an Event-Driven Graph (EDG).' +
+      ' Errors will be returned for the inclusion of most other parameters if the subgraph is an Event-Driven Graph.',
+  );
   command.action(async (name, options) => {
     let readmeFile;
     if (options.readme) {
@@ -47,6 +66,11 @@ export default (opts: BaseCommandOptions) => {
       }
     }
 
+    validateSubscriptionProtocols({
+      subscriptionProtocol: options.subscriptionProtocol,
+      websocketSubprotocol: options.websocketSubprotocol,
+    });
+
     const spinner = ora('Subgraph is being created...').start();
     const resp = await opts.client.platform.createFederatedSubgraph(
       {
@@ -59,10 +83,14 @@ export default (opts: BaseCommandOptions) => {
         subscriptionProtocol: options.subscriptionProtocol
           ? parseGraphQLSubscriptionProtocol(options.subscriptionProtocol)
           : undefined,
+        websocketSubprotocol: options.websocketSubprotocol
+          ? parseGraphQLWebsocketSubprotocol(options.websocketSubprotocol)
+          : undefined,
         readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
+        isEventDrivenGraph: !!options.eventDrivenGraph,
       },
       {
-        headers: baseHeaders,
+        headers: getBaseHeaders(),
       },
     );
 

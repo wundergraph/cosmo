@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
-import { createRulesConfig, schemaLintCheck } from '../src/core/composition/schemaLint.js';
 import { LintRules, LintSeverityLevel } from '../src/types/index.js';
 import { LintRuleEnum } from '../src/db/models.js';
+import SchemaLinter from '../src/core/services/SchemaLinter.js';
 
 describe('Linter Tests', (ctx) => {
   test('Should test schema linting', (testContext) => {
@@ -44,7 +44,9 @@ input InputA{
       { severity: 'error', ruleName: LintRules.SHOULD_HAVE_INPUT_SUFFIX },
     ];
 
-    const lintIssues = schemaLintCheck({ schema, rulesInput: lintRules });
+    const schemaLinter = new SchemaLinter();
+
+    const lintIssues = schemaLinter.schemaLintCheck({ schema, rulesInput: lintRules });
 
     expect(lintIssues.warnings.length).toBe(4);
     expect(lintIssues.errors.length).toBe(1);
@@ -103,7 +105,8 @@ enum ProductNamesEnum {
       { severity: 'warn', ruleName: LintRules.SHOULD_NOT_HAVE_ENUM_SUFFIX },
     ];
 
-    const lintIssues = schemaLintCheck({ schema, rulesInput: rules });
+    const schemaLinter = new SchemaLinter();
+    const lintIssues = schemaLinter.schemaLintCheck({ schema, rulesInput: rules });
 
     expect(lintIssues.warnings.length).toBe(3);
     expect(lintIssues.warnings).toStrictEqual([
@@ -153,7 +156,8 @@ enum ProductNamesEnum {
       { severity: 'warn', ruleName: LintRules.ORDER_ENUM_VALUES },
     ];
 
-    const lintIssues = schemaLintCheck({ schema, rulesInput: rules });
+    const schemaLinter = new SchemaLinter();
+    const lintIssues = schemaLinter.schemaLintCheck({ schema, rulesInput: rules });
     expect(lintIssues.warnings.length).toBe(4);
     expect(lintIssues.warnings).toStrictEqual([
       {
@@ -191,18 +195,13 @@ enum ProductNamesEnum {
 `;
 
     const rules: { severity: LintSeverityLevel; ruleName: LintRuleEnum }[] = [
-      { severity: 'warn', ruleName: LintRules.REQUIRE_DEPRECATION_DATE },
       { severity: 'warn', ruleName: LintRules.REQUIRE_DEPRECATION_REASON },
     ];
-    const lintIssues = schemaLintCheck({ schema, rulesInput: rules });
-    expect(lintIssues.warnings.length).toBe(2);
+
+    const schemaLinter = new SchemaLinter();
+    const lintIssues = schemaLinter.schemaLintCheck({ schema, rulesInput: rules });
+    expect(lintIssues.warnings.length).toBe(1);
     expect(lintIssues.warnings).toStrictEqual([
-      {
-        lintRuleType: 'REQUIRE_DEPRECATION_DATE',
-        severity: 0,
-        message: 'Directive "@deprecated" must have a deletion date for field "b" in type "B"',
-        issueLocation: { line: 2, column: 14, endLine: 2, endColumn: 24 },
-      },
       {
         lintRuleType: 'REQUIRE_DEPRECATION_REASON',
         severity: 0,
@@ -222,7 +221,9 @@ enum ProductNamesEnum {
     const rules: { severity: LintSeverityLevel; ruleName: LintRuleEnum }[] = [
       { severity: 'warn', ruleName: LintRules.ALL_TYPES_REQUIRE_DESCRIPTION },
     ];
-    const lintIssues = schemaLintCheck({ schema, rulesInput: rules });
+
+    const schemaLinter = new SchemaLinter();
+    const lintIssues = schemaLinter.schemaLintCheck({ schema, rulesInput: rules });
     expect(lintIssues.warnings.length).toBe(1);
     expect(lintIssues.warnings).toStrictEqual([
       {
@@ -245,7 +246,9 @@ enum ProductNamesEnum {
       { severity: 'warn', ruleName: LintRules.NO_TYPENAME_PREFIX_IN_TYPE_FIELDS },
       { severity: 'warn', ruleName: LintRules.FIELD_NAMES_SHOULD_BE_CAMEL_CASE },
     ];
-    const lintIssues = schemaLintCheck({ schema, rulesInput: rules });
+
+    const schemaLinter = new SchemaLinter();
+    const lintIssues = schemaLinter.schemaLintCheck({ schema, rulesInput: rules });
     expect(lintIssues.warnings.length).toBe(2);
     expect(lintIssues.warnings).toStrictEqual([
       {
@@ -279,7 +282,9 @@ input InputUser{
       { severity: 'warn', ruleName: LintRules.SHOULD_HAVE_INPUT_SUFFIX },
       { severity: 'warn', ruleName: LintRules.SHOULD_NOT_HAVE_INPUT_PREFIX },
     ];
-    const lintIssues = schemaLintCheck({ schema, rulesInput: rules });
+
+    const schemaLinter = new SchemaLinter();
+    const lintIssues = schemaLinter.schemaLintCheck({ schema, rulesInput: rules });
     expect(lintIssues.warnings.length).toBe(3);
     expect(lintIssues.warnings).toStrictEqual([
       {
@@ -315,7 +320,8 @@ input InputUser{
       { severity: 'error', ruleName: LintRules.SHOULD_HAVE_INPUT_SUFFIX },
     ];
 
-    const rulesConfig = createRulesConfig(rules);
+    const schemaLinter = new SchemaLinter();
+    const rulesConfig = schemaLinter.createRulesConfig(rules);
 
     expect(rulesConfig).toStrictEqual({
       TYPE_NAMES_SHOULD_BE_PASCAL_CASE: ['warn', { ObjectTypeDefinition: { style: 'PascalCase' } }],

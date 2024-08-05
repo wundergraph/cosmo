@@ -4,10 +4,12 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { Command, program } from 'commander';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
-import { parseGraphQLSubscriptionProtocol } from '@wundergraph/cosmo-shared';
+import { parseGraphQLSubscriptionProtocol, parseGraphQLWebsocketSubprotocol } from '@wundergraph/cosmo-shared';
 import ora from 'ora';
-import { baseHeaders } from '../../../../core/config.js';
+import { getBaseHeaders } from '../../../../core/config.js';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
+import { validateSubscriptionProtocols } from '../../../../utils.js';
+import { websocketSubprotocolDescription } from '../../../../constants.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('create');
@@ -24,10 +26,14 @@ export default (opts: BaseCommandOptions) => {
     '--subscription-protocol <protocol>',
     'The protocol to use when subscribing to the graph. The supported protocols are ws, sse, and sse_post.',
   );
+  command.option('--websocket-subprotocol <protocol>', websocketSubprotocolDescription);
   command.option(
     '--admission-webhook-url <url>',
     'The admission webhook url. This is the url that the controlplane will use to implement admission control for the monograph. This is optional.',
-    [],
+  );
+  command.option(
+    '--admission-webhook-secret [string]',
+    'The admission webhook secret is used to sign requests to the webhook url.',
   );
   command.option('--readme <path-to-readme>', 'The markdown file which describes the graph.');
   command.action(async (name, options) => {
@@ -43,7 +49,12 @@ export default (opts: BaseCommandOptions) => {
       }
     }
 
-    const spinner = ora('Federated Graph is being created...').start();
+    validateSubscriptionProtocols({
+      subscriptionProtocol: options.subscriptionProtocol,
+      websocketSubprotocol: options.websocketSubprotocol,
+    });
+
+    const spinner = ora('Monograph is being created...').start();
 
     const resp = await opts.client.platform.createMonograph(
       {
@@ -56,10 +67,14 @@ export default (opts: BaseCommandOptions) => {
         subscriptionProtocol: options.subscriptionProtocol
           ? parseGraphQLSubscriptionProtocol(options.subscriptionProtocol)
           : undefined,
+        websocketSubprotocol: options.websocketSubprotocol
+          ? parseGraphQLWebsocketSubprotocol(options.websocketSubprotocol)
+          : undefined,
         admissionWebhookURL: options.admissionWebhookUrl,
+        admissionWebhookSecret: options.admissionWebhookSecret,
       },
       {
-        headers: baseHeaders,
+        headers: getBaseHeaders(),
       },
     );
 

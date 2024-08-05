@@ -4,7 +4,8 @@ import { describe, expect, test } from 'vitest';
 import {
   normalizeString,
   schemaToSortedNormalizedString,
-  versionTwoSchemaQueryAndPersistedDirectiveDefinitions,
+  versionTwoClientDefinitions,
+  versionTwoRouterDefinitions,
 } from './utils/utils';
 
 describe('Enum federation tests', () => {
@@ -15,7 +16,7 @@ describe('Enum federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+        versionTwoRouterDefinitions +
           `
       enum Instruction {
         FIGHT
@@ -39,7 +40,7 @@ describe('Enum federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+        versionTwoRouterDefinitions +
           `
       enum Instruction {
         FIGHT
@@ -65,7 +66,7 @@ describe('Enum federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+        versionTwoRouterDefinitions +
           `
       type BattleAction {
         baseAction(input: Instruction): Boolean!
@@ -90,7 +91,7 @@ describe('Enum federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+        versionTwoRouterDefinitions +
           `
       type BattleAction {
         baseAction: Instruction!
@@ -121,6 +122,90 @@ describe('Enum federation tests', () => {
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(1);
     expect(errors![0]).toStrictEqual(incompatibleSharedEnumError(parentName));
+  });
+
+  test('that declaring an enum value as inaccessible prevents an enum inconsistency error #1.1', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphG, subgraphH]);
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(
+        versionTwoRouterDefinitions +
+          `
+      enum Enum {
+        A
+        B
+        C @inaccessible
+      }
+
+      type Query {
+        enum(enum: Enum!): Enum!
+        enumTwo(enum: Enum!): Enum!
+      }
+      
+      scalar openfed__Scope
+    `,
+      ),
+    );
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
+      normalizeString(
+        versionTwoClientDefinitions +
+          `
+      enum Enum {
+        A
+        B
+      }
+
+      type Query {
+        enum(enum: Enum!): Enum!
+        enumTwo(enum: Enum!): Enum!
+      }
+      
+      scalar openfed__Scope
+    `,
+      ),
+    );
+  });
+
+  test('that declaring an enum value as inaccessible prevents an enum inconsistency error #1.2', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphH, subgraphG]);
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(
+        versionTwoRouterDefinitions +
+          `
+      enum Enum {
+        A
+        B
+        C @inaccessible
+      }
+
+      type Query {
+        enum(enum: Enum!): Enum!
+        enumTwo(enum: Enum!): Enum!
+      }
+      
+      scalar openfed__Scope
+    `,
+      ),
+    );
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
+      normalizeString(
+        versionTwoClientDefinitions +
+          `
+      enum Enum {
+        A
+        B
+      }
+
+      type Query {
+        enum(enum: Enum!): Enum!
+        enumTwo(enum: Enum!): Enum!
+      }
+      
+      scalar openfed__Scope
+    `,
+      ),
+    );
   });
 });
 
@@ -212,6 +297,37 @@ const subgraphF: Subgraph = {
 
     type BattleAction {
       baseAction(input: Instruction): Boolean!
+    }
+  `),
+};
+
+const subgraphG: Subgraph = {
+  name: 'subgraph-g',
+  url: '',
+  definitions: parse(`
+    enum Enum {
+      A
+      B
+      C @inaccessible
+    }
+
+    type Query {
+      enum(enum: Enum!): Enum!
+    }
+  `),
+};
+
+const subgraphH: Subgraph = {
+  name: 'subgraph-h',
+  url: '',
+  definitions: parse(`
+    enum Enum {
+      A
+      B
+    }
+
+    type Query {
+      enumTwo(enum: Enum!): Enum!
     }
   `),
 };

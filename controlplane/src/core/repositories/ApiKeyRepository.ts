@@ -2,7 +2,7 @@ import { ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_
 import { and, asc, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
-import { apiKeyResources, apiKeys, users } from '../../db/schema.js';
+import { apiKeyPermissions, apiKeyResources, apiKeys, users } from '../../db/schema.js';
 import { APIKeyDTO } from '../../types/index.js';
 
 /**
@@ -18,6 +18,7 @@ export class ApiKeyRepository {
     userID: string;
     expiresAt: ExpiresAt;
     targetIds: string[];
+    permissions: string[];
   }) {
     let expiresAtDate: Date | undefined;
     const present = new Date();
@@ -61,6 +62,14 @@ export class ApiKeyRepository {
           resources: input.targetIds.map((t) => ({
             apiKeyId: apiKey[0].id,
             targetId: t,
+          })),
+        });
+      }
+      if (input.permissions.length > 0) {
+        await apiKeyRepo.addAPIKeyPermissions({
+          permissions: input.permissions.map((p) => ({
+            apiKeyId: apiKey[0].id,
+            permission: p,
           })),
         });
       }
@@ -146,7 +155,17 @@ export class ApiKeyRepository {
       .execute();
   }
 
-  public async verifyAPIKeyPermissions({
+  public async addAPIKeyPermissions({ permissions }: { permissions: { apiKeyId: string; permission: string }[] }) {
+    if (permissions.length === 0) {
+      return;
+    }
+    await this.db
+      .insert(apiKeyPermissions)
+      .values(permissions.map((p) => ({ apiKeyId: p.apiKeyId, permission: p.permission })))
+      .execute();
+  }
+
+  public async verifyAPIKeyResources({
     apiKey,
     // accessedTargetId is the target id of the graph on which the user is trying to perform an action on.
     accessedTargetId,
@@ -170,6 +189,34 @@ export class ApiKeyRepository {
     const targetIds = resources.map((r) => r.targetId);
 
     if (targetIds.includes(accessedTargetId)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  public async verifyAPIKeyPermissions({
+    apiKey,
+    permission,
+  }: {
+    apiKey: string;
+    permission: string;
+  }): Promise<boolean> {
+    const dbPermissions = await this.db
+      .select({
+        permission: apiKeyPermissions.permission,
+      })
+      .from(apiKeys)
+      .innerJoin(apiKeyPermissions, eq(apiKeyPermissions.apiKeyId, apiKeys.id))
+      .where(eq(apiKeys.key, apiKey));
+
+    if (dbPermissions.length === 0) {
+      return false;
+    }
+
+    const permissions = dbPermissions.map((p) => p.permission);
+
+    if (permissions.includes(permission)) {
       return true;
     }
 

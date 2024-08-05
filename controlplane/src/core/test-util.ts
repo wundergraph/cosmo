@@ -6,6 +6,7 @@ import { ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_
 import { pino } from 'pino';
 import { AuthContext, Label } from '../types/index.js';
 import * as schema from '../db/schema.js';
+import { MemberRole } from '../db/models.js';
 import { Authenticator } from './services/Authentication.js';
 import { UserRepository } from './repositories/UserRepository.js';
 import { OrganizationRepository } from './repositories/OrganizationRepository.js';
@@ -22,6 +23,7 @@ export type UserTestData = {
   defaultBillingPlanId?: string;
   email: string;
   apiKey: string;
+  roles: ('admin' | 'developer' | 'viewer')[];
 };
 
 export async function beforeAllSetup(): Promise<string> {
@@ -47,106 +49,146 @@ export function genUniqueLabel(prefix = 'prefix'): Label {
   return { key: prefix + '-' + genID(), value: genID() };
 }
 
-export async function seedTest(databaseConnectionUrl: string, userTestData: UserTestData) {
-  const queryConnection = postgres(databaseConnectionUrl);
+export async function seedTest(queryConnection: postgres.Sql, userTestData: UserTestData, createScimKey?: boolean) {
   const db = drizzle(queryConnection, { schema: { ...schema } });
 
-  const userRepo = new UserRepository(db);
+  const userRepo = new UserRepository(pino(), db);
   const orgRepo = new OrganizationRepository(pino(), db, userTestData.defaultBillingPlanId);
   const apiKeyRepo = new ApiKeyRepository(db);
+
+  const user = await userRepo.byEmail(userTestData.email);
+  if (user) {
+    return;
+  }
 
   await userRepo.addUser({
     id: userTestData.userId,
     email: userTestData.email,
   });
 
-  const insertedOrg = await orgRepo.createOrganization({
-    organizationID: userTestData.organizationId,
-    organizationName: userTestData.organizationName,
-    organizationSlug: userTestData.organizationSlug,
-    ownerID: userTestData.userId,
-  });
+  let org = await orgRepo.byId(userTestData.organizationId);
+
+  if (!org) {
+    org = await orgRepo.createOrganization({
+      organizationID: userTestData.organizationId,
+      organizationName: userTestData.organizationName,
+      organizationSlug: userTestData.organizationSlug,
+      ownerID: userTestData.userId,
+    });
+  }
 
   const orgMember = await orgRepo.addOrganizationMember({
-    organizationID: insertedOrg.id,
+    organizationID: org.id,
     userID: userTestData.userId,
   });
 
   await orgRepo.addOrganizationMemberRoles({
     memberID: orgMember.id,
-    roles: ['admin'],
+    roles: userTestData.roles,
   });
 
   await apiKeyRepo.addAPIKey({
     key: userTestData.apiKey,
-    name: 'myAdminKey',
-    organizationID: insertedOrg.id,
+    name: userTestData.email,
+    organizationID: org.id,
     userID: userTestData.userId,
     expiresAt: ExpiresAt.NEVER,
     targetIds: [],
+    permissions: createScimKey ? ['scim'] : [],
   });
 
-  const namespaceRepo = new NamespaceRepository(db, insertedOrg.id);
-  const ns = await namespaceRepo.create({
-    name: DefaultNamespace,
-    createdBy: userTestData.userId,
-  });
+  const namespaceRepo = new NamespaceRepository(db, org.id);
+  const ns = await namespaceRepo.byName(DefaultNamespace);
   if (!ns) {
-    throw new Error(`Could not create ${DefaultNamespace} namespace`);
+    const ns = await namespaceRepo.create({
+      name: DefaultNamespace,
+      createdBy: userTestData.userId,
+    });
+    if (!ns) {
+      throw new Error(`Could not create ${DefaultNamespace} namespace`);
+    }
   }
-
-  await queryConnection.end({
-    timeout: 1,
-  });
 }
 
-export function createTestAuthenticator(): {
-  authenticator: Authenticator;
-  userTestData: UserTestData;
-} {
+export function createTestContext(
+  organizationName = 'wundergraph',
+  organizationId = randomUUID(),
+  isAdmin = true,
+  hasWriteAccess = true,
+  roles: MemberRole[] = ['admin'],
+): UserTestData & AuthContext {
   const userId = randomUUID();
-  const organizationId = randomUUID();
 
-  const userAuthContext: UserTestData & AuthContext = {
+  return {
     auth: 'api_key',
     userId,
     organizationId,
-    organizationName: 'wundergraph',
+    organizationName,
     email: userId + '@wg.com',
     apiKey: nuid.next(),
     organizationSlug: `slug-${organizationId}`,
-    hasWriteAccess: true,
-    isAdmin: true,
+    hasWriteAccess,
+    isAdmin,
     userDisplayName: userId,
+    roles,
   };
+}
+
+export interface TestAuthenticator extends Authenticator {
+  changeUser(user: TestUser): void;
+  changeUserWithSuppliedContext(userContext: UserTestData & AuthContext): void;
+}
+
+export enum TestUser {
+  adminAliceCompanyA = 'adminAliceCompanyA',
+  adminBobCompanyA = 'adminBobCompanyA',
+  devJoeCompanyA = 'devJoeCompanyA',
+  adminJimCompanyB = 'adminJimCompanyB',
+}
+
+export type DefaultTestAuthenticatorOptions = {
+  [TestUser.adminAliceCompanyA]: UserTestData & AuthContext;
+};
+
+export type TestAuthenticatorOptions = {
+  -readonly [key in keyof typeof TestUser]?: UserTestData & AuthContext;
+} & DefaultTestAuthenticatorOptions;
+
+export function createTestAuthenticator(users: TestAuthenticatorOptions): TestAuthenticator {
+  let activeContext: UserTestData & AuthContext = users.adminAliceCompanyA;
 
   return {
-    authenticator: {
-      async authenticateRouter(headers: Headers): Promise<GraphKeyAuthContext> {
-        const authorization = headers.get('authorization');
-        if (authorization) {
-          try {
-            const token = authorization.replace(/^bearer\s+/i, '');
-            const jwtPayload = await verifyJwt<GraphApiJwtPayload>('secret', token);
-            return {
-              organizationId: jwtPayload.organization_id,
-              federatedGraphId: jwtPayload.federated_graph_id,
-            };
-          } catch (e) {
-            console.error(e);
-          }
+    async authenticateRouter(headers: Headers): Promise<GraphKeyAuthContext> {
+      const authorization = headers.get('authorization');
+      if (authorization) {
+        try {
+          const token = authorization.replace(/^bearer\s+/i, '');
+          const jwtPayload = await verifyJwt<GraphApiJwtPayload>('secret', token);
+          return {
+            organizationId: jwtPayload.organization_id,
+            federatedGraphId: jwtPayload.federated_graph_id,
+          };
+        } catch (e) {
+          console.error(e);
         }
+      }
 
-        return {
-          federatedGraphId: 'federated-graph-id',
-          organizationId: userAuthContext.organizationId,
-        };
-      },
-      authenticate(headers: Headers): Promise<AuthContext> {
-        return Promise.resolve(userAuthContext);
-      },
+      throw new Error('No authorization header found');
     },
-
-    userTestData: userAuthContext,
+    authenticate(headers: Headers): Promise<AuthContext> {
+      if (!activeContext) {
+        throw new Error('No active context found');
+      }
+      return Promise.resolve(activeContext);
+    },
+    changeUser(user: TestUser) {
+      if (!(user in users)) {
+        throw new Error('User not found');
+      }
+      activeContext = users[user]!;
+    },
+    changeUserWithSuppliedContext(userContext: UserTestData & AuthContext) {
+      activeContext = userContext;
+    },
   };
 }

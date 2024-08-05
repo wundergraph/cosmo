@@ -10,10 +10,22 @@ message Subgraph {
   string routing_url = 3;
 }
 
+message FeatureFlagRouterExecutionConfigs {
+  map<string, FeatureFlagRouterExecutionConfig> config_by_feature_flag_name = 1;
+}
+
+message FeatureFlagRouterExecutionConfig {
+  EngineConfiguration engine_config = 1;
+  string version = 2;
+  repeated Subgraph subgraphs = 3;
+}
+
 message RouterConfig {
   EngineConfiguration engine_config = 1;
   string version = 2;
   repeated Subgraph subgraphs = 3;
+  // The map of feature flag router execution configs requires a wrapper to be non-breaking
+  optional FeatureFlagRouterExecutionConfigs feature_flag_configs = 4;
 }
 
 message Response {
@@ -25,23 +37,6 @@ message Response {
 message ResponseStatus {
   int32 code = 1;
   string message = 2;
-}
-
-message GetConfigRequest {
-  // With the introduction of namespaces, we no longer need the graph name. We keep it for backwards compatibility.
-  // The FQDN of the graph to get the config for e.g. "wg.production"
-  string graph_name = 1 [deprecated = true];
-  // The version to check for. If the version is not specified, the latest router config version will be returned.
-  // Otherwise, the version will be used to check if a newer version of the router config is available.
-  // That allow us to not send the router config if the version is the same.
-  optional string version = 2;
-}
-
-message GetConfigResponse {
-  Response response = 1;
-  // RouterConfig is the router config for the graph. It can be nil when a version is specified and the version is the same as the latest version.
-  optional RouterConfig config = 2;
-
 }
 
 message RegistrationInfo {
@@ -65,9 +60,6 @@ message SelfRegisterResponse {
 }
 
 service NodeService {
-  rpc GetLatestValidRouterConfig(GetConfigRequest) returns (GetConfigResponse) {
-    option deprecated = true;
-  }
   rpc SelfRegister(SelfRegisterRequest) returns (SelfRegisterResponse) {}
 }
 
@@ -78,6 +70,7 @@ message EngineConfiguration {
   string graphqlSchema = 4;
   repeated TypeConfiguration type_configurations = 5;
   map<string, string> string_storage = 6;
+  optional string graphql_client_schema = 7;
 }
 
 message DataSourceConfiguration {
@@ -93,7 +86,7 @@ message DataSourceConfiguration {
   repeated RequiredField keys = 10;
   repeated RequiredField provides = 11;
   repeated RequiredField requires = 12;
-  DataSourceCustom_Events custom_events = 13;
+  DataSourceCustomEvents custom_events = 13;
   repeated EntityInterfaceConfiguration entity_interfaces = 14;
   repeated EntityInterfaceConfiguration interface_objects = 15;
 }
@@ -117,6 +110,7 @@ message FieldConfiguration {
   string field_name = 2;
   repeated ArgumentConfiguration arguments_configuration = 3;
   AuthorizationConfiguration authorization_configuration = 4;
+  optional SubscriptionFilterCondition subscription_filter_condition = 5;
 }
 
 enum ArgumentRenderConfiguration {
@@ -144,6 +138,7 @@ enum DataSourceKind {
 message TypeField {
   string type_name = 1;
   repeated string field_names = 2;
+  repeated string external_field_names = 3;
 }
 
 message RequiredField {
@@ -199,16 +194,32 @@ enum EventType {
   SUBSCRIBE = 2;
 }
 
-message EventConfiguration {
-  EventType type = 1;
-  string type_name = 2;
-  string field_name = 3;
-  string topic = 4;
-  string source_name = 5;
+message NatsStreamConfiguration {
+  string consumer_name = 1;
+  string stream_name = 2;
 }
 
-message DataSourceCustom_Events {
-  repeated EventConfiguration events = 1;
+message NatsEventConfiguration {
+  EngineEventConfiguration engine_event_configuration = 1;
+  repeated string subjects = 2;
+  NatsStreamConfiguration stream_configuration = 3;
+}
+
+message KafkaEventConfiguration {
+  EngineEventConfiguration engine_event_configuration = 1;
+  repeated string topics = 2;
+}
+
+message EngineEventConfiguration {
+  string provider_id = 1;
+  EventType type = 2;
+  string type_name = 3;
+  string field_name = 4;
+}
+
+message DataSourceCustomEvents {
+  repeated NatsEventConfiguration nats = 1;
+  repeated KafkaEventConfiguration kafka = 2;
 }
 
 message DataSourceCustom_Static {
@@ -263,6 +274,7 @@ message GraphQLSubscriptionConfiguration {
   /* @deprecated - Kept for backwards compatibility when decoding. Use protocol instead. */
   optional bool useSSE = 3;
   optional wg.cosmo.common.GraphQLSubscriptionProtocol protocol = 4;
+  optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocketSubprotocol = 5;
 }
 
 message GraphQLFederationConfiguration {
@@ -278,4 +290,16 @@ message InternedString {
 message SingleTypeField {
   string type_name = 1;
   string field_name = 2;
+}
+
+message SubscriptionFieldCondition {
+  repeated string field_path = 1;
+  string json = 2;
+}
+
+message SubscriptionFilterCondition {
+  repeated SubscriptionFilterCondition and = 1;
+  optional SubscriptionFieldCondition in = 2;
+  optional SubscriptionFilterCondition not = 3;
+  repeated SubscriptionFilterCondition or = 4;
 }

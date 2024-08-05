@@ -3,8 +3,9 @@ package config
 import (
 	b64 "encoding/base64"
 	"fmt"
-	"github.com/go-playground/validator/v10"
 	"time"
+
+	"github.com/go-playground/validator/v10"
 
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
@@ -30,6 +31,10 @@ type Config struct {
 	ClickHouseDSN   string        `envconfig:"CLICKHOUSE_DSN" validate:"required,url"`
 	JSONLog         bool          `default:"true" envconfig:"JSON_LOG"`
 	ShutdownDelay   time.Duration `default:"30s" validate:"required,min=5s" envconfig:"SHUTDOWN_DELAY"`
+
+	IsPrometheusEnabled  bool   `default:"false" envconfig:"PROMETHEUS_ENABLED"`
+	PrometheusListenAddr string `default:"127.0.0.1:8088" envconfig:"PROMETHEUS_LISTEN_ADDR"`
+	PrometheusPath       string `default:"/metrics" envconfig:"PROMETHEUS_PATH"`
 }
 
 func LoadConfig() (*Config, error) {

@@ -58,12 +58,65 @@ export const federatedGraphs = pgTable('federated_graphs', {
   composedSchemaVersionId: uuid('composed_schema_version_id').references(() => schemaVersion.id, {
     onDelete: 'no action',
   }),
-  routerConfigPath: text('router_config_path'),
   // The admission webhook url. This is the url that the controlplane will use to run admission checks.
   // You can use this to enforce policies on the router config.
   admissionWebhookURL: text('admission_webhook_url'),
+  admissionWebhookSecret: text('admission_webhook_secret'),
   supportsFederation: boolean('supports_federation').default(true).notNull(),
 });
+
+export const contracts = pgTable(
+  'contracts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    sourceFederatedGraphId: uuid('source_federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, {
+        onDelete: 'cascade',
+      }),
+    downstreamFederatedGraphId: uuid('downstream_federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, {
+        onDelete: 'cascade',
+      }),
+    excludeTags: text('exclude_tags').array().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }),
+    createdById: uuid('created_by_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    updatedById: uuid('updated_by_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+  },
+  (t) => ({
+    uniqueFederatedGraphSourceDownstreamGraphId: unique('federated_graph_source_downstream_id').on(
+      t.sourceFederatedGraphId,
+      t.downstreamFederatedGraphId,
+    ),
+  }),
+);
+
+export const contractsRelations = relations(contracts, ({ one }) => ({
+  createdBy: one(users, {
+    fields: [contracts.createdById],
+    references: [users.id],
+  }),
+  updatedBy: one(users, {
+    fields: [contracts.updatedById],
+    references: [users.id],
+  }),
+  sourceFederatedGraph: one(federatedGraphs, {
+    fields: [contracts.sourceFederatedGraphId],
+    references: [federatedGraphs.id],
+    relationName: 'source',
+  }),
+  downstreamFederatedGraph: one(federatedGraphs, {
+    fields: [contracts.downstreamFederatedGraphId],
+    references: [federatedGraphs.id],
+    relationName: 'downstream',
+  }),
+}));
 
 export const federatedGraphClients = pgTable(
   'federated_graph_clients',
@@ -77,13 +130,11 @@ export const federatedGraphClients = pgTable(
     name: text('name').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }),
-    createdById: uuid('created_by_id')
-      .notNull()
-      .references(() => users.id, {
-        onDelete: 'cascade',
-      }),
+    createdById: uuid('created_by_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
     updatedById: uuid('updated_by_id').references(() => users.id, {
-      onDelete: 'cascade',
+      onDelete: 'set null',
     }),
   },
   (t) => ({
@@ -126,13 +177,11 @@ export const federatedGraphPersistedOperations = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }),
     operationContent: text('operation_content'),
-    createdById: uuid('created_by_id')
-      .notNull()
-      .references(() => users.id, {
-        onDelete: 'cascade',
-      }),
+    createdById: uuid('created_by_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
     updatedById: uuid('updated_by_id').references(() => users.id, {
-      onDelete: 'cascade',
+      onDelete: 'set null',
     }),
   },
   (t) => ({
@@ -159,12 +208,18 @@ export const federatedGraphPersistedOperationsRelations = relations(
 );
 
 export const subscriptionProtocolEnum = pgEnum('subscription_protocol', ['ws', 'sse', 'sse_post'] as const);
+export const websocketSubprotocolEnum = pgEnum('websocket_subprotocol', [
+  'auto',
+  'graphql-ws',
+  'graphql-transport-ws',
+] as const);
 
 export const subgraphs = pgTable('subgraphs', {
   id: uuid('id').primaryKey().defaultRandom(),
   routingUrl: text('routing_url').notNull(),
   subscriptionUrl: text('subscription_url'),
   subscriptionProtocol: subscriptionProtocolEnum('subscription_protocol').notNull().default('ws'),
+  websocketSubprotocol: websocketSubprotocolEnum('websocket_subprotocol').notNull().default('auto'),
   // This is the latest valid schema of the subgraph.
   schemaVersionId: uuid('schema_version_id').references(() => schemaVersion.id, {
     onDelete: 'no action',
@@ -174,7 +229,142 @@ export const subgraphs = pgTable('subgraphs', {
     .references(() => targets.id, {
       onDelete: 'cascade',
     }),
+  isFeatureSubgraph: boolean('is_feature_subgraph').notNull().default(false),
+  isEventDrivenGraph: boolean('is_event_driven_graph').notNull().default(false),
 });
+
+export const featureSubgraphsToBaseSubgraphs = pgTable(
+  'feature_subgraphs_to_base_subgraphs',
+  {
+    featureSubgraphId: uuid('feature_subgraph_id')
+      .notNull()
+      .references(() => subgraphs.id, {
+        onDelete: 'cascade',
+      }),
+    baseSubgraphId: uuid('base_subgraph_id')
+      .notNull()
+      .references(() => subgraphs.id, {
+        onDelete: 'cascade',
+      }),
+  },
+  (t) => {
+    return {
+      pk: primaryKey({ columns: [t.featureSubgraphId, t.baseSubgraphId] }),
+    };
+  },
+);
+
+export const featureSubgraphsToSubgraphRelations = relations(featureSubgraphsToBaseSubgraphs, ({ one }) => ({
+  baseSubgraph: one(subgraphs, {
+    fields: [featureSubgraphsToBaseSubgraphs.baseSubgraphId],
+    references: [subgraphs.id],
+  }),
+  featureSubgraph: one(subgraphs, {
+    fields: [featureSubgraphsToBaseSubgraphs.featureSubgraphId],
+    references: [subgraphs.id],
+  }),
+}));
+
+export const featureFlags = pgTable('feature_flags', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  organizationId: uuid('organization_id')
+    .notNull()
+    .references(() => organizations.id, {
+      onDelete: 'cascade',
+    }),
+  namespaceId: uuid('namespace_id')
+    .notNull()
+    .references(() => namespaces.id, {
+      onDelete: 'cascade',
+    }),
+  labels: text('labels').array(),
+  isEnabled: boolean('is_enabled').default(false).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }),
+  createdBy: uuid('created_by').references(() => users.id, {
+    onDelete: 'set null',
+  }),
+});
+
+export const featureFlagToFeatureSubgraphs = pgTable(
+  'feature_flags_to_feature_subgraphs',
+  {
+    featureFlagId: uuid('feature_flag_id')
+      .notNull()
+      .references(() => featureFlags.id, {
+        onDelete: 'cascade',
+      }),
+    featureSubgraphId: uuid('feature_subgraph_id')
+      .notNull()
+      .references(() => subgraphs.id, {
+        onDelete: 'cascade',
+      }),
+  },
+  (t) => {
+    return {
+      pk: primaryKey({ columns: [t.featureFlagId, t.featureSubgraphId] }),
+    };
+  },
+);
+
+export const featureFlagToFeatureSubgraphsRelations = relations(featureFlagToFeatureSubgraphs, ({ one }) => ({
+  featureFlag: one(featureFlags, {
+    fields: [featureFlagToFeatureSubgraphs.featureFlagId],
+    references: [featureFlags.id],
+  }),
+  featureSubgraph: one(subgraphs, {
+    fields: [featureFlagToFeatureSubgraphs.featureSubgraphId],
+    references: [subgraphs.id],
+  }),
+}));
+
+export const federatedGraphsToFeatureFlagSchemaVersions = pgTable(
+  'federated_graphs_to_feature_flag_schema_versions',
+  {
+    federatedGraphId: uuid('federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, {
+        onDelete: 'cascade',
+      }),
+    baseCompositionSchemaVersionId: uuid('base_composition_schema_version_id')
+      .notNull()
+      .references(() => schemaVersion.id, {
+        onDelete: 'cascade',
+      }),
+    composedSchemaVersionId: uuid('composed_schema_version_id')
+      .notNull()
+      .references(() => schemaVersion.id, {
+        onDelete: 'cascade',
+      }),
+    featureFlagId: uuid('feature_flag_id').references(() => featureFlags.id, {
+      onDelete: 'set null',
+    }),
+  },
+  (t) => {
+    return {
+      pk: primaryKey({ columns: [t.federatedGraphId, t.baseCompositionSchemaVersionId, t.composedSchemaVersionId] }),
+    };
+  },
+);
+
+export const federatedGraphsToFeatureFlagSchemaVersionsRelations = relations(
+  federatedGraphsToFeatureFlagSchemaVersions,
+  ({ one }) => ({
+    federatedGraph: one(federatedGraphs, {
+      fields: [federatedGraphsToFeatureFlagSchemaVersions.federatedGraphId],
+      references: [federatedGraphs.id],
+    }),
+    schemaVersion: one(schemaVersion, {
+      fields: [federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId],
+      references: [schemaVersion.id],
+    }),
+    baseSchemaVersion: one(schemaVersion, {
+      fields: [federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId],
+      references: [schemaVersion.id],
+    }),
+  }),
+);
 
 export const federatedGraphRelations = relations(federatedGraphs, ({ many, one }) => ({
   target: one(targets, {
@@ -186,6 +376,12 @@ export const federatedGraphRelations = relations(federatedGraphs, ({ many, one }
     references: [schemaVersion.id],
   }),
   subgraphs: many(subgraphsToFederatedGraph),
+  contract: one(contracts, {
+    fields: [federatedGraphs.id],
+    references: [contracts.downstreamFederatedGraphId],
+    relationName: 'downstream',
+  }),
+  contracts: many(contracts, { relationName: 'source' }),
 }));
 
 export const subgraphRelations = relations(subgraphs, ({ many, one }) => ({
@@ -354,7 +550,9 @@ export const schemaVersion = pgTable('schema_versions', {
   // For a monolithic GraphQL, it is the SDL.
   // For a federated Graph, this is the composition result.
   schemaSDL: text('schema_sdl'),
+  clientSchema: text('client_schema'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  isV2Graph: boolean('is_v2_graph'),
 });
 
 // https://github.com/kamilkisiela/graphql-inspector/blob/f3b9ed7e277f1a4928da7d0fdc212685ff77752a/packages/core/src/diff/changes/change.ts
@@ -433,8 +631,12 @@ export const schemaVersionChangeActionRelations = relations(schemaVersionChangeA
   }),
 }));
 
-export const schemaVersionRelations = relations(schemaVersion, ({ many }) => ({
+export const schemaVersionRelations = relations(schemaVersion, ({ many, one }) => ({
   changes: many(schemaVersionChangeAction),
+  composition: one(graphCompositions, {
+    fields: [schemaVersion.id],
+    references: [graphCompositions.schemaVersionId],
+  }),
 }));
 
 export const schemaChecks = pgTable('schema_checks', {
@@ -591,6 +793,7 @@ export const schemaCheckComposition = pgTable('schema_check_composition', {
     }),
   compositionErrors: text('composition_errors'),
   composedSchemaSDL: text('composed_schema_sdl'),
+  clientSchema: text('client_schema'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -604,6 +807,8 @@ export const users = pgTable('users', {
   id: uuid('id').primaryKey(),
   email: text('email').unique().notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  active: boolean('active').notNull().default(true),
+  updatedAt: timestamp('updated_at', { withTimezone: true }),
 });
 
 export const sessions = pgTable('sessions', {
@@ -632,7 +837,9 @@ export const apiKeys = pgTable(
     id: uuid('id').notNull().primaryKey().defaultRandom(),
     userId: uuid('user_id')
       .notNull()
-      .references(() => users.id),
+      .references(() => users.id, {
+        onDelete: 'cascade',
+      }),
     organizationId: uuid('organization_id')
       .notNull()
       .references(() => organizations.id, {
@@ -704,10 +911,13 @@ export const organizations = pgTable('organizations', {
   name: text('name').notNull(),
   slug: text('slug').notNull().unique(),
   inviteCode: text('invite_code'),
-  createdBy: uuid('user_id')
-    .references(() => users.id)
-    .notNull(),
+  createdBy: uuid('user_id').references(() => users.id, {
+    onDelete: 'set null',
+  }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  isDeactivated: boolean('is_deactivated').default(false),
+  deactivationReason: text('deactivation_reason'),
+  deactivatedAt: timestamp('deactivated_at', { withTimezone: true }),
 });
 
 export const organizationBilling = pgTable(
@@ -1098,8 +1308,6 @@ export const graphCompositions = pgTable('graph_compositions', {
   isComposable: boolean('is_composable').default(false),
   // The errors that occurred during the composition of the schema. This is only set when isComposable is false.
   compositionErrors: text('composition_errors'),
-  // This is router config based on the composed schema. Only set for federated graphs.
-  routerConfig: customJsonb('router_config'),
   // Signature of the schema. Provided by the user when the admission hook is called.
   routerConfigSignature: text('router_config_signature'),
   // The errors that occurred during the deployment of the schema. Only set when the schema was composable and no admission errors occurred.
@@ -1107,9 +1315,11 @@ export const graphCompositions = pgTable('graph_compositions', {
   // The errors that occurred during the admission of the config. Only set when the schema was composable.
   admissionError: text('admission_error'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  createdBy: uuid('created_by').references(() => users.id, {
-    onDelete: 'cascade',
+  createdById: uuid('created_by_id').references(() => users.id, {
+    onDelete: 'set null',
   }),
+  createdByEmail: text('created_by_email'),
+  isFeatureFlagComposition: boolean('is_feature_flag_composition').default(false).notNull(),
 });
 
 // stores the relation between the fedGraph schema versions and its respective subgraph schema versions
@@ -1142,6 +1352,16 @@ export const apiKeyResources = pgTable('api_key_resources', {
       onDelete: 'cascade',
     }),
   targetId: uuid('target_id').references(() => targets.id, { onDelete: 'set null' }),
+});
+
+export const apiKeyPermissions = pgTable('api_key_permissions', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  apiKeyId: uuid('api_key_id')
+    .notNull()
+    .references(() => apiKeys.id, {
+      onDelete: 'cascade',
+    }),
+  permission: text('permission').notNull(),
 });
 
 export const subgraphMembers = pgTable(
@@ -1193,11 +1413,9 @@ export const discussionThread = pgTable('discussion_thread', {
   contentJson: customJson<JSONContent>('content_json'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }),
-  createdById: uuid('created_by_id')
-    .notNull()
-    .references(() => users.id, {
-      onDelete: 'cascade',
-    }),
+  createdById: uuid('created_by_id').references(() => users.id, {
+    onDelete: 'set null',
+  }),
   isDeleted: boolean('is_deleted').default(false).notNull(),
 });
 
@@ -1240,7 +1458,9 @@ export const lintRulesEnum = pgEnum('lint_rules', [
   'DISALLOW_CASE_INSENSITIVE_ENUM_VALUES',
   'NO_TYPENAME_PREFIX_IN_TYPE_FIELDS',
   'REQUIRE_DEPRECATION_REASON',
-  'REQUIRE_DEPRECATION_DATE',
+  // https://github.com/drizzle-team/drizzle-kit-mirror/issues/178 , the below rule is removed and not be used
+  // due to a limitation in postgres, we cant remove a enum value
+  // 'REQUIRE_DEPRECATION_DATE', // @deprecated
 ] as const);
 
 export const lintSeverityEnum = pgEnum('lint_severity', ['warn', 'error'] as const);

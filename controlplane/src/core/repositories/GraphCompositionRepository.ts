@@ -1,7 +1,8 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { and, count, desc, eq, gt, lt } from 'drizzle-orm';
+import { SQL, and, count, desc, eq, gt, lt } from 'drizzle-orm';
 import { JsonValue } from '@bufbuild/protobuf';
 import { FastifyBaseLogger } from 'fastify';
+import { splitLabel } from '@wundergraph/cosmo-shared';
 import * as schema from '../../db/schema.js';
 import { graphCompositions, graphCompositionSubgraphs, schemaVersion, targets, users } from '../../db/schema.js';
 import { DateRange, GraphCompositionDTO } from '../../types/index.js';
@@ -16,34 +17,42 @@ export class GraphCompositionRepository {
   public async addComposition({
     fedGraphSchemaVersionId,
     compositionErrorString,
-    routerConfig,
     routerConfigSignature,
     subgraphSchemaVersionIds,
-    composedBy,
+    composedById,
     admissionErrorString,
     deploymentErrorString,
+    isFeatureFlagComposition,
   }: {
     fedGraphSchemaVersionId: string;
     compositionErrorString: string;
-    routerConfig?: JsonValue;
     routerConfigSignature?: string;
     subgraphSchemaVersionIds: string[];
-    composedBy: string;
+    composedById: string;
     admissionErrorString?: string;
     deploymentErrorString?: string;
+    isFeatureFlagComposition: boolean;
   }) {
     await this.db.transaction(async (tx) => {
+      const actor = await tx.query.users.findFirst({
+        where: eq(users.id, composedById),
+      });
+      if (!actor) {
+        throw new Error(`Could not find actor ${composedById}`);
+      }
+
       const insertedComposition = await tx
         .insert(graphCompositions)
         .values({
           schemaVersionId: fedGraphSchemaVersionId,
-          routerConfig: routerConfig || null,
           compositionErrors: compositionErrorString,
           isComposable: compositionErrorString === '',
           routerConfigSignature,
-          createdBy: composedBy,
+          createdById: composedById,
+          createdByEmail: actor.email,
           deploymentError: deploymentErrorString,
           admissionError: admissionErrorString,
+          isFeatureFlagComposition,
         })
         .returning()
         .execute();
@@ -61,6 +70,27 @@ export class GraphCompositionRepository {
     });
   }
 
+  public updateComposition({
+    fedGraphSchemaVersionId,
+    admissionErrorString,
+    deploymentErrorString,
+    routerConfigSignature,
+  }: {
+    fedGraphSchemaVersionId: string;
+    admissionErrorString?: string;
+    deploymentErrorString?: string;
+    routerConfigSignature?: string;
+  }) {
+    return this.db
+      .update(graphCompositions)
+      .set({
+        deploymentError: deploymentErrorString,
+        admissionError: admissionErrorString,
+        routerConfigSignature,
+      })
+      .where(eq(graphCompositions.schemaVersionId, fedGraphSchemaVersionId));
+  }
+
   public async getGraphComposition(input: {
     compositionId: string;
     organizationId: string;
@@ -75,6 +105,7 @@ export class GraphCompositionRepository {
         compositionErrors: graphCompositions.compositionErrors,
         createdAt: graphCompositions.createdAt,
         createdBy: users.email,
+        createdByEmail: graphCompositions.createdByEmail,
         targetId: schemaVersion.targetId,
         routerConfigSignature: graphCompositions.routerConfigSignature,
         admissionError: graphCompositions.admissionError,
@@ -82,7 +113,7 @@ export class GraphCompositionRepository {
       })
       .from(graphCompositions)
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
-      .leftJoin(users, eq(graphCompositions.createdBy, users.id))
+      .leftJoin(users, eq(graphCompositions.createdById, users.id))
       .where(eq(graphCompositions.id, input.compositionId))
       .orderBy(desc(schemaVersion.createdAt))
       .execute();
@@ -104,7 +135,7 @@ export class GraphCompositionRepository {
       createdAt: composition.createdAt.toISOString(),
       isComposable: composition.isComposable || false,
       compositionErrors: composition.compositionErrors || undefined,
-      createdBy: composition.createdBy || undefined,
+      createdBy: composition.createdBy || composition.createdByEmail || undefined,
       routerConfigSignature: composition.routerConfigSignature || undefined,
       isLatestValid: isCurrentDeployed,
       admissionError: composition.admissionError || undefined,
@@ -126,6 +157,7 @@ export class GraphCompositionRepository {
         compositionErrors: graphCompositions.compositionErrors,
         createdAt: graphCompositions.createdAt,
         createdBy: users.email,
+        createdByEmail: graphCompositions.createdByEmail,
         targetId: schemaVersion.targetId,
         routerConfigSignature: graphCompositions.routerConfigSignature,
         admissionError: graphCompositions.admissionError,
@@ -133,7 +165,7 @@ export class GraphCompositionRepository {
       })
       .from(graphCompositions)
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
-      .leftJoin(users, eq(graphCompositions.createdBy, users.id))
+      .leftJoin(users, eq(graphCompositions.createdById, users.id))
       .where(eq(graphCompositions.schemaVersionId, input.schemaVersionId))
       .orderBy(desc(schemaVersion.createdAt))
       .execute();
@@ -155,7 +187,7 @@ export class GraphCompositionRepository {
       createdAt: composition.createdAt.toISOString(),
       isComposable: composition.isComposable || false,
       compositionErrors: composition.compositionErrors || undefined,
-      createdBy: composition.createdBy || undefined,
+      createdBy: composition.createdBy || composition.createdByEmail || undefined,
       isLatestValid: isCurrentDeployed,
       routerConfigSignature: composition.routerConfigSignature || undefined,
       admissionError: composition.admissionError || undefined,
@@ -164,19 +196,40 @@ export class GraphCompositionRepository {
   }
 
   public async getCompositionSubgraphs(input: { compositionId: string }) {
-    return await this.db
+    const res = await this.db
       .select({
         id: graphCompositionSubgraphs.id,
-        schemaVersionId: graphCompositionSubgraphs.schemaVersionId,
-        name: targets.name,
         targetId: targets.id,
+        name: targets.name,
+        routingUrl: schema.subgraphs.routingUrl,
+        subscriptionUrl: schema.subgraphs.subscriptionUrl,
+        subscriptionProtocol: schema.subgraphs.subscriptionProtocol,
+        schemaSDL: schemaVersion.schemaSDL,
+        schemaVersionId: graphCompositionSubgraphs.schemaVersionId,
+        labels: schema.targets.labels,
+        namespaceId: schema.namespaces.id,
+        namespace: schema.namespaces.name,
+        lastUpdatedAt: graphCompositionSubgraphs.createdAt,
+        websocketSubprotocol: schema.subgraphs.websocketSubprotocol,
+        isEventDrivenGraph: schema.subgraphs.isEventDrivenGraph,
+        isFeatureSubgraph: schema.subgraphs.isFeatureSubgraph,
       })
       .from(graphCompositionSubgraphs)
       .innerJoin(graphCompositions, eq(graphCompositions.id, graphCompositionSubgraphs.graphCompositionId))
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositionSubgraphs.schemaVersionId))
       .innerJoin(targets, eq(targets.id, schemaVersion.targetId))
+      .innerJoin(schema.subgraphs, eq(schema.subgraphs.targetId, targets.id))
+      .innerJoin(schema.namespaces, eq(schema.namespaces.id, targets.namespaceId))
       .where(eq(graphCompositions.id, input.compositionId))
       .execute();
+
+    return res.map((r) => ({
+      ...r,
+      schemaSDL: r.schemaSDL || '',
+      subscriptionUrl: r.subscriptionUrl || '',
+      lastUpdatedAt: r.lastUpdatedAt.toISOString(),
+      labels: r.labels?.map?.((l) => splitLabel(l)) ?? [],
+    }));
   }
 
   public async getGraphCompositions({
@@ -185,14 +238,25 @@ export class GraphCompositionRepository {
     limit,
     offset,
     dateRange,
+    excludeFeatureFlagCompositions,
   }: {
     fedGraphTargetId: string;
     organizationId: string;
     limit: number;
     offset: number;
     dateRange: DateRange;
+    excludeFeatureFlagCompositions: boolean;
   }): Promise<GraphCompositionDTO[]> {
     const fedRepo = new FederatedGraphRepository(this.logger, this.db, organizationId);
+    const conditions: SQL<unknown>[] = [
+      eq(schemaVersion.targetId, fedGraphTargetId),
+      gt(graphCompositions.createdAt, new Date(dateRange.start)),
+      lt(graphCompositions.createdAt, new Date(dateRange.end)),
+    ];
+
+    if (excludeFeatureFlagCompositions) {
+      conditions.push(eq(graphCompositions.isFeatureFlagComposition, false));
+    }
 
     const resp = await this.db
       .select({
@@ -202,20 +266,15 @@ export class GraphCompositionRepository {
         compositionErrors: graphCompositions.compositionErrors,
         createdAt: graphCompositions.createdAt,
         createdBy: users.email,
+        createdByEmail: graphCompositions.createdByEmail,
         routerConfigSignature: graphCompositions.routerConfigSignature,
         admissionError: graphCompositions.admissionError,
         deploymentError: graphCompositions.deploymentError,
       })
       .from(graphCompositions)
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
-      .leftJoin(users, eq(graphCompositions.createdBy, users.id))
-      .where(
-        and(
-          eq(schemaVersion.targetId, fedGraphTargetId),
-          gt(graphCompositions.createdAt, new Date(dateRange.start)),
-          lt(graphCompositions.createdAt, new Date(dateRange.end)),
-        ),
-      )
+      .leftJoin(users, eq(graphCompositions.createdById, users.id))
+      .where(and(...conditions))
       .orderBy(desc(schemaVersion.createdAt))
       .limit(limit)
       .offset(offset)
@@ -232,7 +291,7 @@ export class GraphCompositionRepository {
         createdAt: r.createdAt.toISOString(),
         isComposable: r.isComposable || false,
         compositionErrors: r.compositionErrors || undefined,
-        createdBy: r.createdBy || undefined,
+        createdBy: r.createdBy || r.createdByEmail || undefined,
         isLatestValid: isCurrentDeployed,
         routerConfigSignature: r.routerConfigSignature || undefined,
         admissionError: r.admissionError || undefined,
@@ -246,24 +305,30 @@ export class GraphCompositionRepository {
   public async getGraphCompositionsCount({
     fedGraphTargetId,
     dateRange,
+    excludeFeatureFlagCompositions,
   }: {
     fedGraphTargetId: string;
     dateRange: DateRange;
+    excludeFeatureFlagCompositions: boolean;
   }): Promise<number> {
+    const conditions: SQL<unknown>[] = [
+      eq(schemaVersion.targetId, fedGraphTargetId),
+      gt(graphCompositions.createdAt, new Date(dateRange.start)),
+      lt(graphCompositions.createdAt, new Date(dateRange.end)),
+    ];
+
+    if (excludeFeatureFlagCompositions) {
+      conditions.push(eq(graphCompositions.isFeatureFlagComposition, false));
+    }
+
     const compositionsCount = await this.db
       .select({
         count: count(),
       })
       .from(graphCompositions)
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
-      .leftJoin(users, eq(graphCompositions.createdBy, users.id))
-      .where(
-        and(
-          eq(schemaVersion.targetId, fedGraphTargetId),
-          gt(graphCompositions.createdAt, new Date(dateRange.start)),
-          lt(graphCompositions.createdAt, new Date(dateRange.end)),
-        ),
-      )
+      .leftJoin(users, eq(graphCompositions.createdById, users.id))
+      .where(and(...conditions))
       .execute();
 
     if (compositionsCount.length === 0) {

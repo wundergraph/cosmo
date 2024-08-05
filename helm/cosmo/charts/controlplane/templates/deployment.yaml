@@ -336,10 +336,37 @@ spec:
                   name: {{ include "controlplane.secretName" . }}
                   key: admissionJwtSecret
             {{- end }}
+            - name: PROMETHEUS_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: prometheusEnabled
+            {{- if .Values.configuration.prometheus.enabled }}
+            - name: PROMETHEUS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: prometheusHost
+            - name: PROMETHEUS_HTTP_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: prometheusPath
+            - name: PROMETHEUS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: prometheusPort
+            {{ end }}
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}
               protocol: TCP
+            {{ if .Values.configuration.prometheus.enabled }}
+            - name: metrics
+              containerPort: {{ .Values.configuration.prometheus.port }}
+              protocol: TCP
+            {{- end }}
           {{ with .Values.probes.liveness }}
           livenessProbe:
             {{- toYaml . | nindent 12 }}

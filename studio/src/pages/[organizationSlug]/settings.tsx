@@ -50,16 +50,17 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
+import { useFeature } from "@/hooks/use-feature";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
-import { useHasFeature } from "@/hooks/use-has-feature";
 import { useIsAdmin } from "@/hooks/use-is-admin";
 import { useIsCreator } from "@/hooks/use-is-creator";
 import { useUser } from "@/hooks/use-user";
-import { calURL, docsBaseURL } from "@/lib/constants";
+import { calURL, docsBaseURL, scimBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
 import { MinusCircledIcon, PlusIcon } from "@radix-ui/react-icons";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   createOIDCProvider,
@@ -67,14 +68,22 @@ import {
   deleteOrganization,
   getOIDCProvider,
   leaveOrganization,
-  updateAISettings,
+  updateFeatureSettings,
   updateOrganizationDetails,
-  updateRBACSettings,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { GetOIDCProviderResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import {
+  Feature,
+  GetOIDCProviderResponse,
+} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { Dispatch, SetStateAction, useContext, useState } from "react";
+import {
+  Dispatch,
+  SetStateAction,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { FaMagic } from "react-icons/fa";
 import { z } from "zod";
 
@@ -114,9 +123,7 @@ const OrganizationDetails = () => {
     mode: "onChange",
   });
 
-  const { mutate, isPending } = useMutation(
-    updateOrganizationDetails.useMutation(),
-  );
+  const { mutate, isPending } = useMutation(updateOrganizationDetails);
 
   const { toast } = useToast();
 
@@ -373,18 +380,13 @@ const OpenIDConnectProvider = ({
   refetch: () => void;
 }) => {
   const user = useUser();
-  const oidc = useHasFeature("oidc");
+  const oidc = useFeature("oidc");
   const [open, setOpen] = useState(false);
   const [alertOpen, setAlertOpen] = useState(false);
   const [mode, setMode] = useState(currentMode);
 
-  const { mutate, isPending, data } = useMutation(
-    createOIDCProvider.useMutation(),
-  );
-
-  const { mutate: deleteOidcProvider } = useMutation(
-    deleteOIDCProvider.useMutation(),
-  );
+  const { mutate, isPending, data } = useMutation(createOIDCProvider);
+  const { mutate: deleteOidcProvider } = useMutation(deleteOIDCProvider);
 
   const { toast } = useToast();
 
@@ -838,17 +840,16 @@ const OpenIDConnectProvider = ({
 
 const CosmoAi = () => {
   const router = useRouter();
-  const ai = useHasFeature("ai");
+  const ai = useFeature("ai");
   const queryClient = useQueryClient();
-  const { mutate, isPending, data } = useMutation(
-    updateAISettings.useMutation(),
-  );
+  const { mutate, isPending, data } = useMutation(updateFeatureSettings);
   const { toast } = useToast();
 
   const disable = () => {
     mutate(
       {
         enable: false,
+        featureId: Feature.ai,
       },
       {
         onSuccess: async (d) => {
@@ -881,6 +882,7 @@ const CosmoAi = () => {
     mutate(
       {
         enable: true,
+        featureId: Feature.ai,
       },
       {
         onSuccess: async (d) => {
@@ -909,7 +911,7 @@ const CosmoAi = () => {
     );
   };
 
-  const action = ai ? (
+  const action = ai?.enabled ? (
     <Button
       className="md:ml-auto"
       type="submit"
@@ -962,14 +964,15 @@ const CosmoAi = () => {
 const RBAC = () => {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const rbac = useHasFeature("rbac");
-  const { mutate, isPending } = useMutation(updateRBACSettings.useMutation());
+  const rbac = useFeature("rbac");
+  const { mutate, isPending } = useMutation(updateFeatureSettings);
   const { toast } = useToast();
 
   const disable = () => {
     mutate(
       {
         enable: false,
+        featureId: Feature.rbac,
       },
       {
         onSuccess: async (d) => {
@@ -1002,6 +1005,7 @@ const RBAC = () => {
     mutate(
       {
         enable: true,
+        featureId: Feature.rbac,
       },
       {
         onSuccess: async (d) => {
@@ -1030,7 +1034,7 @@ const RBAC = () => {
     );
   };
 
-  const action = rbac ? (
+  const action = rbac?.enabled ? (
     <Button
       className="md:ml-auto"
       type="submit"
@@ -1092,12 +1096,155 @@ const RBAC = () => {
   );
 };
 
+const Scim = () => {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const scim = useFeature("scim");
+  const { mutate, isPending } = useMutation(updateFeatureSettings);
+  const { toast } = useToast();
+
+  const disable = () => {
+    mutate(
+      {
+        enable: false,
+        featureId: Feature.scim,
+      },
+      {
+        onSuccess: async (d) => {
+          if (d.response?.code === EnumStatusCode.OK) {
+            await queryClient.invalidateQueries({
+              queryKey: ["user", router.asPath],
+            });
+            toast({
+              description: "Disabled Scim successfully.",
+              duration: 3000,
+            });
+          } else if (d.response?.details) {
+            toast({
+              description: d.response.details,
+              duration: 4000,
+            });
+          }
+        },
+        onError: () => {
+          toast({
+            description: "Could not disable Scim. Please try again.",
+            duration: 3000,
+          });
+        },
+      },
+    );
+  };
+
+  const enable = () => {
+    mutate(
+      {
+        enable: true,
+        featureId: Feature.scim,
+      },
+      {
+        onSuccess: async (d) => {
+          if (d.response?.code === EnumStatusCode.OK) {
+            await queryClient.invalidateQueries({
+              queryKey: ["user", router.asPath],
+            });
+            toast({
+              description: "Enabled Scim successfully.",
+              duration: 3000,
+            });
+          } else if (d.response?.details) {
+            toast({
+              description: d.response.details,
+              duration: 4000,
+            });
+          }
+        },
+        onError: () => {
+          toast({
+            description: "Could not enable Scim. Please try again.",
+            duration: 3000,
+          });
+        },
+      },
+    );
+  };
+
+  const action = scim?.enabled ? (
+    <Button
+      className="md:ml-auto"
+      type="submit"
+      variant="destructive"
+      isLoading={isPending}
+      onClick={() => disable()}
+    >
+      Disable
+    </Button>
+  ) : (
+    <Button
+      className="md:ml-auto"
+      type="submit"
+      variant="default"
+      isLoading={isPending}
+      onClick={() => enable()}
+    >
+      Enable
+    </Button>
+  );
+
+  return (
+    <Card>
+      <CardHeader className="gap-y-6 md:flex-row">
+        <div className="space-y-1.5">
+          <CardTitle className="flex items-center gap-x-2">
+            <span>System for Cross-Domain Identity Management (SCIM)</span>
+            <Badge variant="outline">Enterprise feature</Badge>
+          </CardTitle>
+          <CardDescription>
+            Enabling SCIM allows the admin to provision and unprovision the
+            users from the Identity prodviders.{" "}
+            <Link
+              href={docsBaseURL + "/studio/scim"}
+              className="text-sm text-primary"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Learn more
+            </Link>
+          </CardDescription>
+        </div>
+        {scim ? (
+          action
+        ) : (
+          <Button
+            className="md:ml-auto"
+            type="submit"
+            variant="default"
+            asChild
+          >
+            <Link href={calURL} target="_blank" rel="noreferrer">
+              Contact us
+            </Link>
+          </Button>
+        )}
+      </CardHeader>
+      {scim?.enabled && (
+        <CardContent>
+          <div className="flex flex-col gap-y-2">
+            <span className="px-1">SCIM server url</span>
+            <CLI command={scimBaseURL} />
+          </div>
+        </CardContent>
+      )}
+    </Card>
+  );
+};
+
 const LeaveOrganization = () => {
   const user = useContext(UserContext);
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
-  const { mutate } = useMutation(leaveOrganization.useMutation());
+  const { mutate } = useMutation(leaveOrganization);
 
   const { toast } = useToast();
 
@@ -1193,7 +1340,7 @@ const DeleteOrganization = () => {
     mode: "onChange",
   });
 
-  const { mutate, isPending } = useMutation(deleteOrganization.useMutation());
+  const { mutate, isPending } = useMutation(deleteOrganization);
 
   const { toast } = useToast();
 
@@ -1313,12 +1460,20 @@ const SettingsDashboardPage: NextPageWithLayout = () => {
     data: providerData,
     refetch: refetchOIDCProvider,
     isLoading: fetchingOIDCProvider,
-  } = useQuery({
-    ...getOIDCProvider.useQuery(),
-    queryKey: [user?.currentOrganization.slug || "", "GetOIDCProvider", {}],
-  });
+  } = useQuery(getOIDCProvider);
 
   const orgs = user?.organizations?.length || 0;
+
+  useEffect(() => {
+    if (
+      !user ||
+      !user.currentOrganization ||
+      !user.currentOrganization.slug ||
+      !refetchOIDCProvider
+    )
+      return;
+    refetchOIDCProvider();
+  }, [refetchOIDCProvider, user, user?.currentOrganization.slug]);
 
   if (fetchingOIDCProvider) {
     return <Loader fullscreen />;
@@ -1355,7 +1510,8 @@ const SettingsDashboardPage: NextPageWithLayout = () => {
         providerData={providerData}
         refetch={refetchOIDCProvider}
       />
-      <Separator className="my-2" />
+      <Scim />
+      {(!isCreator || orgs > 1) && <Separator className="my-2" />}
 
       {!isCreator && <LeaveOrganization />}
 

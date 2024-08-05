@@ -3,11 +3,12 @@ import * as tls from 'node:tls';
 import path from 'node:path';
 import fp from 'fastify-plugin';
 import IORedis from 'ioredis';
+import { ConnectionOptions } from 'bullmq';
 
 declare module 'fastify' {
   interface FastifyInstance {
-    redisForWorker: IORedis.Redis;
-    redisForQueue: IORedis.Redis;
+    redisForWorker: ConnectionOptions;
+    redisForQueue: ConnectionOptions;
     redisConnect(): Promise<void>;
   }
 }
@@ -25,7 +26,7 @@ export interface RedisPluginOptions {
   };
 }
 
-export default fp<RedisPluginOptions>(async function (fastify, opts) {
+export const createRedisConnections = async (opts: RedisPluginOptions) => {
   const connectionConfig: IORedis.RedisOptions = {
     host: opts.host,
     port: opts.port,
@@ -80,6 +81,12 @@ export default fp<RedisPluginOptions>(async function (fastify, opts) {
     enableOfflineQueue: false,
     lazyConnect: true,
   });
+
+  return { redisQueue, redisWorker };
+};
+
+export default fp<RedisPluginOptions>(async function (fastify, opts) {
+  const { redisQueue, redisWorker } = await createRedisConnections(opts);
 
   fastify.decorate('redisConnect', async () => {
     try {

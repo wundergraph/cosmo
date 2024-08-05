@@ -6,7 +6,7 @@ import { Command, program } from 'commander';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
 import ora from 'ora';
-import { baseHeaders } from '../../../../core/config.js';
+import { getBaseHeaders } from '../../../../core/config.js';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
 
 export default (opts: BaseCommandOptions) => {
@@ -28,7 +28,10 @@ export default (opts: BaseCommandOptions) => {
   command.option(
     '--admission-webhook-url <url>',
     'The admission webhook url. This is the url that the controlplane will use to implement admission control for the federated graph.',
-    [],
+  );
+  command.option(
+    '--admission-webhook-secret [string]',
+    'The admission webhook secret is used to sign requests to the webhook url.',
   );
   command.option('--readme <path-to-readme>', 'The markdown file which describes the federated graph.');
   command.action(async (name, options) => {
@@ -54,9 +57,10 @@ export default (opts: BaseCommandOptions) => {
         readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
         namespace: options.namespace,
         admissionWebhookURL: options.admissionWebhookUrl,
+        admissionWebhookSecret: options.admissionWebhookSecret,
       },
       {
-        headers: baseHeaders,
+        headers: getBaseHeaders(),
       },
     );
 
@@ -72,9 +76,10 @@ export default (opts: BaseCommandOptions) => {
           head: [
             pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
             pc.bold(pc.white('NAMESPACE')),
+            pc.bold(pc.white('FEATURE_FLAG')),
             pc.bold(pc.white('ERROR_MESSAGE')),
           ],
-          colWidths: [30, 30, 120],
+          colWidths: [30, 30, 30, 120],
           wordWrap: true,
         });
 
@@ -87,6 +92,7 @@ export default (opts: BaseCommandOptions) => {
           compositionErrorsTable.push([
             compositionError.federatedGraphName,
             compositionError.namespace,
+            compositionError.featureFlag || '-',
             compositionError.message,
           ]);
         }

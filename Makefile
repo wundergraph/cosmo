@@ -1,13 +1,13 @@
 all: dev-setup
 
 setup-build-tools:
-	go install github.com/bufbuild/buf/cmd/buf@v1.28.1
-	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.31.0
-	go install connectrpc.com/connect/cmd/protoc-gen-connect-go@v1.12.0
+	go install github.com/bufbuild/buf/cmd/buf@v1.32.2
+	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.34.2
+	go install connectrpc.com/connect/cmd/protoc-gen-connect-go@v1.16.2
 
 setup-dev-tools: setup-build-tools
 	go install github.com/amacneil/dbmate/v2@v2.6.0
-	go install honnef.co/go/tools/cmd/staticcheck@2023.1.6
+	go install honnef.co/go/tools/cmd/staticcheck@2023.1.7
 	go install github.com/yannh/kubeconform/cmd/kubeconform@v0.6.3
 	go install github.com/norwoodj/helm-docs/cmd/helm-docs@v1.11.3
 
@@ -20,17 +20,23 @@ prerequisites: setup-dev-tools
 
 infra-up: dc-dev
 
+edfs-infra-up:
+	docker compose -f docker-compose.yml --profile edfs up --remove-orphans --detach
+
+edfs-infra-down:
+	docker compose -f docker-compose.yml --profile edfs down --remove-orphans
+
 infra-down:
-	docker compose -f docker-compose.yml down --remove-orphans
+	docker compose -f docker-compose.yml --profile dev down --remove-orphans
 
 infra-build:
-	docker compose -f docker-compose.yml build
+	docker compose -f docker-compose.yml --profile dev build
 
 infra-restart:
-	docker compose -f docker-compose.yml down && make infra-up
+	docker compose -f docker-compose.yml --profile dev down && make infra-up
 
 infra-down-v:
-	docker compose -f docker-compose.yml down --remove-orphans -v
+	docker compose -f docker-compose.yml --profile dev down --remove-orphans -v
 
 seed:
 	pnpm -r run --filter './controlplane' seed
@@ -85,8 +91,9 @@ start-studio:
 start-router:
 	(cd router && make dev)
 
+DC_FLAGS=
 dc-dev:
-	docker compose --file docker-compose.yml up --remove-orphans --detach --build
+	docker compose --file docker-compose.yml --profile dev up --remove-orphans --detach $(DC_FLAGS)
 
 dc-stack:
 	docker compose --file docker-compose.cosmo.yml up --remove-orphans --detach
@@ -103,8 +110,9 @@ full-demo-down:
 dc-federation-demo:
 	docker compose -f docker-compose.full.yml --profile default --profile router --profile subgraphs up --remove-orphans --detach
 
+DC_FLAGS=
 dc-subgraphs-demo:
-	OTEL_AUTH_TOKEN=$(OTEL_AUTH_TOKEN) docker compose -f docker-compose.full.yml --profile subgraphs up --remove-orphans --detach --build
+	OTEL_AUTH_TOKEN=$(OTEL_AUTH_TOKEN) docker compose -f docker-compose.full.yml --profile subgraphs up --remove-orphans --detach $(DC_FLAGS)
 
 dc-subgraphs-demo-down:
 	docker compose -f docker-compose.full.yml --profile subgraphs down --remove-orphans
@@ -116,14 +124,41 @@ docker-push-local:
 	docker compose --file docker-compose.cosmo.yml push --no-cache
 
 docker-build-minikube: docker-build-local
-	minikube image load ghcr.io/wundergraph/cosmo/studio:latest & \
-	minikube image load ghcr.io/wundergraph/cosmo/controlplane:latest & \
-	minikube image load ghcr.io/wundergraph/cosmo/otelcollector:latest & \
-	minikube image load ghcr.io/wundergraph/cosmo/router:latest & \
-	minikube image load ghcr.io/wundergraph/cosmo/graphqlmetrics:latest & \
-	minikube image load ghcr.io/wundergraph/cosmo/keycloak:latest & \
-	minikube image load ghcr.io/wundergraph/cosmo/cdn:latest
+	docker image save -o mk-studio.tar ghcr.io/wundergraph/cosmo/studio:latest && \
+	docker image save -o mk-controlplane.tar ghcr.io/wundergraph/cosmo/controlplane:latest && \
+	docker image save -o mk-otelcollector.tar ghcr.io/wundergraph/cosmo/otelcollector:latest && \
+	docker image save -o mk-router.tar ghcr.io/wundergraph/cosmo/router:latest && \
+	docker image save -o mk-graphqlmetrics.tar ghcr.io/wundergraph/cosmo/graphqlmetrics:latest && \
+	docker image save -o mk-keycloak.tar ghcr.io/wundergraph/cosmo/keycloak:latest && \
+	docker image save -o mk-cdn.tar ghcr.io/wundergraph/cosmo/cdn:latest
+
+	minikube image load mk-studio.tar && \
+	minikube image load mk-controlplane.tar && \
+	minikube image load mk-otelcollector.tar && \
+	minikube image load mk-router.tar && \
+	minikube image load mk-graphqlmetrics.tar && \
+	minikube image load mk-keycloak.tar && \
+	minikube image load mk-cdn.tar
 	minikube cache reload
+
+	del mk-*.tar
 
 run-subgraphs-local:
 	cd demo && go run cmd/all/main.go
+
+sync-go-workspace:
+	cd router && go mod tidy
+	cd demo && make bump-deps
+	cd aws-lambda-router && make bump-deps
+	cd composition-go && go mod tidy
+	cd graphqlmetrics && go mod tidy
+	cd router-tests && make bump-deps
+	go work sync
+
+# Validates if any breaking changes has been introduced.
+# Compares the head of the branch with your local changes
+check-buf:
+	buf breaking --against '.git#branch=main'
+
+buf-lint:
+	buf lint

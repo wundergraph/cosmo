@@ -11,13 +11,15 @@ export type FeatureIds =
   | 'breaking-change-retention'
   | 'trace-sampling-rate'
   | 'requests'
+  | 'feature-flags'
   // Boolean features
   | 'rbac'
   | 'sso'
   | 'security'
   | 'support'
   | 'ai'
-  | 'oidc';
+  | 'oidc'
+  | 'scim';
 
 export type Features = {
   [key in FeatureIds]: Feature;
@@ -29,19 +31,31 @@ export type Feature = {
   limit?: number | null;
 };
 
-export interface FederatedGraphListFilterOptions extends SubgraphListFilterOptions {
-  supportsFederation?: boolean;
-}
-
-export interface SubgraphListFilterOptions {
+export interface ListFilterOptions {
   namespaceId?: string;
   limit: number;
   offset: number;
+  query?: string;
+}
+
+export interface FederatedGraphListFilterOptions extends ListFilterOptions {
+  supportsFederation?: boolean;
+}
+
+export interface SubgraphListFilterOptions extends ListFilterOptions {
+  excludeFeatureSubgraphs: boolean;
 }
 
 export interface Label {
   key: string;
   value: string;
+}
+
+export interface ContractDTO {
+  id: string;
+  sourceFederatedGraphId: string;
+  downstreamFederatedGraphId: string;
+  excludeTags: string[];
 }
 
 export interface FederatedGraphDTO {
@@ -57,12 +71,14 @@ export interface FederatedGraphDTO {
   subgraphsCount: number;
   composedSchemaVersionId?: string;
   admissionWebhookURL?: string;
+  admissionWebhookSecret?: string;
   compositionId?: string;
   creatorUserId?: string;
   readme?: string;
   namespace: string;
   namespaceId: string;
   supportsFederation: boolean;
+  contract?: ContractDTO;
 }
 
 export interface FederatedGraphChangelogDTO {
@@ -75,6 +91,7 @@ export interface FederatedGraphChangelogDTO {
     changeMessage: string;
     createdAt: string;
   }[];
+  compositionId: string;
 }
 
 export interface SubgraphDTO {
@@ -88,10 +105,34 @@ export interface SubgraphDTO {
   schemaVersionId: string;
   lastUpdatedAt: string;
   labels: Label[];
-  creatorUserId?: string;
-  readme?: string;
   namespace: string;
   namespaceId: string;
+  isEventDrivenGraph: boolean;
+  creatorUserId?: string;
+  isV2Graph?: boolean;
+  readme?: string;
+  websocketSubprotocol?: 'auto' | 'graphql-ws' | 'graphql-transport-ws';
+  isFeatureSubgraph: boolean;
+}
+
+export interface FeatureSubgraphDTO extends SubgraphDTO {
+  baseSubgraphId: string;
+  baseSubgraphName: string;
+}
+
+export interface FeatureFlagDTO {
+  id: string;
+  name: string;
+  namespace: string;
+  namespaceId: string;
+  labels: Label[];
+  creatorUserId?: string;
+  createdBy: string;
+  isEnabled: boolean;
+  organizationId: string;
+  createdAt: string;
+  updatedAt: string;
+  featureSubgraphs: FeatureSubgraphDTO[];
 }
 
 export interface MigrationSubgraph {
@@ -147,7 +188,7 @@ export interface OrganizationDTO {
   id: string;
   name: string;
   slug: string;
-  creatorUserId: string;
+  creatorUserId?: string;
   createdAt: string;
   features?: Feature[];
   billing?: {
@@ -159,6 +200,10 @@ export interface OrganizationDTO {
     trialEnd?: string;
     currentPeriodEnd?: string;
     cancelAtPeriodEnd?: boolean;
+  };
+  deactivation?: {
+    reason?: string;
+    initiatedAt: string;
   };
 }
 
@@ -172,6 +217,7 @@ export interface OrganizationMemberDTO {
   orgMemberID: string;
   email: string;
   roles: string[];
+  active: boolean;
 }
 
 export interface OrganizationInvitationDTO {
@@ -367,7 +413,7 @@ export interface PersistedOperationDTO {
   hash: string;
   filePath: string;
   createdAt: string;
-  createdBy: string;
+  createdBy?: string;
   lastUpdatedAt: string;
   lastUpdatedBy: string;
   contents: string;
@@ -400,6 +446,19 @@ export interface GraphCompositionDTO {
   deploymentError?: string;
 }
 
+export interface FeatureFlagCompositionDTO {
+  id: string;
+  schemaVersionId: string;
+  createdAt: string;
+  featureFlagName: string;
+  createdBy?: string;
+  compositionErrors?: string;
+  routerConfigSignature?: string;
+  isComposable: boolean;
+  admissionError?: string;
+  deploymentError?: string;
+}
+
 export interface SubgraphMemberDTO {
   userId: string;
   subgraphMemberId: string;
@@ -423,7 +482,7 @@ export type DiscussionThreadDTO = {
   contentMarkdown: string | null;
   contentJson: unknown;
   updatedAt: Date | null;
-  createdById: string;
+  createdById: string | null;
   isDeleted: boolean;
 }[];
 export interface SubgraphLatencyResult {
@@ -484,7 +543,6 @@ export const LintRules: LintRuleType = {
   DISALLOW_CASE_INSENSITIVE_ENUM_VALUES: 'DISALLOW_CASE_INSENSITIVE_ENUM_VALUES',
   NO_TYPENAME_PREFIX_IN_TYPE_FIELDS: 'NO_TYPENAME_PREFIX_IN_TYPE_FIELDS',
   REQUIRE_DEPRECATION_REASON: 'REQUIRE_DEPRECATION_REASON',
-  REQUIRE_DEPRECATION_DATE: 'REQUIRE_DEPRECATION_DATE',
 };
 
 export type Severity = 1 | 2;

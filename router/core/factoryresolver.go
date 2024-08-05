@@ -2,10 +2,14 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/buger/jsonparser"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
 
@@ -59,7 +63,8 @@ func NewDefaultFactoryResolver(
 	baseTransport http.RoundTripper,
 	log *zap.Logger,
 	enableSingleFlight bool,
-	pubSubBySourceName map[string]pubsub_datasource.PubSub,
+	natsPubSubBySourceID map[string]pubsub_datasource.NatsPubSub,
+	kafkaPubSubBySourceID map[string]pubsub_datasource.KafkaPubSub,
 ) *DefaultFactoryResolver {
 
 	defaultHttpClient := &http.Client{
@@ -79,7 +84,7 @@ func NewDefaultFactoryResolver(
 		baseTransport:    baseTransport,
 		transportFactory: transportFactory,
 		static:           &staticdatasource.Factory[staticdatasource.Configuration]{},
-		pubsub:           pubsub_datasource.NewFactory(ctx, pubSubBySourceName),
+		pubsub:           pubsub_datasource.NewFactory(ctx, natsPubSubBySourceID, kafkaPubSubBySourceID),
 		log:              log,
 		factoryLogger:    factoryLogger,
 		engineCtx:        ctx,
@@ -89,7 +94,12 @@ func NewDefaultFactoryResolver(
 }
 
 func (d *DefaultFactoryResolver) ResolveGraphqlFactory() (plan.PlannerFactory[graphql_datasource.Configuration], error) {
-	subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(d.httpClient, d.streamingClient, d.engineCtx, graphql_datasource.WithLogger(d.factoryLogger))
+	subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(
+		d.httpClient,
+		d.streamingClient,
+		d.engineCtx,
+		graphql_datasource.WithLogger(d.factoryLogger),
+	)
 
 	factory, err := graphql_datasource.NewFactory(d.engineCtx, d.httpClient, subscriptionClient)
 	return factory, err
@@ -126,12 +136,64 @@ type RouterEngineConfiguration struct {
 	SubgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
 }
 
-func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *RouterEngineConfiguration) (*plan.Configuration, error) {
+func mapProtoFilterToPlanFilter(input *nodev1.SubscriptionFilterCondition, output *plan.SubscriptionFilterCondition) *plan.SubscriptionFilterCondition {
+	if input == nil {
+		return nil
+	}
+	if input.And != nil {
+		output.And = make([]plan.SubscriptionFilterCondition, len(input.And))
+		for i := range input.And {
+			mapProtoFilterToPlanFilter(input.And[i], &output.And[i])
+		}
+		return output
+	}
+	if input.In != nil {
+		var values []string
+		_, err := jsonparser.ArrayEach([]byte(input.In.Json), func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+			// if the value is not a string, just append it as is because this is the JSON
+			// representation of the value. If it contains a template, we want to keep it as
+			// is to explode it later with the actual values
+			if dataType != jsonparser.String || argument_templates.ContainsArgumentTemplateString(value) {
+				values = append(values, string(value))
+				return
+			}
+			// stringify values to prevent its actual type from being lost
+			// during the transport to the engine as bytes
+			marshaledValue, mErr := json.Marshal(string(value))
+			if mErr != nil {
+				return
+			}
+			values = append(values, string(marshaledValue))
+		})
+		if err != nil {
+			return nil
+		}
+		output.In = &plan.SubscriptionFieldCondition{
+			FieldPath: input.In.FieldPath,
+			Values:    values,
+		}
+		return output
+	}
+	if input.Not != nil {
+		output.Not = mapProtoFilterToPlanFilter(input.Not, &plan.SubscriptionFilterCondition{})
+		return output
+	}
+	if input.Or != nil {
+		output.Or = make([]plan.SubscriptionFilterCondition, len(input.Or))
+		for i := range input.Or {
+			output.Or[i] = plan.SubscriptionFilterCondition{}
+			mapProtoFilterToPlanFilter(input.Or[i], &output.Or[i])
+		}
+		return output
+	}
+	return nil
+}
+
+func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nodev1.Subgraph, routerEngineConfig *RouterEngineConfiguration) (*plan.Configuration, error) {
 	var (
 		outConfig plan.Configuration
 	)
 	// attach field usage information to the plan
-	engineConfig := routerConfig.EngineConfig
 	outConfig.IncludeInfo = l.includeInfo
 	outConfig.DefaultFlushIntervalMillis = engineConfig.DefaultFlushInterval
 	for _, configuration := range engineConfig.FieldConfigurations {
@@ -149,10 +211,11 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 			args = append(args, arg)
 		}
 		fieldConfig := plan.FieldConfiguration{
-			TypeName:             configuration.TypeName,
-			FieldName:            configuration.FieldName,
-			Arguments:            args,
-			HasAuthorizationRule: l.fieldHasAuthorizationRule(configuration),
+			TypeName:                    configuration.TypeName,
+			FieldName:                   configuration.FieldName,
+			Arguments:                   args,
+			HasAuthorizationRule:        l.fieldHasAuthorizationRule(configuration),
+			SubscriptionFilterCondition: mapProtoFilterToPlanFilter(configuration.SubscriptionFilterCondition, &plan.SubscriptionFilterCondition{}),
 		}
 		outConfig.Fields = append(outConfig.Fields, fieldConfig)
 	}
@@ -237,7 +300,20 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 					subscriptionUseSSE = *in.CustomGraphql.Subscription.UseSSE
 				}
 			}
-			dataSourceRules := FetchURLRules(&routerEngineConfig.Headers, routerConfig.Subgraphs, subscriptionUrl)
+
+			wsSubprotocol := "auto"
+			if in.CustomGraphql.Subscription.WebsocketSubprotocol != nil {
+				switch *in.CustomGraphql.Subscription.WebsocketSubprotocol {
+				case common.GraphQLWebsocketSubprotocol_GRAPHQL_WEBSOCKET_SUBPROTOCOL_WS:
+					wsSubprotocol = "graphql-ws"
+				case common.GraphQLWebsocketSubprotocol_GRAPHQL_WEBSOCKET_SUBPROTOCOL_TRANSPORT_WS:
+					wsSubprotocol = "graphql-transport-ws"
+				case common.GraphQLWebsocketSubprotocol_GRAPHQL_WEBSOCKET_SUBPROTOCOL_AUTO:
+					wsSubprotocol = "auto"
+				}
+			}
+
+			dataSourceRules := FetchURLRules(&routerEngineConfig.Headers, subgraphs, subscriptionUrl)
 			forwardedClientHeaders, forwardedClientRegexps, err := PropagatedHeaders(dataSourceRules)
 			if err != nil {
 				return nil, fmt.Errorf("error parsing header rules for data source %s: %w", in.Id, err)
@@ -274,6 +350,7 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 					SSEMethodPost:                           subscriptionSSEMethodPost,
 					ForwardedClientHeaderNames:              forwardedClientHeaders,
 					ForwardedClientHeaderRegularExpressions: forwardedClientRegexps,
+					WsSubProtocol:                           wsSubprotocol,
 				},
 				SchemaConfiguration:    schemaConfiguration,
 				CustomScalarTypeFields: customScalarTypeFields,
@@ -293,20 +370,53 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 			}
 
 		case nodev1.DataSourceKind_PUBSUB:
-			pubsubEvents := in.GetCustomEvents().GetEvents()
-			events := make([]pubsub_datasource.EventConfiguration, len(pubsubEvents))
-			for ii, ev := range pubsubEvents {
-				eventType, err := pubsub_datasource.EventTypeFromString(ev.Type.String())
+			var eventConfigurations []pubsub_datasource.EventConfiguration
+
+			for _, eventConfiguration := range in.GetCustomEvents().GetNats() {
+				eventType, err := pubsub_datasource.EventTypeFromString(eventConfiguration.EngineEventConfiguration.Type.String())
 				if err != nil {
-					return nil, fmt.Errorf("invalid event type %q for data source %q: %w", ev.Type.String(), in.Id, err)
+					return nil, fmt.Errorf("invalid event type %q for data source %q: %w", eventConfiguration.EngineEventConfiguration.Type.String(), in.Id, err)
 				}
-				events[ii] = pubsub_datasource.EventConfiguration{
-					FieldName:  ev.FieldName,
-					SourceName: ev.SourceName,
-					Topic:      ev.Topic,
-					Type:       eventType,
-					TypeName:   ev.TypeName,
+
+				var streamConfiguration *pubsub_datasource.NatsStreamConfiguration
+				if eventConfiguration.StreamConfiguration != nil {
+					streamConfiguration = &pubsub_datasource.NatsStreamConfiguration{
+						Consumer:   eventConfiguration.StreamConfiguration.GetConsumerName(),
+						StreamName: eventConfiguration.StreamConfiguration.GetStreamName(),
+					}
 				}
+
+				eventConfigurations = append(eventConfigurations, pubsub_datasource.EventConfiguration{
+					Metadata: &pubsub_datasource.EventMetadata{
+						ProviderID: eventConfiguration.EngineEventConfiguration.GetProviderId(),
+						Type:       eventType,
+						TypeName:   eventConfiguration.EngineEventConfiguration.GetTypeName(),
+						FieldName:  eventConfiguration.EngineEventConfiguration.GetFieldName(),
+					},
+					Configuration: &pubsub_datasource.NatsEventConfiguration{
+						StreamConfiguration: streamConfiguration,
+						Subjects:            eventConfiguration.GetSubjects(),
+					},
+				})
+			}
+
+			for _, eventConfiguration := range in.GetCustomEvents().GetKafka() {
+				eventType, err := pubsub_datasource.EventTypeFromString(eventConfiguration.EngineEventConfiguration.Type.String())
+				if err != nil {
+					return nil, fmt.Errorf("invalid event type %q for data source %q: %w", eventConfiguration.EngineEventConfiguration.Type.String(), in.Id, err)
+				}
+
+				eventConfigurations = append(eventConfigurations, pubsub_datasource.EventConfiguration{
+					Metadata: &pubsub_datasource.EventMetadata{
+						ProviderID: eventConfiguration.EngineEventConfiguration.GetProviderId(),
+						Type:       eventType,
+						TypeName:   eventConfiguration.EngineEventConfiguration.GetTypeName(),
+						FieldName:  eventConfiguration.EngineEventConfiguration.GetFieldName(),
+					},
+					Configuration: &pubsub_datasource.KafkaEventConfiguration{
+						Topics: eventConfiguration.GetTopics(),
+					},
+				})
 			}
 
 			factory, err := l.resolver.ResolvePubsubFactory()
@@ -322,7 +432,7 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 				factory,
 				l.dataSourceMetaData(in),
 				pubsub_datasource.Configuration{
-					Events: events,
+					Events: eventConfigurations,
 				},
 			)
 			if err != nil {
@@ -355,12 +465,16 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 		out.RootNodes = append(out.RootNodes, plan.TypeField{
 			TypeName:   node.TypeName,
 			FieldNames: node.FieldNames,
+			// TODO requires engine changes
+			//ExternalFieldNames: node.ExternalFieldNames,
 		})
 	}
 	for _, node := range in.ChildNodes {
 		out.ChildNodes = append(out.ChildNodes, plan.TypeField{
 			TypeName:   node.TypeName,
 			FieldNames: node.FieldNames,
+			// TODO requires engine changes
+			//ExternalFieldNames: node.ExternalFieldNames,
 		})
 	}
 	for _, directive := range in.Directives {
@@ -372,9 +486,10 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 
 	for _, keyConfiguration := range in.Keys {
 		out.FederationMetaData.Keys = append(out.FederationMetaData.Keys, plan.FederationFieldConfiguration{
-			TypeName:     keyConfiguration.TypeName,
-			FieldName:    keyConfiguration.FieldName,
-			SelectionSet: keyConfiguration.SelectionSet,
+			TypeName:              keyConfiguration.TypeName,
+			FieldName:             keyConfiguration.FieldName,
+			SelectionSet:          keyConfiguration.SelectionSet,
+			DisableEntityResolver: keyConfiguration.DisableEntityResolver,
 		})
 	}
 	for _, providesConfiguration := range in.Provides {

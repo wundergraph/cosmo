@@ -1,23 +1,37 @@
-import { DEFAULT_DEPRECATION_REASON, DirectiveDefinitionNode, Kind, ScalarTypeDefinitionNode } from 'graphql';
+import {
+  DEFAULT_DEPRECATION_REASON,
+  DirectiveDefinitionNode,
+  InputObjectTypeDefinitionNode,
+  Kind,
+  ScalarTypeDefinitionNode,
+} from 'graphql';
 import { stringArrayToNameNodeArray, stringToNamedTypeNode, stringToNameNode } from '../ast/utils';
 import {
+  AND_UPPER,
   ARGUMENT_DEFINITION_UPPER,
   AUTHENTICATED,
   BOOLEAN_SCALAR,
   COMPOSE_DIRECTIVE,
-  DEFAULT,
+  CONDITION,
+  CONSUMER_NAME,
+  DEFAULT_EDFS_PROVIDER_ID,
   DEPRECATED,
+  EDFS_KAFKA_PUBLISH,
+  EDFS_KAFKA_SUBSCRIBE,
+  EDFS_NATS_PUBLISH,
+  EDFS_NATS_REQUEST,
+  EDFS_NATS_STREAM_CONFIGURATION,
+  EDFS_NATS_SUBSCRIBE,
   ENUM_UPPER,
   ENUM_VALUE_UPPER,
-  EVENTS_PUBLISH,
-  EVENTS_REQUEST,
-  EVENTS_SUBSCRIBE,
   EXTENDS,
   EXTERNAL,
   FIELD_DEFINITION_UPPER,
+  FIELD_PATH,
   FIELD_SET_SCALAR,
   FIELDS,
   FROM,
+  IN_UPPER,
   INACCESSIBLE,
   INPUT_FIELD_DEFINITION_UPPER,
   INPUT_OBJECT_UPPER,
@@ -26,8 +40,11 @@ import {
   KEY,
   LINK,
   NAME,
+  NOT_UPPER,
   OBJECT_UPPER,
+  OR_UPPER,
   OVERRIDE,
+  PROVIDER_ID,
   PROVIDES,
   REASON,
   REQUIRES,
@@ -38,15 +55,23 @@ import {
   SCOPE_SCALAR,
   SCOPES,
   SHAREABLE,
-  SOURCE_NAME,
   SPECIFIED_BY,
+  STREAM_NAME,
   STRING_SCALAR,
+  SUBJECT,
+  SUBJECTS,
+  SUBSCRIPTION_FIELD_CONDITION,
+  SUBSCRIPTION_FILTER,
+  SUBSCRIPTION_FILTER_CONDITION,
+  SUBSCRIPTION_FILTER_VALUE,
   TAG,
   TOPIC,
+  TOPICS,
   UNION_UPPER,
   URL_LOWER,
+  VALUES,
 } from './string-constants';
-import { MutableDirectiveDefinitionNode, MutableScalarNode } from '../schema-building/ast';
+import { MutableDirectiveDefinitionNode, MutableInputObjectNode, MutableScalarNode } from '../schema-building/ast';
 
 export const BASE_SCALARS = new Set<string>([
   '_Any',
@@ -103,8 +128,8 @@ const EXTERNAL_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-// directive @eventsPublish(topic: String!, sourceName: String! = "default") on FIELD_DEFINITION
-const EVENTS_PUBLISH_DEFINITION: DirectiveDefinitionNode = {
+// directive @edfs__kafkaPublish(topic: String!, providerId: String! = "kafka") on FIELD_DEFINITION
+const EDFS_KAFKA_PUBLISH_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
@@ -116,59 +141,65 @@ const EVENTS_PUBLISH_DEFINITION: DirectiveDefinitionNode = {
     },
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
-      name: stringToNameNode(SOURCE_NAME),
+      name: stringToNameNode(PROVIDER_ID),
       type: {
         kind: Kind.NON_NULL_TYPE,
         type: stringToNamedTypeNode(STRING_SCALAR),
       },
       defaultValue: {
         kind: Kind.STRING,
-        value: DEFAULT,
+        value: DEFAULT_EDFS_PROVIDER_ID,
       },
     },
   ],
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: [stringToNameNode(FIELD_DEFINITION_UPPER)],
-  name: stringToNameNode(EVENTS_PUBLISH),
+  name: stringToNameNode(EDFS_KAFKA_PUBLISH),
   repeatable: false,
 };
 
-// directive @eventsRequest(topic: String!, sourceName: String! = "default") on FIELD_DEFINITION
-const EVENTS_REQUEST_DEFINITION: DirectiveDefinitionNode = {
+// directive @edfs__kafkaSubscribe(topics: [String!]!, providerId: String! = "kafka") on FIELD_DEFINITION
+const EDFS_KAFKA_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
-      name: stringToNameNode(TOPIC),
+      name: stringToNameNode(TOPICS),
       type: {
         kind: Kind.NON_NULL_TYPE,
-        type: stringToNamedTypeNode(STRING_SCALAR),
+        type: {
+          kind: Kind.LIST_TYPE,
+          type: {
+            kind: Kind.NON_NULL_TYPE,
+            type: stringToNamedTypeNode(STRING_SCALAR),
+          },
+        },
       },
     },
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
-      name: stringToNameNode(SOURCE_NAME),
+      name: stringToNameNode(PROVIDER_ID),
       type: {
         kind: Kind.NON_NULL_TYPE,
         type: stringToNamedTypeNode(STRING_SCALAR),
       },
       defaultValue: {
         kind: Kind.STRING,
-        value: DEFAULT,
+        value: DEFAULT_EDFS_PROVIDER_ID,
       },
     },
   ],
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: [stringToNameNode(FIELD_DEFINITION_UPPER)],
-  name: stringToNameNode(EVENTS_REQUEST),
+  name: stringToNameNode(EDFS_KAFKA_PUBLISH),
   repeatable: false,
 };
 
-// directive @eventsSubscribe(topic: String!, sourceName: String! = "default") on FIELD_DEFINITION
-const EVENTS_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
+// directive @edfs__natsPublish(subject: String!, providerId: String! = "default") on FIELD_DEFINITION
+const EDFS_NATS_PUBLISH_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
-      name: stringToNameNode(TOPIC),
+      name: stringToNameNode(SUBJECT),
       type: {
         kind: Kind.NON_NULL_TYPE,
         type: stringToNamedTypeNode(STRING_SCALAR),
@@ -176,24 +207,95 @@ const EVENTS_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
     },
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
-      name: stringToNameNode(SOURCE_NAME),
+      name: stringToNameNode(PROVIDER_ID),
       type: {
         kind: Kind.NON_NULL_TYPE,
         type: stringToNamedTypeNode(STRING_SCALAR),
       },
       defaultValue: {
         kind: Kind.STRING,
-        value: DEFAULT,
+        value: DEFAULT_EDFS_PROVIDER_ID,
       },
     },
   ],
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: [stringToNameNode(FIELD_DEFINITION_UPPER)],
-  name: stringToNameNode(EVENTS_SUBSCRIBE),
+  name: stringToNameNode(EDFS_NATS_PUBLISH),
   repeatable: false,
 };
 
-// directive @key(fields: openfed__FieldSet!) on INTERFACE | OBJECT
+// directive @edfs__natsRequest(subject: String!, providerId String! = "default") on FIELD_DEFINITION
+const EDFS_NATS_REQUEST_DEFINITION: DirectiveDefinitionNode = {
+  arguments: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(SUBJECT),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: stringToNamedTypeNode(STRING_SCALAR),
+      },
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(PROVIDER_ID),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: stringToNamedTypeNode(STRING_SCALAR),
+      },
+      defaultValue: {
+        kind: Kind.STRING,
+        value: DEFAULT_EDFS_PROVIDER_ID,
+      },
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: [stringToNameNode(FIELD_DEFINITION_UPPER)],
+  name: stringToNameNode(EDFS_NATS_REQUEST),
+  repeatable: false,
+};
+
+// directive @edfs__natsSubscribe(subjects: [String!]!, providerId: String! = "default", streamConfiguration: edfs__NatsStreamConfiguration) on FIELD_DEFINITION
+const EDFS_NATS_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
+  arguments: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(SUBJECTS),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: {
+          kind: Kind.LIST_TYPE,
+          type: {
+            kind: Kind.NON_NULL_TYPE,
+            type: stringToNamedTypeNode(STRING_SCALAR),
+          },
+        },
+      },
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(PROVIDER_ID),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: stringToNamedTypeNode(STRING_SCALAR),
+      },
+      defaultValue: {
+        kind: Kind.STRING,
+        value: DEFAULT_EDFS_PROVIDER_ID,
+      },
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode('streamConfiguration'),
+      type: stringToNamedTypeNode(EDFS_NATS_STREAM_CONFIGURATION),
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: [stringToNameNode(FIELD_DEFINITION_UPPER)],
+  name: stringToNameNode(EDFS_NATS_SUBSCRIBE),
+  repeatable: false,
+};
+
+// directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
 const KEY_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
@@ -310,9 +412,11 @@ export const BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME = new Map<string, Direc
   [DEPRECATED, DEPRECATED_DEFINITION],
   [EXTENDS, EXTENDS_DEFINITION],
   [EXTERNAL, EXTERNAL_DEFINITION],
-  [EVENTS_PUBLISH, EVENTS_PUBLISH_DEFINITION],
-  [EVENTS_REQUEST, EVENTS_REQUEST_DEFINITION],
-  [EVENTS_SUBSCRIBE, EVENTS_SUBSCRIBE_DEFINITION],
+  [EDFS_KAFKA_PUBLISH, EDFS_KAFKA_PUBLISH_DEFINITION],
+  [EDFS_KAFKA_SUBSCRIBE, EDFS_KAFKA_SUBSCRIBE_DEFINITION],
+  [EDFS_NATS_PUBLISH, EDFS_NATS_PUBLISH_DEFINITION],
+  [EDFS_NATS_REQUEST, EDFS_NATS_REQUEST_DEFINITION],
+  [EDFS_NATS_SUBSCRIBE, EDFS_NATS_SUBSCRIBE_DEFINITION],
   [KEY, KEY_DEFINITION],
   [PROVIDES, PROVIDES_DEFINITION],
   [REQUIRES, REQUIRES_DEFINITION],
@@ -483,6 +587,107 @@ const SHAREABLE_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
+// directive @openfed__subscriptionFilter(condition: openfed__SubscriptionFilterCondition!) on FIELD_DEFINITION
+export const SUBSCRIPTION_FILTER_DEFINITION: DirectiveDefinitionNode = {
+  arguments: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(CONDITION),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: stringToNamedTypeNode(SUBSCRIPTION_FILTER_CONDITION),
+      },
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
+  name: stringToNameNode(SUBSCRIPTION_FILTER),
+  repeatable: false,
+};
+
+/* input openfed__SubscriptionFilterCondition {
+ *   AND: [openfed__SubscriptionFilterCondition!]
+ *   IN: openfed__SubscriptionFieldCondition
+ *   NOT: openfed__SubscriptionFilterCondition
+ *   OR: [openfed__SubscriptionFilterCondition!]
+ * }
+ */
+export const SUBSCRIPTION_FILTER_CONDITION_DEFINITION: InputObjectTypeDefinitionNode = {
+  fields: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(AND_UPPER),
+      type: {
+        kind: Kind.LIST_TYPE,
+        type: {
+          kind: Kind.NON_NULL_TYPE,
+          type: stringToNamedTypeNode(SUBSCRIPTION_FILTER_CONDITION),
+        },
+      },
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(IN_UPPER),
+      type: stringToNamedTypeNode(SUBSCRIPTION_FIELD_CONDITION),
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(OR_UPPER),
+      type: {
+        kind: Kind.LIST_TYPE,
+        type: {
+          kind: Kind.NON_NULL_TYPE,
+          type: stringToNamedTypeNode(SUBSCRIPTION_FILTER_CONDITION),
+        },
+      },
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(NOT_UPPER),
+      type: stringToNamedTypeNode(SUBSCRIPTION_FILTER_CONDITION),
+    },
+  ],
+  kind: Kind.INPUT_OBJECT_TYPE_DEFINITION,
+  name: stringToNameNode(SUBSCRIPTION_FILTER_CONDITION),
+};
+
+// scalar openfed__SubscriptionFilterValue
+export const SUBSCRIPTION_FILTER_VALUE_DEFINITION: MutableScalarNode = {
+  kind: Kind.SCALAR_TYPE_DEFINITION,
+  name: stringToNameNode(SUBSCRIPTION_FILTER_VALUE),
+};
+
+/* input openfed__SubscriptionFieldCondition {
+ *   fieldPath: String!
+ *   values: [openfed__SubscriptionFilterValue]!
+ * }
+ */
+export const SUBSCRIPTION_FIELD_CONDITION_DEFINITION: InputObjectTypeDefinitionNode = {
+  fields: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(FIELD_PATH),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: stringToNamedTypeNode(STRING_SCALAR),
+      },
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(VALUES),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: {
+          kind: Kind.LIST_TYPE,
+          type: stringToNamedTypeNode(SUBSCRIPTION_FILTER_VALUE),
+        },
+      },
+    },
+  ],
+  kind: Kind.INPUT_OBJECT_TYPE_DEFINITION,
+  name: stringToNameNode(SUBSCRIPTION_FIELD_CONDITION),
+};
+
 export const V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME = new Map<string, DirectiveDefinitionNode>([
   [AUTHENTICATED, AUTHENTICATED_DEFINITION],
   [COMPOSE_DIRECTIVE, COMPOSE_DIRECTIVE_DEFINITION],
@@ -498,15 +703,20 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
   DEPRECATED_DEFINITION,
   EXTENDS_DEFINITION,
   EXTERNAL_DEFINITION,
-  EVENTS_PUBLISH_DEFINITION,
-  EVENTS_REQUEST_DEFINITION,
-  EVENTS_SUBSCRIBE_DEFINITION,
   KEY_DEFINITION,
   PROVIDES_DEFINITION,
   REQUIRES_DEFINITION,
   SPECIFIED_BY_DEFINITION,
   TAG_DEFINITION,
 ];
+
+export const EVENT_DRIVEN_DIRECTIVE_DEFINITIONS_BY_DIRECTIVE_NAME = new Map<string, DirectiveDefinitionNode>([
+  [EDFS_KAFKA_PUBLISH, EDFS_KAFKA_PUBLISH_DEFINITION],
+  [EDFS_KAFKA_SUBSCRIBE, EDFS_KAFKA_SUBSCRIBE_DEFINITION],
+  [EDFS_NATS_PUBLISH, EDFS_NATS_PUBLISH_DEFINITION],
+  [EDFS_NATS_REQUEST, EDFS_NATS_REQUEST_DEFINITION],
+  [EDFS_NATS_SUBSCRIBE, EDFS_NATS_SUBSCRIBE_DEFINITION],
+]);
 
 export const VERSION_TWO_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
   AUTHENTICATED_DEFINITION,
@@ -524,12 +734,40 @@ export const FIELD_SET_SCALAR_DEFINITION: ScalarTypeDefinitionNode = {
   name: stringToNameNode(FIELD_SET_SCALAR),
 };
 
+// scalar openfed__Scope
 export const SCOPE_SCALAR_DEFINITION: MutableScalarNode = {
   kind: Kind.SCALAR_TYPE_DEFINITION,
   name: stringToNameNode(SCOPE_SCALAR),
 };
 
-export const MAXIMUM_TYPE_NESTING = 30;
+/*
+ * input edfs__NatsStreamConfiguration {
+ *   consumerName: String!
+ *   streamName: String!
+ * }
+ * */
+export const EDFS_NATS_STREAM_CONFIGURATION_DEFINITION: MutableInputObjectNode = {
+  kind: Kind.INPUT_OBJECT_TYPE_DEFINITION,
+  name: stringToNameNode(EDFS_NATS_STREAM_CONFIGURATION),
+  fields: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(CONSUMER_NAME),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: stringToNamedTypeNode(STRING_SCALAR),
+      },
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(STREAM_NAME),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: stringToNamedTypeNode(STRING_SCALAR),
+      },
+    },
+  ],
+};
 
 export const INHERITABLE_DIRECTIVE_NAMES = [EXTERNAL, SHAREABLE];
 
@@ -537,9 +775,11 @@ export const baseDirectives = `
   directive @deprecated(reason: String = "No longer supported") on ARGUMENT_DEFINITION | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION
   directive @extends on INTERFACE | OBJECT
   directive @external on FIELD_DEFINITION | OBJECT
-  directive @eventsPublish(topic: String!, sourceID: String) on FIELD_DEFINITION
-  directive @eventsRequest(topic: String!, sourceID: String) on FIELD_DEFINITION
-  directive @eventsSubscribe(topic: String!, sourceID: String) on FIELD_DEFINITION
+  directive @edfs__kafkaPublish(topic: String!, providerId: String! = "default") on FIELD_DEFINITION
+  directive @edfs__kafkaSubscribe(topic: String!, providerId: String! = "default") on FIELD_DEFINITION
+  directive @edfs__natsPublish(subject: String!, providerId: String! = "default") on FIELD_DEFINITION
+  directive @edfs__natsRequest(subject: String!, providerId: String! = "default") on FIELD_DEFINITION
+  directive @edfs__natsSubscribe(subjects: [String!]!, id: String! = "default", streamConfiguration: edfs__NatsStreamConfiguration) on FIELD_DEFINITION
   directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
   directive @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION
   directive @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION
@@ -555,4 +795,8 @@ export const baseDirectives = `
   directive @shareable on FIELD_DEFINITION | OBJECT
   scalar openfed__FieldSet
   scalar openfed__Scope
+  input edfs__NatsStreamConfiguration {
+    consumerName: String!
+    streamName: String!
+  }
 `;

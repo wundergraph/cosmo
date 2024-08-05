@@ -76,6 +76,27 @@ spec:
                   name: {{ include "controlplane.secretName" . }}
 
                   key: databaseUrl
+            {{- if .Values.configuration.databaseTlsCert }}
+            - name: DB_TLS_CERT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: databaseTlsCert
+            {{- end }}
+            {{- if .Values.configuration.databaseTlsCa }}
+            - name: DB_TLS_CA
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: databaseTlsCa
+            {{- end }}
+            {{- if .Values.configuration.databaseTlsKey }}
+            - name: DB_TLS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: databaseTlsKey
+            {{- end }}
             - name: USER_EMAIL
               value: "{{ .Values.global.seed.userEmail }}"
             - name: USER_PASSWORD

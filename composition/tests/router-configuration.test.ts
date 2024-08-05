@@ -412,53 +412,6 @@ describe('Router Configuration tests', () => {
       );
     });
 
-    test.skip('that external fields that are part of a key FieldSet are not included in the root node #1', () => {
-      const { errors, normalizationResult } = normalizeSubgraphFromString(`
-      type Entity @key(fields: "id") {
-        id: ID! @external
-      }`);
-      expect(errors).toBeUndefined();
-      expect(normalizationResult).toBeDefined();
-      const configurationDataMap = normalizationResult!.configurationDataByParentTypeName;
-      expect(configurationDataMap).toStrictEqual(
-        new Map<string, ConfigurationData>([
-          [
-            'Entity',
-            {
-              fieldNames: new Set<string>([]),
-              isRootNode: true,
-              keys: [{ fieldName: '', selectionSet: 'id' }],
-              typeName: 'Entity',
-            },
-          ],
-        ]),
-      );
-    });
-
-    test.skip('that external fields that are not part of a key FieldSet are not included in the root node #2', () => {
-      const { errors, normalizationResult } = normalizeSubgraphFromString(`
-      type Entity @key(fields: "id") {
-        id: ID! @external
-        name: String! @external
-      }`);
-      expect(errors).toBeUndefined();
-      expect(normalizationResult).toBeDefined();
-      const configurationDataMap = normalizationResult!.configurationDataByParentTypeName;
-      expect(configurationDataMap).toStrictEqual(
-        new Map<string, ConfigurationData>([
-          [
-            'Entity',
-            {
-              fieldNames: new Set<string>([]),
-              isRootNode: true,
-              keys: [{ fieldName: '', selectionSet: 'id' }],
-              typeName: 'Entity',
-            },
-          ],
-        ]),
-      );
-    });
-
     test('that FieldSet configuration is generated', () => {
       const { errors, normalizationResult } = normalizeSubgraphFromString(`
       type Entity @key(fields: "id") {
@@ -467,11 +420,9 @@ describe('Router Configuration tests', () => {
       }
       
       type Object {
-        "invalid @provides like this (not on an entity response type) are ignored"
-        age: Int! @provides(fields: "name")
+        age: Int!
         entity: AnotherEntity @provides(fields: "field")
-        "invalid @requires like this (not on an entity parent) are ignored"
-        name: String! @requires(fields: "id")
+        name: String!
        }
        
       type AnotherEntity @key(fields: "id") {
@@ -499,6 +450,7 @@ describe('Router Configuration tests', () => {
           [
             'Entity',
             {
+              externalFieldNames: new Set<string>(['id', 'name']),
               fieldNames: new Set<string>(['id']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
@@ -517,6 +469,7 @@ describe('Router Configuration tests', () => {
           [
             'AnotherEntity',
             {
+              externalFieldNames: new Set<string>(['field', 'anotherField']),
               fieldNames: new Set<string>(['id', 'myField']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
@@ -603,6 +556,43 @@ describe('Router Configuration tests', () => {
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
               typeName: 'Interface',
+            },
+          ],
+        ]),
+      );
+    });
+
+    test('that nested external fields that are part of a key FieldSet are added to configuration', () => {
+      const { errors, normalizationResult } = normalizeSubgraphFromString(`
+      type Entity @key(fields: "id object { id }") {
+        id: ID @external
+        object: Object! @external
+      }
+      type Object {
+        id: ID! @external
+      }
+    `);
+      expect(errors).toBeUndefined();
+      const configurationData = normalizationResult!.configurationDataByParentTypeName;
+      expect(configurationData).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Entity',
+            {
+              externalFieldNames: new Set<string>(['id', 'object']),
+              fieldNames: new Set<string>(['id', 'object']),
+              isRootNode: true,
+              keys: [{ fieldName: '', selectionSet: 'id object { id }' }],
+              typeName: 'Entity',
+            },
+          ],
+          [
+            'Object',
+            {
+              externalFieldNames: new Set<string>(['id']),
+              fieldNames: new Set<string>(['id']),
+              isRootNode: false,
+              typeName: 'Object',
             },
           ],
         ]),

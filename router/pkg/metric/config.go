@@ -1,7 +1,11 @@
 package metric
 
 import (
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
+	"go.opentelemetry.io/otel/attribute"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"net/http"
 	"net/url"
 	"regexp"
 )
@@ -9,7 +13,7 @@ import (
 // DefaultServerName Default resource name.
 const DefaultServerName = "cosmo-router"
 
-type Prometheus struct {
+type PrometheusConfig struct {
 	Enabled    bool
 	ListenAddr string
 	Path       string
@@ -17,6 +21,8 @@ type Prometheus struct {
 	ExcludeMetrics []*regexp.Regexp
 	// Metric labels to exclude from Prometheus exporter
 	ExcludeMetricLabels []*regexp.Regexp
+	// TestRegistry is used for testing purposes. If set, the registry will be used instead of the default one.
+	TestRegistry *prometheus.Registry
 }
 
 type OpenTelemetryExporter struct {
@@ -37,6 +43,8 @@ type OpenTelemetry struct {
 	Enabled       bool
 	RouterRuntime bool
 	Exporters     []*OpenTelemetryExporter
+	// TestReader is used for testing purposes. If set, the reader will be used instead of the configured exporters.
+	TestReader sdkmetric.Reader
 }
 
 func GetDefaultExporter(cfg *Config) *OpenTelemetryExporter {
@@ -63,13 +71,21 @@ func GetDefaultExporter(cfg *Config) *OpenTelemetryExporter {
 type Config struct {
 	// Name represents the service name for metrics. The default value is cosmo-router.
 	Name string
+
 	// Version represents the service version for metrics. The default value is dev.
 	Version string
 
 	// OpenTelemetry includes the OpenTelemetry configuration
 	OpenTelemetry OpenTelemetry
 
-	Prometheus Prometheus
+	// Prometheus includes the Prometheus configuration
+	Prometheus PrometheusConfig
+
+	// AttributesMapper added to the global attributes for all metrics.
+	AttributesMapper func(req *http.Request) []attribute.KeyValue
+
+	// ResourceAttributes added to the global resource attributes for all metrics.
+	ResourceAttributes []attribute.KeyValue
 }
 
 func (c *Config) IsEnabled() bool {
@@ -78,9 +94,12 @@ func (c *Config) IsEnabled() bool {
 
 // DefaultConfig returns the default config.
 func DefaultConfig(serviceVersion string) *Config {
+
 	return &Config{
-		Name:    DefaultServerName,
-		Version: serviceVersion,
+		Name:               DefaultServerName,
+		Version:            serviceVersion,
+		AttributesMapper:   nil,
+		ResourceAttributes: make([]attribute.KeyValue, 0),
 		OpenTelemetry: OpenTelemetry{
 			Enabled:       false,
 			RouterRuntime: true,
@@ -93,7 +112,7 @@ func DefaultConfig(serviceVersion string) *Config {
 				},
 			},
 		},
-		Prometheus: Prometheus{
+		Prometheus: PrometheusConfig{
 			Enabled:    false,
 			ListenAddr: "0.0.0.0:8088",
 			Path:       "/metrics",

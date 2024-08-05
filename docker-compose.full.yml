@@ -93,10 +93,25 @@ services:
     networks:
       - primary
 
+  products_fg:
+    container_name: products_fg
+    environment:
+      OTEL_AUTH_TOKEN: ${OTEL_AUTH_TOKEN}
+      OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-otelcollector:4318}
+    build:
+      context: ./demo
+      dockerfile: Dockerfile.products_fg
+    profiles:
+      - subgraphs
+    ports:
+      - '4010:4010'
+    networks:
+      - primary
+
   # Infrastructure services
 
   clickhouse:
-    image: clickhouse/clickhouse-server:${DC_CLICKHOUSE_VERSION:-24}
+    image: clickhouse/clickhouse-server:${DC_CLICKHOUSE_VERSION:-24.2.2}
     environment:
       CLICKHOUSE_DB: ${CLICKHOUSE_DATABASE:-cosmo}
       CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
@@ -134,7 +149,6 @@ services:
 
   keycloak:
     image: ghcr.io/wundergraph/cosmo/keycloak:${DC_KEYCLOAK_VERSION:-latest}
-    platform: linux/amd64
     environment:
       KEYCLOAK_EXTRA_ARGS: '--import-realm --health-enabled=true'
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
@@ -157,17 +171,16 @@ services:
       - postgres
 
   minio:
-    image: quay.io/minio/minio:${DC_MINIO_VERSION:-RELEASE.2023-11-06T22-26-08Z}
+    image: bitnami/minio:${DC_MINIO_VERSION:-2024.7.16-debian-12-r0}
     environment:
       - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minio}
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-changeme}
+      - MINIO_DEFAULT_BUCKETS=cosmo
     ports:
       - '10000:9000'
       - '10001:9001'
     volumes:
-      - minio:/data
-      - ./docker/minio/entrypoint.sh:/entrypoint.sh
-    entrypoint: /entrypoint.sh
+      - minio:/bitnami/minio/data
     restart: unless-stopped
     networks:
       - primary
@@ -205,7 +218,6 @@ services:
 
   graphqlmetrics:
     image: ghcr.io/wundergraph/cosmo/graphqlmetrics:${DC_GRAPHQLMETRICS_VERSION:-latest}
-    platform: linux/amd64
     environment:
       CLICKHOUSE_DSN: 'clickhouse://${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-changeme}@clickhouse:9000/${CLICKHOUSE_DATABASE:-cosmo}'
       INGEST_JWT_SECRET: ${INGEST_JWT_SECRET:-fkczyomvdprgvtmvkuhvprxuggkbgwld}
@@ -222,10 +234,11 @@ services:
 
   otelcollector:
     image: ghcr.io/wundergraph/cosmo/otelcollector:${DC_OTELCOLLECTOR_VERSION:-latest}
-    platform: linux/amd64
     environment:
       CLICKHOUSE_ENDPOINT: 'clickhouse://${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-changeme}@clickhouse:9000/${CLICKHOUSE_DATABASE:-cosmo}?dial_timeout=15s&compress=lz4'
       OTEL_INGEST_JWT_SECRET: ${OTEL_INGEST_JWT_SECRET:-fkczyomvdprgvtmvkuhvprxuggkbgwld}
+      PROMETHEUS_LISTEN_ADDR: ${PROMETHEUS_LISTEN_ADDR:-127.0.0.1:8088}
+      PROMETHEUS_LEVEL: ${PROMETHEUS_LEVEL:-none}
     ports:
       - '4318:4318'
     restart: unless-stopped
@@ -238,7 +251,6 @@ services:
 
   controlplane:
     image: ghcr.io/wundergraph/cosmo/controlplane:${DC_CONTROLPLANE_VERSION:-latest}
-    platform: linux/amd64
     environment:
       DB_URL: 'postgresql://postgres:changeme@postgres:5432/controlplane'
       PORT: 3001
@@ -288,7 +300,6 @@ services:
 
   router:
     image: ghcr.io/wundergraph/cosmo/router:${DC_ROUTER_VERSION:-latest}
-    platform: linux/amd64
     environment:
       LOG_LEVEL: info
       CORS_ALLOW_CREDENTIALS: true
@@ -313,7 +324,6 @@ services:
 
   studio:
     image: ghcr.io/wundergraph/cosmo/studio:${DC_STUDIO_VERSION:-latest}
-    platform: linux/amd64
     environment:
       NEXT_PUBLIC_COSMO_CP_URL: http://localhost:3001
       NEXT_PUBLIC_COSMO_STUDIO_URL: http://localhost:3000
@@ -327,7 +337,6 @@ services:
 
   seed:
     image: ghcr.io/wundergraph/cosmo/controlplane:${DC_CONTROLPLANE_VERSION:-latest}
-    platform: linux/amd64
     command:
       - '/app/dist/bin/seed.js'
     environment:
@@ -356,7 +365,6 @@ services:
 
   clickhouse-migration:
     image: ghcr.io/wundergraph/cosmo/controlplane:${DC_CONTROLPLANE_VERSION:-latest}
-    platform: linux/amd64
     command: node dist/bin/ch-migrate.js
     depends_on:
       - clickhouse
@@ -370,7 +378,6 @@ services:
 
   database-migration:
     image: ghcr.io/wundergraph/cosmo/controlplane:${DC_CONTROLPLANE_VERSION:-latest}
-    platform: linux/amd64
     command: node dist/bin/db-migrate.js
     depends_on:
       - postgres

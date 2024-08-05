@@ -51,14 +51,15 @@ message PublishFederatedSubgraphRequest {
   optional string subscription_url = 7;
   // The namespace of the subgraph
   string namespace = 8;
-  // If true, the labels will be unset
-  optional bool unset_labels = 9;
+  // The subscription subprotocol to use when subscribing to this subgraph
+  optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 9;
 }
 
 message PublishFederatedSubgraphResponse {
   Response response = 1;
   repeated CompositionError compositionErrors = 2;
   repeated DeploymentError deploymentErrors = 3;
+  optional bool hasChanged = 4;
 }
 
 message GitInfo {
@@ -96,6 +97,9 @@ message CreateMonographRequest {
   optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 6;
   optional string readme = 7;
   string admissionWebhookURL = 8;
+  // The subscription protocol to use when subscribing to this subgraph
+  optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 9;
+  optional string admissionWebhookSecret = 10;
 }
 
 message CreateMonographResponse {
@@ -113,13 +117,14 @@ message CreateFederatedGraphRequest {
   optional string readme = 4;
   string namespace = 5;
   string admissionWebhookURL = 6;
+  optional string admissionWebhookSecret = 7;
 }
 
 message CreateFederatedSubgraphRequest {
   // The FQDN of the subgraph to be published e.g. "wg.team1.orders"
   string name = 1;
   // routing_url is the URL of the service which will be used to route the requests to the subgraph.
-  string routing_url = 2;
+  optional string routing_url = 2;
   // labels are the labels of the services which will form the federated graph. If the proposed is not valid, the service will be rejected.
   repeated Label labels = 3;
   // subscription protocol to use when subscribing to this subgraph
@@ -129,6 +134,10 @@ message CreateFederatedSubgraphRequest {
   // readme of the subgraph
   optional string readme = 7;
   string namespace = 8;
+  optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 9;
+  optional bool is_event_driven_graph = 10;
+  optional bool is_feature_subgraph = 11;
+  optional string base_subgraph_name = 12;
 }
 
 message DeleteFederatedGraphRequest {
@@ -163,6 +172,7 @@ message CompositionError {
   string message = 1;
   string federatedGraphName = 2;
   string namespace = 3;
+  string featureFlag = 4;
 }
 
 message DeploymentError {
@@ -210,7 +220,6 @@ message CheckSubgraphSchemaResponse {
   repeated SchemaChange nonBreakingChanges = 3;
   repeated CompositionError compositionErrors = 4;
   // Contains the operation usage stats for the operations that are impacted by the schema changes.
-  // Can be undefined when the schema changes are not inspectable by real traffic breaking change detection.
   CheckOperationUsageStats operationUsageStats = 5;
   string check_id = 6;
   repeated CheckedFederatedGraphs checked_federated_graphs = 7;
@@ -252,6 +261,12 @@ message GetFederatedGraphsRequest {
   optional bool supports_federation = 5;
 }
 
+message Contract {
+  string id = 1;
+  string source_federated_graph_id = 2;
+  repeated string exclude_tags = 3;
+}
+
 message FederatedGraph {
   string id = 1;
   string name = 2;
@@ -267,6 +282,8 @@ message FederatedGraph {
   string namespace = 12;
   optional string compositionId = 13;
   bool supports_federation = 14;
+  optional Contract contract = 15;
+  optional string admission_webhook_url = 16;
 }
 
 message GetFederatedGraphsResponse {
@@ -288,6 +305,8 @@ message GetSubgraphsRequest {
   int32 limit = 1;
   int32 offset = 2;
   string namespace = 3;
+  optional string query = 4;
+  bool exclude_feature_subgraphs = 5;
 }
 
 message Subgraph {
@@ -301,11 +320,19 @@ message Subgraph {
   string subscriptionUrl = 8;
   string target_id = 9;
   string namespace = 10;
+  string subscriptionProtocol = 11;
+  optional bool isV2Graph = 12;
+  bool isEventDrivenGraph = 13;
+  string websocketSubprotocol = 14;
+  bool isFeatureSubgraph = 15;
+  optional string baseSubgraphName = 16;
+  optional string baseSubgraphId = 17;
 }
 
 message GetSubgraphsResponse {
   Response response = 1;
   repeated Subgraph graphs = 2;
+  int32 count = 3;
 }
 
 message GetFederatedGraphByNameRequest {
@@ -319,17 +346,23 @@ message GetFederatedGraphByNameResponse {
   FederatedGraph graph = 2;
   repeated Subgraph subgraphs = 3;
   string graphRequestToken = 4;
+  repeated FeatureFlag featureFlagsInLatestValidComposition = 5;
+  // includes all the feature subgraphs that are part of the federated graph, 
+  // even the ones that are not part of the latest composition
+  repeated Subgraph featureSubgraphs = 6;
 }
 
 message GetFederatedGraphSDLByNameRequest {
   string name = 1;
   string namespace = 2;
+  optional string feature_flag_name = 3;
 }
 
 message GetFederatedGraphSDLByNameResponse {
   Response response = 1;
   optional string sdl = 2;
   optional string version_id = 3;
+  optional string client_schema = 4;
 }
 
 message GetSubgraphByNameRequest {
@@ -376,6 +409,12 @@ message GetChecksByFederatedGraphNameRequest {
 }
 
 message SchemaCheck {
+  message GhDetails {
+    string commitSha = 1;
+    string ownerSlug = 2;
+    string repositorySlug = 3;
+  }
+
   string id = 1;
   string targetID = 2;
   string subgraphName = 3;
@@ -385,15 +424,8 @@ message SchemaCheck {
   bool hasClientTraffic = 7;
   bool isForcedSuccess = 8;
   bool isDeleted = 9;
-  optional SchemaCheckGhDetails ghDetails = 10;
+  optional GhDetails ghDetails = 10;
   bool hasLintErrors = 11;
-}
-
-message SchemaCheckGhDetails {
-  string commitSha = 1;
-  string ownerSlug = 3;
-  string repositorySlug = 4;
-  int32 checkRunId = 5;
 }
 
 message GetChecksByFederatedGraphNameResponse {
@@ -482,6 +514,7 @@ message FederatedGraphChangelogOutput{
   string createdAt = 1;
   string schemaVersionId = 2;
   repeated FederatedGraphChangelog changelogs = 3;
+  string compositionId = 4;
 }
 
 message GetFederatedGraphChangelogResponse {
@@ -497,7 +530,7 @@ message GetFederatedResponse {
 
 message UpdateSubgraphRequest {
   string name = 1;
-  string routing_url = 2;
+  optional string routing_url = 2;
   repeated Label labels = 3;
   repeated string headers = 4;
   // subscription protocol to use when subscribing to this subgraph
@@ -507,6 +540,7 @@ message UpdateSubgraphRequest {
   optional string readme = 7;
   string namespace = 8;
   optional bool unset_labels = 9;
+  optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 10;
 }
 
 message UpdateSubgraphResponse {
@@ -523,6 +557,7 @@ message UpdateFederatedGraphRequest {
   string namespace = 5;
   optional bool unset_label_matchers = 6;
   optional string admissionWebhookURL = 7;
+  optional string admissionWebhookSecret = 8;
 }
 
 message UpdateFederatedGraphResponse {
@@ -539,6 +574,9 @@ message UpdateMonographRequest {
   optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 5;
   optional string subscription_url = 6;
   optional string readme = 7;
+  optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 8;
+  optional string admissionWebhookURL = 9;
+  optional string admissionWebhookSecret = 10;
 }
 
 message UpdateMonographResponse {
@@ -565,7 +603,7 @@ message Pagination {
 
 message Sort {
   string id = 1;
-  bool desc = 2; 
+  bool desc = 2;
 }
 
 message AnalyticsConfig {
@@ -746,6 +784,7 @@ message OrgMember{
   string email = 2;
   repeated string roles = 3;
   string orgMemberID = 4;
+  bool active = 5;
 }
 
 message PendingOrgInvitation{
@@ -753,12 +792,26 @@ message PendingOrgInvitation{
   string email = 2;
 }
 
-message GetOrganizationMembersRequest {}
+message GetPendingOrganizationMembersRequest {
+  Pagination pagination = 1;
+  optional string search = 2;
+}
+
+message GetPendingOrganizationMembersResponse {
+  Response response = 1;
+  repeated PendingOrgInvitation pendingInvitations = 2;
+  int32 total_count = 3;
+}
+
+message GetOrganizationMembersRequest {
+  Pagination pagination = 1;
+  optional string search = 2;
+}
 
 message GetOrganizationMembersResponse {
   Response response = 1;
   repeated OrgMember members = 2;
-  repeated PendingOrgInvitation pendingInvitations = 3;
+  int32 total_count = 3;
 }
 
 message InviteUserRequest {
@@ -798,6 +851,8 @@ message CreateAPIKeyRequest {
   ExpiresAt expires = 3;
   repeated string federatedGraphTargetIds = 4;
   repeated string subgraphTargetIds = 5;
+  repeated string permissions = 6;
+  bool allowAllResources = 7;
 }
 
 message CreateAPIKeyResponse {
@@ -856,7 +911,7 @@ message Span {
 }
 
 message GetTraceRequest {
-  string id = 1;  
+  string id = 1;
 }
 
 message GetTraceResponse {
@@ -973,6 +1028,7 @@ message CreateOrganizationWebhookConfigRequest {
 
 message CreateOrganizationWebhookConfigResponse {
   Response response = 1;
+  string webhook_config_id = 2;
 }
 
 message GetOrganizationWebhookConfigsRequest {}
@@ -1131,7 +1187,7 @@ message Organization {
   string id = 1;
   string name = 2;
   string slug = 3;
-  string creatorUserId = 4;
+  optional string creatorUserId = 4;
   string createdAt = 5;
 }
 
@@ -1432,7 +1488,7 @@ message OrganizationInvite{
   string id = 1;
   string name = 2;
   string slug = 3;
-  string creatorUserId = 4;
+  optional string creatorUserId = 4;
   string createdAt = 5;
   optional string invitedBy = 6;
 }
@@ -1498,6 +1554,7 @@ message GraphCompositionSubgraph {
   string schemaVersionId = 2;
   string name = 3;
   string target_id = 4;
+  bool isFeatureSubgraph = 5;
 }
 
 message GetCompositionsRequest {
@@ -1507,6 +1564,7 @@ message GetCompositionsRequest {
   string startDate = 4;
   string endDate = 5;
   string namespace = 6;
+  bool excludeFeatureFlagCompositions = 7; 
 }
 
 message GetCompositionsResponse {
@@ -1517,6 +1575,20 @@ message GetCompositionsResponse {
 
 message GetCompositionDetailsRequest {
   string compositionId = 1;
+  string namespace = 2;
+}
+
+message FeatureFlagComposition {
+  string id = 1;
+  string schemaVersionId = 2;
+  string createdAt = 3;
+  bool isComposable = 4;
+  optional string compositionErrors = 5;
+  optional string createdBy = 6;
+  optional string routerConfigSignature = 7;
+  optional string admissionError = 8;
+  optional string deploymentError = 9;
+  string featureFlagName = 10;
 }
 
 message GetCompositionDetailsResponse {
@@ -1524,6 +1596,7 @@ message GetCompositionDetailsResponse {
   GraphComposition composition = 2;
   repeated GraphCompositionSubgraph compositionSubgraphs = 3;
   ChangeCounts changeCounts = 4;
+  repeated FeatureFlagComposition featureFlagCompositions = 5;
 }
 
 message GetSdlBySchemaVersionRequest {
@@ -1534,6 +1607,7 @@ message GetSdlBySchemaVersionRequest {
 message GetSdlBySchemaVersionResponse {
   Response response = 1;
   string sdl = 2;
+  string client_schema = 3;
 }
 
 message GetChangelogBySchemaVersionRequest {
@@ -1558,19 +1632,18 @@ message GetUserAccessibleResourcesResponse {
   repeated Graph subgraphs = 3;
 }
 
-message UpdateAISettingsRequest {
+enum Feature {
+  rbac = 0;
+  ai = 1;
+  scim = 2;
+}
+
+message UpdateFeatureSettingsRequest {
   bool enable = 1;
+  Feature featureId = 2;
 }
 
-message UpdateAISettingsResponse {
-  Response response = 1;
-}
-
-message UpdateRBACSettingsRequest {
-  bool enable = 1;
-}
-
-message UpdateRBACSettingsResponse {
+message UpdateFeatureSettingsResponse {
   Response response = 1;
 }
 
@@ -1671,10 +1744,11 @@ message GetFieldUsageRequest {
   string graph_name = 1;
   optional string namedType = 2;
   optional string typename = 3;
-  optional string field = 4; 
+  optional string field = 4;
   optional int32 range = 5;
   DateRange dateRange = 6;
   string namespace = 7;
+  optional string feature_flag_name = 8;
 }
 
 message ClientWithOperations {
@@ -1751,7 +1825,7 @@ message GetAllDiscussionsRequest {
 
 message Discussion {
   string id = 1;
-  string schema_version_id = 2; 
+  string schema_version_id = 2;
   string target_id = 3;
   int32 reference_line = 4;
   DiscussionComment openingComment = 5;
@@ -1761,13 +1835,13 @@ message Discussion {
 message DiscussionComment {
   string id = 1;
   string content_json = 2;
-  string created_by = 3;
+  optional string created_by = 3;
   string created_at = 4;
   optional string updated_at = 5;
   bool is_deleted = 6;
 }
 
-message GetAllDiscussionsResponse {  
+message GetAllDiscussionsResponse {
   Response response = 1;
   repeated Discussion discussions = 2;
 }
@@ -1803,11 +1877,6 @@ message SetDiscussionResolutionRequest {
 
 message SetDiscussionResolutionResponse {
   Response response = 1;
-}
-
-message GetConfigRequest {
-  string graph_name = 1;
-  string namespace = 2;
 }
 
 message CreateNamespaceRequest {
@@ -1901,6 +1970,190 @@ message MigrateMonographResponse {
   Response response = 1;
 }
 
+message GetUserAccessiblePermissionsRequest {}
+
+message Permission {
+  string displayName = 1;
+  string value = 2;
+}
+
+message GetUserAccessiblePermissionsResponse {
+  Response response = 1;
+  repeated Permission permissions = 2;
+}
+
+message CreateContractRequest {
+  string name = 1;
+  string namespace = 2;
+  string source_graph_name = 3;
+  string routing_url = 4;
+  string admission_webhook_url = 5;
+  repeated string exclude_tags = 6;
+  optional string readme = 7;
+  optional string admission_webhook_secret = 8;
+}
+
+message CreateContractResponse {
+  Response response = 1;
+  repeated CompositionError compositionErrors = 2;
+  repeated DeploymentError deploymentErrors = 3;
+}
+
+message UpdateContractRequest {
+  string name = 1;
+  string namespace = 2;
+  repeated string exclude_tags = 3;
+}
+
+message UpdateContractResponse {
+  Response response = 1;
+  repeated CompositionError compositionErrors = 2;
+  repeated DeploymentError deploymentErrors = 3;
+}
+
+message IsMemberLimitReachedRequest {}
+
+message IsMemberLimitReachedResponse {
+  Response response = 1;
+  bool limit_reached = 2;
+  int32 member_count = 3;
+}
+
+message DeleteUserRequest {}
+
+message DeleteUserResponse {
+  Response response = 1;
+}
+
+message CreateFeatureFlagRequest {
+  string name = 1;
+  string namespace = 2;
+  repeated Label labels = 3;
+  repeated string feature_subgraph_names = 4;
+  bool is_enabled = 5;
+}
+
+message CreateFeatureFlagResponse {
+  Response response = 1;
+  repeated CompositionError composition_errors = 2;
+  repeated DeploymentError deployment_errors = 3;
+}
+
+message UpdateFeatureFlagRequest {
+  string name = 1;
+  string namespace = 2;
+  repeated Label labels = 3;
+  repeated string feature_subgraph_names = 4;
+  bool unset_labels = 5;
+}
+
+message UpdateFeatureFlagResponse {
+  Response response = 1;
+  repeated CompositionError composition_errors = 2;
+  repeated DeploymentError deployment_errors = 3;
+}
+
+message EnableFeatureFlagRequest {
+  string name = 1;
+  string namespace = 2;
+  bool enabled = 3;
+}
+
+message EnableFeatureFlagResponse {
+  Response response = 1;
+  repeated CompositionError composition_errors = 2;
+  repeated DeploymentError deployment_errors = 3;
+  optional bool has_changed = 4;
+}
+
+message DeleteFeatureFlagRequest {
+  string name = 1;
+  string namespace = 2;
+}
+
+message DeleteFeatureFlagResponse {
+  Response response = 1;
+  repeated CompositionError composition_errors = 2;
+  repeated DeploymentError deployment_errors = 3;
+}
+
+message FeatureFlag {
+  string id = 1;
+  string name = 2;
+  string namespace = 3;
+  repeated Label labels = 4;
+  bool is_enabled = 5;
+  string created_by = 6;
+  string created_at = 7;
+  string updated_at = 8;
+}
+
+message GetFeatureFlagsRequest {
+  int32 limit = 1;
+  int32 offset = 2;
+  string namespace = 3;
+  optional string query = 4;
+}
+
+message GetFeatureFlagsResponse {
+  Response response = 1;
+  repeated FeatureFlag feature_flags = 2;
+  int32 total_count = 3;
+}
+
+message GetFeatureFlagByNameRequest {
+  string name = 1;
+  string namespace = 2;
+}
+
+message GetFeatureFlagByNameResponse {
+  message FfFederatedGraph{
+    FederatedGraph federated_graph = 1;
+    bool is_connected = 2;
+  }
+  Response response = 1;
+  FeatureFlag feature_flag = 2;
+  repeated FfFederatedGraph federated_graphs = 3;
+  repeated Subgraph feature_subgraphs = 4;
+}
+
+message GetFeatureSubgraphsByFeatureFlagRequest {
+  string feature_flag_name = 1;
+  string namespace = 2;
+}
+
+message GetFeatureSubgraphsByFeatureFlagResponse {
+  Response response = 1;
+  repeated Subgraph feature_subgraphs = 2;
+}
+
+message GetFeatureSubgraphsRequest {
+  int32 limit = 1;
+  int32 offset = 2;
+  string namespace = 3;
+  optional string query = 4;
+}
+
+message GetFeatureSubgraphsResponse {
+  Response response = 1;
+  repeated Subgraph feature_subgraphs = 2;
+  int32 count = 3;
+}
+
+message GetFeatureFlagsByFederatedGraphRequest {
+  string federated_graph_name  = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+  string namespace = 4;
+  optional string query = 5;
+}
+
+message GetFeatureFlagsByFederatedGraphResponse {
+  Response response = 1;
+  repeated FeatureFlag feature_flags = 2;
+  int32 total_count = 3;
+}
+
 service PlatformService {
   // Namespaces
   rpc CreateNamespace(CreateNamespaceRequest) returns (CreateNamespaceResponse) {}
@@ -1908,9 +2161,13 @@ service PlatformService {
   rpc RenameNamespace(RenameNamespaceRequest) returns (RenameNamespaceResponse) {}
   rpc GetNamespaces(GetNamespacesRequest) returns (GetNamespacesResponse) {}
 
+  // Contracts
+  rpc CreateContract(CreateContractRequest) returns (CreateContractResponse) {}
+  rpc UpdateContract(UpdateContractRequest) returns (UpdateContractResponse) {}
+
   rpc MoveFederatedGraph(MoveGraphRequest) returns (MoveGraphResponse) {}
   rpc MoveSubgraph(MoveGraphRequest) returns (MoveGraphResponse) {}
-  
+
   rpc MoveMonograph(MoveGraphRequest) returns (MoveGraphResponse) {}
   // CreateMonograph creates a monograph on the control plane.
   rpc CreateMonograph(CreateMonographRequest) returns (CreateMonographResponse) {}
@@ -1918,7 +2175,7 @@ service PlatformService {
   rpc PublishMonograph(PublishMonographRequest) returns (PublishMonographResponse) {}
   // DeleteMonograph deletes a monograph from the control plane.
   rpc DeleteMonograph(DeleteMonographRequest) returns (DeleteMonographResponse) {}
-  // UpdateMonograph updates a monograph with new labels, urls, subscription config and readme
+  // UpdateMonograph updates a monograph with new urls, subscription config and readme
   rpc UpdateMonograph(UpdateMonographRequest) returns (UpdateMonographResponse) {}
   // MigrateMonograph converts a monograph into a federated graph.
   rpc MigrateMonograph(MigrateMonographRequest) returns (MigrateMonographResponse) {}
@@ -2006,6 +2263,10 @@ service PlatformService {
   rpc CreateFederatedGraphToken(CreateFederatedGraphTokenRequest) returns (CreateFederatedGraphTokenResponse) {}
   // GetOrganizationMembers returns the list of organization members
   rpc GetOrganizationMembers(GetOrganizationMembersRequest) returns (GetOrganizationMembersResponse){}
+  // GetOrganizationMembers returns the list of pending organization invites
+  rpc GetPendingOrganizationMembers(GetPendingOrganizationMembersRequest) returns (GetPendingOrganizationMembersResponse){}
+  // IsMemberLimitReached returns whether the organization has reached the member limit
+  rpc IsMemberLimitReached(IsMemberLimitReachedRequest) returns (IsMemberLimitReachedResponse){}
   // InviteUser invites an user to join the organization
   rpc InviteUser(InviteUserRequest) returns (InviteUserResponse){}
   // GetAPIKeys returns a list of API keys of the organization
@@ -2018,11 +2279,9 @@ service PlatformService {
   rpc RemoveOrganizationMember(RemoveOrganizationMemberRequest) returns (RemoveOrganizationMemberResponse){}
   // RemoveInvitation removes the org invitation of the user
   rpc RemoveInvitation(RemoveInvitationRequest) returns (RemoveInvitationResponse){}
-  // GetLatestValidRouterConfig returns the router config for the federated graph
-  rpc GetLatestValidRouterConfig(GetConfigRequest) returns (wg.cosmo.node.v1.GetConfigResponse) {}
   // MigrateFromApollo migrates the graphs from apollo to cosmo
   rpc MigrateFromApollo(MigrateFromApolloRequest) returns (MigrateFromApolloResponse) {}
-  
+
   // CreateOrganizationWebhookConfig create a new webhook config for the organization
   rpc CreateOrganizationWebhookConfig(CreateOrganizationWebhookConfigRequest) returns (CreateOrganizationWebhookConfigResponse) {}
   // GetOrganizationWebhookConfigs returns all webhooks for the organization
@@ -2043,7 +2302,9 @@ service PlatformService {
   // DeleteIntegration deletes an organization web integration hook
   rpc DeleteIntegration(DeleteIntegrationRequest) returns (DeleteIntegrationResponse) {}
 
-  // DeleteOrganization deletes an organization 
+  // DeleteUser deletes the user
+  rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse) {}
+  // DeleteOrganization deletes an organization
   rpc DeleteOrganization(DeleteOrganizationRequest) returns (DeleteOrganizationResponse) {}
   // LeaveOrganization removes a member from the organization
   rpc LeaveOrganization(LeaveOrganizationRequest) returns (LeaveOrganizationResponse) {}
@@ -2079,10 +2340,8 @@ service PlatformService {
   rpc GetChangelogBySchemaVersion(GetChangelogBySchemaVersionRequest) returns (GetChangelogBySchemaVersionResponse) {}
   // GetUserAccessibleResources returns all the federated and subgraphs where the user has write permissions
   rpc GetUserAccessibleResources(GetUserAccessibleResourcesRequest) returns (GetUserAccessibleResourcesResponse) {}
-  // UpdateRBACSettings updates rbac setting of the organization
-  rpc UpdateRBACSettings(UpdateRBACSettingsRequest) returns (UpdateRBACSettingsResponse) {}
-  // UpdateAISettings updates ai setting of the organization
-  rpc UpdateAISettings(UpdateAISettingsRequest) returns (UpdateAISettingsResponse) {}
+  // UpdateFeatureSettings updates the setinngs of features(ai, rbac, scim) of the organization
+  rpc UpdateFeatureSettings(UpdateFeatureSettingsRequest) returns (UpdateFeatureSettingsResponse) {}
   // AddSubgraphMember adds a user to the subgraph
   rpc AddSubgraphMember(AddSubgraphMemberRequest) returns (AddSubgraphMemberResponse) {}
   // RemoveSubgraphMember removes a member from the subgraph
@@ -2107,6 +2366,17 @@ service PlatformService {
   rpc SetDiscussionResolution(SetDiscussionResolutionRequest) returns (SetDiscussionResolutionResponse) {}
   // AddReadme adds a readme of a target, can be a subgraph or a federated graph
   rpc AddReadme(AddReadmeRequest) returns (AddReadmeResponse) {}
+  // GetUserAccessiblePermissions returns all the federated and subgraphs where the user has write permissions
+  rpc GetUserAccessiblePermissions(GetUserAccessiblePermissionsRequest) returns (GetUserAccessiblePermissionsResponse) {}
+
+  // CreateFeatureFlag creates a new feature flag for the selected feature graphs
+  rpc CreateFeatureFlag(CreateFeatureFlagRequest) returns (CreateFeatureFlagResponse) {}
+  // DeleteFeatureFlag deletes an existing feature flag
+  rpc DeleteFeatureFlag(DeleteFeatureFlagRequest) returns (DeleteFeatureFlagResponse) {}
+  // UpdateFeatureFlag updates a new feature flag for the selected feature graphs
+  rpc UpdateFeatureFlag(UpdateFeatureFlagRequest) returns (UpdateFeatureFlagResponse) {}
+  // EnableFeatureFlag enables/disables a feature flag
+  rpc EnableFeatureFlag(EnableFeatureFlagRequest) returns (EnableFeatureFlagResponse) {}
 
   // Analytics
   rpc GetAnalyticsView(GetAnalyticsViewRequest) returns (GetAnalyticsViewResponse) {
@@ -2147,8 +2417,18 @@ service PlatformService {
   rpc EnableLintingForTheNamespace(EnableLintingForTheNamespaceRequest) returns (EnableLintingForTheNamespaceResponse) {}
   // ConfigureNamespaceLintConfig configures the lint config of the organization.
   rpc ConfigureNamespaceLintConfig(ConfigureNamespaceLintConfigRequest) returns (ConfigureNamespaceLintConfigResponse) {}
-  // GetNamespaceLintConfig returns the lint config of the organization.
+  // GetNamespaceLintConfig returns the lint config of the namespace.
   rpc GetNamespaceLintConfig(GetNamespaceLintConfigRequest) returns (GetNamespaceLintConfigResponse) {}
+  // GetFeatureFlags returns the feature flags of the namespace
+  rpc GetFeatureFlags(GetFeatureFlagsRequest) returns (GetFeatureFlagsResponse) {}
+  // GetFeatureFlagByName returns the feature flag of the namespace
+  rpc GetFeatureFlagByName(GetFeatureFlagByNameRequest) returns (GetFeatureFlagByNameResponse) {}
+  // GetFeatureSubgraphsByFeatureFlag returns the feature subgraphs of a feature flag
+  rpc GetFeatureSubgraphsByFeatureFlag(GetFeatureSubgraphsByFeatureFlagRequest) returns (GetFeatureSubgraphsByFeatureFlagResponse) {}
+  // GetFeatureSubgraphs returns the list of feature subgraphs.
+  rpc GetFeatureSubgraphs(GetFeatureSubgraphsRequest) returns (GetFeatureSubgraphsResponse) {}
+  // GetFeatureFlagsByFederatedGraph returns the list of feature flags which match the label matchers of the federated graph.
+  rpc GetFeatureFlagsByFederatedGraph(GetFeatureFlagsByFederatedGraphRequest) returns (GetFeatureFlagsByFederatedGraphResponse) {}
 
   //
   // Billing

@@ -195,5 +195,51 @@ configuration:
   # -- URL of the CDN to use for serving router configs and persistent operations
   cdnBaseUrl: 'http://cosmo-cdn:8787'
 
+  # -- Use this section to configure prometheus metrics.
+  prometheus:
+    # -- Enables prometheus metrics support. Default is false.
+    enabled: false
+    # -- The host to bind to defautls to 127.0.0.1 to avoid opening the metrics endpoint by default.
+    host: 127.0.0.1
+    # -- The port where metrics are exposed. Default is port 8088.
+    port: 8088
+    # -- The HTTP path where metrics are exposed. Default is "/metrics".
+    path: "/metrics"
+    # Use this section to disable/enable pod monitoring over [GCP managed collection](https://cloud.google.com/stackdriver/docs/managed-prometheus/setup-managed#config-mgd-collection).
+    gcpMonitoring:
+      # -- Enables gcp support . Default is false.
+      enabled: false
+      # -- Scrape interval. Default is "60s".
+      interval: 60s
+      # -- Scrape timeout. Default is "50s".
+      timeout: 50s
+
 # -- Existing secret in the same namespace containing the ControlPlane Secrets. The secret keys have to match with current secret.
 existingSecret: ""
+
+# -- Configure jobs to be executed in the control plane
+jobs:
+  # -- Used to deactivate an organization with a reason and schedule deletion
+  deactivateOrganization:
+    # -- Enables the job to be run
+    enabled: false
+    # -- The slug of the organization
+    slug: 'foo'
+    # -- The unique identifier of the organization
+    id: '123'
+    # -- The reason for deactivation
+    reason: ''
+  # -- Used to activate an organization and remove the scheduled deletion
+  activateOrganization:
+    # -- Enables the job to be run
+    enabled: false
+    # -- The slug of the organization
+    slug: 'foo'
+    # -- The unique identifier of the organization
+    id: '123'
+  # -- Used to delete the user
+  deleteUser:
+    # -- Enables the job to be run
+    enabled: false
+    # -- The unique identifier of the user
+    id: '123'

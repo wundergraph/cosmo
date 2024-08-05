@@ -23,7 +23,7 @@ import {
   FiChevronDown,
   FiChevronUp,
 } from "react-icons/fi";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { Router } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { getRouters } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
@@ -228,9 +228,11 @@ const RouterPage: React.FC<{ router: Router }> = ({ router }) => {
                 Process Uptime
               </div>
               <div>
-                {formatDistanceToNow(
-                  subSeconds(new Date(), parseInt(router.uptimeSeconds)),
-                )}
+                {router.uptimeSeconds
+                  ? formatDistanceToNow(
+                      subSeconds(new Date(), parseInt(router.uptimeSeconds)),
+                    )
+                  : "N/A"}
               </div>
             </li>
             <li className="flex justify-between py-4 text-sm">
@@ -238,9 +240,14 @@ const RouterPage: React.FC<{ router: Router }> = ({ router }) => {
                 Server Uptime
               </div>
               <div>
-                {formatDistanceToNow(
-                  subSeconds(new Date(), parseInt(router.serverUptimeSeconds)),
-                )}
+                {router.serverUptimeSeconds
+                  ? formatDistanceToNow(
+                      subSeconds(
+                        new Date(),
+                        parseInt(router.serverUptimeSeconds),
+                      ),
+                    )
+                  : "N/A"}
               </div>
             </li>
             <li className="flex justify-between py-4 text-sm">
@@ -286,7 +293,7 @@ const RouterPage: React.FC<{ router: Router }> = ({ router }) => {
           <ul className="divide-y">
             <li className="flex justify-between py-4 text-sm">
               <div className="font-semibold text-muted-foreground">
-                Memory Usage
+                Memory (Heap)
               </div>
               <div>
                 {prettyBytes(router.memoryUsageMb * 1024 * 1024, {
@@ -371,13 +378,16 @@ const RoutersPage: NextPageWithLayout = () => {
   const namespace = router.query.namespace as string;
   const slug = router.query.slug as string;
 
-  const { data, isLoading, error, refetch } = useQuery({
-    ...getRouters.useQuery({
+  const { data, isLoading, error, refetch } = useQuery(
+    getRouters,
+    {
       fedGraphName: slug,
       namespace,
-    }),
-    refetchInterval: 15_000,
-  });
+    },
+    {
+      refetchInterval: 15_000,
+    },
+  );
 
   const columns: ColumnDef<Router, any>[] = [
     {
@@ -457,6 +467,12 @@ const RoutersPage: NextPageWithLayout = () => {
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    state: {
+      pagination: {
+        pageIndex: 0,
+        pageSize: 100,
+      },
+    },
   });
 
   if (isLoading) {

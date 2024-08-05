@@ -4,6 +4,150 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.77.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.77.0...@wundergraph/cosmo-connect@0.77.1) (2024-07-16)
+
+**Note:** Version bump only for package @wundergraph/cosmo-connect
+
+# [0.77.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.76.0...@wundergraph/cosmo-connect@0.77.0) (2024-07-10)
+
+### Features
+
+* delete user ([#906](https://github.com/wundergraph/cosmo/issues/906)) ([5d438a1](https://github.com/wundergraph/cosmo/commit/5d438a1a2e1be610ff0e139efd692ed798daf677)) (@thisisnithin)
+
+# [0.76.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.75.2...@wundergraph/cosmo-connect@0.76.0) (2024-07-03)
+
+### Features
+
+* feature flags ([#853](https://github.com/wundergraph/cosmo/issues/853)) ([5461bb5](https://github.com/wundergraph/cosmo/commit/5461bb5a529decd51a1b22be0a5301936b8ad392)) (@JivusAyrus)
+
+## [0.75.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.75.1...@wundergraph/cosmo-connect@0.75.2) (2024-06-25)
+
+### Bug Fixes
+
+* cleanup inspectable check ([#884](https://github.com/wundergraph/cosmo/issues/884)) ([5bcf149](https://github.com/wundergraph/cosmo/commit/5bcf14915115d400ea6dc394b5d219e4f6e2eaca)) (@thisisnithin)
+
+## [0.75.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.75.0...@wundergraph/cosmo-connect@0.75.1) (2024-06-24)
+
+### Bug Fixes
+
+* link composition from changelog ([#857](https://github.com/wundergraph/cosmo/issues/857)) ([45ebcfc](https://github.com/wundergraph/cosmo/commit/45ebcfcb30d7f0aa083ba0dc7798bf6678847091)) (@thisisnithin)
+
+# [0.75.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.74.1...@wundergraph/cosmo-connect@0.75.0) (2024-06-20)
+
+### Features
+
+* add subscripion protocol and ws subprotocol to ui ([#829](https://github.com/wundergraph/cosmo/issues/829)) ([26708e4](https://github.com/wundergraph/cosmo/commit/26708e4d02fa3a6fa44b39a8c9138bd14a78c96f)) (@JivusAyrus)
+
+## [0.74.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.74.0...@wundergraph/cosmo-connect@0.74.1) (2024-06-07)
+
+**Note:** Version bump only for package @wundergraph/cosmo-connect
+
+# [0.74.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.73.0...@wundergraph/cosmo-connect@0.74.0) (2024-06-06)
+
+### Features
+
+* handle creating, publishing, and updating Event-Driven Graphs ([#855](https://github.com/wundergraph/cosmo/issues/855)) ([fc2a8f2](https://github.com/wundergraph/cosmo/commit/fc2a8f20b97a17d0927c589f81df66ff7abf78c5)) (@Aenimus)
+
+# [0.73.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.72.4...@wundergraph/cosmo-connect@0.73.0) (2024-06-05)
+
+### Features
+
+* admission webhook signature ([#852](https://github.com/wundergraph/cosmo/issues/852)) ([9212bb3](https://github.com/wundergraph/cosmo/commit/9212bb3aa3f3ca41f38c7944c3e6022c5fdc3ca8)) (@thisisnithin)
+
+## [0.72.4](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.72.3...@wundergraph/cosmo-connect@0.72.4) (2024-05-30)
+
+### Bug Fixes
+
+* remove unused check run id causing overflow ([#838](https://github.com/wundergraph/cosmo/issues/838)) ([7fcc5f0](https://github.com/wundergraph/cosmo/commit/7fcc5f06687f5e534ba4056aff4b24d029cd8335)) (@thisisnithin)
+
+## [0.72.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.72.2...@wundergraph/cosmo-connect@0.72.3) (2024-05-29)
+
+### Bug Fixes
+
+* prevent subgraph update except schema in publish ([#831](https://github.com/wundergraph/cosmo/issues/831)) ([37a9701](https://github.com/wundergraph/cosmo/commit/37a9701a2b9c61a9ecd489584cd6e2a9fe7ab70b)) (@thisisnithin)
+
+## [0.72.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.72.1...@wundergraph/cosmo-connect@0.72.2) (2024-05-24)
+
+### Bug Fixes
+
+* unset admission webhook using empty string ([#820](https://github.com/wundergraph/cosmo/issues/820)) ([eaf470e](https://github.com/wundergraph/cosmo/commit/eaf470e6b31f828b8b316751337b739c4c158e5d)) (@thisisnithin)
+
+## [0.72.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.72.0...@wundergraph/cosmo-connect@0.72.1) (2024-05-22)
+
+### Bug Fixes
+
+* playground config, subgraphs and members table, graph visualization ([#809](https://github.com/wundergraph/cosmo/issues/809)) ([bbdb8cd](https://github.com/wundergraph/cosmo/commit/bbdb8cd858a008051cd1ebb76d5d5f21a33f541a)) (@thisisnithin)
+
+# [0.72.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.71.0...@wundergraph/cosmo-connect@0.72.0) (2024-05-21)
+
+### Features
+
+* implement subscription filter ([#780](https://github.com/wundergraph/cosmo/issues/780)) ([444a766](https://github.com/wundergraph/cosmo/commit/444a766b07de1998df52174a5a2e65086605e14c)) (@Aenimus)
+
+# [0.71.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.70.0...@wundergraph/cosmo-connect@0.71.0) (2024-05-21)
+
+### Features
+
+* add support for websocket subprotocol ([#776](https://github.com/wundergraph/cosmo/issues/776)) ([e35aa26](https://github.com/wundergraph/cosmo/commit/e35aa262227b29f09ddfdd1ce361c010b769b2da)) (@JivusAyrus)
+
+# [0.70.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.69.0...@wundergraph/cosmo-connect@0.70.0) (2024-05-17)
+
+### Features
+
+* schema contracts ([#751](https://github.com/wundergraph/cosmo/issues/751)) ([1bc1a78](https://github.com/wundergraph/cosmo/commit/1bc1a787f046d25f0a4affb3fe42efe39a1c6539)) (@thisisnithin)
+
+# [0.69.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.68.0...@wundergraph/cosmo-connect@0.69.0) (2024-05-14)
+
+### Features
+
+* refactor edfs and add kafka support ([#770](https://github.com/wundergraph/cosmo/issues/770)) ([d659067](https://github.com/wundergraph/cosmo/commit/d659067fd1d094621788f42bac6d121b0831ebb7)) (@StarpTech)
+
+# [0.68.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.67.0...@wundergraph/cosmo-connect@0.68.0) (2024-05-03)
+
+### Features
+
+* support inaccessible and add foundation for contracts ([#764](https://github.com/wundergraph/cosmo/issues/764)) ([08a7db2](https://github.com/wundergraph/cosmo/commit/08a7db222ce1763ffe8062d3792c41e0c54b4224)) (@Aenimus)
+
+# [0.67.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.66.3...@wundergraph/cosmo-connect@0.67.0) (2024-04-26)
+
+### Features
+
+* add apollo compatibility mode in wgc federated-graph fetch command ([#742](https://github.com/wundergraph/cosmo/issues/742)) ([ecd73ab](https://github.com/wundergraph/cosmo/commit/ecd73ab91e1c8289008cae1062220826884d26e8)) (@JivusAyrus)
+
+## [0.66.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.66.2...@wundergraph/cosmo-connect@0.66.3) (2024-04-17)
+
+### Bug Fixes
+
+* make sure an api key with no resources can not be created ([#728](https://github.com/wundergraph/cosmo/issues/728)) ([7717ff6](https://github.com/wundergraph/cosmo/commit/7717ff6a147c485683a3d26c9e8f3b98173e67ee)) (@JivusAyrus)
+
+## [0.66.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.66.1...@wundergraph/cosmo-connect@0.66.2) (2024-04-12)
+
+### Bug Fixes
+
+* inform users if there is nothing new to publish ([#710](https://github.com/wundergraph/cosmo/issues/710)) ([faf01fc](https://github.com/wundergraph/cosmo/commit/faf01fc9e398ef70873abeec8eee06e797cbabf3)) (@JivusAyrus)
+
+## [0.66.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.66.0...@wundergraph/cosmo-connect@0.66.1) (2024-04-10)
+
+### Bug Fixes
+
+* validate whether webhook exists ([#718](https://github.com/wundergraph/cosmo/issues/718)) ([81065d2](https://github.com/wundergraph/cosmo/commit/81065d20e4c47b66bf47edc3b590c9d6e217e046)) (@StarpTech)
+
+# [0.66.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.65.0...@wundergraph/cosmo-connect@0.66.0) (2024-04-09)
+
+### Features
+
+* support edfs subscription stream/consumer; multiple subjects ([#685](https://github.com/wundergraph/cosmo/issues/685)) ([c70b2ae](https://github.com/wundergraph/cosmo/commit/c70b2aefd39c45b5f98eae8a3c43f639d56064b2)) (@Aenimus)
+
+# [0.65.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.64.1...@wundergraph/cosmo-connect@0.65.0) (2024-04-03)
+
+### Features
+
+* implement scim server ([#664](https://github.com/wundergraph/cosmo/issues/664)) ([12591da](https://github.com/wundergraph/cosmo/commit/12591da32ef62e9498855ceda37beba72835a801)) (@)
+
+### Features
+
+* implement scim server ([#664](https://github.com/wundergraph/cosmo/issues/664)) ([12591da](https://github.com/wundergraph/cosmo/commit/12591da32ef62e9498855ceda37beba72835a801)) (@JivusAyrus)
+
 ## [0.64.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.64.0...@wundergraph/cosmo-connect@0.64.1) (2024-03-20)
 
 ### Bug Fixes

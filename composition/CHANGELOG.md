@@ -4,6 +4,104 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.28.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.28.0...@wundergraph/composition@0.28.1) (2024-08-01)
+
+### Bug Fixes
+
+* provides with non-entity ([#989](https://github.com/wundergraph/cosmo/issues/989)) ([99f2101](https://github.com/wundergraph/cosmo/commit/99f210100af7ae3c8e68510457ded3f24403f2cd)) (@Aenimus)
+
+# [0.28.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.27.2...@wundergraph/composition@0.28.0) (2024-07-31)
+
+### Features
+
+* rewrite resolvability checker ([#964](https://github.com/wundergraph/cosmo/issues/964)) ([c323f01](https://github.com/wundergraph/cosmo/commit/c323f01d52a853b04a3b130627a969313eceaf65)) (@Aenimus)
+
+## [0.27.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.27.1...@wundergraph/composition@0.27.2) (2024-07-18)
+
+**Note:** Version bump only for package @wundergraph/composition
+
+## [0.27.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.27.0...@wundergraph/composition@0.27.1) (2024-07-09)
+
+**Note:** Version bump only for package @wundergraph/composition
+
+# [0.27.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.26.2...@wundergraph/composition@0.27.0) (2024-07-03)
+
+### Features
+
+* feature flags ([#853](https://github.com/wundergraph/cosmo/issues/853)) ([5461bb5](https://github.com/wundergraph/cosmo/commit/5461bb5a529decd51a1b22be0a5301936b8ad392)) (@JivusAyrus)
+
+## [0.26.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.26.1...@wundergraph/composition@0.26.2) (2024-06-20)
+
+### Bug Fixes
+
+* inaccessible enum values should not cause enum inconsistency errors ([#878](https://github.com/wundergraph/cosmo/issues/878)) ([910e214](https://github.com/wundergraph/cosmo/commit/910e214878636cba5516e296e304d45862aba095)) (@Aenimus)
+
+## [0.26.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.26.0...@wundergraph/composition@0.26.1) (2024-06-07)
+
+### Bug Fixes
+
+* entity field edge cases ([#860](https://github.com/wundergraph/cosmo/issues/860)) ([e4f553f](https://github.com/wundergraph/cosmo/commit/e4f553f1b586aad3bff2ac2e1897e22479dce068)) (@Aenimus)
+
+# [0.26.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.25.1...@wundergraph/composition@0.26.0) (2024-06-06)
+
+### Features
+
+* handle creating, publishing, and updating Event-Driven Graphs ([#855](https://github.com/wundergraph/cosmo/issues/855)) ([fc2a8f2](https://github.com/wundergraph/cosmo/commit/fc2a8f20b97a17d0927c589f81df66ff7abf78c5)) (@Aenimus)
+
+## [0.25.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.25.0...@wundergraph/composition@0.25.1) (2024-05-24)
+
+**Note:** Version bump only for package @wundergraph/composition
+
+# [0.25.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.24.0...@wundergraph/composition@0.25.0) (2024-05-21)
+
+### Features
+
+* implement subscription filter ([#780](https://github.com/wundergraph/cosmo/issues/780)) ([444a766](https://github.com/wundergraph/cosmo/commit/444a766b07de1998df52174a5a2e65086605e14c)) (@Aenimus)
+
+# [0.24.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.23.2...@wundergraph/composition@0.24.0) (2024-05-14)
+
+### Features
+
+* refactor edfs and add kafka support ([#770](https://github.com/wundergraph/cosmo/issues/770)) ([d659067](https://github.com/wundergraph/cosmo/commit/d659067fd1d094621788f42bac6d121b0831ebb7)) (@StarpTech)
+
+## [0.23.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.23.1...@wundergraph/composition@0.23.2) (2024-05-10)
+
+**Note:** Version bump only for package @wundergraph/composition
+
+## [0.23.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.23.0...@wundergraph/composition@0.23.1) (2024-05-06)
+
+### Bug Fixes
+
+* ignore unknown router execution config fields ([#767](https://github.com/wundergraph/cosmo/issues/767)) ([649a0e1](https://github.com/wundergraph/cosmo/commit/649a0e1349820642491469890f9eaa7b1134e430)) (@Aenimus)
+
+# [0.23.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.22.1...@wundergraph/composition@0.23.0) (2024-05-03)
+
+### Features
+
+* support inaccessible and add foundation for contracts ([#764](https://github.com/wundergraph/cosmo/issues/764)) ([08a7db2](https://github.com/wundergraph/cosmo/commit/08a7db222ce1763ffe8062d3792c41e0c54b4224)) (@Aenimus)
+
+## [0.22.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.22.0...@wundergraph/composition@0.22.1) (2024-04-23)
+
+### Reverts
+
+* Revert "chore(release): Publish [skip ci]" ([feaf2ef](https://github.com/wundergraph/cosmo/commit/feaf2ef49321388daff7c4d9f4558cdda78b5744)) (@StarpTech)
+
+# [0.22.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.21.0...@wundergraph/composition@0.22.0) (2024-04-11)
+
+### Features
+
+* support entity targets (implicit keys) ([#724](https://github.com/wundergraph/cosmo/issues/724)) ([4aa2c86](https://github.com/wundergraph/cosmo/commit/4aa2c86961384d913e964437b7ea369accb891c7)) (@Aenimus)
+
+# [0.21.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.20.3...@wundergraph/composition@0.21.0) (2024-04-09)
+
+### Features
+
+* support edfs subscription stream/consumer; multiple subjects ([#685](https://github.com/wundergraph/cosmo/issues/685)) ([c70b2ae](https://github.com/wundergraph/cosmo/commit/c70b2aefd39c45b5f98eae8a3c43f639d56064b2)) (@Aenimus)
+
+## [0.20.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.20.2...@wundergraph/composition@0.20.3) (2024-04-03)
+
+**Note:** Version bump only for package @wundergraph/composition
+
 ## [0.20.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.20.1...@wundergraph/composition@0.20.2) (2024-03-21)
 
 ### Bug Fixes

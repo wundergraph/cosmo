@@ -467,7 +467,10 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 }
 
 var sources = []*ast.Source{
-	{Name: "../schema.graphqls", Input: `type Query {
+	{Name: "../schema.graphqls", Input: `extend schema
+@link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@authenticated", "@composeDirective", "@external", "@extends", "@inaccessible", "@interfaceObject", "@override", "@provides", "@key", "@requires", "@requiresScopes", "@shareable", "@tag"])
+
+type Query {
   findEmployees(criteria: SearchInput): [Employee!]!
 }
 
@@ -599,7 +602,13 @@ input NestedSearchInput {
 	  | UNION
 	directive @interfaceObject on OBJECT
 	directive @link(import: [String!], url: String!) repeatable on SCHEMA
-	directive @override(from: String!) on FIELD_DEFINITION
+	directive @override(from: String!, label: String) on FIELD_DEFINITION
+	directive @policy(policies: [[federation__Policy!]!]!) on 
+	  | FIELD_DEFINITION
+	  | OBJECT
+	  | INTERFACE
+	  | SCALAR
+	  | ENUM
 	directive @provides(fields: FieldSet!) on FIELD_DEFINITION
 	directive @requires(fields: FieldSet!) on FIELD_DEFINITION
 	directive @requiresScopes(scopes: [[federation__Scope!]!]!) on 
@@ -622,6 +631,7 @@ input NestedSearchInput {
 	  | UNION
 	scalar _Any
 	scalar FieldSet
+	scalar federation__Policy
 	scalar federation__Scope
 `, BuiltIn: true},
 	{Name: "../../federation/entity.graphql", Input: `
@@ -4123,8 +4133,6 @@ func (ec *executionContext) unmarshalInputNestedSearchInput(ctx context.Context,
 		}
 		switch k {
 		case "maritalStatus":
-			var err error
-
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("maritalStatus"))
 			data, err := ec.unmarshalOMaritalStatus2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋfamilyᚋsubgraphᚋmodelᚐMaritalStatus(ctx, v)
 			if err != nil {
@@ -4132,8 +4140,6 @@ func (ec *executionContext) unmarshalInputNestedSearchInput(ctx context.Context,
 			}
 			it.MaritalStatus = data
 		case "hasChildren":
-			var err error
-
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasChildren"))
 			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
 			if err != nil {
@@ -4161,8 +4167,6 @@ func (ec *executionContext) unmarshalInputSearchInput(ctx context.Context, obj i
 		}
 		switch k {
 		case "hasPets":
-			var err error
-
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasPets"))
 			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
 			if err != nil {
@@ -4170,8 +4174,6 @@ func (ec *executionContext) unmarshalInputSearchInput(ctx context.Context, obj i
 			}
 			it.HasPets = data
 		case "nationality":
-			var err error
-
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nationality"))
 			data, err := ec.unmarshalONationality2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋfamilyᚋsubgraphᚋmodelᚐNationality(ctx, v)
 			if err != nil {
@@ -4179,8 +4181,6 @@ func (ec *executionContext) unmarshalInputSearchInput(ctx context.Context, obj i
 			}
 			it.Nationality = data
 		case "nested":
-			var err error
-
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nested"))
 			data, err := ec.unmarshalONestedSearchInput2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋfamilyᚋsubgraphᚋmodelᚐNestedSearchInput(ctx, v)
 			if err != nil {
@@ -4201,11 +4201,6 @@ func (ec *executionContext) _Animal(ctx context.Context, sel ast.SelectionSet, o
 	switch obj := (obj).(type) {
 	case nil:
 		return graphql.Null
-	case model.Pet:
-		if obj == nil {
-			return graphql.Null
-		}
-		return ec._Pet(ctx, sel, obj)
 	case model.Alligator:
 		return ec._Alligator(ctx, sel, &obj)
 	case *model.Alligator:
@@ -4241,6 +4236,11 @@ func (ec *executionContext) _Animal(ctx context.Context, sel ast.SelectionSet, o
 			return graphql.Null
 		}
 		return ec._Pony(ctx, sel, obj)
+	case model.Pet:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._Pet(ctx, sel, obj)
 	default:
 		panic(fmt.Errorf("unexpected type %T", obj))
 	}
@@ -5727,6 +5727,85 @@ func (ec *executionContext) marshalN__TypeKind2string(ctx context.Context, sel a
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalNfederation__Policy2string(ctx context.Context, v interface{}) (string, error) {
+	res, err := graphql.UnmarshalString(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNfederation__Policy2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
+	res := graphql.MarshalString(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
+}
+
+func (ec *executionContext) unmarshalNfederation__Policy2ᚕstringᚄ(ctx context.Context, v interface{}) ([]string, error) {
+	var vSlice []interface{}
+	if v != nil {
+		vSlice = graphql.CoerceList(v)
+	}
+	var err error
+	res := make([]string, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNfederation__Policy2string(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNfederation__Policy2ᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNfederation__Policy2string(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) unmarshalNfederation__Policy2ᚕᚕstringᚄ(ctx context.Context, v interface{}) ([][]string, error) {
+	var vSlice []interface{}
+	if v != nil {
+		vSlice = graphql.CoerceList(v)
+	}
+	var err error
+	res := make([][]string, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNfederation__Policy2ᚕstringᚄ(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNfederation__Policy2ᚕᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v [][]string) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNfederation__Policy2ᚕstringᚄ(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalNfederation__Scope2string(ctx context.Context, v interface{}) (string, error) {

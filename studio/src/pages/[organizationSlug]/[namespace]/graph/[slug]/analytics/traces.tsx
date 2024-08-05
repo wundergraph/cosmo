@@ -29,7 +29,8 @@ import { cn } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { ArrowRightIcon, SizeIcon } from "@radix-ui/react-icons";
 import { useHotkeys } from "@saas-ui/use-hotkeys";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
 import { Table } from "@tanstack/react-table";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
@@ -62,36 +63,35 @@ const TracesPage: NextPageWithLayout = () => {
     sort,
   } = useAnalyticsQueryState();
 
-  const viewQuery = getAnalyticsView.useQuery({
-    namespace: graphContext?.graph?.namespace,
-    federatedGraphName: graphContext?.graph?.name,
-    name,
-    config: {
-      filters,
-      range,
-      dateRange: range
-        ? undefined
-        : {
-            start: formatISO(dateRange.start),
-            end: formatISO(dateRange.end),
-          },
-      pagination,
-      sort,
-    },
-  });
-
-  let { data, isFetching, isLoading, error, refetch } = useQuery({
-    ...viewQuery,
-    placeholderData: keepPreviousData,
-    refetchOnWindowFocus: false,
-    refetchInterval: refreshInterval,
-  });
-
-  const { data: sdlData } = useQuery({
-    ...getFederatedGraphSDLByName.useQuery({
-      name: graphContext?.graph?.name,
+  let { data, isFetching, isLoading, error, refetch } = useQuery(
+    getAnalyticsView,
+    {
       namespace: graphContext?.graph?.namespace,
-    }),
+      federatedGraphName: graphContext?.graph?.name,
+      name,
+      config: {
+        filters,
+        range,
+        dateRange: range
+          ? undefined
+          : {
+              start: formatISO(dateRange.start),
+              end: formatISO(dateRange.end),
+            },
+        pagination,
+        sort,
+      },
+    },
+    {
+      placeholderData: keepPreviousData,
+      refetchOnWindowFocus: false,
+      refetchInterval: refreshInterval,
+    },
+  );
+
+  const { data: sdlData } = useQuery(getFederatedGraphSDLByName, {
+    name: graphContext?.graph?.name,
+    namespace: graphContext?.graph?.namespace,
   });
 
   const { ast } = useParseSchema(sdlData?.sdl);

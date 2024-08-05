@@ -49,7 +49,7 @@ import {
   Pencil1Icon,
   TrashIcon,
 } from "@radix-ui/react-icons";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { OrganizationEventName } from "@wundergraph/cosmo-connect/dist/notifications/events_pb";
 import {
@@ -98,7 +98,7 @@ const DeleteIntegration = ({
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
 
-  const { mutate, isPending } = useMutation(deleteIntegration.useMutation());
+  const { mutate, isPending } = useMutation(deleteIntegration);
 
   const onDelete = () => {
     mutate(
@@ -183,12 +183,11 @@ const Integration = ({
   const { toast } = useToast();
   const router = useRouter();
 
-  const { mutate: create, isPending: isCreating } = useMutation(
-    createIntegration.useMutation(),
-  );
+  const { mutate: create, isPending: isCreating } =
+    useMutation(createIntegration);
 
   const { mutate: update, isPending: isUpdating } = useMutation(
-    updateIntegrationConfig.useMutation(),
+    updateIntegrationConfig,
   );
 
   const createForm = useZodForm<CreateIntegrationInput>({
@@ -541,10 +540,9 @@ const IntegrationsPage: NextPageWithLayout = () => {
   const slackRedirectURL = `${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL}/${organizationSlug}/integrations`;
   const [shouldCreate, setShouldCreate] = useState(false);
 
-  const { data, isLoading, error, refetch } = useQuery({
-    ...getOrganizationIntegrations.useQuery(),
-    queryKey: [user?.currentOrganization.slug || "", router.asPath, {}],
-  });
+  const { data, isLoading, error, refetch } = useQuery(
+    getOrganizationIntegrations,
+  );
 
   useEffect(() => {
     if (!code) {

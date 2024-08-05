@@ -9,6 +9,7 @@ import {
   schemaCheckChangeActionOperationUsage,
   subgraphs,
   targets,
+  websocketSubprotocolEnum,
 } from './schema.js';
 
 export type FederatedGraph = typeof federatedGraphs.$inferSelect;
@@ -21,12 +22,15 @@ export type NewBillingSubscription = typeof billingSubscriptions.$inferInsert;
 export type NewBillingPlan = typeof billingPlans.$inferInsert;
 export type MemberRole = (typeof memberRoleEnum.enumValues)[number];
 export type LintRuleEnum = (typeof lintRulesEnum.enumValues)[number];
+export type WebsocketSubprotocol = (typeof websocketSubprotocolEnum.enumValues)[number];
 
 export type AuditableType =
   | 'organization'
   | 'subgraph'
   | 'federated_graph'
   | 'monograph'
+  | 'feature_subgraph'
+  | 'feature_flag'
   | 'graph_token'
   | 'api_key'
   | 'webhook_config'
@@ -76,6 +80,15 @@ export type AuditLogFullAction =
   | 'subgraph.deleted'
   | 'subgraph.updated'
   | 'subgraph.moved'
+  | 'feature_flag.created'
+  | 'feature_flag.deleted'
+  | 'feature_flag.disabled'
+  | 'feature_flag.enabled'
+  | 'feature_subgraph.created'
+  | 'feature_subgraph.deleted'
+  | 'feature_subgraph.published'
+  | 'feature_subgraph.updated'
+  | 'feature_flag.updated'
   | 'subgraph_member.created'
   | 'subgraph_member.deleted'
   | 'webhook_config.created'

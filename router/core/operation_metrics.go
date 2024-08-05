@@ -2,9 +2,10 @@ package core
 
 import (
 	"context"
-	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"strconv"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/pkg/otel"
 
 	"go.uber.org/zap"
 
@@ -24,6 +25,8 @@ func (p OperationProtocol) String() string {
 	return string(p)
 }
 
+// OperationMetrics is a struct that holds the metrics for an operation. It should be created on the parent router request
+// subgraph metrics are created in the transport or engine loader hooks.
 type OperationMetrics struct {
 	requestContentLength int64
 	routerMetrics        RouterMetrics
@@ -48,12 +51,13 @@ func (m *OperationMetrics) Finish(err error, statusCode int, responseSize int) {
 
 	ctx := context.Background()
 
-	if err != nil {
-		// We don't store false values in the metrics, so only add the error attribute if it's true, DON'T CHANGE THIS
-		m.metricBaseFields = append(m.metricBaseFields, otel.WgRequestError.Bool(true))
-	}
-
 	rm := m.routerMetrics.MetricStore()
+
+	if err != nil {
+		// We don't store false values in the metrics, so only add the error attribute if it's true
+		m.metricBaseFields = append(m.metricBaseFields, otel.WgRequestError.Bool(true))
+		rm.MeasureRequestError(ctx, m.metricBaseFields...)
+	}
 
 	m.metricBaseFields = append(m.metricBaseFields, semconv.HTTPStatusCode(statusCode))
 	rm.MeasureRequestCount(ctx, m.metricBaseFields...)
@@ -84,24 +88,33 @@ func (m *OperationMetrics) AddClientInfo(info *ClientInfo) {
 	m.metricBaseFields = append(m.metricBaseFields, otel.WgClientVersion.String(info.Version))
 }
 
-// startOperationMetrics starts the metrics for an operation. This should only be called by
+type OperationMetricsOptions struct {
+	Attributes           []attribute.KeyValue
+	RouterConfigVersion  string
+	RequestContentLength int64
+	RouterMetrics        RouterMetrics
+	Logger               *zap.Logger
+}
+
+// newOperationMetrics creates a new OperationMetrics struct and starts the operation metrics.
 // routerMetrics.StartOperation()
-func startOperationMetrics(rMetrics RouterMetrics, logger *zap.Logger, requestContentLength int64, routerConfigVersion string) *OperationMetrics {
+func newOperationMetrics(opts OperationMetricsOptions) *OperationMetrics {
 	operationStartTime := time.Now()
 
-	inflightMetric := rMetrics.MetricStore().MeasureInFlight(context.Background())
+	inflightMetric := opts.RouterMetrics.MetricStore().MeasureInFlight(context.Background(), opts.Attributes...)
 	return &OperationMetrics{
-		requestContentLength: requestContentLength,
+		metricBaseFields:     opts.Attributes,
+		requestContentLength: opts.RequestContentLength,
 		operationStartTime:   operationStartTime,
 		inflightMetric:       inflightMetric,
-		routerConfigVersion:  routerConfigVersion,
-		routerMetrics:        rMetrics,
-		logger:               logger,
+		routerConfigVersion:  opts.RouterConfigVersion,
+		routerMetrics:        opts.RouterMetrics,
+		logger:               opts.Logger,
 	}
 }
 
-// setAttributesFromOperationContext returns the attributes that are common to both metrics and traces.
-func setAttributesFromOperationContext(operationContext *operationContext) []attribute.KeyValue {
+// getAttributesFromOperationContext returns the attributes that are common to both metrics and traces.
+func getAttributesFromOperationContext(operationContext *operationContext) []attribute.KeyValue {
 	if operationContext == nil {
 		return nil
 	}

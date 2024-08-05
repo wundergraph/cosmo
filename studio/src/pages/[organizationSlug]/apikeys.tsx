@@ -38,8 +38,8 @@ import {
   TableWrapper,
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
+import { useFeature } from "@/hooks/use-feature";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
-import { useHasFeature } from "@/hooks/use-has-feature";
 import { useUser } from "@/hooks/use-user";
 import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
@@ -51,12 +51,13 @@ import {
   KeyIcon,
 } from "@heroicons/react/24/outline";
 import { PlusIcon } from "@radix-ui/react-icons";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   createAPIKey,
   deleteAPIKey,
   getAPIKeys,
+  getUserAccessiblePermissions,
   getUserAccessibleResources,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import {
@@ -83,12 +84,13 @@ const CreateAPIKeyDialog = ({
   refresh: () => void;
 }) => {
   const user = useUser();
-  const rbac = useHasFeature("rbac");
+  const rbac = useFeature("rbac");
   const { toast } = useToast();
 
-  const { mutate, isPending } = useMutation(createAPIKey.useMutation());
+  const { mutate, isPending } = useMutation(createAPIKey);
 
-  const { data } = useQuery(getUserAccessibleResources.useQuery());
+  const { data } = useQuery(getUserAccessibleResources);
+  const { data: permissionsData } = useQuery(getUserAccessiblePermissions);
   const federatedGraphs = data?.federatedGraphs || [];
   const subgraphs = data?.subgraphs || [];
   const isAdmin = user?.currentOrganization.roles.includes("admin");
@@ -110,6 +112,7 @@ const CreateAPIKeyDialog = ({
   const [selectedFedGraphs, setSelectedFedGraphs] = useState<string[]>([]);
   // target ids of the selected subgraphs
   const [selectedSubgraphs, setSelectedSubgraphs] = useState<string[]>([]);
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   const [errorMsg, setErrorMsg] = useState<string>();
 
   const createAPIKeyInputSchema = z.object({
@@ -134,12 +137,12 @@ const CreateAPIKeyDialog = ({
 
   const onSubmit: SubmitHandler<CreateAPIKeyInput> = (data) => {
     if (
-      rbac &&
+      rbac?.enabled &&
       !selectedAllResources &&
       selectedFedGraphs.length === 0 &&
       selectedSubgraphs.length === 0
     ) {
-      setErrorMsg("Please select atleast one of the resource.");
+      setErrorMsg("Please select at least one of the resources.");
       return;
     }
 
@@ -150,6 +153,8 @@ const CreateAPIKeyDialog = ({
         expires: expiresOptionsMappingToEnum[expires],
         federatedGraphTargetIds: selectedAllResources ? [] : selectedFedGraphs,
         subgraphTargetIds: selectedAllResources ? [] : selectedSubgraphs,
+        permissions: selectedPermissions,
+        allowAllResources: selectedAllResources,
       },
       {
         onSuccess: (d) => {
@@ -174,6 +179,7 @@ const CreateAPIKeyDialog = ({
     setSelectedAllResources(false);
     setSelectedFedGraphs([]);
     setSelectedSubgraphs([]);
+    setSelectedPermissions([]);
   };
 
   const groupedSubgraphs = subgraphs.reduce<
@@ -190,6 +196,22 @@ const CreateAPIKeyDialog = ({
     return result;
   }, {});
 
+  // When rbac is enabled and this is the case for enterprise users
+  // you can only create an API key if you are an admin or have access to at least one federated graph or subgraph
+  if (
+    rbac?.enabled &&
+    !(isAdmin || federatedGraphs.length > 0 || subgraphs.length > 0)
+  ) {
+    return (
+      <Button disabled>
+        <div className="flex items-center gap-x-2">
+          <PlusIcon />
+          <span>New API key</span>
+        </div>
+      </Button>
+    );
+  }
+
   const groupedFederatedGraphs = federatedGraphs.reduce<
     Record<string, GetUserAccessibleResourcesResponse_Graph[]>
   >((result, graph) => {
@@ -203,21 +225,6 @@ const CreateAPIKeyDialog = ({
 
     return result;
   }, {});
-
-  // check if the user has access to create api keys only when rbac is enabled
-  if (
-    rbac &&
-    !(isAdmin || federatedGraphs.length > 0 || subgraphs.length > 0)
-  ) {
-    return (
-      <Button disabled>
-        <div className="flex items-center gap-x-2">
-          <PlusIcon />
-          <span>New API key</span>
-        </div>
-      </Button>
-    );
-  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -266,41 +273,66 @@ const CreateAPIKeyDialog = ({
               </SelectContent>
             </Select>
           </div>
-          {rbac && (
-            <div className="mt-4 flex flex-col gap-y-3">
+          {isAdmin &&
+            permissionsData &&
+            permissionsData.permissions.length > 0 && (
+              <div className="mt-2 flex flex-col gap-y-3">
+                <div className="flex flex-col gap-y-1">
+                  <span className="text-base font-semibold">Permissions</span>
+                  <span className="text-sm text-muted-foreground">
+                    {"Select permissions for the API key."}
+                  </span>
+                </div>
+                {permissionsData.permissions.map((permission) => {
+                  return (
+                    <div
+                      className="flex items-center gap-x-2"
+                      key={permission.value}
+                    >
+                      <Checkbox
+                        id="scim"
+                        checked={selectedPermissions.includes(permission.value)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedPermissions([
+                              ...Array.from(
+                                new Set([
+                                  ...selectedPermissions,
+                                  permission.value,
+                                ]),
+                              ),
+                            ]);
+                          } else {
+                            setSelectedPermissions([
+                              ...selectedPermissions.filter(
+                                (p) => p !== permission.value,
+                              ),
+                            ]);
+                          }
+                        }}
+                      />
+                      <label
+                        htmlFor="scim"
+                        className="text-sm font-medium capitalize leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        {permission.displayName}
+                      </label>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          {rbac?.enabled && (
+            <div className="mt-3 flex flex-col gap-y-3">
               <div className="flex flex-col gap-y-1">
                 <span className="text-base font-semibold">
                   Select Resources
                 </span>
                 <span className="text-sm text-muted-foreground">
-                  {
-                    "Select resources the API key can access, or choose 'All resources' to include current and future resources."
-                  }
+                  {"Select resources the API key can access."}
                 </span>
               </div>
               <div className="flex flex-col gap-y-2">
-                {isAdmin && (
-                  <div className="flex items-center gap-x-2">
-                    <Checkbox
-                      id="all-resources"
-                      checked={selectedAllResources}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedAllResources(true);
-                          setErrorMsg(undefined);
-                        } else {
-                          setSelectedAllResources(false);
-                        }
-                      }}
-                    />
-                    <label
-                      htmlFor="all-resources"
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      All Resources
-                    </label>
-                  </div>
-                )}
                 {federatedGraphs.length > 0 && (
                   <div className="flex flex-col gap-y-1">
                     <div>
@@ -315,7 +347,10 @@ const CreateAPIKeyDialog = ({
                               : "Select graphs"}
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="">
+                        <DropdownMenuContent
+                          align="start"
+                          className="scrollbar-custom max-h-[min(calc(var(--radix-dropdown-menu-content-available-height)_-24px),384px)] overflow-y-auto"
+                        >
                           {Object.entries(groupedFederatedGraphs ?? {}).map(
                             ([namespace, graphs]) => {
                               return (
@@ -376,7 +411,10 @@ const CreateAPIKeyDialog = ({
                               : "Select subgraphs"}
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="">
+                        <DropdownMenuContent
+                          align="start"
+                          className="scrollbar-custom max-h-[min(calc(var(--radix-dropdown-menu-content-available-height)_-24px),384px)] overflow-y-auto"
+                        >
                           {Object.entries(groupedSubgraphs ?? {}).map(
                             ([namespace, graphs]) => {
                               return (
@@ -423,6 +461,37 @@ const CreateAPIKeyDialog = ({
                     </div>
                   </div>
                 )}
+                {isAdmin && (
+                  <div className="mt-2 flex flex-col gap-y-2">
+                    <div className="flex items-start gap-x-2">
+                      <Checkbox
+                        id="all-resources"
+                        checked={selectedAllResources}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedAllResources(true);
+                            setErrorMsg(undefined);
+                          } else {
+                            setSelectedAllResources(false);
+                          }
+                        }}
+                      />
+                      <div className="flex flex-col gap-y-1">
+                        <label
+                          htmlFor="all-resources"
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                          All Resources
+                        </label>
+                        <span className="text-sm text-muted-foreground">
+                          {
+                            "Choose 'All resources' to include all the current and future resources"
+                          }
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -433,7 +502,15 @@ const CreateAPIKeyDialog = ({
           <Button
             className="mt-2"
             type="submit"
-            disabled={!isValid || !!errorMsg}
+            disabled={
+              // should be disabled if the form is invalid or if either the resources or the all resources option is not selected
+              !isValid ||
+              !!errorMsg ||
+              (rbac?.enabled &&
+                !selectedAllResources &&
+                selectedFedGraphs.length === 0 &&
+                selectedSubgraphs.length === 0)
+            }
             variant="default"
             isLoading={isPending}
           >
@@ -460,7 +537,7 @@ const DeleteAPIKeyDialog = ({
 }) => {
   const { toast } = useToast();
 
-  const { mutate, isPending } = useMutation(deleteAPIKey.useMutation());
+  const { mutate, isPending } = useMutation(deleteAPIKey);
 
   const regex = new RegExp(`^${apiKeyName}$`);
   const schema = z.object({
@@ -628,6 +705,8 @@ export const Empty = ({
   open: boolean;
   setOpen: Dispatch<SetStateAction<boolean>>;
 }) => {
+  const user = useContext(UserContext);
+
   return (
     <EmptyState
       icon={<KeyIcon />}
@@ -647,12 +726,17 @@ export const Empty = ({
       }
       actions={
         <div className="mt-2">
-          <CreateAPIKey
-            apiKey={apiKey}
-            setApiKey={setApiKey}
-            open={open}
-            setOpen={setOpen}
-          />
+          {checkUserAccess({
+            rolesToBe: ["admin", "developer"],
+            userRoles: user?.currentOrganization.roles || [],
+          }) && (
+            <CreateAPIKey
+              apiKey={apiKey}
+              setApiKey={setApiKey}
+              open={open}
+              setOpen={setOpen}
+            />
+          )}
         </div>
       }
     />
@@ -670,11 +754,7 @@ export const CreateAPIKey = ({
   open: boolean;
   setOpen: Dispatch<SetStateAction<boolean>>;
 }) => {
-  const user = useContext(UserContext);
-  const { refetch } = useQuery({
-    ...getAPIKeys.useQuery(),
-    queryKey: [user?.currentOrganization.slug || "", "GetAPIKeys", {}],
-  });
+  const { refetch } = useQuery(getAPIKeys);
 
   useEffect(() => {
     if (!apiKey) return;
@@ -693,10 +773,7 @@ export const CreateAPIKey = ({
 
 const APIKeysPage: NextPageWithLayout = () => {
   const user = useContext(UserContext);
-  const { data, isLoading, error, refetch } = useQuery({
-    ...getAPIKeys.useQuery(),
-    queryKey: [user?.currentOrganization.slug || "", "GetAPIKeys", {}],
-  });
+  const { data, isLoading, error, refetch } = useQuery(getAPIKeys);
 
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [apiKey, setApiKey] = useState<string | undefined>();

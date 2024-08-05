@@ -1,4 +1,5 @@
 export const docsBaseURL = "https://cosmo-docs.wundergraph.com";
+export const scimBaseURL = "https://cosmo-cp.wundergraph.com/scim/v2";
 export const calURL =
   "https://cal.com/stefan-avram-wundergraph/wundergraph-introduction";
 export const lintCategories = [
@@ -96,11 +97,6 @@ export const lintCategories = [
       {
         name: "REQUIRE_DEPRECATION_REASON",
         description: "Should provide the reason on @deprecated directive.",
-      },
-      {
-        name: "REQUIRE_DEPRECATION_DATE",
-        description:
-          "Should provide the deletion date on @deprecated directive.",
       },
     ],
   },

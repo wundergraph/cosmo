@@ -2,7 +2,6 @@ import {
   getLeastRestrictiveMergedTypeNode,
   getMostRestrictiveMergedTypeNode,
   getMutableTypeNode,
-  MAXIMUM_TYPE_NESTING,
   maximumTypeNestingExceededError,
   MutableIntermediateTypeNode,
   MutableTypeNode,
@@ -92,7 +91,7 @@ describe('getMergedTypeNode Tests', () => {
     expect(typeErrors).toBeUndefined();
     expect(typeNode).toStrictEqual(simpleObjectType);
     expect(errors).toHaveLength(1);
-    expect(errors[0]).toStrictEqual(maximumTypeNestingExceededError(hostPath, MAXIMUM_TYPE_NESTING));
+    expect(errors[0]).toStrictEqual(maximumTypeNestingExceededError(hostPath));
   });
 
   test('that getLeastRestrictiveMergedTypeNode returns an error if the maximum nesting is exceeded', () => {
@@ -106,7 +105,7 @@ describe('getMergedTypeNode Tests', () => {
     expect(typeErrors).toBeUndefined();
     expect(typeNode).toStrictEqual(simpleObjectType);
     expect(errors).toHaveLength(1);
-    expect(errors[0]).toStrictEqual(maximumTypeNestingExceededError(hostPath, MAXIMUM_TYPE_NESTING));
+    expect(errors[0]).toStrictEqual(maximumTypeNestingExceededError(hostPath));
   });
 
   test('that an error is returned if getMutableTypeNode receives a type that exceeds the nesting limit and a simplified dummy type is returned', () => {
@@ -114,7 +113,7 @@ describe('getMergedTypeNode Tests', () => {
     const typeNode = getMutableTypeNode(exceededNestingLimitType, hostPath, errors);
     expect(typeNode).toStrictEqual(simpleObjectType);
     expect(errors).toHaveLength(1);
-    expect(errors[0]).toStrictEqual(maximumTypeNestingExceededError(hostPath, MAXIMUM_TYPE_NESTING));
+    expect(errors[0]).toStrictEqual(maximumTypeNestingExceededError(hostPath));
   });
 
   test('that stringToTypeNode parses strings correctly', () => {

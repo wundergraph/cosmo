@@ -5,7 +5,7 @@ import {
   baseDirectiveDefinitions,
   normalizeString,
   schemaToSortedNormalizedString,
-  versionOneSchemaQueryAndPersistedDirectiveDefinitions,
+  versionOneRouterDefinitions,
 } from './utils/utils';
 
 describe('Directive tests', () => {
@@ -82,7 +82,7 @@ describe('Directive tests', () => {
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+          versionOneRouterDefinitions +
             `
         scalar JSON
         

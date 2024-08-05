@@ -1,6 +1,5 @@
-import { PlainMessage } from '@bufbuild/protobuf';
-import { OverrideChange, SchemaChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { OverrideChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { federatedGraphClients, federatedGraphPersistedOperations } from '../../db/schema.js';
@@ -79,7 +78,7 @@ export class OperationsRepository {
         filePath: row.filePath,
         createdAt: row.createdAt.toISOString(),
         lastUpdatedAt: row?.updatedAt?.toISOString() || '',
-        createdBy: row.createdBy.email,
+        createdBy: row.createdBy?.email,
         lastUpdatedBy: row.updatedBy?.email ?? '',
         contents: row.operationContent ?? '',
         operationNames: row.operationNames ?? [],

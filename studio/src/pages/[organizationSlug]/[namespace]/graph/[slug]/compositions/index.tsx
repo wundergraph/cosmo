@@ -6,8 +6,8 @@ import {
   DateRangePickerChangeHandler,
 } from "@/components/date-picker-with-range";
 import { EmptyState } from "@/components/empty-state";
+import { InfoTooltip } from "@/components/info-tooltip";
 import {
-  GraphContext,
   GraphPageLayout,
   getGraphLayout,
 } from "@/components/layout/graph-layout";
@@ -34,16 +34,15 @@ import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { formatDateTime } from "@/lib/format-date";
 import { createDateRange } from "@/lib/insights-helpers";
 import { NextPageWithLayout } from "@/lib/page";
+import { useQuery } from "@connectrpc/connect-query";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getCompositions } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { FeatureFlagComposition, GraphComposition } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatDistanceToNow, formatISO } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import React, { useContext } from "react";
 import { MdNearbyError, MdVerifiedUser } from "react-icons/md";
-import { InfoTooltip } from "@/components/info-tooltip";
 
 const CompositionsPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -61,22 +60,30 @@ const CompositionsPage: NextPageWithLayout = () => {
   const startDate = range ? createDateRange(range).start : start;
   const endDate = range ? createDateRange(range).end : end;
 
-  const graphContext = useContext(GraphContext);
-
   const { data, isLoading, error, refetch } = useQuery(
-    getCompositions.useQuery({
+    getCompositions,
+    {
       fedGraphName: router.query.slug as string,
       namespace: router.query.namespace as string,
       limit: limit > 50 ? 50 : limit,
       offset: (pageNumber - 1) * limit,
       startDate: formatISO(startDate),
       endDate: formatISO(endDate),
-    }),
+      excludeFeatureFlagCompositions: true
+    },
+    {
+      placeholderData: (prev) => prev,
+    },
   );
 
   if (isLoading) return <Loader fullscreen />;
 
-  if (error || data?.response?.code !== EnumStatusCode.OK)
+  if (
+    !data ||
+    !data?.compositions ||
+    error ||
+    data?.response?.code !== EnumStatusCode.OK
+  )
     return (
       <EmptyState
         icon={<ExclamationTriangleIcon />}
@@ -87,8 +94,6 @@ const CompositionsPage: NextPageWithLayout = () => {
         actions={<Button onClick={() => refetch()}>Retry</Button>}
       />
     );
-
-  if (!data?.compositions || !graphContext?.graph) return null;
 
   const noOfPages = Math.ceil(data.count / limit);
 
@@ -155,7 +160,7 @@ const CompositionsPage: NextPageWithLayout = () => {
                           </Tooltip>
                         </div>
                       </TableCell>
-                      <TableCell>{createdBy || "-"}</TableCell>
+                      <TableCell>{createdBy}</TableCell>
                       <TableCell>
                         <Tooltip>
                           <TooltipTrigger>

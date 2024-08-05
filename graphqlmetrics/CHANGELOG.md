@@ -4,6 +4,86 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.21.1](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.21.0...graphqlmetrics@0.21.1) (2024-08-01)
+
+### Bug Fixes
+
+* wrong otelhttp used ([#996](https://github.com/wundergraph/cosmo/issues/996)) ([6b322f6](https://github.com/wundergraph/cosmo/commit/6b322f62359da48336c7c9f4c07eac750db93907)) (@StarpTech)
+
+# [0.21.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.20.3...graphqlmetrics@0.21.0) (2024-08-01)
+
+### Features
+
+* **graphqlmetrics:** enable prometheus metrics ([#963](https://github.com/wundergraph/cosmo/issues/963)) ([48f54fe](https://github.com/wundergraph/cosmo/commit/48f54fed6444fd6ffc25a86fe45225b717fabca4)) (@AndreasZeissner)
+
+## [0.20.3](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.20.2...graphqlmetrics@0.20.3) (2024-07-30)
+
+### Bug Fixes
+
+* input coercion for nested values ([#981](https://github.com/wundergraph/cosmo/issues/981)) ([5494e5f](https://github.com/wundergraph/cosmo/commit/5494e5f3075db7795c100c927001a4baae212c68)) (@jensneuse)
+
+## [0.20.2](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.20.1...graphqlmetrics@0.20.2) (2024-07-16)
+
+**Note:** Version bump only for package graphqlmetrics
+
+## [0.20.1](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.20.0...graphqlmetrics@0.20.1) (2024-07-04)
+
+**Note:** Version bump only for package graphqlmetrics
+
+# [0.20.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.19.0...graphqlmetrics@0.20.0) (2024-07-03)
+
+### Features
+
+* feature flags ([#853](https://github.com/wundergraph/cosmo/issues/853)) ([5461bb5](https://github.com/wundergraph/cosmo/commit/5461bb5a529decd51a1b22be0a5301936b8ad392)) (@JivusAyrus)
+
+# [0.19.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.18.0...graphqlmetrics@0.19.0) (2024-06-26)
+
+### Features
+
+* support file upload in router ([#772](https://github.com/wundergraph/cosmo/issues/772)) ([d1cbc11](https://github.com/wundergraph/cosmo/commit/d1cbc11deedbdefad949a3aa5a1b753da4682145)) (@pedraumcosta)
+
+# [0.18.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.17.1...graphqlmetrics@0.18.0) (2024-05-31)
+
+### Features
+
+* support multiple/static NATS EDFS arg templates ([#841](https://github.com/wundergraph/cosmo/issues/841)) ([2c75870](https://github.com/wundergraph/cosmo/commit/2c75870cc65d5a43e864f69e39f202170257f9df)) (@Aenimus)
+
+## [0.17.1](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.17.0...graphqlmetrics@0.17.1) (2024-05-29)
+
+**Note:** Version bump only for package graphqlmetrics
+
+# [0.17.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.16.0...graphqlmetrics@0.17.0) (2024-05-21)
+
+### Features
+
+* add support for websocket subprotocol ([#776](https://github.com/wundergraph/cosmo/issues/776)) ([e35aa26](https://github.com/wundergraph/cosmo/commit/e35aa262227b29f09ddfdd1ce361c010b769b2da)) (@JivusAyrus)
+
+# [0.16.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.15.3...graphqlmetrics@0.16.0) (2024-05-14)
+
+### Features
+
+* refactor edfs and add kafka support ([#770](https://github.com/wundergraph/cosmo/issues/770)) ([d659067](https://github.com/wundergraph/cosmo/commit/d659067fd1d094621788f42bac6d121b0831ebb7)) (@StarpTech)
+
+## [0.15.3](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.15.2...graphqlmetrics@0.15.3) (2024-04-12)
+
+**Note:** Version bump only for package graphqlmetrics
+
+## [0.15.2](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.15.1...graphqlmetrics@0.15.2) (2024-04-09)
+
+**Note:** Version bump only for package graphqlmetrics
+
+## [0.15.1](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.15.0...graphqlmetrics@0.15.1) (2024-04-08)
+
+### Bug Fixes
+
+* provide default subscription protocol for composition-go ([#702](https://github.com/wundergraph/cosmo/issues/702)) ([53140ea](https://github.com/wundergraph/cosmo/commit/53140eabcc960bd95626837da308c86674aeb8a4)) (@Aenimus)
+
+# [0.15.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.14.0...graphqlmetrics@0.15.0) (2024-03-24)
+
+### Features
+
+* multi platform docker builds ([#665](https://github.com/wundergraph/cosmo/issues/665)) ([4c24d70](https://github.com/wundergraph/cosmo/commit/4c24d7075bd48cd946a1037bffc0c4fcaef74289)) (@StarpTech)
+
 # [0.14.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.13.0...graphqlmetrics@0.14.0) (2024-03-14)
 
 ### Features

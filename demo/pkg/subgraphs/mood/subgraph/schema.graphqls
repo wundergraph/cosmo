@@ -1,10 +1,15 @@
+extend schema
+@link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@authenticated", "@composeDirective", "@external", "@extends", "@inaccessible", "@interfaceObject", "@override", "@provides", "@key", "@requires", "@requiresScopes", "@shareable", "@tag"])
+
 type Mutation {
     updateMood(employeeID: Int!, mood: Mood!): Employee!
 }
+
 enum Mood {
     HAPPY
     SAD
 }
+
 type Employee @key(fields: "id") {
   id: Int!
   currentMood: Mood!

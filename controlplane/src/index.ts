@@ -11,6 +11,10 @@ const {
   PORT,
   HOST,
   ALLOWED_ORIGINS,
+  PROMETHEUS_ENABLED,
+  PROMETHEUS_HTTP_PATH,
+  PROMETHEUS_PORT,
+  PROMETHEUS_HOST,
   DB_URL,
   DB_TLS_CERT,
   DB_TLS_KEY,
@@ -65,6 +69,12 @@ const options: BuildConfig = {
   allowedOrigins: ALLOWED_ORIGINS,
   production: process.env.NODE_ENV === 'production',
   clickhouseDsn: CLICKHOUSE_DSN,
+  prometheus: {
+    enabled: PROMETHEUS_ENABLED,
+    path: PROMETHEUS_HTTP_PATH,
+    host: PROMETHEUS_HOST,
+    port: PROMETHEUS_PORT,
+  },
   logger: {
     enabled: true,
     level: LOG_LEVEL as pino.LevelWithSilent,

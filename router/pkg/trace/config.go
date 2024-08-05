@@ -2,6 +2,9 @@ package trace
 
 import (
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
+	"go.opentelemetry.io/otel/attribute"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"net/http"
 	"net/url"
 	"time"
 )
@@ -21,7 +24,7 @@ const (
 	DefaultExportTimeout = 30 * time.Second
 )
 
-type Exporter struct {
+type ExporterConfig struct {
 	Disabled bool
 	Endpoint string
 
@@ -53,13 +56,19 @@ type Config struct {
 	WithNewRoot bool
 	// Sampler represents the sampler for tracing. The default value is 1.
 	Sampler float64
+	// ParentBasedSampler specifies if the parent-based sampler should be used. The default value is true.
+	ParentBasedSampler bool
 	// ExportGraphQLVariables defines if and how GraphQL variables should be exported as span attributes.
 	ExportGraphQLVariables ExportGraphQLVariables
-	Exporters              []*Exporter
+	Exporters              []*ExporterConfig
 	Propagators            []Propagator
+	SpanAttributesMapper   func(req *http.Request) []attribute.KeyValue
+	ResourceAttributes     []attribute.KeyValue
+	// TestMemoryExporter is used for testing purposes. If set, the exporter will be used instead of the configured exporters.
+	TestMemoryExporter sdktrace.SpanExporter
 }
 
-func DefaultExporter(cfg *Config) *Exporter {
+func DefaultExporter(cfg *Config) *ExporterConfig {
 	for _, exporter := range cfg.Exporters {
 		if exporter.Disabled {
 			continue
@@ -82,15 +91,18 @@ func DefaultExporter(cfg *Config) *Exporter {
 // DefaultConfig returns the default config.
 func DefaultConfig(serviceVersion string) *Config {
 	return &Config{
-		Enabled: false,
-		Name:    ServerName,
-		Version: serviceVersion,
-		Sampler: 1,
-		WithNewRoot: false,
+		Enabled:            false,
+		Name:               ServerName,
+		Version:            serviceVersion,
+		Sampler:            1,
+		WithNewRoot:        false,
+		ParentBasedSampler: true,
 		ExportGraphQLVariables: ExportGraphQLVariables{
 			Enabled: true,
 		},
-		Exporters: []*Exporter{
+		SpanAttributesMapper: nil,
+		ResourceAttributes:   make([]attribute.KeyValue, 0),
+		Exporters: []*ExporterConfig{
 			{
 				Disabled:      false,
 				Endpoint:      "http://localhost:4318",

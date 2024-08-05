@@ -4,11 +4,17 @@ import Table from 'cli-table3';
 import { Command, program } from 'commander';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { splitLabel, parseGraphQLSubscriptionProtocol, isValidSubscriptionProtocol } from '@wundergraph/cosmo-shared';
+import {
+  parseGraphQLSubscriptionProtocol,
+  parseGraphQLWebsocketSubprotocol,
+  splitLabel,
+} from '@wundergraph/cosmo-shared';
 import { resolve } from 'pathe';
 import ora from 'ora';
 import { BaseCommandOptions } from '../../../core/types/types.js';
-import { baseHeaders } from '../../../core/config.js';
+import { getBaseHeaders } from '../../../core/config.js';
+import { validateSubscriptionProtocols } from '../../../utils.js';
+import { websocketSubprotocolDescription } from '../../../constants.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('update');
@@ -17,7 +23,8 @@ export default (opts: BaseCommandOptions) => {
   command.option('-n, --namespace [string]', 'The namespace of the subgraph.');
   command.option(
     '-r, --routing-url <url>',
-    'The routing url of your subgraph. This is the url that the subgraph will be accessible at.',
+    'The routing URL of the subgraph. This is the URL at which the subgraph will be accessible.' +
+      ' Returns an error if the subgraph is an Event-Driven Graph.',
   );
   command.option(
     '--label [labels...]',
@@ -29,11 +36,17 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option(
     '--subscription-url <url>',
-    'The url used for subscriptions. If empty, it defaults to same url used for routing.',
+    'The url used for subscriptions. If empty, it defaults to same url used for routing.' +
+      ' Returns an error if the subgraph is an Event-Driven Graph.',
   );
   command.option(
     '--subscription-protocol <protocol>',
-    'The protocol to use when subscribing to the subgraph. The supported protocols are ws, sse, and sse_post.',
+    'The protocol to use when subscribing to the subgraph. The supported protocols are ws, sse, and sse_post.' +
+      ' Returns an error if the subgraph is an Event-Driven Graph.',
+  );
+  command.option(
+    '--websocket-subprotocol <protocol>',
+    websocketSubprotocolDescription + ' Returns an error if the subgraph is an Event-Driven Graph.',
   );
   command.option('--readme <path-to-readme>', 'The markdown file which describes the subgraph.');
 
@@ -50,19 +63,12 @@ export default (opts: BaseCommandOptions) => {
       }
     }
 
-    if (options.subscriptionProtocol && !isValidSubscriptionProtocol(options.subscriptionProtocol)) {
-      program.error(
-        pc.red(
-          pc.bold(
-            `The subscription protocol '${pc.bold(
-              options.subscriptionProtocol,
-            )}' is not valid. Please use one of the following: sse, sse_post, ws.`,
-          ),
-        ),
-      );
-    }
+    validateSubscriptionProtocols({
+      subscriptionProtocol: options.subscriptionProtocol,
+      websocketSubprotocol: options.websocketSubprotocol,
+    });
 
-    const spinner = ora('Subgraph is being updated...').start();
+    const spinner = ora(`The subgraph "${name}" is being updated...`).start();
     const resp = await opts.client.platform.updateSubgraph(
       {
         name,
@@ -81,43 +87,48 @@ export default (opts: BaseCommandOptions) => {
         subscriptionProtocol: options.subscriptionProtocol
           ? parseGraphQLSubscriptionProtocol(options.subscriptionProtocol)
           : undefined,
+        websocketSubprotocol: options.websocketSubprotocol
+          ? parseGraphQLWebsocketSubprotocol(options.websocketSubprotocol)
+          : undefined,
         readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
       },
       {
-        headers: baseHeaders,
+        headers: getBaseHeaders(),
       },
     );
 
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {
-        spinner.succeed('Subgraph was updated successfully.');
+        spinner.succeed(`The subgraph "${name}" was updated successfully.`);
 
         break;
       }
       case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {
-        spinner.warn('Subgraph was updated but with composition errors.');
+        spinner.warn(`The subgraph "${name}" was updated but with composition errors.`);
 
         const compositionErrorsTable = new Table({
           head: [
             pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
             pc.bold(pc.white('NAMESPACE')),
+            pc.bold(pc.white('FEATURE_FLAG')),
             pc.bold(pc.white('ERROR_MESSAGE')),
           ],
-          colWidths: [30, 30, 120],
+          colWidths: [30, 30, 30, 120],
           wordWrap: true,
         });
 
         console.log(
           pc.red(
-            `We found composition errors, while composing the federated graph.\nThe router will continue to work with the latest valid schema.\n${pc.bold(
-              'Please check the errors below:',
-            )}`,
+            `There were composition errors when composing at least one federated graph related to the` +
+              ` subgraph "${name}".\nThe router will continue to work with the latest valid schema.` +
+              `\n${pc.bold('Please check the errors below:')}`,
           ),
         );
         for (const compositionError of resp.compositionErrors) {
           compositionErrorsTable.push([
             compositionError.federatedGraphName,
             compositionError.namespace,
+            compositionError.featureFlag,
             compositionError.message,
           ]);
         }
@@ -128,7 +139,9 @@ export default (opts: BaseCommandOptions) => {
       }
       case EnumStatusCode.ERR_DEPLOYMENT_FAILED: {
         spinner.warn(
-          "Subgraph was updated, but the updated composition hasn't been deployed, so it's not accessible to the router. Check the errors listed below for details.",
+          `The subgraph "${name}" was updated, but the updated composition could not be deployed.` +
+            `\nThis means the updated composition is not accessible to the router.` +
+            `\n${pc.bold('Please check the errors below:')}`,
         );
 
         const deploymentErrorsTable = new Table({
@@ -154,7 +167,7 @@ export default (opts: BaseCommandOptions) => {
         break;
       }
       default: {
-        spinner.fail(`Failed to update subgraph.`);
+        spinner.fail(`Failed to update subgraph "${name}".`);
         if (resp.response?.details) {
           console.log(pc.red(pc.bold(resp.response?.details)));
         }

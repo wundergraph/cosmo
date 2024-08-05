@@ -1,10 +1,8 @@
 {
-  "version": "5",
-  "dialect": "pg",
-  "id": "cfa357a8-98b6-4a3f-9fbf-9b8ba396f48d",
-  "prevId": "e2788888-8b8d-4906-b7ea-13cd4578512f",
+  "version": "7",
+  "dialect": "postgresql",
   "tables": {
-    "federated_graphs": {
+    "public.federated_graphs": {
       "name": "federated_graphs",
       "schema": "",
       "columns": {
@@ -39,33 +37,34 @@
         "federated_graphs_target_id_targets_id_fk": {
           "name": "federated_graphs_target_id_targets_id_fk",
           "tableFrom": "federated_graphs",
-          "tableTo": "targets",
           "columnsFrom": [
             "target_id"
           ],
+          "tableTo": "targets",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "federated_graphs_composed_schema_version_id_schema_versions_id_fk": {
           "name": "federated_graphs_composed_schema_version_id_schema_versions_id_fk",
           "tableFrom": "federated_graphs",
-          "tableTo": "schema_versions",
           "columnsFrom": [
             "composed_schema_version_id"
           ],
+          "tableTo": "schema_versions",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
-      "compositePrimaryKeys": {}
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
     },
-    "schema_versions": {
+    "public.schema_versions": {
       "name": "schema_versions",
       "schema": "",
       "columns": {
@@ -114,20 +113,21 @@
         "schema_versions_target_id_targets_id_fk": {
           "name": "schema_versions_target_id_targets_id_fk",
           "tableFrom": "schema_versions",
-          "tableTo": "targets",
           "columnsFrom": [
             "target_id"
           ],
+          "tableTo": "targets",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
-      "compositePrimaryKeys": {}
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
     },
-    "schema_version_change_action": {
+    "public.schema_version_change_action": {
       "name": "schema_version_change_action",
       "schema": "",
       "columns": {
@@ -169,20 +169,21 @@
         "schema_version_change_action_schema_version_id_schema_versions_id_fk": {
           "name": "schema_version_change_action_schema_version_id_schema_versions_id_fk",
           "tableFrom": "schema_version_change_action",
-          "tableTo": "schema_versions",
           "columnsFrom": [
             "schema_version_id"
           ],
+          "tableTo": "schema_versions",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
-      "compositePrimaryKeys": {}
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
     },
-    "schema_version_changelog": {
+    "public.schema_version_changelog": {
       "name": "schema_version_changelog",
       "schema": "",
       "columns": {
@@ -204,33 +205,34 @@
         "schema_version_changelog_schema_version_id_schema_versions_id_fk": {
           "name": "schema_version_changelog_schema_version_id_schema_versions_id_fk",
           "tableFrom": "schema_version_changelog",
-          "tableTo": "schema_versions",
           "columnsFrom": [
             "schema_version_id"
           ],
+          "tableTo": "schema_versions",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "schema_version_changelog_schema_version_change_action_id_schema_version_change_action_id_fk": {
           "name": "schema_version_changelog_schema_version_change_action_id_schema_version_change_action_id_fk",
           "tableFrom": "schema_version_changelog",
-          "tableTo": "schema_version_change_action",
           "columnsFrom": [
             "schema_version_change_action_id"
           ],
+          "tableTo": "schema_version_change_action",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
-      "compositePrimaryKeys": {}
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
     },
-    "subgraphs": {
+    "public.subgraphs": {
       "name": "subgraphs",
       "schema": "",
       "columns": {
@@ -265,33 +267,34 @@
         "subgraphs_schema_version_id_schema_versions_id_fk": {
           "name": "subgraphs_schema_version_id_schema_versions_id_fk",
           "tableFrom": "subgraphs",
-          "tableTo": "schema_versions",
           "columnsFrom": [
             "schema_version_id"
           ],
+          "tableTo": "schema_versions",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         },
         "subgraphs_target_id_targets_id_fk": {
           "name": "subgraphs_target_id_targets_id_fk",
           "tableFrom": "subgraphs",
-          "tableTo": "targets",
           "columnsFrom": [
             "target_id"
           ],
+          "tableTo": "targets",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
-      "compositePrimaryKeys": {}
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
     },
-    "federated_subgraphs": {
+    "public.federated_subgraphs": {
       "name": "federated_subgraphs",
       "schema": "",
       "columns": {
@@ -313,28 +316,28 @@
         "federated_subgraphs_federated_graph_id_federated_graphs_id_fk": {
           "name": "federated_subgraphs_federated_graph_id_federated_graphs_id_fk",
           "tableFrom": "federated_subgraphs",
-          "tableTo": "federated_graphs",
           "columnsFrom": [
             "federated_graph_id"
           ],
+          "tableTo": "federated_graphs",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "federated_subgraphs_subgraph_id_subgraphs_id_fk": {
           "name": "federated_subgraphs_subgraph_id_subgraphs_id_fk",
           "tableFrom": "federated_subgraphs",
-          "tableTo": "subgraphs",
           "columnsFrom": [
             "subgraph_id"
           ],
+          "tableTo": "subgraphs",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
@@ -345,9 +348,10 @@
             "subgraph_id"
           ]
         }
-      }
+      },
+      "uniqueConstraints": {}
     },
-    "target_labels": {
+    "public.target_labels": {
       "name": "target_labels",
       "schema": "",
       "columns": {
@@ -375,20 +379,21 @@
         "target_labels_target_id_targets_id_fk": {
           "name": "target_labels_target_id_targets_id_fk",
           "tableFrom": "target_labels",
-          "tableTo": "targets",
           "columnsFrom": [
             "target_id"
           ],
+          "tableTo": "targets",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
-      "compositePrimaryKeys": {}
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
     },
-    "targets": {
+    "public.targets": {
       "name": "targets",
       "schema": "",
       "columns": {
@@ -421,33 +426,44 @@
       },
       "indexes": {
         "name_idx": {
-          "name": "name_idx",
           "columns": [
-            "name"
+            {
+              "expression": "name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": true
+          "with": {},
+          "name": "name_idx",
+          "isUnique": true,
+          "method": "btree",
+          "concurrently": false
         }
       },
       "foreignKeys": {},
-      "compositePrimaryKeys": {}
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
     }
   },
   "enums": {
-    "change_type": {
+    "public.change_type": {
       "name": "change_type",
-      "values": {
-        "add_field": "add_field",
-        "remove_field": "remove_field",
-        "renamed_field": "renamed_field"
-      }
+      "schema": "public",
+      "values": [
+        "add_field",
+        "remove_field",
+        "renamed_field"
+      ]
     },
-    "target_type": {
+    "public.target_type": {
       "name": "target_type",
-      "values": {
-        "federated": "federated",
-        "subgraph": "subgraph",
-        "graph": "graph"
-      }
+      "schema": "public",
+      "values": [
+        "federated",
+        "subgraph",
+        "graph"
+      ]
     }
   },
   "schemas": {},
@@ -455,5 +471,7 @@
     "schemas": {},
     "tables": {},
     "columns": {}
-  }
+  },
+  "id": "cfa357a8-98b6-4a3f-9fbf-9b8ba396f48d",
+  "prevId": "e2788888-8b8d-4906-b7ea-13cd4578512f"
 }

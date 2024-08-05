@@ -16,7 +16,7 @@ import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
 import { cn } from "@/lib/utils";
 import { CommandLineIcon } from "@heroicons/react/24/outline";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
 import {
   getOrganizationMembers,
   getSubgraphMembers,
@@ -59,15 +59,18 @@ export const Empty = ({ subgraphName }: { subgraphName: string }) => {
 
 const SubgraphOverviewPage = () => {
   const graph = useSubgraph();
-  const { data } = useQuery(getOrganizationMembers.useQuery());
+  const { data } = useQuery(getOrganizationMembers);
 
-  const { data: subgraphMembersData, refetch } = useQuery({
-    ...getSubgraphMembers.useQuery({
+  const { data: subgraphMembersData, refetch } = useQuery(
+    getSubgraphMembers,
+    {
       subgraphName: graph?.subgraph?.name,
       namespace: graph?.subgraph?.namespace,
-    }),
-    enabled: !!graph,
-  });
+    },
+    {
+      enabled: !!graph,
+    },
+  );
 
   const [inviteOptions, setInviteOptions] = useState<string[]>([]);
 
@@ -91,10 +94,10 @@ const SubgraphOverviewPage = () => {
   return (
     <div className="flex h-full flex-col">
       <div className="flex-shrink-0 overflow-x-auto border-b scrollbar-thin">
-        <dl className="flex w-full flex-row gap-y-2 space-x-4 px-4 py-4 text-sm lg:px-8">
-          <div className="flex-start flex max-w-[300px] flex-1 flex-col gap-1">
+        <dl className="flex w-full flex-col flex-wrap gap-x-8 gap-y-4 px-4 py-4 text-sm lg:px-8 xl:flex-row">
+          <div className="flex-start flex min-w-[220px] flex-col gap-2">
             <dt className="text-sm text-muted-foreground">Routing URL</dt>
-            <dd>
+            <dd className="text-sm">
               <Tooltip delayDuration={100}>
                 <TooltipTrigger className="w-full truncate text-start text-sm">
                   {subgraph.routingURL}
@@ -104,27 +107,28 @@ const SubgraphOverviewPage = () => {
             </dd>
           </div>
 
-          <div className="flex-start flex max-w-[300px] flex-1 flex-col gap-2 ">
+          <div className="flex-start flex min-w-[100px] flex-col gap-2">
             <dt className="text-sm text-muted-foreground">Labels</dt>
             <dd className="flex gap-x-2">
-              <div className="flex space-x-2">
-                {subgraph.labels.map(({ key, value }) => {
-                  return (
-                    <Badge variant="secondary" key={key + value}>
-                      {key}={value}
-                    </Badge>
-                  );
+              <div
+                className={cn("flex flex-shrink-0 gap-x-2", {
+                  "ml-4": subgraph.labels.length === 0,
                 })}
+              >
+                {subgraph.labels.length > 0
+                  ? subgraph.labels.map(({ key, value }) => {
+                      return (
+                        <Badge variant="secondary" key={key + value}>
+                          {key}={value}
+                        </Badge>
+                      );
+                    })
+                  : "-"}
               </div>
             </dd>
           </div>
 
-          <div
-            className={cn("flex-start flex flex-1 flex-col gap-2", {
-              "max-w-[250px]": subgraph.subscriptionUrl === "",
-              "max-w-[300px]": subgraph.subscriptionUrl !== "",
-            })}
-          >
+          <div className="flex-start flex min-w-[150px] flex-col gap-2">
             <dt className="text-sm text-muted-foreground">Subscription URL</dt>
             <dd>
               <p
@@ -132,14 +136,53 @@ const SubgraphOverviewPage = () => {
                   "ml-12": subgraph.subscriptionUrl === "",
                 })}
               >
-                {subgraph.subscriptionUrl !== ""
-                  ? subgraph.subscriptionUrl
-                  : "-"}
+                {subgraph.subscriptionUrl !== "" ? (
+                  <Tooltip delayDuration={100}>
+                    <TooltipTrigger className="w-full truncate text-start text-sm">
+                      {subgraph.subscriptionUrl}
+                    </TooltipTrigger>
+                    <TooltipContent>{subgraph.subscriptionUrl}</TooltipContent>
+                  </Tooltip>
+                ) : (
+                  "-"
+                )}
               </p>
             </dd>
           </div>
 
-          <div className="flex-start flex max-w-[200px] flex-1 flex-col gap-2 ">
+          <div className="flex-start flex min-w-[200px] flex-col gap-2">
+            <dt className="text-sm text-muted-foreground">
+              Subscription Protocol
+            </dt>
+            <dd>
+              <p
+                className={cn("text-sm", {
+                  "ml-16": subgraph.subscriptionUrl === "",
+                })}
+              >
+                {subgraph.subscriptionUrl !== ""
+                  ? subgraph.subscriptionProtocol
+                  : "-"}
+              </p>
+            </dd>
+          </div>
+          <div className="flex-start flex min-w-[250px] flex-col gap-2">
+            <dt className="text-sm text-muted-foreground">
+              Subscription WS Subprotocol
+            </dt>
+            <dd>
+              <p
+                className={cn("text-sm", {
+                  "ml-[90px]": subgraph.subscriptionUrl === "",
+                })}
+              >
+                {subgraph.subscriptionUrl !== ""
+                  ? subgraph.websocketSubprotocol
+                  : "-"}
+              </p>
+            </dd>
+          </div>
+          <div className="flex-start flex flex-col gap-2 ">
             <dt className="text-sm text-muted-foreground">Last Published</dt>
             <dd className="whitespace-nowrap text-sm">
               {subgraph.lastUpdatedAt ? (
