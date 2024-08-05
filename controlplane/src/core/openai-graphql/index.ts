@@ -1,6 +1,7 @@
 import { OpenAI, ClientOptions } from 'openai';
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
+import pRetry, { AbortError } from 'p-retry';
 
 export class OpenAIGraphql {
   private readonly client: OpenAI;
@@ -15,7 +16,7 @@ export class OpenAIGraphql {
   public async generateReadme(input: { graphName: string; sdl: string }): Promise<{ readme: string }> {
     const response = await this.client.chat.completions.create(
       {
-        model: 'gpt-3.5-turbo-0125',
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
@@ -51,17 +52,22 @@ export class OpenAIGraphql {
     return { readme: response.choices[0].message.content ?? '' };
   }
 
-  public async fixSDL(input: { sdl: string; checkResult: string }): Promise<{ sdl: string }> {
+  public fixSDL(input: { sdl: string; checkResult: string }): Promise<{ sdl: string }> {
+    const run = () => this._fixSDL(input);
+    return pRetry(run, { retries: 3 });
+  }
+
+  private async _fixSDL(input: { sdl: string; checkResult: string }): Promise<{ sdl: string }> {
     const out = z.object({
       sdl: z.string().describe('The fixed GraphQL Schema'),
     });
 
     const res = await this.client.chat.completions.create(
       {
-        model: 'gpt-3.5-turbo-1106',
+        model: 'gpt-4o-mini',
         temperature: 0,
-        top_p: 1,
         n: 1,
+        top_p: 1,
         frequency_penalty: 0,
         presence_penalty: 0,
         stream: false,
@@ -99,7 +105,7 @@ export class OpenAIGraphql {
     );
 
     if (res.choices?.length === 0) {
-      throw new Error('OpenAI fixSDL failed with empty choices');
+      throw new AbortError('OpenAI fixSDL failed with empty choices');
     }
 
     try {
@@ -107,9 +113,9 @@ export class OpenAIGraphql {
     } catch (e: any) {
       const errorText = e.toString();
       if (errorText.includes('Unexpected token')) {
-        return this.fixSDL(input);
+        throw e;
       }
-      throw new Error('OpenAI fixSDL failed');
+      throw new AbortError('OpenAI fixSDL failed');
     }
   }
 }
