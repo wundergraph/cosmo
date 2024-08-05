@@ -30,10 +30,10 @@ data:
   redisPort: "{{ .Values.configuration.redisPort }}"
   smtpEnabled: "{{ .Values.configuration.smtp.enabled }}"
   {{- if .Values.configuration.smtp.enabled }}
-  host: "{{ .Values.configuration.smtp.host }}"
-  port: "{{ .Values.configuration.smtp.port }}"
-  secure: "{{ .Values.configuration.smtp.secure }}"
-  requireTls: "{{ .Values.configuration.smtp.requireTls }}"
+  smtpHost: "{{ .Values.configuration.smtp.host }}"
+  smtpPort: "{{ .Values.configuration.smtp.port }}"
+  smtpSecure: "{{ .Values.configuration.smtp.secure }}"
+  smtpRequireTls: "{{ .Values.configuration.smtp.requireTls }}"
   {{- end }}
   prometheusEnabled: "{{ .Values.configuration.prometheus.enabled }}"
   {{- if .Values.configuration.prometheus.enabled }}
