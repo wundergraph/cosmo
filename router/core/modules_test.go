@@ -129,22 +129,22 @@ func TestSortingModulesByPriority(t *testing.T) {
 	testenv.Run(t, &testenv.Config{RouterOptions: []Option{
 		WithModulesConfig(cfg.Modules),
 	}}, func(t *testing.T, xEnv *testenv.Environment) {
-		sortedModulesW := SortModules(modulesW)
+		sortedModulesW := sortModules(modulesW)
 		assert.Equal(t, 2, len(sortedModulesW))
 
-		sortedModulesX := SortModules(modulesX)
+		sortedModulesX := sortModules(modulesX)
 		assert.Equal(t, ModuleID("module1_1"), sortedModulesX[0].ID)
 		assert.Equal(t, 1, sortedModulesX[0].Priority)
 		assert.Equal(t, ModuleID("module2_2"), sortedModulesX[1].ID)
 		assert.Equal(t, 2, sortedModulesX[1].Priority)
 
-		sortedModulesY := SortModules(modulesY)
+		sortedModulesY := sortModules(modulesY)
 		assert.Equal(t, ModuleID("module2_1"), sortedModulesY[0].ID)
 		assert.Equal(t, 1, sortedModulesY[0].Priority)
 		assert.Equal(t, ModuleID("module1_2"), sortedModulesY[1].ID)
 		assert.Equal(t, 2, sortedModulesY[1].Priority)
 
-		sortedModulesZ := SortModules(modulesZ)
+		sortedModulesZ := sortModules(modulesZ)
 		assert.Equal(t, ModuleID("module2_2"), sortedModulesZ[0].ID)
 		assert.Equal(t, 2, sortedModulesZ[0].Priority)
 		assert.Equal(t, ModuleID("module1_0"), sortedModulesZ[1].ID)
