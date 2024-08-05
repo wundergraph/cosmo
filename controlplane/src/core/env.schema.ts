@@ -105,20 +105,25 @@ export const envVariables = z
     /**
      * Email
      */
+    SMTP_ENABLED: z
+      .string()
+      .transform((val) => val === 'true')
+      .default('false'),
     SMTP_USERNAME: z.string().optional(),
     SMTP_PASSWORD: z.string().optional(),
     SMTP_HOST: z.string().optional(),
     SMTP_PORT: z
       .string()
-      .default('587')
+      .optional()
+      .default("") // here to avoid possible type of number | "" | undefined type
       .transform((val) => Number.parseInt(val)),
     SMTP_SECURE: z
       .string()
-      .default('false')
+      .optional()
       .transform((val) => val === 'true'),
     SMTP_REQUIRE_TLS: z
       .string()
-      .default('true')
+      .optional()
       .transform((val) => val === 'true'),
     /**
      * Billing

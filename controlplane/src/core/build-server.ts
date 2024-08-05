@@ -89,12 +89,13 @@ export interface BuildConfig {
   cdnBaseUrl: string;
   s3StorageUrl: string;
   mailer: {
+    smtpEnabled: boolean;
     smtpHost?: string;
     smtpPort?: number;
-    smtpSecure: boolean;
-    smtpRequireTls: boolean;
     smtpUsername?: string;
     smtpPassword?: string;
+    smtpSecure: boolean;
+    smtpRequireTls: boolean;
   };
   admissionWebhook: {
     secret: string;
@@ -238,8 +239,19 @@ export default async function build(opts: BuildConfig) {
   });
 
   let mailerClient: Mailer | undefined;
-  const { smtpHost, smtpPort, smtpSecure, smtpRequireTls, smtpUsername, smtpPassword } = opts.mailer;
-  if (smtpHost && smtpPort && smtpUsername && smtpPassword) {
+  if (opts.mailer.smtpEnabled) {
+    const { smtpHost, smtpPort, smtpSecure, smtpRequireTls, smtpUsername, smtpPassword } = opts.mailer;
+    const isSmtpHostSet = smtpHost && smtpPort
+    const isSmtpAuthSet = smtpUsername && smtpPassword
+
+    if (!isSmtpHostSet) {
+      throw new Error(`smtp host or port not set properly! Please ensure to do so!`);
+    }
+
+    if (!isSmtpAuthSet) {
+      throw new Error(`smtp username and host not set properly!`);
+    }
+
     mailerClient = new Mailer({
       smtpHost,
       smtpPort,

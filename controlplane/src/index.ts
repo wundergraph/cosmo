@@ -41,6 +41,7 @@ const {
   SLACK_APP_CLIENT_ID,
   SLACK_APP_CLIENT_SECRET,
   S3_STORAGE_URL,
+  SMTP_ENABLED,
   SMTP_HOST,
   SMTP_PORT,
   SMTP_USERNAME,
@@ -117,6 +118,7 @@ const options: BuildConfig = {
   },
   s3StorageUrl: S3_STORAGE_URL,
   mailer: {
+    smtpEnabled: SMTP_ENABLED,
     smtpHost: SMTP_HOST,
     smtpPort: SMTP_PORT,
     smtpUsername: SMTP_USERNAME,
