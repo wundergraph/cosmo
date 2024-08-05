@@ -28,11 +28,14 @@ data:
   defaultBillingPlan: "{{ .Values.configuration.defaultBillingPlan }}"
   redisHost: "{{ .Values.configuration.redisHost }}"
   redisPort: "{{ .Values.configuration.redisPort }}"
+  smtpEnabled: "{{ .Values.configuration.smtp.enabled }}"
+  {{- if .Values.configuration.smtp.enabled }}
+  host: "{{ .Values.configuration.smtp.host }}"
+  port: "{{ .Values.configuration.smtp.port }}"
+  secure: "{{ .Values.configuration.smtp.secure }}"
+  requireTls: "{{ .Values.configuration.smtp.requireTls }}"
+  {{- end }}
   prometheusEnabled: "{{ .Values.configuration.prometheus.enabled }}"
-  smtpHost: "{{ .Values.configuration.smtpHost }}"
-  smtpPort: "{{ .Values.configuration.smtpPort }}"
-  smtpSecure: "{{ .Values.configuration.smtpSecure }}"
-  smtpRequireTls: "{{ .Values.configuration.smtpRequireTls }}"
   {{- if .Values.configuration.prometheus.enabled }}
   prometheusHost: "{{ .Values.configuration.prometheus.host }}"
   prometheusPort: "{{ .Values.configuration.prometheus.port }}"

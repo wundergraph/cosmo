@@ -50,12 +50,14 @@ WunderGraph Cosmo Controlplane
 | configuration.s3StorageUrl | string | `"http://minio:changeme@cosmo-minio:9000/cosmo"` |  |
 | configuration.slackAppClientId | string | `""` |  |
 | configuration.slackAppClientSecret | string | `""` |  |
-| configuration.smtpHost | string | `"smtp.postmarkapp.com"` |  |
-| configuration.smtpPassword | string | `""` |  |
-| configuration.smtpPort | int | `587` |  |
-| configuration.smtpRequireTls | bool | `true` |  |
-| configuration.smtpSecure | bool | `false` |  |
-| configuration.smtpUsername | string | `""` |  |
+| configuration.smtp | object | `{"enabled":false,"host":"smtp.postmarkapp.com","password":"","port":587,"requireTls":true,"secure":true,"username":""}` | Use this section to configure the smtp server. |
+| configuration.smtp.enabled | bool | `false` | Enables the smtp server. Default is false. |
+| configuration.smtp.host | string | `"smtp.postmarkapp.com"` | The host to connect to. Default is "smtp.postmarkapp.com". |
+| configuration.smtp.password | string | `""` | The password to use. Default is "". |
+| configuration.smtp.port | int | `587` | The port the smtp server listens to. Default is 587. |
+| configuration.smtp.requireTls | bool | `true` | Forces the client to use STARTTLS. Default is true. |
+| configuration.smtp.secure | bool | `true` | Defines if the connection should use SSL. Default is true. |
+| configuration.smtp.username | string | `""` | The username to use. Default is "". |
 | configuration.stripeSecretKey | string | `""` |  |
 | configuration.stripeWebhookSecret | string | `""` |  |
 | configuration.webhookSecret | string | `""` |  |

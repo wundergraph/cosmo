@@ -181,12 +181,6 @@ configuration:
   slackAppClientId: ''
   slackAppClientSecret: ''
   s3StorageUrl: 'http://minio:changeme@cosmo-minio:9000/cosmo'
-  smtpUsername: ''
-  smtpPassword: ''
-  smtpHost: 'smtp.postmarkapp.com'
-  smtpPort: 587
-  smtpSecure: false
-  smtpRequireTls: true
   stripeSecretKey: ''
   stripeWebhookSecret: ''
   # -- The default billing plan, eg `developer@1`
@@ -194,6 +188,23 @@ configuration:
   openAiApiKey: ''
   # -- URL of the CDN to use for serving router configs and persistent operations
   cdnBaseUrl: 'http://cosmo-cdn:8787'
+
+  # -- Use this section to configure the smtp server.
+  smtp:
+    # -- Enables the smtp server. Default is false.
+    enabled: false
+    # -- The username to use. Default is "".
+    username: ''
+    # -- The password to use. Default is "".
+    password: ''
+    # -- The host to connect to. Default is "smtp.postmarkapp.com".
+    host: 'smtp.postmarkapp.com'
+    # -- The port the smtp server listens to. Default is 587.
+    port: 587
+    # -- Defines if the connection should use SSL. Default is true.
+    secure: true
+    # -- Forces the client to use STARTTLS. Default is true.
+    requireTls: true
 
   # -- Use this section to configure prometheus metrics.
   prometheus:

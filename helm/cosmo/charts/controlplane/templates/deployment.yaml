@@ -226,6 +226,12 @@ spec:
                   name: {{ include "controlplane.secretName" . }}
                   key: s3StorageUrl
             {{- end }}
+            - name: SMTP_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: smtpEnabled
+            {{- if .Values.configuration.smtp.enabled }}
             - name: SMTP_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -259,6 +265,7 @@ spec:
                 configMapKeyRef:
                   name: {{ include "controlplane.fullname" . }}-configmap
                   key: smtpRequireTls
+            {{- end }}
             {{- end }}
             {{- if .Values.configuration.stripeSecretKey }}
             - name: STRIPE_SECRET_KEY
