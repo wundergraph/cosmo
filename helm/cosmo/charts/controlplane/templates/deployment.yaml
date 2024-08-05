@@ -238,24 +238,28 @@ spec:
                   key: smtpUsername
             - name: SMTP_PORT
               valueFrom:
-                secretKeyRef:
-                  name: {{ include "controlplane.secretName" . }}
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
                   key: smtpPort
             - name: SMTP_HOST
               valueFrom:
-                secretKeyRef:
-                  name: {{ include "controlplane.secretName" . }}
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
                   key: smtpHost
+            {{- if .Values.configuration.smtpSecure }}
             - name: SMTP_SECURE
               valueFrom:
-                secretKeyRef:
-                  name: {{ include "controlplane.secretName" . }}
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
                   key: smtpSecure
+            {{- end }}
+            {{- if .Values.configuration.smtpRequireTls }}
             - name: SMTP_REQUIRE_TLS
               valueFrom:
-                secretKeyRef:
-                  name: {{ include "controlplane.secretName" . }}
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
                   key: smtpRequireTls
+            {{- end }}
             {{- if .Values.configuration.stripeSecretKey }}
             - name: STRIPE_SECRET_KEY
               valueFrom:
