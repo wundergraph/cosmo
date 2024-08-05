@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.98.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.98.1...controlplane@0.98.2) (2024-08-05)
+
+### Bug Fixes
+
+* avoid infinite recursion in openapi call ([#1011](https://github.com/wundergraph/cosmo/issues/1011)) ([9522f56](https://github.com/wundergraph/cosmo/commit/9522f564930b2170305196f9855ae7dc3cf2889d)) (@StarpTech)
+
 ## [0.98.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.98.0...controlplane@0.98.1) (2024-08-04)
 
 ### Bug Fixes
