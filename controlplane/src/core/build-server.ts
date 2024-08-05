@@ -240,8 +240,8 @@ export default async function build(opts: BuildConfig) {
   let mailerClient: Mailer | undefined;
   if (opts.mailer.smtpEnabled) {
     const { smtpHost, smtpPort, smtpSecure, smtpRequireTls, smtpUsername, smtpPassword } = opts.mailer;
-    const isSmtpHostSet = smtpHost && smtpPort
-    const isSmtpAuthSet = smtpUsername && smtpPassword
+    const isSmtpHostSet = smtpHost && smtpPort;
+    const isSmtpAuthSet = smtpUsername && smtpPassword;
 
     if (!isSmtpHostSet) {
       throw new Error(`smtp host or port not set properly! Please ensure to do so!`);

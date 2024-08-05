@@ -115,7 +115,7 @@ export const envVariables = z
     SMTP_PORT: z
       .string()
       .optional()
-      .default("") // here to avoid possible type of number | "" | undefined type
+      .default('') // here to avoid possible type of number | "" | undefined type
       .transform((val) => Number.parseInt(val)),
     SMTP_SECURE: z
       .string()
