@@ -573,6 +573,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		MaxConcurrentResolvers:         32,
 		ExecutionPlanCacheSize:         1024,
 		EnablePersistedOperationsCache: true,
+		ParseKitPoolSize:               8,
 	}
 	if testConfig.ModifyEngineExecutionConfiguration != nil {
 		testConfig.ModifyEngineExecutionConfiguration(&engineExecutionConfig)

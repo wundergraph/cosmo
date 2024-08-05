@@ -202,7 +202,8 @@
     "MinifySubgraphOperations": false,
     "EnablePersistedOperationsCache": true,
     "EnableNormalizationCache": true,
-    "NormalizationCacheSize": 1024
+    "NormalizationCacheSize": 1024,
+    "ParseKitPoolSize": 16
   },
   "WebSocket": {
     "Enabled": true,
