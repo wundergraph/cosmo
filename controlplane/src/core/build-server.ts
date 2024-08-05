@@ -238,8 +238,16 @@ export default async function build(opts: BuildConfig) {
   });
 
   let mailerClient: Mailer | undefined;
-  if (opts.mailer.smtpUsername && opts.mailer.smtpPassword) {
-    mailerClient = new Mailer(opts.mailer as MailerParams);
+  const { smtpHost, smtpPort, smtpSecure, smtpRequireTls, smtpUsername, smtpPassword } = opts.mailer;
+  if (smtpHost && smtpPort && smtpUsername && smtpPassword) {
+    mailerClient = new Mailer({
+      smtpHost,
+      smtpPort,
+      smtpSecure,
+      smtpRequireTls,
+      smtpUsername,
+      smtpPassword,
+    });
     try {
       const verified = await mailerClient.verifyConnection();
       if (verified) {
