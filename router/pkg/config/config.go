@@ -451,7 +451,7 @@ type PersistedOperationsCDNProvider struct {
 	URL string `yaml:"url,omitempty" envDefault:"https://cosmo-cdn.wundergraph.com"`
 }
 
-type ExecutionConfigStorage struct {
+type ExecutionConfigStorageConfig struct {
 	ProviderID string `yaml:"provider_id,omitempty" env:"EXECUTION_CONFIG_STORAGE_PROVIDER_ID"`
 	ObjectPath string `yaml:"object_path,omitempty" env:"EXECUTION_CONFIG_STORAGE_OBJECT_PATH"`
 }
@@ -462,8 +462,7 @@ type ExecutionConfigFile struct {
 }
 
 type ExecutionConfig struct {
-	File    ExecutionConfigFile    `yaml:"file,omitempty"`
-	Storage ExecutionConfigStorage `yaml:"storage,omitempty"`
+	Storage ExecutionConfigStorageConfig `yaml:"storage,omitempty"`
 }
 
 type PersistedOperationsCacheConfig struct {
