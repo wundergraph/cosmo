@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { createTransport, Transporter } from 'nodemailer';
 import * as ejs from 'ejs';
+import { MailerParams } from '../../types/index.js';
 
 interface OrganizationInviteBody {
   organizationName: string;
@@ -11,16 +12,16 @@ interface OrganizationInviteBody {
 export default class Mailer {
   client: Transporter;
 
-  constructor({ username, password }: { username: string; password: string }) {
+  constructor(params: MailerParams) {
     this.client = createTransport({
-      host: 'smtp.postmarkapp.com',
-      port: 587,
+      host: params.smtpHost,
+      port: params.smtpPort,
       // true for 465, false for other ports, will still upgrade to StartTLS
-      secure: false,
-      requireTLS: true, // Forces the client to use STARTTLS
+      secure: params.smtpSecure,
+      requireTLS: params.smtpRequireTls, // Forces the client to use STARTTLS
       auth: {
-        user: username,
-        pass: password,
+        user: params.smtpUsername,
+        pass: params.smtpPassword,
       },
     });
   }
