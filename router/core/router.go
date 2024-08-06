@@ -182,7 +182,7 @@ type (
 		processStartTime          time.Time
 		developmentMode           bool
 		healthcheck               health.Checker
-		configFileWatcher         *file_watcher.ConfigFileWatcher
+		configFileWatcher         *file_watcher.Watcher
 		// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
 		localhostFallbackInsideDocker bool
 

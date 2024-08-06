@@ -5,18 +5,18 @@ import (
 	"go.uber.org/zap"
 )
 
-type ConfigFileWatcher struct {
+type Watcher struct {
 	path    string
 	watcher *fsnotify.Watcher
 	logger  *zap.Logger
 }
 
-func FileWatcher(logger *zap.Logger, path string) (*ConfigFileWatcher, error) {
+func FileWatcher(logger *zap.Logger, path string) (*Watcher, error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, err
 	}
-	return &ConfigFileWatcher{
+	return &Watcher{
 		logger: logger.With(
 			zap.String("component", "file_watcher"),
 			zap.String("path", path),
@@ -26,7 +26,7 @@ func FileWatcher(logger *zap.Logger, path string) (*ConfigFileWatcher, error) {
 	}, nil
 }
 
-func (c *ConfigFileWatcher) Watch(cb func()) error {
+func (c *Watcher) Watch(cb func()) error {
 	go func() {
 		for {
 			select {
@@ -55,6 +55,6 @@ func (c *ConfigFileWatcher) Watch(cb func()) error {
 	return nil
 }
 
-func (c *ConfigFileWatcher) Close() error {
+func (c *Watcher) Close() error {
 	return c.watcher.Close()
 }
