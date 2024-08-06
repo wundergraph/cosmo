@@ -226,6 +226,12 @@ spec:
                   name: {{ include "controlplane.secretName" . }}
                   key: s3StorageUrl
             {{- end }}
+            - name: SMTP_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: smtpEnabled
+            {{- if .Values.configuration.smtp.enabled }}
             - name: SMTP_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -236,6 +242,31 @@ spec:
                 secretKeyRef:
                   name: {{ include "controlplane.secretName" . }}
                   key: smtpUsername
+            - name: SMTP_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: smtpPort
+            - name: SMTP_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: smtpHost
+            {{- if .Values.configuration.smtp.secure }}
+            - name: SMTP_SECURE
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: smtpSecure
+            {{- end }}
+            {{- if .Values.configuration.smtp.requireTls }}
+            - name: SMTP_REQUIRE_TLS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: smtpRequireTls
+            {{- end }}
+            {{- end }}
             {{- if .Values.configuration.stripeSecretKey }}
             - name: STRIPE_SECRET_KEY
               valueFrom:

@@ -100,7 +100,14 @@ export const SetupTest = async function ({
   });
 
   const platformWebhooks = new MockPlatformWebhookService();
-  const mailerClient = new Mailer({ username: '', password: '' });
+  const mailerClient = new Mailer({
+    smtpHost: '',
+    smtpPassword: '',
+    smtpPort: 0,
+    smtpRequireTls: false,
+    smtpSecure: false,
+    smtpUsername: '',
+    });
 
   await server.register(fastifyRedis, {
     host: 'localhost',

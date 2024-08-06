@@ -87,8 +87,15 @@ export interface BuildConfig {
   slack: { clientID?: string; clientSecret?: string };
   cdnBaseUrl: string;
   s3StorageUrl: string;
-  smtpUsername?: string;
-  smtpPassword?: string;
+  mailer: {
+    smtpEnabled: boolean;
+    smtpHost?: string;
+    smtpPort?: number;
+    smtpUsername?: string;
+    smtpPassword?: string;
+    smtpSecure: boolean;
+    smtpRequireTls: boolean;
+  };
   admissionWebhook: {
     secret: string;
   };
@@ -231,8 +238,27 @@ export default async function build(opts: BuildConfig) {
   });
 
   let mailerClient: Mailer | undefined;
-  if (opts.smtpUsername && opts.smtpPassword) {
-    mailerClient = new Mailer({ username: opts.smtpUsername, password: opts.smtpPassword });
+  if (opts.mailer.smtpEnabled) {
+    const { smtpHost, smtpPort, smtpSecure, smtpRequireTls, smtpUsername, smtpPassword } = opts.mailer;
+    const isSmtpHostSet = smtpHost && smtpPort;
+    const isSmtpAuthSet = smtpUsername && smtpPassword;
+
+    if (!isSmtpHostSet) {
+      throw new Error(`smtp host or port not set properly! Please ensure to do so!`);
+    }
+
+    if (!isSmtpAuthSet) {
+      throw new Error(`smtp username and host not set properly!`);
+    }
+
+    mailerClient = new Mailer({
+      smtpHost,
+      smtpPort,
+      smtpSecure,
+      smtpRequireTls,
+      smtpUsername,
+      smtpPassword,
+    });
     try {
       const verified = await mailerClient.verifyConnection();
       if (verified) {
