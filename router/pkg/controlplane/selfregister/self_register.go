@@ -28,7 +28,15 @@ type selfRegister struct {
 	logger               *zap.Logger
 }
 
-func New(endpoint, token string, opts ...Option) SelfRegister {
+func New(endpoint, token string, opts ...Option) (SelfRegister, error) {
+	if endpoint == "" {
+		return nil, fmt.Errorf("controlplane endpoint is required for router registration")
+	}
+
+	if token == "" {
+		return nil, fmt.Errorf("graph api token is required for router registration")
+	}
+
 	c := &selfRegister{
 		controlplaneEndpoint: endpoint,
 		graphApiToken:        token,
@@ -60,7 +68,7 @@ func New(endpoint, token string, opts ...Option) SelfRegister {
 		connect.WithSendCompression(brotli.Name),
 	)
 
-	return c
+	return c, nil
 }
 
 func (c *selfRegister) Register(ctx context.Context) (*nodev1.RegistrationInfo, error) {
