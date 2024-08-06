@@ -1,17 +1,19 @@
 package core
 
 import (
-	"connectrpc.com/connect"
 	"context"
+	"os"
+	"testing"
+	"time"
+
+	"connectrpc.com/connect"
 	_ "github.com/amacneil/dbmate/v2/pkg/driver/clickhouse"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1"
+	utils "github.com/wundergraph/cosmo/graphqlmetrics/pkg/utils"
 	"github.com/wundergraph/cosmo/graphqlmetrics/test"
 	"go.uber.org/zap"
-	"os"
-	"testing"
-	"time"
 )
 
 func TestPublishGraphQLMetrics(t *testing.T) {
@@ -60,7 +62,7 @@ func TestPublishGraphQLMetrics(t *testing.T) {
 
 	pReq := connect.NewRequest[graphqlmetricsv1.PublishGraphQLRequestMetricsRequest](req)
 
-	ctx := setClaims(context.Background(), &GraphAPITokenClaims{
+	ctx := utils.SetClaims(context.Background(), &utils.GraphAPITokenClaims{
 		FederatedGraphID: "fed123",
 		OrganizationID:   "org123",
 	})

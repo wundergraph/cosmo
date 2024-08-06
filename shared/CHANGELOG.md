@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.31.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.31.0...@wundergraph/cosmo-shared@0.31.1) (2024-08-01)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+# [0.31.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.30.4...@wundergraph/cosmo-shared@0.31.0) (2024-07-31)
+
+### Features
+
+* rewrite resolvability checker ([#964](https://github.com/wundergraph/cosmo/issues/964)) ([c323f01](https://github.com/wundergraph/cosmo/commit/c323f01d52a853b04a3b130627a969313eceaf65)) (@Aenimus)
+
 ## [0.30.4](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.30.3...@wundergraph/cosmo-shared@0.30.4) (2024-07-18)
 
 **Note:** Version bump only for package @wundergraph/cosmo-shared

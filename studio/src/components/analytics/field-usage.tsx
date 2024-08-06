@@ -31,7 +31,7 @@ import { useQuery } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getFieldUsage } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { GetFieldUsageResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { format, formatISO, fromUnixTime } from "date-fns";
+import { differenceInHours, format, formatISO, fromUnixTime } from "date-fns";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/router";
@@ -76,7 +76,7 @@ export const FieldUsage = ({
   const { range, dateRange } = useAnalyticsQueryState();
 
   const { data, ticks, domain, timeFormatter } = useChartData(
-    range,
+    differenceInHours(dateRange.end, dateRange.start),
     usageData.requestSeries,
   );
 

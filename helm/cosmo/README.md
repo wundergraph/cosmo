@@ -2,7 +2,7 @@
 
 For a detailed deployment guide of the chart, including the full documentation, see the [DEV.md](DEV.md) file.
 
-![Version: 0.4.0](https://img.shields.io/badge/Version-0.4.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
+![Version: 0.7.0](https://img.shields.io/badge/Version-0.7.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
 
 This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle GraphQL API Management Solution.
 
@@ -25,7 +25,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 |  | router | ^0 |
 |  | studio | ^0 |
 | https://charts.bitnami.com/bitnami | clickhouse | 5.3.1 |
-| https://charts.bitnami.com/bitnami | keycloak | 21.7.1 |
+| https://charts.bitnami.com/bitnami | keycloak | 22.0.0 |
 | https://charts.bitnami.com/bitnami | minio | 14.6.25 |
 | https://charts.bitnami.com/bitnami | postgresql | 12.12.10 |
 | https://charts.bitnami.com/bitnami | redis | 19.3.3 |
@@ -53,15 +53,23 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | controlplane.configuration.debugSQL | bool | `false` |  |
 | controlplane.configuration.logLevel | string | `"debug"` |  |
 | controlplane.configuration.prometheus.enabled | bool | `false` | Enables prometheus metrics support. Default is false. |
-| controlplane.configuration.prometheus.gcp_monitoring.enabled | bool | `false` | Enables gcp support . Default is false. |
-| controlplane.configuration.prometheus.gcp_monitoring.interval | string | `"60s"` | Scrape interval. Default is "60s". |
-| controlplane.configuration.prometheus.gcp_monitoring.timeout | string | `"50s"` | Scrape timeout. Default is "50s". |
+| controlplane.configuration.prometheus.gcpMonitoring.enabled | bool | `false` | Enables gcp support . Default is false. |
+| controlplane.configuration.prometheus.gcpMonitoring.interval | string | `"60s"` | Scrape interval. Default is "60s". |
+| controlplane.configuration.prometheus.gcpMonitoring.timeout | string | `"50s"` | Scrape timeout. Default is "50s". |
 | controlplane.configuration.prometheus.host | string | `"127.0.0.1"` | The host to bind to defaults to 127.0.0.1 to avoid opening the metrics endpoint by default. |
 | controlplane.configuration.prometheus.path | string | `"/metrics"` | The HTTP path where metrics are exposed. Default is "/metrics". |
 | controlplane.configuration.prometheus.port | int | `8088` | The port where metrics are exposed. Default is port 8088. |
 | controlplane.configuration.redisHost | string | `"cosmo-redis-master"` |  |
 | controlplane.configuration.redisPort | int | `6379` |  |
 | controlplane.configuration.s3StorageUrl | string | `"http://minio:changeme@cosmo-minio:9000/cosmo"` |  |
+| controlplane.configuration.smtp | object | `{"enabled":false,"host":"smtp.postmarkapp.com","password":"","port":587,"requireTls":true,"secure":true,"username":""}` | Use this section to configure the smtp server. |
+| controlplane.configuration.smtp.enabled | bool | `false` | Enables the smtp server. Default is false. |
+| controlplane.configuration.smtp.host | string | `"smtp.postmarkapp.com"` | The host to connect to. Default is "smtp.postmarkapp.com". |
+| controlplane.configuration.smtp.password | string | `""` | The password to use. Default is "". |
+| controlplane.configuration.smtp.port | int | `587` | The port the smtp server listens to. Default is 587. |
+| controlplane.configuration.smtp.requireTls | bool | `true` | Forces the client to use STARTTLS. Default is true. |
+| controlplane.configuration.smtp.secure | bool | `true` | Defines if the connection should use SSL. Default is true. |
+| controlplane.configuration.smtp.username | string | `""` | The username to use. Default is "". |
 | global.cdn.enabled | bool | `true` |  |
 | global.cdn.port | int | `8787` |  |
 | global.cdn.webUrl | string | `"http://cdn.wundergraph.local"` |  |
@@ -103,6 +111,13 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | global.studio.port | int | `3000` |  |
 | global.studio.webUrl | string | `"http://studio.wundergraph.local"` |  |
 | graphqlmetrics.configuration.clickhouseDsn | string | `"clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4"` |  |
+| graphqlmetrics.configuration.prometheus.enabled | bool | `false` | Enables prometheus metrics support. Default is false. |
+| graphqlmetrics.configuration.prometheus.gcpMonitoring.enabled | bool | `false` | Enables gcp support . Default is false. |
+| graphqlmetrics.configuration.prometheus.gcpMonitoring.interval | string | `"60s"` | Scrape interval. Default is "60s". |
+| graphqlmetrics.configuration.prometheus.gcpMonitoring.timeout | string | `"50s"` | Scrape timeout. Default is "50s". |
+| graphqlmetrics.configuration.prometheus.host | string | `"127.0.0.1"` | The host to bind to defaults to 127.0.0.1 to avoid opening the metrics endpoint by default. |
+| graphqlmetrics.configuration.prometheus.path | string | `"/metrics"` | The HTTP path where metrics are exposed. Default is "/metrics". |
+| graphqlmetrics.configuration.prometheus.port | int | `8088` | The port where metrics are exposed. Default is port 8088. |
 | ingress.annotations | object | `{}` |  |
 | ingress.enabled | bool | `true` |  |
 | keycloak.auth.adminPassword | string | `"changeme"` |  |
@@ -142,6 +157,13 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | minio.service.ports.minio | int | `9000` |  |
 | minio.service.ports.minio_admin | int | `9001` |  |
 | otelcollector.configuration.clickhouseDsn | string | `"clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4"` |  |
+| otelcollector.configuration.prometheus.enabled | bool | `false` | Enables prometheus metrics support. Default is false. |
+| otelcollector.configuration.prometheus.gcpMonitoring.enabled | bool | `false` | Enables gcp support . Default is false. |
+| otelcollector.configuration.prometheus.gcpMonitoring.interval | string | `"60s"` | Scrape interval. Default is "60s". |
+| otelcollector.configuration.prometheus.gcpMonitoring.timeout | string | `"50s"` | Scrape timeout. Default is "50s". |
+| otelcollector.configuration.prometheus.host | string | `"127.0.0.1"` | The host to bind to defautls to 127.0.0.1 to avoid opening the metrics endpoint by default. |
+| otelcollector.configuration.prometheus.level | string | `"normal"` | The level of telemetry to be collected. Default is "basic". One of "none", "basic", "normal", "detailed". |
+| otelcollector.configuration.prometheus.port | int | `8088` | The port where metrics are exposed. Default is port 8088. |
 | postgresql.auth.database | string | `"controlplane"` |  |
 | postgresql.auth.password | string | `"changeme"` |  |
 | postgresql.auth.username | string | `"postgres"` |  |

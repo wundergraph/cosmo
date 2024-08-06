@@ -3,9 +3,12 @@ package config
 import (
 	_ "embed"
 	"errors"
+	"fmt"
 	"github.com/dustin/go-humanize"
+	"github.com/goccy/go-json"
 	"github.com/goccy/go-yaml"
-	"github.com/santhosh-tekuri/jsonschema/v5"
+	"github.com/santhosh-tekuri/jsonschema/v6"
+	"golang.org/x/text/message"
 	"io/fs"
 	"log"
 	"net"
@@ -22,13 +25,56 @@ const (
 	hostnameRegexStringRFC1123 = `^([a-zA-Z0-9]{1}[a-zA-Z0-9-]{0,62}){1}(\.[a-zA-Z0-9]{1}[a-zA-Z0-9-]{0,62})*?$` // accepts hostname starting with a digit https://tools.ietf.org/html/rfc1123
 )
 
-var (
-	//go:embed config.schema.json
-	JSONSchema string
+type duration struct {
+	min time.Duration
+	max time.Duration
+}
 
-	hostnameRegexRFC1123 = regexp.MustCompile(hostnameRegexStringRFC1123)
+func (d duration) Validate(ctx *jsonschema.ValidatorContext, v any) {
+	// is within bounds
+	val, ok := v.(string)
+	if !ok {
+		ctx.AddError(&validationErrorKind{
+			fmt.Sprintf("invalid duration, given %s", val),
+			"duration",
+		})
+		return
+	}
 
-	goDurationSchema = jsonschema.MustCompileString("goDuration.json", `{
+	duration, err := time.ParseDuration(val)
+	if err != nil {
+		ctx.AddError(&validationErrorKind{
+			fmt.Sprintf("invalid duration, given %s", val),
+			"duration",
+		})
+		return
+	}
+
+	if d.min > 0 {
+		if duration < d.min {
+			ctx.AddError(&validationErrorKind{
+				fmt.Sprintf("duration must be greater or equal than %s", d.min),
+				"duration",
+			})
+			return
+		}
+	}
+
+	if d.max > 0 {
+		if duration > d.max {
+			ctx.AddError(&validationErrorKind{
+				fmt.Sprintf("duration must be less or equal than %s", d.max),
+				"duration",
+			})
+			return
+		}
+
+	}
+}
+
+func goDurationVocab() *jsonschema.Vocabulary {
+	schemaURL := "http://example.com/meta/duration"
+	schema, err := jsonschema.UnmarshalJSON(strings.NewReader(`{
 	"properties" : {
 		"duration": {
 			"type": "object",
@@ -37,137 +83,34 @@ var (
 				"minimum": {
 					"type": "string"
 				},	
-				"minimum": {
+				"maximum": {
 					"type": "string"
 				}
 			}
 		}
 	}
-}`)
-
-	humanBytesSchema = jsonschema.MustCompileString("humanBytes.json", `{
-	"properties" : {
-		"bytes": {
-			"type": "object",
-			"additionalProperties": false,
-			"properties": {
-				"minimum": {
-					"type": "number"
-				},	
-				"minimum": {
-					"type": "number"
-				}
-			}
-		}
-	}
-}`)
-)
-
-type humanBytes struct {
-	min uint64
-	max uint64
-}
-
-func (d humanBytes) Validate(ctx jsonschema.ValidationContext, v interface{}) error {
-
-	val, ok := v.(string)
-	if !ok {
-		return ctx.Error("bytes", "invalid bytes, given %s", v)
-	}
-
-	bytes, err := humanize.ParseBytes(val)
+}`))
 	if err != nil {
-		return ctx.Error("bytes", "invalid bytes, given %s", val)
+		log.Fatal(err)
 	}
 
-	if d.min > 0 {
-		if bytes < d.min {
-			return ctx.Error("bytes", "must be greater or equal than %s", humanize.Bytes(d.min))
-		}
+	c := jsonschema.NewCompiler()
+	if err := c.AddResource(schemaURL, schema); err != nil {
+		log.Fatal(err)
 	}
-
-	if d.max > 0 {
-		if bytes > d.max {
-			return ctx.Error("bytes", "must be less or equal than %s", humanize.Bytes(d.max))
-		}
-
-	}
-
-	return nil
-}
-
-type humanBytesCompiler struct{}
-
-func (humanBytesCompiler) Compile(ctx jsonschema.CompilerContext, m map[string]interface{}) (jsonschema.ExtSchema, error) {
-	if val, ok := m["bytes"]; ok {
-
-		if mapVal, ok := val.(map[string]interface{}); ok {
-			var minBytes, maxBytes uint64
-			var err error
-
-			minBytesString, ok := mapVal["minimum"].(string)
-			if ok {
-				minBytes, err = humanize.ParseBytes(minBytesString)
-				if err != nil {
-					return nil, err
-				}
-			}
-			maxBytesString, ok := mapVal["maximum"].(string)
-			if ok {
-				maxBytes, err = humanize.ParseBytes(maxBytesString)
-				if err != nil {
-					return nil, err
-				}
-			}
-			return humanBytes{
-				min: minBytes,
-				max: maxBytes,
-			}, nil
-		}
-
-		return duration{}, nil
-	}
-
-	// nothing to compile, return nil
-	return nil, nil
-}
-
-type duration struct {
-	min time.Duration
-	max time.Duration
-}
-
-func (d duration) Validate(ctx jsonschema.ValidationContext, v interface{}) error {
-	// is within bounds
-	val, ok := v.(string)
-	if !ok {
-		return ctx.Error("duration", "invalid duration, given %s", v)
-	}
-
-	duration, err := time.ParseDuration(val)
+	sch, err := c.Compile(schemaURL)
 	if err != nil {
-		return ctx.Error("duration", "invalid duration, given %s", val)
+		log.Fatal(err)
 	}
 
-	if d.min > 0 {
-		if duration < d.min {
-			return ctx.Error("duration", "must be greater or equal than %s", d.min)
-		}
+	return &jsonschema.Vocabulary{
+		URL:     schemaURL,
+		Schema:  sch,
+		Compile: compileDuration,
 	}
-
-	if d.max > 0 {
-		if duration > d.max {
-			return ctx.Error("duration", "must be less or equal than %s", d.max)
-		}
-
-	}
-
-	return nil
 }
 
-type durationCompiler struct{}
-
-func (durationCompiler) Compile(ctx jsonschema.CompilerContext, m map[string]interface{}) (jsonschema.ExtSchema, error) {
+func compileDuration(ctx *jsonschema.CompilerContext, m map[string]any) (jsonschema.SchemaExt, error) {
 	if val, ok := m["duration"]; ok {
 
 		if mapVal, ok := val.(map[string]interface{}); ok {
@@ -200,31 +143,201 @@ func (durationCompiler) Compile(ctx jsonschema.CompilerContext, m map[string]int
 	return nil, nil
 }
 
-func ValidateConfig(yamlData []byte, schema string) error {
-	var v interface{}
+type humanBytes struct {
+	min uint64
+	max uint64
+}
+
+var (
+	_ jsonschema.ErrorKind = (*validationErrorKind)(nil)
+)
+
+type validationErrorKind struct {
+	message string
+	jsonKey string
+}
+
+func (v validationErrorKind) KeywordPath() []string {
+	return []string{v.jsonKey}
+}
+
+func (v validationErrorKind) LocalizedString(printer *message.Printer) string {
+	return v.message
+}
+
+func (d humanBytes) Validate(ctx *jsonschema.ValidatorContext, v any) {
+
+	val, ok := v.(string)
+	if !ok {
+		ctx.AddError(&validationErrorKind{
+			fmt.Sprintf("invalid bytes, given %s", v),
+			"bytes",
+		})
+		return
+	}
+
+	bytes, err := humanize.ParseBytes(val)
+	if err != nil {
+		ctx.AddError(&validationErrorKind{
+			fmt.Sprintf("invalid bytes, given %s", val),
+			"bytes",
+		})
+		return
+	}
+
+	if d.min > 0 {
+		if bytes < d.min {
+			ctx.AddError(&validationErrorKind{
+				fmt.Sprintf("bytes must be greater or equal than %s", humanize.Bytes(d.min)),
+				"bytes",
+			})
+			return
+		}
+	}
+
+	if d.max > 0 {
+		if bytes > d.max {
+			ctx.AddError(&validationErrorKind{
+				fmt.Sprintf("bytes must be less or equal than %s", humanize.Bytes(d.max)),
+				"bytes",
+			})
+			return
+		}
+
+	}
+}
+
+func humanBytesVocab() *jsonschema.Vocabulary {
+	schemaURL := "http://example.com/meta/humanBytes"
+	schema, err := jsonschema.UnmarshalJSON(strings.NewReader(`{
+	"properties" : {
+		"bytes": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"minimum": {
+					"type": "string"
+				},	
+				"minimum": {
+					"type": "string"
+				}
+			}
+		}
+	}
+}`))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	c := jsonschema.NewCompiler()
+	if err := c.AddResource(schemaURL, schema); err != nil {
+		log.Fatal(err)
+	}
+	sch, err := c.Compile(schemaURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return &jsonschema.Vocabulary{
+		URL:     schemaURL,
+		Schema:  sch,
+		Compile: compileHumanBytes,
+	}
+}
+
+func compileHumanBytes(ctx *jsonschema.CompilerContext, m map[string]any) (jsonschema.SchemaExt, error) {
+	if val, ok := m["bytes"]; ok {
+
+		if mapVal, ok := val.(map[string]interface{}); ok {
+			var minBytes, maxBytes uint64
+			var err error
+
+			minBytesString, ok := mapVal["minimum"].(string)
+			if ok {
+				minBytes, err = humanize.ParseBytes(minBytesString)
+				if err != nil {
+					return nil, err
+				}
+			}
+			maxBytesString, ok := mapVal["maximum"].(string)
+			if ok {
+				maxBytes, err = humanize.ParseBytes(maxBytesString)
+				if err != nil {
+					return nil, err
+				}
+			}
+			return humanBytes{
+				min: minBytes,
+				max: maxBytes,
+			}, nil
+		}
+
+		return humanBytes{}, nil
+	}
+
+	// nothing to compile, return nil
+	return nil, nil
+}
+
+var (
+	//go:embed config.schema.json
+	JSONSchema []byte
+
+	hostnameRegexRFC1123 = regexp.MustCompile(hostnameRegexStringRFC1123)
+)
+
+func ValidateConfig(yamlData []byte, schema []byte) error {
+	var s any
+	err := json.Unmarshal(schema, &s)
+	if err != nil {
+		return err
+	}
+
+	var v any
 	if err := yaml.Unmarshal(yamlData, &v); err != nil {
 		log.Fatal(err)
 	}
 
 	c := jsonschema.NewCompiler()
-	c.AssertFormat = true
-	c.Formats["go-duration"] = isGoDuration
-	c.Formats["bytes-string"] = isBytesString
-	c.Formats["url"] = isURL
-	c.Formats["http-url"] = isHttpURL
-	c.Formats["file-path"] = isFilePath
-	c.Formats["x-uri"] = isURI
-	c.Formats["hostname-port"] = isHostnamePort
+	c.AssertFormat()
+	c.AssertVocabs()
+	c.RegisterFormat(&jsonschema.Format{
+		Name:     "go-duration",
+		Validate: isGoDuration,
+	})
+	c.RegisterFormat(&jsonschema.Format{
+		Name:     "bytes-string",
+		Validate: isBytesString,
+	})
+	c.RegisterFormat(&jsonschema.Format{
+		Name:     "url",
+		Validate: isURL,
+	})
+	c.RegisterFormat(&jsonschema.Format{
+		Name:     "http-url",
+		Validate: isHttpURL,
+	})
+	c.RegisterFormat(&jsonschema.Format{
+		Name:     "file-path",
+		Validate: isFilePath,
+	})
+	c.RegisterFormat(&jsonschema.Format{
+		Name:     "x-uri",
+		Validate: isURI,
+	})
+	c.RegisterFormat(&jsonschema.Format{
+		Name:     "hostname-port",
+		Validate: isHostnamePort,
+	})
+	c.RegisterVocabulary(goDurationVocab())
+	c.RegisterVocabulary(humanBytesVocab())
 
-	c.RegisterExtension("duration", goDurationSchema, durationCompiler{})
-	c.RegisterExtension("bytes", humanBytesSchema, humanBytesCompiler{})
-
-	err := c.AddResource("config.schema.json", strings.NewReader(schema))
+	err = c.AddResource("https://raw.githubusercontent.com/wundergraph/cosmo/main/router/pkg/config/config.schema.json", s)
 	if err != nil {
 		return err
 	}
 
-	sch, err := c.Compile("config.schema.json")
+	sch, err := c.Compile("https://raw.githubusercontent.com/wundergraph/cosmo/main/router/pkg/config/config.schema.json")
 	if err != nil {
 		return err
 	}
@@ -238,23 +351,23 @@ func ValidateConfig(yamlData []byte, schema string) error {
 }
 
 // isGoDuration is the validation function for validating if the current field's value is a valid Go duration.
-func isGoDuration(s any) bool {
+func isGoDuration(s any) error {
 	val, ok := s.(string)
 	if !ok {
-		return false
+		return errors.New("invalid duration")
 	}
 	_, err := time.ParseDuration(val)
-	return err == nil
+	return err
 }
 
 // isBytesString is the validation function for validating if the current field's value is a valid bytes string.
-func isBytesString(s any) bool {
+func isBytesString(s any) error {
 	val, ok := s.(string)
 	if !ok {
-		return false
+		return errors.New("invalid bytes string")
 	}
 	_, err := humanize.ParseBytes(val)
-	return err == nil
+	return err
 }
 
 // isFileURL is the helper function for validating if the `path` valid file URL as per RFC8089
@@ -267,52 +380,56 @@ func isFileURL(path string) bool {
 }
 
 // isURL is the validation function for validating if the current field's value is a valid URL.
-func isURL(a any) bool {
+func isURL(a any) error {
 	val, ok := a.(string)
 	if !ok {
-		return false
+		return errors.New("invalid URL")
 	}
 	s := strings.ToLower(val)
 
 	if len(s) == 0 {
-		return false
+		return errors.New("invalid URL")
 	}
 
 	if isFileURL(s) {
-		return true
+		return errors.New("invalid URL")
 	}
 
 	u, err := url.Parse(s)
 	if err != nil || u.Scheme == "" {
-		return false
+		return errors.New("invalid URL")
 	}
 
 	if u.Host == "" && u.Fragment == "" && u.Opaque == "" {
-		return false
+		return errors.New("invalid URL")
 	}
 
-	return true
+	return nil
 }
 
 // isHttpURL is the validation function for validating if the current field's value is a valid HTTP(s) URL.
-func isHttpURL(a any) bool {
+func isHttpURL(a any) error {
 	val, ok := a.(string)
 	if !ok {
-		return false
+		return errors.New("invalid HTTP URL")
 	}
 
-	if !isURL(val) {
-		return false
+	if err := isURL(val); err != nil {
+		return err
 	}
 
 	s := strings.ToLower(val)
 
 	u, err := url.Parse(s)
 	if err != nil || u.Host == "" {
-		return false
+		return errors.New("invalid HTTP URL")
 	}
 
-	return u.Scheme == "http" || u.Scheme == "https"
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return errors.New("invalid HTTP scheme")
+	}
+
+	return nil
 }
 
 // isDir is the validation function for validating if the current field's value is a valid existing directory.
@@ -336,34 +453,34 @@ func isFile(s string) bool {
 }
 
 // isFilePath is the validation function for validating if the current field's value is a valid file path.
-func isFilePath(a any) bool {
+func isFilePath(a any) error {
 	val, ok := a.(string)
 	if !ok {
-		return false
+		return errors.New("invalid file path")
 	}
 
 	var exists bool
 
 	// Not valid if it is a directory.
 	if isDir(val) {
-		return false
+		return errors.New("invalid file path")
 	}
 	// If it exists, it obviously is valid.
 	// This is done first to avoid code duplication and unnecessary additional logic.
 	if exists = isFile(val); exists {
-		return true
+		return nil
 	}
 
 	// Every OS allows for whitespace, but none
 	// let you use a file with no filename (to my knowledge).
 	// Unless you're dealing with raw inodes, but I digress.
 	if strings.TrimSpace(val) == "" {
-		return false
+		return errors.New("invalid file path")
 	}
 
 	// We make sure it isn't a directory.
 	if strings.HasSuffix(val, string(os.PathSeparator)) {
-		return false
+		return errors.New("invalid file path")
 	}
 
 	if _, err := os.Stat(val); err != nil {
@@ -372,11 +489,11 @@ func isFilePath(a any) bool {
 		case errors.As(err, &t):
 			if errors.Is(t.Err, syscall.EINVAL) {
 				// It's definitely an invalid character in the filepath.
-				return false
+				return errors.New("invalid file path")
 			}
 			// It could be a permission error, a does-not-exist error, etc.
 			// Out-of-scope for this validation, though.
-			return true
+			return nil
 		default:
 			// Something went *seriously* wrong.
 			/*
@@ -387,14 +504,14 @@ func isFilePath(a any) bool {
 		}
 	}
 
-	return false
+	return nil
 }
 
 // isURI is the validation function for validating if the current field's value is a valid URI.
-func isURI(a any) bool {
+func isURI(a any) error {
 	val, ok := a.(string)
 	if !ok {
-		return false
+		return errors.New("invalid URI")
 	}
 
 	// checks needed as of Go 1.6 because of change https://github.com/golang/go/commit/617c93ce740c3c3cc28cdd1a0d712be183d0b328#diff-6c2d018290e298803c0c9419d8739885L195
@@ -404,35 +521,37 @@ func isURI(a any) bool {
 	}
 
 	if len(val) == 0 {
-		return false
+		return errors.New("invalid URI")
 	}
 
 	_, err := url.ParseRequestURI(val)
 
-	return err == nil
+	return err
 }
 
 // isHostnamePort validates a <dns>:<port> combination for fields typically used for socket address.
-func isHostnamePort(a any) bool {
+func isHostnamePort(a any) error {
 	val, ok := a.(string)
 	if !ok {
-		return false
+		return errors.New("invalid hostname:port")
 	}
 
 	host, port, err := net.SplitHostPort(val)
 	if err != nil {
-		return false
+		return err
 	}
 	// Port must be an iny <= 65535.
 	if portNum, err := strconv.ParseInt(
 		port, 10, 32,
 	); err != nil || portNum > 65535 || portNum < 1 {
-		return false
+		return errors.New("invalid port")
 	}
 
 	// If host is specified, it should match a DNS name
 	if host != "" {
-		return hostnameRegexRFC1123.MatchString(host)
+		if !hostnameRegexRFC1123.MatchString(host) {
+			return errors.New("invalid hostname")
+		}
 	}
-	return true
+	return nil
 }

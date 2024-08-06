@@ -181,8 +181,6 @@ configuration:
   slackAppClientId: ''
   slackAppClientSecret: ''
   s3StorageUrl: 'http://minio:changeme@cosmo-minio:9000/cosmo'
-  smtpUsername: ''
-  smtpPassword: ''
   stripeSecretKey: ''
   stripeWebhookSecret: ''
   # -- The default billing plan, eg `developer@1`
@@ -191,7 +189,24 @@ configuration:
   # -- URL of the CDN to use for serving router configs and persistent operations
   cdnBaseUrl: 'http://cosmo-cdn:8787'
 
-  # Use this section to disable/enable and configure prometheus metrics.
+  # -- Use this section to configure the smtp server.
+  smtp:
+    # -- Enables the smtp server. Default is false.
+    enabled: false
+    # -- The username to use. Default is "".
+    username: ''
+    # -- The password to use. Default is "".
+    password: ''
+    # -- The host to connect to. Default is "smtp.postmarkapp.com".
+    host: 'smtp.postmarkapp.com'
+    # -- The port the smtp server listens to. Default is 587.
+    port: 587
+    # -- Defines if the connection should use SSL. Default is true.
+    secure: true
+    # -- Forces the client to use STARTTLS. Default is true.
+    requireTls: true
+
+  # -- Use this section to configure prometheus metrics.
   prometheus:
     # -- Enables prometheus metrics support. Default is false.
     enabled: false
@@ -202,7 +217,7 @@ configuration:
     # -- The HTTP path where metrics are exposed. Default is "/metrics".
     path: "/metrics"
     # Use this section to disable/enable pod monitoring over [GCP managed collection](https://cloud.google.com/stackdriver/docs/managed-prometheus/setup-managed#config-mgd-collection).
-    gcp_monitoring:
+    gcpMonitoring:
       # -- Enables gcp support . Default is false.
       enabled: false
       # -- Scrape interval. Default is "60s".
@@ -212,3 +227,30 @@ configuration:
 
 # -- Existing secret in the same namespace containing the ControlPlane Secrets. The secret keys have to match with current secret.
 existingSecret: ""
+
+# -- Configure jobs to be executed in the control plane
+jobs:
+  # -- Used to deactivate an organization with a reason and schedule deletion
+  deactivateOrganization:
+    # -- Enables the job to be run
+    enabled: false
+    # -- The slug of the organization
+    slug: 'foo'
+    # -- The unique identifier of the organization
+    id: '123'
+    # -- The reason for deactivation
+    reason: ''
+  # -- Used to activate an organization and remove the scheduled deletion
+  activateOrganization:
+    # -- Enables the job to be run
+    enabled: false
+    # -- The slug of the organization
+    slug: 'foo'
+    # -- The unique identifier of the organization
+    id: '123'
+  # -- Used to delete the user
+  deleteUser:
+    # -- Enables the job to be run
+    enabled: false
+    # -- The unique identifier of the user
+    id: '123'

@@ -7,13 +7,13 @@
   },
   "Telemetry": {
     "ServiceName": "cosmo-router",
-    "Attributes": [],
-    "ResourceAttributes": [],
+    "Attributes": null,
+    "ResourceAttributes": null,
     "Tracing": {
       "Enabled": true,
       "SamplingRate": 1,
       "ParentBasedSampler": true,
-      "Exporters": [],
+      "Exporters": null,
       "Propagation": {
         "TraceContext": true,
         "Jaeger": false,
@@ -27,7 +27,7 @@
       "OTLP": {
         "Enabled": true,
         "RouterRuntime": true,
-        "Exporters": []
+        "Exporters": null
       },
       "Prometheus": {
         "Enabled": true,
@@ -43,6 +43,7 @@
     "CollectorEndpoint": "https://cosmo-metrics.wundergraph.com"
   },
   "CORS": {
+    "Enabled": true,
     "AllowOrigins": [
       "*"
     ],
@@ -163,10 +164,10 @@
   "RouterConfigPath": "",
   "RouterRegistration": true,
   "OverrideRoutingURL": {
-    "Subgraphs": {}
+    "Subgraphs": null
   },
   "Overrides": {
-    "Subgraphs": {}
+    "Subgraphs": null
   },
   "SecurityConfiguration": {
     "BlockMutations": false,
@@ -201,7 +202,8 @@
     "MinifySubgraphOperations": false,
     "EnablePersistedOperationsCache": true,
     "EnableNormalizationCache": true,
-    "NormalizationCacheSize": 1024
+    "NormalizationCacheSize": 1024,
+    "ParseKitPoolSize": 16
   },
   "WebSocket": {
     "Enabled": true,
@@ -230,5 +232,27 @@
     "RewritePaths": true,
     "OmitLocations": true,
     "OmitExtensions": false
+  },
+  "StorageProviders": {
+    "S3": null,
+    "CDN": null
+  },
+  "ExecutionConfig": {
+    "File": {
+      "Path": ""
+    },
+    "Storage": {
+      "ProviderID": "",
+      "ObjectPath": ""
+    }
+  },
+  "PersistedOperationsConfig": {
+    "Cache": {
+      "Size": 100000000
+    },
+    "Storage": {
+      "ProviderID": "",
+      "ObjectPrefix": ""
+    }
   }
 }

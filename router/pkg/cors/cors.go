@@ -9,6 +9,8 @@ import (
 
 // Config represents all available options for the middleware.
 type Config struct {
+	Enabled bool
+
 	AllowAllOrigins bool
 
 	// AllowOrigins is a list of origins a cross-domain request can be executed from.
@@ -144,6 +146,7 @@ func (c *Config) parseWildcardRules() [][]string {
 // DefaultConfig returns a generic default configuration mapped to localhost.
 func DefaultConfig() Config {
 	return Config{
+		Enabled:          true,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type"},
 		AllowCredentials: false,

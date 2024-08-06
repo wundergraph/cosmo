@@ -55,6 +55,11 @@ spec:
             - name: healthcheck
               containerPort: 13133
               protocol: TCP
+            {{- if and .Values.configuration.prometheus.enabled (not (eq .Values.configuration.prometheus.level "none")) }}
+            - name: metrics
+              containerPort: {{ .Values.configuration.prometheus.port }}
+              protocol: TCP
+            {{- end }}
           env:
             {{- if .Values.extraEnvVars }}
             {{- toYaml .Values.extraEnvVars | nindent 12 }}
@@ -69,6 +74,15 @@ spec:
                 secretKeyRef:
                   name: {{ include "otelcollector.secretName" . }}
                   key: authJwtSecret
+            {{- if and .Values.configuration.prometheus.enabled (not (eq .Values.configuration.prometheus.level "none")) }}
+            - name: PROMETHEUS_LEVEL
+              value: {{ .Values.configuration.prometheus.level }}
+            - name: PROMETHEUS_LISTEN_ADDR
+              value: {{ .Values.configuration.prometheus.host }}:{{ .Values.configuration.prometheus.port }}
+            {{ else }}
+            - name: PROMETHEUS_LEVEL
+              value: none
+            {{- end }}
           {{- if .Values.existingConfigmap }}
           volumeMounts:
             - mountPath: /etc/otel-config.yaml
@@ -116,4 +130,3 @@ spec:
       {{- if .Values.terminationGracePeriodSeconds }}
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       {{- end }}
-
