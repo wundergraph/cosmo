@@ -2,10 +2,11 @@ package module_test
 
 import (
 	"encoding/json"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
-	"testing"
 
 	"github.com/wundergraph/cosmo/router/cmd/custom/module"
 	"github.com/wundergraph/cosmo/router/core"

@@ -508,7 +508,9 @@ func (r *Router) listenAndServe(cfg *nodev1.RouterConfig) error {
 }
 
 func (r *Router) initModules(ctx context.Context) error {
-	for _, moduleInfo := range modules {
+	var moduleList = sortModules(modules)
+
+	for _, moduleInfo := range moduleList {
 		now := time.Now()
 
 		moduleInstance := moduleInfo.New()
