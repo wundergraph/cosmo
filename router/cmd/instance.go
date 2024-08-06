@@ -63,10 +63,16 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 	cfg := params.Config
 	logger := params.Logger
 
-	if cfg.RouterConfigPath != "" {
+	if cfg.ExecutionConfig.File.Path != "" {
+		executionConfig, err := execution_config.SerializeConfigFromFile(cfg.ExecutionConfig.File.Path)
+		if err != nil {
+			logger.Fatal("Could not read execution config", zap.Error(err), zap.String("path", cfg.ExecutionConfig.File.Path))
+		}
+		routerConfig = executionConfig
+	} else if cfg.RouterConfigPath != "" {
 		routerConfig, err = execution_config.SerializeConfigFromFile(cfg.RouterConfigPath)
 		if err != nil {
-			logger.Fatal("Could not read router config", zap.Error(err), zap.String("path", cfg.RouterConfigPath))
+			logger.Fatal("Could not read execution config", zap.Error(err), zap.String("path", cfg.RouterConfigPath))
 		}
 		if cfg.RouterRegistration {
 			selfRegister = selfregister.New(cfg.ControlplaneURL, cfg.Graph.Token,

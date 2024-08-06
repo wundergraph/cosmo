@@ -131,24 +131,48 @@
     },
     "execution_config": {
       "type": "object",
-      "additionalProperties": false,
-      "description": "The configuration for the execution config.",
-      "properties": {
-        "storage": {
-          "description": "The storage provider for the execution config. Only one provider can be active. When no provider is specified, the router will fallback to the Cosmo CDN provider to download the execution config.",
-          "required": ["provider_id", "object_path"],
+      "description": "The configuration for the execution config. You can load the execution config from the local file system or from a storage provider.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "provider_id": {
-              "description": "The ID of the storage provider. The ID must match the ID of the storage provider in the storage_providers section.",
-              "type": "string"
-            },
-            "object_path": {
-              "type": "string",
-              "description": "The path to the execution config in the storage provider. The path is used to download the execution config from the S3 bucket."
+            "file": {
+              "type": "object",
+              "description": "The configuration for the execution config file. The config file is used to load the execution config from the local file system. The file has precedence over the storage provider.",
+              "additionalProperties": false,
+              "required": ["path"],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "format": "file-path",
+                  "description": "The path to the execution config file. The path is used to load the execution config from the local file system."
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "storage": {
+              "description": "The storage provider for the execution config. Only one provider can be active. When no provider is specified, the router will fallback to the Cosmo CDN provider to download the execution config.",
+              "required": ["provider_id", "object_path"],
+              "properties": {
+                "provider_id": {
+                  "description": "The ID of the storage provider. The ID must match the ID of the storage provider in the storage_providers section.",
+                  "type": "string"
+                },
+                "object_path": {
+                  "type": "string",
+                  "description": "The path to the execution config in the storage provider. The path is used to download the execution config from the storage provider."
+                }
+              }
             }
           }
         }
-      }
+      ]
     },
     "graphql_metrics": {
       "type": "object",
@@ -1252,7 +1276,7 @@
     "router_config_path": {
       "type": "string",
       "format": "file-path",
-      "deprecationMessage": "The router_config_path is deprecated. Please use the execution_config instead.",
+      "deprecationMessage": "The router_config_path is deprecated. Please use the execution_config.file instead.",
       "description": "The path of the router execution config file. This file contains the information how your graph is resolved and configured. The path is specified as a string with the format 'path/to/file'."
     },
     "router_registration": {
@@ -1462,7 +1486,7 @@
           "default": 1024,
           "description": "The size of the normalization cache."
         },
-        "parsekit_pool_size":{
+        "parsekit_pool_size": {
           "type": "integer",
           "default": 8,
           "description": "The size of the ParseKit pool. The ParseKit pool provides re-usable Resources for parsing, normalizing, validating and planning GraphQL Operations. Setting the pool size to a value much higher than the number of CPU Threads available will not improve performance, but only increase memory usage."
