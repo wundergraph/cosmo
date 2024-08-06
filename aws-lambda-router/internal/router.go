@@ -37,7 +37,7 @@ func NewRouter(opts ...Option) *core.Router {
 
 	logger := rc.Logger
 
-	routerConfig, err := execution_config.SerializeConfigFromFile(rc.RouterConfigPath)
+	routerConfig, err := execution_config.FromFile(rc.RouterConfigPath)
 	if err != nil {
 		logger.Fatal("Could not read execution config", zap.Error(err), zap.String("path", rc.RouterConfigPath))
 	}

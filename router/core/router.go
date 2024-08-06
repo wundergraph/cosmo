@@ -758,7 +758,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	}
 
 	if r.executionConfig != nil && r.executionConfig.Path != "" {
-		executionConfig, err := execution_config.SerializeConfigFromFile(r.executionConfig.Path)
+		executionConfig, err := execution_config.FromFile(r.executionConfig.Path)
 		if err != nil {
 			return fmt.Errorf("failed to read execution config: %w", err)
 		}
@@ -1001,7 +1001,7 @@ func (r *Router) Start(ctx context.Context) error {
 
 				r.logger.Info("Config file changed. Updating server with new config")
 
-				cfg, err := execution_config.SerializeConfigBytes(data)
+				cfg, err := execution_config.UnmarshalConfig(data)
 				if err != nil {
 					r.logger.Error("Failed to serialize config file", zap.Error(err))
 					return
