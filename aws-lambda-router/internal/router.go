@@ -46,7 +46,7 @@ func NewRouter(opts ...Option) *core.Router {
 		core.WithLogger(logger),
 		core.WithPlayground(true),
 		core.WithIntrospection(true),
-		core.WithStaticRouterConfig(routerConfig),
+		core.WithExecutionConfig(routerConfig),
 		core.WithAwsLambdaRuntime(),
 		core.WithGraphApiToken(rc.GraphApiToken),
 	}

@@ -9,6 +9,8 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/cdn"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/s3"
+	"github.com/wundergraph/cosmo/router/pkg/execution_config"
+	"github.com/wundergraph/cosmo/router/pkg/file_watcher"
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 	configCDNProvider "github.com/wundergraph/cosmo/router/pkg/routerconfig/cdn"
 	configs3Provider "github.com/wundergraph/cosmo/router/pkg/routerconfig/s3"
@@ -122,6 +124,11 @@ type (
 		ControlPlaneURL string
 	}
 
+	ExecutionConfig struct {
+		Watch bool
+		Path  string
+	}
+
 	// Config defines the configuration options for the Router.
 	Config struct {
 		clusterName               string
@@ -160,6 +167,7 @@ type (
 		eventsConfig              config.EventsConfiguration
 		prometheusServer          *http.Server
 		modulesConfig             map[string]interface{}
+		executionConfig           *ExecutionConfig
 		routerMiddlewares         []func(http.Handler) http.Handler
 		preOriginHandlers         []TransportPreHandler
 		postOriginHandlers        []TransportPostHandler
@@ -175,6 +183,7 @@ type (
 		processStartTime          time.Time
 		developmentMode           bool
 		healthcheck               health.Checker
+		configFileWatcher         *file_watcher.ConfigFileWatcher
 		// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
 		localhostFallbackInsideDocker bool
 
@@ -570,7 +579,7 @@ func (r *Router) BaseURL() string {
 
 // NewServer prepares a new server instance but does not start it. The method should only be used when you want to bootstrap
 // the server manually otherwise you can use Router.Start(). You're responsible for setting health checks status to ready with Server.HealthChecks().
-// The server can be shutdown with Router.Shutdown(). Use core.WithStaticRouterConfig to pass the initial config otherwise the Router will
+// The server can be shutdown with Router.Shutdown(). Use core.WithExecutionConfig to pass the initial config otherwise the Router will
 // try to fetch the config from the control plane. You can swap the router config by using Router.newGraphServer().
 func (r *Router) NewServer(ctx context.Context) (Server, error) {
 	if r.shutdown.Load() {
@@ -747,6 +756,14 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		})
 	}
 
+	if r.executionConfig != nil && r.executionConfig.Path != "" {
+		executionConfig, err := execution_config.SerializeConfigFromFile(r.executionConfig.Path)
+		if err != nil {
+			return err
+		}
+		r.staticRouterConfig = executionConfig
+	}
+
 	if err := r.buildClients(); err != nil {
 		return err
 	}
@@ -916,8 +933,9 @@ func (r *Router) buildClients() error {
 				return err
 			}
 			rClient = c
-			r.logger.Debug("Default to Cosmo CDN as router config provider",
-				zap.String("url", r.cdnConfig.URL),
+
+			r.logger.Info("Polling for router config updates from Cosmo CDN in the background",
+				zap.String("interval", r.routerConfigPollerConfig.PollInterval.String()),
 			)
 		}
 
@@ -960,7 +978,45 @@ func (r *Router) Start(ctx context.Context) error {
 			return err
 		}
 
-		return r.listenAndServe(r.staticRouterConfig)
+		if err := r.listenAndServe(r.staticRouterConfig); err != nil {
+			return err
+		}
+
+		if r.executionConfig != nil && r.executionConfig.Watch {
+			watcher, err := file_watcher.FileWatcher(r.logger, r.executionConfig.Path)
+			if err != nil {
+				return fmt.Errorf("failed to watch config file: %w", err)
+			}
+			err = watcher.Watch(func() {
+				if r.shutdown.Load() {
+					r.logger.Warn("Router is in shutdown state. Skipping config update")
+				}
+
+				data, err := os.ReadFile(r.executionConfig.Path)
+				if err != nil {
+					r.logger.Error("Failed to read config file", zap.Error(err))
+					return
+				}
+
+				r.logger.Info("Config file changed. Updating server with new config")
+
+				cfg, err := execution_config.SerializeConfigBytes(data)
+				if err != nil {
+					r.logger.Error("Failed to serialize config file", zap.Error(err))
+					return
+				}
+
+				if err := r.newServer(ctx, cfg); err != nil {
+					r.logger.Error("Failed to update server with new config", zap.Error(err))
+				}
+			})
+			if err != nil {
+				return fmt.Errorf("failed to watch config file: %w", err)
+			}
+			r.logger.Info("Watching config file for changes", zap.String("path", r.executionConfig.Path))
+			r.configFileWatcher = watcher
+		}
+		return nil
 	}
 
 	// when no static config is provided and no poller is configured, we can't start the server
@@ -1046,6 +1102,12 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 		defer cancel()
 
 		ctx = ctxWithTimer
+	}
+
+	if r.configFileWatcher != nil {
+		if subErr := r.configFileWatcher.Close(); subErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to close config file watcher: %w", subErr))
+		}
 	}
 
 	if r.configPoller != nil {
@@ -1278,6 +1340,13 @@ func WithModulesConfig(config map[string]interface{}) Option {
 	}
 }
 
+func WithExecutionConfig(cfg *ExecutionConfig) Option {
+	return func(r *Router) {
+		r.executionConfig = cfg
+	}
+}
+
+// WithStaticRouterConfig sets the static router config. This disables polling for router config updates.
 func WithStaticRouterConfig(cfg *nodev1.RouterConfig) Option {
 	return func(r *Router) {
 		r.staticRouterConfig = cfg
