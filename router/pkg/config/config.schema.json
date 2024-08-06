@@ -162,7 +162,7 @@
           "additionalProperties": false,
           "properties": {
             "storage": {
-              "description": "The storage provider for the execution config. Only one provider can be active. When no provider is specified, the router will fallback to the Cosmo CDN provider to download the execution config.",
+              "description": "The storage provider for the execution config. Only one provider can be active. When no provider is specified, the router will fallback to the Cosmo CDN provider to download the execution config. Updating the execution config is happening in the background without downtime.",
               "required": ["provider_id", "object_path"],
               "properties": {
                 "provider_id": {
