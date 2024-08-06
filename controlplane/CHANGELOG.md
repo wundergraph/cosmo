@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.99.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.98.2...controlplane@0.99.0) (2024-08-06)
+
+### Features
+
+* **controlplane:** add overriding the mailing options ([#1008](https://github.com/wundergraph/cosmo/issues/1008)) ([f19ec90](https://github.com/wundergraph/cosmo/commit/f19ec90ca2cb2259384c2119291c43d4b5bcd11e)) (@AndreasZeissner)
+
 ## [0.98.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.98.1...controlplane@0.98.2) (2024-08-05)
 
 ### Bug Fixes
