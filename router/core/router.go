@@ -761,7 +761,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	if r.executionConfig != nil && r.executionConfig.Path != "" {
 		executionConfig, err := execution_config.SerializeConfigFromFile(r.executionConfig.Path)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to load execution config: %w", err)
 		}
 		r.staticRouterConfig = executionConfig
 	}
