@@ -1235,7 +1235,7 @@
     "router_config_path": {
       "type": "string",
       "format": "file-path",
-      "deprecationMessage": "The router_config_path is deprecated. Please use the execution_config.local instead.",
+      "deprecationMessage": "The router_config_path is deprecated. Please use the execution_config.file instead.",
       "description": "The path of the router execution config file. This file contains the information how your graph is resolved and configured. The path is specified as a string with the format 'path/to/file'."
     },
     "router_registration": {
