@@ -3,7 +3,9 @@ package core
 import (
 	stdContext "context"
 	"fmt"
+	"math"
 	"net/http"
+	"sort"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -17,11 +19,30 @@ var (
 	modulesMu sync.RWMutex
 )
 
+// ModuleRequestContext is the interface that provides the context for a single origin request.
+type ModuleRequestContext interface {
+	// RequestContext shared across all modules
+	RequestContext
+	// SendError returns the most recent error occurred while trying to make the origin request.
+	SendError() error
+}
+
+type moduleRequestContext struct {
+	*requestContext
+	sendError error
+}
+
+// SendError returns the most recent error occurred while trying to make the origin request.
+func (m *moduleRequestContext) SendError() error {
+	return m.sendError
+}
+
 type ModuleID string
 
 type ModuleInfo struct {
 	// Name is the name of the module
-	ID ModuleID
+	ID       ModuleID
+	Priority int
 	// New is the function that creates a new instance of the module
 	New func() Module
 }
@@ -47,6 +68,32 @@ func RegisterModule(instance Module) {
 		panic(fmt.Sprintf("module already registered: %s", mod.ID))
 	}
 	modules[string(mod.ID)] = mod
+}
+
+// sortModules sorts the modules by priority
+func sortModules(modules map[string]ModuleInfo) []ModuleInfo {
+	var moduleList []ModuleInfo
+	for _, module := range modules {
+		moduleList = append(moduleList, module)
+	}
+
+	sort.Slice(moduleList, func(x, y int) bool {
+		priorityX := moduleList[x].Priority
+		priorityY := moduleList[y].Priority
+		leastPriority := math.MaxInt
+
+		// If priority is 0, treat it as the lowest possible value
+		if priorityX == 0 {
+			priorityX = leastPriority
+		}
+		if priorityY == 0 {
+			priorityY = leastPriority
+		}
+
+		return priorityX < priorityY
+	})
+
+	return moduleList
 }
 
 // Module Interfaces

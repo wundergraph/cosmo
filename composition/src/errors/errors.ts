@@ -11,6 +11,7 @@ import {
   EntityInterfaceFederationData,
   getEntriesNotInHashSet,
   getOrThrowError,
+  GraphFieldData,
   ImplementationErrors,
   InvalidArgument,
   InvalidEntityInterface,
@@ -38,6 +39,7 @@ import {
 import { ObjectDefinitionData } from '../schema-building/type-definition-data';
 import { InvalidRootTypeFieldEventsDirectiveData } from './utils';
 import { MAX_SUBSCRIPTION_FILTER_DEPTH, MAXIMUM_TYPE_NESTING } from '../utils/integer-constants';
+import { UnresolvableFieldData } from '../resolvability-graph/utils';
 
 export const minimumSubgraphRequirementError = new Error('At least one subgraph is required for federation.');
 
@@ -403,6 +405,14 @@ export function incompatibleParentKindFatalError(parentTypeName: string, expecte
   return new Error(
     `Fatal: Expected "${parentTypeName}" to be type ${kindToTypeString(expectedKind)}` +
       ` but received "${kindToTypeString(actualKind)}".`,
+  );
+}
+
+export function unexpectedEdgeFatalError(typeName: string, edgeNames: Array<string>): Error {
+  return new Error(
+    `Fatal: The type "${typeName}" visited the following unexpected edge` +
+      (edgeNames.length > 1 ? 's' : '') +
+      `:\n " ${edgeNames.join(QUOTATION_JOIN)}".`,
   );
 }
 
@@ -805,7 +815,7 @@ export function invalidConfigurationDataErrorMessage(typeName: string, fieldName
   );
 }
 
-export function unknownProvidesEntityErrorMessage(fieldPath: string, responseType: string): string {
+export function unknownProvidedObjectErrorMessage(fieldPath: string, responseType: string): string {
   return (
     ` A @provides directive is declared on "${fieldPath}".\n` +
     ` However, the response type "${responseType}" object or object extension definition was not found.`
@@ -1493,4 +1503,15 @@ export function nonLeafSubscriptionFieldConditionFieldPathFinalFieldErrorMessage
     `\n However, the final field "${fieldName}" is ${typeString} "${namedTypeName}", which is not a leaf type;` +
     ` therefore, it requires further selections.`
   );
+}
+
+export function unresolvablePathError(
+  { fieldName, selectionSet }: UnresolvableFieldData,
+  reasons: Array<string>,
+): Error {
+  const message =
+    `The field "${fieldName}" is unresolvable at the following path:\n${selectionSet}` +
+    `\nThis is because:\n - ` +
+    reasons.join(`\n - `);
+  return new Error(message);
 }

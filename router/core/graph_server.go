@@ -5,13 +5,14 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
-	br "github.com/andybalholm/brotli"
+	"github.com/klauspost/compress/gzhttp"
+	"github.com/klauspost/compress/gzip"
+
 	"github.com/cloudflare/backoff"
 	"github.com/dgraph-io/ristretto"
 	"github.com/go-chi/chi/v5"
@@ -183,7 +184,9 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	httpRouter.Use(rmiddleware.RequestSize(int64(s.routerTrafficConfig.MaxRequestBodyBytes)))
 	httpRouter.Use(middleware.RequestID)
 	httpRouter.Use(middleware.RealIP)
-	httpRouter.Use(cors.New(*s.corsOptions))
+	if s.corsOptions.Enabled {
+		httpRouter.Use(cors.New(*s.corsOptions))
+	}
 
 	gm, err := s.buildGraphMux(ctx, "", s.baseRouterConfigVersion, routerConfig.GetEngineConfig(), routerConfig.GetSubgraphs())
 	if err != nil {
@@ -200,19 +203,24 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		return nil, fmt.Errorf("failed to build feature flag handler: %w", err)
 	}
 
-	brCompressor := middleware.NewCompressor(5, CustomCompressibleContentTypes...)
-	brCompressor.SetEncoder("br", func(w io.Writer, level int) io.Writer {
-		return br.NewWriterLevel(w, level)
-	})
+	wrapper, err := gzhttp.NewWrapper(
+		gzhttp.MinSize(1024), // 1KB
+		gzhttp.CompressionLevel(gzip.DefaultCompression),
+		gzhttp.ContentTypes(CompressibleContentTypes),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create gzip wrapper: %w", err)
+	}
 
 	/**
 	* A group where we can selectively apply middlewares to the graphql endpoint
 	 */
 	httpRouter.Group(func(cr chi.Router) {
 
-		// We are applying it conditionally because brotli compressing the 3MB playground is very slow
-		cr.Use(middleware.Compress(5, CustomCompressibleContentTypes...))
-		cr.Use(brCompressor.Handler)
+		// We are applying it conditionally because compressing 3MB playground is still slow even with stdlib gzip
+		cr.Use(func(h http.Handler) http.Handler {
+			return wrapper(h)
+		})
 
 		// Mount the feature flag handler. It calls the base mux if no feature flag is set.
 		cr.Mount(r.graphqlPath, multiGraphHandler)
@@ -452,10 +460,11 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		requestLoggerOpts...,
 	)
 
-	// Enrich the request context with the subgraphs information which is required for custom modules and tracing
+	// Enrich the request context with the subgraph information which is required for custom modules and tracing
+	subgraphResolver := NewSubgraphResolver(subgraphs)
 	httpRouter.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			r = r.WithContext(withSubgraphs(r.Context(), subgraphs))
+			r = r.WithContext(withSubgraphResolver(r.Context(), subgraphResolver))
 
 			// For debugging purposes, we can validate from what version of the config the request is coming from
 			if s.setConfigVersionHeader {
@@ -547,9 +556,10 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	operationProcessor := NewOperationProcessor(OperationProcessorOptions{
 		Executor:                       executor,
 		MaxOperationSizeInBytes:        int64(s.routerTrafficConfig.MaxRequestBodyBytes),
-		PersistentOpClient:             s.cdnOperationClient,
+		PersistedOperationClient:       s.persistedOperationClient,
 		EnablePersistedOperationsCache: s.engineExecutionConfiguration.EnablePersistedOperationsCache,
 		NormalizationCache:             gm.normalizationCache,
+		ParseKitPoolSize:               s.engineExecutionConfiguration.ParseKitPoolSize,
 	})
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
 
@@ -852,6 +862,9 @@ func configureSubgraphOverwrites(
 	overrideRoutingURLConfig config.OverrideRoutingURLConfiguration,
 	overrides config.OverridesConfiguration,
 ) ([]Subgraph, error) {
+	var (
+		err error
+	)
 	subgraphs := make([]Subgraph, 0, len(configSubgraphs))
 	for _, sg := range configSubgraphs {
 
@@ -861,12 +874,11 @@ func configureSubgraphOverwrites(
 		}
 
 		// Validate subgraph url. Note that it can be empty if the subgraph is virtual
-		parsedURL, err := url.Parse(sg.RoutingUrl)
+		subgraph.Url, err = url.Parse(sg.RoutingUrl)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse subgraph url '%s': %w", sg.RoutingUrl, err)
 		}
-
-		subgraph.Url = parsedURL
+		subgraph.UrlString = subgraph.Url.String()
 
 		overrideURL, ok := overrideRoutingURLConfig.Subgraphs[sg.Name]
 		overrideSubgraph, overrideSubgraphOk := overrides.Subgraphs[sg.Name]
@@ -915,12 +927,11 @@ func configureSubgraphOverwrites(
 		// check if the subgraph is overridden
 		if ok || overrideSubgraphOk {
 			if overrideURL != "" {
-				parsedURL, err := url.Parse(overrideURL)
+				subgraph.Url, err = url.Parse(overrideURL)
 				if err != nil {
 					return nil, fmt.Errorf("failed to parse override url '%s': %w", overrideURL, err)
 				}
-
-				subgraph.Url = parsedURL
+				subgraph.UrlString = subgraph.Url.String()
 			}
 
 			// Override datasource urls

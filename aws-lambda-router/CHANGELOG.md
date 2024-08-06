@@ -4,6 +4,30 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.18.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.18.0...aws-lambda-router@0.18.1) (2024-08-02)
+
+### Bug Fixes
+
+* replace jsonparser with fastjson to delete exported variables ([#999](https://github.com/wundergraph/cosmo/issues/999)) ([0e3307e](https://github.com/wundergraph/cosmo/commit/0e3307e24c7e5185e35ab34f9f5c14903c4085d0)) (@jensneuse)
+
+# [0.18.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.17.3...aws-lambda-router@0.18.0) (2024-08-01)
+
+### Features
+
+* implement s3 provider for config and persistent operations ([#971](https://github.com/wundergraph/cosmo/issues/971)) ([e3206ff](https://github.com/wundergraph/cosmo/commit/e3206fff9c1796a64173be350445514f26db9296)) (@StarpTech)
+
+## [0.17.3](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.17.2...aws-lambda-router@0.17.3) (2024-07-31)
+
+### Bug Fixes
+
+* excessive memory usage for big responses by disabling big pre-al… ([#986](https://github.com/wundergraph/cosmo/issues/986)) ([9aa5f29](https://github.com/wundergraph/cosmo/commit/9aa5f29cbaa12797753f280e49d32b6eed7c11b5)) (@jensneuse)
+
+## [0.17.2](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.17.1...aws-lambda-router@0.17.2) (2024-07-30)
+
+### Bug Fixes
+
+* input coercion for nested values ([#981](https://github.com/wundergraph/cosmo/issues/981)) ([5494e5f](https://github.com/wundergraph/cosmo/commit/5494e5f3075db7795c100c927001a4baae212c68)) (@jensneuse)
+
 ## [0.17.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.17.0...aws-lambda-router@0.17.1) (2024-07-24)
 
 ### Bug Fixes

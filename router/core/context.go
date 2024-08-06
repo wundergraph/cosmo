@@ -17,18 +17,17 @@ import (
 	"go.uber.org/zap"
 )
 
-type key string
-
-const requestContextKey = key("request")
-const subgraphsContextKey = key("subgraphs")
-const baseAttributesContextKey = key("baseOtelAttributes")
+type requestContextKey = struct{}
+type subgraphResolverContextKey struct{}
+type baseAttributesContextKey struct{}
 
 var _ RequestContext = (*requestContext)(nil)
 
 type Subgraph struct {
-	Id   string
-	Name string
-	Url  *url.URL
+	Id        string
+	Name      string
+	Url       *url.URL
+	UrlString string
 }
 
 type ClientInfo struct {
@@ -63,9 +62,6 @@ type RequestContext interface {
 
 	// Operation is the GraphQL operation
 	Operation() OperationContext
-
-	// SendError returns the most recent error occurred while trying to make the origin request.
-	SendError() error
 
 	// Set is used to store a new key/value pair exclusively for this context.
 	Set(string, any)
@@ -142,14 +138,8 @@ type requestContext struct {
 	request *http.Request
 	// operation is the GraphQL operation context
 	operation *operationContext
-	// sendError returns the most recent error occurred while trying to make the origin request.
-	sendError error
-	// subgraphs is the list of subgraphs taken from the router config
-	subgraphs []Subgraph
-}
-
-func (c *requestContext) SendError() error {
-	return c.sendError
+	// subgraphResolver can be used to resolve Subgraph by ID or by request
+	subgraphResolver *SubgraphResolver
 }
 
 func (c *requestContext) Operation() OperationContext {
@@ -161,14 +151,14 @@ func (c *requestContext) Request() *http.Request {
 }
 
 func withRequestContext(ctx context.Context, operation *requestContext) context.Context {
-	return context.WithValue(ctx, requestContextKey, operation)
+	return context.WithValue(ctx, requestContextKey{}, operation)
 }
 
 func getRequestContext(ctx context.Context) *requestContext {
 	if ctx == nil {
 		return nil
 	}
-	op := ctx.Value(requestContextKey)
+	op := ctx.Value(requestContextKey{})
 	if op == nil {
 		return nil
 	}
@@ -317,28 +307,18 @@ func (c *requestContext) GetStringMapStringSlice(key string) (smss map[string][]
 }
 
 func (c *requestContext) ActiveSubgraph(subgraphRequest *http.Request) *Subgraph {
-	for _, sg := range c.subgraphs {
-		if sg.Url != nil && sg.Url.String() == subgraphRequest.URL.String() {
-			return &sg
-		}
-	}
-	return nil
+	return c.subgraphResolver.BySubgraphRequest(subgraphRequest)
 }
 
 func (c *requestContext) SubgraphByID(subgraphID string) *Subgraph {
-	for _, sg := range c.subgraphs {
-		if sg.Url != nil && sg.Id == subgraphID {
-			return &sg
-		}
-	}
-	return nil
+	return c.subgraphResolver.ByID(subgraphID)
 }
 
 func (c *requestContext) Authentication() authentication.Authentication {
 	return authentication.FromContext(c.request.Context())
 }
 
-const operationContextKey = key("graphql")
+type operationContextKey struct{}
 
 type OperationContext interface {
 	// Name is the name of the operation
@@ -426,7 +406,7 @@ func (o *operationContext) ClientInfo() ClientInfo {
 }
 
 func withOperationContext(ctx context.Context, operation *operationContext) context.Context {
-	return context.WithValue(ctx, operationContextKey, operation)
+	return context.WithValue(ctx, operationContextKey{}, operation)
 }
 
 // getOperationContext returns the request context.
@@ -436,7 +416,7 @@ func getOperationContext(ctx context.Context) *operationContext {
 	if ctx == nil {
 		return nil
 	}
-	op := ctx.Value(operationContextKey)
+	op := ctx.Value(operationContextKey{})
 	if op == nil {
 		return nil
 	}
@@ -452,33 +432,61 @@ func isMutationRequest(ctx context.Context) bool {
 	return op.Operation().Type() == "mutation"
 }
 
-func withSubgraphs(ctx context.Context, subgraphs []Subgraph) context.Context {
-	return context.WithValue(ctx, subgraphsContextKey, subgraphs)
+type SubgraphResolver struct {
+	subgraphs []Subgraph
 }
 
-func subgraphsFromContext(ctx context.Context) []Subgraph {
-	subgraphs, _ := ctx.Value(subgraphsContextKey).([]Subgraph)
-	return subgraphs
+func NewSubgraphResolver(subgraphs []Subgraph) *SubgraphResolver {
+	return &SubgraphResolver{subgraphs: subgraphs}
+}
+
+func (s *SubgraphResolver) ByID(subgraphID string) *Subgraph {
+	for _, sg := range s.subgraphs {
+		if sg.Id == subgraphID {
+			return &sg
+		}
+	}
+	return nil
+}
+
+func (s *SubgraphResolver) BySubgraphRequest(subgraphRequest *http.Request) *Subgraph {
+	var want string
+	if subgraphRequest.URL != nil {
+		want = subgraphRequest.URL.String()
+	}
+	for _, sg := range s.subgraphs {
+		if sg.UrlString == want {
+			return &sg
+		}
+	}
+	return nil
+}
+
+func withSubgraphResolver(ctx context.Context, resolver *SubgraphResolver) context.Context {
+	return context.WithValue(ctx, subgraphResolverContextKey{}, resolver)
+}
+
+func subgraphResolverFromContext(ctx context.Context) *SubgraphResolver {
+	resolver, _ := ctx.Value(subgraphResolverContextKey{}).(*SubgraphResolver)
+	return resolver
 }
 
 func withBaseAttributes(ctx context.Context, attributes []attribute.KeyValue) context.Context {
-	return context.WithValue(ctx, baseAttributesContextKey, attributes)
+	return context.WithValue(ctx, baseAttributesContextKey{}, attributes)
 }
 
 func baseAttributesFromContext(ctx context.Context) []attribute.KeyValue {
-	attributes, _ := ctx.Value(baseAttributesContextKey).([]attribute.KeyValue)
+	attributes, _ := ctx.Value(baseAttributesContextKey{}).([]attribute.KeyValue)
 	return attributes
 }
 
 func buildRequestContext(w http.ResponseWriter, r *http.Request, opContext *operationContext, requestLogger *zap.Logger) *requestContext {
-	subgraphs := subgraphsFromContext(r.Context())
-	requestContext := &requestContext{
-		logger:         requestLogger,
-		keys:           map[string]any{},
-		responseWriter: w,
-		request:        r,
-		operation:      opContext,
-		subgraphs:      subgraphs,
+	return &requestContext{
+		logger:           requestLogger,
+		keys:             map[string]any{},
+		responseWriter:   w,
+		request:          r,
+		operation:        opContext,
+		subgraphResolver: subgraphResolverFromContext(r.Context()),
 	}
-	return requestContext
 }
