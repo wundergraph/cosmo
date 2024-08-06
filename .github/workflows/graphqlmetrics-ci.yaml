@@ -12,6 +12,7 @@ concurrency:
 env:
   CI: true
   INT_TESTS: true
+  GOWORK: 'off'
 
 jobs:
   build_test:

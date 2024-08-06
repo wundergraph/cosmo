@@ -6,25 +6,16 @@ inputs:
     description: The working directory to run the linter in
     required: true
     type: string
-  env-go-work:
-    description: Enable or disable the wrapping go workspace
-    required: true
-    default: 'on'
-    type: string
 
 runs:
   using: composite
   steps:
     - name: Run go vet
-      env:
-        GOWORK: ${{ inputs.env-go-work }}
       run: go vet ./...
       shell: bash
       working-directory: ${{ inputs.working-directory }}
 
     - name: Run staticcheck linter
-      env:
-        GOWORK: ${{ inputs.env-go-work }}
       uses: dominikh/staticcheck-action@v1.3.0
       with:
         version: 2023.1.7
