@@ -4,9 +4,6 @@ toolchain go1.22.0
 
 use (
 	./aws-lambda-router
-	./composition-go
-	./demo
-	./graphqlmetrics
 	./router
 	./router-tests
 )
