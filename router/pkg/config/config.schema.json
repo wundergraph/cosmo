@@ -699,7 +699,7 @@
     },
     "controlplane_url": {
       "type": "string",
-      "description": "The URL of the control plane. The URL is used to register the router in the control plane. The URL is specified as a string with the format 'scheme://host:port'.",
+      "description": "The URL of the control plane. The URL is used to register the router on the control-plane. The URL is specified as a string with the format 'scheme://host:port'.",
       "default": "https://cosmo-cp.wundergraph.com",
       "format": "http-url"
     },
@@ -1089,7 +1089,7 @@
         "url": {
           "type": "string",
           "format": "http-url",
-          "description": "The URL of the CDN. The URL is used to register the router in the control plane. The URL is specified as a string with the format 'scheme://host:port'."
+          "description": "The URL of the CDN. The URL is used to register the router on the control-plane. The URL is specified as a string with the format 'scheme://host:port'."
         },
         "cache_size": {
           "type": "string",
@@ -1246,7 +1246,7 @@
     "router_registration": {
       "type": "boolean",
       "default": true,
-      "description": "Enable the router registration. The router registration is used to register the router in the control plane. The default value is true. This should not be modified unless you know what you are doing."
+      "description": "Enable the router registration. The router registration is used to register the router on the control-plane. The default value is true. This should not be modified unless you know what you are doing."
     },
     "override_routing_url": {
       "type": "object",
