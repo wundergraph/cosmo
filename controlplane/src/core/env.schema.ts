@@ -105,8 +105,22 @@ export const envVariables = z
     /**
      * Email
      */
+    SMTP_ENABLED: z
+      .string()
+      .transform((val) => val === 'true')
+      .default('false'),
     SMTP_USERNAME: z.string().optional(),
     SMTP_PASSWORD: z.string().optional(),
+    SMTP_HOST: z.string().optional(),
+    SMTP_PORT: z.coerce.number().optional(),
+    SMTP_SECURE: z
+      .string()
+      .optional()
+      .transform((val) => val === 'true'),
+    SMTP_REQUIRE_TLS: z
+      .string()
+      .optional()
+      .transform((val) => val === 'true'),
     /**
      * Billing
      */
