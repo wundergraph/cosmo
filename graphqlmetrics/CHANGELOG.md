@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.21.1](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.21.0...graphqlmetrics@0.21.1) (2024-08-01)
+
+### Bug Fixes
+
+* wrong otelhttp used ([#996](https://github.com/wundergraph/cosmo/issues/996)) ([6b322f6](https://github.com/wundergraph/cosmo/commit/6b322f62359da48336c7c9f4c07eac750db93907)) (@StarpTech)
+
+# [0.21.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.20.3...graphqlmetrics@0.21.0) (2024-08-01)
+
+### Features
+
+* **graphqlmetrics:** enable prometheus metrics ([#963](https://github.com/wundergraph/cosmo/issues/963)) ([48f54fe](https://github.com/wundergraph/cosmo/commit/48f54fed6444fd6ffc25a86fe45225b717fabca4)) (@AndreasZeissner)
+
+## [0.20.3](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.20.2...graphqlmetrics@0.20.3) (2024-07-30)
+
+### Bug Fixes
+
+* input coercion for nested values ([#981](https://github.com/wundergraph/cosmo/issues/981)) ([5494e5f](https://github.com/wundergraph/cosmo/commit/5494e5f3075db7795c100c927001a4baae212c68)) (@jensneuse)
+
 ## [0.20.2](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.20.1...graphqlmetrics@0.20.2) (2024-07-16)
 
 **Note:** Version bump only for package graphqlmetrics

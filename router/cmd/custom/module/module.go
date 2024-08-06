@@ -96,6 +96,8 @@ func (m *MyModule) Module() core.ModuleInfo {
 	return core.ModuleInfo{
 		// This is the ID of your module, it must be unique
 		ID: myModuleID,
+		// The priority of your module, lower numbers are executed first
+		Priority: 1,
 		New: func() core.Module {
 			return &MyModule{}
 		},

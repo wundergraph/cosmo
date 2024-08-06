@@ -283,16 +283,12 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			h.releaseBodyReadBuffer(buf)
 			return
 		}
-		defer func() {
-			if operationKit != nil {
-				// before processing the request with the graphql_handler.go, we're calling Free() already on the operationKit and set the reference to nil
-				// this allows us to use less memory and free the resources as soon as possible
-				// however, we might return early in case of an error, which is why we're using defer here to make sure we're freeing the resources
-				operationKit.Free()
-			}
-		}()
 
 		if err := operationKit.UnmarshalOperation(); err != nil {
+			// the kit must be freed before we're doing io operations
+			// the kit is bound to the number of CPUs, and we must not hold onto it while doing IO operations
+			operationKit.Free()
+			operationKit = nil
 			finalErr = err
 
 			// Mark the root span of the router as failed, so we can easily identify failed requests
@@ -308,6 +304,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		if operationKit.parsedOperation.IsPersistedOperation {
 			skipParse, err = operationKit.FetchPersistedOperation(r.Context(), clientInfo, commonAttributes)
 			if err != nil {
+				// the kit must be freed before we're doing io operations
+				// the kit is bound to the number of CPUs, and we must not hold onto it while doing IO operations
+				operationKit.Free()
+				operationKit = nil
 				finalErr = err
 
 				// Mark the root span of the router as failed, so we can easily identify failed requests
@@ -335,6 +335,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 			err = operationKit.Parse()
 			if err != nil {
+				// the kit must be freed before we're doing io operations
+				// the kit is bound to the number of CPUs, and we must not hold onto it while doing IO operations
+				operationKit.Free()
+				operationKit = nil
 				finalErr = err
 
 				rtrace.AttachErrToSpan(engineParseSpan, err)
@@ -361,6 +365,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		routerSpan.SetName(GetSpanName(operationKit.parsedOperation.Request.OperationName, operationKit.parsedOperation.Type))
 
 		if blockedErr := h.operationBlocker.OperationIsBlocked(operationKit.parsedOperation); blockedErr != nil {
+			// the kit must be freed before we're doing io operations
+			// the kit is bound to the number of CPUs, and we must not hold onto it while doing IO operations
+			operationKit.Free()
+			operationKit = nil
 			// Mark the root span of the router as failed, so we can easily identify failed requests
 			rtrace.AttachErrToSpan(routerSpan, blockedErr)
 
@@ -396,6 +404,28 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		cached, err := operationKit.Normalize()
 		if err != nil {
+			// the kit must be freed before we're doing io operations
+			// the kit is bound to the number of CPUs, and we must not hold onto it while doing IO operations
+			operationKit.Free()
+			operationKit = nil
+			finalErr = err
+
+			rtrace.AttachErrToSpan(engineNormalizeSpan, err)
+			// Mark the root span of the router as failed, so we can easily identify failed requests
+			rtrace.AttachErrToSpan(routerSpan, err)
+
+			engineNormalizeSpan.End()
+
+			writeOperationError(r, w, requestLogger, err)
+			return
+		}
+
+		err = operationKit.CoerceListVariables()
+		if err != nil {
+			// the kit must be freed before we're doing io operations
+			// the kit is bound to the number of CPUs, and we must not hold onto it while doing IO operations
+			operationKit.Free()
+			operationKit = nil
 			finalErr = err
 
 			rtrace.AttachErrToSpan(engineNormalizeSpan, err)
@@ -449,6 +479,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		)
 		err = operationKit.Validate()
 		if err != nil {
+			// the kit must be freed before we're doing io operations
+			// the kit is bound to the number of CPUs, and we must not hold onto it while doing IO operations
+			operationKit.Free()
+			operationKit = nil
 			finalErr = err
 
 			rtrace.AttachErrToSpan(engineValidateSpan, err)
@@ -486,6 +520,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		opContext, err := h.planner.Plan(operationKit.parsedOperation, clientInfo, OperationProtocolHTTP, traceOptions)
 		if err != nil {
+			// the kit must be freed before we're doing io operations
+			// the kit is bound to the number of CPUs, and we must not hold onto it while doing IO operations
+			operationKit.Free()
+			operationKit = nil
 			finalErr = err
 
 			rtrace.AttachErrToSpan(enginePlanSpan, err)
@@ -516,6 +554,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 			validatedReq, err := h.accessController.Access(w, r)
 			if err != nil {
+				// the kit must be freed before we're doing io operations
+				// the kit is bound to the number of CPUs, and we must not hold onto it while doing IO operations
+				operationKit.Free()
+				operationKit = nil
 				finalErr = err
 				requestLogger.Error("failed to authenticate request", zap.Error(err))
 
@@ -534,8 +576,8 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			r = validatedReq
 		}
 
-		// Free the operation kit after we're done with it
-		// We don't need to hold onto it while processing the operation
+		// the kit must be freed before we're doing io operations
+		// the kit is bound to the number of CPUs, and we must not hold onto it while doing IO operations
 		operationKit.Free()
 		operationKit = nil
 

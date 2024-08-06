@@ -114,6 +114,23 @@ controlplane:
     s3StorageUrl: 'http://minio:changeme@cosmo-minio:9000/cosmo'
     cdnBaseUrl: 'http://cosmo-cdn:8787'
 
+    # -- Use this section to configure the smtp server.
+    smtp:
+      # -- Enables the smtp server. Default is false.
+      enabled: false
+      # -- The username to use. Default is "".
+      username: ''
+      # -- The password to use. Default is "".
+      password: ''
+      # -- The host to connect to. Default is "smtp.postmarkapp.com".
+      host: 'smtp.postmarkapp.com'
+      # -- The port the smtp server listens to. Default is 587.
+      port: 587
+      # -- Defines if the connection should use SSL. Default is true.
+      secure: true
+      # -- Forces the client to use STARTTLS. Default is true.
+      requireTls: true
+
     # Use this section to configure prometheus metrics.
     prometheus:
       # -- Enables prometheus metrics support. Default is false.
@@ -153,7 +170,7 @@ router:
     graphqlMetricsCollectorUrl: 'http://cosmo-graphqlmetrics:4005'
     # -- The URL of the Cosmo CDN. Should be internal to the cluster.
     cdnUrl: 'http://cosmo-cdn:8787'
-    
+
   # Use this section to disable/enable and configure prometheus metrics on the Cosmo Router.
   prometheus:
     # -- Enables prometheus metrics support. Default is true.
@@ -169,11 +186,48 @@ otelcollector:
     # Use internal DNS name to access clickhouse
     clickhouseDsn: 'clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4'
 
+    prometheus:
+      # -- Enables prometheus metrics support. Default is false.
+      enabled: false
+      # -- The host to bind to defautls to 127.0.0.1 to avoid opening the metrics endpoint by default.
+      host: 127.0.0.1
+      # -- The port where metrics are exposed. Default is port 8088.
+      port: 8088
+      # -- The level of telemetry to be collected. Default is "basic". One of "none", "basic", "normal", "detailed".
+      level: normal
+      # Use this section to disable/enable pod monitoring over [GCP managed collection](https://cloud.google.com/stackdriver/docs/managed-prometheus/setup-managed#config-mgd-collection).
+      gcpMonitoring:
+        # -- Enables gcp support . Default is false.
+        enabled: false
+        # -- Scrape interval. Default is "60s".
+        interval: 60s
+        # -- Scrape timeout. Default is "50s".
+        timeout: 50s
+
 # Cosmo GraphQL Metrics Collector. For more options, please refer to the CHART.md
 graphqlmetrics:
   configuration:
     # Use internal DNS name to access clickhouse
     clickhouseDsn: 'clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4'
+
+    # Use this section to configure prometheus metrics.
+    prometheus:
+      # -- Enables prometheus metrics support. Default is false.
+      enabled: false
+      # -- The host to bind to defaults to 127.0.0.1 to avoid opening the metrics endpoint by default.
+      host: 127.0.0.1
+      # -- The port where metrics are exposed. Default is port 8088.
+      port: 8088
+      # -- The HTTP path where metrics are exposed. Default is "/metrics".
+      path: "/metrics"
+      # Use this section to disable/enable pod monitoring over [GCP managed collection](https://cloud.google.com/stackdriver/docs/managed-prometheus/setup-managed#config-mgd-collection).
+      gcpMonitoring:
+        # -- Enables gcp support . Default is false.
+        enabled: false
+        # -- Scrape interval. Default is "60s".
+        interval: 60s
+        # -- Scrape timeout. Default is "50s".
+        timeout: 50s
 
 # The following configuration enables the stateful services of the Cosmo Platform
 # The charts aren't production ready and are intended for development and testing purposes

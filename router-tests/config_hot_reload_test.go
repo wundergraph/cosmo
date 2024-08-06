@@ -3,6 +3,7 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 	"sync"
 	"testing"
 	"time"
@@ -26,16 +27,19 @@ type ConfigPollerMock struct {
 	ready        chan struct{}
 }
 
-func (c *ConfigPollerMock) Subscribe(ctx context.Context, handler func(newConfig *nodev1.RouterConfig, oldVersion string) error) {
+func (c *ConfigPollerMock) Subscribe(_ context.Context, handler func(newConfig *nodev1.RouterConfig, oldVersion string) error) {
 	c.updateConfig = handler
 	close(c.ready)
 }
 
-func (c *ConfigPollerMock) GetRouterConfig(ctx context.Context) (*nodev1.RouterConfig, error) {
-	return c.initConfig, nil
+func (c *ConfigPollerMock) GetRouterConfig(_ context.Context) (*routerconfig.Response, error) {
+	result := &routerconfig.Response{
+		Config: c.initConfig,
+	}
+	return result, nil
 }
 
-func (c *ConfigPollerMock) Stop(ctx context.Context) error {
+func (c *ConfigPollerMock) Stop(_ context.Context) error {
 	return nil
 }
 
@@ -66,7 +70,7 @@ func TestConfigHotReload(t *testing.T) {
 				Query: `{ employees { id } }`,
 			})
 			require.Equal(t, res.Response.StatusCode, 200)
-			require.Equal(t, "5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf", res.Response.Header.Get("X-Router-Config-Version"))
+			require.Equal(t, xEnv.RouterConfigVersionMain(), res.Response.Header.Get("X-Router-Config-Version"))
 			require.JSONEq(t, employeesIDData, res.Body)
 
 			// Wait for the config poller to be ready
@@ -123,7 +127,7 @@ func TestConfigHotReload(t *testing.T) {
 					Query: `{ employees { id } }`,
 				})
 				require.Equal(t, res.Response.StatusCode, 200)
-				require.Equal(t, "5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf", res.Response.Header.Get("X-Router-Config-Version"))
+				require.Equal(t, xEnv.RouterConfigVersionMain(), res.Response.Header.Get("X-Router-Config-Version"))
 				require.JSONEq(t, employeesIDData, res.Body)
 			}()
 
@@ -136,7 +140,7 @@ func TestConfigHotReload(t *testing.T) {
 					Query: `{ employees { id } }`,
 				})
 				require.Equal(t, res.Response.StatusCode, 200)
-				require.Equal(t, "5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf", res.Response.Header.Get("X-Router-Config-Version"))
+				require.Equal(t, xEnv.RouterConfigVersionMain(), res.Response.Header.Get("X-Router-Config-Version"))
 				require.JSONEq(t, employeesIDData, res.Body)
 			}()
 
