@@ -4,6 +4,33 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.101.2](https://github.com/wundergraph/cosmo/compare/router@0.101.1...router@0.101.2) (2024-08-04)
+
+### Bug Fixes
+
+* normalization overrides ([#1004](https://github.com/wundergraph/cosmo/issues/1004)) ([44737ae](https://github.com/wundergraph/cosmo/commit/44737ae5828a6255a51aacc0e359276433cb74d8)) (@jensneuse)
+
+## [0.101.1](https://github.com/wundergraph/cosmo/compare/router@0.101.0...router@0.101.1) (2024-08-04)
+
+**Note:** Version bump only for package router
+
+# [0.101.0](https://github.com/wundergraph/cosmo/compare/router@0.100.1...router@0.101.0) (2024-08-02)
+
+### Bug Fixes
+
+* replace jsonparser with fastjson to delete exported variables ([#999](https://github.com/wundergraph/cosmo/issues/999)) ([0e3307e](https://github.com/wundergraph/cosmo/commit/0e3307e24c7e5185e35ab34f9f5c14903c4085d0)) (@jensneuse)
+
+### Features
+
+* allow disabling cors ([#998](https://github.com/wundergraph/cosmo/issues/998)) ([21304b1](https://github.com/wundergraph/cosmo/commit/21304b19cf44c1e20ff96792bdeaa70ff0b3263e)) (@thisisnithin)
+
+## [0.100.1](https://github.com/wundergraph/cosmo/compare/router@0.100.0...router@0.100.1) (2024-08-01)
+
+### Bug Fixes
+
+* config poller is not required when static config is passed ([#995](https://github.com/wundergraph/cosmo/issues/995)) ([e5ba812](https://github.com/wundergraph/cosmo/commit/e5ba812eaec05dca91d4b0d8b066b7f2ff0651b3)) (@StarpTech)
+* wrong otelhttp used ([#996](https://github.com/wundergraph/cosmo/issues/996)) ([6b322f6](https://github.com/wundergraph/cosmo/commit/6b322f62359da48336c7c9f4c07eac750db93907)) (@StarpTech)
+
 # [0.100.0](https://github.com/wundergraph/cosmo/compare/router@0.99.3...router@0.100.0) (2024-08-01)
 
 ### Features
