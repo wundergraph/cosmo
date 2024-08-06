@@ -181,7 +181,7 @@ func (cdn *Client) RouterConfig(ctx context.Context, version string, modifiedSin
 	* Serialize the response body to a RouterConfig object
 	 */
 
-	routerConfig, err := execution_config.SerializeConfigBytes(body)
+	routerConfig, err := execution_config.UnmarshalConfig(body)
 	if err != nil {
 		return nil, fmt.Errorf("could not unmarshal router external router config from CDN: %w", err)
 	}

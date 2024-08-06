@@ -147,6 +147,11 @@
                   "type": "string",
                   "format": "file-path",
                   "description": "The path to the execution config file. The path is used to load the execution config from the local file system."
+                },
+                "watch": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the watch mode. The watch mode is used to watch the execution config file for changes. If the file changes, the router will reload the execution config without downtime."
                 }
               }
             }
@@ -157,7 +162,7 @@
           "additionalProperties": false,
           "properties": {
             "storage": {
-              "description": "The storage provider for the execution config. Only one provider can be active. When no provider is specified, the router will fallback to the Cosmo CDN provider to download the execution config.",
+              "description": "The storage provider for the execution config. Only one provider can be active. When no provider is specified, the router will fallback to the Cosmo CDN provider to download the execution config. Updating the execution config is happening in the background without downtime.",
               "required": ["provider_id", "object_path"],
               "properties": {
                 "provider_id": {
@@ -694,7 +699,7 @@
     },
     "controlplane_url": {
       "type": "string",
-      "description": "The URL of the control plane. The URL is used to register the router in the control plane. The URL is specified as a string with the format 'scheme://host:port'.",
+      "description": "The URL of the control plane. The URL is used to register the router on the control-plane. The URL is specified as a string with the format 'scheme://host:port'.",
       "default": "https://cosmo-cp.wundergraph.com",
       "format": "http-url"
     },
@@ -1078,18 +1083,18 @@
     },
     "cdn": {
       "type": "object",
-      "deprecationMessage": "The CDN is deprecated. Please use the execution_config and persisted_operations instead.",
       "description": "The configuration for the CDN. The CDN is used to fetch the schema and configurations from the CDN.",
       "additionalProperties": false,
       "properties": {
         "url": {
           "type": "string",
           "format": "http-url",
-          "description": "The URL of the CDN. The URL is used to fetch the schema and the configuration from the CDN. The URL is specified as a string with the format 'scheme://host:port'."
+          "description": "The URL of the CDN. The URL is used to register the router on the control-plane. The URL is specified as a string with the format 'scheme://host:port'."
         },
         "cache_size": {
           "type": "string",
           "default": "100MB",
+          "deprecationMessage": "The cache_size is deprecated. Please use the persisted_operations.cache instead.",
           "bytes": {
             "minimum": "10MB"
           },
@@ -1241,7 +1246,7 @@
     "router_registration": {
       "type": "boolean",
       "default": true,
-      "description": "Enable the router registration. The router registration is used to register the router in the control plane. The default value is true. This should not be modified unless you know what you are doing."
+      "description": "Enable the router registration. The router registration is used to register the router on the control-plane. The default value is true. This should not be modified unless you know what you are doing."
     },
     "override_routing_url": {
       "type": "object",

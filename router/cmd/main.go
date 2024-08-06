@@ -71,7 +71,7 @@ func Main() {
 	})
 
 	if err != nil {
-		logger.Fatal("Could not create app", zap.Error(err))
+		logger.Fatal("Could not create router", zap.Error(err))
 	}
 
 	// Provide a way to cancel all running components of the router after graceful shutdown

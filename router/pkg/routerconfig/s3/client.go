@@ -80,7 +80,7 @@ func (c Client) RouterConfig(ctx context.Context, version string, modifiedSince 
 		return nil, err
 	}
 
-	routerConfig, err := execution_config.SerializeConfigBytes(body)
+	routerConfig, err := execution_config.UnmarshalConfig(body)
 	if err != nil {
 		return nil, err
 	}
