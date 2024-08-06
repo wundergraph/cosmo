@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.99.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.98.2...controlplane@0.99.0) (2024-08-06)
+
+### Features
+
+* **controlplane:** add overriding the mailing options ([#1008](https://github.com/wundergraph/cosmo/issues/1008)) ([f19ec90](https://github.com/wundergraph/cosmo/commit/f19ec90ca2cb2259384c2119291c43d4b5bcd11e)) (@AndreasZeissner)
+
+## [0.98.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.98.1...controlplane@0.98.2) (2024-08-05)
+
+### Bug Fixes
+
+* avoid infinite recursion in openapi call ([#1011](https://github.com/wundergraph/cosmo/issues/1011)) ([9522f56](https://github.com/wundergraph/cosmo/commit/9522f564930b2170305196f9855ae7dc3cf2889d)) (@StarpTech)
+
+## [0.98.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.98.0...controlplane@0.98.1) (2024-08-04)
+
+### Bug Fixes
+
+* **controlplane:** don't enable prom by default ([#1007](https://github.com/wundergraph/cosmo/issues/1007)) ([f26192d](https://github.com/wundergraph/cosmo/commit/f26192de9d516c5ed86be2b6876693ed381fceed)) (@StarpTech)
+
 # [0.98.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.97.2...controlplane@0.98.0) (2024-08-01)
 
 ### Bug Fixes

@@ -184,7 +184,9 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	httpRouter.Use(rmiddleware.RequestSize(int64(s.routerTrafficConfig.MaxRequestBodyBytes)))
 	httpRouter.Use(middleware.RequestID)
 	httpRouter.Use(middleware.RealIP)
-	httpRouter.Use(cors.New(*s.corsOptions))
+	if s.corsOptions.Enabled {
+		httpRouter.Use(cors.New(*s.corsOptions))
+	}
 
 	gm, err := s.buildGraphMux(ctx, "", s.baseRouterConfigVersion, routerConfig.GetEngineConfig(), routerConfig.GetSubgraphs())
 	if err != nil {
@@ -557,6 +559,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		PersistedOperationClient:       s.persistedOperationClient,
 		EnablePersistedOperationsCache: s.engineExecutionConfiguration.EnablePersistedOperationsCache,
 		NormalizationCache:             gm.normalizationCache,
+		ParseKitPoolSize:               s.engineExecutionConfiguration.ParseKitPoolSize,
 	})
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
 

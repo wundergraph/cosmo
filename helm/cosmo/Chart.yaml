@@ -15,7 +15,7 @@ type: application
 # This is the chart version. This version number should be incremented each time you make changes
 # to the chart and its templates, including the app version.
 # Versions are expected to follow Semantic Versioning (https://semver.org/)
-version: '0.5.0'
+version: '0.7.0'
 
 home: https://github.com/wundergraph/cosmo
 
@@ -68,7 +68,7 @@ dependencies:
     condition: global.postgresql.enabled
     repository: 'https://charts.bitnami.com/bitnami'
   - name: keycloak
-    version: '21.7.1'
+    version: '22.0.0'
     repository: 'https://charts.bitnami.com/bitnami'
     condition: global.keycloak.enabled
   - name: clickhouse

@@ -2,7 +2,7 @@
 
 For a detailed deployment guide of the chart, including the full documentation, see the [DEV.md](DEV.md) file.
 
-![Version: 0.5.0](https://img.shields.io/badge/Version-0.5.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
+![Version: 0.7.0](https://img.shields.io/badge/Version-0.7.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
 
 This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle GraphQL API Management Solution.
 
@@ -25,7 +25,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 |  | router | ^0 |
 |  | studio | ^0 |
 | https://charts.bitnami.com/bitnami | clickhouse | 5.3.1 |
-| https://charts.bitnami.com/bitnami | keycloak | 21.7.1 |
+| https://charts.bitnami.com/bitnami | keycloak | 22.0.0 |
 | https://charts.bitnami.com/bitnami | minio | 14.6.25 |
 | https://charts.bitnami.com/bitnami | postgresql | 12.12.10 |
 | https://charts.bitnami.com/bitnami | redis | 19.3.3 |
@@ -62,6 +62,14 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | controlplane.configuration.redisHost | string | `"cosmo-redis-master"` |  |
 | controlplane.configuration.redisPort | int | `6379` |  |
 | controlplane.configuration.s3StorageUrl | string | `"http://minio:changeme@cosmo-minio:9000/cosmo"` |  |
+| controlplane.configuration.smtp | object | `{"enabled":false,"host":"smtp.postmarkapp.com","password":"","port":587,"requireTls":true,"secure":true,"username":""}` | Use this section to configure the smtp server. |
+| controlplane.configuration.smtp.enabled | bool | `false` | Enables the smtp server. Default is false. |
+| controlplane.configuration.smtp.host | string | `"smtp.postmarkapp.com"` | The host to connect to. Default is "smtp.postmarkapp.com". |
+| controlplane.configuration.smtp.password | string | `""` | The password to use. Default is "". |
+| controlplane.configuration.smtp.port | int | `587` | The port the smtp server listens to. Default is 587. |
+| controlplane.configuration.smtp.requireTls | bool | `true` | Forces the client to use STARTTLS. Default is true. |
+| controlplane.configuration.smtp.secure | bool | `true` | Defines if the connection should use SSL. Default is true. |
+| controlplane.configuration.smtp.username | string | `""` | The username to use. Default is "". |
 | global.cdn.enabled | bool | `true` |  |
 | global.cdn.port | int | `8787` |  |
 | global.cdn.webUrl | string | `"http://cdn.wundergraph.local"` |  |

@@ -22,6 +22,7 @@ func TestOperationProcessorPersistentOperations(t *testing.T) {
 	parser := NewOperationProcessor(OperationProcessorOptions{
 		Executor:                executor,
 		MaxOperationSizeInBytes: 10 << 20,
+		ParseKitPoolSize:        4,
 	})
 	clientInfo := &ClientInfo{
 		Name:    "test",
@@ -47,6 +48,7 @@ func TestOperationProcessorPersistentOperations(t *testing.T) {
 		t.Run(tc.Input, func(t *testing.T) {
 			kit, err := parser.NewKitFromReader(strings.NewReader(tc.Input))
 			require.NoError(t, err)
+			defer kit.Free()
 
 			err = kit.UnmarshalOperation()
 			require.NoError(t, err)
@@ -75,6 +77,7 @@ func TestOperationProcessor(t *testing.T) {
 	parser := NewOperationProcessor(OperationProcessorOptions{
 		Executor:                executor,
 		MaxOperationSizeInBytes: 10 << 20,
+		ParseKitPoolSize:        4,
 	})
 	testCases := []struct {
 		ExpectedType  string
@@ -183,6 +186,7 @@ func TestOperationProcessor(t *testing.T) {
 		t.Run(tc.Input, func(t *testing.T) {
 			kit, err := parser.NewKitFromReader(strings.NewReader(tc.Input))
 			require.NoError(t, err)
+			defer kit.Free()
 
 			err = kit.UnmarshalOperation()
 			require.NoError(t, err)
@@ -211,6 +215,7 @@ func TestOperationProcessorUnmarshalExtensions(t *testing.T) {
 	parser := NewOperationProcessor(OperationProcessorOptions{
 		Executor:                executor,
 		MaxOperationSizeInBytes: 10 << 20,
+		ParseKitPoolSize:        4,
 	})
 	testCases := []struct {
 		Input string
@@ -247,6 +252,7 @@ func TestOperationProcessorUnmarshalExtensions(t *testing.T) {
 		t.Run(tc.Input, func(t *testing.T) {
 			kit, err := parser.NewKitFromReader(strings.NewReader(tc.Input))
 			require.NoError(t, err)
+			defer kit.Free()
 
 			err = kit.UnmarshalOperation()
 
