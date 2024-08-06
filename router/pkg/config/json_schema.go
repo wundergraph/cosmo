@@ -293,7 +293,7 @@ func ValidateConfig(yamlData []byte, schema []byte) error {
 		return err
 	}
 
-	var v interface{}
+	var v any
 	if err := yaml.Unmarshal(yamlData, &v); err != nil {
 		log.Fatal(err)
 	}
