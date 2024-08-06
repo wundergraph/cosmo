@@ -429,7 +429,7 @@ version: "1"
 
 execution_config: 
   file: 
-    path: "router-json"
+    path: "router.json"
 `)
 	_, err := LoadConfig(f, "")
 	require.NoError(t, err)
@@ -450,7 +450,7 @@ storage_providers:
 
 execution_config:
   file: 
-    path: "router-json"
+    path: "router.json"
   storage: # Cannot have both local and storage
     provider_id: s3
     object_path: "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/routerconfigs/latest.json"
