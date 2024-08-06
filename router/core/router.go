@@ -119,9 +119,8 @@ type (
 
 	RouterConfigPollerConfig struct {
 		config.ExecutionConfig
-		PollInterval    time.Duration
-		GraphSignKey    string
-		ControlPlaneURL string
+		PollInterval time.Duration
+		GraphSignKey string
 	}
 
 	ExecutionConfig struct {

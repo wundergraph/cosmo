@@ -174,7 +174,6 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		}))
 	} else {
 		options = append(options, core.WithConfigPollerConfig(&core.RouterConfigPollerConfig{
-			ControlPlaneURL: cfg.ControlplaneURL,
 			GraphSignKey:    cfg.Graph.SignKey,
 			PollInterval:    cfg.PollInterval,
 			ExecutionConfig: cfg.ExecutionConfig,
