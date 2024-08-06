@@ -9,7 +9,8 @@ When developing new features, testing in a production-like environment is crucia
 
 ## Decision
 
-We will implement a system that allows for the creation of previews for every pull request by leveraging graph feature flags. This will enable us to override specific subgraphs for each PR in a staging environment, facilitating thorough testing before changes are merged. We will provide two different options. The only difference between them would be the triggers to run the actions. The users can choose one of these solutions based on their preference.
+We will implement an action that allows for the creation of previews for every pull request by leveraging graph feature flags. This will enable us to override specific subgraphs for each PR in a staging environment, facilitating thorough testing before changes are merged. 
+We will provide two different options. The only difference between them would be the triggers to run the actions. The users can choose one of these solutions based on their preference.
 
 ## Options
 
