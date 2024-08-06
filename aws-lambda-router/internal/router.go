@@ -39,14 +39,14 @@ func NewRouter(opts ...Option) *core.Router {
 
 	routerConfig, err := execution_config.SerializeConfigFromFile(rc.RouterConfigPath)
 	if err != nil {
-		logger.Fatal("Could not read router config", zap.Error(err), zap.String("path", rc.RouterConfigPath))
+		logger.Fatal("Could not read execution config", zap.Error(err), zap.String("path", rc.RouterConfigPath))
 	}
 
 	routerOpts := []core.Option{
 		core.WithLogger(logger),
 		core.WithPlayground(true),
 		core.WithIntrospection(true),
-		core.WithExecutionConfig(routerConfig),
+		core.WithStaticRouterConfig(routerConfig),
 		core.WithAwsLambdaRuntime(),
 		core.WithGraphApiToken(rc.GraphApiToken),
 	}
