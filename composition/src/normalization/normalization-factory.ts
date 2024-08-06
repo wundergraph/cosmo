@@ -84,6 +84,7 @@ import {
   duplicateOverriddenFieldsError,
   equivalentSourceAndTargetOverrideErrorMessage,
   expectedEntityError,
+  externalInterfaceFieldsError,
   incompatibleExtensionError,
   incompatibleExtensionKindsError,
   invalidArgumentsError,
@@ -213,6 +214,7 @@ import {
   addPersistedDirectiveDefinitionDataByNode,
   convertKindForExtension,
   extractDirectives,
+  ConditionalFieldData,
   getDirectiveValidationErrors,
   getEnumNodeByData,
   getInputObjectNodeByData,
@@ -231,7 +233,8 @@ import { UnionTypeDefinitionNode, UnionTypeExtensionNode } from 'graphql/index';
 export type NormalizationResult = {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
   concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>;
-  configurationDataByParentTypeName: Map<string, ConfigurationData>;
+  conditionalFieldDataByCoordinates: Map<string, ConditionalFieldData>;
+  configurationDataByTypeName: Map<string, ConfigurationData>;
   entityInterfaces: Map<string, EntityInterfaceSubgraphData>;
   entityDataByTypeName: Map<string, EntityData>;
   originalTypeNameByRenamedTypeName: Map<string, string>;
@@ -286,6 +289,7 @@ export class NormalizationFactory {
   authorizationDataByParentTypeName = new Map<string, AuthorizationData>();
   childName = '';
   concreteTypeNamesByAbstractTypeName = new Map<string, Set<string>>();
+  conditionalFieldDataByCoordinates = new Map<string, ConditionalFieldData>();
   configurationDataByParentTypeName = new Map<string, ConfigurationData>();
   customDirectiveDefinitions = new Map<string, DirectiveDefinitionNode>();
   directiveDefinitionByDirectiveName = new Map<string, DirectiveDefinitionNode>();
@@ -1568,12 +1572,17 @@ export class NormalizationFactory {
         case Kind.OBJECT_TYPE_DEFINITION:
           const extensionWithFieldsData = parentExtensionData as ExtensionWithFieldsData;
           const operationTypeNode = this.operationTypeNodeByTypeName.get(extensionTypeName);
+          const isObject = parentDefinitionData.kind === Kind.OBJECT_TYPE_DEFINITION;
+          const externalInterfaceFieldNames: Array<string> = [];
           if (operationTypeNode) {
             configurationData.isRootNode = true;
             extensionWithFieldsData.fieldDataByFieldName.delete(SERVICE_FIELD);
             extensionWithFieldsData.fieldDataByFieldName.delete(ENTITIES_FIELD);
           }
           for (const [fieldName, fieldData] of extensionWithFieldsData.fieldDataByFieldName) {
+            if (!isObject && fieldData.isExternalBySubgraphName.get(this.subgraphName)) {
+              externalInterfaceFieldNames.push(fieldName);
+            }
             if (fieldData.argumentDataByArgumentName.size > 0) {
               // Arguments can only be fully validated once all parents types are known
               this.validateArguments(fieldData, `${extensionTypeName}.${fieldName}`);
@@ -1602,6 +1611,9 @@ export class NormalizationFactory {
               extensionWithFieldsData,
             ),
           );
+          if (externalInterfaceFieldNames.length > 0) {
+            this.errors.push(externalInterfaceFieldsError(extensionTypeName, externalInterfaceFieldNames));
+          }
           // Interfaces and objects must define at least one field
           if (
             parentDefinitionData.fieldDataByFieldName.size < 1 &&
@@ -1669,20 +1681,22 @@ export class NormalizationFactory {
         case Kind.OBJECT_TYPE_DEFINITION:
           const isEntity = this.entityDataByTypeName.has(parentTypeName);
           const operationTypeNode = this.operationTypeNodeByTypeName.get(parentTypeName);
+          const isObject = parentDefinitionData.kind === Kind.OBJECT_TYPE_DEFINITION;
           if (operationTypeNode) {
             parentDefinitionData.fieldDataByFieldName.delete(SERVICE_FIELD);
             parentDefinitionData.fieldDataByFieldName.delete(ENTITIES_FIELD);
           }
-          if (this.parentsWithChildArguments.has(parentTypeName)) {
-            if (
-              parentDefinitionData.kind !== Kind.OBJECT_TYPE_DEFINITION &&
-              parentDefinitionData.kind !== Kind.INTERFACE_TYPE_DEFINITION
-            ) {
-              continue;
-            }
+          if (this.parentsWithChildArguments.has(parentTypeName) || !isObject) {
+            const externalInterfaceFieldNames: Array<string> = [];
             for (const [fieldName, fieldData] of parentDefinitionData.fieldDataByFieldName) {
+              if (!isObject && fieldData.isExternalBySubgraphName.get(this.subgraphName)) {
+                externalInterfaceFieldNames.push(fieldName);
+              }
               // Arguments can only be fully validated once all parents types are known
               this.validateArguments(fieldData, `${parentTypeName}.${fieldName}`);
+            }
+            if (externalInterfaceFieldNames.length > 0) {
+              this.errors.push(externalInterfaceFieldsError(parentTypeName, externalInterfaceFieldNames));
             }
           }
           const newParentTypeName =
@@ -1866,7 +1880,8 @@ export class NormalizationFactory {
         // configurationDataMap is map of ConfigurationData per type name.
         // It is an Intermediate configuration object that will be converted to an engine configuration in the router
         concreteTypeNamesByAbstractTypeName: this.concreteTypeNamesByAbstractTypeName,
-        configurationDataByParentTypeName: this.configurationDataByParentTypeName,
+        conditionalFieldDataByCoordinates: this.conditionalFieldDataByCoordinates,
+        configurationDataByTypeName: this.configurationDataByParentTypeName,
         entityDataByTypeName: this.entityDataByTypeName,
         entityInterfaces: this.entityInterfaceDataByTypeName,
         isEventDrivenGraph: this.isSubgraphEventDrivenGraph,
@@ -1945,7 +1960,8 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
     }
     if (subgraph.name) {
       internalSubgraphBySubgraphName.set(subgraphName, {
-        configurationDataByParentTypeName: normalizationResult.configurationDataByParentTypeName,
+        conditionalFieldDataByCoordinates: normalizationResult.conditionalFieldDataByCoordinates,
+        configurationDataByTypeName: normalizationResult.configurationDataByTypeName,
         definitions: normalizationResult.subgraphAST,
         entityInterfaces: normalizationResult.entityInterfaces,
         isVersionTwo: normalizationResult.isVersionTwo,
@@ -2040,13 +2056,13 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
     );
     internalSubgraph.overriddenFieldNamesByParentTypeName = overridesData;
     for (const [parentTypeName, fieldNames] of overridesData) {
-      const configurationData = internalSubgraph.configurationDataByParentTypeName.get(parentTypeName);
+      const configurationData = internalSubgraph.configurationDataByTypeName.get(parentTypeName);
       if (!configurationData) {
         continue;
       }
       subtractSourceSetFromTargetSet(fieldNames, configurationData.fieldNames);
       if (configurationData.fieldNames.size < 1) {
-        internalSubgraph.configurationDataByParentTypeName.delete(parentTypeName);
+        internalSubgraph.configurationDataByTypeName.delete(parentTypeName);
       }
     }
   }

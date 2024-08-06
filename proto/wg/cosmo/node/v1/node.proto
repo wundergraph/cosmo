@@ -141,11 +141,22 @@ message TypeField {
   repeated string external_field_names = 3;
 }
 
+message FieldCoordinates {
+  string field_name = 1;
+  string type_name = 2;
+}
+
+message FieldSetCondition {
+  repeated FieldCoordinates field_coordinates_path = 1;
+  repeated string field_path = 2;
+}
+
 message RequiredField {
   string type_name = 1;
   string field_name = 2;
   string selection_set = 3;
   bool disable_entity_resolver = 4;
+  repeated FieldSetCondition conditions = 5;
 }
 
 message EntityInterfaceConfiguration {

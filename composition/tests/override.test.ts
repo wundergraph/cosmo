@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'vitest';
-import { Kind, parse } from 'graphql';
 import {
   batchNormalize,
   ConfigurationData,
@@ -11,14 +10,16 @@ import {
   invalidDirectiveError,
   invalidDirectiveLocationErrorMessage,
   invalidFieldShareabilityError,
+  invalidOverrideTargetSubgraphNameWarning,
   normalizeSubgraph,
   ObjectDefinitionData,
+  OVERRIDE,
+  parse,
   Subgraph,
   subgraphValidationError,
 } from '../src';
 import { normalizeString, schemaToSortedNormalizedString, versionTwoRouterDefinitions } from './utils/utils';
-import { OVERRIDE } from '../src/utils/string-constants';
-import { invalidOverrideTargetSubgraphNameWarning } from '../src/warnings/warnings';
+import { Kind } from 'graphql';
 
 describe('@override directive tests', () => {
   test('that a warning is returned if @override targets an unknown subgraph name', () => {
@@ -491,7 +492,7 @@ describe('@override directive tests', () => {
     expect(e).toBeDefined();
     const g = internalSubgraphBySubgraphName.get('subgraph-f');
     expect(g).toBeDefined();
-    expect(a!.configurationDataByParentTypeName).toStrictEqual(
+    expect(a!.configurationDataByTypeName).toStrictEqual(
       new Map<string, ConfigurationData>([
         [
           'Query',
@@ -512,7 +513,7 @@ describe('@override directive tests', () => {
         ],
       ]),
     );
-    expect(e!.configurationDataByParentTypeName).toStrictEqual(
+    expect(e!.configurationDataByTypeName).toStrictEqual(
       new Map<string, ConfigurationData>([
         [
           'Entity',
@@ -525,7 +526,7 @@ describe('@override directive tests', () => {
         ],
       ]),
     );
-    expect(g!.configurationDataByParentTypeName).toStrictEqual(
+    expect(g!.configurationDataByTypeName).toStrictEqual(
       new Map<string, ConfigurationData>([
         [
           'Entity',
@@ -622,7 +623,7 @@ describe('@override directive tests', () => {
     ]);
     const t = federationResult!.subgraphConfigBySubgraphName.get('subgraph-t');
     expect(t).toBeDefined();
-    expect(t!.configurationDataMap).toStrictEqual(
+    expect(t!.configurationDataByTypeName).toStrictEqual(
       new Map<string, ConfigurationData>([
         [
           'Query',
@@ -636,7 +637,7 @@ describe('@override directive tests', () => {
     );
     const u = federationResult!.subgraphConfigBySubgraphName.get('subgraph-u');
     expect(u).toBeDefined();
-    expect(u!.configurationDataMap).toStrictEqual(
+    expect(u!.configurationDataByTypeName).toStrictEqual(
       new Map<string, ConfigurationData>([
         [
           'Query',
@@ -675,7 +676,7 @@ describe('@override directive tests', () => {
     ]);
     const t = federationResult!.subgraphConfigBySubgraphName.get('subgraph-t');
     expect(t).toBeDefined();
-    expect(t!.configurationDataMap).toStrictEqual(
+    expect(t!.configurationDataByTypeName).toStrictEqual(
       new Map<string, ConfigurationData>([
         [
           'Query',
@@ -689,7 +690,7 @@ describe('@override directive tests', () => {
     );
     const u = federationResult!.subgraphConfigBySubgraphName.get('subgraph-u');
     expect(u).toBeDefined();
-    expect(u!.configurationDataMap).toStrictEqual(
+    expect(u!.configurationDataByTypeName).toStrictEqual(
       new Map<string, ConfigurationData>([
         [
           'Query',
@@ -720,10 +721,10 @@ describe('@override directive tests', () => {
     );
     const v = federationResult!.subgraphConfigBySubgraphName.get('subgraph-v');
     expect(v).toBeDefined();
-    expect(v!.configurationDataMap).toStrictEqual(new Map<string, ConfigurationData>());
+    expect(v!.configurationDataByTypeName).toStrictEqual(new Map<string, ConfigurationData>());
     const w = federationResult!.subgraphConfigBySubgraphName.get('subgraph-w');
     expect(w).toBeDefined();
-    expect(w!.configurationDataMap).toStrictEqual(
+    expect(w!.configurationDataByTypeName).toStrictEqual(
       new Map<string, ConfigurationData>([
         [
           'Query',
@@ -754,10 +755,10 @@ describe('@override directive tests', () => {
     );
     const v = federationResult!.subgraphConfigBySubgraphName.get('subgraph-v');
     expect(v).toBeDefined();
-    expect(v!.configurationDataMap).toStrictEqual(new Map<string, ConfigurationData>());
+    expect(v!.configurationDataByTypeName).toStrictEqual(new Map<string, ConfigurationData>());
     const w = federationResult!.subgraphConfigBySubgraphName.get('subgraph-w');
     expect(w).toBeDefined();
-    expect(w!.configurationDataMap).toStrictEqual(
+    expect(w!.configurationDataByTypeName).toStrictEqual(
       new Map<string, ConfigurationData>([
         [
           'Query',

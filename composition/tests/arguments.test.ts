@@ -8,10 +8,10 @@ import {
   InvalidRequiredInputValueData,
   invalidRequiredInputValueError,
   normalizeSubgraphFromString,
+  parse,
   Subgraph,
   subgraphValidationError,
 } from '../src';
-import { parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
 import {
   normalizeString,

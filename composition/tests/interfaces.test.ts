@@ -7,10 +7,10 @@ import {
   normalizeSubgraph,
   normalizeSubgraphFromString,
   selfImplementationError,
+  parse,
   Subgraph,
   invalidInterfaceImplementationError,
 } from '../src';
-import { parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
 import { normalizeString, schemaToSortedNormalizedString, versionTwoRouterDefinitions } from './utils/utils';
 

@@ -77,7 +77,7 @@ export function renameRootTypes(ff: FederationFactory, subgraph: InternalSubgrap
         if (ff.entityInterfaceFederationDataByTypeName.get(originalTypeName)) {
           return;
         }
-        ff.addValidPrimaryKeyTargetsToEntityData(ff.entityDataByTypeName.get(originalTypeName));
+        ff.addValidPrimaryKeyTargetsToEntityData(originalTypeName);
         overriddenFieldNames = subgraph.overriddenFieldNamesByParentTypeName.get(parentTypeName);
         if (originalTypeName === parentTypeName) {
           return;
@@ -105,7 +105,7 @@ export function renameRootTypes(ff: FederationFactory, subgraph: InternalSubgrap
           PARENT_DEFINITION_DATA,
         ) as ObjectExtensionData;
         isParentRootType = parentData.isRootType;
-        ff.addValidPrimaryKeyTargetsToEntityData(ff.entityDataByTypeName.get(originalTypeName));
+        ff.addValidPrimaryKeyTargetsToEntityData(originalTypeName);
         overriddenFieldNames = subgraph.overriddenFieldNamesByParentTypeName.get(originalTypeName);
         if (originalTypeName === parentTypeName) {
           return;

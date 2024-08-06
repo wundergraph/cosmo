@@ -5,9 +5,9 @@ import {
   invalidSubgraphNamesError,
   noBaseTypeExtensionError,
   noQueryRootTypeError,
+  parse,
   Subgraph,
 } from '../src';
-import { parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
 import {
   documentNodeToNormalizedString,
@@ -69,7 +69,6 @@ describe('FederationFactory tests', () => {
 
   test('that the demo subgraphs federate to generate the correct federated graph', () => {
     const { errors, federationResult } = federateSubgraphs([demoEmployees, demoFamily, demoHobbies, demoProducts]);
-    expect(errors).toBeUndefined();
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(

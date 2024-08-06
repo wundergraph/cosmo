@@ -3,6 +3,7 @@ import {
   EntityInterfaceFederationData,
   federateSubgraphs,
   InvalidEntityInterface,
+  SimpleFieldData,
   Subgraph,
   undefinedEntityInterfaceImplementationsError,
 } from '../src';
@@ -75,7 +76,7 @@ describe('Entity Interface Tests', () => {
     expect(errors).toBeUndefined();
     const subgraphConfigBySubgraphName = federationResult!.subgraphConfigBySubgraphName;
     expect(subgraphConfigBySubgraphName).toBeDefined();
-    expect(subgraphConfigBySubgraphName.get('subgraph-a')!.configurationDataMap).toStrictEqual(
+    expect(subgraphConfigBySubgraphName.get('subgraph-a')!.configurationDataByTypeName).toStrictEqual(
       new Map<string, ConfigurationData>([
         [
           'Interface',
@@ -99,7 +100,7 @@ describe('Entity Interface Tests', () => {
         ],
       ]),
     );
-    expect(subgraphConfigBySubgraphName.get('subgraph-b')!.configurationDataMap).toStrictEqual(
+    expect(subgraphConfigBySubgraphName.get('subgraph-b')!.configurationDataByTypeName).toStrictEqual(
       new Map<string, ConfigurationData>([
         [
           'Query',
@@ -157,6 +158,7 @@ describe('Entity Interface Tests', () => {
           [
             'Interface',
             {
+              fieldDatasBySubgraphName: new Map<string, Array<SimpleFieldData>>(),
               interfaceFieldNames: new Set<string>(['id', 'name', 'age', 'isEntity']),
               interfaceObjectFieldNames: new Set<string>(),
               interfaceObjectSubgraphs: new Set<string>(),

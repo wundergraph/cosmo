@@ -117,7 +117,7 @@ export default (opts: BaseCommandOptions) => {
       subgraphs: config.subgraphs.map((s, index) => {
         const subgraphConfig = result.federationResult!.subgraphConfigBySubgraphName.get(s.name);
         const schema = subgraphConfig?.schema;
-        const configurationDataMap = subgraphConfig?.configurationDataMap;
+        const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
         return {
           id: `${index}`,
           name: s.name,
@@ -128,7 +128,7 @@ export default (opts: BaseCommandOptions) => {
           websocketSubprotocol:
             s.subscription?.protocol === 'ws' ? s.subscription?.websocketSubprotocol || 'auto' : undefined,
           schema,
-          configurationDataMap,
+          configurationDataByTypeName,
         };
       }),
     });
@@ -210,7 +210,7 @@ export default (opts: BaseCommandOptions) => {
           subgraphs: subgraphs.map((s, index) => {
             const subgraphConfig = result.federationResult!.subgraphConfigBySubgraphName.get(s.name);
             const schema = subgraphConfig?.schema;
-            const configurationDataMap = subgraphConfig?.configurationDataMap;
+            const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
             return {
               id: `${index}`,
               name: s.name,
@@ -221,7 +221,7 @@ export default (opts: BaseCommandOptions) => {
               websocketSubprotocol:
                 s.subscription?.protocol === 'ws' ? s.subscription?.websocketSubprotocol || 'auto' : undefined,
               schema,
-              configurationDataMap,
+              configurationDataByTypeName,
             };
           }),
         });

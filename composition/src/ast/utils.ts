@@ -14,7 +14,7 @@ import {
   ObjectTypeDefinitionNode,
   ObjectTypeExtensionNode,
   OperationTypeNode,
-  parse,
+  parse as graphqlParse,
   ScalarTypeDefinitionNode,
   ScalarTypeExtensionNode,
   SchemaDefinitionNode,
@@ -47,7 +47,7 @@ import {
   SUBSCRIPTION,
   UNION_UPPER,
 } from '../utils/string-constants';
-import { duplicateInterfaceError, unexpectedKindFatalError } from '../errors/errors';
+import { duplicateInterfaceError } from '../errors/errors';
 import { ObjectLikeTypeNode } from '../schema-building/ast';
 
 export function isObjectLikeNodeEntity(node: ObjectLikeTypeNode): boolean {
@@ -292,9 +292,13 @@ type ParseResult = {
   error?: Error;
 };
 
+export function parse(source: string): DocumentNode {
+  return graphqlParse(source, { noLocation: true });
+}
+
 export function safeParse(value: string): ParseResult {
   try {
-    const parsedValue = parse(value, { noLocation: true });
+    const parsedValue = parse(value);
     return { documentNode: parsedValue };
   } catch (e) {
     return { error: e as Error };

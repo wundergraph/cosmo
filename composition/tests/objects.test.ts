@@ -2,8 +2,8 @@ import { describe, expect, test } from 'vitest';
 import { ConfigurationData, noFieldDefinitionsError, normalizeSubgraphFromString } from '../src';
 import { normalizeString, versionOneBaseSchema } from './utils/utils';
 
-describe('Objects Tests', () => {
-  describe('Normalization Tests', () => {
+describe('Object tests', () => {
+  describe('Normalization tests', () => {
     test('that an error is returned if an object does not define any fields', () => {
       const { errors } = normalizeSubgraphFromString(`
         type Object
@@ -61,7 +61,7 @@ describe('Objects Tests', () => {
     });
   });
 
-  describe('Router Configuration Tests', () => {
+  describe('Router configuration tests', () => {
     test('that an object extended within the same graph generates the correct router configuration', () => {
       const { errors, normalizationResult } = normalizeSubgraphFromString(`
         type Object {
@@ -74,7 +74,7 @@ describe('Objects Tests', () => {
       `);
 
       expect(errors).toBeUndefined();
-      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
+      expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Object',
