@@ -1,8 +1,9 @@
 -- migrate:up
 
--- This table is used to store the uptime of the router service
--- We only store last value of uptime sample for each service instance
--- We can change this once we want to show historical uptime and persist router instances
+-- This table is used to store the uptime of the router service. It is used to store an optimized version of the uptime metric
+-- We can use the FederatedGraphID as primary key which is the most efficient way to query data.
+-- We only store last value of uptime sample for each service instance.
+-- We can change this once we want to show historical uptime and persist router instances.
 
 CREATE TABLE IF NOT EXISTS cosmo.router_uptime_30 (
    Timestamp SimpleAggregateFunction(max, DateTime('UTC')) CODEC (Delta(4), ZSTD(3)),

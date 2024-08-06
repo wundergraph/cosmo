@@ -58,7 +58,7 @@ func TestTelemetry(t *testing.T) {
 			require.Contains(t, sn[0].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[0].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[0].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[0].Attributes(), otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"))
+			require.Contains(t, sn[0].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
 
 			// Pre-Handler Operation Parse
 
@@ -87,7 +87,7 @@ func TestTelemetry(t *testing.T) {
 			require.Contains(t, sn[1].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[1].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[1].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[1].Attributes(), otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"))
+			require.Contains(t, sn[1].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
 			require.Contains(t, sn[1].Attributes(), otel.WgClientName.String("unknown"))
 			require.Contains(t, sn[1].Attributes(), otel.WgClientVersion.String("missing"))
 			require.Contains(t, sn[1].Attributes(), otel.WgOperationProtocol.String("http"))
@@ -120,7 +120,7 @@ func TestTelemetry(t *testing.T) {
 			require.Contains(t, sn[2].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[2].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[2].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[2].Attributes(), otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"))
+			require.Contains(t, sn[2].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
 			require.Contains(t, sn[2].Attributes(), otel.WgOperationName.String(""))
 			require.Contains(t, sn[2].Attributes(), otel.WgOperationType.String("query"))
 			require.Contains(t, sn[2].Attributes(), otel.WgNormalizationCacheHit.Bool(false))
@@ -157,7 +157,7 @@ func TestTelemetry(t *testing.T) {
 			require.Contains(t, sn[3].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[3].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[3].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[3].Attributes(), otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"))
+			require.Contains(t, sn[3].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
 
 			// Span Resource attributes
 
@@ -182,7 +182,7 @@ func TestTelemetry(t *testing.T) {
 			require.Contains(t, sn[4].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[4].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[4].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[4].Attributes(), otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"))
+			require.Contains(t, sn[4].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
 			require.Contains(t, sn[4].Attributes(), otel.WgEngineRequestTracingEnabled.Bool(false))
 			require.Contains(t, sn[4].Attributes(), otel.WgEnginePlanCacheHit.Bool(false))
 
@@ -219,7 +219,7 @@ func TestTelemetry(t *testing.T) {
 			require.Contains(t, sn[5].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[5].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[5].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[5].Attributes(), otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"))
+			require.Contains(t, sn[5].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
 			require.Contains(t, sn[5].Attributes(), otel.WgComponentName.String("engine-transport"))
 			require.Contains(t, sn[5].Attributes(), semconv.HTTPMethod("POST"))
 			require.Contains(t, sn[5].Attributes(), semconv.HTTPFlavorKey.String("1.1"))
@@ -275,7 +275,7 @@ func TestTelemetry(t *testing.T) {
 			require.Contains(t, sn[6].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[6].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[6].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[6].Attributes(), otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"))
+			require.Contains(t, sn[6].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
 
 			// GraphQL handler
 			require.Equal(t, "Operation - Execute", sn[7].Name())
@@ -305,7 +305,7 @@ func TestTelemetry(t *testing.T) {
 			require.Contains(t, sn[7].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[7].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[7].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[7].Attributes(), otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"))
+			require.Contains(t, sn[7].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
 			require.Contains(t, sn[7].Attributes(), otel.WgAcquireResolverWaitTimeMs.Int64(0))
 
 			// Root Server middleware
@@ -387,7 +387,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 								otel.WgSubgraphID.String("0"),
 								otel.WgSubgraphName.String("employees"),
@@ -405,7 +405,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 							),
 							Value: 1,
@@ -431,7 +431,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 								otel.WgSubgraphID.String("0"),
 								otel.WgSubgraphName.String("employees"),
@@ -449,7 +449,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 							),
 							Sum: 0,
@@ -476,7 +476,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 								otel.WgSubgraphID.String("0"),
 								otel.WgSubgraphName.String("employees"),
@@ -494,7 +494,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 							),
 							Value: 38,
@@ -522,7 +522,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 								otel.WgSubgraphID.String("0"),
 								otel.WgSubgraphName.String("employees"),
@@ -540,7 +540,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 							),
 							Value: 117,
@@ -563,7 +563,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgFederatedGraphID.String("graph"),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 							),
 							Value: 0,
@@ -578,7 +578,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 								otel.WgSubgraphID.String("0"),
 								otel.WgSubgraphName.String("employees"),
@@ -659,7 +659,7 @@ func TestTelemetry(t *testing.T) {
 			require.Equal(t, trace.SpanKindClient, sn[1].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[1].Status())
 			require.Contains(t, sn[1].Attributes(), otel.WgRouterVersion.String("dev"))
-			require.Contains(t, sn[1].Attributes(), otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"))
+			require.Contains(t, sn[1].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
 			require.Contains(t, sn[1].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[1].Attributes(), otel.WgFederatedGraphID.String("graph"))
 			require.Contains(t, sn[1].Attributes(), semconv.HTTPMethod(http.MethodGet))
@@ -806,7 +806,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 								otel.WgSubgraphID.String("0"),
 								otel.WgSubgraphName.String("employees"),
@@ -825,7 +825,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 							),
 							Value: 1,
@@ -852,7 +852,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 								otel.WgSubgraphID.String("0"),
 								otel.WgSubgraphName.String("employees"),
@@ -871,7 +871,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 							),
 							Sum: 0,
@@ -899,7 +899,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 								otel.WgSubgraphID.String("0"),
 								otel.WgSubgraphName.String("employees"),
@@ -918,7 +918,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 							),
 							Value: 38,
@@ -947,7 +947,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 								otel.WgSubgraphID.String("0"),
 								otel.WgSubgraphName.String("employees"),
@@ -966,7 +966,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 							),
 							Value: 117,
@@ -990,7 +990,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgFederatedGraphID.String("graph"),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 							),
 							Value: 0,
@@ -1006,7 +1006,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 								otel.WgSubgraphID.String("0"),
 								otel.WgSubgraphName.String("employees"),
@@ -1175,7 +1175,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 								otel.WgSubgraphID.String("0"),
 								otel.WgSubgraphName.String("employees"),
@@ -1194,7 +1194,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 							),
 							Value: 1,
@@ -1221,7 +1221,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 								otel.WgSubgraphID.String("0"),
 								otel.WgSubgraphName.String("employees"),
@@ -1240,7 +1240,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 							),
 							Sum: 0,
@@ -1268,7 +1268,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 								otel.WgSubgraphID.String("0"),
 								otel.WgSubgraphName.String("employees"),
@@ -1287,7 +1287,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 							),
 							Value: 38,
@@ -1316,7 +1316,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 								otel.WgSubgraphID.String("0"),
 								otel.WgSubgraphName.String("employees"),
@@ -1335,7 +1335,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 							),
 							Value: 117,
@@ -1359,7 +1359,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgFederatedGraphID.String("graph"),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 							),
 							Value: 0,
@@ -1375,7 +1375,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 								otel.WgSubgraphID.String("0"),
 								otel.WgSubgraphName.String("employees"),
@@ -1455,43 +1455,43 @@ func TestTelemetry(t *testing.T) {
 
 			require.Equal(t, "Operation - Parse", sn[1].Name())
 			require.Len(t, sn[1].Attributes(), 8)
-			require.Contains(t, sn[1].Attributes(), otel.WgRouterConfigVersion.String("ecd663825511c47ad364d57e6668f8f7fa158c14"))
+			require.Contains(t, sn[1].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()))
 			require.Contains(t, sn[1].Attributes(), otel.WgFeatureFlag.String("myff"))
 
 			require.Equal(t, "Operation - Normalize", sn[2].Name())
 			require.Len(t, sn[2].Attributes(), 8)
-			require.Contains(t, sn[2].Attributes(), otel.WgRouterConfigVersion.String("ecd663825511c47ad364d57e6668f8f7fa158c14"))
+			require.Contains(t, sn[2].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()))
 			require.Contains(t, sn[2].Attributes(), otel.WgFeatureFlag.String("myff"))
 
 			require.Equal(t, "Operation - Validate", sn[3].Name())
 			require.Len(t, sn[3].Attributes(), 5)
-			require.Contains(t, sn[3].Attributes(), otel.WgRouterConfigVersion.String("ecd663825511c47ad364d57e6668f8f7fa158c14"))
+			require.Contains(t, sn[3].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()))
 			require.Contains(t, sn[3].Attributes(), otel.WgFeatureFlag.String("myff"))
 
 			require.Equal(t, "Operation - Plan", sn[4].Name())
 			require.Len(t, sn[4].Attributes(), 7)
-			require.Contains(t, sn[4].Attributes(), otel.WgRouterConfigVersion.String("ecd663825511c47ad364d57e6668f8f7fa158c14"))
+			require.Contains(t, sn[4].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()))
 			require.Contains(t, sn[4].Attributes(), otel.WgFeatureFlag.String("myff"))
 
 			require.Equal(t, "query unnamed", sn[5].Name())
 			require.Len(t, sn[5].Attributes(), 22)
-			require.Contains(t, sn[5].Attributes(), otel.WgRouterConfigVersion.String("ecd663825511c47ad364d57e6668f8f7fa158c14"))
+			require.Contains(t, sn[5].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()))
 			require.Contains(t, sn[5].Attributes(), otel.WgFeatureFlag.String("myff"))
 
 			require.Equal(t, "Engine - Fetch", sn[6].Name())
 			require.Len(t, sn[6].Attributes(), 15)
-			require.Contains(t, sn[6].Attributes(), otel.WgRouterConfigVersion.String("ecd663825511c47ad364d57e6668f8f7fa158c14"))
+			require.Contains(t, sn[6].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()))
 			require.Contains(t, sn[6].Attributes(), otel.WgFeatureFlag.String("myff"))
 
 			require.Equal(t, "Operation - Execute", sn[7].Name())
 			require.Len(t, sn[7].Attributes(), 6)
-			require.Contains(t, sn[7].Attributes(), otel.WgRouterConfigVersion.String("ecd663825511c47ad364d57e6668f8f7fa158c14"))
+			require.Contains(t, sn[7].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()))
 			require.Contains(t, sn[7].Attributes(), otel.WgFeatureFlag.String("myff"))
 
 			require.Equal(t, "query unnamed", sn[8].Name())
 			require.Len(t, sn[8].Attributes(), 27)
 
-			require.Contains(t, sn[8].Attributes(), otel.WgRouterConfigVersion.String("ecd663825511c47ad364d57e6668f8f7fa158c14"))
+			require.Contains(t, sn[8].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()))
 			require.Contains(t, sn[8].Attributes(), otel.WgFeatureFlag.String("myff"))
 
 			/**
@@ -1519,7 +1519,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("ecd663825511c47ad364d57e6668f8f7fa158c14"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()),
 								otel.WgRouterVersion.String("dev"),
 								otel.WgSubgraphID.String("0"),
 								otel.WgSubgraphName.String("employees"),
@@ -1538,7 +1538,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("ecd663825511c47ad364d57e6668f8f7fa158c14"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()),
 								otel.WgRouterVersion.String("dev"),
 								otel.WgFeatureFlag.String("myff"),
 							),
@@ -1565,7 +1565,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("ecd663825511c47ad364d57e6668f8f7fa158c14"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()),
 								otel.WgRouterVersion.String("dev"),
 								otel.WgSubgraphID.String("0"),
 								otel.WgSubgraphName.String("employees"),
@@ -1584,7 +1584,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("ecd663825511c47ad364d57e6668f8f7fa158c14"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()),
 								otel.WgRouterVersion.String("dev"),
 								otel.WgFeatureFlag.String("myff"),
 							),
@@ -1612,7 +1612,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("ecd663825511c47ad364d57e6668f8f7fa158c14"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()),
 								otel.WgRouterVersion.String("dev"),
 								otel.WgSubgraphID.String("0"),
 								otel.WgSubgraphName.String("employees"),
@@ -1631,7 +1631,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("ecd663825511c47ad364d57e6668f8f7fa158c14"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()),
 								otel.WgRouterVersion.String("dev"),
 								otel.WgFeatureFlag.String("myff"),
 							),
@@ -1660,7 +1660,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("ecd663825511c47ad364d57e6668f8f7fa158c14"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()),
 								otel.WgRouterVersion.String("dev"),
 								otel.WgSubgraphID.String("0"),
 								otel.WgSubgraphName.String("employees"),
@@ -1679,7 +1679,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("ecd663825511c47ad364d57e6668f8f7fa158c14"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()),
 								otel.WgRouterVersion.String("dev"),
 								otel.WgFeatureFlag.String("myff"),
 							),
@@ -1703,7 +1703,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgFederatedGraphID.String("graph"),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("ecd663825511c47ad364d57e6668f8f7fa158c14"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()),
 								otel.WgRouterVersion.String("dev"),
 								otel.WgFeatureFlag.String("myff"),
 							),
@@ -1719,7 +1719,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
 								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String("ecd663825511c47ad364d57e6668f8f7fa158c14"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()),
 								otel.WgRouterVersion.String("dev"),
 								otel.WgSubgraphID.String("0"),
 								otel.WgSubgraphName.String("employees"),
@@ -2084,7 +2084,7 @@ func TestTelemetry(t *testing.T) {
 				otel.WgOperationProtocol.String("http"),
 				otel.WgOperationType.String("query"),
 				otel.WgRouterClusterName.String(""),
-				otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 				otel.WgRouterVersion.String("dev"),
 				otel.WgOperationName.String("myQuery"),
 				otel.WgSubgraphName.String("employees"),
@@ -2105,7 +2105,7 @@ func TestTelemetry(t *testing.T) {
 				otel.WgComponentName.String("engine-loader"),
 				otel.WgFederatedGraphID.String("graph"),
 				otel.WgRouterClusterName.String(""),
-				otel.WgRouterConfigVersion.String("5bf9a3c0fe9523d7aac4c0db3afd96252a0fc3cf"),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 				otel.WgRouterVersion.String("dev"),
 				otel.WgClientName.String("unknown"),
 				otel.WgClientVersion.String("missing"),

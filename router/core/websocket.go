@@ -706,10 +706,10 @@ func (h *WebSocketConnectionHandler) writeErrorMessage(operationID string, err e
 
 func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperation, *operationContext, error) {
 	operationKit, err := h.operationProcessor.NewKit(payload, nil)
-	defer operationKit.Free()
 	if err != nil {
 		return nil, nil, err
 	}
+	defer operationKit.Free()
 
 	if err := operationKit.UnmarshalOperation(); err != nil {
 		return nil, nil, err
@@ -738,6 +738,10 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 	}
 
 	if _, err := operationKit.Normalize(); err != nil {
+		return nil, nil, err
+	}
+
+	if err := operationKit.CoerceListVariables(); err != nil {
 		return nil, nil, err
 	}
 

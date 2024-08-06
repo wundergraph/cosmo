@@ -420,11 +420,9 @@ describe('Router Configuration tests', () => {
       }
       
       type Object {
-        "invalid @provides like this (not on an entity response type) are ignored"
-        age: Int! @provides(fields: "name")
+        age: Int!
         entity: AnotherEntity @provides(fields: "field")
-        "invalid @requires like this (not on an entity parent) are ignored"
-        name: String! @requires(fields: "id")
+        name: String!
        }
        
       type AnotherEntity @key(fields: "id") {
