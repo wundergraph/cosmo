@@ -30,11 +30,11 @@ type selfRegister struct {
 
 func New(endpoint, token string, opts ...Option) (SelfRegister, error) {
 	if endpoint == "" {
-		return nil, fmt.Errorf("controlplane endpoint is required")
+		return nil, fmt.Errorf("controlplane endpoint is required for router registration")
 	}
 
 	if token == "" {
-		return nil, fmt.Errorf("graph api token is required")
+		return nil, fmt.Errorf("graph api token is required for router registration")
 	}
 
 	c := &selfRegister{

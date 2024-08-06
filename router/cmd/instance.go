@@ -157,7 +157,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 
 	options = append(options, additionalOptions...)
 
-	if cfg.RouterRegistration {
+	if cfg.RouterRegistration && cfg.Graph.Token != "" {
 		selfRegister, err := selfregister.New(cfg.ControlplaneURL, cfg.Graph.Token,
 			selfregister.WithLogger(logger),
 		)
@@ -167,10 +167,15 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		options = append(options, core.WithSelfRegistration(selfRegister))
 	}
 
-	if cfg.ExecutionConfig.File.Path != "" {
+	executionConfigPath := cfg.ExecutionConfig.File.Path
+	if executionConfigPath == "" {
+		executionConfigPath = cfg.RouterConfigPath
+	}
+
+	if executionConfigPath != "" {
 		options = append(options, core.WithExecutionConfig(&core.ExecutionConfig{
 			Watch: cfg.ExecutionConfig.File.Watch,
-			Path:  cfg.ExecutionConfig.File.Path,
+			Path:  executionConfigPath,
 		}))
 	} else {
 		options = append(options, core.WithConfigPollerConfig(&core.RouterConfigPollerConfig{
