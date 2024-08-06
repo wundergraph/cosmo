@@ -61,7 +61,6 @@ jobs:
       - name: Check if git is not dirty after generating files
         run: git diff --no-ext-diff --exit-code
 
-
       - name: Install dependencies
         working-directory: ./graphqlmetrics
         run: go mod download
@@ -69,6 +68,7 @@ jobs:
       - uses: ./.github/actions/go-linter
         with:
           working-directory: ./graphqlmetrics
+          env-go-work: 'off'
 
       - name: Test
         working-directory: ./graphqlmetrics

@@ -54,6 +54,7 @@ jobs:
         uses: ./.github/actions/go-linter
         with:
           working-directory: ./composition-go
+          env-go-work: 'off'
 
       - name: Test Go library
         run: go test
