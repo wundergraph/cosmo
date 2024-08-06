@@ -151,7 +151,7 @@
                 "watch": {
                   "type": "boolean",
                   "default": false,
-                  "description": "Enable the watch mode. The watch mode is used to watch the execution config file for changes. If the file changes, the router will reload the execution config."
+                  "description": "Enable the watch mode. The watch mode is used to watch the execution config file for changes. If the file changes, the router will reload the execution config without downtime."
                 }
               }
             }
