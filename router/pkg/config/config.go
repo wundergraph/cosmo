@@ -462,6 +462,7 @@ type ExecutionConfigFile struct {
 }
 
 type ExecutionConfig struct {
+	File    ExecutionConfigFile          `yaml:"file,omitempty"`
 	Storage ExecutionConfigStorageConfig `yaml:"storage,omitempty"`
 }
 
