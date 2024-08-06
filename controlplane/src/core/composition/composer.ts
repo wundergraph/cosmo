@@ -14,6 +14,7 @@ import {
   FeatureFlagRouterExecutionConfigs,
   RouterConfig,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FederatedGraphDTO, Label, SubgraphDTO } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import { audiences, nowInSeconds, signJwtHS256 } from '../crypto/jwt.js';
@@ -26,6 +27,7 @@ import {
   AdmissionWebhookJwtPayload,
 } from '../services/AdmissionWebhookController.js';
 import { GraphCompositionRepository } from '../repositories/GraphCompositionRepository.js';
+import * as schema from '../../db/schema.js';
 import { composeSubgraphs, composeSubgraphsWithContracts } from './composition.js';
 import { getDiffBetweenGraphs, GetDiffBetweenGraphsResult } from './schemaCheck.js';
 
@@ -163,6 +165,7 @@ export type ComposeDeploymentError = RouterConfigUploadError | AdmissionError | 
 export class Composer {
   constructor(
     private logger: FastifyBaseLogger,
+    private db: PostgresJsDatabase<typeof schema>,
     private federatedGraphRepo: FederatedGraphRepository,
     private subgraphRepo: SubgraphRepository,
     private contractRepo: ContractRepository,
@@ -266,6 +269,7 @@ export class Composer {
             },
           });
           const admissionWebhookController = new AdmissionWebhookController(
+            this.db,
             this.logger,
             admissionWebhookURL,
             admissionWebhookSecret,

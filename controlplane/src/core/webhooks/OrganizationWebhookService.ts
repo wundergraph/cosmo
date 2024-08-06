@@ -8,6 +8,7 @@ import pino from 'pino';
 import * as schema from '../../db/schema.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
+import { WebhookDeliveryInfo } from '../../db/models.js';
 import { makeWebhookRequest } from './utils.js';
 
 export interface FederatedGraphSchemaUpdate {
@@ -50,7 +51,7 @@ type Config = {
   key?: string;
   allowedUserEvents?: string[];
   meta: PlainMessage<EventMeta>['meta'];
-  type: string;
+  type: 'webhook' | 'slack';
 };
 
 export class OrganizationWebhookService {
@@ -126,6 +127,9 @@ export class OrganizationWebhookService {
             },
           };
           break;
+        }
+        default: {
+          throw new Error(`Unhandled case encountered for ${eventName}`);
         }
       }
 
@@ -327,7 +331,8 @@ export class OrganizationWebhookService {
   }
 
   private async sendEvent(eventData: OrganizationEventData, configs: Config[]) {
-    const logger = this.logger.child({ eventName: OrganizationEventName[eventData.eventName] });
+    const eventName = OrganizationEventName[eventData.eventName];
+    const logger = this.logger.child({ eventName });
 
     for (const config of configs) {
       if (!this.shouldProcess(eventData, config)) {
@@ -335,7 +340,6 @@ export class OrganizationWebhookService {
       }
 
       if (!config.url) {
-        logger.error('Webhook URL is not set');
         continue;
       }
 
@@ -345,29 +349,56 @@ export class OrganizationWebhookService {
       } else {
         data = {
           version: 1,
-          event: OrganizationEventName[eventData.eventName],
+          event: eventName,
           payload: eventData.payload,
         };
       }
 
+      const deliveryInfo: WebhookDeliveryInfo = {
+        organizationId: this.organizationId,
+        type: config.type,
+        endpoint: config.url,
+        eventName,
+        payload: JSON.stringify(data),
+        requestHeaders: {},
+      };
+
+      this.httpClient.interceptors.request.use((request) => {
+        deliveryInfo.requestHeaders = request.headers;
+        return request;
+      });
+
       // @TODO Use a queue to send the events
-      makeWebhookRequest(this.httpClient, data, config.url, config.key).catch((error: AxiosError) => {
+      try {
+        const res = await makeWebhookRequest(this.httpClient, data, config.url, config.key);
+        deliveryInfo.responseStatusCode = res.status;
+        deliveryInfo.responseHeaders = res.headers;
+        deliveryInfo.responseBody = JSON.stringify(res.data);
+      } catch (error: any) {
         if (error instanceof AxiosError) {
           logger.debug(
             { statusCode: error.response?.status, message: error.message },
             'Could not send organization webhook event',
           );
+          deliveryInfo.responseHeaders = error.response?.headers;
+          deliveryInfo.responseStatusCode = error.response?.status;
+          deliveryInfo.responseErrorCode = error.code;
+          deliveryInfo.responseBody = JSON.stringify(error.response?.data);
+          deliveryInfo.errorMessage = error.message;
         } else {
           logger.debug(error, 'Could not send organization webhook event');
+          deliveryInfo.errorMessage = error.message || 'Failed due to unknown reasons';
         }
-      });
+      }
+
+      await this.db.insert(schema.webhookDeliveries).values(deliveryInfo);
     }
   }
 
   async send(eventData: OrganizationEventData) {
     try {
       const configs = await this.getOrganizationConfigs(eventData.eventName);
-      this.sendEvent(eventData, configs);
+      await this.sendEvent(eventData, configs);
     } catch (e: any) {
       const logger = this.logger.child({ eventName: OrganizationEventName[eventData.eventName] });
       logger.child({ message: e.message });
