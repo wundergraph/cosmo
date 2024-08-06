@@ -13,11 +13,11 @@ inputs:
     type: string
 
 runs:
+  env:
+    GOWORK: ${{ inputs.env-go-work }}
   using: composite
   steps:
     - name: Run go vet
-      env:
-        GOWORK: ${{ inputs.env-go-work }}
       run: go vet ./...
       shell: bash
       working-directory: ${{ inputs.working-directory }}
