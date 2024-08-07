@@ -1,0 +1,62 @@
+---
+name: release-helm-charts
+run-name: package-helm-charts-release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  CI: true
+  REGISTRY: ghcr.io
+  RELEASE_BRANCH: andi/helm-release-testing
+
+jobs:
+  publish-chart:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: install-helm
+        uses: azure/setup-helm@v4.2.0
+
+      - name: install-yq
+        uses: mikefarah/yq@v4.42.1
+
+      - name: smoke-tests
+        run: |
+          helm version
+
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - uses: googleapis/release-please-action@v4
+        with:
+          # https://github.com/googleapis/release-please-action/issues/741
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          target-branch: ${{ env.RELEASE_BRANCH }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          skip-github-release: true
+          skip-github-pull-request: false
+
+
+          # - name: Log in to Github Container registry
+          #   uses: docker/login-action@v3
+          #   with:
+          #     registry: ${{ env.REGISTRY }}
+          #     username: ${{ github.actor }}
+          #     password: ${{ secrets.GITHUB_TOKEN }}
+
+          # - name: Publish Cosmo Chart
+          #   working-directory: helm
+          #   run: |
+          #     make publish-cosmo-chart
+
+          # - name: Publish Router Chart
+          #   working-directory: helm
+          #   run: |
+          #     make publish-router-chart
