@@ -2,6 +2,9 @@
   "packages": {
     "helm/cosmo": {
       "release-type": "helm"
+    },
+    "helm/cosmo/charts/router": {
+      "release-type": "helm"
     }
   }
 }

@@ -20,7 +20,7 @@ permissions:
 env:
   CI: true
   REGISTRY: ghcr.io
-  RELEASE_BRANCH: andi/eng-5520-automate-helm-chart-releases
+  RELEASE_BRANCH: andi/helm-release-testing
 
 jobs:
   publish-chart:
@@ -29,7 +29,7 @@ jobs:
 
     steps:
       - name: install-helm
-        uses: azure/setup-helm@v3
+        uses: azure/setup-helm@v4.2.0
 
       - name: install-yq
         uses: mikefarah/yq@v4.42.1
@@ -49,6 +49,8 @@ jobs:
           manifest-file: .release-please-manifest.json
           target-branch: ${{ env.RELEASE_BRANCH }}
           token: ${{ secrets.GITHUB_TOKEN }}
+          skip-github-release: true
+          skip-github-pull-request: false
 
 
           # - name: Log in to Github Container registry
