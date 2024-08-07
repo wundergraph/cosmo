@@ -28,30 +28,30 @@ permissions:
 
 runs:
   using: composite
-    steps:
-      - name: install-helm
-        uses: azure/setup-helm@v4.2.0
+  steps:
+    - name: install-helm
+      uses: azure/setup-helm@v4.2.0
 
-      - name: install-yq
-        uses: mikefarah/yq@v4.42.1
+    - name: install-yq
+      uses: mikefarah/yq@v4.42.1
 
-      - name: smoke-tests
-        run: |
-          helm version
-          yq --version
+    - name: smoke-tests
+      run: |
+        helm version
+        yq --version
 
-      - name: checkout
-        uses: actions/checkout@v4
+    - name: checkout
+      uses: actions/checkout@v4
 
-      - name: login-to-container-registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ inputs.registry }}
-          username: ${{ inputs.registry-username }}
-          password: ${{ inputs.registry-password }}
+    - name: login-to-container-registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ inputs.registry }}
+        username: ${{ inputs.registry-username }}
+        password: ${{ inputs.registry-password }}
 
-      - name: publish-chart
-        working-directory: ${{ inputs.working-directory }}
-        run: |
-          echo "skipping publish-cosmo-chart for testing"
-          # make publish-cosmo-chart
+    - name: publish-chart
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        echo "skipping ${{ inputs.make-target }} for testing"
+        # make publish-cosmo-chart
