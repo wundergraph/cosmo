@@ -1,10 +1,12 @@
 {
   "packages": {
     "helm/cosmo": {
-      "release-type": "helm"
+      "release-type": "helm",
+      "component": "helm-cosmo"
     },
     "helm/cosmo/charts/router": {
-      "release-type": "helm"
+      "release-type": "helm",
+      "component": "helm-cosmo-router"
     }
   }
 }
