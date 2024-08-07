@@ -44,7 +44,7 @@ jobs:
           # https://github.com/googleapis/release-please-action/issues/741
           path: helm/cosmo
           release-type: helm
-          target-branch: ${{ env.RELEASE_BRANCH }}
+            # target-branch: ${{ env.RELEASE_BRANCH }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
 
