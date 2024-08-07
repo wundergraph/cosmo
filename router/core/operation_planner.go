@@ -84,7 +84,7 @@ func (p *OperationPlanner) preparePlan(requestOperationName []byte, requestOpera
 	if report.HasErrors() {
 		return nil, &reportError{report: &report}
 	}
-	post := postprocess.DefaultProcessor()
+	post := postprocess.NewProcessor()
 	post.Process(preparedPlan)
 
 	return &planWithMetaData{
