@@ -1,6 +1,10 @@
 {
   "include-component-in-tag": true,
   "tag-separator": "@",
+  "commit-search-depth": 100,
+  "release-search-depth": 100,
+  "sequential-calls": true,
+  "group-pull-request-title-pattern": "chore(${component}): release ${version}",
   "packages": {
     "helm/cosmo": {
       "release-type": "helm",
