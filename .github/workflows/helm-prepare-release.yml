@@ -15,7 +15,7 @@ permissions:
 env:
   CI: true
   REGISTRY: ghcr.io
-  RELEASE_BRANCH: andi/helm-release-testing
+  RELEASE_BRANCH: andi/eng-5520-automate-helm-chart-releases
 
 jobs:
   prepare-release:
