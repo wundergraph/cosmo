@@ -67,6 +67,7 @@ require (
 require (
 	github.com/KimMachineGun/automemlimit v0.6.1
 	github.com/caarlos0/env/v11 v11.1.0
+	github.com/fsnotify/fsnotify v1.7.0
 	github.com/klauspost/compress v1.17.9
 	github.com/minio/minio-go/v7 v7.0.74
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1
@@ -86,7 +87,6 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/fatih/color v1.16.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -112,7 +112,7 @@ require (
 	github.com/opencontainers/runtime-spec v1.1.0 // indirect
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58 // indirect
 	github.com/phf/go-queue v0.0.0-20170504031614-9abe38d0371d // indirect
-	github.com/pierrec/lz4/v4 v4.1.19 // indirect
+	github.com/pierrec/lz4/v4 v4.1.21 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/prometheus/client_model v0.6.0 // indirect
