@@ -42,21 +42,3 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           skip-github-release: true
           skip-github-pull-request: false
-
-
-          # - name: Log in to Github Container registry
-          #   uses: docker/login-action@v3
-          #   with:
-          #     registry: ${{ env.REGISTRY }}
-          #     username: ${{ github.actor }}
-          #     password: ${{ secrets.GITHUB_TOKEN }}
-
-          # - name: Publish Cosmo Chart
-          #   working-directory: helm
-          #   run: |
-          #     make publish-cosmo-chart
-
-          # - name: Publish Router Chart
-          #   working-directory: helm
-          #   run: |
-          #     make publish-router-chart
