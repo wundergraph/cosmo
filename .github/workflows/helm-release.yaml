@@ -38,12 +38,6 @@ jobs:
           skip-github-release: false
           skip-github-pull-request: false
 
-      - name: show-release-output
-        run: |
-          echo "${{ steps.release.outputs['helm/cosmo--release_created'] }}"
-          echo "${{ steps.release.outputs['helm/cosmo--tag_name'] }}"
-          echo "${{ steps.release.outputs['helm/cosmo/charts/router--tag_name'] }}"
-
       - uses: ./.github/actions/helm-release
         if: ${{ steps.release.outputs['helm/cosmo--release_created'] }}
         with:
