@@ -12,6 +12,11 @@ on:
         # paths:
         #   - 'helm/**/*'
 
+permissions:
+  contents: write
+  packages: write
+  pull-requests: write
+
 env:
   CI: true
   REGISTRY: ghcr.io
@@ -21,8 +26,6 @@ jobs:
   publish-chart:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    permissions:
-      packages: write
 
     steps:
       - name: install-helm
