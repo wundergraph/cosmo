@@ -4,6 +4,9 @@ run-name: helm-prepare-release
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - andi/eng-5520-automate-helm-chart-releases
 
 permissions:
   contents: write
