@@ -14,7 +14,6 @@ permissions:
 env:
   CI: true
   REGISTRY: ghcr.io
-  RELEASE_BRANCH: andi/helm-release-testing
 
 jobs:
   publish-chart:
@@ -22,19 +21,35 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - name: Log in to Github Container registry
+      - name: install-helm
+        uses: azure/setup-helm@v4.2.0
+
+      - name: install-yq
+        uses: mikefarah/yq@v4.42.1
+
+      - name: smoke-tests
+        run: |
+          helm version
+          yq --version
+
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: login-to-container-registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-            # - name: Publish Cosmo Chart
-            #   working-directory: helm
-            #   run: |
-            #     make publish-cosmo-chart
+      - name: publish-cosmo-chart
+        working-directory: helm
+        run: |
+          echo "skipping publish-cosmo-chart for testing"
+          # make publish-cosmo-chart
 
-            # - name: Publish Router Chart
-            #   working-directory: helm
-            #   run: |
-            #     make publish-router-chart
+      - name: publish-router-chart
+        working-directory: helm
+        run: |
+          echo "skipping publish-router-chart for testing"
+          # make publish-router-chart

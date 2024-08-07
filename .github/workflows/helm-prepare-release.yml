@@ -23,16 +23,6 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - name: install-helm
-        uses: azure/setup-helm@v4.2.0
-
-      - name: install-yq
-        uses: mikefarah/yq@v4.42.1
-
-      - name: smoke-tests
-        run: |
-          helm version
-
       - name: checkout
         uses: actions/checkout@v4
 
@@ -43,5 +33,5 @@ jobs:
           manifest-file: .release-please-manifest.json
           target-branch: ${{ env.RELEASE_BRANCH }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          skip-github-release: true
+          skip-github-release: false
           skip-github-pull-request: false
