@@ -67,6 +67,7 @@ require (
 require (
 	github.com/KimMachineGun/automemlimit v0.6.1
 	github.com/caarlos0/env/v11 v11.1.0
+	github.com/fsnotify/fsnotify v1.7.0
 	github.com/klauspost/compress v1.17.9
 	github.com/minio/minio-go/v7 v7.0.74
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1
@@ -86,7 +87,6 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/fatih/color v1.16.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
