@@ -1,20 +1,22 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
   "include-component-in-tag": true,
+  "draft-pull-request": true,
   "tag-separator": "@",
   "separate-pull-requests": true,
   "commit-search-depth": 100,
   "release-search-depth": 100,
   "sequential-calls": true,
-  "pull-request-title-pattern": "chore(${component}): release ${version} 🚀",
   "packages": {
     "helm/cosmo": {
       "release-type": "helm",
+      "pull-request-title-pattern": "chore(${component}): release ${version} 🚀",
       "package-name": "helm-chart-cosmo",
       "component": "helm-cosmo"
     },
     "helm/cosmo/charts/router": {
       "release-type": "helm",
+      "pull-request-title-pattern": "chore(${component}): release ${version} 🚀",
       "package-name": "helm-cosmo-router",
       "component": "helm-cosmo-router"
     }

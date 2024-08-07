@@ -44,6 +44,7 @@ jobs:
 
       - name: show-release-output
         run: |
+          echo "${{ steps.release.outputs.releases_created }}"
           echo "${{ steps.release.outputs.release_created }}"
           echo "${{ steps.release.outputs['helm/cosmo--release_created'] }}"
           echo "${{ steps.release.outputs['helm/cosmo/charts/router--tag_name'] }}"
