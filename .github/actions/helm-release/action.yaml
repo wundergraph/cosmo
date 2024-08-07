@@ -36,6 +36,7 @@ runs:
       uses: mikefarah/yq@v4.42.1
 
     - name: smoke-tests
+      shell: bash
       run: |
         helm version
         yq --version
@@ -51,6 +52,7 @@ runs:
         password: ${{ inputs.registry-password }}
 
     - name: publish-chart
+      shell: bash
       working-directory: ${{ inputs.working-directory }}
       run: |
         echo "skipping ${{ inputs.make-target }} for testing"
