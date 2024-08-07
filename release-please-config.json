@@ -1,0 +1,7 @@
+{
+  "packages": {
+    "helm/cosmo": {
+      "release-type": "helm"
+    }
+  }
+}
