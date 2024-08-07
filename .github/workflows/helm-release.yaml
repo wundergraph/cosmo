@@ -1,13 +1,12 @@
 ---
-name: helm-prepare-release
-run-name: helm-prepare-release
+name: helm-release
+run-name: helm-release
 
 on:
   workflow_dispatch:
   push:
     branches:
       - andi/helm-release-testing
-
 
 permissions:
   contents: write
