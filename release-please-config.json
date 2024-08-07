@@ -1,10 +1,11 @@
 {
   "include-component-in-tag": true,
   "tag-separator": "@",
+  "separate-pull-requests": false,
   "commit-search-depth": 100,
   "release-search-depth": 100,
   "sequential-calls": true,
-  "group-pull-request-title-pattern": "chore(${component}): release ${version}",
+  "pull-request-title-pattern": "chore(${component}): release ${version}",
   "packages": {
     "helm/cosmo": {
       "release-type": "helm",
@@ -13,7 +14,7 @@
     },
     "helm/cosmo/charts/router": {
       "release-type": "helm",
-      "package-name": "helm-chart-cosmo-router",
+      "package-name": "helm-cosmo-router",
       "component": "helm-cosmo-router"
     }
   }

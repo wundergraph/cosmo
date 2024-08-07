@@ -37,7 +37,14 @@ jobs:
           skip-github-release: false
           skip-github-pull-request: false
 
+      - name: is-release-created
+        if: ${{ steps.release.outputs.releases_created }}
+        run: |
+          echo "performing release"
+
       - name: show-release-output
         run: |
+          echo "${{ steps.release.outputs.release_created }}"
           echo "${{ steps.release.outputs['helm/cosmo--release_created'] }}"
           echo "${{ steps.release.outputs['helm/cosmo/charts/router--tag_name'] }}"
+          echo "${{ steps.release.outputs }}"
