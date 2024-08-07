@@ -42,7 +42,7 @@ jobs:
       - uses: googleapis/release-please-action@v4
         with:
           release-type: helm
-          path: helm/cosmo
+          path: helm/cosmo/Chart.yaml
           target-branch: ${{ env.RELEASE_BRANCH }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
