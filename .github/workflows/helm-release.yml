@@ -15,7 +15,7 @@ on:
 env:
   CI: true
   REGISTRY: ghcr.io
-  RELEASE_BRANCH: andi/eng-5520-automate-helm-chart-releases-2
+  RELEASE_BRANCH: andi/eng-5520-automate-helm-chart-releases
 
 jobs:
   publish-chart:
