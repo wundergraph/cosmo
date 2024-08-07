@@ -1667,6 +1667,7 @@ export class FederatedGraphRepository {
           baseCompositionSchemaVersionId: baseCompositionData.schemaVersionId,
           federatedGraphAdmissionWebhookURL: federatedGraphDTO.admissionWebhookURL,
           federatedGraphAdmissionWebhookSecret: federatedGraphDTO.admissionWebhookSecret,
+          actorId,
         });
 
         allDeploymentErrors.push(
@@ -1701,6 +1702,7 @@ export class FederatedGraphRepository {
             organizationId: this.organizationId,
             federatedGraphAdmissionWebhookURL: contractDTO.admissionWebhookURL,
             federatedGraphAdmissionWebhookSecret: contractDTO.admissionWebhookSecret,
+            actorId,
           });
 
           allDeploymentErrors.push(

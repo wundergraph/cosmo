@@ -215,6 +215,7 @@ export class Composer {
     admissionConfig,
     admissionWebhookURL,
     admissionWebhookSecret,
+    actorId,
   }: {
     routerConfig: RouterConfig;
     blobStorage: BlobStorage;
@@ -227,6 +228,7 @@ export class Composer {
     };
     admissionWebhookURL?: string;
     admissionWebhookSecret?: string;
+    actorId: string;
   }): Promise<{
     errors: ComposeDeploymentError[];
   }> {
@@ -274,11 +276,14 @@ export class Composer {
             admissionWebhookURL,
             admissionWebhookSecret,
           );
-          const resp = await admissionWebhookController.validateConfig({
-            privateConfigUrl: `${admissionConfig.cdnBaseUrl}/${s3PathDraft}?token=${token}`,
-            organizationId,
-            federatedGraphId,
-          });
+          const resp = await admissionWebhookController.validateConfig(
+            {
+              privateConfigUrl: `${admissionConfig.cdnBaseUrl}/${s3PathDraft}?token=${token}`,
+              organizationId,
+              federatedGraphId,
+            },
+            actorId,
+          );
           signatureSha256 = resp.signatureSha256;
         } finally {
           // Always clean up the draft config after the draft has been validated.
@@ -364,6 +369,7 @@ export class Composer {
     organizationId,
     federatedGraphAdmissionWebhookURL,
     federatedGraphAdmissionWebhookSecret,
+    actorId,
   }: {
     admissionConfig: {
       jwtSecret: string;
@@ -377,6 +383,7 @@ export class Composer {
     organizationId: string;
     federatedGraphAdmissionWebhookURL?: string;
     federatedGraphAdmissionWebhookSecret?: string;
+    actorId: string;
   }) {
     const baseRouterConfig = this.composeRouterConfigWithFeatureFlags({
       featureFlagRouterExecutionConfigByFeatureFlagName,
@@ -395,6 +402,7 @@ export class Composer {
         cdnBaseUrl: admissionConfig.cdnBaseUrl,
         jwtSecret: admissionConfig.jwtSecret,
       },
+      actorId,
     });
 
     return {

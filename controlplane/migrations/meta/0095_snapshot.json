@@ -1,5 +1,5 @@
 {
-  "id": "78403d03-6cdd-412d-8fe0-a2cc0c2ce3c9",
+  "id": "a273ba64-954f-45df-ae10-46d58feb57f7",
   "prevId": "d2a85e0d-87a8-40f9-8697-b0666b9fade6",
   "version": "7",
   "dialect": "postgresql",
@@ -4326,6 +4326,12 @@
           "notNull": true,
           "default": "now()"
         },
+        "created_by_id": {
+          "name": "created_by_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "organization_id": {
           "name": "organization_id",
           "type": "uuid",
@@ -4393,6 +4399,20 @@
           "primaryKey": false,
           "notNull": false
         },
+        "retry_count": {
+          "name": "retry_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "duration": {
+          "name": "duration",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
         "is_redelivery": {
           "name": "is_redelivery",
           "type": "boolean",
@@ -4409,6 +4429,19 @@
       },
       "indexes": {},
       "foreignKeys": {
+        "webhook_deliveries_created_by_id_users_id_fk": {
+          "name": "webhook_deliveries_created_by_id_users_id_fk",
+          "tableFrom": "webhook_deliveries",
+          "tableTo": "users",
+          "columnsFrom": [
+            "created_by_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
         "webhook_deliveries_organization_id_organizations_id_fk": {
           "name": "webhook_deliveries_organization_id_organizations_id_fk",
           "tableFrom": "webhook_deliveries",

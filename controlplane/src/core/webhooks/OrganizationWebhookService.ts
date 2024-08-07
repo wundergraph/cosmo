@@ -71,13 +71,6 @@ export class OrganizationWebhookService {
     this.httpClient = axios.create({
       timeout: 10_000,
     });
-    axiosRetry(this.httpClient, {
-      retries: 5,
-      retryDelay: (retryCount) => {
-        return exponentialDelay(retryCount);
-      },
-      shouldResetTimeout: true,
-    });
   }
 
   private async getOrganizationConfigs(eventName: OrganizationEventName) {
@@ -330,11 +323,14 @@ export class OrganizationWebhookService {
     }
   }
 
-  private async sendEvent(eventData: OrganizationEventData, configs: Config[]) {
+  private async sendEvent(eventData: OrganizationEventData, configs: Config[], actorId: string) {
     const eventName = OrganizationEventName[eventData.eventName];
     const logger = this.logger.child({ eventName });
 
     for (const config of configs) {
+      const startTime = performance.now();
+      let retryCount = 0;
+
       if (!this.shouldProcess(eventData, config)) {
         continue;
       }
@@ -360,8 +356,20 @@ export class OrganizationWebhookService {
         endpoint: config.url,
         eventName,
         payload: JSON.stringify(data),
+        createdById: actorId,
         requestHeaders: {},
       };
+
+      axiosRetry(this.httpClient, {
+        retries: 5,
+        retryDelay: (retryCount) => {
+          return exponentialDelay(retryCount);
+        },
+        shouldResetTimeout: true,
+        onRetry: (count) => {
+          retryCount = count;
+        },
+      });
 
       this.httpClient.interceptors.request.use((request) => {
         deliveryInfo.requestHeaders = request.headers;
@@ -391,14 +399,18 @@ export class OrganizationWebhookService {
         }
       }
 
+      const endTime = performance.now();
+      deliveryInfo.duration = endTime - startTime;
+      deliveryInfo.retryCount = retryCount;
+
       await this.db.insert(schema.webhookDeliveries).values(deliveryInfo);
     }
   }
 
-  async send(eventData: OrganizationEventData) {
+  async send(eventData: OrganizationEventData, actorId: string) {
     try {
       const configs = await this.getOrganizationConfigs(eventData.eventName);
-      await this.sendEvent(eventData, configs);
+      await this.sendEvent(eventData, configs, actorId);
     } catch (e: any) {
       const logger = this.logger.child({ eventName: OrganizationEventName[eventData.eventName] });
       logger.child({ message: e.message });

@@ -43,17 +43,13 @@ export class AdmissionWebhookController {
       timeout: 30_000,
       baseURL: this.graphAdmissionWebhookURL,
     });
-    axiosRetry(this.httpClient, {
-      retries: 5,
-      retryDelay: (retryCount) => {
-        return exponentialDelay(retryCount);
-      },
-      shouldResetTimeout: true,
-    });
   }
 
-  public async validateConfig(req: ValidateConfigRequest) {
+  public async validateConfig(req: ValidateConfigRequest, actorId: string) {
     const url = this.graphAdmissionWebhookURL + '/validate-config';
+    const startTime = performance.now();
+    let retryCount = 0;
+
     this.logger.debug({ url, path: '/validate-config', ...req }, 'Sending admission validate-config webhook request');
 
     const deliveryInfo: WebhookDeliveryInfo = {
@@ -63,7 +59,19 @@ export class AdmissionWebhookController {
       eventName: OrganizationEventName[OrganizationEventName.VALIDATE_CONFIG],
       payload: JSON.stringify(req),
       requestHeaders: {},
+      createdById: actorId,
     };
+
+    axiosRetry(this.httpClient, {
+      retries: 5,
+      retryDelay: (retryCount) => {
+        return exponentialDelay(retryCount);
+      },
+      shouldResetTimeout: true,
+      onRetry: (count) => {
+        retryCount = count;
+      },
+    });
 
     this.httpClient.interceptors.request.use((request) => {
       deliveryInfo.requestHeaders = request.headers;
@@ -139,6 +147,10 @@ export class AdmissionWebhookController {
       deliveryInfo.errorMessage = err.message || 'Failed due to unknown reasons';
       throw err;
     } finally {
+      const endTime = performance.now();
+      deliveryInfo.duration = endTime - startTime;
+      deliveryInfo.retryCount = retryCount;
+
       await this.db.insert(schema.webhookDeliveries).values(deliveryInfo);
     }
   }

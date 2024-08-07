@@ -1132,6 +1132,9 @@ export const webhookDeliveryType = pgEnum('webhook_delivery_type', ['webhook', '
 export const webhookDeliveries = pgTable('webhook_deliveries', {
   id: uuid('id').notNull().primaryKey().defaultRandom(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  createdById: uuid('created_by_id').references(() => users.id, {
+    onDelete: 'set null',
+  }),
   organizationId: uuid('organization_id')
     .notNull()
     .references(() => organizations.id, {
@@ -1147,6 +1150,8 @@ export const webhookDeliveries = pgTable('webhook_deliveries', {
   responseErrorCode: text('response_error_code'),
   errorMessage: text('error_message'),
   responseBody: text('response_body'),
+  retryCount: integer('retry_count').notNull().default(0),
+  duration: real('duration').notNull().default(0),
   isRedelivery: boolean('is_redelivery').notNull().default(false),
   /***
    * Keep track of the original id in case of redelivery.
