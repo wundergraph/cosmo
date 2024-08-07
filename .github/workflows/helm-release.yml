@@ -1,14 +1,12 @@
 ---
 name: release-helm-charts
-run-name: package-helm-charts-release
+run-name: release-helm-charts
 
 on:
   workflow_dispatch:
 
 permissions:
-  contents: write
   packages: write
-  pull-requests: write
 
 env:
   CI: true

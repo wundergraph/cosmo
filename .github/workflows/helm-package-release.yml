@@ -1,6 +1,6 @@
 ---
-name: release-helm-charts
-run-name: package-helm-charts-release
+name: prepare-release-helm-charts
+run-name: prepare-release-helm-charts
 
 on:
   workflow_dispatch:
