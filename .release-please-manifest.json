@@ -1,4 +1,6 @@
 {
   "helm-chart-cosmo": "0.7.0",
-  "helm-chart-cosmo-router": "0.4.0"
+  "helm-chart-cosmo-router": "0.4.0",
+  "helm/cosmo": "1.0.0",
+  "helm/cosmo/charts/router": "1.0.0"
 }
