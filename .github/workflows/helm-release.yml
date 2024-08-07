@@ -39,11 +39,12 @@ jobs:
       - name: checkout
         uses: actions/checkout@v4
 
-      - uses: googleapis/release-please-action@v4
+      - uses: googleapis/release-please-action@v3
         with:
-          release-type: helm
+          # https://github.com/googleapis/release-please-action/issues/741
           path: helm/cosmo
-            # target-branch: ${{ env.RELEASE_BRANCH }}
+          release-type: helm
+          target-branch: ${{ env.RELEASE_BRANCH }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
 
