@@ -1,0 +1,21 @@
+---
+name: go-mod-tidy
+description: This action ensures, that the go.mod and go.sum file is up to date
+
+inputs:
+  working-directory:
+    required: true
+    type: string
+
+runs:
+  using: composite
+  steps:
+    - name: Run go mod tidy
+      working-directory: ${{ inputs.working-directory }}
+      shell: bash
+      run: go mod tidy
+
+    - name: Test if go.mod and go.sum are up to date
+      working-directory: ${{ inputs.working-directory }}
+      shell: bash
+      run: git diff --exit-code go.mod go.sum
