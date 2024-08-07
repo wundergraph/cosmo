@@ -27,6 +27,7 @@ jobs:
         uses: actions/checkout@v4
 
       - uses: googleapis/release-please-action@v4
+        id: release
         with:
           # https://github.com/googleapis/release-please-action/issues/741
           config-file: release-please-config.json
@@ -35,3 +36,8 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           skip-github-release: false
           skip-github-pull-request: false
+
+      - name: show-release-output
+        run: |
+          echo "${{ steps.release.outputs['helm-chart-cosmo--release_created'] }}"
+          echo "${{ steps.release.outputs['helm-chart-cosmo--tag_name'] }}"
