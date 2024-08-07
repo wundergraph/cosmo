@@ -42,7 +42,7 @@ jobs:
       - uses: googleapis/release-please-action@v4
         with:
           release-type: helm
-          path: helm
+          path: helm/cosmo
           target-branch: ${{ env.RELEASE_BRANCH }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
