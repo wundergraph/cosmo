@@ -39,18 +39,11 @@ jobs:
           skip-github-release: false
           skip-github-pull-request: false
 
-      - if: ${{ steps.release.outputs.prs_created }}
-        name: install-tools
+      - name: install-tools
         run: go install github.com/norwoodj/helm-docs/cmd/helm-docs@v1.11.3
 
-      - if: ${{ steps.release.outputs.prs_created }}
-        name: Install jq
+      - name: Install jq
         uses: dcarbone/install-jq-action@v2.1.0
-
-      - if: ${{ steps.release.outputs.prs_created }}
-        name: smoke-tests
-        run: |
-          jq --version
 
       - if: ${{ steps.release.outputs.prs_created }}
         name: update-helm-docs
@@ -67,8 +60,7 @@ jobs:
           echo $elements | while read i; do
             headBranchName=$(echo $i | jq -r '.headBranchName')
 
-            git fetch
-            git checkout $headBranchName
+            git checkout origin/$headBranchName
 
             (
 
