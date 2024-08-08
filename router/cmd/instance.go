@@ -6,15 +6,12 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/selfregister"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
-	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"go.uber.org/automaxprocs/maxprocs"
 	"os"
 
 	"github.com/wundergraph/cosmo/router/core"
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"go.uber.org/zap"
 )
 
@@ -56,24 +53,8 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		params.Logger.Info("GOMEMLIMIT set by user", zap.String("limit", os.Getenv("GOMEMLIMIT")))
 	}
 
-	var routerConfig *nodev1.RouterConfig
-	var configPoller configpoller.ConfigPoller
-	var selfRegister selfregister.SelfRegister
-
 	cfg := params.Config
 	logger := params.Logger
-
-	if cfg.RouterConfigPath != "" {
-		routerConfig, err = execution_config.SerializeConfigFromFile(cfg.RouterConfigPath)
-		if err != nil {
-			logger.Fatal("Could not read router config", zap.Error(err), zap.String("path", cfg.RouterConfigPath))
-		}
-		if cfg.RouterRegistration {
-			selfRegister = selfregister.New(cfg.ControlplaneURL, cfg.Graph.Token,
-				selfregister.WithLogger(logger),
-			)
-		}
-	}
 
 	var authenticators []authentication.Authenticator
 	for i, auth := range cfg.Authentication.Providers {
@@ -102,19 +83,11 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		core.WithOverrideRoutingURL(cfg.OverrideRoutingURL),
 		core.WithOverrides(cfg.Overrides),
 		core.WithLogger(logger),
-		core.WithConfigPoller(configPoller),
-		core.WithSelfRegistration(selfRegister),
 		core.WithIntrospection(cfg.IntrospectionEnabled),
 		core.WithPlayground(cfg.PlaygroundEnabled),
 		core.WithGraphApiToken(cfg.Graph.Token),
 		core.WithPersistedOperationsConfig(cfg.PersistedOperationsConfig),
 		core.WithStorageProviders(cfg.StorageProviders),
-		core.WithConfigPollerConfig(&core.RouterConfigPollerConfig{
-			ControlPlaneURL: cfg.ControlplaneURL,
-			GraphSignKey:    cfg.Graph.SignKey,
-			PollInterval:    cfg.PollInterval,
-			ExecutionConfig: cfg.ExecutionConfig,
-		}),
 		core.WithGraphQLPath(cfg.GraphQLPath),
 		core.WithModulesConfig(cfg.Modules),
 		core.WithGracePeriod(cfg.GracePeriod),
@@ -133,7 +106,6 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		core.WithInstanceID(cfg.InstanceID),
 		core.WithReadinessCheckPath(cfg.ReadinessCheckPath),
 		core.WithHeaderRules(cfg.Headers),
-		core.WithStaticRouterConfig(routerConfig),
 		core.WithRouterTrafficConfig(&cfg.TrafficShaping.Router),
 		core.WithFileUploadConfig(&cfg.FileUpload),
 		core.WithSubgraphTransportOptions(&core.SubgraphTransportOptions{
@@ -184,6 +156,34 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 	}
 
 	options = append(options, additionalOptions...)
+
+	if cfg.RouterRegistration && cfg.Graph.Token != "" {
+		selfRegister, err := selfregister.New(cfg.ControlplaneURL, cfg.Graph.Token,
+			selfregister.WithLogger(logger),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("could not create self register: %w", err)
+		}
+		options = append(options, core.WithSelfRegistration(selfRegister))
+	}
+
+	executionConfigPath := cfg.ExecutionConfig.File.Path
+	if executionConfigPath == "" {
+		executionConfigPath = cfg.RouterConfigPath
+	}
+
+	if executionConfigPath != "" {
+		options = append(options, core.WithExecutionConfig(&core.ExecutionConfig{
+			Watch: cfg.ExecutionConfig.File.Watch,
+			Path:  executionConfigPath,
+		}))
+	} else {
+		options = append(options, core.WithConfigPollerConfig(&core.RouterConfigPollerConfig{
+			GraphSignKey:    cfg.Graph.SignKey,
+			PollInterval:    cfg.PollInterval,
+			ExecutionConfig: cfg.ExecutionConfig,
+		}))
+	}
 
 	return core.NewRouter(options...)
 }

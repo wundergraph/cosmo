@@ -9,6 +9,8 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/cdn"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/s3"
+	"github.com/wundergraph/cosmo/router/pkg/execution_config"
+	"github.com/wundergraph/cosmo/router/pkg/file_watcher"
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 	configCDNProvider "github.com/wundergraph/cosmo/router/pkg/routerconfig/cdn"
 	configs3Provider "github.com/wundergraph/cosmo/router/pkg/routerconfig/s3"
@@ -117,9 +119,13 @@ type (
 
 	RouterConfigPollerConfig struct {
 		config.ExecutionConfig
-		PollInterval    time.Duration
-		GraphSignKey    string
-		ControlPlaneURL string
+		PollInterval time.Duration
+		GraphSignKey string
+	}
+
+	ExecutionConfig struct {
+		Watch bool
+		Path  string
 	}
 
 	// Config defines the configuration options for the Router.
@@ -136,7 +142,7 @@ type (
 		corsOptions               *cors.Config
 		setConfigVersionHeader    bool
 		routerGracePeriod         time.Duration
-		staticRouterConfig        *nodev1.RouterConfig
+		staticExecutionConfig     *nodev1.RouterConfig
 		awsLambda                 bool
 		shutdown                  atomic.Bool
 		bootstrapped              bool
@@ -160,6 +166,7 @@ type (
 		eventsConfig              config.EventsConfiguration
 		prometheusServer          *http.Server
 		modulesConfig             map[string]interface{}
+		executionConfig           *ExecutionConfig
 		routerMiddlewares         []func(http.Handler) http.Handler
 		preOriginHandlers         []TransportPreHandler
 		postOriginHandlers        []TransportPostHandler
@@ -175,6 +182,7 @@ type (
 		processStartTime          time.Time
 		developmentMode           bool
 		healthcheck               health.Checker
+		configFileWatcher         *file_watcher.Watcher
 		// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
 		localhostFallbackInsideDocker bool
 
@@ -508,7 +516,9 @@ func (r *Router) listenAndServe(cfg *nodev1.RouterConfig) error {
 }
 
 func (r *Router) initModules(ctx context.Context) error {
-	for _, moduleInfo := range modules {
+	var moduleList = sortModules(modules)
+
+	for _, moduleInfo := range moduleList {
 		now := time.Now()
 
 		moduleInstance := moduleInfo.New()
@@ -570,7 +580,7 @@ func (r *Router) BaseURL() string {
 
 // NewServer prepares a new server instance but does not start it. The method should only be used when you want to bootstrap
 // the server manually otherwise you can use Router.Start(). You're responsible for setting health checks status to ready with Server.HealthChecks().
-// The server can be shutdown with Router.Shutdown(). Use core.WithStaticRouterConfig to pass the initial config otherwise the Router will
+// The server can be shutdown with Router.Shutdown(). Use core.WithExecutionConfig to pass the initial config otherwise the Router will
 // try to fetch the config from the control plane. You can swap the router config by using Router.newGraphServer().
 func (r *Router) NewServer(ctx context.Context) (Server, error) {
 	if r.shutdown.Load() {
@@ -591,19 +601,19 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 	})
 
 	// Start the server with the static config without polling
-	if r.staticRouterConfig != nil {
-		r.logger.Info("Static router config provided. Polling is disabled. Updating router config is only possible by providing a config.")
-		return r.httpServer, r.newServer(ctx, r.staticRouterConfig)
+	if r.staticExecutionConfig != nil {
+		r.logger.Info("Static execution config provided. Polling is disabled. Updating execution config is only possible by providing a config.")
+		return r.httpServer, r.newServer(ctx, r.staticExecutionConfig)
 	}
 
 	// when no static config is provided and no poller is configured, we can't start the server
 	if r.configPoller == nil {
-		return nil, fmt.Errorf("config fetcher not provided. Please provide a static router config instead")
+		return nil, fmt.Errorf("config fetcher not provided. Please provide a static execution config instead")
 	}
 
 	cfg, err := r.configPoller.GetRouterConfig(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get initial router config: %w", err)
+		return nil, fmt.Errorf("failed to get initial execution config: %w", err)
 	}
 
 	if err := r.newServer(ctx, cfg.Config); err != nil {
@@ -747,6 +757,14 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		})
 	}
 
+	if r.executionConfig != nil && r.executionConfig.Path != "" {
+		executionConfig, err := execution_config.FromFile(r.executionConfig.Path)
+		if err != nil {
+			return fmt.Errorf("failed to read execution config: %w", err)
+		}
+		r.staticExecutionConfig = executionConfig
+	}
+
 	if err := r.buildClients(); err != nil {
 		return err
 	}
@@ -856,12 +874,15 @@ func (r *Router) buildClients() error {
 	var rClient routerconfig.Client
 
 	// Poller is only initialized when a config poller is configured and the router is not started with a static config
-	if r.staticRouterConfig == nil && r.routerConfigPollerConfig != nil && r.configPoller == nil {
+	if r.staticExecutionConfig == nil && r.routerConfigPollerConfig != nil && r.configPoller == nil {
 
 		if provider, ok := cdnProviders[r.routerConfigPollerConfig.Storage.ProviderID]; ok {
 
 			if r.graphApiToken == "" {
-				return errors.New("graph token is required to fetch router config from CDN")
+				return errors.New(
+					"graph token is required to fetch execution config from CDN. " +
+						"Alternatively, configure a custom storage provider or specify a static execution config",
+				)
 			}
 
 			c, err := configCDNProvider.NewClient(
@@ -876,7 +897,7 @@ func (r *Router) buildClients() error {
 			}
 			rClient = c
 
-			r.logger.Info("Polling for router config updates from CDN in the background",
+			r.logger.Info("Polling for execution config updates from CDN in the background",
 				zap.String("providerID", provider.ID),
 				zap.String("interval", r.routerConfigPollerConfig.PollInterval.String()),
 			)
@@ -895,7 +916,7 @@ func (r *Router) buildClients() error {
 			}
 			rClient = c
 
-			r.logger.Info("Polling for router config updates from S3 storage in the background",
+			r.logger.Info("Polling for execution config updates from S3 storage in the background",
 				zap.String("providerID", provider.ID),
 				zap.String("interval", r.routerConfigPollerConfig.PollInterval.String()),
 			)
@@ -905,7 +926,10 @@ func (r *Router) buildClients() error {
 			}
 
 			if r.graphApiToken == "" {
-				return errors.New("graph token is required to fetch router config from CDN")
+				return errors.New(
+					"graph token is required to fetch execution config from CDN. " +
+						"Alternatively, configure a custom storage provider or specify a static execution config",
+				)
 			}
 
 			c, err := configCDNProvider.NewClient(r.cdnConfig.URL, r.graphApiToken, &configCDNProvider.Options{
@@ -916,8 +940,9 @@ func (r *Router) buildClients() error {
 				return err
 			}
 			rClient = c
-			r.logger.Debug("Default to Cosmo CDN as router config provider",
-				zap.String("url", r.cdnConfig.URL),
+
+			r.logger.Info("Polling for execution config updates from Cosmo CDN in the background",
+				zap.String("interval", r.routerConfigPollerConfig.PollInterval.String()),
 			)
 		}
 
@@ -940,7 +965,7 @@ func (r *Router) Start(ctx context.Context) error {
 	}
 
 	if err := r.bootstrap(ctx); err != nil {
-		return fmt.Errorf("failed to bootstrap application: %w", err)
+		return fmt.Errorf("failed to bootstrap router: %w", err)
 	}
 
 	r.httpServer = newServer(&httpServerOptions{
@@ -953,24 +978,67 @@ func (r *Router) Start(ctx context.Context) error {
 	})
 
 	// Start the server with the static config without polling
-	if r.staticRouterConfig != nil {
-		r.logger.Info("Static router config provided. Polling is disabled. Updating router config is only possible by providing a config.")
-
-		if err := r.newServer(ctx, r.staticRouterConfig); err != nil {
+	if r.staticExecutionConfig != nil {
+		if err := r.newServer(ctx, r.staticExecutionConfig); err != nil {
 			return err
 		}
 
-		return r.listenAndServe(r.staticRouterConfig)
+		if err := r.listenAndServe(r.staticExecutionConfig); err != nil {
+			return err
+		}
+
+		if r.executionConfig != nil && r.executionConfig.Watch {
+			watcher, err := file_watcher.FileWatcher(r.logger, r.executionConfig.Path)
+			if err != nil {
+				return fmt.Errorf("failed to watch config file: %w", err)
+			}
+			err = watcher.Watch(func() {
+				if r.shutdown.Load() {
+					r.logger.Warn("Router is in shutdown state. Skipping config update")
+				}
+
+				data, err := os.ReadFile(r.executionConfig.Path)
+				if err != nil {
+					r.logger.Error("Failed to read config file", zap.Error(err))
+					return
+				}
+
+				r.logger.Info("Config file changed. Updating server with new config")
+
+				cfg, err := execution_config.UnmarshalConfig(data)
+				if err != nil {
+					r.logger.Error("Failed to serialize config file", zap.Error(err))
+					return
+				}
+
+				if err := r.newServer(ctx, cfg); err != nil {
+					r.logger.Error("Failed to update server with new config", zap.Error(err))
+				}
+			})
+			if err != nil {
+				return fmt.Errorf("failed to watch config file: %w", err)
+			}
+			r.logger.Info("Watching config file for changes. Router will hot-reload automatically without downtime",
+				zap.String("path", r.executionConfig.Path),
+			)
+			r.configFileWatcher = watcher
+
+			return nil
+		}
+
+		r.logger.Info("Static execution config provided. Polling is disabled. Updating execution config is only possible by restarting the server")
+
+		return nil
 	}
 
 	// when no static config is provided and no poller is configured, we can't start the server
 	if r.configPoller == nil {
-		return fmt.Errorf("config fetcher not provided. Please provide a static router config instead")
+		return fmt.Errorf("execution config fetcher not provided. Please provide a static execution config instead")
 	}
 
 	cfg, err := r.configPoller.GetRouterConfig(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to get initial router config: %w", err)
+		return fmt.Errorf("failed to get initial execution config: %w", err)
 	}
 
 	if err := r.newServer(ctx, cfg.Config); err != nil {
@@ -1046,6 +1114,12 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 		defer cancel()
 
 		ctx = ctxWithTimer
+	}
+
+	if r.configFileWatcher != nil {
+		if subErr := r.configFileWatcher.Close(); subErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to close config file watcher: %w", subErr))
+		}
 	}
 
 	if r.configPoller != nil {
@@ -1278,9 +1352,16 @@ func WithModulesConfig(config map[string]interface{}) Option {
 	}
 }
 
-func WithStaticRouterConfig(cfg *nodev1.RouterConfig) Option {
+func WithExecutionConfig(cfg *ExecutionConfig) Option {
 	return func(r *Router) {
-		r.staticRouterConfig = cfg
+		r.executionConfig = cfg
+	}
+}
+
+// WithStaticExecutionConfig sets the static execution config. This disables polling and file watching.
+func WithStaticExecutionConfig(cfg *nodev1.RouterConfig) Option {
+	return func(r *Router) {
+		r.staticExecutionConfig = cfg
 	}
 }
 

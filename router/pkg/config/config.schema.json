@@ -131,24 +131,53 @@
     },
     "execution_config": {
       "type": "object",
-      "additionalProperties": false,
-      "description": "The configuration for the execution config.",
-      "properties": {
-        "storage": {
-          "description": "The storage provider for the execution config. Only one provider can be active. When no provider is specified, the router will fallback to the Cosmo CDN provider to download the execution config.",
-          "required": ["provider_id", "object_path"],
+      "description": "The configuration for the execution config. You can load the execution config from the local file system or from a storage provider.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "provider_id": {
-              "description": "The ID of the storage provider. The ID must match the ID of the storage provider in the storage_providers section.",
-              "type": "string"
-            },
-            "object_path": {
-              "type": "string",
-              "description": "The path to the execution config in the storage provider. The path is used to download the execution config from the S3 bucket."
+            "file": {
+              "type": "object",
+              "description": "The configuration for the execution config file. The config file is used to load the execution config from the local file system. The file has precedence over the storage provider.",
+              "additionalProperties": false,
+              "required": ["path"],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "format": "file-path",
+                  "description": "The path to the execution config file. The path is used to load the execution config from the local file system."
+                },
+                "watch": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the watch mode. The watch mode is used to watch the execution config file for changes. If the file changes, the router will reload the execution config without downtime."
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "storage": {
+              "description": "The storage provider for the execution config. Only one provider can be active. When no provider is specified, the router will fallback to the Cosmo CDN provider to download the execution config. Updating the execution config is happening in the background without downtime.",
+              "required": ["provider_id", "object_path"],
+              "properties": {
+                "provider_id": {
+                  "description": "The ID of the storage provider. The ID must match the ID of the storage provider in the storage_providers section.",
+                  "type": "string"
+                },
+                "object_path": {
+                  "type": "string",
+                  "description": "The path to the execution config in the storage provider. The path is used to download the execution config from the storage provider."
+                }
+              }
             }
           }
         }
-      }
+      ]
     },
     "graphql_metrics": {
       "type": "object",
@@ -670,7 +699,7 @@
     },
     "controlplane_url": {
       "type": "string",
-      "description": "The URL of the control plane. The URL is used to register the router in the control plane. The URL is specified as a string with the format 'scheme://host:port'.",
+      "description": "The URL of the control plane. The URL is used to register the router on the control-plane. The URL is specified as a string with the format 'scheme://host:port'.",
       "default": "https://cosmo-cp.wundergraph.com",
       "format": "http-url"
     },
@@ -1054,18 +1083,18 @@
     },
     "cdn": {
       "type": "object",
-      "deprecationMessage": "The CDN is deprecated. Please use the execution_config and persisted_operations instead.",
       "description": "The configuration for the CDN. The CDN is used to fetch the schema and configurations from the CDN.",
       "additionalProperties": false,
       "properties": {
         "url": {
           "type": "string",
           "format": "http-url",
-          "description": "The URL of the CDN. The URL is used to fetch the schema and the configuration from the CDN. The URL is specified as a string with the format 'scheme://host:port'."
+          "description": "The URL of the CDN. The URL is used to register the router on the control-plane. The URL is specified as a string with the format 'scheme://host:port'."
         },
         "cache_size": {
           "type": "string",
           "default": "100MB",
+          "deprecationMessage": "The cache_size is deprecated. Please use the persisted_operations.cache instead.",
           "bytes": {
             "minimum": "10MB"
           },
@@ -1211,13 +1240,13 @@
     "router_config_path": {
       "type": "string",
       "format": "file-path",
-      "deprecationMessage": "The router_config_path is deprecated. Please use the execution_config instead.",
+      "deprecationMessage": "The router_config_path is deprecated. Please use the execution_config.file instead.",
       "description": "The path of the router execution config file. This file contains the information how your graph is resolved and configured. The path is specified as a string with the format 'path/to/file'."
     },
     "router_registration": {
       "type": "boolean",
       "default": true,
-      "description": "Enable the router registration. The router registration is used to register the router in the control plane. The default value is true. This should not be modified unless you know what you are doing."
+      "description": "Enable the router registration. The router registration is used to register the router on the control-plane. The default value is true. This should not be modified unless you know what you are doing."
     },
     "override_routing_url": {
       "type": "object",
@@ -1421,7 +1450,7 @@
           "default": 1024,
           "description": "The size of the normalization cache."
         },
-        "parsekit_pool_size":{
+        "parsekit_pool_size": {
           "type": "integer",
           "default": 8,
           "description": "The size of the ParseKit pool. The ParseKit pool provides re-usable Resources for parsing, normalizing, validating and planning GraphQL Operations. Setting the pool size to a value much higher than the number of CPU Threads available will not improve performance, but only increase memory usage."

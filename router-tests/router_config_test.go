@@ -12,7 +12,7 @@ import (
 
 func TestRouterConfigParsing(t *testing.T) {
 	t.Parallel()
-	routerConfig, err := execution_config.SerializeConfigFromFile("./testdata/routerConfig.json")
+	routerConfig, err := execution_config.FromFile("./testdata/routerConfig.json")
 	require.NoError(t, err)
 
 	assert.Equal(t, routerConfig.Version, "96f0fab1-d0a4-4fc1-801d-59f684f8315d")
@@ -81,7 +81,7 @@ func TestRouterConfigParsing(t *testing.T) {
 
 func TestRouterConfigParsingOfUnknownProperties(t *testing.T) {
 	t.Parallel()
-	routerConfig, err := execution_config.SerializeConfigFromFile("./testdata/routerConfigWithUnknownProperties.json")
+	routerConfig, err := execution_config.FromFile("./testdata/routerConfigWithUnknownProperties.json")
 	require.NoError(t, err)
 
 	assert.Equal(t, routerConfig.Version, "96f0fab1-d0a4-4fc1-801d-59f684f8315d")

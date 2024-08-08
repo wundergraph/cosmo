@@ -238,6 +238,10 @@
     "CDN": null
   },
   "ExecutionConfig": {
+    "File": {
+      "Path": "",
+      "Watch": false
+    },
     "Storage": {
       "ProviderID": "",
       "ObjectPath": ""

@@ -1,20 +1,23 @@
-name: "Go Lint"
-description: "This action validates the codebase using static analysis tools"
+---
+name: go-linter
+description: This action validates the codebase using static analysis tools
 inputs:
   working-directory:
-    description: "The working directory to run the linter in"
+    description: The working directory to run the linter in
+    required: true
+    type: string
 
 runs:
-  using: "composite"
+  using: composite
   steps:
-    - name: Run go vet on router
-      run: "go vet ./..."
+    - name: Run go vet
+      run: go vet ./...
       shell: bash
       working-directory: ${{ inputs.working-directory }}
 
-    - name: Run staticcheck linter on router
+    - name: Run staticcheck linter
       uses: dominikh/staticcheck-action@v1.3.0
       with:
-        version: "2023.1.7"
+        version: 2023.1.7
         install-go: false
         working-directory: ${{ inputs.working-directory }}

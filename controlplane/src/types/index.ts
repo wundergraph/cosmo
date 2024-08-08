@@ -512,6 +512,15 @@ export type TimeFilters = {
   dateRange: DateRange<number>;
 };
 
+export interface MailerParams {
+  smtpHost: string;
+  smtpPort: number;
+  smtpSecure: boolean;
+  smtpRequireTls: boolean;
+  smtpUsername: string;
+  smtpPassword: string;
+}
+
 type LintRuleType = Record<LintRuleEnum, LintRuleEnum>;
 
 // when the rules are changed, it has to be changed in the constants.ts file in the studio to maintain consistency.
