@@ -64,6 +64,7 @@ jobs:
           echo $elements | while read i; do
             headBranchName=$(echo $i | jq -r '.headBranchName')
             (
+              git fetch
               git checkout $headBranchName
 
               cd helm || true
