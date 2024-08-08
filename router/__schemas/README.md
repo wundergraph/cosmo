@@ -7,4 +7,10 @@ This directory contains files and scripts used to generate a Router execution co
 1. Start the subgraphs in the `subgraphs` directory by running `dc-subgraphs-demo` from the root of the repository.
 2. `./compose.sh` to generate the Router execution config from the subgraphs. The generated file will be placed in the `__schemas/config.json`.
 
-You can use the generate file by setting the `router_config_path` property to `./__schemas/config.json` in the Router config [`config.yml`](../config.yml).
+Modify the [`config.yml`](../config.yml) to use the generated file by adding the following:
+
+```yaml
+execution_config:
+  file:
+    path: "./__schemas/config.json"
+```
