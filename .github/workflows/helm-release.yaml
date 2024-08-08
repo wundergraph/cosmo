@@ -40,7 +40,7 @@ jobs:
 
       - name: debug
         run: |
-          echo ${{ toJSON(steps.release.outputs) }}
+          echo "${{ toJSON(steps.release.outputs) }}"
 
       - uses: ./.github/actions/helm-release-docs-update
         if: ${{ steps.release.outputs['helm/cosmo--pr'].headBranchName }}
