@@ -1,0 +1,45 @@
+---
+name: helm-release-docs-update
+description: update the helm chart docs
+inputs:
+  working-directory:
+    description: The working directory to run the publish command in
+    required: true
+    type: string
+  github-token:
+    description: The working directory to run the publish command in
+    required: true
+    type: string
+  branch:
+    description: The working directory to run the publish command in
+    required: true
+    type: string
+
+permissions:
+  contents: write
+
+runs:
+  using: composite
+  steps:
+    - name: install-tools
+      shell: bash
+      run: go install github.com/norwoodj/helm-docs/cmd/helm-docs@v1.11.3
+
+    - name: smoke-tests
+      shell: bash
+      run: |
+        type helm-docs
+
+    - name: checkout
+      uses: actions/checkout@v4
+
+    - name: update-helm-docs
+      shell: bash
+      run: make docs
+      working-directory: ${{ inputs.working-directory }}
+
+    - name: commit-and-push
+      uses: actions-js/push@master
+      with:
+        github_token: ${{ inputs.github-token }}
+        branch: ${{ inputs.branch }}

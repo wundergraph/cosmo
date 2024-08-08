@@ -37,6 +37,13 @@ jobs:
           skip-github-release: false
           skip-github-pull-request: false
 
+      - uses: ./.github/actions/helm-release-docs-update
+        if: ${{ steps.release.outputs['helm/cosmo--pr'].headBranchName }}
+        with:
+          working-directory: ./helm
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ steps.release.outputs['helm/cosmo--pr'].headBranchName }}
+
       - uses: ./.github/actions/helm-release
         if: ${{ steps.release.outputs['helm/cosmo--release_created'] }}
         with:
@@ -45,6 +52,13 @@ jobs:
           registry-username: ${{ github.actor }}
           registry-password: ${{ secrets.GITHUB_TOKEN }}
           make-target: publish-cosmo-chart
+
+      - uses: ./.github/actions/helm-release-docs-update
+        if: ${{ steps.release.outputs['helm/cosmo/charts/router--pr'].headBranchName }}
+        with:
+          working-directory: ./helm
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ steps.release.outputs['helm/cosmo/charts/router--pr'].headBranchName }}
 
       - uses: ./.github/actions/helm-release
         if: ${{ steps.release.outputs['helm/cosmo/charts/router--release_created'] }}
