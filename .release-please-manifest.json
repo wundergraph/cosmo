@@ -1,4 +1,4 @@
 {
-  "helm/cosmo": "0.7.0",
+  "helm/cosmo": "0.8.0",
   "helm/cosmo/charts/router": "0.4.0"
 }
