@@ -90,6 +90,7 @@ import {
   GetOrganizationMembersResponse,
   GetOrganizationRequestsCountResponse,
   GetOrganizationWebhookConfigsResponse,
+  GetOrganizationWebhookHistoryResponse,
   GetOrganizationWebhookMetaResponse,
   GetPendingOrganizationMembersResponse,
   GetPersistedOperationsResponse,
@@ -11491,6 +11492,54 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
           featureFlags,
           totalCount: featureFlags.length,
+        };
+      });
+    },
+
+    getOrganizationWebhookHistory: (req, ctx) => {
+      let logger = getLogger(ctx, opts.logger);
+
+      return handleError<PlainMessage<GetOrganizationWebhookHistoryResponse>>(ctx, logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
+
+        const analyticsRetention = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'analytics-retention',
+        });
+
+        const { dateRange } = validateDateRanges({
+          limit: analyticsRetention?.limit ?? 7,
+          dateRange: req.dateRange,
+        });
+
+        if (!dateRange) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Invalid date range',
+            },
+            deliveries: [],
+            totalCount: 0,
+          };
+        }
+
+        const { deliveries, totalCount } = await orgRepo.getWebhookHistory({
+          organizationID: authContext.organizationId,
+          limit: req.pagination?.limit,
+          offset: req.pagination?.offset,
+          filterByType: req.filterByType,
+          startDate: dateRange.start,
+          endDate: dateRange.end,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          deliveries,
+          totalCount,
         };
       });
     },

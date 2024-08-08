@@ -1152,8 +1152,8 @@ export const webhookDeliveries = pgTable('webhook_deliveries', {
   responseBody: text('response_body'),
   retryCount: integer('retry_count').notNull().default(0),
   duration: real('duration').notNull().default(0),
-  isRedelivery: boolean('is_redelivery').notNull().default(false),
   /***
+   * Set if it is a redelivery
    * Keep track of the original id in case of redelivery.
    * The id of an already redelivered webhook may also be set here.
    *

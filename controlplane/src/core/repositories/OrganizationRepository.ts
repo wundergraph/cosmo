@@ -4,9 +4,10 @@ import {
   Integration,
   IntegrationConfig,
   IntegrationType,
+  WebhookDelivery,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { addDays } from 'date-fns';
-import { SQL, and, asc, eq, inArray, like, not, sql } from 'drizzle-orm';
+import { SQL, and, asc, count, eq, gt, inArray, like, lt, not, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { MemberRole, NewOrganizationFeature } from '../../db/models.js';
@@ -1354,5 +1355,47 @@ export class OrganizationRepository {
     return input.deleteOrganizationQueue.removeJob({
       organizationId: input.organizationId,
     });
+  }
+
+  public async getWebhookHistory(input: {
+    organizationID: string;
+    filterByType?: string;
+    offset?: number;
+    limit?: number;
+    startDate: string;
+    endDate: string;
+  }): Promise<{ deliveries: PlainMessage<WebhookDelivery>[]; totalCount: number }> {
+    const conditions = and(
+      eq(schema.webhookDeliveries.organizationId, input.organizationID),
+      gt(schema.webhookDeliveries.createdAt, new Date(input.startDate)),
+      lt(schema.webhookDeliveries.createdAt, new Date(input.endDate)),
+      input.filterByType
+        ? eq(schema.webhookDeliveries.type, input.filterByType as (typeof schema.webhookDeliveryType.enumValues)[0])
+        : undefined,
+    );
+
+    const res = await this.db.query.webhookDeliveries.findMany({
+      where: conditions,
+      offset: input.offset,
+      limit: input.limit,
+    });
+
+    const totalCount = (await this.db.select({ count: count() }).from(schema.webhookDeliveries).where(conditions))[0]
+      .count;
+
+    const deliveries = res.map((r) => ({
+      ...r,
+      createdBy: r.createdById || undefined,
+      isRedelivery: !!r.originalDeliveryId,
+      createdAt: r.createdAt.toISOString(),
+      requestHeaders: JSON.stringify(r.requestHeaders),
+      responseHeaders: r.responseHeaders ? JSON.stringify(r.responseHeaders) : undefined,
+      responseStatusCode: r.responseStatusCode || undefined,
+      responseErrorCode: r.responseErrorCode || undefined,
+      responseBody: r.responseBody || undefined,
+      errorMessage: r.errorMessage || undefined,
+    }));
+
+    return { deliveries, totalCount };
   }
 }
