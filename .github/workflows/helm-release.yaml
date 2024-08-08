@@ -64,7 +64,7 @@ jobs:
           elements=$(echo $created_prs | jq -c '.[]')
           echo $elements | while read i; do
             headBranchName=$(echo $i | jq -r '.headBranchName')
-            git checkout origin/$headBranchName
+            git checkout $headBranchName
             (
               cd helm || true
               make docs
