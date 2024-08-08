@@ -8,7 +8,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-type tokenDecoder interface {
+type TokenDecoder interface {
 	Decode(token string) (Claims, error)
 }
 
@@ -18,7 +18,7 @@ type jwksTokenDecoder struct {
 	jwks *keyfunc.JWKS
 }
 
-// Decode implements tokenDecoder.
+// Decode implements TokenDecoder.
 func (j *jwksTokenDecoder) Decode(tokenString string) (Claims, error) {
 	token, err := jwt.Parse(tokenString, j.jwks.Keyfunc)
 	if err != nil {
@@ -28,7 +28,7 @@ func (j *jwksTokenDecoder) Decode(tokenString string) (Claims, error) {
 	return Claims(claims), nil
 }
 
-func NewJwksTokenDecoder(url string, refreshInterval time.Duration) (tokenDecoder, error) {
+func NewJwksTokenDecoder(url string, refreshInterval time.Duration) (TokenDecoder, error) {
 
 	jwks, err := keyfunc.Get(url, keyfunc.Options{
 		RefreshInterval: refreshInterval,

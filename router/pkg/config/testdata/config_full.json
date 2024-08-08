@@ -340,7 +340,7 @@
       "FromInitialPayload": {
         "Enabled": true,
         "Key": "Authorization",
-        "ExportTokenToRequestHeader": {
+        "ExportToken": {
           "Enabled": true,
           "HeaderKey": "Authorization"
         }

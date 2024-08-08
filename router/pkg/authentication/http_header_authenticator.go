@@ -13,7 +13,7 @@ const (
 )
 
 type httpHeaderAuthenticator struct {
-	tokenDecoder        tokenDecoder
+	tokenDecoder        TokenDecoder
 	name                string
 	headerNames         []string
 	headerValuePrefixes []string
@@ -56,7 +56,7 @@ type HttpHeaderAuthenticatorOptions struct {
 	// Bearer
 	HeaderValuePrefixes []string
 	// TokenDecoder is the token decoder to use for decoding the token. It cannot be nil.
-	TokenDecoder tokenDecoder
+	TokenDecoder TokenDecoder
 }
 
 // NewHttpHeaderAuthenticator returns a HttpHeader based authenticator. See HttpHeaderAuthenticatorOptions

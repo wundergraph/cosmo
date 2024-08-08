@@ -258,7 +258,7 @@ websocket:
     from_initial_payload:
       enabled: true
       key: "Authorization"
-      export_token_to_client_request_header:
+      export_token:
         enabled: true
         header_key: "Authorization"
 

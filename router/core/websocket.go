@@ -332,7 +332,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		handler.r = validatedReq
 
 		// Export the token from the initial payload to the request header
-		if fromInitialPayloadConfig.ExportTokenToRequestHeader.Enabled {
+		if fromInitialPayloadConfig.ExportToken.Enabled {
 			var initialPayloadMap map[string]interface{}
 			err := json.Unmarshal(handler.initialPayload, &initialPayloadMap)
 			if err != nil {
@@ -343,11 +343,13 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 			}
 			jwtToken, ok := initialPayloadMap[fromInitialPayloadConfig.Key].(string)
 			if !ok {
-				requestLogger.Error("JWT token is not a string")
+				err := fmt.Errorf("invalid JWT token in initial payload: JWT token is not a string")
+				requestLogger.Error(err.Error())
+				handler.writeErrorMessage(requestID, err)
 				handler.Close()
 				return
 			}
-			handler.r.Header.Set(fromInitialPayloadConfig.ExportTokenToRequestHeader.HeaderKey, jwtToken)
+			handler.r.Header.Set(fromInitialPayloadConfig.ExportToken.HeaderKey, jwtToken)
 		}
 	}
 

@@ -9,7 +9,7 @@ import (
 )
 
 type websocketInitialPayloadAuthenticator struct {
-	tokenDecoder        tokenDecoder
+	tokenDecoder        TokenDecoder
 	key                 string
 	name                string
 	headerValuePrefixes []string
@@ -60,7 +60,7 @@ func (a *websocketInitialPayloadAuthenticator) Authenticate(ctx context.Context,
 // WebsocketInitialPayloadAuthenticatorOptions contains the available options for the InitialPayload authenticator
 type WebsocketInitialPayloadAuthenticatorOptions struct {
 	// TokenDecoder is the token decoder to use for decoding the token.
-	TokenDecoder tokenDecoder
+	TokenDecoder TokenDecoder
 	// Key represents the property name in the initial payload that contains the token.
 	Key string
 	// HeaderValuePrefixes are the prefixes to use for retrieving the token. It defaults to

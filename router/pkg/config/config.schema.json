@@ -344,7 +344,7 @@
                   "description": "This configuration indicates if the Router should look for the JWT (JSON Web Token) in the initial payload of the WebSocket Connection. The default value is 'false'.",
                   "default": false
                 },
-                "export_token_to_client_request_header": {
+                "export_token": {
                   "type": "object",
                   "description": "The configuration used to export the JWT (JSON Web Token) to the client request header.",
                   "additionalProperties": false,

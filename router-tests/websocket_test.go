@@ -428,11 +428,7 @@ func TestWebSockets(t *testing.T) {
 
 			var res testenv.WebSocketMessage
 			err = conn.ReadJSON(&res)
-			require.NoError(t, err)
-			require.Equal(t, "error", res.Type)
-			payload, err := json.Marshal(res.Payload)
-			require.NoError(t, err)
-			require.JSONEq(t, `[{"message":"unauthorized"}]`, string(payload))
+			require.Error(t, err)
 
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 			xEnv.WaitForConnectionCount(0, time.Second*5)

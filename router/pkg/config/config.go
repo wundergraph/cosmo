@@ -361,7 +361,7 @@ type ComplianceConfig struct {
 	AnonymizeIP AnonymizeIpConfiguration `yaml:"anonymize_ip,omitempty"`
 }
 
-type ExportTokenToRequestHeaderConfiguration struct {
+type ExportTokenConfiguration struct {
 	// Enabled true if the Router should export the token to the client request header
 	Enabled bool `yaml:"enabled" envDefault:"true"`
 	// HeaderKey is the name of the header where the token should be exported to
@@ -378,8 +378,8 @@ type InitialPayloadAuthenticationConfiguration struct {
 	Enabled bool `yaml:"enabled,omitempty" envDefault:"false"`
 	// The key in the initial payload where the token is stored
 	Key string `yaml:"key,omitempty" envDefault:"Authorization"`
-	// ExportTokenToRequestHeader represents the configuration for exporting the token to the client request header.
-	ExportTokenToRequestHeader ExportTokenToRequestHeaderConfiguration `yaml:"export_token_to_client_request_header"`
+	// ExportToken represents the configuration for exporting the token to the client request header.
+	ExportToken ExportTokenConfiguration `yaml:"export_token"`
 }
 
 type WebSocketConfiguration struct {
