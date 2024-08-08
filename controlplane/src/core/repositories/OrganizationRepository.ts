@@ -1379,6 +1379,13 @@ export class OrganizationRepository {
       offset: input.offset,
       limit: input.limit,
       orderBy: desc(schema.webhookDeliveries.createdAt),
+      with: {
+        user: {
+          columns: {
+            email: true,
+          },
+        },
+      },
     });
 
     const totalCount = (await this.db.select({ count: count() }).from(schema.webhookDeliveries).where(conditions))[0]
@@ -1386,7 +1393,7 @@ export class OrganizationRepository {
 
     const deliveries = res.map((r) => ({
       ...r,
-      createdBy: r.createdById || undefined,
+      createdBy: r.user?.email || undefined,
       isRedelivery: !!r.originalDeliveryId,
       createdAt: r.createdAt.toISOString(),
       requestHeaders: JSON.stringify(r.requestHeaders),
@@ -1403,6 +1410,13 @@ export class OrganizationRepository {
   getWebhookDeliveryById(id: string, organizationId: string) {
     return this.db.query.webhookDeliveries.findFirst({
       where: and(eq(schema.webhookDeliveries.id, id), eq(schema.webhookDeliveries.organizationId, organizationId)),
+      with: {
+        user: {
+          columns: {
+            email: true,
+          },
+        },
+      },
     });
   }
 }

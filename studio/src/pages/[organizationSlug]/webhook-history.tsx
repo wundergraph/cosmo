@@ -60,26 +60,29 @@ import {
 } from "@tanstack/react-table";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
+  getDeliveryDetails,
   getOrganizationWebhookHistory,
   redeliverWebhook,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import {
-  GetOrganizationWebhookHistoryResponse,
-  WebhookDelivery,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { GetOrganizationWebhookHistoryResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatISO } from "date-fns";
 import { useRouter } from "next/router";
-import { useMemo } from "react";
 
-const WebhookDeliveryDetails = ({
-  details,
-  refresh,
-}: {
-  details?: WebhookDelivery;
-  refresh: () => void;
-}) => {
+const WebhookDeliveryDetails = ({ refresh }: { refresh: () => void }) => {
   const router = useRouter();
   const { toast } = useToast();
+
+  const detailsId = router.query.details as string;
+
+  const { data, error, isLoading, refetch } = useQuery(
+    getDeliveryDetails,
+    {
+      id: detailsId,
+    },
+    {
+      enabled: !!detailsId,
+    },
+  );
 
   const { mutate, isPending } = useMutation(redeliverWebhook, {
     onSuccess: (data) => {
@@ -104,10 +107,153 @@ const WebhookDeliveryDetails = ({
     },
   });
 
+  let content;
+  if (isLoading) {
+    content = <Loader fullscreen />;
+  } else if (
+    error ||
+    data?.response?.code !== EnumStatusCode.OK ||
+    !data.delivery
+  ) {
+    content = (
+      <EmptyState
+        icon={<ExclamationTriangleIcon />}
+        title="Could not retrieve delivery details"
+        description={
+          data?.response?.details || error?.message || "Please try again"
+        }
+        actions={<Button onClick={() => refetch()}>Retry</Button>}
+      />
+    );
+  } else {
+    const details = data.delivery;
+    content = (
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-1 items-center gap-x-2 rounded-md border border-input p-2">
+            <Badge>POST</Badge>
+            <code className="w-full truncate break-all text-xs">
+              {details.endpoint}
+            </code>
+          </div>
+          <Button
+            variant="secondary"
+            className="w-full md:w-auto"
+            isLoading={isPending}
+            onClick={() => {
+              mutate({
+                id: details.id,
+              });
+            }}
+          >
+            Redeliver
+          </Button>
+        </div>
+        <TableWrapper>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Time</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Event</TableHead>
+                <TableHead>Duration</TableHead>
+                <TableHead>Retries</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow>
+                <TableCell>
+                  {formatDateTime(new Date(details.createdAt))}
+                </TableCell>
+                <TableCell>
+                  {details.responseStatusCode || details.responseErrorCode}
+                </TableCell>
+                <TableCell>
+                  <Badge variant="secondary">{details.eventName}</Badge>
+                </TableCell>
+                <TableCell>{msToTime(details.duration)}</TableCell>
+                <TableCell>{details.retryCount}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </TableWrapper>
+        <div className="text-sm text-muted-foreground">
+          Triggered by {details.createdBy ?? "unknown user"}
+        </div>
+        <Tabs className="mt-2" defaultValue="request">
+          <TabsList>
+            <TabsTrigger value="request">Request</TabsTrigger>
+            <TabsTrigger value="response" className="gap-x-2">
+              Response
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent autoFocus={false} value="request" className="px-1">
+            <h3 className="mb-2 mt-6 text-base font-semibold tracking-tight">
+              Headers
+            </h3>
+            <div className="scrollbar-custom overflow-auto rounded border">
+              <CodeViewer
+                disableLinking
+                code={details.requestHeaders}
+                language="json"
+              />
+            </div>
+            <h3 className="mb-2 mt-6 text-base font-semibold tracking-tight">
+              Payload
+            </h3>
+            <div className="scrollbar-custom overflow-auto rounded border">
+              <CodeViewer
+                disableLinking
+                code={details.payload}
+                language="json"
+              />
+            </div>
+          </TabsContent>
+          <TabsContent autoFocus={false} value="response" className="px-1">
+            {details.errorMessage && (
+              <>
+                <h3 className="mb-2 mt-6 text-base font-semibold tracking-tight">
+                  Error
+                </h3>
+                <div className="rounded border px-3 py-2 font-mono text-xs">
+                  {details.errorMessage}
+                </div>
+              </>
+            )}
+            <h3 className="mb-2 mt-6 text-base font-semibold tracking-tight">
+              Headers
+            </h3>
+            <div className="scrollbar-custom overflow-auto rounded border">
+              <CodeViewer
+                disableLinking
+                code={details.responseHeaders || ""}
+                language="json"
+              />
+            </div>
+            {JSON.parse(details.responseBody || "{}") && (
+              <>
+                <h3 className="mb-2 mt-6 text-base font-semibold tracking-tight">
+                  Body
+                </h3>
+                <div className="scrollbar-custom overflow-auto rounded border">
+                  <CodeViewer
+                    disableLinking
+                    code={details.responseBody || "{}"}
+                    language="json"
+                  />
+                </div>
+              </>
+            )}
+          </TabsContent>
+        </Tabs>
+      </div>
+    );
+  }
+
   return (
     <Sheet
       modal
-      open={!!details}
+      open={!!detailsId}
       onOpenChange={(isOpen) => {
         if (!isOpen) {
           const newQuery = { ...router.query };
@@ -122,127 +268,12 @@ const WebhookDeliveryDetails = ({
         <SheetHeader className="mb-4">
           <SheetTitle className="flex items-center gap-2">
             Details{" "}
-            {details?.isRedelivery && <Badge variant="muted">redelivery</Badge>}
+            {data?.delivery?.isRedelivery && (
+              <Badge variant="muted">redelivery</Badge>
+            )}
           </SheetTitle>
         </SheetHeader>
-        {details && (
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex flex-1 items-center gap-x-2 rounded-md border border-input p-2">
-                <Badge>POST</Badge>
-                <code className="w-full truncate break-all text-xs">
-                  {details.endpoint}
-                </code>
-              </div>
-              <Button
-                variant="secondary"
-                className="w-full md:w-auto"
-                isLoading={isPending}
-                onClick={() => {
-                  mutate({
-                    id: details.id,
-                  });
-                }}
-              >
-                Redeliver
-              </Button>
-            </div>
-            <TableWrapper>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Time</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Event</TableHead>
-                    <TableHead>Duration</TableHead>
-                    <TableHead>Retries</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <TableRow>
-                    <TableCell>
-                      {formatDateTime(new Date(details.createdAt))}
-                    </TableCell>
-                    <TableCell>
-                      {details.responseStatusCode || details.responseErrorCode}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{details.eventName}</Badge>
-                    </TableCell>
-                    <TableCell>{msToTime(details.duration)}</TableCell>
-                    <TableCell>{details.retryCount}</TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </TableWrapper>
-            <Tabs className="mt-6" defaultValue="request">
-              <TabsList>
-                <TabsTrigger value="request">Request</TabsTrigger>
-                <TabsTrigger value="response" className="gap-x-2">
-                  Response
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent autoFocus={false} value="request" className="px-1">
-                <h3 className="mb-2 mt-6 text-base font-semibold tracking-tight">
-                  Headers
-                </h3>
-                <div className="scrollbar-custom overflow-auto rounded border">
-                  <CodeViewer
-                    disableLinking
-                    code={details.requestHeaders}
-                    language="json"
-                  />
-                </div>
-                <h3 className="mb-2 mt-6 text-base font-semibold tracking-tight">
-                  Payload
-                </h3>
-                <div className="scrollbar-custom overflow-auto rounded border">
-                  <CodeViewer
-                    disableLinking
-                    code={details.payload}
-                    language="json"
-                  />
-                </div>
-              </TabsContent>
-              <TabsContent autoFocus={false} value="response" className="px-1">
-                {details.errorMessage && (
-                  <>
-                    <h3 className="mb-2 mt-6 text-base font-semibold tracking-tight">
-                      Error
-                    </h3>
-                    <div className="rounded border px-3 py-2 font-mono text-xs">
-                      {details.errorMessage}
-                    </div>
-                  </>
-                )}
-                <h3 className="mb-2 mt-6 text-base font-semibold tracking-tight">
-                  Headers
-                </h3>
-                <div className="scrollbar-custom overflow-auto rounded border">
-                  <CodeViewer
-                    disableLinking
-                    code={details.responseHeaders || ""}
-                    language="json"
-                  />
-                </div>
-                {JSON.parse(details.responseBody || "{}") && (
-                  <>
-                    <h3 className="mb-2 mt-6 text-base font-semibold tracking-tight">
-                      Body
-                    </h3>
-                    <div className="scrollbar-custom overflow-auto rounded border">
-                      <CodeViewer
-                        disableLinking
-                        code={details.responseBody || "{}"}
-                        language="json"
-                      />
-                    </div>
-                  </>
-                )}
-              </TabsContent>
-            </Tabs>
-          </div>
-        )}
+        {content}
       </SheetContent>
     </Sheet>
   );
@@ -279,11 +310,6 @@ const WebhookHistoryPage: NextPageWithLayout = () => {
       refetchInterval: refreshInterval,
     },
   );
-
-  const detailsId = router.query.details as string;
-  const webhookDetails = useMemo(() => {
-    return data?.deliveries.find((d) => d.id === detailsId);
-  }, [detailsId, data?.deliveries]);
 
   const applyParams = useApplyParams();
 
@@ -506,7 +532,7 @@ const WebhookHistoryPage: NextPageWithLayout = () => {
         )}
       </TableWrapper>
       <Pagination limit={limit} noOfPages={noOfPages} pageNumber={pageNumber} />
-      <WebhookDeliveryDetails details={webhookDetails} refresh={refetch} />
+      <WebhookDeliveryDetails refresh={refetch} />
     </div>
   );
 };

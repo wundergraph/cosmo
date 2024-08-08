@@ -64,6 +64,7 @@ import {
   GetCompositionDetailsResponse,
   GetCompositionsResponse,
   GetDashboardAnalyticsViewResponse,
+  GetDeliveryDetailsResponse,
   GetDiscussionResponse,
   GetDiscussionSchemasResponse,
   GetFeatureFlagByNameResponse,
@@ -11543,6 +11544,45 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
           deliveries,
           totalCount,
+        };
+      });
+    },
+
+    getDeliveryDetails: (req, ctx) => {
+      let logger = getLogger(ctx, opts.logger);
+
+      return handleError<PlainMessage<GetDeliveryDetailsResponse>>(ctx, logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
+
+        const delivery = await orgRepo.getWebhookDeliveryById(req.id, authContext.organizationId);
+        if (!delivery) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Could not find webhook delivery`,
+            },
+          };
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          delivery: {
+            ...delivery,
+            createdBy: delivery.user?.email || undefined,
+            isRedelivery: !!delivery.originalDeliveryId,
+            createdAt: delivery.createdAt.toISOString(),
+            requestHeaders: JSON.stringify(delivery.requestHeaders),
+            responseHeaders: delivery.responseHeaders ? JSON.stringify(delivery.responseHeaders) : undefined,
+            responseStatusCode: delivery.responseStatusCode || undefined,
+            responseErrorCode: delivery.responseErrorCode || undefined,
+            responseBody: delivery.responseBody || undefined,
+            errorMessage: delivery.errorMessage || undefined,
+          },
         };
       });
     },

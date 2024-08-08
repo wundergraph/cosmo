@@ -2193,6 +2193,15 @@ message RedeliverWebhookResponse {
   Response response = 1;
 }
 
+message GetDeliveryDetailsRequest {
+  string id = 1;
+}
+
+message GetDeliveryDetailsResponse {
+  Response response = 1;
+  WebhookDelivery delivery = 2;
+}
+
 service PlatformService {
   // Namespaces
   rpc CreateNamespace(CreateNamespaceRequest) returns (CreateNamespaceResponse) {}
@@ -2334,6 +2343,8 @@ service PlatformService {
 
   // GetOrganizationWebhookHistory retrieves all webhook deliveries for the organization
   rpc GetOrganizationWebhookHistory(GetOrganizationWebhookHistoryRequest) returns (GetOrganizationWebhookHistoryResponse) {}
+  // GetDeliveryDetails retrieves details for a particular webhook
+  rpc GetDeliveryDetails(GetDeliveryDetailsRequest) returns (GetDeliveryDetailsResponse) {}
   // RedeliverWebhook triggers the delivery of the given webhook once again
   rpc RedeliverWebhook(RedeliverWebhookRequest) returns (RedeliverWebhookResponse) {}
 

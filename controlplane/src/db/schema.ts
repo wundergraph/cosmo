@@ -1162,6 +1162,13 @@ export const webhookDeliveries = pgTable('webhook_deliveries', {
   originalDeliveryId: text('original_delivery_id'),
 });
 
+export const webhookDeliveriesRelations = relations(webhookDeliveries, ({ one }) => ({
+  user: one(users, {
+    fields: [webhookDeliveries.createdById],
+    references: [users.id],
+  }),
+}));
+
 export const webhookGraphSchemaUpdateRelations = relations(webhookGraphSchemaUpdate, ({ one }) => ({
   organizationWebhook: one(organizationWebhooks, {
     fields: [webhookGraphSchemaUpdate.webhookId],
