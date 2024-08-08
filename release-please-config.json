@@ -8,6 +8,7 @@
   "release-search-depth": 100,
   "sequential-calls": true,
   "pull-request-title-pattern": "chore: release${component} ${version} 🚀",
+  "include-v-in-tag": false,
   "packages": {
     "helm/cosmo": {
       "release-type": "helm",
