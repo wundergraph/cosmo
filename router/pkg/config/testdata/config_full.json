@@ -371,7 +371,8 @@
   },
   "ExecutionConfig": {
     "File": {
-      "Path": ""
+      "Path": "",
+      "Watch": false
     },
     "Storage": {
       "ProviderID": "s3",

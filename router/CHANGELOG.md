@@ -4,6 +4,14 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.102.0](https://github.com/wundergraph/cosmo/compare/router@0.101.2...router@0.102.0) (2024-08-06)
+
+### Features
+
+* add priority to modules ([#1002](https://github.com/wundergraph/cosmo/issues/1002)) ([4d7ac68](https://github.com/wundergraph/cosmo/commit/4d7ac68841e6f11da81b0d57da35c94923ac3833)) (@JivusAyrus)
+* config file watcher ([#1013](https://github.com/wundergraph/cosmo/issues/1013)) ([d023d49](https://github.com/wundergraph/cosmo/commit/d023d4942a67dc80ac4e96be9249e8ea53c2ccaa)) (@StarpTech)
+* new approach to pass execution config by file ([#1012](https://github.com/wundergraph/cosmo/issues/1012)) ([d357b79](https://github.com/wundergraph/cosmo/commit/d357b7997e4352ff49f72fe47a17340b126e4b63)) (@StarpTech)
+
 ## [0.101.2](https://github.com/wundergraph/cosmo/compare/router@0.101.1...router@0.101.2) (2024-08-04)
 
 ### Bug Fixes
