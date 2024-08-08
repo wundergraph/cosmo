@@ -55,17 +55,22 @@ jobs:
       - if: ${{ steps.release.outputs.prs_created }}
         name: update-helm-docs
         run: |
+          go install github.com/norwoodj/helm-docs/cmd/helm-docs@v1.11.3
+
           git config --global user.email "bot@wundergraph.com"
           git config --global user.name "hardworker-bot"
+
 
           created_prs='${{ steps.release.outputs.prs }}'
           elements=$(echo $created_prs | jq -c '.[]')
 
           echo $elements | while read i; do
             headBranchName=$(echo $i | jq -r '.headBranchName')
+
+            git fetch
+            git checkout $headBranchName
+
             (
-              git fetch --all
-              git checkout $headBranchName
 
               cd helm || true
               make docs
