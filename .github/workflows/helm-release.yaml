@@ -41,7 +41,6 @@ jobs:
 
       - if: ${{ steps.release.outputs.prs_created }}
         name: install-tools
-        shell: bash
         run: go install github.com/norwoodj/helm-docs/cmd/helm-docs@v1.11.3
 
       - if: ${{ steps.release.outputs.prs_created }}
@@ -50,9 +49,7 @@ jobs:
 
       - if: ${{ steps.release.outputs.prs_created }}
         name: smoke-tests
-        shell: bash
         run: |
-          type helm-docs
           jq --version
 
       - if: ${{ steps.release.outputs.prs_created }}
@@ -60,6 +57,8 @@ jobs:
         run: |
           git config --global user.email "bot@wundergraph.com"
           git config --global user.name "hardworker-bot"
+
+          ls -la
 
           created_prs=${{ steps.release.outputs.prs }}
           elements=$(echo $created_prs | jq -c '.[]')
