@@ -58,6 +58,7 @@ jobs:
         run: |
           git config --global user.email "bot@wundergraph.com"
           git config --global user.name "hardworker-bot"
+          sleep 20
           git fetch --all --quiet
 
           created_prs='${{ steps.release.outputs.prs }}'
