@@ -9,9 +9,11 @@ import {
   DatePickerWithRange,
   DateRangePickerChangeHandler,
 } from "@/components/date-picker-with-range";
+import { EmptyState } from "@/components/empty-state";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Loader } from "@/components/ui/loader";
 import { Pagination } from "@/components/ui/pagination";
 import {
   Select,
@@ -37,17 +39,15 @@ import {
   TableWrapper,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/components/ui/use-toast";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { formatDateTime } from "@/lib/format-date";
 import { createDateRange, msToTime } from "@/lib/insights-helpers";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
-import { useQuery } from "@connectrpc/connect-query";
-import {
-  CheckIcon,
-  ExclamationTriangleIcon,
-  UpdateIcon,
-} from "@radix-ui/react-icons";
+import { useMutation, useQuery } from "@connectrpc/connect-query";
+import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import { CheckIcon, UpdateIcon } from "@radix-ui/react-icons";
 import { keepPreviousData } from "@tanstack/react-query";
 import {
   createColumnHelper,
@@ -58,7 +58,11 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { getOrganizationWebhookHistory } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+import {
+  getOrganizationWebhookHistory,
+  redeliverWebhook,
+} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import {
   GetOrganizationWebhookHistoryResponse,
   WebhookDelivery,
@@ -67,8 +71,38 @@ import { formatISO } from "date-fns";
 import { useRouter } from "next/router";
 import { useMemo } from "react";
 
-const WebhookDeliveryDetails = ({ details }: { details?: WebhookDelivery }) => {
+const WebhookDeliveryDetails = ({
+  details,
+  refresh,
+}: {
+  details?: WebhookDelivery;
+  refresh: () => void;
+}) => {
   const router = useRouter();
+  const { toast } = useToast();
+
+  const { mutate, isPending } = useMutation(redeliverWebhook, {
+    onSuccess: (data) => {
+      if (data.response?.code === EnumStatusCode.OK) {
+        toast({
+          description: "Webhook redelivery attempted",
+          duration: 2000,
+        });
+        refresh();
+      } else {
+        toast({
+          description: data.response?.details,
+          duration: 2000,
+        });
+      }
+    },
+    onError: () => {
+      toast({
+        description: `Could not attempt redelivery`,
+        duration: 2000,
+      });
+    },
+  });
 
   const responseBody = JSON.parse(details?.responseBody || "{}");
 
@@ -90,18 +124,30 @@ const WebhookDeliveryDetails = ({ details }: { details?: WebhookDelivery }) => {
         <SheetHeader className="mb-4">
           <SheetTitle className="flex items-center gap-2">
             Details{" "}
-            {!details?.isRedelivery && (
-              <Badge variant="muted">redelivery</Badge>
-            )}
+            {details?.isRedelivery && <Badge variant="muted">redelivery</Badge>}
           </SheetTitle>
         </SheetHeader>
         {details && (
           <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-x-2 rounded-md border border-input p-2">
-              <Badge>POST</Badge>
-              <code className="w-full truncate break-all text-xs">
-                {details.endpoint}
-              </code>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-1 items-center gap-x-2 rounded-md border border-input p-2">
+                <Badge>POST</Badge>
+                <code className="w-full truncate break-all text-xs">
+                  {details.endpoint}
+                </code>
+              </div>
+              <Button
+                variant="secondary"
+                className="w-full md:w-auto"
+                isLoading={isPending}
+                onClick={() => {
+                  mutate({
+                    id: details.id,
+                  });
+                }}
+              >
+                Redeliver
+              </Button>
             </div>
             <TableWrapper>
               <Table>
@@ -221,7 +267,7 @@ const WebhookHistoryPage: NextPageWithLayout = () => {
     getOrganizationWebhookHistory,
     {
       pagination: {
-        limit,
+        limit: limit > 50 ? 50 : limit,
         offset: (pageNumber - 1) * limit,
       },
       dateRange: {
@@ -267,7 +313,7 @@ const WebhookHistoryPage: NextPageWithLayout = () => {
     }
   };
 
-  const auditLogRetention = useFeatureLimit("analytics-retention", 7);
+  const historyRetention = useFeatureLimit("analytics-retention", 7);
 
   const noOfPages = Math.ceil((data?.totalCount || 0) / limit);
 
@@ -347,6 +393,7 @@ const WebhookHistoryPage: NextPageWithLayout = () => {
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    manualPagination: true,
   });
 
   const onRefreshIntervalChange = (value?: number) => {
@@ -362,7 +409,7 @@ const WebhookHistoryPage: NextPageWithLayout = () => {
           range={range}
           dateRange={{ start, end }}
           onChange={onDateRangeChange}
-          calendarDaysLimit={auditLogRetention}
+          calendarDaysLimit={historyRetention}
         />
         <Select
           value={type}
@@ -442,6 +489,18 @@ const WebhookHistoryPage: NextPageWithLayout = () => {
             ))}
           </TableBody>
         </Table>
+        {isLoading && <Loader className="my-12" />}
+        {!isLoading &&
+          (error || data?.response?.code !== EnumStatusCode.OK) && (
+            <EmptyState
+              icon={<ExclamationTriangleIcon />}
+              title="Could not retrieve history"
+              description={
+                data?.response?.details || error?.message || "Please try again"
+              }
+              actions={<Button onClick={() => refetch()}>Retry</Button>}
+            />
+          )}
         {data?.deliveries.length === 0 && (
           <p className="w-full p-8 text-center text-sm italic text-muted-foreground">
             No history found
@@ -449,7 +508,7 @@ const WebhookHistoryPage: NextPageWithLayout = () => {
         )}
       </TableWrapper>
       <Pagination limit={limit} noOfPages={noOfPages} pageNumber={pageNumber} />
-      <WebhookDeliveryDetails details={webhookDetails} />
+      <WebhookDeliveryDetails details={webhookDetails} refresh={refetch} />
     </div>
   );
 };

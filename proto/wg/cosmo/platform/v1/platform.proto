@@ -2185,6 +2185,14 @@ message GetOrganizationWebhookHistoryResponse {
   int32 total_count = 3;
 }
 
+message RedeliverWebhookRequest {
+  string id = 1;
+}
+
+message RedeliverWebhookResponse {
+  Response response = 1;
+}
+
 service PlatformService {
   // Namespaces
   rpc CreateNamespace(CreateNamespaceRequest) returns (CreateNamespaceResponse) {}
@@ -2324,8 +2332,10 @@ service PlatformService {
   // DeleteOrganizationWebhookConfig deletes an organization webhook
   rpc DeleteOrganizationWebhookConfig(DeleteOrganizationWebhookConfigRequest) returns (DeleteOrganizationWebhookConfigResponse) {}
 
-  // GetOrganizationWebhookHistory
+  // GetOrganizationWebhookHistory retrieves all webhook deliveries for the organization
   rpc GetOrganizationWebhookHistory(GetOrganizationWebhookHistoryRequest) returns (GetOrganizationWebhookHistoryResponse) {}
+  // RedeliverWebhook triggers the delivery of the given webhook once again
+  rpc RedeliverWebhook(RedeliverWebhookRequest) returns (RedeliverWebhookResponse) {}
 
   // CreateIntegration create a new integration for the organization
   rpc CreateIntegration(CreateIntegrationRequest) returns (CreateIntegrationResponse) {}

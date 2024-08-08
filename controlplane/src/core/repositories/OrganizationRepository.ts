@@ -7,7 +7,7 @@ import {
   WebhookDelivery,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { addDays } from 'date-fns';
-import { SQL, and, asc, count, eq, gt, inArray, like, lt, not, sql } from 'drizzle-orm';
+import { SQL, and, asc, count, desc, eq, gt, inArray, like, lt, not, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { MemberRole, NewOrganizationFeature } from '../../db/models.js';
@@ -1378,6 +1378,7 @@ export class OrganizationRepository {
       where: conditions,
       offset: input.offset,
       limit: input.limit,
+      orderBy: desc(schema.webhookDeliveries.createdAt),
     });
 
     const totalCount = (await this.db.select({ count: count() }).from(schema.webhookDeliveries).where(conditions))[0]
@@ -1397,5 +1398,11 @@ export class OrganizationRepository {
     }));
 
     return { deliveries, totalCount };
+  }
+
+  getWebhookDeliveryById(id: string, organizationId: string) {
+    return this.db.query.webhookDeliveries.findFirst({
+      where: and(eq(schema.webhookDeliveries.id, id), eq(schema.webhookDeliveries.organizationId, organizationId)),
+    });
   }
 }

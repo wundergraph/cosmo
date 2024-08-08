@@ -121,6 +121,7 @@ import {
   PublishFederatedSubgraphResponse,
   PublishMonographResponse,
   PublishPersistedOperationsResponse,
+  RedeliverWebhookResponse,
   RemoveInvitationResponse,
   RemoveOperationIgnoreAllOverrideResponse,
   RemoveOperationOverridesResponse,
@@ -227,6 +228,8 @@ import { OrganizationWebhookService } from '../webhooks/OrganizationWebhookServi
 import { apiKeyPermissions } from '../constants.js';
 import SchemaLinter from '../services/SchemaLinter.js';
 import { FeatureFlagRepository } from '../repositories/FeatureFlagRepository.js';
+import { AdmissionWebhookController, ValidateConfigRequest } from '../services/AdmissionWebhookController.js';
+import { RedeliverWebhookService } from '../webhooks/RedeliverWebhookService.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -11540,6 +11543,36 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
           deliveries,
           totalCount,
+        };
+      });
+    },
+
+    redeliverWebhook: (req, ctx) => {
+      let logger = getLogger(ctx, opts.logger);
+
+      return handleError<PlainMessage<RedeliverWebhookResponse>>(ctx, logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
+        const redeliverWebhookService = new RedeliverWebhookService(opts.db, authContext.organizationId, logger);
+
+        const originalDelivery = await orgRepo.getWebhookDeliveryById(req.id, authContext.organizationId);
+        if (!originalDelivery) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Could not find webhook delivery`,
+            },
+          };
+        }
+
+        await redeliverWebhookService.send(originalDelivery, authContext.userId);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
         };
       });
     },

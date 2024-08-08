@@ -17253,3 +17253,77 @@ export class GetOrganizationWebhookHistoryResponse extends Message<GetOrganizati
   }
 }
 
+/**
+ * @generated from message wg.cosmo.platform.v1.RedeliverWebhookRequest
+ */
+export class RedeliverWebhookRequest extends Message<RedeliverWebhookRequest> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  constructor(data?: PartialMessage<RedeliverWebhookRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.RedeliverWebhookRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RedeliverWebhookRequest {
+    return new RedeliverWebhookRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RedeliverWebhookRequest {
+    return new RedeliverWebhookRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RedeliverWebhookRequest {
+    return new RedeliverWebhookRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RedeliverWebhookRequest | PlainMessage<RedeliverWebhookRequest> | undefined, b: RedeliverWebhookRequest | PlainMessage<RedeliverWebhookRequest> | undefined): boolean {
+    return proto3.util.equals(RedeliverWebhookRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.RedeliverWebhookResponse
+ */
+export class RedeliverWebhookResponse extends Message<RedeliverWebhookResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<RedeliverWebhookResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.RedeliverWebhookResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RedeliverWebhookResponse {
+    return new RedeliverWebhookResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RedeliverWebhookResponse {
+    return new RedeliverWebhookResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RedeliverWebhookResponse {
+    return new RedeliverWebhookResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RedeliverWebhookResponse | PlainMessage<RedeliverWebhookResponse> | undefined, b: RedeliverWebhookResponse | PlainMessage<RedeliverWebhookResponse> | undefined): boolean {
+    return proto3.util.equals(RedeliverWebhookResponse, a, b);
+  }
+}
+
