@@ -2,10 +2,11 @@ package authentication
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/goccy/go-json"
 )
 
 type websocketInitialPayloadAuthenticator struct {
