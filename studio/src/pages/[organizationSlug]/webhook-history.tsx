@@ -334,7 +334,7 @@ const WebhookHistoryPage: NextPageWithLayout = () => {
             {isSuccess ? (
               <CheckIcon className="h-4 w-4 text-success" />
             ) : (
-              <ExclamationTriangleIcon className="text-destructive" />
+              <ExclamationTriangleIcon className="h-4 w-4 text-destructive" />
             )}
           </div>
         );
