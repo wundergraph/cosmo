@@ -58,12 +58,12 @@ jobs:
         run: |
           git config --global user.email "bot@wundergraph.com"
           git config --global user.name "hardworker-bot"
-          git fetch --quiet --no-tags --no-recurse-submodules
 
           created_prs='${{ steps.release.outputs.prs }}'
           elements=$(echo $created_prs | jq -c '.[]')
           echo $elements | while read i; do
             headBranchName=$(echo $i | jq -r '.headBranchName')
+            git fetch --quiet --no-tags --no-recurse-submodules
             git checkout $headBranchName
             (
               cd helm || true
