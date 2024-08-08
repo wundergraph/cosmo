@@ -338,11 +338,13 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 			if err != nil {
 				requestLogger.Error("Error parsing initial payload: %v", zap.Error(err))
 				handler.writeErrorMessage(requestID, err)
+				handler.Close()
 				return
 			}
 			jwtToken, ok := initialPayloadMap[fromInitialPayloadConfig.Key].(string)
 			if !ok {
 				requestLogger.Error("JWT token is not a string")
+				handler.Close()
 				return
 			}
 			handler.r.Header.Set(fromInitialPayloadConfig.ExportTokenToRequestHeader.HeaderKey, jwtToken)

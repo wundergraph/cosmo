@@ -385,6 +385,7 @@ func TestWebSockets(t *testing.T) {
 			require.JSONEq(t, `[{"message":"unauthorized"}]`, string(payload))
 
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+			xEnv.WaitForConnectionCount(0, time.Second*5)
 			require.NoError(t, conn.Close())
 		})
 	})
@@ -434,6 +435,7 @@ func TestWebSockets(t *testing.T) {
 			require.JSONEq(t, `[{"message":"unauthorized"}]`, string(payload))
 
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+			xEnv.WaitForConnectionCount(0, time.Second*5)
 			require.NoError(t, conn.Close())
 		})
 	})
