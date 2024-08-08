@@ -39,9 +39,9 @@ jobs:
           skip-github-release: false
           skip-github-pull-request: false
 
-      - name: debug
-        run: |
-          echo "${{ toJSON(steps.release.outputs) }}"
+            # - name: debug
+            #   run: |
+            #     echo "${{ toJSON(steps.release.outputs) }}"
 
       - uses: ./.github/actions/helm-release-docs-update
         if: ${{ steps.release.outputs['helm/cosmo--pr'].headBranchName }}
