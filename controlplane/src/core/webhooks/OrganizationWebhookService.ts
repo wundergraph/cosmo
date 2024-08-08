@@ -246,12 +246,11 @@ export class OrganizationWebhookService {
           ],
         };
         if (latestChangelogs) {
-          const addedChanges = latestChangelogs.changelogs.filter(
-            (c) => c.changeType.includes('ADDED') || c.changeType.includes('CHANGED'),
-          );
+          const addedChanges = latestChangelogs.changelogs.filter((c) => c.changeType.includes('ADDED'));
           const removedChanges = latestChangelogs.changelogs.filter((c) => c.changeType.includes('REMOVED'));
+          const changedChanges = latestChangelogs.changelogs.filter((c) => c.changeType.includes('CHANGED'));
 
-          if (removedChanges.length + addedChanges.length > 20) {
+          if (removedChanges.length + addedChanges.length + changedChanges.length > 20) {
             tempData.attachments.unshift({
               color: '#e11d48',
               blocks: [
@@ -259,7 +258,7 @@ export class OrganizationWebhookService {
                   type: 'section',
                   text: {
                     type: 'mrkdwn',
-                    text: `Too many changes to display. There were ${removedChanges.length} deletions and ${addedChanges.length} additions.`,
+                    text: `Too many changes to display. There were ${removedChanges.length + changedChanges.length} deletions and ${addedChanges.length + changedChanges.length} additions.`,
                   },
                 },
               ],
