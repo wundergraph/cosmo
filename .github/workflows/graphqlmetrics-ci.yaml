@@ -48,6 +48,10 @@ jobs:
         with:
           cache-dependency-path: graphqlmetrics/go.sum
 
+      - uses: ./.github/actions/go-mod-tidy
+        with:
+          working-directory: ./graphqlmetrics
+
       - name: Install tools
         run: make setup-build-tools
 
@@ -64,6 +68,7 @@ jobs:
       - uses: ./.github/actions/go-linter
         with:
           working-directory: ./graphqlmetrics
+          env-go-work: 'off'
 
       - name: Test
         working-directory: ./graphqlmetrics

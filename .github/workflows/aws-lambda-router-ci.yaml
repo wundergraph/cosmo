@@ -36,6 +36,10 @@ jobs:
         with:
           cache-dependency-path: router/go.sum
 
+      - uses: ./.github/actions/go-mod-tidy
+        with:
+          working-directory: ./aws-lambda-router
+
       - name: Install tools
         run: make setup-build-tools
 
