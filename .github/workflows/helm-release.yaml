@@ -58,9 +58,7 @@ jobs:
           git config --global user.email "bot@wundergraph.com"
           git config --global user.name "hardworker-bot"
 
-          ls -la
-
-          created_prs=${{ toJson(steps.release.outputs.prs) }}
+          created_prs='${{ steps.release.outputs.prs }}'
           elements=$(echo $created_prs | jq -c '.[]')
 
           for element in $elements; do
