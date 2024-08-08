@@ -60,7 +60,7 @@ jobs:
 
           ls -la
 
-          created_prs=${{ steps.release.outputs.prs }}
+          created_prs='${{ steps.release.outputs.prs }}'
           elements=$(echo $created_prs | jq -c '.[]')
 
           for element in $elements; do
