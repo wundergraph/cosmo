@@ -7,6 +7,7 @@ on:
   push:
     branches:
       - main
+      - andi/eng-5520-automate-helm-chart-releases
 
 permissions:
   contents: write
@@ -15,7 +16,7 @@ permissions:
 env:
   CI: true
   REGISTRY: ghcr.io
-  RELEASE_BRANCH: main
+  RELEASE_BRANCH: andi/helm-release-testing
 
 jobs:
   prepare-release:
