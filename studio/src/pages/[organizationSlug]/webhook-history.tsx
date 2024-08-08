@@ -104,8 +104,6 @@ const WebhookDeliveryDetails = ({
     },
   });
 
-  const responseBody = JSON.parse(details?.responseBody || "{}");
-
   return (
     <Sheet
       modal
@@ -227,7 +225,7 @@ const WebhookDeliveryDetails = ({
                     language="json"
                   />
                 </div>
-                {responseBody && (
+                {JSON.parse(details.responseBody || "{}") && (
                   <>
                     <h3 className="mb-2 mt-6 text-base font-semibold tracking-tight">
                       Body
@@ -235,7 +233,7 @@ const WebhookDeliveryDetails = ({
                     <div className="scrollbar-custom overflow-auto rounded border">
                       <CodeViewer
                         disableLinking
-                        code={responseBody}
+                        code={details.responseBody || "{}"}
                         language="json"
                       />
                     </div>
