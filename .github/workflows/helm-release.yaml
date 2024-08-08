@@ -61,15 +61,15 @@ jobs:
           created_prs='${{ steps.release.outputs.prs }}'
           elements=$(echo $created_prs | jq -c '.[]')
 
-          for element in $elements; do
-            headBranchName=$(echo $element | jq -r '.headBranchName')
-            git checkout $headBranchName
+          echo $elements | while read i; do
+            headBranchName=$(echo $i | jq -r '.headBranchName')
             (
-              cd helm
-              make docs
+              git checkout $headBranchName
 
+              cd helm || true
+              make docs
               git add .
-              git commit -m "docs: update helm chart docs"
+              git commit -m "chore: update helm chart docs"
             )
             git push origin $headBranchName
           done
