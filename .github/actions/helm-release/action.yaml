@@ -1,0 +1,59 @@
+---
+name: helm-release
+description: push packaged helm charts to the ocr
+inputs:
+  working-directory:
+    description: The working directory to run the publish command in
+    required: true
+    type: string
+  registry:
+    description: The registry to push the chart against
+    required: true
+    type: string
+  registry-username:
+    description: The username to use for the registry
+    required: true
+    type: string
+  registry-password:
+    description: The password to use for the registry
+    required: true
+    type: string
+  make-target:
+    description: The make target to run (oneOf publish-cosmo-chart|publish-router-chart)
+    required: true
+    type: string
+
+permissions:
+  packages: write
+
+runs:
+  using: composite
+  steps:
+    - name: install-helm
+      uses: azure/setup-helm@v4.2.0
+
+    - name: install-yq
+      uses: mikefarah/yq@v4.42.1
+
+    - name: smoke-tests
+      shell: bash
+      run: |
+        helm version
+        yq --version
+
+    - name: checkout
+      uses: actions/checkout@v4
+
+    - name: login-to-container-registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ inputs.registry }}
+        username: ${{ inputs.registry-username }}
+        password: ${{ inputs.registry-password }}
+
+    # upload changelog to artifactory
+    - name: publish-chart
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        make ${{ inputs.make-target }}
