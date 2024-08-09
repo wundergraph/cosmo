@@ -27,7 +27,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     # do not run for other prs than the release please prs
-    if: startsWith(github.event.pull_request.head.ref, 'release-please--')
     steps:
       - name: checkout
         uses: actions/checkout@v4
@@ -48,7 +47,8 @@ jobs:
         run: make docs
         working-directory: ./helm
 
-      - uses: stefanzweifel/git-auto-commit-action@v5
+      - if: startsWith(github.event.pull_request.head.ref, 'release-please--')
+        uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: 'chore: update helm docs and prepare release'
           file_pattern: 'helm/**/*.md'
