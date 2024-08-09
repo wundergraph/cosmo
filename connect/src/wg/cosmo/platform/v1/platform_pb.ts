@@ -17328,46 +17328,46 @@ export class RedeliverWebhookResponse extends Message<RedeliverWebhookResponse> 
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.GetDeliveryDetailsRequest
+ * @generated from message wg.cosmo.platform.v1.GetWebhookDeliveryDetailsRequest
  */
-export class GetDeliveryDetailsRequest extends Message<GetDeliveryDetailsRequest> {
+export class GetWebhookDeliveryDetailsRequest extends Message<GetWebhookDeliveryDetailsRequest> {
   /**
    * @generated from field: string id = 1;
    */
   id = "";
 
-  constructor(data?: PartialMessage<GetDeliveryDetailsRequest>) {
+  constructor(data?: PartialMessage<GetWebhookDeliveryDetailsRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.GetDeliveryDetailsRequest";
+  static readonly typeName = "wg.cosmo.platform.v1.GetWebhookDeliveryDetailsRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetDeliveryDetailsRequest {
-    return new GetDeliveryDetailsRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetWebhookDeliveryDetailsRequest {
+    return new GetWebhookDeliveryDetailsRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetDeliveryDetailsRequest {
-    return new GetDeliveryDetailsRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetWebhookDeliveryDetailsRequest {
+    return new GetWebhookDeliveryDetailsRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetDeliveryDetailsRequest {
-    return new GetDeliveryDetailsRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetWebhookDeliveryDetailsRequest {
+    return new GetWebhookDeliveryDetailsRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: GetDeliveryDetailsRequest | PlainMessage<GetDeliveryDetailsRequest> | undefined, b: GetDeliveryDetailsRequest | PlainMessage<GetDeliveryDetailsRequest> | undefined): boolean {
-    return proto3.util.equals(GetDeliveryDetailsRequest, a, b);
+  static equals(a: GetWebhookDeliveryDetailsRequest | PlainMessage<GetWebhookDeliveryDetailsRequest> | undefined, b: GetWebhookDeliveryDetailsRequest | PlainMessage<GetWebhookDeliveryDetailsRequest> | undefined): boolean {
+    return proto3.util.equals(GetWebhookDeliveryDetailsRequest, a, b);
   }
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.GetDeliveryDetailsResponse
+ * @generated from message wg.cosmo.platform.v1.GetWebhookDeliveryDetailsResponse
  */
-export class GetDeliveryDetailsResponse extends Message<GetDeliveryDetailsResponse> {
+export class GetWebhookDeliveryDetailsResponse extends Message<GetWebhookDeliveryDetailsResponse> {
   /**
    * @generated from field: wg.cosmo.platform.v1.Response response = 1;
    */
@@ -17378,32 +17378,32 @@ export class GetDeliveryDetailsResponse extends Message<GetDeliveryDetailsRespon
    */
   delivery?: WebhookDelivery;
 
-  constructor(data?: PartialMessage<GetDeliveryDetailsResponse>) {
+  constructor(data?: PartialMessage<GetWebhookDeliveryDetailsResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.GetDeliveryDetailsResponse";
+  static readonly typeName = "wg.cosmo.platform.v1.GetWebhookDeliveryDetailsResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "delivery", kind: "message", T: WebhookDelivery },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetDeliveryDetailsResponse {
-    return new GetDeliveryDetailsResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetWebhookDeliveryDetailsResponse {
+    return new GetWebhookDeliveryDetailsResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetDeliveryDetailsResponse {
-    return new GetDeliveryDetailsResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetWebhookDeliveryDetailsResponse {
+    return new GetWebhookDeliveryDetailsResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetDeliveryDetailsResponse {
-    return new GetDeliveryDetailsResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetWebhookDeliveryDetailsResponse {
+    return new GetWebhookDeliveryDetailsResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: GetDeliveryDetailsResponse | PlainMessage<GetDeliveryDetailsResponse> | undefined, b: GetDeliveryDetailsResponse | PlainMessage<GetDeliveryDetailsResponse> | undefined): boolean {
-    return proto3.util.equals(GetDeliveryDetailsResponse, a, b);
+  static equals(a: GetWebhookDeliveryDetailsResponse | PlainMessage<GetWebhookDeliveryDetailsResponse> | undefined, b: GetWebhookDeliveryDetailsResponse | PlainMessage<GetWebhookDeliveryDetailsResponse> | undefined): boolean {
+    return proto3.util.equals(GetWebhookDeliveryDetailsResponse, a, b);
   }
 }
 

@@ -60,7 +60,7 @@ import {
 } from "@tanstack/react-table";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
-  getDeliveryDetails,
+  getWebhookDeliveryDetails,
   getOrganizationWebhookHistory,
   redeliverWebhook,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
@@ -75,7 +75,7 @@ const WebhookDeliveryDetails = ({ refresh }: { refresh: () => void }) => {
   const detailsId = router.query.details as string;
 
   const { data, error, isLoading, refetch } = useQuery(
-    getDeliveryDetails,
+    getWebhookDeliveryDetails,
     {
       id: detailsId,
     },

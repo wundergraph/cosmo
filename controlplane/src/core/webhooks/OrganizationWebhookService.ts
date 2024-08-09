@@ -69,7 +69,7 @@ export class OrganizationWebhookService {
     this.defaultBillingPlanId = defaultBillingPlanId;
 
     this.httpClient = axios.create({
-      timeout: 10_000,
+      timeout: 30_000,
     });
   }
 

@@ -17,7 +17,7 @@ export class RedeliverWebhookService {
     this.logger = logger.child({ organizationId });
 
     this.httpClient = axios.create({
-      timeout: 10_000,
+      timeout: 30_000,
     });
   }
 
@@ -52,7 +52,6 @@ export class RedeliverWebhookService {
       try {
         const res = await this.httpClient.post(originalDelivery.endpoint, JSON.parse(originalDelivery.payload), {
           headers: originalDelivery.requestHeaders,
-          timeout: 10_000,
         });
 
         deliveryInfo.responseStatusCode = res.status;

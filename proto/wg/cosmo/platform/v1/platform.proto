@@ -2193,11 +2193,11 @@ message RedeliverWebhookResponse {
   Response response = 1;
 }
 
-message GetDeliveryDetailsRequest {
+message GetWebhookDeliveryDetailsRequest {
   string id = 1;
 }
 
-message GetDeliveryDetailsResponse {
+message GetWebhookDeliveryDetailsResponse {
   Response response = 1;
   WebhookDelivery delivery = 2;
 }
@@ -2343,8 +2343,8 @@ service PlatformService {
 
   // GetOrganizationWebhookHistory retrieves all webhook deliveries for the organization
   rpc GetOrganizationWebhookHistory(GetOrganizationWebhookHistoryRequest) returns (GetOrganizationWebhookHistoryResponse) {}
-  // GetDeliveryDetails retrieves details for a particular webhook
-  rpc GetDeliveryDetails(GetDeliveryDetailsRequest) returns (GetDeliveryDetailsResponse) {}
+  // GetWebhookDeliveryDetails retrieves details for a particular webhook
+  rpc GetWebhookDeliveryDetails(GetWebhookDeliveryDetailsRequest) returns (GetWebhookDeliveryDetailsResponse) {}
   // RedeliverWebhook triggers the delivery of the given webhook once again
   rpc RedeliverWebhook(RedeliverWebhookRequest) returns (RedeliverWebhookResponse) {}
 

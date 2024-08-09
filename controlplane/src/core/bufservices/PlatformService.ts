@@ -64,7 +64,7 @@ import {
   GetCompositionDetailsResponse,
   GetCompositionsResponse,
   GetDashboardAnalyticsViewResponse,
-  GetDeliveryDetailsResponse,
+  GetWebhookDeliveryDetailsResponse,
   GetDiscussionResponse,
   GetDiscussionSchemasResponse,
   GetFeatureFlagByNameResponse,
@@ -11548,10 +11548,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getDeliveryDetails: (req, ctx) => {
+    getWebhookDeliveryDetails: (req, ctx) => {
       let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetDeliveryDetailsResponse>>(ctx, logger, async () => {
+      return handleError<PlainMessage<GetWebhookDeliveryDetailsResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
@@ -11593,6 +11593,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<RedeliverWebhookResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
+
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user does not have permissions to perform this operation`,
+            },
+          };
+        }
 
         const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const redeliverWebhookService = new RedeliverWebhookService(opts.db, authContext.organizationId, logger);

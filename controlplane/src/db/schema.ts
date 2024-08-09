@@ -15,6 +15,7 @@ import {
   real,
 } from 'drizzle-orm/pg-core';
 import type { JSONContent } from '@tiptap/core';
+import { AxiosHeaderValue } from 'axios';
 import { FeatureIds } from '../types/index.js';
 import { AuditableType, AuditActorType, AuditLogAction, AuditLogFullAction } from './models.js';
 
@@ -1144,8 +1145,8 @@ export const webhookDeliveries = pgTable('webhook_deliveries', {
   endpoint: text('endpoint').notNull(),
   eventName: text('event_name').notNull(),
   payload: text('payload').notNull(),
-  requestHeaders: customJson<Record<string, any>>('request_headers').notNull(),
-  responseHeaders: customJson<Record<string, any>>('response_headers'),
+  requestHeaders: customJson<Record<string, AxiosHeaderValue | undefined>>('request_headers').notNull(),
+  responseHeaders: customJson<Record<string, AxiosHeaderValue | undefined>>('response_headers'),
   responseStatusCode: integer('response_status_code'),
   responseErrorCode: text('response_error_code'),
   errorMessage: text('error_message'),
