@@ -16,6 +16,7 @@ on:
       - synchronize
       - opened
       - edited
+      - labeled
 
 permissions:
   contents: write
