@@ -100,19 +100,16 @@ type OperationProcessor struct {
 
 // parseKit is a helper struct to parse, normalize and validate operations
 type parseKit struct {
-	i                       int
-	parser                  *astparser.Parser
-	doc                     *ast.Document
-	keyGen                  *xxhash.Digest
-	staticNormalizer        *astnormalization.OperationNormalizer
-	variablesNormalizer     *astnormalization.VariablesNormalizer
-	printer                 *astprinter.Printer
-	normalizedOperation     *bytes.Buffer
-	variablesValidator      *variablesvalidation.VariablesValidator
-	operationValidator      *astvalidation.OperationValidator
-	inputListCoercion       *astnormalization.ListInputCoercion
-	variablesParser         *fastjson.Parser
-	exportedVariablesParser *fastjson.Parser
+	i                   int
+	parser              *astparser.Parser
+	doc                 *ast.Document
+	keyGen              *xxhash.Digest
+	staticNormalizer    *astnormalization.OperationNormalizer
+	variablesNormalizer *astnormalization.VariablesNormalizer
+	printer             *astprinter.Printer
+	normalizedOperation *bytes.Buffer
+	variablesValidator  *variablesvalidation.VariablesValidator
+	operationValidator  *astvalidation.OperationValidator
 }
 
 type OperationCache struct {
@@ -448,48 +445,10 @@ func (o *OperationKit) normalizePersistedOperation() (cached bool, err error) {
 	return false, nil
 }
 
-func (o *OperationKit) deleteNonSkipIncludeVariables(variables []byte, skipIncludeNames []string) ([]byte, error) {
-	if variables == nil {
-		return []byte("{}"), nil
-	}
-	switch unsafebytes.BytesToString(variables) {
-	case "null", "":
-		return []byte("{}"), nil
-	case "{}":
-		return variables, nil
-	}
-	value, err := o.kit.variablesParser.ParseBytes(variables)
-	if err != nil {
-		return nil, errors.WithStack(fmt.Errorf("deleteNonSkipIncludeVariables: %w", err))
-	}
-	if value.Type() != fastjson.TypeObject {
-		return nil, errors.WithStack(fmt.Errorf("deleteNonSkipIncludeVariables: variables must be an object"))
-	}
-	object := value.GetObject()
-	deleteKeys := make([]string, 0)
-	object.Visit(func(key []byte, v *fastjson.Value) {
-		keyStr := unsafebytes.BytesToString(key)
-		for i := range skipIncludeNames {
-			if keyStr == skipIncludeNames[i] {
-				return
-			}
-		}
-		deleteKeys = append(deleteKeys, keyStr)
-	})
-	if len(deleteKeys) == 0 {
-		return variables, nil
-	}
-	for _, key := range deleteKeys {
-		value.Del(key)
-	}
-	return value.MarshalTo(nil), nil
-}
-
 type NormalizationCacheEntry struct {
 	operationID              uint64
 	normalizedRepresentation string
 	operationType            string
-	exportedVariables        []byte
 }
 
 func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error) {
@@ -590,27 +549,6 @@ func (o *OperationKit) NormalizeVariables() error {
 	o.parsedOperation.NormalizedRepresentation = o.kit.normalizedOperation.String()
 	o.parsedOperation.Request.Variables = o.kit.doc.Input.Variables
 	return nil
-}
-
-// nullifyVariables returns nil if the variables are nil or don't contain any meaningful data
-// by the definition of the GraphQL specification, variables must be a map
-// this means that the minimum meaningful variables are {"a":0}
-// so if we have less than 7 characters, we return nil because we don't need to store the variables in the cache
-// as we will discard them anyways
-// keep in mind that we're solely using the exported variables, which contain default variables,
-// to populate the variables with defaults if we've got a normalization cache hit
-// consequently, we don't need to store anything in the cache if the variables are empty-ish
-//
-// in addition, if we're nullifying the exported variables in case of a cache miss
-// we can immediately skip parsing them and trying to set defaults from them if they're nil (early return)
-func (o *OperationKit) nullifyVariables(variables []byte) []byte {
-	if variables == nil {
-		return nil
-	}
-	if len(variables) < 7 {
-		return nil
-	}
-	return variables
 }
 
 type normalizedOperationCacheEntry struct {
@@ -799,14 +737,11 @@ func createParseKit(i int) *parseKit {
 			astnormalization.WithRemoveNotMatchingOperationDefinitions(),
 			astnormalization.WithRemoveUnusedVariables(),
 		),
-		variablesNormalizer:     astnormalization.NewVariablesNormalizer(),
-		printer:                 &astprinter.Printer{},
-		normalizedOperation:     &bytes.Buffer{},
-		variablesValidator:      variablesvalidation.NewVariablesValidator(),
-		operationValidator:      astvalidation.DefaultOperationValidator(),
-		inputListCoercion:       astnormalization.NewListInputCoercion(),
-		variablesParser:         &fastjson.Parser{},
-		exportedVariablesParser: &fastjson.Parser{},
+		variablesNormalizer: astnormalization.NewVariablesNormalizer(),
+		printer:             &astprinter.Printer{},
+		normalizedOperation: &bytes.Buffer{},
+		variablesValidator:  variablesvalidation.NewVariablesValidator(),
+		operationValidator:  astvalidation.DefaultOperationValidator(),
 	}
 }
 
