@@ -15,6 +15,7 @@ import {
   real,
 } from 'drizzle-orm/pg-core';
 import type { JSONContent } from '@tiptap/core';
+import { AxiosHeaderValue } from 'axios';
 import { FeatureIds } from '../types/index.js';
 import { AuditableType, AuditActorType, AuditLogAction, AuditLogFullAction } from './models.js';
 
@@ -1126,6 +1127,48 @@ export const webhookGraphSchemaUpdate = pgTable(
     };
   },
 );
+
+export const webhookDeliveryType = pgEnum('webhook_delivery_type', ['webhook', 'slack', 'admission'] as const);
+
+export const webhookDeliveries = pgTable('webhook_deliveries', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  createdById: uuid('created_by_id').references(() => users.id, {
+    onDelete: 'set null',
+  }),
+  organizationId: uuid('organization_id')
+    .notNull()
+    .references(() => organizations.id, {
+      onDelete: 'cascade',
+    }),
+  type: webhookDeliveryType('type').notNull(),
+  endpoint: text('endpoint').notNull(),
+  eventName: text('event_name').notNull(),
+  payload: text('payload').notNull(),
+  requestHeaders: customJson<Record<string, AxiosHeaderValue | undefined>>('request_headers').notNull(),
+  responseHeaders: customJson<Record<string, AxiosHeaderValue | undefined>>('response_headers'),
+  responseStatusCode: integer('response_status_code'),
+  responseErrorCode: text('response_error_code'),
+  errorMessage: text('error_message'),
+  responseBody: text('response_body'),
+  retryCount: integer('retry_count').notNull().default(0),
+  duration: real('duration').notNull().default(0),
+  /***
+   * Set if it is a redelivery
+   * Keep track of the original id in case of redelivery.
+   * The id of an already redelivered webhook may also be set here.
+   *
+   * Example: original > redelivery of original >  redelivery of redelivery
+   */
+  originalDeliveryId: text('original_delivery_id'),
+});
+
+export const webhookDeliveriesRelations = relations(webhookDeliveries, ({ one }) => ({
+  user: one(users, {
+    fields: [webhookDeliveries.createdById],
+    references: [users.id],
+  }),
+}));
 
 export const webhookGraphSchemaUpdateRelations = relations(webhookGraphSchemaUpdate, ({ one }) => ({
   organizationWebhook: one(organizationWebhooks, {
