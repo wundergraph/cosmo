@@ -563,7 +563,7 @@ func TestAuthentication(t *testing.T) {
 			require.Equal(t, http.StatusOK, res.StatusCode)
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"Unauthorized request to Subgraph '3' at Path 'mutation', Reason: missing required scopes."},{"message":"Unauthorized to load field 'Mutation.addFact', Reason: missing required scopes.","path":["addFact"]}],"data":null,"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Mutation","fieldName":"addFact"},"required":[["write:fact"],["write:all"]]}],"actualScopes":["read:miscellaneous","read:all"]}}}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized request to Subgraph '3', Reason: missing required scopes."},{"message":"Unauthorized to load field 'Mutation.addFact', Reason: missing required scopes.","path":["addFact"]}],"data":null,"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Mutation","fieldName":"addFact"},"required":[["write:fact"],["write:all"]]}],"actualScopes":["read:miscellaneous","read:all"]}}}`, string(data))
 		})
 	})
 	t.Run("mutation with scope missing for mutation root field (with reject)", func(t *testing.T) {

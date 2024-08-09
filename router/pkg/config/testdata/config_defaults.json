@@ -203,7 +203,9 @@
     "EnablePersistedOperationsCache": true,
     "EnableNormalizationCache": true,
     "NormalizationCacheSize": 1024,
-    "ParseKitPoolSize": 16
+    "ParseKitPoolSize": 16,
+    "EnableValidationCache": true,
+    "ValidationCacheSize": 1024
   },
   "WebSocket": {
     "Enabled": true,

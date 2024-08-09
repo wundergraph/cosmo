@@ -23,6 +23,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/variablesvalidation"
@@ -82,6 +83,7 @@ type OperationProcessorOptions struct {
 
 	EnablePersistedOperationsCache bool
 	NormalizationCache             *ristretto.Cache[uint64, NormalizationCacheEntry]
+	ValidationCache                *ristretto.Cache[uint64, bool]
 	ParseKitPoolSize               int
 }
 
@@ -98,19 +100,16 @@ type OperationProcessor struct {
 
 // parseKit is a helper struct to parse, normalize and validate operations
 type parseKit struct {
-	i                       int
-	skipReuse               bool
-	parser                  *astparser.Parser
-	doc                     *ast.Document
-	cachedDoc               *ast.Document
-	keyGen                  *xxhash.Digest
-	normalizer              *astnormalization.OperationNormalizer
-	printer                 *astprinter.Printer
-	normalizedOperation     *bytes.Buffer
-	variablesValidator      *variablesvalidation.VariablesValidator
-	inputListCoercion       *astnormalization.ListInputCoercion
-	variablesParser         *fastjson.Parser
-	exportedVariablesParser *fastjson.Parser
+	i                   int
+	parser              *astparser.Parser
+	doc                 *ast.Document
+	keyGen              *xxhash.Digest
+	staticNormalizer    *astnormalization.OperationNormalizer
+	variablesNormalizer *astnormalization.VariablesNormalizer
+	printer             *astprinter.Printer
+	normalizedOperation *bytes.Buffer
+	variablesValidator  *variablesvalidation.VariablesValidator
+	operationValidator  *astvalidation.OperationValidator
 }
 
 type OperationCache struct {
@@ -121,6 +120,7 @@ type OperationCache struct {
 	persistedOperationCacheLock *sync.RWMutex
 
 	normalizationCache *ristretto.Cache[uint64, NormalizationCacheEntry]
+	validationCache    *ristretto.Cache[uint64, bool]
 }
 
 // OperationKit provides methods to parse, normalize and validate operations.
@@ -392,28 +392,13 @@ func (o *OperationKit) Parse() error {
 	return nil
 }
 
-// Normalize normalizes the operation. After normalization the normalized representation of the operation
+// NormalizeOperation normalizes the operation. After normalization the normalized representation of the operation
 // and variables is available. Also, the final operation ID is generated.
-func (o *OperationKit) Normalize() (bool, error) {
+func (o *OperationKit) NormalizeOperation() (bool, error) {
 	if o.parsedOperation.IsPersistedOperation {
 		return o.normalizePersistedOperation()
 	}
 	return o.normalizeNonPersistedOperation()
-}
-
-func (o *OperationKit) CoerceListVariables() (err error) {
-	if o.kit.cachedDoc != nil {
-		o.parsedOperation.Request.Variables, err = o.kit.inputListCoercion.CoerceInput(o.kit.cachedDoc, o.operationProcessor.executor.ClientSchema, o.parsedOperation.Request.Variables)
-		if err != nil {
-			return errors.WithStack(fmt.Errorf("coerceListVariables: %w", err))
-		}
-		return nil
-	}
-	o.parsedOperation.Request.Variables, err = o.kit.inputListCoercion.CoerceInput(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.parsedOperation.Request.Variables)
-	if err != nil {
-		return errors.WithStack(fmt.Errorf("coerceListVariables: %w", err))
-	}
-	return nil
 }
 
 func (o *OperationKit) normalizePersistedOperation() (cached bool, err error) {
@@ -423,37 +408,14 @@ func (o *OperationKit) normalizePersistedOperation() (cached bool, err error) {
 	}
 	skipIncludeNames := o.skipIncludeVariableNames()
 
-	// we create a copy of the original variables because we need to delete variables that are not used in "skip" and "include" directives
-	// skip or include directives have an influence on normalization (we're removing unused parts of the Operation)
-	// so we want to extract those variables and set them as default values
-	// later on, we can re-use the original variables again
-	// the exported variables minus the variables that are used in skip or include directives are used for the exported defaults in the cache
-	originalVariables := make([]byte, len(o.parsedOperation.Request.Variables))
-	copy(originalVariables, o.parsedOperation.Request.Variables)
-
-	o.parsedOperation.Request.Variables, err = o.deleteNonSkipIncludeVariables(o.parsedOperation.Request.Variables, skipIncludeNames)
-	if err != nil {
-		return false, errors.WithStack(fmt.Errorf("normalizePersistedOperation: %w", err))
-	}
-
 	report := &operationreport.Report{}
 	o.kit.doc.Input.Variables = o.parsedOperation.Request.Variables
-	o.kit.normalizer.NormalizeNamedOperation(o.kit.doc, o.operationProcessor.executor.ClientSchema, staticOperationName, report)
+	o.kit.staticNormalizer.NormalizeNamedOperation(o.kit.doc, o.operationProcessor.executor.ClientSchema, staticOperationName, report)
 	if report.HasErrors() {
 		return false, &reportError{
 			report: report,
 		}
 	}
-
-	exportedVariables := make([]byte, len(o.kit.doc.Input.Variables))
-	copy(exportedVariables, o.kit.doc.Input.Variables)
-
-	originalVariables, err = o.populateDefaultVariablesFromExportedDefaults(exportedVariables, originalVariables)
-	if err != nil {
-		return false, errors.WithStack(fmt.Errorf("normalizePersistedOperation: %w", err))
-	}
-
-	o.parsedOperation.Request.Variables = originalVariables
 
 	// Hash the normalized operation with the static operation name to avoid different IDs for the same operation
 	err = o.kit.printer.Print(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.keyGen)
@@ -474,57 +436,19 @@ func (o *OperationKit) normalizePersistedOperation() (cached bool, err error) {
 
 	// Set the normalized representation
 	o.parsedOperation.NormalizedRepresentation = o.kit.normalizedOperation.String()
+	o.parsedOperation.Request.Variables = o.kit.doc.Input.Variables
 
 	if o.cache != nil && o.cache.persistedOperationCache != nil {
-		o.savePersistedOperationToCache(skipIncludeNames, exportedVariables)
+		o.savePersistedOperationToCache(skipIncludeNames)
 	}
 
 	return false, nil
-}
-
-func (o *OperationKit) deleteNonSkipIncludeVariables(variables []byte, skipIncludeNames []string) ([]byte, error) {
-	if variables == nil {
-		return []byte("{}"), nil
-	}
-	switch unsafebytes.BytesToString(variables) {
-	case "null", "":
-		return []byte("{}"), nil
-	case "{}":
-		return variables, nil
-	}
-	value, err := o.kit.variablesParser.ParseBytes(variables)
-	if err != nil {
-		return nil, errors.WithStack(fmt.Errorf("deleteNonSkipIncludeVariables: %w", err))
-	}
-	if value.Type() != fastjson.TypeObject {
-		return nil, errors.WithStack(fmt.Errorf("deleteNonSkipIncludeVariables: variables must be an object"))
-	}
-	object := value.GetObject()
-	deleteKeys := make([]string, 0)
-	object.Visit(func(key []byte, v *fastjson.Value) {
-		keyStr := unsafebytes.BytesToString(key)
-		for i := range skipIncludeNames {
-			if keyStr == skipIncludeNames[i] {
-				return
-			}
-		}
-		deleteKeys = append(deleteKeys, keyStr)
-	})
-	if len(deleteKeys) == 0 {
-		return variables, nil
-	}
-	for _, key := range deleteKeys {
-		value.Del(key)
-	}
-	return value.MarshalTo(nil), nil
 }
 
 type NormalizationCacheEntry struct {
 	operationID              uint64
 	normalizedRepresentation string
 	operationType            string
-	exportedVariables        []byte
-	doc                      *ast.Document
 }
 
 func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error) {
@@ -534,58 +458,30 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 	if o.cache != nil && o.cache.normalizationCache != nil {
 		entry, ok := o.cache.normalizationCache.Get(cacheKey)
 		if ok {
-			o.kit.cachedDoc = entry.doc
 			o.parsedOperation.NormalizedRepresentation = entry.normalizedRepresentation
 			o.parsedOperation.ID = entry.operationID
 			o.parsedOperation.Type = entry.operationType
 			o.parsedOperation.NormalizationCacheHit = true
-			o.parsedOperation.Request.Variables, err = o.populateDefaultVariablesFromExportedDefaults(entry.exportedVariables, o.parsedOperation.Request.Variables)
+			err = o.setAndParseOperationDoc()
 			if err != nil {
-				return false, errors.WithStack(fmt.Errorf("normalizeNonPersistedOperation (cached): %w", err))
+				return false, err
 			}
 			return true, nil
 		}
 	}
 
-	// we create a copy of the original variables because we need to delete variables that are not used in "skip" and "include" directives
-	// skip or include directives have an influence on normalization (we're removing unused parts of the Operation)
-	// so we want to extract those variables and set them as default values
-	// later on, we can re-use the original variables again
-	// the exported variables minus the variables that are used in skip or include directives are used for the exported defaults in the cache
-	originalVariables := make([]byte, len(o.parsedOperation.Request.Variables))
-	copy(originalVariables, o.parsedOperation.Request.Variables)
-
-	// remove variables that are used in skip or include directives
-	// these are just regular default values, so we can remove them
-	// we only want to normalize the operation with variables that have an impact on the operation shape (skip or include directives)
-	o.parsedOperation.Request.Variables, err = o.deleteNonSkipIncludeVariables(o.parsedOperation.Request.Variables, skipIncludeVariableNames)
-	if err != nil {
-		return false, errors.WithStack(fmt.Errorf("normalizeNonPersistedOperation (uncached): %w", err))
-	}
-
 	// normalize the operation
 	report := &operationreport.Report{}
 	o.kit.doc.Input.Variables = o.parsedOperation.Request.Variables
-	o.kit.normalizer.NormalizeNamedOperation(o.kit.doc, o.operationProcessor.executor.ClientSchema, staticOperationName, report)
+	o.kit.staticNormalizer.NormalizeNamedOperation(o.kit.doc, o.operationProcessor.executor.ClientSchema, staticOperationName, report)
 	if report.HasErrors() {
 		return false, &reportError{
 			report: report,
 		}
 	}
 
-	// make a copy of the exported variables, so we can store them in the cache
-	// for subsequent requests, they can be used to add missing variables
-	exportedVariables := make([]byte, len(o.kit.doc.Input.Variables))
-	copy(exportedVariables, o.kit.doc.Input.Variables)
-
-	originalVariables, err = o.populateDefaultVariablesFromExportedDefaults(exportedVariables, originalVariables)
-	if err != nil {
-		return false, errors.WithStack(fmt.Errorf("normalizeNonPersistedOperation (uncached): %w", err))
-	}
-
 	// reset with the original variables
-	o.parsedOperation.Request.Variables = originalVariables
-	o.kit.doc.Input.Variables = originalVariables
+	o.parsedOperation.Request.Variables = o.kit.doc.Input.Variables
 
 	// Hash the normalized operation with the static operation name & original variables to avoid different IDs for the same operation
 	err = o.kit.printer.Print(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.keyGen)
@@ -611,44 +507,54 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 			operationID:              o.parsedOperation.ID,
 			normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
 			operationType:            o.parsedOperation.Type,
-			exportedVariables:        o.nullifyVariables(exportedVariables),
-			doc:                      o.kit.doc,
 		}
 		o.cache.normalizationCache.Set(cacheKey, entry, 1)
-		// we typically re-use the kit, but in this case we're sharing the doc across requests for validation
-		// as such, we don't want to return and re-use the kit for future requests, so we're setting it to skipReuse true
-		o.kit.skipReuse = true
 	}
 
 	return false, nil
 }
 
-// nullifyVariables returns nil if the variables are nil or don't contain any meaningful data
-// by the definition of the GraphQL specification, variables must be a map
-// this means that the minimum meaningful variables are {"a":0}
-// so if we have less than 7 characters, we return nil because we don't need to store the variables in the cache
-// as we will discard them anyways
-// keep in mind that we're solely using the exported variables, which contain default variables,
-// to populate the variables with defaults if we've got a normalization cache hit
-// consequently, we don't need to store anything in the cache if the variables are empty-ish
-//
-// in addition, if we're nullifying the exported variables in case of a cache miss
-// we can immediately skip parsing them and trying to set defaults from them if they're nil (early return)
-func (o *OperationKit) nullifyVariables(variables []byte) []byte {
-	if variables == nil {
+func (o *OperationKit) setAndParseOperationDoc() error {
+	o.kit.doc.Reset()
+	o.kit.doc.Input.ResetInputString(o.parsedOperation.NormalizedRepresentation)
+	o.kit.doc.Input.Variables = o.parsedOperation.Request.Variables
+	report := &operationreport.Report{}
+	o.kit.parser.Parse(o.kit.doc, report)
+	if report.HasErrors() {
+		return &reportError{
+			report: report,
+		}
+	}
+	return nil
+}
+
+func (o *OperationKit) NormalizeVariables() error {
+	before := len(o.kit.doc.Input.Variables) + len(o.kit.doc.Input.RawBytes)
+	report := &operationreport.Report{}
+	o.kit.variablesNormalizer.NormalizeNamedOperation(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.parsedOperation.Request.OperationName, report)
+	if report.HasErrors() {
+		return &reportError{
+			report: report,
+		}
+	}
+	after := len(o.kit.doc.Input.Variables) + len(o.kit.doc.Input.RawBytes)
+	if after == before {
 		return nil
 	}
-	if len(variables) < 7 {
-		return nil
+	o.kit.normalizedOperation.Reset()
+	err := o.kit.printer.Print(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.normalizedOperation)
+	if err != nil {
+		return errors.WithStack(fmt.Errorf("normalizeVariables: %w", err))
 	}
-	return variables
+	o.parsedOperation.NormalizedRepresentation = o.kit.normalizedOperation.String()
+	o.parsedOperation.Request.Variables = o.kit.doc.Input.Variables
+	return nil
 }
 
 type normalizedOperationCacheEntry struct {
 	operationID              uint64
 	normalizedRepresentation string
 	operationType            string
-	exportedVariables        []byte
 }
 
 func (o *OperationKit) loadPersistedOperationFromCache() (ok bool, err error) {
@@ -672,55 +578,11 @@ func (o *OperationKit) loadPersistedOperationFromCache() (ok bool, err error) {
 	o.parsedOperation.ID = entry.operationID
 	o.parsedOperation.NormalizedRepresentation = entry.normalizedRepresentation
 	o.parsedOperation.Type = entry.operationType
-	o.parsedOperation.Request.Variables, err = o.populateDefaultVariablesFromExportedDefaults(entry.exportedVariables, o.parsedOperation.Request.Variables)
+	err = o.setAndParseOperationDoc()
 	if err != nil {
-		return false, errors.WithStack(fmt.Errorf("loadPersistedOperationFromCache: %w", err))
+		return false, err
 	}
-
-	o.kit.doc.Input.ResetInputString(entry.normalizedRepresentation)
-	report := &operationreport.Report{}
-	o.kit.parser.Parse(o.kit.doc, report)
-	if report.HasErrors() {
-		return false, &reportError{
-			report: report,
-		}
-	}
-
 	return true, nil
-}
-
-// populateDefaultVariablesFromExportedDefaults iterates through the exported default variables and sets missing ones in the variables
-func (o *OperationKit) populateDefaultVariablesFromExportedDefaults(exportedVariables, override []byte) ([]byte, error) {
-	if exportedVariables == nil {
-		return override, nil
-	}
-	switch unsafebytes.BytesToString(exportedVariables) {
-	case "null", "", "{}":
-		return override, nil
-	}
-	in, err := o.kit.exportedVariablesParser.ParseBytes(exportedVariables)
-	if err != nil {
-		return nil, errors.WithStack(fmt.Errorf("populateDefaultVariablesFromExportedDefaults failed parsing exportedVariables: %w, input: %s", err, exportedVariables))
-	}
-	if in.Type() != fastjson.TypeObject {
-		return nil, errors.WithStack(fmt.Errorf("populateDefaultVariablesFromExportedDefaults: exportedVariables must be an object"))
-	}
-	out, err := o.kit.variablesParser.ParseBytes(override)
-	if err != nil {
-		return nil, errors.WithStack(fmt.Errorf("populateDefaultVariablesFromExportedDefaults failed parsing override: %w, %s", err, override))
-	}
-	if out.Type() != fastjson.TypeObject {
-		return nil, errors.WithStack(fmt.Errorf("populateDefaultVariablesFromExportedDefaults: override must be an object"))
-	}
-	inObject, outObject := in.GetObject(), out.GetObject()
-	inObject.Visit(func(key []byte, v *fastjson.Value) {
-		if out.Exists(unsafebytes.BytesToString(key)) {
-			return
-		}
-		outObject.Set(string(key), v)
-	})
-	result := out.MarshalTo(nil)
-	return result, nil
 }
 
 func (o *OperationKit) jsonIsNull(variables []byte) bool {
@@ -737,15 +599,13 @@ func (o *OperationKit) jsonIsNull(variables []byte) bool {
 	return value.Type() == fastjson.TypeNull
 }
 
-func (o *OperationKit) savePersistedOperationToCache(skipIncludeVariableNames []string, exportedVariables []byte) {
+func (o *OperationKit) savePersistedOperationToCache(skipIncludeVariableNames []string) {
 	cacheKey := o.generatePersistedOperationCacheKey(skipIncludeVariableNames)
 	entry := normalizedOperationCacheEntry{
 		operationID:              o.parsedOperation.ID,
 		normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
 		operationType:            o.parsedOperation.Type,
-		exportedVariables:        make([]byte, len(exportedVariables)),
 	}
-	copy(entry.exportedVariables, exportedVariables)
 
 	o.cache.persistedOperationCacheLock.Lock()
 	o.cache.persistedOperationCache[cacheKey] = entry
@@ -804,25 +664,33 @@ func (o *OperationKit) writeSkipIncludeCacheKeyToKeyGen(skipIncludeVariableNames
 }
 
 // Validate validates the operation variables.
-func (o *OperationKit) Validate() error {
-	if o.kit.cachedDoc != nil {
-		err := o.kit.variablesValidator.Validate(o.kit.cachedDoc, o.operationProcessor.executor.ClientSchema, o.parsedOperation.Request.Variables)
-		if err != nil {
-			return &inputError{
-				message:    err.Error(),
-				statusCode: http.StatusOK,
-			}
-		}
-		return nil
-	}
-	err := o.kit.variablesValidator.Validate(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.parsedOperation.Request.Variables)
+func (o *OperationKit) Validate() (cacheHit bool, err error) {
+	err = o.kit.variablesValidator.Validate(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.doc.Input.Variables)
 	if err != nil {
-		return &inputError{
+		return false, &inputError{
 			message:    err.Error(),
 			statusCode: http.StatusOK,
 		}
 	}
-	return nil
+	if o.cache != nil && o.cache.validationCache != nil {
+		var valid bool
+		valid, cacheHit = o.cache.validationCache.Get(o.parsedOperation.ID)
+		if valid {
+			return
+		}
+	}
+	report := &operationreport.Report{}
+	o.kit.operationValidator.Validate(o.kit.doc, o.operationProcessor.executor.ClientSchema, report)
+	if o.cache != nil && o.cache.validationCache != nil {
+		valid := !report.HasErrors()
+		o.cache.validationCache.Set(o.parsedOperation.ID, valid, 1)
+	}
+	if report.HasErrors() {
+		return cacheHit, &reportError{
+			report: report,
+		}
+	}
+	return
 }
 
 var (
@@ -863,19 +731,17 @@ func createParseKit(i int) *parseKit {
 		parser: astparser.NewParser(),
 		doc:    ast.NewSmallDocument(),
 		keyGen: xxhash.New(),
-		normalizer: astnormalization.NewWithOpts(
-			astnormalization.WithExtractVariables(),
+		staticNormalizer: astnormalization.NewWithOpts(
 			astnormalization.WithInlineFragmentSpreads(),
 			astnormalization.WithRemoveFragmentDefinitions(),
 			astnormalization.WithRemoveNotMatchingOperationDefinitions(),
 			astnormalization.WithRemoveUnusedVariables(),
 		),
-		printer:                 &astprinter.Printer{},
-		normalizedOperation:     &bytes.Buffer{},
-		variablesValidator:      variablesvalidation.NewVariablesValidator(),
-		inputListCoercion:       astnormalization.NewListInputCoercion(),
-		variablesParser:         &fastjson.Parser{},
-		exportedVariablesParser: &fastjson.Parser{},
+		variablesNormalizer: astnormalization.NewVariablesNormalizer(),
+		printer:             &astprinter.Printer{},
+		normalizedOperation: &bytes.Buffer{},
+		variablesValidator:  variablesvalidation.NewVariablesValidator(),
+		operationValidator:  astvalidation.DefaultOperationValidator(),
 	}
 }
 
@@ -908,6 +774,12 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		}
 		processor.operationCache.normalizationCache = opts.NormalizationCache
 	}
+	if opts.ValidationCache != nil {
+		if processor.operationCache == nil {
+			processor.operationCache = &OperationCache{}
+		}
+		processor.operationCache.validationCache = opts.ValidationCache
+	}
 	return processor
 }
 
@@ -917,11 +789,6 @@ func (p *OperationProcessor) getKit() *parseKit {
 }
 
 func (p *OperationProcessor) freeKit(kit *parseKit) {
-	if kit.skipReuse {
-		kit.skipReuse = false
-		kit.doc = ast.NewSmallDocument()
-	}
-	kit.cachedDoc = nil
 	kit.keyGen.Reset()
 	kit.doc.Reset()
 	kit.normalizedOperation.Reset()
