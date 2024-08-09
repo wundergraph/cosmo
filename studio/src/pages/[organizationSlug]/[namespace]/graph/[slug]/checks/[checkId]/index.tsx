@@ -373,10 +373,10 @@ const CheckDetails = ({
         </dl>
       </div>
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        <dl className="grid flex-shrink-0 grid-cols-3 space-y-6 overflow-hidden border-b px-4 py-4 lg:block lg:min-h-full lg:w-[240px] lg:space-y-8 lg:overflow-auto lg:border-b-0 lg:border-r lg:px-6 xl:w-[260px] xl:px-8">
+        <dl className="flex flex-col flex-shrink-0 space-y-6 overflow-hidden border-b px-4 py-4 lg:block lg:min-h-full lg:w-[240px] lg:space-y-8 lg:overflow-auto lg:border-b-0 lg:border-r lg:px-6 xl:w-[260px] xl:px-8">
           <div className="col-span-3 flex flex-col">
             <dt className="mb-2 text-sm text-muted-foreground">Tasks</dt>
-            <dd className="grid grid-cols-3 flex-row gap-2 lg:flex lg:flex-col">
+            <dd className="flex flex-wrap flex-row gap-2 lg:flex lg:flex-col">
               <Badge
                 variant="outline"
                 className="flex items-center space-x-1.5 py-2"
@@ -550,7 +550,7 @@ const CheckDetails = ({
             className="flex h-full min-h-0 flex-col"
           >
             <div className="flex flex-row px-4 py-4 lg:px-6">
-              <TabsList>
+              <TabsList className="overflow-x-auto scrollbar-none justify-start">
                 <TabsTrigger
                   value="changes"
                   className="flex items-center gap-x-2"
@@ -734,7 +734,7 @@ const CheckDetails = ({
                     variant="outline"
                   />
                 </div>
-                <div className="scrollbar-custom h-full w-full overflow-auto">
+                <div className="scrollbar-custom h-full w-full min-h-[300px] overflow-auto">
                   <SDLViewerMonaco
                     schema={sdl}
                     disablePrettier

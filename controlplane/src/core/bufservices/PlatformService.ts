@@ -22,6 +22,7 @@ import {
   CreateFederatedGraphResponse,
   CreateFederatedGraphTokenResponse,
   CreateFederatedSubgraphResponse,
+  CreateIgnoreOverridesForAllOperationsResponse,
   CreateIntegrationResponse,
   CreateMonographResponse,
   CreateNamespaceResponse,
@@ -3148,7 +3149,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         await auditLogRepo.addAuditLog({
           organizationId: authContext.organizationId,
           auditAction: 'operation_change_override.created',
-          action: 'updated',
+          action: 'created',
           actorId: authContext.userId,
           auditableType: 'operation_change_override',
           auditableDisplayName: req.operationHash,
@@ -3273,7 +3274,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         await auditLogRepo.addAuditLog({
           organizationId: authContext.organizationId,
-          auditAction: 'operation_ignore_all_override.deleted',
+          auditAction: 'operation_ignore_override.deleted',
           action: 'updated',
           actorId: authContext.userId,
           auditableType: 'operation_ignore_all_override',
@@ -3289,6 +3290,175 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
         };
+      });
+    },
+
+    createIgnoreOverridesForAllOperations: (req, ctx) => {
+      let logger = getLogger(ctx, opts.logger);
+
+      return handleError<PlainMessage<CreateIgnoreOverridesForAllOperationsResponse>>(ctx, logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
+        const schemaCheckRepo = new SchemaCheckRepository(opts.db);
+        const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
+
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user does not have permissions to perform this operation`,
+            },
+          };
+        }
+
+        const graph = await fedGraphRepo.byName(req.graphName, req.namespace);
+
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Requested graph does not exist',
+            },
+          };
+        }
+
+        return await opts.db.transaction(async (tx) => {
+          const auditLogRepo = new AuditLogRepository(tx);
+          const operationsRepo = new OperationsRepository(tx, graph.id);
+          const affectedOperations = await schemaCheckRepo.getAffectedOperationsByCheckId(req.checkId);
+
+          for (const affectedOperation of affectedOperations) {
+            const affectedChanges = await operationsRepo.createIgnoreAllOverride({
+              namespaceId: graph.namespaceId,
+              operationHash: affectedOperation.hash,
+              operationName: affectedOperation.name,
+              actorId: authContext.userId,
+            });
+
+            if (affectedChanges.length === 0) {
+              throw new PublicError(
+                EnumStatusCode.ERR,
+                `Could not create ignore override for operation with hash ${affectedOperation.hash}`,
+              );
+            }
+
+            await auditLogRepo.addAuditLog({
+              organizationId: authContext.organizationId,
+              auditAction: 'operation_ignore_override.created',
+              action: 'updated',
+              actorId: authContext.userId,
+              auditableType: 'operation_ignore_all_override',
+              auditableDisplayName: affectedOperation.hash,
+              actorDisplayName: authContext.userDisplayName,
+              actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+              targetNamespaceId: graph.namespaceId,
+              targetNamespaceDisplayName: graph.namespace,
+            });
+          }
+
+          return {
+            response: {
+              code: EnumStatusCode.OK,
+            },
+          };
+        });
+      });
+    },
+
+    toggleChangeOverridesForAllOperations: (req, ctx) => {
+      let logger = getLogger(ctx, opts.logger);
+
+      return handleError<PlainMessage<CreateIgnoreOverridesForAllOperationsResponse>>(ctx, logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
+        const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
+
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user does not have permissions to perform this operation`,
+            },
+          };
+        }
+
+        const graph = await fedGraphRepo.byName(req.graphName, req.namespace);
+
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Requested graph does not exist',
+            },
+          };
+        }
+
+        return opts.db.transaction(async (tx) => {
+          const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
+          const schemaCheckRepo = new SchemaCheckRepository(tx);
+          const auditLogRepo = new AuditLogRepository(tx);
+          const operationsRepo = new OperationsRepository(tx, graph.id);
+
+          const affectedOperations = await schemaCheckRepo.getAffectedOperationsByCheckId(req.checkId);
+          const checkDetails = await subgraphRepo.checkDetails(req.checkId, graph.targetId);
+
+          if (!checkDetails) {
+            throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Could not find details of requested check`);
+          }
+
+          for (const affectedOperation of affectedOperations) {
+            const impactingChanges = checkDetails.changes.filter(({ id }) =>
+              affectedOperation.schemaChangeIds.includes(id),
+            );
+
+            const affectedRows = [];
+            if (req.isSafe) {
+              const res = await operationsRepo.createOperationOverrides({
+                namespaceId: graph.namespaceId,
+                operationHash: affectedOperation.hash,
+                operationName: affectedOperation.name,
+                changes: impactingChanges,
+                actorId: authContext.userId,
+              });
+              affectedRows.push(...res);
+            } else {
+              const res = await operationsRepo.removeOperationOverrides({
+                operationHash: affectedOperation.hash,
+                namespaceId: graph.namespaceId,
+                changes: impactingChanges,
+              });
+              affectedRows.push(...res);
+            }
+
+            if (affectedRows.length === 0) {
+              throw new PublicError(
+                EnumStatusCode.ERR,
+                `Could not toggle change overrides for operation with hash ${affectedOperation.hash}`,
+              );
+            }
+
+            await auditLogRepo.addAuditLog({
+              organizationId: authContext.organizationId,
+              auditAction: req.isSafe ? 'operation_change_override.created' : 'operation_change_override.deleted',
+              action: req.isSafe ? 'created' : 'deleted',
+              actorId: authContext.userId,
+              auditableType: 'operation_change_override',
+              auditableDisplayName: affectedOperation.hash,
+              actorDisplayName: authContext.userDisplayName,
+              actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+              targetNamespaceId: graph.namespaceId,
+              targetNamespaceDisplayName: graph.namespace,
+            });
+          }
+
+          return {
+            response: {
+              code: EnumStatusCode.OK,
+            },
+          };
+        });
       });
     },
 
@@ -3342,7 +3512,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         await auditLogRepo.addAuditLog({
           organizationId: authContext.organizationId,
-          auditAction: 'operation_ignore_all_override.created',
+          auditAction: 'operation_ignore_override.created',
           action: 'updated',
           actorId: authContext.userId,
           auditableType: 'operation_ignore_all_override',
