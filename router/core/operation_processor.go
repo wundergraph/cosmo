@@ -23,6 +23,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/variablesvalidation"
@@ -82,6 +83,7 @@ type OperationProcessorOptions struct {
 
 	EnablePersistedOperationsCache bool
 	NormalizationCache             *ristretto.Cache[uint64, NormalizationCacheEntry]
+	ValidationCache                *ristretto.Cache[uint64, bool]
 	ParseKitPoolSize               int
 }
 
@@ -98,18 +100,16 @@ type OperationProcessor struct {
 
 // parseKit is a helper struct to parse, normalize and validate operations
 type parseKit struct {
-	i                       int
-	parser                  *astparser.Parser
-	doc                     *ast.Document
-	keyGen                  *xxhash.Digest
-	staticNormalizer        *astnormalization.OperationNormalizer
-	variablesNormalizer     *astnormalization.VariablesNormalizer
-	printer                 *astprinter.Printer
-	normalizedOperation     *bytes.Buffer
-	variablesValidator      *variablesvalidation.VariablesValidator
-	inputListCoercion       *astnormalization.ListInputCoercion
-	variablesParser         *fastjson.Parser
-	exportedVariablesParser *fastjson.Parser
+	i                   int
+	parser              *astparser.Parser
+	doc                 *ast.Document
+	keyGen              *xxhash.Digest
+	staticNormalizer    *astnormalization.OperationNormalizer
+	variablesNormalizer *astnormalization.VariablesNormalizer
+	printer             *astprinter.Printer
+	normalizedOperation *bytes.Buffer
+	variablesValidator  *variablesvalidation.VariablesValidator
+	operationValidator  *astvalidation.OperationValidator
 }
 
 type OperationCache struct {
@@ -120,6 +120,7 @@ type OperationCache struct {
 	persistedOperationCacheLock *sync.RWMutex
 
 	normalizationCache *ristretto.Cache[uint64, NormalizationCacheEntry]
+	validationCache    *ristretto.Cache[uint64, bool]
 }
 
 // OperationKit provides methods to parse, normalize and validate operations.
@@ -444,48 +445,10 @@ func (o *OperationKit) normalizePersistedOperation() (cached bool, err error) {
 	return false, nil
 }
 
-func (o *OperationKit) deleteNonSkipIncludeVariables(variables []byte, skipIncludeNames []string) ([]byte, error) {
-	if variables == nil {
-		return []byte("{}"), nil
-	}
-	switch unsafebytes.BytesToString(variables) {
-	case "null", "":
-		return []byte("{}"), nil
-	case "{}":
-		return variables, nil
-	}
-	value, err := o.kit.variablesParser.ParseBytes(variables)
-	if err != nil {
-		return nil, errors.WithStack(fmt.Errorf("deleteNonSkipIncludeVariables: %w", err))
-	}
-	if value.Type() != fastjson.TypeObject {
-		return nil, errors.WithStack(fmt.Errorf("deleteNonSkipIncludeVariables: variables must be an object"))
-	}
-	object := value.GetObject()
-	deleteKeys := make([]string, 0)
-	object.Visit(func(key []byte, v *fastjson.Value) {
-		keyStr := unsafebytes.BytesToString(key)
-		for i := range skipIncludeNames {
-			if keyStr == skipIncludeNames[i] {
-				return
-			}
-		}
-		deleteKeys = append(deleteKeys, keyStr)
-	})
-	if len(deleteKeys) == 0 {
-		return variables, nil
-	}
-	for _, key := range deleteKeys {
-		value.Del(key)
-	}
-	return value.MarshalTo(nil), nil
-}
-
 type NormalizationCacheEntry struct {
 	operationID              uint64
 	normalizedRepresentation string
 	operationType            string
-	exportedVariables        []byte
 }
 
 func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error) {
@@ -586,27 +549,6 @@ func (o *OperationKit) NormalizeVariables() error {
 	o.parsedOperation.NormalizedRepresentation = o.kit.normalizedOperation.String()
 	o.parsedOperation.Request.Variables = o.kit.doc.Input.Variables
 	return nil
-}
-
-// nullifyVariables returns nil if the variables are nil or don't contain any meaningful data
-// by the definition of the GraphQL specification, variables must be a map
-// this means that the minimum meaningful variables are {"a":0}
-// so if we have less than 7 characters, we return nil because we don't need to store the variables in the cache
-// as we will discard them anyways
-// keep in mind that we're solely using the exported variables, which contain default variables,
-// to populate the variables with defaults if we've got a normalization cache hit
-// consequently, we don't need to store anything in the cache if the variables are empty-ish
-//
-// in addition, if we're nullifying the exported variables in case of a cache miss
-// we can immediately skip parsing them and trying to set defaults from them if they're nil (early return)
-func (o *OperationKit) nullifyVariables(variables []byte) []byte {
-	if variables == nil {
-		return nil
-	}
-	if len(variables) < 7 {
-		return nil
-	}
-	return variables
 }
 
 type normalizedOperationCacheEntry struct {
@@ -722,15 +664,33 @@ func (o *OperationKit) writeSkipIncludeCacheKeyToKeyGen(skipIncludeVariableNames
 }
 
 // Validate validates the operation variables.
-func (o *OperationKit) Validate() error {
-	err := o.kit.variablesValidator.Validate(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.doc.Input.Variables)
+func (o *OperationKit) Validate() (cacheHit bool, err error) {
+	err = o.kit.variablesValidator.Validate(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.doc.Input.Variables)
 	if err != nil {
-		return &inputError{
+		return false, &inputError{
 			message:    err.Error(),
 			statusCode: http.StatusOK,
 		}
 	}
-	return nil
+	if o.cache != nil && o.cache.validationCache != nil {
+		var valid bool
+		valid, cacheHit = o.cache.validationCache.Get(o.parsedOperation.ID)
+		if valid {
+			return
+		}
+	}
+	report := &operationreport.Report{}
+	o.kit.operationValidator.Validate(o.kit.doc, o.operationProcessor.executor.ClientSchema, report)
+	if o.cache != nil && o.cache.validationCache != nil {
+		valid := !report.HasErrors()
+		o.cache.validationCache.Set(o.parsedOperation.ID, valid, 1)
+	}
+	if report.HasErrors() {
+		return cacheHit, &reportError{
+			report: report,
+		}
+	}
+	return
 }
 
 var (
@@ -777,13 +737,11 @@ func createParseKit(i int) *parseKit {
 			astnormalization.WithRemoveNotMatchingOperationDefinitions(),
 			astnormalization.WithRemoveUnusedVariables(),
 		),
-		variablesNormalizer:     astnormalization.NewVariablesNormalizer(),
-		printer:                 &astprinter.Printer{},
-		normalizedOperation:     &bytes.Buffer{},
-		variablesValidator:      variablesvalidation.NewVariablesValidator(),
-		inputListCoercion:       astnormalization.NewListInputCoercion(),
-		variablesParser:         &fastjson.Parser{},
-		exportedVariablesParser: &fastjson.Parser{},
+		variablesNormalizer: astnormalization.NewVariablesNormalizer(),
+		printer:             &astprinter.Printer{},
+		normalizedOperation: &bytes.Buffer{},
+		variablesValidator:  variablesvalidation.NewVariablesValidator(),
+		operationValidator:  astvalidation.DefaultOperationValidator(),
 	}
 }
 
@@ -815,6 +773,12 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 			processor.operationCache = &OperationCache{}
 		}
 		processor.operationCache.normalizationCache = opts.NormalizationCache
+	}
+	if opts.ValidationCache != nil {
+		if processor.operationCache == nil {
+			processor.operationCache = &OperationCache{}
+		}
+		processor.operationCache.validationCache = opts.ValidationCache
 	}
 	return processor
 }

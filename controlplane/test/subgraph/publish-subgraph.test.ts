@@ -85,7 +85,7 @@ describe('Publish subgraph tests', () => {
     expect(publishFederatedSubgraphResp.response?.details).toBe(
       'The subgraph was originally created as a regular subgraph.' +
       ' A regular subgraph cannot be retroactively changed into an Event-Driven Graph (EDG).' +
-      ' Please create a new Event-Driven subgraph with the -edg flag.',
+      ' Please create a new Event-Driven subgraph with the --edg flag.',
     );
 
     await server.close();
@@ -212,7 +212,7 @@ describe('Publish subgraph tests', () => {
     });
 
     expect(publishFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR);
-    expect(publishFederatedSubgraphResp.response?.details).toBe('An Event-Driven Graph must not define a websocket subprotocol');
+    expect(publishFederatedSubgraphResp.response?.details).toBe('An Event-Driven Graph must not define a websocket subprotocol.');
 
     await server.close();
   });
@@ -230,7 +230,7 @@ describe('Publish subgraph tests', () => {
 
     expect(publishFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR);
     expect(publishFederatedSubgraphResp.response?.details)
-      .toBe('A valid, non-empty routing URL is required to create and publish a non-Event-Driven subgraph');
+      .toBe('A valid, non-empty routing URL is required to create and publish a non-Event-Driven subgraph.');
 
     await server.close();
   });
@@ -248,7 +248,7 @@ describe('Publish subgraph tests', () => {
     });
 
     expect(publishFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR);
-    expect(publishFederatedSubgraphResp.response?.details).toBe('Routing URL "url" is not a valid URL');
+    expect(publishFederatedSubgraphResp.response?.details).toBe('Routing URL "url" is not a valid URL.');
 
     await server.close();
   });

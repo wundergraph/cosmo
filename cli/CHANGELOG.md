@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.59.0](https://github.com/wundergraph/cosmo/compare/wgc@0.58.7...wgc@0.59.0) (2024-08-09)
+
+### Features
+
+* add command to create and publish feature subgraph in one command ([#960](https://github.com/wundergraph/cosmo/issues/960)) ([9a478e8](https://github.com/wundergraph/cosmo/commit/9a478e8164bfc7c933fedbe6188d7876e5c46c94)) (@JivusAyrus)
+
 ## [0.58.7](https://github.com/wundergraph/cosmo/compare/wgc@0.58.6...wgc@0.58.7) (2024-08-01)
 
 **Note:** Version bump only for package wgc
