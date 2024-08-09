@@ -9,8 +9,6 @@ on:
       - 'release-please--**'
   pull_request:
     branches:
-      - 'release-please--**'
-      - andi/helm-release-testing
       - main
     types:
       - reopened
@@ -28,7 +26,8 @@ jobs:
   update-docs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-
+    # do not run for other prs than the release please prs
+    if: startsWith(github.event.pull_request.head.ref, 'release-please--')
     steps:
       - name: checkout
         uses: actions/checkout@v4
