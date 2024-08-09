@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
   pull_request:
     branches:
-      # - 'release-please--**'
+      - 'release-please--**'
       - andi/helm-release-testing
     types:
       - reopened
@@ -19,8 +19,6 @@ permissions:
 
 env:
   CI: true
-  REGISTRY: ghcr.io.github/workflows/helm-release.yaml
-  RELEASE_BRANCH: andi/helm-release-testing
 
 jobs:
   update-docs:
