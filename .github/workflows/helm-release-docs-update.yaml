@@ -47,6 +47,11 @@ jobs:
         run: make docs
         working-directory: ./helm
 
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJSON(github) }}
+        run: echo "$GITHUB_CONTEXT"
+
       - if: startsWith(github.event.pull_request.head.ref, 'release-please--')
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
