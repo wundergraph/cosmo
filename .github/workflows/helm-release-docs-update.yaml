@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
-    steps:opened
+    steps:
       - name: checkout
         uses: actions/checkout@v4
 
@@ -51,3 +51,4 @@ jobs:
           commit_user_name: hardworker-bot
           commit_user_email: bot@wundergraph.com
           commit_author: hardworker-bot <bot@wundergraph.com>
+          create_branch: false
