@@ -53,7 +53,7 @@ jobs:
           GITHUB_CONTEXT: ${{ toJSON(github) }}
         run: echo "$GITHUB_CONTEXT"
 
-      - if: startsWith(github.event.pull_request.head.ref, 'release-please--')
+      - if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'release-please--')
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: 'chore: update helm docs and prepare release'
