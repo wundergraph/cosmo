@@ -6,7 +6,7 @@ on:
   push:
     branches:
       - 'release-please--**'
-      - andi/helm-release-testing
+        # - andi/helm-release-testing
 
 permissions:
   contents: write
@@ -17,7 +17,7 @@ env:
   RELEASE_BRANCH: andi/helm-release-testing
 
 jobs:
-  prepare-release:
+  update-docs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
