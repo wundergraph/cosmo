@@ -2742,6 +2742,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
         const routingUrl = req.routingUrl || '';
         let subgraph = await subgraphRepo.byName(req.name, req.namespace);
+        let baseSubgraphID = '';
 
         /* If the subgraph exists, validate that no parameters were included.
          * Otherwise, validate the input and create the subgraph.
@@ -2767,7 +2768,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                 details: isEventDrivenGraph
                   ? 'The subgraph was originally created as a regular subgraph.' +
                     ' A regular subgraph cannot be retroactively changed into an Event-Driven Graph (EDG).' +
-                    ' Please create a new Event-Driven subgraph with the -edg flag.'
+                    ' Please create a new Event-Driven subgraph with the --edg flag.'
                   : 'The subgraph was originally created as an Event-Driven Graph (EDG).' +
                     ' An EDG cannot be retroactively changed into a regular subgraph.' +
                     ' Please create a new regular subgraph.',
@@ -2777,6 +2778,32 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             };
           }
         } else {
+          if (req.isFeatureSubgraph) {
+            if (req.baseSubgraphName) {
+              const baseSubgraph = await subgraphRepo.byName(req.baseSubgraphName, req.namespace);
+              if (!baseSubgraph) {
+                return {
+                  response: {
+                    code: EnumStatusCode.ERR,
+                    details: `Base subgraph "${req.baseSubgraphName}" does not exist in the namespace "${req.namespace}".`,
+                  },
+                  compositionErrors: [],
+                  deploymentErrors: [],
+                };
+              }
+              baseSubgraphID = baseSubgraph.id;
+            } else {
+              return {
+                response: {
+                  code: EnumStatusCode.ERR_NOT_FOUND,
+                  details: `Feature Subgraph ${req.name} not found. If intended to create and publish, please pass the name of the base subgraph with --subgraph option.`,
+                },
+                compositionErrors: [],
+                deploymentErrors: [],
+              };
+            }
+          }
+
           // Labels are not required but should be valid if included.
           if (!isValidLabels(req.labels)) {
             return {
@@ -2824,7 +2851,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               return {
                 response: {
                   code: EnumStatusCode.ERR,
-                  details: `An Event-Driven Graph must not define a websocket subprotocol`,
+                  details: `An Event-Driven Graph must not define a websocket subprotocol.`,
                 },
                 compositionErrors: [],
                 deploymentErrors: [],
@@ -2836,8 +2863,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                 response: {
                   code: EnumStatusCode.ERR,
                   details: routingUrl
-                    ? `Routing URL "${routingUrl}" is not a valid URL`
-                    : `A valid, non-empty routing URL is required to create and publish a non-Event-Driven subgraph`,
+                    ? `Routing URL "${routingUrl}" is not a valid URL.`
+                    : req.isFeatureSubgraph
+                      ? `A valid, non-empty routing URL is required to create and publish a feature subgraph.`
+                      : `A valid, non-empty routing URL is required to create and publish a non-Event-Driven subgraph.`,
                 },
                 compositionErrors: [],
                 deploymentErrors: [],
@@ -2870,6 +2899,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               req.subscriptionProtocol === undefined ? undefined : formatSubscriptionProtocol(req.subscriptionProtocol),
             websocketSubprotocol:
               req.websocketSubprotocol === undefined ? undefined : formatWebsocketSubprotocol(req.websocketSubprotocol),
+            featureSubgraphOptions:
+              req.isFeatureSubgraph && baseSubgraphID !== ''
+                ? {
+                    isFeatureSubgraph: req.isFeatureSubgraph || false,
+                    baseSubgraphID,
+                  }
+                : undefined,
           });
 
           if (!subgraph) {
