@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.20.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.19.0...aws-lambda-router@0.20.0) (2024-08-09)
+
+### Features
+
+* add fetch tree resolver ([#1019](https://github.com/wundergraph/cosmo/issues/1019)) ([4f4dee7](https://github.com/wundergraph/cosmo/commit/4f4dee765ba73cabba7ff4fe95faa4e4935505ba)) (@jensneuse)
+
 # [0.19.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.18.1...aws-lambda-router@0.19.0) (2024-08-06)
 
 ### Features
