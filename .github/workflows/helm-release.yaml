@@ -14,7 +14,7 @@ permissions:
 
 env:
   CI: true
-  REGISTRY: ghcr.io.github/workflows/helm-release.yaml
+  REGISTRY: ghcr.io
   RELEASE_BRANCH: main
 
 jobs:
