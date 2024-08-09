@@ -18,7 +18,7 @@ env:
   RELEASE_BRANCH: main
 
 jobs:
-  prepare-release:
+  release-please-helm:
     runs-on: ubuntu-latest
     timeout-minutes: 5
 

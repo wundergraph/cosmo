@@ -1,0 +1,59 @@
+---
+name: helm-release-docs-update
+run-name: helm-release-docs-update
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'release-please--**'
+  pull_request:
+    branches:
+      - main
+    types:
+      - reopened
+      - synchronize
+      - opened
+      - edited
+      - labeled
+
+permissions:
+  contents: write
+
+env:
+  CI: true
+
+jobs:
+  update-docs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # do not run for other prs than the release please prs
+    if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'release-please--')
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+
+      - name: install-tools
+        run: |
+          wget https://github.com/norwoodj/helm-docs/releases/download/v1.11.3/helm-docs_1.11.3_Linux_x86_64.tar.gz
+          echo "07efe78fd56de173e29f15ea5be2aa6f425d346bcd480aa229840b5405661cb2  helm-docs_1.11.3_Linux_x86_64.tar.gz" >> helm-docs_1.11.3_Linux_x86_64.tar.gz.sha256
+          sha256sum --check helm-docs_1.11.3_Linux_x86_64.tar.gz.sha256
+
+          tar -xvf helm-docs_1.11.3_Linux_x86_64.tar.gz
+          install helm-docs /usr/local/bin/helm-docs
+
+      - name: Generate Helm docs
+        run: make docs
+        working-directory: ./helm
+
+      - uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'chore: update helm docs and prepare release'
+          file_pattern: 'helm/**/*.md'
+          commit_user_name: hardworker-bot
+          commit_user_email: bot@wundergraph.com
+          commit_author: hardworker-bot <bot@wundergraph.com>
+          create_branch: false
