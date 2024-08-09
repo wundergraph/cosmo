@@ -9,7 +9,7 @@ on:
       - 'release-please--**'
   pull_request:
     branches:
-			- andi/helm-release-testing
+      - andi/helm-release-testing
       - main
     types:
       - reopened
