@@ -6,6 +6,7 @@ on:
   workflow_dispatch:
   push:
     branches:
+      - andi/helm-release-testing
       - main
 
 permissions:
@@ -15,7 +16,7 @@ permissions:
 env:
   CI: true
   REGISTRY: ghcr.io
-  RELEASE_BRANCH: main
+  RELEASE_BRANCH: andi/helm-release-testing
 
 jobs:
   release-please-helm:
