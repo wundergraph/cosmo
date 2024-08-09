@@ -15,7 +15,7 @@ permissions:
 env:
   CI: true
   REGISTRY: ghcr.io.github/workflows/helm-release.yaml
-  RELEASE_BRANCH: andi/helm-release-testing
+  RELEASE_BRANCH: main
 
 jobs:
   release-please-helm:
