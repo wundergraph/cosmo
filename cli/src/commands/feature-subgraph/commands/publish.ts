@@ -188,7 +188,7 @@ export default (opts: BaseCommandOptions) => {
       default: {
         spinner.fail(`Failed to publish feature subgraph "${name}".`);
         if (resp.response?.details) {
-          console.error(pc.red(pc.bold(resp.response?.details)));
+          program.error(pc.red(pc.bold(resp.response?.details)));
         }
         process.exit(1);
       }

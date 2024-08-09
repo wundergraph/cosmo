@@ -37,6 +37,15 @@ describe('Create feature subgraph tests', () => {
 
     expect(featureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
 
+    const getFeatureSubgraphResponse = await client.getSubgraphByName({
+      name: featureSubgraphName,
+    });
+
+    expect(getFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(getFeatureSubgraphResponse.graph?.name).toBe(featureSubgraphName);
+    expect(getFeatureSubgraphResponse.graph?.routingURL).toBe(DEFAULT_SUBGRAPH_URL_TWO);
+    expect(getFeatureSubgraphResponse.graph?.isFeatureSubgraph).toBe(true);
+
     await server.close();
   });
 
@@ -192,6 +201,15 @@ describe('Create feature subgraph tests', () => {
       schema: 'type Query { hello: String }',
     });
     expect(featureSubgraphResponseOne.response?.code).toBe(EnumStatusCode.OK);
+
+    const getFeatureSubgraphResponse = await client.getSubgraphByName({
+      name: featureSubgraphName,
+    });
+
+    expect(getFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(getFeatureSubgraphResponse.graph?.name).toBe(featureSubgraphName);
+    expect(getFeatureSubgraphResponse.graph?.routingURL).toBe(DEFAULT_SUBGRAPH_URL_TWO);
+    expect(getFeatureSubgraphResponse.graph?.isFeatureSubgraph).toBe(true);
 
     await server.close();
   });
