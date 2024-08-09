@@ -4,6 +4,9 @@ run-name: helm-release-docs-update
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - 'release-please--**'
   pull_request:
     branches:
       - 'release-please--**'
