@@ -6,6 +6,13 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"net"
+	"net/http"
+	"net/url"
+	"os"
+	"sync"
+	"time"
+
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/cdn"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/s3"
@@ -14,12 +21,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 	configCDNProvider "github.com/wundergraph/cosmo/router/pkg/routerconfig/cdn"
 	configs3Provider "github.com/wundergraph/cosmo/router/pkg/routerconfig/s3"
-	"net"
-	"net/http"
-	"net/url"
-	"os"
-	"sync"
-	"time"
 
 	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/graphiql"
@@ -1231,6 +1232,10 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 	// Shutdown the CDN operation client and free up resources
 	if r.persistedOperationClient != nil {
 		r.persistedOperationClient.Close()
+	}
+
+	for _, authenticator := range r.accessController.authenticators {
+		authenticator.Close()
 	}
 
 	wg.Wait()

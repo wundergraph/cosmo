@@ -10,6 +10,7 @@ import (
 
 type TokenDecoder interface {
 	Decode(token string) (Claims, error)
+	Close()
 }
 
 type jwksTokenDecoder struct {
@@ -43,5 +44,7 @@ func NewJwksTokenDecoder(url string, refreshInterval time.Duration) (TokenDecode
 }
 
 func (j *jwksTokenDecoder) Close() {
-	j.jwks.EndBackground()
+	if j.jwks != nil {
+		j.jwks.EndBackground()
+	}
 }

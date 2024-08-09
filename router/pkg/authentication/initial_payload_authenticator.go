@@ -16,6 +16,12 @@ type websocketInitialPayloadAuthenticator struct {
 	headerValuePrefixes []string
 }
 
+func (a *websocketInitialPayloadAuthenticator) Close() {
+	if a.tokenDecoder != nil {
+		a.tokenDecoder.Close()
+	}
+}
+
 func (a *websocketInitialPayloadAuthenticator) Name() string {
 	return a.name
 }
