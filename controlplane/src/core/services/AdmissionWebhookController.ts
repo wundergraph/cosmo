@@ -3,6 +3,10 @@ import axios, { AxiosError, AxiosInstance } from 'axios';
 import { JWTPayload } from 'jose';
 import axiosRetry, { exponentialDelay } from 'axios-retry';
 import { FastifyBaseLogger } from 'fastify';
+import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import * as schema from '../../db/schema.js';
+import { WebhookDeliveryInfo } from '../../db/models.js';
 
 export class AdmissionError extends Error {
   constructor(message: string, cause?: Error) {
@@ -30,6 +34,7 @@ export interface ValidateConfigResponse {
 export class AdmissionWebhookController {
   httpClient: AxiosInstance;
   constructor(
+    private db: PostgresJsDatabase<typeof schema>,
     private logger: FastifyBaseLogger,
     private graphAdmissionWebhookURL?: string,
     private graphAdmissionWebhookSecret?: string,
@@ -38,18 +43,40 @@ export class AdmissionWebhookController {
       timeout: 30_000,
       baseURL: this.graphAdmissionWebhookURL,
     });
-    axiosRetry(this.httpClient, {
-      retries: 5,
-      retryDelay: (retryCount) => {
-        return exponentialDelay(retryCount);
-      },
-      shouldResetTimeout: true,
-    });
   }
 
-  public async validateConfig(req: ValidateConfigRequest) {
+  public async validateConfig(req: ValidateConfigRequest, actorId: string) {
     const url = this.graphAdmissionWebhookURL + '/validate-config';
+    const startTime = performance.now();
+    let retryCount = 0;
+
     this.logger.debug({ url, path: '/validate-config', ...req }, 'Sending admission validate-config webhook request');
+
+    const deliveryInfo: WebhookDeliveryInfo = {
+      organizationId: req.organizationId,
+      type: 'admission',
+      endpoint: url,
+      eventName: OrganizationEventName[OrganizationEventName.VALIDATE_CONFIG],
+      payload: JSON.stringify(req),
+      requestHeaders: {},
+      createdById: actorId,
+    };
+
+    axiosRetry(this.httpClient, {
+      retries: 6,
+      retryDelay: (retryCount, error) => {
+        return exponentialDelay(retryCount, error, 1000);
+      },
+      shouldResetTimeout: true,
+      onRetry: (count) => {
+        retryCount = count;
+      },
+    });
+
+    this.httpClient.interceptors.request.use((request) => {
+      deliveryInfo.requestHeaders = request.headers;
+      return request;
+    });
 
     try {
       const headers: Record<string, string> = {};
@@ -66,6 +93,10 @@ export class AdmissionWebhookController {
         data: req,
         headers,
       });
+
+      deliveryInfo.responseStatusCode = res.status;
+      deliveryInfo.responseHeaders = res.headers;
+      deliveryInfo.responseBody = JSON.stringify(res.data);
 
       this.logger.debug(
         {
@@ -97,6 +128,12 @@ export class AdmissionWebhookController {
       );
 
       if (err instanceof AxiosError) {
+        deliveryInfo.responseHeaders = err.response?.headers;
+        deliveryInfo.responseStatusCode = err.response?.status;
+        deliveryInfo.responseErrorCode = err.code;
+        deliveryInfo.responseBody = JSON.stringify(err.response?.data);
+        deliveryInfo.errorMessage = err.message;
+
         if (err.response?.status !== 200 && err.response?.data?.error) {
           throw new AdmissionError(
             `Config validation has failed. /validate-config handler responded with: StatusCode: ${err.response.status}. Error: ${err.response.data.error}`,
@@ -107,7 +144,14 @@ export class AdmissionWebhookController {
         );
       }
 
+      deliveryInfo.errorMessage = err.message || 'Failed due to unknown reasons';
       throw err;
+    } finally {
+      const endTime = performance.now();
+      deliveryInfo.duration = endTime - startTime;
+      deliveryInfo.retryCount = retryCount;
+
+      await this.db.insert(schema.webhookDeliveries).values(deliveryInfo);
     }
   }
 }

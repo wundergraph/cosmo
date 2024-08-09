@@ -10,6 +10,7 @@ import {
   subgraphs,
   targets,
   websocketSubprotocolEnum,
+  webhookDeliveries,
 } from './schema.js';
 
 export type FederatedGraph = typeof federatedGraphs.$inferSelect;
@@ -23,6 +24,8 @@ export type NewBillingPlan = typeof billingPlans.$inferInsert;
 export type MemberRole = (typeof memberRoleEnum.enumValues)[number];
 export type LintRuleEnum = (typeof lintRulesEnum.enumValues)[number];
 export type WebsocketSubprotocol = (typeof websocketSubprotocolEnum.enumValues)[number];
+
+export type WebhookDeliveryInfo = typeof webhookDeliveries.$inferInsert;
 
 export type AuditableType =
   | 'organization'

@@ -1,6 +1,8 @@
 import { UserContext } from "@/components/app-provider";
+import { useCurrentOrganization } from "@/hooks/use-current-organization";
 import { useLocalStorage } from "@/hooks/use-local-storage";
-import { checkUserAccess, cn } from "@/lib/utils";
+import { formatDateTime } from "@/lib/format-date";
+import { cn } from "@/lib/utils";
 import { useQuery } from "@connectrpc/connect-query";
 import {
   Component2Icon,
@@ -9,6 +11,7 @@ import {
   ExclamationTriangleIcon,
 } from "@radix-ui/react-icons";
 import { getBillingPlans } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { addDays } from "date-fns";
 import { useRouter } from "next/router";
 import {
   Dispatch,
@@ -29,14 +32,12 @@ import {
   PiReceipt,
   PiUserGear,
   PiUsers,
+  PiWebhooksLogo
 } from "react-icons/pi";
 import { PageHeader } from "./head";
 import { LayoutProps } from "./layout";
 import { NavLink, SideNav } from "./sidenav";
 import { TitleLayout } from "./title-layout";
-import { useCurrentOrganization } from "@/hooks/use-current-organization";
-import { formatDateTime } from "@/lib/format-date";
-import { addDays } from "date-fns";
 
 export const StarBanner = ({
   isDisabled,
@@ -167,6 +168,11 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         title: "Notifications",
         href: basePath + "/webhooks",
         icon: <PiBell className="h-4 w-4" />,
+      },
+      {
+        title: "Webhook History",
+        href: basePath + "/webhook-history",
+        icon: <PiWebhooksLogo className="h-4 w-4"/>,
       },
       {
         title: "Usage",

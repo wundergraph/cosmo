@@ -51,11 +51,17 @@ export enum OrganizationEventName {
    * @generated from enum value: MONOGRAPH_SCHEMA_UPDATED = 1;
    */
   MONOGRAPH_SCHEMA_UPDATED = 1,
+
+  /**
+   * @generated from enum value: VALIDATE_CONFIG = 3;
+   */
+  VALIDATE_CONFIG = 3,
 }
 // Retrieve enum metadata with: proto3.getEnumType(OrganizationEventName)
 proto3.util.setEnumType(OrganizationEventName, "wg.cosmo.notifications.OrganizationEventName", [
   { no: 0, name: "FEDERATED_GRAPH_SCHEMA_UPDATED" },
   { no: 1, name: "MONOGRAPH_SCHEMA_UPDATED" },
+  { no: 3, name: "VALIDATE_CONFIG" },
 ]);
 
 /**

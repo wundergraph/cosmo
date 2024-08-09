@@ -12,6 +12,7 @@ enum PlatformEventName {
 enum OrganizationEventName {
   FEDERATED_GRAPH_SCHEMA_UPDATED = 0;
   MONOGRAPH_SCHEMA_UPDATED = 1;
+  VALIDATE_CONFIG = 3;
 }
 
 message GraphSchemaUpdatedMeta {

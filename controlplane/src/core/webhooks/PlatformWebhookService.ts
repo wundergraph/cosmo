@@ -49,9 +49,9 @@ export class PlatformWebhookService implements IPlatformWebhookService {
       timeout: 10_000,
     });
     axiosRetry(this.httpClient, {
-      retries: 5,
-      retryDelay: (retryCount) => {
-        return exponentialDelay(retryCount);
+      retries: 6,
+      retryDelay: (retryCount, error) => {
+        return exponentialDelay(retryCount, error, 1000);
       },
       shouldResetTimeout: true,
     });
