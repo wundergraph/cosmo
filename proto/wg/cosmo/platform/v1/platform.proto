@@ -53,6 +53,8 @@ message PublishFederatedSubgraphRequest {
   string namespace = 8;
   // The subscription subprotocol to use when subscribing to this subgraph
   optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 9;
+  optional bool is_feature_subgraph = 10;
+  optional string base_subgraph_name = 11;
 }
 
 message PublishFederatedSubgraphResponse {
@@ -1352,6 +1354,27 @@ message ForceCheckSuccessResponse {
   Response response = 1;
 }
 
+message ToggleChangeOverridesForAllOperationsRequest {
+  string check_id = 1;
+  bool is_safe = 2;
+  string graph_name = 3;
+  string namespace = 4;
+}
+
+message ToggleChangeOverridesForAllOperationsResponse {
+  Response response = 1;
+}
+
+message CreateIgnoreOverridesForAllOperationsRequest {
+  string check_id = 1;
+  string graph_name = 2;
+  string namespace = 3;
+}
+
+message CreateIgnoreOverridesForAllOperationsResponse {
+  Response response = 1;
+}
+
 message OverrideChange {
   string changeType = 1;
   optional string path = 2;
@@ -2253,6 +2276,11 @@ service PlatformService {
   rpc GetOperationOverrides(GetOperationOverridesRequest) returns (GetOperationOverridesResponse) {}
   // GetAllOverrides returns all overrides for operations within a namespace
   rpc GetAllOverrides(GetAllOverridesRequest) returns (GetAllOverridesResponse) {}
+
+  // ToggleChangeOverridesForAllOperations marks all impacting changes of a given check either safe or unsafe
+  rpc ToggleChangeOverridesForAllOperations(ToggleChangeOverridesForAllOperationsRequest) returns (ToggleChangeOverridesForAllOperationsResponse) {}
+  // CreateIgnoreOverridesForAllOperations creates ignore override for all operations of a given check
+  rpc CreateIgnoreOverridesForAllOperations(CreateIgnoreOverridesForAllOperationsRequest) returns (CreateIgnoreOverridesForAllOperationsResponse) {}
 
   // GetOperationContent returns the operation body by searching using the hash
   rpc GetOperationContent(GetOperationContentRequest) returns (GetOperationContentResponse) {}
