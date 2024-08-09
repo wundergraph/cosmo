@@ -41,3 +41,7 @@ func NewJwksTokenDecoder(url string, refreshInterval time.Duration) (TokenDecode
 		jwks: jwks,
 	}, nil
 }
+
+func (j *jwksTokenDecoder) Close() {
+	j.jwks.EndBackground()
+}
