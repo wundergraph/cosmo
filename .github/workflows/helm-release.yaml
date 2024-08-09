@@ -39,47 +39,6 @@ jobs:
           skip-github-release: false
           skip-github-pull-request: false
 
-      - if: ${{ steps.release.outputs.prs_created }}
-        name: install-tools
-        run: |
-          wget https://github.com/norwoodj/helm-docs/releases/download/v1.11.3/helm-docs_1.11.3_Linux_x86_64.tar.gz
-          echo "07efe78fd56de173e29f15ea5be2aa6f425d346bcd480aa229840b5405661cb2  helm-docs_1.11.3_Linux_x86_64.tar.gz" >> helm-docs_1.11.3_Linux_x86_64.tar.gz.sha256
-          sha256sum --check helm-docs_1.11.3_Linux_x86_64.tar.gz.sha256
-
-          tar -xvf helm-docs_1.11.3_Linux_x86_64.tar.gz
-          install helm-docs /usr/local/bin/helm-docs
-
-      - if: ${{ steps.release.outputs.prs_created }}
-        name: Install jq
-        uses: dcarbone/install-jq-action@v2.1.0
-
-      - if: ${{ steps.release.outputs.prs_created }}
-        name: update-helm-docs
-        run: |
-          git config --global user.email "bot@wundergraph.com"
-          git config --global user.name "hardworker-bot"
-          sleep 20
-          git fetch --all --quiet
-
-          created_prs='${{ steps.release.outputs.prs }}'
-          elements=$(echo $created_prs | jq -c '.[]')
-
-          echo $elements | while read i; do
-            headBranchName=$(echo $i | jq -r '.headBranchName')
-            git checkout $headBranchName
-            (
-              cd helm || true
-              make docs
-              git add .
-              git commit -m "chore: update helm chart docs"
-            )
-            if [[ $headBranchName == main ]]; then
-              echo "something went wrong!"
-              exit 1
-            fi
-            git push origin $headBranchName
-          done
-
       - uses: ./.github/actions/helm-release
         if: ${{ steps.release.outputs['helm/cosmo--release_created'] }}
         with:
