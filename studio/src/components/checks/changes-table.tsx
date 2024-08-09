@@ -101,7 +101,7 @@ export const ChangesTable = ({
           <TableRow>
             <TableHead className="w-[200px]">Change</TableHead>
             <TableHead>Description</TableHead>
-            {operationHash && <TableHead>Override</TableHead>}
+            {operationHash && !hasIgnoreAll && <TableHead>Override</TableHead>}
             <TableHead className="w-2/12 2xl:w-1/12"></TableHead>
           </TableRow>
         </TableHeader>
@@ -224,52 +224,48 @@ const Row = ({
         </div>
       </TableCell>
       <TableCell>{message}</TableCell>
-      {operationHash && (
+      {operationHash && !hasIgnoreAll && (
         <TableCell>
-          {!hasIgnoreAll ? (
-            <Tooltip delayDuration={100}>
-              <TooltipTrigger asChild>
-                <div>
-                  <Switch
-                    checked={hasOverride}
-                    disabled={creatingOverrides || removingOverrides}
-                    onCheckedChange={() =>
-                      hasOverride
-                        ? removeOverrides({
-                            graphName: graphContext?.graph?.name,
-                            namespace: graphContext?.graph?.namespace,
-                            operationHash,
-                            changes: [
-                              {
-                                changeType,
-                                path,
-                              },
-                            ],
-                          })
-                        : createOverrides({
-                            graphName: graphContext?.graph?.name,
-                            namespace: graphContext?.graph?.namespace,
-                            operationHash,
-                            operationName,
-                            changes: [
-                              {
-                                changeType,
-                                path,
-                              },
-                            ],
-                          })
-                    }
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                Mark this change to {path} as {hasOverride ? "unsafe" : "safe"}{" "}
-                for future checks
-              </TooltipContent>
-            </Tooltip>
-          ) : (
-            <span>Ignore All</span>
-          )}
+          <Tooltip delayDuration={100}>
+            <TooltipTrigger asChild>
+              <div>
+                <Switch
+                  checked={hasOverride}
+                  disabled={creatingOverrides || removingOverrides}
+                  onCheckedChange={() =>
+                    hasOverride
+                      ? removeOverrides({
+                          graphName: graphContext?.graph?.name,
+                          namespace: graphContext?.graph?.namespace,
+                          operationHash,
+                          changes: [
+                            {
+                              changeType,
+                              path,
+                            },
+                          ],
+                        })
+                      : createOverrides({
+                          graphName: graphContext?.graph?.name,
+                          namespace: graphContext?.graph?.namespace,
+                          operationHash,
+                          operationName,
+                          changes: [
+                            {
+                              changeType,
+                              path,
+                            },
+                          ],
+                        })
+                  }
+                />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              Mark this change to {path} as {hasOverride ? "unsafe" : "safe"}{" "}
+              for future checks
+            </TooltipContent>
+          </Tooltip>
         </TableCell>
       )}
       <TableCell>
