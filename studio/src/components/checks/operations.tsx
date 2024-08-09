@@ -22,6 +22,7 @@ import { Loader } from "@/components/ui/loader";
 import { useToast } from "@/components/ui/use-toast";
 import { formatDateTime } from "@/lib/format-date";
 import { cn } from "@/lib/utils";
+import { useMutation, useQuery } from "@connectrpc/connect-query";
 import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
@@ -29,23 +30,26 @@ import {
 import {
   ChevronDownIcon,
   Cross1Icon,
+  InfoCircledIcon,
   MagnifyingGlassIcon,
   Share1Icon,
 } from "@radix-ui/react-icons";
-import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
+  createIgnoreOverridesForAllOperations,
   createOperationIgnoreAllOverride,
   createOperationOverrides,
   getCheckOperations,
   removeOperationIgnoreAllOverride,
   removeOperationOverrides,
+  toggleChangeOverridesForAllOperations,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import copy from "copy-to-clipboard";
 import Fuse from "fuse.js";
 import { useRouter } from "next/router";
-import { useContext, useState } from "react";
+import { useContext, useMemo, useState } from "react";
 import { useApplyParams } from "../analytics/use-apply-params";
+import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { OperationContentDialog } from "./operation-content";
 
@@ -166,6 +170,61 @@ export const CheckOperations = () => {
     },
   );
 
+  const {
+    mutate: toggleGlobalChangeOverrides,
+    isPending: togglingGlobalChangeOverrides,
+  } = useMutation(toggleChangeOverridesForAllOperations, {
+    onSuccess: (d) => {
+      if (d.response?.code === EnumStatusCode.OK) {
+        toast({
+          description: "All overrides have been toggled successfully",
+        });
+        refetch();
+      } else {
+        toast({
+          description:
+            d.response?.details ??
+            "Could not toggle overrides. Please try again.",
+          duration: 3000,
+        });
+      }
+    },
+    onError: () => {
+      toast({
+        description: "Could not toggle override. Please try again.",
+        duration: 3000,
+      });
+    },
+  });
+
+  const {
+    mutate: createGlobalIgnoreOverrides,
+    isPending: creatingGlobalIgnoreOverrides,
+  } = useMutation(createIgnoreOverridesForAllOperations, {
+    onSuccess: (d) => {
+      if (d.response?.code === EnumStatusCode.OK) {
+        toast({
+          description:
+            "All listed operations will now be ignored for future checks",
+        });
+        refetch();
+      } else {
+        toast({
+          description:
+            d.response?.details ??
+            "Could not toggle overrides. Please try again.",
+          duration: 3000,
+        });
+      }
+    },
+    onError: () => {
+      toast({
+        description: "Could not toggle override. Please try again.",
+        duration: 3000,
+      });
+    },
+  });
+
   const [search, setSearch] = useState(router.query.search as string);
 
   const applyParams = useApplyParams();
@@ -176,6 +235,27 @@ export const CheckOperations = () => {
     copy(link);
     toast({ description: "Copied link to clipboard" });
   };
+
+  const filteredOperations = useMemo(() => {
+    const fuse = new Fuse(data?.operations ?? [], {
+      keys: ["hash", "name"],
+      minMatchCharLength: 1,
+    });
+
+    return search
+      ? fuse.search(search).map(({ item }) => item)
+      : data?.operations || [];
+  }, [data?.operations, search]);
+
+  const doAllOperationsHaveIgnoreAllOverride = useMemo(() => {
+    return filteredOperations.every((op) => op.hasIgnoreAllOverride);
+  }, [filteredOperations]);
+
+  const doAllOperationsHaveAllTheirChangesMarkedSafe = useMemo(() => {
+    return filteredOperations.every((op) =>
+      op.impactingChanges.every((c) => !!c.hasOverride),
+    );
+  }, [filteredOperations]);
 
   if (isLoading) return <Loader fullscreen />;
 
@@ -201,40 +281,91 @@ export const CheckOperations = () => {
     );
   }
 
-  const fuse = new Fuse(data.operations, {
-    keys: ["hash", "name"],
-    minMatchCharLength: 1,
-  });
-
-  const filteredOperations = search
-    ? fuse.search(search).map(({ item }) => item)
-    : data.operations;
-
   return (
     <div className="px-4 lg:px-6">
-      <div className="relative">
-        <MagnifyingGlassIcon className="absolute bottom-0 left-3 top-0 my-auto" />
-        <Input
-          placeholder="Search by hash or name"
-          className="pl-8 pr-10"
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            applyParams({ search: e.target.value });
-          }}
-        />
-        {search && (
-          <Button
-            variant="ghost"
-            className="absolute bottom-0 right-0 top-0 my-auto rounded-l-none"
-            onClick={() => {
-              setSearch("");
-              applyParams({ search: null });
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <MagnifyingGlassIcon className="absolute bottom-0 left-3 top-0 my-auto" />
+          <Input
+            placeholder="Search by hash or name"
+            className="pl-8 pr-10"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              applyParams({ search: e.target.value });
             }}
-          >
-            <Cross1Icon />
-          </Button>
-        )}
+          />
+          {search && (
+            <Button
+              variant="ghost"
+              className="absolute bottom-0 right-0 top-0 my-auto rounded-l-none"
+              onClick={() => {
+                setSearch("");
+                applyParams({ search: null });
+              }}
+            >
+              <Cross1Icon />
+            </Button>
+          )}
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="secondary">
+              Override All
+              <ChevronDownIcon className="ml-2" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              disabled={togglingGlobalChangeOverrides}
+              onClick={() => {
+                toggleGlobalChangeOverrides({
+                  checkId: id,
+                  isSafe: !doAllOperationsHaveAllTheirChangesMarkedSafe,
+                  graphName: graphContext?.graph?.name,
+                  namespace: graphContext?.graph?.namespace,
+                });
+              }}
+              className="cursor-pointer flex-col items-start gap-1"
+            >
+              {doAllOperationsHaveAllTheirChangesMarkedSafe
+                ? "Toggle changes as unsafe"
+                : "Toggle changes as safe"}
+              <p className="max-w-xs text-xs text-muted-foreground">
+                {doAllOperationsHaveAllTheirChangesMarkedSafe
+                  ? "Future checks will break if the current changes appear again for the detected operations"
+                  : "Future checks will ignore the current breaking changes for the detected operations"}
+              </p>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              disabled={
+                creatingGlobalIgnoreOverrides ||
+                doAllOperationsHaveIgnoreAllOverride
+              }
+              onClick={() => {
+                createGlobalIgnoreOverrides({
+                  checkId: id,
+                  graphName: graphContext?.graph?.name,
+                  namespace: graphContext?.graph?.namespace,
+                });
+              }}
+              className="cursor-pointer flex-col items-start gap-1"
+            >
+              Ignore All Operations
+              <p className="max-w-xs text-xs text-muted-foreground">
+                Future checks will ignore all current and new breaking changes
+                for the detected operations
+              </p>
+              {doAllOperationsHaveIgnoreAllOverride && (
+                <p className=" mt-2 flex items-center gap-x-2 text-xs">
+                  <InfoCircledIcon className="h-4 w-4" /> All listed operations
+                  are already ignored
+                </p>
+              )}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
       <Accordion type="single" collapsible className="mt-4 w-full">
         {filteredOperations.map(
@@ -280,7 +411,7 @@ export const CheckOperations = () => {
                         className="!inline-block !decoration-[none]"
                         variant="success"
                       >
-                        safe
+                        ignored for this check
                       </Badge>
                     )}
                   </div>
@@ -307,22 +438,7 @@ export const CheckOperations = () => {
                           </TooltipTrigger>
                           <TooltipContent>Copy link</TooltipContent>
                         </Tooltip>
-                        {hasIgnoreAllOverride ? (
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            isLoading={removing}
-                            onClick={() =>
-                              removeIgnoreAll({
-                                graphName: graphContext?.graph?.name,
-                                namespace: graphContext?.graph?.namespace,
-                                operationHash: hash,
-                              })
-                            }
-                          >
-                            Remove Ignore All Override
-                          </Button>
-                        ) : (
+                        {!hasIgnoreAllOverride && (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button size="sm" variant="secondary">
@@ -356,12 +472,12 @@ export const CheckOperations = () => {
                                 className="cursor-pointer flex-col items-start gap-1"
                               >
                                 {doAllChangesHaveOverrides
-                                  ? "Toggle all changes as unsafe"
-                                  : "Toggle all changes as safe"}
+                                  ? "Toggle changes as unsafe"
+                                  : "Toggle changes as safe"}
                                 <p className="max-w-xs text-xs text-muted-foreground">
                                   {doAllChangesHaveOverrides
-                                    ? "Future checks will break if the current changes appear again for this operation"
-                                    : "Future checks will ignore the current breaking changes for this operation"}
+                                    ? "Future checks will break if the listed changes appear again for this operation"
+                                    : "Future checks will ignore the listed breaking changes for this operation"}
                                 </p>
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
@@ -377,7 +493,7 @@ export const CheckOperations = () => {
                                 }}
                                 className="cursor-pointer flex-col items-start gap-1"
                               >
-                                Ignore All
+                                Ignore Operation
                                 <p className="max-w-xs text-xs text-muted-foreground">
                                   Future checks will ignore all current and new
                                   breaking changes for this operation
@@ -388,6 +504,33 @@ export const CheckOperations = () => {
                         )}
                       </div>
                     </div>
+                    {hasIgnoreAllOverride && (
+                      <Alert>
+                        <AlertTitle>
+                          Ignore Operation override is active
+                        </AlertTitle>
+                        <AlertDescription>
+                          Future checks will ignore this operation even if
+                          breaking changes affect it. To configure overrides for
+                          individual changes, please remove this override.
+                        </AlertDescription>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="mt-4"
+                          isLoading={removing}
+                          onClick={() =>
+                            removeIgnoreAll({
+                              graphName: graphContext?.graph?.name,
+                              namespace: graphContext?.graph?.namespace,
+                              operationHash: hash,
+                            })
+                          }
+                        >
+                          Remove Override
+                        </Button>
+                      </Alert>
+                    )}
                     <ChangesTable
                       operationHash={hash}
                       operationName={name}

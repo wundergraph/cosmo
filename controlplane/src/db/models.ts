@@ -115,5 +115,5 @@ export type AuditLogFullAction =
   | 'router_config.fetched'
   | 'operation_change_override.created'
   | 'operation_change_override.deleted'
-  | 'operation_ignore_all_override.created'
-  | 'operation_ignore_all_override.deleted';
+  | 'operation_ignore_override.created'
+  | 'operation_ignore_override.deleted';

@@ -1,6 +1,7 @@
 import { OverrideChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { PlainMessage } from '@bufbuild/protobuf';
 import * as schema from '../../db/schema.js';
 import { federatedGraphClients, federatedGraphPersistedOperations } from '../../db/schema.js';
 import { ClientDTO, PersistedOperationDTO, SchemaChangeType, UpdatedPersistedOperation } from '../../types/index.js';
@@ -142,7 +143,7 @@ export class OperationsRepository {
   }
 
   public createOperationOverrides(data: {
-    changes: OverrideChange[];
+    changes: PlainMessage<OverrideChange>[];
     namespaceId: string;
     operationHash: string;
     operationName: string;
@@ -176,14 +177,15 @@ export class OperationsRepository {
       .returning();
   }
 
-  public async removeOperationOverrides(data: {
+  public removeOperationOverrides(data: {
     operationHash: string;
     namespaceId: string;
-    changes: OverrideChange[];
+    changes: PlainMessage<OverrideChange>[];
   }) {
-    await this.db.transaction(async (tx) => {
+    return this.db.transaction(async (tx) => {
+      const affectedRows = [];
       for (const change of data.changes) {
-        await tx
+        const res = await tx
           .delete(schema.operationChangeOverrides)
           .where(
             and(
@@ -196,7 +198,10 @@ export class OperationsRepository {
             ),
           )
           .returning();
+        affectedRows.push(...res);
       }
+
+      return affectedRows;
     });
   }
 
