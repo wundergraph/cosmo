@@ -3359,7 +3359,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        return await opts.db.transaction(async (tx) => {
+        return opts.db.transaction(async (tx) => {
           const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
           const schemaCheckRepo = new SchemaCheckRepository(tx);
           const auditLogRepo = new AuditLogRepository(tx);
