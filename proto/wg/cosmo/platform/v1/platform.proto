@@ -53,6 +53,8 @@ message PublishFederatedSubgraphRequest {
   string namespace = 8;
   // The subscription subprotocol to use when subscribing to this subgraph
   optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 9;
+  optional bool is_feature_subgraph = 10;
+  optional string base_subgraph_name = 11;
 }
 
 message PublishFederatedSubgraphResponse {

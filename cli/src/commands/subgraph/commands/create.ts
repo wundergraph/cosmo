@@ -49,7 +49,7 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option('--readme <path-to-readme>', 'The markdown file which describes the subgraph.');
   command.option(
-    '-edg, --event-driven-graph',
+    '--edg, --event-driven-graph',
     'Set whether the subgraph is an Event-Driven Graph (EDG).' +
       ' Errors will be returned for the inclusion of most other parameters if the subgraph is an Event-Driven Graph.',
   );
