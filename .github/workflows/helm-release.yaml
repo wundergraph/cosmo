@@ -20,7 +20,7 @@ env:
   RELEASE_BRANCH: andi/helm-release-testing
 
 jobs:
-  prepare-release:
+  release-please-helm:
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -38,45 +38,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           skip-github-release: false
           skip-github-pull-request: false
-
-      - if: ${{ steps.release.outputs.prs_created }}
-        name: install-tools
-        shell: bash
-        run: go install github.com/norwoodj/helm-docs/cmd/helm-docs@v1.11.3
-
-      - if: ${{ steps.release.outputs.prs_created }}
-        name: Install jq
-        uses: dcarbone/install-jq-action@v2.1.0
-
-      - if: ${{ steps.release.outputs.prs_created }}
-        name: smoke-tests
-        shell: bash
-        run: |
-          type helm-docs
-          jq --version
-
-      - if: ${{ steps.release.outputs.prs_created }}
-        name: update-helm-docs
-        run: |
-          git config --global user.email "bot@wundergraph.com"
-          git config --global user.name "hardworker-bot"
-
-          created_prs=${{ steps.release.outputs.prs }}
-          elements=$(echo $created_prs | jq -c '.[]')
-
-          for element in $elements; do
-            headBranchName=$(echo $element | jq -r '.headBranchName')
-            git checkout $headBranchName
-            (
-              cd helm
-              make docs
-
-              git add .
-              git commit -m "docs: update helm chart docs"
-            )
-            git push origin $headBranchName
-          done
-          git checkout ${{ env.RELEASE_BRANCH }}
 
       - uses: ./.github/actions/helm-release
         if: ${{ steps.release.outputs['helm/cosmo--release_created'] }}
