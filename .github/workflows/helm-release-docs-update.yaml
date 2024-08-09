@@ -3,16 +3,10 @@ name: helm-release-docs-update
 run-name: helm-release-docs-update
 
 on:
-  workflow_dispatch:
-  pull_request:
+  push:
     branches:
       - 'release-please--**'
       - andi/helm-release-testing
-    types:
-      - reopened
-      - synchronize
-      - opened
-      - edited
 
 permissions:
   contents: write
