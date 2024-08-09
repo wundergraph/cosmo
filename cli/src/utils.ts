@@ -1,5 +1,5 @@
 /* eslint-disable import/named */
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, writeSync } from 'node:fs';
 import { FederationResultContainer, Subgraph, federateSubgraphs } from '@wundergraph/composition';
 import boxen from 'boxen';
 import { buildClientSchema, printSchema } from 'graphql';
@@ -287,4 +287,12 @@ export const validateSubscriptionProtocols = ({
       );
     }
   }
+};
+
+/**
+ * Ensures that all data is written synchronously to the console before the next operation.
+ * console.log() can have asynchronous behavior in Node.js environments.
+ */
+export const writeToConsoleSync = (message: string) => {
+  writeSync(process.stdout.fd, message);
 };
