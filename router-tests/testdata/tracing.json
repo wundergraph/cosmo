@@ -435,6 +435,7 @@
             "fetch": {
               "kind": "Single",
               "path": "",
+              "source_id": "0",
               "trace": {
                 "raw_input_data": {},
                 "input": {
@@ -684,6 +685,7 @@
                 "fetch": {
                   "kind": "BatchEntity",
                   "path": "employees",
+                  "source_id": "1",
                   "trace": {
                     "raw_input_data": [
                       {
@@ -1055,6 +1057,7 @@
                 "fetch": {
                   "kind": "BatchEntity",
                   "path": "employees",
+                  "source_id": "2",
                   "trace": {
                     "raw_input_data": [
                       {
@@ -1681,6 +1684,7 @@
             "fetch": {
               "kind": "BatchEntity",
               "path": "employees.@.hobbies.@.countriesLived",
+              "source_id": "7",
               "trace": {
                 "raw_input_data": [
                   {
