@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.79.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.78.0...@wundergraph/cosmo-connect@0.79.0) (2024-08-09)
+
+### Features
+
+* global override for all operations in check ([#1044](https://github.com/wundergraph/cosmo/issues/1044)) ([6eb0e4d](https://github.com/wundergraph/cosmo/commit/6eb0e4dce9373260b12b4f7fd07f7637349bf2eb)) (@thisisnithin)
+* webhook history view ([#1036](https://github.com/wundergraph/cosmo/issues/1036)) ([4457a57](https://github.com/wundergraph/cosmo/commit/4457a5735e86bd655bed685aca66287ed743e08c)) (@thisisnithin)
+
 # [0.78.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.77.1...@wundergraph/cosmo-connect@0.78.0) (2024-08-09)
 
 ### Features
