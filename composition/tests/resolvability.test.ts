@@ -1200,6 +1200,16 @@ describe('Field resolvability tests', () => {
       ),
     );
   });
+  
+  test('that not fails implementing multiple interfaces for interfaceObject', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphBM, subgraphBO]);
+    expect(errors).toBeUndefined();
+  });
+
+  test('that fails implementing multiple interfaces for interfaceObject', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphBN, subgraphBO]);
+    expect(errors).toBeUndefined();
+  });
 });
 
 const subgraphA: Subgraph = {
@@ -2367,6 +2377,83 @@ const subgraphBL: Subgraph = {
       idTwo: ID!
       age: Int!
       entityTwo: EntityTwo! @shareable
+    }
+  `),
+};
+
+
+const subgraphBM: Subgraph = {
+  name: 'subgraph-bm',
+  url: '',
+  definitions: parse(`
+    interface Updatable @key(fields: "id") {
+      id: ID!
+    }
+
+    interface Deletable @key(fields: "id") {
+      id: ID!
+    }
+
+    interface Sharable @key(fields: "id") {
+      id: ID!
+    }
+
+    type Entity implements Updatable @key(fields: "id") {
+      id: ID!
+    }
+
+    type Query {
+      entity: Entity!
+    }
+  `),
+};
+
+const subgraphBN: Subgraph = {
+  name: 'subgraph-bn',
+  url: '',
+  definitions: parse(`
+    interface Updatable @key(fields: "id") {
+      id: ID!
+    }
+
+    interface Deletable @key(fields: "id") {
+      id: ID!
+    }
+
+    interface Sharable @key(fields: "id") {
+      id: ID!
+    }
+
+    type Entity implements Updatable & Deletable & Sharable @key(fields: "id") {
+      id: ID!
+    }
+
+    type Query {
+      entity: Entity!
+    }
+  `),
+};
+
+const subgraphBO: Subgraph = {
+  name: 'subgraph-bo',
+  url: '',
+  definitions: parse(`
+    type Updatable @key(fields: "id") @interfaceObject {
+      id: ID!
+
+      viewerCanUpdate: Boolean!
+    }
+
+    type Deletable @key(fields: "id") @interfaceObject {
+      id: ID!
+
+      viewerCanDelete: Boolean!
+    }
+
+    type Sharable @key(fields: "id") @interfaceObject {
+      id: ID!
+
+      viewerCanShare: Boolean!
     }
   `),
 };
