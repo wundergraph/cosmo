@@ -360,9 +360,9 @@ export class OrganizationWebhookService {
       };
 
       axiosRetry(this.httpClient, {
-        retries: 5,
-        retryDelay: (retryCount) => {
-          return exponentialDelay(retryCount);
+        retries: 6,
+        retryDelay: (retryCount, error) => {
+          return exponentialDelay(retryCount, error, 1000);
         },
         shouldResetTimeout: true,
         onRetry: (count) => {
