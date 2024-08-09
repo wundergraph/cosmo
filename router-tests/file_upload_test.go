@@ -34,7 +34,7 @@ func TestSingleFileUpload_InvalidFileFormat(t *testing.T) {
 			Query:     "mutation ($file: Upload!){singleUpload(file: $file)}",
 			Variables: []byte(`{"file":"invalid_format"}`),
 		})
-		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at Path 'mutation'.","extensions":{"errors":[{"message":"string is not an Upload","path":["singleUpload","file"]}],"statusCode":200}}],"data":null}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0'.","extensions":{"errors":[{"message":"string is not an Upload","path":["singleUpload","file"]}],"statusCode":200}}],"data":null}`, res.Body)
 	})
 }
 
@@ -45,7 +45,7 @@ func TestSingleFileUpload_NoFileProvided(t *testing.T) {
 			Query:     "mutation ($file: Upload!){singleUpload(file: $file)}",
 			Variables: []byte(`{"file":null}`),
 		})
-		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at Path 'mutation'.","extensions":{"errors":[{"message":"cannot be null","path":["variable","file"],"extensions":{"code":"GRAPHQL_VALIDATION_FAILED"}}],"statusCode":422}}],"data":null}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0'.","extensions":{"errors":[{"message":"cannot be null","path":["variable","file"],"extensions":{"code":"GRAPHQL_VALIDATION_FAILED"}}],"statusCode":422}}],"data":null}`, res.Body)
 	})
 }
 
@@ -115,7 +115,7 @@ func TestMultipleFilesUpload_InvalidFileFormat(t *testing.T) {
 			Query:     "mutation($files: [Upload!]!) { multipleUpload(files: $files)}",
 			Variables: []byte(`{"files":["invalid_format1", "invalid_format2"]}`),
 		})
-		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at Path 'mutation'.","extensions":{"errors":[{"message":"string is not an Upload","path":["multipleUpload","files",0]}],"statusCode":200}}],"data":null}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0'.","extensions":{"errors":[{"message":"string is not an Upload","path":["multipleUpload","files",0]}],"statusCode":200}}],"data":null}`, res.Body)
 	})
 }
 
@@ -127,7 +127,7 @@ func TestMultipleFilesUpload_NoFilesProvided(t *testing.T) {
 			Variables: []byte(`{"files":null}`),
 		})
 		fmt.Println(res.Body)
-		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at Path 'mutation'.","extensions":{"errors":[{"message":"cannot be null","path":["variable","files"],"extensions":{"code":"GRAPHQL_VALIDATION_FAILED"}}],"statusCode":422}}],"data":null}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0'.","extensions":{"errors":[{"message":"cannot be null","path":["variable","files"],"extensions":{"code":"GRAPHQL_VALIDATION_FAILED"}}],"statusCode":422}}],"data":null}`, res.Body)
 	})
 }
 

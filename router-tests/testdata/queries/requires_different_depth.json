@@ -2,14 +2,20 @@
   "data": {
     "products": [
       {
+        "__typename": "Consultancy",
         "lead": {
+          "__typename": "Employee",
           "id": 1,
-          "derivedID": 1
+          "derivedMood": "HAPPY"
         },
         "isLeadAvailable": false
       },
-      {},
-      {}
+      {
+        "__typename": "Cosmo"
+      },
+      {
+        "__typename": "SDK"
+      }
     ]
   }
 }

@@ -148,7 +148,7 @@ func TestTelemetry(t *testing.T) {
 
 			// Span attributes
 
-			require.Len(t, sn[3].Attributes(), 4)
+			require.Len(t, sn[3].Attributes(), 5)
 
 			require.Equal(t, "Operation - Plan", sn[4].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[4].SpanKind())
@@ -158,6 +158,7 @@ func TestTelemetry(t *testing.T) {
 			require.Contains(t, sn[3].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[3].Attributes(), otel.WgFederatedGraphID.String("graph"))
 			require.Contains(t, sn[3].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
+			require.Contains(t, sn[3].Attributes(), otel.WgValidationCacheHit.Bool(false))
 
 			// Span Resource attributes
 
@@ -627,6 +628,19 @@ func TestTelemetry(t *testing.T) {
 			metricdatatest.AssertEqual(t, responseContentLengthMetric, rm.ScopeMetrics[0].Metrics[3], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, requestInFlightMetric, rm.ScopeMetrics[0].Metrics[4], metricdatatest.IgnoreTimestamp())
 
+			// make a second request and assert that we're now hitting the validation cache
+
+			exporter.Reset()
+
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			sn = exporter.GetSpans().Snapshots()
+			require.Len(t, sn, 9, "expected 9 spans, got %d", len(sn))
+			require.Len(t, sn[3].Attributes(), 5)
+			require.Contains(t, sn[3].Attributes(), otel.WgValidationCacheHit.Bool(true))
 		})
 	})
 
@@ -1464,9 +1478,10 @@ func TestTelemetry(t *testing.T) {
 			require.Contains(t, sn[2].Attributes(), otel.WgFeatureFlag.String("myff"))
 
 			require.Equal(t, "Operation - Validate", sn[3].Name())
-			require.Len(t, sn[3].Attributes(), 5)
+			require.Len(t, sn[3].Attributes(), 6)
 			require.Contains(t, sn[3].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()))
 			require.Contains(t, sn[3].Attributes(), otel.WgFeatureFlag.String("myff"))
+			require.Contains(t, sn[3].Attributes(), otel.WgValidationCacheHit.Bool(false))
 
 			require.Equal(t, "Operation - Plan", sn[4].Name())
 			require.Len(t, sn[4].Attributes(), 7)
@@ -2017,7 +2032,7 @@ func TestTelemetry(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id details { forename surname } notes } }`,
 			})
-			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '3' at Path 'query.employees.@'."}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '3' at Path 'employees'."}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
 			sn := exporter.GetSpans().Snapshots()
 
 			require.Len(t, sn, 11, "expected 11 spans, got %d", len(sn))
@@ -2029,7 +2044,7 @@ func TestTelemetry(t *testing.T) {
 			require.Equal(t, "Engine - Fetch", sn[8].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[8].SpanKind())
 			require.Equal(t, codes.Error, sn[8].Status().Code)
-			require.Contains(t, sn[8].Status().Description, "connect: connection refused\nFailed to fetch from Subgraph '3' at Path: 'query.employees.@'.")
+			require.Contains(t, sn[8].Status().Description, "connect: connection refused\nFailed to fetch from Subgraph '3' at Path: 'employees'.")
 
 			events := sn[8].Events()
 			require.Len(t, events, 1, "expected 1 event because the GraphQL request failed")
@@ -2039,7 +2054,7 @@ func TestTelemetry(t *testing.T) {
 			require.Equal(t, "query unnamed", sn[10].Name())
 			require.Equal(t, trace.SpanKindServer, sn[10].SpanKind())
 			require.Equal(t, codes.Error, sn[10].Status().Code)
-			require.Contains(t, sn[10].Status().Description, "connect: connection refused\nFailed to fetch from Subgraph '3' at Path: 'query.employees.@'.")
+			require.Contains(t, sn[10].Status().Description, "connect: connection refused\nFailed to fetch from Subgraph '3' at Path: 'employees'.")
 
 		})
 	})
@@ -2064,7 +2079,7 @@ func TestTelemetry(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query myQuery { employees { id details { forename surname } notes } }`,
 			})
-			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '3' at Path 'query.employees.@'.","extensions":{"errors":[{"message":"Unauthorized","path":["foo"],"extensions":{"code":"UNAUTHORIZED"}},{"message":"MyErrorMessage","path":["bar"],"extensions":{"code":"YOUR_ERROR_CODE"}}],"statusCode":403}}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '3' at Path 'employees'.","extensions":{"errors":[{"message":"Unauthorized","path":["foo"],"extensions":{"code":"UNAUTHORIZED"}},{"message":"MyErrorMessage","path":["bar"],"extensions":{"code":"YOUR_ERROR_CODE"}}],"statusCode":403}}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
 			sn := exporter.GetSpans().Snapshots()
 			require.Len(t, sn, 11, "expected 11 spans, got %d", len(sn))
 
@@ -2119,7 +2134,7 @@ func TestTelemetry(t *testing.T) {
 
 			require.True(t, given.Equals(&want))
 
-			require.Equal(t, sdktrace.Status{Code: codes.Error, Description: `Failed to fetch from Subgraph '3' at Path: 'query.employees.@'.
+			require.Equal(t, sdktrace.Status{Code: codes.Error, Description: `Failed to fetch from Subgraph '3' at Path: 'employees'.
 Downstream errors:
 1. Subgraph error at Path 'foo', Message: Unauthorized, Extension Code: UNAUTHORIZED.
 2. Subgraph error at Path 'bar', Message: MyErrorMessage, Extension Code: YOUR_ERROR_CODE.
@@ -2145,7 +2160,7 @@ Downstream errors:
 			require.Equal(t, "query myQuery", sn[10].Name())
 			require.Equal(t, trace.SpanKindServer, sn[10].SpanKind())
 			require.Equal(t, codes.Error, sn[10].Status().Code)
-			require.Contains(t, sn[10].Status().Description, `Failed to fetch from Subgraph '3' at Path: 'query.employees.@'.
+			require.Contains(t, sn[10].Status().Description, `Failed to fetch from Subgraph '3' at Path: 'employees'.
 Downstream errors:
 1. Subgraph error at Path 'foo', Message: Unauthorized, Extension Code: UNAUTHORIZED.
 2. Subgraph error at Path 'bar', Message: MyErrorMessage, Extension Code: YOUR_ERROR_CODE.

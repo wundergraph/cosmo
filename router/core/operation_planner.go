@@ -8,7 +8,6 @@ import (
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/postprocess"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -65,14 +64,6 @@ func (p *OperationPlanner) preparePlan(requestOperationName []byte, requestOpera
 		return nil, &reportError{report: &report}
 	}
 
-	validation := astvalidation.DefaultOperationValidator()
-
-	// validate the document against client schema before planning
-	state := validation.Validate(&doc, p.executor.ClientSchema, &report)
-	if state != astvalidation.Valid {
-		return nil, &reportError{report: &report}
-	}
-
 	planner, err := plan.NewPlanner(p.executor.PlanConfig)
 	if err != nil {
 		return nil, err
@@ -84,7 +75,7 @@ func (p *OperationPlanner) preparePlan(requestOperationName []byte, requestOpera
 	if report.HasErrors() {
 		return nil, &reportError{report: &report}
 	}
-	post := postprocess.DefaultProcessor()
+	post := postprocess.NewProcessor()
 	post.Process(preparedPlan)
 
 	return &planWithMetaData{

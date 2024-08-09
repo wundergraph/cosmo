@@ -91,6 +91,8 @@ const Trace = ({
     let gStartTimeNano = BigInt(Number.MAX_VALUE);
     let gEndTimeNano = BigInt(0);
 
+    let executeDurationSinceStart = 0;
+
     const fetchMap = new Map<string, FetchNode>();
 
     const parseFetch = (fetch: any, parentId?: string): FetchNode | undefined => {
@@ -192,15 +194,14 @@ const Trace = ({
 
       return fetchNode;
     };
-
-    const parseJson = (json: any, parentId?: string): FetchNode | undefined => {
+    const parseJsonOld = (json: any, parentId?: string): FetchNode | undefined => {
       const fetchNode = parseFetch(json.fetch, parentId);
 
       json.fields?.forEach((field: any) => {
         if (field.value && field.value.node_type === 'array') {
           field.value.items.forEach((fieldItem: any) => {
             if (fieldItem.node_type === 'object') {
-              const node = parseJson(fieldItem, fetchNode?.id ?? parentId);
+              const node = parseJsonOld(fieldItem, fetchNode?.id ?? parentId);
               if (node) {
                 fetchMap.set(node.id, node);
               }
@@ -209,7 +210,7 @@ const Trace = ({
         }
 
         if (field.value && field.value.node_type === 'object') {
-          const node = parseJson(field.value, fetchNode?.id ?? parentId);
+          const node = parseJsonOld(field.value, fetchNode?.id ?? parentId);
           if (node) {
             fetchMap.set(node.id, node);
           }
@@ -219,6 +220,126 @@ const Trace = ({
       return fetchNode;
     };
 
+    const parseFetchNew = (fetch: any, parentId?: string): FetchNode | undefined => {
+      if (!fetch) return;
+
+      const fetchNode: FetchNode = {
+        id: crypto.randomUUID(),
+        parentId,
+        type: fetch.kind,
+        dataSourceId: fetch.source_id,
+        dataSourceName: subgraphs?.find((s) => s.id === fetch.source_id)?.name ?? 'subgraph',
+        input: fetch.trace?.input,
+        rawInput: fetch.trace?.raw_input_data,
+        output: fetch.trace?.output,
+        durationSinceStart: fetch.trace?.duration_since_start_nanoseconds,
+        durationSinceStartPretty: fetch.trace?.duration_since_start_pretty,
+        durationLoad: fetch.trace?.duration_load_nanoseconds,
+        durationLoadPretty: fetch.trace?.duration_load_pretty,
+        singleFlightUsed: fetch.trace?.single_flight_used,
+        singleFlightSharedResponse: fetch.trace?.single_flight_shared_response,
+        loadSkipped: fetch.trace?.load_skipped,
+        children: [],
+      };
+
+      if (!executeDurationSinceStart && fetchNode.durationSinceStart) {
+        executeDurationSinceStart = fetchNode.durationSinceStart;
+      }
+
+      if (fetch.trace?.load_stats) {
+        const mappedData: LoadStats = Object.entries(fetch.trace.load_stats).map(([key, val]: any) => {
+          const durationSinceStart = val.duration_since_start_pretty;
+          const idleTime = val.idle_time_pretty;
+
+          delete val.duration_since_start_pretty;
+          delete val.duration_since_start_nanoseconds;
+          delete val.idle_time_pretty;
+          delete val.idle_time_nanoseconds;
+
+          return {
+            name: key,
+            durationSinceStart,
+            attributes: val,
+            idleTime,
+          };
+        });
+
+        fetchNode.loadStats = mappedData;
+      }
+
+      const fetchOutputTrace = fetch.trace?.output?.extensions?.trace;
+      if (fetchOutputTrace) {
+        fetchNode.outputTrace = {
+          request: {
+            ...fetchOutputTrace.request,
+          },
+          response: {
+            statusCode: fetchOutputTrace.response.status_code,
+            headers: fetchOutputTrace.response.headers,
+          },
+        };
+      }
+
+      if (fetchNode.durationLoad && fetchNode.durationSinceStart) {
+        const endTime = gStartTimeNano + BigInt(fetchNode.durationSinceStart + fetchNode.durationLoad);
+        if (endTime > gEndTimeNano) {
+          gEndTimeNano = endTime;
+        }
+      }
+
+      const childFetches = fetch.fetches || fetch.children;
+      if (childFetches) {
+        childFetches.forEach((f: any) => {
+          const node = parseFetchNew(f.fetch || f, fetchNode.id);
+          if (node) {
+            if (fetchNode.type === 'ParallelList') {
+              node.dataSourceId = fetchNode.dataSourceId;
+              node.dataSourceName = fetchNode.dataSourceName;
+            }
+            fetchNode.children.push(node);
+          }
+        });
+      }
+
+      tempNodes.push({
+        id: fetchNode.id,
+        type: ['Parallel', 'Sequence', 'ParallelList'].includes(fetchNode.type) ? 'multi' : 'fetch',
+        data: {
+          ...fetchNode,
+        },
+        connectable: false,
+        deletable: false,
+        position: {
+          x: 0,
+          y: 0,
+        },
+      });
+
+      fetchNode.children.forEach((childNode, index, children) => {
+        let parent = fetchNode;
+        if (fetchNode.type === 'Sequence') {
+          const prevChild = children[index - 1];
+          parent = prevChild || fetchNode;
+        }
+
+        tempEdges.push({
+          id: `edge-${childNode.id}-${parent.id}`,
+          source: `${parent.id}`,
+          animated: true,
+          target: `${childNode.id}`,
+          type: 'fetch',
+          data: {
+            ...childNode,
+          },
+        });
+      });
+
+      return fetchNode;
+    };
+    const parseJsonNew = (json: any, parentId?: string) => {
+      return parseFetchNew(json.fetches, parentId);
+    };
+
     try {
       const parsedResponse = JSON.parse(response);
       if (!parsedResponse?.extensions?.trace) {
@@ -226,21 +347,6 @@ const Trace = ({
       }
 
       gStartTimeNano = BigInt(parsedResponse.extensions.trace.info.trace_start_unix * 1e9);
-
-      const traceTree = parseJson(parsedResponse.extensions.trace, 'plan');
-
-      if (traceTree) {
-        fetchMap.set(traceTree.id, traceTree);
-      }
-
-      fetchMap.forEach((fetchNode) => {
-        if (fetchNode.parentId) {
-          const parent = fetchMap.get(fetchNode.parentId);
-          if (parent) {
-            parent.children.push(fetchNode);
-          }
-        }
-      });
 
       const parseStats = parsedResponse.extensions.trace.info.parse_stats;
       const normalizeStats = parsedResponse.extensions.trace.info.normalize_stats;
@@ -275,21 +381,35 @@ const Trace = ({
         durationLoad: plannerStats.duration_nanoseconds,
       } as FetchNode;
 
-      const execute = {
-        id: 'execute',
-        type: 'execute',
-        durationSinceStart: traceTree?.durationSinceStart,
-        durationLoad: Number(gEndTimeNano - gStartTimeNano) - (traceTree?.durationSinceStart ?? 0),
-        children: [traceTree],
-      } as FetchNode;
-
-      const root = {
-        id: 'root',
-        type: 'graphql',
-        durationLoad: Number(gEndTimeNano - gStartTimeNano),
-        children: [parse, normalize, validate, plan, execute],
-      } as FetchNode;
-
+      let traceTree: FetchNode | undefined;
+      if (parsedResponse.extensions.trace.version) {
+        traceTree = parseJsonNew(parsedResponse.extensions.trace, plan.id);
+        if (traceTree) {
+          tempEdges.push({
+            id: `edge-${traceTree.id}-${plan.id}`,
+            source: plan.id,
+            animated: true,
+            target: `${traceTree.id}`,
+            type: 'fetch',
+            data: {
+              ...plan,
+            },
+          });
+        }
+      } else {
+        traceTree = parseJsonOld(parsedResponse.extensions.trace, 'plan');
+        if (traceTree) {
+          fetchMap.set(traceTree.id, traceTree);
+        }
+        fetchMap.forEach((fetchNode) => {
+          if (fetchNode.parentId) {
+            const parent = fetchMap.get(fetchNode.parentId);
+            if (parent) {
+              parent.children.push(fetchNode);
+            }
+          }
+        });
+      }
       tempNodes.unshift({
         id: plan.id,
         type: 'multi',
@@ -314,6 +434,21 @@ const Trace = ({
           ...plan,
         },
       });
+
+      const execute = {
+        id: 'execute',
+        type: 'execute',
+        durationSinceStart: executeDurationSinceStart,
+        durationLoad: Number(gEndTimeNano - gStartTimeNano) - executeDurationSinceStart,
+        children: [traceTree],
+      } as FetchNode;
+
+      const root = {
+        id: 'root',
+        type: 'graphql',
+        durationLoad: Number(gEndTimeNano - gStartTimeNano),
+        children: [parse, normalize, validate, plan, execute],
+      } as FetchNode;
 
       setTree(root);
       setNodes(tempNodes);

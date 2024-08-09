@@ -18,7 +18,7 @@ export const YourComponent {
     return (
         <Playground 
             routingUrl={} // the endpoint of the router
-            hideLogo={} // boolean to hide wundergraph logo
+            hideLogo={} // boolean to hide the wundergraph logo
             theme={} // 'light' or 'dark';
         />
     );

@@ -207,6 +207,9 @@ export const FetchWaterfall = ({
               "parallel",
               "serial",
               "parallelListItem",
+              "Parallel",
+              "Sequence",
+              "ParallelList",
             ].includes(fetch.type) ? (
               <div className="-translate-y-px px-2.5 py-2 text-xs text-muted-foreground">
                 {mapFetchType(fetch.type)}
@@ -263,12 +266,20 @@ export const FetchWaterfall = ({
               "parallel",
               "serial",
               "parallelListItem",
+              "Parallel",
+              "Sequence",
+              "ParallelList",
             ].includes(fetch.type)}
             className="group relative flex flex-1 items-center group-hover:brightness-90 disabled:cursor-not-allowed "
           >
-            {!["parallel", "serial", "parallelListItem"].includes(
-              fetch.type,
-            ) && (
+            {![
+              "parallel",
+              "serial",
+              "parallelListItem",
+              "Parallel",
+              "Sequence",
+              "ParallelList",
+            ].includes(fetch.type) && (
               <>
                 <div className="absolute h-px w-full bg-input" />
                 <div

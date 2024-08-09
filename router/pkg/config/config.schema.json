@@ -1454,6 +1454,16 @@
           "type": "integer",
           "default": 8,
           "description": "The size of the ParseKit pool. The ParseKit pool provides re-usable Resources for parsing, normalizing, validating and planning GraphQL Operations. Setting the pool size to a value much higher than the number of CPU Threads available will not improve performance, but only increase memory usage."
+        },
+        "enable_validation_cache": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the validation cache. The validation cache is used to cache results of validating GraphQL Operations."
+        },
+        "validation_cache_size": {
+          "type": "integer",
+          "default": 1024,
+          "description": "The size of the validation cache."
         }
       }
     },
