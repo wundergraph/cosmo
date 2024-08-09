@@ -254,6 +254,13 @@ websocket:
     enabled: true
     allow_list:
       - "Authorization"
+  authentication:
+    from_initial_payload:
+      enabled: true
+      key: "Authorization"
+      export_token:
+        enabled: true
+        header_key: "Authorization"
 
 storage_providers:
   s3:

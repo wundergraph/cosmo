@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/jwks"
@@ -28,11 +29,13 @@ func configureAuth(t *testing.T) ([]authentication.Authenticator, *jwks.Server) 
 	authServer, err := jwks.NewServer(t)
 	require.NoError(t, err)
 	t.Cleanup(authServer.Close)
-	authOptions := authentication.JWKSAuthenticatorOptions{
-		Name: jwksName,
-		URL:  authServer.JWKSURL(),
+	tokenDecoder, _ := authentication.NewJwksTokenDecoder(authServer.JWKSURL(), time.Second*5)
+	authOptions := authentication.HttpHeaderAuthenticatorOptions{
+		Name:         jwksName,
+		URL:          authServer.JWKSURL(),
+		TokenDecoder: tokenDecoder,
 	}
-	authenticator, err := authentication.NewJWKSAuthenticator(authOptions)
+	authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
 	require.NoError(t, err)
 	return []authentication.Authenticator{authenticator}, authServer
 }
@@ -610,13 +613,15 @@ func TestAuthenticationWithCustomHeaders(t *testing.T) {
 	authServer, err := jwks.NewServer(t)
 	require.NoError(t, err)
 	t.Cleanup(authServer.Close)
-	authOptions := authentication.JWKSAuthenticatorOptions{
+	tokenDecoder, _ := authentication.NewJwksTokenDecoder(authServer.JWKSURL(), time.Second*5)
+	authOptions := authentication.HttpHeaderAuthenticatorOptions{
 		Name:                jwksName,
 		URL:                 authServer.JWKSURL(),
 		HeaderNames:         []string{headerName},
 		HeaderValuePrefixes: []string{headerValuePrefix},
+		TokenDecoder:        tokenDecoder,
 	}
-	authenticator, err := authentication.NewJWKSAuthenticator(authOptions)
+	authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
 	require.NoError(t, err)
 	authenticators := []authentication.Authenticator{authenticator}
 
@@ -743,19 +748,23 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(authServer2.Close)
 
+	tokenDecoder1, _ := authentication.NewJwksTokenDecoder(authServer1.JWKSURL(), time.Second*5)
 	authenticator1HeaderValuePrefixes := []string{"Bearer"}
-	authenticator1, err := authentication.NewJWKSAuthenticator(authentication.JWKSAuthenticatorOptions{
+	authenticator1, err := authentication.NewHttpHeaderAuthenticator(authentication.HttpHeaderAuthenticatorOptions{
 		Name:                "1",
 		HeaderValuePrefixes: authenticator1HeaderValuePrefixes,
 		URL:                 authServer1.JWKSURL(),
+		TokenDecoder:        tokenDecoder1,
 	})
 	require.NoError(t, err)
 
+	tokenDecoder2, _ := authentication.NewJwksTokenDecoder(authServer2.JWKSURL(), time.Second*5)
 	authenticator2HeaderValuePrefixes := []string{"", "Bearer", "Token"}
-	authenticator2, err := authentication.NewJWKSAuthenticator(authentication.JWKSAuthenticatorOptions{
+	authenticator2, err := authentication.NewHttpHeaderAuthenticator(authentication.HttpHeaderAuthenticatorOptions{
 		Name:                "2",
 		HeaderValuePrefixes: authenticator2HeaderValuePrefixes,
 		URL:                 authServer2.JWKSURL(),
+		TokenDecoder:        tokenDecoder2,
 	})
 	require.NoError(t, err)
 	authenticators := []authentication.Authenticator{authenticator1, authenticator2}
@@ -849,12 +858,14 @@ func TestAuthenticationOverWebsocket(t *testing.T) {
 	require.NoError(t, err)
 	defer authServer.Close()
 
-	jwksOpts := authentication.JWKSAuthenticatorOptions{
-		Name: jwksName,
-		URL:  authServer.JWKSURL(),
+	tokenDecoder, _ := authentication.NewJwksTokenDecoder(authServer.JWKSURL(), time.Second*5)
+	jwksOpts := authentication.HttpHeaderAuthenticatorOptions{
+		Name:         jwksName,
+		URL:          authServer.JWKSURL(),
+		TokenDecoder: tokenDecoder,
 	}
 
-	authenticator, err := authentication.NewJWKSAuthenticator(jwksOpts)
+	authenticator, err := authentication.NewHttpHeaderAuthenticator(jwksOpts)
 	require.NoError(t, err)
 	authenticators := []authentication.Authenticator{authenticator}
 
