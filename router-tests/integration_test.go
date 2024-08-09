@@ -141,22 +141,29 @@ func TestExecutionPlanCache(t *testing.T) {
 		require.Equal(t, "MISS", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
 		require.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, res.Body)
 
-		res2, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			Query:     `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
 			Variables: json.RawMessage(`{"criteria":{"nationality":"GERMAN"}}`),
 		})
 		require.NoError(t, err)
-		require.Equal(t, http.StatusOK, res2.Response.StatusCode)
-		require.Equal(t, "HIT", res2.Response.Header.Get("X-WG-Execution-Plan-Cache"))
-		require.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, res2.Body)
+		require.Equal(t, http.StatusOK, res.Response.StatusCode)
+		require.Equal(t, "HIT", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+		require.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, res.Body)
 
-		res3, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			Query: `query Find($criteria: SearchInput! = { nationality: ENGLISH }) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
 		})
 		require.NoError(t, err)
-		require.Equal(t, http.StatusOK, res3.Response.StatusCode)
-		require.Equal(t, "HIT", res3.Response.Header.Get("X-WG-Execution-Plan-Cache"))
-		require.Equal(t, `{"data":{"findEmployees":[{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res3.Body)
+		require.Equal(t, http.StatusOK, res.Response.StatusCode)
+		require.Equal(t, "MISS", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+		require.Equal(t, `{"data":{"findEmployees":[{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res.Body)
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			Query: `query Find($criteria: SearchInput! = { nationality: ENGLISH }) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+		})
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, res.Response.StatusCode)
+		require.Equal(t, "HIT", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+		require.Equal(t, `{"data":{"findEmployees":[{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res.Body)
 	})
 }
 

@@ -696,11 +696,11 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 		return nil, nil, blocked
 	}
 
-	if _, err := operationKit.Normalize(); err != nil {
+	if _, err := operationKit.NormalizeOperation(); err != nil {
 		return nil, nil, err
 	}
 
-	if err := operationKit.CoerceListVariables(); err != nil {
+	if err := operationKit.NormalizeVariables(); err != nil {
 		return nil, nil, err
 	}
 

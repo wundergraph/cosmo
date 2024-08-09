@@ -402,7 +402,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			trace.WithAttributes(attributes...),
 		)
 
-		cached, err := operationKit.Normalize()
+		cached, err := operationKit.NormalizeOperation()
 		if err != nil {
 			// the kit must be freed before we're doing io operations
 			// the kit is bound to the number of CPUs, and we must not hold onto it while doing IO operations
@@ -420,7 +420,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			return
 		}
 
-		err = operationKit.CoerceListVariables()
+		err = operationKit.NormalizeVariables()
 		if err != nil {
 			// the kit must be freed before we're doing io operations
 			// the kit is bound to the number of CPUs, and we must not hold onto it while doing IO operations
