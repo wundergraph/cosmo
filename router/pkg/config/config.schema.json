@@ -346,7 +346,7 @@
                 },
                 "export_token": {
                   "type": "object",
-                  "description": "The configuration used to export the JWT (JSON Web Token) to the client request header.",
+                  "description": "The configuration responsible for exporting the JWT (JSON Web Token) to the client's request header. If the specified header key differs from the default value, 'Authorization', it needs to be included in the 'forward_upgrade_headers' list to ensure it is forwarded to the subgraphs.",
                   "additionalProperties": false,
                   "properties": {
                     "enabled": {
