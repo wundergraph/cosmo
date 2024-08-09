@@ -102,6 +102,8 @@ const Trace = ({
     let gStartTimeNano = BigInt(Number.MAX_VALUE);
     let gEndTimeNano = BigInt(0);
 
+    let executeDurationSinceStart = 0;
+
     const fetchMap = new Map<string, FetchNode>();
 
     const parseFetch = (
@@ -272,6 +274,10 @@ const Trace = ({
         loadSkipped: fetch.trace?.load_skipped,
         children: [],
       };
+
+      if (!executeDurationSinceStart && fetchNode.durationSinceStart) {
+        executeDurationSinceStart = fetchNode.durationSinceStart;
+      }
 
       if (fetch.trace?.load_stats) {
         const mappedData: LoadStats = Object.entries(
@@ -474,10 +480,9 @@ const Trace = ({
       const execute = {
         id: "execute",
         type: "execute",
-        durationSinceStart: traceTree?.durationSinceStart,
+        durationSinceStart: executeDurationSinceStart,
         durationLoad:
-          Number(gEndTimeNano - gStartTimeNano) -
-          (traceTree?.durationSinceStart ?? 0),
+          Number(gEndTimeNano - gStartTimeNano) - executeDurationSinceStart,
         children: [traceTree],
       } as FetchNode;
 
