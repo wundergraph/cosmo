@@ -7,8 +7,6 @@ on:
   push:
     branches:
       - main
-      - andi/eng-5520-automate-helm-chart-releases
-      - andi/helm-release-testing
 
 permissions:
   contents: write
