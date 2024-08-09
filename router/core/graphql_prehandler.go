@@ -477,7 +477,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			trace.WithSpanKind(trace.SpanKindInternal),
 			trace.WithAttributes(commonAttributes...),
 		)
-		err = operationKit.Validate()
+		validationCached, err := operationKit.Validate()
 		if err != nil {
 			// the kit must be freed before we're doing io operations
 			// the kit is bound to the number of CPUs, and we must not hold onto it while doing IO operations
@@ -495,6 +495,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			return
 		}
 
+		engineValidateSpan.SetAttributes(otel.WgValidationCacheHit.Bool(validationCached))
 		engineValidateSpan.End()
 
 		if !traceOptions.ExcludeValidateStats {

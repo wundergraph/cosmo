@@ -23,6 +23,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/variablesvalidation"
@@ -82,6 +83,7 @@ type OperationProcessorOptions struct {
 
 	EnablePersistedOperationsCache bool
 	NormalizationCache             *ristretto.Cache[uint64, NormalizationCacheEntry]
+	ValidationCache                *ristretto.Cache[uint64, bool]
 	ParseKitPoolSize               int
 }
 
@@ -107,6 +109,7 @@ type parseKit struct {
 	printer                 *astprinter.Printer
 	normalizedOperation     *bytes.Buffer
 	variablesValidator      *variablesvalidation.VariablesValidator
+	operationValidator      *astvalidation.OperationValidator
 	inputListCoercion       *astnormalization.ListInputCoercion
 	variablesParser         *fastjson.Parser
 	exportedVariablesParser *fastjson.Parser
@@ -120,6 +123,7 @@ type OperationCache struct {
 	persistedOperationCacheLock *sync.RWMutex
 
 	normalizationCache *ristretto.Cache[uint64, NormalizationCacheEntry]
+	validationCache    *ristretto.Cache[uint64, bool]
 }
 
 // OperationKit provides methods to parse, normalize and validate operations.
@@ -722,15 +726,33 @@ func (o *OperationKit) writeSkipIncludeCacheKeyToKeyGen(skipIncludeVariableNames
 }
 
 // Validate validates the operation variables.
-func (o *OperationKit) Validate() error {
-	err := o.kit.variablesValidator.Validate(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.doc.Input.Variables)
+func (o *OperationKit) Validate() (cacheHit bool, err error) {
+	err = o.kit.variablesValidator.Validate(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.doc.Input.Variables)
 	if err != nil {
-		return &inputError{
+		return false, &inputError{
 			message:    err.Error(),
 			statusCode: http.StatusOK,
 		}
 	}
-	return nil
+	if o.cache != nil && o.cache.validationCache != nil {
+		var valid bool
+		valid, cacheHit = o.cache.validationCache.Get(o.parsedOperation.ID)
+		if valid {
+			return
+		}
+	}
+	report := &operationreport.Report{}
+	o.kit.operationValidator.Validate(o.kit.doc, o.operationProcessor.executor.ClientSchema, report)
+	if o.cache != nil && o.cache.validationCache != nil {
+		valid := !report.HasErrors()
+		o.cache.validationCache.Set(o.parsedOperation.ID, valid, 1)
+	}
+	if report.HasErrors() {
+		return cacheHit, &reportError{
+			report: report,
+		}
+	}
+	return
 }
 
 var (
@@ -781,6 +803,7 @@ func createParseKit(i int) *parseKit {
 		printer:                 &astprinter.Printer{},
 		normalizedOperation:     &bytes.Buffer{},
 		variablesValidator:      variablesvalidation.NewVariablesValidator(),
+		operationValidator:      astvalidation.DefaultOperationValidator(),
 		inputListCoercion:       astnormalization.NewListInputCoercion(),
 		variablesParser:         &fastjson.Parser{},
 		exportedVariablesParser: &fastjson.Parser{},
@@ -815,6 +838,12 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 			processor.operationCache = &OperationCache{}
 		}
 		processor.operationCache.normalizationCache = opts.NormalizationCache
+	}
+	if opts.ValidationCache != nil {
+		if processor.operationCache == nil {
+			processor.operationCache = &OperationCache{}
+		}
+		processor.operationCache.validationCache = opts.ValidationCache
 	}
 	return processor
 }

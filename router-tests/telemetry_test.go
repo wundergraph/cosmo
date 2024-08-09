@@ -148,7 +148,7 @@ func TestTelemetry(t *testing.T) {
 
 			// Span attributes
 
-			require.Len(t, sn[3].Attributes(), 4)
+			require.Len(t, sn[3].Attributes(), 5)
 
 			require.Equal(t, "Operation - Plan", sn[4].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[4].SpanKind())
@@ -158,6 +158,7 @@ func TestTelemetry(t *testing.T) {
 			require.Contains(t, sn[3].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[3].Attributes(), otel.WgFederatedGraphID.String("graph"))
 			require.Contains(t, sn[3].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
+			require.Contains(t, sn[3].Attributes(), otel.WgValidationCacheHit.Bool(false))
 
 			// Span Resource attributes
 
@@ -627,6 +628,19 @@ func TestTelemetry(t *testing.T) {
 			metricdatatest.AssertEqual(t, responseContentLengthMetric, rm.ScopeMetrics[0].Metrics[3], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, requestInFlightMetric, rm.ScopeMetrics[0].Metrics[4], metricdatatest.IgnoreTimestamp())
 
+			// make a second request and assert that we're now hitting the validation cache
+
+			exporter.Reset()
+
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			sn = exporter.GetSpans().Snapshots()
+			require.Len(t, sn, 9, "expected 9 spans, got %d", len(sn))
+			require.Len(t, sn[3].Attributes(), 5)
+			require.Contains(t, sn[3].Attributes(), otel.WgValidationCacheHit.Bool(true))
 		})
 	})
 
@@ -1464,9 +1478,10 @@ func TestTelemetry(t *testing.T) {
 			require.Contains(t, sn[2].Attributes(), otel.WgFeatureFlag.String("myff"))
 
 			require.Equal(t, "Operation - Validate", sn[3].Name())
-			require.Len(t, sn[3].Attributes(), 5)
+			require.Len(t, sn[3].Attributes(), 6)
 			require.Contains(t, sn[3].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()))
 			require.Contains(t, sn[3].Attributes(), otel.WgFeatureFlag.String("myff"))
+			require.Contains(t, sn[3].Attributes(), otel.WgValidationCacheHit.Bool(false))
 
 			require.Equal(t, "Operation - Plan", sn[4].Name())
 			require.Len(t, sn[4].Attributes(), 7)

@@ -704,7 +704,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 		return nil, nil, err
 	}
 
-	if err := operationKit.Validate(); err != nil {
+	if _, err := operationKit.Validate(); err != nil {
 		return nil, nil, err
 	}
 
