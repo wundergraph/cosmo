@@ -11,6 +11,7 @@ on:
     branches:
       - 'release-please--**'
       - andi/helm-release-testing
+      - main
     types:
       - reopened
       - synchronize
