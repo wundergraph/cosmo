@@ -39,14 +39,20 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref }}
           repository: ${{ github.event.pull_request.head.repo.full_name }}
 
-      - name: install-tools
-        run: |
-          wget https://github.com/norwoodj/helm-docs/releases/download/v1.11.3/helm-docs_1.11.3_Linux_x86_64.tar.gz
-          echo "07efe78fd56de173e29f15ea5be2aa6f425d346bcd480aa229840b5405661cb2  helm-docs_1.11.3_Linux_x86_64.tar.gz" >> helm-docs_1.11.3_Linux_x86_64.tar.gz.sha256
-          sha256sum --check helm-docs_1.11.3_Linux_x86_64.tar.gz.sha256
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          # The go install / version instructions are inside the Makefile, so we need to cache the Makefile.
+          key: ${{ runner.os }}-go-${{ hashFiles('router/go.sum') }}-makefile-${{ hashFiles('Makefile') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
 
-          tar -xvf helm-docs_1.11.3_Linux_x86_64.tar.gz
-          install helm-docs /usr/local/bin/helm-docs
+      - uses: ./.github/actions/go
+
+      - name: Install tools
+        run: go install github.com/norwoodj/helm-docs/cmd/helm-docs@v1.11.3
 
       - name: Generate Helm docs
         run: make docs
