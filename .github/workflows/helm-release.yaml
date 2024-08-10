@@ -33,7 +33,7 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
           target-branch: ${{ env.RELEASE_BRANCH }}
-          token: ${{ secrets.GH_TOKEN_WORKFLOW_PUBLISH }}
+          token: ${{ secrets.GH_TOKEN_HELM_RELEASES }}
           skip-github-release: false
           skip-github-pull-request: false
 
