@@ -574,6 +574,8 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		ExecutionPlanCacheSize:         1024,
 		EnablePersistedOperationsCache: true,
 		ParseKitPoolSize:               8,
+		EnableValidationCache:          true,
+		ValidationCacheSize:            1024,
 	}
 	if testConfig.ModifyEngineExecutionConfiguration != nil {
 		testConfig.ModifyEngineExecutionConfiguration(&engineExecutionConfig)

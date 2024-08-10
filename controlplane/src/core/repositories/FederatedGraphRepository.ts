@@ -1431,7 +1431,14 @@ export class FederatedGraphRepository {
       const contractRepo = new ContractRepository(this.logger, tx, this.organizationId);
       const featureFlagRepo = new FeatureFlagRepository(this.logger, tx, this.organizationId);
       const graphCompositionRepo = new GraphCompositionRepository(this.logger, tx);
-      const composer = new Composer(this.logger, fedGraphRepo, subgraphRepo, contractRepo, graphCompositionRepo);
+      const composer = new Composer(
+        this.logger,
+        this.db,
+        fedGraphRepo,
+        subgraphRepo,
+        contractRepo,
+        graphCompositionRepo,
+      );
 
       const allDeploymentErrors: PlainMessage<DeploymentError>[] = [];
       const allCompositionErrors: PlainMessage<CompositionError>[] = [];
@@ -1660,6 +1667,7 @@ export class FederatedGraphRepository {
           baseCompositionSchemaVersionId: baseCompositionData.schemaVersionId,
           federatedGraphAdmissionWebhookURL: federatedGraphDTO.admissionWebhookURL,
           federatedGraphAdmissionWebhookSecret: federatedGraphDTO.admissionWebhookSecret,
+          actorId,
         });
 
         allDeploymentErrors.push(
@@ -1694,6 +1702,7 @@ export class FederatedGraphRepository {
             organizationId: this.organizationId,
             federatedGraphAdmissionWebhookURL: contractDTO.admissionWebhookURL,
             federatedGraphAdmissionWebhookSecret: contractDTO.admissionWebhookSecret,
+            actorId,
           });
 
           allDeploymentErrors.push(

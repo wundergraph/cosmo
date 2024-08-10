@@ -5,7 +5,7 @@ query Requires {
       lead {
         __typename
         id
-        derivedID
+        derivedMood
       }
       isLeadAvailable
     }

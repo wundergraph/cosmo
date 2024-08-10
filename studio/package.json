@@ -1,6 +1,6 @@
 {
   "name": "studio",
-  "version": "0.83.6",
+  "version": "0.85.0",
   "private": true,
   "license": "Apache-2.0",
   "description": "WunderGraph Cosmo Studio",
