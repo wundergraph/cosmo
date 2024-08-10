@@ -1,5 +1,5 @@
 ---
-name: helm-release
+name: Helm Release
 run-name: helm-release
 
 on:
