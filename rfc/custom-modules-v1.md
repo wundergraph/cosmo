@@ -411,6 +411,24 @@ func (m *MyModule) Cleanup() error {
 }
 ```
 
+## Backwards Compatibility
+
+The new module system is not backwards compatible with the old module system. Existing custom modules will need to be rewritten to use the new interfaces and API. We will provide a migration guide and tooling to help developers migrate their custom modules to the new system.
+
+## Outlook
+
+Possible workflow to implement and build custom modules:
+
+1. **Scaffolding**: A CLI tool that scaffolds a new custom module with a template and basic structure.
+2. **Testing**: A testing framework that provides utilities to test custom modules in isolation and in combination with other modules.
+3. **Deployment**: A deployment tool that packages custom modules into a binary or container image and deploys them to the router.
+
+```
+wgc module create myModule --router v0.93.0
+wgc module test myModule
+wgc module build --image-tag myRouter
+```
+
 ### Terminology
 
 - **Gateway**: The main entry point for incoming GraphQL requests. The gateway is responsible for routing requests to the appropriate subgraphs and aggregating the responses.
