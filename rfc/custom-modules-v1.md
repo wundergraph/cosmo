@@ -267,8 +267,10 @@ type ApplicationHooks interface {
 }
 
 type TelemetryHooks interface {
-	// OnSpanStart is called when a span is started
-	OnSpanStart(span *trace.Span) func() // Return a function to be called when the span ends
+	// OnSpanStart is called when a span is created
+	// Returning a function to be called when the span ends.
+	// This can be used to add custom attributes or events to the span.
+	OnSpan(span *trace.Span) func() // Return a function to be called when the span ends
 }
 
 type OperationHooks interface {
