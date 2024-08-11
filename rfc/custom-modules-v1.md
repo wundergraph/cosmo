@@ -424,10 +424,10 @@ Possible workflow to implement and build custom modules:
 2. **Testing**: A testing framework that provides utilities to test custom modules in isolation and in combination with other modules.
 3. **Deployment**: A deployment tool that packages custom modules into a binary or container image and deploys them to the router.
 
-```
-wgc module create myModule --router v0.93.0
-wgc module test myModule
-wgc module build --image-tag myRouter
+```bash
+wgc module create myModule --router v0.93.0 # Scaffold a new custom module and specify the router version
+wgc module test # Run tests for all custom modules
+wgc module build --image-tag myRouter # Build a custom module and package it into our official router image
 ```
 
 ### Terminology
