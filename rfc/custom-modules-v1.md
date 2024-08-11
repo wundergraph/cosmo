@@ -176,14 +176,14 @@ type GatewayRequest struct {
 	// The parsed, normaliazed and planned operation with all the information like name, variables, type, document representation,
 	// client name version, uploaded files, plan, normalization, persisted operation etc.
 	Operation *core.Operation
-    // The active Telemetry instance
+	// The active Telemetry instance
 	Telemetry *core.Telemetry
 	// The active graph
 	Graph *core.Graph
 	// The original HTTP request
 	Orignal *http.Request
-    // Logger for the gateway request
-    Logger *zap.Logger
+	// Logger for the gateway request
+	Logger *zap.Logger
 }
 
 type GatewayResponse struct {
@@ -216,12 +216,12 @@ type SubgraphRequest struct {
 	GatewayRequest *core.RouterRequest
 	// The final GraphQL request to the subgraph
 	Request *core.GraphQLRequest
-    // The active Telemetry instance 
+	// The active Telemetry instance
 	Telemetry *core.Telemetry
 	// The original http request to the subgraph
 	Orignal *http.Request
 	// Logger for the subgraph request
-    Logger *zap.Logger
+	Logger *zap.Logger
 }
 
 type SubgraphResponse struct {
@@ -229,7 +229,7 @@ type SubgraphResponse struct {
 	Subgraph *core.Subgraph
 	// The original Gateway request
 	GatewayRequest *core.GatewayRequest
-    // The active Telemetry instance 
+	// The active Telemetry instance
 	Telemetry *core.Telemetry
 	// The final GraphQL response from the subgraph
 	Response *core.GraphQLResponse
@@ -259,7 +259,7 @@ type ApplicationHooks interface {
 
 type TelemetryHooks interface {
 	// OnSpanStart is called when a span is started
-	OnSpanStart(span *trace.Span) func () // Return a function to be called when the span ends
+	OnSpanStart(span *trace.Span) func() // Return a function to be called when the span ends
 }
 
 type OperationHooks interface {
