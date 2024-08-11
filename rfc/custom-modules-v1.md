@@ -139,7 +139,7 @@ A developer can implement a custom module by creating a struct that implements o
 - `GatewayHooks`: Provides hooks for the gateway lifecycle, including request and response handling.
 - `SubgraphHooks`: Provides hooks for subgraph requests and responses.
 - `ApplicationHooks`: Provides hooks for the application lifecycle, including startup, shutdown, and error handling.
-- `TelemetryHooks`: Provides hooks for OpenTelemetry spans.
+- `TelemetryHooks`: Provides hooks for OpenTelemetry spans and metrics.
 - `OperationHooks`: Provides hooks for parsed, normalized, and planned GraphQL operations.
 - `Module`: Provides information about the module, including an ID, priority, and factory function.
 
