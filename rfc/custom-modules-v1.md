@@ -141,7 +141,7 @@ A developer can implement a custom module by creating a struct that implements o
 - `ApplicationHooks`: Provides hooks for the application lifecycle, including startup, shutdown, and error handling.
 - `TelemetryHooks`: Provides hooks for OpenTelemetry spans and metrics.
 - `OperationHooks`: Provides hooks for parsed, normalized, and planned GraphQL operations.
-- `Module`: Provides information about the module, including an ID, priority, and factory function.
+- `Module`: Provides hooks for the module lifecycle, including provisioning and cleanup.
 
 ```go
 type MyModule struct{}
