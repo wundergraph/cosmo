@@ -216,8 +216,8 @@ type SubgraphRequest struct {
 	GatewayRequest *core.RouterRequest
 	// The final GraphQL request to the subgraph
 	Request *core.GraphQLRequest
-    // The active Telemetry instance
-    Telemetry *core.Telemetry
+    // The active Telemetry instance 
+	Telemetry *core.Telemetry
 	// The original http request to the subgraph
 	Orignal *http.Request
 	// Logger for the subgraph request
@@ -229,8 +229,8 @@ type SubgraphResponse struct {
 	Subgraph *core.Subgraph
 	// The original Gateway request
 	GatewayRequest *core.GatewayRequest
-    // The active Telemetry instance
-    Telemetry *core.Telemetry
+    // The active Telemetry instance 
+	Telemetry *core.Telemetry
 	// The final GraphQL response from the subgraph
 	Response *core.GraphQLResponse
 	// The original http response from the subgraph
