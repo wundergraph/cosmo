@@ -327,17 +327,17 @@ type MyModule struct{}
 var _ GatewayHooks = (*MyModule)(nil)
 
 func (m *MyModule) OnGatewayResponse(res *core.GatewayResponse, err error) error {
-    // Add custom extensions to the response
-    res.Response.Extensions["myExtension"] = "myValue"
-	
-	// Rewrite errors in the response 
+	// Add custom extensions to the response
+	res.Response.Extensions["myExtension"] = "myValue"
+
+	// Rewrite errors in the response
 	if len(res.Response.Errors) > 0 {
-        for _, err := range res.Response.Errors {
-            err.Message = "An error occurred"
-        }
+		for _, err := range res.Response.Errors {
+			err.Message = "An error occurred"
+		}
 	}
 
-    return nil
+	return nil
 }
 ```
 
