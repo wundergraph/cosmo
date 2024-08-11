@@ -429,6 +429,36 @@ func (m *MyModule) Cleanup() error {
 }
 ```
 
+# Custom Module configuration
+
+Custom modules can be configured using a YAML file that is loaded by the router at startup. We reserve a section in the configuration file for custom modules. Each module can have its own configuration section with custom properties.
+
+```yaml
+modules:
+  myModule:
+    value: 42
+```
+
+At module provisioning, the configuration is loaded and can be marshaled into the module struct, where it can be accessed across the module lifecycle.
+
+```go
+type MyModule struct {
+	Value uint64 `yaml:"value"`
+}
+
+func (m *MyModule) Provision(ctx *core.ModuleContext) error {
+	// Access the module configuration marshaled from the config file into the struct
+	cfg, err := ctx.Config()
+	if err != nil {
+		return err
+	}
+
+	// Access the custom value from the configuration
+	m.Value
+}
+```
+
+
 ## Outlook
 
 Possible workflow to implement and build custom modules:
