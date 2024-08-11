@@ -296,6 +296,11 @@ func (m *MyModule) Cleanup() error {
 - **Response Caching**: A module that caches responses from subgraphs and returns them for identical requests.
 - **Enriching Logs**: A module that adds custom log fields to the gateway and subgraph logs.
 
+
+## Backwards Compatibility
+
+The new module system is not backwards compatible with the old module system. Existing custom modules will need to be rewritten to use the new interfaces and API. We will provide a migration guide and tooling to help developers migrate their custom modules to the new system.
+
 # Example Modules
 
 ## Custom Telemetry
@@ -410,10 +415,6 @@ func (m *MyModule) Cleanup() error {
     return m.Redis.Close()
 }
 ```
-
-## Backwards Compatibility
-
-The new module system is not backwards compatible with the old module system. Existing custom modules will need to be rewritten to use the new interfaces and API. We will provide a migration guide and tooling to help developers migrate their custom modules to the new system.
 
 ## Outlook
 
