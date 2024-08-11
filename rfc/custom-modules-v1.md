@@ -458,6 +458,20 @@ func (m *MyModule) Provision(ctx *core.ModuleContext) error {
 }
 ```
 
+# Module Registration
+
+Modules are registered in the main.go file of the router application. The router will load the modules at startup and call the provision method to initialize them.
+The order in which modules are registered determines the order in which they are executed. The first argument of `core.RegisterModule` accepts the module struct, and the second argument is a variadic list of options that can be passed to the module.
+
+```go
+func main() {
+    // Register the custom module in the order you want them to be executed
+    core.RegisterModule(&MyModule{}, core.WithXyz("abc"))
+
+    // Start the router
+    routercmd.Main()
+}
+```
 
 ## Outlook
 
