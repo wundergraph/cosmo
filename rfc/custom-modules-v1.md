@@ -201,10 +201,10 @@ type GatewayResponse struct {
 }
 
 type GatewayHooks interface {
-	// OnRequest is called when a request is made to the gateway.
+	// OnRequest is called when a request is made to the gateway and after all GraphQL information is available
 	// Returning an error will result in a GraphQL error being returned to the client.
 	OnGatewayRequest(ctx *core.GatewayRequest, err error) error
-	// OnResponse is called when a response is sent to the client
+	// OnResponse is called before the response is sent to the client
 	// Returning an error will result in a GraphQL error being returned to the client.
 	OnGatewayResponse(ctx *core.GatewayResponse, err error) error
 	// OnError is called when an error occurs during the gateway lifecycle
@@ -305,6 +305,8 @@ This module adds custom attributes to the OpenTelemetry span for each gateway re
 ```go
 type MyModule struct{}
 
+var _ GatewayHooks = (*MyModule)(nil)
+
 func (m *MyModule) OnGatewayRequest(req *core.GatewayRequest, err error) error {
     req.Telemetry.Span.AddEvent("Gateway Request")
 	req.Telemetry.Span.AddAttributes(
@@ -321,6 +323,8 @@ This module intercepts the final Gateway response to rewrite errors and add cust
 
 ```go
 type MyModule struct{}
+
+var _ GatewayHooks = (*MyModule)(nil)
 
 func (m *MyModule) OnGatewayResponse(res *core.GatewayResponse, err error) error {
     // Add custom extensions to the response
@@ -344,6 +348,8 @@ This module adds custom log fields to the gateway and subgraph logs. Data can co
 ```go
 type MyModule struct{}
 
+var _ GatewayHooks = (*MyModule)(nil)
+
 func (m *MyModule) OnGatewayRequest(req *core.GatewayRequest, err error) error {
     // Add custom fields to the gateway log
     req.Logger = req.Logger.With(zap.String("myField", "myValue"))
@@ -360,6 +366,8 @@ This module integrates with Redis to cache responses from subgraphs. Useful for 
 type MyModule struct{
 	Redis *redis.Client
 }
+
+var _ SubgraphHooks = (*MyModule)(nil)
 
 func (m *MyModule) Provision(ctx *core.ModuleContext) error {
     // Initialize the Redis client
