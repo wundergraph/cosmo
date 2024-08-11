@@ -1,8 +1,11 @@
-# Router Custom Module System v1
+---
+title: "Router Custom Module System v1"
+author: Dustin Deus
+date: 2024-08-11
+status: Draft
+---
 
-- **Author(s):** Dustin Deus
-- **Date:** 2024-08-11
-- **Status:** Draft
+# Router Custom Module System v1
 
 ## Abstract
 
