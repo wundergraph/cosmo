@@ -326,12 +326,12 @@ type MyModule struct{}
 var _ GatewayHooks = (*MyModule)(nil)
 
 func (m *MyModule) OnGatewayRequest(req *core.GatewayRequest, err error) error {
-    req.Telemetry.Span.AddEvent("Gateway Request")
+	req.Telemetry.Span.AddEvent("Gateway Request")
 	req.Telemetry.Span.AddAttributes(
-        attribute.String("gateway.name", "myGateway"),
-        attribute.String("gateway.version", "v1"),
-    )
-    return nil
+		attribute.String("gateway.name", "myGateway"),
+		attribute.String("gateway.version", "v1"),
+	)
+	return nil
 }
 ```
 
