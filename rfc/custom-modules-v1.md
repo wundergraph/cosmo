@@ -473,6 +473,21 @@ func main() {
 }
 ```
 
+Every custom router has its own go.mod file which represents in Go a module. This allows for reproducible builds and versioning of the custom router. The part below will be abstracted by a CLI tool in the future.
+```go
+// go.mod
+
+module github.com/myorg/myrouter
+
+go 1.23
+
+require (
+	"github.com/wundergraph/cosmo/router v0.93.0
+	// Import your modules here
+	github.com/myorg/mymodule v1.0.0
+)
+```
+
 ## Outlook
 
 Possible workflow to implement and build custom modules:
