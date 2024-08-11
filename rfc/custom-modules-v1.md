@@ -7,6 +7,10 @@ status: Draft
 
 # Router Custom Module System v1
 
+- **Author:** Dustin Deus
+- **Date:** 2024-08-11
+- **Status:** Draft
+
 ## Abstract
 
 This RFC describes an overhaul of the current module system in the router. The new module system is designed to be more flexible and native to GraphQL. It allows developers to hook into the gateway lifecycle as well as outgoing and incoming requests to subgraphs.
