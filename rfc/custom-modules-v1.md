@@ -20,6 +20,8 @@ As of today, customers can extend the router with custom modules. These modules 
 Ultimately, custom modules must be self-contained, composable and testable. They should provide a clear API for developers to interact with the gateway and subgraph lifecycle and implement custom logic without having to understand the internal workings of the router or advanced Go programming concepts.
 To briefly explain the decision to use Go as the language for the module system, we have chosen Go because it is a simple and easy-to-learn language that is widely used in the infrastructure and cloud-native ecosystem. You can build custom integration on top production-grade SDK without re-implementing them from scratch. It superiors to scripting languages like Rhai or cross-compiling WebAssembly because it can be easily debugged, profiled, and tested with any modern IDE (VsCode, Goland, etc.). Not part of this RFC, are our ambitions to make the workflow as smooth as possible with a CLI tool that can scaffold, test, and deploy custom modules. In the future, custom modules could be published to a central registry and shared with the community.
 
+As powerful as the new module becomes, it is important to move basic adn common functionality into the core of the router because building and maintaining custom modules should be a last resort. The router should provide a rich set of features out of the box that cover the most common use cases. Custom modules should be reserved for advanced or highly specific use cases that cannot be achieved with the built-in features of the router. Integration with third-party services, custom authentication, and advanced telemetry are examples of use cases that are well-suited for custom modules.
+
 ## Old Module System
 
 <details>
@@ -298,7 +300,7 @@ func (m *MyModule) Cleanup() error {
 
 ## Custom Telemetry
 
-This module adds custom attributes to the OpenTelemetry span for each gateway request.
+This module adds custom attributes to the OpenTelemetry span for each gateway request. Data can come from the request, the gateway configuration, or external sources.
 
 ```go
 type MyModule struct{}
@@ -337,7 +339,7 @@ func (m *MyModule) OnGatewayResponse(res *core.GatewayResponse, err error) error
 
 ## Enriching logs
 
-This module adds custom log fields to the gateway and subgraph logs.
+This module adds custom log fields to the gateway and subgraph logs. Data can come from the request, the response, or external sources.
 
 ```go
 type MyModule struct{}
@@ -352,7 +354,7 @@ func (m *MyModule) OnGatewayRequest(req *core.GatewayRequest, err error) error {
 
 ## Custom service integration
 
-This module integrates with Redis to cache responses from subgraphs.
+This module integrates with Redis to cache responses from subgraphs. Useful for very specific use cases where caching is required.
 
 ```go
 type MyModule struct{
