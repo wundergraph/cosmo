@@ -303,7 +303,7 @@ func (m *MyModule) Cleanup() error {
 
 - **Advanced GraphQL Operation Handling**: A module that walks the parsed operation and performs custom logic based on the operation type, fields, and arguments.
 - **Request validation**: A module that validates incoming requests and returns an error if the request is invalid.
-- **Custom Telemetry**: A module that collects custom span or metric data and sends it to a telemetry backend.
+- **Custom Telemetry**: A module that creates custom spans or metric data and sends it to a telemetry backend.
 - **Custom Authentication**: A module that authenticates incoming requests and adds user information to the subgraph requests.
 - **Response interception**: A module that intercepts responses from subgraphs and modifies them before they are sent to the client.
 - **Response Caching**: A module that caches responses from subgraphs and returns them for identical requests.
