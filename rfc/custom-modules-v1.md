@@ -14,7 +14,7 @@ As of today, customers can extend the router with custom modules. These modules 
 
 - The current module system is not native to GraphQL. It is based on HTTP middleware and does not provide a GraphQL-specific API.
 - The current module system is inconsistent and hard to use. It does not provide a clear API for developers to intercept and modify GraphQL requests and responses.
-- The current module system does not provide a way to create or modify OpenTelemetry spans for different parts of the gateway lifecycle.
+- The current module system does not provide a way to create or modify OpenTelemetry data, logs for different parts of the gateway lifecycle.
 - The current module system does not provide a way to interact with the parsed, normalized, and planned GraphQL operation in order to implement custom logic.
 
 Ultimately, custom modules must be self-contained, composable and testable. They should provide a clear API for developers to interact with the gateway and subgraph lifecycle and implement custom logic without having to understand the internal workings of the router or advanced Go programming concepts.
