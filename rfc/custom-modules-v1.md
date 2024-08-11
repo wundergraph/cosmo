@@ -246,6 +246,10 @@ type SubgraphResponse struct {
 	Orignal *http.Response
 }
 
+// SubgraphHooks are called when a subgraph request or response is made.
+// The order is not guaranteed, so the hooks should be idempotent and side-effect free.
+// if state needs to be shared between hooks, it should be stored in the context.
+// We will provide an easy way to share state between hooks.
 type SubgraphHooks interface {
 	// OnRequest is called when a subgraph request is made.
 	// Returning an error will result in a GraphQL error as a response from the subgraph.
