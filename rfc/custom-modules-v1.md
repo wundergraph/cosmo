@@ -434,6 +434,7 @@ func (m *MyModule) Cleanup() error {
 Custom modules can be configured using a YAML file that is loaded by the router at startup. We reserve a section in the configuration file for custom modules. Each module can have its own configuration section with custom properties.
 
 ```yaml
+# config.yaml
 modules:
   myModule:
     value: 42
