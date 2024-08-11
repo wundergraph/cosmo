@@ -416,7 +416,7 @@ func (m *MyModule) Cleanup() error {
 - **Gateway**: The main entry point for incoming GraphQL requests. The gateway is responsible for routing requests to the appropriate subgraphs and aggregating the responses.
 - **Subgraph**: A GraphQL service that provides a subset of the overall schema. Subgraphs are connected to the gateway and can be queried independently or as part of a federated query.
 - **Operation**: A GraphQL operation that is sent to the gateway. An operation can be a query, mutation, or subscription.
-- **Request**: A GraphQL request that is sent to the gateway. A request can contain one or more operations.
+- **Request**: A GraphQL request that is sent to the gateway. A request can contain an operation, variables, and extensions.
 - **Response**: A GraphQL response that is sent from the gateway to the client. A response can contain data, errors, and extensions.
 - **Hooks**: Functions that are called at specific points in the gateway lifecycle. Hooks can be used to intercept and modify requests and responses, handle errors, and perform custom logic.
 - **Telemetry**: The collection of data related to the gateway and subgraph lifecycle. Telemetry can include metrics, traces, and logs. OpenTelemetry is used to collect telemetry data in the gateway.
