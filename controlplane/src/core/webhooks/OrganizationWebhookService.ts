@@ -8,6 +8,7 @@ import pino from 'pino';
 import * as schema from '../../db/schema.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
+import { WebhookDeliveryInfo } from '../../db/models.js';
 import { makeWebhookRequest } from './utils.js';
 
 export interface FederatedGraphSchemaUpdate {
@@ -50,7 +51,7 @@ type Config = {
   key?: string;
   allowedUserEvents?: string[];
   meta: PlainMessage<EventMeta>['meta'];
-  type: string;
+  type: 'webhook' | 'slack';
 };
 
 export class OrganizationWebhookService {
@@ -68,14 +69,7 @@ export class OrganizationWebhookService {
     this.defaultBillingPlanId = defaultBillingPlanId;
 
     this.httpClient = axios.create({
-      timeout: 10_000,
-    });
-    axiosRetry(this.httpClient, {
-      retries: 5,
-      retryDelay: (retryCount) => {
-        return exponentialDelay(retryCount);
-      },
-      shouldResetTimeout: true,
+      timeout: 30_000,
     });
   }
 
@@ -126,6 +120,9 @@ export class OrganizationWebhookService {
             },
           };
           break;
+        }
+        default: {
+          throw new Error(`Unhandled case encountered for ${eventName}`);
         }
       }
 
@@ -246,12 +243,11 @@ export class OrganizationWebhookService {
           ],
         };
         if (latestChangelogs) {
-          const addedChanges = latestChangelogs.changelogs.filter(
-            (c) => c.changeType.includes('ADDED') || c.changeType.includes('CHANGED'),
-          );
+          const addedChanges = latestChangelogs.changelogs.filter((c) => c.changeType.includes('ADDED'));
           const removedChanges = latestChangelogs.changelogs.filter((c) => c.changeType.includes('REMOVED'));
+          const changedChanges = latestChangelogs.changelogs.filter((c) => c.changeType.includes('CHANGED'));
 
-          if (removedChanges.length + addedChanges.length > 20) {
+          if (removedChanges.length + addedChanges.length + changedChanges.length > 20) {
             tempData.attachments.unshift({
               color: '#e11d48',
               blocks: [
@@ -259,7 +255,7 @@ export class OrganizationWebhookService {
                   type: 'section',
                   text: {
                     type: 'mrkdwn',
-                    text: `Too many changes to display. There were ${removedChanges.length} deletions and ${addedChanges.length} additions.`,
+                    text: `Too many changes to display. There were ${removedChanges.length + changedChanges.length} deletions and ${addedChanges.length + changedChanges.length} additions.`,
                   },
                 },
               ],
@@ -326,16 +322,19 @@ export class OrganizationWebhookService {
     }
   }
 
-  private async sendEvent(eventData: OrganizationEventData, configs: Config[]) {
-    const logger = this.logger.child({ eventName: OrganizationEventName[eventData.eventName] });
+  private async sendEvent(eventData: OrganizationEventData, configs: Config[], actorId: string) {
+    const eventName = OrganizationEventName[eventData.eventName];
+    const logger = this.logger.child({ eventName });
 
     for (const config of configs) {
+      const startTime = performance.now();
+      let retryCount = 0;
+
       if (!this.shouldProcess(eventData, config)) {
         continue;
       }
 
       if (!config.url) {
-        logger.error('Webhook URL is not set');
         continue;
       }
 
@@ -345,29 +344,72 @@ export class OrganizationWebhookService {
       } else {
         data = {
           version: 1,
-          event: OrganizationEventName[eventData.eventName],
+          event: eventName,
           payload: eventData.payload,
         };
       }
 
+      const deliveryInfo: WebhookDeliveryInfo = {
+        organizationId: this.organizationId,
+        type: config.type,
+        endpoint: config.url,
+        eventName,
+        payload: JSON.stringify(data),
+        createdById: actorId,
+        requestHeaders: {},
+      };
+
+      axiosRetry(this.httpClient, {
+        retries: 6,
+        retryDelay: (retryCount, error) => {
+          return exponentialDelay(retryCount, error, 1000);
+        },
+        shouldResetTimeout: true,
+        onRetry: (count) => {
+          retryCount = count;
+        },
+      });
+
+      this.httpClient.interceptors.request.use((request) => {
+        deliveryInfo.requestHeaders = request.headers;
+        return request;
+      });
+
       // @TODO Use a queue to send the events
-      makeWebhookRequest(this.httpClient, data, config.url, config.key).catch((error: AxiosError) => {
+      try {
+        const res = await makeWebhookRequest(this.httpClient, data, config.url, config.key);
+        deliveryInfo.responseStatusCode = res.status;
+        deliveryInfo.responseHeaders = res.headers;
+        deliveryInfo.responseBody = JSON.stringify(res.data);
+      } catch (error: any) {
         if (error instanceof AxiosError) {
           logger.debug(
             { statusCode: error.response?.status, message: error.message },
             'Could not send organization webhook event',
           );
+          deliveryInfo.responseHeaders = error.response?.headers;
+          deliveryInfo.responseStatusCode = error.response?.status;
+          deliveryInfo.responseErrorCode = error.code;
+          deliveryInfo.responseBody = JSON.stringify(error.response?.data);
+          deliveryInfo.errorMessage = error.message;
         } else {
           logger.debug(error, 'Could not send organization webhook event');
+          deliveryInfo.errorMessage = error.message || 'Failed due to unknown reasons';
         }
-      });
+      }
+
+      const endTime = performance.now();
+      deliveryInfo.duration = endTime - startTime;
+      deliveryInfo.retryCount = retryCount;
+
+      await this.db.insert(schema.webhookDeliveries).values(deliveryInfo);
     }
   }
 
-  async send(eventData: OrganizationEventData) {
+  async send(eventData: OrganizationEventData, actorId: string) {
     try {
       const configs = await this.getOrganizationConfigs(eventData.eventName);
-      this.sendEvent(eventData, configs);
+      await this.sendEvent(eventData, configs, actorId);
     } catch (e: any) {
       const logger = this.logger.child({ eventName: OrganizationEventName[eventData.eventName] });
       logger.child({ message: e.message });

@@ -134,6 +134,7 @@ func TestPersistedOperationsCache(t *testing.T) {
 			Variables:     []byte(`{"withAligators": false,"withCats": true,"skipDogs": false,"skipMouses": true}`),
 		})
 		require.NoError(t, err)
+		require.Equal(t, `{"data":{"employees":[{"details":{"pets":null}},{"details":{"pets":null}},{"details":{"pets":[{"name":"Snappy","__typename":"Alligator"}]}},{"details":{"pets":[{"name":"Abby","__typename":"Dog","breed":"GOLDEN_RETRIEVER","class":"MAMMAL","gender":"FEMALE"},{"name":"Survivor","__typename":"Pony"}]}},{"details":{"pets":[{"name":"Blotch","__typename":"Cat","class":"MAMMAL","gender":"FEMALE","type":"STREET"},{"name":"Grayone","__typename":"Cat","class":"MAMMAL","gender":"MALE","type":"STREET"},{"name":"Rusty","__typename":"Cat","class":"MAMMAL","gender":"MALE","type":"STREET"},{"name":"Manya","__typename":"Cat","class":"MAMMAL","gender":"FEMALE","type":"HOME"},{"name":"Peach","__typename":"Cat","class":"MAMMAL","gender":"MALE","type":"STREET"},{"name":"Panda","__typename":"Cat","class":"MAMMAL","gender":"MALE","type":"HOME"},{"name":"Mommy","__typename":"Cat","class":"MAMMAL","gender":"FEMALE","type":"STREET"},{"name":"Terry","__typename":"Cat","class":"MAMMAL","gender":"FEMALE","type":"HOME"},{"name":"Tilda","__typename":"Cat","class":"MAMMAL","gender":"FEMALE","type":"HOME"},{"name":"Vasya","__typename":"Cat","class":"MAMMAL","gender":"MALE","type":"HOME"}]}},{"details":{"pets":null}},{"details":{"pets":null}},{"details":{"pets":[{"name":"Vanson","__typename":"Mouse"}]}},{"details":{"pets":null}},{"details":{"pets":[{"name":"Pepper","__typename":"Cat","class":"MAMMAL","gender":"FEMALE","type":"HOME"}]}}]}}`, res.Body)
 		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 		require.Equal(t, "HIT", res.Response.Header.Get(core.ExecutionPlanCacheHeader))
 	}
@@ -227,8 +228,8 @@ func TestPersistedOperationCacheWithVariables(t *testing.T) {
 			Variables:     []byte(`{"id":3,"withAligators": false,"withCats": true,"skipDogs": false,"skipMouses": true}`),
 		})
 		require.NoError(t, err)
-		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 		require.Equal(t, `{"data":{"employee":{"details":{"pets":[{"name":"Snappy","__typename":"Alligator"}]}}}}`, res.Body)
+		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"Employee"`),
@@ -279,6 +280,42 @@ func TestPersistedOperationCacheWithVariables(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 		require.Equal(t, `{"data":{"employee":{"details":{"pets":[{"name":"Snappy","__typename":"Alligator"}]}}}}`, res.Body)
+	})
+}
+
+func TestPersistedOperationsWithNestedVariablesExtraction(t *testing.T) {
+	t.Parallel()
+
+	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		header := make(http.Header)
+		header.Add("graphql-client-name", "my-client")
+		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"NormalizationQuery"`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "nestedVariableExtraction"}}`),
+			Header:        header,
+			Variables:     []byte(`{"arg":"a"}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		require.Equal(t, `{"data":{"rootFieldWithListOfInputArg":[{"arg":"a"}]}}`, res.Body)
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"NormalizationQuery"`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "nestedVariableExtraction"}}`),
+			Header:        header,
+			Variables:     []byte(`{"arg":"a"}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		require.Equal(t, `{"data":{"rootFieldWithListOfInputArg":[{"arg":"a"}]}}`, res.Body)
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"NormalizationQuery"`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "nestedVariableExtraction"}}`),
+			Header:        header,
+			Variables:     []byte(`{"arg":"b"}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		require.Equal(t, `{"data":{"rootFieldWithListOfInputArg":[{"arg":"b"}]}}`, res.Body)
 	})
 }
 

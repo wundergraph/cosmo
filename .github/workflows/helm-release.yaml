@@ -1,0 +1,56 @@
+---
+name: Helm Release
+run-name: helm-release
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  CI: true
+  REGISTRY: ghcr.io
+  RELEASE_BRANCH: main
+
+jobs:
+  build_test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          # https://github.com/googleapis/release-please-action/issues/741
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          target-branch: ${{ env.RELEASE_BRANCH }}
+          token: ${{ secrets.GH_TOKEN_HELM_RELEASES }}
+          skip-github-release: false
+          skip-github-pull-request: false
+
+      - uses: ./.github/actions/helm-release
+        if: ${{ steps.release.outputs['helm/cosmo--release_created'] }}
+        with:
+          working-directory: ./helm
+          registry: ${{ env.REGISTRY }}
+          registry-username: ${{ github.actor }}
+          registry-password: ${{ secrets.GITHUB_TOKEN }}
+          make-target: publish-cosmo-chart
+
+      - uses: ./.github/actions/helm-release
+        if: ${{ steps.release.outputs['helm/cosmo/charts/router--release_created'] }}
+        with:
+          working-directory: ./helm
+          registry: ${{ env.REGISTRY }}
+          registry-username: ${{ github.actor }}
+          registry-password: ${{ secrets.GITHUB_TOKEN }}
+          make-target: publish-router-chart

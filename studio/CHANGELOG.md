@@ -4,6 +4,27 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.85.1](https://github.com/wundergraph/cosmo/compare/studio@0.85.0...studio@0.85.1) (2024-08-10)
+
+**Note:** Version bump only for package studio
+
+# [0.85.0](https://github.com/wundergraph/cosmo/compare/studio@0.84.0...studio@0.85.0) (2024-08-09)
+
+### Features
+
+* add fetch tree resolver ([#1019](https://github.com/wundergraph/cosmo/issues/1019)) ([4f4dee7](https://github.com/wundergraph/cosmo/commit/4f4dee765ba73cabba7ff4fe95faa4e4935505ba)) (@jensneuse)
+
+# [0.84.0](https://github.com/wundergraph/cosmo/compare/studio@0.83.6...studio@0.84.0) (2024-08-09)
+
+### Features
+
+* global override for all operations in check ([#1044](https://github.com/wundergraph/cosmo/issues/1044)) ([6eb0e4d](https://github.com/wundergraph/cosmo/commit/6eb0e4dce9373260b12b4f7fd07f7637349bf2eb)) (@thisisnithin)
+* webhook history view ([#1036](https://github.com/wundergraph/cosmo/issues/1036)) ([4457a57](https://github.com/wundergraph/cosmo/commit/4457a5735e86bd655bed685aca66287ed743e08c)) (@thisisnithin)
+
+## [0.83.6](https://github.com/wundergraph/cosmo/compare/studio@0.83.5...studio@0.83.6) (2024-08-09)
+
+**Note:** Version bump only for package studio
+
 ## [0.83.5](https://github.com/wundergraph/cosmo/compare/studio@0.83.4...studio@0.83.5) (2024-08-06)
 
 ### Bug Fixes

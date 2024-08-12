@@ -574,6 +574,8 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		ExecutionPlanCacheSize:         1024,
 		EnablePersistedOperationsCache: true,
 		ParseKitPoolSize:               8,
+		EnableValidationCache:          true,
+		ValidationCacheSize:            1024,
 	}
 	if testConfig.ModifyEngineExecutionConfiguration != nil {
 		testConfig.ModifyEngineExecutionConfiguration(&engineExecutionConfig)
@@ -628,14 +630,14 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 
 	if testConfig.RouterConfig != nil {
 		if testConfig.RouterConfig.StaticConfig != nil {
-			routerOpts = append(routerOpts, core.WithStaticRouterConfig(testConfig.RouterConfig.StaticConfig))
+			routerOpts = append(routerOpts, core.WithStaticExecutionConfig(testConfig.RouterConfig.StaticConfig))
 		} else if testConfig.RouterConfig.ConfigPollerFactory != nil {
 			routerOpts = append(routerOpts, core.WithConfigPoller(testConfig.RouterConfig.ConfigPollerFactory(routerConfig)))
 		} else {
 			return nil, errors.New("router config is nil")
 		}
 	} else if routerConfig != nil {
-		routerOpts = append(routerOpts, core.WithStaticRouterConfig(routerConfig))
+		routerOpts = append(routerOpts, core.WithStaticExecutionConfig(routerConfig))
 	}
 
 	if testConfig.TraceExporter != nil {

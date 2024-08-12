@@ -1,0 +1,4 @@
+{
+  "version": 1,
+  "body": "query NormalizationQuery ($arg: String!) {rootFieldWithListOfInputArg(arg: {arg: $arg}){arg}}"
+}

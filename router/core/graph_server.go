@@ -10,14 +10,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/klauspost/compress/gzhttp"
-	"github.com/klauspost/compress/gzip"
-
 	"github.com/cloudflare/backoff"
 	"github.com/dgraph-io/ristretto"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/klauspost/compress/gzhttp"
+	"github.com/klauspost/compress/gzip"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
@@ -301,12 +300,16 @@ type graphMux struct {
 	mux                *chi.Mux
 	planCache          ExecutionPlanCache[uint64, *planWithMetaData]
 	normalizationCache *ristretto.Cache[uint64, NormalizationCacheEntry]
+	validationCache    *ristretto.Cache[uint64, bool]
 }
 
 func (s *graphMux) Shutdown(_ context.Context) {
 	s.planCache.Close()
 	if s.normalizationCache != nil {
 		s.normalizationCache.Close()
+	}
+	if s.validationCache != nil {
+		s.validationCache.Close()
 	}
 }
 
@@ -375,6 +378,18 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		gm.normalizationCache, err = ristretto.NewCache[uint64, NormalizationCacheEntry](normalizationCacheConfig)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create normalization cache: %w", err)
+		}
+	}
+
+	if s.engineExecutionConfiguration.EnableValidationCache && s.engineExecutionConfiguration.ValidationCacheSize > 0 {
+		validationCacheConfig := &ristretto.Config[uint64, bool]{
+			MaxCost:     s.engineExecutionConfiguration.ValidationCacheSize,
+			NumCounters: s.engineExecutionConfiguration.ValidationCacheSize * 10,
+			BufferItems: 64,
+		}
+		gm.validationCache, err = ristretto.NewCache[uint64, bool](validationCacheConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create validation cache: %w", err)
 		}
 	}
 
@@ -559,6 +574,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		PersistedOperationClient:       s.persistedOperationClient,
 		EnablePersistedOperationsCache: s.engineExecutionConfiguration.EnablePersistedOperationsCache,
 		NormalizationCache:             gm.normalizationCache,
+		ValidationCache:                gm.validationCache,
 		ParseKitPoolSize:               s.engineExecutionConfiguration.ParseKitPoolSize,
 	})
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
