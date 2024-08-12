@@ -23,6 +23,8 @@ As of today, customers can extend the router with custom modules. These modules 
 - The current module system is inconsistent and hard to use. It does not provide a clear API for developers to intercept and modify GraphQL requests and responses.
 - The current module system does not provide an intuitive way to create or modify OpenTelemetry data, logs for different parts of the gateway lifecycle.
 - The current module system does not provide a way to interact with the parsed, normalized, and planned GraphQL operation in order to implement custom logic.
+- The current module system does not provide a way to hook into authorization and authentication logic in the gateway.
+- The current module system does not provide a way to hook into the usage of GraphQL directives in the operation definition or subgraph schema.
 
 Ultimately, custom modules must be self-contained, composable and testable. They should provide a clear API for developers to interact with the gateway and subgraph lifecycle and implement custom logic without having to understand the internal workings of the router or advanced Go programming concepts.
 To briefly explain the decision to use Go as the language for the module system, we have chosen Go because it is a simple and easy-to-learn language that is widely used in the infrastructure and cloud-native ecosystem. You can build custom integration on top production-grade SDK of AWS, GCP and the community without re-implementing them from scratch. It superiors to scripting languages like Rhai or cross-compiling WebAssembly because it can be easily debugged, profiled, and tested with any modern IDE (VsCode, Goland, etc.). Not part of this RFC, are our ambitions to make the workflow as smooth as possible with a CLI tool that can scaffold, test, and deploy custom modules. In the future, custom modules could be published to a central registry and shared with the community. A brief overview of the workflow is provided at the end of this RFC.
@@ -148,6 +150,7 @@ A developer can implement a custom module by creating a struct that implements o
 - `GatewayHooks`: Provides hooks for the gateway lifecycle, including request and response handling.
 - `SubgraphHooks`: Provides hooks for subgraph requests and responses.
 - `ApplicationHooks`: Provides hooks for the application lifecycle, including startup, shutdown, and error handling.
+- `AuthenticationHooks`: Provides hooks for authentication and authorization logic.
 - `TelemetryHooks`: Provides hooks for OpenTelemetry spans and metrics.
 - `OperationHooks`: Provides hooks for parsed, normalized, and planned GraphQL operations.
 - `Module`: Provides hooks for the module lifecycle, including provisioning and cleanup.
@@ -277,13 +280,28 @@ type TelemetryHooks interface {
 	OnSpan(span *trace.Span) func() // Return a function to be called when the span ends
 }
 
+type AuthenticationHooks interface {
+	// OnAuthenticate is called when a gateway request is authenticated
+	// Returning an error will result in a GraphQL error as a response from the gateway.
+	OnAuthenticate(req *core.GatewayRequest, err error) error
+	// OnPostAuthenticate is called after a gateway request is authenticated
+	// Returning an error will result in a GraphQL error as a response from the gateway.
+	OnPostAuthenticate(req *core.GatewayRequest, err error) error
+}
+
 type OperationHooks interface {
 	// OnNormalize is called when an operation is normalized
 	// Returning an error will result in a GraphQL error as a response from the gateway.
 	OnOperationNormalize(op *core.Operation, err error) error
+	// OnPostNormalize is called after an operation is normalized
+	// Returning an error will result in a GraphQL error as a response from the gateway.
+	OnPostOperationNormalize(op *core.Operation, err error) error
 	// OnPlan is called when an operation is planned
 	// Returning an error will result in a GraphQL error as a response from the gateway.
 	OnOperationPlan(op *core.Operation, err error) error
+	// OnPostOperationPlan is called after an operation is planned
+	// Returning an error will result in a GraphQL error as a response from the gateway.
+	OnPostOperationPlan(op *core.Operation, err error) error
 }
 
 var _ GatewayHooks = (*MyModule)(nil)
@@ -293,7 +311,7 @@ func (m *MyModule) Provision(ctx *core.ModuleContext) error {
 	return nil
 }
 
-func (m *MyModule) Cleanup() error {
+func (m *MyModule) Shutdown() error {
 	// Shutdown your module here, close connections etc.
 	return nil
 }
@@ -304,11 +322,11 @@ func (m *MyModule) Cleanup() error {
 - **Advanced GraphQL Operation Handling**: A module that walks the parsed operation and performs custom logic based on the operation type, fields, and arguments.
 - **Request validation**: A module that validates incoming requests and returns an error if the request is invalid.
 - **Custom Telemetry**: A module that creates custom spans or metric data and sends it to a telemetry backend.
-- **Custom Authentication**: A module that authenticates incoming requests and adds user information to the subgraph requests.
+- **Custom Authentication / Authorization**: A module that authenticates incoming requests and adds user information to the subgraph requests.
 - **Response interception**: A module that intercepts responses from subgraphs and modifies them before they are sent to the client.
 - **Response Caching**: A module that caches responses from subgraphs and returns them for identical requests.
+- **GraphQL Directive Handling**: A module that reacts to specific GraphQL directives in the operation definition.
 - **Enriching Logs**: A module that adds custom log fields to the gateway and subgraph logs.
-
 
 ## Backwards Compatibility
 
@@ -429,7 +447,7 @@ func (m *MyModule) Cleanup() error {
 }
 ```
 
-# Custom Module configuration
+## Custom Module configuration
 
 Custom modules can be configured using a YAML file that is loaded by the router at startup. We reserve a section in the configuration file for custom modules. Each module can have its own configuration section with custom properties.
 
@@ -456,6 +474,90 @@ func (m *MyModule) Provision(ctx *core.ModuleContext) error {
 
 	// Access the custom value from the configuration
 	m.Value
+}
+```
+
+## Custom Authentication and Authorization
+
+Custom modules can be used to implement custom authentication and authorization logic in the gateway. The module can intercept incoming requests and validate the user's credentials, scopes, and permissions before forwarding the request to the subgraph. The router has built-in support JWK. The parsed token information is available in the request `req.Request.Auth` field.
+
+```go
+type MyModule struct{}
+
+var _ AuthenticationHooks = (*MyModule)(nil)
+
+func (m *MyModule) OnAuthenticate(req *core.GatewayRequest, err error) error {
+	// Authenticate the user's credentials
+	if !authenticateUser(req.Request.Auth) {
+		return core.UnauthenticatedError("Unauthenticated")
+	}
+	if !authorizeUser(req.Request.Auth) {
+		return core.UnauthenticatedError("Unauthorized")
+	}
+	return nil
+}
+```
+
+# Advanced Modules
+
+## Custom Subgraph Transport
+
+Overwrite the subgraph transport to use a custom HTTP client with retries, mTLS, timeouts, and circuit breaking.
+
+```go
+type MyModule struct {
+	Client *http.Client
+}
+
+var _ SubgraphHooks = (*MyModule)(nil)
+
+func (m *MyModule) Provision(ctx *core.ModuleContext) error {
+	// Register your custom HTTP client as the transport for subgraph requests
+	// Can only be done in the provision method. If a second module tries to register a transport, an error is returned
+	// because the behavior is undefined.
+	
+	ctx.RegisterOriginTransport(&http.Transport{})
+	return nil
+}
+```
+
+## React to specific GraphQL Directives
+
+React to specific GraphQL directives in the subgraph schema and decide if the request should be forwarded to the subgraph. The following example checks if the `@requiresScopes` directive is present in the operation. Another example could be to check if the `@cacheControl` directive is present and set the cache control header on the response.
+
+```go
+type MyModule struct {
+	Client *http.Client
+}
+
+func (m *MyModule) CacheControlDirective(ctx *core.DirectiveContext) error {
+	// Return an error to abort the request to the subgraph
+	// The error is returned to the client as a GraphQL error
+	
+	// Find the minimum cache control directive in the operation to calculate the final cache time.
+	// Finally, set the cache control header on the gateway response to the client in the OnGatewayResponse hook.
+	// The store is a shared context between all hooks and can be used to store and retrieve data.
+	minAge := ctx.Directive.Args["maxAge"]
+	currentAge := ctx.store.Get("cacheControl")
+	if minAge < currentAge {
+		ctx.store.Set("cacheControl", minAge)
+    }
+	
+	return nil
+}
+
+func (m *MyModule) RequiresScopesDirective(ctx *core.DirectiveContext) error {
+    // Check if the user has the required scopes
+    if !hasScopes(ctx.Request.Auth, ctx.Directive.Args["scopes"]) {
+        return core.UnauthenticatedError("Unauthorized")
+    }
+    return nil
+}
+
+func (m *MyModule) Provision(ctx *core.ModuleContext) error {
+	ctx.RegisterDirectiveHandler("cacheControl", m.CacheControlDirective)
+    ctx.RegisterDirectiveHandler("requiresScopes", m.RequiresScopesDirective)
+	return nil
 }
 ```
 
