@@ -16,7 +16,7 @@ jobs:
   build_test:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    if: !(github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release-please--')) || !(github.event_name == 'pull_request' && startsWith(github.head_ref, 'release-please--'))
+    if: !startsWith(github.ref, 'refs/heads/release-please--')) || !startsWith(github.head_ref, 'release-please--')
     steps:
       - uses: actions/checkout@v4
         with:
