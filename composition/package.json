@@ -1,6 +1,6 @@
 {
   "name": "@wundergraph/composition",
-  "version": "0.28.1",
+  "version": "0.28.2",
   "author": {
     "name": "WunderGraph Maintainers",
     "email": "info@wundergraph.com"
@@ -31,12 +31,12 @@
     "@graphql-tools/utils": "^10.1.0",
     "graphql": "^16.9.0",
     "lodash": "^4.17.21",
-    "pathe": "^1.1.1",
-    "vitest": "^2.0.3"
+    "pathe": "^1.1.1"
   },
   "devDependencies": {
     "@types/lodash": "^4.17.0",
     "del-cli": "^5.0.0",
-    "typescript": "5.5.2"
+    "typescript": "5.5.2",
+    "vitest": "^2.0.3"
   }
 }

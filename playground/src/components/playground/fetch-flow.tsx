@@ -34,15 +34,15 @@ import { ViewOutput } from './view-output';
 import { ViewLoadStats } from './view-load-stats';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
-const dagreGraph = new dagre.graphlib.Graph();
-dagreGraph.setDefaultEdgeLabel(function () {
-  return { minlen: 4, weight: 1 };
-});
-
 const nodeWidth = 400;
 const nodeHeight = 400;
 
 const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
+  const dagreGraph = new dagre.graphlib.Graph();
+  dagreGraph.setDefaultEdgeLabel(function () {
+    return { minlen: 4, weight: 1 };
+  });
+
   dagreGraph.setGraph({ rankdir: 'LR', nodesep: 15 });
 
   nodes.forEach((node) => {
