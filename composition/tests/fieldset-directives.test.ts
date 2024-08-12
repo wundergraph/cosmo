@@ -239,7 +239,7 @@ describe('openfed_FieldSet tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         invalidKeyDirectivesError('Entity', [
-          invalidSelectionSetDefinitionErrorMessage('id { something }', 'Entity.id', 'ID', 'scalar'),
+          invalidSelectionSetDefinitionErrorMessage('id { something }', ['Entity.id'], 'ID', 'scalar'),
         ]),
       );
     });
@@ -257,7 +257,7 @@ describe('openfed_FieldSet tests', () => {
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
-        invalidKeyDirectivesError('Entity', [invalidSelectionSetErrorMessage('id', 'Entity.id', 'Object', 'object')]),
+        invalidKeyDirectivesError('Entity', [invalidSelectionSetErrorMessage('id', ['Entity.id'], 'Object', 'object')]),
       );
     });
 
@@ -285,7 +285,7 @@ describe('openfed_FieldSet tests', () => {
         invalidKeyDirectivesError('Entity', [
           invalidSelectionSetErrorMessage(
             'id { object { object } }',
-            'AnotherObject.object',
+            ['AnotherObject.object'],
             'YetAnotherObject',
             'object',
           ),
@@ -422,7 +422,8 @@ describe('openfed_FieldSet tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(PROVIDES, [
-          ` On "Object.entity" —` + invalidInlineFragmentTypeErrorMessage('... on I { name }', 'Entity', 'I', 'Entity'),
+          ` On "Object.entity" —` +
+            invalidInlineFragmentTypeErrorMessage('... on I { name }', ['Object.entity'], 'I', 'Entity'),
         ]),
       );
     });
@@ -565,7 +566,7 @@ describe('openfed_FieldSet tests', () => {
           ` On "Object.entity" —` +
             invalidInlineFragmentTypeConditionErrorMessage(
               'interface { ... on AnotherObject { name } }',
-              'Entity.interface',
+              ['Entity.interface'],
               'AnotherObject',
               'interface',
               'I',
@@ -647,7 +648,7 @@ describe('openfed_FieldSet tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(PROVIDES, [
-          ` On "Object.entity" —` + invalidSelectionOnUnionErrorMessage('union { name }', 'Entity.union', 'U'),
+          ` On "Object.entity" —` + invalidSelectionOnUnionErrorMessage('union { name }', ['Entity.union'], 'U'),
         ]),
       );
     });
@@ -680,7 +681,7 @@ describe('openfed_FieldSet tests', () => {
           ` On "Object.entity" —` +
             invalidInlineFragmentTypeConditionErrorMessage(
               'union { ... on YetAnotherObject { name } }',
-              'Entity.union',
+              ['Entity.union'],
               'YetAnotherObject',
               'union',
               'U',
@@ -918,6 +919,7 @@ describe('openfed_FieldSet tests', () => {
   });
 
   describe('@requires FieldSets', () => {
+    // todo
     test('that a @requires directive is ignored when declared on a non-entity parent', () => {
       const { errors, normalizationResult } = normalizeSubgraphFromString(`
         type Object {
@@ -984,7 +986,7 @@ describe('openfed_FieldSet tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(REQUIRES, [
-          ` On "Entity.age" —` + invalidInlineFragmentTypeErrorMessage('... on I { name }', 'Entity', 'I', 'Entity'),
+          ` On "Entity.age" —` + invalidInlineFragmentTypeErrorMessage('... on I { name }', [], 'I', 'Entity'),
         ]),
       );
     });
@@ -1104,7 +1106,7 @@ describe('openfed_FieldSet tests', () => {
           ` On "Entity.age" —` +
             invalidInlineFragmentTypeConditionErrorMessage(
               'interface { ... on Object { age } }',
-              'Entity.interface',
+              ['Entity.interface'],
               'Object',
               'interface',
               'I',
@@ -1173,7 +1175,7 @@ describe('openfed_FieldSet tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(REQUIRES, [
-          ` On "Entity.name" —` + invalidSelectionOnUnionErrorMessage('union { name }', 'Entity.union', 'U'),
+          ` On "Entity.name" —` + invalidSelectionOnUnionErrorMessage('union { name }', ['Entity.union'], 'U'),
         ]),
       );
     });
@@ -1204,7 +1206,7 @@ describe('openfed_FieldSet tests', () => {
           ` On "Entity.age" —` +
             invalidInlineFragmentTypeConditionErrorMessage(
               'union { ... on AnotherObject { age } }',
-              'Entity.union',
+              ['Entity.union'],
               'AnotherObject',
               'union',
               'U',

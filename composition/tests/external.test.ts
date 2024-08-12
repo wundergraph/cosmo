@@ -3,9 +3,11 @@ import {
   allExternalFieldsError,
   EXTERNAL,
   externalInterfaceFieldsError,
+  externalInterfaceFieldsWarning,
   federateSubgraphs,
   invalidDirectiveError,
   invalidRepeatedDirectiveErrorMessage,
+  N_A,
   normalizeSubgraph,
   normalizeSubgraphFromString,
   parse,
@@ -15,6 +17,7 @@ import {
   baseDirectiveDefinitions,
   normalizeString,
   schemaToSortedNormalizedString,
+  versionOneRouterDefinitions,
   versionTwoRouterDefinitions,
 } from './utils/utils';
 
@@ -50,21 +53,21 @@ describe('@external directive tests', () => {
         normalizeString(
           baseDirectiveDefinitions +
             `
-         type Object {
-          """
-            This is the description for Object.externalFieldFour
-          """
-          externalFieldFour: String! @external
-          externalFieldOne(argOne: String!, argTwo: Boolean!): String @external
-          externalFieldThree: Float @external
-          externalFieldTwo: Int! @external
-          nonExternalFieldOne: Boolean!
-          nonExternalFieldThree: Boolean
-          nonExternalFieldTwo(argOne: Int"""This is a description for Object.nonExternalFieldTwo.argTwo"""argTwo: Boolean!): Float!
-        }
-        
-        scalar openfed__FieldSet
-      `,
+            type Object {
+              """
+              This is the description for Object.externalFieldFour
+              """
+              externalFieldFour: String! @external
+              externalFieldOne(argOne: String!, argTwo: Boolean!): String @external
+              externalFieldThree: Float @external
+              externalFieldTwo: Int! @external
+              nonExternalFieldOne: Boolean!
+              nonExternalFieldThree: Boolean
+              nonExternalFieldTwo(argOne: Int"""This is a description for Object.nonExternalFieldTwo.argTwo"""argTwo: Boolean!): Float!
+            }
+
+            scalar openfed__FieldSet
+          `,
         ),
       );
     });
@@ -98,21 +101,21 @@ describe('@external directive tests', () => {
         normalizeString(
           baseDirectiveDefinitions +
             `
-         type Object {
-          """
-            This is the description for Object.externalFieldFour
-          """
-          externalFieldFour: String! @external
-          externalFieldOne(argOne: String!, argTwo: Boolean!): String @external
-          externalFieldThree: Float @external
-          externalFieldTwo: Int! @external
-          nonExternalFieldOne: Boolean!
-          nonExternalFieldThree: Boolean
-          nonExternalFieldTwo(argOne: Int"""This is a description for Object.nonExternalFieldTwo.argTwo"""argTwo: Boolean!): Float!
-        }
-        
-        scalar openfed__FieldSet
-      `,
+            type Object {
+              """
+              This is the description for Object.externalFieldFour
+              """
+              externalFieldFour: String! @external
+              externalFieldOne(argOne: String!, argTwo: Boolean!): String @external
+              externalFieldThree: Float @external
+              externalFieldTwo: Int! @external
+              nonExternalFieldOne: Boolean!
+              nonExternalFieldThree: Boolean
+              nonExternalFieldTwo(argOne: Int"""This is a description for Object.nonExternalFieldTwo.argTwo"""argTwo: Boolean!): Float!
+            }
+
+            scalar openfed__FieldSet
+          `,
         ),
       );
     });
@@ -124,12 +127,12 @@ describe('@external directive tests', () => {
         normalizeString(
           baseDirectiveDefinitions +
             `
-           type Entity @key(fields: "id") {
-            field: String! @external
-            id: ID! @external
-           }
-           
-           scalar openfed__FieldSet
+            type Entity @key(fields: "id") {
+              field: String! @external
+              id: ID! @external
+            }
+
+            scalar openfed__FieldSet
           `,
         ),
       );
@@ -145,33 +148,77 @@ describe('@external directive tests', () => {
       ]);
     });
 
-    test('that an error is returned if an interface field is declared @external', () => {
+    test('that an error is returned if a V2 interface field is declared @external', () => {
       const { errors } = normalizeSubgraph(
         parse(`
-        interface Interface {
-          name: String! @external
-        }`),
+          type Query @shareable {
+            dummy: String!
+          }
+
+          interface Interface {
+            name: String! @external
+          }
+        `),
       );
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(externalInterfaceFieldsError('Interface', ['name']));
     });
 
-    test('that an error is returned if an extension interface field is declared @external', () => {
+    test('that an error is returned if a V2 interface field is declared @external', () => {
       const { errors } = normalizeSubgraph(
         parse(`
-        interface Interface {
-          name: String!
-        }
-        
-        extend interface Interface {
-          age: Int! @external
-        }
-      `),
+          type Query @shareable {
+            dummy: String!
+          }
+
+          interface Interface {
+            id: ID!
+          }
+
+          extend interface Interface {
+            age: Int! @external
+            name: String! @external
+          }
+        `),
       );
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
-      expect(errors![0]).toStrictEqual(externalInterfaceFieldsError('Interface', ['age']));
+      expect(errors![0]).toStrictEqual(externalInterfaceFieldsError('Interface', ['age', 'name']));
+    });
+
+    test('that a warning is returned if a V1 interface fields are declared @external', () => {
+      const { errors, warnings } = normalizeSubgraph(
+        parse(`
+          interface Interface {
+            age: Int! @external
+            id: ID!
+            name: String! @external
+          }`),
+      );
+      expect(errors).toBeUndefined();
+      expect(warnings).toBeDefined();
+      expect(warnings).toHaveLength(1);
+      expect(warnings![0]).toStrictEqual(externalInterfaceFieldsWarning(N_A, 'Interface', ['age', 'name']));
+    });
+
+    test('that a warning is returned if a V1 interface extension field is declared @external', () => {
+      const { errors, warnings } = normalizeSubgraph(
+        parse(`
+          interface Interface {
+            name: String!
+          }
+
+          extend interface Interface {
+            age: Int! @external
+            id: ID! @external
+          }
+        `),
+      );
+      expect(errors).toBeUndefined();
+      expect(warnings).toBeDefined();
+      expect(warnings).toHaveLength(1);
+      expect(warnings![0]).toStrictEqual(externalInterfaceFieldsWarning(N_A, 'Interface', ['age', 'id']));
     });
   });
 
@@ -183,32 +230,32 @@ describe('@external directive tests', () => {
         normalizeString(
           versionTwoRouterDefinitions +
             `
-      type Entity implements Interface {
-        age: Int!
-        id: ID!
-        isEntity: Boolean!
-        name: String!
-      }
-      
-      type EntityTwo implements Interface {
-        age: Int!
-        field: String!
-        id: ID!
-        name: String!
-      }
-      
-      interface Interface {
-        id: ID!
-        name: String!
-      }
-      
-      type Query {
-        entity: Entity!
-        entityTwo: EntityTwo!
-      }
-      
-      scalar openfed__Scope
-    `,
+            type Entity implements Interface {
+              age: Int!
+              id: ID!
+              isEntity: Boolean!
+              name: String!
+            }
+
+            type EntityTwo implements Interface {
+              age: Int!
+              field: String!
+              id: ID!
+              name: String!
+            }
+
+            interface Interface {
+              id: ID!
+              name: String!
+            }
+
+            type Query {
+              entity: Entity!
+              entityTwo: EntityTwo!
+            }
+
+            scalar openfed__Scope
+          `,
         ),
       );
     });
@@ -220,32 +267,32 @@ describe('@external directive tests', () => {
         normalizeString(
           versionTwoRouterDefinitions +
             `
-      type Entity implements Interface {
-        age: Int!
-        id: ID!
-        isEntity: Boolean!
-        name: String!
-      }
-      
-      type EntityTwo implements Interface {
-        age: Int!
-        field: String!
-        id: ID!
-        name: String!
-      }
-      
-      interface Interface {
-        id: ID!
-        name: String!
-      }
-      
-      type Query {
-        entity: Entity!
-        entityTwo: EntityTwo!
-      }
-      
-      scalar openfed__Scope
-    `,
+            type Entity implements Interface {
+              age: Int!
+              id: ID!
+              isEntity: Boolean!
+              name: String!
+            }
+
+            type EntityTwo implements Interface {
+              age: Int!
+              field: String!
+              id: ID!
+              name: String!
+            }
+
+            interface Interface {
+              id: ID!
+              name: String!
+            }
+
+            type Query {
+              entity: Entity!
+              entityTwo: EntityTwo!
+            }
+
+            scalar openfed__Scope
+          `,
         ),
       );
     });
@@ -257,34 +304,34 @@ describe('@external directive tests', () => {
         normalizeString(
           versionTwoRouterDefinitions +
             `
-      type Entity implements Interface {
-        age: Int!
-        field: String!
-        id: ID!
-        isEntity: Boolean!
-        name: String!
-      }
-      
-      type EntityTwo implements Interface {
-        age: Int!
-        field: String!
-        id: ID!
-        isEntity: Boolean!
-        name: String!
-      }
-      
-      interface Interface {
-        id: ID!
-        name: String!
-      }
-      
-      type Query {
-        entity: Entity!
-        entityTwo: EntityTwo!
-      }
-      
-      scalar openfed__Scope
-    `,
+            type Entity implements Interface {
+              age: Int!
+              field: String!
+              id: ID!
+              isEntity: Boolean!
+              name: String!
+            }
+
+            type EntityTwo implements Interface {
+              age: Int!
+              field: String!
+              id: ID!
+              isEntity: Boolean!
+              name: String!
+            }
+
+            interface Interface {
+              id: ID!
+              name: String!
+            }
+
+            type Query {
+              entity: Entity!
+              entityTwo: EntityTwo!
+            }
+
+            scalar openfed__Scope
+          `,
         ),
       );
     });
@@ -296,34 +343,34 @@ describe('@external directive tests', () => {
         normalizeString(
           versionTwoRouterDefinitions +
             `
-      type Entity implements Interface {
-        age: Int!
-        field: String!
-        id: ID!
-        isEntity: Boolean!
-        name: String!
-      }
-      
-      type EntityTwo implements Interface {
-        age: Int!
-        field: String!
-        id: ID!
-        isEntity: Boolean!
-        name: String!
-      }
-      
-      interface Interface {
-        id: ID!
-        name: String!
-      }
-      
-      type Query {
-        entity: Entity!
-        entityTwo: EntityTwo!
-      }
-      
-      scalar openfed__Scope
-    `,
+            type Entity implements Interface {
+              age: Int!
+              field: String!
+              id: ID!
+              isEntity: Boolean!
+              name: String!
+            }
+
+            type EntityTwo implements Interface {
+              age: Int!
+              field: String!
+              id: ID!
+              isEntity: Boolean!
+              name: String!
+            }
+
+            interface Interface {
+              id: ID!
+              name: String!
+            }
+
+            type Query {
+              entity: Entity!
+              entityTwo: EntityTwo!
+            }
+
+            scalar openfed__Scope
+          `,
         ),
       );
     });
@@ -335,34 +382,34 @@ describe('@external directive tests', () => {
         normalizeString(
           versionTwoRouterDefinitions +
             `
-      type Entity implements Interface {
-        age: Int!
-        field: String!
-        id: ID!
-        isEntity: Boolean!
-        name: String!
-      }
-      
-      type EntityTwo implements Interface {
-        age: Int!
-        field: String!
-        id: ID!
-        isEntity: Boolean!
-        name: String!
-      }
-      
-      interface Interface {
-        id: ID!
-        name: String!
-      }
-      
-      type Query {
-        entity: Entity!
-        entityTwo: EntityTwo!
-      }
-      
-      scalar openfed__Scope
-    `,
+            type Entity implements Interface {
+              age: Int!
+              field: String!
+              id: ID!
+              isEntity: Boolean!
+              name: String!
+            }
+
+            type EntityTwo implements Interface {
+              age: Int!
+              field: String!
+              id: ID!
+              isEntity: Boolean!
+              name: String!
+            }
+
+            interface Interface {
+              id: ID!
+              name: String!
+            }
+
+            type Query {
+              entity: Entity!
+              entityTwo: EntityTwo!
+            }
+
+            scalar openfed__Scope
+          `,
         ),
       );
     });
@@ -374,34 +421,34 @@ describe('@external directive tests', () => {
         normalizeString(
           versionTwoRouterDefinitions +
             `
-      type Entity implements Interface {
-        age: Int!
-        field: String!
-        id: ID!
-        isEntity: Boolean!
-        name: String!
-      }
-      
-      type EntityTwo implements Interface {
-        age: Int!
-        field: String!
-        id: ID!
-        isEntity: Boolean!
-        name: String!
-      }
-      
-      interface Interface {
-        id: ID!
-        name: String!
-      }
-      
-      type Query {
-        entity: Entity!
-        entityTwo: EntityTwo!
-      }
-      
-      scalar openfed__Scope
-    `,
+            type Entity implements Interface {
+              age: Int!
+              field: String!
+              id: ID!
+              isEntity: Boolean!
+              name: String!
+            }
+
+            type EntityTwo implements Interface {
+              age: Int!
+              field: String!
+              id: ID!
+              isEntity: Boolean!
+              name: String!
+            }
+
+            interface Interface {
+              id: ID!
+              name: String!
+            }
+
+            type Query {
+              entity: Entity!
+              entityTwo: EntityTwo!
+            }
+
+            scalar openfed__Scope
+          `,
         ),
       );
     });
@@ -413,34 +460,34 @@ describe('@external directive tests', () => {
         normalizeString(
           versionTwoRouterDefinitions +
             `
-      type Entity implements Interface {
-        age: Int!
-        field: String!
-        id: ID!
-        isEntity: Boolean!
-        name: String!
-      }
-      
-      type EntityTwo implements Interface {
-        age: Int!
-        field: String!
-        id: ID!
-        isEntity: Boolean!
-        name: String!
-      }
-      
-      interface Interface {
-        id: ID!
-        name: String!
-      }
-      
-      type Query {
-        entity: Entity!
-        entityTwo: EntityTwo!
-      }
-      
-      scalar openfed__Scope
-    `,
+            type Entity implements Interface {
+              age: Int!
+              field: String!
+              id: ID!
+              isEntity: Boolean!
+              name: String!
+            }
+
+            type EntityTwo implements Interface {
+              age: Int!
+              field: String!
+              id: ID!
+              isEntity: Boolean!
+              name: String!
+            }
+
+            interface Interface {
+              id: ID!
+              name: String!
+            }
+
+            type Query {
+              entity: Entity!
+              entityTwo: EntityTwo!
+            }
+
+            scalar openfed__Scope
+          `,
         ),
       );
     });
@@ -452,34 +499,34 @@ describe('@external directive tests', () => {
         normalizeString(
           versionTwoRouterDefinitions +
             `
-      type Entity implements Interface {
-        age: Int!
-        field: String!
-        id: ID!
-        isEntity: Boolean!
-        name: String!
-      }
-      
-      type EntityTwo implements Interface {
-        age: Int!
-        field: String!
-        id: ID!
-        isEntity: Boolean!
-        name: String!
-      }
-      
-      interface Interface {
-        id: ID!
-        name: String!
-      }
-      
-      type Query {
-        entity: Entity!
-        entityTwo: EntityTwo!
-      }
-      
-      scalar openfed__Scope
-    `,
+            type Entity implements Interface {
+              age: Int!
+              field: String!
+              id: ID!
+              isEntity: Boolean!
+              name: String!
+            }
+
+            type EntityTwo implements Interface {
+              age: Int!
+              field: String!
+              id: ID!
+              isEntity: Boolean!
+              name: String!
+            }
+
+            interface Interface {
+              id: ID!
+              name: String!
+            }
+
+            type Query {
+              entity: Entity!
+              entityTwo: EntityTwo!
+            }
+
+            scalar openfed__Scope
+          `,
         ),
       );
     });
@@ -491,18 +538,18 @@ describe('@external directive tests', () => {
         normalizeString(
           versionTwoRouterDefinitions +
             `
-      type Entity {
-        field: String!
-        id: ID!
-      }
-      
-      type Query {
-        anotherField: Entity!
-        field: Entity!
-      }
-      
-      scalar openfed__Scope
-    `,
+            type Entity {
+              field: String!
+              id: ID!
+            }
+
+            type Query {
+              anotherField: Entity!
+              field: Entity!
+            }
+
+            scalar openfed__Scope
+          `,
         ),
       );
     });
@@ -514,18 +561,18 @@ describe('@external directive tests', () => {
         normalizeString(
           versionTwoRouterDefinitions +
             `
-      type Entity {
-        field: String!
-        id: ID!
-      }
-      
-      type Query {
-        anotherField: Entity!
-        field: Entity!
-      }
-      
-      scalar openfed__Scope
-    `,
+            type Entity {
+              field: String!
+              id: ID!
+            }
+
+            type Query {
+              anotherField: Entity!
+              field: Entity!
+            }
+
+            scalar openfed__Scope
+          `,
         ),
       );
     });
@@ -536,6 +583,25 @@ describe('@external directive tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         allExternalFieldsError('Entity', new Map<string, Array<string>>([['name', ['subgraph-h', 'subgraph-i']]])),
+      );
+    });
+
+    test('that composition is successful if at least one field is not declared @external', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphJ, subgraphK]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionOneRouterDefinitions +
+            `
+            type Entity {
+              id: ID!
+            }
+
+            type Query {
+              entity: Entity!
+            }
+          `,
+        ),
       );
     });
   });
@@ -689,6 +755,30 @@ const subgraphI: Subgraph = {
     extend type Entity @key(fields: "id") {
       id: ID! @external
       name: String! @external
+    }
+  `),
+};
+
+const subgraphJ: Subgraph = {
+  name: 'subgraph-j',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entity: Entity!
+    }
+
+    type Entity @extends @key(fields: "id") {
+      id: ID! @external
+    }
+  `),
+};
+
+const subgraphK: Subgraph = {
+  name: 'subgraph-k',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID!
     }
   `),
 };

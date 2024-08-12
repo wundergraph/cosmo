@@ -1608,7 +1608,12 @@ describe('Normalization tests', () => {
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(
       invalidKeyDirectivesError('Entity', [
-        invalidSelectionSetErrorMessage('id organization { id details }', 'Organization.details', 'Details', 'object'),
+        invalidSelectionSetErrorMessage(
+          'id organization { id details }',
+          ['Organization.details'],
+          'Details',
+          'object',
+        ),
       ]),
     );
   });

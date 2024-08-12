@@ -185,6 +185,7 @@ import { ConstDirectiveNode, ConstObjectValueNode } from 'graphql/index';
 import { MAX_SUBSCRIPTION_FILTER_DEPTH } from '../utils/integer-constants';
 import { Graph } from '../resolvability-graph/graph';
 import { GraphNode } from '../resolvability-graph/graph-nodes';
+import { Warning } from '../warnings/warnings';
 
 export class FederationFactory {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
@@ -222,7 +223,7 @@ export class FederationFactory {
   subscriptionFilterDataByFieldPath = new Map<string, SubscriptionFilterData>();
   isMaxDepth = false;
   tagNamesByPath = new Map<string, Set<string>>();
-  warnings: string[];
+  warnings: Warning[];
 
   constructor(options: FederationFactoryOptions) {
     this.authorizationDataByParentTypeName = options.authorizationDataByParentTypeName;
@@ -231,7 +232,7 @@ export class FederationFactory {
     this.entityInterfaceFederationDataByTypeName = options.entityInterfaceFederationDataByTypeName;
     this.internalSubgraphBySubgraphName = options.internalSubgraphBySubgraphName;
     this.internalGraph = options.internalGraph;
-    this.warnings = options.warnings || [];
+    this.warnings = options.warnings;
   }
 
   getValidImplementedInterfaces(data: DefinitionWithFieldsData): NamedTypeNode[] {
@@ -2171,20 +2172,20 @@ export class FederationFactory {
     this.validateQueryRootType();
     // Return any composition errors before checking whether all fields are resolvable
     if (this.errors.length > 0) {
-      return { errors: this.errors };
+      return { errors: this.errors, warnings: this.warnings };
     }
-    /* Resolvability evaluations are not necessary for contracts because the source graph resolvability checks must
-     * have already completed without error. */
-    const warnings = this.warnings.length > 0 ? { warnings: this.warnings } : {};
-    // Resolvability checks are unnecessary for a single subgraph
+    /* Resolvability evaluations are not necessary for contracts because the source graph resolvability evaluations
+     * must have already completed without error.
+     * Resolvability evaluations are also unnecessary for a single subgraph.
+     * */
     if (this.internalSubgraphBySubgraphName.size > 1) {
       const resolvabilityErrors = this.internalGraph.validate();
       if (resolvabilityErrors.length > 0) {
-        return { errors: resolvabilityErrors, ...warnings };
+        return { errors: resolvabilityErrors, warnings: this.warnings };
       }
     }
     if (this.errors.length > 0) {
-      return { errors: this.errors, ...warnings };
+      return { errors: this.errors, warnings: this.warnings };
     }
     const newRouterAST: DocumentNode = {
       kind: Kind.DOCUMENT,
@@ -2216,7 +2217,7 @@ export class FederationFactory {
         federatedGraphClientSchema: newClientSchema,
         ...this.getClientSchemaObjectBoolean(),
       },
-      ...warnings,
+      warnings: this.warnings,
     };
   }
 
@@ -2365,9 +2366,8 @@ export class FederationFactory {
     this.pushParentDefinitionDataToDocumentDefinitions(interfaceImplementations);
     this.validateInterfaceImplementationsAndPushToDocumentDefinitions(interfaceImplementations);
     this.validateQueryRootType();
-    const warnings = this.warnings.length > 0 ? this.warnings : undefined;
     if (this.errors.length > 0) {
-      return { errors: this.errors, warnings };
+      return { errors: this.errors, warnings: this.warnings };
     }
     const newRouterAST: DocumentNode = {
       kind: Kind.DOCUMENT,
@@ -2399,7 +2399,7 @@ export class FederationFactory {
         federatedGraphClientSchema: newClientSchema,
         ...this.getClientSchemaObjectBoolean(),
       },
-      warnings,
+      warnings: this.warnings,
     };
   }
 
@@ -2410,13 +2410,14 @@ export class FederationFactory {
 }
 
 type FederationFactoryResult = {
+  warnings: Warning[];
   errors?: Error[];
   federationFactory?: FederationFactory;
 };
 
 function initializeFederationFactory(subgraphs: Subgraph[]): FederationFactoryResult {
   if (subgraphs.length < 1) {
-    return { errors: [minimumSubgraphRequirementError] };
+    return { errors: [minimumSubgraphRequirementError], warnings: [] };
   }
   const {
     authorizationDataByParentTypeName,
@@ -2428,7 +2429,7 @@ function initializeFederationFactory(subgraphs: Subgraph[]): FederationFactoryRe
     warnings,
   } = batchNormalize(subgraphs);
   if (errors) {
-    return { errors };
+    return { errors, warnings };
   }
   const entityInterfaceFederationDataByTypeName = new Map<string, EntityInterfaceFederationData>();
   const invalidEntityInterfacesByTypeName = new Map<string, InvalidEntityInterface[]>();
@@ -2473,6 +2474,7 @@ function initializeFederationFactory(subgraphs: Subgraph[]): FederationFactoryRe
           entityInterfaceFederationDataByTypeName,
         ),
       ],
+      warnings,
     };
   }
   return {
@@ -2485,13 +2487,14 @@ function initializeFederationFactory(subgraphs: Subgraph[]): FederationFactoryRe
       internalGraph,
       warnings,
     }),
+    warnings,
   };
 }
 
 export function federateSubgraphs(subgraphs: Subgraph[]): FederationResultContainer {
-  const { errors, federationFactory } = initializeFederationFactory(subgraphs);
+  const { errors, federationFactory, warnings } = initializeFederationFactory(subgraphs);
   if (errors || !federationFactory) {
-    return { errors: errors || [federationFactoryInitializationFatalError] };
+    return { errors: errors || [federationFactoryInitializationFatalError], warnings };
   }
   return federationFactory.federateSubgraphsInternal();
 }
@@ -2501,9 +2504,16 @@ export function federateSubgraphsWithContracts(
   subgraphs: Subgraph[],
   tagExclusionsByContractName: Map<string, Set<string>>,
 ): FederationResultContainerWithContracts {
-  const { errors: normalizationErrors, federationFactory } = initializeFederationFactory(subgraphs);
+  const {
+    errors: normalizationErrors,
+    federationFactory,
+    warnings: normalizationWarnings,
+  } = initializeFederationFactory(subgraphs);
   if (normalizationErrors || !federationFactory) {
-    return { errors: normalizationErrors || [federationFactoryInitializationFatalError] };
+    return {
+      errors: normalizationErrors || [federationFactoryInitializationFatalError],
+      warnings: normalizationWarnings,
+    };
   }
   federationFactory.federateSubgraphData();
   const federationFactories = [cloneDeep(federationFactory)];
@@ -2536,9 +2546,9 @@ export function federateSubgraphsContract(
   subgraphs: Subgraph[],
   tagExclusions: Set<string>,
 ): FederationResultContainer {
-  const { errors, federationFactory } = initializeFederationFactory(subgraphs);
+  const { errors, federationFactory, warnings } = initializeFederationFactory(subgraphs);
   if (errors || !federationFactory) {
-    return { errors: errors || [federationFactoryInitializationFatalError] };
+    return { errors: errors || [federationFactoryInitializationFatalError], warnings };
   }
   federationFactory.federateSubgraphData();
   return federationFactory.buildFederationContractResult(tagExclusions);

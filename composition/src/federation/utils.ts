@@ -24,6 +24,7 @@ import { ObjectExtensionData, ParentExtensionData } from '../schema-building/typ
 import { getNormalizedFieldSet } from '../normalization/utils';
 import { GraphNode } from '../resolvability-graph/graph-nodes';
 import { ConditionalFieldData } from '../schema-building/utils';
+import { Warning } from '../warnings/warnings';
 
 export type FederationFactoryOptions = {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
@@ -32,13 +33,13 @@ export type FederationFactoryOptions = {
   entityInterfaceFederationDataByTypeName: Map<string, EntityInterfaceFederationData>;
   internalGraph: Graph;
   internalSubgraphBySubgraphName: Map<string, InternalSubgraph>;
-  warnings?: string[];
+  warnings: Warning[];
 };
 
 export type FederationResultContainer = {
+  warnings: Warning[];
   errors?: Error[];
   federationResult?: FederationResult;
-  warnings?: String[];
 };
 
 export type FederationResult = {
@@ -54,7 +55,7 @@ export type FederationResultContainerWithContracts = {
   errors?: Error[];
   federationResult?: FederationResult;
   federationResultContainerByContractName?: Map<string, FederationResultContainer>;
-  warnings?: String[];
+  warnings?: Warning[];
 };
 
 export type RootTypeFieldData = {
