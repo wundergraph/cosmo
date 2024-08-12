@@ -53,9 +53,13 @@ That's it, migrate over with a single click!
 
 - [Docker](https://docs.docker.com/get-docker/)
 - [Docker Compose](https://docs.docker.com/compose/install/) (version 2+ only)
+- [NPM](https://nodejs.org/en/download/) (for the Cosmo CLI)
 
-Running cosmo is as easy as running a single command. It can take a few seconds (~30s) until all services are up and running. A seed container and few migrations are running in the background to bootstrap the platform.
+Running cosmo is as easy as running a single command. It can take a few minutes (~1-2m) until all services are up and running. A seed container and few migrations are running in the background to bootstrap the platform.
 They might restart a few times until the database is ready. Creates a small demo project and starts the router and subgraphs:
+
+> [!WARNING]  
+> Please give Docker Desktop enough resources (CPU, Memory) to run the platform. We recommend at least 4 CPUs and 8GB of memory.
 
 1. Start the platform:
 
