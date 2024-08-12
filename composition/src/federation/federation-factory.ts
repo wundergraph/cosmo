@@ -2538,7 +2538,7 @@ export function federateSubgraphsWithContracts(
     federationResultContainerByContractName.set(contractName, federationResultContainer);
     i++;
   }
-  return { federationResult, federationResultContainerByContractName };
+  return { federationResult, federationResultContainerByContractName, warnings };
 }
 
 // the flow when adding a completely new contract

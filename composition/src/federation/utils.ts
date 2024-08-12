@@ -52,18 +52,10 @@ export type FederationResult = {
 };
 
 export type FederationResultContainerWithContracts = {
+  warnings: Warning[];
   errors?: Error[];
   federationResult?: FederationResult;
   federationResultContainerByContractName?: Map<string, FederationResultContainer>;
-  warnings?: Warning[];
-};
-
-export type RootTypeFieldData = {
-  fieldName: string;
-  fieldTypeNodeString: string;
-  path: string;
-  typeName: string;
-  subgraphs: Set<string>;
 };
 
 export type ParentTagData = {
