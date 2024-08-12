@@ -1,6 +1,8 @@
 name: Helm CI
 on:
   pull_request:
+    branches:
+      - "!release-please--**"
     paths:
       - "helm/**/*"
       - ".github/workflows/helm-ci.yaml"
@@ -16,7 +18,6 @@ jobs:
   build_test:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    if: !startsWith(github.ref, 'refs/heads/release-please--')) || !startsWith(github.head_ref, 'release-please--')
     steps:
       - uses: actions/checkout@v4
         with:

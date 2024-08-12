@@ -1,6 +1,8 @@
 name: Helm Deployment
 on:
   pull_request:
+    branches:
+      - "!release-please--**"
     paths:
       - "helm/**/*"
       - ".github/workflows/helm-deployment.yaml"
@@ -17,7 +19,6 @@ jobs:
   build_test:
     runs-on: ubuntu-latest
     timeout-minutes: 8
-    if: !startsWith(github.ref, 'refs/heads/release-please--')) || !startsWith(github.head_ref, 'release-please--')
     steps:
       - uses: actions/checkout@v4
         with:
