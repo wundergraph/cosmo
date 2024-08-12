@@ -16,6 +16,7 @@ jobs:
   build_test:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    if: !(github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release-please--')) || !(github.event_name == 'pull_request' && startsWith(github.head_ref, 'release-please--'))
     steps:
       - uses: actions/checkout@v4
         with:
@@ -41,4 +42,4 @@ jobs:
         working-directory: ./helm
 
       - name: Check if git is not dirty after generating files
-        run: git diff --no-ext-diff --exit-code ./helm
+        run: git diff --no-ext-diff --exit-code ./helm        run: git diff --no-ext-diff --exit-code ./helm
