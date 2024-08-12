@@ -24,6 +24,7 @@ inputs:
     type: string
 
 permissions:
+  contents: read
   packages: write
 
 runs:
@@ -44,10 +45,12 @@ runs:
     - name: checkout
       uses: actions/checkout@v4
 
-    - name: helm login
-      shell: bash
-      run: |
-        echo ${{ inputs.registry-password }} | helm registry login ${{ inputs.registry }} -u ${{ inputs.registry-username }} --password-stdin
+    - name: docker-login
+      uses: docker/login-action@v3.3.0
+      with:
+        registry: ${{ inputs.registry }}
+        username: ${{ inputs.registry-username }}
+        password: ${{ inputs.registry-password }}
 
     # upload changelog to artifactory
     - name: publish-chart
