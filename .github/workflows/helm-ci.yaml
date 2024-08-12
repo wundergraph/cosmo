@@ -1,9 +1,8 @@
 name: Helm CI
 on:
   pull_request:
-    branches:
-      - "*"
-      - "!release-please--**"
+    branches-ignore:
+      - "release-please--**"
     paths:
       - "helm/**/*"
       - ".github/workflows/helm-ci.yaml"
