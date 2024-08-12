@@ -18,7 +18,8 @@ on:
   pull_request:
     branches:
       - main
-      - "!release-please--**"
+    branches-ignore:
+      - "release-please--**"
   schedule:
     - cron: '27 3 * * 1'
 
