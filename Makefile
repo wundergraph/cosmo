@@ -108,7 +108,7 @@ full-demo-down:
 	docker compose -f docker-compose.full.yml --profile default --profile router --profile subgraphs down --remove-orphans -v
 
 dc-federation-demo:
-	docker compose -f docker-compose.full.yml --profile default --profile router --profile subgraphs up --remove-orphans --detach
+	docker compose -f docker-compose.full.yml --profile default --profile router --profile subgraphs  --parallel 3  up --remove-orphans --detach
 
 DC_FLAGS=
 dc-subgraphs-demo:
