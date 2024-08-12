@@ -14,7 +14,7 @@ on:
       - reopened
       - synchronize
       - opened
-      - edited
+      - edited #
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref }}
@@ -30,8 +30,8 @@ jobs:
   build_test:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    # do not run for other prs than the release please prs
-    if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'release-please--')
+    # do not run for other prs than the release please prs and on pushes to the release-please-- branch
+    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release-please--')) || (github.event_name == 'pull_request' && startsWith(github.head_ref, 'release-please--'))
     steps:
       - name: checkout
         uses: actions/checkout@v4
