@@ -27,7 +27,7 @@ env:
   CI: true
 
 jobs:
-  update-release-docs:
+  build_test:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     # do not run for other prs than the release please prs and on pushes to the release-please-- branch
