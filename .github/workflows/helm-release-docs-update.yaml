@@ -1,0 +1,58 @@
+---
+name: Helm Release update Docs
+run-name: helm-release-docs-update
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'release-please--**'
+  pull_request:
+    branches:
+      - main
+    types:
+      - reopened
+      - synchronize
+      - opened
+      - edited
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+env:
+  CI: true
+
+jobs:
+  build_test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # do not run for other prs than the release please prs
+    if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'release-please--')
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+
+      - uses: ./.github/actions/go
+
+      - name: Install tools
+        run: go install github.com/norwoodj/helm-docs/cmd/helm-docs@v1.11.3
+
+      - name: Generate Helm docs
+        run: make docs
+        working-directory: ./helm
+
+      - uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'chore: update helm docs and prepare release'
+          file_pattern: 'helm/**/*.md'
+          commit_user_name: hardworker-bot
+          commit_user_email: bot@wundergraph.com
+          commit_author: hardworker-bot <bot@wundergraph.com>
+          create_branch: false

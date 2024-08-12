@@ -31,10 +31,10 @@ WunderGraph Cosmo is the full Lifecycle API Management for (Federated) GraphQL. 
 
 Core:
 
-- [CLI](./cli): The cosmo CLI tool `wgc`. Used to manage the cosmo platform e.g. pushing schema, check schemas, creating new projects, managing users, etc. It interacts with the control plane.
-- [Control Plane](./controlplane): The control plane is the central component of the cosmo platform. It consists of a platform API and a node API. The platform API is used by the cosmo `CLI` tool and the `Studio` to manage the platform.
+- [CLI](./cli): The Cosmo CLI tool `wgc`. Used to manage the Cosmo platform e.g. pushing schema, check schemas, creating new projects, managing users, etc. It interacts with the control plane.
+- [Control Plane](./controlplane): The control plane is the central component of the Cosmo platform. It consists of a platform API and a node API. The platform API is used by the cosmo `CLI` tool and the `Studio` to manage the platform.
 - [Router](./router): The router is the component that understands the GraphQL Federation protocol. It is responsible for routing requests to the correct service and for aggregating the responses. It is in connection with the control plane to register itself for advanced cluster management.
-- [Studio](./studio): The studio is the web interface for the cosmo platform. It is used to manage the platform and to collaborate on GraphQL Federation. It is in connection with the control plane through the Platform API to manage the platform.
+- [Studio](./studio): The studio is the web interface for the Cosmo platform. It is used to manage the platform and to collaborate on GraphQL Federation. It is in connection with the control plane through the Platform API to manage the platform.
 
 Collectors:
 
@@ -53,9 +53,13 @@ That's it, migrate over with a single click!
 
 - [Docker](https://docs.docker.com/get-docker/)
 - [Docker Compose](https://docs.docker.com/compose/install/) (version 2+ only)
+- [NPM](https://nodejs.org/en/download/) (for the Cosmo CLI)
 
-Running cosmo is as easy as running a single command. It can take a few seconds (~30s) until all services are up and running. A seed container and few migrations are running in the background to bootstrap the platform.
+Running Cosmo is as easy as running a single command. It can take a few minutes (~1-2m) until all services are up and running. A seed container and few migrations are running in the background to bootstrap the platform.
 They might restart a few times until the database is ready. Creates a small demo project and starts the router and subgraphs:
+
+> [!WARNING]  
+> Please give Docker Desktop enough resources (CPU, Memory) to run the platform. We recommend at least 4 CPUs and 8GB of memory.
 
 1. Start the platform:
 
@@ -138,7 +142,7 @@ We manage multiple compose files:
 
 - `docker-compose.yml`: The default compose file. It contains all services that are required to run the platform for development.
 - `docker-compose.full.yml`: This compose file contains the full Cosmo platform. It is used for demo and testing.
-- `docker-compose.cosmo.yml`: This compose file allows to build all cosmo components and manage them in a single compose file. It is used for testing and releasing.
+- `docker-compose.cosmo.yml`: This compose file allows to build all Cosmo components and manage them in a single compose file. It is used for testing and releasing.
 
 **Clean up a compose stack before starting another one!**
 
