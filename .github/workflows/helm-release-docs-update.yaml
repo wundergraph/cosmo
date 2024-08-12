@@ -12,6 +12,8 @@ on:
       - main
     paths:
       - "helm/**/CHANGELOG.md"
+      - ".release-please-manifest.json"
+      - "helm/**/Chart.yaml"
     types:
       - reopened
       - synchronize
