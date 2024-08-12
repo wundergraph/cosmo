@@ -88,6 +88,7 @@ jobs:
         exit 1
 
     - name: Perform CodeQL Analysis
+      if: "(github.event_name == 'push' && !startsWith(github.ref, 'refs/heads/release-please--')) || (github.event_name == 'pull_request' && !startsWith(github.head_ref, 'release-please--'))"
       uses: github/codeql-action/analyze@v3
       with:
         category: "/language:${{matrix.language}}"
