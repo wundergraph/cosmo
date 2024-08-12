@@ -153,7 +153,7 @@ A developer can implement a custom module by creating a struct that implements o
 - `AuthenticationHooks`: Provides hooks for authentication and authorization logic.
 - `TelemetryHooks`: Provides hooks for OpenTelemetry spans and metrics.
 - `OperationHooks`: Provides hooks for parsed, normalized, and planned GraphQL operations.
-- `Module`: Provides hooks for the module lifecycle, including provisioning and cleanup.
+- `Module`: Provides hooks for the module lifecycle, including provisioning and shutdown.
 
 ```go
 type MyModule struct{}
@@ -334,9 +334,11 @@ The new module system is not backwards compatible with the old module system. Ex
 
 # Example Modules
 
+__All examples are pseudocode and not tested but they are as close as possible to the final implementation__
+
 ## Custom Telemetry
 
-This module adds custom attributes to the OpenTelemetry span for each gateway request. Data can come from the request, the gateway configuration, or external sources.
+This module adds custom attributes to the OpenTelemetry span for each gateway request. Data can come from the request, the gateway configuration, or external sources. The example modifies the first span of the gateway but depending on the hook, the span is different.
 
 ```go
 type MyModule struct{}
@@ -355,7 +357,7 @@ func (m *MyModule) OnGatewayRequest(req *core.GatewayRequest, err error) error {
 
 ## Intercepting Gateway Responses
 
-This module intercepts the final Gateway response to rewrite errors and add custom extensions.
+This module intercepts the final Gateway response to rewrite errors and add custom extensions. You have access to the parsed operation, the gateway request, and the gateway response.
 
 ```go
 type MyModule struct{}
@@ -379,7 +381,7 @@ func (m *MyModule) OnGatewayResponse(res *core.GatewayResponse, err error) error
 
 ## Enriching logs
 
-This module adds custom log fields to the gateway and subgraph logs. Data can come from the request, the response, or external sources.
+This module adds custom log fields to the gateway and subgraph logs. Data can come from the request, the response, or external sources. This will affect request and response logs.
 
 ```go
 type MyModule struct{}
@@ -458,11 +460,15 @@ modules:
     value: 42
 ```
 
-At module provisioning, the configuration is loaded and can be marshaled into the module struct, where it can be accessed across the module lifecycle.
+At module provisioning, the configuration is loaded and can be marshaled into the module struct, where it can be accessed across the module lifecycle. We support all primitive types, slices, and maps in the configuration file.
 
 ```go
 type MyModule struct {
 	Value uint64 `yaml:"value"`
+	
+	Nested struct {
+        Property string `yaml:"property"`
+    } `yaml:"nested"`
 }
 
 func (m *MyModule) Provision(ctx *core.ModuleContext) error {
@@ -479,7 +485,7 @@ func (m *MyModule) Provision(ctx *core.ModuleContext) error {
 
 ## Custom Authentication and Authorization
 
-Custom modules can be used to implement custom authentication and authorization logic in the gateway. The module can intercept incoming requests and validate the user's credentials, scopes, and permissions before forwarding the request to the subgraph. The router has built-in support JWK. The parsed token information is available in the request `req.Request.Auth` field.
+Custom modules can be used to implement custom authentication and authorization logic in the gateway. The module can intercept incoming requests and validate the user's credentials, scopes, and permissions before forwarding the request to the subgraph. The router has built-in support for JWK. The parsed token information is available in the request `req.Request.Auth` field.
 
 ```go
 type MyModule struct{}
@@ -509,12 +515,10 @@ type MyModule struct {
 	Client *http.Client
 }
 
-var _ SubgraphHooks = (*MyModule)(nil)
-
 func (m *MyModule) Provision(ctx *core.ModuleContext) error {
 	// Register your custom HTTP client as the transport for subgraph requests
-	// Can only be done in the provision method. If a second module tries to register a transport, an error is returned
-	// because the behavior is undefined.
+	// Can only be done in the provision method. If a second module tries to register a transport,
+	// an error is returned because the behavior is undefined.
 	
 	ctx.RegisterOriginTransport(&http.Transport{})
 	return nil
@@ -533,7 +537,7 @@ type MyModule struct {
 func (m *MyModule) CacheControlDirective(ctx *core.DirectiveContext) error {
 	// Return an error to abort the request to the subgraph
 	// The error is returned to the client as a GraphQL error
-	
+
 	// Find the minimum cache control directive in the operation to calculate the final cache time.
 	// Finally, set the cache control header on the gateway response to the client in the OnGatewayResponse hook.
 	// The store is a shared context between all hooks and can be used to store and retrieve data.
@@ -541,29 +545,29 @@ func (m *MyModule) CacheControlDirective(ctx *core.DirectiveContext) error {
 	currentAge := ctx.store.Get("cacheControl")
 	if minAge < currentAge {
 		ctx.store.Set("cacheControl", minAge)
-    }
-	
+	}
+
 	return nil
 }
 
 func (m *MyModule) RequiresScopesDirective(ctx *core.DirectiveContext) error {
-    // Check if the user has the required scopes
-    if !hasScopes(ctx.Request.Auth, ctx.Directive.Args["scopes"]) {
-        return core.UnauthenticatedError("Unauthorized")
-    }
-    return nil
+	// Check if the user has the required scopes
+	if !hasScopes(ctx.Request.Auth, ctx.Directive.Args["scopes"]) {
+		return core.UnauthenticatedError("Unauthorized")
+	}
+	return nil
 }
 
 func (m *MyModule) Provision(ctx *core.ModuleContext) error {
 	ctx.RegisterDirectiveHandler("cacheControl", m.CacheControlDirective)
-    ctx.RegisterDirectiveHandler("requiresScopes", m.RequiresScopesDirective)
+	ctx.RegisterDirectiveHandler("requiresScopes", m.RequiresScopesDirective)
 	return nil
 }
 ```
 
 # Module Registration
 
-Modules are registered in the main.go file of the router application. The router will load the modules at startup and call the provision method to initialize them.
+Modules are registered in the `main.go` file of the router application. The router will load the modules at startup and call the provision method to initialize them.
 The order in which modules are registered determines the order in which they are executed. The first argument of `core.RegisterModule` accepts the module struct, and the second argument is a variadic list of options that can be passed to the module.
 
 ```go
@@ -576,7 +580,7 @@ func main() {
 }
 ```
 
-Every custom router has its own go.mod file which represents in Go a module. This allows for reproducible builds and versioning of the custom router. The part below will be abstracted by a CLI tool in the future.
+Every custom router has its own `go.mod` file which represents in Go a module. This allows for reproducible builds and versioning of the custom router. The part below will be abstracted by a CLI tool in the future.
 ```go
 // go.mod
 
