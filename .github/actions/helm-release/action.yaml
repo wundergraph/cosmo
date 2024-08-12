@@ -44,12 +44,9 @@ runs:
     - name: checkout
       uses: actions/checkout@v4
 
-    - name: login-to-container-registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ inputs.registry }}
-        username: ${{ inputs.registry-username }}
-        password: ${{ inputs.registry-password }}
+    - name: helm login
+      run: |
+        echo ${{ inputs.registry-password }} | helm registry login ${{ inputs.registry }} -u ${{ inputs.registry-username }} --password-stdin
 
     # upload changelog to artifactory
     - name: publish-chart
