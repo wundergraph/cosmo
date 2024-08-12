@@ -2,6 +2,7 @@ name: Helm CI
 on:
   pull_request:
     branches:
+      - "*"
       - "!release-please--**"
     paths:
       - "helm/**/*"
