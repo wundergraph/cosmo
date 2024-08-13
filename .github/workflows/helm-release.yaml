@@ -43,7 +43,7 @@ jobs:
           working-directory: ./helm
           registry: ${{ env.REGISTRY }}
           registry-username: ${{ github.actor }}
-          registry-password: ${{ secrets.GH_TOKEN_HELM_RELEASES }}
+          registry-password: ${{ secrets.GITHUB_TOKEN }}
           make-target: publish-cosmo-chart
 
       - uses: ./.github/actions/helm-release
@@ -52,5 +52,5 @@ jobs:
           working-directory: ./helm
           registry: ${{ env.REGISTRY }}
           registry-username: ${{ github.actor }}
-          registry-password: ${{ secrets.GH_TOKEN_HELM_RELEASES }}
+          registry-password: ${{ secrets.GITHUB_TOKEN }}
           make-target: publish-router-chart
