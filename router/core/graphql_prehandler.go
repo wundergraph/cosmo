@@ -81,10 +81,6 @@ type httpOperation struct {
 	traceTimings     *art.TraceTimings
 }
 
-type OperationProcessorResult struct {
-	operation *ParsedOperation
-}
-
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 	return &PreHandler{
 		log:                         opts.Logger,
