@@ -15,6 +15,7 @@ import {
   invalidSelectionSetDefinitionErrorMessage,
   invalidSelectionSetErrorMessage,
   nonExternalConditionalFieldError,
+  nonExternalConditionalFieldWarning,
   normalizeSubgraph,
   normalizeSubgraphFromString,
   parse,
@@ -913,9 +914,7 @@ describe('openfed_FieldSet tests', () => {
     });
 
     // TODO
-    test('that an error is returned if a field is part of both a @provides and @key FieldSet', () => {
-      // TODO
-    });
+    test.skip('that an error is returned if a field is part of both a @provides and @key FieldSet', () => {});
   });
 
   describe('@requires FieldSets', () => {
@@ -1401,9 +1400,19 @@ describe('openfed_FieldSet tests', () => {
       );
     });
 
-    test('that non-external v1 fields that form part of a @requires field set are treated as non-conditional', () => {
-      const { errors, federationResult } = federateSubgraphs([subgraphE, subgraphF]);
+    test('that non-external v1 fields that form part of a @requires field set are treated as non-conditional but return a warning', () => {
+      const { errors, federationResult, warnings } = federateSubgraphs([subgraphE, subgraphF]);
       expect(errors).toBeUndefined();
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toStrictEqual(
+        nonExternalConditionalFieldWarning(
+          'Entity.name',
+          'subgraph-f',
+          'NestedObject.name',
+          'object { nestedObject { name } }',
+          FieldSetDirective.REQUIRES,
+        ),
+      );
       const e = federationResult!.subgraphConfigBySubgraphName.get(subgraphE.name);
       expect(e).toBeDefined();
       expect(e!.configurationDataByTypeName).toStrictEqual(
@@ -1486,6 +1495,126 @@ describe('openfed_FieldSet tests', () => {
                 {
                   fieldName: 'name',
                   selectionSet: 'object { nestedObject { name } }',
+                },
+              ],
+              typeName: 'Entity',
+            },
+          ],
+          [
+            'Object',
+            {
+              fieldNames: new Set<string>(['nestedObject']),
+              isRootNode: false,
+              typeName: 'Object',
+            },
+          ],
+          [
+            'NestedObject',
+            {
+              fieldNames: new Set<string>(['id', 'name']),
+              isRootNode: false,
+              typeName: 'NestedObject',
+            },
+          ],
+        ]),
+      );
+    });
+
+    test('that non-external v1 fields that form part of a @provides field set are treated as non-conditional but return a warning', () => {
+      const { errors, federationResult, warnings } = federateSubgraphs([subgraphE, subgraphG]);
+      expect(errors).toBeUndefined();
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toStrictEqual(
+        nonExternalConditionalFieldWarning(
+          'Query.entity',
+          'subgraph-g',
+          'NestedObject.name',
+          'object { nestedObject { name } }',
+          FieldSetDirective.PROVIDES,
+        ),
+      );
+      const e = federationResult!.subgraphConfigBySubgraphName.get(subgraphE.name);
+      expect(e).toBeDefined();
+      expect(e!.configurationDataByTypeName).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id', 'object', 'age']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id object { nestedObject { id } }',
+                },
+                {
+                  fieldName: '',
+                  selectionSet: 'id object { nestedObject { name } }',
+                },
+                {
+                  disableEntityResolver: true,
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Entity',
+            },
+          ],
+          [
+            'Object',
+            {
+              fieldNames: new Set<string>(['nestedObject']),
+              isRootNode: false,
+              typeName: 'Object',
+            },
+          ],
+          [
+            'NestedObject',
+            {
+              fieldNames: new Set<string>(['id', 'name']),
+              isRootNode: false,
+              typeName: 'NestedObject',
+            },
+          ],
+        ]),
+      );
+      const g = federationResult!.subgraphConfigBySubgraphName.get(subgraphG.name);
+      expect(g).toBeDefined();
+      expect(g!.configurationDataByTypeName).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['entity']),
+              isRootNode: true,
+              provides: [
+                {
+                  fieldName: 'entity',
+                  selectionSet: 'object { nestedObject { name } }',
+                },
+              ],
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id', 'name', 'object']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+                {
+                  disableEntityResolver: true,
+                  fieldName: '',
+                  selectionSet: 'id object { nestedObject { id } }',
+                },
+                {
+                  disableEntityResolver: true,
+                  fieldName: '',
+                  selectionSet: 'id object { nestedObject { name } }',
                 },
               ],
               typeName: 'Entity',
@@ -1657,6 +1786,35 @@ const subgraphF: Subgraph = {
     type Entity @key(fields: "id") {
       id: ID!
       name: String! @requires(fields: "object { nestedObject { name } }")
+      object: Object!
+    }
+    
+    type Object {
+      nestedObject: NestedObject!
+    }
+    
+    type NestedObject {
+      id: ID!
+      name: String!
+    }
+  `),
+};
+
+const subgraphG: Subgraph = {
+  name: 'subgraph-g',
+  url: '',
+  definitions: parse(`
+    schema {
+      query: Queries  
+    }
+    
+    type Queries {
+      entity: Entity! @provides(fields: "object { nestedObject { name } }")
+    }
+    
+    type Entity @key(fields: "id") {
+      id: ID!
+      name: String!
       object: Object!
     }
     

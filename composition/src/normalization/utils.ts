@@ -373,7 +373,7 @@ function validateNonRepeatableFieldSet(
             if (nf.isSubgraphVersionTwo) {
               nf.errors.push(
                 nonExternalConditionalFieldError(
-                  fieldCoordinatesPath[0],
+                  `${directiveParentTypeName}.${directiveFieldName}`,
                   nf.subgraphName,
                   currentFieldCoordinates,
                   fieldSet,
@@ -386,7 +386,7 @@ function validateNonRepeatableFieldSet(
                * */
               nf.warnings.push(
                 nonExternalConditionalFieldWarning(
-                  fieldCoordinatesPath[0],
+                  `${directiveParentTypeName}.${directiveFieldName}`,
                   nf.subgraphName,
                   currentFieldCoordinates,
                   fieldSet,
