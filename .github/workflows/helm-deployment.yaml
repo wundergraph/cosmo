@@ -1,9 +1,16 @@
 name: Helm Deployment
 on:
+  push:
+    branches-ignore:
+      - "release-please--**"
   pull_request:
     paths:
       - "helm/**/*"
-      - ".github/workflows/helm-deployment.yaml"
+      - ".github/workflows/helm-ci.yaml"
+      # do not trigger on what usually the release-please bot would do
+      # otherwise this is triggered also on pull requests from the bot
+      - "helm/**/CHANGELOG.md"
+      - "helm/**/Chart.yaml"
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}
@@ -13,7 +20,6 @@ env:
   CI: true
 
 jobs:
-
   build_test:
     runs-on: ubuntu-latest
     timeout-minutes: 8
@@ -44,11 +50,13 @@ jobs:
           kbld version
 
       - name: start minikube
+        if: "(github.event_name == 'push' && !startsWith(github.ref, 'refs/heads/release-please--')) || (github.event_name == 'pull_request' && !startsWith(github.head_ref, 'release-please--'))"
         id: minikube
         uses: medyagh/setup-minikube@v0.0.14
         with:
           addons: ingress
 
       - name: Deploy to minikube
+        if: "(github.event_name == 'push' && !startsWith(github.ref, 'refs/heads/release-please--')) || (github.event_name == 'pull_request' && !startsWith(github.head_ref, 'release-please--'))"
         working-directory: ./helm
         run: make deploy KAPP_ARGS="-y --logs-all"
