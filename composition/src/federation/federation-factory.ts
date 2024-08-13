@@ -1326,6 +1326,7 @@ export class FederationFactory {
             configurationKeys.push({
               fieldName: '',
               selectionSet: interfaceObjectKey.selectionSet,
+              ...(interfaceObjectKey.disableEntityResolver ? { disableEntityResolver: true } : {}),
             });
           }
           if (configurationKeys.length > 0) {
