@@ -25,9 +25,6 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
 
       - uses: ./.github/actions/go
 
@@ -46,5 +43,6 @@ jobs:
           commit_user_email: bot@wundergraph.com
           commit_author: hardworker-bot <bot@wundergraph.com>
           create_branch: false
+          skip_checkout: true
           # see: https://github.com/stefanzweifel/git-auto-commit-action?tab=readme-ov-file#custom-file_pattern-changed-files-but-seeing-working-tree-clean-nothing-to-commit-in-the-logs
           disable_globbing: true
