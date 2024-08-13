@@ -561,7 +561,7 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 		trace.WithAttributes(attributes...),
 	)
 
-	opContext, err := h.planner.Plan(operationKit.parsedOperation, httpOperation.clientInfo, OperationProtocolHTTP, httpOperation.traceOptions)
+	opContext, err := h.planner.plan(operationKit.parsedOperation, httpOperation.clientInfo, OperationProtocolHTTP, httpOperation.traceOptions)
 	if err != nil {
 
 		rtrace.AttachErrToSpan(enginePlanSpan, err)

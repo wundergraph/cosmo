@@ -85,8 +85,7 @@ func (p *OperationPlanner) preparePlan(requestOperationName []byte, requestOpera
 	}, nil
 }
 
-func (p *OperationPlanner) Plan(operation *ParsedOperation, clientInfo *ClientInfo, protocol OperationProtocol, traceOptions resolve.TraceOptions) (*operationContext, error) {
-
+func (p *OperationPlanner) plan(operation *ParsedOperation, clientInfo *ClientInfo, protocol OperationProtocol, traceOptions resolve.TraceOptions) (*operationContext, error) {
 	opContext := &operationContext{
 		name:                       operation.Request.OperationName,
 		opType:                     operation.Type,
