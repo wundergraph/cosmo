@@ -171,6 +171,175 @@ describe('Entity Interface Tests', () => {
     );
   });
 
+  test('that entities can implement multiple entity interfaces', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphG, subgraphH]);
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(
+        versionTwoRouterDefinitions +
+          `
+      interface EntityInterfaceOne {
+        id: ID!
+        one: Boolean!
+      }
+
+      interface EntityInterfaceThree {
+        id: ID!
+        three: Boolean!
+      }
+
+      interface EntityInterfaceTwo {
+        id: ID!
+        two: Boolean!
+      }
+      
+      type EntityOne implements EntityInterfaceOne & EntityInterfaceThree & EntityInterfaceTwo {
+        id: ID!
+        one: Boolean!
+        three: Boolean!
+        two: Boolean!
+      }
+
+      type EntityTwo implements EntityInterfaceOne & EntityInterfaceThree & EntityInterfaceTwo {
+        id: ID!
+        one: Boolean!
+        three: Boolean!
+        two: Boolean!
+      }
+      
+      type Query {
+        entityOne: EntityOne!
+        entityTwo: EntityTwo!
+      }
+      
+      scalar openfed__Scope
+    `,
+      ),
+    );
+    const g = federationResult!.subgraphConfigBySubgraphName.get('subgraph-g');
+    expect(g).toBeDefined();
+    const h = federationResult!.subgraphConfigBySubgraphName.get('subgraph-h');
+    expect(h).toBeDefined();
+    expect(g!.configurationDataByTypeName).toStrictEqual(
+      new Map<string, ConfigurationData>([
+        [
+          'Query',
+          {
+            fieldNames: new Set<string>(['entityOne', 'entityTwo']),
+            isRootNode: true,
+            typeName: 'Query',
+          },
+        ],
+        [
+          'EntityInterfaceOne',
+          {
+            entityInterfaceConcreteTypeNames: new Set<string>(['EntityOne', 'EntityTwo']),
+            fieldNames: new Set<string>(['id']),
+            isInterfaceObject: false,
+            isRootNode: true,
+            typeName: 'EntityInterfaceOne',
+            keys: [{ fieldName: '', selectionSet: 'id' }],
+          },
+        ],
+        [
+          'EntityInterfaceTwo',
+          {
+            entityInterfaceConcreteTypeNames: new Set<string>(['EntityOne', 'EntityTwo']),
+            fieldNames: new Set<string>(['id']),
+            isInterfaceObject: false,
+            isRootNode: true,
+            typeName: 'EntityInterfaceTwo',
+            keys: [{ fieldName: '', selectionSet: 'id' }],
+          },
+        ],
+        [
+          'EntityInterfaceThree',
+          {
+            entityInterfaceConcreteTypeNames: new Set<string>(['EntityOne', 'EntityTwo']),
+            fieldNames: new Set<string>(['id']),
+            isInterfaceObject: false,
+            isRootNode: true,
+            typeName: 'EntityInterfaceThree',
+            keys: [{ fieldName: '', selectionSet: 'id' }],
+          },
+        ],
+        [
+          'EntityOne',
+          {
+            fieldNames: new Set<string>(['id']),
+            isRootNode: true,
+            typeName: 'EntityOne',
+            keys: [{ fieldName: '', selectionSet: 'id' }],
+          },
+        ],
+        [
+          'EntityTwo',
+          {
+            fieldNames: new Set<string>(['id']),
+            isRootNode: true,
+            typeName: 'EntityTwo',
+            keys: [{ fieldName: '', selectionSet: 'id' }],
+          },
+        ],
+      ]),
+    );
+    expect(h!.configurationDataByTypeName).toStrictEqual(
+      new Map<string, ConfigurationData>([
+        [
+          'EntityInterfaceOne',
+          {
+            entityInterfaceConcreteTypeNames: new Set<string>(['EntityOne', 'EntityTwo']),
+            fieldNames: new Set<string>(['id', 'one']),
+            isInterfaceObject: true,
+            isRootNode: true,
+            typeName: 'EntityInterfaceOne',
+            keys: [{ fieldName: '', selectionSet: 'id' }],
+          },
+        ],
+        [
+          'EntityInterfaceTwo',
+          {
+            entityInterfaceConcreteTypeNames: new Set<string>(['EntityOne', 'EntityTwo']),
+            fieldNames: new Set<string>(['id', 'two']),
+            isInterfaceObject: true,
+            isRootNode: true,
+            typeName: 'EntityInterfaceTwo',
+            keys: [{ fieldName: '', selectionSet: 'id' }],
+          },
+        ],
+        [
+          'EntityInterfaceThree',
+          {
+            entityInterfaceConcreteTypeNames: new Set<string>(['EntityOne', 'EntityTwo']),
+            fieldNames: new Set<string>(['id', 'three']),
+            isInterfaceObject: true,
+            isRootNode: true,
+            typeName: 'EntityInterfaceThree',
+            keys: [{ fieldName: '', selectionSet: 'id' }],
+          },
+        ],
+        [
+          'EntityOne',
+          {
+            fieldNames: new Set<string>(['id', 'one', 'two', 'three']),
+            isRootNode: true,
+            typeName: 'EntityOne',
+            keys: [{ fieldName: '', selectionSet: 'id' }],
+          },
+        ],
+        [
+          'EntityTwo',
+          {
+            fieldNames: new Set<string>(['id', 'one', 'two', 'three']),
+            isRootNode: true,
+            typeName: 'EntityTwo',
+            keys: [{ fieldName: '', selectionSet: 'id' }],
+          },
+        ],
+      ]),
+    );
+  });
+
   test.skip('that an error is returned if a type declared with @interfaceObject is not an interface in other subgraphs', () => {});
 
   test.skip('that an error is returned if a type declared with @interfaceObject is not an entity', () => {});
@@ -290,5 +459,57 @@ const subgraphF: Subgraph = {
       id: ID!
       isEntity: Boolean!
     }  
+  `),
+};
+
+const subgraphG: Subgraph = {
+  name: 'subgraph-g',
+  url: '',
+  definitions: parse(`
+    interface EntityInterfaceOne @key(fields: "id") {
+      id: ID!
+    }
+    
+    interface EntityInterfaceTwo @key(fields: "id") {
+      id: ID!
+    }
+    
+    interface EntityInterfaceThree @key(fields: "id") {
+      id: ID!
+    }
+    
+    type EntityOne implements EntityInterfaceOne & EntityInterfaceTwo & EntityInterfaceThree @key(fields: "id") {
+      id: ID!
+    }
+
+    type EntityTwo implements EntityInterfaceOne & EntityInterfaceTwo & EntityInterfaceThree @key(fields: "id") {
+      id: ID!
+    }
+    
+    type Query {
+      entityOne: EntityOne!
+      entityTwo: EntityTwo!
+    }
+  `),
+};
+
+const subgraphH: Subgraph = {
+  name: 'subgraph-h',
+  url: '',
+  definitions: parse(`
+    type EntityInterfaceOne @key(fields: "id") @interfaceObject {
+      id: ID!
+      one: Boolean!
+    }
+    
+    type EntityInterfaceTwo @key(fields: "id") @interfaceObject {
+      id: ID!
+      two: Boolean!
+    }
+    
+    type EntityInterfaceThree @key(fields: "id") @interfaceObject {
+      id: ID!
+      three: Boolean!
+    }
   `),
 };

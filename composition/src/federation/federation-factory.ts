@@ -121,6 +121,7 @@ import { printTypeNode } from '@graphql-tools/merge';
 import {
   ConfigurationData,
   FieldConfiguration,
+  newConfigurationData,
   RequiredFieldConfiguration,
   SubscriptionCondition,
   SubscriptionFieldCondition,
@@ -1259,18 +1260,18 @@ export class FederationFactory {
           subgraphName,
           'internalSubgraphBySubgraphName',
         );
-        const configurationDataMap = internalSubgraph.configurationDataByTypeName;
+        const configurationDataByTypeName = internalSubgraph.configurationDataByTypeName;
         const concreteTypeNames = this.concreteTypeNamesByAbstractTypeName.get(entityInterfaceTypeName);
         if (!concreteTypeNames) {
           continue;
         }
         const interfaceObjectConfiguration = getOrThrowError(
-          configurationDataMap,
+          configurationDataByTypeName,
           entityInterfaceTypeName,
           'configurationDataMap',
         );
-        const keys = interfaceObjectConfiguration.keys;
-        if (!keys) {
+        const interfaceObjectKeys = interfaceObjectConfiguration.keys;
+        if (!interfaceObjectKeys) {
           // TODO no keys error
           continue;
         }
@@ -1280,10 +1281,6 @@ export class FederationFactory {
         this.internalGraph.setSubgraphName(subgraphName);
         const interfaceObjectNode = this.internalGraph.addOrUpdateNode(entityInterfaceTypeName, { isAbstract: true });
         for (const concreteTypeName of concreteTypeNames) {
-          if (configurationDataMap.has(concreteTypeName)) {
-            // error TODO
-            continue;
-          }
           if (authorizationData) {
             const concreteAuthorizationData = getValueOrDefault(
               this.authorizationDataByParentTypeName,
@@ -1312,15 +1309,27 @@ export class FederationFactory {
           // The subgraph locations of the interface object must be added to the concrete types that implement it
           const entityData = getOrThrowError(this.entityDataByTypeName, concreteTypeName, 'entityDataByTypeName');
           entityData.subgraphNames.add(subgraphName);
-          const configurationData: ConfigurationData = {
-            fieldNames,
-            isRootNode: true,
-            keys,
-            typeName: concreteTypeName,
-          };
+          // The configurationData can exist already because an entity might implement several entity interfaces
+          const configurationData = getValueOrDefault(configurationDataByTypeName, concreteTypeName, () =>
+            newConfigurationData(true, concreteTypeName),
+          );
+          addIterableValuesToSet(fieldNames, configurationData.fieldNames);
           const resolvableKeyFieldSets = new Set<string>();
-          for (const key of keys.filter((k) => !k.disableEntityResolver)) {
-            resolvableKeyFieldSets.add(key.selectionSet);
+          const configurationKeys = configurationData.keys || [];
+          for (const interfaceObjectKey of interfaceObjectKeys) {
+            if (!interfaceObjectKey.disableEntityResolver) {
+              resolvableKeyFieldSets.add(interfaceObjectKey.selectionSet);
+            }
+            if (configurationKeys.some((key) => key.selectionSet === interfaceObjectKey.selectionSet)) {
+              continue;
+            }
+            configurationKeys.push({
+              fieldName: '',
+              selectionSet: interfaceObjectKey.selectionSet,
+            });
+          }
+          if (configurationKeys.length > 0) {
+            configurationData.keys = configurationKeys;
           }
           for (const fieldName of entityInterfaceData.interfaceObjectFieldNames) {
             const existingFieldData = concreteTypeData.fieldDataByFieldName.get(fieldName);
@@ -1335,7 +1344,7 @@ export class FederationFactory {
             );
             concreteTypeData.fieldDataByFieldName.set(fieldName, { ...interfaceFieldData });
           }
-          configurationDataMap.set(concreteTypeName, configurationData);
+          configurationDataByTypeName.set(concreteTypeName, configurationData);
           this.handleInterfaceObjectForInternalGraph({
             internalSubgraph,
             subgraphName,
