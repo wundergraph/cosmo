@@ -7,18 +7,6 @@ on:
   push:
     branches:
       - 'release-please--**'
-  pull_request:
-    branches:
-      - main
-    paths:
-      - "helm/**/CHANGELOG.md"
-      - ".release-please-manifest.json"
-      - "helm/**/Chart.yaml"
-    types:
-      - reopened
-      - synchronize
-      - opened
-      - edited
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref }}
