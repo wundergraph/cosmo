@@ -231,6 +231,7 @@ This module adds custom attributes to the OpenTelemetry span for each gateway re
 ```go
 type MyModule struct{}
 
+// Ensure that MyModule implements the GatewayHooks interface
 var _ GatewayHooks = (*MyModule)(nil)
 
 func (m *MyModule) OnGatewayRequest(req *core.GatewayRequest, err error) error {
@@ -250,6 +251,7 @@ This module intercepts the final Gateway response to rewrite errors and add cust
 ```go
 type MyModule struct{}
 
+// Ensure that MyModule implements the GatewayHooks interface
 var _ GatewayHooks = (*MyModule)(nil)
 
 func (m *MyModule) OnGatewayResponse(res *core.GatewayResponse, err error) error {
@@ -274,6 +276,7 @@ This module adds custom log fields to the gateway and subgraph logs. Data can co
 ```go
 type MyModule struct{}
 
+// Ensure that MyModule implements the GatewayHooks interface
 var _ GatewayHooks = (*MyModule)(nil)
 
 func (m *MyModule) OnGatewayRequest(req *core.GatewayRequest, err error) error {
@@ -293,6 +296,7 @@ type MyModule struct{
 	Redis *redis.Client
 }
 
+// Ensure that MyModule implements the SubgraphHooks interface
 var _ SubgraphHooks = (*MyModule)(nil)
 
 func (m *MyModule) Provision(ctx *core.ModuleContext) error {
@@ -461,6 +465,7 @@ type MyModule struct{
 	Value uint64 `yaml:"value"`
 }
 
+// Ensure that MyModule implements the GatewayHooks interface
 var _ GatewayHooks = (*MyModule)(nil)
 
 func (m *MyModule) Provision(ctx *core.ModuleContext) error {
@@ -485,6 +490,9 @@ type ModuleB struct{
 func (m *ModuleB) OnGatewayRequest(req *core.GatewayRequest, err error) error {
 	// Access the parent module value
 	m.value
+	
+	// Access the request store to share data between modules
+	req.store.get("myData")
 
 	return nil
 }
