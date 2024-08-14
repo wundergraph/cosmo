@@ -1,4 +1,5 @@
 import withMarkdoc from "@markdoc/next.js";
+import { withSentryConfig } from "@sentry/nextjs";
 import pkg from "./package.json" assert { type: "json" };
 
 const isPreview = process.env.VERCEL_ENV === "preview";
@@ -6,6 +7,12 @@ const isPreview = process.env.VERCEL_ENV === "preview";
 const allowUnsafeEval = true;
 // Report CSP violations to the console instead of blocking them
 const debugCSP = false;
+// Enable or disable the sentry integration
+const isSentryEnabled = process.env.SENTRY_ENABLED === "true";
+const sentryDebugEnabled = process.env.SENTRY_DEBUG === "false";
+
+const sentryOrganization = process.env.SENTRY_ORGANIZATION || "";
+const sentryProject = process.env.SENTRY_PROJECT || "";
 
 // Content Security Policy (CSP) is a security standard that helps prevent cross-site scripting (XSS),
 // clickjacking, and other code injection attacks resulting from execution of malicious content
@@ -81,4 +88,56 @@ const config = {
   },
 };
 
-export default withMarkdoc({ mode: "static" })(config);
+const withOptionalSentryConfig = (org, project, config) =>
+  withSentryConfig(config, {
+    // For all available options, see:
+    // https://github.com/getsentry/sentry-webpack-plugin#options
+
+    org: org,
+    project: project,
+
+    telemetry: false,
+
+    // Only print logs for uploading source maps in CI
+    silent: !process.env.CI,
+
+    // For all available options, see:
+    // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
+
+    // Upload a larger set of source maps for prettier stack traces (increases build time)
+    widenClientFileUpload: true,
+
+    // Uncomment to route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
+    // This can increase your server load as well as your hosting bill.
+    // Note: Check that the configured route will not match with your Next.js middleware, otherwise reporting of client-
+    // side errors will fail.
+    // tunnelRoute: "/monitoring",
+
+    // Hides source maps from generated client bundles
+    hideSourceMaps: true,
+    reactComponentAnnotation: {
+      enabled: true,
+    },
+
+    // Automatically tree-shake Sentry logger statements to reduce bundle size
+    disableLogger: !sentryDebugEnabled,
+
+    // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
+    // See the following for more information:
+    // https://docs.sentry.io/product/crons/
+    // https://vercel.com/docs/cron-jobs
+    automaticVercelMonitors: true,
+  });
+
+const withOptionalFeatures = (config) => {
+  if (isSentryEnabled) {
+    config = withOptionalSentryConfig(
+      sentryOrganization,
+      sentryProject,
+      config,
+    );
+  }
+  return config;
+};
+
+export default withOptionalFeatures(withMarkdoc({ mode: "static" })(config));
