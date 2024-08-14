@@ -88,3 +88,11 @@ export type ConfigurationData = {
   keys?: RequiredFieldConfiguration[];
   requires?: RequiredFieldConfiguration[];
 };
+
+export function newConfigurationData(isRootNode: boolean, typeName: string): ConfigurationData {
+  return {
+    fieldNames: new Set<string>(),
+    isRootNode,
+    typeName,
+  };
+}
