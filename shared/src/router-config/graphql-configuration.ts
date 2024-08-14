@@ -8,6 +8,8 @@ import {
   EntityInterfaceConfiguration,
   EventType,
   FieldConfiguration,
+  FieldCoordinates,
+  FieldSetCondition,
   KafkaEventConfiguration,
   NatsEventConfiguration,
   NatsStreamConfiguration,
@@ -38,21 +40,54 @@ export type DataSourceConfiguration = {
   interfaceObjects: EntityInterfaceConfiguration[];
 };
 
-function addRequiredFields(
-  requiredFields: RequiredFieldConfiguration[] | undefined,
-  target: RequiredField[],
+function generateFieldSetConditions(requiredField: RequiredFieldConfiguration): Array<FieldSetCondition> | undefined {
+  if (!requiredField.conditions) {
+    return;
+  }
+  const conditions: Array<FieldSetCondition> = [];
+  for (const fieldSetCondition of requiredField.conditions) {
+    const fieldCoordinatesPath: Array<FieldCoordinates> = [];
+    for (const path of fieldSetCondition.fieldCoordinatesPath) {
+      const fieldCoordinates = path.split('.');
+      if (fieldCoordinates.length !== 2) {
+        throw new Error(
+          `fatal: malformed conditional field coordinates "${path}" for field set "${requiredField.selectionSet}".`,
+        );
+      }
+      fieldCoordinatesPath.push(
+        new FieldCoordinates({
+          fieldName: fieldCoordinates[1],
+          typeName: fieldCoordinates[0],
+        }),
+      );
+    }
+    conditions.push(
+      new FieldSetCondition({
+        fieldCoordinatesPath,
+        fieldPath: fieldSetCondition.fieldPath,
+      }),
+    );
+  }
+  return conditions;
+}
+
+export function addRequiredFields(
+  requiredFields: Array<RequiredFieldConfiguration> | undefined,
+  target: Array<RequiredField>,
   typeName: string,
 ) {
   if (!requiredFields) {
     return;
   }
   for (const requiredField of requiredFields) {
+    const conditions = generateFieldSetConditions(requiredField);
     target.push(
       new RequiredField({
         typeName,
         fieldName: requiredField.fieldName,
         selectionSet: requiredField.selectionSet,
         ...(requiredField.disableEntityResolver ? { disableEntityResolver: true } : {}),
+        ...(conditions ? { conditions } : {}),
       }),
     );
   }
@@ -72,8 +107,8 @@ function eventType(type: CompositionEventType) {
   }
 }
 
-export function configurationDataMapToDataSourceConfiguration(
-  dataMap: Map<string, ConfigurationData>,
+export function configurationDatasToDataSourceConfiguration(
+  dataByTypeName: Map<string, ConfigurationData>,
 ): DataSourceConfiguration {
   const output: DataSourceConfiguration = {
     rootNodes: [],
@@ -85,7 +120,7 @@ export function configurationDataMapToDataSourceConfiguration(
     entityInterfaces: [],
     interfaceObjects: [],
   };
-  for (const data of dataMap.values()) {
+  for (const data of dataByTypeName.values()) {
     const typeName = data.typeName;
     const fieldNames: string[] = [...data.fieldNames];
     const typeField = new TypeField({ typeName, fieldNames });

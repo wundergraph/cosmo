@@ -6,9 +6,9 @@ import {
   maxOrScopes,
   normalizeSubgraphFromString,
   orScopesLimitError,
+  parse,
   Subgraph,
 } from '../src';
-import { parse } from 'graphql';
 import {
   normalizeString,
   schemaToSortedNormalizedString,
