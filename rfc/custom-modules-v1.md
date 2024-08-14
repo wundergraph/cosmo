@@ -361,10 +361,7 @@ type MyModule struct {
 
 func (m *MyModule) Provision(ctx *core.ModuleContext) error {
 	// Access the module configuration marshaled from the config file into the struct
-	cfg, err := ctx.Config()
-	if err != nil {
-		return err
-	}
+	_ = ctx.LoadConfig()
 
 	// Access the custom value from the configuration
 	m.Value
@@ -449,6 +446,46 @@ func (m *MyModule) RequiresScopesDirective(ctx *core.DirectiveContext) error {
 func (m *MyModule) Provision(ctx *core.ModuleContext) error {
 	ctx.RegisterDirectiveHandler("cacheControl", m.CacheControlDirective)
 	ctx.RegisterDirectiveHandler("requiresScopes", m.RequiresScopesDirective)
+	return nil
+}
+```
+
+# Module Composition
+
+Modules can be composed by chaining them together in the `Provision` method. This allows developers to create complex behavior by combining multiple modules which simplify testing and maintenance.
+The order in which modules are composed determines the order in which they are executed. The submodules are executed first in the order they are registered, followed by the parent module.
+Data from the parent module can be passed to the submodules as arguments in the constructor. Request and response data can be shared between modules using the request store.
+
+```go
+type MyModule struct{
+	Value uint64 `yaml:"value"`
+}
+
+var _ GatewayHooks = (*MyModule)(nil)
+
+func (m *MyModule) Provision(ctx *core.ModuleContext) error {
+	    
+	// Access the module configuration marshaled from the config file into the struct
+	_ = ctx.LoadConfig()
+	
+	// Compose multiple modules together
+	_ = ctx.RegisterModule(&ModuleB{
+		value: m.Value,
+	}, core.WithXyz("abc"))
+
+	return nil
+}
+
+// ModuleB is a submodule of ModuleA
+
+type ModuleB struct{
+    value uint64
+}
+
+func (m *ModuleB) OnGatewayRequest(req *core.GatewayRequest, err error) error {
+	// Access the parent module value
+	m.value
+
 	return nil
 }
 ```
