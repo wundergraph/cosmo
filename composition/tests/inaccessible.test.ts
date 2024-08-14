@@ -10,9 +10,9 @@ import {
   invalidInterfaceImplementationError,
   normalizeSubgraph,
   ObjectDefinitionData,
+  parse,
   Subgraph,
 } from '../src';
-import { parse } from 'graphql';
 import {
   normalizeString,
   schemaToSortedNormalizedString,

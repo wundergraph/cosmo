@@ -1,6 +1,5 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { SQL, and, count, desc, eq, gt, lt } from 'drizzle-orm';
-import { JsonValue } from '@bufbuild/protobuf';
 import { FastifyBaseLogger } from 'fastify';
 import { splitLabel } from '@wundergraph/cosmo-shared';
 import * as schema from '../../db/schema.js';

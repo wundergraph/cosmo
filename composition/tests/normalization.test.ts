@@ -1150,22 +1150,6 @@ describe('Normalization tests', () => {
     expect(errors).toBeUndefined();
   });
 
-  test.skip('Should give errors if the provides directive points to a field that is not external ', () => {
-    const { errors } = normalizeSubgraphFromString(`
-     type Review @key(fields : "id") {
-      id: String!
-      user: User! @provides(fields : "age")
-    }
-    
-    type User @key(fields : "userId") {
-      userId: String!
-      name: String! @external
-      age: Int!
-    }
-    `);
-    expect(errors).toBeDefined();
-  });
-
   test('that an error is returned if @provides refers to a non-existent field', () => {
     const { errors } = normalizeSubgraphFromString(`
      type Review @key(fields : "id") {
@@ -1275,18 +1259,6 @@ describe('Normalization tests', () => {
       }
     `);
     expect(errors).toBeUndefined();
-  });
-
-  test.skip('Should give errors if the requires directive points to a field which is not external ', () => {
-    const { errors } = normalizeSubgraphFromString(`
-     type Product @key(fields : "id") {
-        id: String!
-        shippingCost: String! @requires(fields : "age")
-        weight: Float! @external
-        age: Int
-      }
-    `);
-    expect(errors).toBeDefined();
   });
 
   test('Should give errors if the requires directive points to a field which does not exist ', () => {
@@ -1636,7 +1608,12 @@ describe('Normalization tests', () => {
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(
       invalidKeyDirectivesError('Entity', [
-        invalidSelectionSetErrorMessage('id organization { id details }', 'Organization.details', 'Details', 'object'),
+        invalidSelectionSetErrorMessage(
+          'id organization { id details }',
+          ['Organization.details'],
+          'Details',
+          'object',
+        ),
       ]),
     );
   });

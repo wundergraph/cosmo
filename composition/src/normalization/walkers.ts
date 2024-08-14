@@ -30,7 +30,7 @@ import {
   upsertEntityDataProperties,
 } from '../utils/utils';
 import { isNodeExtension, isNodeInterfaceObject, isObjectLikeNodeEntity, SchemaNode } from '../ast/utils';
-import { extractFieldSetValue, newFieldSetData } from './utils';
+import { extractFieldSetValue, newFieldSetData, newKeyFieldSetData } from './utils';
 import {
   ANY_SCALAR,
   ENTITIES_FIELD,
@@ -132,11 +132,11 @@ export function upsertDirectiveSchemaAndEntityDefinitions(nf: NormalizationFacto
         if (!isObjectLikeNodeEntity(node)) {
           return;
         }
-        const fieldSetData = getValueOrDefault(nf.fieldSetDataByTypeName, typeName, newFieldSetData);
-        nf.extractKeyFieldSets(node, fieldSetData);
+        const keyFieldSetData = getValueOrDefault(nf.keyFieldSetDataByTypeName, typeName, newKeyFieldSetData);
+        nf.extractKeyFieldSets(node, keyFieldSetData);
         upsertEntityDataProperties(nf.entityDataByTypeName, {
           typeName,
-          keyFieldSets: fieldSetData.isUnresolvableByKeyFieldSet.keys(),
+          keyFieldSets: keyFieldSetData.isUnresolvableByKeyFieldSet.keys(),
           ...(nf.subgraphName ? { subgraphNames: [nf.subgraphName] } : {}),
         });
         getValueOrDefault(nf.entityInterfaceDataByTypeName, typeName, () => ({
@@ -155,11 +155,11 @@ export function upsertDirectiveSchemaAndEntityDefinitions(nf: NormalizationFacto
           return;
         }
         const typeName = node.name.value;
-        const fieldSetData = getValueOrDefault(nf.fieldSetDataByTypeName, typeName, newFieldSetData);
-        nf.extractKeyFieldSets(node, fieldSetData);
+        const keyFieldSetData = getValueOrDefault(nf.keyFieldSetDataByTypeName, typeName, newKeyFieldSetData);
+        nf.extractKeyFieldSets(node, keyFieldSetData);
         upsertEntityDataProperties(nf.entityDataByTypeName, {
           typeName,
-          keyFieldSets: fieldSetData.isUnresolvableByKeyFieldSet.keys(),
+          keyFieldSets: keyFieldSetData.isUnresolvableByKeyFieldSet.keys(),
           ...(nf.subgraphName ? { subgraphNames: [nf.subgraphName] } : {}),
         });
       },
@@ -173,11 +173,11 @@ export function upsertDirectiveSchemaAndEntityDefinitions(nf: NormalizationFacto
         if (isNodeInterfaceObject(node)) {
           nf.internalGraph.addOrUpdateNode(typeName, { isAbstract: true });
         }
-        const fieldSetData = getValueOrDefault(nf.fieldSetDataByTypeName, typeName, newFieldSetData);
-        nf.extractKeyFieldSets(node, fieldSetData);
+        const keyFieldSetData = getValueOrDefault(nf.keyFieldSetDataByTypeName, typeName, newKeyFieldSetData);
+        nf.extractKeyFieldSets(node, keyFieldSetData);
         upsertEntityDataProperties(nf.entityDataByTypeName, {
           typeName,
-          keyFieldSets: fieldSetData.isUnresolvableByKeyFieldSet.keys(),
+          keyFieldSets: keyFieldSetData.isUnresolvableByKeyFieldSet.keys(),
           ...(nf.subgraphName ? { subgraphNames: [nf.subgraphName] } : {}),
         });
       },
@@ -188,11 +188,11 @@ export function upsertDirectiveSchemaAndEntityDefinitions(nf: NormalizationFacto
           return;
         }
         const typeName = node.name.value;
-        const fieldSetData = getValueOrDefault(nf.fieldSetDataByTypeName, typeName, newFieldSetData);
-        nf.extractKeyFieldSets(node, fieldSetData);
+        const keyFieldSetData = getValueOrDefault(nf.keyFieldSetDataByTypeName, typeName, newKeyFieldSetData);
+        nf.extractKeyFieldSets(node, keyFieldSetData);
         upsertEntityDataProperties(nf.entityDataByTypeName, {
           typeName,
-          keyFieldSets: fieldSetData.isUnresolvableByKeyFieldSet.keys(),
+          keyFieldSets: keyFieldSetData.isUnresolvableByKeyFieldSet.keys(),
           ...(nf.subgraphName ? { subgraphNames: [nf.subgraphName] } : {}),
         });
       },
@@ -488,42 +488,30 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           nf.isSubgraphVersionTwo,
           nf.errors,
         );
+        const providesDirectives = fieldData.directivesByDirectiveName.get(PROVIDES);
+        const requiresDirectives = fieldData.directivesByDirectiveName.get(REQUIRES);
+        // return early to avoid creating unnecessary FieldSetDatas
+        if (!requiresDirectives && !providesDirectives) {
+          return;
+        }
         const entityData = nf.entityDataByTypeName.get(nf.originalParentTypeName);
         if (entityData) {
           entityData.fieldNames.add(nf.childName);
-          // Only entities will have an existing FieldSet
-          const existingFieldSet = nf.fieldSetDataByTypeName.get(nf.originalParentTypeName);
-          if (existingFieldSet) {
-            // @requires should only be defined on a field whose parent is an entity
-            // If there is existingFieldSet, it's an entity
-            extractFieldSetValue(
-              nf.childName,
-              existingFieldSet.requires,
-              fieldData.directivesByDirectiveName.get(REQUIRES),
-            );
-            // @provides only makes sense on entities, but the field can be encountered before the type definition
-            // When the FieldSet is evaluated, it will be checked whether the field is an entity.
-            extractFieldSetValue(
-              nf.childName,
-              existingFieldSet.provides,
-              fieldData.directivesByDirectiveName.get(PROVIDES),
-            );
-            return;
-          }
+          const fieldSetData = getValueOrDefault(nf.fieldSetDataByTypeName, nf.originalParentTypeName, newFieldSetData);
+          extractFieldSetValue(nf.childName, fieldSetData.requires, requiresDirectives);
+          extractFieldSetValue(nf.childName, fieldSetData.provides, providesDirectives);
+          return;
         }
-        const providesDirectives = fieldData.directivesByDirectiveName.get(PROVIDES);
+        // @requires should only be defined on a field whose parent is an entity
+        if (requiresDirectives) {
+          // todo warning
+        }
         // Check whether the directive exists to avoid creating unnecessary fieldSet configurations
         if (!providesDirectives) {
           return;
         }
-        const fieldSetContainer = getValueOrDefault(
-          nf.fieldSetDataByTypeName,
-          nf.originalParentTypeName,
-          newFieldSetData,
-        );
-        // @provides only makes sense on entities, but the field can be encountered before the type definition
-        // When the FieldSet is evaluated, it will be checked whether the field is an entity.
-        extractFieldSetValue(nf.childName, fieldSetContainer.provides, providesDirectives);
+        const fieldSetData = getValueOrDefault(nf.fieldSetDataByTypeName, nf.originalParentTypeName, newFieldSetData);
+        extractFieldSetValue(nf.childName, fieldSetData.provides, providesDirectives);
       },
       leave() {
         nf.childName = '';

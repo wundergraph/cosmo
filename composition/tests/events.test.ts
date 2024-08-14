@@ -20,13 +20,13 @@ import {
   nonKeyFieldNamesEventDrivenErrorMessage,
   normalizeSubgraph,
   normalizeSubgraphFromString,
+  parse,
   Subgraph,
   subgraphValidationError,
   undefinedNatsStreamConfigurationInputErrorMessage,
   undefinedRequiredArgumentsErrorMessage,
   unexpectedDirectiveArgumentErrorMessage,
 } from '../src';
-import { parse } from 'graphql';
 import {
   DEFAULT_EDFS_PROVIDER_ID,
   EDFS_NATS_PUBLISH,
@@ -50,7 +50,7 @@ describe('events Configuration tests', () => {
       const { errors, normalizationResult } = normalizeSubgraphFromString(subgraphStringA);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
+      expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Query',
@@ -174,7 +174,7 @@ describe('events Configuration tests', () => {
       const { errors, normalizationResult } = normalizeSubgraphFromString(subgraphStringB);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
+      expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Subscription',
@@ -211,7 +211,7 @@ describe('events Configuration tests', () => {
       const { errors, normalizationResult } = normalizeSubgraphFromString(subgraphStringC);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
+      expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Query',
@@ -397,7 +397,7 @@ describe('events Configuration tests', () => {
       const { errors, normalizationResult } = normalizeSubgraph(subgraphU.definitions, subgraphU.name);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
+      expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -584,7 +584,7 @@ describe('events Configuration tests', () => {
     });
 
     test('that an interface implemented by an entity is a valid root type response named type', () => {
-      const { errors, federationResult } = federateSubgraphs([subgraphI]);
+      const { errors, federationResult } = federateSubgraphs([subgraphI, subgraphV]);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
@@ -625,7 +625,7 @@ describe('events Configuration tests', () => {
     });
 
     test('that a union of which an entity is a member is a valid root type response named type', () => {
-      const { errors, federationResult } = federateSubgraphs([subgraphJ]);
+      const { errors, federationResult } = federateSubgraphs([subgraphJ, subgraphV]);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1226,6 +1226,22 @@ const subgraphU: Subgraph = {
     
     type edfs__PublishResult {
       success: Boolean!
+    }
+  `),
+};
+
+const subgraphV: Subgraph = {
+  name: 'subgraph-v',
+  url: '',
+  definitions: parse(`
+
+    type Entity @key(fields: "id object { id }") {
+      id: ID!
+      object: Object
+    }
+
+    type Object {
+      id: ID!
     }
   `),
 };

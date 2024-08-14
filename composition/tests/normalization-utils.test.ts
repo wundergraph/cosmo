@@ -1,6 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { getNormalizedFieldSet } from '../src/normalization/utils';
-import { parse } from 'graphql';
+import { getNormalizedFieldSet, parse } from '../src';
 
 describe('Utils tests', () => {
   test('that a deeply nested FieldSet is normalized', () => {

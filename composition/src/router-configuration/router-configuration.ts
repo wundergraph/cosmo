@@ -49,9 +49,30 @@ export type FieldConfiguration = {
   requiredScopes?: string[][];
 };
 
+export type FieldSetCondition = {
+  fieldCoordinatesPath: Array<string>;
+  fieldPath: Array<string>;
+};
+
+export type FieldSetConditionOptions = {
+  fieldCoordinatesPath: Array<string>;
+  fieldPath: Array<string>;
+};
+
+export function newFieldSetConditionData({
+  fieldCoordinatesPath,
+  fieldPath,
+}: FieldSetConditionOptions): FieldSetCondition {
+  return {
+    fieldCoordinatesPath,
+    fieldPath,
+  };
+}
+
 export type RequiredFieldConfiguration = {
   fieldName: string;
   selectionSet: string;
+  conditions?: Array<FieldSetCondition>;
   disableEntityResolver?: boolean;
 };
 

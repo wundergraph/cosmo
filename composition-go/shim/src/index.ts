@@ -57,7 +57,7 @@ export function buildRouterConfiguration(subgraphs: Subgraph[]): string {
     subgraphs: subgraphs.map((s, index) => {
       const subgraphConfig = result.federationResult!.subgraphConfigBySubgraphName.get(s.name);
       const schema = subgraphConfig?.schema;
-      const configurationDataMap = subgraphConfig?.configurationDataMap;
+      const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
       return {
         id: `${index}`,
         name: s.name,
@@ -67,7 +67,7 @@ export function buildRouterConfiguration(subgraphs: Subgraph[]): string {
         subscriptionProtocol: s.subscription_protocol ?? 'ws',
         websocketSubprotocol: s.subscription_protocol === 'ws' ? s.websocketSubprotocol || 'auto': undefined,
         schema,
-        configurationDataMap,
+        configurationDataByTypeName,
       };
     }),
   });
