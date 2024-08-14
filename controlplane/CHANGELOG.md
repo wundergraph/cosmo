@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.102.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.102.1...controlplane@0.102.2) (2024-08-14)
+
+### Bug Fixes
+
+* **cli-compose:** feature subgraph introspection ([#1078](https://github.com/wundergraph/cosmo/issues/1078)) ([13a7d63](https://github.com/wundergraph/cosmo/commit/13a7d638ac879e759e56d29fbd660aac5e3c3fc0)) (@StarpTech)
+
 ## [0.102.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.102.0...controlplane@0.102.1) (2024-08-10)
 
 **Note:** Version bump only for package controlplane
