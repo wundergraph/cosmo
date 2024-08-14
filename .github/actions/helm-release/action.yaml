@@ -23,10 +23,6 @@ inputs:
     required: true
     type: string
 
-permissions:
-  contents: read
-  packages: write
-
 runs:
   using: composite
   steps:
