@@ -723,7 +723,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 
 	planOptions := PlanOptions{
 		Protocol:         OperationProtocolWS,
-		ClientInfo:       *h.clientInfo,
+		ClientInfo:       h.clientInfo,
 		TraceOptions:     traceOptions,
 		ExecutionOptions: executionOptions,
 	}
