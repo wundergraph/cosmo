@@ -26,35 +26,59 @@ func NewTraceTimings(ctx context.Context) *TraceTimings {
 }
 
 func (tt *TraceTimings) StartParse() {
+	if tt == nil {
+		return
+	}
 	tt.ParseStart = resolve.GetDurationNanoSinceTraceStart(tt.ctx)
 }
 
 func (tt *TraceTimings) EndParse() {
+	if tt == nil {
+		return
+	}
 	tt.ParseEnd = resolve.GetDurationNanoSinceTraceStart(tt.ctx)
 }
 
 // StartNormalize starts the timing for the normalization step
 func (tt *TraceTimings) StartNormalize() {
+	if tt == nil {
+		return
+	}
 	tt.NormalizeStart = resolve.GetDurationNanoSinceTraceStart(tt.ctx)
 }
 
 func (tt *TraceTimings) EndNormalize() {
+	if tt == nil {
+		return
+	}
 	tt.NormalizeEnd = resolve.GetDurationNanoSinceTraceStart(tt.ctx)
 }
 
 func (tt *TraceTimings) StartValidate() {
+	if tt == nil {
+		return
+	}
 	tt.ValidateStart = resolve.GetDurationNanoSinceTraceStart(tt.ctx)
 }
 
 func (tt *TraceTimings) EndValidate() {
+	if tt == nil {
+		return
+	}
 	tt.ValidateEnd = resolve.GetDurationNanoSinceTraceStart(tt.ctx)
 }
 
 func (tt *TraceTimings) StartPlanning() {
+	if tt == nil {
+		return
+	}
 	tt.PlanningStart = resolve.GetDurationNanoSinceTraceStart(tt.ctx)
 }
 
 func (tt *TraceTimings) EndPlanning() {
+	if tt == nil {
+		return
+	}
 	tt.PlanningEnd = resolve.GetDurationNanoSinceTraceStart(tt.ctx)
 }
 
@@ -75,6 +99,9 @@ func (tt *TraceTimings) DurationPlanning() int64 {
 }
 
 func SetRequestTracingStats(ctx context.Context, traceOptions resolve.TraceOptions, traceTimings *TraceTimings) {
+	if traceTimings == nil {
+		return
+	}
 	if !traceOptions.ExcludeParseStats {
 		resolve.SetParseStats(ctx, resolve.PhaseStats{
 			DurationSinceStartNano:   traceTimings.ParseStart,
