@@ -2,6 +2,7 @@ package internal
 
 import (
 	"fmt"
+
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
@@ -46,6 +47,7 @@ func NewRouter(opts ...Option) *core.Router {
 		core.WithLogger(logger),
 		core.WithPlayground(true),
 		core.WithIntrospection(true),
+		core.WithQueryPlans(true),
 		core.WithStaticExecutionConfig(routerConfig),
 		core.WithAwsLambdaRuntime(),
 		core.WithGraphApiToken(rc.GraphApiToken),
