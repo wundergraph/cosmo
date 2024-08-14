@@ -41,12 +41,26 @@ func TestKafkaEvents(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 
-	ctx := context.Background()
-	kafkaContainer, err := kafka.RunContainer(ctx,
-		testcontainers.WithImage("confluentinc/confluent-local:7.6.1"),
-		testcontainers.WithWaitStrategyAndDeadline(time.Second*30, wait.ForListeningPort("9093/tcp")),
+	var (
+		kafkaContainer *kafka.KafkaContainer
+		err            error
 	)
-	require.NoError(t, err)
+
+	ctx := context.Background()
+	require.Eventually(t, func() bool {
+		// when using Docker Desktop on Mac, it's possible that it takes 2 attempts to get the network port of the container
+		// I've debugged this extensively and the issue is not with the testcontainers-go library, but with the Docker Desktop
+		// Error message: container logs (port not found)
+		// This is an internal issue coming from the Docker pkg
+		// It seems like Docker Desktop on Mac is not always capable of providing a port mapping
+		// The solution is to retry the container creation until we get the network port
+		// Please don't try to improve this code as this workaround allows running the tests without any issues
+		kafkaContainer, err = kafka.RunContainer(ctx,
+			testcontainers.WithImage("confluentinc/confluent-local:7.6.1"),
+			testcontainers.WithWaitStrategyAndDeadline(time.Second*30, wait.ForListeningPort("9093/tcp")),
+		)
+		return err == nil && kafkaContainer != nil
+	}, time.Second*30, time.Second)
 
 	require.NoError(t, kafkaContainer.Start(ctx))
 
