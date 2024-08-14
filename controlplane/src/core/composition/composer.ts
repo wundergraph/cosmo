@@ -95,7 +95,7 @@ export function subgraphDTOsToComposedSubgraphs(
      * */
     const subgraphConfig = result?.subgraphConfigBySubgraphName.get(subgraph.name);
     const schema = subgraphConfig?.schema;
-    const configurationDataMap = subgraphConfig?.configurationDataMap;
+    const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
     return {
       id: subgraph.id,
       name: subgraph.name,
@@ -106,7 +106,7 @@ export function subgraphDTOsToComposedSubgraphs(
       subscriptionProtocol: subgraph.subscriptionProtocol,
       websocketSubprotocol:
         subgraph.subscriptionProtocol === 'ws' ? subgraph.websocketSubprotocol || 'auto' : undefined,
-      configurationDataMap,
+      configurationDataByTypeName,
       schema,
     };
   });

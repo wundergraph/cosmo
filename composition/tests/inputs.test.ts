@@ -2,10 +2,10 @@ import {
   federateSubgraphs,
   incompatibleInputValueDefaultValueTypeError,
   invalidRequiredInputValueError,
+  parse,
   Subgraph,
   subgraphValidationError,
 } from '../src';
-import { parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
 import { normalizeString, schemaToSortedNormalizedString, versionOneRouterDefinitions } from './utils/utils';
 import { INPUT_OBJECT } from '../src/utils/string-constants';
