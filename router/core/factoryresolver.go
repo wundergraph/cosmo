@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
 	"net/http"
 	"net/url"
+	"slices"
 	"time"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
 
 	"github.com/buger/jsonparser"
 
@@ -194,7 +196,6 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 		outConfig plan.Configuration
 	)
 	// attach field usage information to the plan
-	outConfig.IncludeInfo = l.includeInfo
 	outConfig.DefaultFlushIntervalMillis = engineConfig.DefaultFlushInterval
 	for _, configuration := range engineConfig.FieldConfigurations {
 		var args []plan.ArgumentConfiguration
@@ -359,8 +360,10 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				return nil, fmt.Errorf("error creating custom configuration for data source %s: %w", in.Id, err)
 			}
 
-			out, err = plan.NewDataSourceConfiguration[graphql_datasource.Configuration](
+			dataSourceName := l.subgraphName(subgraphs, in.Id)
+			out, err = plan.NewDataSourceConfigurationWithName[graphql_datasource.Configuration](
 				in.Id,
+				dataSourceName,
 				factory,
 				l.dataSourceMetaData(in),
 				customConfiguration,
@@ -445,6 +448,18 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 		outConfig.DataSources = append(outConfig.DataSources, out)
 	}
 	return &outConfig, nil
+}
+
+func (l *Loader) subgraphName(subgraphs []*nodev1.Subgraph, dataSourceID string) string {
+	i := slices.IndexFunc(subgraphs, func(s *nodev1.Subgraph) bool {
+		return s.Id == dataSourceID
+	})
+
+	if i != -1 {
+		return subgraphs[i].Name
+	}
+
+	return ""
 }
 
 func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.DataSourceMetadata {
