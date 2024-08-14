@@ -251,7 +251,6 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 		PlanningVisitor:               debug.PlanningVisitor,
 		DatasourceVisitor:             debug.DatasourceVisitor,
 	}
-	planConfig.IncludeInfo = true
 	planConfig.MinifySubgraphOperations = routerEngineCfg.Execution.MinifySubgraphOperations
 	return planConfig, nil
 }

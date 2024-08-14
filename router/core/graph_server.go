@@ -393,7 +393,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		}
 	}
 
-	routerMetrics := NewRouterMetrics(&routerMetricsConfig{
+	metrics := NewRouterMetrics(&routerMetricsConfig{
 		metrics:             s.metricStore,
 		gqlMetricsExporter:  s.gqlMetricsExporter,
 		exportEnabled:       s.graphqlMetricsConfig.Enabled,
@@ -621,7 +621,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
 		Logger:                      s.logger,
 		Executor:                    executor,
-		Metrics:                     routerMetrics,
+		Metrics:                     metrics,
 		OperationProcessor:          operationProcessor,
 		Planner:                     operationPlanner,
 		AccessController:            s.accessController,
@@ -635,6 +635,9 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		FileUploadEnabled:           s.fileUploadConfig.Enabled,
 		MaxUploadFiles:              s.fileUploadConfig.MaxFiles,
 		MaxUploadFileSize:           int(s.fileUploadConfig.MaxFileSizeBytes),
+		AlwaysIncludeQueryPlan:      s.engineExecutionConfiguration.Debug.AlwaysIncludeQueryPlan,
+		AlwaysSkipLoader:            s.engineExecutionConfiguration.Debug.AlwaysSkipLoader,
+		QueryPlansEnabled:           s.Config.queryPlansEnabled,
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
@@ -643,7 +646,8 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			OperationBlocker:           operationBlocker,
 			Planner:                    operationPlanner,
 			GraphQLHandler:             graphqlHandler,
-			Metrics:                    routerMetrics,
+			PreHandler:                 graphqlPreHandler,
+			Metrics:                    metrics,
 			AccessController:           s.accessController,
 			Logger:                     s.logger,
 			Stats:                      s.websocketStats,

@@ -6,6 +6,13 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"net"
+	"net/http"
+	"net/url"
+	"os"
+	"sync"
+	"time"
+
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/cdn"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/s3"
@@ -14,12 +21,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 	configCDNProvider "github.com/wundergraph/cosmo/router/pkg/routerconfig/cdn"
 	configs3Provider "github.com/wundergraph/cosmo/router/pkg/routerconfig/s3"
-	"net"
-	"net/http"
-	"net/url"
-	"os"
-	"sync"
-	"time"
 
 	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/graphiql"
@@ -154,6 +155,7 @@ type (
 		graphqlPath               string
 		playground                bool
 		introspection             bool
+		queryPlansEnabled         bool
 		graphApiToken             string
 		healthCheckPath           string
 		readinessCheckPath        string
@@ -333,6 +335,8 @@ func NewRouter(opts ...Option) (*Router, error) {
 		// Required for WunderGraph ART
 		"x-wg-trace",
 		"x-wg-token",
+		"x-wg-skip-loader",
+		"x-wg-include-query-plan",
 		// Required for Trace Context propagation
 		"traceparent",
 		"tracestate",
@@ -1259,6 +1263,12 @@ func WithPlayground(enable bool) Option {
 func WithIntrospection(enable bool) Option {
 	return func(r *Router) {
 		r.introspection = enable
+	}
+}
+
+func WithQueryPlans(enabled bool) Option {
+	return func(r *Router) {
+		r.queryPlansEnabled = enabled
 	}
 }
 

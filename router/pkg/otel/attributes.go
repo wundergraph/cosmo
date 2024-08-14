@@ -32,6 +32,7 @@ const (
 	WgAcquireResolverWaitTimeMs        = attribute.Key("wg.engine.resolver.wait_time_ms")
 	WgNormalizationCacheHit            = attribute.Key("wg.engine.normalization_cache_hit")
 	WgValidationCacheHit               = attribute.Key("wg.engine.validation_cache_hit")
+	WgVariablesValidationSkipped       = attribute.Key("wg.engine.variables_validation_skipped")
 	// HTTPRequestUploadFileCount is the number of files uploaded in a request (Not specified in the OpenTelemetry specification)
 	HTTPRequestUploadFileCount = attribute.Key("http.request.upload.file_count")
 )

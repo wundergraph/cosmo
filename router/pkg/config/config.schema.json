@@ -659,6 +659,8 @@
             "Apollo-Graphql-Client-Version",
             "x-wg-trace",
             "x-wg-token",
+            "x-wg-include-query-plan",
+            "x-wg-skip-loader",
             "traceparent",
             "tracestate"
           ],
@@ -711,6 +713,11 @@
     "introspection_enabled": {
       "type": "boolean",
       "description": "Enable the GraphQL introspection. The GraphQL introspection allows you to query the schema of the GraphQL API. The default value is true. If the value is false, the GraphQL introspection is disabled. In production, it is recommended to disable the introspection.",
+      "default": true
+    },
+    "query_plans_enabled": {
+      "type": "boolean",
+      "description": "Query plans can be very useful for debugging and understand the query execution. By default, query plans are enabled, but they are still only accessible if a request is signed (from Cosmo Studio) or in dev mode, which is relatively secure. If you want to disable query plans completely, set this to false.",
       "default": true
     },
     "log_level": {
@@ -1381,6 +1388,16 @@
             "enable_normalization_cache_response_header": {
               "type": "boolean",
               "description": "Enable the normalization cache response header. The normalization cache response header is used to cache the normalized operations in the client."
+            },
+            "always_include_query_plan": {
+              "type": "boolean",
+              "default": false,
+              "description": "Always include the query plan in the response."
+            },
+            "always_skip_loader": {
+              "type": "boolean",
+              "default": false,
+              "description": "Always skip the loader. This will return no data but only render response extensions, e.g. to expose the query plan."
             }
           }
         },
@@ -1432,7 +1449,7 @@
         },
         "minify_subgraph_operations": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "description": "Minify the subgraph operations. If the value is true, GraphQL Operations get minified after planning. This reduces the amount of GraphQL AST nodes the Subgraph has to parse, which ultimately saves CPU time and memory, resulting in faster response times."
         },
         "enable_persisted_operations_cache": {

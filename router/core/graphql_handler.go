@@ -159,10 +159,11 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Request: resolve.Request{
 			Header: r.Header,
 		},
-		RenameTypeNames: h.executor.RenameTypeNames,
-		TracingOptions:  operationCtx.traceOptions,
-		InitialPayload:  operationCtx.initialPayload,
-		Extensions:      operationCtx.extensions,
+		RenameTypeNames:  h.executor.RenameTypeNames,
+		TracingOptions:   operationCtx.traceOptions,
+		InitialPayload:   operationCtx.initialPayload,
+		Extensions:       operationCtx.extensions,
+		ExecutionOptions: operationCtx.executionOptions,
 	}
 
 	ctx = ctx.WithContext(executionContext)
