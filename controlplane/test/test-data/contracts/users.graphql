@@ -1,0 +1,21 @@
+type Query {
+  internalUser(id: ID!): InternalUser! @tag(name: "dev-only")
+  user(id: ID!): User!
+}
+
+type Mutation {
+  internalUpdateUser(id: ID!): InternalUser! @tag(name: "dev-only")
+  updateUser(id: ID!): User!
+}
+
+type User @key(fields: "id") {
+  id: ID!
+  name: String!
+  age: Int!
+}
+
+type InternalUser @key(fields: "id") @tag(name: "dev-only") {
+  id: ID!
+  user: User!
+  privateField: String!
+}

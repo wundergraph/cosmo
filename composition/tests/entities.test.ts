@@ -3,10 +3,13 @@ import {
   duplicateDirectiveArgumentDefinitionsErrorMessage,
   federateSubgraphs,
   FieldData,
+  FIELDS,
   invalidDirectiveError,
   invalidFieldShareabilityError,
+  KEY,
   normalizeSubgraph,
   ObjectDefinitionData,
+  parse,
   Subgraph,
   undefinedRequiredArgumentsErrorMessage,
   unexpectedDirectiveArgumentErrorMessage,
@@ -20,8 +23,6 @@ import {
   versionOneRouterDefinitions,
   versionTwoRouterDefinitions,
 } from './utils/utils';
-import { parse } from 'graphql';
-import { FIELDS, KEY } from '../src/utils/string-constants';
 
 describe('Entity tests', () => {
   describe('Entity normalization tests', () => {
@@ -316,7 +317,7 @@ describe('Entity tests', () => {
       expect(i).toBeDefined();
       const j = subgraphConfigBySubgraphName?.get('subgraph-j');
       expect(j).toBeDefined();
-      expect(i!.configurationDataMap).toStrictEqual(
+      expect(i!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Query',
@@ -337,7 +338,7 @@ describe('Entity tests', () => {
           ],
         ]),
       );
-      expect(j!.configurationDataMap).toStrictEqual(
+      expect(j!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -360,7 +361,7 @@ describe('Entity tests', () => {
       expect(j).toBeDefined();
       const k = subgraphConfigBySubgraphName?.get('subgraph-k');
       expect(k).toBeDefined();
-      expect(j!.configurationDataMap).toStrictEqual(
+      expect(j!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -373,7 +374,7 @@ describe('Entity tests', () => {
           ],
         ]),
       );
-      expect(k!.configurationDataMap).toStrictEqual(
+      expect(k!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Query',
@@ -404,7 +405,7 @@ describe('Entity tests', () => {
       expect(k).toBeDefined();
       const l = subgraphConfigBySubgraphName?.get('subgraph-l');
       expect(l).toBeDefined();
-      expect(k!.configurationDataMap).toStrictEqual(
+      expect(k!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Query',
@@ -425,7 +426,7 @@ describe('Entity tests', () => {
           ],
         ]),
       );
-      expect(l!.configurationDataMap).toStrictEqual(
+      expect(l!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -463,7 +464,7 @@ describe('Entity tests', () => {
       expect(q).toBeDefined();
       const r = subgraphConfigBySubgraphName?.get('subgraph-r');
       expect(r).toBeDefined();
-      expect(o!.configurationDataMap).toStrictEqual(
+      expect(o!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Query',
@@ -503,7 +504,7 @@ describe('Entity tests', () => {
           ],
         ]),
       );
-      expect(p!.configurationDataMap).toStrictEqual(
+      expect(p!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -519,7 +520,7 @@ describe('Entity tests', () => {
           ],
         ]),
       );
-      expect(q!.configurationDataMap).toStrictEqual(
+      expect(q!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -551,7 +552,7 @@ describe('Entity tests', () => {
           ],
         ]),
       );
-      expect(r!.configurationDataMap).toStrictEqual(
+      expect(r!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -574,7 +575,7 @@ describe('Entity tests', () => {
       expect(j).toBeDefined();
       const n = subgraphConfigBySubgraphName?.get('subgraph-n');
       expect(n).toBeDefined();
-      expect(j!.configurationDataMap).toStrictEqual(
+      expect(j!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -587,7 +588,7 @@ describe('Entity tests', () => {
           ],
         ]),
       );
-      expect(n!.configurationDataMap).toStrictEqual(
+      expect(n!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Query',
@@ -617,7 +618,7 @@ describe('Entity tests', () => {
       const subgraphConfigBySubgraphName = federationResult?.subgraphConfigBySubgraphName;
       const s = subgraphConfigBySubgraphName?.get('subgraph-s');
       expect(s).toBeDefined();
-      expect(s!.configurationDataMap).toStrictEqual(
+      expect(s!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Query',
@@ -667,7 +668,7 @@ describe('Entity tests', () => {
       expect(u).toBeDefined();
       const v = federationResult?.subgraphConfigBySubgraphName.get('subgraph-v');
       expect(v).toBeDefined();
-      expect(u!.configurationDataMap).toStrictEqual(
+      expect(u!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Query',
@@ -691,7 +692,7 @@ describe('Entity tests', () => {
           ],
         ]),
       );
-      expect(v!.configurationDataMap).toStrictEqual(
+      expect(v!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -730,7 +731,7 @@ describe('Entity tests', () => {
       expect(u).toBeDefined();
       const v = federationResult?.subgraphConfigBySubgraphName.get('subgraph-v');
       expect(v).toBeDefined();
-      expect(u!.configurationDataMap).toStrictEqual(
+      expect(u!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Query',
@@ -754,7 +755,7 @@ describe('Entity tests', () => {
           ],
         ]),
       );
-      expect(v!.configurationDataMap).toStrictEqual(
+      expect(v!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -808,7 +809,7 @@ describe('Entity tests', () => {
       expect(x).toBeDefined();
       const y = federationResult?.subgraphConfigBySubgraphName.get('subgraph-y');
       expect(y).toBeDefined();
-      expect(w!.configurationDataMap).toStrictEqual(
+      expect(w!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Query',
@@ -850,7 +851,7 @@ describe('Entity tests', () => {
           ],
         ]),
       );
-      expect(x!.configurationDataMap).toStrictEqual(
+      expect(x!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -871,7 +872,7 @@ describe('Entity tests', () => {
           ],
         ]),
       );
-      expect(y!.configurationDataMap).toStrictEqual(
+      expect(y!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -946,7 +947,7 @@ describe('Entity tests', () => {
       expect(x).toBeDefined();
       const y = federationResult?.subgraphConfigBySubgraphName.get('subgraph-y');
       expect(y).toBeDefined();
-      expect(w!.configurationDataMap).toStrictEqual(
+      expect(w!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Query',
@@ -988,7 +989,7 @@ describe('Entity tests', () => {
           ],
         ]),
       );
-      expect(x!.configurationDataMap).toStrictEqual(
+      expect(x!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -1009,7 +1010,7 @@ describe('Entity tests', () => {
           ],
         ]),
       );
-      expect(y!.configurationDataMap).toStrictEqual(
+      expect(y!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -1084,7 +1085,7 @@ describe('Entity tests', () => {
       expect(x).toBeDefined();
       const y = federationResult?.subgraphConfigBySubgraphName.get('subgraph-y');
       expect(y).toBeDefined();
-      expect(w!.configurationDataMap).toStrictEqual(
+      expect(w!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Query',
@@ -1126,7 +1127,7 @@ describe('Entity tests', () => {
           ],
         ]),
       );
-      expect(x!.configurationDataMap).toStrictEqual(
+      expect(x!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -1147,7 +1148,7 @@ describe('Entity tests', () => {
           ],
         ]),
       );
-      expect(y!.configurationDataMap).toStrictEqual(
+      expect(y!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -1222,7 +1223,7 @@ describe('Entity tests', () => {
       expect(x).toBeDefined();
       const y = federationResult?.subgraphConfigBySubgraphName.get('subgraph-y');
       expect(y).toBeDefined();
-      expect(w!.configurationDataMap).toStrictEqual(
+      expect(w!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Query',
@@ -1264,7 +1265,7 @@ describe('Entity tests', () => {
           ],
         ]),
       );
-      expect(x!.configurationDataMap).toStrictEqual(
+      expect(x!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -1285,7 +1286,7 @@ describe('Entity tests', () => {
           ],
         ]),
       );
-      expect(y!.configurationDataMap).toStrictEqual(
+      expect(y!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -1360,7 +1361,7 @@ describe('Entity tests', () => {
       expect(x).toBeDefined();
       const y = federationResult?.subgraphConfigBySubgraphName.get('subgraph-y');
       expect(y).toBeDefined();
-      expect(w!.configurationDataMap).toStrictEqual(
+      expect(w!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Query',
@@ -1402,7 +1403,7 @@ describe('Entity tests', () => {
           ],
         ]),
       );
-      expect(x!.configurationDataMap).toStrictEqual(
+      expect(x!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -1423,7 +1424,7 @@ describe('Entity tests', () => {
           ],
         ]),
       );
-      expect(y!.configurationDataMap).toStrictEqual(
+      expect(y!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -1498,7 +1499,7 @@ describe('Entity tests', () => {
       expect(x).toBeDefined();
       const y = federationResult?.subgraphConfigBySubgraphName.get('subgraph-y');
       expect(y).toBeDefined();
-      expect(w!.configurationDataMap).toStrictEqual(
+      expect(w!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Query',
@@ -1540,7 +1541,7 @@ describe('Entity tests', () => {
           ],
         ]),
       );
-      expect(x!.configurationDataMap).toStrictEqual(
+      expect(x!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -1561,7 +1562,7 @@ describe('Entity tests', () => {
           ],
         ]),
       );
-      expect(y!.configurationDataMap).toStrictEqual(
+      expect(y!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',

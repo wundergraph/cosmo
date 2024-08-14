@@ -173,6 +173,7 @@
   "ControlplaneURL": "https://cosmo-cp.wundergraph.com",
   "PlaygroundEnabled": true,
   "IntrospectionEnabled": true,
+  "QueryPlansEnabled": true,
   "LogLevel": "info",
   "JSONLog": true,
   "ShutdownDelay": 15000000000,
@@ -300,7 +301,9 @@
       "ReportMemoryUsage": false,
       "EnableResolverDebugging": false,
       "EnablePersistedOperationsCacheResponseHeader": false,
-      "EnableNormalizationCacheResponseHeader": false
+      "EnableNormalizationCacheResponseHeader": false,
+      "AlwaysIncludeQueryPlan": false,
+      "AlwaysSkipLoader": false
     },
     "EnableSingleFlight": true,
     "EnableRequestTracing": true,
@@ -311,7 +314,7 @@
     "EpollKqueueConnBufferSize": 128,
     "WebSocketReadTimeout": 5000000000,
     "ExecutionPlanCacheSize": 1024,
-    "MinifySubgraphOperations": false,
+    "MinifySubgraphOperations": true,
     "EnablePersistedOperationsCache": true,
     "EnableNormalizationCache": true,
     "NormalizationCacheSize": 1024,

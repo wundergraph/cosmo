@@ -11,7 +11,6 @@ import {
   EntityInterfaceFederationData,
   getEntriesNotInHashSet,
   getOrThrowError,
-  GraphFieldData,
   ImplementationErrors,
   InvalidArgument,
   InvalidEntityInterface,
@@ -19,7 +18,6 @@ import {
   kindToTypeString,
   numberToOrdinal,
 } from '../utils/utils';
-import { RootTypeFieldData } from '../federation/utils';
 import {
   AND_UPPER,
   ARGUMENT,
@@ -40,6 +38,7 @@ import { ObjectDefinitionData } from '../schema-building/type-definition-data';
 import { InvalidRootTypeFieldEventsDirectiveData } from './utils';
 import { MAX_SUBSCRIPTION_FILTER_DEPTH, MAXIMUM_TYPE_NESTING } from '../utils/integer-constants';
 import { UnresolvableFieldData } from '../resolvability-graph/utils';
+import { FieldSetDirective } from '../schema-building/utils';
 
 export const minimumSubgraphRequirementError = new Error('At least one subgraph is required for federation.');
 
@@ -227,42 +226,6 @@ export function undefinedDirectiveErrorMessage(directiveName: string, hostPath: 
   return (
     `The directive "${directiveName}" is declared on "${hostPath}",` +
     ` but the directive is not defined in the schema.`
-  );
-}
-
-export function unresolvableFieldError(
-  rootTypeFieldData: RootTypeFieldData,
-  fieldName: string,
-  fieldSubgraphs: string[],
-  unresolvablePath: string,
-  parentTypeName: string,
-): Error {
-  const fieldPath = `${parentTypeName}.${fieldName}`;
-  return new Error(
-    `The path "${unresolvablePath}" cannot be resolved because:\n` +
-      ` The root type field "${rootTypeFieldData.path}" is defined in the following subgraph` +
-      (rootTypeFieldData.subgraphs.size > 1 ? 's' : '') +
-      `: "` +
-      [...rootTypeFieldData.subgraphs].join(QUOTATION_JOIN) +
-      `".\n` +
-      ` However, "${fieldPath}" is only defined in the following subgraph` +
-      (fieldSubgraphs.length > 1 ? 's' : '') +
-      `: "` +
-      fieldSubgraphs +
-      `".\n` +
-      ` Consequently, "${fieldPath}" cannot be resolved through the root type field "${rootTypeFieldData.path}".\n` +
-      `Potential solutions:\n` +
-      ` Convert "${parentTypeName}" into an entity using the "@key" directive.\n` +
-      ` Add the shareable root type field "${rootTypeFieldData.path}" to ` +
-      (fieldSubgraphs.length > 1 ? 'one of the following subgraphs' : 'the following subgraph') +
-      `: "` +
-      fieldSubgraphs.join(QUOTATION_JOIN) +
-      `".\n` +
-      `  For example (note that V1 fields are shareable by default and do not require a directive):\n` +
-      `   type ${rootTypeFieldData.typeName} {\n` +
-      `     ...\n` +
-      `     ${rootTypeFieldData.fieldName}: ${rootTypeFieldData.fieldTypeNodeString} @shareable\n` +
-      `   }`,
   );
 }
 
@@ -674,38 +637,23 @@ export const inaccessibleQueryRootTypeError = new Error(
     ` consequently, it must not be declared @inaccessible.`,
 );
 
-export function unexpectedObjectResponseType(fieldPath: string, actualTypeString: string): Error {
-  return new Error(
-    `Expected the path "${fieldPath}" to have the response type` +
-      ` Enum, Interface, Object, Scalar, or Union but received ${actualTypeString}.`,
-  );
-}
-
-export function noConcreteTypesForAbstractTypeError(typeString: string, abstractTypeName: string): Error {
-  return new Error(
-    `Expected ${typeString} "${abstractTypeName}" to define at least one ` +
-      (typeString === UNION ? 'member' : 'object that implements the interface') +
-      ` but received none`,
-  );
-}
-
 export function expectedEntityError(typeName: string): Error {
   return new Error(`Expected object "${typeName}" to define a "key" directive, but it defines no directives.`);
 }
 
-export const inlineFragmentInFieldSetErrorMessage = ` Inline fragments are not currently supported within a FieldSet argument.`;
+export const inlineFragmentInFieldSetErrorMessage = ` Inline fragments are not currently supported within a field set argument.`;
 
 export function abstractTypeInKeyFieldSetErrorMessage(
   fieldSet: string,
-  fieldPath: string,
+  fieldCoordinates: string,
   abstractTypeName: string,
   abstractTypeString: string,
 ): string {
   return (
-    ` The following FieldSet is invalid:\n "${fieldSet}"\n` +
-    `  This is because "${fieldPath}" returns "${abstractTypeName}", which is type "${abstractTypeString}".\n` +
-    `  Fields that return abstract types (interfaces and unions)` +
-    ` cannot be included in the FieldSet of "@key" directives.`
+    ` The following field set is invalid:\n  "${fieldSet}"\n` +
+    ` This is because "${fieldCoordinates}" returns "${abstractTypeName}", which is type "${abstractTypeString}".\n` +
+    ` Fields that return abstract types (interfaces and unions)` +
+    ` cannot be included in the field set of "@key" directives.`
   );
 }
 
@@ -715,35 +663,36 @@ export function unknownTypeInFieldSetErrorMessage(
   responseTypeName: string,
 ): string {
   return (
-    ` The following FieldSet is invalid:\n "${fieldSet}"\n` +
-    `  This is because "${fieldPath}" returns the unknown type "${responseTypeName}".`
+    ` The following field set is invalid:\n  "${fieldSet}"\n` +
+    ` This is because "${fieldPath}" returns the unknown type "${responseTypeName}".`
   );
 }
 
 export function invalidSelectionSetErrorMessage(
   fieldSet: string,
-  fieldPath: string,
-  fieldTypeName: string,
+  fieldCoordinatesPath: Array<string>,
+  selectionSetTypeName: string,
   fieldTypeString: string,
 ): string {
   return (
-    ` The following FieldSet is invalid:\n "${fieldSet}"\n` +
-    `  This is because "${fieldPath}" returns "${fieldTypeName}", which is type "${fieldTypeString}".\n` +
-    ` Types such as "${fieldTypeString}" that define fields` +
-    ` must define a selection set with at least one field selection.`
+    ` The following field set is invalid:\n  "${fieldSet}"\n` +
+    ` This is because of the selection set corresponding to the ` +
+    getSelectionSetLocationWithTypeString(fieldCoordinatesPath, selectionSetTypeName, fieldTypeString) +
+    ` Composite types such as "${fieldTypeString}" types must define a selection set with at least one field selection.`
   );
 }
 
 export function invalidSelectionSetDefinitionErrorMessage(
   fieldSet: string,
-  fieldPath: string,
-  fieldTypeName: string,
+  fieldCoordinatesPath: Array<string>,
+  selectionSetTypeName: string,
   fieldTypeString: string,
 ): string {
   return (
-    ` The following FieldSet is invalid:\n "${fieldSet}"\n` +
-    `  This is because "${fieldPath}" returns "${fieldTypeName}", which is type "${fieldTypeString}".\n` +
-    `  Types such as "${fieldTypeString}" that do not define fields cannot define a selection set.`
+    ` The following field set is invalid:\n  "${fieldSet}"\n` +
+    ` This is because of the selection set corresponding to the ` +
+    getSelectionSetLocationWithTypeString(fieldCoordinatesPath, selectionSetTypeName, fieldTypeString) +
+    ` Non-composite types such as "${fieldTypeString}" cannot define a selection set.`
   );
 }
 
@@ -753,13 +702,14 @@ export function undefinedFieldInFieldSetErrorMessage(
   fieldName: string,
 ): string {
   return (
-    ` The following FieldSet is invalid:\n "${fieldSet}"\n` +
-    `  This is because "${parentTypeName}" does not define a field named "${fieldName}".`
+    ` The following field set is invalid:\n  "${fieldSet}"\n` +
+    ` This is because of the selection set corresponding to the field coordinate "${parentTypeName}.${fieldName}".\n` +
+    ` The type "${parentTypeName}" does not define a field named "${fieldName}".`
   );
 }
 
 export function unparsableFieldSetErrorMessage(fieldSet: string, error?: Error): string {
-  let message = ` The following FieldSet is invalid:\n "${fieldSet}"\n` + `  The FieldSet could not be parsed.`;
+  let message = ` The following field set is invalid:\n  "${fieldSet}"\n` + ` The field set could not be parsed.`;
   if (error) {
     message += `\n The reason provided was: ` + error.message;
   }
@@ -768,8 +718,8 @@ export function unparsableFieldSetErrorMessage(fieldSet: string, error?: Error):
 
 export function unparsableFieldSetSelectionErrorMessage(fieldSet: string, fieldName: string): string {
   return (
-    ` The following FieldSet is invalid:\n "${fieldSet}"\n` +
-    `  This is because the selection set defined on "${fieldName}" could not be parsed.`
+    ` The following field set is invalid:\n  "${fieldSet}"\n` +
+    ` This is because the selection set defined on "${fieldName}" could not be parsed.`
   );
 }
 
@@ -779,16 +729,16 @@ export function undefinedObjectLikeParentError(parentTypeName: string): Error {
 
 export function unexpectedArgumentErrorMessage(fieldSet: string, fieldPath: string, argumentName: string): string {
   return (
-    ` The following FieldSet is invalid:\n "${fieldSet}"\n` +
-    `  This is because "${fieldPath}" does not define an argument named "${argumentName}".`
+    ` The following field set is invalid:\n  "${fieldSet}"\n` +
+    ` This is because "${fieldPath}" does not define an argument named "${argumentName}".`
   );
 }
 
 export function argumentsInKeyFieldSetErrorMessage(fieldSet: string, fieldPath: string): string {
   return (
-    ` The following FieldSet is invalid:\n "${fieldSet}"\n` +
-    `  This is because "${fieldPath}" defines arguments.\n` +
-    `  Fields that define arguments cannot be included in the FieldSet of @key directives.`
+    ` The following field set is invalid:\n  "${fieldSet}"\n` +
+    ` This is because "${fieldPath}" defines arguments.\n` +
+    ` Fields that define arguments cannot be included in the field set of @key directives.`
   );
 }
 
@@ -803,15 +753,15 @@ export function invalidProvidesOrRequiresDirectivesError(directiveName: string, 
 
 export function duplicateFieldInFieldSetErrorMessage(fieldSet: string, fieldPath: string): string {
   return (
-    ` The following FieldSet is invalid:\n "${fieldSet}"\n` +
-    `  This is because "${fieldPath}" was included in the FieldSet more than once.`
+    ` The following field set is invalid:\n  "${fieldSet}"\n` +
+    ` This is because "${fieldPath}" was included in the field set more than once.`
   );
 }
 
 export function invalidConfigurationDataErrorMessage(typeName: string, fieldName: string, fieldSet: string): string {
   return (
     ` Expected ConfigurationData to exist for type "${typeName}" when adding field "${fieldName}"` +
-    `  while validating FieldSet "${fieldSet}".`
+    `  while validating field set "${fieldSet}".`
   );
 }
 
@@ -822,78 +772,124 @@ export function unknownProvidedObjectErrorMessage(fieldPath: string, responseTyp
   );
 }
 
+function getSelectionSetLocation(
+  fieldCoordinatesPath: Array<string>,
+  selectionSetTypeName: string,
+  withReturnType: boolean = false,
+): string {
+  /* fieldCoordinatesPath can have length 0 if it's a @requires directive,
+   * in which case the first part of the field set refers to the enclosing parent type.
+   * */
+  if (fieldCoordinatesPath.length < 1) {
+    return `enclosing type name "${selectionSetTypeName}".\n`;
+  }
+  return (
+    `field coordinates "${fieldCoordinatesPath[fieldCoordinatesPath.length - 1]}"` +
+    (withReturnType ? ` that returns "${selectionSetTypeName}"` : '') +
+    `.\n`
+  );
+}
+
+function getSelectionSetLocationWithTypeString(
+  fieldCoordinatesPath: Array<string>,
+  selectionSetTypeName: string,
+  typeString: string,
+): string {
+  /* fieldCoordinatesPath can have length 0 if it's a @requires directive,
+   * in which case the first part of the field set refers to the enclosing parent type.
+   * */
+  if (fieldCoordinatesPath.length < 1) {
+    return `enclosing type name "${selectionSetTypeName}", which is type "${typeString}".\n`;
+  }
+  return (
+    `field coordinates "${fieldCoordinatesPath[fieldCoordinatesPath.length - 1]}"` +
+    ` that returns "${selectionSetTypeName}", which is type "${typeString}".\n`
+  );
+}
+
 export function invalidInlineFragmentTypeErrorMessage(
   fieldSet: string,
-  fieldPath: string,
+  fieldCoordinatesPath: Array<string>,
   typeConditionName: string,
-  parentTypeName: string,
+  selectionSetTypeName: string,
 ): string {
   return (
-    ` The following FieldSet is invalid:\n "${fieldSet}"\n` +
-    `  This is because "${fieldPath}" defines an inline fragment with the type condition "${typeConditionName}".\n` +
-    `  However, "${parentTypeName}" is not an abstract (interface or union) type.\n` +
-    `  Consequently, the only valid type condition would be "${parentTypeName}".`
+    ` The following field set is invalid:\n  "${fieldSet}"\n` +
+    ` This is because an inline fragment with the type condition "${typeConditionName}" is defined on the` +
+    ` selection set corresponding to the ` +
+    getSelectionSetLocation(fieldCoordinatesPath, selectionSetTypeName, true) +
+    ` However, "${selectionSetTypeName}" is not an abstract (interface or union) type.\n` +
+    ` Consequently, the only valid type condition at this selection set would be "${selectionSetTypeName}".`
   );
 }
 
 export function inlineFragmentWithoutTypeConditionErrorMessage(fieldSet: string, fieldPath: string): string {
   return (
-    ` The following FieldSet is invalid:\n "${fieldSet}"\n` +
-    `  This is because "${fieldPath}" defines an inline fragment without a type condition.`
+    ` The following field set is invalid:\n  "${fieldSet}"\n` +
+    ` This is because "${fieldPath}" defines an inline fragment without a type condition.`
   );
 }
 
 export function unknownInlineFragmentTypeConditionErrorMessage(
   fieldSet: string,
-  fieldPath: string,
+  fieldCoordinatesPath: Array<string>,
+  selectionSetTypeName: string,
   typeConditionName: string,
 ): string {
   return (
-    ` The following FieldSet is invalid:\n "${fieldSet}"\n` +
-    `  This is because "${fieldPath}" defines an inline fragment` +
-    ` with the unknown type condition "${typeConditionName}".`
+    ` The following field set is invalid:\n  "${fieldSet}"\n` +
+    ` This is because an inline fragment with the unknown type condition "${typeConditionName}" is defined on the` +
+    ` selection set corresponding to the ` +
+    getSelectionSetLocation(fieldCoordinatesPath, selectionSetTypeName)
   );
 }
 
 export function invalidInlineFragmentTypeConditionTypeErrorMessage(
   fieldSet: string,
-  fieldPath: string,
+  fieldCoordinatesPath: Array<string>,
+  selectionSetTypeName: string,
   typeConditionName: string,
   typeConditionTypeString: string,
 ): string {
   return (
-    ` The following FieldSet is invalid:\n "${fieldSet}"\n` +
-    `  This is because "${fieldPath}" defines an inline fragment with the type condition "${typeConditionName}",` +
-    ` which is type "${typeConditionTypeString}".\n` +
-    `  However, either an "interface" or "object" type was expected.`
+    ` The following field set is invalid:\n  "${fieldSet}"\n` +
+    ` This is because an inline fragment with the type condition "${typeConditionName}" is defined on the` +
+    ` selection set corresponding to the ` +
+    getSelectionSetLocation(fieldCoordinatesPath, selectionSetTypeName) +
+    ` However, "${typeConditionName}" is type "${typeConditionTypeString}" when types "interface" or "object" would` +
+    ` be expected.`
   );
 }
 
 export function invalidInlineFragmentTypeConditionErrorMessage(
   fieldSet: string,
-  fieldPath: string,
+  fieldCoordinatesPath: Array<string>,
   typeConditionName: string,
   parentTypeString: string,
-  parentTypeName: string,
+  selectionSetTypeName: string,
 ): string {
-  let message =
-    ` The following FieldSet is invalid:\n "${fieldSet}"\n` +
-    `  This is because "${fieldPath}" defines an inline fragment with the type condition "${typeConditionName}".\n`;
+  const message =
+    ` The following field set is invalid:\n  "${fieldSet}"\n` +
+    ` This is because an inline fragment with the type condition "${typeConditionName}" is defined on the` +
+    ` selection set corresponding to the ` +
+    getSelectionSetLocationWithTypeString(fieldCoordinatesPath, selectionSetTypeName, parentTypeString);
   if (parentTypeString === 'interface') {
-    return message + `  However, "${typeConditionName}" does not implement "${parentTypeName}"`;
+    return message + ` However, "${typeConditionName}" does not implement "${selectionSetTypeName}"`;
   }
-  return message + `  However, "${typeConditionName}" is not a member of the union "${parentTypeName}".`;
+  return message + ` However, "${typeConditionName}" is not a member of "${selectionSetTypeName}".`;
 }
 
 export function invalidSelectionOnUnionErrorMessage(
   fieldSet: string,
-  fieldPath: string,
-  responseTypeName: string,
+  fieldCoordinatesPath: Array<string>,
+  selectionSetTypeName: string,
 ): string {
   return (
-    ` The following FieldSet is invalid:\n "${fieldSet}"\n` +
-    `  This is because "${fieldPath}" returns "${responseTypeName}", which is type "union".\n` +
-    `  Consequently, an inline fragment is required to make a selection on one of the union's members.`
+    ` The following field set is invalid:\n  "${fieldSet}"\n` +
+    ` This is because of the selection set corresponding to the ` +
+    getSelectionSetLocationWithTypeString(fieldCoordinatesPath, selectionSetTypeName, UNION) +
+    ` Union types such as "${selectionSetTypeName}" must define field selections (besides "__typename") on an` +
+    ` inline fragment whose type condition corresponds to a constituent union member.`
   );
 }
 
@@ -907,8 +903,8 @@ export function duplicateOverriddenFieldErrorMessage(fieldPath: string, subgraph
 
 export function duplicateOverriddenFieldsError(errorMessages: string[]): Error {
   return new Error(
-    `The @override directive must only be declared on one single instance of a field.` +
-      ` However, an @override directive was declared on more than one instance of the following field` +
+    `The "@override" directive must only be declared on one single instance of a field.` +
+      ` However, an "@override" directive was declared on more than one instance of the following field` +
       (errorMessages.length > 1 ? 's' : '') +
       `: "` +
       errorMessages.join(QUOTATION_JOIN) +
@@ -1105,7 +1101,7 @@ export function invalidKeyFieldSetsEventDrivenErrorMessage(
   let message = '';
   for (const [typeName, keyFieldSets] of invalidKeyFieldSetsByEntityTypeName) {
     message +=
-      ` The following "@key" FieldSet` +
+      ` The following "@key" field set` +
       (keyFieldSets.length > 1 ? 's are' : ' is') +
       ` defined on the entity "${typeName}" without a "resolvable: false" argument:\n` +
       `  "` +
@@ -1132,7 +1128,7 @@ export function nonKeyFieldNamesEventDrivenErrorMessage(nonKeyFieldNameByFieldPa
   let message =
     ` The following field` +
     (nonKeyFieldNameByFieldPath.size > 1 ? 's are' : ' is') +
-    ` defined despite not composing part of a "@key" directive FieldSet:\n`;
+    ` defined despite not composing part of a "@key" directive field set:\n`;
   for (const [fieldPath, fieldName] of nonKeyFieldNameByFieldPath) {
     message += `  Field "${fieldName}" defined on path "${fieldPath}"\n`;
   }
@@ -1153,7 +1149,7 @@ export function nonEntityObjectExtensionsEventDrivenErrorMessage(typeNames: stri
 
 export function nonKeyComposingObjectTypeNamesEventDrivenErrorMessage(typeNames: string[]): string {
   return (
-    ` Only object definitions whose fields compose part of a "@key" directive's FieldSet may be defined in an` +
+    ` Only object definitions whose fields compose part of a "@key" directive's field set may be defined in an` +
     ` Event Driven graph. Consequently, the following object type definition` +
     (typeNames.length > 1 ? 's are' : ' is') +
     ` invalid:\n  "` +
@@ -1514,4 +1510,50 @@ export function unresolvablePathError(
     `\nThis is because:\n - ` +
     reasons.join(`\n - `);
   return new Error(message);
+}
+
+export function allExternalFieldsError(typeName: string, subgraphNamesByFieldName: Map<string, Array<string>>): Error {
+  let message =
+    `The object "${typeName}" is invalid because the following field definition` +
+    (subgraphNamesByFieldName.size > 1 ? 's are' : ' is') +
+    ` declared @external on all instances of that field:\n`;
+  for (const [fieldName, subgraphNames] of subgraphNamesByFieldName) {
+    message +=
+      ` "${fieldName}" in subgraph` +
+      (subgraphNames.length > 1 ? 's' : '') +
+      ` "` +
+      subgraphNames.join(QUOTATION_JOIN) +
+      `"\n`;
+  }
+  message += `At least one instance of a field definition must always be resolvable (and therefore not declared @external).`;
+  return new Error(message);
+}
+
+export function externalInterfaceFieldsError(typeName: string, fieldNames: Array<string>): Error {
+  return new Error(
+    `The interface "${typeName}" is invalid because the following field definition` +
+      (fieldNames.length > 1 ? 's are' : ' is') +
+      ` declared @external:\n "` +
+      fieldNames.join(QUOTATION_JOIN) +
+      `"\n` +
+      `Interface fields should not be declared @external. This is because interface fields do not resolve directly,` +
+      ` but the "@external" directive relates to whether a field instance can be resolved` +
+      ` by the subgraph in which it is defined.`,
+  );
+}
+
+export function nonExternalConditionalFieldError(
+  originCoords: string,
+  subgraphName: string,
+  targetCoords: string,
+  fieldSet: string,
+  fieldSetDirective: FieldSetDirective,
+): Error {
+  return new Error(
+    `The field "${originCoords}" in subgraph "${subgraphName}" defines a "@${fieldSetDirective}" directive with the following` +
+      ` field set:\n "${fieldSet}".` +
+      `\nHowever, neither the field "${targetCoords}" nor any of its field set ancestors are declared @external.` +
+      `\nConsequently, "${targetCoords}" is already provided by subgraph "${subgraphName}" and should not form part of` +
+      ` a "@${fieldSetDirective}" directive field set.`,
+  );
 }
