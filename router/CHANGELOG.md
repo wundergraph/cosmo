@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.104.0](https://github.com/wundergraph/cosmo/compare/router@0.103.0...router@0.104.0) (2024-08-14)
+
+### Bug Fixes
+
+* **cli-compose:** feature subgraph introspection ([#1078](https://github.com/wundergraph/cosmo/issues/1078)) ([13a7d63](https://github.com/wundergraph/cosmo/commit/13a7d638ac879e759e56d29fbd660aac5e3c3fc0)) (@StarpTech)
+
+### Features
+
+* expose query plans through response extensions field ([#1077](https://github.com/wundergraph/cosmo/issues/1077)) ([58430bc](https://github.com/wundergraph/cosmo/commit/58430bc7c90b2b21500a1471ef929950d0f0ce1a)) (@jensneuse)
+
 # [0.103.0](https://github.com/wundergraph/cosmo/compare/router@0.102.1...router@0.103.0) (2024-08-09)
 
 ### Features
