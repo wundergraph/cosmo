@@ -32,22 +32,26 @@ import (
 )
 
 type PreHandlerOptions struct {
-	Logger                      *zap.Logger
-	Executor                    *Executor
-	Metrics                     RouterMetrics
-	OperationProcessor          *OperationProcessor
-	Planner                     *OperationPlanner
-	AccessController            *AccessController
-	OperationBlocker            *OperationBlocker
-	DevelopmentMode             bool
-	RouterPublicKey             *ecdsa.PublicKey
-	EnableRequestTracing        bool
-	TracerProvider              *sdktrace.TracerProvider
+	Logger             *zap.Logger
+	Executor           *Executor
+	Metrics            RouterMetrics
+	OperationProcessor *OperationProcessor
+	Planner            *OperationPlanner
+	AccessController   *AccessController
+	OperationBlocker   *OperationBlocker
+	RouterPublicKey    *ecdsa.PublicKey
+	TracerProvider     *sdktrace.TracerProvider
+	MaxUploadFiles     int
+	MaxUploadFileSize  int
+
 	FlushTelemetryAfterResponse bool
-	TraceExportVariables        bool
 	FileUploadEnabled           bool
-	MaxUploadFiles              int
-	MaxUploadFileSize           int
+	TraceExportVariables        bool
+	DevelopmentMode             bool
+	EnableRequestTracing        bool
+	AlwaysIncludeQueryPlan      bool
+	AlwaysSkipLoader            bool
+	QueryPlansEnabled           bool
 }
 
 type PreHandler struct {
@@ -59,6 +63,9 @@ type PreHandler struct {
 	accessController            *AccessController
 	operationBlocker            *OperationBlocker
 	developmentMode             bool
+	alwaysIncludeQueryPlan      bool
+	alwaysSkipLoader            bool
+	queryPlansEnabled           bool
 	routerPublicKey             *ecdsa.PublicKey
 	enableRequestTracing        bool
 	tracerProvider              *sdktrace.TracerProvider
@@ -90,29 +97,32 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 			"wundergraph/cosmo/router/pre_handler",
 			trace.WithInstrumentationVersion("0.0.1"),
 		),
-		fileUploadEnabled: opts.FileUploadEnabled,
-		maxUploadFiles:    opts.MaxUploadFiles,
-		maxUploadFileSize: opts.MaxUploadFileSize,
-		bodyReadBuffers:   &sync.Pool{},
+		fileUploadEnabled:      opts.FileUploadEnabled,
+		maxUploadFiles:         opts.MaxUploadFiles,
+		maxUploadFileSize:      opts.MaxUploadFileSize,
+		bodyReadBuffers:        &sync.Pool{},
+		alwaysIncludeQueryPlan: opts.AlwaysIncludeQueryPlan,
+		alwaysSkipLoader:       opts.AlwaysSkipLoader,
+		queryPlansEnabled:      opts.QueryPlansEnabled,
 	}
 }
 
-func (p *PreHandler) getBodyReadBuffer(preferredSize int64) *bytes.Buffer {
+func (h *PreHandler) getBodyReadBuffer(preferredSize int64) *bytes.Buffer {
 	if preferredSize <= 0 {
 		preferredSize = 1024
-	} else if preferredSize > p.operationProcessor.maxOperationSizeInBytes {
-		preferredSize = p.operationProcessor.maxOperationSizeInBytes
+	} else if preferredSize > h.operationProcessor.maxOperationSizeInBytes {
+		preferredSize = h.operationProcessor.maxOperationSizeInBytes
 	}
-	buf := p.bodyReadBuffers.Get()
+	buf := h.bodyReadBuffers.Get()
 	if buf == nil {
 		return bytes.NewBuffer(make([]byte, 0, preferredSize))
 	}
 	return buf.(*bytes.Buffer)
 }
 
-func (p *PreHandler) releaseBodyReadBuffer(buf *bytes.Buffer) {
+func (h *PreHandler) releaseBodyReadBuffer(buf *bytes.Buffer) {
 	buf.Reset()
-	p.bodyReadBuffers.Put(buf)
+	h.bodyReadBuffers.Put(buf)
 }
 
 // Error and Status Code handling
@@ -135,7 +145,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			finalErr     error
 			writtenBytes int
 			statusCode   = http.StatusOK
-			traceOptions = resolve.TraceOptions{}
+			traceTimings *art.TraceTimings
 		)
 
 		routerSpan := trace.SpanFromContext(r.Context())
@@ -147,35 +157,17 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			otel.WgOperationProtocol.String(OperationProtocolHTTP.String()),
 		}
 
-		if h.enableRequestTracing {
-			if clientInfo.WGRequestToken != "" && h.routerPublicKey != nil {
-				_, err := jwt.Parse(clientInfo.WGRequestToken, func(token *jwt.Token) (interface{}, error) {
-					return h.routerPublicKey, nil
-				}, jwt.WithValidMethods([]string{jwt.SigningMethodES256.Name}))
-				if err != nil {
-					err := errors.New("invalid request token. Router version 0.42.1 or above is required to use request tracing in production")
-					finalErr = err
-					requestLogger.Error(fmt.Sprintf("failed to parse request token: %s", err.Error()))
-					writeRequestErrors(r, w, http.StatusForbidden, graphqlerrors.RequestErrorsFromError(err), requestLogger)
-					return
-				}
-
-				// Enable ART after successful request token validation
-				traceOptions = ParseRequestTraceOptions(r)
-			} else if h.developmentMode {
-				// In development, without request signing, we enable ART
-				traceOptions = ParseRequestTraceOptions(r)
-			} else {
-				// In production, without request signing, we disable ART because it's not safe to use
-				traceOptions.DisableAll()
-			}
+		executionOptions, traceOptions, err := h.parseRequestOptions(r, clientInfo, requestLogger)
+		if err != nil {
+			finalErr = err
+			writeRequestErrors(r, w, http.StatusBadRequest, graphqlerrors.RequestErrorsFromError(err), requestLogger)
+			return
 		}
 
 		if traceOptions.Enable {
 			r = r.WithContext(resolve.SetTraceStart(r.Context(), traceOptions.EnablePredictableDebugTimings))
+			traceTimings = art.NewTraceTimings(r.Context())
 		}
-
-		traceTimings := art.NewTraceTimings(r.Context())
 
 		var commonAttributes []attribute.KeyValue
 		if attributes := baseAttributesFromContext(r.Context()); attributes != nil {
@@ -329,9 +321,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				trace.WithAttributes(attributes...),
 			)
 
-			if !traceOptions.ExcludeParseStats {
-				traceTimings.StartParse()
-			}
+			traceTimings.StartParse()
 
 			err = operationKit.Parse()
 			if err != nil {
@@ -352,10 +342,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				return
 			}
 
-			if !traceOptions.ExcludeParseStats {
-				traceTimings.EndParse()
-			}
-
+			traceTimings.EndParse()
 			engineParseSpan.End()
 		}
 
@@ -392,9 +379,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		* Normalize the operation
 		 */
 
-		if !traceOptions.ExcludeNormalizeStats {
-			traceTimings.StartNormalize()
-		}
+		traceTimings.StartNormalize()
 
 		_, engineNormalizeSpan := h.tracer.Start(r.Context(), "Operation - Normalize",
 			trace.WithSpanKind(trace.SpanKindInternal),
@@ -445,10 +430,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 
 		engineNormalizeSpan.End()
-
-		if !traceOptions.ExcludeNormalizeStats {
-			traceTimings.EndNormalize()
-		}
+		traceTimings.EndNormalize()
 
 		if h.traceExportVariables {
 			// At this stage the variables are normalized
@@ -469,15 +451,13 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		* Validate the operation
 		 */
 
-		if !traceOptions.ExcludeValidateStats {
-			traceTimings.StartValidate()
-		}
+		traceTimings.StartValidate()
 
 		_, engineValidateSpan := h.tracer.Start(r.Context(), "Operation - Validate",
 			trace.WithSpanKind(trace.SpanKindInternal),
 			trace.WithAttributes(commonAttributes...),
 		)
-		validationCached, err := operationKit.Validate()
+		validationCached, err := operationKit.Validate(executionOptions.SkipLoader)
 		if err != nil {
 			// the kit must be freed before we're doing io operations
 			// the kit is bound to the number of CPUs, and we must not hold onto it while doing IO operations
@@ -494,13 +474,16 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			writeOperationError(r, w, requestLogger, err)
 			return
 		}
-
 		engineValidateSpan.SetAttributes(otel.WgValidationCacheHit.Bool(validationCached))
+		if executionOptions.SkipLoader {
+			// In case we're skipping the loader, which means that we won't execute the operation
+			// we skip the validation of variables as we're not using them
+			// this allows us to generate query plans without having to provide variables
+			engineValidateSpan.SetAttributes(otel.WgVariablesValidationSkipped.Bool(true))
+		}
 		engineValidateSpan.End()
 
-		if !traceOptions.ExcludeValidateStats {
-			traceTimings.EndValidate()
-		}
+		traceTimings.EndValidate()
 
 		/**
 		* Plan the operation
@@ -509,9 +492,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		// If the request has a query parameter wg_trace=true we skip the cache
 		// and always plan the operation
 		// this allows us to "write" to the plan
-		if !traceOptions.ExcludePlannerStats {
-			traceTimings.StartPlanning()
-		}
+		traceTimings.StartPlanning()
 
 		_, enginePlanSpan := h.tracer.Start(r.Context(), "Operation - Plan",
 			trace.WithSpanKind(trace.SpanKindInternal),
@@ -519,7 +500,14 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			trace.WithAttributes(commonAttributes...),
 		)
 
-		opContext, err := h.planner.Plan(operationKit.parsedOperation, clientInfo, OperationProtocolHTTP, traceOptions)
+		planOptions := PlanOptions{
+			Protocol:         OperationProtocolHTTP,
+			ClientInfo:       *clientInfo,
+			TraceOptions:     traceOptions,
+			ExecutionOptions: executionOptions,
+		}
+
+		opContext, err := h.planner.Plan(operationKit.parsedOperation, planOptions)
 		if err != nil {
 			// the kit must be freed before we're doing io operations
 			// the kit is bound to the number of CPUs, and we must not hold onto it while doing IO operations
@@ -542,9 +530,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		enginePlanSpan.End()
 
-		if !traceOptions.ExcludePlannerStats {
-			traceTimings.EndPlanning()
-		}
+		traceTimings.EndPlanning()
 
 		// If we have authenticators, we try to authenticate the request
 		if len(h.accessController.authenticators) > 0 {
@@ -645,4 +631,63 @@ func (h *PreHandler) flushMetrics(ctx context.Context, requestLogger *zap.Logger
 	wg.Wait()
 
 	requestLogger.Debug("Metrics flushed", zap.Duration("duration", time.Since(now)))
+}
+
+func (h *PreHandler) parseRequestOptions(r *http.Request, clientInfo *ClientInfo, requestLogger *zap.Logger) (resolve.ExecutionOptions, resolve.TraceOptions, error) {
+	ex, tr, err := h.internalParseRequestOptions(r, clientInfo, requestLogger)
+	if err != nil {
+		return ex, tr, err
+	}
+	if h.alwaysIncludeQueryPlan {
+		ex.IncludeQueryPlanInResponse = true
+	}
+	if h.alwaysSkipLoader {
+		ex.SkipLoader = true
+	}
+	if !h.queryPlansEnabled {
+		ex.IncludeQueryPlanInResponse = false
+	}
+	return ex, tr, nil
+}
+
+func (h *PreHandler) internalParseRequestOptions(r *http.Request, clientInfo *ClientInfo, requestLogger *zap.Logger) (resolve.ExecutionOptions, resolve.TraceOptions, error) {
+	if h.developmentMode {
+		return h.parseRequestExecutionOptions(r), h.parseRequestTraceOptions(r), nil
+	}
+	if clientInfo.WGRequestToken != "" && h.routerPublicKey != nil {
+		_, err := jwt.Parse(clientInfo.WGRequestToken, func(token *jwt.Token) (interface{}, error) {
+			return h.routerPublicKey, nil
+		}, jwt.WithValidMethods([]string{jwt.SigningMethodES256.Name}))
+		if err != nil {
+			requestLogger.Error(fmt.Sprintf("failed to parse request token: %s", err.Error()))
+			return resolve.ExecutionOptions{}, resolve.TraceOptions{}, err
+		}
+		return h.parseRequestExecutionOptions(r), h.parseRequestTraceOptions(r), nil
+	}
+	traceOptions := resolve.TraceOptions{}
+	traceOptions.DisableAll()
+	return resolve.ExecutionOptions{
+		SkipLoader:                 false,
+		IncludeQueryPlanInResponse: false,
+	}, traceOptions, nil
+}
+
+func (h *PreHandler) parseRequestExecutionOptions(r *http.Request) resolve.ExecutionOptions {
+	options := resolve.ExecutionOptions{
+		SkipLoader:                 false,
+		IncludeQueryPlanInResponse: false,
+	}
+	if r.Header.Get("X-WG-Skip-Loader") != "" {
+		options.SkipLoader = true
+	}
+	if r.URL.Query().Has("wg_skip_loader") {
+		options.SkipLoader = true
+	}
+	if r.Header.Get("X-WG-Include-Query-Plan") != "" {
+		options.IncludeQueryPlanInResponse = true
+	}
+	if r.URL.Query().Has("wg_include_query_plan") {
+		options.IncludeQueryPlanInResponse = true
+	}
+	return options
 }
