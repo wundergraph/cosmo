@@ -9,10 +9,22 @@ const allowUnsafeEval = true;
 const debugCSP = false;
 // Enable or disable the sentry integration
 const isSentryEnabled = process.env.SENTRY_ENABLED === "true";
-const sentryDebugEnabled = process.env.SENTRY_DEBUG === "false";
-
+const sentryDebugEnabled = process.env.SENTRY_DEBUG === "true";
 const sentryOrganization = process.env.SENTRY_ORGANIZATION || "";
 const sentryProject = process.env.SENTRY_PROJECT || "";
+const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN || "";
+if (isSentryEnabled) {
+  if (sentryAuthToken) {
+    console.warn(
+      "sentry auth token not set, this will fail on uploading soure maps",
+    );
+  }
+  if (sentryOrganization === "" || sentryProject === "") {
+    console.warn(
+      "sentry not configured properly please check your environment settings for the build",
+    );
+  }
+}
 
 // Content Security Policy (CSP) is a security standard that helps prevent cross-site scripting (XSS),
 // clickjacking, and other code injection attacks resulting from execution of malicious content
