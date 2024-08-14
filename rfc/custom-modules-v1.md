@@ -142,6 +142,8 @@ type ModuleHooks interface {
     Provision(ctx *core.ModuleContext) error
     // Shutdown is called when the module is shutdown
     Shutdown() error
+	// Module returns the module information and factory function
+	Module() core.ModuleInfo
 }
 
 // SubgraphHooks are called when a subgraph request or response is made.
@@ -339,7 +341,7 @@ func (m *MyModule) Cleanup() error {
 ## Custom Module configuration
 
 Custom modules can be configured using a YAML file that is loaded by the router at startup. We reserve a section in the configuration file for custom modules. Each module can have its own configuration section with custom properties.
-The name of the module in the configuration file must match the name of the module struct in the Go code (snake_case).
+The name of the module in the configuration file must match the name specified in the `ModuleInfo` struct.
 
 ```yaml
 # config.yaml
@@ -362,6 +364,13 @@ type MyModule struct {
 func (m *MyModule) Provision(ctx *core.ModuleContext) error {
 	// Access the custom value from the configuration
 	m.Value
+}
+
+func (m *MyModule) Module() core.ModuleInfo {
+    return core.ModuleInfo{
+        Name: "myModule",
+		New: func() core.Module { return &MyModule{} },
+    }
 }
 ```
 
