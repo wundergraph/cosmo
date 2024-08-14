@@ -130,7 +130,7 @@ export const createDeleteOrganizationWorker = (input: {
     log.warn(`Job ${job} stalled`);
   });
   worker.on('error', (err) => {
-    input.logger.error(err, 'Worker error');
+    log.error(err, 'Worker error');
   });
   return worker;
 };
