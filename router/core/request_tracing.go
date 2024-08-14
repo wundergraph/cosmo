@@ -23,6 +23,10 @@ const (
 )
 
 func (h *PreHandler) parseRequestTraceOptions(r *http.Request) (options resolve.TraceOptions) {
+	if !h.enableRequestTracing {
+		options.DisableAll()
+		return
+	}
 	var (
 		values []string
 	)

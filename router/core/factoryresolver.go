@@ -459,7 +459,7 @@ func (l *Loader) subgraphName(subgraphs []*nodev1.Subgraph, dataSourceID string)
 		return subgraphs[i].Name
 	}
 
-	return dataSourceID
+	return ""
 }
 
 func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.DataSourceMetadata {

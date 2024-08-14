@@ -654,7 +654,7 @@ func (h *PreHandler) internalParseRequestOptions(r *http.Request, clientInfo *Cl
 	if h.developmentMode {
 		return h.parseRequestExecutionOptions(r), h.parseRequestTraceOptions(r), nil
 	}
-	if clientInfo.WGRequestToken != "" && h.routerPublicKey != nil {
+	if h.enableRequestTracing && clientInfo.WGRequestToken != "" && h.routerPublicKey != nil {
 		_, err := jwt.Parse(clientInfo.WGRequestToken, func(token *jwt.Token) (interface{}, error) {
 			return h.routerPublicKey, nil
 		}, jwt.WithValidMethods([]string{jwt.SigningMethodES256.Name}))
