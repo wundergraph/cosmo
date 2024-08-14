@@ -74,20 +74,26 @@ export default (opts: BaseCommandOptions) => {
         continue;
       }
 
-      const result = await introspectSubgraph({
-        subgraphURL: s.introspection?.url ?? s.routing_url,
-        additionalHeaders: Object.entries(s.introspection?.headers ?? {}).map(([key, value]) => ({
-          key,
-          value,
-        })),
-        rawIntrospection: s.introspection?.raw,
-      });
+      const url = s.introspection?.url ?? s.routing_url;
 
-      if (!result.success) {
-        program.error(`Could not introspect subgraph ${s.name}: ${result.errorMessage ?? 'failed'}`);
+      try {
+        const result = await introspectSubgraph({
+          subgraphURL: url,
+          additionalHeaders: Object.entries(s.introspection?.headers ?? {}).map(([key, value]) => ({
+            key,
+            value,
+          })),
+          rawIntrospection: s.introspection?.raw,
+        });
+
+        if (!result.success) {
+          program.error(`Could not introspect subgraph ${s.name}, URL: ${url}: ${result.errorMessage ?? 'failed'}`);
+        }
+
+        subgraphSDLs.set(s.name, result.sdl);
+      } catch (e: any) {
+        program.error(`Could not introspect subgraph ${s.name}, URL: ${url}: ${e.message}`);
       }
-
-      subgraphSDLs.set(s.name, result.sdl);
     }
 
     const result = composeSubgraphs(
@@ -151,22 +157,35 @@ export default (opts: BaseCommandOptions) => {
             if (featureSubgraph?.schema?.file) {
               const schemaFile = resolve(inputFileLocation, featureSubgraph.schema.file);
               const sdl = (await readFile(schemaFile)).toString();
+              // Replace feature subgraph sdl with the base subgraph sdl
               subgraphSDLs.set(featureSubgraph.name, sdl);
             } else {
-              const result = await introspectSubgraph({
-                subgraphURL: featureSubgraph?.introspection?.url ?? featureSubgraph.routing_url,
-                additionalHeaders: Object.entries(featureSubgraph.introspection?.headers ?? {}).map(([key, value]) => ({
-                  key,
-                  value,
-                })),
-                rawIntrospection: featureSubgraph.introspection?.raw,
-              });
+              const url = featureSubgraph.introspection?.url ?? featureSubgraph.routing_url;
+              try {
+                const result = await introspectSubgraph({
+                  subgraphURL: url,
+                  additionalHeaders: Object.entries(featureSubgraph.introspection?.headers ?? {}).map(
+                    ([key, value]) => ({
+                      key,
+                      value,
+                    }),
+                  ),
+                  rawIntrospection: featureSubgraph.introspection?.raw,
+                });
 
-              if (!result.success) {
+                if (!result.success) {
+                  program.error(
+                    `Could not introspect feature-graph subgraph ${featureSubgraph.name}, URL: ${url}: ${
+                      result.errorMessage ?? 'failed'
+                    }`,
+                  );
+                }
+
+                // Replace feature subgraph sdl with the base subgraph sdl
+                subgraphSDLs.set(s.name, result.sdl);
+              } catch (e: any) {
                 program.error(
-                  `Could not introspect feature-graph subgraph ${featureSubgraph.name}: ${
-                    result.errorMessage ?? 'failed'
-                  }`,
+                  `Could not introspect feature-graph subgraph ${featureSubgraph.name}, URL: ${url}: ${e.message}`,
                 );
               }
             }
