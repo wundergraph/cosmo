@@ -138,10 +138,10 @@ type SubgraphResponse struct {
 }
 
 type ModuleHooks interface {
-    // Provision is called when the module is provisioned
-    Provision(ctx *core.ModuleContext) error
-    // Shutdown is called when the module is shutdown
-    Shutdown() error
+	// Provision is called when the module is provisioned
+	Provision(ctx *core.ModuleContext) error
+	// Shutdown is called when the module is shutdown
+	Shutdown() error
 	// Module returns the module information and factory function
 	Module() core.ModuleInfo
 }
@@ -340,7 +340,7 @@ func (m *MyModule) Cleanup() error {
 
 ## Custom Module configuration
 
-Custom modules can be configured using a YAML file that is loaded by the router at startup. We reserve a section in the configuration file for custom modules. Each module can have its own configuration section with custom properties.
+Custom modules can be configured using a YAML file that is loaded by the router at startup `config.yaml`. We reserve a section in the configuration file for custom modules. Each module can have its own configuration section with custom properties.
 The name of the module in the configuration file must match the name specified in the `ModuleInfo` struct.
 
 ```yaml
@@ -350,15 +350,15 @@ modules:
     value: 42
 ```
 
-At module provisioning, the configuration is loaded and can be marshaled into the module struct, where it can be accessed across the module lifecycle. We support all primitive types, slices, and maps in the configuration file.
+At module provisioning, the configuration is loaded and is marshaled into the module struct, where it can be accessed across the module lifecycle. We support all primitive types, slices, and maps in the configuration file.
 
 ```go
 type MyModule struct {
 	Value uint64 `yaml:"value"`
-	
+
 	Nested struct {
-        Property string `yaml:"property"`
-    } `yaml:"nested"`
+		Property string `yaml:"property"`
+	} `yaml:"nested"`
 }
 
 func (m *MyModule) Provision(ctx *core.ModuleContext) error {
@@ -367,10 +367,10 @@ func (m *MyModule) Provision(ctx *core.ModuleContext) error {
 }
 
 func (m *MyModule) Module() core.ModuleInfo {
-    return core.ModuleInfo{
-        Name: "myModule",
-		New: func() core.Module { return &MyModule{} },
-    }
+	return core.ModuleInfo{
+		Name: "myModule",
+		New:  func() core.Module { return &MyModule{} },
+	}
 }
 ```
 
