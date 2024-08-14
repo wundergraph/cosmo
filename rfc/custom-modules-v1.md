@@ -483,6 +483,21 @@ require (
 )
 ```
 
+# Module Versioning
+
+Modules can be versioned using Go Workspace module versioning. The version of a module is specified in the `go.mod` file of the module. The router will load the correct version of the module based on the version specified in the `go.mod` file. The version of a module can be updated by changing the version in the `go.mod` file and running `go mod tidy` to update the dependencies. Go workspaces are supported by VsCode, Goland, and other modern IDEs.
+
+```
+.
+├── go.work
+├── modules/
+│   ├── go.mod
+│   └── myModule.go
+└── router/
+    ├── main.go
+    └── go.mod
+```
+
 ## Outlook
 
 Possible workflow to implement and build custom modules:
