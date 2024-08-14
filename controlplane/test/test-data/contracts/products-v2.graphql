@@ -1,0 +1,26 @@
+type Query {
+  internalProduct(sku: ID!): InternalProduct! @tag(name: "dev-only")
+  product(sku: ID!): User!
+}
+
+type Product {
+  sku: ID!
+  upc: Int!
+  name: String!
+}
+
+type InternalProduct @tag(name: "dev-only") {
+  sku: ID!
+  product: Product!
+  stock: Int!
+}
+
+type User @key(fields: "id") {
+  id: ID!
+  preferredProduct: Product!
+}
+
+type InternalUser @key(fields: "id") @tag(name: "dev-only") {
+  id: ID!
+  preferredProduct: Product!
+}

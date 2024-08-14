@@ -3,20 +3,22 @@ import { join } from 'node:path';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { RouterConfig } from "@wundergraph/cosmo-connect/dist/node/v1/node_pb";
+import { normalizeString } from "@wundergraph/composition/tests/utils/utils.js";
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
 import { unsuccessfulBaseCompositionError } from '../src/core/errors/errors.js';
 import {
-  SetupTest,
-  createFederatedGraph,
-  createThenPublishSubgraph,
-  createNamespace,
-  DEFAULT_ROUTER_URL,
-  createAndPublishSubgraph,
   assertFeatureFlagExecutionConfig,
   assertNumberOfCompositions,
+  createAndPublishSubgraph,
+  createFederatedGraph,
+  createNamespace,
+  createThenPublishSubgraph,
+  DEFAULT_NAMESPACE,
+  DEFAULT_ROUTER_URL,
   DEFAULT_SUBGRAPH_URL_ONE,
   DEFAULT_SUBGRAPH_URL_TWO,
-  DEFAULT_NAMESPACE,
+  SetupTest,
 } from './test-util.js';
 
 let dbname = '';
@@ -964,14 +966,14 @@ describe('Contract tests', (ctx) => {
       labels,
       DEFAULT_SUBGRAPH_URL_ONE,
     );
-    const publishSubgraphResponse = await client.publishFederatedSubgraph({
-      name: 'products',
+    await createAndPublishSubgraph(
+      client,
+      'products',
       namespace,
+      fs.readFileSync(join(process.cwd(), `test/test-data/feature-flags/products.graphql`)).toString(),
       labels,
-      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
-      schema: fs.readFileSync(join(process.cwd(), `test/test-data/feature-flags/products.graphql`)).toString(),
-    });
-    expect(publishSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+      DEFAULT_SUBGRAPH_URL_TWO,
+    );
 
     const baseGraphResponse = await client.getFederatedGraphByName({
       name: baseGraphName,
@@ -1000,7 +1002,7 @@ describe('Contract tests', (ctx) => {
       namespace,
     });
 
-    // There should still only be a single key in storage
+    // There should be two keys (the source graph and the contract)
     expect(blobStorage.keys()).toHaveLength(2);
     const contractKey = blobStorage.keys()[1];
     expect(contractKey).toContain(contractResponse.graph!.id);
@@ -1041,6 +1043,246 @@ describe('Contract tests', (ctx) => {
     await assertNumberOfCompositions(client, contractName, 2, namespace);
     // The source graph compositions should remain at three
     await assertNumberOfCompositions(client, baseGraphName, 3, namespace);
+
+    await server.close();
+  });
+
+  test('that a contract uploads the correct client schema to the router', async () => {
+    const { client, server, blobStorage } = await SetupTest({ dbname });
+
+    const namespace = genID('namespace').toLowerCase();
+    await createNamespace(client, namespace);
+    const baseGraphName = genID('baseGraphName');
+    const label = genUniqueLabel('label');
+    const labels = [label];
+    await createFederatedGraph(client, baseGraphName, namespace, [joinLabel(label)], DEFAULT_ROUTER_URL);
+    await createAndPublishSubgraph(
+      client,
+      'users',
+      namespace,
+      fs.readFileSync(join(process.cwd(), `test/test-data/contracts/users.graphql`)).toString(),
+      labels,
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+    await createAndPublishSubgraph(
+      client,
+      'products',
+      namespace,
+      fs.readFileSync(join(process.cwd(), `test/test-data/contracts/products.graphql`)).toString(),
+      labels,
+      DEFAULT_SUBGRAPH_URL_TWO,
+    );
+    const baseGraphResponse = await client.getFederatedGraphByName({
+      name: baseGraphName,
+      namespace,
+    });
+
+    expect(blobStorage.keys()).toHaveLength(1);
+    const baseGraphKey = blobStorage.keys()[0];
+    expect(baseGraphKey).toContain(baseGraphResponse.graph!.id);
+    await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
+    // Two subgraph publishes for two compositions
+    await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
+
+    const contractName = genID('contractName');
+    const createContractResponse = await client.createContract({
+      name: contractName,
+      namespace,
+      sourceGraphName: baseGraphName,
+      excludeTags: ['dev-only'],
+      routingUrl: 'http://localhost:3004',
+    });
+    expect(createContractResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const contractResponse = await client.getFederatedGraphByName({
+      name: contractName,
+      namespace,
+    });
+
+    // There should be two keys in storage (source graph and contract)
+    expect(blobStorage.keys()).toHaveLength(2);
+    const contractKey = blobStorage.keys()[1];
+    expect(contractKey).toContain(contractResponse.graph!.id);
+
+    // There should be a composition for the contract
+    await assertNumberOfCompositions(client, contractName, 1, namespace);
+    // The source graph compositions should remain at two
+    await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
+
+    const rawExecutionConfig = await blobStorage.getObject({ key: contractKey });
+    expect(rawExecutionConfig).toBeDefined();
+
+    const executionConfig: RouterConfig = await rawExecutionConfig.stream
+      .getReader()
+      .read()
+      .then((result) => JSON.parse(result.value.toString()));
+
+    expect(executionConfig.engineConfig).toBeDefined();
+    expect(executionConfig.engineConfig?.graphqlSchema).toBeDefined();
+    expect(executionConfig.engineConfig?.graphqlClientSchema).toBeDefined();
+    expect(normalizeString(executionConfig.engineConfig!.graphqlSchema!)).toBe(normalizeString(`
+      schema {
+        query: Query
+        mutation: Mutation
+      }
+      directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
+      directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
+      
+      type Query {
+        internalUser(id: ID!): InternalUser! @tag(name: "dev-only") @inaccessible
+        user(id: ID!): User!
+        internalProduct(sku: ID!): InternalProduct! @tag(name: "dev-only") @inaccessible
+        product(sku: ID!): User!
+      }
+
+      type Mutation {
+        internalUpdateUser(id: ID!): InternalUser! @tag(name: "dev-only") @inaccessible
+        updateUser(id: ID!): User!
+      }
+
+      type User {
+        id: ID!
+        name: String!
+        age: Int!
+        preferredProduct: Product!
+      }
+
+      type InternalUser @tag(name: "dev-only") @inaccessible {
+        id: ID!
+        user: User!
+        privateField: String!
+        preferredProduct: Product!
+      }
+
+      type Product {
+        sku: ID!
+        name: String!
+      }
+
+      type InternalProduct @tag(name: "dev-only") @inaccessible {
+        sku: ID!
+        product: Product!
+        stock: Int!
+      }
+    `));
+    expect(normalizeString(executionConfig.engineConfig!.graphqlClientSchema!)).toBe(normalizeString(`
+      type Query {
+        user(id: ID!): User!
+        product(sku: ID!): User!
+      }
+
+      type Mutation {
+        updateUser(id: ID!): User!
+      }
+
+      type User {
+        id: ID!
+        name: String!
+        age: Int!
+        preferredProduct: Product!
+      }
+
+      type Product {
+        sku: ID!
+        name: String!
+      }
+    `));
+
+    const publishSubgraphResponse = await client.publishFederatedSubgraph({
+      name: 'products',
+      namespace,
+      schema: fs.readFileSync(join(process.cwd(), `test/test-data/contracts/products-v2.graphql`)).toString(),
+    });
+    expect(publishSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // There should be a new source graph composition
+    await assertNumberOfCompositions(client, baseGraphName, 3, namespace);
+    // There should be a new contract composition
+    await assertNumberOfCompositions(client, contractName, 2, namespace);
+
+    // There should still be only two keys
+    expect(blobStorage.keys()).toHaveLength(2);
+
+    const newRawExecutionConfig = await blobStorage.getObject({ key: contractKey });
+    expect(newRawExecutionConfig).toBeDefined();
+
+    const newExecutionConfig: RouterConfig = await newRawExecutionConfig.stream
+      .getReader()
+      .read()
+      .then((result) => JSON.parse(result.value.toString()));
+
+    expect(newExecutionConfig.engineConfig).toBeDefined();
+    expect(newExecutionConfig.engineConfig?.graphqlSchema).toBeDefined();
+    expect(newExecutionConfig.engineConfig?.graphqlClientSchema).toBeDefined();
+    expect(normalizeString(newExecutionConfig.engineConfig!.graphqlSchema!)).toBe(normalizeString(`
+      schema {
+        query: Query
+        mutation: Mutation
+      }
+      directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
+      directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
+      
+      type Query {
+        internalUser(id: ID!): InternalUser! @tag(name: "dev-only") @inaccessible
+        user(id: ID!): User!
+        internalProduct(sku: ID!): InternalProduct! @tag(name: "dev-only") @inaccessible
+        product(sku: ID!): User!
+      }
+
+      type Mutation {
+        internalUpdateUser(id: ID!): InternalUser! @tag(name: "dev-only") @inaccessible
+        updateUser(id: ID!): User!
+      }
+
+      type User {
+        id: ID!
+        name: String!
+        age: Int!
+        preferredProduct: Product!
+      }
+
+      type InternalUser @tag(name: "dev-only") @inaccessible {
+        id: ID!
+        user: User!
+        privateField: String!
+        preferredProduct: Product!
+      }
+
+      type Product {
+        sku: ID!
+        upc: Int!
+        name: String!
+      }
+
+      type InternalProduct @tag(name: "dev-only") @inaccessible {
+        sku: ID!
+        product: Product!
+        stock: Int!
+      }
+    `));
+    expect(normalizeString(newExecutionConfig.engineConfig!.graphqlClientSchema!)).toBe(normalizeString(`
+      type Query {
+        user(id: ID!): User!
+        product(sku: ID!): User!
+      }
+
+      type Mutation {
+        updateUser(id: ID!): User!
+      }
+
+      type User {
+        id: ID!
+        name: String!
+        age: Int!
+        preferredProduct: Product!
+      }
+
+      type Product {
+        sku: ID!
+        upc: Int!
+        name: String!
+      }
+    `));
 
     await server.close();
   });
