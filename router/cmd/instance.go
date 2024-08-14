@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/KimMachineGun/automemlimit/memlimit"
 	"github.com/dustin/go-humanize"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
@@ -9,7 +11,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/selfregister"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"go.uber.org/automaxprocs/maxprocs"
-	"os"
 
 	"github.com/wundergraph/cosmo/router/core"
 	"go.uber.org/zap"
@@ -84,6 +85,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		core.WithOverrides(cfg.Overrides),
 		core.WithLogger(logger),
 		core.WithIntrospection(cfg.IntrospectionEnabled),
+		core.WithQueryPlans(cfg.QueryPlansEnabled),
 		core.WithPlayground(cfg.PlaygroundEnabled),
 		core.WithGraphApiToken(cfg.Graph.Token),
 		core.WithPersistedOperationsConfig(cfg.PersistedOperationsConfig),

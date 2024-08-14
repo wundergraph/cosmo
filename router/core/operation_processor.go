@@ -418,7 +418,7 @@ func (o *OperationKit) normalizePersistedOperation() (cached bool, err error) {
 	}
 
 	// Hash the normalized operation with the static operation name to avoid different IDs for the same operation
-	err = o.kit.printer.Print(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.keyGen)
+	err = o.kit.printer.Print(o.kit.doc, o.kit.keyGen)
 	if err != nil {
 		return false, errors.WithStack(fmt.Errorf("normalizePersistedOperation failed generating operation hash: %w", err))
 	}
@@ -429,7 +429,7 @@ func (o *OperationKit) normalizePersistedOperation() (cached bool, err error) {
 
 	// Print the operation with the original operation name
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = o.originalOperationNameRef
-	err = o.kit.printer.Print(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.normalizedOperation)
+	err = o.kit.printer.Print(o.kit.doc, o.kit.normalizedOperation)
 	if err != nil {
 		return false, errors.WithStack(fmt.Errorf("normalizePersistedOperation failed printing operation: %w", err))
 	}
@@ -484,7 +484,7 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 	o.parsedOperation.Request.Variables = o.kit.doc.Input.Variables
 
 	// Hash the normalized operation with the static operation name & original variables to avoid different IDs for the same operation
-	err = o.kit.printer.Print(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.keyGen)
+	err = o.kit.printer.Print(o.kit.doc, o.kit.keyGen)
 	if err != nil {
 		return false, errors.WithStack(fmt.Errorf("normalizeNonPersistedOperation (uncached) failed generating operation hash: %w", err))
 	}
@@ -494,7 +494,7 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 
 	// Print the operation with the original operation name
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = o.originalOperationNameRef
-	err = o.kit.printer.Print(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.normalizedOperation)
+	err = o.kit.printer.Print(o.kit.doc, o.kit.normalizedOperation)
 	if err != nil {
 		return false, errors.WithStack(fmt.Errorf("normalizeNonPersistedOperation (uncached) failed printing operation: %w", err))
 	}
@@ -542,7 +542,7 @@ func (o *OperationKit) NormalizeVariables() error {
 		return nil
 	}
 	o.kit.normalizedOperation.Reset()
-	err := o.kit.printer.Print(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.normalizedOperation)
+	err := o.kit.printer.Print(o.kit.doc, o.kit.normalizedOperation)
 	if err != nil {
 		return errors.WithStack(fmt.Errorf("normalizeVariables: %w", err))
 	}
@@ -664,19 +664,24 @@ func (o *OperationKit) writeSkipIncludeCacheKeyToKeyGen(skipIncludeVariableNames
 }
 
 // Validate validates the operation variables.
-func (o *OperationKit) Validate() (cacheHit bool, err error) {
-	err = o.kit.variablesValidator.Validate(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.doc.Input.Variables)
-	if err != nil {
-		return false, &inputError{
-			message:    err.Error(),
-			statusCode: http.StatusOK,
+func (o *OperationKit) Validate(skipLoader bool) (cacheHit bool, err error) {
+	if !skipLoader {
+		// in case we're skipping the loader, it means that we won't execute the operation
+		// this means that we don't need to validate the variables as they are not used
+		// this is useful to return a query plan without having to provide variables
+		err = o.kit.variablesValidator.Validate(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.doc.Input.Variables)
+		if err != nil {
+			return false, &inputError{
+				message:    err.Error(),
+				statusCode: http.StatusOK,
+			}
 		}
-	}
-	if o.cache != nil && o.cache.validationCache != nil {
-		var valid bool
-		valid, cacheHit = o.cache.validationCache.Get(o.parsedOperation.ID)
-		if valid {
-			return
+		if o.cache != nil && o.cache.validationCache != nil {
+			var valid bool
+			valid, cacheHit = o.cache.validationCache.Get(o.parsedOperation.ID)
+			if valid {
+				return
+			}
 		}
 	}
 	report := &operationreport.Report{}
