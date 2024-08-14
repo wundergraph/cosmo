@@ -137,6 +137,13 @@ type SubgraphResponse struct {
 	Orignal *http.Response
 }
 
+type ModuleHooks interface {
+    // Provision is called when the module is provisioned
+    Provision(ctx *core.ModuleContext) error
+    // Shutdown is called when the module is shutdown
+    Shutdown() error
+}
+
 // SubgraphHooks are called when a subgraph request or response is made.
 // The order is not guaranteed, so the hooks should be idempotent and side-effect free.
 // if state needs to be shared between hooks, it should be stored in the context.
@@ -190,18 +197,6 @@ type OperationHooks interface {
 	// OnPostOperationPlan is called after an operation is planned
 	// Returning an error will result in a GraphQL error as a response from the gateway.
 	OnPostOperationPlan(op *core.Operation, err error) error
-}
-
-var _ GatewayHooks = (*MyModule)(nil)
-
-func (m *MyModule) Provision(ctx *core.ModuleContext) error {
-	// Initialize your module here, open connections etc.
-	return nil
-}
-
-func (m *MyModule) Shutdown() error {
-	// Shutdown your module here, close connections etc.
-	return nil
 }
 ```
 
@@ -344,11 +339,12 @@ func (m *MyModule) Cleanup() error {
 ## Custom Module configuration
 
 Custom modules can be configured using a YAML file that is loaded by the router at startup. We reserve a section in the configuration file for custom modules. Each module can have its own configuration section with custom properties.
+The name of the module in the configuration file must match the name of the module struct in the Go code (snake_case).
 
 ```yaml
 # config.yaml
 modules:
-  myModule:
+  my_module:
     value: 42
 ```
 
@@ -364,9 +360,6 @@ type MyModule struct {
 }
 
 func (m *MyModule) Provision(ctx *core.ModuleContext) error {
-	// Access the module configuration marshaled from the config file into the struct
-	_ = ctx.LoadConfig()
-
 	// Access the custom value from the configuration
 	m.Value
 }
@@ -469,10 +462,6 @@ type MyModule struct{
 var _ GatewayHooks = (*MyModule)(nil)
 
 func (m *MyModule) Provision(ctx *core.ModuleContext) error {
-	    
-	// Access the module configuration marshaled from the config file into the struct
-	_ = ctx.LoadConfig()
-	
 	// Compose multiple modules together
 	_ = ctx.RegisterModule(&ModuleB{
 		value: m.Value,
