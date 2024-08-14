@@ -1588,7 +1588,7 @@ export class FederatedGraphRepository {
             const contractSchemaVersionId = randomUUID();
 
             // Build the router execution config if the composed schema is valid
-            const contractRouterExecutionConfig = buildRouterExecutionConfig(composedGraph, contractSchemaVersionId);
+            const contractRouterExecutionConfig = buildRouterExecutionConfig(composedContract, contractSchemaVersionId);
 
             const contractComposition = await composer.saveComposition({
               composedGraph: composedContract,
