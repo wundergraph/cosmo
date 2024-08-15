@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/watcher"
 	"net"
 	"net/http"
 	"net/url"
@@ -17,7 +18,6 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/cdn"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/s3"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
-	"github.com/wundergraph/cosmo/router/pkg/file_watcher"
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 	configCDNProvider "github.com/wundergraph/cosmo/router/pkg/routerconfig/cdn"
 	configs3Provider "github.com/wundergraph/cosmo/router/pkg/routerconfig/s3"
@@ -184,7 +184,6 @@ type (
 		processStartTime          time.Time
 		developmentMode           bool
 		healthcheck               health.Checker
-		configFileWatcher         *file_watcher.Watcher
 		// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
 		localhostFallbackInsideDocker bool
 
@@ -992,45 +991,54 @@ func (r *Router) Start(ctx context.Context) error {
 		}
 
 		if r.executionConfig != nil && r.executionConfig.Watch {
-			watcher, err := file_watcher.FileWatcher(r.logger, r.executionConfig.Path)
+
+			w, err := watcher.NewWatcher(r.logger.With(zap.String("watcher", "execution_config")))
 			if err != nil {
-				return fmt.Errorf("failed to watch config file: %w", err)
+				return fmt.Errorf("failed to start watcher for execution config file: %w", err)
 			}
-			err = watcher.Watch(func() {
+
+			// Watch the execution config file for changes. Returning an error will stop the watcher.
+			// We intentionally ignore the error here because the user can retry. The watcher is closed when context is done.
+			err = w.Watch(ctx, r.executionConfig.Path, func(events []watcher.Event) error {
 				if r.shutdown.Load() {
 					r.logger.Warn("Router is in shutdown state. Skipping config update")
+					return nil
 				}
 
 				data, err := os.ReadFile(r.executionConfig.Path)
 				if err != nil {
 					r.logger.Error("Failed to read config file", zap.Error(err))
-					return
+					return nil
 				}
 
-				r.logger.Info("Config file changed. Updating server with new config")
+				r.logger.Info("Config file changed. Updating server with new config", zap.String("path", r.executionConfig.Path))
 
 				cfg, err := execution_config.UnmarshalConfig(data)
 				if err != nil {
 					r.logger.Error("Failed to serialize config file", zap.Error(err))
-					return
+					return nil
 				}
 
 				if err := r.newServer(ctx, cfg); err != nil {
 					r.logger.Error("Failed to update server with new config", zap.Error(err))
+					return nil
 				}
+
+				return nil
 			})
 			if err != nil {
-				return fmt.Errorf("failed to watch config file: %w", err)
+				r.logger.Error("Failed to watch execution config file. Restart the router to apply changes", zap.Error(err))
+				return fmt.Errorf("failed to watch execution config file: %w", err)
 			}
+
 			r.logger.Info("Watching config file for changes. Router will hot-reload automatically without downtime",
 				zap.String("path", r.executionConfig.Path),
 			)
-			r.configFileWatcher = watcher
 
 			return nil
 		}
 
-		r.logger.Info("Static execution config provided. Polling is disabled. Updating execution config is only possible by restarting the server")
+		r.logger.Info("Static execution config provided. Polling and watching is disabled. Updating execution config is only possible by restarting the server")
 
 		return nil
 	}
@@ -1118,12 +1126,6 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 		defer cancel()
 
 		ctx = ctxWithTimer
-	}
-
-	if r.configFileWatcher != nil {
-		if subErr := r.configFileWatcher.Close(); subErr != nil {
-			err = errors.Join(err, fmt.Errorf("failed to close config file watcher: %w", subErr))
-		}
 	}
 
 	if r.configPoller != nil {

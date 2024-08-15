@@ -66,6 +66,7 @@ require (
 
 require (
 	github.com/KimMachineGun/automemlimit v0.6.1
+	github.com/bep/debounce v1.2.1
 	github.com/caarlos0/env/v11 v11.1.0
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/klauspost/compress v1.17.9
@@ -103,6 +104,7 @@ require (
 	github.com/jensneuse/byte-template v0.0.0-20200214152254-4f3cf06e5c68 // indirect
 	github.com/kingledion/go-tools v0.6.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.8 // indirect
+	github.com/livebud/bud v0.2.8 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
@@ -120,6 +122,7 @@ require (
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/r3labs/sse/v2 v2.8.1 // indirect
 	github.com/rs/xid v1.5.0 // indirect
+	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06 // indirect
 	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
