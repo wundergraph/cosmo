@@ -32,7 +32,6 @@ func TestChange(t *testing.T) {
 	err = os.WriteFile(tempFile, []byte("a"), 0644)
 	require.NoError(t, err)
 
-	ctx := context.Background()
 	eventCh := make(chan []watcher.Event)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -63,7 +62,6 @@ func TestChange(t *testing.T) {
 func TestCreate(t *testing.T) {
 	dir := t.TempDir()
 	defer os.RemoveAll(dir)
-	ctx := context.Background()
 	eventCh := make(chan []watcher.Event)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -82,6 +80,7 @@ func TestCreate(t *testing.T) {
 	err = os.WriteFile(filepath.Join(dir, "config.json"), []byte("b"), 0644)
 	require.NoError(t, err)
 	events, err := getEvent(eventCh)
+	require.NoError(t, err)
 	require.Len(t, events, 1)
 	cancel()
 	require.NoError(t, w.Wait())

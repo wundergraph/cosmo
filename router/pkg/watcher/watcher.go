@@ -17,10 +17,10 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
-// Stop informs the watcher to stop.
+// ErrStop informs the watcher to stop.
 //
-// Stop is not an error, it's part of the control flow.
-var Stop = errors.New("stop watching")
+// ErrStop is not an error, it's part of the control flow.
+var ErrStop = errors.New("stop watching")
 
 // Arbitrarily picked after some manual testing. OSX is pretty fast, but Ubuntu
 // requires a longer delay for writes. Duplicate checks below allow us to keep
@@ -99,7 +99,13 @@ func NewWatcher(logger *zap.Logger) (*Watcher, error) {
 }
 
 func (w *Watcher) Wait() error {
-	return w.errGroup.Wait()
+	if err := w.errGroup.Wait(); err != nil {
+		if !errors.Is(err, ErrStop) {
+			return err
+		}
+		return nil
+	}
+	return nil
 }
 
 // Watch watches a file for changes and triggers the provided function. The watcher stops when
@@ -211,10 +217,12 @@ func (w *Watcher) Watch(ctx context.Context, filePath string, fn func(events []E
 		return nil
 	}
 
-	d := filepath.Dir(filePath)
+	// The implementation is intended to watch the directory of the file to get events
+	// for create, delete, and rename.
+	fileDir := filepath.Dir(filePath)
 
 	// Walk the files, adding files that aren't ignored
-	if err := filepath.WalkDir(d, func(path string, de fs.DirEntry, err error) error {
+	if err := filepath.WalkDir(fileDir, func(path string, de fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
