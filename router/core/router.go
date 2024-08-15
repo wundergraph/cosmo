@@ -1038,7 +1038,7 @@ func (r *Router) Start(ctx context.Context) error {
 			return nil
 		}
 
-		r.logger.Info("Static execution config provided. Polling and watching is disabled. Updating execution config is only possible by restarting the server")
+		r.logger.Info("Static execution config provided. Polling and watching is disabled. Updating execution config is only possible by restarting the router")
 
 		return nil
 	}

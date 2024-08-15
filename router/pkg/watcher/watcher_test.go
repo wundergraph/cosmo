@@ -10,26 +10,9 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
-
-	"golang.org/x/sync/errgroup"
 )
 
 var waitForEvents = 500 * time.Millisecond
-
-func writeFiles(dir string, files map[string]string) error {
-	eg := new(errgroup.Group)
-	for path, data := range files {
-		path := filepath.Join(dir, path)
-		data := data
-		eg.Go(func() error {
-			if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-				return err
-			}
-			return os.WriteFile(path, []byte(data), 0644)
-		})
-	}
-	return eg.Wait()
-}
 
 func getEvent(event <-chan []watcher.Event) ([]watcher.Event, error) {
 	select {
@@ -79,6 +62,7 @@ func TestChange(t *testing.T) {
 
 func TestCreate(t *testing.T) {
 	dir := t.TempDir()
+	defer os.RemoveAll(dir)
 	ctx := context.Background()
 	eventCh := make(chan []watcher.Event)
 	ctx, cancel := context.WithCancel(context.Background())
