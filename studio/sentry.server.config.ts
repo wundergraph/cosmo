@@ -4,20 +4,16 @@
 
 import * as Sentry from "@sentry/nextjs";
 
-const sentryDsn = process.env.SENTRY_DSN;
-const sentryClientServerRate = parseFloat(
-  process.env.SENTRY_SERVER_SAMPLE_RATE || "1",
-);
-const sentryDebugEnabled = process.env.SENTRY_DEBUG === "false";
-
 Sentry.init({
-  dsn: sentryDsn,
+  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
 
   // Adjust this value in production, or use tracesSampler for greater control
-  tracesSampleRate: sentryClientServerRate,
+  tracesSampleRate: parseFloat(
+    process.env.NEXT_PUBLIC_SENTRY_SERVER_SAMPLE_RATE || "1",
+  ),
 
   // Setting this option to true will print useful information to the console while you're setting up Sentry.
-  debug: sentryDebugEnabled,
+  debug: process.env.SENTRY_DEBUG === "true",
 
   // Uncomment the line below to enable Spotlight (https://spotlightjs.com)
   // spotlight: process.env.NODE_ENV === 'development',

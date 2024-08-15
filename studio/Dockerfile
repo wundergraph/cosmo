@@ -19,6 +19,21 @@ COPY studio/.env.docker studio/.env.production
 
 RUN pnpm install --filter=wundergraph-cosmo --filter=./connect --filter=./shared --filter=./studio --filter=./composition --frozen-lockfile
 
+# enables building custom on premise images with sentry support.
+ARG SENTRY_ENABLED
+ARG SENTRY_AUTH_TOKEN
+ARG SENTRY_ORGANIZATION
+ARG SENTRY_PROJECT
+ARG SENTRY_SEVER_SAMPLE_RATE
+ARG SENTRY_EDGE_SAMPLE_RATE
+
+ENV SENTRY_ENABLED $SENTRY_ENABLED
+ENV SENTRY_AUTH_TOKEN $SENTRY_AUTH_TOKEN
+ENV SENTRY_ORGANIZATION $SENTRY_ORGANIZATION
+ENV SENTRY_PROJECT $SENTRY_PROJECT
+ENV SENTRY_SEVER_SAMPLE_RATE $SENTRY_SEVER_SAMPLE_RATE
+ENV SENTRY_EDGE_SAMPLE_RATE $SENTRY_EDGE_SAMPLE_RATE
+
 COPY . /app/
 
 RUN pnpm buf generate --template buf.ts.gen.yaml

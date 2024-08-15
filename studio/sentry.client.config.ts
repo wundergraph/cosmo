@@ -4,27 +4,46 @@
 
 import * as Sentry from "@sentry/nextjs";
 
-const sentryDsn = process.env.SENTRY_DSN;
-const sentryClientSampleRate = parseFloat(
-  process.env.SENTRY_CLIENT_SAMPLE_RATE || "1",
-);
-const sentryDebugEnabled = process.env.SENTRY_DEBUG === "false";
-
 Sentry.init({
-  dsn: sentryDsn,
-
-  // Adjust this value in production, or use tracesSampler for greater control
-  tracesSampleRate: sentryClientSampleRate,
-
+  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
   // Setting this option to true will print useful information to the console while you're setting up Sentry.
-  debug: sentryDebugEnabled,
-  replaysOnErrorSampleRate: 1.0,
-
-  // This sets the sample rate to be 10%. You may want this to be 100% while
-  // in development and sample at a lower rate in production
-  replaysSessionSampleRate: 0.1,
-
-  // You can remove this option if you're not planning to use the Sentry Session Replay feature:
+  debug: process.env.SENTRY_DEBUG === "true",
+  /**
+   * A global sample rate to apply to all events.
+   *
+   * 0.0 = 0% chance of a given event being sent (send no events) 1.0 = 100% chance of a given event being sent (send
+   * all events)
+   */
+  sampleRate: parseFloat(
+    process.env.NEXT_PUBLIC_SENTRY_CLIENT_SAMPLE_RATE || "1",
+  ),
+  /**
+   * Sample rate to determine trace sampling.
+   *
+   * 0.0 = 0% chance of a given trace being sent (send no traces) 1.0 = 100% chance of a given trace being sent (send
+   * all traces)
+   *
+   * Tracing is enabled if either this or `tracesSampler` is defined. If both are defined, `tracesSampleRate` is
+   * ignored.
+   */
+  tracesSampleRate: parseFloat(
+    process.env.NEXT_PUBLIC_SENTRY_CLIENT_TRACES_SAMPLE_RATE || "1",
+  ),
+  /**
+   * The sample rate for sessions that has had an error occur.
+   * This is independent of `sessionSampleRate`.
+   * 1.0 will record all sessions and 0 will record none.
+   */
+  replaysOnErrorSampleRate: parseFloat(
+    process.env.NEXT_PUBLIC_SENTRY_CLIENT_REPLAYS_ON_ERROR_SAMPLE_RATE || "1",
+  ),
+  /**
+   * The sample rate for session-long replays.
+   * 1.0 will record all sessions and 0 will record none.
+   */
+  replaysSessionSampleRate: parseFloat(
+    process.env.NEXT_PUBLIC_SENTRY_CLIENT_REPLAYS_SESSION_SAMPLE_RATE || "1",
+  ),
   integrations: [
     Sentry.replayIntegration({
       // Additional Replay configuration goes in here, for example:

@@ -14,14 +14,14 @@ const sentryOrganization = process.env.SENTRY_ORGANIZATION || "";
 const sentryProject = process.env.SENTRY_PROJECT || "";
 const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN || "";
 if (isSentryEnabled) {
-  if (sentryAuthToken) {
-    console.warn(
-      "sentry auth token not set, this will fail on uploading soure maps",
+  if (sentryAuthToken === "") {
+    throw Error(
+      "SENTRY_AUTH_TOKEN please ensure it's set during build time when using sentry!",
     );
   }
   if (sentryOrganization === "" || sentryProject === "") {
-    console.warn(
-      "sentry not configured properly please check your environment settings for the build",
+    throw Error(
+      "SENTRY_ORGANIZATION or SENTRY_PROJECT not set please check your environment variables!",
     );
   }
 }
