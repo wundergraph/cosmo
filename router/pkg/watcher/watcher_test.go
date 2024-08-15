@@ -50,11 +50,16 @@ func TestChange(t *testing.T) {
 	time.Sleep(waitForEvents)
 	err = os.WriteFile(tempFile, []byte("b"), 0644)
 	require.NoError(t, err)
-	events, err := getEvent(eventCh)
-	require.NoError(t, err)
-	require.Len(t, events, 1)
-	require.Equal(t, events[0].Path, tempFile)
-	require.Equal(t, events[0].Op, watcher.OpUpdate)
+
+	require.Eventually(t, func() bool {
+		events, err := getEvent(eventCh)
+		require.NoError(t, err)
+		require.Len(t, events, 1)
+		require.Equal(t, events[0].Path, tempFile)
+		require.Equal(t, events[0].Op, watcher.OpUpdate)
+		return true
+	}, waitForEvents, 10*time.Millisecond)
+
 	cancel()
 	require.NoError(t, w.Wait())
 }
@@ -76,12 +81,19 @@ func TestCreate(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	time.Sleep(waitForEvents)
+	tempFile := filepath.Join(dir, "config.json")
 	err = os.WriteFile(filepath.Join(dir, "config.json"), []byte("b"), 0644)
 	require.NoError(t, err)
-	events, err := getEvent(eventCh)
-	require.NoError(t, err)
-	require.Len(t, events, 1)
+
+	require.Eventually(t, func() bool {
+		events, err := getEvent(eventCh)
+		require.NoError(t, err)
+		require.Len(t, events, 1)
+		require.Equal(t, events[0].Path, tempFile)
+		require.Equal(t, events[0].Op, watcher.OpCreate)
+		return true
+	}, waitForEvents, 10*time.Millisecond)
+
 	cancel()
 	require.NoError(t, w.Wait())
 }
