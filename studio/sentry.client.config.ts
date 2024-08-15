@@ -44,7 +44,38 @@ Sentry.init({
   replaysSessionSampleRate: parseFloat(
     process.env.NEXT_PUBLIC_SENTRY_CLIENT_REPLAYS_SESSION_SAMPLE_RATE || "1",
   ),
+
   integrations: [
+    Sentry.feedbackIntegration({
+      id: "feedback form",
+      showBranding: false,
+      autoInject: true,
+      isEmailRequired: true,
+      isNameRequired: true,
+      showEmail: true,
+      enableScreenshot: true,
+      useSentryUser: {
+        email: "foo@bar",
+        name: "foo",
+      },
+      triggerLabel: "need help?",
+      triggerAriaLabel: "label-open",
+      cancelButtonLabel: "all good",
+      submitButtonLabel: "submit question",
+      confirmButtonLabel: "yes",
+      formTitle: "Need Help?",
+      emailLabel: "email?",
+      emailPlaceholder: "email",
+      messageLabel: "message",
+      messagePlaceholder: "message place holder",
+      nameLabel: "name",
+      namePlaceholder: "another name",
+      successMessageText: "success message",
+      isRequiredLabel: "is required",
+      addScreenshotButtonLabel: "take a screenshot",
+      removeScreenshotButtonLabel: "remove a screenshot",
+      colorScheme: "system",
+    }),
     Sentry.replayIntegration({
       // Additional Replay configuration goes in here, for example:
       maskAllText: true,
