@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.2.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.2.0...@wundergraph/playground@0.2.1) (2024-08-15)
+
+### Bug Fixes
+
+* polyfill crypto.randomUUID for localhost ([#1086](https://github.com/wundergraph/cosmo/issues/1086)) ([1a7776b](https://github.com/wundergraph/cosmo/commit/1a7776b1c1b2cfdf4095cf8046fe5f97bb641fe1)) (@StarpTech)
+
 # [0.2.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.1.0...@wundergraph/playground@0.2.0) (2024-08-09)
 
 ### Features
