@@ -66,6 +66,7 @@ require (
 
 require (
 	github.com/KimMachineGun/automemlimit v0.6.1
+	github.com/bep/debounce v1.2.1
 	github.com/caarlos0/env/v11 v11.1.0
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/klauspost/compress v1.17.9
