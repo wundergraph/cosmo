@@ -15,7 +15,7 @@ Sentry.init({
    * all events)
    */
   sampleRate: parseFloat(
-    process.env.NEXT_PUBLIC_SENTRY_CLIENT_SAMPLE_RATE || "1",
+    process.env.NEXT_PUBLIC_SENTRY_CLIENT_SAMPLE_RATE || "0",
   ),
   /**
    * Sample rate to determine trace sampling.
@@ -27,7 +27,7 @@ Sentry.init({
    * ignored.
    */
   tracesSampleRate: parseFloat(
-    process.env.NEXT_PUBLIC_SENTRY_CLIENT_TRACES_SAMPLE_RATE || "1",
+    process.env.NEXT_PUBLIC_SENTRY_CLIENT_TRACES_SAMPLE_RATE || "0",
   ),
   /**
    * The sample rate for sessions that has had an error occur.
@@ -35,14 +35,14 @@ Sentry.init({
    * 1.0 will record all sessions and 0 will record none.
    */
   replaysOnErrorSampleRate: parseFloat(
-    process.env.NEXT_PUBLIC_SENTRY_CLIENT_REPLAYS_ON_ERROR_SAMPLE_RATE || "1",
+    process.env.NEXT_PUBLIC_SENTRY_CLIENT_REPLAYS_ON_ERROR_SAMPLE_RATE || "0",
   ),
   /**
    * The sample rate for session-long replays.
    * 1.0 will record all sessions and 0 will record none.
    */
   replaysSessionSampleRate: parseFloat(
-    process.env.NEXT_PUBLIC_SENTRY_CLIENT_REPLAYS_SESSION_SAMPLE_RATE || "1",
+    process.env.NEXT_PUBLIC_SENTRY_CLIENT_REPLAYS_SESSION_SAMPLE_RATE || "0",
   ),
   integrations: [
     Sentry.replayIntegration({
