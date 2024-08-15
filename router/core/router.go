@@ -198,6 +198,8 @@ type (
 
 		securityConfiguration config.SecurityConfiguration
 
+		customModules []Module
+
 		engineExecutionConfiguration config.EngineExecutionConfiguration
 		// should be removed once the users have migrated to the new overrides config
 		overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration
@@ -283,9 +285,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 	if r.fileUploadConfig == nil {
 		r.fileUploadConfig = DefaultFileUploadConfig()
 	}
-	if r.accessController == nil {
-		r.accessController = DefaultAccessController()
-	} else {
+	if r.accessController != nil {
 		if len(r.accessController.authenticators) == 0 && r.accessController.authenticationRequired {
 			r.logger.Warn("authentication is required but no authenticators are configured")
 		}
@@ -519,7 +519,18 @@ func (r *Router) listenAndServe(cfg *nodev1.RouterConfig) error {
 }
 
 func (r *Router) initModules(ctx context.Context) error {
-	var moduleList = sortModules(modules)
+
+	moduleList := make([]ModuleInfo, 0, len(modules)+len(r.customModules))
+
+	for _, module := range modules {
+		moduleList = append(moduleList, module)
+	}
+
+	for _, module := range r.customModules {
+		moduleList = append(moduleList, module.Module())
+	}
+
+	moduleList = sortModules(moduleList)
 
 	for _, moduleInfo := range moduleList {
 		now := time.Now()
@@ -1450,6 +1461,12 @@ func WithSecurityConfig(cfg config.SecurityConfiguration) Option {
 func WithEngineExecutionConfig(cfg config.EngineExecutionConfiguration) Option {
 	return func(r *Router) {
 		r.engineExecutionConfiguration = cfg
+	}
+}
+
+func WithCustomModules(modules ...Module) Option {
+	return func(r *Router) {
+		r.customModules = modules
 	}
 }
 

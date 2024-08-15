@@ -295,7 +295,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 
 		// If we have authenticators, we try to authenticate the request
-		if len(h.accessController.authenticators) > 0 {
+		if h.accessController != nil {
 			_, authenticateSpan := h.tracer.Start(r.Context(), "Authenticate",
 				trace.WithSpanKind(trace.SpanKindServer),
 				trace.WithAttributes(commonAttributes...),
@@ -355,6 +355,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpOperation *httpOperation) (*operationContext, error) {
 
 	operationKit, err := h.operationProcessor.NewKit(httpOperation.body, httpOperation.files)
+	if err != nil {
+		return nil, err
+	}
+
 	defer func() {
 		// the kit must be freed before we're doing io operations
 		// the kit is bound to the number of CPUs, and we must not hold onto it while doing IO operations
@@ -362,13 +366,9 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 
 		if operationKit != nil {
 			operationKit.Free()
-			operationKit = nil
 		}
-	}()
 
-	if err != nil {
-		return nil, err
-	}
+	}()
 
 	if err := operationKit.UnmarshalOperation(); err != nil {
 		return nil, err
@@ -630,11 +630,11 @@ func (h *PreHandler) parseRequestOptions(r *http.Request, clientInfo *ClientInfo
 func (h *PreHandler) internalParseRequestOptions(r *http.Request, clientInfo *ClientInfo, requestLogger *zap.Logger) (resolve.ExecutionOptions, resolve.TraceOptions, error) {
 	// Determine if we should enable request tracing / query plans at all
 	if h.enableRequestTracing {
-		// In dev mode we always enable tracing / query plans
+		// In dev mode we always allow to enable tracing / query plans
 		if h.developmentMode {
 			return h.parseRequestExecutionOptions(r), h.parseRequestTraceOptions(r), nil
 		}
-		// If the client has a valid request token and we have a public key from the controlplane
+		// If the client has a valid request token, and we have a public key from the controlplane
 		if clientInfo.WGRequestToken != "" && h.routerPublicKey != nil {
 			_, err := jwt.Parse(clientInfo.WGRequestToken, func(token *jwt.Token) (interface{}, error) {
 				return h.routerPublicKey, nil
