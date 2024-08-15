@@ -107,6 +107,10 @@ const withOptionalSentryConfig = (org, project, config) =>
 
     org: org,
     project: project,
+    sourcemaps: {
+      disable: false,
+      deleteSourcemapsAfterUpload: true,
+    },
 
     telemetry: false,
 
