@@ -166,6 +166,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         invitations: data.invitations,
       });
 
+      if (process.env.NEXT_PUBLIC_SENTRY_ENABLED) {
+        import('@sentry/nextjs').then(Sentry => {
+          Sentry.setUser({
+            id: data.id,
+            email: data.email,
+            organization: organization.name,
+            organizationId: organization.id,
+            organizationSlug: organization.slug,
+            plan: organization.plan,
+          });
+        });
+      }
+
       // Identify call for koala script
       identifyKoala({
         id: data.id,
