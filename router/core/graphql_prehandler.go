@@ -79,7 +79,7 @@ type PreHandler struct {
 }
 
 type httpOperation struct {
-	body             []byte
+	body             *[]byte
 	files            []httpclient.File
 	requestLogger    *zap.Logger
 	attributes       []attribute.KeyValue
@@ -283,7 +283,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			traceTimings:     traceTimings,
 			executionOptions: executionOptions,
 			files:            files,
-			body:             body,
+			body:             &body,
 		})
 		if err != nil {
 			finalErr = err
@@ -355,7 +355,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpOperation *httpOperation) (*operationContext, error) {
 
-	operationKit, err := h.operationProcessor.NewKit(httpOperation.body, httpOperation.files)
+	operationKit, err := h.operationProcessor.NewKit(*httpOperation.body, httpOperation.files)
 	if err != nil {
 		return nil, err
 	}
