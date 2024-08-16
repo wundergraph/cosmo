@@ -148,7 +148,6 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		core.WithEngineExecutionConfig(cfg.EngineExecutionConfiguration),
 		core.WithSecurityConfig(cfg.SecurityConfiguration),
 		core.WithAuthorizationConfig(&cfg.Authorization),
-		core.WithAccessController(core.NewAccessController(authenticators, cfg.Authorization.RequireAuthentication)),
 		core.WithWebSocketConfiguration(&cfg.WebSocket),
 		core.WithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation),
 		core.WithLocalhostFallbackInsideDocker(cfg.LocalhostFallbackInsideDocker),
@@ -185,6 +184,10 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 			PollInterval:    cfg.PollInterval,
 			ExecutionConfig: cfg.ExecutionConfig,
 		}))
+	}
+
+	if len(authenticators) > 0 {
+		options = append(options, core.WithAccessController(core.NewAccessController(authenticators, cfg.Authorization.RequireAuthentication)))
 	}
 
 	return core.NewRouter(options...)

@@ -27,7 +27,7 @@ func TestTelemetry(t *testing.T) {
 
 	const employeesIDData = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
 
-	t.Run("Trace unnamed GraphQL operation with metrics", func(t *testing.T) {
+	t.Run("Trace unnamed GraphQL operation and validate all metrics and spans", func(t *testing.T) {
 		t.Parallel()
 
 		metricReader := metric.NewManualReader()
@@ -54,11 +54,14 @@ func TestTelemetry(t *testing.T) {
 			require.Equal(t, "HTTP - Read Body", sn[0].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[0].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[0].Status())
-			require.Len(t, sn[0].Attributes(), 4)
+			require.Len(t, sn[0].Attributes(), 7)
 			require.Contains(t, sn[0].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[0].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[0].Attributes(), otel.WgFederatedGraphID.String("graph"))
 			require.Contains(t, sn[0].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
+			require.Contains(t, sn[0].Attributes(), otel.WgClientName.String("unknown"))
+			require.Contains(t, sn[0].Attributes(), otel.WgClientVersion.String("missing"))
+			require.Contains(t, sn[0].Attributes(), otel.WgOperationProtocol.String("http"))
 
 			// Pre-Handler Operation Parse
 
@@ -115,7 +118,7 @@ func TestTelemetry(t *testing.T) {
 
 			// Span attributes
 
-			require.Len(t, sn[2].Attributes(), 7)
+			require.Len(t, sn[2].Attributes(), 10)
 
 			require.Contains(t, sn[2].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[2].Attributes(), otel.WgRouterClusterName.String(""))
@@ -124,6 +127,9 @@ func TestTelemetry(t *testing.T) {
 			require.Contains(t, sn[2].Attributes(), otel.WgOperationName.String(""))
 			require.Contains(t, sn[2].Attributes(), otel.WgOperationType.String("query"))
 			require.Contains(t, sn[2].Attributes(), otel.WgNormalizationCacheHit.Bool(false))
+			require.Contains(t, sn[2].Attributes(), otel.WgClientName.String("unknown"))
+			require.Contains(t, sn[2].Attributes(), otel.WgClientVersion.String("missing"))
+			require.Contains(t, sn[2].Attributes(), otel.WgOperationProtocol.String("http"))
 
 			require.Equal(t, "Operation - Validate", sn[3].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[3].SpanKind())
@@ -148,7 +154,7 @@ func TestTelemetry(t *testing.T) {
 
 			// Span attributes
 
-			require.Len(t, sn[3].Attributes(), 5)
+			require.Len(t, sn[3].Attributes(), 11)
 
 			require.Equal(t, "Operation - Plan", sn[4].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[4].SpanKind())
@@ -159,6 +165,12 @@ func TestTelemetry(t *testing.T) {
 			require.Contains(t, sn[3].Attributes(), otel.WgFederatedGraphID.String("graph"))
 			require.Contains(t, sn[3].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
 			require.Contains(t, sn[3].Attributes(), otel.WgValidationCacheHit.Bool(false))
+			require.Contains(t, sn[3].Attributes(), otel.WgClientName.String("unknown"))
+			require.Contains(t, sn[3].Attributes(), otel.WgClientVersion.String("missing"))
+			require.Contains(t, sn[3].Attributes(), otel.WgOperationName.String(""))
+			require.Contains(t, sn[3].Attributes(), otel.WgOperationType.String("query"))
+			require.Contains(t, sn[3].Attributes(), otel.WgOperationProtocol.String("http"))
+			require.Contains(t, sn[3].Attributes(), otel.WgOperationHash.String("14226210703439426856"))
 
 			// Span Resource attributes
 
@@ -179,13 +191,19 @@ func TestTelemetry(t *testing.T) {
 
 			// Span attributes
 
-			require.Len(t, sn[4].Attributes(), 6)
+			require.Len(t, sn[4].Attributes(), 12)
 			require.Contains(t, sn[4].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[4].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[4].Attributes(), otel.WgFederatedGraphID.String("graph"))
 			require.Contains(t, sn[4].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
 			require.Contains(t, sn[4].Attributes(), otel.WgEngineRequestTracingEnabled.Bool(false))
 			require.Contains(t, sn[4].Attributes(), otel.WgEnginePlanCacheHit.Bool(false))
+			require.Contains(t, sn[4].Attributes(), otel.WgClientName.String("unknown"))
+			require.Contains(t, sn[4].Attributes(), otel.WgClientVersion.String("missing"))
+			require.Contains(t, sn[4].Attributes(), otel.WgOperationName.String(""))
+			require.Contains(t, sn[4].Attributes(), otel.WgOperationType.String("query"))
+			require.Contains(t, sn[4].Attributes(), otel.WgOperationProtocol.String("http"))
+			require.Contains(t, sn[4].Attributes(), otel.WgOperationHash.String("14226210703439426856"))
 
 			// Engine Transport
 			require.Equal(t, "query unnamed", sn[5].Name())
@@ -639,7 +657,7 @@ func TestTelemetry(t *testing.T) {
 
 			sn = exporter.GetSpans().Snapshots()
 			require.Len(t, sn, 9, "expected 9 spans, got %d", len(sn))
-			require.Len(t, sn[3].Attributes(), 5)
+			require.Len(t, sn[3].Attributes(), 11)
 			require.Contains(t, sn[3].Attributes(), otel.WgValidationCacheHit.Bool(true))
 		})
 	})
@@ -1473,18 +1491,18 @@ func TestTelemetry(t *testing.T) {
 			require.Contains(t, sn[1].Attributes(), otel.WgFeatureFlag.String("myff"))
 
 			require.Equal(t, "Operation - Normalize", sn[2].Name())
-			require.Len(t, sn[2].Attributes(), 8)
+			require.Len(t, sn[2].Attributes(), 11)
 			require.Contains(t, sn[2].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()))
 			require.Contains(t, sn[2].Attributes(), otel.WgFeatureFlag.String("myff"))
 
 			require.Equal(t, "Operation - Validate", sn[3].Name())
-			require.Len(t, sn[3].Attributes(), 6)
+			require.Len(t, sn[3].Attributes(), 12)
 			require.Contains(t, sn[3].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()))
 			require.Contains(t, sn[3].Attributes(), otel.WgFeatureFlag.String("myff"))
 			require.Contains(t, sn[3].Attributes(), otel.WgValidationCacheHit.Bool(false))
 
 			require.Equal(t, "Operation - Plan", sn[4].Name())
-			require.Len(t, sn[4].Attributes(), 7)
+			require.Len(t, sn[4].Attributes(), 13)
 			require.Contains(t, sn[4].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()))
 			require.Contains(t, sn[4].Attributes(), otel.WgFeatureFlag.String("myff"))
 
@@ -1969,6 +1987,11 @@ func TestTelemetry(t *testing.T) {
 
 			sn := exporter.GetSpans().Snapshots()
 			require.Len(t, sn, 9, "expected 9 spans, got %d", len(sn))
+
+			require.Equal(t, "HTTP - Read Body", sn[0].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[0].SpanKind())
+			require.Equal(t, sn[0].Parent().SpanID(), sn[8].SpanContext().SpanID())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[0].Status())
 
 			// Pre-Handler Operation steps
 			require.Equal(t, "Operation - Parse", sn[1].Name())

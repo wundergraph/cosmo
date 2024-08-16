@@ -54,64 +54,69 @@ func TestSingleError(t *testing.T) {
 }
 
 func TestSortingModulesByPriority(t *testing.T) {
-	modulesW := make(map[string]ModuleInfo)
-	modulesW["module1_0"] = ModuleInfo{
-		ID: "module1_0",
-		New: func() Module {
-			return nil
+
+	modulesW := []ModuleInfo{
+		{
+			ID: "module1_0",
+			New: func() Module {
+				return nil
+			},
 		},
-	}
-	modulesW["module2_0"] = ModuleInfo{
-		ID: "module2_0",
-		New: func() Module {
-			return nil
+		{
+			ID: "module2_0",
+			New: func() Module {
+				return nil
+			},
 		},
 	}
 
-	modulesX := make(map[string]ModuleInfo)
-	modulesX["module1_1"] = ModuleInfo{
-		ID:       "module1_1",
-		Priority: 1,
-		New: func() Module {
-			return nil
+	modulesX := []ModuleInfo{
+		{
+			ID:       "module1_1",
+			Priority: 1,
+			New: func() Module {
+				return nil
+			},
 		},
-	}
-	modulesX["module2_2"] = ModuleInfo{
-		ID:       "module2_2",
-		Priority: 2,
-		New: func() Module {
-			return nil
-		},
-	}
-
-	modulesY := make(map[string]ModuleInfo)
-	modulesY["module1_2"] = ModuleInfo{
-		ID:       "module1_2",
-		Priority: 2,
-		New: func() Module {
-			return nil
-		},
-	}
-	modulesY["module2_1"] = ModuleInfo{
-		ID:       "module2_1",
-		Priority: 1,
-		New: func() Module {
-			return nil
+		{
+			ID:       "module2_2",
+			Priority: 2,
+			New: func() Module {
+				return nil
+			},
 		},
 	}
 
-	modulesZ := make(map[string]ModuleInfo)
-	modulesZ["module1_0"] = ModuleInfo{
-		ID: "module1_0",
-		New: func() Module {
-			return nil
+	modulesY := []ModuleInfo{
+		{
+			ID:       "module1_2",
+			Priority: 2,
+			New: func() Module {
+				return nil
+			},
+		},
+		{
+			ID:       "module2_1",
+			Priority: 1,
+			New: func() Module {
+				return nil
+			},
 		},
 	}
-	modulesZ["module2_2"] = ModuleInfo{
-		ID:       "module2_2",
-		Priority: 2,
-		New: func() Module {
-			return nil
+
+	modulesZ := []ModuleInfo{
+		{
+			ID: "module1_0",
+			New: func() Module {
+				return nil
+			},
+		},
+		{
+			ID:       "module2_2",
+			Priority: 2,
+			New: func() Module {
+				return nil
+			},
 		},
 	}
 

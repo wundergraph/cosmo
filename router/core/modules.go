@@ -71,15 +71,10 @@ func RegisterModule(instance Module) {
 }
 
 // sortModules sorts the modules by priority
-func sortModules(modules map[string]ModuleInfo) []ModuleInfo {
-	var moduleList []ModuleInfo
-	for _, module := range modules {
-		moduleList = append(moduleList, module)
-	}
-
-	sort.Slice(moduleList, func(x, y int) bool {
-		priorityX := moduleList[x].Priority
-		priorityY := moduleList[y].Priority
+func sortModules(modules []ModuleInfo) []ModuleInfo {
+	sort.Slice(modules, func(x, y int) bool {
+		priorityX := modules[x].Priority
+		priorityY := modules[y].Priority
 		leastPriority := math.MaxInt
 
 		// If priority is 0, treat it as the lowest possible value
@@ -93,7 +88,7 @@ func sortModules(modules map[string]ModuleInfo) []ModuleInfo {
 		return priorityX < priorityY
 	})
 
-	return moduleList
+	return modules
 }
 
 // Module Interfaces

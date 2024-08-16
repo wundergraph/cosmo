@@ -66,7 +66,7 @@ func (p *MultipartParser) processFilePart(filePart []*multipart.FileHeader) erro
 	defer file.Close()
 
 	if filePart[0].Size > int64(p.maxUploadFileSize) {
-		return &inputError{
+		return &httpGraphqlError{
 			message:    "file too large to upload",
 			statusCode: http.StatusOK,
 		}
@@ -101,14 +101,14 @@ func (p *MultipartParser) Parse(r *http.Request, buf *bytes.Buffer) ([]byte, []h
 	reader := multipart.NewReader(r.Body, boundary)
 	p.form, err = reader.ReadForm(0)
 	if err != nil {
-		return body, p.files, &inputError{
+		return body, p.files, &httpGraphqlError{
 			message:    err.Error(),
 			statusCode: http.StatusOK,
 		}
 	}
 
 	if len(p.form.File) > p.maxUploadFiles {
-		return body, p.files, &inputError{
+		return body, p.files, &httpGraphqlError{
 			message:    fmt.Sprintf("too many files: %d, max allowed: %d", len(p.form.File), p.maxUploadFiles),
 			statusCode: http.StatusOK,
 		}
