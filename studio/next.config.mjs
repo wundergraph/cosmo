@@ -9,10 +9,13 @@ const allowUnsafeEval = true;
 const debugCSP = false;
 // Enable or disable the sentry integration
 const isSentryEnabled = process.env.NEXT_PUBLIC_SENTRY_ENABLED === "true";
+const isSentryFeatureReplayEnabled = isSentryEnabled && (process.env.NEXT_PUBLIC_SENTRY_REPLAY_ENABLED === "true");
+
 const sentryDebugEnabled = process.env.SENTRY_DEBUG === "true";
 const sentryOrganization = process.env.SENTRY_ORGANIZATION || "";
 const sentryProject = process.env.SENTRY_PROJECT || "";
 const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN || "";
+
 if (isSentryEnabled) {
   if (sentryAuthToken === "") {
     throw Error(
@@ -56,7 +59,7 @@ const lightweightCspHeader = `
   };
   manifest-src 'self';
   media-src 'self';
-  worker-src 'self' ${isSentryEnabled ? "blob:": ""};
+  worker-src 'self' ${isSentryFeatureReplayEnabled ? "blob:": ""};
 `;
 
 /**

@@ -2,7 +2,22 @@
 // The config you add here will be used whenever a users loads a page in their browser.
 // https://docs.sentry.io/platforms/javascript/guides/nextjs/
 
-import * as Sentry from "@sentry/nextjs";
+import *as Sentry from "@sentry/nextjs";
+
+const isSentryEnabled = process.env.NEXT_PUBLIC_SENTRY_ENABLED === "true";
+const isSentryFeatureReplayEnabled = isSentryEnabled && (process.env.NEXT_PUBLIC_SENTRY_REPLAY_ENABLED === "true");
+
+const integrations = []
+
+if (isSentryFeatureReplayEnabled) {
+  integrations.push(
+    Sentry.replayIntegration({
+      // Additional Replay configuration goes in here, for example:
+      maskAllText: true,
+      blockAllMedia: true,
+    }),
+  )
+}
 
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
@@ -44,11 +59,5 @@ Sentry.init({
   replaysSessionSampleRate: parseFloat(
     process.env.NEXT_PUBLIC_SENTRY_CLIENT_REPLAYS_SESSION_SAMPLE_RATE || "0",
   ),
-  integrations: [
-    Sentry.replayIntegration({
-      // Additional Replay configuration goes in here, for example:
-      maskAllText: true,
-      blockAllMedia: true,
-    }),
-  ],
+  integrations,
 });
