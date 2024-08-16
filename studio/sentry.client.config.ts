@@ -6,6 +6,7 @@ import *as Sentry from "@sentry/nextjs";
 
 const isSentryEnabled = process.env.NEXT_PUBLIC_SENTRY_ENABLED === "true";
 const isSentryFeatureReplayEnabled = isSentryEnabled && (process.env.NEXT_PUBLIC_SENTRY_REPLAY_ENABLED === "true");
+const isSentryFeatureFeedbackFormEnabled = isSentryEnabled && (process.env.NEXT_PUBLIC_SENTRY_FEEBACK_FORM_ENABLED === "true");
 
 const integrations = []
 
@@ -19,36 +20,40 @@ if (isSentryFeatureReplayEnabled) {
   )
 }
 
+if (isSentryFeatureFeedbackFormEnabled) {
+  integrations.push(
     Sentry.feedbackIntegration({
-      id: "feedback form",
+      id: "sentry-feedback-form",
+      // useSentryUser is populated on user login
       showBranding: false,
       autoInject: true,
       isEmailRequired: true,
       isNameRequired: true,
       showEmail: true,
       enableScreenshot: true,
-      useSentryUser: {
-        email: "foo@bar",
-        name: "foo",
-      },
-      triggerLabel: "need help?",
+
       triggerAriaLabel: "label-open",
-      cancelButtonLabel: "all good",
-      submitButtonLabel: "submit question",
-      confirmButtonLabel: "yes",
-      formTitle: "Need Help?",
-      emailLabel: "email?",
-      emailPlaceholder: "email",
-      messageLabel: "message",
-      messagePlaceholder: "message place holder",
-      nameLabel: "name",
-      namePlaceholder: "another name",
-      successMessageText: "success message",
-      isRequiredLabel: "is required",
-      addScreenshotButtonLabel: "take a screenshot",
+      cancelButtonLabel: "Back",
+      submitButtonLabel: "Send Message",
+      confirmButtonLabel: "Send Message",
+      successMessageText: "Your message has been sent. We’ll get back to you soon. For quicker responses, feel free to reach out to us on Discord!",
+
+      triggerLabel: "How can we help you?",
+      formTitle: "We're here to help!",
+      nameLabel: "Full Name",
+      namePlaceholder: "e.g., John Doe",
+      emailLabel: "Email Address",
+      emailPlaceholder: "e.g., john.doe@example.com",
+      messageLabel: "How Can We Help?",
+      messagePlaceholder: "Type your message here...",
+
+      isRequiredLabel: "required",
+      addScreenshotButtonLabel: "Capture Screenshot",
       removeScreenshotButtonLabel: "remove a screenshot",
       colorScheme: "system",
     }),
+  )
+}
 
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
