@@ -857,22 +857,24 @@ func (r *Router) buildClients() error {
 		)
 	}
 
-	// For backwards compatibility with cdn config field
-	cacheSize := r.persistedOperationsConfig.Cache.Size.Uint64()
-	if cacheSize <= 0 {
-		cacheSize = r.cdnConfig.CacheSize.Uint64()
-	}
+	if pClient != nil {
+		// For backwards compatibility with cdn config field
+		cacheSize := r.persistedOperationsConfig.Cache.Size.Uint64()
+		if cacheSize <= 0 {
+			cacheSize = r.cdnConfig.CacheSize.Uint64()
+		}
 
-	c, err := persistedoperation.NewClient(&persistedoperation.Options{
-		CacheSize:      cacheSize,
-		Logger:         r.logger,
-		ProviderClient: pClient,
-	})
-	if err != nil {
-		return err
-	}
+		c, err := persistedoperation.NewClient(&persistedoperation.Options{
+			CacheSize:      cacheSize,
+			Logger:         r.logger,
+			ProviderClient: pClient,
+		})
+		if err != nil {
+			return err
+		}
 
-	r.persistedOperationClient = c
+		r.persistedOperationClient = c
+	}
 
 	var rClient routerconfig.Client
 

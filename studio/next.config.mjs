@@ -8,11 +8,14 @@ const allowUnsafeEval = true;
 // Report CSP violations to the console instead of blocking them
 const debugCSP = false;
 // Enable or disable the sentry integration
-const isSentryEnabled = process.env.SENTRY_ENABLED === "true";
+const isSentryEnabled = process.env.NEXT_PUBLIC_SENTRY_ENABLED === "true";
+const isSentryFeatureReplayEnabled = isSentryEnabled && (process.env.NEXT_PUBLIC_SENTRY_REPLAY_ENABLED === "true");
+
 const sentryDebugEnabled = process.env.SENTRY_DEBUG === "true";
 const sentryOrganization = process.env.SENTRY_ORGANIZATION || "";
 const sentryProject = process.env.SENTRY_PROJECT || "";
 const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN || "";
+
 if (isSentryEnabled) {
   if (sentryAuthToken === "") {
     throw Error(
@@ -33,13 +36,14 @@ if (isSentryEnabled) {
 // Known provider content security policies:
 // For Stripe see https://docs.stripe.com/security/guide?csp=csp-js#content-security-policy
 // Vercel Preview Environment see https://vercel.com/docs/workflow-collaboration/comments/specialized-usage#using-a-content-security-policy
+// Entry session replay worker https://docs.sentry.io/platforms/javascript/session-replay/#content-security-policy-csp
 // Important: 'unsafe-eval' is only used in development mode, when script is injected by Next.js
 
 const lightweightCspHeader = `
-  style-src 'report-sample' 'self' 'unsafe-inline' data:;;
+  style-src 'report-sample' 'self' 'unsafe-inline' data:;
   object-src 'none';
   base-uri 'self';
-  font-src 'self' data:;;
+  font-src 'self' data:;
   frame-src 'self' https://js.stripe.com https://hooks.stripe.com ${
     isPreview ? "https://vercel.live/ https://vercel.com" : ""
   };
@@ -55,7 +59,7 @@ const lightweightCspHeader = `
   };
   manifest-src 'self';
   media-src 'self';
-  worker-src 'self';
+  worker-src 'self' ${isSentryFeatureReplayEnabled ? "blob:": ""};
 `;
 
 /**
