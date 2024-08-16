@@ -8,7 +8,7 @@ const allowUnsafeEval = true;
 // Report CSP violations to the console instead of blocking them
 const debugCSP = false;
 // Enable or disable the sentry integration
-const isSentryEnabled = process.env.SENTRY_ENABLED === "true";
+const isSentryEnabled = process.env.NEXT_PUBLIC_SENTRY_ENABLED === "true";
 const sentryDebugEnabled = process.env.SENTRY_DEBUG === "true";
 const sentryOrganization = process.env.SENTRY_ORGANIZATION || "";
 const sentryProject = process.env.SENTRY_PROJECT || "";
