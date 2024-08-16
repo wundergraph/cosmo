@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"slices"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
 
@@ -94,7 +95,7 @@ func (h HeaderRuleEngine) OnOriginRequest(request *http.Request, ctx RequestCont
 
 			if rule.Rename != "" && rule.Named != "" {
 				// Ignore the rule when the target header is in the ignored list
-				if contains(ignoredHeaders, rule.Rename) {
+				if slices.Contains(ignoredHeaders, rule.Rename) {
 					continue
 				}
 
@@ -117,7 +118,7 @@ func (h HeaderRuleEngine) OnOriginRequest(request *http.Request, ctx RequestCont
 			 */
 
 			if rule.Named != "" {
-				if contains(ignoredHeaders, rule.Named) {
+				if slices.Contains(ignoredHeaders, rule.Named) {
 					continue
 				}
 
@@ -146,7 +147,7 @@ func (h HeaderRuleEngine) OnOriginRequest(request *http.Request, ctx RequestCont
 						 */
 						if rule.Rename != "" && rule.Named == "" {
 
-							if contains(ignoredHeaders, rule.Rename) {
+							if slices.Contains(ignoredHeaders, rule.Rename) {
 								continue
 							}
 
@@ -165,7 +166,7 @@ func (h HeaderRuleEngine) OnOriginRequest(request *http.Request, ctx RequestCont
 						/**
 						 *	Propagate the header as is
 						 */
-						if contains(ignoredHeaders, name) {
+						if slices.Contains(ignoredHeaders, name) {
 							continue
 						}
 						request.Header.Set(name, ctx.Request().Header.Get(name))
@@ -176,15 +177,6 @@ func (h HeaderRuleEngine) OnOriginRequest(request *http.Request, ctx RequestCont
 	}
 
 	return request, nil
-}
-
-func contains(list []string, item string) bool {
-	for _, l := range list {
-		if l == item {
-			return true
-		}
-	}
-	return false
 }
 
 // SubgraphRules returns the list of header rules for the subgraph with the given name
