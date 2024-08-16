@@ -291,6 +291,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			rtrace.AttachErrToSpan(routerSpan, err)
 
 			writeOperationError(r, w, requestLogger, err)
+			h.releaseBodyReadBuffer(buf)
 			return
 		}
 
