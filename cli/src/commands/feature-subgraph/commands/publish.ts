@@ -58,6 +58,7 @@ export default (opts: BaseCommandOptions) => {
     'The base subgraph name for which the feature subgraph is to be created' +
       ' This parameter is always ignored if the feature subgraph has already been created.',
   );
+  command.option('-r, --raw', 'Prints to the console in json format instead of table');
 
   command.action(async (name, options) => {
     const schemaFile = resolve(process.cwd(), options.schema);
@@ -82,7 +83,10 @@ export default (opts: BaseCommandOptions) => {
       websocketSubprotocol: options.websocketSubprotocol,
     });
 
-    const spinner = ora('Feature Subgraph is being published...').start();
+    const spinner = ora('Feature Subgraph is being published...');
+    if (!options.raw) {
+      spinner.start();
+    }
 
     const resp = await opts.client.platform.publishFederatedSubgraph(
       {
@@ -110,85 +114,132 @@ export default (opts: BaseCommandOptions) => {
 
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {
-        spinner.succeed(
-          resp?.hasChanged === false ? 'No new changes to publish.' : 'Feature subgraph published successfully.',
-        );
+        if (options.raw) {
+          console.log(
+            JSON.stringify({
+              status: 'OK',
+              message: 'Feature subgraph published successfully.',
+              compositionErrors: resp.compositionErrors,
+              deploymentErrors: resp.deploymentErrors,
+              details: '',
+            }),
+          );
+        } else {
+          spinner.succeed(
+            resp?.hasChanged === false ? 'No new changes to publish.' : 'Feature subgraph published successfully.',
+          );
+        }
 
         break;
       }
       case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {
-        spinner.warn('Feature subgraph published but with composition errors.');
+        if (options.raw) {
+          console.log(
+            JSON.stringify({
+              status: 'ERR_SUBGRAPH_COMPOSITION_FAILED',
+              message: 'Feature subgraph published but with composition errors.',
+              compositionErrors: resp.compositionErrors,
+              deploymentErrors: resp.deploymentErrors,
+              details: '',
+            }),
+          );
+        } else {
+          spinner.warn('Feature subgraph published but with composition errors.');
 
-        const compositionErrorsTable = new Table({
-          head: [
-            pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
-            pc.bold(pc.white('NAMESPACE')),
-            pc.bold(pc.white('FEATURE_FLAG')),
-            pc.bold(pc.white('ERROR_MESSAGE')),
-          ],
-          colWidths: [30, 30, 30, 120],
-          wordWrap: true,
-        });
+          const compositionErrorsTable = new Table({
+            head: [
+              pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+              pc.bold(pc.white('NAMESPACE')),
+              pc.bold(pc.white('FEATURE_FLAG')),
+              pc.bold(pc.white('ERROR_MESSAGE')),
+            ],
+            colWidths: [30, 30, 30, 120],
+            wordWrap: true,
+          });
 
-        console.log(
-          pc.red(
-            `We found composition errors, while composing the federated graph.\nThe router will continue to work with the latest valid schema.\n${pc.bold(
-              'Please check the errors below:',
-            )}`,
-          ),
-        );
-        for (const compositionError of resp.compositionErrors) {
-          compositionErrorsTable.push([
-            compositionError.federatedGraphName,
-            compositionError.namespace,
-            compositionError.featureFlag || '-',
-            compositionError.message,
-          ]);
+          console.log(
+            pc.red(
+              `We found composition errors, while composing the federated graph.\nThe router will continue to work with the latest valid schema.\n${pc.bold(
+                'Please check the errors below:',
+              )}`,
+            ),
+          );
+          for (const compositionError of resp.compositionErrors) {
+            compositionErrorsTable.push([
+              compositionError.federatedGraphName,
+              compositionError.namespace,
+              compositionError.featureFlag || '-',
+              compositionError.message,
+            ]);
+          }
+          // Don't exit here with 1 because the change was still applied
+          console.log(compositionErrorsTable.toString());
+
+          if (options.failOnCompositionError) {
+            program.error(pc.red(pc.bold('The command failed due to composition errors.')));
+          }
         }
-        // Don't exit here with 1 because the change was still applied
-        console.log(compositionErrorsTable.toString());
-
-        if (options.failOnCompositionError) {
-          program.error(pc.red(pc.bold('The command failed due to composition errors.')));
-        }
-
         break;
       }
       case EnumStatusCode.ERR_DEPLOYMENT_FAILED: {
-        spinner.warn(
-          "Feature subgraph was published, but the updated composition hasn't been deployed, so it's not accessible to the router. Check the errors listed below for details.",
-        );
+        if (options.raw) {
+          console.log(
+            JSON.stringify({
+              status: 'ERR_DEPLOYMENT_FAILED',
+              message: `Feature subgraph was published, but the updated composition hasn't been deployed, so it's not accessible to the router. Check the errors listed below for details.`,
+              compositionErrors: resp.compositionErrors,
+              deploymentErrors: resp.deploymentErrors,
+              details: '',
+            }),
+          );
+        } else {
+          spinner.warn(
+            "Feature subgraph was published, but the updated composition hasn't been deployed, so it's not accessible to the router. Check the errors listed below for details.",
+          );
 
-        const deploymentErrorsTable = new Table({
-          head: [
-            pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
-            pc.bold(pc.white('NAMESPACE')),
-            pc.bold(pc.white('ERROR_MESSAGE')),
-          ],
-          colWidths: [30, 30, 120],
-          wordWrap: true,
-        });
+          const deploymentErrorsTable = new Table({
+            head: [
+              pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+              pc.bold(pc.white('NAMESPACE')),
+              pc.bold(pc.white('ERROR_MESSAGE')),
+            ],
+            colWidths: [30, 30, 120],
+            wordWrap: true,
+          });
 
-        for (const deploymentError of resp.deploymentErrors) {
-          deploymentErrorsTable.push([
-            deploymentError.federatedGraphName,
-            deploymentError.namespace,
-            deploymentError.message,
-          ]);
-        }
-        // Don't exit here with 1 because the change was still applied
-        console.log(deploymentErrorsTable.toString());
+          for (const deploymentError of resp.deploymentErrors) {
+            deploymentErrorsTable.push([
+              deploymentError.federatedGraphName,
+              deploymentError.namespace,
+              deploymentError.message,
+            ]);
+          }
+          // Don't exit here with 1 because the change was still applied
+          console.log(deploymentErrorsTable.toString());
 
-        if (options.failOnAdmissionWebhookError) {
-          program.error(pc.red(pc.bold('The command failed due to admission webhook errors.')));
+          if (options.failOnAdmissionWebhookError) {
+            program.error(pc.red(pc.bold('The command failed due to admission webhook errors.')));
+          }
         }
 
         break;
       }
       default: {
-        spinner.fail(`Failed to publish feature subgraph "${name}".`);
-        if (resp.response?.details) {
-          program.error(pc.red(pc.bold(resp.response?.details)));
+        if (options.raw) {
+          console.log(
+            JSON.stringify({
+              status: 'ERR',
+              message: `Failed to publish feature subgraph "${name}".`,
+              compositionErrors: resp.compositionErrors,
+              deploymentErrors: resp.deploymentErrors,
+              details: resp.response?.details,
+            }),
+          );
+        } else {
+          spinner.fail(`Failed to publish feature subgraph "${name}".`);
+          if (resp.response?.details) {
+            program.error(pc.red(pc.bold(resp.response?.details)));
+          }
         }
         process.exit(1);
       }
