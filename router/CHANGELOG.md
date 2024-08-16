@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.105.2](https://github.com/wundergraph/cosmo/compare/router@0.105.1...router@0.105.2) (2024-08-16)
+
+### Bug Fixes
+
+* don't propagate client content negotiation headers with wildcard ([#1089](https://github.com/wundergraph/cosmo/issues/1089)) ([2e7d8d2](https://github.com/wundergraph/cosmo/commit/2e7d8d27d7fdaf0cc66cfb65ff3a8012fe083679)) (@StarpTech)
+* dont initialize persisted operation client when disabled ([#1083](https://github.com/wundergraph/cosmo/issues/1083)) ([b483053](https://github.com/wundergraph/cosmo/commit/b483053d9be976895863aea1af90e01670731ba6)) (@flymedllva)
+
 ## [0.105.1](https://github.com/wundergraph/cosmo/compare/router@0.105.0...router@0.105.1) (2024-08-15)
 
 ### Bug Fixes
