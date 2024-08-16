@@ -36,10 +36,10 @@ if (isSentryEnabled) {
 // Important: 'unsafe-eval' is only used in development mode, when script is injected by Next.js
 
 const lightweightCspHeader = `
-  style-src 'report-sample' 'self' 'unsafe-inline' data:;;
+  style-src 'report-sample' 'self' 'unsafe-inline' data:;
   object-src 'none';
   base-uri 'self';
-  font-src 'self' data:;;
+  font-src 'self' data:;
   frame-src 'self' https://js.stripe.com https://hooks.stripe.com ${
     isPreview ? "https://vercel.live/ https://vercel.com" : ""
   };
