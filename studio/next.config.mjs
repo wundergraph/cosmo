@@ -33,6 +33,7 @@ if (isSentryEnabled) {
 // Known provider content security policies:
 // For Stripe see https://docs.stripe.com/security/guide?csp=csp-js#content-security-policy
 // Vercel Preview Environment see https://vercel.com/docs/workflow-collaboration/comments/specialized-usage#using-a-content-security-policy
+// Entry session replay worker https://docs.sentry.io/platforms/javascript/session-replay/#content-security-policy-csp
 // Important: 'unsafe-eval' is only used in development mode, when script is injected by Next.js
 
 const lightweightCspHeader = `
@@ -55,7 +56,7 @@ const lightweightCspHeader = `
   };
   manifest-src 'self';
   media-src 'self';
-  worker-src 'self';
+  worker-src 'self' ${isSentryEnabled ? "blob:": ""};
 `;
 
 /**
