@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"slices"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
 
@@ -11,10 +12,14 @@ import (
 )
 
 var (
-	_          EnginePreOriginHandler = (*HeaderRuleEngine)(nil)
-	hopHeaders                        = []string{
+	_              EnginePreOriginHandler = (*HeaderRuleEngine)(nil)
+	ignoredHeaders                        = []string{
+		"Alt-Svc",
 		"Connection",
 		"Proxy-Connection", // non-standard but still sent by libcurl and rejected by e.g. google
+
+		// Hop-by-hop headers
+		// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Connection
 		"Keep-Alive",
 		"Proxy-Authenticate",
 		"Proxy-Authorization",
@@ -22,6 +27,13 @@ var (
 		"Trailer", // not Trailers per URL above; https://www.rfc-editor.org/errata_search.php?eid=4522
 		"Transfer-Encoding",
 		"Upgrade",
+
+		// Content Negotiation. We must never propagate the client headers to the upstream
+		// The router has to decide on its own what to send to the upstream
+		"Content-Type",
+		"Accept-Encoding",
+		"Accept-Charset",
+		"Accept",
 	}
 )
 
@@ -75,10 +87,18 @@ func (h HeaderRuleEngine) OnOriginRequest(request *http.Request, ctx RequestCont
 	}
 
 	for _, rule := range requestRules {
-		// Forwards the matching client request header to the upstream
 		if rule.Operation == config.HeaderRuleOperationPropagate {
-			// Rename the header when name is provided
+
+			/**
+			 *	Rename the header before propagating and delete the original
+			 */
+
 			if rule.Rename != "" && rule.Named != "" {
+				// Ignore the rule when the target header is in the ignored list
+				if slices.Contains(ignoredHeaders, rule.Rename) {
+					continue
+				}
+
 				value := ctx.Request().Header.Get(rule.Named)
 				if value != "" {
 					request.Header.Set(rule.Rename, ctx.Request().Header.Get(rule.Named))
@@ -89,31 +109,48 @@ func (h HeaderRuleEngine) OnOriginRequest(request *http.Request, ctx RequestCont
 					request.Header.Del(rule.Named)
 					continue
 				}
+
+				continue
 			}
 
-			// Exact match
+			/**
+			 *	Propagate the header as is
+			 */
+
 			if rule.Named != "" {
+				if slices.Contains(ignoredHeaders, rule.Named) {
+					continue
+				}
+
 				value := ctx.Request().Header.Get(rule.Named)
 				if value != "" {
 					request.Header.Set(rule.Named, ctx.Request().Header.Get(rule.Named))
 				} else if rule.Default != "" {
 					request.Header.Set(rule.Named, rule.Default)
 				}
+
 				continue
 			}
 
-			// Regex match
+			/**
+			 * Matching based on regex
+			 */
+
 			if regex, ok := h.regex[rule.Matching]; ok {
 				for name := range ctx.Request().Header {
-					// Skip hop-by-hop headers and connection headers
-					if contains(hopHeaders, name) {
-						continue
-					}
 					// Headers are case-insensitive, but Go canonicalize them
 					// Issue: https://github.com/golang/go/issues/37834
 					if regex.MatchString(name) {
-						// Rename the header when matiching is provided
+
+						/**
+						 *	Rename the header before propagating and delete the original
+						 */
 						if rule.Rename != "" && rule.Named == "" {
+
+							if slices.Contains(ignoredHeaders, rule.Rename) {
+								continue
+							}
+
 							value := ctx.Request().Header.Get(name)
 							if value != "" {
 								request.Header.Set(rule.Rename, ctx.Request().Header.Get(name))
@@ -122,26 +159,24 @@ func (h HeaderRuleEngine) OnOriginRequest(request *http.Request, ctx RequestCont
 								request.Header.Set(rule.Rename, rule.Default)
 								request.Header.Del(name)
 							}
-						} else {
-							request.Header.Set(name, ctx.Request().Header.Get(name))
+
+							continue
 						}
+
+						/**
+						 *	Propagate the header as is
+						 */
+						if slices.Contains(ignoredHeaders, name) {
+							continue
+						}
+						request.Header.Set(name, ctx.Request().Header.Get(name))
 					}
 				}
-				continue
 			}
 		}
 	}
 
 	return request, nil
-}
-
-func contains(list []string, item string) bool {
-	for _, l := range list {
-		if l == item {
-			return true
-		}
-	}
-	return false
 }
 
 // SubgraphRules returns the list of header rules for the subgraph with the given name
