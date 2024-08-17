@@ -39,26 +39,31 @@ As powerful as the new module becomes, it is important to move basic and common 
 A developer can implement a custom module by creating a struct that implements one or more of the following interfaces:
 
 - GatewayHooks: Provides hooks for the gateway lifecycle, including request and response handling.
-  - `OnGatewayRequest`: Called when a request is made to the gateway and after all GraphQL information is available.
-  - `OnGatewayResponse`: Called before the response is sent to the client.
+  - `GatewayRequestHook`: Called when a request is made to the gateway and after all GraphQL information is available.
+  - `GatewayResponseHook`: Called before the response is sent to the client.
+  - `GatewayErrorHook`: Called when an error occurs during the gateway lifecycle.
 - SubgraphHooks: Provides hooks for subgraph requests and responses.
-  - `OnSubgraphRequest`: Called when a subgraph request is made.
-  - `OnSubgraphResponse`: Called when a subgraph response is received.
+  - `SubgraphRequestHook`: Called when a subgraph request is made.
+  - `SubgraphResponseHook`: Called when a subgraph response is received.
 - ApplicationHooks: Provides hooks for the application lifecycle, including startup, shutdown, and error handling.
-  - `OnAppStart`: Called when the application starts.
-  - `OnAppStop`: Called when the application stops.
+  - `ApplicationStartHook`: Called when the application starts.
+  - `ApplicationStopHook`: Called when the application stops.
+  - `ApplicationErrorHook`: Called when an error occurs during the application lifecycle.
 - AuthenticationHooks: Provides hooks for authentication and authorization logic.
-  - `OnAuthenticate`: Called when a gateway request is authenticated.
+  - `AuthenticationHook`: Called when a gateway request is authenticated.
 - AuthorizationHooks: Provides hooks for authorization logic.
-  - `OnAuthorize`: Called when a gateway request is authorized.
+  - `AuthorizationHook`: Called when a gateway request is authorized.
 - TelemetryHooks: Provides hooks for OpenTelemetry tracing and metrics.
-  - `OnSpanStart`: Called when a span is created.
-  - `OnMetric`: Called when a metric is recorded.
+  - `TelemetrySpanHook`: Called when a span is created.
+  - `TelemetryMetricHook`: Called when a metric is recorded.
 - GraphQLOperationHooks: Provides hooks for parsed, normalized, and planned GraphQL operations.
-  - `OnOperationParse`: Called when an operation is parsed.
-  - `OnOperationNormalize`: Called when an operation is normalized.
-  - `OnOperationPlan`: Called when an operation is planned.
-- `Module` (**Required**): Provides hooks for the module lifecycle, including provisioning and shutdown.
+  - `GraphQLOperationParseHook`: Called when an operation is parsed.
+  - `GraphQLOperationNormalizeHook`: Called when an operation is normalized.
+  - `GraphQLOperationPlanHook`: Called when an operation is planned.
+- `ModuleHooks` (**Required**): Provides hooks for the module lifecycle, including provisioning and shutdown.
+  - `Provision`: Called when the module is provisioned.
+  - `Shutdown`: Called when the module is shutdown.
+  - `Module`: Returns the module information and factory function.
 
 For some hooks, we will also provide `pre/post` hooks that are called after the main hook has been executed. This allows developers to perform additional logic after the main hook has been executed e.g. to annotate a span with additional attributes or events.
 
@@ -233,6 +238,12 @@ type TelemetrySpanHook interface {
 	// Returning a function to be called when the span ends.
 	// This can be used to add custom attributes or events to the span.
 	OnSpan(span *trace.Span) func() // Return a function to be called when the span ends
+}
+
+type TelemetryMetricHook interface {
+    // OnMetric is called when a metric is recorded
+    // Returning an error will result in a telemetry error
+    OnMetric(metric *metric.Metric) error
 }
 
 // AuthenticationHooks are called when a gateway request is authenticated
