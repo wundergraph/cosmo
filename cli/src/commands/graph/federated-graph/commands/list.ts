@@ -66,7 +66,7 @@ export default (opts: BaseCommandOptions) => {
       process.exit(0);
     }
 
-    if(options.raw) {
+    if (options.raw) {
       console.log(pc.yellow('Please use the --json option. The --raw option is deprecated.'));
     }
 
