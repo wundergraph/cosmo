@@ -41,6 +41,10 @@ export default (opts: BaseCommandOptions) => {
       return;
     }
 
+    if (options.raw) {
+      console.log(pc.yellow('Please use the --json option. The --raw option is deprecated.'));
+    }
+
     if (options.raw || options.json) {
       console.log(JSON.stringify(resp.namespaces));
       return;
