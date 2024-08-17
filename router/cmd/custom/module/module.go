@@ -106,7 +106,6 @@ func (m *MyModule) Module() core.ModuleInfo {
 
 // Interface guard
 var (
-	_ core.RouterMiddlewareHandler = (*MyModule)(nil)
 	_ core.EnginePreOriginHandler  = (*MyModule)(nil)
 	_ core.EnginePostOriginHandler = (*MyModule)(nil)
 	_ core.Provisioner             = (*MyModule)(nil)

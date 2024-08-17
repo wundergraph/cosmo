@@ -22,9 +22,12 @@ As of today, customers can extend the router with custom modules. These modules 
 - The current module system is not native to GraphQL. It is based on HTTP middleware and does not provide a GraphQL-specific API.
 - The current module system is inconsistent and hard to use. It does not provide a clear API for developers to intercept and modify GraphQL requests and responses.
 - The current module system does not provide an intuitive way to create or modify OpenTelemetry data, logs for different parts of the gateway lifecycle.
+- The current module system does not provide a way to share state between hooks or modules in a safe and efficient way.
 - The current module system does not provide a way to interact with the parsed, normalized, and planned GraphQL operation in order to implement custom logic.
 - The current module system does not provide a way to hook into authorization and authentication logic in the gateway.
 - The current module system does not provide a way to hook into the usage of GraphQL directives in the operation definition or subgraph schema.
+- The current module system does not provide a way to hook into GraphQL scalar types for validation, transformation, or custom handling.
+
 
 Ultimately, custom modules must be self-contained, composable and testable. They should provide a clear API for developers to interact with the gateway and subgraph lifecycle and implement custom logic without having to understand the internal workings of the router or advanced Go programming concepts.
 To briefly explain the decision to use Go as the language for the module system, we have chosen Go because it is a simple and easy-to-learn language that is widely used in the infrastructure and cloud-native ecosystem. You can build custom integration on top production-grade SDK of AWS, GCP and the community without re-implementing them from scratch. It superiors to scripting languages like Rhai or cross-compiling WebAssembly because it can be easily debugged, profiled, and tested with any modern IDE (VsCode, Goland, etc.). Not part of this RFC, are our ambitions to make the workflow as smooth as possible with a CLI tool that can scaffold, test, and deploy custom modules. In the future, custom modules could be published to a central registry and shared with the community. A brief overview of the workflow is provided at the end of this RFC.
@@ -36,12 +39,28 @@ As powerful as the new module becomes, it is important to move basic and common 
 A developer can implement a custom module by creating a struct that implements one or more of the following interfaces:
 
 - `GatewayHooks`: Provides hooks for the gateway lifecycle, including request and response handling.
+  - `OnGatewayRequest`: Called when a request is made to the gateway and after all GraphQL information is available.
+  - `OnGatewayResponse`: Called before the response is sent to the client.
 - `SubgraphHooks`: Provides hooks for subgraph requests and responses.
+  - `OnSubgraphRequest`: Called when a subgraph request is made.
+  - `OnSubgraphResponse`: Called when a subgraph response is received.
 - `ApplicationHooks`: Provides hooks for the application lifecycle, including startup, shutdown, and error handling.
+  - `OnAppStart`: Called when the application starts.
+  - `OnAppStop`: Called when the application stops.
 - `AuthenticationHooks`: Provides hooks for authentication and authorization logic.
-- `TelemetryHooks`: Provides hooks for OpenTelemetry spans and metrics.
-- `OperationHooks`: Provides hooks for parsed, normalized, and planned GraphQL operations.
-- `Module`: Provides hooks for the module lifecycle, including provisioning and shutdown.
+  - `OnAuthenticate`: Called when a gateway request is authenticated.
+- `AuthorizationHooks`: Provides hooks for authorization logic.
+  - `OnAuthorize`: Called when a gateway request is authorized.
+- `TelemetryHooks`: Provides hooks for OpenTelemetry tracing and metrics.
+  - `OnSpanStart`: Called when a span is created.
+  - `OnMetric`: Called when a metric is recorded.
+- `GraphQLOperationHooks`: Provides hooks for parsed, normalized, and planned GraphQL operations.
+  - `OnOperationParse`: Called when an operation is parsed.
+  - `OnOperationNormalize`: Called when an operation is normalized.
+  - `OnOperationPlan`: Called when an operation is planned.
+- `Module` (**Required**): Provides hooks for the module lifecycle, including provisioning and shutdown.
+
+For some hooks, we will also provide `pre/post` hooks that are called after the main hook has been executed. This allows developers to perform additional logic after the main hook has been executed e.g. to annotate a span with additional attributes or events.
 
 ```go
 type MyModule struct{}
@@ -70,6 +89,27 @@ type Graph struct {
 	Schema *graphql.Schema
 }
 
+type Operation struct {
+	// The name of the operation
+	Name string
+	// The type of the operation (query, mutation, subscription)
+	Type string
+	// The document representation of the operation
+	Document graphql.Document
+	// The variables of the operation
+	Variables map[string]interface{}
+	// The client name of the operation
+	ClientName string
+	// The client version of the operation
+	ClientVersion string
+	// The uploaded files of the operation
+	UploadedFiles map[string]*core.UploadedFile
+	// The plan of the operation
+	Plan *core.Plan
+	// The normalization of the operation
+	Normalization *core.Normalization
+}
+
 type GatewayRequest struct {
 	// The original GraphQL request with all the information like query, variables, operation name, extensions etc.
 	Request *core.GraphQLRequest
@@ -81,7 +121,7 @@ type GatewayRequest struct {
 	// The active graph
 	Graph *core.Graph
 	// The original HTTP request
-	Orignal *http.Request
+    HttpRequest *http.Request
 	// Logger for the gateway request
 	Logger *zap.Logger
 }
@@ -96,17 +136,6 @@ type GatewayResponse struct {
 	Response *core.GraphQLResponse
 	// The original HTTP response
 	Orignal *http.Response
-}
-
-type GatewayHooks interface {
-	// OnRequest is called when a request is made to the gateway and after all GraphQL information is available
-	// Returning an error will result in a GraphQL error being returned to the client.
-	OnGatewayRequest(ctx *core.GatewayRequest, err error) error
-	// OnResponse is called before the response is sent to the client
-	// Returning an error will result in a GraphQL error being returned to the client.
-	OnGatewayResponse(ctx *core.GatewayResponse, err error) error
-	// OnError is called when an error occurs during the gateway lifecycle
-	OnGatewayError(err error)
 }
 
 type SubgraphRequest struct {
@@ -134,8 +163,115 @@ type SubgraphResponse struct {
 	// The final GraphQL response from the subgraph
 	Response *core.GraphQLResponse
 	// The original http response from the subgraph
-	Orignal *http.Response
+    HttpResponse *http.Response
 }
+
+// Gateway Hooks
+
+type GatewayRequestHook interface {
+	// OnGatewayRequest is called when a request is made to the gateway and after all GraphQL information is available
+	// Returning an error will result in a GraphQL error being returned to the client.
+	OnGatewayRequest(ctx *core.GatewayRequest, err error) error
+}
+
+type GatewayResponseHook interface {
+	// OnGatewayResponse is called before the response is sent to the client
+	// Returning an error will result in a GraphQL error being returned to the client.
+	OnGatewayResponse(ctx *core.GatewayResponse, err error) error
+}
+
+type GatewayErrorHook interface {
+	// OnError is called when an error occurs during the gateway lifecycle
+	OnGatewayError(err error)
+}
+
+// SubgraphHooks are called when a subgraph request or response is made.
+// The order is not guaranteed, so the hooks should be idempotent and side-effect free.
+// if state needs to be shared between hooks, it should be stored in the context.
+// We will provide an easy way to share state between hooks.
+
+type SubgraphRequestHook interface {
+	// OnSubgraphRequest is called when a subgraph request is made
+	// Returning an error will result in a GraphQL error being returned to the client.
+	OnSubgraphRequest(ctx *core.SubgraphRequest, err error) error
+}
+
+type SubgraphResponseHook interface {
+	// OnSubgraphResponse is called when a subgraph response is received
+	// Returning an error will result in a GraphQL error being returned to the client.
+	OnSubgraphResponse(ctx *core.SubgraphResponse, err error) error
+}
+
+type SubgraphErrorHook interface {
+	// OnError is called when an error occurs during the subgraph lifecycle
+	OnSubgraphError(err error)
+}
+
+// ApplicationHooks are called when the application starts, stops, or an error occurs.
+
+type ApplicationStartHook interface {
+	// OnAppStart is called when the application starts
+	// Returning an error will result in the application not starting
+	OnAppStart() error
+}
+
+type ApplicationStopHook interface {
+	// OnAppStop is called when the application stops
+	// Returning an error will result in the application not stopping
+	OnAppStop() error
+}
+
+type ApplicationErrorHook interface {
+	// OnError is called when an error occurs during the application lifecycle start/stop or any other error
+	OnAppError(err error)
+}
+
+// TelemetryHooks are called when a span is created
+
+type TelemetrySpanHook interface {
+	// OnSpan is called when a span is created
+	// Returning a function to be called when the span ends.
+	// This can be used to add custom attributes or events to the span.
+	OnSpan(span *trace.Span) func() // Return a function to be called when the span ends
+}
+
+// AuthenticationHooks are called when a gateway request is authenticated
+
+type AuthenticationHook interface {
+	// OnAuthenticate is called when a gateway request is authenticated
+	// Returning an error will result in a GraphQL error as a response from the gateway.
+	OnAuthenticate(ctx *core.GatewayRequest, err error) error
+}
+
+// AuthorizationHooks are called when a gateway request is authorized
+
+type AuthorizationHook interface {
+    // OnAuthorize is called when a gateway request is authorized
+    // Returning an error will result in a GraphQL error as a response from the gateway.
+    OnAuthorize(ctx *core.GatewayRequest, err error) error
+}
+
+// OperationHooks are called when an operation is parsed, normalized, or planned
+
+type GraphQLOperationParseHook interface {
+	// OnOperationParse is called when an operation is parsed
+	// Returning an error will result in a GraphQL error as a response from the gateway.
+	OnOperationParse(op *core.Operation, err error) error
+}
+
+type GraphQLOperationNormalizeHook interface {
+	// OnNormalize is called when an operation is normalized
+	// Returning an error will result in a GraphQL error as a response from the gateway.
+	OnOperationNormalize(op *core.Operation, err error) error
+}
+
+type GraphQLOperationPlanHook interface {
+	// OnPlan is called when an operation is planned
+	// Returning an error will result in a GraphQL error as a response from the gateway.
+	OnOperationPlan(op *core.Operation, err error) error
+}
+
+// Module Hooks
 
 type ModuleHooks interface {
 	// Provision is called when the module is provisioned
@@ -144,61 +280,6 @@ type ModuleHooks interface {
 	Shutdown() error
 	// Module returns the module information and factory function
 	Module() core.ModuleInfo
-}
-
-// SubgraphHooks are called when a subgraph request or response is made.
-// The order is not guaranteed, so the hooks should be idempotent and side-effect free.
-// if state needs to be shared between hooks, it should be stored in the context.
-// We will provide an easy way to share state between hooks.
-type SubgraphHooks interface {
-	// OnRequest is called when a subgraph request is made.
-	// Returning an error will result in a GraphQL error as a response from the subgraph.
-	OnSubgraphRequest(req *core.SubgraphRequest, err error) error
-	// OnResponse is called when a subgraph response is received
-	// Returning an error will result in a GraphQL error as a response from the subgraph.
-	OnSubgraphResponse(res *core.SubgraphResponse, err error) error
-	// OnError is called when an error occurs during the subgraph lifecycle request/response or any other error
-	OnError(err error)
-}
-
-type ApplicationHooks interface {
-	// OnStart is called when the application starts
-	OnAppStart() error
-	// OnStop is called when the application stops
-	OnAppStop() error
-	// OnError is called when an error occurs during the application lifecycle start/stop or any other error
-	OnAppError(err error)
-}
-
-type TelemetryHooks interface {
-	// OnSpanStart is called when a span is created
-	// Returning a function to be called when the span ends.
-	// This can be used to add custom attributes or events to the span.
-	OnSpan(span *trace.Span) func() // Return a function to be called when the span ends
-}
-
-type AuthenticationHooks interface {
-	// OnAuthenticate is called when a gateway request is authenticated
-	// Returning an error will result in a GraphQL error as a response from the gateway.
-	OnAuthenticate(req *core.GatewayRequest, err error) error
-	// OnPostAuthenticate is called after a gateway request is authenticated
-	// Returning an error will result in a GraphQL error as a response from the gateway.
-	OnPostAuthenticate(req *core.GatewayRequest, err error) error
-}
-
-type OperationHooks interface {
-	// OnNormalize is called when an operation is normalized
-	// Returning an error will result in a GraphQL error as a response from the gateway.
-	OnOperationNormalize(op *core.Operation, err error) error
-	// OnPostNormalize is called after an operation is normalized
-	// Returning an error will result in a GraphQL error as a response from the gateway.
-	OnPostOperationNormalize(op *core.Operation, err error) error
-	// OnPlan is called when an operation is planned
-	// Returning an error will result in a GraphQL error as a response from the gateway.
-	OnOperationPlan(op *core.Operation, err error) error
-	// OnPostOperationPlan is called after an operation is planned
-	// Returning an error will result in a GraphQL error as a response from the gateway.
-	OnPostOperationPlan(op *core.Operation, err error) error
 }
 ```
 
@@ -211,6 +292,7 @@ type OperationHooks interface {
 - **Response interception**: A module that intercepts responses from subgraphs and modifies them before they are sent to the client.
 - **Response Caching**: A module that caches responses from subgraphs and returns them for identical requests.
 - **GraphQL Directive Handling**: A module that reacts to specific GraphQL directives in the operation definition.
+- **GraphQL Scalar Handling**: A module that allows custom handling of scalar types in the operation e.g. validation, transformation.
 - **Enriching Logs**: A module that adds custom log fields to the gateway and subgraph logs.
 
 ## Backwards Compatibility
@@ -219,7 +301,7 @@ The new module system is not backwards compatible with the old module system. Ex
 
 # Example Modules
 
-__All examples are pseudocode and not tested but they are as close as possible to the final implementation__
+__All examples are pseudocode and not tested, but they are as close as possible to the final implementation__
 
 ## Custom Telemetry
 
@@ -228,8 +310,8 @@ This module adds custom attributes to the OpenTelemetry span for each gateway re
 ```go
 type MyModule struct{}
 
-// Ensure that MyModule implements the GatewayHooks interface
-var _ GatewayHooks = (*MyModule)(nil)
+// Ensure that MyModule implements the GatewayRequestHook interface
+var _ GatewayRequestHook = (*MyModule)(nil)
 
 func (m *MyModule) OnGatewayRequest(req *core.GatewayRequest, err error) error {
 	req.Telemetry.Span.AddEvent("Gateway Request")
@@ -248,8 +330,8 @@ This module intercepts the final Gateway response to rewrite errors and add cust
 ```go
 type MyModule struct{}
 
-// Ensure that MyModule implements the GatewayHooks interface
-var _ GatewayHooks = (*MyModule)(nil)
+// Ensure that MyModule implements the GatewayResponseHook interface
+var _ GatewayResponseHook = (*MyModule)(nil)
 
 func (m *MyModule) OnGatewayResponse(res *core.GatewayResponse, err error) error {
 	// Add custom extensions to the response
@@ -273,8 +355,8 @@ This module adds custom log fields to the gateway and subgraph logs. Data can co
 ```go
 type MyModule struct{}
 
-// Ensure that MyModule implements the GatewayHooks interface
-var _ GatewayHooks = (*MyModule)(nil)
+// Ensure that MyModule implements the GatewayRequestHook interface
+var _ GatewayRequestHook = (*MyModule)(nil)
 
 func (m *MyModule) OnGatewayRequest(req *core.GatewayRequest, err error) error {
     // Add custom fields to the gateway log
@@ -294,7 +376,8 @@ type MyModule struct{
 }
 
 // Ensure that MyModule implements the SubgraphHooks interface
-var _ SubgraphHooks = (*MyModule)(nil)
+var _ SubgraphRequestHook = (*MyModule)(nil)
+var _ SubgraphResponseHook = (*MyModule)(nil)
 
 func (m *MyModule) Provision(ctx *core.ModuleContext) error {
     // Initialize the Redis client
@@ -381,17 +464,21 @@ Custom modules can be used to implement custom authentication and authorization 
 ```go
 type MyModule struct{}
 
-var _ AuthenticationHooks = (*MyModule)(nil)
+var _ AuthenticationHook = (*MyModule)(nil)
 
 func (m *MyModule) OnAuthenticate(req *core.GatewayRequest, err error) error {
 	// Authenticate the user's credentials
-	if !authenticateUser(req.Request.Auth) {
+	if !authenticateUser(req.HttpRequest) {
 		return core.UnauthenticatedError("Unauthenticated")
 	}
-	if !authorizeUser(req.Request.Auth) {
-		return core.UnauthenticatedError("Unauthorized")
-	}
 	return nil
+}
+
+func (m *MyModule) OnAuthenticate(req *core.GatewayRequest, err error) error {
+  if !authorizeUser(req.Request.Auth) {
+    return core.UnauthenticatedError("Unauthorized")
+  }
+  return nil
 }
 ```
 
@@ -425,7 +512,7 @@ type MyModule struct {
 	Client *http.Client
 }
 
-func (m *MyModule) CacheControlDirective(ctx *core.DirectiveContext) error {
+func (m *MyModule) CacheControlDirectiveHandler(ctx *core.DirectiveContext) error {
 	// Return an error to abort the request to the subgraph
 	// The error is returned to the client as a GraphQL error
 
@@ -441,7 +528,7 @@ func (m *MyModule) CacheControlDirective(ctx *core.DirectiveContext) error {
 	return nil
 }
 
-func (m *MyModule) RequiresScopesDirective(ctx *core.DirectiveContext) error {
+func (m *MyModule) RequiresScopesDirectiveHandler(ctx *core.DirectiveContext) error {
 	// Check if the user has the required scopes
 	if !hasScopes(ctx.Request.Auth, ctx.Directive.Args["scopes"]) {
 		return core.UnauthenticatedError("Unauthorized")
@@ -450,11 +537,34 @@ func (m *MyModule) RequiresScopesDirective(ctx *core.DirectiveContext) error {
 }
 
 func (m *MyModule) Provision(ctx *core.ModuleContext) error {
-	ctx.RegisterDirectiveHandler("cacheControl", m.CacheControlDirective)
-	ctx.RegisterDirectiveHandler("requiresScopes", m.RequiresScopesDirective)
+	ctx.RegisterDirectiveHandler("cacheControl", m.CacheControlDirectiveHandler)
+	ctx.RegisterDirectiveHandler("requiresScopes", m.RequiresScopesDirectiveHandler)
 	return nil
 }
 ```
+
+## Validate GraphQL Scalar Types
+
+GraphQL scalar types are meant to represent an indivisible value, like a string or an integer. Usually, a gateway can't validate the value of a scalar type because it's just a string. However, custom modules allows you to hook into the process before the value is sent to the subgraph and before it's sent to the client.
+In our case, we ensure that the `Money` scalar type is a valid money format. We can validate the value of the scalar type in the `MoneyScalarHandler` hook and return an error if the value is invalid.
+
+```go
+type MyModule struct{}
+
+func (m *MyModule) MoneyScalarHandler(ctx *core.ScalarContext) error {
+    // Validate the Money scalar type
+	if !isValidMoneyFormat(ctx.Value) {
+        return core.ValidationError("Invalid money format")
+    }
+    return nil
+}
+
+func (m *MyModule) Provision(ctx *core.ModuleContext) error {
+    ctx.RegisterScalarHandler("Money", m.MoneyScalarHandler)
+    return nil
+}
+```
+
 
 # Module Composition
 
@@ -467,8 +577,8 @@ type MyModule struct{
 	Value uint64 `yaml:"value"`
 }
 
-// Ensure that MyModule implements the GatewayHooks interface
-var _ GatewayHooks = (*MyModule)(nil)
+// Ensure that MyModule implements the GatewayRequestHook interface
+var _ GatewayRequestHook = (*MyModule)(nil)
 
 func (m *MyModule) Provision(ctx *core.ModuleContext) error {
 	// Compose multiple modules together
