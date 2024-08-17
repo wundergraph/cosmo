@@ -27,6 +27,7 @@ As of today, customers can extend the router with custom modules. These modules 
 - The current module system does not provide a way to hook into authorization and authentication logic in the gateway.
 - The current module system does not provide a way to hook into the usage of GraphQL directives in the operation definition or subgraph schema.
 - The current module system does not provide a way to hook into GraphQL scalar types for validation, transformation, or custom handling.
+- The current module system does not provide a way to hook into lifecycle when a GraphQL server starts, stops, or when the schema is updated.
 
 
 Ultimately, custom modules must be self-contained, composable and testable. They should provide a clear API for developers to interact with the gateway and subgraph lifecycle and implement custom logic without having to understand the internal workings of the router or advanced Go programming concepts.
@@ -56,6 +57,9 @@ A developer can implement a custom module by creating a struct that implements o
 - TelemetryHooks: Provides hooks for OpenTelemetry tracing and metrics.
   - `TelemetrySpanHook`: Called when a span is created.
   - `TelemetryMetricHook`: Called when a metric is recorded.
+- GraphServerHooks: Provides hooks for the lifecycle of a GraphQL server.
+  - `GraphServerStartHook`: Called when the GraphQL server starts e.g. for the first time or when the schema is updated.
+  - `GraphServerStopHook`: Called when the GraphQL server stops e.g. when the application is shut down or the old schema is replaced.
 - GraphQLOperationHooks: Provides hooks for parsed, normalized, and planned GraphQL operations.
   - `GraphQLOperationParseHook`: Called when an operation is parsed.
   - `GraphQLOperationNormalizeHook`: Called when an operation is normalized.
@@ -291,6 +295,20 @@ type ModuleHooks interface {
 	Shutdown() error
 	// Module returns the module information and factory function
 	Module() core.ModuleInfo
+}
+
+// GraphServerHooks are called when the GraphQL server starts, stops, or the schema is updated
+
+type GraphServerStartHook interface {
+    // OnGraphServerStart is called when the GraphQL server starts
+    // Returning an error will result in the GraphQL server not starting
+    OnGraphServerStart(ctx *core.GraphServerContext) error
+}
+
+type GraphServerStopHook interface {
+    // OnGraphServerStop is called when the GraphQL server stops
+    // Returning an error will result in the GraphQL server not stopping
+    OnGraphServerStop(ctx *core.GraphServerContext) error
 }
 ```
 
