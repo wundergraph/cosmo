@@ -126,7 +126,7 @@ type GatewayRequest struct {
 	// The active graph
 	Graph *core.Graph
 	// The original HTTP request
-    HttpRequest *http.Request
+	HttpRequest *http.Request
 	// Logger for the gateway request
 	Logger *zap.Logger
 }
@@ -168,7 +168,7 @@ type SubgraphResponse struct {
 	// The final GraphQL response from the subgraph
 	Response *core.GraphQLResponse
 	// The original http response from the subgraph
-    HttpResponse *http.Response
+	HttpResponse *http.Response
 }
 
 // Gateway Hooks
@@ -241,9 +241,9 @@ type TelemetrySpanHook interface {
 }
 
 type TelemetryMetricHook interface {
-    // OnMetric is called when a metric is recorded
-    // Returning an error will result in a telemetry error
-    OnMetric(metric *metric.Metric) error
+	// OnMetric is called when a metric is recorded
+	// Returning an error will result in a telemetry error
+	OnMetric(metric *metric.Metric) error
 }
 
 // AuthenticationHooks are called when a gateway request is authenticated
@@ -257,9 +257,9 @@ type AuthenticationHook interface {
 // AuthorizationHooks are called when a gateway request is authorized
 
 type AuthorizationHook interface {
-    // OnAuthorize is called when a gateway request is authorized
-    // Returning an error will result in a GraphQL error as a response from the gateway.
-    OnAuthorize(ctx *core.GatewayRequest, err error) error
+	// OnAuthorize is called when a gateway request is authorized
+	// Returning an error will result in a GraphQL error as a response from the gateway.
+	OnAuthorize(ctx *core.GatewayRequest, err error) error
 }
 
 // OperationHooks are called when an operation is parsed, normalized, or planned
