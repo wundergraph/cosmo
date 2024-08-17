@@ -38,23 +38,23 @@ As powerful as the new module becomes, it is important to move basic and common 
 
 A developer can implement a custom module by creating a struct that implements one or more of the following interfaces:
 
-- `GatewayHooks`: Provides hooks for the gateway lifecycle, including request and response handling.
+- GatewayHooks: Provides hooks for the gateway lifecycle, including request and response handling.
   - `OnGatewayRequest`: Called when a request is made to the gateway and after all GraphQL information is available.
   - `OnGatewayResponse`: Called before the response is sent to the client.
-- `SubgraphHooks`: Provides hooks for subgraph requests and responses.
+- SubgraphHooks: Provides hooks for subgraph requests and responses.
   - `OnSubgraphRequest`: Called when a subgraph request is made.
   - `OnSubgraphResponse`: Called when a subgraph response is received.
-- `ApplicationHooks`: Provides hooks for the application lifecycle, including startup, shutdown, and error handling.
+- ApplicationHooks: Provides hooks for the application lifecycle, including startup, shutdown, and error handling.
   - `OnAppStart`: Called when the application starts.
   - `OnAppStop`: Called when the application stops.
-- `AuthenticationHooks`: Provides hooks for authentication and authorization logic.
+- AuthenticationHooks: Provides hooks for authentication and authorization logic.
   - `OnAuthenticate`: Called when a gateway request is authenticated.
-- `AuthorizationHooks`: Provides hooks for authorization logic.
+- AuthorizationHooks: Provides hooks for authorization logic.
   - `OnAuthorize`: Called when a gateway request is authorized.
-- `TelemetryHooks`: Provides hooks for OpenTelemetry tracing and metrics.
+- TelemetryHooks: Provides hooks for OpenTelemetry tracing and metrics.
   - `OnSpanStart`: Called when a span is created.
   - `OnMetric`: Called when a metric is recorded.
-- `GraphQLOperationHooks`: Provides hooks for parsed, normalized, and planned GraphQL operations.
+- GraphQLOperationHooks: Provides hooks for parsed, normalized, and planned GraphQL operations.
   - `OnOperationParse`: Called when an operation is parsed.
   - `OnOperationNormalize`: Called when an operation is normalized.
   - `OnOperationPlan`: Called when an operation is planned.
@@ -552,16 +552,16 @@ In our case, we ensure that the `Money` scalar type is a valid money format. We 
 type MyModule struct{}
 
 func (m *MyModule) MoneyScalarHandler(ctx *core.ScalarContext) error {
-    // Validate the Money scalar type
+	// Validate the Money scalar type
 	if !isValidMoneyFormat(ctx.Value) {
-        return core.ValidationError("Invalid money format")
-    }
-    return nil
+		return core.ValidationError("Invalid money format")
+	}
+	return nil
 }
 
 func (m *MyModule) Provision(ctx *core.ModuleContext) error {
-    ctx.RegisterScalarHandler("Money", m.MoneyScalarHandler)
-    return nil
+	ctx.RegisterScalarHandler("Money", m.MoneyScalarHandler)
+	return nil
 }
 ```
 
