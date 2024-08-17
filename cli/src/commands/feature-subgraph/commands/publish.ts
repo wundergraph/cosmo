@@ -7,7 +7,7 @@ import { resolve } from 'pathe';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { parseGraphQLSubscriptionProtocol, parseGraphQLWebsocketSubprotocol } from '@wundergraph/cosmo-shared';
-import { BaseCommandOptions } from '../../../core/types/types.js';
+import { BaseCommandOptions, SubgraphCommandJsonOutput } from '../../../core/types/types.js';
 import { getBaseHeaders } from '../../../core/config.js';
 import { validateSubscriptionProtocols } from '../../../utils.js';
 import { websocketSubprotocolDescription } from '../../../constants.js';
@@ -59,9 +59,11 @@ export default (opts: BaseCommandOptions) => {
       ' This parameter is always ignored if the feature subgraph has already been created.',
   );
   command.option('-r, --raw', 'Prints to the console in json format instead of table');
+  command.option('-j, --json', 'Prints to the console in json format instead of table');
 
   command.action(async (name, options) => {
     const schemaFile = resolve(process.cwd(), options.schema);
+    const shouldOutputJson = options.json || options.raw;
     if (!existsSync(schemaFile)) {
       program.error(
         pc.red(
@@ -84,7 +86,7 @@ export default (opts: BaseCommandOptions) => {
     });
 
     const spinner = ora('Feature Subgraph is being published...');
-    if (!options.raw) {
+    if (!shouldOutputJson) {
       spinner.start();
     }
 
@@ -114,15 +116,15 @@ export default (opts: BaseCommandOptions) => {
 
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {
-        if (options.raw) {
+        if (shouldOutputJson) {
           console.log(
             JSON.stringify({
-              status: 'OK',
+              status: 'success',
               message: 'Feature subgraph published successfully.',
               compositionErrors: resp.compositionErrors,
               deploymentErrors: resp.deploymentErrors,
               details: '',
-            }),
+            } as SubgraphCommandJsonOutput),
           );
         } else {
           spinner.succeed(
@@ -133,15 +135,15 @@ export default (opts: BaseCommandOptions) => {
         break;
       }
       case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {
-        if (options.raw) {
+        if (shouldOutputJson) {
           console.log(
             JSON.stringify({
-              status: 'ERR_SUBGRAPH_COMPOSITION_FAILED',
+              status: 'error',
               message: 'Feature subgraph published but with composition errors.',
               compositionErrors: resp.compositionErrors,
               deploymentErrors: resp.deploymentErrors,
               details: '',
-            }),
+            } as SubgraphCommandJsonOutput),
           );
         } else {
           spinner.warn('Feature subgraph published but with composition errors.');
@@ -182,15 +184,14 @@ export default (opts: BaseCommandOptions) => {
         break;
       }
       case EnumStatusCode.ERR_DEPLOYMENT_FAILED: {
-        if (options.raw) {
+        if (shouldOutputJson) {
           console.log(
             JSON.stringify({
-              status: 'ERR_DEPLOYMENT_FAILED',
+              status: 'error',
               message: `Feature subgraph was published, but the updated composition hasn't been deployed, so it's not accessible to the router. Check the errors listed below for details.`,
               compositionErrors: resp.compositionErrors,
               deploymentErrors: resp.deploymentErrors,
-              details: '',
-            }),
+            } as SubgraphCommandJsonOutput),
           );
         } else {
           spinner.warn(
@@ -225,15 +226,15 @@ export default (opts: BaseCommandOptions) => {
         break;
       }
       default: {
-        if (options.raw) {
+        if (shouldOutputJson) {
           console.log(
             JSON.stringify({
-              status: 'ERR',
+              status: 'error',
               message: `Failed to publish feature subgraph "${name}".`,
               compositionErrors: resp.compositionErrors,
               deploymentErrors: resp.deploymentErrors,
               details: resp.response?.details,
-            }),
+            } as SubgraphCommandJsonOutput),
           );
         } else {
           spinner.fail(`Failed to publish feature subgraph "${name}".`);
