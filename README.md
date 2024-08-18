@@ -32,8 +32,8 @@ Not all companies start with a federated architecture, Cosmo supports both monol
 Get started with Cosmo by choosing the example that best fits your role and use case:
 
 - [**Developer**](examples/router-simple/README.md): Quickly start with Cosmo by composing a federated GraphQL schema locally from multiple services and running the Cosmo Router.
-- [**Architect**](./examples/full-cosmo-docker/README.md): Evaluate Cosmo for your organization by running it locally with Docker Compose and starting the Cosmo Router.
-- [**Platform Engineer**](examples/full-cosmo-helm/README.md): Deploy Cosmo in your infrastructure, demonstrated by deploying it in a Kubernetes cluster and running the Cosmo Router within the same cluster.
+- [**Architect**](./examples/full-cosmo-docker/README.md): Evaluate the entire Cosmo Platform for your organization by running it locally with Docker Compose.
+- [**Platform Engineer**](examples/full-cosmo-helm/README.md): Deploy the entire Cosmo Platform to Kubernetes through our official Helm Chart.
 
 
 ## License
