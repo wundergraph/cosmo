@@ -1,4 +1,4 @@
-# Federation Simple
+# Router Simple
 
 This example demonstrates how to compose a federated GraphQL schema from multiple remote services and run the Cosmo Router locally.
 
