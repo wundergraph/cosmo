@@ -123,7 +123,6 @@ export default (opts: BaseCommandOptions) => {
               message: 'Feature subgraph published successfully.',
               compositionErrors: resp.compositionErrors,
               deploymentErrors: resp.deploymentErrors,
-              details: '',
             } as SubgraphCommandJsonOutput),
           );
         } else {
@@ -142,7 +141,6 @@ export default (opts: BaseCommandOptions) => {
               message: 'Feature subgraph published but with composition errors.',
               compositionErrors: resp.compositionErrors,
               deploymentErrors: resp.deploymentErrors,
-              details: '',
             } as SubgraphCommandJsonOutput),
           );
         } else {
