@@ -5,7 +5,6 @@ This example demonstrates how to compose a federated GraphQL schema from multipl
 ### Prerequisites
 
 - [NodeJs & NPM (LTS)](https://nodejs.org/en/download/)
-- [wgc](https://www.npmjs.com/package/wgc)
 
 ## Getting started
 
