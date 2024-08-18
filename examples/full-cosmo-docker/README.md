@@ -29,6 +29,18 @@ Password: wunder@123
 Finally :rocket:, navigate to the [Studio Playground](https://cosmo.wundergraph.com/wundergraph/default/graph/mygraph/playground) to run the query:
 
 ```graphql
+query MyEmployees {
+  employees {
+    details {
+      forename
+    }
+    currentMood
+    derivedMood
+    isAvailable
+    notes
+    products
+  }
+}
 ```
 
 After you are done, you can clean up the demo by running `./destroy.sh`.

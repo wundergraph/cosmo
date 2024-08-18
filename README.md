@@ -35,7 +35,6 @@ Get started with Cosmo by choosing the example that best fits your role and use 
 - [**Architect**](./examples/full-cosmo-docker/README.md): Evaluate the entire Cosmo Platform for your organization by running it locally with Docker Compose.
 - [**Platform Engineer**](examples/full-cosmo-helm/README.md): Deploy the entire Cosmo Platform to Kubernetes through our official Helm Chart.
 
-
 ## License
 
 Cosmo is licensed under the [Apache License, Version 2.0](LICENSE).
