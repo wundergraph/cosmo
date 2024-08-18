@@ -63,7 +63,7 @@ The following command will create a federated graph consisting of multiple subgr
 ./create_demo.sh
 ```
 
-Finally, navigate to the [Studio Playground](http://studio.wundergraph.local/wundergraph/development/graph/mygraph/playground) and query the router.
+Finally 🚀, navigate to the [Studio Playground](http://studio.wundergraph.local/wundergraph/development/graph/mygraph/playground) and query the router.
 
 Login with the default credentials:
 
