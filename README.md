@@ -27,6 +27,14 @@ GraphQL Federation empowers organizations to break down their GraphQL schema int
 
 Not all companies start with a federated architecture, Cosmo supports both monolithic and federated architectures.
 
+## Getting Started
+
+To get started with WunderGraph Cosmo, follow these steps:
+
+1. **Clone the Repository**: `git clone https://github.com/wundergraph/cosmo.git`
+2. **Choose your Example**: Select the example that best fits your role and use case from the [Try Cosmo Now](#try-cosmo-now) section and follow the instructions.
+3. **Explore Further**: Check out the [Docs](https://cosmo-docs.wundergraph.com) for more information on Cosmo's features and capabilities.
+
 ## Try Cosmo Now! :rocket:
 
 Get started with Cosmo by choosing the example that best fits your role and use case:
@@ -34,6 +42,7 @@ Get started with Cosmo by choosing the example that best fits your role and use 
 - [**Developer**](examples/router-simple/README.md): Quickly start with Cosmo by composing a federated GraphQL schema locally from multiple services and running the Cosmo Router.
 - [**Architect**](./examples/full-cosmo-docker/README.md): Evaluate the entire Cosmo Platform for your organization by running it locally with Docker Compose.
 - [**Platform Engineer**](examples/full-cosmo-helm/README.md): Deploy the entire Cosmo Platform to Kubernetes through our official Helm Chart.
+- [**CTO**](https://wundergraph.com/contact/sales): Get in touch with the founders to discuss how Cosmo can help your organization.
 
 ## License
 
