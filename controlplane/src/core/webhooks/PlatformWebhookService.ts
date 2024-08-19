@@ -3,8 +3,8 @@ import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications
 import pino from 'pino';
 import axios, { AxiosError, AxiosInstance } from 'axios';
 import axiosRetry, { exponentialDelay } from 'axios-retry';
+import { webhookAxiosRetryCond } from '../util.js';
 import { makeWebhookRequest } from './utils.js';
-import {webhookAxiosRetryCond} from "../util.js";
 
 interface User {
   user_id: string;

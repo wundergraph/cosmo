@@ -1,7 +1,7 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import { EventMeta, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import axios, { AxiosError, AxiosInstance } from 'axios';
-import axiosRetry, {exponentialDelay} from 'axios-retry';
+import axiosRetry, { exponentialDelay } from 'axios-retry';
 import { eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import pino from 'pino';
@@ -9,8 +9,8 @@ import * as schema from '../../db/schema.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { WebhookDeliveryInfo } from '../../db/models.js';
+import { webhookAxiosRetryCond } from '../util.js';
 import { makeWebhookRequest } from './utils.js';
-import {webhookAxiosRetryCond} from "../util.js";
 
 export interface FederatedGraphSchemaUpdate {
   eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED;

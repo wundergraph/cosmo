@@ -4,7 +4,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { WebhookDeliveryInfo } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
-import {webhookAxiosRetryCond} from "../util.js";
+import { webhookAxiosRetryCond } from '../util.js';
 
 export class RedeliverWebhookService {
   private readonly logger: FastifyBaseLogger;

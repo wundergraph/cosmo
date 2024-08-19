@@ -7,7 +7,7 @@ import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notificat
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { WebhookDeliveryInfo } from '../../db/models.js';
-import {webhookAxiosRetryCond} from "../util.js";
+import { webhookAxiosRetryCond } from '../util.js';
 
 export class AdmissionError extends Error {
   constructor(message: string, cause?: Error) {
