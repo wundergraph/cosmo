@@ -389,7 +389,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, conn.Close())
 		})
 	})
-	t.Run("subscription with authorization via initial payload invalid token with reject", func(t *testing.T) {
+	t.Run("subscription with authorization via initial payload invalid token without reject", func(t *testing.T) {
 		t.Parallel()
 
 		authServer, err := jwks.NewServer(t)
