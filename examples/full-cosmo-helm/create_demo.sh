@@ -7,6 +7,7 @@ npm install -g wgc@latest
 # Load the right configuration for Kubernetes Cluster
 . ../../scripts/configurations/kubernetes.sh
 
+# Create and publish the subgraphs
 wgc namespace create development
 wgc federated-graph create mygraph --namespace development --routing-url "http://router.wundergraph.local/graphql"
 wgc subgraph publish employees --namespace development --routing-url "https://employees-api.fly.dev/graphql" --schema ../../demo/pkg/subgraphs/employees/subgraph/schema.graphqls
