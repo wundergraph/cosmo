@@ -3,19 +3,19 @@ package core
 import (
 	"strconv"
 
+	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	"go.opentelemetry.io/otel/attribute"
 
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"go.uber.org/zap"
 )
 
 type RouterMetrics interface {
 	StartOperation(clientInfo *ClientInfo, logger *zap.Logger, requestContentLength int64, metricAttributes []attribute.KeyValue) *OperationMetrics
-	ExportSchemaUsageInfo(operationContext *operationContext, statusCode int, hasError bool)
-	GqlMetricsExporter() graphqlmetrics.SchemaUsageExporter
+	ExportSchemaUsageInfo(operationContext *operationContext, statusCode int, hasError bool, exportSynchronous bool)
+	GqlMetricsExporter() *graphqlmetrics.Exporter
 	MetricStore() metric.Provider
 }
 
@@ -23,7 +23,7 @@ type RouterMetrics interface {
 // uses to collect and its metrics
 type routerMetrics struct {
 	metrics             metric.Provider
-	gqlMetricsExporter  graphqlmetrics.SchemaUsageExporter
+	gqlMetricsExporter  *graphqlmetrics.Exporter
 	routerConfigVersion string
 	logger              *zap.Logger
 	exportEnabled       bool
@@ -31,7 +31,7 @@ type routerMetrics struct {
 
 type routerMetricsConfig struct {
 	metrics             metric.Provider
-	gqlMetricsExporter  graphqlmetrics.SchemaUsageExporter
+	gqlMetricsExporter  *graphqlmetrics.Exporter
 	routerConfigVersion string
 	logger              *zap.Logger
 	exportEnabled       bool
@@ -57,6 +57,7 @@ func (m *routerMetrics) StartOperation(clientInfo *ClientInfo, logger *zap.Logge
 		Logger:               logger,
 		RequestContentLength: requestContentLength,
 		RouterConfigVersion:  m.routerConfigVersion,
+		TrackUsageInfo:       m.exportEnabled,
 	})
 	metrics.AddClientInfo(clientInfo)
 	return metrics
@@ -66,65 +67,13 @@ func (m *routerMetrics) MetricStore() metric.Provider {
 	return m.metrics
 }
 
-func (m *routerMetrics) GqlMetricsExporter() graphqlmetrics.SchemaUsageExporter {
+func (m *routerMetrics) GqlMetricsExporter() *graphqlmetrics.Exporter {
 	return m.gqlMetricsExporter
 }
 
-func (m *routerMetrics) ExportSchemaUsageInfo(operationContext *operationContext, statusCode int, hasError bool) {
+func (m *routerMetrics) ExportSchemaUsageInfo(operationContext *operationContext, statusCode int, hasError bool, exportSynchronous bool) {
 	if !m.exportEnabled {
 		return
-	}
-
-	usageInfo, err := plan.GetSchemaUsageInfo(
-		operationContext.preparedPlan.preparedPlan,
-		operationContext.preparedPlan.operationDocument,
-		operationContext.preparedPlan.schemaDocument,
-		operationContext.Variables(),
-	)
-	if err != nil {
-		m.logger.Error("failed to get schema usage info", zap.Error(err))
-		return
-	}
-
-	fieldUsageInfos := make([]*graphqlmetricsv1.TypeFieldUsageInfo, len(usageInfo.TypeFields))
-	argumentUsageInfos := make([]*graphqlmetricsv1.ArgumentUsageInfo, len(usageInfo.Arguments))
-	inputUsageInfos := make([]*graphqlmetricsv1.InputUsageInfo, len(usageInfo.InputTypeFields))
-
-	for i := range usageInfo.TypeFields {
-		fieldUsageInfos[i] = &graphqlmetricsv1.TypeFieldUsageInfo{
-			Count:       1,
-			Path:        usageInfo.TypeFields[i].Path,
-			TypeNames:   usageInfo.TypeFields[i].EnclosingTypeNames,
-			SubgraphIDs: usageInfo.TypeFields[i].Source.IDs,
-			NamedType:   usageInfo.TypeFields[i].FieldTypeName,
-		}
-	}
-
-	for i := range usageInfo.Arguments {
-		argumentUsageInfos[i] = &graphqlmetricsv1.ArgumentUsageInfo{
-			Count:     1,
-			Path:      []string{usageInfo.Arguments[i].FieldName, usageInfo.Arguments[i].ArgumentName},
-			TypeName:  usageInfo.Arguments[i].EnclosingTypeName,
-			NamedType: usageInfo.Arguments[i].ArgumentTypeName,
-		}
-	}
-
-	for i := range usageInfo.InputTypeFields {
-		// In that case it is a top level input field usage e.g employee(id: 1)
-		if len(usageInfo.InputTypeFields[i].EnclosingTypeNames) == 0 {
-			inputUsageInfos[i] = &graphqlmetricsv1.InputUsageInfo{
-				Count:     uint64(usageInfo.InputTypeFields[i].Count),
-				NamedType: usageInfo.InputTypeFields[i].FieldTypeName,
-				// Root input fields have no enclosing type name and no path
-			}
-		} else {
-			inputUsageInfos[i] = &graphqlmetricsv1.InputUsageInfo{
-				Path:      []string{usageInfo.InputTypeFields[i].EnclosingTypeNames[0], usageInfo.InputTypeFields[i].FieldName},
-				Count:     uint64(usageInfo.InputTypeFields[i].Count),
-				TypeName:  usageInfo.InputTypeFields[i].EnclosingTypeNames[0],
-				NamedType: usageInfo.InputTypeFields[i].FieldTypeName,
-			}
-		}
 	}
 
 	var opType graphqlmetricsv1.OperationType
@@ -137,14 +86,26 @@ func (m *routerMetrics) ExportSchemaUsageInfo(operationContext *operationContext
 		opType = graphqlmetricsv1.OperationType_SUBSCRIPTION
 	}
 
-	// Non-blocking
-	m.gqlMetricsExporter.Record(&graphqlmetricsv1.SchemaUsageInfo{
+	// If you refactor the code below or code within the exporter,
+	// make sure to never "mutate" SchemaUsageInfo
+	// We're re-using typeFieldUsageInfo and argumentUsageInfo across requests
+	// they are being cached across requests using the planner cache
+	// because the two are unique for each plan and can be re-used
+	// If you need to modify them, make a copy
+	// However, in the current form, the aggregation layer adds an envelope around Schema Usage with the RequestCount
+	// This allows batching / aggregation without having to modify the original slices,
+	// which seems to be efficient in terms of memory usage and CPU
+	item := &graphqlmetricsv1.SchemaUsageInfo{
 		RequestDocument:  operationContext.content,
-		TypeFieldMetrics: fieldUsageInfos,
+		TypeFieldMetrics: operationContext.typeFieldUsageInfo,
+		ArgumentMetrics:  operationContext.argumentUsageInfo,
+		InputMetrics:     operationContext.inputUsageInfo,
 		OperationInfo: &graphqlmetricsv1.OperationInfo{
 			Type: opType,
 			Hash: strconv.FormatUint(operationContext.hash, 10),
-			Name: operationContext.name,
+			// parsed operation names are re-used across requests
+			// for that reason, we need to copy the name, or it might get corrupted
+			Name: m.strCopy(operationContext.name),
 		},
 		SchemaInfo: &graphqlmetricsv1.SchemaInfo{
 			Version: m.routerConfigVersion,
@@ -153,11 +114,17 @@ func (m *routerMetrics) ExportSchemaUsageInfo(operationContext *operationContext
 			Name:    operationContext.clientInfo.Name,
 			Version: operationContext.clientInfo.Version,
 		},
-		ArgumentMetrics: argumentUsageInfos,
-		InputMetrics:    inputUsageInfos,
 		RequestInfo: &graphqlmetricsv1.RequestInfo{
 			Error:      hasError,
 			StatusCode: int32(statusCode),
 		},
-	})
+	}
+
+	m.gqlMetricsExporter.RecordUsage(item, exportSynchronous)
+}
+
+func (m *routerMetrics) strCopy(s string) string {
+	b := make([]byte, len(s))
+	copy(b, s)
+	return unsafebytes.BytesToString(b)
 }

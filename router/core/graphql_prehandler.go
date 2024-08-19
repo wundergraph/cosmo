@@ -52,6 +52,7 @@ type PreHandlerOptions struct {
 	AlwaysIncludeQueryPlan      bool
 	AlwaysSkipLoader            bool
 	QueryPlansEnabled           bool
+	TrackSchemaUsageInfo        bool
 }
 
 type PreHandler struct {
@@ -76,6 +77,7 @@ type PreHandler struct {
 	maxUploadFiles              int
 	maxUploadFileSize           int
 	bodyReadBuffers             *sync.Pool
+	trackSchemaUsageInfo        bool
 }
 
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
@@ -104,6 +106,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		alwaysIncludeQueryPlan: opts.AlwaysIncludeQueryPlan,
 		alwaysSkipLoader:       opts.AlwaysSkipLoader,
 		queryPlansEnabled:      opts.QueryPlansEnabled,
+		trackSchemaUsageInfo:   opts.TrackSchemaUsageInfo,
 	}
 }
 
@@ -178,12 +181,11 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		routerSpan.SetAttributes(attributes...)
 
-		if h.flushTelemetryAfterResponse {
-			defer h.flushMetrics(r.Context(), requestLogger)
-		}
-
 		defer func() {
-			metrics.Finish(finalErr, statusCode, writtenBytes)
+			metrics.Finish(finalErr, statusCode, writtenBytes, h.flushTelemetryAfterResponse)
+			if h.flushTelemetryAfterResponse {
+				h.flushMetrics(r.Context(), requestLogger)
+			}
 		}()
 
 		var body []byte
@@ -501,10 +503,11 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		)
 
 		planOptions := PlanOptions{
-			Protocol:         OperationProtocolHTTP,
-			ClientInfo:       *clientInfo,
-			TraceOptions:     traceOptions,
-			ExecutionOptions: executionOptions,
+			Protocol:             OperationProtocolHTTP,
+			ClientInfo:           *clientInfo,
+			TraceOptions:         traceOptions,
+			ExecutionOptions:     executionOptions,
+			TrackSchemaUsageInfo: h.trackSchemaUsageInfo,
 		}
 
 		opContext, err := h.planner.Plan(operationKit.parsedOperation, planOptions)
@@ -603,15 +606,7 @@ func (h *PreHandler) flushMetrics(ctx context.Context, requestLogger *zap.Logger
 
 	now := time.Now()
 
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if err := h.metrics.GqlMetricsExporter().ForceFlush(ctx); err != nil {
-			requestLogger.Error("Failed to flush schema usage metrics", zap.Error(err))
-		}
-	}()
-
+	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
 		defer wg.Done()

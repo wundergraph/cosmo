@@ -722,10 +722,11 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 	}
 
 	planOptions := PlanOptions{
-		Protocol:         OperationProtocolWS,
-		ClientInfo:       *h.clientInfo,
-		TraceOptions:     traceOptions,
-		ExecutionOptions: executionOptions,
+		Protocol:             OperationProtocolWS,
+		ClientInfo:           *h.clientInfo,
+		TraceOptions:         traceOptions,
+		ExecutionOptions:     executionOptions,
+		TrackSchemaUsageInfo: h.preHandler.trackSchemaUsageInfo,
 	}
 
 	opContext, err := h.planner.Plan(operationKit.parsedOperation, planOptions)
@@ -806,7 +807,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 	// Put in a closure to evaluate err after the defer
 	defer func() {
 		// StatusCode has no meaning here. We set it to 0 but set the error.
-		h.metrics.ExportSchemaUsageInfo(operationCtx, 0, err != nil)
+		h.metrics.ExportSchemaUsageInfo(operationCtx, 0, err != nil, false)
 	}()
 
 	switch p := operationCtx.preparedPlan.preparedPlan.(type) {
