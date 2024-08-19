@@ -656,6 +656,8 @@ export type FieldMatch = {
   argument?: GraphQLArgument;
 };
 
+export type TypeMatch = { type: GraphQLNamedType };
+
 export const getAllFields = (schema: GraphQLSchema): FieldMatch[] => {
   const fields: FieldMatch[] = [];
 
@@ -685,4 +687,76 @@ export const getAllFields = (schema: GraphQLSchema): FieldMatch[] => {
   }
 
   return fields;
+};
+
+function isMatch(sourceText: string, searchValue: string): boolean {
+  try {
+    const escaped = searchValue.replaceAll(/[^_0-9A-Za-z]/g, (ch) => "\\" + ch);
+    return sourceText.search(new RegExp(escaped, "i")) !== -1;
+  } catch {
+    return sourceText.toLowerCase().includes(searchValue.toLowerCase());
+  }
+}
+
+export const searchSchema = (searchValue: string, schema: GraphQLSchema) => {
+  const matches: {
+    types: TypeMatch[];
+    fields: FieldMatch[];
+  } = {
+    types: [],
+    fields: [],
+  };
+
+  if (!schema) {
+    return matches;
+  }
+
+  const typeMap = schema.getTypeMap();
+  let typeNames = Object.keys(typeMap);
+
+  for (const typeName of typeNames) {
+    if (matches.types.length + matches.fields.length >= 100) {
+      break;
+    }
+
+    const type = typeMap[typeName];
+    if (isMatch(typeName, searchValue)) {
+      matches.types.push({ type });
+    }
+
+    if (
+      !isObjectType(type) &&
+      !isInterfaceType(type) &&
+      !isInputObjectType(type)
+    ) {
+      continue;
+    }
+
+    const fields = type.getFields();
+    for (const fieldName in fields) {
+      const field = fields[fieldName];
+      let matchingArgs: GraphQLArgument[] | undefined;
+
+      if (!isMatch(fieldName, searchValue)) {
+        if ("args" in field) {
+          matchingArgs = field.args.filter((arg) =>
+            isMatch(arg.name, searchValue),
+          );
+          if (matchingArgs.length === 0) {
+            continue;
+          }
+        } else {
+          continue;
+        }
+      }
+
+      matches["fields"].push(
+        ...(matchingArgs
+          ? matchingArgs.map((argument) => ({ type, field, argument }))
+          : [{ type, field }]),
+      );
+    }
+  }
+
+  return matches;
 };
