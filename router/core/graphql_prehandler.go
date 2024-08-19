@@ -52,6 +52,7 @@ type PreHandlerOptions struct {
 	AlwaysIncludeQueryPlan      bool
 	AlwaysSkipLoader            bool
 	QueryPlansEnabled           bool
+	TrackSchemaUsageInfo        bool
 }
 
 type PreHandler struct {
@@ -76,6 +77,7 @@ type PreHandler struct {
 	maxUploadFiles              int
 	maxUploadFileSize           int
 	bodyReadBuffers             *sync.Pool
+	trackSchemaUsageInfo        bool
 }
 
 type httpOperation struct {
@@ -117,6 +119,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		alwaysIncludeQueryPlan: opts.AlwaysIncludeQueryPlan,
 		alwaysSkipLoader:       opts.AlwaysSkipLoader,
 		queryPlansEnabled:      opts.QueryPlansEnabled,
+		trackSchemaUsageInfo:   opts.TrackSchemaUsageInfo,
 	}
 }
 
@@ -190,12 +193,11 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		routerSpan.SetAttributes(commonAttributes...)
 
-		if h.flushTelemetryAfterResponse {
-			defer h.flushMetrics(r.Context(), requestLogger)
-		}
-
 		defer func() {
-			metrics.Finish(finalErr, statusCode, writtenBytes)
+			metrics.Finish(finalErr, statusCode, writtenBytes, h.flushTelemetryAfterResponse)
+			if h.flushTelemetryAfterResponse {
+				h.flushMetrics(r.Context(), requestLogger)
+			}
 		}()
 
 		var body []byte
@@ -551,6 +553,7 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 		ClientInfo:       httpOperation.clientInfo,
 		TraceOptions:     httpOperation.traceOptions,
 		ExecutionOptions: httpOperation.executionOptions,
+		TrackSchemaUsageInfo: h.trackSchemaUsageInfo,
 	}
 
 	opContext, err := h.planner.plan(operationKit.parsedOperation, planOptions)
@@ -581,15 +584,7 @@ func (h *PreHandler) flushMetrics(ctx context.Context, requestLogger *zap.Logger
 
 	now := time.Now()
 
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if err := h.metrics.GqlMetricsExporter().ForceFlush(ctx); err != nil {
-			requestLogger.Error("Failed to flush schema usage metrics", zap.Error(err))
-		}
-	}()
-
+	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
 		defer wg.Done()

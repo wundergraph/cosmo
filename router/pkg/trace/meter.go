@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"net/url"
+
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 	"github.com/wundergraph/cosmo/router/pkg/trace/redact"
 	"go.opentelemetry.io/otel"
@@ -14,7 +16,6 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"go.uber.org/zap"
-	"net/url"
 
 	_ "google.golang.org/grpc/encoding/gzip" // Required for gzip support over grpc
 )
