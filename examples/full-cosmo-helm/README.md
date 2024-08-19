@@ -83,4 +83,4 @@ helm uninstall cosmo
 ```
 
 > [!CAUTION]
-> Volumes might not be automatically removed, so you may need to manually remove them with `kubectl delete pvc -l release=cosmo`
+> Volumes might not be automatically removed, so you may need to manually remove them with `kubectl delete pvc -l app.kubernetes.io/instance=cosmo`
