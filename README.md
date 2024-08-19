@@ -42,9 +42,9 @@ Get started with Cosmo by choosing the example that best fits your role and use 
 - [**Developer**](examples/router-simple/README.md): Quickly start with Cosmo by composing a federated GraphQL schema locally from multiple services and running the Cosmo Router.
 - [**Architect**](./examples/full-cosmo-docker/README.md): Evaluate the entire Cosmo Platform for your organization by running it locally with Docker Compose.
 - [**Platform Engineer**](examples/full-cosmo-helm/README.md): Deploy the entire Cosmo Platform to Kubernetes through our official Helm Chart.
-- [**CEO / CTO**](https://wundergraph.com/contact/sales): Get in touch with the founders to discuss how Cosmo can help your organization.
+- [**Engineering Manager, CTO**](https://wundergraph.com/contact/sales): Get in touch with the founders to discuss how Cosmo can help your organization.
 
-_For any questions, feedback, or support, please [contact](https://8bxwlo3ot55.typeform.com/to/oC6XATf4) us._
+_For any questions, feedback, or support, please [contact](https://wundergraph.com/contact/sales) us._
 
 ## License
 
