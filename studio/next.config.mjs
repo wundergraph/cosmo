@@ -9,12 +9,22 @@ const allowUnsafeEval = true;
 const debugCSP = false;
 // Enable or disable the sentry integration
 const isSentryEnabled = process.env.NEXT_PUBLIC_SENTRY_ENABLED === "true";
-const isSentryFeatureReplayEnabled = isSentryEnabled && (process.env.NEXT_PUBLIC_SENTRY_REPLAY_ENABLED === "true");
+const isSentryFeatureReplayEnabled =
+  isSentryEnabled && process.env.NEXT_PUBLIC_SENTRY_REPLAY_ENABLED === "true";
 
 const sentryDebugEnabled = process.env.SENTRY_DEBUG === "true";
 const sentryOrganization = process.env.SENTRY_ORGANIZATION || "";
 const sentryProject = process.env.SENTRY_PROJECT || "";
 const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN || "";
+
+const clientTracesSampleRate = parseFloat(
+  process.env.NEXT_PUBLIC_SENTRY_CLIENT_TRACES_SAMPLE_RATE || "0",
+);
+const serverSampleRate = parseFloat(
+  process.env.SENTRY_SERVER_SAMPLE_RATE || "0",
+);
+
+const enableTraces = clientTracesSampleRate > 0 || serverSampleRate > 0;
 
 if (isSentryEnabled) {
   if (sentryAuthToken === "") {
@@ -59,7 +69,7 @@ const lightweightCspHeader = `
   };
   manifest-src 'self';
   media-src 'self';
-  worker-src 'self' ${isSentryFeatureReplayEnabled ? "blob:": ""};
+  worker-src 'self' ${isSentryFeatureReplayEnabled ? "blob:" : ""};
 `;
 
 /**
@@ -160,4 +170,21 @@ const withOptionalFeatures = (config) => {
   return config;
 };
 
-export default withOptionalFeatures(withMarkdoc({ mode: "static" })(config));
+const nextConfig = {
+  webpack: (config, { webpack }) => {
+    config.plugins.push(
+      new webpack.DefinePlugin({
+        __SENTRY_TRACING__: !enableTraces,
+        __RRWEB_EXCLUDE_IFRAME__: !isSentryFeatureReplayEnabled,
+        __RRWEB_EXCLUDE_SHADOW_DOM__: !isSentryFeatureReplayEnabled,
+        __SENTRY_EXCLUDE_REPLAY_WORKER__: !isSentryFeatureReplayEnabled,
+      }),
+    );
+
+    return config;
+  },
+};
+
+export default withOptionalFeatures(
+  withMarkdoc({ mode: "static" })(nextConfig),
+);
