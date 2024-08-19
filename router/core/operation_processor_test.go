@@ -246,7 +246,7 @@ func TestOperationProcessorUnmarshalExtensions(t *testing.T) {
 			Valid: true,
 		},
 	}
-	var inputError InputError
+	var inputError HttpError
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.Input, func(t *testing.T) {

@@ -239,17 +239,19 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	requestLogger := h.logger.With(logging.WithRequestID(requestID))
 	clientInfo := NewClientInfoFromRequest(r)
 
-	// Check access control before upgrading the connection
-	validatedReq, err := h.accessController.Access(w, r)
-	if err != nil {
-		statusCode := http.StatusForbidden
-		if errors.Is(err, ErrUnauthorized) {
-			statusCode = http.StatusUnauthorized
+	if h.accessController != nil {
+		// Check access control before upgrading the connection
+		validatedReq, err := h.accessController.Access(w, r)
+		if err != nil {
+			statusCode := http.StatusForbidden
+			if errors.Is(err, ErrUnauthorized) {
+				statusCode = http.StatusUnauthorized
+			}
+			http.Error(w, http.StatusText(statusCode), statusCode)
+			return
 		}
-		http.Error(w, http.StatusText(statusCode), statusCode)
-		return
+		r = validatedReq
 	}
-	r = validatedReq
 
 	upgrader := ws.HTTPUpgrader{
 		Timeout: time.Second * 5,
@@ -722,14 +724,14 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 	}
 
 	planOptions := PlanOptions{
-		Protocol:             OperationProtocolWS,
-		ClientInfo:           *h.clientInfo,
-		TraceOptions:         traceOptions,
-		ExecutionOptions:     executionOptions,
+		Protocol:         OperationProtocolWS,
+		ClientInfo:       h.clientInfo,
+		TraceOptions:     traceOptions,
+		ExecutionOptions: executionOptions,
 		TrackSchemaUsageInfo: h.preHandler.trackSchemaUsageInfo,
 	}
 
-	opContext, err := h.planner.Plan(operationKit.parsedOperation, planOptions)
+	opContext, err := h.planner.plan(operationKit.parsedOperation, planOptions)
 	if err != nil {
 		return operationKit.parsedOperation, nil, err
 	}

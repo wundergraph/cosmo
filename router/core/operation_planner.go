@@ -109,20 +109,19 @@ func (p *OperationPlanner) preparePlan(ctx *operationContext) (*planWithMetaData
 
 type PlanOptions struct {
 	Protocol             OperationProtocol
-	ClientInfo           ClientInfo
+	ClientInfo           *ClientInfo
 	TraceOptions         resolve.TraceOptions
 	ExecutionOptions     resolve.ExecutionOptions
 	TrackSchemaUsageInfo bool
 }
 
-func (p *OperationPlanner) Plan(operation *ParsedOperation, options PlanOptions) (*operationContext, error) {
-
+func (p *OperationPlanner) plan(operation *ParsedOperation, options PlanOptions) (*operationContext, error) {
 	opContext := &operationContext{
 		name:                       operation.Request.OperationName,
 		opType:                     operation.Type,
 		content:                    operation.NormalizedRepresentation,
 		hash:                       operation.ID,
-		clientInfo:                 options.ClientInfo,
+		clientInfo:                 *options.ClientInfo,
 		variables:                  operation.Request.Variables,
 		files:                      operation.Files,
 		traceOptions:               options.TraceOptions,

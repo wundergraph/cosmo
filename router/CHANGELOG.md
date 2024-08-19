@@ -4,6 +4,31 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.105.3](https://github.com/wundergraph/cosmo/compare/router@0.105.2...router@0.105.3) (2024-08-19)
+
+### Bug Fixes
+
+* semaphore is not released after panic ([#1069](https://github.com/wundergraph/cosmo/issues/1069)) ([fbd6bac](https://github.com/wundergraph/cosmo/commit/fbd6bac9522b663468acc2a95ea24fc32b142d47)) (@StarpTech)
+
+## [0.105.2](https://github.com/wundergraph/cosmo/compare/router@0.105.1...router@0.105.2) (2024-08-16)
+
+### Bug Fixes
+
+* don't propagate client content negotiation headers with wildcard ([#1089](https://github.com/wundergraph/cosmo/issues/1089)) ([2e7d8d2](https://github.com/wundergraph/cosmo/commit/2e7d8d27d7fdaf0cc66cfb65ff3a8012fe083679)) (@StarpTech)
+* dont initialize persisted operation client when disabled ([#1083](https://github.com/wundergraph/cosmo/issues/1083)) ([b483053](https://github.com/wundergraph/cosmo/commit/b483053d9be976895863aea1af90e01670731ba6)) (@flymedllva)
+
+## [0.105.1](https://github.com/wundergraph/cosmo/compare/router@0.105.0...router@0.105.1) (2024-08-15)
+
+### Bug Fixes
+
+* polyfill crypto.randomUUID for localhost ([#1086](https://github.com/wundergraph/cosmo/issues/1086)) ([1a7776b](https://github.com/wundergraph/cosmo/commit/1a7776b1c1b2cfdf4095cf8046fe5f97bb641fe1)) (@StarpTech)
+
+# [0.105.0](https://github.com/wundergraph/cosmo/compare/router@0.104.2...router@0.105.0) (2024-08-15)
+
+### Features
+
+* make file watcher more robust ([#1081](https://github.com/wundergraph/cosmo/issues/1081)) ([1b85ec5](https://github.com/wundergraph/cosmo/commit/1b85ec58eb67ffa3c56e65323fa9383ce7564e2e)) (@StarpTech)
+
 ## [0.104.2](https://github.com/wundergraph/cosmo/compare/router@0.104.1...router@0.104.2) (2024-08-14)
 
 **Note:** Version bump only for package router
