@@ -69,7 +69,7 @@ A developer can implement a custom module by creating a struct that implements o
   - `Shutdown`: Called when the module is shutdown.
   - `Module`: Returns the module information and factory function.
 
-For some hooks, we will also provide `pre/post` hooks that are called after the main hook has been executed. This allows developers to perform additional logic after the main hook has been executed e.g. to annotate a span with additional attributes or events.
+For some hooks, we will also provide `pre/post` hooks. This allows developers to perform additional logic after the main hook has been executed e.g. to annotate a span with additional attributes or events.
 
 ```go
 type MyModule struct{}
