@@ -44,6 +44,7 @@ type WebsocketMiddlewareOptions struct {
 	OperationBlocker   *OperationBlocker
 	Planner            *OperationPlanner
 	GraphQLHandler     *GraphQLHandler
+	PreHandler         *PreHandler
 	Metrics            RouterMetrics
 	AccessController   *AccessController
 	Logger             *zap.Logger
@@ -74,6 +75,7 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 		operationBlocker:   opts.OperationBlocker,
 		planner:            opts.Planner,
 		graphqlHandler:     opts.GraphQLHandler,
+		preHandler:         opts.PreHandler,
 		metrics:            opts.Metrics,
 		accessController:   opts.AccessController,
 		logger:             opts.Logger,
@@ -207,6 +209,7 @@ type WebsocketHandler struct {
 	operationBlocker   *OperationBlocker
 	planner            *OperationPlanner
 	graphqlHandler     *GraphQLHandler
+	preHandler         *PreHandler
 	metrics            RouterMetrics
 	accessController   *AccessController
 	logger             *zap.Logger
@@ -238,7 +241,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	requestLogger := h.logger.With(logging.WithRequestID(requestID))
 	clientInfo := NewClientInfoFromRequest(r)
 
-	if !h.config.Authentication.FromInitialPayload.Enabled {
+	if h.accessController != nil && !h.config.Authentication.FromInitialPayload.Enabled {
 		// Check access control before upgrading the connection
 		validatedReq, err := h.accessController.Access(w, r)
 		if err != nil {
@@ -291,6 +294,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		OperationBlocker:      h.operationBlocker,
 		Planner:               h.planner,
 		GraphQLHandler:        h.graphqlHandler,
+		PreHandler:            h.preHandler,
 		Metrics:               h.metrics,
 		ResponseWriter:        w,
 		Request:               r,
@@ -608,6 +612,7 @@ type WebSocketConnectionHandlerOptions struct {
 	OperationBlocker      *OperationBlocker
 	Planner               *OperationPlanner
 	GraphQLHandler        *GraphQLHandler
+	PreHandler            *PreHandler
 	Metrics               RouterMetrics
 	ResponseWriter        http.ResponseWriter
 	Request               *http.Request
@@ -629,6 +634,7 @@ type WebSocketConnectionHandler struct {
 	operationBlocker   *OperationBlocker
 	planner            *OperationPlanner
 	graphqlHandler     *GraphQLHandler
+	preHandler         *PreHandler
 	metrics            RouterMetrics
 	w                  http.ResponseWriter
 	r                  *http.Request
@@ -673,6 +679,7 @@ func NewWebsocketConnectionHandler(ctx context.Context, opts WebSocketConnection
 		operationBlocker:      opts.OperationBlocker,
 		planner:               opts.Planner,
 		graphqlHandler:        opts.GraphQLHandler,
+		preHandler:            opts.PreHandler,
 		metrics:               opts.Metrics,
 		w:                     opts.ResponseWriter,
 		r:                     opts.Request,
@@ -710,6 +717,12 @@ func (h *WebSocketConnectionHandler) writeErrorMessage(operationID string, err e
 }
 
 func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperation, *operationContext, error) {
+
+	executionOptions, traceOptions, err := h.preHandler.parseRequestOptions(h.r, h.clientInfo, h.logger)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	operationKit, err := h.operationProcessor.NewKit(payload, nil)
 	if err != nil {
 		return nil, nil, err
@@ -750,11 +763,18 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 		return nil, nil, err
 	}
 
-	if _, err := operationKit.Validate(); err != nil {
+	if _, err := operationKit.Validate(executionOptions.SkipLoader); err != nil {
 		return nil, nil, err
 	}
 
-	opContext, err := h.planner.Plan(operationKit.parsedOperation, h.clientInfo, OperationProtocolWS, ParseRequestTraceOptions(h.r))
+	planOptions := PlanOptions{
+		Protocol:         OperationProtocolWS,
+		ClientInfo:       h.clientInfo,
+		TraceOptions:     traceOptions,
+		ExecutionOptions: executionOptions,
+	}
+
+	opContext, err := h.planner.plan(operationKit.parsedOperation, planOptions)
 	if err != nil {
 		return operationKit.parsedOperation, nil, err
 	}

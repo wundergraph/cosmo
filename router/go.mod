@@ -39,7 +39,7 @@ require (
 	github.com/tidwall/gjson v1.17.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/twmb/franz-go v1.16.1
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.71
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.74
 	// Do not upgrade, it renames attributes we rely on
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/contrib/propagators/b3 v1.23.0
@@ -66,6 +66,7 @@ require (
 
 require (
 	github.com/KimMachineGun/automemlimit v0.6.1
+	github.com/bep/debounce v1.2.1
 	github.com/caarlos0/env/v11 v11.1.0
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/klauspost/compress v1.17.9

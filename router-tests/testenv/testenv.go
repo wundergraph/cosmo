@@ -121,6 +121,7 @@ type Config struct {
 	MetricReader                       metric.Reader
 	PrometheusRegistry                 *prometheus.Registry
 	ShutdownDelay                      time.Duration
+	NoRetryClient                      bool
 }
 
 type SubgraphsConfig struct {
@@ -388,10 +389,18 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	listenerAddr := fmt.Sprintf("localhost:%d", routerPort)
 
-	client := retryablehttp.NewClient()
-	client.Logger = nil
-	client.RetryMax = 10
-	client.RetryWaitMin = 100 * time.Millisecond
+	var client *http.Client
+
+	if cfg.NoRetryClient {
+		client = http.DefaultClient
+	} else {
+		retryClient := retryablehttp.NewClient()
+		retryClient.Logger = nil
+		retryClient.RetryMax = 10
+		retryClient.RetryWaitMin = 100 * time.Millisecond
+
+		client = retryClient.StandardClient()
+	}
 
 	rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdn, natsData.Server)
 	if err != nil {
@@ -420,7 +429,17 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 			Certificates: []tls.Certificate{cert},
 		}
 
-		client.HTTPClient = httpClient
+		if cfg.NoRetryClient {
+			client = httpClient
+		} else {
+			retryClient := retryablehttp.NewClient()
+			retryClient.Logger = nil
+			retryClient.RetryMax = 10
+			retryClient.RetryWaitMin = 100 * time.Millisecond
+			retryClient.HTTPClient = httpClient
+
+			client = retryClient.StandardClient()
+		}
 	}
 
 	go func() {
@@ -480,7 +499,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		cancel:                  cancel,
 		Router:                  rr,
 		RouterURL:               rr.BaseURL(),
-		RouterClient:            client.StandardClient(),
+		RouterClient:            client,
 		CDN:                     cdn,
 		NatsServer:              natsData.Server,
 		NatsConnectionDefault:   natsData.Connections[0],
@@ -619,6 +638,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithInstanceID("test-instance"),
 		core.WithGracePeriod(15 * time.Second),
 		core.WithIntrospection(true),
+		core.WithQueryPlans(true),
 		core.WithEvents(config.EventsConfiguration{
 			Providers: config.EventProviders{
 				Nats:  natsEventSources,

@@ -4,11 +4,11 @@ import {
   generateResolvabilityErrorReasons,
   generateSelectionSetSegments,
   GraphFieldData,
+  parse,
   renderSelectionSet,
   Subgraph,
   unresolvablePathError,
 } from '../src';
-import { parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
 import {
   documentNodeToNormalizedString,
