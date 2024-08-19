@@ -11,6 +11,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  packages: write
 
 env:
   CI: true

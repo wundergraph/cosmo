@@ -27,12 +27,6 @@ func NewAccessController(authenticators []authentication.Authenticator, authenti
 	}
 }
 
-// DefaultAccessController returns an AccessController without authenticators that
-// requires no authentication for authorization
-func DefaultAccessController() *AccessController {
-	return NewAccessController(nil, false)
-}
-
 // Access performs authorization and authentication, returning an error if the request
 // should not proceed. If it succeeds, a new http.Request with an updated context.Context
 // is returned.

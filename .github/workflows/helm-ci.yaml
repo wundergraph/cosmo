@@ -41,4 +41,5 @@ jobs:
         working-directory: ./helm
 
       - name: Check if git is not dirty after generating files
+        if: (github.event_name == 'push' && !startsWith(github.ref, 'refs/heads/release-please--')) || (github.event_name == 'pull_request' && !startsWith(github.head_ref, 'release-please--'))
         run: git diff --no-ext-diff --exit-code ./helm

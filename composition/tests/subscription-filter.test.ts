@@ -13,6 +13,7 @@ import {
   normalizeSubgraph,
   NULL,
   OBJECT,
+  parse,
   Subgraph,
   subscriptionFieldConditionEmptyValuesArrayErrorMessage,
   subscriptionFieldConditionInvalidInputFieldErrorMessage,
@@ -22,7 +23,6 @@ import {
   subscriptionFilterConditionInvalidInputFieldErrorMessage,
   subscriptionFilterConditionInvalidInputFieldTypeErrorMessage,
 } from '../src';
-import { parse } from 'graphql';
 import { normalizeString, schemaToSortedNormalizedString } from './utils/utils';
 import { CONDITION, FIELD, SUBSCRIPTION } from '../src';
 
@@ -502,7 +502,8 @@ const subgraphB: Subgraph = {
       name: String!
     }
     
-    type Object @external {
+    type Object {
+      id: ID!
       name: String!
       age: Int!
       field: NestedObject!

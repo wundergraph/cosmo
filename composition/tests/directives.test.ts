@@ -1,5 +1,4 @@
-import { federateSubgraphs, normalizeSubgraphFromString, Subgraph } from '../src';
-import { parse } from 'graphql';
+import { federateSubgraphs, normalizeSubgraphFromString, parse, Subgraph } from '../src';
 import { describe, expect, test } from 'vitest';
 import {
   baseDirectiveDefinitions,

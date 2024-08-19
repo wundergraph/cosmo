@@ -6,20 +6,21 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/cdn"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/s3"
-	"github.com/wundergraph/cosmo/router/pkg/execution_config"
-	"github.com/wundergraph/cosmo/router/pkg/file_watcher"
-	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
-	configCDNProvider "github.com/wundergraph/cosmo/router/pkg/routerconfig/cdn"
-	configs3Provider "github.com/wundergraph/cosmo/router/pkg/routerconfig/s3"
+	"github.com/wundergraph/cosmo/router/pkg/watcher"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/cdn"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/s3"
+	"github.com/wundergraph/cosmo/router/pkg/execution_config"
+	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
+	configCDNProvider "github.com/wundergraph/cosmo/router/pkg/routerconfig/cdn"
+	configs3Provider "github.com/wundergraph/cosmo/router/pkg/routerconfig/s3"
 
 	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/graphiql"
@@ -154,6 +155,7 @@ type (
 		graphqlPath               string
 		playground                bool
 		introspection             bool
+		queryPlansEnabled         bool
 		graphApiToken             string
 		healthCheckPath           string
 		readinessCheckPath        string
@@ -182,7 +184,6 @@ type (
 		processStartTime          time.Time
 		developmentMode           bool
 		healthcheck               health.Checker
-		configFileWatcher         *file_watcher.Watcher
 		// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
 		localhostFallbackInsideDocker bool
 
@@ -196,6 +197,8 @@ type (
 		registrationInfo *nodev1.RegistrationInfo
 
 		securityConfiguration config.SecurityConfiguration
+
+		customModules []Module
 
 		engineExecutionConfiguration config.EngineExecutionConfiguration
 		// should be removed once the users have migrated to the new overrides config
@@ -282,9 +285,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 	if r.fileUploadConfig == nil {
 		r.fileUploadConfig = DefaultFileUploadConfig()
 	}
-	if r.accessController == nil {
-		r.accessController = DefaultAccessController()
-	} else {
+	if r.accessController != nil {
 		if len(r.accessController.authenticators) == 0 && r.accessController.authenticationRequired {
 			r.logger.Warn("authentication is required but no authenticators are configured")
 		}
@@ -333,6 +334,8 @@ func NewRouter(opts ...Option) (*Router, error) {
 		// Required for WunderGraph ART
 		"x-wg-trace",
 		"x-wg-token",
+		"x-wg-skip-loader",
+		"x-wg-include-query-plan",
 		// Required for Trace Context propagation
 		"traceparent",
 		"tracestate",
@@ -516,7 +519,18 @@ func (r *Router) listenAndServe(cfg *nodev1.RouterConfig) error {
 }
 
 func (r *Router) initModules(ctx context.Context) error {
-	var moduleList = sortModules(modules)
+
+	moduleList := make([]ModuleInfo, 0, len(modules)+len(r.customModules))
+
+	for _, module := range modules {
+		moduleList = append(moduleList, module)
+	}
+
+	for _, module := range r.customModules {
+		moduleList = append(moduleList, module.Module())
+	}
+
+	moduleList = sortModules(moduleList)
 
 	for _, moduleInfo := range moduleList {
 		now := time.Now()
@@ -854,22 +868,24 @@ func (r *Router) buildClients() error {
 		)
 	}
 
-	// For backwards compatibility with cdn config field
-	cacheSize := r.persistedOperationsConfig.Cache.Size.Uint64()
-	if cacheSize <= 0 {
-		cacheSize = r.cdnConfig.CacheSize.Uint64()
-	}
+	if pClient != nil {
+		// For backwards compatibility with cdn config field
+		cacheSize := r.persistedOperationsConfig.Cache.Size.Uint64()
+		if cacheSize <= 0 {
+			cacheSize = r.cdnConfig.CacheSize.Uint64()
+		}
 
-	c, err := persistedoperation.NewClient(&persistedoperation.Options{
-		CacheSize:      cacheSize,
-		Logger:         r.logger,
-		ProviderClient: pClient,
-	})
-	if err != nil {
-		return err
-	}
+		c, err := persistedoperation.NewClient(&persistedoperation.Options{
+			CacheSize:      cacheSize,
+			Logger:         r.logger,
+			ProviderClient: pClient,
+		})
+		if err != nil {
+			return err
+		}
 
-	r.persistedOperationClient = c
+		r.persistedOperationClient = c
+	}
 
 	var rClient routerconfig.Client
 
@@ -988,45 +1004,54 @@ func (r *Router) Start(ctx context.Context) error {
 		}
 
 		if r.executionConfig != nil && r.executionConfig.Watch {
-			watcher, err := file_watcher.FileWatcher(r.logger, r.executionConfig.Path)
+
+			w, err := watcher.NewWatcher(r.logger.With(zap.String("watcher", "execution_config")))
 			if err != nil {
-				return fmt.Errorf("failed to watch config file: %w", err)
+				return fmt.Errorf("failed to start watcher for execution config file: %w", err)
 			}
-			err = watcher.Watch(func() {
+
+			// Watch the execution config file for changes. Returning an error will stop the watcher.
+			// We intentionally ignore the error here because the user can retry. The watcher is closed when context is done.
+			err = w.Watch(ctx, r.executionConfig.Path, func(events []watcher.Event) error {
 				if r.shutdown.Load() {
 					r.logger.Warn("Router is in shutdown state. Skipping config update")
+					return nil
 				}
 
 				data, err := os.ReadFile(r.executionConfig.Path)
 				if err != nil {
 					r.logger.Error("Failed to read config file", zap.Error(err))
-					return
+					return nil
 				}
 
-				r.logger.Info("Config file changed. Updating server with new config")
+				r.logger.Info("Config file changed. Updating server with new config", zap.String("path", r.executionConfig.Path))
 
 				cfg, err := execution_config.UnmarshalConfig(data)
 				if err != nil {
 					r.logger.Error("Failed to serialize config file", zap.Error(err))
-					return
+					return nil
 				}
 
 				if err := r.newServer(ctx, cfg); err != nil {
 					r.logger.Error("Failed to update server with new config", zap.Error(err))
+					return nil
 				}
+
+				return nil
 			})
 			if err != nil {
-				return fmt.Errorf("failed to watch config file: %w", err)
+				r.logger.Error("Failed to watch execution config file. Restart the router to apply changes", zap.Error(err))
+				return fmt.Errorf("failed to watch execution config file: %w", err)
 			}
+
 			r.logger.Info("Watching config file for changes. Router will hot-reload automatically without downtime",
 				zap.String("path", r.executionConfig.Path),
 			)
-			r.configFileWatcher = watcher
 
 			return nil
 		}
 
-		r.logger.Info("Static execution config provided. Polling is disabled. Updating execution config is only possible by restarting the server")
+		r.logger.Info("Static execution config provided. Polling and watching is disabled. Updating execution config is only possible by restarting the router")
 
 		return nil
 	}
@@ -1114,12 +1139,6 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 		defer cancel()
 
 		ctx = ctxWithTimer
-	}
-
-	if r.configFileWatcher != nil {
-		if subErr := r.configFileWatcher.Close(); subErr != nil {
-			err = errors.Join(err, fmt.Errorf("failed to close config file watcher: %w", subErr))
-		}
 	}
 
 	if r.configPoller != nil {
@@ -1259,6 +1278,12 @@ func WithPlayground(enable bool) Option {
 func WithIntrospection(enable bool) Option {
 	return func(r *Router) {
 		r.introspection = enable
+	}
+}
+
+func WithQueryPlans(enabled bool) Option {
+	return func(r *Router) {
+		r.queryPlansEnabled = enabled
 	}
 }
 
@@ -1438,6 +1463,12 @@ func WithSecurityConfig(cfg config.SecurityConfiguration) Option {
 func WithEngineExecutionConfig(cfg config.EngineExecutionConfiguration) Option {
 	return func(r *Router) {
 		r.engineExecutionConfiguration = cfg
+	}
+}
+
+func WithCustomModules(modules ...Module) Option {
+	return func(r *Router) {
+		r.customModules = modules
 	}
 }
 

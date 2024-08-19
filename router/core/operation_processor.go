@@ -73,7 +73,7 @@ func (e invalidExtensionsTypeError) StatusCode() int {
 }
 
 var (
-	_ InputError = invalidExtensionsTypeError(0)
+	_ HttpError = invalidExtensionsTypeError(0)
 )
 
 type OperationProcessorOptions struct {
@@ -177,7 +177,7 @@ func (o *OperationKit) UnmarshalOperation() error {
 	buf := bytes.NewBuffer(make([]byte, len(o.data))[:0])
 	err := json.Compact(buf, o.data)
 	if err != nil {
-		return &inputError{
+		return &httpGraphqlError{
 			message:    fmt.Sprintf("error parsing request body: %s", err),
 			statusCode: http.StatusBadRequest,
 		}
@@ -185,7 +185,7 @@ func (o *OperationKit) UnmarshalOperation() error {
 	o.data = buf.Bytes()
 	err = json.Unmarshal(o.data, &o.parsedOperation.Request)
 	if err != nil {
-		return &inputError{
+		return &httpGraphqlError{
 			message:    fmt.Sprintf("error parsing request body: %s", err),
 			statusCode: http.StatusBadRequest,
 		}
@@ -195,14 +195,14 @@ func (o *OperationKit) UnmarshalOperation() error {
 		var mapExtensions map[string]any
 		err = json.Unmarshal(o.parsedOperation.Request.Extensions, &mapExtensions)
 		if err != nil {
-			return &inputError{
+			return &httpGraphqlError{
 				message:    fmt.Sprintf("error parsing extensions: %s", err),
 				statusCode: http.StatusBadRequest,
 			}
 		}
 		err = json.Unmarshal(o.parsedOperation.Request.Extensions, &o.parsedOperation.GraphQLRequestExtensions)
 		if err != nil {
-			return &inputError{
+			return &httpGraphqlError{
 				message:    fmt.Sprintf("error parsing extensions: %s", err),
 				statusCode: http.StatusBadRequest,
 			}
@@ -211,7 +211,7 @@ func (o *OperationKit) UnmarshalOperation() error {
 			// Delete persistedQuery from extensions to avoid it being passed to the subgraphs
 			o.parsedOperation.Request.Extensions, err = sjson.DeleteBytes(o.parsedOperation.Request.Extensions, "persistedQuery")
 			if err != nil {
-				return &inputError{
+				return &httpGraphqlError{
 					message:    fmt.Sprintf("error deleting persistedQuery from extensions: %s", err),
 					statusCode: http.StatusBadRequest,
 				}
@@ -222,7 +222,7 @@ func (o *OperationKit) UnmarshalOperation() error {
 		// variables must be a valid JSON object or null
 		variables, err := fastjson.ParseBytes(o.parsedOperation.Request.Variables)
 		if err != nil {
-			return &inputError{
+			return &httpGraphqlError{
 				message:    fmt.Sprintf("error parsing variables: %s", err),
 				statusCode: http.StatusBadRequest,
 			}
@@ -236,7 +236,7 @@ func (o *OperationKit) UnmarshalOperation() error {
 		case fastjson.TypeObject:
 			o.parsedOperation.Variables = variables.GetObject()
 		default:
-			return &inputError{
+			return &httpGraphqlError{
 				message:    "variables must be an object",
 				statusCode: http.StatusBadRequest,
 			}
@@ -264,14 +264,14 @@ func (o *OperationKit) UnmarshalOperation() error {
 // UnmarshalOperation must be called before calling this method.
 func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *ClientInfo, commonTraceAttributes []attribute.KeyValue) (bool, error) {
 	if o.operationProcessor.persistedOperationClient == nil {
-		return false, &inputError{
+		return false, &httpGraphqlError{
 			message:    "could not resolve persisted query, feature is not configured",
 			statusCode: http.StatusOK,
 		}
 	}
 	fromCache, err := o.loadPersistedOperationFromCache()
 	if err != nil {
-		return false, &inputError{
+		return false, &httpGraphqlError{
 			statusCode: http.StatusInternalServerError,
 			message:    "error loading persisted operation from cache",
 		}
@@ -300,7 +300,7 @@ func (o *OperationKit) Parse() error {
 	)
 
 	if len(o.parsedOperation.Request.Query) == 0 {
-		return &inputError{
+		return &httpGraphqlError{
 			message:    "error parsing request body",
 			statusCode: http.StatusBadRequest,
 		}
@@ -342,14 +342,14 @@ func (o *OperationKit) Parse() error {
 	}
 
 	if o.parsedOperation.Request.OperationName == "" && operationCount > 1 {
-		return &inputError{
+		return &httpGraphqlError{
 			message:    "operation name is required when multiple operations are defined",
 			statusCode: http.StatusOK,
 		}
 	}
 
 	if o.parsedOperation.Request.OperationName != "" && operationCount != 0 && o.operationDefinitionRef == -1 {
-		return &inputError{
+		return &httpGraphqlError{
 			message:    fmt.Sprintf("operation with name '%s' not found", o.parsedOperation.Request.OperationName),
 			statusCode: http.StatusOK,
 		}
@@ -359,12 +359,12 @@ func (o *OperationKit) Parse() error {
 		if anonymousOperationCount == 1 {
 			o.operationDefinitionRef = anonymousOperationDefinitionRef
 		} else if anonymousOperationCount > 1 {
-			return &inputError{
+			return &httpGraphqlError{
 				message:    "operation name is required when multiple operations are defined",
 				statusCode: http.StatusOK,
 			}
 		} else {
-			return &inputError{
+			return &httpGraphqlError{
 				message:    fmt.Sprintf("operation with name '%s' not found", o.parsedOperation.Request.OperationName),
 				statusCode: http.StatusOK,
 			}
@@ -379,7 +379,7 @@ func (o *OperationKit) Parse() error {
 	case ast.OperationTypeSubscription:
 		o.parsedOperation.Type = "subscription"
 	default:
-		return &inputError{
+		return &httpGraphqlError{
 			message:    "operation type not supported",
 			statusCode: http.StatusOK,
 		}
@@ -418,7 +418,7 @@ func (o *OperationKit) normalizePersistedOperation() (cached bool, err error) {
 	}
 
 	// Hash the normalized operation with the static operation name to avoid different IDs for the same operation
-	err = o.kit.printer.Print(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.keyGen)
+	err = o.kit.printer.Print(o.kit.doc, o.kit.keyGen)
 	if err != nil {
 		return false, errors.WithStack(fmt.Errorf("normalizePersistedOperation failed generating operation hash: %w", err))
 	}
@@ -429,7 +429,7 @@ func (o *OperationKit) normalizePersistedOperation() (cached bool, err error) {
 
 	// Print the operation with the original operation name
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = o.originalOperationNameRef
-	err = o.kit.printer.Print(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.normalizedOperation)
+	err = o.kit.printer.Print(o.kit.doc, o.kit.normalizedOperation)
 	if err != nil {
 		return false, errors.WithStack(fmt.Errorf("normalizePersistedOperation failed printing operation: %w", err))
 	}
@@ -484,7 +484,7 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 	o.parsedOperation.Request.Variables = o.kit.doc.Input.Variables
 
 	// Hash the normalized operation with the static operation name & original variables to avoid different IDs for the same operation
-	err = o.kit.printer.Print(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.keyGen)
+	err = o.kit.printer.Print(o.kit.doc, o.kit.keyGen)
 	if err != nil {
 		return false, errors.WithStack(fmt.Errorf("normalizeNonPersistedOperation (uncached) failed generating operation hash: %w", err))
 	}
@@ -494,7 +494,7 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 
 	// Print the operation with the original operation name
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = o.originalOperationNameRef
-	err = o.kit.printer.Print(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.normalizedOperation)
+	err = o.kit.printer.Print(o.kit.doc, o.kit.normalizedOperation)
 	if err != nil {
 		return false, errors.WithStack(fmt.Errorf("normalizeNonPersistedOperation (uncached) failed printing operation: %w", err))
 	}
@@ -542,7 +542,7 @@ func (o *OperationKit) NormalizeVariables() error {
 		return nil
 	}
 	o.kit.normalizedOperation.Reset()
-	err := o.kit.printer.Print(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.normalizedOperation)
+	err := o.kit.printer.Print(o.kit.doc, o.kit.normalizedOperation)
 	if err != nil {
 		return errors.WithStack(fmt.Errorf("normalizeVariables: %w", err))
 	}
@@ -664,19 +664,24 @@ func (o *OperationKit) writeSkipIncludeCacheKeyToKeyGen(skipIncludeVariableNames
 }
 
 // Validate validates the operation variables.
-func (o *OperationKit) Validate() (cacheHit bool, err error) {
-	err = o.kit.variablesValidator.Validate(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.doc.Input.Variables)
-	if err != nil {
-		return false, &inputError{
-			message:    err.Error(),
-			statusCode: http.StatusOK,
+func (o *OperationKit) Validate(skipLoader bool) (cacheHit bool, err error) {
+	if !skipLoader {
+		// in case we're skipping the loader, it means that we won't execute the operation
+		// this means that we don't need to validate the variables as they are not used
+		// this is useful to return a query plan without having to provide variables
+		err = o.kit.variablesValidator.Validate(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.doc.Input.Variables)
+		if err != nil {
+			return false, &httpGraphqlError{
+				message:    err.Error(),
+				statusCode: http.StatusOK,
+			}
 		}
-	}
-	if o.cache != nil && o.cache.validationCache != nil {
-		var valid bool
-		valid, cacheHit = o.cache.validationCache.Get(o.parsedOperation.ID)
-		if valid {
-			return
+		if o.cache != nil && o.cache.validationCache != nil {
+			var valid bool
+			valid, cacheHit = o.cache.validationCache.Get(o.parsedOperation.ID)
+			if valid {
+				return
+			}
 		}
 	}
 	report := &operationreport.Report{}
@@ -803,7 +808,7 @@ func (p *OperationProcessor) freeKit(kit *parseKit) {
 }
 
 func (p *OperationProcessor) entityTooLarge() error {
-	return &inputError{
+	return &httpGraphqlError{
 		message:    fmt.Sprintf("request body too large, max size is %d bytes", p.maxOperationSizeInBytes),
 		statusCode: http.StatusRequestEntityTooLarge,
 	}

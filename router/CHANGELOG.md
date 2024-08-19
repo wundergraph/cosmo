@@ -4,6 +4,43 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.105.2](https://github.com/wundergraph/cosmo/compare/router@0.105.1...router@0.105.2) (2024-08-16)
+
+### Bug Fixes
+
+* don't propagate client content negotiation headers with wildcard ([#1089](https://github.com/wundergraph/cosmo/issues/1089)) ([2e7d8d2](https://github.com/wundergraph/cosmo/commit/2e7d8d27d7fdaf0cc66cfb65ff3a8012fe083679)) (@StarpTech)
+* dont initialize persisted operation client when disabled ([#1083](https://github.com/wundergraph/cosmo/issues/1083)) ([b483053](https://github.com/wundergraph/cosmo/commit/b483053d9be976895863aea1af90e01670731ba6)) (@flymedllva)
+
+## [0.105.1](https://github.com/wundergraph/cosmo/compare/router@0.105.0...router@0.105.1) (2024-08-15)
+
+### Bug Fixes
+
+* polyfill crypto.randomUUID for localhost ([#1086](https://github.com/wundergraph/cosmo/issues/1086)) ([1a7776b](https://github.com/wundergraph/cosmo/commit/1a7776b1c1b2cfdf4095cf8046fe5f97bb641fe1)) (@StarpTech)
+
+# [0.105.0](https://github.com/wundergraph/cosmo/compare/router@0.104.2...router@0.105.0) (2024-08-15)
+
+### Features
+
+* make file watcher more robust ([#1081](https://github.com/wundergraph/cosmo/issues/1081)) ([1b85ec5](https://github.com/wundergraph/cosmo/commit/1b85ec58eb67ffa3c56e65323fa9383ce7564e2e)) (@StarpTech)
+
+## [0.104.2](https://github.com/wundergraph/cosmo/compare/router@0.104.1...router@0.104.2) (2024-08-14)
+
+**Note:** Version bump only for package router
+
+## [0.104.1](https://github.com/wundergraph/cosmo/compare/router@0.104.0...router@0.104.1) (2024-08-14)
+
+**Note:** Version bump only for package router
+
+# [0.104.0](https://github.com/wundergraph/cosmo/compare/router@0.103.0...router@0.104.0) (2024-08-14)
+
+### Bug Fixes
+
+* **cli-compose:** feature subgraph introspection ([#1078](https://github.com/wundergraph/cosmo/issues/1078)) ([13a7d63](https://github.com/wundergraph/cosmo/commit/13a7d638ac879e759e56d29fbd660aac5e3c3fc0)) (@StarpTech)
+
+### Features
+
+* expose query plans through response extensions field ([#1077](https://github.com/wundergraph/cosmo/issues/1077)) ([58430bc](https://github.com/wundergraph/cosmo/commit/58430bc7c90b2b21500a1471ef929950d0f0ce1a)) (@jensneuse)
+
 # [0.103.0](https://github.com/wundergraph/cosmo/compare/router@0.102.1...router@0.103.0) (2024-08-09)
 
 ### Features

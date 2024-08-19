@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/KimMachineGun/automemlimit/memlimit"
 	"github.com/dustin/go-humanize"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
@@ -9,7 +11,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/selfregister"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"go.uber.org/automaxprocs/maxprocs"
-	"os"
 
 	"github.com/wundergraph/cosmo/router/core"
 	"go.uber.org/zap"
@@ -98,6 +99,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		core.WithOverrides(cfg.Overrides),
 		core.WithLogger(logger),
 		core.WithIntrospection(cfg.IntrospectionEnabled),
+		core.WithQueryPlans(cfg.QueryPlansEnabled),
 		core.WithPlayground(cfg.PlaygroundEnabled),
 		core.WithGraphApiToken(cfg.Graph.Token),
 		core.WithPersistedOperationsConfig(cfg.PersistedOperationsConfig),
@@ -160,7 +162,6 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		core.WithEngineExecutionConfig(cfg.EngineExecutionConfiguration),
 		core.WithSecurityConfig(cfg.SecurityConfiguration),
 		core.WithAuthorizationConfig(&cfg.Authorization),
-		core.WithAccessController(core.NewAccessController(authenticators, cfg.Authorization.RequireAuthentication)),
 		core.WithWebSocketConfiguration(&cfg.WebSocket),
 		core.WithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation),
 		core.WithLocalhostFallbackInsideDocker(cfg.LocalhostFallbackInsideDocker),
@@ -197,6 +198,10 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 			PollInterval:    cfg.PollInterval,
 			ExecutionConfig: cfg.ExecutionConfig,
 		}))
+	}
+
+	if len(authenticators) > 0 {
+		options = append(options, core.WithAccessController(core.NewAccessController(authenticators, cfg.Authorization.RequireAuthentication)))
 	}
 
 	return core.NewRouter(options...)

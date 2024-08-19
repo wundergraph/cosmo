@@ -3,6 +3,7 @@ import { EntityInterfaceSubgraphData } from '../utils/utils';
 import { ConfigurationData } from '../router-configuration/router-configuration';
 import { ParentDefinitionData, PersistedDirectiveDefinitionData } from '../schema-building/type-definition-data';
 import { ObjectExtensionData } from '../schema-building/type-extension-data';
+import { ConditionalFieldData } from '../schema-building/utils';
 
 export type Subgraph = {
   definitions: DocumentNode;
@@ -11,7 +12,8 @@ export type Subgraph = {
 };
 
 export type InternalSubgraph = {
-  configurationDataByParentTypeName: Map<string, ConfigurationData>;
+  conditionalFieldDataByCoordinates: Map<string, ConditionalFieldData>;
+  configurationDataByTypeName: Map<string, ConfigurationData>;
   definitions: DocumentNode;
   entityInterfaces: Map<string, EntityInterfaceSubgraphData>;
   isVersionTwo: boolean;
@@ -27,7 +29,7 @@ export type InternalSubgraph = {
 };
 
 export type SubgraphConfig = {
-  configurationDataMap: Map<string, ConfigurationData>;
+  configurationDataByTypeName: Map<string, ConfigurationData>;
   schema: GraphQLSchema;
 };
 
