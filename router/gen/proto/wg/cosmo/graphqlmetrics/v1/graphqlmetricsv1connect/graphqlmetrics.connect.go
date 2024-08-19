@@ -38,12 +38,16 @@ const (
 	// GraphQLMetricsServicePublishGraphQLMetricsProcedure is the fully-qualified name of the
 	// GraphQLMetricsService's PublishGraphQLMetrics RPC.
 	GraphQLMetricsServicePublishGraphQLMetricsProcedure = "/wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService/PublishGraphQLMetrics"
+	// GraphQLMetricsServicePublishAggregatedGraphQLMetricsProcedure is the fully-qualified name of the
+	// GraphQLMetricsService's PublishAggregatedGraphQLMetrics RPC.
+	GraphQLMetricsServicePublishAggregatedGraphQLMetricsProcedure = "/wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService/PublishAggregatedGraphQLMetrics"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
 var (
-	graphQLMetricsServiceServiceDescriptor                     = v1.File_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto.Services().ByName("GraphQLMetricsService")
-	graphQLMetricsServicePublishGraphQLMetricsMethodDescriptor = graphQLMetricsServiceServiceDescriptor.Methods().ByName("PublishGraphQLMetrics")
+	graphQLMetricsServiceServiceDescriptor                               = v1.File_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto.Services().ByName("GraphQLMetricsService")
+	graphQLMetricsServicePublishGraphQLMetricsMethodDescriptor           = graphQLMetricsServiceServiceDescriptor.Methods().ByName("PublishGraphQLMetrics")
+	graphQLMetricsServicePublishAggregatedGraphQLMetricsMethodDescriptor = graphQLMetricsServiceServiceDescriptor.Methods().ByName("PublishAggregatedGraphQLMetrics")
 )
 
 // GraphQLMetricsServiceClient is a client for the wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService
@@ -51,6 +55,7 @@ var (
 type GraphQLMetricsServiceClient interface {
 	// PublishGraphQLMetrics publishes the GraphQL metrics to the metrics service
 	PublishGraphQLMetrics(context.Context, *connect.Request[v1.PublishGraphQLRequestMetricsRequest]) (*connect.Response[v1.PublishOperationCoverageReportResponse], error)
+	PublishAggregatedGraphQLMetrics(context.Context, *connect.Request[v1.PublishAggregatedGraphQLRequestMetricsRequest]) (*connect.Response[v1.PublishAggregatedGraphQLRequestMetricsResponse], error)
 }
 
 // NewGraphQLMetricsServiceClient constructs a client for the
@@ -70,12 +75,19 @@ func NewGraphQLMetricsServiceClient(httpClient connect.HTTPClient, baseURL strin
 			connect.WithSchema(graphQLMetricsServicePublishGraphQLMetricsMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		publishAggregatedGraphQLMetrics: connect.NewClient[v1.PublishAggregatedGraphQLRequestMetricsRequest, v1.PublishAggregatedGraphQLRequestMetricsResponse](
+			httpClient,
+			baseURL+GraphQLMetricsServicePublishAggregatedGraphQLMetricsProcedure,
+			connect.WithSchema(graphQLMetricsServicePublishAggregatedGraphQLMetricsMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // graphQLMetricsServiceClient implements GraphQLMetricsServiceClient.
 type graphQLMetricsServiceClient struct {
-	publishGraphQLMetrics *connect.Client[v1.PublishGraphQLRequestMetricsRequest, v1.PublishOperationCoverageReportResponse]
+	publishGraphQLMetrics           *connect.Client[v1.PublishGraphQLRequestMetricsRequest, v1.PublishOperationCoverageReportResponse]
+	publishAggregatedGraphQLMetrics *connect.Client[v1.PublishAggregatedGraphQLRequestMetricsRequest, v1.PublishAggregatedGraphQLRequestMetricsResponse]
 }
 
 // PublishGraphQLMetrics calls
@@ -84,11 +96,18 @@ func (c *graphQLMetricsServiceClient) PublishGraphQLMetrics(ctx context.Context,
 	return c.publishGraphQLMetrics.CallUnary(ctx, req)
 }
 
+// PublishAggregatedGraphQLMetrics calls
+// wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService.PublishAggregatedGraphQLMetrics.
+func (c *graphQLMetricsServiceClient) PublishAggregatedGraphQLMetrics(ctx context.Context, req *connect.Request[v1.PublishAggregatedGraphQLRequestMetricsRequest]) (*connect.Response[v1.PublishAggregatedGraphQLRequestMetricsResponse], error) {
+	return c.publishAggregatedGraphQLMetrics.CallUnary(ctx, req)
+}
+
 // GraphQLMetricsServiceHandler is an implementation of the
 // wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService service.
 type GraphQLMetricsServiceHandler interface {
 	// PublishGraphQLMetrics publishes the GraphQL metrics to the metrics service
 	PublishGraphQLMetrics(context.Context, *connect.Request[v1.PublishGraphQLRequestMetricsRequest]) (*connect.Response[v1.PublishOperationCoverageReportResponse], error)
+	PublishAggregatedGraphQLMetrics(context.Context, *connect.Request[v1.PublishAggregatedGraphQLRequestMetricsRequest]) (*connect.Response[v1.PublishAggregatedGraphQLRequestMetricsResponse], error)
 }
 
 // NewGraphQLMetricsServiceHandler builds an HTTP handler from the service implementation. It
@@ -103,10 +122,18 @@ func NewGraphQLMetricsServiceHandler(svc GraphQLMetricsServiceHandler, opts ...c
 		connect.WithSchema(graphQLMetricsServicePublishGraphQLMetricsMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	graphQLMetricsServicePublishAggregatedGraphQLMetricsHandler := connect.NewUnaryHandler(
+		GraphQLMetricsServicePublishAggregatedGraphQLMetricsProcedure,
+		svc.PublishAggregatedGraphQLMetrics,
+		connect.WithSchema(graphQLMetricsServicePublishAggregatedGraphQLMetricsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case GraphQLMetricsServicePublishGraphQLMetricsProcedure:
 			graphQLMetricsServicePublishGraphQLMetricsHandler.ServeHTTP(w, r)
+		case GraphQLMetricsServicePublishAggregatedGraphQLMetricsProcedure:
+			graphQLMetricsServicePublishAggregatedGraphQLMetricsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -118,4 +145,8 @@ type UnimplementedGraphQLMetricsServiceHandler struct{}
 
 func (UnimplementedGraphQLMetricsServiceHandler) PublishGraphQLMetrics(context.Context, *connect.Request[v1.PublishGraphQLRequestMetricsRequest]) (*connect.Response[v1.PublishOperationCoverageReportResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService.PublishGraphQLMetrics is not implemented"))
+}
+
+func (UnimplementedGraphQLMetricsServiceHandler) PublishAggregatedGraphQLMetrics(context.Context, *connect.Request[v1.PublishAggregatedGraphQLRequestMetricsRequest]) (*connect.Response[v1.PublishAggregatedGraphQLRequestMetricsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService.PublishAggregatedGraphQLMetrics is not implemented"))
 }
