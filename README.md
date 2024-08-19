@@ -46,7 +46,8 @@ Get started with Cosmo by choosing the example that best fits your role and use 
 
 _For any questions, feedback, or support, please [contact](https://wundergraph.com/contact/sales) us._
 
-<p align="left">
+</br>
+<p align="center">
 <a href="https://cosmo.wundergraph.com">
 <img width="200" src="./docs/assets/cta_readme.png"/>
 </a>
