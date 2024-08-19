@@ -19,14 +19,14 @@ This example demonstrates how to run the entire Cosmo platform locally with Dock
 ./start.sh
 ```
 
-2. Navigate to the [Studio Playground](http://localhost:3000/wundergraph/default/graph/mygraph/playground) and query the router. Login with the default credentials:
+2. Navigate to the [Studio Playground](http://localhost:3000/wundergraph/default/graph/mygraph/playground) and login before with the default credentials:
 
 ```
 Username: foo@wundergraph.com
 Password: wunder@123
 ```
 
-Finally :rocket:, navigate to the [Studio Playground](https://cosmo.wundergraph.com/wundergraph/default/graph/mygraph/playground) to run the query:
+Finally :rocket:, run the query in the Playground:
 
 ```graphql
 query MyEmployees {
