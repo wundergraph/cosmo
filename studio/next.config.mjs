@@ -11,12 +11,6 @@ const debugCSP = false;
 const isSentryEnabled = process.env.NEXT_PUBLIC_SENTRY_ENABLED === "true";
 const isSentryFeatureReplayEnabled =
   isSentryEnabled && process.env.NEXT_PUBLIC_SENTRY_REPLAY_ENABLED === "true";
-
-const sentryDebugEnabled = process.env.SENTRY_DEBUG === "true";
-const sentryOrganization = process.env.SENTRY_ORGANIZATION || "";
-const sentryProject = process.env.SENTRY_PROJECT || "";
-const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN || "";
-
 const clientTracesSampleRate = parseFloat(
   process.env.NEXT_PUBLIC_SENTRY_CLIENT_TRACES_SAMPLE_RATE || "0",
 );
@@ -24,7 +18,13 @@ const serverSampleRate = parseFloat(
   process.env.SENTRY_SERVER_SAMPLE_RATE || "0",
 );
 
-const enableTraces = clientTracesSampleRate > 0 || serverSampleRate > 0;
+const isSentryTracesEnabled =
+  clientTracesSampleRate > 0 || serverSampleRate > 0;
+
+const sentryDebugEnabled = process.env.SENTRY_DEBUG === "true";
+const sentryOrganization = process.env.SENTRY_ORGANIZATION || "";
+const sentryProject = process.env.SENTRY_PROJECT || "";
+const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN || "";
 
 if (isSentryEnabled) {
   if (sentryAuthToken === "") {
@@ -170,11 +170,13 @@ const withOptionalFeatures = (config) => {
   return config;
 };
 
+// This is done to reduce the production build size
+// see: https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/tree-shaking/
 const nextConfig = {
   webpack: (config, { webpack }) => {
     config.plugins.push(
       new webpack.DefinePlugin({
-        __SENTRY_TRACING__: !enableTraces,
+        __SENTRY_TRACING__: !isSentryTracesEnabled,
         __RRWEB_EXCLUDE_IFRAME__: !isSentryFeatureReplayEnabled,
         __RRWEB_EXCLUDE_SHADOW_DOM__: !isSentryFeatureReplayEnabled,
         __SENTRY_EXCLUDE_REPLAY_WORKER__: !isSentryFeatureReplayEnabled,
