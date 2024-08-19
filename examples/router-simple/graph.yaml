@@ -1,0 +1,14 @@
+version: 1
+subgraphs:
+  - name: employees
+    routing_url: https://employees-api.fly.dev/graphql
+  - name: family
+    routing_url: https://family-api.fly.dev/graphql
+  - name: hobbies
+    routing_url: https://hobbies-api.fly.dev/graphql
+  - name: products
+    routing_url: https://product-api.fly.dev/graphql
+  - name: availability
+    routing_url: https://availability-api.fly.dev/graphql
+  - name: mood
+    routing_url: https://mood-api.fly.dev/graphql
