@@ -1,35 +1,33 @@
 package graphqlmetrics
 
 import (
-	"github.com/stretchr/testify/require"
-	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"net/http"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 )
 
 func TestAggregateCountWithEqualUsages(t *testing.T) {
 
-	result := Aggregate([]*graphqlmetricsv1.SchemaUsageInfo{
+	result := AggregateSchemaUsageInfoBatch([]*graphqlmetricsv1.SchemaUsageInfo{
 		{
 			TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
 				{
 					Path:        []string{"user", "id"},
 					TypeNames:   []string{"User", "ID"},
 					SubgraphIDs: []string{"1", "2"},
-					Count:       2,
 				},
 				{
 					Path:        []string{"user", "name"},
 					TypeNames:   []string{"User", "String"},
 					SubgraphIDs: []string{"1", "2"},
-					Count:       1,
 				},
 			},
 			ArgumentMetrics: []*graphqlmetricsv1.ArgumentUsageInfo{
 				{
 					Path:      []string{"user", "id"},
 					TypeName:  "User",
-					Count:     1,
 					NamedType: "ID",
 				},
 			},
@@ -37,7 +35,6 @@ func TestAggregateCountWithEqualUsages(t *testing.T) {
 				{
 					Path:      []string{"user", "id"},
 					TypeName:  "User",
-					Count:     1,
 					NamedType: "ID",
 				},
 			},
@@ -67,20 +64,17 @@ func TestAggregateCountWithEqualUsages(t *testing.T) {
 					Path:        []string{"user", "id"},
 					TypeNames:   []string{"User", "ID"},
 					SubgraphIDs: []string{"1", "2"},
-					Count:       5,
 				},
 				{
 					Path:        []string{"user", "name"},
 					TypeNames:   []string{"User", "String"},
 					SubgraphIDs: []string{"1", "2"},
-					Count:       2,
 				},
 			},
 			ArgumentMetrics: []*graphqlmetricsv1.ArgumentUsageInfo{
 				{
 					Path:      []string{"user", "id"},
 					TypeName:  "User",
-					Count:     2,
 					NamedType: "ID",
 				},
 			},
@@ -88,7 +82,6 @@ func TestAggregateCountWithEqualUsages(t *testing.T) {
 				{
 					Path:      []string{"user", "id"},
 					TypeName:  "User",
-					Count:     2,
 					NamedType: "ID",
 				},
 			},
@@ -114,23 +107,19 @@ func TestAggregateCountWithEqualUsages(t *testing.T) {
 		},
 	})
 
-	require.Equal(t, 1, len(result))
-	require.Equal(t, uint64(7), result[0].TypeFieldMetrics[0].Count)
-	require.Equal(t, uint64(3), result[0].TypeFieldMetrics[1].Count)
-	require.Equal(t, uint64(3), result[0].ArgumentMetrics[0].Count)
-	require.Equal(t, uint64(3), result[0].InputMetrics[0].Count)
+	require.Equal(t, 1, len(result.Aggregation))
+	require.Equal(t, 2, int(result.Aggregation[0].RequestCount))
 }
 
 func TestAggregateCountWithDifferentInputs(t *testing.T) {
 
-	result := Aggregate([]*graphqlmetricsv1.SchemaUsageInfo{
+	result := AggregateSchemaUsageInfoBatch([]*graphqlmetricsv1.SchemaUsageInfo{
 		{
 			TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
 				{
 					Path:        []string{"user", "id"},
 					TypeNames:   []string{"User", "ID"},
 					SubgraphIDs: []string{"1", "2"},
-					Count:       2,
 				},
 				{
 					Path:        []string{"user", "name"},
@@ -143,7 +132,6 @@ func TestAggregateCountWithDifferentInputs(t *testing.T) {
 				{
 					Path:      []string{"user", "id"},
 					TypeName:  "User",
-					Count:     1,
 					NamedType: "ID",
 				},
 			},
@@ -151,7 +139,6 @@ func TestAggregateCountWithDifferentInputs(t *testing.T) {
 				{
 					Path:      []string{"user", "id"},
 					TypeName:  "User",
-					Count:     1,
 					NamedType: "ID",
 				},
 			},
@@ -181,20 +168,17 @@ func TestAggregateCountWithDifferentInputs(t *testing.T) {
 					Path:        []string{"user", "id"},
 					TypeNames:   []string{"User", "ID"},
 					SubgraphIDs: []string{"1", "2"},
-					Count:       5,
 				},
 				{
 					Path:        []string{"user", "name"},
 					TypeNames:   []string{"User", "String"},
 					SubgraphIDs: []string{"1", "2"},
-					Count:       2,
 				},
 			},
 			ArgumentMetrics: []*graphqlmetricsv1.ArgumentUsageInfo{
 				{
 					Path:      []string{"user", "id"},
 					TypeName:  "User",
-					Count:     2,
 					NamedType: "ID",
 				},
 			},
@@ -202,13 +186,11 @@ func TestAggregateCountWithDifferentInputs(t *testing.T) {
 				{
 					Path:      []string{"user", "id"},
 					TypeName:  "User",
-					Count:     2,
 					NamedType: "ID",
 				},
 				{
 					Path:      []string{"user", "name"},
 					TypeName:  "User",
-					Count:     1,
 					NamedType: "String",
 				},
 			},
@@ -234,30 +216,20 @@ func TestAggregateCountWithDifferentInputs(t *testing.T) {
 		},
 	})
 
-	require.Equal(t, 2, len(result))
-	require.Equal(t, uint64(2), result[0].TypeFieldMetrics[0].Count)
-	require.Equal(t, uint64(1), result[0].TypeFieldMetrics[1].Count)
-	require.Equal(t, uint64(1), result[0].ArgumentMetrics[0].Count)
-	require.Equal(t, 1, len(result[0].InputMetrics))
-	require.Equal(t, uint64(1), result[0].InputMetrics[0].Count)
-
-	require.Equal(t, uint64(5), result[1].TypeFieldMetrics[0].Count)
-	require.Equal(t, uint64(2), result[1].TypeFieldMetrics[1].Count)
-	require.Equal(t, uint64(2), result[1].ArgumentMetrics[0].Count)
-	require.Equal(t, 2, len(result[1].InputMetrics))
-	require.Equal(t, uint64(2), result[1].InputMetrics[0].Count)
+	require.Equal(t, 2, len(result.Aggregation))
+	require.Equal(t, 1, int(result.Aggregation[0].RequestCount))
+	require.Equal(t, 1, int(result.Aggregation[1].RequestCount))
 }
 
 func TestAggregateWithDifferentOperationInfo(t *testing.T) {
 
-	result := Aggregate([]*graphqlmetricsv1.SchemaUsageInfo{
+	result := AggregateSchemaUsageInfoBatch([]*graphqlmetricsv1.SchemaUsageInfo{
 		{
 			TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
 				{
 					Path:        []string{"user", "id"},
 					TypeNames:   []string{"User", "ID"},
 					SubgraphIDs: []string{"1", "2"},
-					Count:       2,
 				},
 			},
 			OperationInfo: &graphqlmetricsv1.OperationInfo{
@@ -269,7 +241,6 @@ func TestAggregateWithDifferentOperationInfo(t *testing.T) {
 				{
 					Path:      []string{"user", "id"},
 					TypeName:  "User",
-					Count:     1,
 					NamedType: "ID",
 				},
 			},
@@ -277,7 +248,6 @@ func TestAggregateWithDifferentOperationInfo(t *testing.T) {
 				{
 					Path:      []string{"user", "id"},
 					TypeName:  "User",
-					Count:     1,
 					NamedType: "ID",
 				},
 			},
@@ -300,14 +270,12 @@ func TestAggregateWithDifferentOperationInfo(t *testing.T) {
 					Path:        []string{"user", "id"},
 					TypeNames:   []string{"User", "ID"},
 					SubgraphIDs: []string{"1", "2"},
-					Count:       1,
 				},
 			},
 			ArgumentMetrics: []*graphqlmetricsv1.ArgumentUsageInfo{
 				{
 					Path:      []string{"user", "id"},
 					TypeName:  "User",
-					Count:     1,
 					NamedType: "ID",
 				},
 			},
@@ -315,7 +283,6 @@ func TestAggregateWithDifferentOperationInfo(t *testing.T) {
 				{
 					Path:      []string{"user", "id"},
 					TypeName:  "User",
-					Count:     1,
 					NamedType: "ID",
 				},
 			},
@@ -339,32 +306,26 @@ func TestAggregateWithDifferentOperationInfo(t *testing.T) {
 		},
 	})
 
-	require.Equal(t, 2, len(result))
-	require.Equal(t, uint64(2), result[0].TypeFieldMetrics[0].Count)
-	require.Equal(t, uint64(1), result[1].TypeFieldMetrics[0].Count)
-	require.Equal(t, uint64(1), result[0].ArgumentMetrics[0].Count)
-	require.Equal(t, uint64(1), result[1].ArgumentMetrics[0].Count)
-	require.Equal(t, uint64(1), result[0].InputMetrics[0].Count)
-	require.Equal(t, uint64(1), result[1].InputMetrics[0].Count)
+	require.Equal(t, 2, len(result.Aggregation))
+	require.Equal(t, 1, int(result.Aggregation[0].RequestCount))
+	require.Equal(t, 1, int(result.Aggregation[1].RequestCount))
 }
 
 func TestAggregateWithDifferentClientInfo(t *testing.T) {
 
-	result := Aggregate([]*graphqlmetricsv1.SchemaUsageInfo{
+	result := AggregateSchemaUsageInfoBatch([]*graphqlmetricsv1.SchemaUsageInfo{
 		{
 			TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
 				{
 					Path:        []string{"user", "id"},
 					TypeNames:   []string{"User", "ID"},
 					SubgraphIDs: []string{"1", "2"},
-					Count:       2,
 				},
 			},
 			ArgumentMetrics: []*graphqlmetricsv1.ArgumentUsageInfo{
 				{
 					Path:      []string{"user", "id"},
 					TypeName:  "User",
-					Count:     1,
 					NamedType: "ID",
 				},
 			},
@@ -372,7 +333,6 @@ func TestAggregateWithDifferentClientInfo(t *testing.T) {
 				{
 					Path:      []string{"user", "id"},
 					TypeName:  "User",
-					Count:     1,
 					NamedType: "ID",
 				},
 			},
@@ -400,14 +360,12 @@ func TestAggregateWithDifferentClientInfo(t *testing.T) {
 					Path:        []string{"user", "id"},
 					TypeNames:   []string{"User", "ID"},
 					SubgraphIDs: []string{"1", "2"},
-					Count:       1,
 				},
 			},
 			ArgumentMetrics: []*graphqlmetricsv1.ArgumentUsageInfo{
 				{
 					Path:      []string{"user", "id"},
 					TypeName:  "User",
-					Count:     1,
 					NamedType: "ID",
 				},
 			},
@@ -415,7 +373,6 @@ func TestAggregateWithDifferentClientInfo(t *testing.T) {
 				{
 					Path:      []string{"user", "id"},
 					TypeName:  "User",
-					Count:     1,
 					NamedType: "ID",
 				},
 			},
@@ -439,32 +396,26 @@ func TestAggregateWithDifferentClientInfo(t *testing.T) {
 		},
 	})
 
-	require.Equal(t, 2, len(result))
-	require.Equal(t, uint64(2), result[0].TypeFieldMetrics[0].Count)
-	require.Equal(t, uint64(1), result[1].TypeFieldMetrics[0].Count)
-	require.Equal(t, uint64(1), result[0].ArgumentMetrics[0].Count)
-	require.Equal(t, uint64(1), result[1].ArgumentMetrics[0].Count)
-	require.Equal(t, uint64(1), result[0].InputMetrics[0].Count)
-	require.Equal(t, uint64(1), result[1].InputMetrics[0].Count)
+	require.Equal(t, 2, len(result.Aggregation))
+	require.Equal(t, 1, int(result.Aggregation[0].RequestCount))
+	require.Equal(t, 1, int(result.Aggregation[1].RequestCount))
 }
 
 func TestAggregateWithDifferentRequestInfo(t *testing.T) {
 
-	result := Aggregate([]*graphqlmetricsv1.SchemaUsageInfo{
+	result := AggregateSchemaUsageInfoBatch([]*graphqlmetricsv1.SchemaUsageInfo{
 		{
 			TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
 				{
 					Path:        []string{"user", "id"},
 					TypeNames:   []string{"User", "ID"},
 					SubgraphIDs: []string{"1", "2"},
-					Count:       2,
 				},
 			},
 			ArgumentMetrics: []*graphqlmetricsv1.ArgumentUsageInfo{
 				{
 					Path:      []string{"user", "id"},
 					TypeName:  "User",
-					Count:     1,
 					NamedType: "ID",
 				},
 			},
@@ -472,7 +423,6 @@ func TestAggregateWithDifferentRequestInfo(t *testing.T) {
 				{
 					Path:      []string{"user", "id"},
 					TypeName:  "User",
-					Count:     1,
 					NamedType: "ID",
 				},
 			},
@@ -500,14 +450,12 @@ func TestAggregateWithDifferentRequestInfo(t *testing.T) {
 					Path:        []string{"user", "id"},
 					TypeNames:   []string{"User", "ID"},
 					SubgraphIDs: []string{"1", "2"},
-					Count:       1,
 				},
 			},
 			ArgumentMetrics: []*graphqlmetricsv1.ArgumentUsageInfo{
 				{
 					Path:      []string{"user", "id"},
 					TypeName:  "User",
-					Count:     1,
 					NamedType: "ID",
 				},
 			},
@@ -515,7 +463,6 @@ func TestAggregateWithDifferentRequestInfo(t *testing.T) {
 				{
 					Path:      []string{"user", "id"},
 					TypeName:  "User",
-					Count:     1,
 					NamedType: "ID",
 				},
 			},
@@ -539,38 +486,31 @@ func TestAggregateWithDifferentRequestInfo(t *testing.T) {
 		},
 	})
 
-	require.Equal(t, 2, len(result))
-	require.Equal(t, uint64(2), result[0].TypeFieldMetrics[0].Count)
-	require.Equal(t, uint64(1), result[1].TypeFieldMetrics[0].Count)
-	require.Equal(t, uint64(1), result[0].ArgumentMetrics[0].Count)
-	require.Equal(t, uint64(1), result[1].ArgumentMetrics[0].Count)
-	require.Equal(t, uint64(1), result[0].InputMetrics[0].Count)
-	require.Equal(t, uint64(1), result[1].InputMetrics[0].Count)
+	require.Equal(t, 2, len(result.Aggregation))
+	require.Equal(t, 1, int(result.Aggregation[0].RequestCount))
+	require.Equal(t, 1, int(result.Aggregation[1].RequestCount))
 }
 
 func TestAggregateWithDifferentHash(t *testing.T) {
 
-	result := Aggregate([]*graphqlmetricsv1.SchemaUsageInfo{
+	result := AggregateSchemaUsageInfoBatch([]*graphqlmetricsv1.SchemaUsageInfo{
 		{
 			TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
 				{
 					Path:        []string{"user", "id"},
 					TypeNames:   []string{"User", "ID"},
 					SubgraphIDs: []string{"1", "2"},
-					Count:       2,
 				},
 				{
 					Path:        []string{"user", "name"},
 					TypeNames:   []string{"User", "String"},
 					SubgraphIDs: []string{"1", "2"},
-					Count:       6,
 				},
 			},
 			ArgumentMetrics: []*graphqlmetricsv1.ArgumentUsageInfo{
 				{
 					Path:      []string{"user", "id"},
 					TypeName:  "User",
-					Count:     1,
 					NamedType: "ID",
 				},
 			},
@@ -578,7 +518,6 @@ func TestAggregateWithDifferentHash(t *testing.T) {
 				{
 					Path:      []string{"user", "id"},
 					TypeName:  "User",
-					Count:     1,
 					NamedType: "ID",
 				},
 			},
@@ -602,14 +541,12 @@ func TestAggregateWithDifferentHash(t *testing.T) {
 					Path:        []string{"user", "id"},
 					TypeNames:   []string{"User", "ID"},
 					SubgraphIDs: []string{"1", "2"},
-					Count:       1,
 				},
 			},
 			ArgumentMetrics: []*graphqlmetricsv1.ArgumentUsageInfo{
 				{
 					Path:      []string{"user", "id"},
 					TypeName:  "User",
-					Count:     1,
 					NamedType: "ID",
 				},
 			},
@@ -617,7 +554,6 @@ func TestAggregateWithDifferentHash(t *testing.T) {
 				{
 					Path:      []string{"user", "id"},
 					TypeName:  "User",
-					Count:     1,
 					NamedType: "ID",
 				},
 			},
@@ -637,12 +573,7 @@ func TestAggregateWithDifferentHash(t *testing.T) {
 		},
 	})
 
-	require.Equal(t, 2, len(result))
-	require.Equal(t, uint64(2), result[0].TypeFieldMetrics[0].Count)
-	require.Equal(t, uint64(6), result[0].TypeFieldMetrics[1].Count)
-	require.Equal(t, uint64(1), result[1].TypeFieldMetrics[0].Count)
-	require.Equal(t, uint64(1), result[0].ArgumentMetrics[0].Count)
-	require.Equal(t, uint64(1), result[1].ArgumentMetrics[0].Count)
-	require.Equal(t, uint64(1), result[0].InputMetrics[0].Count)
-	require.Equal(t, uint64(1), result[1].InputMetrics[0].Count)
+	require.Equal(t, 2, len(result.Aggregation))
+	require.Equal(t, 1, int(result.Aggregation[0].RequestCount))
+	require.Equal(t, 1, int(result.Aggregation[1].RequestCount))
 }

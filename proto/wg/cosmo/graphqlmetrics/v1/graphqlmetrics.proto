@@ -37,6 +37,11 @@ message SchemaUsageInfo {
   repeated InputUsageInfo InputMetrics = 9;
 }
 
+message SchemaUsageInfoAggregation {
+    SchemaUsageInfo SchemaUsage = 1;
+    uint64 RequestCount = 2;
+}
+
 message ClientInfo {
   // Name is the GraphQL client name obtained from the request header
   string Name = 1;
@@ -93,6 +98,8 @@ message InputUsageInfo {
   uint64 Count = 3;
   // NamedType is the underlying type of the input field
   string NamedType = 4;
+  // EnumValues is an empty list if the input field is not an enum, otherwise it contains the list of used enum values
+  repeated string EnumValues = 5;
 }
 
 message PublishGraphQLRequestMetricsRequest {
@@ -102,7 +109,15 @@ message PublishGraphQLRequestMetricsRequest {
 message PublishOperationCoverageReportResponse {
 }
 
+message PublishAggregatedGraphQLRequestMetricsRequest {
+  repeated SchemaUsageInfoAggregation Aggregation = 1;
+}
+
+message PublishAggregatedGraphQLRequestMetricsResponse {
+}
+
 service GraphQLMetricsService {
   // PublishGraphQLMetrics publishes the GraphQL metrics to the metrics service
   rpc PublishGraphQLMetrics(PublishGraphQLRequestMetricsRequest) returns (PublishOperationCoverageReportResponse) {}
+  rpc PublishAggregatedGraphQLMetrics(PublishAggregatedGraphQLRequestMetricsRequest) returns (PublishAggregatedGraphQLRequestMetricsResponse) {}
 }

@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	graphqlmetrics "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"go.opentelemetry.io/otel/attribute"
 
@@ -368,6 +369,10 @@ type operationContext struct {
 
 	persistedOperationCacheHit bool
 	normalizationCacheHit      bool
+
+	typeFieldUsageInfo []*graphqlmetrics.TypeFieldUsageInfo
+	argumentUsageInfo  []*graphqlmetrics.ArgumentUsageInfo
+	inputUsageInfo     []*graphqlmetrics.InputUsageInfo
 }
 
 func (o *operationContext) Variables() []byte {

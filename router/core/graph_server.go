@@ -529,11 +529,11 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	}
 
 	ecb := &ExecutorConfigurationBuilder{
-		introspection: s.introspection,
-		baseURL:       s.baseURL,
-		transport:     s.executionTransport,
-		logger:        s.logger,
-		includeInfo:   s.graphqlMetricsConfig.Enabled,
+		introspection:  s.introspection,
+		baseURL:        s.baseURL,
+		transport:      s.executionTransport,
+		logger:         s.logger,
+		trackUsageInfo: s.graphqlMetricsConfig.Enabled,
 		transportOptions: &TransportOptions{
 			RequestTimeout: s.subgraphTransportOptions.RequestTimeout,
 			PreHandlers:    s.preOriginHandlers,
@@ -638,6 +638,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		AlwaysIncludeQueryPlan:      s.engineExecutionConfiguration.Debug.AlwaysIncludeQueryPlan,
 		AlwaysSkipLoader:            s.engineExecutionConfiguration.Debug.AlwaysSkipLoader,
 		QueryPlansEnabled:           s.Config.queryPlansEnabled,
+		TrackSchemaUsageInfo:        s.graphqlMetricsConfig.Enabled,
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
