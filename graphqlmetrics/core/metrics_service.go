@@ -58,24 +58,32 @@ func (s *MetricsService) saveOperations(ctx context.Context, insertTime time.Tim
 		return 0, fmt.Errorf("failed to prepare batch for operations: %w", err)
 	}
 
+	abort := true
+
 	for _, schemaUsage := range schemaUsage {
-
-		operationType := strings.ToLower(schemaUsage.OperationInfo.Type.String())
-
 		// If the operation is already in the cache, we can skip it and don't write it again
-		if _, ok := s.opGuardCache.Get(schemaUsage.OperationInfo.Hash); !ok {
-			err := opBatch.Append(
-				insertTime,
-				schemaUsage.OperationInfo.Name,
-				schemaUsage.OperationInfo.Hash,
-				operationType,
-				schemaUsage.RequestDocument,
-			)
-			if err != nil {
-				return 0, fmt.Errorf("failed to append operation to batch: %w", err)
-			}
+		if _, exists := s.opGuardCache.Get(schemaUsage.OperationInfo.Hash); exists {
+			continue
 		}
+		if abort {
+			abort = false
+		}
+		err := opBatch.Append(
+			insertTime,
+			schemaUsage.OperationInfo.Name,
+			schemaUsage.OperationInfo.Hash,
+			strings.ToLower(schemaUsage.OperationInfo.Type.String()),
+			schemaUsage.RequestDocument,
+		)
+		if err != nil {
+			return 0, fmt.Errorf("failed to append operation to batch: %w", err)
+		}
+	}
 
+	// if we skipped saving all operations, in case they were already stored (known from the cache),
+	// we can abort the batch as there is nothing to write
+	if abort {
+		return 0, opBatch.Abort()
 	}
 
 	if err := opBatch.Send(); err != nil {
@@ -218,14 +226,16 @@ func (s *MetricsService) PublishGraphQLMetrics(
 	}
 
 	dispatched := s.pool.TrySubmit(func() {
-		var sentOps, sentMetrics = 0, 0
+		var (
+			storedOperations, storedMetrics int
+		)
 		insertTime := time.Now()
 
 		defer func() {
 			requestLogger.Debug("operations write finished",
 				zap.Duration("duration", time.Since(insertTime)),
-				zap.Int("metrics", sentMetrics),
-				zap.Int("operations", sentOps),
+				zap.Int("storedOperations", storedOperations),
+				zap.Int("storedMetrics", storedMetrics),
 			)
 		}()
 
@@ -236,7 +246,7 @@ func (s *MetricsService) PublishGraphQLMetrics(
 			if err != nil {
 				return err
 			}
-			sentOps += writtenOps
+			storedOperations += writtenOps
 			return nil
 		})
 
@@ -249,7 +259,83 @@ func (s *MetricsService) PublishGraphQLMetrics(
 			if err != nil {
 				return err
 			}
-			sentMetrics += writtenMetrics
+			storedMetrics += writtenMetrics
+			return nil
+		})
+
+		if err != nil {
+			requestLogger.Error("Failed to write metrics", zap.Error(err))
+		}
+	})
+
+	if !dispatched {
+		requestLogger.Error("Failed to dispatch request to worker pool")
+
+		// Will force the client (router) to retry the request
+		return nil, errPublishFailed
+	}
+
+	return res, nil
+}
+
+func (s *MetricsService) PublishAggregatedGraphQLMetrics(ctx context.Context, req *connect.Request[graphqlmetricsv1.PublishAggregatedGraphQLRequestMetricsRequest]) (*connect.Response[graphqlmetricsv1.PublishAggregatedGraphQLRequestMetricsResponse], error) {
+	requestLogger := s.logger.With(zap.String("procedure", req.Spec().Procedure))
+	res := connect.NewResponse(&graphqlmetricsv1.PublishAggregatedGraphQLRequestMetricsResponse{})
+
+	claims, err := utils.GetClaims(ctx)
+	if err != nil {
+		return nil, errNotAuthenticated
+	}
+
+	schemaUsage := make([]*graphqlmetricsv1.SchemaUsageInfo, len(req.Msg.Aggregation))
+	for i, agg := range req.Msg.Aggregation {
+		for j := range agg.SchemaUsage.ArgumentMetrics {
+			agg.SchemaUsage.ArgumentMetrics[j].Count = agg.RequestCount
+		}
+		for j := range agg.SchemaUsage.InputMetrics {
+			agg.SchemaUsage.InputMetrics[j].Count = agg.RequestCount
+		}
+		for j := range agg.SchemaUsage.TypeFieldMetrics {
+			agg.SchemaUsage.TypeFieldMetrics[j].Count = agg.RequestCount
+		}
+		schemaUsage[i] = agg.SchemaUsage
+	}
+
+	dispatched := s.pool.TrySubmit(func() {
+		var (
+			storedOperations, storedMetrics int
+		)
+		insertTime := time.Now()
+
+		defer func() {
+			requestLogger.Debug("operations write finished",
+				zap.Duration("duration", time.Since(insertTime)),
+				zap.Int("storedOperations", storedOperations),
+				zap.Int("storedMetrics", storedMetrics),
+			)
+		}()
+
+		insertCtx := context.Background()
+
+		err = retryOnError(insertCtx, requestLogger.With(zap.String("component", "operations")), func(ctx context.Context) error {
+			writtenOps, err := s.saveOperations(ctx, insertTime, schemaUsage)
+			if err != nil {
+				return err
+			}
+			storedOperations += writtenOps
+			return nil
+		})
+
+		if err != nil {
+			requestLogger.Error("Failed to write operations", zap.Error(err))
+		}
+
+		err = retryOnError(insertCtx, requestLogger.With(zap.String("component", "metrics")), func(ctx context.Context) error {
+			writtenMetrics, err := s.saveUsageMetrics(ctx, insertTime, claims, schemaUsage)
+			if err != nil {
+				return err
+			}
+			storedMetrics += writtenMetrics
 			return nil
 		})
 

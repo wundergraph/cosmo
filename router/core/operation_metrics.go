@@ -36,17 +36,14 @@ type OperationMetrics struct {
 	routerConfigVersion  string
 	opContext            *operationContext
 	logger               *zap.Logger
-}
-
-func (m *OperationMetrics) exportSchemaUsageInfo(operationContext *operationContext, statusCode int, hasError bool) {
-	m.routerMetrics.ExportSchemaUsageInfo(operationContext, statusCode, hasError)
+	trackUsageInfo       bool
 }
 
 func (m *OperationMetrics) AddOperationContext(opContext *operationContext) {
 	m.opContext = opContext
 }
 
-func (m *OperationMetrics) Finish(err error, statusCode int, responseSize int) {
+func (m *OperationMetrics) Finish(err error, statusCode int, responseSize int, exportSynchronous bool) {
 	m.inflightMetric()
 
 	ctx := context.Background()
@@ -68,8 +65,8 @@ func (m *OperationMetrics) Finish(err error, statusCode int, responseSize int) {
 	)
 	rm.MeasureResponseSize(ctx, int64(responseSize), m.metricBaseFields...)
 
-	if m.opContext != nil {
-		m.exportSchemaUsageInfo(m.opContext, statusCode, err != nil)
+	if m.trackUsageInfo && m.opContext != nil {
+		m.routerMetrics.ExportSchemaUsageInfo(m.opContext, statusCode, err != nil, exportSynchronous)
 	}
 }
 
@@ -94,6 +91,7 @@ type OperationMetricsOptions struct {
 	RequestContentLength int64
 	RouterMetrics        RouterMetrics
 	Logger               *zap.Logger
+	TrackUsageInfo       bool
 }
 
 // newOperationMetrics creates a new OperationMetrics struct and starts the operation metrics.
@@ -110,6 +108,7 @@ func newOperationMetrics(opts OperationMetricsOptions) *OperationMetrics {
 		routerConfigVersion:  opts.RouterConfigVersion,
 		routerMetrics:        opts.RouterMetrics,
 		logger:               opts.Logger,
+		trackUsageInfo:       opts.TrackUsageInfo,
 	}
 }
 

@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/wundergraph/cosmo/router/pkg/watcher"
 
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
@@ -23,15 +24,12 @@ import (
 	configCDNProvider "github.com/wundergraph/cosmo/router/pkg/routerconfig/cdn"
 	configs3Provider "github.com/wundergraph/cosmo/router/pkg/routerconfig/s3"
 
+	"github.com/nats-io/nuid"
+	"github.com/redis/go-redis/v9"
 	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/graphiql"
 	"go.uber.org/atomic"
-	brotli "go.withmatt.com/connect-brotli"
 
-	"github.com/nats-io/nuid"
-	"github.com/redis/go-redis/v9"
-
-	"connectrpc.com/connect"
 	"github.com/mitchellh/mapstructure"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -140,7 +138,7 @@ type (
 		tracerProvider            *sdktrace.TracerProvider
 		otlpMeterProvider         *sdkmetric.MeterProvider
 		promMeterProvider         *sdkmetric.MeterProvider
-		gqlMetricsExporter        graphqlmetrics.SchemaUsageExporter
+		gqlMetricsExporter        *graphqlmetrics.Exporter
 		corsOptions               *cors.Config
 		setConfigVersionHeader    bool
 		routerGracePeriod         time.Duration
@@ -719,15 +717,11 @@ func (r *Router) bootstrap(ctx context.Context) error {
 
 	}
 
-	r.gqlMetricsExporter = graphqlmetrics.NewNoopExporter()
-
 	if r.graphqlMetricsConfig.Enabled {
 		client := graphqlmetricsv1connect.NewGraphQLMetricsServiceClient(
 			http.DefaultClient,
 			r.graphqlMetricsConfig.CollectorEndpoint,
-			brotli.WithCompression(),
-			// Compress requests with Brotli.
-			connect.WithSendCompression(brotli.Name),
+			connect.WithSendGzip(),
 		)
 		ge, err := graphqlmetrics.NewExporter(
 			r.logger,
