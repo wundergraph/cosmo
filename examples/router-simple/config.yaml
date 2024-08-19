@@ -1,0 +1,9 @@
+# yaml-language-server: $schema=../../router/pkg/config/config.schema.json
+
+version: "1"
+
+dev_mode: true
+execution_config:
+  file:
+    watch: true
+    path: config.json
