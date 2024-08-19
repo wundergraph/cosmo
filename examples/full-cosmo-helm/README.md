@@ -18,6 +18,8 @@ This example demonstrates how to run the entire Cosmo platform on Kubernetes wit
 helm install my-cosmo oci://ghcr.io/wundergraph/cosmo/helm-charts/cosmo --version 0.8.0
 ```
 
+_Check [Releases](https://github.com/wundergraph/cosmo/releases?q=helm-cosmo&expanded=true) for the latest release of the Cosmo Chart._
+
 ### 2. Make the Ingress controller accessible from your local machine.
 
 The following steps depend on your operating system:
