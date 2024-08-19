@@ -9468,6 +9468,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `Organization not found`,
             },
             organizationName: '',
+            organizationSlug: '',
           };
         }
 
@@ -9476,6 +9477,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           organizationName: organization.name,
+          organizationSlug: organization.slug,
         };
       });
     },
