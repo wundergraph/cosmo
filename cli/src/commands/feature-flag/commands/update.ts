@@ -26,6 +26,7 @@ export default (opts: BaseCommandOptions) => {
       ' The feature subgraphs are passed in the format <featureSubgraph1> <featureSubgraph2> <featureSubgraph3>.' +
       ' The feature flag must contain at least one feature subgraph.',
   );
+  command.option('-j, --json', 'Prints to the console in json format instead of table');
   command.action(async (name, options) => {
     if (options.featureGraphs && options.featureSubgraphs.length === 0) {
       program.error(
@@ -38,7 +39,10 @@ export default (opts: BaseCommandOptions) => {
       );
     }
 
-    const spinner = ora(`The feature flag "${name}" is being updated...`).start();
+    const spinner = ora(`The feature flag "${name}" is being updated...`);
+    if (!options.json) {
+      spinner.start();
+    }
     const resp = await opts.client.platform.updateFeatureFlag(
       {
         name,
@@ -71,6 +75,7 @@ export default (opts: BaseCommandOptions) => {
           `\nThis means the updated composition is not accessible to the router.` +
           `\n${pc.bold('Please check the errors below:')}`,
         defaultErrorMessage: `Failed to update the feature flag "${name}".`,
+        shouldOutputJson: options.json,
       });
     } catch {
       process.exit(1);

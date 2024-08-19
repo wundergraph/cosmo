@@ -6952,6 +6952,11 @@ export class WhoAmIResponse extends Message<WhoAmIResponse> {
    */
   userEmail?: string;
 
+  /**
+   * @generated from field: string organizationSlug = 4;
+   */
+  organizationSlug = "";
+
   constructor(data?: PartialMessage<WhoAmIResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -6963,6 +6968,7 @@ export class WhoAmIResponse extends Message<WhoAmIResponse> {
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "organizationName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "userEmail", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "organizationSlug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): WhoAmIResponse {
