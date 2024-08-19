@@ -1253,8 +1253,12 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 		r.persistedOperationClient.Close()
 	}
 
-	for _, authenticator := range r.accessController.authenticators {
-		authenticator.Close()
+	if r.accessController != nil {
+		for _, authenticator := range r.accessController.authenticators {
+			if authenticator != nil {
+				authenticator.Close()
+			}
+		}
 	}
 
 	wg.Wait()
