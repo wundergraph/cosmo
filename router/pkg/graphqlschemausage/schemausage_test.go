@@ -368,7 +368,7 @@ func TestGetSchemaUsageInfo(t *testing.T) {
 		assert.Equal(t, prettyJSON(t, expectedArgumentUsageInfo[i]), prettyJSON(t, argumentUsageInfo[i]), "argumentUsageInfo[%d]", i)
 	}
 	for i := range expectedInputUsageInfo {
-		assert.Equal(t, prettyJSON(t, expectedInputUsageInfo[i]), prettyJSON(t, inputUsageInfo[i]), "inputUsageInfo[%d]", i)
+		assert.Equal(t, prettyJSON(t, &expectedInputUsageInfo[i]), prettyJSON(t, inputUsageInfo[i]), "inputUsageInfo[%d]", i)
 	}
 }
 
