@@ -21,6 +21,7 @@ export default (opts: BaseCommandOptions) => {
   command.option('-n, --namespace [string]', 'Filter to get graphs in this namespace only.');
   command.option('-o, --out [string]', 'Destination file for the json output.');
   command.option('-r, --raw', 'Prints to the console in json format instead of table');
+  command.option('-j, --json', 'Prints to the console in json format instead of table');
   command.action(async (options) => {
     const resp = await opts.client.platform.getFederatedGraphs(
       {
@@ -61,6 +62,10 @@ export default (opts: BaseCommandOptions) => {
     }
 
     if (options.raw) {
+      console.log(pc.yellow('Please use the --json option. The --raw option is deprecated.'));
+    }
+
+    if (options.raw || options.json) {
       console.log(resp.graphs);
       process.exit(0);
     }

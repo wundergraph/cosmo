@@ -28,8 +28,12 @@ export default (opts: BaseCommandOptions) => {
     'Flag that if included will enable the feature flag upon creation.' +
       ' A new feature flag is disabled by default to prevent accidental compositions.',
   );
+  command.option('-j, --json', 'Prints to the console in json format instead of table');
   command.action(async (name, options) => {
-    const spinner = ora('The feature flag is being created...').start();
+    const spinner = ora('The feature flag is being created...');
+    if (!options.json) {
+      spinner.start();
+    }
     const resp = await opts.client.platform.createFeatureFlag(
       {
         name,
@@ -66,6 +70,7 @@ export default (opts: BaseCommandOptions) => {
           `\nThis means the updated composition is not accessible to the router.` +
           `\n${pc.bold('Please check the errors below:')}`,
         defaultErrorMessage: `Failed to create the feature flag "${name}".`,
+        shouldOutputJson: options.json,
       });
     } catch {
       process.exit(1);
