@@ -93,6 +93,20 @@ const lightweightCspHeader = `
 /** @type {import("next").NextConfig} */
 const config = {
   output: "standalone",
+  // This is done to reduce the production build size
+  // see: https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/tree-shaking/
+  webpack: (config, { webpack }) => {
+    config.plugins.push(
+      new webpack.DefinePlugin({
+        __SENTRY_TRACING__: !isSentryTracesEnabled,
+        __RRWEB_EXCLUDE_IFRAME__: !isSentryFeatureReplayEnabled,
+        __RRWEB_EXCLUDE_SHADOW_DOM__: !isSentryFeatureReplayEnabled,
+        __SENTRY_EXCLUDE_REPLAY_WORKER__: !isSentryFeatureReplayEnabled,
+      }),
+    );
+
+    return config;
+  },
   pageExtensions: ["md", "mdoc", "js", "jsx", "ts", "tsx"],
   publicRuntimeConfig: {
     version: pkg.version,
@@ -170,23 +184,4 @@ const withOptionalFeatures = (config) => {
   return config;
 };
 
-// This is done to reduce the production build size
-// see: https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/tree-shaking/
-const nextConfig = {
-  webpack: (config, { webpack }) => {
-    config.plugins.push(
-      new webpack.DefinePlugin({
-        __SENTRY_TRACING__: !isSentryTracesEnabled,
-        __RRWEB_EXCLUDE_IFRAME__: !isSentryFeatureReplayEnabled,
-        __RRWEB_EXCLUDE_SHADOW_DOM__: !isSentryFeatureReplayEnabled,
-        __SENTRY_EXCLUDE_REPLAY_WORKER__: !isSentryFeatureReplayEnabled,
-      }),
-    );
-
-    return config;
-  },
-};
-
-export default withOptionalFeatures(
-  withMarkdoc({ mode: "static" })(nextConfig),
-);
+export default withOptionalFeatures(withMarkdoc({ mode: "static" })(config));
