@@ -16,3 +16,11 @@ export type SubgraphCommandJsonOutput = {
   message: string;
   details?: string;
 };
+
+export type WhoAmICommandJsonOutput = {
+  status: 'success' | 'error';
+  organizationName: string;
+  organizationSlug: string;
+  apiUrl: string;
+  details?: string;
+};
