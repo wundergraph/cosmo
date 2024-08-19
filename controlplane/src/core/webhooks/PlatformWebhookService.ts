@@ -4,6 +4,7 @@ import pino from 'pino';
 import axios, { AxiosError, AxiosInstance } from 'axios';
 import axiosRetry, { exponentialDelay } from 'axios-retry';
 import { makeWebhookRequest } from './utils.js';
+import {webhookAxiosRetryCond} from "../util.js";
 
 interface User {
   user_id: string;
@@ -50,6 +51,7 @@ export class PlatformWebhookService implements IPlatformWebhookService {
     });
     axiosRetry(this.httpClient, {
       retries: 6,
+      retryCondition: webhookAxiosRetryCond,
       retryDelay: (retryCount, error) => {
         return exponentialDelay(retryCount, error, 1000);
       },
