@@ -80,9 +80,10 @@ func (s *MetricsService) saveOperations(ctx context.Context, insertTime time.Tim
 		}
 	}
 
+	// if we skipped saving all operations, in case they were already stored (known from the cache),
+	// we can abort the batch as there is nothing to write
 	if abort {
-		err = opBatch.Abort()
-		return 0, err
+		return 0, opBatch.Abort()
 	}
 
 	if err := opBatch.Send(); err != nil {
@@ -288,7 +289,6 @@ func (s *MetricsService) PublishAggregatedGraphQLMetrics(ctx context.Context, re
 
 	schemaUsage := make([]*graphqlmetricsv1.SchemaUsageInfo, len(req.Msg.Aggregation))
 	for i, agg := range req.Msg.Aggregation {
-		fmt.Println(agg.SchemaUsage.OperationInfo.Name)
 		for j := range agg.SchemaUsage.ArgumentMetrics {
 			agg.SchemaUsage.ArgumentMetrics[j].Count = agg.RequestCount
 		}
