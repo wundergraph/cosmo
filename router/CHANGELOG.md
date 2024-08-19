@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.105.3](https://github.com/wundergraph/cosmo/compare/router@0.105.2...router@0.105.3) (2024-08-19)
+
+### Bug Fixes
+
+* semaphore is not released after panic ([#1069](https://github.com/wundergraph/cosmo/issues/1069)) ([fbd6bac](https://github.com/wundergraph/cosmo/commit/fbd6bac9522b663468acc2a95ea24fc32b142d47)) (@StarpTech)
+
 ## [0.105.2](https://github.com/wundergraph/cosmo/compare/router@0.105.1...router@0.105.2) (2024-08-16)
 
 ### Bug Fixes
