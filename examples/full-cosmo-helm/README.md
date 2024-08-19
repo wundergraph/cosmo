@@ -74,7 +74,13 @@ Username: foo@wundergraph.com
 Password: wunder@123
 ```
 
-After you are done, you can clean up the demo by running `helm uninstall cosmo`.
+### 4. Clean up
+
+After you are done, you can clean up the demo by running:
+
+```bash
+helm uninstall cosmo
+```
 
 > [!CAUTION]
 > Volumes might not be automatically removed, so you may need to manually remove them with `kubectl delete pvc -l release=cosmo`

@@ -4,6 +4,7 @@ set -e
 # Install WunderGraph CLI
 npm install -g wgc@latest
 
+# Load the right configuration for Kubernetes Cluster
 . ../../scripts/configurations/kubernetes.sh
 
 wgc namespace create development
