@@ -34,14 +34,13 @@ export const handleFeatureFlagResult = ({
   switch (responseCode) {
     case EnumStatusCode.OK: {
       if (shouldOutputJson) {
-        console.log(
-          JSON.stringify({
-            status: 'success',
-            message: successMessage,
-            compositionErrors,
-            deploymentErrors,
-          } as SubgraphCommandJsonOutput),
-        );
+        const successMessageJson: SubgraphCommandJsonOutput = {
+          status: 'success',
+          message: successMessage,
+          compositionErrors,
+          deploymentErrors,
+        };
+        console.log(JSON.stringify(successMessageJson));
       } else {
         spinner.succeed(successMessage);
       }
@@ -49,14 +48,13 @@ export const handleFeatureFlagResult = ({
     }
     case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {
       if (shouldOutputJson) {
-        console.log(
-          JSON.stringify({
-            status: 'error',
-            message: subgraphCompositionBaseErrorMessage,
-            compositionErrors,
-            deploymentErrors,
-          } as SubgraphCommandJsonOutput),
-        );
+        const compositionFailedMessageJson: SubgraphCommandJsonOutput = {
+          status: 'error',
+          message: subgraphCompositionBaseErrorMessage,
+          compositionErrors,
+          deploymentErrors,
+        };
+        console.log(JSON.stringify(compositionFailedMessageJson));
       } else {
         spinner.fail(subgraphCompositionBaseErrorMessage);
 
@@ -87,14 +85,13 @@ export const handleFeatureFlagResult = ({
     }
     case EnumStatusCode.ERR_DEPLOYMENT_FAILED: {
       if (shouldOutputJson) {
-        console.log(
-          JSON.stringify({
-            status: 'error',
-            message: deploymentErrorMessage,
-            compositionErrors,
-            deploymentErrors,
-          } as SubgraphCommandJsonOutput),
-        );
+        const deploymentFailedMessageJson: SubgraphCommandJsonOutput = {
+          status: 'error',
+          message: deploymentErrorMessage,
+          compositionErrors,
+          deploymentErrors,
+        };
+        console.log(JSON.stringify(deploymentFailedMessageJson));
       } else {
         spinner.warn(deploymentErrorMessage);
 
@@ -122,15 +119,14 @@ export const handleFeatureFlagResult = ({
     }
     default: {
       if (shouldOutputJson) {
-        console.log(
-          JSON.stringify({
-            status: 'error',
-            message: defaultErrorMessage,
-            compositionErrors,
-            deploymentErrors,
-            details: responseDetails,
-          } as SubgraphCommandJsonOutput),
-        );
+        const defaultErrorMessageJson: SubgraphCommandJsonOutput = {
+          status: 'error',
+          message: defaultErrorMessage,
+          compositionErrors,
+          deploymentErrors,
+          details: responseDetails,
+        };
+        console.log(JSON.stringify(defaultErrorMessageJson));
       } else {
         spinner.fail(defaultErrorMessage);
         if (responseDetails) {

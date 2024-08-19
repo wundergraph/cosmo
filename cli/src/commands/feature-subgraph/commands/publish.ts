@@ -117,14 +117,13 @@ export default (opts: BaseCommandOptions) => {
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {
         if (shouldOutputJson) {
-          console.log(
-            JSON.stringify({
-              status: 'success',
-              message: 'Feature subgraph published successfully.',
-              compositionErrors: resp.compositionErrors,
-              deploymentErrors: resp.deploymentErrors,
-            } as SubgraphCommandJsonOutput),
-          );
+          const successMessageJson: SubgraphCommandJsonOutput = {
+            status: 'success',
+            message: 'Feature subgraph published successfully.',
+            compositionErrors: resp.compositionErrors,
+            deploymentErrors: resp.deploymentErrors,
+          };
+          console.log(JSON.stringify(successMessageJson));
         } else {
           spinner.succeed(
             resp?.hasChanged === false ? 'No new changes to publish.' : 'Feature subgraph published successfully.',
@@ -135,14 +134,13 @@ export default (opts: BaseCommandOptions) => {
       }
       case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {
         if (shouldOutputJson) {
-          console.log(
-            JSON.stringify({
-              status: 'error',
-              message: 'Feature subgraph published but with composition errors.',
-              compositionErrors: resp.compositionErrors,
-              deploymentErrors: resp.deploymentErrors,
-            } as SubgraphCommandJsonOutput),
-          );
+          const compositionFailedMessageJson: SubgraphCommandJsonOutput = {
+            status: 'error',
+            message: 'Feature subgraph published but with composition errors.',
+            compositionErrors: resp.compositionErrors,
+            deploymentErrors: resp.deploymentErrors,
+          };
+          console.log(JSON.stringify(compositionFailedMessageJson));
         } else {
           spinner.warn('Feature subgraph published but with composition errors.');
 
@@ -183,14 +181,13 @@ export default (opts: BaseCommandOptions) => {
       }
       case EnumStatusCode.ERR_DEPLOYMENT_FAILED: {
         if (shouldOutputJson) {
-          console.log(
-            JSON.stringify({
-              status: 'error',
-              message: `Feature subgraph was published, but the updated composition hasn't been deployed, so it's not accessible to the router. Check the errors listed below for details.`,
-              compositionErrors: resp.compositionErrors,
-              deploymentErrors: resp.deploymentErrors,
-            } as SubgraphCommandJsonOutput),
-          );
+          const deploymentFailedMessageJson: SubgraphCommandJsonOutput = {
+            status: 'error',
+            message: `Feature subgraph was published, but the updated composition hasn't been deployed, so it's not accessible to the router. Check the errors listed below for details.`,
+            compositionErrors: resp.compositionErrors,
+            deploymentErrors: resp.deploymentErrors,
+          };
+          console.log(JSON.stringify(deploymentFailedMessageJson));
         } else {
           spinner.warn(
             "Feature subgraph was published, but the updated composition hasn't been deployed, so it's not accessible to the router. Check the errors listed below for details.",
@@ -225,15 +222,14 @@ export default (opts: BaseCommandOptions) => {
       }
       default: {
         if (shouldOutputJson) {
-          console.log(
-            JSON.stringify({
-              status: 'error',
-              message: `Failed to publish feature subgraph "${name}".`,
-              compositionErrors: resp.compositionErrors,
-              deploymentErrors: resp.deploymentErrors,
-              details: resp.response?.details,
-            } as SubgraphCommandJsonOutput),
-          );
+          const defaultErrorMessageJson: SubgraphCommandJsonOutput = {
+            status: 'error',
+            message: `Failed to publish feature subgraph "${name}".`,
+            compositionErrors: resp.compositionErrors,
+            deploymentErrors: resp.deploymentErrors,
+            details: resp.response?.details,
+          };
+          console.log(JSON.stringify(defaultErrorMessageJson));
         } else {
           spinner.fail(`Failed to publish feature subgraph "${name}".`);
           if (resp.response?.details) {
