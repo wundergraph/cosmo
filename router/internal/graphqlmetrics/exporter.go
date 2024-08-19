@@ -25,6 +25,12 @@ type Exporter struct {
 
 	queue           chan *graphqlmetrics.SchemaUsageInfo
 	inflightBatches *atomic.Int64
+
+	// exportRequestContext is used to cancel all requests that started before the shutdown
+	exportRequestContext context.Context
+	// cancelAllExportRequests will be called when we return from the Shutdown func
+	// this means that we cancel all requests
+	cancelAllExportRequests context.CancelFunc
 }
 
 type RetryOptions struct {
@@ -76,15 +82,18 @@ func NewDefaultExporterSettings() *ExporterSettings {
 // are sent. The apiToken is the token used to authenticate with the collector. The collector supports Brotli compression
 // and retries on failure. Underling queue implementation sends batches of metrics at the specified interval and batch size.
 func NewExporter(logger *zap.Logger, client graphqlmetricsv1connect.GraphQLMetricsServiceClient, apiToken string, settings *ExporterSettings) (*Exporter, error) {
+	ctx, cancel := context.WithCancel(context.Background())
 	e := &Exporter{
-		logger:            logger.With(zap.String("component", "graphqlmetrics_exporter")),
-		settings:          settings,
-		client:            client,
-		apiToken:          apiToken,
-		queue:             make(chan *graphqlmetrics.SchemaUsageInfo, settings.QueueSize),
-		shutdownSignal:    make(chan struct{}),
-		acceptTrafficSema: make(chan struct{}),
-		inflightBatches:   atomic.NewInt64(0),
+		logger:                  logger.With(zap.String("component", "graphqlmetrics_exporter")),
+		settings:                settings,
+		client:                  client,
+		apiToken:                apiToken,
+		queue:                   make(chan *graphqlmetrics.SchemaUsageInfo, settings.QueueSize),
+		shutdownSignal:          make(chan struct{}),
+		acceptTrafficSema:       make(chan struct{}),
+		inflightBatches:         atomic.NewInt64(0),
+		exportRequestContext:    ctx,
+		cancelAllExportRequests: cancel,
 	}
 	if err := e.validate(); err != nil {
 		return nil, err
@@ -138,7 +147,7 @@ func (e *Exporter) acceptTraffic() bool {
 
 func (e *Exporter) RecordUsage(usageInfo *graphqlmetrics.SchemaUsageInfo, synchronous bool) (ok bool) {
 	if synchronous {
-		_ = e.sendItems(context.Background(), []*graphqlmetrics.SchemaUsageInfo{usageInfo})
+		_ = e.sendItems([]*graphqlmetrics.SchemaUsageInfo{usageInfo})
 		return true
 	}
 	if !e.acceptTraffic() {
@@ -153,11 +162,12 @@ func (e *Exporter) RecordUsage(usageInfo *graphqlmetrics.SchemaUsageInfo, synchr
 	}
 }
 
-func (e *Exporter) sendItems(ctx context.Context, items []*graphqlmetrics.SchemaUsageInfo) error {
+func (e *Exporter) sendItems(items []*graphqlmetrics.SchemaUsageInfo) error {
 	e.logger.Debug("sending batch", zap.Int("size", len(items)))
+	ctx := e.exportRequestContext
 	if e.settings.ExportTimeout > 0 {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, e.settings.ExportTimeout)
+		ctx, cancel = context.WithTimeout(e.exportRequestContext, e.settings.ExportTimeout)
 		defer cancel()
 	}
 
@@ -217,7 +227,7 @@ func (e *Exporter) aggregateAndSendBatch(batch []*graphqlmetrics.SchemaUsageInfo
 
 	request := AggregateSchemaUsageInfoBatch(batch)
 
-	err := e.sendAggregation(context.Background(), request)
+	err := e.sendAggregation(e.exportRequestContext, request)
 	if err == nil {
 		return
 	}
@@ -258,7 +268,7 @@ func (e *Exporter) aggregateAndSendBatch(batch []*graphqlmetrics.SchemaUsageInfo
 		// Wait for the specified backoff period
 		time.Sleep(sleepDuration)
 
-		err = e.sendAggregation(context.Background(), request)
+		err = e.sendAggregation(e.exportRequestContext, request)
 		if err == nil {
 			return
 		}
@@ -342,7 +352,12 @@ func (e *Exporter) drainQueue(buffer []*graphqlmetrics.SchemaUsageInfo) {
 // If the context is canceled, the exporter will be shutdown immediately.
 func (e *Exporter) Shutdown(ctx context.Context) error {
 	ticker := time.NewTicker(time.Millisecond * 100)
-	defer ticker.Stop()
+	defer func() {
+		ticker.Stop()
+		// cancel all requests
+		e.cancelAllExportRequests()
+		e.logger.Debug("Exporter.Shutdown: done")
+	}()
 
 	// first close the acceptTrafficSema to stop accepting new items
 	close(e.acceptTrafficSema)
