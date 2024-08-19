@@ -22,7 +22,7 @@ const isSentryTracesEnabled =
   clientTracesSampleRate > 0 || serverSampleRate > 0;
 
 const sentryDebugEnabled = process.env.SENTRY_DEBUG === "true";
-const sentryOrganization = process.env.SENTRY_ORGANIZATION || "";
+const sentryOrganization = process.env.SENTRY_ORG || "";
 const sentryProject = process.env.SENTRY_PROJECT || "";
 const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN || "";
 
@@ -34,7 +34,7 @@ if (isSentryEnabled) {
   }
   if (sentryOrganization === "" || sentryProject === "") {
     throw Error(
-      "SENTRY_ORGANIZATION or SENTRY_PROJECT not set please check your environment variables!",
+      "SENTRY_ORG or SENTRY_PROJECT not set please check your environment variables!",
     );
   }
 }
