@@ -4,7 +4,7 @@ import { joinLabel } from '@wundergraph/cosmo-shared';
 import Table from 'cli-table3';
 import { Command } from 'commander';
 import pc from 'picocolors';
-import { join } from 'pathe';
+import { join, resolve } from 'pathe';
 import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import program from '../../index.js';
@@ -56,7 +56,7 @@ export default (opts: BaseCommandOptions) => {
             lastUpdatedAt: g.lastUpdatedAt,
           }) as OutputFile[number],
       );
-      await writeFile(join(process.cwd(), options.out), JSON.stringify(output));
+      await writeFile(resolve(process.cwd(), options.out), JSON.stringify(output));
       process.exit(0);
     }
 

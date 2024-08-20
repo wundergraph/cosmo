@@ -23,8 +23,10 @@ export class DeleteOrganizationQueue {
     this.queue = new Queue<DeleteOrganizationInput>(QueueName, {
       connection: conn,
       defaultJobOptions: {
-        removeOnComplete: true,
-        removeOnFail: true,
+        // Keep successful jobs for 1 hour or 100 jobs
+        removeOnComplete: { age: 3600, count: 100 },
+        // Keep failed jobs for 14 days or 100 failed jobs
+        removeOnFail: { age: 14 * 24 * 3600, count: 100 },
         attempts: 3,
         backoff: {
           type: 'exponential',
@@ -128,6 +130,9 @@ export const createDeleteOrganizationWorker = (input: {
   );
   worker.on('stalled', (job) => {
     log.warn(`Job ${job} stalled`);
+  });
+  worker.on('failed', (job, err) => {
+    log.error(err, 'Worker failed', job?.data);
   });
   worker.on('error', (err) => {
     log.error(err, 'Worker error');
