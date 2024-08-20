@@ -37,7 +37,7 @@ const SubgraphsDashboardPage: NextPageWithLayout = () => {
   const applyParams = useApplyParams();
 
   const { data, isLoading, error, refetch } = useQuery(getSubgraphs, {
-    namespace,
+    namespace: namespace || "default",
     query,
     limit,
     offset,
@@ -50,7 +50,7 @@ const SubgraphsDashboardPage: NextPageWithLayout = () => {
     error: fsError,
     refetch: refetchFeatureSubgraphs,
   } = useQuery(getFeatureSubgraphs, {
-    namespace,
+        namespace: namespace || "default",
     query,
     limit,
     offset,
