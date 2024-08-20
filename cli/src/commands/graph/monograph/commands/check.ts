@@ -17,7 +17,7 @@ export default (opts: BaseCommandOptions) => {
   command.option('--schema <path-to-schema>', 'The path of the new schema file.');
 
   command.action(async (name, options) => {
-    const schemaFile = resolve(process.cwd(), options.schema);
+    const schemaFile = resolve(options.schema);
 
     if (!existsSync(schemaFile)) {
       console.log(

@@ -24,7 +24,7 @@ export default (opts: BaseCommandOptions) => {
     }
 
     if (options.schema) {
-      schemaFile = resolve(process.cwd(), options.schema);
+      schemaFile = resolve(options.schema);
       if (!existsSync(schemaFile)) {
         program.error(
           pc.red(

@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import path from 'node:path';
+import { join } from 'pathe';
 import yaml from 'js-yaml';
 import envPaths from 'env-paths';
 
@@ -12,7 +12,7 @@ const info = JSON.parse(
 
 const paths = envPaths('cosmo', { suffix: '' });
 export const configDir = paths.config;
-export const configFile = path.join(configDir, 'config.yaml');
+export const configFile = join(configDir, 'config.yaml');
 
 const getLoginDetails = (): { accessToken: string; organizationSlug: string } | null => {
   try {

@@ -53,7 +53,7 @@ export default (opts: BaseCommandOptions) => {
   command.requiredOption('-i, --input <path-to-input>', 'The yaml file with data about graph and subgraphs.');
   command.option('-o, --out [string]', 'Destination file for the router config.');
   command.action(async (options) => {
-    const inputFile = resolve(process.cwd(), options.input);
+    const inputFile = resolve(options.input);
     const inputFileLocation = dirname(inputFile);
 
     if (!existsSync(inputFile)) {

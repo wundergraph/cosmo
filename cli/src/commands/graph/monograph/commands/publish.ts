@@ -29,7 +29,7 @@ export default (opts: BaseCommandOptions) => {
   );
 
   command.action(async (name, options) => {
-    const schemaFile = resolve(process.cwd(), options.schema);
+    const schemaFile = resolve(options.schema);
     if (!existsSync(schemaFile)) {
       program.error(
         pc.red(
