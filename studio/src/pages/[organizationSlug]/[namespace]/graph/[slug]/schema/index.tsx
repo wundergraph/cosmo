@@ -701,7 +701,7 @@ const Type = (props: {
             <div>Filter:</div>
             <Badge variant="muted" className="w-full overflow-hidden">
               <p className="w-full overflow-hidden truncate">
-                {router.query.fieldName}fiuwevbifuwebfiuwbfiweufvbweuifvb
+                {router.query.fieldName}
               </p>
             </Badge>
           </div>
