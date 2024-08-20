@@ -2,6 +2,7 @@ import { AppProvider } from "@/components/app-provider";
 import { Layout } from "@/components/layout/layout";
 import { MarkdownLayout } from "@/components/layout/markdown-layout";
 import { ThemeProvider } from "@/components/theme-provider";
+import ErrorFallback from "@/components/error-fallback";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppPropsWithLayout } from "@/lib/page";
@@ -21,6 +22,7 @@ import "../styles/playground.css";
 import "../styles/utils.css";
 import { useEffect } from "react";
 const queryClient = new QueryClient();
+import { withErrorBoundary } from "@sentry/nextjs";
 
 function MyApp({ Component, pageProps }: AppPropsWithLayout) {
   useEffect(() => {
@@ -71,4 +73,8 @@ MyApp.getInitialProps = async (
   return { ...ctx };
 };
 
-export default MyApp;
+export default process.env.NEXT_PUBLIC_SENTRY_ENABLED
+  ? withErrorBoundary(MyApp, {
+      fallback: ErrorFallback,
+    })
+  : MyApp;
