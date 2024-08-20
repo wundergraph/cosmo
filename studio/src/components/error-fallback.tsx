@@ -34,8 +34,12 @@ const ErrorFallback: React.ReactElement = (
       description="Sorry, something went wrong. Please try again later or return to the home page."
       className="z-50 md:-mt-8"
       actions={
-        <Button asChild>
-          <Link href="/">Take me home</Link>
+        /**
+         * uses onClick={() => (window.location.href = "/") to go back to home
+         * The Link exists for the button styling
+         */
+        <Button onClick={() => (window.location.href = "/")} asChild>
+          <Link href={"/"}>Take me home</Link>
         </Button>
       }
     />
