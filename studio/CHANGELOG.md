@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.86.0](https://github.com/wundergraph/cosmo/compare/studio@0.85.4...studio@0.86.0) (2024-08-20)
+
+### Bug Fixes
+
+* conflicting requests on reload and dashboard ([#1099](https://github.com/wundergraph/cosmo/issues/1099)) ([a0ae1bb](https://github.com/wundergraph/cosmo/commit/a0ae1bb11668f026020435716df71435b6dff36a)) (@thisisnithin)
+
+### Features
+
+* enable sentry usage in studio ([#1082](https://github.com/wundergraph/cosmo/issues/1082)) ([c2d4ba4](https://github.com/wundergraph/cosmo/commit/c2d4ba4b520ae495cf56b81e6c05c8b8ceecf0c9)) (@AndreasZeissner)
+
 ## [0.85.4](https://github.com/wundergraph/cosmo/compare/studio@0.85.3...studio@0.85.4) (2024-08-20)
 
 ### Bug Fixes
