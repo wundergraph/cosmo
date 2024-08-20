@@ -10,6 +10,7 @@ import {
 import { useRouter } from "next/router";
 import { ReactNode, createContext, useEffect, useState } from "react";
 import { useCookieOrganization } from "@/hooks/use-cookie-organization";
+import { setUser as setSentryUser } from "@sentry/nextjs";
 
 export const UserContext = createContext<User | undefined>(undefined);
 
@@ -165,6 +166,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         organizations: data.organizations,
         invitations: data.invitations,
       });
+
+      if (process.env.NEXT_PUBLIC_SENTRY_ENABLED) {
+        setSentryUser({
+          id: data.id,
+          email: data.email,
+          organization: organization.name,
+          organizationId: organization.id,
+          organizationSlug: organization.slug,
+          plan: organization.plan,
+        });
+      }
 
       // Identify call for koala script
       identifyKoala({
