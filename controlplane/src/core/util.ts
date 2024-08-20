@@ -9,6 +9,8 @@ import { formatISO, subHours } from 'date-fns';
 import { FastifyBaseLogger } from 'fastify';
 import { parse, visit } from 'graphql';
 import { uid } from 'uid/secure';
+import { AxiosError } from 'axios';
+import { isNetworkError, isRetryableError } from 'axios-retry';
 import { MemberRole, WebsocketSubprotocol } from '../db/models.js';
 import { AuthContext, DateRange, Label, ResponseMessage } from '../types/index.js';
 import { isAuthenticationError, isAuthorizationError, isPublicError } from './errors/errors.js';
@@ -362,4 +364,10 @@ export function getValueOrDefault<K, V>(map: Map<K, V>, key: K, constructor: () 
   const value = constructor();
   map.set(key, value);
   return value;
+}
+
+// webhookAxiosRetryCond retry condition function to retry on network errors and 429, 5xx errors for all
+// HTTP methods including POST, PUT, DELETE, etc.
+export function webhookAxiosRetryCond(err: AxiosError) {
+  return isNetworkError(err) || isRetryableError(err);
 }
