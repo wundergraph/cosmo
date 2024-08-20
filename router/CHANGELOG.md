@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.106.0](https://github.com/wundergraph/cosmo/compare/router@0.105.3...router@0.106.0) (2024-08-19)
+
+### Features
+
+* handle websocket authentication via initial payload ([#918](https://github.com/wundergraph/cosmo/issues/918)) ([e37e806](https://github.com/wundergraph/cosmo/commit/e37e80648a9f14d2f3df23c87922a3c99ee5204a)) (@alexandra-c)
+* implement more efficient aggregation of schema usage metrics with caching ([#1095](https://github.com/wundergraph/cosmo/issues/1095)) ([a40c9d8](https://github.com/wundergraph/cosmo/commit/a40c9d83e8434bfe1a8338bd8892b110022c14ad)) (@jensneuse)
+
 ## [0.105.3](https://github.com/wundergraph/cosmo/compare/router@0.105.2...router@0.105.3) (2024-08-19)
 
 ### Bug Fixes
