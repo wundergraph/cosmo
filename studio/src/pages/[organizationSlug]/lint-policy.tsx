@@ -85,7 +85,7 @@ const LintPolicyPage: NextPageWithLayout = () => {
   const router = useRouter();
   const namespace = router.query.namespace as string;
   const { data, isLoading, refetch, error } = useQuery(getNamespaceLintConfig, {
-    namespace,
+    namespace: namespace || "default",
   });
   const { mutate: configureLintRules, isPending: isConfiguring } = useMutation(
     configureNamespaceLintConfig,

@@ -69,7 +69,7 @@ const GraphsDashboardPage: NextPageWithLayout = () => {
 
   const { data, isLoading, error, refetch } = useQuery(getFederatedGraphs, {
     includeMetrics: true,
-    namespace,
+    namespace: namespace || "default",
   });
 
   // refetch the query when the organization changes
