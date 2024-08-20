@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.85.4](https://github.com/wundergraph/cosmo/compare/studio@0.85.3...studio@0.85.4) (2024-08-20)
+
+### Bug Fixes
+
+* schema search ui ([#1096](https://github.com/wundergraph/cosmo/issues/1096)) ([319ab3f](https://github.com/wundergraph/cosmo/commit/319ab3ff4d2b06ec9625e69436908444645eaff9)) (@thisisnithin)
+
 ## [0.85.3](https://github.com/wundergraph/cosmo/compare/studio@0.85.2...studio@0.85.3) (2024-08-19)
 
 **Note:** Version bump only for package studio
