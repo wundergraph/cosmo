@@ -997,7 +997,7 @@ const SearchType = ({
   }, [setOpen]);
 
   const [query, setQuery] = useState("");
-  const [debouncedSearch, { isPending }] = useDebounce(query, 200);
+  const [debouncedSearch, { isPending }] = useDebounce(query, 300);
   const debouncing = isPending();
 
   const { results, totalResults } = useMemo(() => {
