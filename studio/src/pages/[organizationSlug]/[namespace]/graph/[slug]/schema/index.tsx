@@ -33,6 +33,19 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuPortal,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Kbd } from "@/components/ui/kbd";
 import { Loader } from "@/components/ui/loader";
 import {
@@ -65,7 +78,6 @@ import {
 } from "@/components/ui/tooltip";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { useLocalStorage } from "@/hooks/use-local-storage";
-import { useSessionStorage } from "@/hooks/use-session-storage";
 import { useUser } from "@/hooks/use-user";
 import useWindowSize from "@/hooks/use-window-size";
 import { useChartData } from "@/lib/insights-helpers";
@@ -74,7 +86,7 @@ import {
   FieldMatch,
   GraphQLTypeCategory,
   ParsedGraphQLField,
-  getAllFields,
+  TypeMatch,
   getCategoryDescription,
   getCategoryForType,
   getDeprecatedTypes,
@@ -84,13 +96,16 @@ import {
   graphqlRootCategories,
   graphqlTypeCategories,
   mapGraphQLType,
+  searchSchema,
   useParseSchema,
 } from "@/lib/schema-helpers";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@connectrpc/connect-query";
 import {
   ChevronUpDownIcon,
   ExclamationTriangleIcon,
   InformationCircleIcon,
+  XMarkIcon,
 } from "@heroicons/react/24/outline";
 import {
   ArrowRightIcon,
@@ -98,7 +113,6 @@ import {
   MagnifyingGlassIcon,
   PlusIcon,
 } from "@radix-ui/react-icons";
-import { useQuery } from "@connectrpc/connect-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
@@ -108,7 +122,7 @@ import {
   getOrganizationMembers,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { sentenceCase } from "change-case";
-import { useCommandState } from "cmdk";
+import { CommandLoading, useCommandState } from "cmdk";
 import { formatISO } from "date-fns";
 import { GraphQLSchema, buildASTSchema, parse } from "graphql";
 import Link from "next/link";
@@ -119,25 +133,14 @@ import {
   createContext,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
+import { MdOutlineFeaturedPlayList } from "react-icons/md";
 import { PiChat, PiGraphLight } from "react-icons/pi";
 import { Line, LineChart, ResponsiveContainer } from "recharts";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuLabel,
-  DropdownMenuPortal,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { MdOutlineFeaturedPlayList } from "react-icons/md";
+import { useDebounce } from "use-debounce";
 
 const fallback = buildASTSchema(parse(`type Query { dummy: String! }`));
 
@@ -174,6 +177,7 @@ const TypeLink = ({
           ...router.query,
           category,
           typename: cleanName,
+          fieldName: null,
         },
       }}
     >
@@ -252,14 +256,6 @@ const Fields = (props: {
 }) => {
   const router = useRouter();
 
-  const hasArgs = props.fields.some((f) => !!f.args);
-  const hasDetails = props.fields.some(
-    (f) => !!f.description || !!f.deprecationReason,
-  );
-  const hasUsage = !(["scalars", "enums"] as GraphQLTypeCategory[]).includes(
-    props.category,
-  );
-
   const openUsage = (fieldName: string) => {
     const query: Record<string, string> = {};
     if (props.category === "unions") {
@@ -277,8 +273,23 @@ const Fields = (props: {
     });
   };
 
+  const fieldName = router.query.fieldName as string;
+  const filteredFields = useMemo(() => {
+    return props.fields.filter((f) =>
+      fieldName ? f.name === fieldName : true,
+    );
+  }, [fieldName, props.fields]);
+
+  const hasArgs = filteredFields.some((f) => !!f.args);
+  const hasDetails = filteredFields.some(
+    (f) => !!f.description || !!f.deprecationReason,
+  );
+  const hasUsage = !(["scalars", "enums"] as GraphQLTypeCategory[]).includes(
+    props.category,
+  );
+
   const parentRef = useRef<HTMLTableElement>(null);
-  const count = props.fields.length;
+  const count = filteredFields.length;
   const virtualizer = useVirtualizer({
     count,
     getScrollElement: () => parentRef.current,
@@ -291,33 +302,6 @@ const Fields = (props: {
     overscan: 5,
   });
   const items = virtualizer.getVirtualItems();
-
-  const fieldName = router.query.fieldName as string;
-
-  const [scrolledField, setScrolledField] = useState<string>();
-  useEffect(() => {
-    if (scrolledField === fieldName) {
-      return;
-    }
-
-    if (!fieldName) {
-      setScrolledField(undefined);
-      return;
-    }
-
-    const index = props.fields.findIndex((f) => f.name === fieldName);
-    if (index === -1) return;
-
-    const offset = items[index]?.start + 150;
-    if (!offset) return;
-
-    virtualizer.scrollToOffset(offset, {
-      align: "end",
-    });
-
-    setScrolledField(fieldName);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fieldName, props.fields, virtualizer]);
 
   return (
     <TableWrapper ref={parentRef} className="max-h-full">
@@ -355,7 +339,7 @@ const Fields = (props: {
           }}
         >
           {items.map((virtualRow) => {
-            const field = props.fields[virtualRow.index];
+            const field = filteredFields[virtualRow.index];
             return (
               <TableRow
                 className="group absolute flex w-full py-1 even:bg-secondary/20 hover:bg-secondary/40"
@@ -496,6 +480,11 @@ const Fields = (props: {
           })}
         </TableBody>
       </Table>
+      {filteredFields.length === 0 && (
+        <div className="my-4 text-center text-sm text-muted-foreground">
+          No fields found
+        </div>
+      )}
     </TableWrapper>
   );
 };
@@ -706,6 +695,33 @@ const Type = (props: {
           </p>
         </div>
       </div>
+      {router.query.fieldName && (
+        <div className="mt-6 flex flex-wrap items-center gap-2">
+          <div className="flex w-full max-w-lg items-center gap-x-2 rounded-md border border-dashed px-2 py-1.5 text-sm lg:w-auto lg:max-w-none">
+            <div>Filter:</div>
+            <Badge variant="muted" className="w-full overflow-hidden">
+              <p className="w-full overflow-hidden truncate">
+                {router.query.fieldName}
+              </p>
+            </Badge>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => {
+              delete router.query.fieldName;
+              router.push({
+                pathname: `${router.pathname}`,
+                query: {
+                  ...router.query,
+                },
+              });
+            }}
+          >
+            <XMarkIcon className="mr-2 h-4 w-4" />
+            Clear
+          </Button>
+        </div>
+      )}
       <div className="mt-6 h-4/5 flex-1">
         {props.fields && (
           <Fields
@@ -901,22 +917,24 @@ const TypeWrapper = ({
   );
 };
 
-const SearchDescription = ({ allFields }: { allFields: FieldMatch[] }) => {
+const SearchDescription = ({
+  results,
+}: {
+  results: {
+    types: TypeMatch[];
+    fields: FieldMatch[];
+  };
+}) => {
   const activeValue = useCommandState((state) => state.value);
-  const { ast } = useContext(ExplorerContext);
-
   if (!activeValue) {
     return null;
   }
 
   const [category, index, _] = activeValue?.split("-");
-  const types = getTypesByCategory(ast, category as any);
-  const type = types[Number(index)];
+  const type = results.types[Number(index)]?.type;
 
-  const [fieldIndex, fieldType, fieldName] = activeValue
-    ?.split(".")
-    ?.map((v) => v.trim());
-  const field = allFields[Number(fieldIndex)]?.field;
+  const [fieldIndex] = activeValue?.split(".")?.map((v) => v.trim());
+  const field = results.fields[Number(fieldIndex)]?.field;
 
   return (
     <div className="hidden w-64 flex-shrink-0 flex-col p-4 md:flex">
@@ -978,9 +996,16 @@ const SearchType = ({
     return () => document.removeEventListener("keydown", down);
   }, [setOpen]);
 
-  const allFields = getAllFields(ast);
+  const [query, setQuery] = useState("");
+  const [debouncedSearch, { isPending }] = useDebounce(query, 300);
+  const debouncing = isPending();
 
-  const counts = getTypeCounts(ast);
+  const { results, totalResults } = useMemo(() => {
+    const results = searchSchema(debouncedSearch, ast);
+    const totalResults = results.fields.length + results.types.length;
+
+    return { results, totalResults };
+  }, [debouncedSearch, ast]);
 
   return (
     <CommandDialog
@@ -991,44 +1016,43 @@ const SearchType = ({
       open={open}
       onOpenChange={setOpen}
     >
-      <CommandInput placeholder="Search for a type" />
-      <div className="flex divide-x">
+      <CommandInput
+        value={query}
+        onValueChange={setQuery}
+        placeholder="Search for a type"
+      />
+      {debouncing && (
+        <CommandLoading>
+          <Loader className="my-12" />
+        </CommandLoading>
+      )}
+      <div className={cn("flex divide-x", debouncing && "hidden")}>
         <CommandList className="scrollbar-custom w-full">
-          <CommandEmpty>No results found.</CommandEmpty>
-          {graphqlTypeCategories.map((category) => {
-            if (counts[category] === 0) {
-              return null;
-            }
-
-            const types = getTypesByCategory(ast, category);
-
-            return (
-              <CommandGroup key={category} heading={sentenceCase(category)}>
-                {types.map((t, i) => {
-                  return (
-                    <CommandItem
-                      onSelect={() => {
-                        const newQuery = { ...router.query };
-                        newQuery.category = category;
-                        newQuery.typename = t.name;
-                        setOpen(false);
-                        router.push({
-                          query: newQuery,
-                        });
-                      }}
-                      key={t.name}
-                      value={`${category}-${i}-${t}`}
-                      className="subpixel-antialiased"
-                    >
-                      {t.name}
-                    </CommandItem>
-                  );
-                })}
-              </CommandGroup>
-            );
-          })}
+          <CommandEmpty>No results found</CommandEmpty>
+          <CommandGroup heading="Types">
+            {results.types.map(({ type }, i) => {
+              const category = getCategoryForType(ast, type.name)!;
+              return (
+                <CommandItem
+                  onSelect={() => {
+                    const newQuery = { ...router.query };
+                    newQuery.category = category;
+                    newQuery.typename = type.name;
+                    setOpen(false);
+                    router.push({
+                      query: newQuery,
+                    });
+                  }}
+                  key={category + type.name + i}
+                  value={`${category}-${i}-${type}`}
+                >
+                  {type.name}
+                </CommandItem>
+              );
+            })}
+          </CommandGroup>
           <CommandGroup heading="Fields">
-            {allFields.map((f, i) => {
+            {results.fields.map((f, i) => {
               return (
                 <CommandItem
                   onSelect={() => {
@@ -1044,9 +1068,8 @@ const SearchType = ({
                       query: newQuery,
                     });
                   }}
-                  key={f.field.name}
+                  key={f.type.name + f.field.name + i}
                   value={`${i} . ${f.type.name} . ${f.field.name}`}
-                  className="subpixel-antialiased"
                 >
                   <span className="text-primary">{f.type.name}</span>.
                   {f.field.name}
@@ -1055,8 +1078,18 @@ const SearchType = ({
             })}
           </CommandGroup>
         </CommandList>
-        <SearchDescription allFields={allFields} />
+        <SearchDescription results={results} />
       </div>
+      {totalResults > 0 && !debouncing && (
+        <>
+          <Separator />
+          <div className="p-2 text-end text-xs text-muted-foreground">
+            {totalResults >= 100
+              ? "Showing first 100 results"
+              : `Found ${totalResults} results`}
+          </div>
+        </>
+      )}
     </CommandDialog>
   );
 };
