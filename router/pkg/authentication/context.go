@@ -1,8 +1,13 @@
 package authentication
 
-import "context"
+import (
+	"context"
+
+	"github.com/goccy/go-json"
+)
 
 type authenticationKey struct{}
+type websocketInitialPayloadContextKey struct{}
 
 // NewContext returns a new context.Context with the given Authentication attached
 func NewContext(ctx context.Context, auth Authentication) context.Context {
@@ -18,4 +23,13 @@ func FromContext(ctx context.Context) Authentication {
 		return auth
 	}
 	return nil
+}
+
+func WithWebsocketInitialPayloadContextKey(ctx context.Context, initialPayload json.RawMessage) context.Context {
+	return context.WithValue(ctx, websocketInitialPayloadContextKey{}, initialPayload)
+}
+
+func WebsocketInitialPayloadFromContext(ctx context.Context) json.RawMessage {
+	initialPayload, _ := ctx.Value(websocketInitialPayloadContextKey{}).(json.RawMessage)
+	return initialPayload
 }

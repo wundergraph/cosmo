@@ -1,6 +1,6 @@
 {
   "name": "controlplane",
-  "version": "0.102.4",
+  "version": "0.103.1",
   "private": true,
   "description": "WunderGraph Cosmo Controlplane",
   "type": "module",
@@ -87,6 +87,7 @@
     "stripe": "^14.19.0",
     "tiny-lru": "^11.2.11",
     "uid": "^2.0.2",
+    "uuid": "^10.0.0",
     "zod": "^3.22.4",
     "zod-to-json-schema": "^3.22.4"
   },

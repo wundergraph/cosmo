@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.22.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.21.1...graphqlmetrics@0.22.0) (2024-08-19)
+
+### Features
+
+* implement more efficient aggregation of schema usage metrics with caching ([#1095](https://github.com/wundergraph/cosmo/issues/1095)) ([a40c9d8](https://github.com/wundergraph/cosmo/commit/a40c9d83e8434bfe1a8338bd8892b110022c14ad)) (@jensneuse)
+
 ## [0.21.1](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.21.0...graphqlmetrics@0.21.1) (2024-08-01)
 
 ### Bug Fixes

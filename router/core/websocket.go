@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -14,6 +13,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/goccy/go-json"
 
 	"github.com/gorilla/websocket"
 
@@ -25,6 +26,7 @@ import (
 	"github.com/tidwall/gjson"
 	"github.com/wundergraph/cosmo/router/internal/epoller"
 	"github.com/wundergraph/cosmo/router/internal/wsproto"
+	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
@@ -239,17 +241,19 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	requestLogger := h.logger.With(logging.WithRequestID(requestID))
 	clientInfo := NewClientInfoFromRequest(r)
 
-	// Check access control before upgrading the connection
-	validatedReq, err := h.accessController.Access(w, r)
-	if err != nil {
-		statusCode := http.StatusForbidden
-		if errors.Is(err, ErrUnauthorized) {
-			statusCode = http.StatusUnauthorized
+	if h.accessController != nil && !h.config.Authentication.FromInitialPayload.Enabled {
+		// Check access control before upgrading the connection
+		validatedReq, err := h.accessController.Access(w, r)
+		if err != nil {
+			statusCode := http.StatusForbidden
+			if errors.Is(err, ErrUnauthorized) {
+				statusCode = http.StatusUnauthorized
+			}
+			http.Error(w, http.StatusText(statusCode), statusCode)
+			return
 		}
-		http.Error(w, http.StatusText(statusCode), statusCode)
-		return
+		r = validatedReq
 	}
-	r = validatedReq
 
 	upgrader := ws.HTTPUpgrader{
 		Timeout: time.Second * 5,
@@ -310,6 +314,48 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		requestLogger.Error("Initializing websocket connection", zap.Error(err))
 		handler.Close()
 		return
+	}
+
+	// Authenticate the connection using the initial payload
+	fromInitialPayloadConfig := h.config.Authentication.FromInitialPayload
+	if fromInitialPayloadConfig.Enabled {
+		// Setting the initialPayload in the context to be used by the websocketInitialPayloadAuthenticator
+		r = r.WithContext(authentication.WithWebsocketInitialPayloadContextKey(r.Context(), handler.initialPayload))
+
+		// Later check access control after initial payload is read and set into the context
+		validatedReq, err := h.accessController.Access(w, r)
+		if err != nil {
+			statusCode := http.StatusForbidden
+			if errors.Is(err, ErrUnauthorized) {
+				statusCode = http.StatusUnauthorized
+			}
+			http.Error(handler.w, http.StatusText(statusCode), statusCode)
+			handler.writeErrorMessage(requestID, err)
+			handler.Close()
+			return
+		}
+		handler.r = validatedReq
+
+		// Export the token from the initial payload to the request header
+		if fromInitialPayloadConfig.ExportToken.Enabled {
+			var initialPayloadMap map[string]interface{}
+			err := json.Unmarshal(handler.initialPayload, &initialPayloadMap)
+			if err != nil {
+				requestLogger.Error("Error parsing initial payload: %v", zap.Error(err))
+				handler.writeErrorMessage(requestID, err)
+				handler.Close()
+				return
+			}
+			jwtToken, ok := initialPayloadMap[fromInitialPayloadConfig.Key].(string)
+			if !ok {
+				err := fmt.Errorf("invalid JWT token in initial payload: JWT token is not a string")
+				requestLogger.Error(err.Error())
+				handler.writeErrorMessage(requestID, err)
+				handler.Close()
+				return
+			}
+			handler.r.Header.Set(fromInitialPayloadConfig.ExportToken.HeaderKey, jwtToken)
+		}
 	}
 
 	// Only when epoll is available. On Windows, epoll is not available
@@ -723,12 +769,13 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 
 	planOptions := PlanOptions{
 		Protocol:         OperationProtocolWS,
-		ClientInfo:       *h.clientInfo,
+		ClientInfo:       h.clientInfo,
 		TraceOptions:     traceOptions,
 		ExecutionOptions: executionOptions,
+		TrackSchemaUsageInfo: h.preHandler.trackSchemaUsageInfo,
 	}
 
-	opContext, err := h.planner.Plan(operationKit.parsedOperation, planOptions)
+	opContext, err := h.planner.plan(operationKit.parsedOperation, planOptions)
 	if err != nil {
 		return operationKit.parsedOperation, nil, err
 	}
@@ -806,7 +853,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 	// Put in a closure to evaluate err after the defer
 	defer func() {
 		// StatusCode has no meaning here. We set it to 0 but set the error.
-		h.metrics.ExportSchemaUsageInfo(operationCtx, 0, err != nil)
+		h.metrics.ExportSchemaUsageInfo(operationCtx, 0, err != nil, false)
 	}()
 
 	switch p := operationCtx.preparedPlan.preparedPlan.(type) {

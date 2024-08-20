@@ -9,10 +9,20 @@ const allowUnsafeEval = true;
 const debugCSP = false;
 // Enable or disable the sentry integration
 const isSentryEnabled = process.env.NEXT_PUBLIC_SENTRY_ENABLED === "true";
-const isSentryFeatureReplayEnabled = isSentryEnabled && (process.env.NEXT_PUBLIC_SENTRY_REPLAY_ENABLED === "true");
+const isSentryFeatureReplayEnabled =
+  isSentryEnabled && process.env.NEXT_PUBLIC_SENTRY_REPLAY_ENABLED === "true";
+const clientTracesSampleRate = parseFloat(
+  process.env.NEXT_PUBLIC_SENTRY_CLIENT_TRACES_SAMPLE_RATE || "0",
+);
+const serverSampleRate = parseFloat(
+  process.env.SENTRY_SERVER_SAMPLE_RATE || "0",
+);
+
+const isSentryTracesEnabled =
+  clientTracesSampleRate > 0 || serverSampleRate > 0;
 
 const sentryDebugEnabled = process.env.SENTRY_DEBUG === "true";
-const sentryOrganization = process.env.SENTRY_ORGANIZATION || "";
+const sentryOrganization = process.env.SENTRY_ORG || "";
 const sentryProject = process.env.SENTRY_PROJECT || "";
 const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN || "";
 
@@ -24,7 +34,7 @@ if (isSentryEnabled) {
   }
   if (sentryOrganization === "" || sentryProject === "") {
     throw Error(
-      "SENTRY_ORGANIZATION or SENTRY_PROJECT not set please check your environment variables!",
+      "SENTRY_ORG or SENTRY_PROJECT not set please check your environment variables!",
     );
   }
 }
@@ -59,7 +69,7 @@ const lightweightCspHeader = `
   };
   manifest-src 'self';
   media-src 'self';
-  worker-src 'self' ${isSentryFeatureReplayEnabled ? "blob:": ""};
+  worker-src 'self' ${isSentryFeatureReplayEnabled ? "blob:" : ""};
 `;
 
 /**
@@ -83,6 +93,20 @@ const lightweightCspHeader = `
 /** @type {import("next").NextConfig} */
 const config = {
   output: "standalone",
+  // This is done to reduce the production build size
+  // see: https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/tree-shaking/
+  webpack: (config, { webpack }) => {
+    config.plugins.push(
+      new webpack.DefinePlugin({
+        __SENTRY_TRACING__: !isSentryTracesEnabled,
+        __RRWEB_EXCLUDE_IFRAME__: !isSentryFeatureReplayEnabled,
+        __RRWEB_EXCLUDE_SHADOW_DOM__: !isSentryFeatureReplayEnabled,
+        __SENTRY_EXCLUDE_REPLAY_WORKER__: !isSentryFeatureReplayEnabled,
+      }),
+    );
+
+    return config;
+  },
   pageExtensions: ["md", "mdoc", "js", "jsx", "ts", "tsx"],
   publicRuntimeConfig: {
     version: pkg.version,
@@ -146,7 +170,7 @@ const withOptionalSentryConfig = (org, project, config) =>
     // See the following for more information:
     // https://docs.sentry.io/product/crons/
     // https://vercel.com/docs/cron-jobs
-    automaticVercelMonitors: true,
+    automaticVercelMonitors: false,
   });
 
 const withOptionalFeatures = (config) => {

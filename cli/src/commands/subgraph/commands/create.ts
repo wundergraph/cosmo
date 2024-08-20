@@ -56,7 +56,7 @@ export default (opts: BaseCommandOptions) => {
   command.action(async (name, options) => {
     let readmeFile;
     if (options.readme) {
-      readmeFile = resolve(process.cwd(), options.readme);
+      readmeFile = resolve(options.readme);
       if (!existsSync(readmeFile)) {
         program.error(
           pc.red(

@@ -64,18 +64,32 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 			if name == "" {
 				name = fmt.Sprintf("jwks-#%d", i)
 			}
-			opts := authentication.JWKSAuthenticatorOptions{
+			tokenDecoder, _ := authentication.NewJwksTokenDecoder(auth.JWKS.URL, auth.JWKS.RefreshInterval)
+			opts := authentication.HttpHeaderAuthenticatorOptions{
 				Name:                name,
 				URL:                 auth.JWKS.URL,
 				HeaderNames:         auth.JWKS.HeaderNames,
 				HeaderValuePrefixes: auth.JWKS.HeaderValuePrefixes,
-				RefreshInterval:     auth.JWKS.RefreshInterval,
+				TokenDecoder:        tokenDecoder,
 			}
-			authenticator, err := authentication.NewJWKSAuthenticator(opts)
+			authenticator, err := authentication.NewHttpHeaderAuthenticator(opts)
 			if err != nil {
-				logger.Fatal("Could not create JWKS authenticator", zap.Error(err), zap.String("name", name))
+				logger.Fatal("Could not create HttpHeader authenticator", zap.Error(err), zap.String("name", name))
 			}
 			authenticators = append(authenticators, authenticator)
+
+			if cfg.WebSocket.Authentication.FromInitialPayload.Enabled {
+				opts := authentication.WebsocketInitialPayloadAuthenticatorOptions{
+					TokenDecoder:        tokenDecoder,
+					Key:                 cfg.WebSocket.Authentication.FromInitialPayload.Key,
+					HeaderValuePrefixes: auth.JWKS.HeaderValuePrefixes,
+				}
+				authenticator, err = authentication.NewWebsocketInitialPayloadAuthenticator(opts)
+				if err != nil {
+					logger.Fatal("Could not create WebsocketInitialPayload authenticator", zap.Error(err))
+				}
+				authenticators = append(authenticators, authenticator)
+			}
 		}
 	}
 
@@ -148,7 +162,6 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		core.WithEngineExecutionConfig(cfg.EngineExecutionConfiguration),
 		core.WithSecurityConfig(cfg.SecurityConfiguration),
 		core.WithAuthorizationConfig(&cfg.Authorization),
-		core.WithAccessController(core.NewAccessController(authenticators, cfg.Authorization.RequireAuthentication)),
 		core.WithWebSocketConfiguration(&cfg.WebSocket),
 		core.WithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation),
 		core.WithLocalhostFallbackInsideDocker(cfg.LocalhostFallbackInsideDocker),
@@ -185,6 +198,10 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 			PollInterval:    cfg.PollInterval,
 			ExecutionConfig: cfg.ExecutionConfig,
 		}))
+	}
+
+	if len(authenticators) > 0 {
+		options = append(options, core.WithAccessController(core.NewAccessController(authenticators, cfg.Authorization.RequireAuthentication)))
 	}
 
 	return core.NewRouter(options...)

@@ -323,6 +323,47 @@
           "type": "boolean",
           "default": true,
           "description": "Forward the initial payload in the extensions payload when starting a subscription on a Subgraph. The default value is true."
+        },
+        "authentication": {
+          "type": "object",
+          "description": "The configuration used to authenticate the WebSocket connections.",
+          "additionalProperties": false,
+          "properties": {
+            "from_initial_payload": {
+              "type": "object",
+              "description": "The configuration used to tell the Router to look for the JWT (JSON Web Token) in the initial payload of the WebSocket Connection.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "This configuration indicates if the Router should look for the JWT (JSON Web Token) in the initial payload of the WebSocket Connection. The default value is 'false'.",
+                  "default": false
+                },
+                "key": {
+                  "type": "string",
+                  "default": "Authorization",
+                  "description": "The name of the property holding the JWT (JSON Web Token) value. The default value is 'Authorization'"
+                },
+                "export_token": {
+                  "type": "object",
+                  "description": "The configuration responsible for exporting the JWT (JSON Web Token) to the client's request header. If the specified header key differs from the default value, 'Authorization', it needs to be included in the 'forward_upgrade_headers' list to ensure it is forwarded to the subgraphs.",
+                  "additionalProperties": false,
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "This configuration indicates if the Router will export the JWT (JSON Web Token) to the client request header. The default value is 'false'.",
+                      "default": true
+                    },
+                    "header_key": {
+                      "type": "string",
+                      "description": "The name of the header property that will have the JWT (JSON Web Token) value. The default value is 'Authorization'",
+                      "default": "Authorization"
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },

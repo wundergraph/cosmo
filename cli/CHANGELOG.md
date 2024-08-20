@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.60.2](https://github.com/wundergraph/cosmo/compare/wgc@0.60.1...wgc@0.60.2) (2024-08-20)
+
+### Bug Fixes
+
+* correct output path handling for abs paths ([#1101](https://github.com/wundergraph/cosmo/issues/1101)) ([505f32e](https://github.com/wundergraph/cosmo/commit/505f32e44dcd5fe498f8035962f8e27f9cccd6b9)) (@StarpTech)
+
+## [0.60.1](https://github.com/wundergraph/cosmo/compare/wgc@0.60.0...wgc@0.60.1) (2024-08-20)
+
+### Bug Fixes
+
+* use uuid for config version in compose command ([#1097](https://github.com/wundergraph/cosmo/issues/1097)) ([0e1750e](https://github.com/wundergraph/cosmo/commit/0e1750e55a2e71d777f0cfc59d4d819e3b23eb40)) (@thisisnithin)
+
+# [0.60.0](https://github.com/wundergraph/cosmo/compare/wgc@0.59.4...wgc@0.60.0) (2024-08-19)
+
+### Features
+
+* export cli cmds output in json ([#1088](https://github.com/wundergraph/cosmo/issues/1088)) ([32c597c](https://github.com/wundergraph/cosmo/commit/32c597c1bcab88a1d820ea83f978fa811d8e3768)) (@JivusAyrus)
+
 ## [0.59.4](https://github.com/wundergraph/cosmo/compare/wgc@0.59.3...wgc@0.59.4) (2024-08-14)
 
 **Note:** Version bump only for package wgc

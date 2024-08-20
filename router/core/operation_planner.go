@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strconv"
 
+	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
+	"github.com/wundergraph/cosmo/router/pkg/graphqlschemausage"
 	"golang.org/x/sync/singleflight"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
@@ -16,12 +18,15 @@ import (
 type planWithMetaData struct {
 	preparedPlan                      plan.Plan
 	operationDocument, schemaDocument *ast.Document
+	typeFieldUsageInfo                []*graphqlmetricsv1.TypeFieldUsageInfo
+	argumentUsageInfo                 []*graphqlmetricsv1.ArgumentUsageInfo
 }
 
 type OperationPlanner struct {
-	sf        singleflight.Group
-	planCache ExecutionPlanCache[uint64, *planWithMetaData]
-	executor  *Executor
+	sf             singleflight.Group
+	planCache      ExecutionPlanCache[uint64, *planWithMetaData]
+	executor       *Executor
+	trackUsageInfo bool
 }
 
 type ExecutionPlanCache[K any, V any] interface {
@@ -51,8 +56,9 @@ func (n *noopExecutionPlanCache) Set(key uint64, value *planWithMetaData, cost i
 
 func NewOperationPlanner(executor *Executor, planCache ExecutionPlanCache[uint64, *planWithMetaData]) *OperationPlanner {
 	return &OperationPlanner{
-		planCache: planCache,
-		executor:  executor,
+		planCache:      planCache,
+		executor:       executor,
+		trackUsageInfo: executor.TrackUsageInfo,
 	}
 }
 
@@ -84,28 +90,38 @@ func (p *OperationPlanner) preparePlan(ctx *operationContext) (*planWithMetaData
 	post := postprocess.NewProcessor()
 	post.Process(preparedPlan)
 
-	return &planWithMetaData{
+	out := &planWithMetaData{
 		preparedPlan:      preparedPlan,
 		operationDocument: &doc,
 		schemaDocument:    p.executor.RouterSchema,
-	}, nil
+	}
+
+	if p.trackUsageInfo {
+		out.typeFieldUsageInfo = graphqlschemausage.GetTypeFieldUsageInfo(preparedPlan)
+		out.argumentUsageInfo, err = graphqlschemausage.GetArgumentUsageInfo(&doc, p.executor.RouterSchema)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return out, nil
 }
 
 type PlanOptions struct {
-	Protocol         OperationProtocol
-	ClientInfo       ClientInfo
-	TraceOptions     resolve.TraceOptions
-	ExecutionOptions resolve.ExecutionOptions
+	Protocol             OperationProtocol
+	ClientInfo           *ClientInfo
+	TraceOptions         resolve.TraceOptions
+	ExecutionOptions     resolve.ExecutionOptions
+	TrackSchemaUsageInfo bool
 }
 
-func (p *OperationPlanner) Plan(operation *ParsedOperation, options PlanOptions) (*operationContext, error) {
-
+func (p *OperationPlanner) plan(operation *ParsedOperation, options PlanOptions) (*operationContext, error) {
 	opContext := &operationContext{
 		name:                       operation.Request.OperationName,
 		opType:                     operation.Type,
 		content:                    operation.NormalizedRepresentation,
 		hash:                       operation.ID,
-		clientInfo:                 options.ClientInfo,
+		clientInfo:                 *options.ClientInfo,
 		variables:                  operation.Request.Variables,
 		files:                      operation.Files,
 		traceOptions:               options.TraceOptions,
@@ -131,6 +147,14 @@ func (p *OperationPlanner) Plan(operation *ParsedOperation, options PlanOptions)
 			return nil, err
 		}
 		opContext.preparedPlan = prepared
+		if options.TrackSchemaUsageInfo {
+			opContext.typeFieldUsageInfo = prepared.typeFieldUsageInfo
+			opContext.argumentUsageInfo = prepared.argumentUsageInfo
+			opContext.inputUsageInfo, err = graphqlschemausage.GetInputUsageInfo(prepared.operationDocument, p.executor.RouterSchema, opContext.variables)
+			if err != nil {
+				return nil, err
+			}
+		}
 		return opContext, nil
 	}
 
@@ -159,6 +183,14 @@ func (p *OperationPlanner) Plan(operation *ParsedOperation, options PlanOptions)
 		opContext.preparedPlan, ok = sharedPreparedPlan.(*planWithMetaData)
 		if !ok {
 			return nil, errors.New("unexpected prepared plan type")
+		}
+		if options.TrackSchemaUsageInfo {
+			opContext.typeFieldUsageInfo = opContext.preparedPlan.typeFieldUsageInfo
+			opContext.argumentUsageInfo = opContext.preparedPlan.argumentUsageInfo
+			opContext.inputUsageInfo, err = graphqlschemausage.GetInputUsageInfo(opContext.preparedPlan.operationDocument, p.executor.RouterSchema, opContext.variables)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 	return opContext, nil

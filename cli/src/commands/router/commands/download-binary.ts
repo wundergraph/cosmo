@@ -4,7 +4,7 @@ import { Command, program } from 'commander';
 import pc from 'picocolors';
 import cliProgress from 'cli-progress';
 import decompress from 'decompress';
-import { join } from 'pathe';
+import { resolve, join } from 'pathe';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 
 export default function (_: BaseCommandOptions) {
@@ -12,7 +12,7 @@ export default function (_: BaseCommandOptions) {
   command.description('Downloads the latest router binary for the detected machine platform and architecture.');
   command.option('-o, --out [string]', 'Destination directory for the downloaded router binary.');
   command.action(async (options) => {
-    const path = join(process.cwd(), options.out ?? './router');
+    const path = resolve(options.out ?? './router');
     const fullPath = join(path, 'router');
     if (fs.existsSync(fullPath)) {
       program.error(pc.red(`${fullPath} already exists`));

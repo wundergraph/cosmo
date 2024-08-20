@@ -4,6 +4,7 @@ import { ServiceImpl } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { OrganizationEventName, PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
+import { validate as validateUUID } from 'uuid';
 import {
   AcceptOrDeclineInvitationResponse,
   AddReadmeResponse,
@@ -9468,6 +9469,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `Organization not found`,
             },
             organizationName: '',
+            organizationSlug: '',
           };
         }
 
@@ -9476,6 +9478,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           organizationName: organization.name,
+          organizationSlug: organization.slug,
         };
       });
     },
@@ -9995,7 +9998,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           let composition: GraphCompositionDTO | undefined;
 
           // Might be empty when starting with a local composed config that has no config version id
-          if (routerDTO.configVersionId) {
+          if (routerDTO.configVersionId && validateUUID(routerDTO.configVersionId)) {
             composition = await graphCompositionRepository.getGraphCompositionBySchemaVersion({
               organizationId: authContext.organizationId,
               schemaVersionId: routerDTO.configVersionId,

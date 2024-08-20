@@ -1,24 +1,38 @@
 package graphqlmetrics
 
 import (
-	"connectrpc.com/connect"
 	"context"
 	"fmt"
+	"net/http"
+	"sync"
+	"testing"
+	"time"
+
+	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	"go.uber.org/zap"
-	"net/http"
-	"testing"
-	"time"
 )
 
 type MyClient struct {
-	t                *testing.T
-	publishedBatches [][]*graphqlmetricsv1.SchemaUsageInfo
+	t                     *testing.T
+	publishedBatches      [][]*graphqlmetricsv1.SchemaUsageInfo
+	publishedAggregations [][]*graphqlmetricsv1.SchemaUsageInfoAggregation
+	mu                    sync.Mutex
+}
+
+func (m *MyClient) PublishAggregatedGraphQLMetrics(ctx context.Context, c *connect.Request[graphqlmetricsv1.PublishAggregatedGraphQLRequestMetricsRequest]) (*connect.Response[graphqlmetricsv1.PublishAggregatedGraphQLRequestMetricsResponse], error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	require.Equal(m.t, "Bearer secret", c.Header().Get("Authorization"))
+	m.publishedAggregations = append(m.publishedAggregations, c.Msg.Aggregation)
+	return nil, nil
 }
 
 func (m *MyClient) PublishGraphQLMetrics(ctx context.Context, c *connect.Request[graphqlmetricsv1.PublishGraphQLRequestMetricsRequest]) (*connect.Response[graphqlmetricsv1.PublishOperationCoverageReportResponse], error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	require.Equal(m.t, "Bearer secret", c.Header().Get("Authorization"))
 	m.publishedBatches = append(m.publishedBatches, c.Msg.GetSchemaUsage())
 	return nil, nil
@@ -28,8 +42,7 @@ var _ graphqlmetricsv1connect.GraphQLMetricsServiceClient = (*MyClient)(nil)
 
 func TestExportAggregationSameSchemaUsages(t *testing.T) {
 	c := &MyClient{
-		t:                t,
-		publishedBatches: make([][]*graphqlmetricsv1.SchemaUsageInfo, 0),
+		t: t,
 	}
 
 	queueSize := 200
@@ -41,11 +54,10 @@ func TestExportAggregationSameSchemaUsages(t *testing.T) {
 		c,
 		"secret",
 		&ExporterSettings{
-			NumConsumers: 1,
-			BatchSize:    batchSize,
-			QueueSize:    queueSize,
-			Interval:     500 * time.Millisecond,
-			Retry: RetryOptions{
+			BatchSize: batchSize,
+			QueueSize: queueSize,
+			Interval:  500 * time.Millisecond,
+			RetryOptions: RetryOptions{
 				Enabled:     false,
 				MaxDuration: 300 * time.Millisecond,
 				Interval:    100 * time.Millisecond,
@@ -92,21 +104,24 @@ func TestExportAggregationSameSchemaUsages(t *testing.T) {
 			},
 		}
 
-		require.True(t, e.Record(usage))
+		require.True(t, e.RecordUsage(usage, false))
 	}
 
 	require.Nil(t, e.Shutdown(context.Background()))
 
-	require.Equal(t, 1, len(c.publishedBatches))
-	require.Equal(t, 2, len(c.publishedBatches[0]))
-	require.Equal(t, uint64(50), c.publishedBatches[0][0].TypeFieldMetrics[0].Count)
-	require.Equal(t, uint64(50), c.publishedBatches[0][1].TypeFieldMetrics[0].Count)
+	require.False(t, e.RecordUsage(nil, false))
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	require.Equal(t, 1, len(c.publishedAggregations))
+	require.Equal(t, 2, len(c.publishedAggregations[0]))
+	require.Equal(t, 50, int(c.publishedAggregations[0][0].RequestCount))
+	require.Equal(t, 50, int(c.publishedAggregations[0][1].RequestCount))
 }
 
 func TestExportBatchesWithUniqueSchemaUsages(t *testing.T) {
 	c := &MyClient{
-		t:                t,
-		publishedBatches: make([][]*graphqlmetricsv1.SchemaUsageInfo, 0),
+		t: t,
 	}
 
 	queueSize := 200
@@ -118,11 +133,10 @@ func TestExportBatchesWithUniqueSchemaUsages(t *testing.T) {
 		c,
 		"secret",
 		&ExporterSettings{
-			NumConsumers: 1,
-			BatchSize:    batchSize,
-			QueueSize:    queueSize,
-			Interval:     500 * time.Millisecond,
-			Retry: RetryOptions{
+			BatchSize: batchSize,
+			QueueSize: queueSize,
+			Interval:  time.Second * 5,
+			RetryOptions: RetryOptions{
 				Enabled:     false,
 				MaxDuration: 300 * time.Millisecond,
 				Interval:    100 * time.Millisecond,
@@ -135,19 +149,18 @@ func TestExportBatchesWithUniqueSchemaUsages(t *testing.T) {
 	require.Nil(t, err)
 
 	for i := 0; i < totalItems; i++ {
+		i := i
 		usage := &graphqlmetricsv1.SchemaUsageInfo{
 			TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
 				{
 					Path:        []string{"user", "id"},
 					TypeNames:   []string{"User", "ID"},
 					SubgraphIDs: []string{"1", "2"},
-					Count:       2,
 				},
 				{
 					Path:        []string{"user", "name"},
 					TypeNames:   []string{"User", "String"},
 					SubgraphIDs: []string{"1", "2"},
-					Count:       1,
 				},
 			},
 			OperationInfo: &graphqlmetricsv1.OperationInfo{
@@ -165,13 +178,13 @@ func TestExportBatchesWithUniqueSchemaUsages(t *testing.T) {
 			Attributes: map[string]string{},
 		}
 
-		require.True(t, e.Record(usage))
+		e.RecordUsage(usage, false)
 	}
 
 	require.Nil(t, e.Shutdown(context.Background()))
-
-	require.Equal(t, totalItems/batchSize, len(c.publishedBatches))
-	require.Equal(t, 5, len(c.publishedBatches[0]))
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	require.Equal(t, totalItems/batchSize, len(c.publishedAggregations))
 }
 
 func TestForceFlushSync(t *testing.T) {
@@ -189,13 +202,12 @@ func TestForceFlushSync(t *testing.T) {
 		c,
 		"secret",
 		&ExporterSettings{
-			NumConsumers: 1,
-			BatchSize:    batchSize,
-			QueueSize:    queueSize,
+			BatchSize: batchSize,
+			QueueSize: queueSize,
 			// Intentionally set to a high value to make sure that the exporter is forced to flush immediately
 			Interval:      5000 * time.Millisecond,
 			ExportTimeout: 5000 * time.Millisecond,
-			Retry: RetryOptions{
+			RetryOptions: RetryOptions{
 				Enabled:     false,
 				MaxDuration: 300 * time.Millisecond,
 				Interval:    100 * time.Millisecond,
@@ -207,6 +219,7 @@ func TestForceFlushSync(t *testing.T) {
 	require.Nil(t, err)
 
 	for i := 0; i < totalItems; i++ {
+		i := i
 		usage := &graphqlmetricsv1.SchemaUsageInfo{
 			TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
 				{
@@ -237,19 +250,18 @@ func TestForceFlushSync(t *testing.T) {
 			Attributes: map[string]string{},
 		}
 
-		require.True(t, e.Record(usage))
+		e.RecordUsage(usage, true)
 	}
 
-	require.Nil(t, e.ForceFlush(context.Background()))
-
-	require.Equal(t, totalItems/batchSize, len(c.publishedBatches))
-	require.Equal(t, 2, len(c.publishedBatches))
-	require.Equal(t, 5, len(c.publishedBatches[0]))
+	c.mu.Lock()
+	require.Equal(t, 10, len(c.publishedBatches))
+	require.Equal(t, 1, len(c.publishedBatches[0]))
 
 	// Make sure that the exporter is still working after a forced flush
 
 	// Reset the published batches
 	c.publishedBatches = c.publishedBatches[:0]
+	c.mu.Unlock()
 
 	for i := 0; i < totalItems; i++ {
 		usage := &graphqlmetricsv1.SchemaUsageInfo{
@@ -282,20 +294,18 @@ func TestForceFlushSync(t *testing.T) {
 			Attributes: map[string]string{},
 		}
 
-		require.True(t, e.Record(usage))
+		e.RecordUsage(usage, true)
 	}
 
-	require.Nil(t, e.ForceFlush(context.Background()))
-
-	require.Equal(t, totalItems/batchSize, len(c.publishedBatches))
-	require.Equal(t, 2, len(c.publishedBatches))
-	require.Equal(t, 5, len(c.publishedBatches[0]))
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	require.Equal(t, 10, len(c.publishedBatches))
+	require.Equal(t, 1, len(c.publishedBatches[0]))
 }
 
 func TestExportBatchInterval(t *testing.T) {
 	c := &MyClient{
-		t:                t,
-		publishedBatches: make([][]*graphqlmetricsv1.SchemaUsageInfo, 0),
+		t: t,
 	}
 
 	queueSize := 200
@@ -307,11 +317,10 @@ func TestExportBatchInterval(t *testing.T) {
 		c,
 		"secret",
 		&ExporterSettings{
-			NumConsumers: 1,
-			BatchSize:    batchSize,
-			QueueSize:    queueSize,
-			Interval:     100 * time.Millisecond,
-			Retry: RetryOptions{
+			BatchSize: batchSize,
+			QueueSize: queueSize,
+			Interval:  100 * time.Millisecond,
+			RetryOptions: RetryOptions{
 				Enabled:     false,
 				MaxDuration: 300 * time.Millisecond,
 				Interval:    100 * time.Millisecond,
@@ -354,19 +363,20 @@ func TestExportBatchInterval(t *testing.T) {
 			Attributes: map[string]string{},
 		}
 
-		require.True(t, e.Record(usage))
+		e.RecordUsage(usage, false)
 	}
 
-	require.Nil(t, e.Shutdown(context.Background()))
+	time.Sleep(200 * time.Millisecond)
 
-	require.Equal(t, 1, len(c.publishedBatches))
-	require.Equal(t, 5, len(c.publishedBatches[0]))
+	defer require.Nil(t, e.Shutdown(context.Background()))
+
+	require.Equal(t, 1, len(c.publishedAggregations))
+	require.Equal(t, 5, len(c.publishedAggregations[0]))
 }
 
 func TestExportFullQueue(t *testing.T) {
 	c := &MyClient{
-		t:                t,
-		publishedBatches: make([][]*graphqlmetricsv1.SchemaUsageInfo, 0),
+		t: t,
 	}
 
 	// limits are too low, so queue will be blocked
@@ -379,11 +389,10 @@ func TestExportFullQueue(t *testing.T) {
 		c,
 		"secret",
 		&ExporterSettings{
-			NumConsumers: 1,
-			BatchSize:    batchSize,
-			QueueSize:    queueSize,
-			Interval:     500 * time.Millisecond,
-			Retry: RetryOptions{
+			BatchSize: batchSize,
+			QueueSize: queueSize,
+			Interval:  500 * time.Millisecond,
+			RetryOptions: RetryOptions{
 				Enabled:     false,
 				MaxDuration: 300 * time.Millisecond,
 				Interval:    100 * time.Millisecond,
@@ -426,7 +435,7 @@ func TestExportFullQueue(t *testing.T) {
 			},
 		}
 
-		if e.Record(usage) {
+		if e.RecordUsage(usage, false) {
 			dispatched++
 		}
 	}
