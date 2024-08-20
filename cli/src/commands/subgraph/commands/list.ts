@@ -56,7 +56,7 @@ export default (opts: BaseCommandOptions) => {
             lastUpdatedAt: g.lastUpdatedAt,
           }) as OutputFile[number],
       );
-      await writeFile(resolve(process.cwd(), options.out), JSON.stringify(output));
+      await writeFile(resolve(options.out), JSON.stringify(output));
       process.exit(0);
     }
 

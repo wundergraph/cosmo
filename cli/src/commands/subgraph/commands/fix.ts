@@ -21,7 +21,7 @@ export default (opts: BaseCommandOptions) => {
   command.option('--out-schema <path-to-out-schema>', 'The path where the fixed schema file should be written.');
 
   command.action(async (name, options) => {
-    const schemaFile = resolve(process.cwd(), options.schema);
+    const schemaFile = resolve(options.schema);
     if (!existsSync(schemaFile)) {
       program.error(
         pc.red(
@@ -64,7 +64,7 @@ export default (opts: BaseCommandOptions) => {
     }
 
     if (options.outSchema) {
-      await writeFile(resolve(process.cwd(), options.outSchema), resp.schema);
+      await writeFile(resolve(options.outSchema), resp.schema);
       console.log(logSymbols.success + pc.green(` Fixed schema written to ${options.outSchema}.`));
       return;
     }

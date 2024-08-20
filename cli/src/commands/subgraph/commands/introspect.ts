@@ -39,7 +39,7 @@ export default (opts: BaseCommandOptions) => {
     }
 
     if (options.out) {
-      await writeFile(resolve(process.cwd(), options.out), resp.sdl ?? '');
+      await writeFile(resolve(options.out), resp.sdl ?? '');
     } else {
       console.log(resp.sdl);
     }
