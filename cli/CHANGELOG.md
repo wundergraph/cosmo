@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.60.1](https://github.com/wundergraph/cosmo/compare/wgc@0.60.0...wgc@0.60.1) (2024-08-20)
+
+### Bug Fixes
+
+* use uuid for config version in compose command ([#1097](https://github.com/wundergraph/cosmo/issues/1097)) ([0e1750e](https://github.com/wundergraph/cosmo/commit/0e1750e55a2e71d777f0cfc59d4d819e3b23eb40)) (@thisisnithin)
+
 # [0.60.0](https://github.com/wundergraph/cosmo/compare/wgc@0.59.4...wgc@0.60.0) (2024-08-19)
 
 ### Features
