@@ -2,11 +2,14 @@
 // The config you add here will be used whenever a users loads a page in their browser.
 // https://docs.sentry.io/platforms/javascript/guides/nextjs/
 
-import { init, replayIntegration } from "@sentry/nextjs";
+import { init, replayIntegration, feedbackIntegration } from "@sentry/nextjs";
 
 const isSentryEnabled = process.env.NEXT_PUBLIC_SENTRY_ENABLED === "true";
 const isSentryFeatureReplayEnabled =
   isSentryEnabled && process.env.NEXT_PUBLIC_SENTRY_REPLAY_ENABLED === "true";
+const isSentryFeatureFeedbackFormEnabled =
+  isSentryEnabled &&
+  process.env.NEXT_PUBLIC_SENTRY_FEEBACK_FORM_ENABLED === "true";
 
 const integrations = [];
 
@@ -16,6 +19,38 @@ if (isSentryFeatureReplayEnabled) {
       // Additional Replay configuration goes in here, for example:
       maskAllText: true,
       blockAllMedia: true,
+    }),
+  );
+}
+
+if (isSentryFeatureFeedbackFormEnabled) {
+  integrations.push(
+    feedbackIntegration({
+      id: "sentry-feedback-form",
+      showBranding: false,
+      autoInject: true,
+      isEmailRequired: true,
+      isNameRequired: true,
+      showEmail: true,
+      enableScreenshot: true,
+      triggerAriaLabel: "label-open",
+      cancelButtonLabel: "Back",
+      submitButtonLabel: "Send Message",
+      confirmButtonLabel: "Send Message",
+      successMessageText:
+        "Your message has been sent. We’ll get back to you soon. For quicker responses, feel free to reach out to us on Discord!",
+      triggerLabel: "How can we help you?",
+      formTitle: "We're here to help!",
+      nameLabel: "Full Name",
+      namePlaceholder: "e.g., John Doe",
+      emailLabel: "Email Address",
+      emailPlaceholder: "e.g., john.doe@example.com",
+      messageLabel: "How Can We Help?",
+      messagePlaceholder: "Type your message here...",
+      isRequiredLabel: "required",
+      addScreenshotButtonLabel: "Capture Screenshot",
+      removeScreenshotButtonLabel: "remove a screenshot",
+      colorScheme: "system",
     }),
   );
 }
@@ -50,15 +85,21 @@ init({
    * This is independent of `sessionSampleRate`.
    * 1.0 will record all sessions and 0 will record none.
    */
-  replaysOnErrorSampleRate: isSentryFeatureReplayEnabled ? parseFloat(
-    process.env.NEXT_PUBLIC_SENTRY_CLIENT_REPLAYS_ON_ERROR_SAMPLE_RATE || "0",
-  ) : 0,
+  replaysOnErrorSampleRate: isSentryFeatureReplayEnabled
+    ? parseFloat(
+        process.env.NEXT_PUBLIC_SENTRY_CLIENT_REPLAYS_ON_ERROR_SAMPLE_RATE ||
+          "0",
+      )
+    : 0,
   /**
    * The sample rate for session-long replays.
    * 1.0 will record all sessions and 0 will record none.
    */
-  replaysSessionSampleRate: isSentryFeatureReplayEnabled ? parseFloat(
-    process.env.NEXT_PUBLIC_SENTRY_CLIENT_REPLAYS_SESSION_SAMPLE_RATE || "0",
-  ) : 0,
+  replaysSessionSampleRate: isSentryFeatureReplayEnabled
+    ? parseFloat(
+        process.env.NEXT_PUBLIC_SENTRY_CLIENT_REPLAYS_SESSION_SAMPLE_RATE ||
+          "0",
+      )
+    : 0,
   integrations,
 });
