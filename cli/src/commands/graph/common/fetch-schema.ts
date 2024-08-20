@@ -1,7 +1,7 @@
 import { writeFile } from 'node:fs/promises';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { Command } from 'commander';
-import { join } from 'pathe';
+import { resolve } from 'pathe';
 import pc from 'picocolors';
 import { getBaseHeaders } from '../../../core/config.js';
 import { CommonGraphCommandOptions } from '../../../core/types/types.js';
@@ -35,7 +35,7 @@ export default (opts: CommonGraphCommandOptions) => {
     }
 
     if (options.out) {
-      await writeFile(join(process.cwd(), options.out), resp.sdl ?? '');
+      await writeFile(resolve(options.out), resp.sdl ?? '');
     } else {
       console.log(resp.sdl);
     }

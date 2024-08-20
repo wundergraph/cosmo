@@ -3,7 +3,7 @@ import { Command } from 'commander';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import Table from 'cli-table3';
-import { join } from 'pathe';
+import { resolve } from 'pathe';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
 import { getBaseHeaders } from '../../../../core/config.js';
 import program from '../../../index.js';
@@ -57,7 +57,7 @@ export default (opts: BaseCommandOptions) => {
             lastUpdatedAt: g.lastUpdatedAt,
           }) as OutputFile[number],
       );
-      await writeFile(join(process.cwd(), options.out), JSON.stringify(output));
+      await writeFile(resolve(options.out), JSON.stringify(output));
       process.exit(0);
     }
 
