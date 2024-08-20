@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
-import { createHash } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { buildRouterConfig, normalizeURL } from '@wundergraph/cosmo-shared';
 import { Command, program } from 'commander';
 import { parse, printSchema } from 'graphql';
@@ -139,7 +139,7 @@ export default (opts: BaseCommandOptions) => {
       }),
     });
 
-    routerConfig.version = createHash('sha1').update(routerConfig.toJsonString()).digest('hex');
+    routerConfig.version = randomUUID();
 
     if (config.feature_flags && config.feature_flags.length > 0) {
       const ffConfigs: FeatureFlagRouterExecutionConfigs = new FeatureFlagRouterExecutionConfigs();
@@ -251,9 +251,7 @@ export default (opts: BaseCommandOptions) => {
           engineConfig: routerConfig.engineConfig,
         });
 
-        ffConfigs.configByFeatureFlagName[ff.name].version = createHash('sha1')
-          .update(routerConfig.toJsonString())
-          .digest('hex');
+        ffConfigs.configByFeatureFlagName[ff.name].version = randomUUID();
       }
 
       routerConfig.featureFlagConfigs = ffConfigs;
