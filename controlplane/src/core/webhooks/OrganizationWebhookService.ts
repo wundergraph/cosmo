@@ -9,6 +9,7 @@ import * as schema from '../../db/schema.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { WebhookDeliveryInfo } from '../../db/models.js';
+import { webhookAxiosRetryCond } from '../util.js';
 import { makeWebhookRequest } from './utils.js';
 
 export interface FederatedGraphSchemaUpdate {
@@ -365,6 +366,7 @@ export class OrganizationWebhookService {
           return exponentialDelay(retryCount, error, 1000);
         },
         shouldResetTimeout: true,
+        retryCondition: webhookAxiosRetryCond,
         onRetry: (count) => {
           retryCount = count;
         },
