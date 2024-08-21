@@ -49,7 +49,7 @@ func TestPersistedOperationOverGET(t *testing.T) {
 			header.Add("graphql-client-name", "my-client")
 			res, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
 				OperationName: []byte(`Find`),
-				Variables:     []byte(`{"criteria":{"nationality":"GERMAN"}}`),
+				Variables:     []byte(`{"criteria":  {"nationality":  "GERMAN"   }}`),
 				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "e33580cf6276de9a75fb3b1c4b7580fec2a1c8facd13f3487bf6c7c3f854f7e3"}}`),
 				Header:        header,
 			})

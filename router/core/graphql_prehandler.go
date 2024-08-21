@@ -375,11 +375,17 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 	// Handle the case when operation information are provided as GET parameters
 	if req.Method == http.MethodGet {
 		if err := operationKit.UnmarshalOperationFromURL(req.URL); err != nil {
-			return nil, err
+			return nil, &httpGraphqlError{
+				message:    fmt.Sprintf("error parsing request query params: %s", err),
+				statusCode: http.StatusBadRequest,
+			}
 		}
 	} else if req.Method == http.MethodPost {
 		if err := operationKit.UnmarshalOperationFromBody(httpOperation.body); err != nil {
-			return nil, err
+			return nil, &httpGraphqlError{
+				message:    fmt.Sprintf("error parsing request body: %s", err),
+				statusCode: http.StatusBadRequest,
+			}
 		}
 		// If we have files, we need to set them on the parsed operation
 		if len(httpOperation.files) > 0 {

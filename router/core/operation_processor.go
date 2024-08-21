@@ -170,6 +170,7 @@ func (o *OperationKit) Free() {
 
 // UnmarshalOperationFromURL loads the operation from the URL and unmarshal it into the ParsedOperation
 // It follows the GraphQL over HTTP specification for GET requests https://graphql.github.io/graphql-over-http/draft/#sec-GET
+// We always compact the variables and extensions to ensure that we produce easy to parse JSON for the engine
 func (o *OperationKit) UnmarshalOperationFromURL(url *url.URL) error {
 
 	values := url.Query()
@@ -187,11 +188,21 @@ func (o *OperationKit) UnmarshalOperationFromURL(url *url.URL) error {
 	variables := values.Get("variables")
 	if variables != "" {
 		o.parsedOperation.Request.Variables = []byte(variables)
+		buf := bytes.NewBuffer(make([]byte, len(o.parsedOperation.Request.Variables))[:0])
+		err := json.Compact(buf, o.parsedOperation.Request.Variables)
+		if err != nil {
+			return err
+		}
 	}
 
 	extensions := values.Get("extensions")
 	if extensions != "" {
 		o.parsedOperation.Request.Extensions = []byte(extensions)
+		buf := bytes.NewBuffer(make([]byte, len(o.parsedOperation.Request.Extensions))[:0])
+		err := json.Compact(buf, o.parsedOperation.Request.Extensions)
+		if err != nil {
+			return err
+		}
 	}
 
 	return o.unmarshalOperation()
@@ -199,22 +210,17 @@ func (o *OperationKit) UnmarshalOperationFromURL(url *url.URL) error {
 
 // UnmarshalOperationFromBody loads the operation from the request body and unmarshal it into the ParsedOperation
 // This will load operationName, query, variables and extensions from the request body but extension and variables
-// will be unmarshalled as JSON.RawMessage
+// will be unmarshalled as JSON.RawMessage.
+// We always compact the variables and extensions to ensure that we produce easy to parse JSON for the engine
 func (o *OperationKit) UnmarshalOperationFromBody(data []byte) error {
 	buf := bytes.NewBuffer(make([]byte, len(data))[:0])
 	err := json.Compact(buf, data)
 	if err != nil {
-		return &httpGraphqlError{
-			message:    fmt.Sprintf("error parsing request body: %s", err),
-			statusCode: http.StatusBadRequest,
-		}
+		return err
 	}
 	err = json.Unmarshal(buf.Bytes(), &o.parsedOperation.Request)
 	if err != nil {
-		return &httpGraphqlError{
-			message:    fmt.Sprintf("error parsing request body: %s", err),
-			statusCode: http.StatusBadRequest,
-		}
+		return err
 	}
 
 	return o.unmarshalOperation()

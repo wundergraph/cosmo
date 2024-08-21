@@ -32,7 +32,7 @@ func TestOperationsOverGET(t *testing.T) {
 			res, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
 				OperationName: []byte(`Find`),
 				Query:         `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
-				Variables:     []byte(`{"criteria":{"nationality":"GERMAN"}}`),
+				Variables:     []byte(`{"criteria":{   "nationality":"GERMAN"}  }   `),
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, res.Response.StatusCode)
