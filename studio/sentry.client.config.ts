@@ -38,6 +38,8 @@ if (isSentryFeatureFeedbackFormEnabled) {
       isNameRequired:
         process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_IS_NAME_REQUIRED ===
         "true",
+      showName:
+        process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_SHOW_NAME === "true",
       showEmail:
         process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_SHOW_EMAIL === "true",
       enableScreenshot:
