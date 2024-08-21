@@ -3,7 +3,6 @@ package core
 import (
 	"context"
 	"errors"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -50,10 +49,7 @@ func TestOperationProcessorPersistentOperations(t *testing.T) {
 			require.NoError(t, err)
 			defer kit.Free()
 
-			data, err := parser.ReadReader(strings.NewReader(tc.Input))
-			require.NoError(t, err)
-
-			err = kit.UnmarshalOperationFromBody(data)
+			err = kit.UnmarshalOperationFromBody([]byte(tc.Input))
 			if err != nil {
 				require.NoError(t, err)
 			}
@@ -195,10 +191,7 @@ func TestOperationProcessor(t *testing.T) {
 			require.NoError(t, err)
 			defer kit.Free()
 
-			data, err := parser.ReadReader(strings.NewReader(tc.Input))
-			require.NoError(t, err)
-
-			err = kit.UnmarshalOperationFromBody(data)
+			err = kit.UnmarshalOperationFromBody([]byte(tc.Input))
 			if err != nil {
 				require.NoError(t, err)
 			}
@@ -269,10 +262,7 @@ func TestOperationProcessorUnmarshalExtensions(t *testing.T) {
 			require.NoError(t, err)
 			defer kit.Free()
 
-			data, err := parser.ReadReader(strings.NewReader(tc.Input))
-			require.NoError(t, err)
-
-			err = kit.UnmarshalOperationFromBody(data)
+			err = kit.UnmarshalOperationFromBody([]byte(tc.Input))
 
 			isInputError := errors.As(err, &inputError)
 			if tc.Valid {

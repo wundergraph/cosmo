@@ -18,7 +18,6 @@ import (
 	"github.com/tidwall/sjson"
 	"github.com/valyala/fastjson"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
-	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
@@ -169,6 +168,8 @@ func (o *OperationKit) Free() {
 	o.operationProcessor.freeKit(o.kit)
 }
 
+// UnmarshalOperationFromURL loads the operation from the URL and unmarshal it into the ParsedOperation
+// It follows the GraphQL over HTTP specification for GET requests https://graphql.github.io/graphql-over-http/draft/#sec-GET
 func (o *OperationKit) UnmarshalOperationFromURL(url *url.URL) error {
 
 	values := url.Query()
@@ -855,16 +856,6 @@ func (p *OperationProcessor) ReadBody(buf *bytes.Buffer, r io.Reader) ([]byte, e
 	}
 
 	return buf.Bytes(), nil
-}
-
-func (p *OperationProcessor) ReadReader(r io.Reader) ([]byte, error) {
-	buf := pool.GetBytesBuffer()
-	defer pool.PutBytesBuffer(buf)
-	data, err := p.ReadBody(buf, r)
-	if err != nil {
-		return nil, err
-	}
-	return data, nil
 }
 
 // NewKit creates a new OperationKit. The kit is used to parse, normalize and
