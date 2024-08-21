@@ -1242,14 +1242,17 @@ func (e *Environment) InitGraphQLWebSocketConnection(header http.Header, query u
 	return conn
 }
 
-func (e *Environment) GraphQLSubscriptionOverGetAndSSE(ctx context.Context, request GraphQLRequest, handler func(r *http.Request, data string)) {
-	req, err := e.newGraphQLRequestOverGET(e.GraphQLRequestURL(), request)
+func (e *Environment) GraphQLSubscriptionOverGetAndSSE(ctx context.Context, request GraphQLRequest, handler func(data string)) {
+	req, err := e.newGraphQLRequestOverGET(e.GraphQLServeSentEventsURL(), request)
 	if err != nil {
 		e.t.Fatalf("could not create request: %s", err)
 	}
-	q := req.URL.Query()
-	q.Add("wg_sse", "true")
-	req.URL.RawQuery = q.Encode()
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "text/event-stream")
+	req.Header.Set("Connection", "keep-alive")
+	req.Header.Set("Cache-Control", "no-cache")
+
 	resp, err := e.RouterClient.Do(req)
 	if err != nil {
 		e.t.Fatalf("could not make request: %s", err)
@@ -1282,7 +1285,7 @@ func (e *Environment) GraphQLSubscriptionOverGetAndSSE(ctx context.Context, requ
 			// SSE lines typically start with "event", "data", etc.
 			if strings.HasPrefix(line, "data: ") {
 				data := strings.TrimPrefix(line, "data: ")
-				handler(req, data)
+				handler(data)
 			}
 		}
 

@@ -93,7 +93,6 @@ func TestPersistedSubscriptionOverGET(t *testing.T) {
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			header := make(http.Header)
 			header.Add("graphql-client-name", "my-client")
-			header.Add("Content-Type", "text/event-stream")
 
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
@@ -104,7 +103,7 @@ func TestPersistedSubscriptionOverGET(t *testing.T) {
 			go xEnv.GraphQLSubscriptionOverGetAndSSE(ctx, testenv.GraphQLRequest{
 				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "a78014f326504cdcc3ed9c4440c989ca0ac7ef237f6379ea7fee0ffde5ea71cb"}}`),
 				Header:     header,
-			}, func(r *http.Request, data string) {
+			}, func(data string) {
 				defer wg.Done()
 
 				var payload currentTimePayload

@@ -46,11 +46,18 @@ func TestOperationProcessorPersistentOperations(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.Input, func(t *testing.T) {
-			kit, err := parser.NewKitFromReader(strings.NewReader(tc.Input))
+			kit, err := parser.NewKit()
 			require.NoError(t, err)
 			defer kit.Free()
 
-			err = kit.UnmarshalOperation()
+			data, err := parser.ReadReader(strings.NewReader(tc.Input))
+			require.NoError(t, err)
+
+			err = kit.UnmarshalOperationFromBody(data)
+			if err != nil {
+				require.NoError(t, err)
+			}
+
 			require.NoError(t, err)
 
 			_, err = kit.FetchPersistedOperation(context.Background(), clientInfo, nil)
@@ -184,11 +191,18 @@ func TestOperationProcessor(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.Input, func(t *testing.T) {
-			kit, err := parser.NewKitFromReader(strings.NewReader(tc.Input))
+			kit, err := parser.NewKit()
 			require.NoError(t, err)
 			defer kit.Free()
 
-			err = kit.UnmarshalOperation()
+			data, err := parser.ReadReader(strings.NewReader(tc.Input))
+			require.NoError(t, err)
+
+			err = kit.UnmarshalOperationFromBody(data)
+			if err != nil {
+				require.NoError(t, err)
+			}
+
 			require.NoError(t, err)
 
 			err = kit.Parse()
@@ -250,11 +264,15 @@ func TestOperationProcessorUnmarshalExtensions(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.Input, func(t *testing.T) {
-			kit, err := parser.NewKitFromReader(strings.NewReader(tc.Input))
+
+			kit, err := parser.NewKit()
 			require.NoError(t, err)
 			defer kit.Free()
 
-			err = kit.UnmarshalOperation()
+			data, err := parser.ReadReader(strings.NewReader(tc.Input))
+			require.NoError(t, err)
+
+			err = kit.UnmarshalOperationFromBody(data)
 
 			isInputError := errors.As(err, &inputError)
 			if tc.Valid {

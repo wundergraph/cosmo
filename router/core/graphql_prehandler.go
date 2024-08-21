@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/goccy/go-json"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
 	"io"
 	"net/http"
@@ -248,7 +247,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 					requestLogger.Error("failed to remove files after multipart request", zap.Error(err))
 				}
 			}()
-		} else {
+		} else if r.Method == http.MethodPost {
 			_, readOperationBodySpan := h.tracer.Start(r.Context(), "HTTP - Read Body",
 				trace.WithSpanKind(trace.SpanKindInternal),
 				trace.WithAttributes(commonAttributes...),
@@ -357,26 +356,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 }
 
 func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpOperation *httpOperation) (*operationContext, error) {
-
-	// Handle the case when operation information are provided as GET parameters
-	if req.Method == http.MethodGet {
-		q := req.URL.Query()
-		req := GraphQLRequest{
-			OperationName: q.Get("operationName"),
-			Query:         q.Get("query"),
-			Variables:     []byte(q.Get("variables")),
-			Extensions:    []byte(q.Get("extensions")),
-		}
-
-		d, err := json.Marshal(req)
-		if err != nil {
-			return nil, err
-		}
-
-		httpOperation.body = d
-	}
-
-	operationKit, err := h.operationProcessor.NewKit(httpOperation.body, httpOperation.files)
+	operationKit, err := h.operationProcessor.NewKit()
 	if err != nil {
 		return nil, err
 	}
@@ -392,8 +372,19 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 
 	}()
 
-	if err := operationKit.UnmarshalOperation(); err != nil {
-		return nil, err
+	// Handle the case when operation information are provided as GET parameters
+	if req.Method == http.MethodGet {
+		if err := operationKit.UnmarshalOperationFromURL(req.URL); err != nil {
+			return nil, err
+		}
+	} else if req.Method == http.MethodPost {
+		if err := operationKit.UnmarshalOperationFromBody(httpOperation.body); err != nil {
+			return nil, err
+		}
+		// If we have files, we need to set them on the parsed operation
+		if len(httpOperation.files) > 0 {
+			operationKit.parsedOperation.Files = httpOperation.files
+		}
 	}
 
 	var skipParse bool

@@ -78,7 +78,7 @@ func TestSubscriptionOverGET(t *testing.T) {
 			go xEnv.GraphQLSubscriptionOverGetAndSSE(ctx, testenv.GraphQLRequest{
 				OperationName: []byte(`CurrentTime`),
 				Query:         `subscription CurrentTime { currentTime { unixTime timeStamp }}`,
-			}, func(r *http.Request, data string) {
+			}, func(data string) {
 				defer wg.Done()
 
 				var payload currentTimePayload
