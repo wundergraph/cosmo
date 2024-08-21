@@ -27,21 +27,43 @@ if (isSentryFeatureReplayEnabled) {
 if (isSentryFeatureFeedbackFormEnabled) {
   integrations.push(
     feedbackIntegration({
-      id: "sentry-feedback-form",
+      colorScheme: "system",
+      themeLight: {
+        background: "hsl(var(--background))",
+        accentForeground: "hsl(var(--primary-foreground))",
+        accentBackground: "hsl(var(--primary))",
+        successColor: "hsl(var(--success))",
+        errorColor: "hsl(var(--destructive))",
+        boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.1)",
+        outline: "2px solid hsl(var(--primary))",
+      },
+      themeDark: {
+        background: "hsl(var(--background))",
+        accentForeground: "hsl(var(--primary-foreground))",
+        accentBackground: "hsl(var(--primary))",
+        successColor: "hsl(var(--success))",
+        errorColor: "hsl(var(--destructive))",
+        boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.5)",
+        outline: "2px solid hsl(var(--primary))",
+      },
       showBranding:
-        process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_SHOW_BRANDING === "true",
+        process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_SHOW_BRANDING === "true" ||
+        false,
       autoInject:
-        process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_AUTO_INJECT === "true",
+        process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_AUTO_INJECT === "true" ||
+        true,
       isEmailRequired:
         process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_IS_EMAIL_REQUIRED ===
-        "true",
+          "true" || true,
       isNameRequired:
         process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_IS_NAME_REQUIRED ===
-        "true",
+          "true" || false,
       showName:
-        process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_SHOW_NAME === "true",
+        process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_SHOW_NAME === "true" ||
+        false,
       showEmail:
-        process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_SHOW_EMAIL === "true",
+        process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_SHOW_EMAIL === "true" ||
+        true,
       enableScreenshot:
         process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_ENABLE_SCREENSHOT ===
         "true",
@@ -94,8 +116,6 @@ if (isSentryFeatureFeedbackFormEnabled) {
         process.env
           .NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_REMOVE_SCREENSHOT_BUTTON_LABEL ||
         "Remove a screenshot",
-      colorScheme:
-        process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_COLOR_SCHEME || "system",
     }),
   );
 }
@@ -148,3 +168,10 @@ init({
     : 0,
   integrations,
 });
+
+// beforeSend(event, hint) {
+//   if (event.exception && event.event_id) {
+//     showReportDialog({ eventId: event.event_id });
+//   }
+//   return event;
+// },
