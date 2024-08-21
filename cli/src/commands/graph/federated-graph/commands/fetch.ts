@@ -25,7 +25,7 @@ export default (opts: BaseCommandOptions) => {
     try {
       const fedGraphSDL = await getFederatedGraphSDL({ client: opts.client, name, namespace: options.namespace });
 
-      const basePath = resolve(options.out || '', `/${name}${options.namespace ? `-${options.namespace}` : ''}/`);
+      const basePath = resolve(options.out, `${name}${options.namespace ? `-${options.namespace}` : ''}`);
       const superGraphPath = join(basePath, '/supergraph/');
       const subgraphPath = join(basePath, '/subgraphs/');
       const scriptsPath = join(basePath, '/scripts/');
