@@ -9,6 +9,9 @@ export const options = {
   ],
 };
 
+
+// oha http://localhost:3002/graphql -n 100 -z 10s -H 'content-type: application/json' -d '{"query":"  query Bench {\n    employees {\n      details {\n        forename\n      }\n    }\n}","operationName":"Bench"}'
+
 export default function () {
   let query = `
   query Bench {

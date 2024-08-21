@@ -10,6 +10,8 @@ export const options = {
   ],
 };
 
+// oha http://localhost:3002/graphql?query%3Dquery%20Bench%20%7B%20%20%20%20employees%20%7B%20%20%20%20%20%20details%20%7B%20%20%20%20%20%20%20%20forename%20%20%20%20%7D%20%20%20%7D%26operationName%3DBench -n 100 -z 10s -H 'content-type: application/json'
+
 export default function () {
   let query = `
   query Bench {
