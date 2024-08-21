@@ -296,7 +296,7 @@ func (o *OperationKit) unmarshalOperation() error {
 }
 
 // FetchPersistedOperation fetches the persisted operation from the cache or the client. If the operation is fetched from the cache it returns true.
-// UnmarshalOperationFromBody must be called before calling this method.
+// UnmarshalOperationFromBody or UnmarshalOperationFromURL must be called before calling this method.
 func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *ClientInfo, commonTraceAttributes []attribute.KeyValue) (bool, error) {
 	if o.operationProcessor.persistedOperationClient == nil {
 		return false, &httpGraphqlError{
