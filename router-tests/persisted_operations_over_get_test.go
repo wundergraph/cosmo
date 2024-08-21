@@ -78,7 +78,7 @@ func TestPersistedOperationOverGET(t *testing.T) {
 func TestPersistedSubscriptionOverGET(t *testing.T) {
 	t.Parallel()
 
-	t.Run("subscription with header propagation sse subgraph get", func(t *testing.T) {
+	t.Run("subscription over sse subgraph", func(t *testing.T) {
 		t.Parallel()
 
 		type currentTimePayload struct {
