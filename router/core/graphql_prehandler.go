@@ -360,11 +360,12 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 
 	// Handle the case when operation information are provided as GET parameters
 	if req.Method == http.MethodGet {
+		q := req.URL.Query()
 		req := GraphQLRequest{
-			OperationName: req.URL.Query().Get("operationName"),
-			Query:         req.URL.Query().Get("query"),
-			Variables:     []byte(req.URL.Query().Get("variables")),
-			Extensions:    []byte(req.URL.Query().Get("extensions")),
+			OperationName: q.Get("operationName"),
+			Query:         q.Get("query"),
+			Variables:     []byte(q.Get("variables")),
+			Extensions:    []byte(q.Get("extensions")),
 		}
 
 		d, err := json.Marshal(req)
