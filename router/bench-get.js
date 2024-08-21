@@ -1,4 +1,5 @@
 import http from 'k6/http';
+import { URL } from 'https://jslib.k6.io/url/1.0.0/index.js';
 import { check } from 'k6';
 
 export const options = {
@@ -25,7 +26,12 @@ export default function () {
     'GraphQL-Client-Version': '0.0.1',
   };
 
-  let res = http.post('http://localhost:3002/graphql', JSON.stringify({ query: query, operationName: 'Bench' }), {
+  const url = new URL('http://localhost:3002/graphql');
+
+  url.searchParams.append('query', query);
+  url.searchParams.append('operationName', 'Bench');
+
+  let res = http.get(url.toString(), {
     headers: headers,
   });
   check(res, {

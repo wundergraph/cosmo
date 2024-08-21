@@ -432,9 +432,9 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 	// Give the buffer back to the pool as soon as we're done with it
 	h.releaseBodyReadBuffer(buf)
 
-	if req.Method == http.MethodGet && operationKit.parsedOperation.Type != "query" {
+	if req.Method == http.MethodGet && operationKit.parsedOperation.Type == "mutation" {
 		return nil, &httpGraphqlError{
-			message:    "Only operations of type Query can be sent over HTTP GET",
+			message:    "Mutations can only be sent over HTTP POST",
 			statusCode: http.StatusMethodNotAllowed,
 		}
 	}

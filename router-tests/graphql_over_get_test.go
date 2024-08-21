@@ -1,8 +1,12 @@
 package integration_test
 
 import (
+	"context"
+	"encoding/json"
 	"net/http"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -44,7 +48,48 @@ func TestOperationsOverGET(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusMethodNotAllowed, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"Only operations of type Query can be sent over HTTP GET"}],"data":null}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"Mutations can only be sent over HTTP POST"}],"data":null}`, res.Body)
+		})
+	})
+}
+
+func TestSubscriptionOverGET(t *testing.T) {
+	t.Parallel()
+
+	t.Run("subscription over sse", func(t *testing.T) {
+		t.Parallel()
+
+		type currentTimePayload struct {
+			Data struct {
+				CurrentTime struct {
+					UnixTime  float64 `json:"unixTime"`
+					Timestamp string  `json:"timestamp"`
+				} `json:"currentTime"`
+			} `json:"data"`
+		}
+
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+
+			var wg sync.WaitGroup
+			wg.Add(2)
+
+			go xEnv.GraphQLSubscriptionOverGetAndSSE(ctx, testenv.GraphQLRequest{
+				OperationName: []byte(`CurrentTime`),
+				Query:         `subscription CurrentTime { currentTime { unixTime timeStamp }}`,
+			}, func(r *http.Request, data string) {
+				defer wg.Done()
+
+				var payload currentTimePayload
+				err := json.Unmarshal([]byte(data), &payload)
+				require.NoError(t, err)
+
+				require.NotZero(t, payload.Data.CurrentTime.UnixTime)
+				require.NotEmpty(t, payload.Data.CurrentTime.Timestamp)
+			})
+
+			wg.Wait()
 		})
 	})
 }

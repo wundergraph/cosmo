@@ -1,6 +1,7 @@
 package testenv
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"crypto/tls"
@@ -971,7 +972,16 @@ func (e *Environment) MakeGraphQLRequestWithContext(ctx context.Context, request
 }
 
 func (e *Environment) MakeGraphQLRequestOverGET(request GraphQLRequest) (*TestResponse, error) {
-	req, err := http.NewRequestWithContext(e.Context, http.MethodGet, e.GraphQLRequestURL(), nil)
+	req, err := e.newGraphQLRequestOverGET(e.GraphQLRequestURL(), request)
+	if err != nil {
+		return nil, err
+	}
+
+	return e.makeGraphQLRequest(req)
+}
+
+func (e *Environment) newGraphQLRequestOverGET(baseURL string, request GraphQLRequest) (*http.Request, error) {
+	req, err := http.NewRequestWithContext(e.Context, http.MethodGet, baseURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -995,7 +1005,7 @@ func (e *Environment) MakeGraphQLRequestOverGET(request GraphQLRequest) (*TestRe
 	}
 	req.URL.RawQuery = q.Encode()
 
-	return e.makeGraphQLRequest(req)
+	return req, nil
 }
 
 func (e *Environment) makeGraphQLRequest(request *http.Request) (*TestResponse, error) {
@@ -1230,6 +1240,53 @@ func (e *Environment) InitGraphQLWebSocketConnection(header http.Header, query u
 	require.NoError(e.t, err)
 	require.Equal(e.t, "connection_ack", ack.Type)
 	return conn
+}
+
+func (e *Environment) GraphQLSubscriptionOverGetAndSSE(ctx context.Context, request GraphQLRequest, handler func(r *http.Request, data string)) {
+	req, err := e.newGraphQLRequestOverGET(e.GraphQLRequestURL(), request)
+	if err != nil {
+		e.t.Fatalf("could not create request: %s", err)
+	}
+	q := req.URL.Query()
+	q.Add("wg_sse", "true")
+	req.URL.RawQuery = q.Encode()
+	resp, err := e.RouterClient.Do(req)
+	if err != nil {
+		e.t.Fatalf("could not make request: %s", err)
+	}
+	defer resp.Body.Close()
+
+	// Check for the correct response status code
+	if resp.StatusCode != http.StatusOK {
+		e.t.Fatalf("expected status code 200, got %d", resp.StatusCode)
+	}
+
+	reader := bufio.NewReader(resp.Body)
+
+	// Process incoming events
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-e.Context.Done():
+			return
+		case <-req.Context().Done():
+			return
+		default:
+			line, err := reader.ReadString('\n')
+			if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, io.EOF) {
+				e.t.Fatalf("could not read line: %s", err)
+				return
+			}
+
+			// SSE lines typically start with "event", "data", etc.
+			if strings.HasPrefix(line, "data: ") {
+				data := strings.TrimPrefix(line, "data: ")
+				handler(req, data)
+			}
+		}
+
+	}
 }
 
 func (e *Environment) AbsintheWebsocketDialWithRetry(header http.Header) (*websocket.Conn, *http.Response, error) {
