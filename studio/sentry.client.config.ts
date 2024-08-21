@@ -7,6 +7,7 @@ import { init, replayIntegration, feedbackIntegration } from "@sentry/nextjs";
 const isSentryEnabled = process.env.NEXT_PUBLIC_SENTRY_ENABLED === "true";
 const isSentryFeatureReplayEnabled =
   isSentryEnabled && process.env.NEXT_PUBLIC_SENTRY_REPLAY_ENABLED === "true";
+
 const isSentryFeatureFeedbackFormEnabled =
   isSentryEnabled &&
   process.env.NEXT_PUBLIC_SENTRY_FEEBACK_FORM_ENABLED === "true";
@@ -27,30 +28,72 @@ if (isSentryFeatureFeedbackFormEnabled) {
   integrations.push(
     feedbackIntegration({
       id: "sentry-feedback-form",
-      showBranding: false,
-      autoInject: true,
-      isEmailRequired: true,
-      isNameRequired: true,
-      showEmail: true,
-      enableScreenshot: true,
-      triggerAriaLabel: "label-open",
-      cancelButtonLabel: "Back",
-      submitButtonLabel: "Send Message",
-      confirmButtonLabel: "Send Message",
+      showBranding:
+        process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_SHOW_BRANDING === "true",
+      autoInject:
+        process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_AUTO_INJECT === "true",
+      isEmailRequired:
+        process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_IS_EMAIL_REQUIRED ===
+        "true",
+      isNameRequired:
+        process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_IS_NAME_REQUIRED ===
+        "true",
+      showEmail:
+        process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_SHOW_EMAIL === "true",
+      enableScreenshot:
+        process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_ENABLE_SCREENSHOT ===
+        "true",
+      triggerAriaLabel:
+        process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_TRIGGER_ARIA_LABEL ||
+        "label-open",
+      cancelButtonLabel:
+        process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_CANCEL_BUTTON_LABEL ||
+        "Back",
+      submitButtonLabel:
+        process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_SUBMIT_BUTTON_LABEL ||
+        "Send Message",
+      confirmButtonLabel:
+        process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_CONFIRM_BUTTON_LABEL ||
+        "Send Message",
       successMessageText:
+        process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_SUCCESS_MESSAGE_TEXT ||
         "Your message has been sent. We’ll get back to you soon. For quicker responses, feel free to reach out to us on Discord!",
-      triggerLabel: "How can we help you?",
-      formTitle: "We're here to help!",
-      nameLabel: "Full Name",
-      namePlaceholder: "e.g., John Doe",
-      emailLabel: "Email Address",
-      emailPlaceholder: "e.g., john.doe@example.com",
-      messageLabel: "How Can We Help?",
-      messagePlaceholder: "Type your message here...",
-      isRequiredLabel: "required",
-      addScreenshotButtonLabel: "Capture Screenshot",
-      removeScreenshotButtonLabel: "remove a screenshot",
-      colorScheme: "system",
+      triggerLabel:
+        process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_TRIGGER_LABEL ||
+        "How can we help you?",
+      formTitle:
+        process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_TITLE ||
+        "We're here to help!",
+      nameLabel:
+        process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_NAME_LABEL || "Full Name",
+      namePlaceholder:
+        process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_NAME_PLACEHOLDER ||
+        "e.g., John Doe",
+      emailLabel:
+        process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_EMAIL_LABEL ||
+        "Email Address",
+      emailPlaceholder:
+        process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_EMAIL_PLACEHOLDER ||
+        "e.g., john.doe@example.com",
+      messageLabel:
+        process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_MESSAGE_LABEL ||
+        "How Can We Help?",
+      messagePlaceholder:
+        process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_MESSAGE_PLACEHOLDER ||
+        "Type your message here...",
+      isRequiredLabel:
+        process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_IS_REQUIRED_LABEL ||
+        "required",
+      addScreenshotButtonLabel:
+        process.env
+          .NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_ADD_SCREENSHOT_BUTTON_LABEL ||
+        "Capture Screenshot",
+      removeScreenshotButtonLabel:
+        process.env
+          .NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_REMOVE_SCREENSHOT_BUTTON_LABEL ||
+        "Remove a screenshot",
+      colorScheme:
+        process.env.NEXT_PUBLIC_SENTRY_FEEDBACK_FORM_COLOR_SCHEME || "system",
     }),
   );
 }
