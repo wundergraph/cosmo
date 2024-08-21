@@ -107,10 +107,12 @@ services:
     environment:
       CLICKHOUSE_ENDPOINT: 'clickhouse://${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-changeme}@clickhouse:9000/${CLICKHOUSE_DATABASE:-cosmo}?dial_timeout=15s&compress=lz4'
       OTEL_INGEST_JWT_SECRET: ${OTEL_INGEST_JWT_SECRET:-fkczyomvdprgvtmvkuhvprxuggkbgwld}
+      PROMETHEUS_LISTEN_ADDR: ${PROMETHEUS_LISTEN_ADDR:-127.0.0.1:8088}
+      PROMETHEUS_LEVEL: ${PROMETHEUS_LEVEL:-none}
     ports:
       - '4317:4317' # otlpgrpc
       - '4318:4318' # otlphttp
-      - '8888:8888' # prometheus metrics
+      - '8089:8088' # prometheus metrics
     restart: unless-stopped
     depends_on:
       - clickhouse

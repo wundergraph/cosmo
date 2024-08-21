@@ -10,7 +10,7 @@ describe('Router Configuration tests', () => {
       const { errors, normalizationResult } = normalizeSubgraphFromString(employees);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      const configurationDataMap = normalizationResult!.configurationDataByParentTypeName;
+      const configurationDataMap = normalizationResult!.configurationDataByTypeName;
       expect(configurationDataMap).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
@@ -145,7 +145,7 @@ describe('Router Configuration tests', () => {
       const { errors, normalizationResult } = normalizeSubgraphFromString(family);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      const configurationDataMap = normalizationResult!.configurationDataByParentTypeName;
+      const configurationDataMap = normalizationResult!.configurationDataByTypeName;
       expect(configurationDataMap).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
@@ -245,7 +245,7 @@ describe('Router Configuration tests', () => {
       const { errors, normalizationResult } = normalizeSubgraphFromString(hobbies);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      const configurationDataMap = normalizationResult!.configurationDataByParentTypeName;
+      const configurationDataMap = normalizationResult!.configurationDataByTypeName;
       expect(configurationDataMap).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
@@ -330,7 +330,7 @@ describe('Router Configuration tests', () => {
       const { errors, normalizationResult } = normalizeSubgraphFromString(products);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      const configurationDataMap = normalizationResult!.configurationDataByParentTypeName;
+      const configurationDataMap = normalizationResult!.configurationDataByTypeName;
       expect(configurationDataMap).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
@@ -420,11 +420,9 @@ describe('Router Configuration tests', () => {
       }
       
       type Object {
-        "invalid @provides like this (not on an entity response type) are ignored"
-        age: Int! @provides(fields: "name")
+        age: Int!
         entity: AnotherEntity @provides(fields: "field")
-        "invalid @requires like this (not on an entity parent) are ignored"
-        name: String! @requires(fields: "id")
+        name: String!
        }
        
       type AnotherEntity @key(fields: "id") {
@@ -446,7 +444,7 @@ describe('Router Configuration tests', () => {
       `);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      const configurationDataMap = normalizationResult!.configurationDataByParentTypeName;
+      const configurationDataMap = normalizationResult!.configurationDataByTypeName;
       expect(configurationDataMap).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
@@ -513,7 +511,7 @@ describe('Router Configuration tests', () => {
         }
       `);
       expect(errors).toBeUndefined();
-      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
+      expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -547,7 +545,7 @@ describe('Router Configuration tests', () => {
         }
       `);
       expect(errors).toBeUndefined();
-      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
+      expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Interface',
@@ -575,7 +573,7 @@ describe('Router Configuration tests', () => {
       }
     `);
       expect(errors).toBeUndefined();
-      const configurationData = normalizationResult!.configurationDataByParentTypeName;
+      const configurationData = normalizationResult!.configurationDataByTypeName;
       expect(configurationData).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
@@ -749,7 +747,7 @@ describe('Router Configuration tests', () => {
         createSubgraph('users', users),
       ]);
       expect(errors).toBeUndefined();
-      expect(internalSubgraphBySubgraphName.get('monolith')!.configurationDataByParentTypeName).toStrictEqual(
+      expect(internalSubgraphBySubgraphName.get('monolith')!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Query',
@@ -761,7 +759,7 @@ describe('Router Configuration tests', () => {
           ],
         ]),
       );
-      expect(internalSubgraphBySubgraphName.get('reviews')!.configurationDataByParentTypeName).toStrictEqual(
+      expect(internalSubgraphBySubgraphName.get('reviews')!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Query',
@@ -789,7 +787,7 @@ describe('Router Configuration tests', () => {
           ],
         ]),
       );
-      expect(internalSubgraphBySubgraphName.get('users')!.configurationDataByParentTypeName).toStrictEqual(
+      expect(internalSubgraphBySubgraphName.get('users')!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Query',

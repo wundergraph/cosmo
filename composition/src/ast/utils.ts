@@ -14,7 +14,7 @@ import {
   ObjectTypeDefinitionNode,
   ObjectTypeExtensionNode,
   OperationTypeNode,
-  parse,
+  parse as graphqlParse,
   ScalarTypeDefinitionNode,
   ScalarTypeExtensionNode,
   SchemaDefinitionNode,
@@ -47,7 +47,7 @@ import {
   SUBSCRIPTION,
   UNION_UPPER,
 } from '../utils/string-constants';
-import { duplicateInterfaceError, unexpectedKindFatalError } from '../errors/errors';
+import { duplicateInterfaceError } from '../errors/errors';
 import { ObjectLikeTypeNode } from '../schema-building/ast';
 
 export function isObjectLikeNodeEntity(node: ObjectLikeTypeNode): boolean {
@@ -234,44 +234,6 @@ export function extractExecutableDirectiveLocations(
   return set;
 }
 
-export function addConcreteTypesForImplementedInterfaces(
-  node: ObjectTypeDefinitionNode | ObjectTypeExtensionNode | InterfaceTypeDefinitionNode,
-  abstractToConcreteTypeNames: Map<string, Set<string>>,
-) {
-  if (!node.interfaces || node.interfaces.length < 1) {
-    return;
-  }
-  const concreteTypeName = node.name.value;
-  for (const iFace of node.interfaces) {
-    const interfaceName = iFace.name.value;
-    const concreteTypes = abstractToConcreteTypeNames.get(interfaceName);
-    if (concreteTypes) {
-      concreteTypes.add(concreteTypeName);
-    } else {
-      abstractToConcreteTypeNames.set(interfaceName, new Set<string>([concreteTypeName]));
-    }
-  }
-}
-
-export function addConcreteTypesForUnion(
-  node: UnionTypeDefinitionNode | UnionTypeExtensionNode,
-  abstractToConcreteTypeNames: Map<string, Set<string>>,
-) {
-  if (!node.types || node.types.length < 1) {
-    return;
-  }
-  const unionName = node.name.value;
-  for (const member of node.types) {
-    const memberName = member.name.value;
-    const concreteTypes = abstractToConcreteTypeNames.get(unionName);
-    if (concreteTypes) {
-      concreteTypes.add(memberName);
-    } else {
-      abstractToConcreteTypeNames.set(unionName, new Set<string>([memberName]));
-    }
-  }
-}
-
 export function formatDescription(description?: StringValueNode): StringValueNode | undefined {
   if (!description) {
     return description;
@@ -330,9 +292,13 @@ type ParseResult = {
   error?: Error;
 };
 
+export function parse(source: string): DocumentNode {
+  return graphqlParse(source, { noLocation: true });
+}
+
 export function safeParse(value: string): ParseResult {
   try {
-    const parsedValue = parse(value, { noLocation: true });
+    const parsedValue = parse(value);
     return { documentNode: parsedValue };
   } catch (e) {
     return { error: e as Error };

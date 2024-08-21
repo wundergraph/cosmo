@@ -7,13 +7,13 @@
   },
   "Telemetry": {
     "ServiceName": "cosmo-router",
-    "Attributes": [],
-    "ResourceAttributes": [],
+    "Attributes": null,
+    "ResourceAttributes": null,
     "Tracing": {
       "Enabled": true,
       "SamplingRate": 1,
       "ParentBasedSampler": true,
-      "Exporters": [],
+      "Exporters": null,
       "Propagation": {
         "TraceContext": true,
         "Jaeger": false,
@@ -27,7 +27,7 @@
       "OTLP": {
         "Enabled": true,
         "RouterRuntime": true,
-        "Exporters": []
+        "Exporters": null
       },
       "Prometheus": {
         "Enabled": true,
@@ -43,6 +43,7 @@
     "CollectorEndpoint": "https://cosmo-metrics.wundergraph.com"
   },
   "CORS": {
+    "Enabled": true,
     "AllowOrigins": [
       "*"
     ],
@@ -116,6 +117,7 @@
   "ControlplaneURL": "https://cosmo-cp.wundergraph.com",
   "PlaygroundEnabled": true,
   "IntrospectionEnabled": true,
+  "QueryPlansEnabled": true,
   "LogLevel": "info",
   "JSONLog": true,
   "ShutdownDelay": 60000000000,
@@ -163,10 +165,10 @@
   "RouterConfigPath": "",
   "RouterRegistration": true,
   "OverrideRoutingURL": {
-    "Subgraphs": {}
+    "Subgraphs": null
   },
   "Overrides": {
-    "Subgraphs": {}
+    "Subgraphs": null
   },
   "SecurityConfiguration": {
     "BlockMutations": false,
@@ -187,7 +189,9 @@
       "ReportMemoryUsage": false,
       "EnableResolverDebugging": false,
       "EnablePersistedOperationsCacheResponseHeader": false,
-      "EnableNormalizationCacheResponseHeader": false
+      "EnableNormalizationCacheResponseHeader": false,
+      "AlwaysIncludeQueryPlan": false,
+      "AlwaysSkipLoader": false
     },
     "EnableSingleFlight": true,
     "EnableRequestTracing": true,
@@ -198,10 +202,13 @@
     "EpollKqueueConnBufferSize": 128,
     "WebSocketReadTimeout": 5000000000,
     "ExecutionPlanCacheSize": 1024,
-    "MinifySubgraphOperations": false,
+    "MinifySubgraphOperations": true,
     "EnablePersistedOperationsCache": true,
     "EnableNormalizationCache": true,
-    "NormalizationCacheSize": 1024
+    "NormalizationCacheSize": 1024,
+    "ParseKitPoolSize": 16,
+    "EnableValidationCache": true,
+    "ValidationCacheSize": 1024
   },
   "WebSocket": {
     "Enabled": true,
@@ -221,7 +228,17 @@
         "Authorization"
       ]
     },
-    "ForwardInitialPayload": true
+    "ForwardInitialPayload": true,
+    "Authentication": {
+      "FromInitialPayload": {
+        "Enabled": false,
+        "Key": "Authorization",
+        "ExportToken": {
+          "Enabled": true,
+          "HeaderKey": "Authorization"
+        }
+      }
+    }
   },
   "SubgraphErrorPropagation": {
     "Enabled": false,
@@ -230,5 +247,28 @@
     "RewritePaths": true,
     "OmitLocations": true,
     "OmitExtensions": false
+  },
+  "StorageProviders": {
+    "S3": null,
+    "CDN": null
+  },
+  "ExecutionConfig": {
+    "File": {
+      "Path": "",
+      "Watch": false
+    },
+    "Storage": {
+      "ProviderID": "",
+      "ObjectPath": ""
+    }
+  },
+  "PersistedOperationsConfig": {
+    "Cache": {
+      "Size": 100000000
+    },
+    "Storage": {
+      "ProviderID": "",
+      "ObjectPrefix": ""
+    }
   }
 }

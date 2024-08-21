@@ -6,10 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"io"
 	"net/http"
 	"strings"
+
+	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 
 	"go.opentelemetry.io/otel/attribute"
 
@@ -158,10 +159,11 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Request: resolve.Request{
 			Header: r.Header,
 		},
-		RenameTypeNames: h.executor.RenameTypeNames,
-		TracingOptions:  operationCtx.traceOptions,
-		InitialPayload:  operationCtx.initialPayload,
-		Extensions:      operationCtx.extensions,
+		RenameTypeNames:  h.executor.RenameTypeNames,
+		TracingOptions:   operationCtx.traceOptions,
+		InitialPayload:   operationCtx.initialPayload,
+		Extensions:       operationCtx.extensions,
+		ExecutionOptions: operationCtx.executionOptions,
 	}
 
 	ctx = ctx.WithContext(executionContext)
@@ -342,15 +344,13 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 		}
 	}
 	if ctx.TracingOptions.Enable && ctx.TracingOptions.IncludeTraceOutputInResponseExtensions {
-		traceNode := resolve.GetTrace(ctx.Context(), res.FetchTree)
-		if traceNode != nil {
-			if response.Extensions == nil {
-				response.Extensions = &Extensions{}
-			}
-			response.Extensions.Trace, err = json.Marshal(traceNode)
-			if err != nil {
-				requestLogger.Error("unable to marshal trace node", zap.Error(err))
-			}
+		traceNode := resolve.GetTrace(ctx.Context(), res.Fetches)
+		if response.Extensions == nil {
+			response.Extensions = &Extensions{}
+		}
+		response.Extensions.Trace, err = json.Marshal(traceNode)
+		if err != nil {
+			requestLogger.Error("unable to marshal trace node", zap.Error(err))
 		}
 	}
 	err = json.NewEncoder(w).Encode(response)

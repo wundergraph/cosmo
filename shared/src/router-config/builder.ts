@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
-import { ConfigurationData, FieldConfiguration, ROOT_TYPES } from '@wundergraph/composition';
+import { ConfigurationData, FieldConfiguration, ROOT_TYPE_NAMES } from '@wundergraph/composition';
 import { GraphQLSchema, lexicographicSortSchema } from 'graphql';
 import {
   GraphQLSubscriptionProtocol,
@@ -20,7 +20,7 @@ import {
   RouterConfig,
   TypeField,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { configurationDataMapToDataSourceConfiguration, generateFieldConfigurations } from './graphql-configuration.js';
+import { configurationDatasToDataSourceConfiguration, generateFieldConfigurations } from './graphql-configuration.js';
 import { normalizationFailureError } from './errors.js';
 
 export interface Input {
@@ -51,7 +51,7 @@ export interface ComposedSubgraph {
   subscriptionProtocol: SubscriptionProtocol;
   websocketSubprotocol?: WebsocketSubprotocol;
   // The intermediate representation of the engine configuration for the subgraph
-  configurationDataMap?: Map<string, ConfigurationData>;
+  configurationDataByTypeName?: Map<string, ConfigurationData>;
   // The normalized GraphQL schema for the subgraph
   schema?: GraphQLSchema;
 }
@@ -105,8 +105,8 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
   });
 
   for (const subgraph of input.subgraphs) {
-    if (!subgraph.configurationDataMap) {
-      throw normalizationFailureError('ConfigurationDataMap');
+    if (!subgraph.configurationDataByTypeName) {
+      throw normalizationFailureError('ConfigurationDataByTypeName');
     }
     if (!subgraph.schema) {
       throw normalizationFailureError('GraphQLSchema');
@@ -118,7 +118,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       printSchemaWithDirectives(lexicographicSortSchema(subgraph.schema)),
     );
     const { childNodes, entityInterfaces, events, interfaceObjects, keys, provides, requires, rootNodes } =
-      configurationDataMapToDataSourceConfiguration(subgraph.configurationDataMap);
+      configurationDatasToDataSourceConfiguration(subgraph.configurationDataByTypeName);
     const subscriptionProtocol = parseGraphQLSubscriptionProtocol(subgraph.subscriptionProtocol || 'ws');
     const websocketSubprotocol = parseGraphQLWebsocketSubprotocol(subgraph.websocketSubprotocol || 'auto');
     let kind: DataSourceKind;
@@ -136,7 +136,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       // Query/Mutation/Subscription. Filter rootNodes in place
       // while moving items that do not pass the filter to childNodes.
       const isRootTypeNode = (node: TypeField) => {
-        return ROOT_TYPES.has(node.typeName);
+        return ROOT_TYPE_NAMES.has(node.typeName);
       };
       let ii = 0;
       let filtered = 0;

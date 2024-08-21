@@ -3,6 +3,7 @@ import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications
 import pino from 'pino';
 import axios, { AxiosError, AxiosInstance } from 'axios';
 import axiosRetry, { exponentialDelay } from 'axios-retry';
+import { webhookAxiosRetryCond } from '../util.js';
 import { makeWebhookRequest } from './utils.js';
 
 interface User {
@@ -49,9 +50,10 @@ export class PlatformWebhookService implements IPlatformWebhookService {
       timeout: 10_000,
     });
     axiosRetry(this.httpClient, {
-      retries: 5,
-      retryDelay: (retryCount) => {
-        return exponentialDelay(retryCount);
+      retries: 6,
+      retryCondition: webhookAxiosRetryCond,
+      retryDelay: (retryCount, error) => {
+        return exponentialDelay(retryCount, error, 1000);
       },
       shouldResetTimeout: true,
     });

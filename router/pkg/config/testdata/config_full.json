@@ -7,8 +7,8 @@
   },
   "Telemetry": {
     "ServiceName": "cosmo-router",
-    "Attributes": [],
-    "ResourceAttributes": [],
+    "Attributes": null,
+    "ResourceAttributes": null,
     "Tracing": {
       "Enabled": true,
       "SamplingRate": 1,
@@ -19,7 +19,7 @@
           "Exporter": "http",
           "Endpoint": "https://my-otel-collector.example.com",
           "HTTPPath": "/v1/traces",
-          "Headers": null,
+          "Headers": {},
           "BatchTimeout": 10000000000,
           "ExportTimeout": 30000000000
         }
@@ -61,6 +61,7 @@
     "CollectorEndpoint": "https://cosmo-metrics.wundergraph.com"
   },
   "CORS": {
+    "Enabled": true,
     "AllowOrigins": [
       "*"
     ],
@@ -172,6 +173,7 @@
   "ControlplaneURL": "https://cosmo-cp.wundergraph.com",
   "PlaygroundEnabled": true,
   "IntrospectionEnabled": true,
+  "QueryPlansEnabled": true,
   "LogLevel": "info",
   "JSONLog": true,
   "ShutdownDelay": 15000000000,
@@ -263,7 +265,7 @@
       ]
     }
   },
-  "RouterConfigPath": "",
+  "RouterConfigPath": "latest.json",
   "RouterRegistration": true,
   "OverrideRoutingURL": {
     "Subgraphs": {
@@ -299,7 +301,9 @@
       "ReportMemoryUsage": false,
       "EnableResolverDebugging": false,
       "EnablePersistedOperationsCacheResponseHeader": false,
-      "EnableNormalizationCacheResponseHeader": false
+      "EnableNormalizationCacheResponseHeader": false,
+      "AlwaysIncludeQueryPlan": false,
+      "AlwaysSkipLoader": false
     },
     "EnableSingleFlight": true,
     "EnableRequestTracing": true,
@@ -310,10 +314,13 @@
     "EpollKqueueConnBufferSize": 128,
     "WebSocketReadTimeout": 5000000000,
     "ExecutionPlanCacheSize": 1024,
-    "MinifySubgraphOperations": false,
+    "MinifySubgraphOperations": true,
     "EnablePersistedOperationsCache": true,
     "EnableNormalizationCache": true,
-    "NormalizationCacheSize": 1024
+    "NormalizationCacheSize": 1024,
+    "ParseKitPoolSize": 16,
+    "EnableValidationCache": true,
+    "ValidationCacheSize": 1024
   },
   "WebSocket": {
     "Enabled": true,
@@ -333,7 +340,17 @@
         "Authorization"
       ]
     },
-    "ForwardInitialPayload": true
+    "ForwardInitialPayload": true,
+    "Authentication": {
+      "FromInitialPayload": {
+        "Enabled": true,
+        "Key": "Authorization",
+        "ExportToken": {
+          "Enabled": true,
+          "HeaderKey": "Authorization"
+        }
+      }
+    }
   },
   "SubgraphErrorPropagation": {
     "Enabled": false,
@@ -342,5 +359,38 @@
     "RewritePaths": true,
     "OmitLocations": true,
     "OmitExtensions": false
+  },
+  "StorageProviders": {
+    "S3": [
+      {
+        "ID": "s3",
+        "Endpoint": "localhost:10000",
+        "AccessKey": "Pj6opX3288YukriGCzIr",
+        "SecretKey": "WNMg9X4fzMva18henO6XLX4qRHEArwYdT7Yt84w9",
+        "Bucket": "cosmo",
+        "Region": "us-east-1",
+        "Secure": false
+      }
+    ],
+    "CDN": null
+  },
+  "ExecutionConfig": {
+    "File": {
+      "Path": "",
+      "Watch": false
+    },
+    "Storage": {
+      "ProviderID": "s3",
+      "ObjectPath": "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/routerconfigs/latest.json"
+    }
+  },
+  "PersistedOperationsConfig": {
+    "Cache": {
+      "Size": 100000000
+    },
+    "Storage": {
+      "ProviderID": "s3",
+      "ObjectPrefix": "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/operations/foo"
+    }
   }
 }

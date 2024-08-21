@@ -3,7 +3,9 @@ package core
 import (
 	stdContext "context"
 	"fmt"
+	"math"
 	"net/http"
+	"sort"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -39,7 +41,8 @@ type ModuleID string
 
 type ModuleInfo struct {
 	// Name is the name of the module
-	ID ModuleID
+	ID       ModuleID
+	Priority int
 	// New is the function that creates a new instance of the module
 	New func() Module
 }
@@ -65,6 +68,27 @@ func RegisterModule(instance Module) {
 		panic(fmt.Sprintf("module already registered: %s", mod.ID))
 	}
 	modules[string(mod.ID)] = mod
+}
+
+// sortModules sorts the modules by priority
+func sortModules(modules []ModuleInfo) []ModuleInfo {
+	sort.Slice(modules, func(x, y int) bool {
+		priorityX := modules[x].Priority
+		priorityY := modules[y].Priority
+		leastPriority := math.MaxInt
+
+		// If priority is 0, treat it as the lowest possible value
+		if priorityX == 0 {
+			priorityX = leastPriority
+		}
+		if priorityY == 0 {
+			priorityY = leastPriority
+		}
+
+		return priorityX < priorityY
+	})
+
+	return modules
 }
 
 // Module Interfaces

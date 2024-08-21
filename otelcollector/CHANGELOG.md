@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.17.0](https://github.com/wundergraph/cosmo/compare/otelcollector@0.16.0...otelcollector@0.17.0) (2024-08-01)
+
+### Features
+
+* **otelcollector:** enable prometheus support for otelcollector and export it ([#984](https://github.com/wundergraph/cosmo/issues/984)) ([786391f](https://github.com/wundergraph/cosmo/commit/786391fc48def4648558042ef2cb05c99b010a7e)) (@AndreasZeissner)
+
 # [0.16.0](https://github.com/wundergraph/cosmo/compare/otelcollector@0.15.0...otelcollector@0.16.0) (2024-07-03)
 
 ### Features

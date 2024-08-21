@@ -13,16 +13,23 @@ import (
 	"sync"
 	"time"
 
-	"github.com/wundergraph/cosmo/router/internal/cdn"
-	"github.com/wundergraph/cosmo/router/internal/docker"
-	"github.com/wundergraph/cosmo/router/internal/graphiql"
-	"go.uber.org/atomic"
-	brotli "go.withmatt.com/connect-brotli"
+	"connectrpc.com/connect"
+	"github.com/wundergraph/cosmo/router/pkg/watcher"
+
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/cdn"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/s3"
+	"github.com/wundergraph/cosmo/router/pkg/execution_config"
+	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
+	configCDNProvider "github.com/wundergraph/cosmo/router/pkg/routerconfig/cdn"
+	configs3Provider "github.com/wundergraph/cosmo/router/pkg/routerconfig/s3"
 
 	"github.com/nats-io/nuid"
 	"github.com/redis/go-redis/v9"
+	"github.com/wundergraph/cosmo/router/internal/docker"
+	"github.com/wundergraph/cosmo/router/internal/graphiql"
+	"go.uber.org/atomic"
 
-	"connectrpc.com/connect"
 	"github.com/mitchellh/mapstructure"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -110,56 +117,72 @@ type (
 		ClientAuth *TlsClientAuthConfig
 	}
 
+	RouterConfigPollerConfig struct {
+		config.ExecutionConfig
+		PollInterval time.Duration
+		GraphSignKey string
+	}
+
+	ExecutionConfig struct {
+		Watch bool
+		Path  string
+	}
+
 	// Config defines the configuration options for the Router.
 	Config struct {
-		clusterName              string
-		instanceID               string
-		logger                   *zap.Logger
-		traceConfig              *rtrace.Config
-		metricConfig             *rmetric.Config
-		tracerProvider           *sdktrace.TracerProvider
-		otlpMeterProvider        *sdkmetric.MeterProvider
-		promMeterProvider        *sdkmetric.MeterProvider
-		gqlMetricsExporter       graphqlmetrics.SchemaUsageExporter
-		corsOptions              *cors.Config
-		setConfigVersionHeader   bool
-		routerGracePeriod        time.Duration
-		staticRouterConfig       *nodev1.RouterConfig
-		awsLambda                bool
-		shutdown                 atomic.Bool
-		bootstrapped             bool
-		ipAnonymization          *IPAnonymizationConfig
-		listenAddr               string
-		baseURL                  string
-		graphqlWebURL            string
-		playgroundPath           string
-		graphqlPath              string
-		playground               bool
-		introspection            bool
-		graphApiToken            string
-		healthCheckPath          string
-		readinessCheckPath       string
-		livenessCheckPath        string
-		cdnConfig                config.CDNConfiguration
-		cdnOperationClient       *cdn.PersistedOperationsClient
-		eventsConfig             config.EventsConfiguration
-		prometheusServer         *http.Server
-		modulesConfig            map[string]interface{}
-		routerMiddlewares        []func(http.Handler) http.Handler
-		preOriginHandlers        []TransportPreHandler
-		postOriginHandlers       []TransportPostHandler
-		headerRuleEngine         *HeaderRuleEngine
-		headerRules              config.HeaderRules
-		subgraphTransportOptions *SubgraphTransportOptions
-		graphqlMetricsConfig     *GraphQLMetricsConfig
-		routerTrafficConfig      *config.RouterTrafficConfiguration
-		fileUploadConfig         *config.FileUpload
-		accessController         *AccessController
-		retryOptions             retrytransport.RetryOptions
-		redisClient              *redis.Client
-		processStartTime         time.Time
-		developmentMode          bool
-		healthcheck              health.Checker
+		clusterName               string
+		instanceID                string
+		logger                    *zap.Logger
+		traceConfig               *rtrace.Config
+		metricConfig              *rmetric.Config
+		tracerProvider            *sdktrace.TracerProvider
+		otlpMeterProvider         *sdkmetric.MeterProvider
+		promMeterProvider         *sdkmetric.MeterProvider
+		gqlMetricsExporter        *graphqlmetrics.Exporter
+		corsOptions               *cors.Config
+		setConfigVersionHeader    bool
+		routerGracePeriod         time.Duration
+		staticExecutionConfig     *nodev1.RouterConfig
+		awsLambda                 bool
+		shutdown                  atomic.Bool
+		bootstrapped              bool
+		ipAnonymization           *IPAnonymizationConfig
+		listenAddr                string
+		baseURL                   string
+		graphqlWebURL             string
+		playgroundPath            string
+		graphqlPath               string
+		playground                bool
+		introspection             bool
+		queryPlansEnabled         bool
+		graphApiToken             string
+		healthCheckPath           string
+		readinessCheckPath        string
+		livenessCheckPath         string
+		routerConfigPollerConfig  *RouterConfigPollerConfig
+		cdnConfig                 config.CDNConfiguration
+		persistedOperationClient  persistedoperation.Client
+		persistedOperationsConfig config.PersistedOperationsConfig
+		storageProviders          config.StorageProviders
+		eventsConfig              config.EventsConfiguration
+		prometheusServer          *http.Server
+		modulesConfig             map[string]interface{}
+		executionConfig           *ExecutionConfig
+		routerMiddlewares         []func(http.Handler) http.Handler
+		preOriginHandlers         []TransportPreHandler
+		postOriginHandlers        []TransportPostHandler
+		headerRuleEngine          *HeaderRuleEngine
+		headerRules               config.HeaderRules
+		subgraphTransportOptions  *SubgraphTransportOptions
+		graphqlMetricsConfig      *GraphQLMetricsConfig
+		routerTrafficConfig       *config.RouterTrafficConfiguration
+		fileUploadConfig          *config.FileUpload
+		accessController          *AccessController
+		retryOptions              retrytransport.RetryOptions
+		redisClient               *redis.Client
+		processStartTime          time.Time
+		developmentMode           bool
+		healthcheck               health.Checker
 		// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
 		localhostFallbackInsideDocker bool
 
@@ -173,6 +196,8 @@ type (
 		registrationInfo *nodev1.RegistrationInfo
 
 		securityConfiguration config.SecurityConfiguration
+
+		customModules []Module
 
 		engineExecutionConfiguration config.EngineExecutionConfiguration
 		// should be removed once the users have migrated to the new overrides config
@@ -259,9 +284,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 	if r.fileUploadConfig == nil {
 		r.fileUploadConfig = DefaultFileUploadConfig()
 	}
-	if r.accessController == nil {
-		r.accessController = DefaultAccessController()
-	} else {
+	if r.accessController != nil {
 		if len(r.accessController.authenticators) == 0 && r.accessController.authenticationRequired {
 			r.logger.Warn("authentication is required but no authenticators are configured")
 		}
@@ -310,6 +333,8 @@ func NewRouter(opts ...Option) (*Router, error) {
 		// Required for WunderGraph ART
 		"x-wg-trace",
 		"x-wg-token",
+		"x-wg-skip-loader",
+		"x-wg-include-query-plan",
 		// Required for Trace Context propagation
 		"traceparent",
 		"tracestate",
@@ -430,7 +455,9 @@ func NewRouter(opts ...Option) (*Router, error) {
 			}
 		}
 
-		r.logger.Warn("No graph token provided. The following features are disabled. Not recommended for Production.", zap.Strings("features", disabledFeatures))
+		r.logger.Warn("No graph token provided. The following Cosmo Cloud features are disabled. Not recommended for Production.",
+			zap.Strings("features", disabledFeatures),
+		)
 	}
 
 	if r.developmentMode {
@@ -455,9 +482,6 @@ func NewRouter(opts ...Option) (*Router, error) {
 
 // newGraphServer creates a new server.
 func (r *Router) newServer(ctx context.Context, cfg *nodev1.RouterConfig) error {
-
-	start := time.Now()
-
 	server, err := newGraphServer(ctx, r, cfg)
 	if err != nil {
 		r.logger.Error("Failed to create graph server. Keeping the old server", zap.Error(err))
@@ -465,12 +489,6 @@ func (r *Router) newServer(ctx context.Context, cfg *nodev1.RouterConfig) error 
 	}
 
 	r.httpServer.SwapGraphServer(ctx, server)
-
-	r.logger.Debug(
-		"New graph server swapped",
-		zap.String("duration", time.Since(start).String()),
-		zap.String("config_version", cfg.GetVersion()),
-	)
 
 	return nil
 }
@@ -500,7 +518,20 @@ func (r *Router) listenAndServe(cfg *nodev1.RouterConfig) error {
 }
 
 func (r *Router) initModules(ctx context.Context) error {
-	for _, moduleInfo := range modules {
+
+	moduleList := make([]ModuleInfo, 0, len(modules)+len(r.customModules))
+
+	for _, module := range modules {
+		moduleList = append(moduleList, module)
+	}
+
+	for _, module := range r.customModules {
+		moduleList = append(moduleList, module.Module())
+	}
+
+	moduleList = sortModules(moduleList)
+
+	for _, moduleInfo := range moduleList {
 		now := time.Now()
 
 		moduleInstance := moduleInfo.New()
@@ -562,7 +593,7 @@ func (r *Router) BaseURL() string {
 
 // NewServer prepares a new server instance but does not start it. The method should only be used when you want to bootstrap
 // the server manually otherwise you can use Router.Start(). You're responsible for setting health checks status to ready with Server.HealthChecks().
-// The server can be shutdown with Router.Shutdown(). Use core.WithStaticRouterConfig to pass the initial config otherwise the Router will
+// The server can be shutdown with Router.Shutdown(). Use core.WithExecutionConfig to pass the initial config otherwise the Router will
 // try to fetch the config from the control plane. You can swap the router config by using Router.newGraphServer().
 func (r *Router) NewServer(ctx context.Context) (Server, error) {
 	if r.shutdown.Load() {
@@ -583,22 +614,22 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 	})
 
 	// Start the server with the static config without polling
-	if r.staticRouterConfig != nil {
-		r.logger.Info("Static router config provided. Polling is disabled. Updating router config is only possible by providing a config.")
-		return r.httpServer, r.newServer(ctx, r.staticRouterConfig)
+	if r.staticExecutionConfig != nil {
+		r.logger.Info("Static execution config provided. Polling is disabled. Updating execution config is only possible by providing a config.")
+		return r.httpServer, r.newServer(ctx, r.staticExecutionConfig)
 	}
 
 	// when no static config is provided and no poller is configured, we can't start the server
 	if r.configPoller == nil {
-		return nil, fmt.Errorf("config fetcher not provided. Please provide a static router config instead")
+		return nil, fmt.Errorf("config fetcher not provided. Please provide a static execution config instead")
 	}
 
-	routerConfig, err := r.configPoller.GetRouterConfig(ctx)
+	cfg, err := r.configPoller.GetRouterConfig(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get initial router config: %w", err)
+		return nil, fmt.Errorf("failed to get initial execution config: %w", err)
 	}
 
-	if err := r.newServer(ctx, routerConfig); err != nil {
+	if err := r.newServer(ctx, cfg.Config); err != nil {
 		r.logger.Error("Failed to start server with initial config", zap.Error(err))
 		return nil, err
 	}
@@ -686,27 +717,11 @@ func (r *Router) bootstrap(ctx context.Context) error {
 
 	}
 
-	if r.graphApiToken != "" {
-		cdnPersistentOpClient, err := cdn.NewPersistentOperationClient(r.cdnConfig.URL, r.graphApiToken, cdn.PersistentOperationsOptions{
-			CacheSize:     r.cdnConfig.CacheSize.Uint64(),
-			Logger:        r.logger,
-			TraceProvider: r.tracerProvider,
-		})
-		if err != nil {
-			return err
-		}
-		r.cdnOperationClient = cdnPersistentOpClient
-	}
-
-	r.gqlMetricsExporter = graphqlmetrics.NewNoopExporter()
-
 	if r.graphqlMetricsConfig.Enabled {
 		client := graphqlmetricsv1connect.NewGraphQLMetricsServiceClient(
 			http.DefaultClient,
 			r.graphqlMetricsConfig.CollectorEndpoint,
-			brotli.WithCompression(),
-			// Compress requests with Brotli.
-			connect.WithSendCompression(brotli.Name),
+			connect.WithSendGzip(),
 		)
 		ge, err := graphqlmetrics.NewExporter(
 			r.logger,
@@ -751,9 +766,203 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		})
 	}
 
+	if r.executionConfig != nil && r.executionConfig.Path != "" {
+		executionConfig, err := execution_config.FromFile(r.executionConfig.Path)
+		if err != nil {
+			return fmt.Errorf("failed to read execution config: %w", err)
+		}
+		r.staticExecutionConfig = executionConfig
+	}
+
+	if err := r.buildClients(); err != nil {
+		return err
+	}
+
 	// Modules are only initialized once and not on every config change
 	if err := r.initModules(ctx); err != nil {
 		return fmt.Errorf("failed to init user modules: %w", err)
+	}
+
+	return nil
+}
+
+// buildClients initializes the storage clients for persisted operations and router config.
+func (r *Router) buildClients() error {
+	s3Providers := map[string]config.S3StorageProvider{}
+	cdnProviders := map[string]config.CDNStorageProvider{}
+
+	for _, provider := range r.storageProviders.S3 {
+		if _, ok := s3Providers[provider.ID]; ok {
+			return fmt.Errorf("duplicate s3 storage provider with id '%s'", provider.ID)
+		}
+		s3Providers[provider.ID] = provider
+	}
+
+	for _, provider := range r.storageProviders.CDN {
+		if _, ok := cdnProviders[provider.ID]; ok {
+			return fmt.Errorf("duplicate cdn storage provider with id '%s'", provider.ID)
+		}
+		cdnProviders[provider.ID] = provider
+	}
+
+	var pClient persistedoperation.Client
+
+	if provider, ok := cdnProviders[r.persistedOperationsConfig.Storage.ProviderID]; ok {
+
+		if r.graphApiToken == "" {
+			return errors.New("graph token is required to fetch persisted operations from CDN")
+		}
+
+		c, err := cdn.NewClient(provider.URL, r.graphApiToken, cdn.Options{
+			Logger:        r.logger,
+			TraceProvider: r.tracerProvider,
+		})
+		if err != nil {
+			return err
+		}
+		pClient = c
+
+		r.logger.Info("Use CDN as storage provider for persisted operations",
+			zap.String("providerID", provider.ID),
+		)
+	} else if provider, ok := s3Providers[r.persistedOperationsConfig.Storage.ProviderID]; ok {
+
+		c, err := s3.NewClient(provider.Endpoint, &s3.Options{
+			AccessKeyID:      provider.AccessKey,
+			SecretAccessKey:  provider.SecretKey,
+			Region:           provider.Region,
+			UseSSL:           provider.Secure,
+			BucketName:       provider.Bucket,
+			ObjectPathPrefix: r.persistedOperationsConfig.Storage.ObjectPrefix,
+			TraceProvider:    r.tracerProvider,
+		})
+		if err != nil {
+			return err
+		}
+		pClient = c
+
+		r.logger.Info("Use S3 as storage provider for persisted operations",
+			zap.String("providerID", provider.ID),
+		)
+	} else if r.graphApiToken != "" {
+		if r.persistedOperationsConfig.Storage.ProviderID != "" {
+			return fmt.Errorf("unknown storage provider id '%s' for persisted operations", r.persistedOperationsConfig.Storage.ProviderID)
+		}
+
+		c, err := cdn.NewClient(r.cdnConfig.URL, r.graphApiToken, cdn.Options{
+			Logger:        r.logger,
+			TraceProvider: r.tracerProvider,
+		})
+		if err != nil {
+			return err
+		}
+		pClient = c
+
+		r.logger.Debug("Default to Cosmo CDN as persisted operations provider",
+			zap.String("url", r.cdnConfig.URL),
+		)
+	}
+
+	if pClient != nil {
+		// For backwards compatibility with cdn config field
+		cacheSize := r.persistedOperationsConfig.Cache.Size.Uint64()
+		if cacheSize <= 0 {
+			cacheSize = r.cdnConfig.CacheSize.Uint64()
+		}
+
+		c, err := persistedoperation.NewClient(&persistedoperation.Options{
+			CacheSize:      cacheSize,
+			Logger:         r.logger,
+			ProviderClient: pClient,
+		})
+		if err != nil {
+			return err
+		}
+
+		r.persistedOperationClient = c
+	}
+
+	var rClient routerconfig.Client
+
+	// Poller is only initialized when a config poller is configured and the router is not started with a static config
+	if r.staticExecutionConfig == nil && r.routerConfigPollerConfig != nil && r.configPoller == nil {
+
+		if provider, ok := cdnProviders[r.routerConfigPollerConfig.Storage.ProviderID]; ok {
+
+			if r.graphApiToken == "" {
+				return errors.New(
+					"graph token is required to fetch execution config from CDN. " +
+						"Alternatively, configure a custom storage provider or specify a static execution config",
+				)
+			}
+
+			c, err := configCDNProvider.NewClient(
+				provider.URL,
+				r.graphApiToken,
+				&configCDNProvider.Options{
+					Logger:       r.logger,
+					SignatureKey: r.routerConfigPollerConfig.GraphSignKey,
+				})
+			if err != nil {
+				return err
+			}
+			rClient = c
+
+			r.logger.Info("Polling for execution config updates from CDN in the background",
+				zap.String("providerID", provider.ID),
+				zap.String("interval", r.routerConfigPollerConfig.PollInterval.String()),
+			)
+		} else if provider, ok := s3Providers[r.routerConfigPollerConfig.Storage.ProviderID]; ok {
+
+			c, err := configs3Provider.NewClient(provider.Endpoint, &configs3Provider.ClientOptions{
+				AccessKeyID:     provider.AccessKey,
+				SecretAccessKey: provider.SecretKey,
+				BucketName:      provider.Bucket,
+				Region:          provider.Region,
+				ObjectPath:      r.routerConfigPollerConfig.Storage.ObjectPath,
+				Secure:          provider.Secure,
+			})
+			if err != nil {
+				return err
+			}
+			rClient = c
+
+			r.logger.Info("Polling for execution config updates from S3 storage in the background",
+				zap.String("providerID", provider.ID),
+				zap.String("interval", r.routerConfigPollerConfig.PollInterval.String()),
+			)
+		} else {
+			if r.routerConfigPollerConfig.Storage.ProviderID != "" {
+				return fmt.Errorf("unknown storage provider id '%s' for execution config", r.routerConfigPollerConfig.Storage.ProviderID)
+			}
+
+			if r.graphApiToken == "" {
+				return errors.New(
+					"graph token is required to fetch execution config from CDN. " +
+						"Alternatively, configure a custom storage provider or specify a static execution config",
+				)
+			}
+
+			c, err := configCDNProvider.NewClient(r.cdnConfig.URL, r.graphApiToken, &configCDNProvider.Options{
+				Logger:       r.logger,
+				SignatureKey: r.routerConfigPollerConfig.GraphSignKey,
+			})
+			if err != nil {
+				return err
+			}
+			rClient = c
+
+			r.logger.Info("Polling for execution config updates from Cosmo CDN in the background",
+				zap.String("interval", r.routerConfigPollerConfig.PollInterval.String()),
+			)
+		}
+
+		r.configPoller = configpoller.New(r.graphApiToken,
+			configpoller.WithLogger(r.logger),
+			configpoller.WithPollInterval(r.routerConfigPollerConfig.PollInterval),
+			configpoller.WithClient(rClient),
+		)
+
 	}
 
 	return nil
@@ -767,7 +976,7 @@ func (r *Router) Start(ctx context.Context) error {
 	}
 
 	if err := r.bootstrap(ctx); err != nil {
-		return fmt.Errorf("failed to bootstrap application: %w", err)
+		return fmt.Errorf("failed to bootstrap router: %w", err)
 	}
 
 	r.httpServer = newServer(&httpServerOptions{
@@ -780,27 +989,79 @@ func (r *Router) Start(ctx context.Context) error {
 	})
 
 	// Start the server with the static config without polling
-	if r.staticRouterConfig != nil {
-		r.logger.Info("Static router config provided. Polling is disabled. Updating router config is only possible by providing a config.")
-
-		if err := r.newServer(ctx, r.staticRouterConfig); err != nil {
+	if r.staticExecutionConfig != nil {
+		if err := r.newServer(ctx, r.staticExecutionConfig); err != nil {
 			return err
 		}
 
-		return r.listenAndServe(r.staticRouterConfig)
+		if err := r.listenAndServe(r.staticExecutionConfig); err != nil {
+			return err
+		}
+
+		if r.executionConfig != nil && r.executionConfig.Watch {
+
+			w, err := watcher.NewWatcher(r.logger.With(zap.String("watcher", "execution_config")))
+			if err != nil {
+				return fmt.Errorf("failed to start watcher for execution config file: %w", err)
+			}
+
+			// Watch the execution config file for changes. Returning an error will stop the watcher.
+			// We intentionally ignore the error here because the user can retry. The watcher is closed when context is done.
+			err = w.Watch(ctx, r.executionConfig.Path, func(events []watcher.Event) error {
+				if r.shutdown.Load() {
+					r.logger.Warn("Router is in shutdown state. Skipping config update")
+					return nil
+				}
+
+				data, err := os.ReadFile(r.executionConfig.Path)
+				if err != nil {
+					r.logger.Error("Failed to read config file", zap.Error(err))
+					return nil
+				}
+
+				r.logger.Info("Config file changed. Updating server with new config", zap.String("path", r.executionConfig.Path))
+
+				cfg, err := execution_config.UnmarshalConfig(data)
+				if err != nil {
+					r.logger.Error("Failed to serialize config file", zap.Error(err))
+					return nil
+				}
+
+				if err := r.newServer(ctx, cfg); err != nil {
+					r.logger.Error("Failed to update server with new config", zap.Error(err))
+					return nil
+				}
+
+				return nil
+			})
+			if err != nil {
+				r.logger.Error("Failed to watch execution config file. Restart the router to apply changes", zap.Error(err))
+				return fmt.Errorf("failed to watch execution config file: %w", err)
+			}
+
+			r.logger.Info("Watching config file for changes. Router will hot-reload automatically without downtime",
+				zap.String("path", r.executionConfig.Path),
+			)
+
+			return nil
+		}
+
+		r.logger.Info("Static execution config provided. Polling and watching is disabled. Updating execution config is only possible by restarting the router")
+
+		return nil
 	}
 
 	// when no static config is provided and no poller is configured, we can't start the server
 	if r.configPoller == nil {
-		return fmt.Errorf("config fetcher not provided. Please provide a static router config instead")
+		return fmt.Errorf("execution config fetcher not provided. Please provide a static execution config instead")
 	}
 
-	routerConfig, err := r.configPoller.GetRouterConfig(ctx)
+	cfg, err := r.configPoller.GetRouterConfig(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to get initial router config: %w", err)
+		return fmt.Errorf("failed to get initial execution config: %w", err)
 	}
 
-	if err := r.newServer(ctx, routerConfig); err != nil {
+	if err := r.newServer(ctx, cfg.Config); err != nil {
 		return err
 	}
 
@@ -836,19 +1097,12 @@ func (r *Router) Start(ctx context.Context) error {
 		)
 	}
 
-	if err := r.listenAndServe(routerConfig); err != nil {
+	if err := r.listenAndServe(cfg.Config); err != nil {
 		r.logger.Error("Failed to start server with initial config", zap.Error(err))
 		return err
 	}
 
-	r.logger.Info("Polling for router config updates in the background")
-
 	r.configPoller.Subscribe(ctx, func(newConfig *nodev1.RouterConfig, oldVersion string) error {
-		r.logger.Info("Router execution config has changed, hot reloading server",
-			zap.String("old_version", oldVersion),
-			zap.String("new_version", newConfig.GetVersion()),
-		)
-
 		if r.shutdown.Load() {
 			r.logger.Warn("Router is in shutdown state. Skipping config update")
 			return nil
@@ -989,8 +1243,16 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 	}()
 
 	// Shutdown the CDN operation client and free up resources
-	if r.cdnOperationClient != nil {
-		r.cdnOperationClient.Close()
+	if r.persistedOperationClient != nil {
+		r.persistedOperationClient.Close()
+	}
+
+	if r.accessController != nil {
+		for _, authenticator := range r.accessController.authenticators {
+			if authenticator != nil {
+				authenticator.Close()
+			}
+		}
 	}
 
 	wg.Wait()
@@ -1019,6 +1281,12 @@ func WithPlayground(enable bool) Option {
 func WithIntrospection(enable bool) Option {
 	return func(r *Router) {
 		r.introspection = enable
+	}
+}
+
+func WithQueryPlans(enabled bool) Option {
+	return func(r *Router) {
+		r.queryPlansEnabled = enabled
 	}
 }
 
@@ -1057,24 +1325,28 @@ func WithPlaygroundPath(p string) Option {
 	}
 }
 
+// WithConfigPoller sets the poller client to fetch the router config. If not set, WithConfigPollerConfig should be set.
 func WithConfigPoller(cf configpoller.ConfigPoller) Option {
 	return func(r *Router) {
 		r.configPoller = cf
 	}
 }
 
+// WithSelfRegistration sets the self registration client to register the router with the control plane.
 func WithSelfRegistration(sr selfregister.SelfRegister) Option {
 	return func(r *Router) {
 		r.selfRegister = sr
 	}
 }
 
+// WithGracePeriod sets the grace period for the router to shutdown.
 func WithGracePeriod(timeout time.Duration) Option {
 	return func(r *Router) {
 		r.routerGracePeriod = timeout
 	}
 }
 
+// WithMetrics sets the metrics configuration for the router.
 func WithMetrics(cfg *rmetric.Config) Option {
 	return func(r *Router) {
 		r.metricConfig = cfg
@@ -1084,6 +1356,7 @@ func WithMetrics(cfg *rmetric.Config) Option {
 // CorsDefaultOptions returns the default CORS options for the rs/cors package.
 func CorsDefaultOptions() *cors.Config {
 	return &cors.Config{
+		Enabled:      true,
 		AllowOrigins: []string{"*"},
 		AllowMethods: []string{
 			http.MethodHead,
@@ -1107,9 +1380,16 @@ func WithModulesConfig(config map[string]interface{}) Option {
 	}
 }
 
-func WithStaticRouterConfig(cfg *nodev1.RouterConfig) Option {
+func WithExecutionConfig(cfg *ExecutionConfig) Option {
 	return func(r *Router) {
-		r.staticRouterConfig = cfg
+		r.executionConfig = cfg
+	}
+}
+
+// WithStaticExecutionConfig sets the static execution config. This disables polling and file watching.
+func WithStaticExecutionConfig(cfg *nodev1.RouterConfig) Option {
+	return func(r *Router) {
+		r.staticExecutionConfig = cfg
 	}
 }
 
@@ -1186,6 +1466,12 @@ func WithSecurityConfig(cfg config.SecurityConfiguration) Option {
 func WithEngineExecutionConfig(cfg config.EngineExecutionConfiguration) Option {
 	return func(r *Router) {
 		r.engineExecutionConfiguration = cfg
+	}
+}
+
+func WithCustomModules(modules ...Module) Option {
+	return func(r *Router) {
+		r.customModules = modules
 	}
 }
 
@@ -1328,6 +1614,24 @@ func WithSubgraphErrorPropagation(cfg config.SubgraphErrorPropagationConfigurati
 func WithTLSConfig(cfg *TlsConfig) Option {
 	return func(r *Router) {
 		r.tlsConfig = cfg
+	}
+}
+
+func WithConfigPollerConfig(cfg *RouterConfigPollerConfig) Option {
+	return func(r *Router) {
+		r.routerConfigPollerConfig = cfg
+	}
+}
+
+func WithPersistedOperationsConfig(cfg config.PersistedOperationsConfig) Option {
+	return func(r *Router) {
+		r.persistedOperationsConfig = cfg
+	}
+}
+
+func WithStorageProviders(cfg config.StorageProviders) Option {
+	return func(r *Router) {
+		r.storageProviders = cfg
 	}
 }
 

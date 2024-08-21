@@ -4,6 +4,77 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.86.0](https://github.com/wundergraph/cosmo/compare/studio@0.85.4...studio@0.86.0) (2024-08-20)
+
+### Bug Fixes
+
+* conflicting requests on reload and dashboard ([#1099](https://github.com/wundergraph/cosmo/issues/1099)) ([a0ae1bb](https://github.com/wundergraph/cosmo/commit/a0ae1bb11668f026020435716df71435b6dff36a)) (@thisisnithin)
+
+### Features
+
+* enable sentry usage in studio ([#1082](https://github.com/wundergraph/cosmo/issues/1082)) ([c2d4ba4](https://github.com/wundergraph/cosmo/commit/c2d4ba4b520ae495cf56b81e6c05c8b8ceecf0c9)) (@AndreasZeissner)
+
+## [0.85.4](https://github.com/wundergraph/cosmo/compare/studio@0.85.3...studio@0.85.4) (2024-08-20)
+
+### Bug Fixes
+
+* schema search ui ([#1096](https://github.com/wundergraph/cosmo/issues/1096)) ([319ab3f](https://github.com/wundergraph/cosmo/commit/319ab3ff4d2b06ec9625e69436908444645eaff9)) (@thisisnithin)
+
+## [0.85.3](https://github.com/wundergraph/cosmo/compare/studio@0.85.2...studio@0.85.3) (2024-08-19)
+
+**Note:** Version bump only for package studio
+
+## [0.85.2](https://github.com/wundergraph/cosmo/compare/studio@0.85.1...studio@0.85.2) (2024-08-14)
+
+**Note:** Version bump only for package studio
+
+## [0.85.1](https://github.com/wundergraph/cosmo/compare/studio@0.85.0...studio@0.85.1) (2024-08-10)
+
+**Note:** Version bump only for package studio
+
+# [0.85.0](https://github.com/wundergraph/cosmo/compare/studio@0.84.0...studio@0.85.0) (2024-08-09)
+
+### Features
+
+* add fetch tree resolver ([#1019](https://github.com/wundergraph/cosmo/issues/1019)) ([4f4dee7](https://github.com/wundergraph/cosmo/commit/4f4dee765ba73cabba7ff4fe95faa4e4935505ba)) (@jensneuse)
+
+# [0.84.0](https://github.com/wundergraph/cosmo/compare/studio@0.83.6...studio@0.84.0) (2024-08-09)
+
+### Features
+
+* global override for all operations in check ([#1044](https://github.com/wundergraph/cosmo/issues/1044)) ([6eb0e4d](https://github.com/wundergraph/cosmo/commit/6eb0e4dce9373260b12b4f7fd07f7637349bf2eb)) (@thisisnithin)
+* webhook history view ([#1036](https://github.com/wundergraph/cosmo/issues/1036)) ([4457a57](https://github.com/wundergraph/cosmo/commit/4457a5735e86bd655bed685aca66287ed743e08c)) (@thisisnithin)
+
+## [0.83.6](https://github.com/wundergraph/cosmo/compare/studio@0.83.5...studio@0.83.6) (2024-08-09)
+
+**Note:** Version bump only for package studio
+
+## [0.83.5](https://github.com/wundergraph/cosmo/compare/studio@0.83.4...studio@0.83.5) (2024-08-06)
+
+### Bug Fixes
+
+* get discussions only when targetId exists ([#1010](https://github.com/wundergraph/cosmo/issues/1010)) ([b1d96ea](https://github.com/wundergraph/cosmo/commit/b1d96ea97d47ffb724cecbf84d536a49686340e6)) (@JivusAyrus)
+
+## [0.83.4](https://github.com/wundergraph/cosmo/compare/studio@0.83.3...studio@0.83.4) (2024-08-01)
+
+### Bug Fixes
+
+* don't aggregate router sum metrics table, optimize router metrics queries ([#970](https://github.com/wundergraph/cosmo/issues/970)) ([7908a0f](https://github.com/wundergraph/cosmo/commit/7908a0f3e5a942d74f820dc64ad2079e1a420e18)) (@StarpTech)
+
+## [0.83.3](https://github.com/wundergraph/cosmo/compare/studio@0.83.2...studio@0.83.3) (2024-07-31)
+
+### Bug Fixes
+
+* api keys graphs dropdown ui ([#979](https://github.com/wundergraph/cosmo/issues/979)) ([9cf3716](https://github.com/wundergraph/cosmo/commit/9cf37161de151a719c752f29572819b89a265063)) (@JivusAyrus)
+
+## [0.83.2](https://github.com/wundergraph/cosmo/compare/studio@0.83.1...studio@0.83.2) (2024-07-30)
+
+### Bug Fixes
+
+* broken pagination on page size change and subgraphs table with many items ([#978](https://github.com/wundergraph/cosmo/issues/978)) ([b20b00e](https://github.com/wundergraph/cosmo/commit/b20b00e892c683d068ff7a210bad4a4ead38bb52)) (@thisisnithin)
+* invite members modal and subgraph selector ([#974](https://github.com/wundergraph/cosmo/issues/974)) ([61b417c](https://github.com/wundergraph/cosmo/commit/61b417c15bdf0081e67eb4e20cb5f5d06c0255ea)) (@thisisnithin)
+* tick formatter for custom date ranges ([#980](https://github.com/wundergraph/cosmo/issues/980)) ([fd4ca77](https://github.com/wundergraph/cosmo/commit/fd4ca77baf062feca3b1976d2f3d145a0204e843)) (@JivusAyrus)
+
 ## [0.83.1](https://github.com/wundergraph/cosmo/compare/studio@0.83.0...studio@0.83.1) (2024-07-27)
 
 ### Bug Fixes

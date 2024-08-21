@@ -6,18 +6,18 @@ import (
 	"os"
 )
 
-// SerializeConfigFromFile returns the router config read from the file.
-func SerializeConfigFromFile(path string) (*nodev1.RouterConfig, error) {
+// FromFile creates a new router config from the file at the given path.
+func FromFile(path string) (*nodev1.RouterConfig, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
-	return SerializeConfigBytes(data)
+	return UnmarshalConfig(data)
 }
 
-// SerializeConfigBytes returns the router config from the bytes.
-func SerializeConfigBytes(config []byte) (*nodev1.RouterConfig, error) {
+// UnmarshalConfig deserializes the router config from the given byte slice.
+func UnmarshalConfig(config []byte) (*nodev1.RouterConfig, error) {
 
 	// Ignore fields that are not in the proto definition
 	// This allows to add new fields to the proto without breaking the router

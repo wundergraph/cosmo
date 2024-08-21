@@ -121,6 +121,7 @@ type Config struct {
 	MetricReader                       metric.Reader
 	PrometheusRegistry                 *prometheus.Registry
 	ShutdownDelay                      time.Duration
+	NoRetryClient                      bool
 }
 
 type SubgraphsConfig struct {
@@ -388,10 +389,18 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	listenerAddr := fmt.Sprintf("localhost:%d", routerPort)
 
-	client := retryablehttp.NewClient()
-	client.Logger = nil
-	client.RetryMax = 10
-	client.RetryWaitMin = 100 * time.Millisecond
+	var client *http.Client
+
+	if cfg.NoRetryClient {
+		client = http.DefaultClient
+	} else {
+		retryClient := retryablehttp.NewClient()
+		retryClient.Logger = nil
+		retryClient.RetryMax = 10
+		retryClient.RetryWaitMin = 100 * time.Millisecond
+
+		client = retryClient.StandardClient()
+	}
 
 	rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdn, natsData.Server)
 	if err != nil {
@@ -420,7 +429,17 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 			Certificates: []tls.Certificate{cert},
 		}
 
-		client.HTTPClient = httpClient
+		if cfg.NoRetryClient {
+			client = httpClient
+		} else {
+			retryClient := retryablehttp.NewClient()
+			retryClient.Logger = nil
+			retryClient.RetryMax = 10
+			retryClient.RetryWaitMin = 100 * time.Millisecond
+			retryClient.HTTPClient = httpClient
+
+			client = retryClient.StandardClient()
+		}
 	}
 
 	go func() {
@@ -472,23 +491,24 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	e := &Environment{
-		t:                     t,
-		graphQLPath:           graphQLPath,
-		absinthePath:          absinthePath,
-		Context:               ctx,
-		cancel:                cancel,
-		Router:                rr,
-		RouterURL:             rr.BaseURL(),
-		RouterClient:          client.StandardClient(),
-		CDN:                   cdn,
-		NatsServer:            natsData.Server,
-		NatsConnectionDefault: natsData.Connections[0],
-		NatsConnectionMyNats:  natsData.Connections[1],
-		SubgraphRequestCount:  counters,
-		KafkaAdminClient:      kafkaAdminClient,
-		KafkaClient:           kafkaClient,
-		shutdownDelay:         cfg.ShutdownDelay,
-		shutdown:              atomic.NewBool(false),
+		t:                       t,
+		routerConfigVersionMain: routerConfig.Version,
+		graphQLPath:             graphQLPath,
+		absinthePath:            absinthePath,
+		Context:                 ctx,
+		cancel:                  cancel,
+		Router:                  rr,
+		RouterURL:               rr.BaseURL(),
+		RouterClient:            client,
+		CDN:                     cdn,
+		NatsServer:              natsData.Server,
+		NatsConnectionDefault:   natsData.Connections[0],
+		NatsConnectionMyNats:    natsData.Connections[1],
+		SubgraphRequestCount:    counters,
+		KafkaAdminClient:        kafkaAdminClient,
+		KafkaClient:             kafkaClient,
+		shutdownDelay:           cfg.ShutdownDelay,
+		shutdown:                atomic.NewBool(false),
 		Servers: []*httptest.Server{
 			employeesServer,
 			familyServer,
@@ -499,6 +519,13 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 			moodServer,
 			countriesServer,
 		},
+	}
+
+	if routerConfig.FeatureFlagConfigs != nil {
+		myFF, ok := routerConfig.FeatureFlagConfigs.ConfigByFeatureFlagName["myff"]
+		if ok {
+			e.routerConfigVersionMyFF = myFF.Version
+		}
 	}
 
 	e.WaitForServer(ctx, e.RouterURL+"/health/live", 100, 10)
@@ -565,6 +592,9 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		MaxConcurrentResolvers:         32,
 		ExecutionPlanCacheSize:         1024,
 		EnablePersistedOperationsCache: true,
+		ParseKitPoolSize:               8,
+		EnableValidationCache:          true,
+		ValidationCacheSize:            1024,
 	}
 	if testConfig.ModifyEngineExecutionConfiguration != nil {
 		testConfig.ModifyEngineExecutionConfiguration(&engineExecutionConfig)
@@ -608,6 +638,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithInstanceID("test-instance"),
 		core.WithGracePeriod(15 * time.Second),
 		core.WithIntrospection(true),
+		core.WithQueryPlans(true),
 		core.WithEvents(config.EventsConfiguration{
 			Providers: config.EventProviders{
 				Nats:  natsEventSources,
@@ -619,14 +650,14 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 
 	if testConfig.RouterConfig != nil {
 		if testConfig.RouterConfig.StaticConfig != nil {
-			routerOpts = append(routerOpts, core.WithStaticRouterConfig(testConfig.RouterConfig.StaticConfig))
+			routerOpts = append(routerOpts, core.WithStaticExecutionConfig(testConfig.RouterConfig.StaticConfig))
 		} else if testConfig.RouterConfig.ConfigPollerFactory != nil {
 			routerOpts = append(routerOpts, core.WithConfigPoller(testConfig.RouterConfig.ConfigPollerFactory(routerConfig)))
 		} else {
 			return nil, errors.New("router config is nil")
 		}
 	} else if routerConfig != nil {
-		routerOpts = append(routerOpts, core.WithStaticRouterConfig(routerConfig))
+		routerOpts = append(routerOpts, core.WithStaticExecutionConfig(routerConfig))
 	}
 
 	if testConfig.TraceExporter != nil {
@@ -719,6 +750,12 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 				},
 			},
 			ForwardInitialPayload: true,
+			Authentication: config.WebSocketAuthenticationConfiguration{
+				FromInitialPayload: config.InitialPayloadAuthenticationConfiguration{
+					Enabled: false,
+					Key:     "Authorization",
+				},
+			},
 		}
 		if testConfig.ModifyWebsocketConfiguration != nil {
 			testConfig.ModifyWebsocketConfiguration(wsConfig)
@@ -798,6 +835,17 @@ type Environment struct {
 	shutdownDelay         time.Duration
 
 	extraURLQueryValues url.Values
+
+	routerConfigVersionMain string
+	routerConfigVersionMyFF string
+}
+
+func (e *Environment) RouterConfigVersionMain() string {
+	return e.routerConfigVersionMain
+}
+
+func (e *Environment) RouterConfigVersionMyFF() string {
+	return e.routerConfigVersionMyFF
 }
 
 func (e *Environment) SetExtraURLQueryValues(values url.Values) {

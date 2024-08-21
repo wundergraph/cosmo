@@ -26,8 +26,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build for router
+        run: pnpm run --filter ./playground build:router
+
       - name: Check if git is not dirty after generating files
         run: git diff --no-ext-diff --exit-code
 
-      - name: Build
+      - name: Build as plugin
         run: pnpm run --filter ./playground build

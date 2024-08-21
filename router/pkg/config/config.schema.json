@@ -28,6 +28,157 @@
         }
       }
     },
+    "storage_providers": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The configuration for the storage providers. Storage providers can be used to store the persisted operations and the execution config.",
+      "properties": {
+        "cdn": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["url", "id"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "The ID of the storage provider. The ID is used to identify the storage provider in the configuration."
+              },
+              "url": {
+                "type": "string",
+                "description": "The URL of the CDN. The URL is specified as a string with the format 'scheme://host:port'.",
+                "default": "https://cosmo-cdn.wundergraph.com"
+              }
+            }
+          }
+        },
+        "s3": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["bucket", "id"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "The ID of the storage provider. The ID is used to identify the storage provider in the configuration."
+              },
+              "bucket": {
+                "type": "string",
+                "description": "The name of the S3 bucket. The S3 bucket is used to store the execution config."
+              },
+              "region": {
+                "type": "string",
+                "description": "The region of the S3 bucket. The region is used to specify the region of the S3 bucket."
+              },
+              "access_key": {
+                "type": "string",
+                "description": "The access key of the S3 bucket. The access key ID is used to authenticate with the S3 bucket."
+              },
+              "secret_key": {
+                "type": "string",
+                "description": "The secret key of the S3 bucket. The secret access key is used to authenticate with the S3 bucket."
+              },
+              "endpoint": {
+                "type": "string",
+                "description": "The endpoint of the S3 bucket. The endpoint is used to specify the endpoint of the S3 bucket."
+              },
+              "secure": {
+                "type": "boolean",
+                "default": true,
+                "description": "Enable the secure connection. The secure connection is used to establish a secure connection with the S3 bucket."
+              }
+            }
+          }
+        }
+      }
+    },
+    "persisted_operations": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The configuration for the persisted operations.",
+      "properties": {
+        "cache": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "size": {
+              "type": "string",
+              "default": "100MB",
+              "bytes": {
+                "minimum": "10MB"
+              },
+              "format": "bytes-string",
+              "description": "The size of the cache used. The default value is 100MB."
+            }
+          }
+        },
+        "storage": {
+          "description": "The storage provider for persisted operation. Only one provider can be active. When no provider is specified, the router will fallback to the Cosmo CDN provider to download the persisted operations.",
+          "required": ["provider_id", "object_prefix"],
+          "properties": {
+            "provider_id": {
+              "description": "The ID of the storage provider. The ID must match the ID of the storage provider in the storage_providers section.",
+              "type": "string"
+            },
+            "object_prefix": {
+              "type": "string",
+              "description": "The prefix of the object in the storage provider location. The prefix is put in front of the operation SHA256 hash. /<prefix>/<sha256>.json"
+            }
+          }
+        }
+      }
+    },
+    "execution_config": {
+      "type": "object",
+      "description": "The configuration for the execution config. You can load the execution config from the local file system or from a storage provider.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "file": {
+              "type": "object",
+              "description": "The configuration for the execution config file. The config file is used to load the execution config from the local file system. The file has precedence over the storage provider.",
+              "additionalProperties": false,
+              "required": ["path"],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "format": "file-path",
+                  "description": "The path to the execution config file. The path is used to load the execution config from the local file system."
+                },
+                "watch": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the watch mode. The watch mode is used to watch the execution config file for changes. If the file changes, the router will reload the execution config without downtime."
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "storage": {
+              "description": "The storage provider for the execution config. Only one provider can be active. When no provider is specified, the router will fallback to the Cosmo CDN provider to download the execution config. Updating the execution config is happening in the background without downtime.",
+              "required": ["provider_id", "object_path"],
+              "properties": {
+                "provider_id": {
+                  "description": "The ID of the storage provider. The ID must match the ID of the storage provider in the storage_providers section.",
+                  "type": "string"
+                },
+                "object_path": {
+                  "type": "string",
+                  "description": "The path to the execution config in the storage provider. The path is used to download the execution config from the storage provider."
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
     "graphql_metrics": {
       "type": "object",
       "additionalProperties": false,
@@ -142,9 +293,7 @@
             "allow_list": {
               "type": "array",
               "description": "The names of the headers to forward. The default value is 'Authorization'.",
-              "default": [
-                "Authorization"
-              ],
+              "default": ["Authorization"],
               "items": {
                 "type": "string"
               }
@@ -163,9 +312,7 @@
             "allow_list": {
               "type": "array",
               "description": "The names of the query parameters to forward. The default value is 'Authorization'.",
-              "default": [
-                "Authorization"
-              ],
+              "default": ["Authorization"],
               "items": {
                 "type": "string"
               }
@@ -176,6 +323,47 @@
           "type": "boolean",
           "default": true,
           "description": "Forward the initial payload in the extensions payload when starting a subscription on a Subgraph. The default value is true."
+        },
+        "authentication": {
+          "type": "object",
+          "description": "The configuration used to authenticate the WebSocket connections.",
+          "additionalProperties": false,
+          "properties": {
+            "from_initial_payload": {
+              "type": "object",
+              "description": "The configuration used to tell the Router to look for the JWT (JSON Web Token) in the initial payload of the WebSocket Connection.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "This configuration indicates if the Router should look for the JWT (JSON Web Token) in the initial payload of the WebSocket Connection. The default value is 'false'.",
+                  "default": false
+                },
+                "key": {
+                  "type": "string",
+                  "default": "Authorization",
+                  "description": "The name of the property holding the JWT (JSON Web Token) value. The default value is 'Authorization'"
+                },
+                "export_token": {
+                  "type": "object",
+                  "description": "The configuration responsible for exporting the JWT (JSON Web Token) to the client's request header. If the specified header key differs from the default value, 'Authorization', it needs to be included in the 'forward_upgrade_headers' list to ensure it is forwarded to the subgraphs.",
+                  "additionalProperties": false,
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "This configuration indicates if the Router will export the JWT (JSON Web Token) to the client request header. The default value is 'false'.",
+                      "default": true
+                    },
+                    "header_key": {
+                      "type": "string",
+                      "description": "The name of the header property that will have the JWT (JSON Web Token) value. The default value is 'Authorization'",
+                      "default": "Authorization"
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -411,7 +599,7 @@
                       },
                       "path": {
                         "type": "string",
-                        "description": "The path to which the metrics are exported.",
+                        "description": "The path to which the metrics are exported. This is ignored when using 'grpc' as exporter and can be omitted.",
                         "default": "/v1/metrics",
                         "format": "x-uri"
                       },
@@ -473,6 +661,11 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Set this to enable/disable the CORS middleware. It is enabled by default. When disabled, the rest of the properties for CORS have no effect.",
+          "default": true
+        },
         "allow_origins": {
           "type": "array",
           "description": "The allowed origins. The default value is to allow all origins. The value can be a list of origins or the wildcard '*'.",
@@ -507,6 +700,8 @@
             "Apollo-Graphql-Client-Version",
             "x-wg-trace",
             "x-wg-token",
+            "x-wg-include-query-plan",
+            "x-wg-skip-loader",
             "traceparent",
             "tracestate"
           ],
@@ -547,7 +742,7 @@
     },
     "controlplane_url": {
       "type": "string",
-      "description": "The URL of the control plane. The URL is used to register the router in the control plane. The URL is specified as a string with the format 'scheme://host:port'.",
+      "description": "The URL of the control plane. The URL is used to register the router on the control-plane. The URL is specified as a string with the format 'scheme://host:port'.",
       "default": "https://cosmo-cp.wundergraph.com",
       "format": "http-url"
     },
@@ -559,6 +754,11 @@
     "introspection_enabled": {
       "type": "boolean",
       "description": "Enable the GraphQL introspection. The GraphQL introspection allows you to query the schema of the GraphQL API. The default value is true. If the value is false, the GraphQL introspection is disabled. In production, it is recommended to disable the introspection.",
+      "default": true
+    },
+    "query_plans_enabled": {
+      "type": "boolean",
+      "description": "Query plans can be very useful for debugging and understand the query execution. By default, query plans are enabled, but they are still only accessible if a request is signed (from Cosmo Studio) or in dev mode, which is relatively secure. If you want to disable query plans completely, set this to false.",
       "default": true
     },
     "log_level": {
@@ -937,11 +1137,12 @@
         "url": {
           "type": "string",
           "format": "http-url",
-          "description": "The URL of the CDN. The URL is used to fetch the schema and the configuration from the CDN. The URL is specified as a string with the format 'scheme://host:port'."
+          "description": "The URL of the CDN. The URL is used to register the router on the control-plane. The URL is specified as a string with the format 'scheme://host:port'."
         },
         "cache_size": {
           "type": "string",
           "default": "100MB",
+          "deprecationMessage": "The cache_size is deprecated. Please use the persisted_operations.cache instead.",
           "bytes": {
             "minimum": "10MB"
           },
@@ -982,7 +1183,9 @@
                     "type": "object",
                     "oneOf": [
                       {
+                        "type": "object",
                         "required": ["token"],
+                        "additionalProperties": false,
                         "properties": {
                           "token": {
                             "type": "string",
@@ -992,6 +1195,7 @@
                       },
                       {
                         "type": "object",
+                        "additionalProperties": false,
                         "properties": {
                           "user_info": {
                             "type": "object",
@@ -1081,20 +1285,16 @@
         }
       }
     },
-    "config_path": {
-      "type": "string",
-      "format": "file-path",
-      "description": "The path of the router configuration file. The path is specified as a string with the format 'path/to/file'."
-    },
     "router_config_path": {
       "type": "string",
       "format": "file-path",
+      "deprecationMessage": "The router_config_path is deprecated. Please use the execution_config.file instead.",
       "description": "The path of the router execution config file. This file contains the information how your graph is resolved and configured. The path is specified as a string with the format 'path/to/file'."
     },
     "router_registration": {
       "type": "boolean",
       "default": true,
-      "description": "Enable the router registration. The router registration is used to register the router in the control plane. The default value is true. This should not be modified unless you know what you are doing."
+      "description": "Enable the router registration. The router registration is used to register the router on the control-plane. The default value is true. This should not be modified unless you know what you are doing."
     },
     "override_routing_url": {
       "type": "object",
@@ -1229,6 +1429,16 @@
             "enable_normalization_cache_response_header": {
               "type": "boolean",
               "description": "Enable the normalization cache response header. The normalization cache response header is used to cache the normalized operations in the client."
+            },
+            "always_include_query_plan": {
+              "type": "boolean",
+              "default": false,
+              "description": "Always include the query plan in the response."
+            },
+            "always_skip_loader": {
+              "type": "boolean",
+              "default": false,
+              "description": "Always skip the loader. This will return no data but only render response extensions, e.g. to expose the query plan."
             }
           }
         },
@@ -1280,7 +1490,7 @@
         },
         "minify_subgraph_operations": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "description": "Minify the subgraph operations. If the value is true, GraphQL Operations get minified after planning. This reduces the amount of GraphQL AST nodes the Subgraph has to parse, which ultimately saves CPU time and memory, resulting in faster response times."
         },
         "enable_persisted_operations_cache": {
@@ -1297,6 +1507,21 @@
           "type": "integer",
           "default": 1024,
           "description": "The size of the normalization cache."
+        },
+        "parsekit_pool_size": {
+          "type": "integer",
+          "default": 8,
+          "description": "The size of the ParseKit pool. The ParseKit pool provides re-usable Resources for parsing, normalizing, validating and planning GraphQL Operations. Setting the pool size to a value much higher than the number of CPU Threads available will not improve performance, but only increase memory usage."
+        },
+        "enable_validation_cache": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the validation cache. The validation cache is used to cache results of validating GraphQL Operations."
+        },
+        "validation_cache_size": {
+          "type": "integer",
+          "default": 1024,
+          "description": "The size of the validation cache."
         }
       }
     },

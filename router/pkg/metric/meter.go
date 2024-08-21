@@ -3,13 +3,14 @@ package metric
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"time"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 	"go.opentelemetry.io/otel/attribute"
 	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
-	"net/url"
-	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
@@ -161,9 +162,6 @@ func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.
 
 		if len(exp.Headers) > 0 {
 			opts = append(opts, otlpmetricgrpc.WithHeaders(exp.Headers))
-		}
-		if len(exp.HTTPPath) > 0 {
-			log.Warn("Otlpmetricgrpc exporter doesn't support arbitrary paths", zap.String("path", exp.HTTPPath))
 		}
 
 		exporter, err = otlpmetricgrpc.New(

@@ -4,6 +4,7 @@ import { ServiceImpl } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { OrganizationEventName, PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
+import { validate as validateUUID } from 'uuid';
 import {
   AcceptOrDeclineInvitationResponse,
   AddReadmeResponse,
@@ -22,6 +23,7 @@ import {
   CreateFederatedGraphResponse,
   CreateFederatedGraphTokenResponse,
   CreateFederatedSubgraphResponse,
+  CreateIgnoreOverridesForAllOperationsResponse,
   CreateIntegrationResponse,
   CreateMonographResponse,
   CreateNamespaceResponse,
@@ -64,6 +66,7 @@ import {
   GetCompositionDetailsResponse,
   GetCompositionsResponse,
   GetDashboardAnalyticsViewResponse,
+  GetWebhookDeliveryDetailsResponse,
   GetDiscussionResponse,
   GetDiscussionSchemasResponse,
   GetFeatureFlagByNameResponse,
@@ -90,6 +93,7 @@ import {
   GetOrganizationMembersResponse,
   GetOrganizationRequestsCountResponse,
   GetOrganizationWebhookConfigsResponse,
+  GetOrganizationWebhookHistoryResponse,
   GetOrganizationWebhookMetaResponse,
   GetPendingOrganizationMembersResponse,
   GetPersistedOperationsResponse,
@@ -120,6 +124,7 @@ import {
   PublishFederatedSubgraphResponse,
   PublishMonographResponse,
   PublishPersistedOperationsResponse,
+  RedeliverWebhookResponse,
   RemoveInvitationResponse,
   RemoveOperationIgnoreAllOverrideResponse,
   RemoveOperationOverridesResponse,
@@ -226,6 +231,8 @@ import { OrganizationWebhookService } from '../webhooks/OrganizationWebhookServi
 import { apiKeyPermissions } from '../constants.js';
 import SchemaLinter from '../services/SchemaLinter.js';
 import { FeatureFlagRepository } from '../repositories/FeatureFlagRepository.js';
+import { AdmissionWebhookController, ValidateConfigRequest } from '../services/AdmissionWebhookController.js';
+import { RedeliverWebhookService } from '../webhooks/RedeliverWebhookService.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -847,22 +854,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               continue;
             }
 
-            orgWebhooks.send({
-              eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
-              payload: {
-                federated_graph: {
-                  id: movedGraph.id,
-                  name: movedGraph.name,
-                  namespace: movedGraph.namespace,
+            orgWebhooks.send(
+              {
+                eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+                payload: {
+                  federated_graph: {
+                    id: movedGraph.id,
+                    name: movedGraph.name,
+                    namespace: movedGraph.namespace,
+                  },
+                  organization: {
+                    id: authContext.organizationId,
+                    slug: authContext.organizationSlug,
+                  },
+                  errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
+                  actor_id: authContext.userId,
                 },
-                organization: {
-                  id: authContext.organizationId,
-                  slug: authContext.organizationSlug,
-                },
-                errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
-                actor_id: authContext.userId,
               },
-            });
+              authContext.userId,
+            );
           }
 
           if (compositionErrors.length > 0) {
@@ -1012,22 +1022,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         );
 
         for (const graph of updatedFederatedGraphs) {
-          orgWebhooks.send({
-            eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
-            payload: {
-              federated_graph: {
-                id: graph.id,
-                name: graph.name,
-                namespace: graph.namespace,
+          orgWebhooks.send(
+            {
+              eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+              payload: {
+                federated_graph: {
+                  id: graph.id,
+                  name: graph.name,
+                  namespace: graph.namespace,
+                },
+                organization: {
+                  id: authContext.organizationId,
+                  slug: authContext.organizationSlug,
+                },
+                errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
+                actor_id: authContext.userId,
               },
-              organization: {
-                id: authContext.organizationId,
-                slug: authContext.organizationSlug,
-              },
-              errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
-              actor_id: authContext.userId,
             },
-          });
+            authContext.userId,
+          );
         }
 
         if (compositionErrors.length > 0) {
@@ -1413,22 +1426,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           deploymentErrors.push(...composition.deploymentErrors);
         });
 
-        orgWebhooks.send({
-          eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
-          payload: {
-            federated_graph: {
-              id: federatedGraph.id,
-              name: federatedGraph.name,
-              namespace: federatedGraph.namespace,
+        orgWebhooks.send(
+          {
+            eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+            payload: {
+              federated_graph: {
+                id: federatedGraph.id,
+                name: federatedGraph.name,
+                namespace: federatedGraph.namespace,
+              },
+              organization: {
+                id: authContext.organizationId,
+                slug: authContext.organizationSlug,
+              },
+              errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
+              actor_id: authContext.userId,
             },
-            organization: {
-              id: authContext.organizationId,
-              slug: authContext.organizationSlug,
-            },
-            errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
-            actor_id: authContext.userId,
           },
-        });
+          authContext.userId,
+        );
 
         if (compositionErrors.length > 0) {
           return {
@@ -1748,22 +1764,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           targetNamespaceDisplayName: graph.namespace,
         });
 
-        orgWebhooks.send({
-          eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
-          payload: {
-            federated_graph: {
-              id: graph.id,
-              name: graph.name,
-              namespace: graph.namespace,
+        orgWebhooks.send(
+          {
+            eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+            payload: {
+              federated_graph: {
+                id: graph.id,
+                name: graph.name,
+                namespace: graph.namespace,
+              },
+              organization: {
+                id: authContext.organizationId,
+                slug: authContext.organizationSlug,
+              },
+              errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
+              actor_id: authContext.userId,
             },
-            organization: {
-              id: authContext.organizationId,
-              slug: authContext.organizationSlug,
-            },
-            errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
-            actor_id: authContext.userId,
           },
-        });
+          authContext.userId,
+        );
 
         if (compositionErrors.length > 0) {
           return {
@@ -2153,7 +2172,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           schemaCheckID,
         });
 
-        const composer = new Composer(logger, fedGraphRepo, subgraphRepo, contractRepo, graphCompostionRepo);
+        const composer = new Composer(logger, opts.db, fedGraphRepo, subgraphRepo, contractRepo, graphCompostionRepo);
 
         const result = req.delete
           ? await composer.composeWithDeletedSubgraph(subgraph.labels, subgraph.name, subgraph.namespaceId)
@@ -2308,7 +2327,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const contractRepo = new ContractRepository(logger, opts.db, authContext.organizationId);
         const graphCompostionRepo = new GraphCompositionRepository(logger, opts.db);
 
-        const composer = new Composer(logger, fedGraphRepo, subgraphRepo, contractRepo, graphCompostionRepo);
+        const composer = new Composer(logger, opts.db, fedGraphRepo, subgraphRepo, contractRepo, graphCompostionRepo);
 
         req.namespace = req.namespace || DefaultNamespace;
 
@@ -2595,21 +2614,24 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         );
 
         for (const graph of updatedFederatedGraphs) {
-          orgWebhooks.send({
-            eventName: OrganizationEventName.MONOGRAPH_SCHEMA_UPDATED,
-            payload: {
-              monograph: {
-                id: graph.id,
-                name: graph.name,
-                namespace: graph.namespace,
+          orgWebhooks.send(
+            {
+              eventName: OrganizationEventName.MONOGRAPH_SCHEMA_UPDATED,
+              payload: {
+                monograph: {
+                  id: graph.id,
+                  name: graph.name,
+                  namespace: graph.namespace,
+                },
+                organization: {
+                  id: authContext.organizationId,
+                  slug: authContext.organizationSlug,
+                },
+                actor_id: authContext.userId,
               },
-              organization: {
-                id: authContext.organizationId,
-                slug: authContext.organizationSlug,
-              },
-              actor_id: authContext.userId,
             },
-          });
+            authContext.userId,
+          );
         }
 
         if (
@@ -2742,6 +2764,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
         const routingUrl = req.routingUrl || '';
         let subgraph = await subgraphRepo.byName(req.name, req.namespace);
+        let baseSubgraphID = '';
 
         /* If the subgraph exists, validate that no parameters were included.
          * Otherwise, validate the input and create the subgraph.
@@ -2767,7 +2790,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                 details: isEventDrivenGraph
                   ? 'The subgraph was originally created as a regular subgraph.' +
                     ' A regular subgraph cannot be retroactively changed into an Event-Driven Graph (EDG).' +
-                    ' Please create a new Event-Driven subgraph with the -edg flag.'
+                    ' Please create a new Event-Driven subgraph with the --edg flag.'
                   : 'The subgraph was originally created as an Event-Driven Graph (EDG).' +
                     ' An EDG cannot be retroactively changed into a regular subgraph.' +
                     ' Please create a new regular subgraph.',
@@ -2777,6 +2800,32 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             };
           }
         } else {
+          if (req.isFeatureSubgraph) {
+            if (req.baseSubgraphName) {
+              const baseSubgraph = await subgraphRepo.byName(req.baseSubgraphName, req.namespace);
+              if (!baseSubgraph) {
+                return {
+                  response: {
+                    code: EnumStatusCode.ERR,
+                    details: `Base subgraph "${req.baseSubgraphName}" does not exist in the namespace "${req.namespace}".`,
+                  },
+                  compositionErrors: [],
+                  deploymentErrors: [],
+                };
+              }
+              baseSubgraphID = baseSubgraph.id;
+            } else {
+              return {
+                response: {
+                  code: EnumStatusCode.ERR_NOT_FOUND,
+                  details: `Feature Subgraph ${req.name} not found. If intended to create and publish, please pass the name of the base subgraph with --subgraph option.`,
+                },
+                compositionErrors: [],
+                deploymentErrors: [],
+              };
+            }
+          }
+
           // Labels are not required but should be valid if included.
           if (!isValidLabels(req.labels)) {
             return {
@@ -2824,7 +2873,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               return {
                 response: {
                   code: EnumStatusCode.ERR,
-                  details: `An Event-Driven Graph must not define a websocket subprotocol`,
+                  details: `An Event-Driven Graph must not define a websocket subprotocol.`,
                 },
                 compositionErrors: [],
                 deploymentErrors: [],
@@ -2836,8 +2885,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                 response: {
                   code: EnumStatusCode.ERR,
                   details: routingUrl
-                    ? `Routing URL "${routingUrl}" is not a valid URL`
-                    : `A valid, non-empty routing URL is required to create and publish a non-Event-Driven subgraph`,
+                    ? `Routing URL "${routingUrl}" is not a valid URL.`
+                    : req.isFeatureSubgraph
+                      ? `A valid, non-empty routing URL is required to create and publish a feature subgraph.`
+                      : `A valid, non-empty routing URL is required to create and publish a non-Event-Driven subgraph.`,
                 },
                 compositionErrors: [],
                 deploymentErrors: [],
@@ -2870,6 +2921,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               req.subscriptionProtocol === undefined ? undefined : formatSubscriptionProtocol(req.subscriptionProtocol),
             websocketSubprotocol:
               req.websocketSubprotocol === undefined ? undefined : formatWebsocketSubprotocol(req.websocketSubprotocol),
+            featureSubgraphOptions:
+              req.isFeatureSubgraph && baseSubgraphID !== ''
+                ? {
+                    isFeatureSubgraph: req.isFeatureSubgraph || false,
+                    baseSubgraphID,
+                  }
+                : undefined,
           });
 
           if (!subgraph) {
@@ -2912,22 +2970,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           const hasErrors =
             compositionErrors.some((error) => error.federatedGraphName === graph.name) ||
             deploymentErrors.some((error) => error.federatedGraphName === graph.name);
-          orgWebhooks.send({
-            eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
-            payload: {
-              federated_graph: {
-                id: graph.id,
-                name: graph.name,
-                namespace: graph.namespace,
+          orgWebhooks.send(
+            {
+              eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+              payload: {
+                federated_graph: {
+                  id: graph.id,
+                  name: graph.name,
+                  namespace: graph.namespace,
+                },
+                organization: {
+                  id: authContext.organizationId,
+                  slug: authContext.organizationSlug,
+                },
+                errors: hasErrors,
+                actor_id: authContext.userId,
               },
-              organization: {
-                id: authContext.organizationId,
-                slug: authContext.organizationSlug,
-              },
-              errors: hasErrors,
-              actor_id: authContext.userId,
             },
-          });
+            authContext.userId,
+          );
         }
 
         await auditLogRepo.addAuditLog({
@@ -3112,7 +3173,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         await auditLogRepo.addAuditLog({
           organizationId: authContext.organizationId,
           auditAction: 'operation_change_override.created',
-          action: 'updated',
+          action: 'created',
           actorId: authContext.userId,
           auditableType: 'operation_change_override',
           auditableDisplayName: req.operationHash,
@@ -3237,7 +3298,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         await auditLogRepo.addAuditLog({
           organizationId: authContext.organizationId,
-          auditAction: 'operation_ignore_all_override.deleted',
+          auditAction: 'operation_ignore_override.deleted',
           action: 'updated',
           actorId: authContext.userId,
           auditableType: 'operation_ignore_all_override',
@@ -3253,6 +3314,175 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
         };
+      });
+    },
+
+    createIgnoreOverridesForAllOperations: (req, ctx) => {
+      let logger = getLogger(ctx, opts.logger);
+
+      return handleError<PlainMessage<CreateIgnoreOverridesForAllOperationsResponse>>(ctx, logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
+        const schemaCheckRepo = new SchemaCheckRepository(opts.db);
+        const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
+
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user does not have permissions to perform this operation`,
+            },
+          };
+        }
+
+        const graph = await fedGraphRepo.byName(req.graphName, req.namespace);
+
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Requested graph does not exist',
+            },
+          };
+        }
+
+        return await opts.db.transaction(async (tx) => {
+          const auditLogRepo = new AuditLogRepository(tx);
+          const operationsRepo = new OperationsRepository(tx, graph.id);
+          const affectedOperations = await schemaCheckRepo.getAffectedOperationsByCheckId(req.checkId);
+
+          for (const affectedOperation of affectedOperations) {
+            const affectedChanges = await operationsRepo.createIgnoreAllOverride({
+              namespaceId: graph.namespaceId,
+              operationHash: affectedOperation.hash,
+              operationName: affectedOperation.name,
+              actorId: authContext.userId,
+            });
+
+            if (affectedChanges.length === 0) {
+              throw new PublicError(
+                EnumStatusCode.ERR,
+                `Could not create ignore override for operation with hash ${affectedOperation.hash}`,
+              );
+            }
+
+            await auditLogRepo.addAuditLog({
+              organizationId: authContext.organizationId,
+              auditAction: 'operation_ignore_override.created',
+              action: 'updated',
+              actorId: authContext.userId,
+              auditableType: 'operation_ignore_all_override',
+              auditableDisplayName: affectedOperation.hash,
+              actorDisplayName: authContext.userDisplayName,
+              actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+              targetNamespaceId: graph.namespaceId,
+              targetNamespaceDisplayName: graph.namespace,
+            });
+          }
+
+          return {
+            response: {
+              code: EnumStatusCode.OK,
+            },
+          };
+        });
+      });
+    },
+
+    toggleChangeOverridesForAllOperations: (req, ctx) => {
+      let logger = getLogger(ctx, opts.logger);
+
+      return handleError<PlainMessage<CreateIgnoreOverridesForAllOperationsResponse>>(ctx, logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
+        const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
+
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user does not have permissions to perform this operation`,
+            },
+          };
+        }
+
+        const graph = await fedGraphRepo.byName(req.graphName, req.namespace);
+
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Requested graph does not exist',
+            },
+          };
+        }
+
+        return opts.db.transaction(async (tx) => {
+          const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
+          const schemaCheckRepo = new SchemaCheckRepository(tx);
+          const auditLogRepo = new AuditLogRepository(tx);
+          const operationsRepo = new OperationsRepository(tx, graph.id);
+
+          const affectedOperations = await schemaCheckRepo.getAffectedOperationsByCheckId(req.checkId);
+          const checkDetails = await subgraphRepo.checkDetails(req.checkId, graph.targetId);
+
+          if (!checkDetails) {
+            throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Could not find details of requested check`);
+          }
+
+          for (const affectedOperation of affectedOperations) {
+            const impactingChanges = checkDetails.changes.filter(({ id }) =>
+              affectedOperation.schemaChangeIds.includes(id),
+            );
+
+            const affectedRows = [];
+            if (req.isSafe) {
+              const res = await operationsRepo.createOperationOverrides({
+                namespaceId: graph.namespaceId,
+                operationHash: affectedOperation.hash,
+                operationName: affectedOperation.name,
+                changes: impactingChanges,
+                actorId: authContext.userId,
+              });
+              affectedRows.push(...res);
+            } else {
+              const res = await operationsRepo.removeOperationOverrides({
+                operationHash: affectedOperation.hash,
+                namespaceId: graph.namespaceId,
+                changes: impactingChanges,
+              });
+              affectedRows.push(...res);
+            }
+
+            if (affectedRows.length === 0) {
+              throw new PublicError(
+                EnumStatusCode.ERR,
+                `Could not toggle change overrides for operation with hash ${affectedOperation.hash}`,
+              );
+            }
+
+            await auditLogRepo.addAuditLog({
+              organizationId: authContext.organizationId,
+              auditAction: req.isSafe ? 'operation_change_override.created' : 'operation_change_override.deleted',
+              action: req.isSafe ? 'created' : 'deleted',
+              actorId: authContext.userId,
+              auditableType: 'operation_change_override',
+              auditableDisplayName: affectedOperation.hash,
+              actorDisplayName: authContext.userDisplayName,
+              actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+              targetNamespaceId: graph.namespaceId,
+              targetNamespaceDisplayName: graph.namespace,
+            });
+          }
+
+          return {
+            response: {
+              code: EnumStatusCode.OK,
+            },
+          };
+        });
       });
     },
 
@@ -3306,7 +3536,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         await auditLogRepo.addAuditLog({
           organizationId: authContext.organizationId,
-          auditAction: 'operation_ignore_all_override.created',
+          auditAction: 'operation_ignore_override.created',
           action: 'updated',
           actorId: authContext.userId,
           auditableType: 'operation_ignore_all_override',
@@ -3692,22 +3922,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           const hasErrors =
             compositionErrors.some((error) => error.federatedGraphName === affectedFederatedGraph.name) ||
             deploymentErrors.some((error) => error.federatedGraphName === affectedFederatedGraph.name);
-          orgWebhooks.send({
-            eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
-            payload: {
-              federated_graph: {
-                id: affectedFederatedGraph.id,
-                name: affectedFederatedGraph.name,
-                namespace: affectedFederatedGraph.namespace,
+          orgWebhooks.send(
+            {
+              eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+              payload: {
+                federated_graph: {
+                  id: affectedFederatedGraph.id,
+                  name: affectedFederatedGraph.name,
+                  namespace: affectedFederatedGraph.namespace,
+                },
+                organization: {
+                  id: authContext.organizationId,
+                  slug: authContext.organizationSlug,
+                },
+                errors: hasErrors,
+                actor_id: authContext.userId,
               },
-              organization: {
-                id: authContext.organizationId,
-                slug: authContext.organizationSlug,
-              },
-              errors: hasErrors,
-              actor_id: authContext.userId,
             },
-          });
+            authContext.userId,
+          );
         }
 
         if (compositionErrors.length > 0) {
@@ -3924,22 +4157,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           const hasErrors =
             compositionErrors.some((error) => error.federatedGraphName === graph.name) ||
             deploymentErrors.some((error) => error.federatedGraphName === graph.name);
-          orgWebhooks.send({
-            eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
-            payload: {
-              federated_graph: {
-                id: graph.id,
-                name: graph.name,
-                namespace: graph.namespace,
+          orgWebhooks.send(
+            {
+              eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+              payload: {
+                federated_graph: {
+                  id: graph.id,
+                  name: graph.name,
+                  namespace: graph.namespace,
+                },
+                organization: {
+                  id: authContext.organizationId,
+                  slug: authContext.organizationSlug,
+                },
+                errors: hasErrors,
+                actor_id: authContext.userId,
               },
-              organization: {
-                id: authContext.organizationId,
-                slug: authContext.organizationSlug,
-              },
-              errors: hasErrors,
-              actor_id: authContext.userId,
             },
-          });
+            authContext.userId,
+          );
         }
 
         if (compositionErrors.length > 0) {
@@ -4128,22 +4364,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           const hasErrors =
             compositionErrors.some((error) => error.federatedGraphName === graph.name) ||
             deploymentErrors.some((error) => error.federatedGraphName === graph.name);
-          orgWebhooks.send({
-            eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
-            payload: {
-              federated_graph: {
-                id: graph.id,
-                name: graph.name,
-                namespace: graph.namespace,
+          orgWebhooks.send(
+            {
+              eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+              payload: {
+                federated_graph: {
+                  id: graph.id,
+                  name: graph.name,
+                  namespace: graph.namespace,
+                },
+                organization: {
+                  id: authContext.organizationId,
+                  slug: authContext.organizationSlug,
+                },
+                errors: hasErrors,
+                actor_id: authContext.userId,
               },
-              organization: {
-                id: authContext.organizationId,
-                slug: authContext.organizationSlug,
-              },
-              errors: hasErrors,
-              actor_id: authContext.userId,
             },
-          });
+            authContext.userId,
+          );
         }
 
         if (compositionErrors.length > 0) {
@@ -4277,22 +4516,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         });
 
         for (const graph of federatedGraphs) {
-          orgWebhooks.send({
-            eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
-            payload: {
-              federated_graph: {
-                id: graph.id,
-                name: graph.name,
-                namespace: graph.namespace,
+          orgWebhooks.send(
+            {
+              eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+              payload: {
+                federated_graph: {
+                  id: graph.id,
+                  name: graph.name,
+                  namespace: graph.namespace,
+                },
+                organization: {
+                  id: authContext.organizationId,
+                  slug: authContext.organizationSlug,
+                },
+                errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
+                actor_id: authContext.userId,
               },
-              organization: {
-                id: authContext.organizationId,
-                slug: authContext.organizationSlug,
-              },
-              errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
-              actor_id: authContext.userId,
             },
-          });
+            authContext.userId,
+          );
         }
 
         if (compositionErrors.length > 0) {
@@ -4443,22 +4685,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         });
 
         for (const graph of federatedGraphs) {
-          orgWebhooks.send({
-            eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
-            payload: {
-              federated_graph: {
-                id: graph.id,
-                name: graph.name,
-                namespace: graph.namespace,
+          orgWebhooks.send(
+            {
+              eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+              payload: {
+                federated_graph: {
+                  id: graph.id,
+                  name: graph.name,
+                  namespace: graph.namespace,
+                },
+                organization: {
+                  id: authContext.organizationId,
+                  slug: authContext.organizationSlug,
+                },
+                errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
+                actor_id: authContext.userId,
               },
-              organization: {
-                id: authContext.organizationId,
-                slug: authContext.organizationSlug,
-              },
-              errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
-              actor_id: authContext.userId,
             },
-          });
+            authContext.userId,
+          );
         }
 
         if (compositionErrors.length > 0) {
@@ -4657,21 +4902,24 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             targetNamespaceDisplayName: graph.namespace,
           });
 
-          orgWebhooks.send({
-            eventName: OrganizationEventName.MONOGRAPH_SCHEMA_UPDATED,
-            payload: {
-              monograph: {
-                id: graph.id,
-                name: graph.name,
-                namespace: graph.namespace,
+          orgWebhooks.send(
+            {
+              eventName: OrganizationEventName.MONOGRAPH_SCHEMA_UPDATED,
+              payload: {
+                monograph: {
+                  id: graph.id,
+                  name: graph.name,
+                  namespace: graph.namespace,
+                },
+                organization: {
+                  id: authContext.organizationId,
+                  slug: authContext.organizationSlug,
+                },
+                actor_id: authContext.userId,
               },
-              organization: {
-                id: authContext.organizationId,
-                slug: authContext.organizationSlug,
-              },
-              actor_id: authContext.userId,
             },
-          });
+            authContext.userId,
+          );
 
           return {
             response: {
@@ -4812,22 +5060,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           targetNamespaceDisplayName: federatedGraph.namespace,
         });
 
-        orgWebhooks.send({
-          eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
-          payload: {
-            federated_graph: {
-              id: federatedGraph.id,
-              name: federatedGraph.name,
-              namespace: federatedGraph.namespace,
+        orgWebhooks.send(
+          {
+            eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+            payload: {
+              federated_graph: {
+                id: federatedGraph.id,
+                name: federatedGraph.name,
+                namespace: federatedGraph.namespace,
+              },
+              organization: {
+                id: authContext.organizationId,
+                slug: authContext.organizationSlug,
+              },
+              errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
+              actor_id: authContext.userId,
             },
-            organization: {
-              id: authContext.organizationId,
-              slug: authContext.organizationSlug,
-            },
-            errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
-            actor_id: authContext.userId,
           },
-        });
+          authContext.userId,
+        );
 
         if (compositionErrors.length > 0) {
           return {
@@ -5038,22 +5289,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         });
 
         for (const graph of updatedFederatedGraphs) {
-          orgWebhooks.send({
-            eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
-            payload: {
-              federated_graph: {
-                id: graph.id,
-                name: graph.name,
-                namespace: graph.namespace,
+          orgWebhooks.send(
+            {
+              eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+              payload: {
+                federated_graph: {
+                  id: graph.id,
+                  name: graph.name,
+                  namespace: graph.namespace,
+                },
+                organization: {
+                  id: authContext.organizationId,
+                  slug: authContext.organizationSlug,
+                },
+                errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
+                actor_id: authContext.userId,
               },
-              organization: {
-                id: authContext.organizationId,
-                slug: authContext.organizationSlug,
-              },
-              errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
-              actor_id: authContext.userId,
             },
-          });
+            authContext.userId,
+          );
         }
 
         if (compositionErrors.length > 0) {
@@ -6089,22 +6343,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           });
         }
 
-        orgWebhooks.send({
-          eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
-          payload: {
-            federated_graph: {
-              id: migratedGraph.id,
-              name: migratedGraph.name,
-              namespace: migratedGraph.namespace,
+        orgWebhooks.send(
+          {
+            eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+            payload: {
+              federated_graph: {
+                id: migratedGraph.id,
+                name: migratedGraph.name,
+                namespace: migratedGraph.namespace,
+              },
+              organization: {
+                id: authContext.organizationId,
+                slug: authContext.organizationSlug,
+              },
+              errors: false,
+              actor_id: authContext.userId,
             },
-            organization: {
-              id: authContext.organizationId,
-              slug: authContext.organizationSlug,
-            },
-            errors: false,
-            actor_id: authContext.userId,
           },
-        });
+          authContext.userId,
+        );
 
         const tokenValue = await signJwtHS256<GraphApiKeyJwtPayload>({
           secret: opts.jwtSecret,
@@ -9212,6 +9469,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `Organization not found`,
             },
             organizationName: '',
+            organizationSlug: '',
           };
         }
 
@@ -9220,6 +9478,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           organizationName: organization.name,
+          organizationSlug: organization.slug,
         };
       });
     },
@@ -9739,7 +9998,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           let composition: GraphCompositionDTO | undefined;
 
           // Might be empty when starting with a local composed config that has no config version id
-          if (routerDTO.configVersionId) {
+          if (routerDTO.configVersionId && validateUUID(routerDTO.configVersionId)) {
             composition = await graphCompositionRepository.getGraphCompositionBySchemaVersion({
               organizationId: authContext.organizationId,
               schemaVersionId: routerDTO.configVersionId,
@@ -11446,6 +11705,132 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
           featureFlags,
           totalCount: featureFlags.length,
+        };
+      });
+    },
+
+    getOrganizationWebhookHistory: (req, ctx) => {
+      let logger = getLogger(ctx, opts.logger);
+
+      return handleError<PlainMessage<GetOrganizationWebhookHistoryResponse>>(ctx, logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
+
+        const analyticsRetention = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'analytics-retention',
+        });
+
+        const { dateRange } = validateDateRanges({
+          limit: analyticsRetention?.limit ?? 7,
+          dateRange: req.dateRange,
+        });
+
+        if (!dateRange) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Invalid date range',
+            },
+            deliveries: [],
+            totalCount: 0,
+          };
+        }
+
+        const { deliveries, totalCount } = await orgRepo.getWebhookHistory({
+          organizationID: authContext.organizationId,
+          limit: req.pagination?.limit,
+          offset: req.pagination?.offset,
+          filterByType: req.filterByType,
+          startDate: dateRange.start,
+          endDate: dateRange.end,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          deliveries,
+          totalCount,
+        };
+      });
+    },
+
+    getWebhookDeliveryDetails: (req, ctx) => {
+      let logger = getLogger(ctx, opts.logger);
+
+      return handleError<PlainMessage<GetWebhookDeliveryDetailsResponse>>(ctx, logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
+
+        const delivery = await orgRepo.getWebhookDeliveryById(req.id, authContext.organizationId);
+        if (!delivery) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Could not find webhook delivery`,
+            },
+          };
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          delivery: {
+            ...delivery,
+            createdBy: delivery.user?.email || undefined,
+            isRedelivery: !!delivery.originalDeliveryId,
+            createdAt: delivery.createdAt.toISOString(),
+            requestHeaders: JSON.stringify(delivery.requestHeaders),
+            responseHeaders: delivery.responseHeaders ? JSON.stringify(delivery.responseHeaders) : undefined,
+            responseStatusCode: delivery.responseStatusCode || undefined,
+            responseErrorCode: delivery.responseErrorCode || undefined,
+            responseBody: delivery.responseBody || undefined,
+            errorMessage: delivery.errorMessage || undefined,
+          },
+        };
+      });
+    },
+
+    redeliverWebhook: (req, ctx) => {
+      let logger = getLogger(ctx, opts.logger);
+
+      return handleError<PlainMessage<RedeliverWebhookResponse>>(ctx, logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user does not have permissions to perform this operation`,
+            },
+          };
+        }
+
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
+        const redeliverWebhookService = new RedeliverWebhookService(opts.db, authContext.organizationId, logger);
+
+        const originalDelivery = await orgRepo.getWebhookDeliveryById(req.id, authContext.organizationId);
+        if (!originalDelivery) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Could not find webhook delivery`,
+            },
+          };
+        }
+
+        await redeliverWebhookService.send(originalDelivery, authContext.userId);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
         };
       });
     },

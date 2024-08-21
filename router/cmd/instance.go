@@ -2,18 +2,17 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/execution_config"
+	"os"
 
-	"github.com/wundergraph/cosmo/router/internal/cdn"
+	"github.com/KimMachineGun/automemlimit/memlimit"
+	"github.com/dustin/go-humanize"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/selfregister"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"go.uber.org/automaxprocs/maxprocs"
 
 	"github.com/wundergraph/cosmo/router/core"
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"go.uber.org/zap"
 )
 
@@ -33,39 +32,30 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		return nil, fmt.Errorf("could not set max GOMAXPROCS: %w", err)
 	}
 
-	var routerConfig *nodev1.RouterConfig
-	var configPoller configpoller.ConfigPoller
-	var selfRegister selfregister.SelfRegister
+	// Automatically set GOMEMLIMIT to 90% of the available memory.
+	// This is an effort to prevent the router from being killed by OOM (Out Of Memory)
+	// when the system is under memory pressure e.g. when GC is not able to free memory fast enough.
+	// More details: https://tip.golang.org/doc/gc-guide#Memory_limit
+	mLimit, err := memlimit.SetGoMemLimitWithOpts(
+		memlimit.WithRatio(0.9),
+		memlimit.WithProvider(
+			memlimit.ApplyFallback(
+				memlimit.FromCgroupHybrid,
+				memlimit.FromSystem,
+			),
+		),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("could not set memory limit: %w", err)
+	}
+	if mLimit > 0 {
+		params.Logger.Info("GOMEMLIMIT set automatically", zap.String("limit", humanize.Bytes(uint64(mLimit))))
+	} else if os.Getenv("GOMEMLIMIT") != "" {
+		params.Logger.Info("GOMEMLIMIT set by user", zap.String("limit", os.Getenv("GOMEMLIMIT")))
+	}
 
 	cfg := params.Config
 	logger := params.Logger
-
-	if cfg.RouterConfigPath != "" {
-		routerConfig, err = execution_config.SerializeConfigFromFile(cfg.RouterConfigPath)
-		if err != nil {
-			logger.Fatal("Could not read router config", zap.Error(err), zap.String("path", cfg.RouterConfigPath))
-		}
-	} else if cfg.Graph.Token != "" {
-		routerCDN, err := cdn.NewRouterConfigClient(cfg.CDN.URL, cfg.Graph.Token, cdn.RouterConfigOptions{
-			Logger:       logger,
-			SignatureKey: cfg.Graph.SignKey,
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		configPoller = configpoller.New(cfg.ControlplaneURL, cfg.Graph.Token,
-			configpoller.WithLogger(logger),
-			configpoller.WithPollInterval(cfg.PollInterval),
-			configpoller.WithCDNClient(routerCDN),
-		)
-	}
-
-	if cfg.RouterRegistration && cfg.Graph.Token != "" {
-		selfRegister = selfregister.New(cfg.ControlplaneURL, cfg.Graph.Token,
-			selfregister.WithLogger(logger),
-		)
-	}
 
 	var authenticators []authentication.Authenticator
 	for i, auth := range cfg.Authentication.Providers {
@@ -74,18 +64,32 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 			if name == "" {
 				name = fmt.Sprintf("jwks-#%d", i)
 			}
-			opts := authentication.JWKSAuthenticatorOptions{
+			tokenDecoder, _ := authentication.NewJwksTokenDecoder(auth.JWKS.URL, auth.JWKS.RefreshInterval)
+			opts := authentication.HttpHeaderAuthenticatorOptions{
 				Name:                name,
 				URL:                 auth.JWKS.URL,
 				HeaderNames:         auth.JWKS.HeaderNames,
 				HeaderValuePrefixes: auth.JWKS.HeaderValuePrefixes,
-				RefreshInterval:     auth.JWKS.RefreshInterval,
+				TokenDecoder:        tokenDecoder,
 			}
-			authenticator, err := authentication.NewJWKSAuthenticator(opts)
+			authenticator, err := authentication.NewHttpHeaderAuthenticator(opts)
 			if err != nil {
-				logger.Fatal("Could not create JWKS authenticator", zap.Error(err), zap.String("name", name))
+				logger.Fatal("Could not create HttpHeader authenticator", zap.Error(err), zap.String("name", name))
 			}
 			authenticators = append(authenticators, authenticator)
+
+			if cfg.WebSocket.Authentication.FromInitialPayload.Enabled {
+				opts := authentication.WebsocketInitialPayloadAuthenticatorOptions{
+					TokenDecoder:        tokenDecoder,
+					Key:                 cfg.WebSocket.Authentication.FromInitialPayload.Key,
+					HeaderValuePrefixes: auth.JWKS.HeaderValuePrefixes,
+				}
+				authenticator, err = authentication.NewWebsocketInitialPayloadAuthenticator(opts)
+				if err != nil {
+					logger.Fatal("Could not create WebsocketInitialPayload authenticator", zap.Error(err))
+				}
+				authenticators = append(authenticators, authenticator)
+			}
 		}
 	}
 
@@ -94,11 +98,12 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		core.WithOverrideRoutingURL(cfg.OverrideRoutingURL),
 		core.WithOverrides(cfg.Overrides),
 		core.WithLogger(logger),
-		core.WithConfigPoller(configPoller),
-		core.WithSelfRegistration(selfRegister),
 		core.WithIntrospection(cfg.IntrospectionEnabled),
+		core.WithQueryPlans(cfg.QueryPlansEnabled),
 		core.WithPlayground(cfg.PlaygroundEnabled),
 		core.WithGraphApiToken(cfg.Graph.Token),
+		core.WithPersistedOperationsConfig(cfg.PersistedOperationsConfig),
+		core.WithStorageProviders(cfg.StorageProviders),
 		core.WithGraphQLPath(cfg.GraphQLPath),
 		core.WithModulesConfig(cfg.Modules),
 		core.WithGracePeriod(cfg.GracePeriod),
@@ -117,7 +122,6 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		core.WithInstanceID(cfg.InstanceID),
 		core.WithReadinessCheckPath(cfg.ReadinessCheckPath),
 		core.WithHeaderRules(cfg.Headers),
-		core.WithStaticRouterConfig(routerConfig),
 		core.WithRouterTrafficConfig(&cfg.TrafficShaping.Router),
 		core.WithFileUploadConfig(&cfg.FileUpload),
 		core.WithSubgraphTransportOptions(&core.SubgraphTransportOptions{
@@ -136,6 +140,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 			cfg.TrafficShaping.All.BackoffJitterRetry.Interval,
 		),
 		core.WithCors(&cors.Config{
+			Enabled:          cfg.CORS.Enabled,
 			AllowOrigins:     cfg.CORS.AllowOrigins,
 			AllowMethods:     cfg.CORS.AllowMethods,
 			AllowCredentials: cfg.CORS.AllowCredentials,
@@ -157,7 +162,6 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		core.WithEngineExecutionConfig(cfg.EngineExecutionConfiguration),
 		core.WithSecurityConfig(cfg.SecurityConfiguration),
 		core.WithAuthorizationConfig(&cfg.Authorization),
-		core.WithAccessController(core.NewAccessController(authenticators, cfg.Authorization.RequireAuthentication)),
 		core.WithWebSocketConfiguration(&cfg.WebSocket),
 		core.WithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation),
 		core.WithLocalhostFallbackInsideDocker(cfg.LocalhostFallbackInsideDocker),
@@ -167,6 +171,38 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 	}
 
 	options = append(options, additionalOptions...)
+
+	if cfg.RouterRegistration && cfg.Graph.Token != "" {
+		selfRegister, err := selfregister.New(cfg.ControlplaneURL, cfg.Graph.Token,
+			selfregister.WithLogger(logger),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("could not create self register: %w", err)
+		}
+		options = append(options, core.WithSelfRegistration(selfRegister))
+	}
+
+	executionConfigPath := cfg.ExecutionConfig.File.Path
+	if executionConfigPath == "" {
+		executionConfigPath = cfg.RouterConfigPath
+	}
+
+	if executionConfigPath != "" {
+		options = append(options, core.WithExecutionConfig(&core.ExecutionConfig{
+			Watch: cfg.ExecutionConfig.File.Watch,
+			Path:  executionConfigPath,
+		}))
+	} else {
+		options = append(options, core.WithConfigPollerConfig(&core.RouterConfigPollerConfig{
+			GraphSignKey:    cfg.Graph.SignKey,
+			PollInterval:    cfg.PollInterval,
+			ExecutionConfig: cfg.ExecutionConfig,
+		}))
+	}
+
+	if len(authenticators) > 0 {
+		options = append(options, core.WithAccessController(core.NewAccessController(authenticators, cfg.Authorization.RequireAuthentication)))
+	}
 
 	return core.NewRouter(options...)
 }

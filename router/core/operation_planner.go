@@ -4,27 +4,29 @@ import (
 	"errors"
 	"strconv"
 
+	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
+	"github.com/wundergraph/cosmo/router/pkg/graphqlschemausage"
 	"golang.org/x/sync/singleflight"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/postprocess"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-
-	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 )
 
 type planWithMetaData struct {
 	preparedPlan                      plan.Plan
 	operationDocument, schemaDocument *ast.Document
+	typeFieldUsageInfo                []*graphqlmetricsv1.TypeFieldUsageInfo
+	argumentUsageInfo                 []*graphqlmetricsv1.ArgumentUsageInfo
 }
 
 type OperationPlanner struct {
-	sf        singleflight.Group
-	planCache ExecutionPlanCache[uint64, *planWithMetaData]
-	executor  *Executor
+	sf             singleflight.Group
+	planCache      ExecutionPlanCache[uint64, *planWithMetaData]
+	executor       *Executor
+	trackUsageInfo bool
 }
 
 type ExecutionPlanCache[K any, V any] interface {
@@ -54,22 +56,15 @@ func (n *noopExecutionPlanCache) Set(key uint64, value *planWithMetaData, cost i
 
 func NewOperationPlanner(executor *Executor, planCache ExecutionPlanCache[uint64, *planWithMetaData]) *OperationPlanner {
 	return &OperationPlanner{
-		planCache: planCache,
-		executor:  executor,
+		planCache:      planCache,
+		executor:       executor,
+		trackUsageInfo: executor.TrackUsageInfo,
 	}
 }
 
-func (p *OperationPlanner) preparePlan(requestOperationName []byte, requestOperationContent string) (*planWithMetaData, error) {
-	doc, report := astparser.ParseGraphqlDocumentString(requestOperationContent)
+func (p *OperationPlanner) preparePlan(ctx *operationContext) (*planWithMetaData, error) {
+	doc, report := astparser.ParseGraphqlDocumentString(ctx.content)
 	if report.HasErrors() {
-		return nil, &reportError{report: &report}
-	}
-
-	validation := astvalidation.DefaultOperationValidator()
-
-	// validate the document against client schema before planning
-	state := validation.Validate(&doc, p.executor.ClientSchema, &report)
-	if state != astvalidation.Valid {
 		return nil, &reportError{report: &report}
 	}
 
@@ -78,52 +73,88 @@ func (p *OperationPlanner) preparePlan(requestOperationName []byte, requestOpera
 		return nil, err
 	}
 
+	var (
+		preparedPlan plan.Plan
+	)
+
 	// create and postprocess the plan
 	// planning uses the router schema
-	preparedPlan := planner.Plan(&doc, p.executor.RouterSchema, unsafebytes.BytesToString(requestOperationName), &report)
+	if ctx.executionOptions.IncludeQueryPlanInResponse {
+		preparedPlan = planner.Plan(&doc, p.executor.RouterSchema, ctx.name, &report, plan.IncludeQueryPlanInResponse())
+	} else {
+		preparedPlan = planner.Plan(&doc, p.executor.RouterSchema, ctx.name, &report)
+	}
 	if report.HasErrors() {
 		return nil, &reportError{report: &report}
 	}
-	post := postprocess.DefaultProcessor()
+	post := postprocess.NewProcessor()
 	post.Process(preparedPlan)
 
-	return &planWithMetaData{
+	out := &planWithMetaData{
 		preparedPlan:      preparedPlan,
 		operationDocument: &doc,
 		schemaDocument:    p.executor.RouterSchema,
-	}, nil
+	}
+
+	if p.trackUsageInfo {
+		out.typeFieldUsageInfo = graphqlschemausage.GetTypeFieldUsageInfo(preparedPlan)
+		out.argumentUsageInfo, err = graphqlschemausage.GetArgumentUsageInfo(&doc, p.executor.RouterSchema)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return out, nil
 }
 
-func (p *OperationPlanner) Plan(operation *ParsedOperation, clientInfo *ClientInfo, protocol OperationProtocol, traceOptions resolve.TraceOptions) (*operationContext, error) {
+type PlanOptions struct {
+	Protocol             OperationProtocol
+	ClientInfo           *ClientInfo
+	TraceOptions         resolve.TraceOptions
+	ExecutionOptions     resolve.ExecutionOptions
+	TrackSchemaUsageInfo bool
+}
 
+func (p *OperationPlanner) plan(operation *ParsedOperation, options PlanOptions) (*operationContext, error) {
 	opContext := &operationContext{
 		name:                       operation.Request.OperationName,
 		opType:                     operation.Type,
 		content:                    operation.NormalizedRepresentation,
 		hash:                       operation.ID,
-		clientInfo:                 clientInfo,
+		clientInfo:                 *options.ClientInfo,
 		variables:                  operation.Request.Variables,
 		files:                      operation.Files,
-		traceOptions:               traceOptions,
+		traceOptions:               options.TraceOptions,
 		extensions:                 operation.Request.Extensions,
-		protocol:                   protocol,
+		protocol:                   options.Protocol,
 		persistedOperationCacheHit: operation.PersistedOperationCacheHit,
 		normalizationCacheHit:      operation.NormalizationCacheHit,
+		executionOptions:           options.ExecutionOptions,
 	}
 
 	if operation.IsPersistedOperation {
 		opContext.persistedID = operation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
 	}
 
-	if traceOptions.Enable {
-		// if we have tracing enabled we always prepare a new plan
-		// this is because we're writing trace data to the plan
-		requestOperationNameBytes := unsafebytes.StringToBytes(opContext.Name())
-		prepared, err := p.preparePlan(requestOperationNameBytes, opContext.Content())
+	// if we have tracing enabled or want to include a query plan in the response we always prepare a new plan
+	// this is because in case of tracing, we're writing trace data to the plan
+	// in case of including the query plan, we don't want to cache this additional overhead
+	skipCache := options.TraceOptions.Enable || options.ExecutionOptions.IncludeQueryPlanInResponse
+
+	if skipCache {
+		prepared, err := p.preparePlan(opContext)
 		if err != nil {
 			return nil, err
 		}
 		opContext.preparedPlan = prepared
+		if options.TrackSchemaUsageInfo {
+			opContext.typeFieldUsageInfo = prepared.typeFieldUsageInfo
+			opContext.argumentUsageInfo = prepared.argumentUsageInfo
+			opContext.inputUsageInfo, err = graphqlschemausage.GetInputUsageInfo(prepared.operationDocument, p.executor.RouterSchema, opContext.variables)
+			if err != nil {
+				return nil, err
+			}
+		}
 		return opContext, nil
 	}
 
@@ -139,8 +170,7 @@ func (p *OperationPlanner) Plan(operation *ParsedOperation, clientInfo *ClientIn
 		// this ensures that we only prepare the plan once for this operation ID
 		operationIDStr := strconv.FormatUint(operationID, 10)
 		sharedPreparedPlan, err, _ := p.sf.Do(operationIDStr, func() (interface{}, error) {
-			requestOperationNameBytes := unsafebytes.StringToBytes(opContext.Name())
-			prepared, err := p.preparePlan(requestOperationNameBytes, opContext.Content())
+			prepared, err := p.preparePlan(opContext)
 			if err != nil {
 				return nil, err
 			}
@@ -153,6 +183,14 @@ func (p *OperationPlanner) Plan(operation *ParsedOperation, clientInfo *ClientIn
 		opContext.preparedPlan, ok = sharedPreparedPlan.(*planWithMetaData)
 		if !ok {
 			return nil, errors.New("unexpected prepared plan type")
+		}
+		if options.TrackSchemaUsageInfo {
+			opContext.typeFieldUsageInfo = opContext.preparedPlan.typeFieldUsageInfo
+			opContext.argumentUsageInfo = opContext.preparedPlan.argumentUsageInfo
+			opContext.inputUsageInfo, err = graphqlschemausage.GetInputUsageInfo(opContext.preparedPlan.operationDocument, p.executor.RouterSchema, opContext.variables)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 	return opContext, nil

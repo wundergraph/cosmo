@@ -2,6 +2,7 @@ package internal
 
 import (
 	"fmt"
+
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
@@ -37,16 +38,17 @@ func NewRouter(opts ...Option) *core.Router {
 
 	logger := rc.Logger
 
-	routerConfig, err := execution_config.SerializeConfigFromFile(rc.RouterConfigPath)
+	routerConfig, err := execution_config.FromFile(rc.RouterConfigPath)
 	if err != nil {
-		logger.Fatal("Could not read router config", zap.Error(err), zap.String("path", rc.RouterConfigPath))
+		logger.Fatal("Could not read execution config", zap.Error(err), zap.String("path", rc.RouterConfigPath))
 	}
 
 	routerOpts := []core.Option{
 		core.WithLogger(logger),
 		core.WithPlayground(true),
 		core.WithIntrospection(true),
-		core.WithStaticRouterConfig(routerConfig),
+		core.WithQueryPlans(true),
+		core.WithStaticExecutionConfig(routerConfig),
 		core.WithAwsLambdaRuntime(),
 		core.WithGraphApiToken(rc.GraphApiToken),
 	}

@@ -4,6 +4,62 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.60.3](https://github.com/wundergraph/cosmo/compare/wgc@0.60.2...wgc@0.60.3) (2024-08-20)
+
+### Bug Fixes
+
+* graph fetch base path ([#1102](https://github.com/wundergraph/cosmo/issues/1102)) ([f738745](https://github.com/wundergraph/cosmo/commit/f738745d6319c6db1cb90f1957ec298a01541160)) (@StarpTech)
+
+## [0.60.2](https://github.com/wundergraph/cosmo/compare/wgc@0.60.1...wgc@0.60.2) (2024-08-20)
+
+### Bug Fixes
+
+* correct output path handling for abs paths ([#1101](https://github.com/wundergraph/cosmo/issues/1101)) ([505f32e](https://github.com/wundergraph/cosmo/commit/505f32e44dcd5fe498f8035962f8e27f9cccd6b9)) (@StarpTech)
+
+## [0.60.1](https://github.com/wundergraph/cosmo/compare/wgc@0.60.0...wgc@0.60.1) (2024-08-20)
+
+### Bug Fixes
+
+* use uuid for config version in compose command ([#1097](https://github.com/wundergraph/cosmo/issues/1097)) ([0e1750e](https://github.com/wundergraph/cosmo/commit/0e1750e55a2e71d777f0cfc59d4d819e3b23eb40)) (@thisisnithin)
+
+# [0.60.0](https://github.com/wundergraph/cosmo/compare/wgc@0.59.4...wgc@0.60.0) (2024-08-19)
+
+### Features
+
+* export cli cmds output in json ([#1088](https://github.com/wundergraph/cosmo/issues/1088)) ([32c597c](https://github.com/wundergraph/cosmo/commit/32c597c1bcab88a1d820ea83f978fa811d8e3768)) (@JivusAyrus)
+
+## [0.59.4](https://github.com/wundergraph/cosmo/compare/wgc@0.59.3...wgc@0.59.4) (2024-08-14)
+
+**Note:** Version bump only for package wgc
+
+## [0.59.3](https://github.com/wundergraph/cosmo/compare/wgc@0.59.2...wgc@0.59.3) (2024-08-14)
+
+### Bug Fixes
+
+* **cli-compose:** feature subgraph introspection ([#1078](https://github.com/wundergraph/cosmo/issues/1078)) ([13a7d63](https://github.com/wundergraph/cosmo/commit/13a7d638ac879e759e56d29fbd660aac5e3c3fc0)) (@StarpTech)
+
+## [0.59.2](https://github.com/wundergraph/cosmo/compare/wgc@0.59.1...wgc@0.59.2) (2024-08-10)
+
+**Note:** Version bump only for package wgc
+
+## [0.59.1](https://github.com/wundergraph/cosmo/compare/wgc@0.59.0...wgc@0.59.1) (2024-08-09)
+
+**Note:** Version bump only for package wgc
+
+# [0.59.0](https://github.com/wundergraph/cosmo/compare/wgc@0.58.7...wgc@0.59.0) (2024-08-09)
+
+### Features
+
+* add command to create and publish feature subgraph in one command ([#960](https://github.com/wundergraph/cosmo/issues/960)) ([9a478e8](https://github.com/wundergraph/cosmo/commit/9a478e8164bfc7c933fedbe6188d7876e5c46c94)) (@JivusAyrus)
+
+## [0.58.7](https://github.com/wundergraph/cosmo/compare/wgc@0.58.6...wgc@0.58.7) (2024-08-01)
+
+**Note:** Version bump only for package wgc
+
+## [0.58.6](https://github.com/wundergraph/cosmo/compare/wgc@0.58.5...wgc@0.58.6) (2024-07-31)
+
+**Note:** Version bump only for package wgc
+
 ## [0.58.5](https://github.com/wundergraph/cosmo/compare/wgc@0.58.4...wgc@0.58.5) (2024-07-18)
 
 **Note:** Version bump only for package wgc

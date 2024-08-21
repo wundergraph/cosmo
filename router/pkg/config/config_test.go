@@ -6,18 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/santhosh-tekuri/jsonschema/v5"
+	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/sebdah/goldie/v2"
 	"github.com/stretchr/testify/require"
 )
-
-func TestConfigRequiredValues(t *testing.T) {
-	f := createTempFileFromFixture(t, `
-version: "1"
-`)
-	_, err := LoadConfig(f, "")
-	require.ErrorContains(t, err, "either router config path or graph token must be provided")
-}
 
 func TestTokenNotRequiredWhenPassingStaticConfig(t *testing.T) {
 	f := createTempFileFromFixture(t, `
@@ -48,8 +40,8 @@ traffic_shaping:
 	var js *jsonschema.ValidationError
 	require.ErrorAs(t, err, &js)
 
-	require.Equal(t, js.Causes[0].KeywordLocation, "/properties/traffic_shaping/properties/router/properties/max_request_body_size/bytes")
-	require.Equal(t, js.Causes[0].Message, "must be greater or equal than 1.0 MB")
+	require.Equal(t, js.Causes[0].InstanceLocation, []string{"traffic_shaping", "router", "max_request_body_size"})
+	require.Equal(t, js.Causes[0].Error(), "at '/traffic_shaping/router/max_request_body_size': bytes must be greater or equal than 1.0 MB")
 }
 
 func TestVariableExpansion(t *testing.T) {
@@ -195,8 +187,8 @@ telemetry:
 	var js *jsonschema.ValidationError
 	require.ErrorAs(t, err, &js)
 
-	require.Equal(t, js.Causes[0].KeywordLocation, "/properties/telemetry/properties/tracing/properties/exporters/items/properties/export_timeout/duration")
-	require.Equal(t, js.Causes[0].Message, "must be greater or equal than 5s")
+	require.Equal(t, js.Causes[0].InstanceLocation, []string{"telemetry", "tracing", "exporters", "0", "export_timeout"})
+	require.Equal(t, js.Causes[0].Error(), "at '/telemetry/tracing/exporters/0/export_timeout': duration must be greater or equal than 5s")
 
 	f = createTempFileFromFixture(t, `
 version: "1"
@@ -215,8 +207,8 @@ telemetry:
 
 	require.ErrorAs(t, err, &js)
 
-	require.Equal(t, js.Causes[0].KeywordLocation, "/properties/telemetry/properties/tracing/properties/exporters/items/properties/export_timeout/duration")
-	require.Equal(t, js.Causes[0].Message, "must be less or equal than 2m0s")
+	require.Equal(t, js.Causes[0].InstanceLocation, []string{"telemetry", "tracing", "exporters", "0", "export_timeout"})
+	require.Equal(t, js.Causes[0].Error(), "at '/telemetry/tracing/exporters/0/export_timeout': duration must be less or equal than 2m0s")
 }
 
 func TestLoadFullConfig(t *testing.T) {
@@ -294,5 +286,178 @@ overrides:
 	_, err := LoadConfig(f, "")
 	var js *jsonschema.ValidationError
 	require.ErrorAs(t, err, &js)
-	require.Equal(t, js.Causes[0].Message, "'a' is not valid 'http-url'")
+	require.Equal(t, js.Causes[0].Error(), "at '/overrides/subgraphs/some-subgraph/routing_url': 'a' is not valid http-url: invalid URL")
+}
+
+func TestValidPersistedOperations(t *testing.T) {
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  s3:
+    - id: "s3"
+      endpoint: "localhost:10000"
+      bucket: "cosmo"
+      access_key: "Pj6opX3288YukriGCzIr"
+      secret_key: "WNMg9X4fzMva18henO6XLX4qRHEArwYdT7Yt84w9"
+      secure: false
+
+persisted_operations:
+  cache:
+    size: 100MB
+  storage:
+    provider_id: s3
+    object_prefix: "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/operations/foo"
+`)
+	_, err := LoadConfig(f, "")
+	var js *jsonschema.ValidationError
+	require.NoError(t, err, &js)
+
+	f = createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  cdn:
+    - url: https://cosmo-cdn.wundergraph.com
+      id: cdn
+
+persisted_operations:
+  cache:
+    size: 100MB
+  storage:
+    provider_id: cdn
+    object_prefix: "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/operations/foo"
+`)
+	_, err = LoadConfig(f, "")
+	js = &jsonschema.ValidationError{}
+	require.NoError(t, err, &js)
+}
+
+func TestInvalidPersistedOperations(t *testing.T) {
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  s3:
+    - id: "s3"
+      endpoint: "localhost:10000"
+      bucket: "cosmo"
+      access_key: "Pj6opX3288YukriGCzIr"
+      secret_key: "WNMg9X4fzMva18henO6XLX4qRHEArwYdT7Yt84w9"
+      secure: false
+
+persisted_operations:
+  cache:
+    size: 100MB
+  storage:
+    provider_id: s3
+	# Missing object_prefix
+`)
+	_, err := LoadConfig(f, "")
+	var js *jsonschema.ValidationError
+	require.ErrorAs(t, err, &js)
+	require.Equal(t, js.Causes[0].Error(), "at '/persisted_operations/storage': missing property 'object_prefix'")
+}
+
+func TestValidExecutionConfig(t *testing.T) {
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  s3:
+    - id: "s3"
+      endpoint: "localhost:10000"
+      bucket: "cosmo"
+      access_key: "Pj6opX3288YukriGCzIr"
+      secret_key: "WNMg9X4fzMva18henO6XLX4qRHEArwYdT7Yt84w9"
+      secure: false
+
+execution_config:
+  storage:
+    provider_id: s3
+    object_path: "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/routerconfigs/latest.json"
+`)
+	_, err := LoadConfig(f, "")
+	var js *jsonschema.ValidationError
+	require.NoError(t, err, &js)
+
+	f = createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  cdn:
+    - url: https://cosmo-cdn.wundergraph.com
+      id: cdn
+
+execution_config:
+  storage:
+    provider_id: cdn
+    object_path: "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/routerconfigs/latest.json"
+`)
+	_, err = LoadConfig(f, "")
+	js = &jsonschema.ValidationError{}
+	require.NoError(t, err, &js)
+}
+
+func TestInvalidExecutionConfig(t *testing.T) {
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  s3:
+    - id: "s3"
+      endpoint: "localhost:10000"
+      bucket: "cosmo"
+      access_key: "Pj6opX3288YukriGCzIr"
+      secret_key: "WNMg9X4fzMva18henO6XLX4qRHEArwYdT7Yt84w9"
+      secure: false
+
+execution_config:
+  storage:
+    provider_id: s3
+	# Missing object_path
+`)
+	_, err := LoadConfig(f, "")
+	var js *jsonschema.ValidationError
+	require.ErrorAs(t, err, &js)
+	require.Equal(t, js.Causes[0].Error(), "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config/storage': missing property 'object_path'")
+}
+
+func TestValidLocalExecutionConfig(t *testing.T) {
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+execution_config: 
+  file: 
+    path: "router.json"
+`)
+	_, err := LoadConfig(f, "")
+	require.NoError(t, err)
+}
+
+func TestInvalidFileExecutionConfig(t *testing.T) {
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  s3:
+    - id: "s3"
+      endpoint: "localhost:10000"
+      bucket: "cosmo"
+      access_key: "Pj6opX3288YukriGCzIr"
+      secret_key: "WNMg9X4fzMva18henO6XLX4qRHEArwYdT7Yt84w9"
+      secure: false
+
+execution_config:
+  file: 
+    path: "router.json"
+  storage: # Cannot have both local and storage
+    provider_id: s3
+    object_path: "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/routerconfigs/latest.json"
+`)
+	_, err := LoadConfig(f, "")
+	var js *jsonschema.ValidationError
+	require.ErrorAs(t, err, &js)
+	require.Equal(t, js.Causes[0].Error(), "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config': additional properties 'file' not allowed")
+
 }

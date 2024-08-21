@@ -13,6 +13,7 @@ import {
   normalizeSubgraph,
   NULL,
   OBJECT,
+  parse,
   Subgraph,
   subscriptionFieldConditionEmptyValuesArrayErrorMessage,
   subscriptionFieldConditionInvalidInputFieldErrorMessage,
@@ -22,9 +23,8 @@ import {
   subscriptionFilterConditionInvalidInputFieldErrorMessage,
   subscriptionFilterConditionInvalidInputFieldTypeErrorMessage,
 } from '../src';
-import { parse } from 'graphql';
 import { normalizeString, schemaToSortedNormalizedString } from './utils/utils';
-import { CONDITION, FIELD, SUBSCRIPTION } from '../src/utils/string-constants';
+import { CONDITION, FIELD, SUBSCRIPTION } from '../src';
 
 describe('@openfed__subscriptionFilter tests', () => {
   describe('Normalization tests', () => {
@@ -490,7 +490,7 @@ const subgraphB: Subgraph = {
       SA
     }
     
-    type Entity  @key(fields: "id object { name, age } product { sku, continent }") {
+    type Entity @key(fields: "id") @key(fields: "id object { name, age } product { sku, continent }") {
       age: Int!
       id: ID!
       name: String!
@@ -502,7 +502,8 @@ const subgraphB: Subgraph = {
       name: String!
     }
     
-    type Object @external {
+    type Object {
+      id: ID!
       name: String!
       age: Int!
       field: NestedObject!
