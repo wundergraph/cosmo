@@ -62,7 +62,7 @@ export default (opts: BaseCommandOptions) => {
   command.option('-j, --json', 'Prints to the console in json format instead of table');
 
   command.action(async (name, options) => {
-    const schemaFile = resolve(process.cwd(), options.schema);
+    const schemaFile = resolve(options.schema);
     const shouldOutputJson = options.json || options.raw;
     if (!existsSync(schemaFile)) {
       program.error(
