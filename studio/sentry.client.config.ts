@@ -29,7 +29,7 @@ if (isSentryFeatureFeedbackFormEnabled) {
     feedbackIntegration({
       colorScheme: "system",
       themeLight: {
-        background: "hsl(var(--background))",
+        background: "#ffffff",
         accentForeground: "hsl(var(--primary-foreground))",
         accentBackground: "hsl(var(--primary))",
         successColor: "hsl(var(--success))",
@@ -38,7 +38,7 @@ if (isSentryFeatureFeedbackFormEnabled) {
         outline: "2px solid hsl(var(--primary))",
       },
       themeDark: {
-        background: "hsl(var(--background))",
+        background: "#0a0210",
         accentForeground: "hsl(var(--primary-foreground))",
         accentBackground: "hsl(var(--primary))",
         successColor: "hsl(var(--success))",
