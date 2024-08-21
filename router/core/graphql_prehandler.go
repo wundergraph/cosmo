@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
+	"github.com/goccy/go-json"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
 	"io"
 	"net/http"
@@ -357,6 +358,23 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpOperation *httpOperation) (*operationContext, error) {
 
+	// Handle the case when operation information are provided as GET parameters
+	if req.Method == http.MethodGet {
+		req := GraphQLRequest{
+			OperationName: req.URL.Query().Get("operationName"),
+			Query:         req.URL.Query().Get("query"),
+			Variables:     []byte(req.URL.Query().Get("variables")),
+			Extensions:    []byte(req.URL.Query().Get("extensions")),
+		}
+
+		d, err := json.Marshal(req)
+		if err != nil {
+			return nil, err
+		}
+
+		httpOperation.body = d
+	}
+
 	operationKit, err := h.operationProcessor.NewKit(httpOperation.body, httpOperation.files)
 	if err != nil {
 		return nil, err
@@ -412,6 +430,13 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 
 	// Give the buffer back to the pool as soon as we're done with it
 	h.releaseBodyReadBuffer(buf)
+
+	if req.Method == http.MethodGet && operationKit.parsedOperation.Type != "query" {
+		return nil, &httpGraphqlError{
+			message:    "Only operations of type Query can be sent over HTTP GET",
+			statusCode: http.StatusMethodNotAllowed,
+		}
+	}
 
 	attributes := []attribute.KeyValue{
 		otel.WgOperationName.String(operationKit.parsedOperation.Request.OperationName),
@@ -549,10 +574,10 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 	)
 
 	planOptions := PlanOptions{
-		Protocol:         OperationProtocolHTTP,
-		ClientInfo:       httpOperation.clientInfo,
-		TraceOptions:     httpOperation.traceOptions,
-		ExecutionOptions: httpOperation.executionOptions,
+		Protocol:             OperationProtocolHTTP,
+		ClientInfo:           httpOperation.clientInfo,
+		TraceOptions:         httpOperation.traceOptions,
+		ExecutionOptions:     httpOperation.executionOptions,
 		TrackSchemaUsageInfo: h.trackSchemaUsageInfo,
 	}
 

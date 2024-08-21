@@ -957,10 +957,6 @@ func (e *Environment) MakeGraphQLRequestOK(request GraphQLRequest) *TestResponse
 }
 
 func (e *Environment) MakeGraphQLRequestWithContext(ctx context.Context, request GraphQLRequest) (*TestResponse, error) {
-	return e.makeGraphQLRequest(ctx, request)
-}
-
-func (e *Environment) makeGraphQLRequest(ctx context.Context, request GraphQLRequest) (*TestResponse, error) {
 	data, err := json.Marshal(request)
 	require.NoError(e.t, err)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, e.GraphQLRequestURL(), bytes.NewReader(data))
@@ -971,7 +967,39 @@ func (e *Environment) makeGraphQLRequest(ctx context.Context, request GraphQLReq
 		req.Header = request.Header
 	}
 	req.Header.Set("Accept-Encoding", "identity")
-	resp, err := e.RouterClient.Do(req)
+	return e.makeGraphQLRequest(req)
+}
+
+func (e *Environment) MakeGraphQLRequestOverGET(request GraphQLRequest) (*TestResponse, error) {
+	req, err := http.NewRequestWithContext(e.Context, http.MethodGet, e.GraphQLRequestURL(), nil)
+	if err != nil {
+		return nil, err
+	}
+	if request.Header != nil {
+		req.Header = request.Header
+	}
+	req.Header.Set("Accept-Encoding", "identity")
+
+	q := req.URL.Query()
+	if request.Query != "" {
+		q.Add("query", request.Query)
+	}
+	if request.Variables != nil {
+		q.Add("variables", string(request.Variables))
+	}
+	if request.OperationName != nil {
+		q.Add("operationName", string(request.OperationName))
+	}
+	if request.Extensions != nil {
+		q.Add("extensions", string(request.Extensions))
+	}
+	req.URL.RawQuery = q.Encode()
+
+	return e.makeGraphQLRequest(req)
+}
+
+func (e *Environment) makeGraphQLRequest(request *http.Request) (*TestResponse, error) {
+	resp, err := e.RouterClient.Do(request)
 	if err != nil {
 		return nil, err
 	}
@@ -991,7 +1019,7 @@ func (e *Environment) makeGraphQLRequest(ctx context.Context, request GraphQLReq
 }
 
 func (e *Environment) MakeGraphQLRequest(request GraphQLRequest) (*TestResponse, error) {
-	return e.makeGraphQLRequest(e.Context, request)
+	return e.MakeGraphQLRequestWithContext(e.Context, request)
 }
 
 func (e *Environment) MakeGraphQLRequestAsMultipartForm(request GraphQLRequest) (*TestResponse, error) {

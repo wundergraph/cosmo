@@ -137,10 +137,10 @@ type OperationKit struct {
 }
 
 type GraphQLRequest struct {
-	Query         string          `json:"query"`
-	OperationName string          `json:"operationName"`
-	Variables     json.RawMessage `json:"variables"`
-	Extensions    json.RawMessage `json:"extensions"`
+	Query         string          `json:"query,omitempty"`
+	OperationName string          `json:"operationName,omitempty"`
+	Variables     json.RawMessage `json:"variables,omitempty"`
+	Extensions    json.RawMessage `json:"extensions,omitempty"`
 }
 
 type GraphQLRequestExtensions struct {
