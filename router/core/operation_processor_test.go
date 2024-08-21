@@ -225,20 +225,25 @@ func TestOperationProcessorUnmarshalExtensions(t *testing.T) {
 		ParseKitPoolSize:        4,
 	})
 	testCases := []struct {
-		Input string
-		Valid bool
+		Input     string
+		HttpError bool
+		Valid     bool
 	}{
 		{
-			Input: `{"query":"subscription { initialPayload(repeat:3) }","extensions":"this_is_not_valid"}`,
+			Input:     `{"query":"subscription { initialPayload(repeat:3) }","extensions":"this_is_not_valid"}`,
+			HttpError: true,
 		},
 		{
-			Input: `{"query":"subscription { initialPayload(repeat:3) }","extensions":42}`,
+			Input:     `{"query":"subscription { initialPayload(repeat:3) }","extensions":42}`,
+			HttpError: true,
 		},
 		{
-			Input: `{"query":"subscription { initialPayload(repeat:3) }","extensions":true}`,
+			Input:     `{"query":"subscription { initialPayload(repeat:3) }","extensions":true}`,
+			HttpError: true,
 		},
 		{
 			Input: `{"query":"subscription { initialPayload(repeat:3) }","extensions":{"foo":bar}}`,
+			Valid: false,
 		},
 		{
 			Input: `{"query":"subscription { initialPayload(repeat:3) }","extensions":{}}`,
@@ -264,11 +269,13 @@ func TestOperationProcessorUnmarshalExtensions(t *testing.T) {
 
 			err = kit.UnmarshalOperationFromBody([]byte(tc.Input))
 
-			isInputError := errors.As(err, &inputError)
 			if tc.Valid {
-				assert.False(t, isInputError, "expected invalid extensions to not return an input error, got %s", err)
-			} else {
+				assert.NoError(t, err)
+			} else if tc.HttpError {
+				isInputError := errors.As(err, &inputError)
 				assert.True(t, isInputError, "expected invalid extensions to return an input error, got %s", err)
+			} else {
+				assert.Error(t, err)
 			}
 		})
 	}
