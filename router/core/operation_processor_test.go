@@ -272,8 +272,7 @@ func TestOperationProcessorUnmarshalExtensions(t *testing.T) {
 			if tc.Valid {
 				assert.NoError(t, err)
 			} else if tc.HttpError {
-				isInputError := errors.As(err, &inputError)
-				assert.True(t, isInputError, "expected invalid extensions to return an input error, got %s", err)
+				assert.True(t, errors.As(err, &inputError), "expected invalid extensions to return an http error, got %s", err)
 			} else {
 				assert.Error(t, err)
 			}
