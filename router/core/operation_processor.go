@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"slices"
 	"sync"
 
@@ -17,7 +18,6 @@ import (
 	"github.com/tidwall/sjson"
 	"github.com/valyala/fastjson"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
-	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
@@ -113,8 +113,8 @@ type parseKit struct {
 }
 
 type OperationCache struct {
-	persistetOperationVariableNames     map[string][]string
-	persistetOperationVariableNamesLock *sync.RWMutex
+	persistedOperationVariableNames     map[string][]string
+	persistedOperationVariableNamesLock *sync.RWMutex
 
 	persistedOperationCache     map[uint64]normalizedOperationCacheEntry
 	persistedOperationCacheLock *sync.RWMutex
@@ -128,7 +128,6 @@ type OperationCache struct {
 // It must be created for each request and freed after the request is done.
 type OperationKit struct {
 	cache                    *OperationCache
-	data                     []byte
 	operationDefinitionRef   int
 	originalOperationNameRef ast.ByteSliceReference
 	operationProcessor       *OperationProcessor
@@ -137,10 +136,10 @@ type OperationKit struct {
 }
 
 type GraphQLRequest struct {
-	Query         string          `json:"query"`
-	OperationName string          `json:"operationName"`
-	Variables     json.RawMessage `json:"variables"`
-	Extensions    json.RawMessage `json:"extensions"`
+	Query         string          `json:"query,omitempty"`
+	OperationName string          `json:"operationName,omitempty"`
+	Variables     json.RawMessage `json:"variables,omitempty"`
+	Extensions    json.RawMessage `json:"extensions,omitempty"`
 }
 
 type GraphQLRequestExtensions struct {
@@ -154,16 +153,13 @@ type GraphQLRequestExtensionsPersistedQuery struct {
 
 // NewOperationKit creates a new OperationKit. The kit is used to parse, normalize and validate operations.
 // It allocates resources that need to be freed by calling OperationKit.Free()
-func NewOperationKit(processor *OperationProcessor, data []byte, files []httpclient.File) *OperationKit {
+func NewOperationKit(processor *OperationProcessor) *OperationKit {
 	return &OperationKit{
 		operationProcessor:     processor,
 		kit:                    processor.getKit(),
 		operationDefinitionRef: -1,
-		data:                   data,
 		cache:                  processor.operationCache,
-		parsedOperation: &ParsedOperation{
-			Files: files,
-		},
+		parsedOperation:        &ParsedOperation{},
 	}
 }
 
@@ -172,24 +168,68 @@ func (o *OperationKit) Free() {
 	o.operationProcessor.freeKit(o.kit)
 }
 
-// UnmarshalOperation loads the operation from the request body and unmarshal it into the ParsedOperation
-func (o *OperationKit) UnmarshalOperation() error {
-	buf := bytes.NewBuffer(make([]byte, len(o.data))[:0])
-	err := json.Compact(buf, o.data)
-	if err != nil {
-		return &httpGraphqlError{
-			message:    fmt.Sprintf("error parsing request body: %s", err),
-			statusCode: http.StatusBadRequest,
+// UnmarshalOperationFromURL loads the operation from the URL and unmarshal it into the ParsedOperation
+// It follows the GraphQL over HTTP specification for GET requests https://graphql.github.io/graphql-over-http/draft/#sec-GET
+// We always compact the variables and extensions to ensure that we produce easy to parse JSON for the engine
+func (o *OperationKit) UnmarshalOperationFromURL(url *url.URL) error {
+
+	values := url.Query()
+
+	query := values.Get("query")
+	if query != "" {
+		o.parsedOperation.Request.Query = values.Get("query")
+	}
+
+	operationName := values.Get("operationName")
+	if operationName != "" {
+		o.parsedOperation.Request.OperationName = operationName
+	}
+
+	variables := values.Get("variables")
+	if variables != "" {
+		o.parsedOperation.Request.Variables = []byte(variables)
+		buf := bytes.NewBuffer(make([]byte, len(o.parsedOperation.Request.Variables))[:0])
+		err := json.Compact(buf, o.parsedOperation.Request.Variables)
+		if err != nil {
+			return err
 		}
 	}
-	o.data = buf.Bytes()
-	err = json.Unmarshal(o.data, &o.parsedOperation.Request)
-	if err != nil {
-		return &httpGraphqlError{
-			message:    fmt.Sprintf("error parsing request body: %s", err),
-			statusCode: http.StatusBadRequest,
+
+	extensions := values.Get("extensions")
+	if extensions != "" {
+		o.parsedOperation.Request.Extensions = []byte(extensions)
+		buf := bytes.NewBuffer(make([]byte, len(o.parsedOperation.Request.Extensions))[:0])
+		err := json.Compact(buf, o.parsedOperation.Request.Extensions)
+		if err != nil {
+			return err
 		}
 	}
+
+	return o.unmarshalOperation()
+}
+
+// UnmarshalOperationFromBody loads the operation from the request body and unmarshal it into the ParsedOperation
+// This will load operationName, query, variables and extensions from the request body but extension and variables
+// will be unmarshalled as JSON.RawMessage.
+// We always compact the variables and extensions to ensure that we produce easy to parse JSON for the engine
+func (o *OperationKit) UnmarshalOperationFromBody(data []byte) error {
+	buf := bytes.NewBuffer(make([]byte, len(data))[:0])
+	err := json.Compact(buf, data)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(buf.Bytes(), &o.parsedOperation.Request)
+	if err != nil {
+		return err
+	}
+
+	return o.unmarshalOperation()
+}
+
+// unmarshalOperation unmarshal the extensions and variables from the request body into the ParsedOperation
+// and does some pre-processing on the operation to ensure that the engine can handle it
+func (o *OperationKit) unmarshalOperation() error {
+	var err error
 
 	if o.parsedOperation.Request.Extensions != nil {
 		var mapExtensions map[string]any
@@ -218,6 +258,7 @@ func (o *OperationKit) UnmarshalOperation() error {
 			}
 		}
 	}
+
 	if o.parsedOperation.Request.Variables != nil {
 		// variables must be a valid JSON object or null
 		variables, err := fastjson.ParseBytes(o.parsedOperation.Request.Variables)
@@ -261,7 +302,7 @@ func (o *OperationKit) UnmarshalOperation() error {
 }
 
 // FetchPersistedOperation fetches the persisted operation from the cache or the client. If the operation is fetched from the cache it returns true.
-// UnmarshalOperation must be called before calling this method.
+// UnmarshalOperationFromBody or UnmarshalOperationFromURL must be called before calling this method.
 func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *ClientInfo, commonTraceAttributes []attribute.KeyValue) (bool, error) {
 	if o.operationProcessor.persistedOperationClient == nil {
 		return false, &httpGraphqlError{
@@ -291,7 +332,7 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 }
 
 // Parse parses the operation, populate the document and set the operation type.
-// UnmarshalOperation must be called before calling this method.
+// UnmarshalOperationFromBody must be called before calling this method.
 func (o *OperationKit) Parse() error {
 	var (
 		operationCount                  = 0
@@ -611,15 +652,15 @@ func (o *OperationKit) savePersistedOperationToCache(skipIncludeVariableNames []
 	o.cache.persistedOperationCache[cacheKey] = entry
 	o.cache.persistedOperationCacheLock.Unlock()
 
-	o.cache.persistetOperationVariableNamesLock.Lock()
-	o.cache.persistetOperationVariableNames[o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash] = skipIncludeVariableNames
-	o.cache.persistetOperationVariableNamesLock.Unlock()
+	o.cache.persistedOperationVariableNamesLock.Lock()
+	o.cache.persistedOperationVariableNames[o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash] = skipIncludeVariableNames
+	o.cache.persistedOperationVariableNamesLock.Unlock()
 }
 
 func (o *OperationKit) loadPersistedOperationCacheKey(persistedQuerySha256Hash string) (key uint64, ok bool) {
-	o.cache.persistetOperationVariableNamesLock.RLock()
-	variableNames, ok := o.cache.persistetOperationVariableNames[persistedQuerySha256Hash]
-	o.cache.persistetOperationVariableNamesLock.RUnlock()
+	o.cache.persistedOperationVariableNamesLock.RLock()
+	variableNames, ok := o.cache.persistedOperationVariableNames[persistedQuerySha256Hash]
+	o.cache.persistedOperationVariableNamesLock.RUnlock()
 	if !ok {
 		return 0, false
 	}
@@ -767,8 +808,8 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 	}
 	if opts.EnablePersistedOperationsCache {
 		processor.operationCache = &OperationCache{
-			persistetOperationVariableNames:     map[string][]string{},
-			persistetOperationVariableNamesLock: &sync.RWMutex{},
+			persistedOperationVariableNames:     map[string][]string{},
+			persistedOperationVariableNamesLock: &sync.RWMutex{},
 			persistedOperationCache:             map[uint64]normalizedOperationCacheEntry{},
 			persistedOperationCacheLock:         &sync.RWMutex{},
 		}
@@ -807,19 +848,15 @@ func (p *OperationProcessor) freeKit(kit *parseKit) {
 	p.parseKitSemaphore <- kit.i
 }
 
-func (p *OperationProcessor) entityTooLarge() error {
-	return &httpGraphqlError{
-		message:    fmt.Sprintf("request body too large, max size is %d bytes", p.maxOperationSizeInBytes),
-		statusCode: http.StatusRequestEntityTooLarge,
-	}
-}
-
 func (p *OperationProcessor) ReadBody(buf *bytes.Buffer, r io.Reader) ([]byte, error) {
 	if _, err := io.Copy(buf, r); err != nil {
 		// Set when http.MaxBytesReader is used before
 		var maxBytesErr *http.MaxBytesError
 		if errors.As(err, &maxBytesErr) {
-			return nil, p.entityTooLarge()
+			return nil, &httpGraphqlError{
+				message:    fmt.Sprintf("request body too large, max size is %d bytes", p.maxOperationSizeInBytes),
+				statusCode: http.StatusRequestEntityTooLarge,
+			}
 		}
 		return nil, fmt.Errorf("failed to read request body: %w", err)
 	}
@@ -827,22 +864,9 @@ func (p *OperationProcessor) ReadBody(buf *bytes.Buffer, r io.Reader) ([]byte, e
 	return buf.Bytes(), nil
 }
 
-func (p *OperationProcessor) NewKitFromReader(r io.Reader) (*OperationKit, error) {
-	buf := pool.GetBytesBuffer()
-	defer pool.PutBytesBuffer(buf)
-	data, err := p.ReadBody(buf, r)
-	if err != nil {
-		return nil, err
-	}
-	return NewOperationKit(p, data, nil), nil
-}
-
 // NewKit creates a new OperationKit. The kit is used to parse, normalize and
 // validate operations. It also validates if the operation size is within the
 // limit.
-func (p *OperationProcessor) NewKit(data []byte, files []httpclient.File) (*OperationKit, error) {
-	if len(data) > int(p.maxOperationSizeInBytes) {
-		return nil, p.entityTooLarge()
-	}
-	return NewOperationKit(p, data, files), nil
+func (p *OperationProcessor) NewKit() (*OperationKit, error) {
+	return NewOperationKit(p), nil
 }

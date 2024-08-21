@@ -1,6 +1,7 @@
 package testenv
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"crypto/tls"
@@ -957,10 +958,6 @@ func (e *Environment) MakeGraphQLRequestOK(request GraphQLRequest) *TestResponse
 }
 
 func (e *Environment) MakeGraphQLRequestWithContext(ctx context.Context, request GraphQLRequest) (*TestResponse, error) {
-	return e.makeGraphQLRequest(ctx, request)
-}
-
-func (e *Environment) makeGraphQLRequest(ctx context.Context, request GraphQLRequest) (*TestResponse, error) {
 	data, err := json.Marshal(request)
 	require.NoError(e.t, err)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, e.GraphQLRequestURL(), bytes.NewReader(data))
@@ -971,7 +968,48 @@ func (e *Environment) makeGraphQLRequest(ctx context.Context, request GraphQLReq
 		req.Header = request.Header
 	}
 	req.Header.Set("Accept-Encoding", "identity")
-	resp, err := e.RouterClient.Do(req)
+	return e.makeGraphQLRequest(req)
+}
+
+func (e *Environment) MakeGraphQLRequestOverGET(request GraphQLRequest) (*TestResponse, error) {
+	req, err := e.newGraphQLRequestOverGET(e.GraphQLRequestURL(), request)
+	if err != nil {
+		return nil, err
+	}
+
+	return e.makeGraphQLRequest(req)
+}
+
+func (e *Environment) newGraphQLRequestOverGET(baseURL string, request GraphQLRequest) (*http.Request, error) {
+	req, err := http.NewRequestWithContext(e.Context, http.MethodGet, baseURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	if request.Header != nil {
+		req.Header = request.Header
+	}
+	req.Header.Set("Accept-Encoding", "identity")
+
+	q := req.URL.Query()
+	if request.Query != "" {
+		q.Add("query", request.Query)
+	}
+	if request.Variables != nil {
+		q.Add("variables", string(request.Variables))
+	}
+	if request.OperationName != nil {
+		q.Add("operationName", string(request.OperationName))
+	}
+	if request.Extensions != nil {
+		q.Add("extensions", string(request.Extensions))
+	}
+	req.URL.RawQuery = q.Encode()
+
+	return req, nil
+}
+
+func (e *Environment) makeGraphQLRequest(request *http.Request) (*TestResponse, error) {
+	resp, err := e.RouterClient.Do(request)
 	if err != nil {
 		return nil, err
 	}
@@ -991,7 +1029,7 @@ func (e *Environment) makeGraphQLRequest(ctx context.Context, request GraphQLReq
 }
 
 func (e *Environment) MakeGraphQLRequest(request GraphQLRequest) (*TestResponse, error) {
-	return e.makeGraphQLRequest(e.Context, request)
+	return e.MakeGraphQLRequestWithContext(e.Context, request)
 }
 
 func (e *Environment) MakeGraphQLRequestAsMultipartForm(request GraphQLRequest) (*TestResponse, error) {
@@ -1202,6 +1240,56 @@ func (e *Environment) InitGraphQLWebSocketConnection(header http.Header, query u
 	require.NoError(e.t, err)
 	require.Equal(e.t, "connection_ack", ack.Type)
 	return conn
+}
+
+func (e *Environment) GraphQLSubscriptionOverGetAndSSE(ctx context.Context, request GraphQLRequest, handler func(data string)) {
+	req, err := e.newGraphQLRequestOverGET(e.GraphQLServeSentEventsURL(), request)
+	if err != nil {
+		e.t.Fatalf("could not create request: %s", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "text/event-stream")
+	req.Header.Set("Connection", "keep-alive")
+	req.Header.Set("Cache-Control", "no-cache")
+
+	resp, err := e.RouterClient.Do(req)
+	if err != nil {
+		e.t.Fatalf("could not make request: %s", err)
+	}
+	defer resp.Body.Close()
+
+	// Check for the correct response status code
+	if resp.StatusCode != http.StatusOK {
+		e.t.Fatalf("expected status code 200, got %d", resp.StatusCode)
+	}
+
+	reader := bufio.NewReader(resp.Body)
+
+	// Process incoming events
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-e.Context.Done():
+			return
+		case <-req.Context().Done():
+			return
+		default:
+			line, err := reader.ReadString('\n')
+			if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, io.EOF) {
+				e.t.Fatalf("could not read line: %s", err)
+				return
+			}
+
+			// SSE lines typically start with "event", "data", etc.
+			if strings.HasPrefix(line, "data: ") {
+				data := strings.TrimPrefix(line, "data: ")
+				handler(data)
+			}
+		}
+
+	}
 }
 
 func (e *Environment) AbsintheWebsocketDialWithRetry(header http.Header) (*websocket.Conn, *http.Response, error) {

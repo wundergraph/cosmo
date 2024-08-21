@@ -723,13 +723,13 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 		return nil, nil, err
 	}
 
-	operationKit, err := h.operationProcessor.NewKit(payload, nil)
+	operationKit, err := h.operationProcessor.NewKit()
 	if err != nil {
 		return nil, nil, err
 	}
 	defer operationKit.Free()
 
-	if err := operationKit.UnmarshalOperation(); err != nil {
+	if err := operationKit.UnmarshalOperationFromBody(payload); err != nil {
 		return nil, nil, err
 	}
 
@@ -768,10 +768,10 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 	}
 
 	planOptions := PlanOptions{
-		Protocol:         OperationProtocolWS,
-		ClientInfo:       h.clientInfo,
-		TraceOptions:     traceOptions,
-		ExecutionOptions: executionOptions,
+		Protocol:             OperationProtocolWS,
+		ClientInfo:           h.clientInfo,
+		TraceOptions:         traceOptions,
+		ExecutionOptions:     executionOptions,
 		TrackSchemaUsageInfo: h.preHandler.trackSchemaUsageInfo,
 	}
 

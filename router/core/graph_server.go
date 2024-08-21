@@ -694,7 +694,10 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	// Needs to be mounted after the pre-handler to ensure that the request was parsed and authorized
 	httpRouter.Use(s.routerMiddlewares...)
 
+	// GraphQL over POST
 	httpRouter.Post("/", graphqlHandler.ServeHTTP)
+	// GraphQL over GET
+	httpRouter.Get("/", graphqlHandler.ServeHTTP)
 
 	gm.mux = httpRouter
 
