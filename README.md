@@ -57,8 +57,6 @@ _For any questions, feedback, or support, please [contact](https://wundergraph.c
 
 We welcome contributions from the community! Whether it's fixing a bug, adding new features, or improving documentation, your help is greatly appreciated. Please take a look in our [Contributing Guide](CONTRIBUTING.md) to get started.
 
-### How to Contribute
-
 ## License
 
 Cosmo is licensed under the [Apache License, Version 2.0](LICENSE).
