@@ -12,6 +12,7 @@ var sdk = &model.Sdk{
 	Upc:       "sdk",
 	Engineers: engineers,
 	Owner:     employees[0],
+	Unicode:   "\U0001F600\u2665\u0021\u0015\u0010\U0001F765",
 }
 
 var consultancy = &model.Consultancy{

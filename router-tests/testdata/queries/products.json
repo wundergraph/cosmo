@@ -22,7 +22,8 @@
         "clientLanguages": [
           "RUST",
           "TYPESCRIPT"
-        ]
+        ],
+        "unicode": "😀♥!\u0015\u0010🝥"
       }
     ],
     "productTypes": [
