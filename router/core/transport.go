@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dgraph-io/ristretto"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
@@ -26,7 +27,6 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	otrace "go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
-	"golang.org/x/sync/singleflight"
 )
 
 type TransportPreHandler func(req *http.Request, ctx RequestContext) (*http.Request, *http.Response)
@@ -39,7 +39,14 @@ type CustomTransport struct {
 	metricStore  metric.Provider
 	logger       *zap.Logger
 
-	sf *singleflight.Group
+	sfCache *ristretto.Cache[uint64, *sfCacheItem]
+}
+
+type sfCacheItem struct {
+	loaded   chan struct{}
+	response *http.Response
+	body     []byte
+	err      error
 }
 
 func NewCustomTransport(
@@ -59,7 +66,11 @@ func NewCustomTransport(
 		ct.roundTripper = roundTripper
 	}
 	if enableSingleFlight {
-		ct.sf = &singleflight.Group{}
+		ct.sfCache, _ = ristretto.NewCache[uint64, *sfCacheItem](&ristretto.Config[uint64, *sfCacheItem]{
+			MaxCost:     1024,
+			NumCounters: 1024 * 10,
+			BufferItems: 64,
+		})
 	}
 
 	return ct
@@ -172,7 +183,7 @@ func (ct *CustomTransport) isUpgradeError(req *http.Request, res *http.Response)
 }
 
 func (ct *CustomTransport) allowSingleFlight(req *http.Request) bool {
-	if ct.sf == nil {
+	if ct.sfCache == nil {
 		// Single flight is disabled
 		return false
 	}
@@ -214,55 +225,59 @@ func releaseBuffer(buf *bytes.Buffer) {
 
 func (ct *CustomTransport) roundTripSingleFlight(req *http.Request) (*http.Response, error) {
 
-	// We need to use the single flight group to ensure that the request is only sent once
-	v, err, shared := ct.sf.Do(ct.singleFlightKey(req), func() (interface{}, error) {
-		res, err := ct.roundTripper.RoundTrip(req)
-		if err != nil {
-			return nil, err
-		}
-		// single flight is disallowed for mutations, including file uploads
-		// hence we don't need to worry about buffering the body here
-		buf := getBuffer()
-		defer releaseBuffer(buf)
-		_, err = buf.ReadFrom(res.Body)
-		if err != nil {
-			return nil, err
-		}
-		cp := make([]byte, buf.Len())
-		copy(cp, buf.Bytes())
-		return &responseWithBody{
-			res:  res,
-			body: cp,
-		}, nil
-	})
+	key := ct.singleFlightKey(req)
+	item, ok := ct.sfCache.Get(key)
+	if ok {
+		<-item.loaded
+		res := &http.Response{}
+		res.Status = item.response.Status
+		res.StatusCode = item.response.StatusCode
+		res.Header = item.response.Header.Clone()
+		res.Trailer = item.response.Trailer.Clone()
+		res.ContentLength = item.response.ContentLength
+		res.TransferEncoding = item.response.TransferEncoding
+		res.Close = item.response.Close
+		res.Uncompressed = item.response.Uncompressed
+		res.Request = req
+
+		// Restore the body
+		res.Body = io.NopCloser(bytes.NewReader(item.body))
+		return res, item.err
+	}
+
+	item = &sfCacheItem{
+		loaded: make(chan struct{}),
+	}
+	ct.sfCache.SetWithTTL(key, item, 1, time.Millisecond*50)
+	defer close(item.loaded)
+
+	res, err := ct.roundTripper.RoundTrip(req)
 	if err != nil {
+		item.err = err
 		return nil, err
 	}
 
-	sfStats := resolve.GetSingleFlightStats(req.Context())
-	if sfStats != nil {
-		sfStats.SingleFlightUsed = true
-		sfStats.SingleFlightSharedResponse = shared
+	// single flight is disallowed for mutations, including file uploads
+	// hence we don't need to worry about buffering the body here
+	buf := getBuffer()
+	defer releaseBuffer(buf)
+	_, err = buf.ReadFrom(res.Body)
+	if err != nil {
+		item.err = err
+		return nil, err
 	}
-	rwb := v.(*responseWithBody)
-	res := &http.Response{}
-	res.Status = rwb.res.Status
-	res.StatusCode = rwb.res.StatusCode
-	res.Header = rwb.res.Header.Clone()
-	res.Trailer = rwb.res.Trailer.Clone()
-	res.ContentLength = rwb.res.ContentLength
-	res.TransferEncoding = rwb.res.TransferEncoding
-	res.Close = rwb.res.Close
-	res.Uncompressed = rwb.res.Uncompressed
-	res.Request = req
+
+	item.response = res
+	item.body = make([]byte, buf.Len())
+	copy(item.body, buf.Bytes())
 
 	// Restore the body
-	res.Body = io.NopCloser(bytes.NewReader(rwb.body))
+	res.Body = io.NopCloser(bytes.NewReader(item.body))
 
 	return res, nil
 }
 
-func (ct *CustomTransport) singleFlightKey(req *http.Request) string {
+func (ct *CustomTransport) singleFlightKey(req *http.Request) uint64 {
 	keyGen := pool.Hash64.Get()
 	defer pool.Hash64.Put(keyGen)
 
@@ -283,7 +298,7 @@ func (ct *CustomTransport) singleFlightKey(req *http.Request) string {
 	}
 
 	sum := keyGen.Sum64()
-	return strconv.FormatUint(sum, 10)
+	return sum
 }
 
 type TransportFactory struct {
