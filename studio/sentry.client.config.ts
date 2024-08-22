@@ -13,7 +13,11 @@ const integrations = [];
 if (isSentryFeatureReplayEnabled) {
   integrations.push(
     replayIntegration({
-      // Additional Replay configuration goes in here, for example:
+      // minimum duration of a replay before it's sent to sentry
+      // capped at max 15s
+      minReplayDuration: parseFloat(
+        process.env.NEXT_PUBLIC_SENTRY_REPLAY_MIN_REPLAY_DURATION || "15",
+      ),
       maskAllText: true,
       blockAllMedia: true,
     }),

@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.107.0](https://github.com/wundergraph/cosmo/compare/router@0.106.0...router@0.107.0) (2024-08-21)
+
+### Features
+
+* support GraphQL over GET ([#1103](https://github.com/wundergraph/cosmo/issues/1103)) ([e08c0fe](https://github.com/wundergraph/cosmo/commit/e08c0feb1a37a4b35befeabc3f734b44d82dc2ff)) (@StarpTech)
+
 # [0.106.0](https://github.com/wundergraph/cosmo/compare/router@0.105.3...router@0.106.0) (2024-08-19)
 
 ### Features
