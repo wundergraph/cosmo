@@ -3,7 +3,6 @@ package core
 import (
 	"context"
 	"errors"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -46,11 +45,15 @@ func TestOperationProcessorPersistentOperations(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.Input, func(t *testing.T) {
-			kit, err := parser.NewKitFromReader(strings.NewReader(tc.Input))
+			kit, err := parser.NewKit()
 			require.NoError(t, err)
 			defer kit.Free()
 
-			err = kit.UnmarshalOperation()
+			err = kit.UnmarshalOperationFromBody([]byte(tc.Input))
+			if err != nil {
+				require.NoError(t, err)
+			}
+
 			require.NoError(t, err)
 
 			_, err = kit.FetchPersistedOperation(context.Background(), clientInfo, nil)
@@ -184,11 +187,15 @@ func TestOperationProcessor(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.Input, func(t *testing.T) {
-			kit, err := parser.NewKitFromReader(strings.NewReader(tc.Input))
+			kit, err := parser.NewKit()
 			require.NoError(t, err)
 			defer kit.Free()
 
-			err = kit.UnmarshalOperation()
+			err = kit.UnmarshalOperationFromBody([]byte(tc.Input))
+			if err != nil {
+				require.NoError(t, err)
+			}
+
 			require.NoError(t, err)
 
 			err = kit.Parse()
@@ -218,20 +225,25 @@ func TestOperationProcessorUnmarshalExtensions(t *testing.T) {
 		ParseKitPoolSize:        4,
 	})
 	testCases := []struct {
-		Input string
-		Valid bool
+		Input     string
+		HttpError bool
+		Valid     bool
 	}{
 		{
-			Input: `{"query":"subscription { initialPayload(repeat:3) }","extensions":"this_is_not_valid"}`,
+			Input:     `{"query":"subscription { initialPayload(repeat:3) }","extensions":"this_is_not_valid"}`,
+			HttpError: true,
 		},
 		{
-			Input: `{"query":"subscription { initialPayload(repeat:3) }","extensions":42}`,
+			Input:     `{"query":"subscription { initialPayload(repeat:3) }","extensions":42}`,
+			HttpError: true,
 		},
 		{
-			Input: `{"query":"subscription { initialPayload(repeat:3) }","extensions":true}`,
+			Input:     `{"query":"subscription { initialPayload(repeat:3) }","extensions":true}`,
+			HttpError: true,
 		},
 		{
 			Input: `{"query":"subscription { initialPayload(repeat:3) }","extensions":{"foo":bar}}`,
+			Valid: false,
 		},
 		{
 			Input: `{"query":"subscription { initialPayload(repeat:3) }","extensions":{}}`,
@@ -250,17 +262,19 @@ func TestOperationProcessorUnmarshalExtensions(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.Input, func(t *testing.T) {
-			kit, err := parser.NewKitFromReader(strings.NewReader(tc.Input))
+
+			kit, err := parser.NewKit()
 			require.NoError(t, err)
 			defer kit.Free()
 
-			err = kit.UnmarshalOperation()
+			err = kit.UnmarshalOperationFromBody([]byte(tc.Input))
 
-			isInputError := errors.As(err, &inputError)
 			if tc.Valid {
-				assert.False(t, isInputError, "expected invalid extensions to not return an input error, got %s", err)
+				assert.NoError(t, err)
+			} else if tc.HttpError {
+				assert.True(t, errors.As(err, &inputError), "expected invalid extensions to return an http error, got %s", err)
 			} else {
-				assert.True(t, isInputError, "expected invalid extensions to return an input error, got %s", err)
+				assert.Error(t, err)
 			}
 		})
 	}
