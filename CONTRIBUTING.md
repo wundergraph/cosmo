@@ -114,7 +114,7 @@ Navigate to the cli directory and replace `.env.example` with `.env`. After that
 cd cli && pnpm wgc -h
 ```
 
-_Clean up all containers and volumes by running `make infra-down-v`._
+_Clean up all containers and volumes by running `make infra-down-v`. You can repeat the steps above to start the platform again._
 
 ### Docker Compose
 
