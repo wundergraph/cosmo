@@ -2130,10 +2130,12 @@ export class FederationFactory {
       }
 
       const namedTypeData =
-        this.parentDefinitionDataByTypeName.get(data.fieldData.namedTypeName) || 
+        this.parentDefinitionDataByTypeName.get(data.fieldData.namedTypeName) ||
         this.objectExtensionDataByTypeName.get(data.fieldData.namedTypeName);
 
-      // should be impossible, because if the type was unknown, normalization would have produced an error.
+      /* An undefined namedTypeData should be impossible.
+       * If the type were unknown, it would have resulted in an earlier normalization error.
+       */
       if (!namedTypeData) {
         this.errors.push(
           invalidSubscriptionFilterDirectiveError(fieldPath, [
