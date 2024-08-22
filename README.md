@@ -46,12 +46,18 @@ Get started with Cosmo by choosing the example that best fits your role and use 
 
 _For any questions, feedback, or support, please [contact](https://wundergraph.com/contact/sales) us._
 
-</br>
+<br>
 <p align="center">
 <a href="https://cosmo.wundergraph.com">
-<img width="200" src="./docs/assets/cta_readme.png"/>
+<img width="250" src="./docs/assets/cta_readme.png"/>
 </a>
 </p>
+
+## Contributing
+
+We welcome contributions from the community! Whether it's fixing a bug, adding new features, or improving documentation, your help is greatly appreciated. Please take a look in our [Contributing Guide](CONTRIBUTING.md) to get started.
+
+### How to Contribute
 
 ## License
 
