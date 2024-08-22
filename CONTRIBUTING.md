@@ -1,5 +1,10 @@
 # Contributing to the WunderGraph Cosmo Repository
 
+Before contributing to the WunderGraph Cosmo repository, please open an issue to discuss the changes you would like to make. Alternatively, you can also open a discussion in the [WunderGraph Discussions](https://github.com/wundergraph/cosmo/discussions).
+We are open to all kinds of contributions, including bug fixes, new features, and documentation improvements.
+
+The following sections provide a guide on how to contribute to the WunderGraph Cosmo repository.
+
 ## Prerequisites
 
 This guide assumes you have already installed the following software:
@@ -52,9 +57,9 @@ export PATH="$PATH:$(go env GOPATH)/bin"
 
 [This](https://plugins.jetbrains.com/plugin/13389-conventional-commit) plugins simplifies the commit message creation process.
 
-### Pull Requests
+### Pull Requests Conventions
 
-We merge all pull requests in `squash merge` mode. You're not enforced to use [conventional commit standard](https://www.conventionalcommits.org/en/v1.0.0-beta.2/#why-use-conventional-commits) across all your commits, but it's a good practice and avoid mistakes. At the end it's important that the squashed commit message follow the standard.
+We merge all pull requests in `squash merge` mode. You're not enforced to use [conventional commit standard](https://www.conventionalcommits.org/en/v1.0.0-beta.2/#why-use-conventional-commits) across all your commits, but it's a good practice and increase transparency. At the end it's important that the squashed commit message follow the standard.
 
 ## Local Development
 
@@ -71,7 +76,7 @@ We merge all pull requests in `squash merge` mode. You're not enforced to use [c
 All services work with environment variables. You can find the default values in the `.env.example` file.
 Please copy the variables to `.env` (the same for studio but with `.env.local`) and adjust the values to your needs.
 
-Bootstrapping your development environment is easy. Just run the following commands in order:
+Bootstrapping Cosmo for local development is easy. Just run the following commands in order:
 
 ```shell
 # 1️⃣ Setup the repository, build libraries and start all services (Wait a few seconds until Keycloak is ready)
@@ -83,13 +88,13 @@ make migrate && make seed
 # 3️⃣ Start the control plane
 make start-cp
 
-# 4️⃣⃣ Create the demo and copy the JWT printed at the bottom
+# 4️⃣ Create the demo and copy the JWT printed at the bottom
 make create-demo
 
 # 5️⃣ Start the subgraphs
 OTEL_AUTH_TOKEN=<jwt-token> make dc-subgraphs-demo
 
-# 6️⃣⃣ Put the JWT from the previous step into the router/.env as GRAPH_API_TOKEN and start the router
+# 6️⃣ Put the JWT from the previous step into the router/.env as GRAPH_API_TOKEN and start the router
 make start-router
 
 # ✨ Finally, Start the studio (http://localhost:3000) and explore the Cosmo platform
@@ -103,18 +108,13 @@ Username: foo@wundergraph.com
 Password: wunder@123
 ```
 
-Your API key to access the platform is: `cosmo_669b576aaadc10ee1ae81d9193425705`. Set the following environment variable to use it with the CLI:
+Navigate to the cli directory and replace `.env.example` with `.env`. After that you can run commands against your local Cosmo instance.
 
 ```shell
-export COSMO_API_KEY=cosmo_669b576aaadc10ee1ae81d9193425705
-export COSMO_API_URL=http://localhost:3001
-export KC_API_URL=http://localhost:8080
-export CDN_URL=http://localhost:11000
-
 cd cli && pnpm wgc -h
 ```
 
-_Clean up all containers and volumes by running `make infra-down-v`._
+_Clean up all containers and volumes by running `make infra-down-v`. You can repeat the steps above to bootstrap the platform again._
 
 ### Docker Compose
 
