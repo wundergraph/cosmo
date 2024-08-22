@@ -46,6 +46,7 @@ fragment SDKFragment on SDK {
     }
   }
   clientLanguages
+  unicode
 }
 
 fragment EmployeeFragment on Employee {
