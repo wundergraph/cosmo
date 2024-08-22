@@ -237,6 +237,7 @@ type Sdk struct {
 	Upc       string      `json:"upc"`
 	Engineers []*Employee `json:"engineers"`
 	Owner     *Employee   `json:"owner"`
+	Unicode   string      `json:"unicode"`
 }
 
 func (Sdk) IsProducts() {}
