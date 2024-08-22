@@ -13,7 +13,8 @@ const integrations = [];
 if (isSentryFeatureReplayEnabled) {
   integrations.push(
     replayIntegration({
-      // filter short living sessions stopped e.g. on login
+      // minimum duration of a replay before it's sent to sentry
+      // capped at max 15s
       minReplayDuration: parseFloat(
         process.env.NEXT_PUBLIC_SENTRY_REPLAY_MIN_REPLAY_DURATION || "15",
       ),
