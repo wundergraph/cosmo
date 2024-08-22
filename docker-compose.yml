@@ -20,6 +20,7 @@ services:
       - dev
 
   keycloak:
+    image: ghcr.io/wundergraph/cosmo/keycloak:${DC_KEYCLOAK_VERSION:-latest}
     build:
       context: keycloak
       dockerfile: Dockerfile
@@ -101,6 +102,7 @@ services:
       - dev
 
   otelcollector:
+    image: ghcr.io/wundergraph/cosmo/otelcollector:${DC_OTELCOLLECTOR_VERSION:-latest}
     build:
       context: otelcollector
       dockerfile: Dockerfile
@@ -157,6 +159,7 @@ services:
       - dev
 
   cdn:
+    image: ghcr.io/wundergraph/cosmo/cdn:${DC_CDN_VERSION:-latest}
     build:
       context: .
       dockerfile: cdn-server/Dockerfile
