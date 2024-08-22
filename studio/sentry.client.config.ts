@@ -13,7 +13,8 @@ const integrations = [];
 if (isSentryFeatureReplayEnabled) {
   integrations.push(
     replayIntegration({
-      // Additional Replay configuration goes in here, for example:
+      // filter short living sessions stopped e.g. on login
+      minReplayDuration: 15,
       maskAllText: true,
       blockAllMedia: true,
     }),
