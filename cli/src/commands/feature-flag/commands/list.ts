@@ -4,6 +4,7 @@ import { Command, program } from 'commander';
 import pc from 'picocolors';
 import Table from 'cli-table3';
 import { joinLabel } from '@wundergraph/cosmo-shared';
+import { resolve } from 'pathe';
 import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 
@@ -18,13 +19,18 @@ type OutputFile = {
 export default (opts: BaseCommandOptions) => {
   const command = new Command('list');
   command.description('Lists all feature flags in the namespace.');
-  command.option('-n, --namespace [string]', 'The namespace of the feature flags.');
+  command.option(
+    '-n, --namespace [string]',
+    'The namespace of the feature flags. If not provided, it will list all feature flags.',
+  );
   command.option('-o, --out [string]', 'Destination file for the json output.');
   command.option('-j, --json', 'Prints to the console in json format instead of table');
   command.action(async (options) => {
     const resp = await opts.client.platform.getFeatureFlags(
       {
         namespace: options.namespace,
+        limit: 0,
+        offset: 0,
       },
       {
         headers: getBaseHeaders(),
@@ -46,7 +52,7 @@ export default (opts: BaseCommandOptions) => {
             namespace: f.namespace,
           }) as OutputFile[number],
       );
-      await writeFile(options.out, JSON.stringify(output));
+      await writeFile(resolve(options.out), JSON.stringify(output));
       return;
     }
     if (options.json) {
