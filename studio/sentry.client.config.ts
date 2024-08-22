@@ -14,7 +14,9 @@ if (isSentryFeatureReplayEnabled) {
   integrations.push(
     replayIntegration({
       // filter short living sessions stopped e.g. on login
-      minReplayDuration: 15,
+      minReplayDuration: parseFloat(
+        process.env.NEXT_PUBLIC_SENTRY_REPLAY_MIN_REPLAY_DURATION || "15",
+      ),
       maskAllText: true,
       blockAllMedia: true,
     }),
