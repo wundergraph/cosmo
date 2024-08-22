@@ -45,6 +45,7 @@ import {
   subscriptionFilterConditionInvalidInputFieldErrorMessage,
   subscriptionFilterConditionInvalidInputFieldNumberErrorMessage,
   subscriptionFilterConditionInvalidInputFieldTypeErrorMessage,
+  subscriptionFilterNamedTypeErrorMessage,
   undefinedEntityInterfaceImplementationsError,
   undefinedSubscriptionFieldConditionFieldPathFieldErrorMessage,
   unknownFieldSubgraphNameError,
@@ -2127,11 +2128,21 @@ export class FederationFactory {
       if (this.inaccessiblePaths.has(fieldPath)) {
         continue;
       }
-      const namedTypeData = getOrThrowError(
-        this.parentDefinitionDataByTypeName,
-        data.fieldData.namedTypeName,
-        PARENT_DEFINITION_DATA,
-      );
+
+      const namedTypeData =
+        this.parentDefinitionDataByTypeName.get(data.fieldData.namedTypeName) || 
+        this.objectExtensionDataByTypeName.get(data.fieldData.namedTypeName);
+
+      // should be impossible, because if the type was unknown, normalization would have produced an error.
+      if (!namedTypeData) {
+        this.errors.push(
+          invalidSubscriptionFilterDirectiveError(fieldPath, [
+            subscriptionFilterNamedTypeErrorMessage(data.fieldData.namedTypeName),
+          ]),
+        );
+        continue;
+      }
+
       if (isNodeDataInaccessible(namedTypeData)) {
         // @inaccessible error are caught elsewhere
         continue;
