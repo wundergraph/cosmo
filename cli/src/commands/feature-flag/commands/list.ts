@@ -18,7 +18,7 @@ type OutputFile = {
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('list');
-  command.description('Lists all feature flags in the namespace.');
+  command.description('Lists the feature flags.');
   command.option(
     '-n, --namespace [string]',
     'The namespace of the feature flags. If not provided, it will list all feature flags.',
