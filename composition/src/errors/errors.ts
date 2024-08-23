@@ -1280,6 +1280,10 @@ export function invalidSubscriptionFilterDirectiveError(fieldPath: string, error
   );
 }
 
+export function subscriptionFilterNamedTypeErrorMessage(namedTypeName: string): string {
+  return ` Unknown type "${namedTypeName}".`;
+}
+
 export function subscriptionFilterConditionDepthExceededErrorMessage(inputPath: string): string {
   return (
     ` The input path "${inputPath}" exceeds the maximum depth of ${MAX_SUBSCRIPTION_FILTER_DEPTH}` +
