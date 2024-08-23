@@ -23,7 +23,11 @@ import {
   subscriptionFilterConditionInvalidInputFieldErrorMessage,
   subscriptionFilterConditionInvalidInputFieldTypeErrorMessage,
 } from '../src';
-import { normalizeString, schemaToSortedNormalizedString } from './utils/utils';
+import {
+  normalizeString,
+  schemaToSortedNormalizedString,
+  versionOnePersistedDirectiveDefinitions,
+} from './utils/utils';
 import { CONDITION, FIELD, SUBSCRIPTION } from '../src';
 
 describe('@openfed__subscriptionFilter tests', () => {
@@ -456,6 +460,49 @@ describe('@openfed__subscriptionFilter tests', () => {
         ]),
       ]);
     });
+
+    test('that an entity can be defined as an extension in an EDG', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphQ, subgraphR]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          `schema {
+          query: Query
+          subscription: Subscription
+        }
+        ` +
+            versionOnePersistedDirectiveDefinitions +
+            `
+        type Entity {
+          id: ID!
+          name: String!
+        }
+        
+        type Query {
+          entity: Entity!
+        }
+        
+        type Subscription {
+          field: Entity!
+        }
+
+        input openfed__SubscriptionFieldCondition {
+          fieldPath: String!
+          values: [openfed__SubscriptionFilterValue]!
+        }
+        
+        input openfed__SubscriptionFilterCondition {
+          AND: [openfed__SubscriptionFilterCondition!]
+          IN: openfed__SubscriptionFieldCondition
+          NOT: openfed__SubscriptionFilterCondition
+          OR: [openfed__SubscriptionFilterCondition!]
+        }
+        
+        scalar openfed__SubscriptionFilterValue
+      `,
+        ),
+      );
+    });
   });
 });
 
@@ -463,17 +510,17 @@ const subgraphA: Subgraph = {
   name: 'subgraph-a',
   url: '',
   definitions: parse(`
-  type Entity @key(fields: "id", resolvable: false) {
-    id: ID! @external
-  }
-  
-  type Object {
-    field: String! @openfed__subscriptionFilter(condition: { IN: { fieldPath: "" } })
-  }
-  
-  type Subscription {
-    field: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"])
-  }
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+    
+    type Object {
+      field: String! @openfed__subscriptionFilter(condition: { IN: { fieldPath: "" } })
+    }
+    
+    type Subscription {
+      field: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"])
+    }
   `),
 };
 
@@ -856,6 +903,49 @@ const subgraphP: Subgraph = {
           }
         }
       )
+    }
+  `),
+};
+
+const subgraphQ: Subgraph = {
+  name: 'subgraph-q',
+  url: '',
+  definitions: parse(`
+    extend type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+    
+    type Subscription {
+      field: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: [1] } })
+    }
+
+    input openfed__SubscriptionFieldCondition {
+      fieldPath: String!
+      values: [openfed__SubscriptionFilterValue]!
+    }
+
+    input openfed__SubscriptionFilterCondition {
+      AND: [openfed__SubscriptionFilterCondition!]
+      IN: openfed__SubscriptionFieldCondition
+      NOT: openfed__SubscriptionFilterCondition
+      OR: [openfed__SubscriptionFilterCondition!]
+    }
+
+    scalar openfed__SubscriptionFilterValue
+  `),
+};
+
+const subgraphR: Subgraph = {
+  name: 'subgraph-r',
+  url: '',
+  definitions: parse(`
+    type Query{
+      entity: Entity!
+    }
+    
+    type Entity @key(fields: "id") {
+      id: ID! 
+      name: String! 
     }
   `),
 };

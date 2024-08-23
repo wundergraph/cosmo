@@ -155,6 +155,7 @@ type ComplexityRoot struct {
 	SDK struct {
 		Engineers func(childComplexity int) int
 		Owner     func(childComplexity int) int
+		Unicode   func(childComplexity int) int
 		Upc       func(childComplexity int) int
 	}
 
@@ -688,6 +689,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.SDK.Owner(childComplexity), true
 
+	case "SDK.unicode":
+		if e.complexity.SDK.Unicode == nil {
+			break
+		}
+
+		return e.complexity.SDK.Unicode(childComplexity), true
+
 	case "SDK.upc":
 		if e.complexity.SDK.Upc == nil {
 			break
@@ -869,7 +877,24 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 
 var sources = []*ast.Source{
 	{Name: "../schema.graphqls", Input: `extend schema
-@link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@authenticated", "@composeDirective", "@external", "@extends", "@inaccessible", "@interfaceObject", "@override", "@provides", "@key", "@requires", "@requiresScopes", "@shareable", "@tag"])
+  @link(
+    url: "https://specs.apollo.dev/federation/v2.5"
+    import: [
+      "@authenticated"
+      "@composeDirective"
+      "@external"
+      "@extends"
+      "@inaccessible"
+      "@interfaceObject"
+      "@override"
+      "@provides"
+      "@key"
+      "@requires"
+      "@requiresScopes"
+      "@shareable"
+      "@tag"
+    ]
+  )
 
 directive @goField(
   forceResolver: Boolean
@@ -1028,6 +1053,7 @@ type SDK implements IProduct @key(fields: "upc") {
   upc: ID!
   engineers: [Employee!]!
   owner: Employee!
+  unicode: String!
 }
 `, BuiltIn: false},
 	{Name: "../../federation/directives.graphql", Input: `
@@ -3126,6 +3152,8 @@ func (ec *executionContext) fieldContext_Entity_findSDKByUpc(ctx context.Context
 				return ec.fieldContext_SDK_engineers(ctx, field)
 			case "owner":
 				return ec.fieldContext_SDK_owner(ctx, field)
+			case "unicode":
+				return ec.fieldContext_SDK_unicode(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type SDK", field.Name)
 		},
@@ -4603,6 +4631,50 @@ func (ec *executionContext) fieldContext_SDK_owner(ctx context.Context, field gr
 				return ec.fieldContext_Employee_rootFieldErrorWrapper(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SDK_unicode(ctx context.Context, field graphql.CollectedField, obj *model.Sdk) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SDK_unicode(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Unicode, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SDK_unicode(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SDK",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -8032,6 +8104,11 @@ func (ec *executionContext) _SDK(ctx context.Context, sel ast.SelectionSet, obj 
 			}
 		case "owner":
 			out.Values[i] = ec._SDK_owner(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "unicode":
+			out.Values[i] = ec._SDK_unicode(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

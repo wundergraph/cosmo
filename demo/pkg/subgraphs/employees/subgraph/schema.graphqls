@@ -175,4 +175,5 @@ type SDK implements IProduct @key(fields: "upc") {
   upc: ID!
   engineers: [Employee!]!
   owner: Employee!
+  unicode: String!
 }
