@@ -52,7 +52,7 @@ app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- range $key, $value := .Values.commonLabels }}
-{{ $key }}: {{ $value }}
+{{ $key }}: {{ quote $value }}
 {{- end }}
 {{- end }}
 
@@ -64,7 +64,7 @@ extra "customLabels" to each job
 {{ include "controlplane.labels" .context }}
 {{- if and (hasKey . "customLabels") -}}
 {{- range $key, $value := .customLabels }}
-{{ $key }}: {{ $value }}
+{{ $key }}: {{ quote $value }}
 {{- end }}
 {{- end -}}
 {{- end }}
