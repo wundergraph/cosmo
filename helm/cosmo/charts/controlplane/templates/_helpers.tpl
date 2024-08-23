@@ -51,6 +51,22 @@ helm.sh/chart: {{ include "controlplane.chart" . }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- range $key, $value := .Values.commonLabels }}
+{{ $key }}: {{ $value }}
+{{- end }}
+{{- end }}
+
+{{/*
+Job labels, used to append defaults and
+extra "customLabels" to each job
+*/}}
+{{- define "controlplane.job.labels" -}}
+{{ include "controlplane.labels" .context }}
+{{- if and (hasKey . "customLabels") -}}
+{{- range $key, $value := .customLabels }}
+{{ $key }}: {{ $value }}
+{{- end }}
+{{- end -}}
 {{- end }}
 
 {{/*
