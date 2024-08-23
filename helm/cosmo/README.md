@@ -71,6 +71,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | controlplane.configuration.smtp.requireTls | bool | `true` | Forces the client to use STARTTLS. Default is true. |
 | controlplane.configuration.smtp.secure | bool | `true` | Defines if the connection should use SSL. Default is true. |
 | controlplane.configuration.smtp.username | string | `""` | The username to use. Default is "". |
+| controlplane.jobs | object | `{"activateOrganization":{"customLabels":{},"enabled":false,"id":"123","slug":"foo"},"clickhouseMigration":{"customLabels":{}},"databaseMigration":{"customLabels":{}},"deactivateOrganization":{"customLabels":{},"enabled":false,"id":"123","reason":"","slug":"foo"},"deleteUser":{"customLabels":{},"enabled":false,"id":"123"},"seedOrganization":{"customLabels":{}}}` | Configure jobs to be executed in the control plane |
 | controlplane.jobs.activateOrganization | object | `{"customLabels":{},"enabled":false,"id":"123","slug":"foo"}` | Used to activate an organization and remove the scheduled deletion |
 | controlplane.jobs.activateOrganization.customLabels | object | `{}` | Adds custom labels to the job |
 | controlplane.jobs.activateOrganization.enabled | bool | `false` | Enables the job to be run |
