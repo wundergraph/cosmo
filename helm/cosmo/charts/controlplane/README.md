@@ -15,6 +15,7 @@ WunderGraph Cosmo Controlplane
 | autoscaling.maxReplicas | int | `100` |  |
 | autoscaling.minReplicas | int | `1` |  |
 | autoscaling.targetCPUUtilizationPercentage | int | `80` |  |
+| commonLabels | object | `{}` | Add labels to all the deployed resources |
 | configuration.allowedOrigins[0] | string | `"*"` |  |
 | configuration.authRedirectUri | string | `"http://controlplane.wundergraph.local/v1/auth/callback"` |  |
 | configuration.cdnBaseUrl | string | `"http://cosmo-cdn:8787"` | URL of the CDN to use for serving router configs and persistent operations |
@@ -73,19 +74,25 @@ WunderGraph Cosmo Controlplane
 | imagePullSecrets | list | `[]` |  |
 | ingress.hosts | string | `nil` |  |
 | ingress.tls | list | `[]` |  |
-| jobs | object | `{"activateOrganization":{"enabled":false,"id":"123","slug":"foo"},"deactivateOrganization":{"enabled":false,"id":"123","reason":"","slug":"foo"},"deleteUser":{"enabled":false,"id":"123"}}` | Configure jobs to be executed in the control plane |
-| jobs.activateOrganization | object | `{"enabled":false,"id":"123","slug":"foo"}` | Used to activate an organization and remove the scheduled deletion |
+| jobs | object | `{"activateOrganization":{"customLabels":{},"enabled":false,"id":"123","slug":"foo"},"clickhouseMigration":{"customLabels":{}},"databaseMigration":{"customLabels":{}},"deactivateOrganization":{"customLabels":{},"enabled":false,"id":"123","reason":"","slug":"foo"},"deleteUser":{"customLabels":{},"enabled":false,"id":"123"},"seedOrganization":{"customLabels":{}}}` | Configure jobs to be executed in the control plane |
+| jobs.activateOrganization | object | `{"customLabels":{},"enabled":false,"id":"123","slug":"foo"}` | Used to activate an organization and remove the scheduled deletion |
+| jobs.activateOrganization.customLabels | object | `{}` | Adds custom labels to the job |
 | jobs.activateOrganization.enabled | bool | `false` | Enables the job to be run |
 | jobs.activateOrganization.id | string | `"123"` | The unique identifier of the organization |
 | jobs.activateOrganization.slug | string | `"foo"` | The slug of the organization |
-| jobs.deactivateOrganization | object | `{"enabled":false,"id":"123","reason":"","slug":"foo"}` | Used to deactivate an organization with a reason and schedule deletion |
+| jobs.clickhouseMigration.customLabels | object | `{}` | Adds custom labels to the clickhouse migration job (see: .Values.global.otelcollector) |
+| jobs.databaseMigration.customLabels | object | `{}` | Adds custom labels to the database-migration job |
+| jobs.deactivateOrganization | object | `{"customLabels":{},"enabled":false,"id":"123","reason":"","slug":"foo"}` | Used to deactivate an organization with a reason and schedule deletion |
+| jobs.deactivateOrganization.customLabels | object | `{}` | Adds custom labels to the job |
 | jobs.deactivateOrganization.enabled | bool | `false` | Enables the job to be run |
 | jobs.deactivateOrganization.id | string | `"123"` | The unique identifier of the organization |
 | jobs.deactivateOrganization.reason | string | `""` | The reason for deactivation |
 | jobs.deactivateOrganization.slug | string | `"foo"` | The slug of the organization |
-| jobs.deleteUser | object | `{"enabled":false,"id":"123"}` | Used to delete the user |
+| jobs.deleteUser | object | `{"customLabels":{},"enabled":false,"id":"123"}` | Used to delete the user |
+| jobs.deleteUser.customLabels | object | `{}` | Adds custom labels to the job |
 | jobs.deleteUser.enabled | bool | `false` | Enables the job to be run |
 | jobs.deleteUser.id | string | `"123"` | The unique identifier of the user |
+| jobs.seedOrganization.customLabels | object | `{}` | Adds custom labels to the job (see: .Values.global.seed) |
 | nameOverride | string | `""` | String to partially override common.names.fullname template (will maintain the release name) |
 | nodeSelector | object | `{}` |  |
 | podAnnotations | object | `{}` |  |
