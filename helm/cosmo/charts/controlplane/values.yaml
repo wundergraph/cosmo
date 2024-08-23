@@ -267,7 +267,8 @@ jobs:
     # -- Adds custom labels to the clickhouse migration job (see: .Values.global.otelcollector)
     customLabels: {}
   databaseMigration:
+    # -- Adds custom labels to the database-migration job
     customLabels: {}
   seedOrganization:
-    # -- Adds custom labels to the job (see: .Values.seed)
+    # -- Adds custom labels to the job (see: .Values.global.seed)
     customLabels: {}
