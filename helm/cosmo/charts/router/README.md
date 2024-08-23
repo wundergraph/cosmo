@@ -14,6 +14,7 @@ This is the official Helm Chart for the WunderGraph Cosmo Router.
 | autoscaling.minReplicas | int | `1` |  |
 | autoscaling.targetCPUUtilizationPercentage | int | `80` |  |
 | commonConfiguration | string | `"version: \"1\"\nlog_level: \"info\""` | You can use this to provide the router configuration via yaml. Values here have precedence over the configurations section. For a full list of available configuration options, see https://cosmo-docs.wundergraph.com/router/configuration This value is processed with the helm `tpl` function allowing referencing of variables and inclusion of templates |
+| commonLabels | object | `{}` | Add labels to all the deployed resources |
 | configuration.cdnUrl | string | `""` |  |
 | configuration.controlplaneUrl | string | `""` | The URL of the Cosmo Controlplane. Should be internal to the cluster. Default to cloud if not set. |
 | configuration.devMode | bool | `false` | Set to true to enable the development mode. This allows for Advanced Request Tracing (ART) in the GraphQL Playground |
