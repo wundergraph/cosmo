@@ -15,6 +15,7 @@ WunderGraph Cosmo Open Telemetry Collector.
 | autoscaling.maxReplicas | int | `100` |  |
 | autoscaling.minReplicas | int | `1` |  |
 | autoscaling.targetCPUUtilizationPercentage | int | `80` |  |
+| commonLabels | object | `{}` | Add labels to all the deployed resources |
 | configuration.clickhouseDsn | string | `"clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4"` |  |
 | configuration.prometheus | object | `{"enabled":false,"gcpMonitoring":{"enabled":false,"interval":"60s","timeout":"50s"},"host":"127.0.0.1","level":"basic","port":8088}` | Use this section to configure prometheus metrics. |
 | configuration.prometheus.enabled | bool | `false` | Enables prometheus metrics support. Default is false. |
