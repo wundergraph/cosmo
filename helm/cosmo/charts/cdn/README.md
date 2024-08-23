@@ -15,6 +15,7 @@ WunderGraph Cosmo CDN
 | autoscaling.maxReplicas | int | `100` |  |
 | autoscaling.minReplicas | int | `1` |  |
 | autoscaling.targetCPUUtilizationPercentage | int | `80` |  |
+| commonLabels | object | `{}` | Add labels to all the deployed resources |
 | configuration | string | `nil` |  |
 | deploymentStrategy | object | `{}` |  |
 | existingSecret | string | `""` | Existing secret in the same namespace containing the authJwtSecret and s3StorageUrl. The secret keys have to match with current secret. |
