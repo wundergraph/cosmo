@@ -13,6 +13,9 @@ import { useCookieOrganization } from "@/hooks/use-cookie-organization";
 import { setUser as setSentryUser } from "@sentry/nextjs";
 
 export const UserContext = createContext<User | undefined>(undefined);
+export const SessionClientContext = createContext<QueryClient | undefined>(
+  undefined,
+);
 
 const queryClient = new QueryClient();
 const sessionQueryClient = new QueryClient();
@@ -251,13 +254,23 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [queryResetCounter]);
 
   if (!transport) {
-    return <UserContext.Provider value={user}>{children}</UserContext.Provider>;
+    return (
+      <UserContext.Provider value={user}>
+        <SessionClientContext.Provider value={sessionQueryClient}>
+          {children}
+        </SessionClientContext.Provider>
+      </UserContext.Provider>
+    );
   }
 
   return (
     <TransportProvider transport={transport}>
       <QueryClientProvider client={queryClient}>
-        <UserContext.Provider value={user}>{children}</UserContext.Provider>
+        <UserContext.Provider value={user}>
+          <SessionClientContext.Provider value={sessionQueryClient}>
+            {children}
+          </SessionClientContext.Provider>
+        </UserContext.Provider>
       </QueryClientProvider>
     </TransportProvider>
   );
