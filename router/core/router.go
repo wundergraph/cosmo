@@ -823,7 +823,7 @@ func (r *Router) buildClients() error {
 		pClient = c
 
 		r.logger.Info("Use CDN as storage provider for persisted operations",
-			zap.String("providerID", provider.ID),
+			zap.String("provider_id", provider.ID),
 		)
 	} else if provider, ok := s3Providers[r.persistedOperationsConfig.Storage.ProviderID]; ok {
 
@@ -842,7 +842,7 @@ func (r *Router) buildClients() error {
 		pClient = c
 
 		r.logger.Info("Use S3 as storage provider for persisted operations",
-			zap.String("providerID", provider.ID),
+			zap.String("provider_id", provider.ID),
 		)
 	} else if r.graphApiToken != "" {
 		if r.persistedOperationsConfig.Storage.ProviderID != "" {
@@ -909,7 +909,7 @@ func (r *Router) buildClients() error {
 			rClient = c
 
 			r.logger.Info("Polling for execution config updates from CDN in the background",
-				zap.String("providerID", provider.ID),
+				zap.String("provider_id", provider.ID),
 				zap.String("interval", r.routerConfigPollerConfig.PollInterval.String()),
 			)
 		} else if provider, ok := s3Providers[r.routerConfigPollerConfig.Storage.ProviderID]; ok {
@@ -928,7 +928,7 @@ func (r *Router) buildClients() error {
 			rClient = c
 
 			r.logger.Info("Polling for execution config updates from S3 storage in the background",
-				zap.String("providerID", provider.ID),
+				zap.String("provider_id", provider.ID),
 				zap.String("interval", r.routerConfigPollerConfig.PollInterval.String()),
 			)
 		} else {
