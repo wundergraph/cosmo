@@ -17,7 +17,7 @@ This RFC describes a new feature to reduce the latency of the system by pre-plan
 
 ## Motivation
 
-GraphQL is a powerful tool to query data from a server. However, the flexibility of the query language comes with a cost. The cost is the complexity of the query and how expensive it is to normalize, plan and execute it. While execution performance is predictable and primarily a concern of the underlying subgraphs, the planning phase can be a significant latency contributor. The distributed operation cache aims to reduce this latency by pre-planning the most expensive and requested operations ahead to make it invisible to the user.
+GraphQL is a powerful tool to query data from a server. However, the flexibility of the query language comes with a cost. The cost is the complexity of the query and how expensive it is to normalize, plan and execute it. While execution performance is primarily a concern of the underlying subgraphs, the planning phase can be a unpredictable and significant latency contributor. The distributed operation cache aims to reduce this latency by pre-planning the most expensive and requested operations ahead to make it invisible to the user.
 
 # Proposal
 
