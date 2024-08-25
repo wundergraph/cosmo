@@ -72,6 +72,19 @@ global:
     databaseUsername: 'postgres'
     databasePassword: 'changeme'
 
+    # -- smtpServer configuration
+    smtpServer:
+      auth: true
+      replyToDisplayName: 'WunderGraph Cosmo'
+      fromDisplayName: 'WunderGraph Cosmo'
+      username: ''
+      password: '**********'
+      from: 'system@wundergraph.com'
+      host: 'smtp.postmarkapp.com'
+      port: 587
+      starttls: true
+      ssl: false
+
   minio:
     enabled: true
 
