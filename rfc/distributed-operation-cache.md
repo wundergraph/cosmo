@@ -64,17 +64,17 @@ The Top-N computation is done for a specific time interval e.g. 3-72 hour (confi
 
 #### Example
 
-The following example shows the Top-5 operations of a graph. The cache capacity is 5. The operations are sorted by the total pre-execution time and request count in descending order.
+The following example shows the Top-5 operations of a graph. The cache capacity is 5. The operations are sorted by the total pre-execution time and request count in descending order. There are three slots left in the cache where the Cosmo Platform can add automatic operations based on the Top-N computation.
 
 ```
 Operation A: 400ms, 1000 requests (Manual added)
-Operation B: 300ms, 500 requests (Automatic)
-Operation C: 200ms, 200 requests (Automatic)
+Operation B: 300ms, 500 requests (Automatic Slot)
+Operation C: 200ms, 200 requests (Automatic Slot)
 Operation D: 100ms, 100 requests (Manual added)
-Operation E: 50ms, 50 requests (Automatic)
+Operation E: 50ms, 50 requests (Automatic Slot)
 ```
 
-The user can add three more manual operations to the cache until the cache capacity is reached. This has the effect that no automatic operations can be added to the cache. In that case, we assume that the user knows better which operations are important. If the capacity is reached and the user adds another manual operation, the least expensive manual operation is removed from the cache.
+Alternatively, the user can add three more manual operations to the cache until the cache capacity is reached. This has the effect that no automatic operations can be added to the cache. In that case, we assume that the user knows better which operations are important.
 
 ### Cache update process
 
