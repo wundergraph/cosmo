@@ -21,14 +21,14 @@ GraphQL is a powerful tool to query data from a server. However, the flexibility
 
 # Proposal
 
-The distributed operation cache is semi-automatic and allows the user to push specific operations to the cache but also automatically computes the most expensive and requested operations of the last time frame (configurable). The cache has a fixed size of operations e.g. 100 (configurable) and is shared across all router instances. An operation can be a regular query, subscription, mutation or persisted operation. When the cache capacity is reached, manual operations have a higher priority than automatic operations. This allows users to manage the priority of operations in the cache themselves.
+The distributed operation cache is semi-automatic and allows the user to push specific operations to the cache but also automatically computes the most expensive and requested operations of the last time frame (configurable). The cache has a fixed size of operations e.g. 100 (configurable) and is shared across all router instances. An operation can be a regular query, subscription, mutation or persisted operation. When the cache capacity is reached, manual operations have a higher priority than automatic operations. This allows users to manage the priority of operations in the cache themselves. It is possible that operations aren't compatible with all future schema changes. In that case, the operation is removed from the cache.
 
 ### Pushing operations to the cache
 
 The User can push individual operations to the operation cache by using the CLI:
 
 ```bash
-wgc router cache add -g mygraph operations.json
+wgc federated-graph operation-cache add --graph mygraph --file operations.json
 ```
 
 The CLI command will add the operations from the file `operations.json` to the operation cache of the graph `mygraph`. The file must contain a list of operations in JSON format. The operations can be queries, subscriptions, mutations or persisted operations.
