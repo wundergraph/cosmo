@@ -53,7 +53,11 @@ The update operation is idempotent and always updates the cache with the latest 
 
 ### Automatic operation computation
 
-At the same time, WunderGraph Cosmo is analyzing the incoming traffic based on the OpenTelemetry metrics that each router is sending. The Cosmo Platform computes the Top-N operations for each graph and combines it with the manually added operations. The Top-N operations are then pushed to the distributed operation cache of the graph. On each router startup and schema change, the cache is loaded and all operations are pre-planned before the router accepts traffic. For containerized environments like Kubernetes, users should use the readiness probe to ensure that the router is ready to accept traffic. For schema updates after startup, this process is transparent to the environment and clients because the new Graph schema isn't swapped until the cache is warmed up.
+At the same time, WunderGraph Cosmo is analyzing the incoming traffic based on the OpenTelemetry metrics that each router is sending. The Cosmo Platform computes the Top-N operations for each graph and combines it with the manually added operations. The Top-N operations are then pushed to the distributed operation cache of the graph. On each router startup and schema change, the cache is loaded and all operations are pre-planned before the router accepts traffic.
+
+### Platform integration
+
+For containerized environments like Kubernetes, users should use the readiness probe to ensure that the router is ready to accept traffic. Setting not to small values for the readiness probe timeout is recommended to ensure that the router has enough time to prepare the cache. For schema updates after startup, this process is transparent to the environment and clients because the new Graph schema isn't swapped until the cache is warmed up.
 
 ### Top-N computation
 
