@@ -62,6 +62,20 @@ The Top-N computation is based on the following metrics:
 
 The Top-N computation is done for a specific time interval e.g. 3-72 hour (configurable). The operations are sorted by the pre-execution time and request count. The Top-N operations are then pushed to the distributed operation cache. Manual operations have a higher priority than automatic operations. This means when the cache capacity is reached, manual operations are moved to the cache first and automatic operations are removed.
 
+#### Example
+
+The following example shows the Top-5 operations of a graph. The cache capacity is 5. The operations are sorted by the total pre-execution time and request count in descending order.
+
+```
+Operation A: 400ms, 1000 requests (Manual added)
+Operation B: 300ms, 500 requests (Automatic)
+Operation C: 200ms, 200 requests (Automatic)
+Operation D: 100ms, 100 requests (Manual added)
+Operation E: 50ms, 50 requests (Automatic)
+```
+
+The user can add three more manual operations to the cache until the cache capacity is reached. This has the effect that no automatic operations can be added to the cache. In that case, we assume that the user knows better which operations are important. If the capacity is reached and the user adds another manual operation, the least expensive manual operation is removed from the cache.
+
 ### Cache update process
 
 The router checks periodically e.g. every 5min for updates of the distributed operation cache. The cache is checked explicitly when the router starts and when the schema changes. The cache is loaded and all operations are pre-planned before the router accepts traffic. The cache is updated in the background and doesn't block the router from accepting traffic.
