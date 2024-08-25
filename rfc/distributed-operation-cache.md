@@ -37,9 +37,7 @@ The CLI command will add the operations from the file `operations.json` to the d
 [
   // Queries
   {
-    "query": "query { ... }",
-    // Only required for multi operation queries
-    "operationName": "myQuery"
+    "body": "query { ... }"
   },
   // Persisted operation
   {
