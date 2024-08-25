@@ -68,10 +68,10 @@ The following example shows the Top-5 operations of a graph. The cache capacity 
 
 ```
 Operation A: 400ms, 1000 requests (Manual added)
-Operation B: 300ms, 500 requests (Automatic Slot)
-Operation C: 200ms, 200 requests (Automatic Slot)
+Operation B: 300ms, 500 requests (Automatic slot)
+Operation C: 200ms, 200 requests (Automatic slot)
 Operation D: 100ms, 100 requests (Manual added)
-Operation E: 50ms, 50 requests (Automatic Slot)
+Operation E: 50ms, 50 requests (Automatic slot)
 ```
 
 Alternatively, the user can add three more manual operations to the cache until the cache capacity is reached. This has the effect that no automatic operations can be added to the cache. In that case, we assume that the user knows better which operations are important.
