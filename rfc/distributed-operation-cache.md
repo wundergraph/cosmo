@@ -68,7 +68,7 @@ The router checks periodically e.g. every 5min for updates of the distributed op
 
 ### Platform integration
 
-For containerized environments like Kubernetes, users should use the readiness probe to ensure that the router is ready to accept traffic. Setting not to small values for the readiness probe timeout is recommended to ensure that the router has enough time to prepare the cache. For schema updates after startup, this process is transparent to the environment and clients because the new Graph schema isn't swapped until the cache is warmed up.
+For containerized environments like Kubernetes, users should use the readiness probe to ensure that the router is ready to accept traffic. Setting not to small values for the readiness probe timeout is recommended to ensure that the router has enough time to prepare the cache. For schema updates after startup, this process is non-blocking because the new graph schema isn't swapped until the cache is warmed up.
 
 ### Cosmo UI integration
 
