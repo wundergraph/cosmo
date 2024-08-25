@@ -1,11 +1,11 @@
 ---
-title: "Distributed Operation Cache"
+title: "Operation Cache Warmer"
 author: Dustin Deus
 date: 2024-08-25
 status: Draft
 ---
 
-# Distributed Operation Cache
+# Operation Cache Warmer
 
 - **Author:** Dustin Deus
 - **Date:** 2024-08-25
@@ -17,7 +17,7 @@ This RFC describes a new feature to reduce the latency of the system by pre-plan
 
 ## Motivation
 
-GraphQL is a powerful tool to query data from a server. However, the flexibility of the query language comes with a cost. The cost is the complexity of the query and how expensive it is to normalize, plan and execute it. While execution performance is primarily a concern of the underlying subgraphs, the planning phase can be a unpredictable and significant latency contributor. The distributed operation cache aims to reduce this latency by pre-planning the most expensive and requested operations ahead to make it invisible to the user.
+GraphQL is a powerful tool to query data from a server. However, the flexibility of the query language comes with a cost. The cost is the complexity of the query and how expensive it is to normalize, plan and execute it. While execution performance is primarily a concern of the underlying subgraphs, the planning phase can be a unpredictable and significant latency contributor. The operation cache warmer aims to reduce this latency by pre-planning the most expensive and requested operations ahead to make it invisible to the user.
 
 # Proposal
 
@@ -25,13 +25,13 @@ The distributed operation cache is semi-automatic and allows the user to push sp
 
 ### Pushing operations to the cache
 
-The User can push individual operations to the distributed operation cache by using the CLI:
+The User can push individual operations to the operation cache by using the CLI:
 
 ```bash
 wgc router cache add -g mygraph operations.json
 ```
 
-The CLI command will add the operations from the file `operations.json` to the distributed operation cache of the graph `mygraph`. The file must contain a list of operations in JSON format. The operations can be queries, subscriptions, mutations or persisted operations.
+The CLI command will add the operations from the file `operations.json` to the operation cache of the graph `mygraph`. The file must contain a list of operations in JSON format. The operations can be queries, subscriptions, mutations or persisted operations.
 
 ```json5
 [
@@ -51,7 +51,7 @@ The cli command is idempotent and always updates the cache with the latest opera
 
 ### Automatic operation computation
 
-At the same time, WunderGraph Cosmo is analyzing the incoming traffic based on the OpenTelemetry metrics that each router is sending. The Cosmo Platform computes the Top-N operations for each graph and combines it with the manually added operations. The Top-N operations are then pushed to the distributed operation cache of the graph.
+At the same time, WunderGraph Cosmo is analyzing the incoming traffic based on the OpenTelemetry metrics that each router is sending. The Cosmo Platform computes the Top-N operations for each graph and combines it with the manually added operations. The Top-N operations are then pushed to the operation cache of the graph.
 
 ### Top-N computation
 
@@ -60,7 +60,7 @@ The Top-N computation is based on the following metrics:
 - Total operation pre-execution time: Normalization, Validation, Planning
 - Total request count
 
-The Top-N computation is done for a specific time interval e.g. 3-72 hour (configurable). The operations are sorted by the pre-execution time and request count. The Top-N operations are then pushed to the distributed operation cache. Manual operations have a higher priority than automatic operations. This means when the cache capacity is reached, manual operations are moved to the cache first and automatic operations are removed.
+The Top-N computation is done for a specific time interval e.g. 3-72 hour (configurable). The operations are sorted by the pre-execution time and request count. The Top-N operations are then pushed to the operation cache. Manual operations have a higher priority than automatic operations. This means when the cache capacity is reached, manual operations are moved to the cache first and automatic operations are removed.
 
 #### Example
 
@@ -78,7 +78,7 @@ Alternatively, the user can add three more manual operations to the cache until 
 
 ### Cache update process
 
-The router checks periodically e.g. every 5min for updates of the distributed operation cache. The cache is checked explicitly when the router starts and when the schema changes. The cache is loaded and all operations are pre-planned before the router accepts traffic. The cache is updated in the background and doesn't block the router from accepting traffic.
+The router checks periodically e.g. every 5min for updates of the operation cache. The cache is checked explicitly when the router starts and when the schema changes. The cache is loaded and all operations are pre-planned before the router accepts traffic. The cache is updated in the background and doesn't block the router from accepting traffic.
 
 ### Platform integration
 
@@ -86,7 +86,7 @@ For containerized environments like Kubernetes, users should use the readiness p
 
 ### Cosmo UI integration
 
-A User can disable the distributed operation cache in the Cosmo UI. The User can see the current operations in the cache and remove them if necessary. The User can also see the current status of the cache and the last computation time.
+A User can disable the operation cache in the Cosmo UI. The User can see the current operations in the cache and remove them if necessary. The User can also see the current status of the cache and the last computation time.
 
 #### Triggering the computation manually
 
@@ -94,7 +94,7 @@ A User is able to trigger the computation of the Top-N operations manually in th
 
 ## Router configuration
 
-The distributed operation cache can be enabled or disabled in the router configuration file. The default is enabled. A valid Graph API key is required to fetch the operations cache from the Cosmo Platform.
+The operation cache can be enabled or disabled in the router configuration file. The default is enabled. A valid Graph API key is required to fetch the operations cache from the Cosmo Platform.
 
 ```yaml
 version: "1"
