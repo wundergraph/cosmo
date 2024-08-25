@@ -64,7 +64,7 @@ The Top-N computation is done for a specific time interval e.g. 3-72 hour (confi
 
 ### Cache update process
 
-The router checks periodically for updates of the distributed operation cache. The cache is updated explicitly when the router starts and when the schema changes. The cache is loaded and all operations are pre-planned before the router accepts traffic. The cache is updated in the background and doesn't block the router from accepting traffic.
+The router checks periodically e.g. every 5min for updates of the distributed operation cache. The cache is checked explicitly when the router starts and when the schema changes. The cache is loaded and all operations are pre-planned before the router accepts traffic. The cache is updated in the background and doesn't block the router from accepting traffic.
 
 ### Platform integration
 
