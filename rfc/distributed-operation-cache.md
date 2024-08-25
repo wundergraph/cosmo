@@ -47,7 +47,7 @@ The CLI command will add the operations from the file `operations.json` to the d
 ]
 ```
 
-The update operation is idempotent and always updates the cache with the latest operations. This doesn't trigger the computation of the Top-N operations which is done periodically by the Cosmo Platform.
+The cli command is idempotent and always updates the cache with the latest operations. This doesn't trigger the computation of the Top-N operations which is done periodically by the Cosmo Platform.
 
 ### Automatic operation computation
 
