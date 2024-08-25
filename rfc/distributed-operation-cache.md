@@ -13,7 +13,7 @@ status: Draft
 
 ## Abstract
 
-This RFC describes a new feature to reduce the latency of the system by pre-planning the most expensive and requested operations before the router accepts traffic. We archive this by computing the Top-N GraphQL operations available and making them available to all routers instances.
+This RFC describes a new feature to reduce the latency of the system by pre-planning the most expensive and requested operations before the router accepts traffic. We archive this by computing the Top-N GraphQL operations available and making them available to all routers instances before they accept traffic.
 
 ## Motivation
 
