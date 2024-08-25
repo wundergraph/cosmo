@@ -87,4 +87,7 @@ version: "1"
 
 cache_warmup:
   enabled: true
+  interval: 5m
 ```
+
+_For this RFC, we only consider support for the WunderGraph Cosmo CDN._
