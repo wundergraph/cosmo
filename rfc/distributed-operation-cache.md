@@ -75,7 +75,7 @@ A User is able to trigger the computation of the Top-N operations manually in th
 
 The distributed operation cache can be enabled or disabled in the router configuration file. The default is enabled. A valid Graph API key is required to fetch the operations cache from the Cosmo Platform.
 
-```
+```yaml
 version: "1"
 
 cache_warmup:
