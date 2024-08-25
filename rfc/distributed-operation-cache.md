@@ -59,8 +59,8 @@ At the same time, WunderGraph Cosmo is analyzing the incoming traffic based on t
 
 The Top-N computation is based on the following metrics:
 
-- Operation pre-execution time, including normalization, validation, planning.
-- Request count
+- Total operation pre-execution time: Normalization, Validation, Planning
+- Total request count
 
 The Top-N computation is done for a specific time interval e.g. 3-72 hour (configurable). The operations are sorted by the pre-execution time and request count. The Top-N operations are then pushed to the distributed operation cache. Manual operations have a higher priority than automatic operations. This means when the cache capacity is reached, manual operations are moved to the cache first and automatic operations are removed.
 
