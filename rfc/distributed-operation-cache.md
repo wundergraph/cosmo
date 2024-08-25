@@ -51,11 +51,7 @@ The update operation is idempotent and always updates the cache with the latest 
 
 ### Automatic operation computation
 
-At the same time, WunderGraph Cosmo is analyzing the incoming traffic based on the OpenTelemetry metrics that each router is sending. The Cosmo Platform computes the Top-N operations for each graph and combines it with the manually added operations. The Top-N operations are then pushed to the distributed operation cache of the graph. On each router startup and schema change, the cache is loaded and all operations are pre-planned before the router accepts traffic.
-
-### Platform integration
-
-For containerized environments like Kubernetes, users should use the readiness probe to ensure that the router is ready to accept traffic. Setting not to small values for the readiness probe timeout is recommended to ensure that the router has enough time to prepare the cache. For schema updates after startup, this process is transparent to the environment and clients because the new Graph schema isn't swapped until the cache is warmed up.
+At the same time, WunderGraph Cosmo is analyzing the incoming traffic based on the OpenTelemetry metrics that each router is sending. The Cosmo Platform computes the Top-N operations for each graph and combines it with the manually added operations. The Top-N operations are then pushed to the distributed operation cache of the graph.
 
 ### Top-N computation
 
@@ -65,6 +61,14 @@ The Top-N computation is based on the following metrics:
 - Total request count
 
 The Top-N computation is done for a specific time interval e.g. 3-72 hour (configurable). The operations are sorted by the pre-execution time and request count. The Top-N operations are then pushed to the distributed operation cache. Manual operations have a higher priority than automatic operations. This means when the cache capacity is reached, manual operations are moved to the cache first and automatic operations are removed.
+
+### Cache update process
+
+The router checks periodically for updates of the distributed operation cache. The cache is updated explicitly when the router starts and when the schema changes. The cache is loaded and all operations are pre-planned before the router accepts traffic. The cache is updated in the background and doesn't block the router from accepting traffic.
+
+### Platform integration
+
+For containerized environments like Kubernetes, users should use the readiness probe to ensure that the router is ready to accept traffic. Setting not to small values for the readiness probe timeout is recommended to ensure that the router has enough time to prepare the cache. For schema updates after startup, this process is transparent to the environment and clients because the new Graph schema isn't swapped until the cache is warmed up.
 
 ### Cosmo UI integration
 
