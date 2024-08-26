@@ -34,6 +34,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
+| cdn.commonLabels | object | `{}` | Add labels to all deployed resources |
 | cdn.configuration.s3StorageUrl | string | `"http://minio:changeme@cosmo-minio:9000/cosmo"` |  |
 | clickhouse.auth.password | string | `"changeme"` |  |
 | clickhouse.auth.username | string | `"default"` |  |
@@ -131,6 +132,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | global.studio.enabled | bool | `true` |  |
 | global.studio.port | int | `3000` |  |
 | global.studio.webUrl | string | `"http://studio.wundergraph.local"` |  |
+| graphqlmetrics.commonLabels | object | `{}` | Add labels to all deployed resources |
 | graphqlmetrics.configuration.clickhouseDsn | string | `"clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4"` |  |
 | graphqlmetrics.configuration.prometheus.enabled | bool | `false` | Enables prometheus metrics support. Default is false. |
 | graphqlmetrics.configuration.prometheus.gcpMonitoring.enabled | bool | `false` | Enables gcp support . Default is false. |
@@ -177,6 +179,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | minio.persistence.size | string | `"1Gi"` |  |
 | minio.service.ports.minio | int | `9000` |  |
 | minio.service.ports.minio_admin | int | `9001` |  |
+| otelcollector.commonLabels | object | `{}` | Add labels to all deployed resources |
 | otelcollector.configuration.clickhouseDsn | string | `"clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4"` |  |
 | otelcollector.configuration.prometheus.enabled | bool | `false` | Enables prometheus metrics support. Default is false. |
 | otelcollector.configuration.prometheus.gcpMonitoring.enabled | bool | `false` | Enables gcp support . Default is false. |
@@ -202,6 +205,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | redis.master.persistence.enabled | bool | `true` |  |
 | redis.master.persistence.size | string | `"1Gi"` |  |
 | redis.replica.replicaCount | int | `0` |  |
+| router.commonLabels | object | `{}` | Add labels to all deployed resources |
 | router.configuration.cdnUrl | string | `"http://cosmo-cdn:8787"` | The URL of the Cosmo CDN. Should be internal to the cluster. |
 | router.configuration.controlplaneUrl | string | `"http://cosmo-controlplane:3001"` | The URL of the Cosmo Controlplane. Should be internal to the cluster. |
 | router.configuration.graphApiToken | string | `""` |  |
