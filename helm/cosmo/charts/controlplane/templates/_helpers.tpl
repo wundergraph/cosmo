@@ -65,7 +65,7 @@ extra labels (jobLabels) to each job
 {{- range $key, $value := .context.Values.additionalJobLabels }}
 {{ $key }}: {{ quote $value }}
 {{- end }}
-{{- if and (hasKey . "labels") -}}
+{{- if and (hasKey . "additionalLabels") -}}
 {{- range $key, $value := .additionalLabels }}
 {{ $key }}: {{ quote $value }}
 {{- end }}
