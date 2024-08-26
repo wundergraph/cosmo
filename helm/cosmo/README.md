@@ -72,13 +72,13 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | controlplane.configuration.smtp.requireTls | bool | `true` | Forces the client to use STARTTLS. Default is true. |
 | controlplane.configuration.smtp.secure | bool | `true` | Defines if the connection should use SSL. Default is true. |
 | controlplane.configuration.smtp.username | string | `""` | The username to use. Default is "". |
-| controlplane.jobs | object | `{"activateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","slug":"foo"},"clickhouseMigration":{"labels":{}},"databaseMigration":{"additionalLabels":{}},"deactivateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","reason":"","slug":"foo"},"deleteUser":{"additionalLabels":{},"enabled":false,"id":"123"},"seedOrganization":{"additionalLabels":{}}}` | Configure jobs to be executed in the control plane |
+| controlplane.jobs | object | `{"activateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","slug":"foo"},"clickhouseMigration":{"additionalLabels":{}},"databaseMigration":{"additionalLabels":{}},"deactivateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","reason":"","slug":"foo"},"deleteUser":{"additionalLabels":{},"enabled":false,"id":"123"},"seedOrganization":{"additionalLabels":{}}}` | Configure jobs to be executed in the control plane |
 | controlplane.jobs.activateOrganization | object | `{"additionalLabels":{},"enabled":false,"id":"123","slug":"foo"}` | Used to activate an organization and remove the scheduled deletion |
 | controlplane.jobs.activateOrganization.additionalLabels | object | `{}` | Adds additional labels to the job |
 | controlplane.jobs.activateOrganization.enabled | bool | `false` | Enables the job to be run |
 | controlplane.jobs.activateOrganization.id | string | `"123"` | The unique identifier of the organization |
 | controlplane.jobs.activateOrganization.slug | string | `"foo"` | The slug of the organization |
-| controlplane.jobs.clickhouseMigration.labels | object | `{}` | Adds additional labels to the clickhouse migration job (see: .Values.global.otelcollector) |
+| controlplane.jobs.clickhouseMigration.additionalLabels | object | `{}` | Adds additional labels to the clickhouse migration job (see: .Values.global.otelcollector) |
 | controlplane.jobs.databaseMigration.additionalLabels | object | `{}` | Adds additional labels to the database-migration job |
 | controlplane.jobs.deactivateOrganization | object | `{"additionalLabels":{},"enabled":false,"id":"123","reason":"","slug":"foo"}` | Used to deactivate an organization with a reason and schedule deletion |
 | controlplane.jobs.deactivateOrganization.additionalLabels | object | `{}` | Adds additional labels to the job |
