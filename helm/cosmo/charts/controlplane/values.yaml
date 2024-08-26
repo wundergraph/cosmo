@@ -231,14 +231,17 @@ configuration:
 # -- Existing secret in the same namespace containing the ControlPlane Secrets. The secret keys have to match with current secret.
 existingSecret: ""
 
+# -- Pass additional labels to all jobs
+additionalJobLabels: {}
+
 # -- Configure jobs to be executed in the control plane
 jobs:
   # -- Used to deactivate an organization with a reason and schedule deletion
   deactivateOrganization:
     # -- Enables the job to be run
     enabled: false
-    # -- Adds custom labels to the job
-    customLabels: {}
+    # -- Adds additional labels to the job
+    additionalLabels: {}
     # -- The slug of the organization
     slug: 'foo'
     # -- The unique identifier of the organization
@@ -247,8 +250,8 @@ jobs:
     reason: ''
   # -- Used to activate an organization and remove the scheduled deletion
   activateOrganization:
-    # -- Adds custom labels to the job
-    customLabels: {}
+    # -- Adds additional labels to the job
+    additionalLabels: {}
     # -- Enables the job to be run
     enabled: false
     # -- The slug of the organization
@@ -257,18 +260,18 @@ jobs:
     id: '123'
   # -- Used to delete the user
   deleteUser:
-    # -- Adds custom labels to the job
-    customLabels: {}
+    # -- Adds additional labels to the job
+    additionalLabels: {}
     # -- Enables the job to be run
     enabled: false
     # -- The unique identifier of the user
     id: '123'
   clickhouseMigration:
-    # -- Adds custom labels to the clickhouse migration job (see: .Values.global.otelcollector)
-    customLabels: {}
+    # -- Adds additional labels to the clickhouse migration job (see: .Values.global.otelcollector)
+    additionalLabels: {}
   databaseMigration:
-    # -- Adds custom labels to the database-migration job
-    customLabels: {}
+    # -- Adds additional labels to the database-migration job
+    additionalLabels: {}
   seedOrganization:
-    # -- Adds custom labels to the job (see: .Values.global.seed)
-    customLabels: {}
+    # -- Adds additional labels to the job (see: .Values.global.seed)
+    additionalLabels: {}

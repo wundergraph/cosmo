@@ -58,12 +58,15 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 
 {{/*
 Job labels, used to append defaults and
-extra "customLabels" to each job
+extra labels (jobLabels) to each job 
 */}}
 {{- define "controlplane.job.labels" -}}
 {{ include "controlplane.labels" .context }}
-{{- if and (hasKey . "customLabels") -}}
-{{- range $key, $value := .customLabels }}
+{{- range $key, $value := .context.Values.additionalJobLabels }}
+{{ $key }}: {{ quote $value }}
+{{- end }}
+{{- if and (hasKey . "labels") -}}
+{{- range $key, $value := .additionalLabels }}
 {{ $key }}: {{ quote $value }}
 {{- end }}
 {{- end -}}
