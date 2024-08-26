@@ -28,7 +28,7 @@ spec:
     metadata:
       name: "{{ include "controlplane.fullname" . }}-clickhouse-migration"
       labels:
-        {{- include "controlplane.job.labels" (dict "additionalLabels" .Values.jobs.clickhouseMigration.additionalLabels "additionalLabels" .) | nindent 8 }}
+        {{- include "controlplane.job.labels" (dict "additionalLabels" .Values.jobs.clickhouseMigration.additionalLabels "context" .) | nindent 8 }}
     spec:
       restartPolicy: OnFailure
       {{- with .Values.imagePullSecrets }}
