@@ -1,4 +1,4 @@
-import { UserContext } from "@/components/app-provider";
+import { SessionClientContext, UserContext } from "@/components/app-provider";
 import { EmptyState } from "@/components/empty-state";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
 import {
@@ -59,8 +59,10 @@ import { calURL, docsBaseURL, scimBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
 import { MinusCircledIcon, PlusIcon } from "@radix-ui/react-icons";
-import { useQueryClient } from "@tanstack/react-query";
-import { useQuery, useMutation } from "@connectrpc/connect-query";
+import {
+  useQuery,
+  useMutation,
+} from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   createOIDCProvider,
@@ -90,7 +92,7 @@ import { z } from "zod";
 const OrganizationDetails = () => {
   const user = useContext(UserContext);
   const router = useRouter();
-  const client = useQueryClient();
+  const sessionQueryClient = useContext(SessionClientContext);
 
   const schema = z.object({
     organizationName: z
@@ -142,7 +144,7 @@ const OrganizationDetails = () => {
               description: "Organization details updated successfully.",
               duration: 3000,
             });
-            client.invalidateQueries({
+            sessionQueryClient.invalidateQueries({
               queryKey: ["user", router.asPath],
             });
           } else if (d.response?.details) {
@@ -841,7 +843,7 @@ const OpenIDConnectProvider = ({
 const CosmoAi = () => {
   const router = useRouter();
   const ai = useFeature("ai");
-  const queryClient = useQueryClient();
+  const sessionQueryClient = useContext(SessionClientContext);
   const { mutate, isPending, data } = useMutation(updateFeatureSettings);
   const { toast } = useToast();
 
@@ -854,7 +856,7 @@ const CosmoAi = () => {
       {
         onSuccess: async (d) => {
           if (d.response?.code === EnumStatusCode.OK) {
-            await queryClient.invalidateQueries({
+            await sessionQueryClient.invalidateQueries({
               queryKey: ["user", router.asPath],
             });
             toast({
@@ -887,7 +889,7 @@ const CosmoAi = () => {
       {
         onSuccess: async (d) => {
           if (d.response?.code === EnumStatusCode.OK) {
-            await queryClient.invalidateQueries({
+            await sessionQueryClient.invalidateQueries({
               queryKey: ["user", router.asPath],
             });
             toast({
@@ -963,7 +965,7 @@ const CosmoAi = () => {
 
 const RBAC = () => {
   const router = useRouter();
-  const queryClient = useQueryClient();
+  const sessionQueryClient = useContext(SessionClientContext);
   const rbac = useFeature("rbac");
   const { mutate, isPending } = useMutation(updateFeatureSettings);
   const { toast } = useToast();
@@ -977,7 +979,7 @@ const RBAC = () => {
       {
         onSuccess: async (d) => {
           if (d.response?.code === EnumStatusCode.OK) {
-            await queryClient.invalidateQueries({
+            await sessionQueryClient.invalidateQueries({
               queryKey: ["user", router.asPath],
             });
             toast({
@@ -1010,7 +1012,7 @@ const RBAC = () => {
       {
         onSuccess: async (d) => {
           if (d.response?.code === EnumStatusCode.OK) {
-            await queryClient.invalidateQueries({
+            await sessionQueryClient.invalidateQueries({
               queryKey: ["user", router.asPath],
             });
             toast({
@@ -1098,7 +1100,7 @@ const RBAC = () => {
 
 const Scim = () => {
   const router = useRouter();
-  const queryClient = useQueryClient();
+  const sessionQueryClient = useContext(SessionClientContext);
   const scim = useFeature("scim");
   const { mutate, isPending } = useMutation(updateFeatureSettings);
   const { toast } = useToast();
@@ -1112,7 +1114,7 @@ const Scim = () => {
       {
         onSuccess: async (d) => {
           if (d.response?.code === EnumStatusCode.OK) {
-            await queryClient.invalidateQueries({
+            await sessionQueryClient.invalidateQueries({
               queryKey: ["user", router.asPath],
             });
             toast({
@@ -1145,7 +1147,7 @@ const Scim = () => {
       {
         onSuccess: async (d) => {
           if (d.response?.code === EnumStatusCode.OK) {
-            await queryClient.invalidateQueries({
+            await sessionQueryClient.invalidateQueries({
               queryKey: ["user", router.asPath],
             });
             toast({
