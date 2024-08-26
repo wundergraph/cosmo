@@ -15,6 +15,7 @@ WunderGraph Cosmo Studio.
 | autoscaling.maxReplicas | int | `100` |  |
 | autoscaling.minReplicas | int | `1` |  |
 | autoscaling.targetCPUUtilizationPercentage | int | `80` |  |
+| commonLabels | object | `{}` | Add labels to all deployed resources |
 | configuration.slackClientId | string | `""` | The client ID of the slack app to use for slack app integration |
 | configuration.stripePublishableKey | string | `""` | The publishable key of the stripe account to use for stripe integration |
 | deploymentStrategy | object | `{}` |  |
