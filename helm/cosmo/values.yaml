@@ -98,6 +98,54 @@ cdn:
 
 # Cosmo Controlplane. For more options, please refer to the README.md
 controlplane:
+  # -- Add labels to all deployed resources
+  commonLabels: {}
+
+  # -- Pass additional labels to all jobs
+  additionalJobLabels: {}
+
+  # -- Configure jobs to be executed in the control plane
+  jobs:
+    # -- Used to deactivate an organization with a reason and schedule deletion
+    deactivateOrganization:
+      # -- Enables the job to be run
+      enabled: false
+      # -- Adds additional labels to the job
+      additionalLabels: {}
+      # -- The slug of the organization
+      slug: 'foo'
+      # -- The unique identifier of the organization
+      id: '123'
+      # -- The reason for deactivation
+      reason: ''
+    # -- Used to activate an organization and remove the scheduled deletion
+    activateOrganization:
+      # -- Adds additional labels to the job
+      additionalLabels: {}
+      # -- Enables the job to be run
+      enabled: false
+      # -- The slug of the organization
+      slug: 'foo'
+      # -- The unique identifier of the organization
+      id: '123'
+    # -- Used to delete the user
+    deleteUser:
+      # -- Adds additional labels to the job
+      additionalLabels: {}
+      # -- Enables the job to be run
+      enabled: false
+      # -- The unique identifier of the user
+      id: '123'
+    clickhouseMigration:
+      # -- Adds additional labels to the clickhouse migration job (see: .Values.global.otelcollector)
+      additionalLabels: {}
+    databaseMigration:
+      # -- Adds additional labels to the database-migration job
+      additionalLabels: {}
+    seedOrganization:
+      # -- Adds additional labels to the job (see: .Values.global.seed)
+      additionalLabels: {}
+
   configuration:
     logLevel: 'debug'
     allowedOrigins:
