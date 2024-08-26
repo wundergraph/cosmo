@@ -5,7 +5,7 @@ metadata:
   # We truncate the user id to keep within 52 characters for the name. We add the full id in the annotations.
   name: "{{ include "controlplane.fullname" . }}-delete-user-{{ trunc 8 .Values.jobs.deleteUser.id }}"
   labels:
-    {{- include "controlplane.labels" . | nindent 4 }}
+    {{- include "controlplane.job.labels" (dict "additionalLabels" .Values.jobs.deleteUser.additionalLabels "context" .) | nindent 4 }}
   annotations:
     "user-id": {{ .Values.jobs.deleteUser.id }}
     # Run the job after installing the helm chart
@@ -23,7 +23,7 @@ spec:
     metadata:
       name: "{{ include "controlplane.fullname" . }}-delete-user"
       labels:
-        {{- include "controlplane.labels" . | nindent 8 }}
+        {{- include "controlplane.job.labels" (dict "additionalLabels" .Values.jobs.deleteUser.additionalLabels "context" .) | nindent 8 }}
     spec:
       restartPolicy: OnFailure
       {{- with .Values.imagePullSecrets }}
