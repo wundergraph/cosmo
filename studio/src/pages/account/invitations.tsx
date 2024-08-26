@@ -17,7 +17,8 @@ import {
   getInvitations,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { useRouter } from "next/router";
-import { useState } from "react";
+import { useContext, useState } from "react";
+import { SessionClientContext } from "@/components/app-provider";
 
 const InvitationCard = ({
   id,
@@ -32,7 +33,7 @@ const InvitationCard = ({
   const { mutate, isPending } = useMutation(acceptOrDeclineInvitation);
   const { refetch } = useQuery(getInvitations);
   const { toast } = useToast();
-  const client = useQueryClient();
+  const sessionQueryClient = useContext(SessionClientContext);
   const [accepted, setAccepted] = useState<boolean | undefined>();
 
   const onSubmit = (accept: boolean) => {
@@ -47,7 +48,7 @@ const InvitationCard = ({
             duration: 3000,
           });
           refetch();
-          client.invalidateQueries({
+          sessionQueryClient.invalidateQueries({
             queryKey: ["user", router.asPath],
           });
           setAccepted(undefined);
