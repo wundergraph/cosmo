@@ -2,7 +2,7 @@
 
 For a detailed deployment guide of the chart, including the full documentation, see the [DEV.md](DEV.md) file.
 
-![Version: 0.8.0](https://img.shields.io/badge/Version-0.8.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
+![Version: 0.9.0](https://img.shields.io/badge/Version-0.9.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
 
 This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle GraphQL API Management Solution.
 
@@ -34,6 +34,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
+| cdn.commonLabels | object | `{}` | Add labels to all deployed resources |
 | cdn.configuration.s3StorageUrl | string | `"http://minio:changeme@cosmo-minio:9000/cosmo"` |  |
 | clickhouse.auth.password | string | `"changeme"` |  |
 | clickhouse.auth.username | string | `"default"` |  |
@@ -44,6 +45,8 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | clickhouse.replicaCount | int | `1` |  |
 | clickhouse.shards | int | `1` |  |
 | clickhouse.zookeeper.enabled | bool | `false` |  |
+| controlplane.additionalJobLabels | object | `{}` | Pass additional labels to all jobs |
+| controlplane.commonLabels | object | `{}` | Add labels to all deployed resources |
 | controlplane.configuration.allowedOrigins[0] | string | `"http://studio.wundergraph.local"` |  |
 | controlplane.configuration.authRedirectUri | string | `"http://controlplane.wundergraph.local/v1/auth/callback"` |  |
 | controlplane.configuration.cdnBaseUrl | string | `"http://cosmo-cdn:8787"` |  |
@@ -70,6 +73,25 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | controlplane.configuration.smtp.requireTls | bool | `true` | Forces the client to use STARTTLS. Default is true. |
 | controlplane.configuration.smtp.secure | bool | `true` | Defines if the connection should use SSL. Default is true. |
 | controlplane.configuration.smtp.username | string | `""` | The username to use. Default is "". |
+| controlplane.jobs | object | `{"activateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","slug":"foo"},"clickhouseMigration":{"additionalLabels":{}},"databaseMigration":{"additionalLabels":{}},"deactivateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","reason":"","slug":"foo"},"deleteUser":{"additionalLabels":{},"enabled":false,"id":"123"},"seedOrganization":{"additionalLabels":{}}}` | Configure jobs to be executed in the control plane |
+| controlplane.jobs.activateOrganization | object | `{"additionalLabels":{},"enabled":false,"id":"123","slug":"foo"}` | Used to activate an organization and remove the scheduled deletion |
+| controlplane.jobs.activateOrganization.additionalLabels | object | `{}` | Adds additional labels to the job |
+| controlplane.jobs.activateOrganization.enabled | bool | `false` | Enables the job to be run |
+| controlplane.jobs.activateOrganization.id | string | `"123"` | The unique identifier of the organization |
+| controlplane.jobs.activateOrganization.slug | string | `"foo"` | The slug of the organization |
+| controlplane.jobs.clickhouseMigration.additionalLabels | object | `{}` | Adds additional labels to the clickhouse migration job (see: .Values.global.otelcollector) |
+| controlplane.jobs.databaseMigration.additionalLabels | object | `{}` | Adds additional labels to the database-migration job |
+| controlplane.jobs.deactivateOrganization | object | `{"additionalLabels":{},"enabled":false,"id":"123","reason":"","slug":"foo"}` | Used to deactivate an organization with a reason and schedule deletion |
+| controlplane.jobs.deactivateOrganization.additionalLabels | object | `{}` | Adds additional labels to the job |
+| controlplane.jobs.deactivateOrganization.enabled | bool | `false` | Enables the job to be run |
+| controlplane.jobs.deactivateOrganization.id | string | `"123"` | The unique identifier of the organization |
+| controlplane.jobs.deactivateOrganization.reason | string | `""` | The reason for deactivation |
+| controlplane.jobs.deactivateOrganization.slug | string | `"foo"` | The slug of the organization |
+| controlplane.jobs.deleteUser | object | `{"additionalLabels":{},"enabled":false,"id":"123"}` | Used to delete the user |
+| controlplane.jobs.deleteUser.additionalLabels | object | `{}` | Adds additional labels to the job |
+| controlplane.jobs.deleteUser.enabled | bool | `false` | Enables the job to be run |
+| controlplane.jobs.deleteUser.id | string | `"123"` | The unique identifier of the user |
+| controlplane.jobs.seedOrganization.additionalLabels | object | `{}` | Adds additional labels to the job (see: .Values.global.seed) |
 | global.cdn.enabled | bool | `true` |  |
 | global.cdn.port | int | `8787` |  |
 | global.cdn.webUrl | string | `"http://cdn.wundergraph.local"` |  |
@@ -111,6 +133,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | global.studio.enabled | bool | `true` |  |
 | global.studio.port | int | `3000` |  |
 | global.studio.webUrl | string | `"http://studio.wundergraph.local"` |  |
+| graphqlmetrics.commonLabels | object | `{}` | Add labels to all deployed resources |
 | graphqlmetrics.configuration.clickhouseDsn | string | `"clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4"` |  |
 | graphqlmetrics.configuration.prometheus.enabled | bool | `false` | Enables prometheus metrics support. Default is false. |
 | graphqlmetrics.configuration.prometheus.gcpMonitoring.enabled | bool | `false` | Enables gcp support . Default is false. |
@@ -157,6 +180,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | minio.persistence.size | string | `"1Gi"` |  |
 | minio.service.ports.minio | int | `9000` |  |
 | minio.service.ports.minio_admin | int | `9001` |  |
+| otelcollector.commonLabels | object | `{}` | Add labels to all deployed resources |
 | otelcollector.configuration.clickhouseDsn | string | `"clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4"` |  |
 | otelcollector.configuration.prometheus.enabled | bool | `false` | Enables prometheus metrics support. Default is false. |
 | otelcollector.configuration.prometheus.gcpMonitoring.enabled | bool | `false` | Enables gcp support . Default is false. |
@@ -182,6 +206,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | redis.master.persistence.enabled | bool | `true` |  |
 | redis.master.persistence.size | string | `"1Gi"` |  |
 | redis.replica.replicaCount | int | `0` |  |
+| router.commonLabels | object | `{}` | Add labels to all deployed resources |
 | router.configuration.cdnUrl | string | `"http://cosmo-cdn:8787"` | The URL of the Cosmo CDN. Should be internal to the cluster. |
 | router.configuration.controlplaneUrl | string | `"http://cosmo-controlplane:3001"` | The URL of the Cosmo Controlplane. Should be internal to the cluster. |
 | router.configuration.graphApiToken | string | `""` |  |
