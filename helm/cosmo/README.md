@@ -45,7 +45,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | clickhouse.shards | int | `1` |  |
 | clickhouse.zookeeper.enabled | bool | `false` |  |
 | controlplane.additionalJobLabels | object | `{}` | Pass additional labels to all jobs |
-| controlplane.commonLabels | object | `{}` | Add labels to all the deployed resources |
+| controlplane.commonLabels | object | `{}` | Add labels to all deployed resources |
 | controlplane.configuration.allowedOrigins[0] | string | `"http://studio.wundergraph.local"` |  |
 | controlplane.configuration.authRedirectUri | string | `"http://controlplane.wundergraph.local/v1/auth/callback"` |  |
 | controlplane.configuration.cdnBaseUrl | string | `"http://cosmo-cdn:8787"` |  |

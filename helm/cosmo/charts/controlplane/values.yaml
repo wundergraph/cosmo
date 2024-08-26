@@ -11,7 +11,7 @@ image:
   # -- Overrides the image tag whose default is the chart appVersion.
   version: 'latest'
 
-# -- Add labels to all the deployed resources
+# -- Add labels to all deployed resources
 commonLabels: {}
 
 deploymentStrategy: {}

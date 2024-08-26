@@ -16,7 +16,7 @@ WunderGraph Cosmo Controlplane
 | autoscaling.maxReplicas | int | `100` |  |
 | autoscaling.minReplicas | int | `1` |  |
 | autoscaling.targetCPUUtilizationPercentage | int | `80` |  |
-| commonLabels | object | `{}` | Add labels to all the deployed resources |
+| commonLabels | object | `{}` | Add labels to all deployed resources |
 | configuration.allowedOrigins[0] | string | `"*"` |  |
 | configuration.authRedirectUri | string | `"http://controlplane.wundergraph.local/v1/auth/callback"` |  |
 | configuration.cdnBaseUrl | string | `"http://cosmo-cdn:8787"` | URL of the CDN to use for serving router configs and persistent operations |

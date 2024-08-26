@@ -98,7 +98,7 @@ cdn:
 
 # Cosmo Controlplane. For more options, please refer to the README.md
 controlplane:
-  # -- Add labels to all the deployed resources
+  # -- Add labels to all deployed resources
   commonLabels: {}
 
   # -- Pass additional labels to all jobs
