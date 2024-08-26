@@ -197,7 +197,10 @@ export const Playground = (input: {
   const [clientValidationEnabled, setClientValidationEnabled] = useState(true);
 
   useEffect(() => {
-    if (isMounted) return;
+    const responseTabs = document.getElementById('response-tabs');
+    if (responseTabs && isMounted) {
+      return;
+    }
 
     const sidebar = document.getElementsByClassName('graphiql-sidebar-section')[0];
 
@@ -242,7 +245,7 @@ export const Playground = (input: {
     }
 
     setIsMounted(true);
-  }, [isMounted]);
+  });
 
   const getSchema = async () => {
     const res = await fetch(url, {

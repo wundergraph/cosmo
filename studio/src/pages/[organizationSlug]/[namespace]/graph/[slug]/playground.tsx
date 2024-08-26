@@ -540,8 +540,12 @@ const PlaygroundPage: NextPageWithLayout = () => {
   const [isGraphiqlRendered, setIsGraphiqlRendered] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (isMounted) return;
+    const responseTabs = document.getElementById("response-tabs");
+    if (responseTabs && isMounted) {
+      return;
+    }
 
     const header = document.getElementsByClassName(
       "graphiql-session-header-right",
@@ -598,7 +602,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
     }
 
     setIsMounted(true);
-  }, [isMounted]);
+  });
 
   useEffect(() => {
     if (!isGraphiqlRendered && typeof query === "string") {

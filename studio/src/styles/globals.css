@@ -179,7 +179,8 @@ pre[class*="language-"] code {
 
 .CodeMirror-vscrollbar,
 .CodeMirror-hscrollbar,
-.graphiql-plugin {
+.graphiql-plugin,
+.graphiql-tabs  {
   @apply scrollbar-custom;
 }
 
