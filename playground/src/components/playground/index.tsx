@@ -198,7 +198,6 @@ export const Playground = (input: {
 
   useEffect(() => {
     const responseTabs = document.getElementById('response-tabs');
-
     if (responseTabs && isMounted) {
       return;
     }
@@ -246,7 +245,7 @@ export const Playground = (input: {
     }
 
     setIsMounted(true);
-  }, [isMounted]);
+  });
 
   const getSchema = async () => {
     const res = await fetch(url, {
