@@ -164,7 +164,8 @@ body.graphiql-dark [data-radix-popper-content-wrapper] {
   @apply h-screen !font-sans;
 }
 
-.graphiql-plugin {
+.graphiql-plugin,
+.graphiql-tabs {
   @apply scrollbar-custom;
 }
 
@@ -254,4 +255,12 @@ body.graphiql-dark [data-radix-popper-content-wrapper] {
   to {
     transform: translate3d(10px, 0, 0);
   }
+}
+
+.graphiql-session-header-right {
+  @apply flex-shrink-0;
+}
+
+.graphiql-tabs {
+  @apply z-10;
 }

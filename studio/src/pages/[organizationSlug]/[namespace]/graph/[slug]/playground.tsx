@@ -541,7 +541,11 @@ const PlaygroundPage: NextPageWithLayout = () => {
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    if (isMounted) return;
+    const responseTabs = document.getElementById("response-tabs");
+
+    if (responseTabs && isMounted) {
+      return;
+    }
 
     const header = document.getElementsByClassName(
       "graphiql-session-header-right",
