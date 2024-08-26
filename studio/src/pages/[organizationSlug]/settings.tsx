@@ -144,7 +144,7 @@ const OrganizationDetails = () => {
               description: "Organization details updated successfully.",
               duration: 3000,
             });
-            sessionQueryClient?.invalidateQueries({
+            sessionQueryClient.invalidateQueries({
               queryKey: ["user", router.asPath],
             });
           } else if (d.response?.details) {
@@ -856,7 +856,7 @@ const CosmoAi = () => {
       {
         onSuccess: async (d) => {
           if (d.response?.code === EnumStatusCode.OK) {
-            await sessionQueryClient?.invalidateQueries({
+            await sessionQueryClient.invalidateQueries({
               queryKey: ["user", router.asPath],
             });
             toast({
@@ -889,7 +889,7 @@ const CosmoAi = () => {
       {
         onSuccess: async (d) => {
           if (d.response?.code === EnumStatusCode.OK) {
-            await sessionQueryClient?.invalidateQueries({
+            await sessionQueryClient.invalidateQueries({
               queryKey: ["user", router.asPath],
             });
             toast({
@@ -979,7 +979,7 @@ const RBAC = () => {
       {
         onSuccess: async (d) => {
           if (d.response?.code === EnumStatusCode.OK) {
-            await sessionQueryClient?.invalidateQueries({
+            await sessionQueryClient.invalidateQueries({
               queryKey: ["user", router.asPath],
             });
             toast({
@@ -1012,7 +1012,7 @@ const RBAC = () => {
       {
         onSuccess: async (d) => {
           if (d.response?.code === EnumStatusCode.OK) {
-            await sessionQueryClient?.invalidateQueries({
+            await sessionQueryClient.invalidateQueries({
               queryKey: ["user", router.asPath],
             });
             toast({
@@ -1114,7 +1114,7 @@ const Scim = () => {
       {
         onSuccess: async (d) => {
           if (d.response?.code === EnumStatusCode.OK) {
-            await sessionQueryClient?.invalidateQueries({
+            await sessionQueryClient.invalidateQueries({
               queryKey: ["user", router.asPath],
             });
             toast({
@@ -1147,7 +1147,7 @@ const Scim = () => {
       {
         onSuccess: async (d) => {
           if (d.response?.code === EnumStatusCode.OK) {
-            await sessionQueryClient?.invalidateQueries({
+            await sessionQueryClient.invalidateQueries({
               queryKey: ["user", router.asPath],
             });
             toast({
