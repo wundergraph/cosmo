@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.8.0...helm-cosmo@0.9.0) (2024-08-26)
+
+
+### Features
+
+* **controlplane:** enable custom job labels and pass common labels  ([#1112](https://github.com/wundergraph/cosmo/issues/1112)) ([e1006b9](https://github.com/wundergraph/cosmo/commit/e1006b935e5f1003f1818544c6c455bebc0929de))
+
 ## [0.8.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo-v0.7.0...helm-cosmo@0.8.0) (2024-08-14)
 
 
