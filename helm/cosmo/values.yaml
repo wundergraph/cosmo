@@ -72,6 +72,28 @@ global:
     databaseUsername: 'postgres'
     databasePassword: 'changeme'
 
+    smtpServer:
+      # -- Use auth for connecting to the smtpServer.
+      auth: true
+      # -- Set replyToDisplayName.
+      replyToDisplayName: 'WunderGraph Cosmo'
+      # -- Set fromDisplayName.
+      fromDisplayName: 'WunderGraph Cosmo'
+      # -- Set username, maps to smtpServer.user in the imported keycloak realm
+      username: ''
+      # -- Set password to be used for connecting to the smtpServer.
+      password: '**********'
+      # -- Set 'from' email to be used.
+      from: 'system@wundergraph.com'
+      # -- Set mail host to be used, usually the same one as the one in the controlplane.
+      host: 'smtp.postmarkapp.com'
+      # -- The port of the mail server.
+      port: 587
+      # -- Enable or disable starttls.
+      starttls: true
+      # -- Enable or disable using ssl for the smtpServer connection.
+      ssl: false
+
   minio:
     enabled: true
 

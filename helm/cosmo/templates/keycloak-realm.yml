@@ -963,18 +963,18 @@ data:
         "strictTransportSecurity": "max-age=31536000; includeSubDomains"
       },
       "smtpServer": {
-        "replyToDisplayName": "WunderGraph Cosmo",
-        "starttls": "true",
-        "auth": "true",
+        "replyToDisplayName": "{{ .Values.global.keycloak.smtpServer.replyToDisplayName }}",
+        "starttls": "{{ .Values.global.keycloak.smtpServer.starttls }}",
+        "auth": "{{ .Values.global.keycloak.smtpServer.auth }}",
         "envelopeFrom": "",
-        "ssl": "false",
-        "password": "**********",
-        "port": "587",
-        "host": "smtp.postmarkapp.com",
+        "ssl": "{{ .Values.global.keycloak.smtpServer.ssl }}",
+        "password": "{{ .Values.global.keycloak.smtpServer.password }}",
+        "port": "{{ .Values.global.keycloak.smtpServer.port }}",
+        "host": "{{ .Values.global.keycloak.smtpServer.host }}",
         "replyTo": "",
-        "from": "system@wundergraph.com",
-        "fromDisplayName": "WunderGraph Cosmo",
-        "user": ""
+        "from": "{{ .Values.global.keycloak.smtpServer.from }}",
+        "fromDisplayName": "{{ .Values.global.keycloak.smtpServer.fromDisplayName }}",
+        "user": "{{ .Values.global.keycloak.smtpServer.username }}"
       },
       "loginTheme": "cosmo",
       "accountTheme": "",
