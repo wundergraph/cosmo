@@ -77,6 +77,7 @@ global:
       auth: true
       replyToDisplayName: 'WunderGraph Cosmo'
       fromDisplayName: 'WunderGraph Cosmo'
+      # -- maps to smtpServer.user in the imported keycloak realm
       username: ''
       password: '**********'
       from: 'system@wundergraph.com'

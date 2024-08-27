@@ -118,6 +118,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | global.keycloak.port | int | `8080` |  |
 | global.keycloak.realm | string | `"cosmo"` |  |
 | global.keycloak.smtpServer | object | `{"auth":true,"from":"system@wundergraph.com","fromDisplayName":"WunderGraph Cosmo","host":"smtp.postmarkapp.com","password":"**********","port":587,"replyToDisplayName":"WunderGraph Cosmo","ssl":false,"starttls":true,"username":""}` | smtpServer configuration |
+| global.keycloak.smtpServer.username | string | `""` | maps to smtpServer.user in the imported keycloak realm |
 | global.keycloak.webUrl | string | `"http://keycloak.wundergraph.local"` |  |
 | global.minio.enabled | bool | `true` |  |
 | global.otelcollector.enabled | bool | `true` |  |
