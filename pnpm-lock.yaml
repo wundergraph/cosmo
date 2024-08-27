@@ -199,6 +199,9 @@ importers:
       graphql:
         specifier: 16.9.0
         version: 16.9.0
+      https-proxy-agent:
+        specifier: ^7.0.5
+        version: 7.0.5
       inquirer:
         specifier: ^9.2.7
         version: 9.2.7
@@ -12683,7 +12686,7 @@ packages:
       '@typescript-eslint/scope-manager': 5.62.0
       '@typescript-eslint/type-utils': 5.62.0(eslint@8.52.0)(typescript@5.5.2)
       '@typescript-eslint/utils': 5.62.0(eslint@8.52.0)(typescript@5.5.2)
-      debug: 4.3.4
+      debug: 4.3.5
       eslint: 8.52.0
       graphemer: 1.4.0
       ignore: 5.2.4
@@ -12784,7 +12787,7 @@ packages:
       '@typescript-eslint/scope-manager': 5.62.0
       '@typescript-eslint/types': 5.62.0
       '@typescript-eslint/typescript-estree': 5.62.0(typescript@5.5.2)
-      debug: 4.3.4
+      debug: 4.3.5
       eslint: 8.52.0
       typescript: 5.5.2
     transitivePeerDependencies:
@@ -12851,7 +12854,7 @@ packages:
     dependencies:
       '@typescript-eslint/typescript-estree': 5.62.0(typescript@5.5.2)
       '@typescript-eslint/utils': 5.62.0(eslint@8.52.0)(typescript@5.5.2)
-      debug: 4.3.4
+      debug: 4.3.5
       eslint: 8.52.0
       tsutils: 3.21.0(typescript@5.5.2)
       typescript: 5.5.2
@@ -13387,7 +13390,6 @@ packages:
       debug: 4.3.5
     transitivePeerDependencies:
       - supports-color
-    dev: true
 
   /agentkeepalive@4.5.0:
     resolution: {integrity: sha512-5GG/5IbQQpC9FpkRGsSvZI5QYeSCzlJHdpBQntCsuTOxhKD8lqKhrleg2Yi7yvMIf82Ycmmqln9U8V9qwEiJew==}
@@ -16198,7 +16200,7 @@ packages:
       eslint: '*'
       eslint-plugin-import: '*'
     dependencies:
-      debug: 4.3.4
+      debug: 4.3.5
       enhanced-resolve: 5.15.0
       eslint: 8.52.0
       eslint-module-utils: 2.8.0(@typescript-eslint/parser@5.62.0)(eslint-import-resolver-typescript@3.5.5)(eslint@8.52.0)
@@ -18569,6 +18571,16 @@ packages:
     transitivePeerDependencies:
       - supports-color
     dev: true
+
+  /https-proxy-agent@7.0.5:
+    resolution: {integrity: sha512-1e4Wqeblerz+tMKPIq2EMGiiWW1dIjZOksyHWSUm1rmuvw/how9hBHZ38lAGj5ID4Ik6EdkOw7NmWPy6LAwalw==}
+    engines: {node: '>= 14'}
+    dependencies:
+      agent-base: 7.1.0
+      debug: 4.3.5
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
 
   /human-signals@2.1.0:
     resolution: {integrity: sha512-B4FFZ6q/T2jhhksgkbEW3HBvWIfDW85snkQgawt07S7J5QXTk6BkNV+0yAeZrM5QpMAdYlocGoljn0sJ/WQkFw==}
