@@ -21,9 +21,6 @@ importers:
       graphiql:
         specifier: ^3.3.2
         version: 3.3.2(@codemirror/language@6.0.0)(@types/node@20.12.12)(graphql@16.9.0)(react-dom@18.3.1)(react@18.3.1)
-      pnpm:
-        specifier: ^8.15.9
-        version: 8.15.9
     devDependencies:
       '@bufbuild/buf':
         specifier: ^1.34.0
@@ -12686,7 +12683,7 @@ packages:
       '@typescript-eslint/scope-manager': 5.62.0
       '@typescript-eslint/type-utils': 5.62.0(eslint@8.52.0)(typescript@5.5.2)
       '@typescript-eslint/utils': 5.62.0(eslint@8.52.0)(typescript@5.5.2)
-      debug: 4.3.5
+      debug: 4.3.4
       eslint: 8.52.0
       graphemer: 1.4.0
       ignore: 5.2.4
@@ -12787,7 +12784,7 @@ packages:
       '@typescript-eslint/scope-manager': 5.62.0
       '@typescript-eslint/types': 5.62.0
       '@typescript-eslint/typescript-estree': 5.62.0(typescript@5.5.2)
-      debug: 4.3.5
+      debug: 4.3.4
       eslint: 8.52.0
       typescript: 5.5.2
     transitivePeerDependencies:
@@ -12854,7 +12851,7 @@ packages:
     dependencies:
       '@typescript-eslint/typescript-estree': 5.62.0(typescript@5.5.2)
       '@typescript-eslint/utils': 5.62.0(eslint@8.52.0)(typescript@5.5.2)
-      debug: 4.3.5
+      debug: 4.3.4
       eslint: 8.52.0
       tsutils: 3.21.0(typescript@5.5.2)
       typescript: 5.5.2
@@ -16201,7 +16198,7 @@ packages:
       eslint: '*'
       eslint-plugin-import: '*'
     dependencies:
-      debug: 4.3.5
+      debug: 4.3.4
       enhanced-resolve: 5.15.0
       eslint: 8.52.0
       eslint-module-utils: 2.8.0(@typescript-eslint/parser@5.62.0)(eslint-import-resolver-typescript@3.5.5)(eslint@8.52.0)
@@ -21757,12 +21754,6 @@ packages:
     resolution: {integrity: sha512-Nc3IT5yHzflTfbjgqWcCPpo7DaKy4FnpB0l/zCAW0Tc7jxAiuqSxHasntB3D7887LSrA93kDJ9IXovxJYxyLCA==}
     engines: {node: '>=4'}
     dev: true
-
-  /pnpm@8.15.9:
-    resolution: {integrity: sha512-SZQ0ydj90aJ5Tr9FUrOyXApjOrzuW7Fee13pDzL0e1E6ypjNXP0AHDHw20VLw4BO3M1XhQHkyik6aBYWa72fgQ==}
-    engines: {node: '>=16.14'}
-    hasBin: true
-    dev: false
 
   /popmotion@11.0.3:
     resolution: {integrity: sha512-Y55FLdj3UxkR7Vl3s7Qr4e9m0onSnP8W7d/xQLsoJM40vs6UKHFdygs6SWryasTZYqugMjm3BepCF4CWXDiHgA==}
