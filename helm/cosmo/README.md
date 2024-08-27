@@ -119,11 +119,11 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | global.keycloak.realm | string | `"cosmo"` |  |
 | global.keycloak.smtpServer.auth | bool | `true` | Use auth for connecting to the smtpServer. |
 | global.keycloak.smtpServer.from | string | `"system@wundergraph.com"` | Set 'from' email to be used. |
-| global.keycloak.smtpServer.fromDisplayName | string | `"WunderGraph Cosmo"` | fromDisplayName to set. |
+| global.keycloak.smtpServer.fromDisplayName | string | `"WunderGraph Cosmo"` | Set fromDisplayName. |
 | global.keycloak.smtpServer.host | string | `"smtp.postmarkapp.com"` | Set mail host to be used, usually the same one as the one in the controlplane. |
 | global.keycloak.smtpServer.password | string | `"**********"` | Set password to be used for connecting to the smtpServer. |
 | global.keycloak.smtpServer.port | int | `587` | The port of the mail server. |
-| global.keycloak.smtpServer.replyToDisplayName | string | `"WunderGraph Cosmo"` | replyToDisplayName to set. |
+| global.keycloak.smtpServer.replyToDisplayName | string | `"WunderGraph Cosmo"` | Set replyToDisplayName. |
 | global.keycloak.smtpServer.ssl | bool | `false` | Enable or disable using ssl for the smtpServer connection. |
 | global.keycloak.smtpServer.starttls | bool | `true` | Enable or disable starttls. |
 | global.keycloak.smtpServer.username | string | `""` | Set username, maps to smtpServer.user in the imported keycloak realm |
