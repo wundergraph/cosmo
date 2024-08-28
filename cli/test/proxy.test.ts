@@ -1,7 +1,6 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest';
 import { setGlobalDispatcher, ProxyAgent } from 'undici';
 import { HttpsProxyAgent } from 'https-proxy-agent';
-import { Client } from '../src/core/client/client.js';
 
 // Mocks the actual used undici modules
 // The tests check if those have been configured
