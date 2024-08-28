@@ -17,7 +17,6 @@ type OutputFile = {
   isComposable: boolean;
   lastUpdatedAt: string;
   contract: {
-    id: string;
     sourceFederatedGraphId: string;
     excludeTags: string[];
   };
