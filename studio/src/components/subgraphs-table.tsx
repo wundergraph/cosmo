@@ -506,6 +506,7 @@ export const SubgraphsTable = ({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="px-4">ID</TableHead>
               <TableHead className="px-4">Name</TableHead>
               <TableHead className="w-4/12 px-4">Url</TableHead>
               <TableHead
@@ -523,6 +524,7 @@ export const SubgraphsTable = ({
           <TableBody>
             {subgraphs.map(
               ({
+                id,
                 name,
                 routingURL,
                 lastUpdatedAt,
@@ -556,6 +558,12 @@ export const SubgraphsTable = ({
                     className=" group cursor-pointer py-1 hover:bg-secondary/30"
                     onClick={() => router.push(path)}
                   >
+                    <TableCell className="px-4 font-medium">
+                      <Tooltip delayDuration={200}>
+                        <TooltipTrigger>{id.slice(0, 8)}</TooltipTrigger>
+                        <TooltipContent>{id}</TooltipContent>
+                      </Tooltip>
+                    </TableCell>
                     <TableCell className="px-4 font-medium">{name}</TableCell>
                     <TableCell className="px-4 text-muted-foreground">
                       {routingURL}

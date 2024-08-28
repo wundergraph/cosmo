@@ -50,7 +50,7 @@ const SubgraphsDashboardPage: NextPageWithLayout = () => {
     error: fsError,
     refetch: refetchFeatureSubgraphs,
   } = useQuery(getFeatureSubgraphs, {
-        namespace: namespace || "default",
+    namespace: namespace || "default",
     query,
     limit,
     offset,
@@ -125,7 +125,7 @@ const SubgraphsDashboardPage: NextPageWithLayout = () => {
       <div className="relative mb-4 mt-8">
         <MagnifyingGlassIcon className="absolute bottom-0 left-3 top-0 my-auto" />
         <Input
-          placeholder="Search by name"
+          placeholder="Search by ID or Name"
           className="pl-8 pr-10"
           value={search}
           onChange={(e) => {
