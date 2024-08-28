@@ -23,7 +23,7 @@ export const CreateClient = (opts: ClientOptions): Client => {
     // You have to tell the Node.js http API which HTTP version to use.
     httpVersion: '1.1',
     nodeOptions: {
-      agent: opts.proxyUrl ? new HttpsProxyAgent(opts.proxyUrl) : undefined,
+      ...(opts.proxyUrl ? { agent: new HttpsProxyAgent(opts.proxyUrl) } : {}),
     },
     // Avoid compression for small requests
     compressMinBytes: 1024,
