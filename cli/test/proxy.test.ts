@@ -34,8 +34,8 @@ const prepare = () => {
 
 beforeEach(prepare);
 
-describe('fetch when the HTTP_PROXY variable is set', () => {
-  test('when using HTTP_PROXY the ProxyAgent for native fetch was configured', async () => {
+describe('that when the HTTP_PROXY variable is set', () => {
+  test('the ProxyAgent for native fetch is configured using HTTP_PROXY', async () => {
     process.env.HTTP_PROXY = 'http://proxy-server:8080';
     await import('../src/commands/index.js');
 
@@ -48,8 +48,8 @@ describe('fetch when the HTTP_PROXY variable is set', () => {
   });
 });
 
-describe('fetch when the HTTP(S)_PROXY variable is set', () => {
-  test('when using HTTPS_PROXY the fetch ProxyAgent was set (without trailing slash)', async () => {
+describe('that when the HTTPS_PROXY variable is set', () => {
+  test('the fetch ProxyAgent is set without a trailing slash in HTTPS_PROXY', async () => {
     process.env.HTTPS_PROXY = 'https://proxy-server:8080';
 
     await import('../src/commands/index.js');
@@ -61,7 +61,7 @@ describe('fetch when the HTTP(S)_PROXY variable is set', () => {
 
     expect(setGlobalDispatcher).toHaveBeenCalledOnce();
   });
-  test('when using HTTPS_PROXY the fetch ProxyAgent was set (with leading slash)', async () => {
+  test('the fetch ProxyAgent is set with a trailing slash in HTTPS_PROXY', async () => {
     process.env.HTTPS_PROXY = 'https://proxy-server:8080/';
 
     await import('../src/commands/index.js');
@@ -76,12 +76,12 @@ describe('fetch when the HTTP(S)_PROXY variable is set', () => {
 });
 
 describe('Platform Client Proxy Configuration', () => {
-  test('does not create proxy agent when proxyUrl is not provided', async () => {
+  test('that a proxy agent is not created when no proxyUrl is provided', async () => {
     await import('../src/commands/index.js');
     expect(HttpsProxyAgent).not.toHaveBeenCalled();
   });
 
-  test('creates a proxy agent when given a proxyUrl', async () => {
+  test('that a proxy agent is created when a proxyUrl is provided', async () => {
     process.env.HTTPS_PROXY = 'https://proxy-server:8080';
 
     await import('../src/commands/index.js');
@@ -90,7 +90,7 @@ describe('Platform Client Proxy Configuration', () => {
 });
 
 describe('when the HTTPS_PROXY variable is not set', () => {
-  test('the global undici or connect proxy was not initizalized', async () => {
+  test('the global undici or connect proxy is not initizalized', async () => {
     await import('../src/commands/index.js');
 
     // native fetch
