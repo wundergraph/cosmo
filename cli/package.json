@@ -51,6 +51,7 @@
     "dotenv": "^16.3.1",
     "env-paths": "^3.0.0",
     "graphql": "^16.9.0",
+    "https-proxy-agent": "^7.0.5",
     "inquirer": "^9.2.7",
     "js-yaml": "^4.1.0",
     "jwt-decode": "^3.1.2",
@@ -59,7 +60,8 @@
     "open": "^9.1.0",
     "ora": "^8.0.1",
     "pathe": "^1.1.1",
-    "picocolors": "^1.0.0"
+    "picocolors": "^1.0.0",
+    "undici": "^6.19.8"
   },
   "devDependencies": {
     "@types/cli-progress": "^3.11.5",
