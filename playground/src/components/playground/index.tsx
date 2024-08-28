@@ -12,6 +12,7 @@ import { TbDevicesCheck } from 'react-icons/tb';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import axios, { AxiosError } from 'axios';
 import 'graphiql/graphiql.css';
 import '@graphiql/plugin-explorer/dist/style.css';
 import '@/theme.css';
@@ -61,15 +62,37 @@ const graphiQLFetch = async (
       }
     }
 
-    const response = await fetch(url, init);
+    const axiosResponse = await axios({
+      method: init.method as 'get' | 'post' | 'put' | 'delete', // adjust method as per init
+      url: url.toString(),
+      headers,
+      data: init.body,
+    });
+
+    const response = new Response(JSON.stringify(axiosResponse.data), {
+      status: axiosResponse.status,
+      statusText: axiosResponse.statusText,
+      headers: new Headers(Object.entries(axiosResponse.headers)),
+    });
+
     onFetch(await response.clone().json());
     return response;
-  } catch (e) {
-    // @ts-expect-error
-    if (e?.message?.includes('Failed to fetch')) {
-      throw new Error('Unable to connect to the server. Please check if your server is running.');
+  } catch (error: any) {
+    if (error instanceof AxiosError) {
+      const errorInfo = {
+        message: error.message || 'Network Error',
+        responseErrorCode: error.code,
+        responseStatusCode: error.response?.status,
+        responseHeaders: error.response?.headers,
+        responseBody: JSON.stringify(error.response?.data),
+        errorMessage: error.message,
+      };
+      const response = new Response(JSON.stringify(errorInfo));
+      onFetch(await response.clone().json());
+      return response;
+    } else {
+      throw error;
     }
-    throw e;
   }
 };
 

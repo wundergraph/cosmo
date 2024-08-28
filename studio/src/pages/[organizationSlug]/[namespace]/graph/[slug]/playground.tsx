@@ -1,3 +1,4 @@
+import { useApplyParams } from "@/components/analytics/use-apply-params";
 import { CodeViewer } from "@/components/code-viewer";
 import {
   getGraphLayout,
@@ -42,12 +43,12 @@ import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { NextPageWithLayout } from "@/lib/page";
 import { parseSchema } from "@/lib/schema-helpers";
 import { cn } from "@/lib/utils";
+import { useMutation, useQuery } from "@connectrpc/connect-query";
 import { explorerPlugin } from "@graphiql/plugin-explorer";
 import { createGraphiQLFetcher } from "@graphiql/toolkit";
 import { SparklesIcon } from "@heroicons/react/24/outline";
 import { Component2Icon, MobileIcon } from "@radix-ui/react-icons";
 import { TooltipContent, TooltipTrigger } from "@radix-ui/react-tooltip";
-import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getClients,
@@ -59,6 +60,7 @@ import {
   PersistedOperation,
   PublishedOperationStatus,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import axios, { AxiosError } from "axios";
 import crypto from "crypto";
 import { GraphiQL } from "graphiql";
 import { GraphQLSchema, parse, validate } from "graphql";
@@ -68,11 +70,10 @@ import { ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { FaNetworkWired } from "react-icons/fa";
 import { FiSave } from "react-icons/fi";
+import { MdOutlineFeaturedPlayList } from "react-icons/md";
 import { PiBracketsCurly, PiDevices, PiGraphLight } from "react-icons/pi";
 import { TbDevicesCheck } from "react-icons/tb";
 import { z } from "zod";
-import { useApplyParams } from "@/components/analytics/use-apply-params";
-import { MdOutlineFeaturedPlayList } from "react-icons/md";
 
 const graphiQLFetch = async (
   onFetch: any,
@@ -138,20 +139,37 @@ const graphiQLFetch = async (
       }
     }
 
-    const response = await fetch(url, {
-      ...init,
+    const axiosResponse = await axios({
+      method: init.method as "get" | "post" | "put" | "delete", // adjust method as per init
+      url: url.toString(),
       headers,
+      data: init.body,
     });
+
+    const response = new Response(JSON.stringify(axiosResponse.data), {
+      status: axiosResponse.status,
+      statusText: axiosResponse.statusText,
+      headers: new Headers(Object.entries(axiosResponse.headers)),
+    });
+
     onFetch(await response.clone().json());
     return response;
-  } catch (e) {
-    // @ts-expect-error
-    if (e?.message?.includes("Failed to fetch")) {
-      throw new Error(
-        "Unable to connect to the server. Please check if your server is running.",
-      );
+  } catch (error: any) {
+    if (error instanceof AxiosError) {
+      const errorInfo = {
+        message: error.message || "Network Error",
+        responseErrorCode: error.code,
+        responseStatusCode: error.response?.status,
+        responseHeaders: error.response?.headers,
+        responseBody: JSON.stringify(error.response?.data),
+        errorMessage: error.message,
+      };
+      const response = new Response(JSON.stringify(errorInfo));
+      onFetch(await response.clone().json());
+      return response;
+    } else {
+      throw error;
     }
-    throw e;
   }
 };
 
