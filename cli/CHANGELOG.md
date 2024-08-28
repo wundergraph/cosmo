@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.62.0](https://github.com/wundergraph/cosmo/compare/wgc@0.61.0...wgc@0.62.0) (2024-08-28)
+
+### Features
+
+* option to list only contracts ([#1128](https://github.com/wundergraph/cosmo/issues/1128)) ([199a9ec](https://github.com/wundergraph/cosmo/commit/199a9ec49d912cd7b18519f5874f3004bab057e2)) (@thisisnithin)
+
 # [0.61.0](https://github.com/wundergraph/cosmo/compare/wgc@0.60.3...wgc@0.61.0) (2024-08-22)
 
 ### Features

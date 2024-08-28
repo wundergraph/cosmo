@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.28.4](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.28.3...@wundergraph/composition@0.28.4) (2024-08-28)
+
+### Bug Fixes
+
+* allow entity extensions in EDGs ([#1111](https://github.com/wundergraph/cosmo/issues/1111)) ([080e98a](https://github.com/wundergraph/cosmo/commit/080e98a34a86b5b0998aa0b6ee55d3a23ddbdcfa)) (@Aenimus)
+
 ## [0.28.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.28.2...@wundergraph/composition@0.28.3) (2024-08-14)
 
 **Note:** Version bump only for package @wundergraph/composition
