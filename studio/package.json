@@ -68,6 +68,7 @@
     "@tiptap/react": "2.1.13",
     "@tiptap/starter-kit": "2.1.13",
     "@wundergraph/cosmo-connect": "workspace:*",
+    "axios": "^1.7.2",
     "bowser": "^2.11.0",
     "canvas-confetti": "^1.6.0",
     "change-case": "^4.1.2",
