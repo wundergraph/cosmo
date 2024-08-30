@@ -4,7 +4,7 @@ require (
 	github.com/akrylysov/algnhsa v1.1.0
 	github.com/aws/aws-lambda-go v1.43.0
 	github.com/stretchr/testify v1.9.0
-	github.com/wundergraph/cosmo/router v0.0.0-20240822132308-3725523e6ab4
+	github.com/wundergraph/cosmo/router v0.0.0-20240829082608-1f1ecc1dbc63
 	go.uber.org/zap v1.26.0
 )
 
@@ -90,9 +90,8 @@ require (
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/twmb/franz-go v1.16.1 // indirect
 	github.com/twmb/franz-go/pkg/kmsg v1.7.0 // indirect
-	github.com/valyala/fastjson v1.6.4 // indirect
-	github.com/wundergraph/astjson v0.0.0-20240822164222-c1cca919e2c8 // indirect
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.75 // indirect
+	github.com/wundergraph/astjson v0.0.0-20240827102346-5fc60fe30f9c // indirect
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.76 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1 // indirect
 	go.opentelemetry.io/contrib/propagators/b3 v1.23.0 // indirect
