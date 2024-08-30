@@ -9,7 +9,6 @@ import (
 	"github.com/jensneuse/abstractlogger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astjson"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
@@ -20,6 +19,8 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
+
+	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 )
 
 const schemaUsageInfoTestSchema = `
@@ -387,6 +388,10 @@ func (s *StatefulSource) Start() {
 
 type FakeFactory[T any] struct {
 	upstreamSchema *ast.Document
+}
+
+func (f *FakeFactory[T]) UpstreamSchema(dataSourceConfig plan.DataSourceConfiguration[T]) (*ast.Document, bool) {
+	return f.upstreamSchema, true
 }
 
 func (f *FakeFactory[T]) Planner(logger abstractlogger.Logger) plan.DataSourcePlanner[T] {

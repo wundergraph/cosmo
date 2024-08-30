@@ -69,56 +69,56 @@
               "kind": "Single",
               "fetch": {
                 "kind": "BatchEntity",
-                "path": "products",
+                "path": "products.@.lead",
                 "subgraphName": "employees",
                 "subgraphId": "0",
                 "fetchId": 3,
                 "dependsOnFetchIds": [
                   0,
-                  2
+                  1
                 ],
                 "representations": [
                   {
-                    "kind": "@key",
-                    "typeName": "Consultancy",
-                    "fragment": "fragment Key on Consultancy {\n    __typename\n    upc\n}"
+                    "kind": "@requires",
+                    "typeName": "Employee",
+                    "fieldName": "derivedMood",
+                    "fragment": "fragment Requires_for_derivedMood on Employee {\n    currentMood\n}"
                   },
                   {
-                    "kind": "@requires",
-                    "typeName": "Consultancy",
-                    "fieldName": "isLeadAvailable",
-                    "fragment": "fragment Requires_for_isLeadAvailable on Consultancy {\n    lead {\n        isAvailable\n    }\n}"
+                    "kind": "@key",
+                    "typeName": "Employee",
+                    "fragment": "fragment Key on Employee {\n    __typename\n    id\n}"
                   }
                 ],
-                "query": "query($representations: [_Any!]!){\n    _entities(representations: $representations){\n        __typename\n        ... on Consultancy {\n            isLeadAvailable\n        }\n    }\n}"
+                "query": "query($representations: [_Any!]!){\n    _entities(representations: $representations){\n        __typename\n        ... on Employee {\n            derivedMood\n        }\n    }\n}"
               }
             },
             {
               "kind": "Single",
               "fetch": {
                 "kind": "BatchEntity",
-                "path": "products.@.lead",
+                "path": "products",
                 "subgraphName": "employees",
                 "subgraphId": "0",
                 "fetchId": 4,
                 "dependsOnFetchIds": [
-                  1,
-                  0
+                  0,
+                  2
                 ],
                 "representations": [
                   {
-                    "kind": "@key",
-                    "typeName": "Employee",
-                    "fragment": "fragment Key on Employee {\n    __typename\n    id\n}"
+                    "kind": "@requires",
+                    "typeName": "Consultancy",
+                    "fieldName": "isLeadAvailable",
+                    "fragment": "fragment Requires_for_isLeadAvailable on Consultancy {\n    lead {\n        isAvailable\n    }\n}"
                   },
                   {
-                    "kind": "@requires",
-                    "typeName": "Employee",
-                    "fieldName": "derivedMood",
-                    "fragment": "fragment Requires_for_derivedMood on Employee {\n    currentMood\n}"
+                    "kind": "@key",
+                    "typeName": "Consultancy",
+                    "fragment": "fragment Key on Consultancy {\n    __typename\n    upc\n}"
                   }
                 ],
-                "query": "query($representations: [_Any!]!){\n    _entities(representations: $representations){\n        __typename\n        ... on Employee {\n            derivedMood\n        }\n    }\n}"
+                "query": "query($representations: [_Any!]!){\n    _entities(representations: $representations){\n        __typename\n        ... on Consultancy {\n            isLeadAvailable\n        }\n    }\n}"
               }
             }
           ]
