@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.21.4](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.21.3...aws-lambda-router@0.21.4) (2024-08-30)
+
+### Bug Fixes
+
+* planning of provides, parent entity jump, conditional implicit keys, external fields ([#1092](https://github.com/wundergraph/cosmo/issues/1092)) ([0fe2cba](https://github.com/wundergraph/cosmo/commit/0fe2cbaa72fa7ba5dbbf97c1e95615f29f13af1f)) (@devsergiy)
+
 ## [0.21.3](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.21.2...aws-lambda-router@0.21.3) (2024-08-30)
 
 ### Bug Fixes
