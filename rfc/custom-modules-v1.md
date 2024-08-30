@@ -40,12 +40,13 @@ As powerful as the new module becomes, it is important to move basic and common 
 A developer can implement a custom module by creating a struct that implements one or more of the following interfaces:
 
 - RouterHooks: Provides hooks for the router lifecycle, including request and response handling.
-  - `RouterRequestHook`: Called when a request is made to the router and after all GraphQL information is available.
-  - `RouterResponseHook`: Called before the response is sent to the client.
-  - `RouterErrorHook`: Called when an error occurs during the router lifecycle.
+  - `RouterPreRequestHook`: Called when a request is made to the router, operation name/type is included in the input.
+  - `RouterResponseHook`: Called before the response is sent to the client, a meaningful status code is included in the input.
+  - `RouterErrorHook`: Called when an error occurs during the router lifecycle, an error type is included in the input.
 - SubgraphHooks: Provides hooks for subgraph requests and responses.
-  - `SubgraphRequestHook`: Called when a subgraph request is made.
+  - `SubgraphPreRequestHook`: Called when a subgraph request is made.
   - `SubgraphResponseHook`: Called when a subgraph response is received.
+  - `SubgraphErrorHook`: Called when an error occurs during the subgraph call, an error type is included in the input.
 - ApplicationHooks: Provides hooks for the application lifecycle, including startup, shutdown, and error handling.
   - `ApplicationStartHook`: Called when the application starts.
   - `ApplicationStopHook`: Called when the application stops.
@@ -54,16 +55,16 @@ A developer can implement a custom module by creating a struct that implements o
   - `AuthenticationHook`: Called when a router request is authenticated.
 - AuthorizationHooks: Provides hooks for authorization logic.
   - `AuthorizationHook`: Called when a router request is authorized.
-- TelemetryHooks: Provides hooks for OpenTelemetry tracing and metrics.
-  - `TelemetrySpanHook`: Called when a span is created.
-  - `TelemetryMetricHook`: Called when a metric is recorded.
 - GraphServerHooks: Provides hooks for the lifecycle of a GraphQL server.
   - `GraphServerStartHook`: Called when the GraphQL server starts e.g. for the first time or when the schema is updated.
   - `GraphServerStopHook`: Called when the GraphQL server stops e.g. when the application is shut down or the old schema is replaced.
 - GraphQLOperationHooks: Provides hooks for parsed, normalized, and planned GraphQL operations.
-  - `GraphQLOperationParseHook`: Called when an operation is parsed.
-  - `GraphQLOperationNormalizeHook`: Called when an operation is normalized.
-  - `GraphQLOperationPlanHook`: Called when an operation is planned.
+  - `GraphQLOperationPreParseHook`: Called when an operation enters parse.
+  - `GraphQLOperationPostParseHook`: Called when an operation exits parse.
+  - `GraphQLOperationPreNormalizeHook`: Called when an operation enters normalize.
+  - `GraphQLOperationPostNormalizeHook`: Called when an operation exits normalize.
+  - `GraphQLOperationPrePlanHook`: Called when an operation enters plan.
+  - `GraphQLOperationPostPlanHook`: Called when an operation exits plan, planCache lookup results are included.
 - `ModuleHooks` (**Required**): Provides hooks for the module lifecycle, including provisioning and shutdown.
   - `Provision`: Called when the module is provisioned.
   - `Shutdown`: Called when the module is shutdown.
@@ -176,11 +177,14 @@ type SubgraphResponse struct {
 }
 
 // Router Hooks
+// The three hooks cover the entire router lifecycle, 
+// from entering to either successfully exiting or erroring out
+// The input err of the post hooks is an object of core.errorType
 
-type RouterRequestHook interface {
-	// OnRouterRequest is called when a request is made to the router and after all GraphQL information is available
+type RouterPreRequestHook interface {
+	// PreRouterRequest is called when a request is made to the router. 
 	// Returning an error will result in a GraphQL error being returned to the client.
-	OnRouterRequest(ctx *core.RouterRequest, err error) error
+	PreRouterRequest(ctx *core.RouterRequest) error
 }
 
 type RouterResponseHook interface {
@@ -194,15 +198,21 @@ type RouterErrorHook interface {
 	OnRouterError(err error)
 }
 
+type RouterHook interface {
+	RouterPreRequestHook
+	RouterResponseHook
+	RouterErrorHook
+}
+
 // SubgraphHooks are called when a subgraph request or response is made.
 // The order is not guaranteed, so the hooks should be idempotent and side-effect free.
 // if state needs to be shared between hooks, it should be stored in the context.
 // We will provide an easy way to share state between hooks.
 
-type SubgraphRequestHook interface {
-	// OnSubgraphRequest is called when a subgraph request is made
+type SubgraphPreRequestHook interface {
+	// PreSubgraphRequest is called when a subgraph request is made
 	// Returning an error will result in a GraphQL error being returned to the client.
-	OnSubgraphRequest(ctx *core.SubgraphRequest, err error) error
+	PreSubgraphRequest(ctx *core.SubgraphRequest) error
 }
 
 type SubgraphResponseHook interface {
@@ -214,6 +224,12 @@ type SubgraphResponseHook interface {
 type SubgraphErrorHook interface {
 	// OnError is called when an error occurs during the subgraph lifecycle
 	OnSubgraphError(err error)
+}
+
+type SubgraphHook interface {
+	SubgraphPreRequestHook
+	SubgraphResponseHook
+	SubgraphErrorHook
 }
 
 // ApplicationHooks are called when the application starts, stops, or an error occurs.
@@ -235,21 +251,6 @@ type ApplicationErrorHook interface {
 	OnAppError(err error)
 }
 
-// TelemetryHooks are called when a span is created
-
-type TelemetrySpanHook interface {
-	// OnSpan is called when a span is created
-	// Returning a function to be called when the span ends.
-	// This can be used to add custom attributes or events to the span.
-	OnSpan(span *trace.Span) func() // Return a function to be called when the span ends
-}
-
-type TelemetryMetricHook interface {
-	// OnMetric is called when a metric is recorded
-	// Returning an error will result in a telemetry error
-	OnMetric(metric *metric.Metric) error
-}
-
 // AuthenticationHooks are called when a router request is authenticated
 
 type AuthenticationHook interface {
@@ -267,23 +268,50 @@ type AuthorizationHook interface {
 }
 
 // OperationHooks are called when an operation is parsed, normalized, or planned
-
-type GraphQLOperationParseHook interface {
-	// OnOperationParse is called when an operation is parsed
+// The input err of the post hooks is an object of core.errorType
+type GraphQLOperationPreParseHook interface {
+	// PreOperationParse is called when an operation is entering parse
 	// Returning an error will result in a GraphQL error as a response from the router.
-	OnOperationParse(op *core.Operation, err error) error
+	PreOperationParse(op *core.Operation) error
 }
 
-type GraphQLOperationNormalizeHook interface {
-	// OnNormalize is called when an operation is normalized
+type GraphQLOperationPostParseHook interface {
+	// PostOperationParse is called when an operation is exiting parse
 	// Returning an error will result in a GraphQL error as a response from the router.
-	OnOperationNormalize(op *core.Operation, err error) error
+	PostOperationParse(op *core.Operation, err error) error
 }
 
-type GraphQLOperationPlanHook interface {
-	// OnPlan is called when an operation is planned
+type GraphQLOperationPreNormalizeHook interface {
+	// PreOperationNormalize is called when an operation is entering normalize
 	// Returning an error will result in a GraphQL error as a response from the router.
-	OnOperationPlan(op *core.Operation, err error) error
+	PreOperationNormalize(op *core.Operation) error
+}
+
+type GraphQLOperationPostNormalizeHook interface {
+	// PostOperationNormalize is called when an operation is exiting normalize
+	// Returning an error will result in a GraphQL error as a response from the router.
+	PostOperationNormalize(op *core.Operation, err error) error
+}
+
+type GraphQLOperationPrePlanHook interface {
+	// PreOperationPlan is called when an operation is entering plan
+	// Returning an error will result in a GraphQL error as a response from the router.
+	PreOperationPlan(op *core.Operation) error
+}
+
+type GraphQLOperationPostPlanHook interface {
+	// PostOperationPlan is called when an operation is exiting plan
+	// Returning an error will result in a GraphQL error as a response from the router.
+	PostOperationPlan(op *core.Operation, err error) error
+}
+
+type GraphQLOperationHook interface {
+	GraphQLOperationPreParseHook
+	GraphQLOperationPostParseHook
+	GraphQLOperationPreNormalizeHook
+	GraphQLOperationPostNormalizeHook
+	GraphQLOperationPrePlanHook
+	GraphQLOperationPostPlanHook
 }
 
 // Module Hooks
@@ -316,7 +344,7 @@ type GraphServerStopHook interface {
 
 - **Advanced GraphQL Operation Handling**: A module that walks the parsed operation and performs custom logic based on the operation type, fields, and arguments.
 - **Request validation**: A module that validates incoming requests and returns an error if the request is invalid.
-- **Custom Telemetry**: A module that creates custom spans or metric data and sends it to a telemetry backend.
+- **Custom Telemetry**: Can be acheived by using Custom Metrics.
 - **Custom Authentication / Authorization**: A module that authenticates incoming requests and adds user information to the subgraph requests.
 - **Response interception**: A module that intercepts responses from subgraphs and modifies them before they are sent to the client.
 - **Response Caching**: A module that caches responses from subgraphs and returns them for identical requests.
@@ -332,21 +360,56 @@ The new module system is not backwards compatible with the old module system. Ex
 
 __All examples are pseudocode and not tested, but they are as close as possible to the final implementation__
 
-## Custom Telemetry
+## Custom Metrics
 
-This module adds custom attributes to the OpenTelemetry span for each router request. Data can come from the request, the router configuration, or external sources. The example modifies the first span of the router but depending on the hook, the span is different.
+This module allows custom metric client to record request latency and error type.
 
 ```go
 type MyModule struct{}
 
-// Ensure that MyModule implements the RouterRequestHook interface
-var _ RouterRequestHook = (*MyModule)(nil)
+// Ensure that MyModule implements the RouterHook interface
+var _ RouterHook = (*MyModule)(nil)
 
-func (m *MyModule) OnRouterRequest(req *core.RouterRequest, err error) error {
-	req.Telemetry.Span.AddEvent("Router Request")
-	req.Telemetry.Span.AddAttributes(
-		attribute.String("customer.id", "123"),
-	)
+func (m *MyModule) PreRouterRequest(req *core.RouterRequest, err error) error {
+	tags := map[string]string{
+		"operation_name": req.OperationName,
+		"operation_type": req.OperationType,
+	}
+	m.scope.Tagged(tags).Counter("request.calls").Inc(1)
+
+	req.Context = context.WithValue(req.Context, startTimeKey, time.Now())
+
+	return nil
+}
+
+func (m *MyModule) OnRouterResponse(res *core.RouterResponse, err error) error {
+	startTime, ok := res.Context.Value(startTimeKey).(time.Time)
+	if !ok {
+		return nil
+	}
+
+	tags := map[string]string{
+		"operation_name": req.OperationName,
+		"operation_type": req.OperationType,
+	}
+
+	latency := time.Since(startTime)
+	m.scope.Tagged(tags).Timer("request.latency").Record(latency)
+
+	return nil
+}
+
+func (m *MyModule) OnRouterError(res *core.RouterResponse, err error) error {
+	tags := map[string]string{
+		"operation_name": req.OperationName,
+		"operation_type": req.OperationType,
+	}
+
+	if typedErr, ok := err.(*core.ErrorType); ok { 
+		tags["error_type"] := typedError.String()
+	}
+	m.scope.tagged(tags).Counter("request.error").Inc(1)
+
 	return nil
 }
 ```
