@@ -59,6 +59,20 @@ spec:
                   name: {{ include "cdn.fullname" . }}-configmap
                   key: port
 
+            - name: S3_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "cdn.fullname" . }}-configmap
+                  key: s3Region
+
+            {{- if .Values.configuration.s3Endpoint }}
+            - name: S3_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "cdn.fullname" . }}-configmap
+                  key: s3Endpoint
+            {{- end }}
+
             - name: S3_STORAGE_URL
               valueFrom:
                 secretKeyRef:

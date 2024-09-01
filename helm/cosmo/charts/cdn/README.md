@@ -16,7 +16,8 @@ WunderGraph Cosmo CDN
 | autoscaling.minReplicas | int | `1` |  |
 | autoscaling.targetCPUUtilizationPercentage | int | `80` |  |
 | commonLabels | object | `{}` | Add labels to all deployed resources |
-| configuration | string | `nil` |  |
+| configuration.s3Endpoint | string | `""` | The endpoint of the S3 bucket. |
+| configuration.s3Region | string | `"auto"` | The region where the S3 bucket is located. |
 | deploymentStrategy | object | `{}` |  |
 | existingSecret | string | `""` | Existing secret in the same namespace containing the authJwtSecret and s3StorageUrl. The secret keys have to match with current secret. |
 | extraEnvVars | list | `[]` | Allows to set additional environment variables on the container. Useful for global application non-specific settings. |
