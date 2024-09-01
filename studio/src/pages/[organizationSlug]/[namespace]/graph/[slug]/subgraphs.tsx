@@ -54,7 +54,7 @@ const SubGraphsPage: NextPageWithLayout = () => {
       );
     } else {
       const fuse = new Fuse(graphData.subgraphs, {
-        keys: ["name"],
+        keys: ["name", "id"],
         minMatchCharLength: 1,
       });
 
@@ -74,7 +74,7 @@ const SubGraphsPage: NextPageWithLayout = () => {
       <div className="relative mb-4">
         <MagnifyingGlassIcon className="absolute bottom-0 left-3 top-0 my-auto" />
         <Input
-          placeholder="Search by name"
+          placeholder="Search by ID or Name"
           className="pl-8 pr-10"
           value={search}
           onChange={(e) => {

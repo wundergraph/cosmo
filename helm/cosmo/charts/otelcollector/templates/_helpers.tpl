@@ -59,6 +59,9 @@ Selector labels
 {{- define "otelcollector.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "otelcollector.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
+{{- range $key, $value := .Values.commonLabels }}
+{{ $key }}: {{ quote $value }}
+{{- end }}
 {{- end }}
 
 {{/*

@@ -2,7 +2,7 @@
 
 For a detailed deployment guide of the chart, including the full documentation, see the [DEV.md](DEV.md) file.
 
-![Version: 0.9.0](https://img.shields.io/badge/Version-0.9.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
+![Version: 0.10.0](https://img.shields.io/badge/Version-0.10.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
 
 This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle GraphQL API Management Solution.
 
@@ -34,6 +34,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
+| cdn.commonLabels | object | `{}` | Add labels to all deployed resources |
 | cdn.configuration.s3StorageUrl | string | `"http://minio:changeme@cosmo-minio:9000/cosmo"` |  |
 | clickhouse.auth.password | string | `"changeme"` |  |
 | clickhouse.auth.username | string | `"default"` |  |
@@ -116,6 +117,16 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | global.keycloak.loginRealm | string | `"master"` |  |
 | global.keycloak.port | int | `8080` |  |
 | global.keycloak.realm | string | `"cosmo"` |  |
+| global.keycloak.smtpServer.auth | bool | `true` | Use auth for connecting to the smtpServer. |
+| global.keycloak.smtpServer.from | string | `"system@wundergraph.com"` | Set 'from' email to be used. |
+| global.keycloak.smtpServer.fromDisplayName | string | `"WunderGraph Cosmo"` | Set fromDisplayName. |
+| global.keycloak.smtpServer.host | string | `"smtp.postmarkapp.com"` | Set mail host to be used, usually the same one as the one in the controlplane. |
+| global.keycloak.smtpServer.password | string | `"**********"` | Set password to be used for connecting to the smtpServer. |
+| global.keycloak.smtpServer.port | int | `587` | The port of the mail server. |
+| global.keycloak.smtpServer.replyToDisplayName | string | `"WunderGraph Cosmo"` | Set replyToDisplayName. |
+| global.keycloak.smtpServer.ssl | bool | `false` | Enable or disable using ssl for the smtpServer connection. |
+| global.keycloak.smtpServer.starttls | bool | `true` | Enable or disable starttls. |
+| global.keycloak.smtpServer.username | string | `""` | Set username, maps to smtpServer.user in the imported keycloak realm |
 | global.keycloak.webUrl | string | `"http://keycloak.wundergraph.local"` |  |
 | global.minio.enabled | bool | `true` |  |
 | global.otelcollector.enabled | bool | `true` |  |
@@ -131,6 +142,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | global.studio.enabled | bool | `true` |  |
 | global.studio.port | int | `3000` |  |
 | global.studio.webUrl | string | `"http://studio.wundergraph.local"` |  |
+| graphqlmetrics.commonLabels | object | `{}` | Add labels to all deployed resources |
 | graphqlmetrics.configuration.clickhouseDsn | string | `"clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4"` |  |
 | graphqlmetrics.configuration.prometheus.enabled | bool | `false` | Enables prometheus metrics support. Default is false. |
 | graphqlmetrics.configuration.prometheus.gcpMonitoring.enabled | bool | `false` | Enables gcp support . Default is false. |
@@ -177,6 +189,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | minio.persistence.size | string | `"1Gi"` |  |
 | minio.service.ports.minio | int | `9000` |  |
 | minio.service.ports.minio_admin | int | `9001` |  |
+| otelcollector.commonLabels | object | `{}` | Add labels to all deployed resources |
 | otelcollector.configuration.clickhouseDsn | string | `"clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4"` |  |
 | otelcollector.configuration.prometheus.enabled | bool | `false` | Enables prometheus metrics support. Default is false. |
 | otelcollector.configuration.prometheus.gcpMonitoring.enabled | bool | `false` | Enables gcp support . Default is false. |
@@ -202,6 +215,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | redis.master.persistence.enabled | bool | `true` |  |
 | redis.master.persistence.size | string | `"1Gi"` |  |
 | redis.replica.replicaCount | int | `0` |  |
+| router.commonLabels | object | `{}` | Add labels to all deployed resources |
 | router.configuration.cdnUrl | string | `"http://cosmo-cdn:8787"` | The URL of the Cosmo CDN. Should be internal to the cluster. |
 | router.configuration.controlplaneUrl | string | `"http://cosmo-controlplane:3001"` | The URL of the Cosmo Controlplane. Should be internal to the cluster. |
 | router.configuration.graphApiToken | string | `""` |  |

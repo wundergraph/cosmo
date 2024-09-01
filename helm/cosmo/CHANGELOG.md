@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.10.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.9.0...helm-cosmo@0.10.0) (2024-08-29)
+
+
+### Features
+
+* **cosmo:** add setting commonLabels on subchart resources ([#1120](https://github.com/wundergraph/cosmo/issues/1120)) ([030dc6d](https://github.com/wundergraph/cosmo/commit/030dc6da6652508d041bb34715d867d3a54db004))
+* **keycloak:** enable passing smtpServer to keycloak ([#1116](https://github.com/wundergraph/cosmo/issues/1116)) ([b278c75](https://github.com/wundergraph/cosmo/commit/b278c75a4fdfa572e8891a61ff3bc582947c7c2b))
+
 ## [0.9.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.8.0...helm-cosmo@0.9.0) (2024-08-26)
 
 
