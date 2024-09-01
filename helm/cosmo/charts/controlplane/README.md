@@ -49,6 +49,8 @@ WunderGraph Cosmo Controlplane
 | configuration.redisTlsCa | string | `""` | When connecting to a redis instance over TLS. Accept a cert in PEM format (as one-line with \n) or file. |
 | configuration.redisTlsCert | string | `""` |  |
 | configuration.redisTlsKey | string | `""` |  |
+| configuration.s3Endpoint | string | `""` | The endpoint of the S3 bucket. |
+| configuration.s3Region | string | `"auto"` | The region where the S3 bucket is located. |
 | configuration.s3StorageUrl | string | `"http://minio:changeme@cosmo-minio:9000/cosmo"` |  |
 | configuration.slackAppClientId | string | `""` |  |
 | configuration.slackAppClientSecret | string | `""` |  |
