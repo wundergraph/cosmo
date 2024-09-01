@@ -120,6 +120,10 @@ cdn:
   configuration:
     # This must match the value used in controlplane.configuration.s3StorageUrl
     s3StorageUrl: 'http://minio:changeme@cosmo-minio:9000/cosmo'
+    # -- The region where the S3 bucket is located.
+    s3Region: 'auto'
+    # -- The endpoint of the S3 bucket.
+    s3Endpoint: ''
 
 # Cosmo Controlplane. For more options, please refer to the README.md
 controlplane:
@@ -184,7 +188,13 @@ controlplane:
     clickhouseMigrationDsn: 'clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&max_execution_time=60'
     redisHost: 'cosmo-redis-master'
     redisPort: 6379
+    # This must match the value used in cdn.configuration.s3StorageUrl
     s3StorageUrl: 'http://minio:changeme@cosmo-minio:9000/cosmo'
+    # -- The region where the S3 bucket is located.
+    s3Region: 'auto'
+    # -- The endpoint of the S3 bucket.
+    s3Endpoint: ''
+
     cdnBaseUrl: 'http://cosmo-cdn:8787'
 
     # -- Use this section to configure the smtp server.
