@@ -99,9 +99,27 @@ export const envVariables = z
     SLACK_APP_CLIENT_ID: z.string().optional(),
     SLACK_APP_CLIENT_SECRET: z.string().optional(),
     /**
-     * S3 Storage e.g. for persistent operations
+     * S3 Storage e.g. for persistent operations.
+     *
+     * S3_STORAGE_URL: The blobStorage url containing username and password (e.g.: https://username:password@cosmo-controlplane-bucket.s3.amazonaws.com)
+     * S3_REGION: The region to use for the S3 storage (e.g.: us-east-1, this fallbacks to auto and must be set when using aws)
+     * S3_ENDPOINT: The aws endpoint to use for the S3 storage (e.g.: s3.amazonaws.com, this fallbacks to the origin of the S3_STORAGE_URL)
+     *
+     * Examples:
+     * Minio Storage
+     * S3_STORAGE_URL="http://minio:pass@minio:9000/cosmo"
+     * S3_REGION="auto"                           # default
+     * S3_ENDPOINT=S3_STORAGE_URL.origin          # default
+     *
+     * AWS S3 Storage
+     * S3_STORAGE_URL="https://username:password@cosmo-controlplane-bucket.s3.amazonaws.com"
+     * S3_REGION="us-east-1"                      # set this for amazon to your region
+     * S3_ENDPOINT="s3.amazonaws.com"             # replaces the bucket from the S3_STORAGE_URL origin
      */
     S3_STORAGE_URL: z.string(),
+    S3_ENDPOINT: z.string().optional(),
+    S3_REGION: z.string().default('auto'),
+
     /**
      * Email
      */

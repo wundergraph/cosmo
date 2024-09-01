@@ -1,4 +1,5 @@
 import { randomFill } from 'node:crypto';
+import { S3ClientConfig } from '@aws-sdk/client-s3';
 import { HandlerContext } from '@connectrpc/connect';
 import {
   GraphQLSubscriptionProtocol,
@@ -370,4 +371,50 @@ export function getValueOrDefault<K, V>(map: Map<K, V>, key: K, constructor: () 
 // HTTP methods including POST, PUT, DELETE, etc.
 export function webhookAxiosRetryCond(err: AxiosError) {
   return isNetworkError(err) || isRetryableError(err);
+}
+
+export function createS3ClientConfig(
+  s3Url: string,
+  bucketName: string,
+  region: string | undefined,
+  endpoint: string | undefined,
+): S3ClientConfig {
+  const url = new URL(s3Url);
+  const forcePathStyle = !isVirtualHostStyleUrl(url);
+
+  const accessKeyId = url.username ?? '';
+  const secretAccessKey = url.password ?? '';
+
+  if (forcePathStyle && !endpoint) {
+    endpoint = url.origin;
+  }
+
+  if (!forcePathStyle && !endpoint) {
+    endpoint = url.origin.replace(`${bucketName}.`, '');
+  }
+
+  return {
+    region,
+    endpoint,
+    credentials: {
+      accessKeyId,
+      secretAccessKey,
+    },
+    forcePathStyle,
+  };
+}
+
+export function extractS3BucketName(s3Url: string) {
+  const url = new URL(s3Url);
+
+  if (isVirtualHostStyleUrl(url)) {
+    return url.hostname.split('.')[0];
+  }
+
+  // path based style
+  return url.pathname.slice(1);
+}
+
+export function isVirtualHostStyleUrl(url: URL) {
+  return url.hostname.split('.').length > 2;
 }
