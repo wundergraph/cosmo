@@ -1762,6 +1762,73 @@ export class LintIssue extends Message<LintIssue> {
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.GraphPruningIssue
+ */
+export class GraphPruningIssue extends Message<GraphPruningIssue> {
+  /**
+   * @generated from field: string graphPruningRuleType = 1;
+   */
+  graphPruningRuleType = "";
+
+  /**
+   * @generated from field: wg.cosmo.platform.v1.LintSeverity severity = 2;
+   */
+  severity = LintSeverity.warn;
+
+  /**
+   * @generated from field: string fieldPath = 3;
+   */
+  fieldPath = "";
+
+  /**
+   * @generated from field: string message = 4;
+   */
+  message = "";
+
+  /**
+   * @generated from field: wg.cosmo.platform.v1.LintLocation issueLocation = 5;
+   */
+  issueLocation?: LintLocation;
+
+  /**
+   * @generated from field: string federatedGraphName = 6;
+   */
+  federatedGraphName = "";
+
+  constructor(data?: PartialMessage<GraphPruningIssue>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GraphPruningIssue";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "graphPruningRuleType", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "severity", kind: "enum", T: proto3.getEnumType(LintSeverity) },
+    { no: 3, name: "fieldPath", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "issueLocation", kind: "message", T: LintLocation },
+    { no: 6, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GraphPruningIssue {
+    return new GraphPruningIssue().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GraphPruningIssue {
+    return new GraphPruningIssue().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GraphPruningIssue {
+    return new GraphPruningIssue().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GraphPruningIssue | PlainMessage<GraphPruningIssue> | undefined, b: GraphPruningIssue | PlainMessage<GraphPruningIssue> | undefined): boolean {
+    return proto3.util.equals(GraphPruningIssue, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.CheckSubgraphSchemaResponse
  */
 export class CheckSubgraphSchemaResponse extends Message<CheckSubgraphSchemaResponse> {
@@ -1812,6 +1879,16 @@ export class CheckSubgraphSchemaResponse extends Message<CheckSubgraphSchemaResp
    */
   lintErrors: LintIssue[] = [];
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.GraphPruningIssue graphPruneWarnings = 10;
+   */
+  graphPruneWarnings: GraphPruningIssue[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.GraphPruningIssue graphPruneErrors = 11;
+   */
+  graphPruneErrors: GraphPruningIssue[] = [];
+
   constructor(data?: PartialMessage<CheckSubgraphSchemaResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1829,6 +1906,8 @@ export class CheckSubgraphSchemaResponse extends Message<CheckSubgraphSchemaResp
     { no: 7, name: "checked_federated_graphs", kind: "message", T: CheckedFederatedGraphs, repeated: true },
     { no: 8, name: "lintWarnings", kind: "message", T: LintIssue, repeated: true },
     { no: 9, name: "lintErrors", kind: "message", T: LintIssue, repeated: true },
+    { no: 10, name: "graphPruneWarnings", kind: "message", T: GraphPruningIssue, repeated: true },
+    { no: 11, name: "graphPruneErrors", kind: "message", T: GraphPruningIssue, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckSubgraphSchemaResponse {
@@ -3309,6 +3388,11 @@ export class SchemaCheck extends Message<SchemaCheck> {
    */
   hasLintErrors = false;
 
+  /**
+   * @generated from field: bool hasGraphPruningErrors = 12;
+   */
+  hasGraphPruningErrors = false;
+
   constructor(data?: PartialMessage<SchemaCheck>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3328,6 +3412,7 @@ export class SchemaCheck extends Message<SchemaCheck> {
     { no: 9, name: "isDeleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 10, name: "ghDetails", kind: "message", T: SchemaCheck_GhDetails, opt: true },
     { no: 11, name: "hasLintErrors", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 12, name: "hasGraphPruningErrors", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SchemaCheck {
@@ -3587,6 +3672,11 @@ export class GetCheckSummaryResponse extends Message<GetCheckSummaryResponse> {
    */
   lintIssues: LintIssue[] = [];
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.GraphPruningIssue graphPruningIssues = 10;
+   */
+  graphPruningIssues: GraphPruningIssue[] = [];
+
   constructor(data?: PartialMessage<GetCheckSummaryResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3603,6 +3693,7 @@ export class GetCheckSummaryResponse extends Message<GetCheckSummaryResponse> {
     { no: 7, name: "compositionErrors", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 8, name: "traffic_check_days", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 9, name: "lintIssues", kind: "message", T: LintIssue, repeated: true },
+    { no: 10, name: "graphPruningIssues", kind: "message", T: GraphPruningIssue, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckSummaryResponse {
@@ -15610,6 +15701,303 @@ export class ConfigureNamespaceLintConfigResponse extends Message<ConfigureNames
 
   static equals(a: ConfigureNamespaceLintConfigResponse | PlainMessage<ConfigureNamespaceLintConfigResponse> | undefined, b: ConfigureNamespaceLintConfigResponse | PlainMessage<ConfigureNamespaceLintConfigResponse> | undefined): boolean {
     return proto3.util.equals(ConfigureNamespaceLintConfigResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.EnableGraphPruningForTheNamespaceRequest
+ */
+export class EnableGraphPruningForTheNamespaceRequest extends Message<EnableGraphPruningForTheNamespaceRequest> {
+  /**
+   * @generated from field: string namespace = 1;
+   */
+  namespace = "";
+
+  /**
+   * @generated from field: bool enableGraphPruning = 2;
+   */
+  enableGraphPruning = false;
+
+  constructor(data?: PartialMessage<EnableGraphPruningForTheNamespaceRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.EnableGraphPruningForTheNamespaceRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "enableGraphPruning", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EnableGraphPruningForTheNamespaceRequest {
+    return new EnableGraphPruningForTheNamespaceRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EnableGraphPruningForTheNamespaceRequest {
+    return new EnableGraphPruningForTheNamespaceRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EnableGraphPruningForTheNamespaceRequest {
+    return new EnableGraphPruningForTheNamespaceRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: EnableGraphPruningForTheNamespaceRequest | PlainMessage<EnableGraphPruningForTheNamespaceRequest> | undefined, b: EnableGraphPruningForTheNamespaceRequest | PlainMessage<EnableGraphPruningForTheNamespaceRequest> | undefined): boolean {
+    return proto3.util.equals(EnableGraphPruningForTheNamespaceRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.EnableGraphPruningForTheNamespaceResponse
+ */
+export class EnableGraphPruningForTheNamespaceResponse extends Message<EnableGraphPruningForTheNamespaceResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<EnableGraphPruningForTheNamespaceResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.EnableGraphPruningForTheNamespaceResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EnableGraphPruningForTheNamespaceResponse {
+    return new EnableGraphPruningForTheNamespaceResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EnableGraphPruningForTheNamespaceResponse {
+    return new EnableGraphPruningForTheNamespaceResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EnableGraphPruningForTheNamespaceResponse {
+    return new EnableGraphPruningForTheNamespaceResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: EnableGraphPruningForTheNamespaceResponse | PlainMessage<EnableGraphPruningForTheNamespaceResponse> | undefined, b: EnableGraphPruningForTheNamespaceResponse | PlainMessage<EnableGraphPruningForTheNamespaceResponse> | undefined): boolean {
+    return proto3.util.equals(EnableGraphPruningForTheNamespaceResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GraphPruningConfig
+ */
+export class GraphPruningConfig extends Message<GraphPruningConfig> {
+  /**
+   * @generated from field: string ruleName = 1;
+   */
+  ruleName = "";
+
+  /**
+   * @generated from field: wg.cosmo.platform.v1.LintSeverity severityLevel = 2;
+   */
+  severityLevel = LintSeverity.warn;
+
+  /**
+   * grace period in days
+   *
+   * @generated from field: int32 gracePeriod = 3;
+   */
+  gracePeriod = 0;
+
+  constructor(data?: PartialMessage<GraphPruningConfig>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GraphPruningConfig";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "ruleName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "severityLevel", kind: "enum", T: proto3.getEnumType(LintSeverity) },
+    { no: 3, name: "gracePeriod", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GraphPruningConfig {
+    return new GraphPruningConfig().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GraphPruningConfig {
+    return new GraphPruningConfig().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GraphPruningConfig {
+    return new GraphPruningConfig().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GraphPruningConfig | PlainMessage<GraphPruningConfig> | undefined, b: GraphPruningConfig | PlainMessage<GraphPruningConfig> | undefined): boolean {
+    return proto3.util.equals(GraphPruningConfig, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.ConfigureNamespaceGraphPruningConfigRequest
+ */
+export class ConfigureNamespaceGraphPruningConfigRequest extends Message<ConfigureNamespaceGraphPruningConfigRequest> {
+  /**
+   * @generated from field: string namespace = 1;
+   */
+  namespace = "";
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.GraphPruningConfig configs = 2;
+   */
+  configs: GraphPruningConfig[] = [];
+
+  constructor(data?: PartialMessage<ConfigureNamespaceGraphPruningConfigRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.ConfigureNamespaceGraphPruningConfigRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "configs", kind: "message", T: GraphPruningConfig, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ConfigureNamespaceGraphPruningConfigRequest {
+    return new ConfigureNamespaceGraphPruningConfigRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ConfigureNamespaceGraphPruningConfigRequest {
+    return new ConfigureNamespaceGraphPruningConfigRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ConfigureNamespaceGraphPruningConfigRequest {
+    return new ConfigureNamespaceGraphPruningConfigRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ConfigureNamespaceGraphPruningConfigRequest | PlainMessage<ConfigureNamespaceGraphPruningConfigRequest> | undefined, b: ConfigureNamespaceGraphPruningConfigRequest | PlainMessage<ConfigureNamespaceGraphPruningConfigRequest> | undefined): boolean {
+    return proto3.util.equals(ConfigureNamespaceGraphPruningConfigRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.ConfigureNamespaceGraphPruningConfigResponse
+ */
+export class ConfigureNamespaceGraphPruningConfigResponse extends Message<ConfigureNamespaceGraphPruningConfigResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<ConfigureNamespaceGraphPruningConfigResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.ConfigureNamespaceGraphPruningConfigResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ConfigureNamespaceGraphPruningConfigResponse {
+    return new ConfigureNamespaceGraphPruningConfigResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ConfigureNamespaceGraphPruningConfigResponse {
+    return new ConfigureNamespaceGraphPruningConfigResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ConfigureNamespaceGraphPruningConfigResponse {
+    return new ConfigureNamespaceGraphPruningConfigResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ConfigureNamespaceGraphPruningConfigResponse | PlainMessage<ConfigureNamespaceGraphPruningConfigResponse> | undefined, b: ConfigureNamespaceGraphPruningConfigResponse | PlainMessage<ConfigureNamespaceGraphPruningConfigResponse> | undefined): boolean {
+    return proto3.util.equals(ConfigureNamespaceGraphPruningConfigResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetNamespaceGraphPruningConfigRequest
+ */
+export class GetNamespaceGraphPruningConfigRequest extends Message<GetNamespaceGraphPruningConfigRequest> {
+  /**
+   * @generated from field: string namespace = 1;
+   */
+  namespace = "";
+
+  constructor(data?: PartialMessage<GetNamespaceGraphPruningConfigRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetNamespaceGraphPruningConfigRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetNamespaceGraphPruningConfigRequest {
+    return new GetNamespaceGraphPruningConfigRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetNamespaceGraphPruningConfigRequest {
+    return new GetNamespaceGraphPruningConfigRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetNamespaceGraphPruningConfigRequest {
+    return new GetNamespaceGraphPruningConfigRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetNamespaceGraphPruningConfigRequest | PlainMessage<GetNamespaceGraphPruningConfigRequest> | undefined, b: GetNamespaceGraphPruningConfigRequest | PlainMessage<GetNamespaceGraphPruningConfigRequest> | undefined): boolean {
+    return proto3.util.equals(GetNamespaceGraphPruningConfigRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetNamespaceGraphPruningConfigResponse
+ */
+export class GetNamespaceGraphPruningConfigResponse extends Message<GetNamespaceGraphPruningConfigResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: bool graphPrunerEnabled = 2;
+   */
+  graphPrunerEnabled = false;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.GraphPruningConfig configs = 3;
+   */
+  configs: GraphPruningConfig[] = [];
+
+  constructor(data?: PartialMessage<GetNamespaceGraphPruningConfigResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetNamespaceGraphPruningConfigResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "graphPrunerEnabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 3, name: "configs", kind: "message", T: GraphPruningConfig, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetNamespaceGraphPruningConfigResponse {
+    return new GetNamespaceGraphPruningConfigResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetNamespaceGraphPruningConfigResponse {
+    return new GetNamespaceGraphPruningConfigResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetNamespaceGraphPruningConfigResponse {
+    return new GetNamespaceGraphPruningConfigResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetNamespaceGraphPruningConfigResponse | PlainMessage<GetNamespaceGraphPruningConfigResponse> | undefined, b: GetNamespaceGraphPruningConfigResponse | PlainMessage<GetNamespaceGraphPruningConfigResponse> | undefined): boolean {
+    return proto3.util.equals(GetNamespaceGraphPruningConfigResponse, a, b);
   }
 }
 

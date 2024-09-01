@@ -61,6 +61,10 @@
           "id": "feature-flags",
           "description": "1 Feature Flag",
           "limit": 1
+        },
+        {
+          "id": "field-grace-period",
+          "limit": 7
         }
       ]
     },
@@ -104,6 +108,10 @@
           "id": "feature-flags",
           "description": "3 Feature Flags",
           "limit": 3
+        },
+        {
+          "id": "field-grace-period",
+          "limit": 14
         }
       ]
     },
@@ -142,7 +150,11 @@
         { "id": "trace-sampling-rate", "limit": 0.1 },
         { "id": "oidc" },
         { "id": "scim", "description": "System for Cross-Domain Identity Management (SCIM)" },
-        { "id": "feature-flags", "description": "Custom Number of Feature Flags", "limit": 10 }
+        { "id": "feature-flags", "description": "Custom Number of Feature Flags", "limit": 10 },
+        {
+          "id": "field-grace-period",
+          "limit": 30
+        }
       ]
     }
   }

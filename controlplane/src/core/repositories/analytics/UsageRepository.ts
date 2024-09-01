@@ -5,7 +5,7 @@ import {
   RequestSeriesItem,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ClickHouseClient } from '../../clickhouse/index.js';
-import { DateRange, TimeFilters } from '../../../types/index.js';
+import { DateRange, Field, TimeFilters } from '../../../types/index.js';
 import { parseTimeFilters } from './util.js';
 
 export class UsageRepository {
@@ -160,5 +160,134 @@ export class UsageRepository {
       clients,
       meta,
     };
+  }
+
+  public async getUnusedFields({
+    organizationId,
+    federatedGraphId,
+    range,
+    fields,
+  }: {
+    organizationId: string;
+    federatedGraphId: string;
+    range: number;
+    fields: Field[];
+  }): Promise<{ name: string; typeName: string }[]> {
+    const arrayJoinFields = fields.map((field) => `('${field.name}', '${field.typeName}')`).join(', ');
+    const {
+      dateRange: { end, start },
+    } = parseTimeFilters(undefined, range);
+
+    const query = `
+      WITH 
+        toDateTime('${start}') AS startDate,
+        toDateTime('${end}') AS endDate,
+        all_fields AS (
+          SELECT
+              field.1 as Name,
+              field.2 as TypeName
+          FROM
+          (
+            SELECT
+                arrayJoin([ ${arrayJoinFields} ]) as field
+          )
+        ),
+        used_fields AS (
+            SELECT
+                DISTINCT on (FieldName, TypeName) FieldName,
+                TypeName
+            from
+                gql_metrics_schema_usage_5m_90d 
+                ARRAY JOIN TypeNames AS TypeName
+            where
+                Timestamp >= startDate AND Timestamp <= endDate
+                AND OrganizationID = '${organizationId}'
+                AND FederatedGraphID = '${federatedGraphId}'
+        )
+      SELECT
+          all_fields.Name as name,
+          all_fields.TypeName as typeName
+      from
+          all_fields
+          LEFT JOIN used_fields ON all_fields.Name = used_fields.FieldName
+          AND all_fields.TypeName = used_fields.TypeName
+      WHERE
+          used_fields.FieldName = ''
+          AND used_fields.TypeName = ''
+    `;
+
+    const res = await this.client.queryPromise(query);
+
+    if (Array.isArray(res)) {
+      return res.map((item) => ({
+        name: item.name,
+        typeName: item.typeName,
+      }));
+    }
+
+    return [];
+  }
+
+  public async getUsedFields({
+    organizationId,
+    federatedGraphId,
+    range,
+    fields,
+  }: {
+    organizationId: string;
+    federatedGraphId: string;
+    range: number;
+    fields: Field[];
+  }): Promise<{ name: string; typeName: string }[]> {
+    const arrayJoinFields = fields.map((field) => `('${field.name}', '${field.typeName}')`).join(', ');
+    const {
+      dateRange: { end, start },
+    } = parseTimeFilters(undefined, range);
+
+    const query = `
+      WITH 
+        toDateTime('${start}') AS startDate,
+        toDateTime('${end}') AS endDate,
+        all_fields AS (
+          SELECT
+              field.1 as Name,
+              field.2 as TypeName
+          FROM
+          (
+            SELECT
+                arrayJoin([ ${arrayJoinFields} ]) as field
+          )
+        ),
+        used_fields AS (
+            SELECT
+                DISTINCT on (FieldName, TypeName) FieldName,
+                TypeName
+            from
+                gql_metrics_schema_usage_5m_90d 
+                ARRAY JOIN TypeNames AS TypeName
+            where
+                Timestamp >= startDate AND Timestamp <= endDate
+                AND OrganizationID = '${organizationId}'
+                AND FederatedGraphID = '${federatedGraphId}'
+        )
+      SELECT
+          all_fields.Name as name,
+          all_fields.TypeName as typeName
+      from
+          all_fields
+          INNER JOIN used_fields ON all_fields.Name = used_fields.FieldName
+          AND all_fields.TypeName = used_fields.TypeName
+    `;
+
+    const res = await this.client.queryPromise(query);
+
+    if (Array.isArray(res)) {
+      return res.map((item) => ({
+        name: item.name,
+        typeName: item.typeName,
+      }));
+    }
+
+    return [];
   }
 }

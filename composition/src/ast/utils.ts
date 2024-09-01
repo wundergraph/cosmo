@@ -292,13 +292,13 @@ type ParseResult = {
   error?: Error;
 };
 
-export function parse(source: string): DocumentNode {
-  return graphqlParse(source, { noLocation: true });
+export function parse(source: string, noLocation = true): DocumentNode {
+  return graphqlParse(source, { noLocation });
 }
 
-export function safeParse(value: string): ParseResult {
+export function safeParse(value: string, noLocation = true): ParseResult {
   try {
-    const parsedValue = parse(value);
+    const parsedValue = parse(value, noLocation);
     return { documentNode: parsedValue };
   } catch (e) {
     return { error: e as Error };

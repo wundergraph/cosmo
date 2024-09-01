@@ -3,7 +3,13 @@ import { LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platfo
 import { Linter } from 'eslint';
 import { uid } from 'uid';
 import { LintRuleEnum } from '../../db/models.js';
-import { LintIssueResult, LintRules, RulesConfig, SchemaLintDTO, SchemaLintIssues } from '../../types/index.js';
+import {
+  LintIssueResult,
+  LintRules,
+  RulesConfig,
+  SchemaLintDTO,
+  SchemaLintIssues
+} from '../../types/index.js';
 
 export default class SchemaLinter {
   linter: Linter;
