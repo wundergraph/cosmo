@@ -184,6 +184,10 @@ configuration:
   slackAppClientId: ''
   slackAppClientSecret: ''
   s3StorageUrl: 'http://minio:changeme@cosmo-minio:9000/cosmo'
+  # -- The region where the S3 bucket is located.
+  s3Region: 'auto'
+  # -- The endpoint of the S3 bucket.
+  s3Endpoint: ''
   stripeSecretKey: ''
   stripeWebhookSecret: ''
   # -- The default billing plan, eg `developer@1`

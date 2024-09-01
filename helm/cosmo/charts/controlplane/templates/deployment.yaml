@@ -226,6 +226,18 @@ spec:
                   name: {{ include "controlplane.secretName" . }}
                   key: s3StorageUrl
             {{- end }}
+            - name: S3_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: s3Region
+            {{- if .Values.configuration.s3Endpoint }}
+            - name: S3_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: s3Endpoint
+            {{- end }}
             - name: SMTP_ENABLED
               valueFrom:
                 configMapKeyRef:
