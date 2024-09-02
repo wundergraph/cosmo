@@ -114,7 +114,7 @@ export const envVariables = z
      * AWS S3 Storage
      * S3_STORAGE_URL="https://username:password@cosmo-controlplane-bucket.s3.amazonaws.com"
      * S3_REGION="us-east-1"                      # set this for amazon to your region
-     * S3_ENDPOINT="s3.amazonaws.com"             # replaces the bucket from the S3_STORAGE_URL origin
+     * S3_ENDPOINT="s3.amazonaws.com"             # replaces the bucket from the S3_STORAGE_URL origin or set it manually to s3.amazonaws.com
      */
     S3_STORAGE_URL: z.string(),
     S3_ENDPOINT: z.string().optional(),
