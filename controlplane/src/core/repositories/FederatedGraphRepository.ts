@@ -3,7 +3,7 @@ import { KeyObject, randomUUID } from 'node:crypto';
 import { PlainMessage } from '@bufbuild/protobuf';
 import { FeatureFlagRouterExecutionConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { CompositionError, DeploymentError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { joinLabel, normalizeURL } from '@wundergraph/cosmo-shared';
+import { ComposedSubgraph, joinLabel, normalizeURL } from '@wundergraph/cosmo-shared';
 import {
   and,
   asc,
@@ -689,7 +689,7 @@ export class FederatedGraphRepository {
     composedSDL,
     clientSchema,
     compositionErrors,
-    subgraphSchemaVersionIds,
+    composedSubgraphs,
     composedById,
     schemaVersionId,
     isFeatureFlagComposition,
@@ -700,7 +700,7 @@ export class FederatedGraphRepository {
     composedSDL?: string;
     clientSchema?: string;
     compositionErrors?: Error[];
-    subgraphSchemaVersionIds: string[];
+    composedSubgraphs: ComposedSubgraph[];
     composedById: string;
     isFeatureFlagComposition: boolean;
     featureFlagId: string;
@@ -723,6 +723,7 @@ export class FederatedGraphRepository {
         .insert(schemaVersion)
         .values({
           id: schemaVersionId,
+          organizationId: this.organizationId,
           targetId: fedGraph.targetId,
           schemaSDL: composedSDL,
           clientSchema,
@@ -752,8 +753,9 @@ export class FederatedGraphRepository {
 
       // adding the composition entry and the relation between fedGraph schema version and subgraph schema version
       await compositionRepo.addComposition({
+        fedGraphTargetId: fedGraph.targetId,
         fedGraphSchemaVersionId: insertedVersion[0].insertedId,
-        subgraphSchemaVersionIds,
+        composedSubgraphs,
         compositionErrorString,
         composedById,
         isFeatureFlagComposition,
@@ -886,17 +888,15 @@ export class FederatedGraphRepository {
   }) {
     const version = await this.db
       .select({
-        name: targets.name,
         schemaSDL: schemaVersion.schemaSDL,
         clientSchema: schemaVersion.clientSchema,
         schemaVersionId: schemaVersion.id,
       })
-      .from(targets)
-      .innerJoin(schemaVersion, eq(schema.schemaVersion.targetId, targets.id))
+      .from(schemaVersion)
       .where(
         and(
-          eq(targets.organizationId, this.organizationId),
-          eq(targets.id, targetId),
+          eq(schemaVersion.targetId, targetId),
+          eq(schemaVersion.organizationId, this.organizationId),
           eq(schemaVersion.id, schemaVersionId),
         ),
       )

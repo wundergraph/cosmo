@@ -12258,6 +12258,11 @@ export class GraphCompositionSubgraph extends Message<GraphCompositionSubgraph> 
    */
   isFeatureSubgraph = false;
 
+  /**
+   * @generated from field: string changeType = 6;
+   */
+  changeType = "";
+
   constructor(data?: PartialMessage<GraphCompositionSubgraph>) {
     super();
     proto3.util.initPartial(data, this);
@@ -12271,6 +12276,7 @@ export class GraphCompositionSubgraph extends Message<GraphCompositionSubgraph> 
     { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "target_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "isFeatureSubgraph", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 6, name: "changeType", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GraphCompositionSubgraph {

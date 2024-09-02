@@ -43,6 +43,7 @@ export type WebsocketSubprotocol = 'auto' | 'graphql-ws' | 'graphql-transport-ws
 
 export interface ComposedSubgraph {
   id: string;
+  targetId: string;
   name: string;
   sdl: string;
   schemaVersionId?: string;
@@ -54,6 +55,7 @@ export interface ComposedSubgraph {
   configurationDataByTypeName?: Map<string, ConfigurationData>;
   // The normalized GraphQL schema for the subgraph
   schema?: GraphQLSchema;
+  isFeatureSubgraph: boolean;
 }
 
 export const internString = (config: EngineConfiguration, str: string): InternedString => {

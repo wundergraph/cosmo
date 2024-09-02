@@ -99,6 +99,8 @@ export function subgraphDTOsToComposedSubgraphs(
     return {
       id: subgraph.id,
       name: subgraph.name,
+      targetId: subgraph.targetId,
+      isFeatureSubgraph: subgraph.isFeatureSubgraph,
       url: subgraph.routingUrl,
       sdl: subgraph.schemaSDL,
       schemaVersionId: subgraph.schemaVersionId,
@@ -437,7 +439,7 @@ export class Composer {
       targetId: composedGraph.targetID,
       composedSDL: composedGraph.composedSchema,
       clientSchema: composedGraph.federatedClientSchema,
-      subgraphSchemaVersionIds: composedGraph.subgraphs.map((s) => s.schemaVersionId!),
+      composedSubgraphs: composedGraph.subgraphs,
       compositionErrors: composedGraph.errors,
       composedById,
       schemaVersionId: federatedSchemaVersionId,

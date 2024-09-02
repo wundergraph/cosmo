@@ -33,6 +33,7 @@ describe('Router Config Builder', () => {
 
     const accounts: ComposedSubgraph = {
       id: '0',
+      targetId: '0',
       name: 'accounts',
       sdl: fs.readFileSync(path.join(__dirname, 'testdata', 'accounts.graphql'), {
         encoding: 'utf8',
@@ -43,9 +44,11 @@ describe('Router Config Builder', () => {
       websocketSubprotocol: 'auto',
       schema: accountsSubgraphConfig!.schema,
       configurationDataByTypeName: accountsSubgraphConfig!.configurationDataByTypeName,
+      isFeatureSubgraph: false,
     };
     const products: ComposedSubgraph = {
       id: '1',
+      targetId: '1',
       name: 'products',
       sdl: fs.readFileSync(path.join(__dirname, 'testdata', 'products.graphql'), {
         encoding: 'utf8',
@@ -56,9 +59,11 @@ describe('Router Config Builder', () => {
       websocketSubprotocol: 'auto',
       schema: productsSubgraphConfig!.schema,
       configurationDataByTypeName: productsSubgraphConfig!.configurationDataByTypeName,
+      isFeatureSubgraph: false,
     };
     const reviews: ComposedSubgraph = {
       id: '2',
+      targetId: '2',
       name: 'reviews',
       sdl: fs.readFileSync(path.join(__dirname, 'testdata', 'reviews.graphql'), {
         encoding: 'utf8',
@@ -69,9 +74,11 @@ describe('Router Config Builder', () => {
       websocketSubprotocol: 'auto',
       schema: reviewsSubgraphConfig!.schema,
       configurationDataByTypeName: reviewsSubgraphConfig!.configurationDataByTypeName,
+      isFeatureSubgraph: false,
     };
     const inventory: ComposedSubgraph = {
       id: '3',
+      targetId: '3',
       name: 'inventory',
       sdl: fs.readFileSync(path.join(__dirname, 'testdata', 'inventory.graphql'), {
         encoding: 'utf8',
@@ -82,6 +89,7 @@ describe('Router Config Builder', () => {
       websocketSubprotocol: 'auto',
       schema: inventorySubgraphConfig!.schema,
       configurationDataByTypeName: inventorySubgraphConfig!.configurationDataByTypeName,
+      isFeatureSubgraph: false,
     };
     const routerConfig = buildRouterConfig({
       // if the federatedClientSDL is empty, it is not added to the config
@@ -110,6 +118,7 @@ describe('Router Config Builder', () => {
 
     const accounts: ComposedSubgraph = {
       id: '0',
+      targetId: '0',
       name: 'accounts',
       sdl: fs.readFileSync(path.join(__dirname, 'testdata', 'simple-accounts.graphql'), {
         encoding: 'utf8',
@@ -119,9 +128,11 @@ describe('Router Config Builder', () => {
       subscriptionProtocol: 'ws',
       schema: accountsSubgraphConfig!.schema,
       configurationDataByTypeName: accountsSubgraphConfig!.configurationDataByTypeName,
+      isFeatureSubgraph: false,
     };
     const products: ComposedSubgraph = {
       id: '1',
+      targetId: '1',
       name: 'products',
       sdl: fs.readFileSync(path.join(__dirname, 'testdata', 'simple-products.graphql'), {
         encoding: 'utf8',
@@ -131,6 +142,7 @@ describe('Router Config Builder', () => {
       subscriptionProtocol: 'ws',
       schema: productsSubgraphConfig!.schema,
       configurationDataByTypeName: productsSubgraphConfig!.configurationDataByTypeName,
+      isFeatureSubgraph: false,
     };
     const routerConfig = buildRouterConfig({
       // if the federatedClientSDL is empty, it is not added to the config
@@ -161,6 +173,7 @@ describe('Router Config Builder', () => {
 
     const accounts: ComposedSubgraph = {
       id: '0',
+      targetId: '0',
       name: 'accounts',
       sdl: fs.readFileSync(path.join(__dirname, 'testdata', 'simple-accounts.graphql'), {
         encoding: 'utf8',
@@ -170,9 +183,11 @@ describe('Router Config Builder', () => {
       subscriptionProtocol: 'ws',
       schema: accountsSubgraphConfig!.schema,
       configurationDataByTypeName: accountsSubgraphConfig!.configurationDataByTypeName,
+      isFeatureSubgraph: false,
     };
     const products: ComposedSubgraph = {
       id: '1',
+      targetId: '1',
       name: 'products',
       sdl: fs.readFileSync(path.join(__dirname, 'testdata', 'simple-products-with-tags.graphql'), {
         encoding: 'utf8',
@@ -182,6 +197,7 @@ describe('Router Config Builder', () => {
       subscriptionProtocol: 'ws',
       schema: productsSubgraphConfig!.schema,
       configurationDataByTypeName: productsSubgraphConfig!.configurationDataByTypeName,
+      isFeatureSubgraph: false,
     };
     const routerConfig = buildRouterConfig({
       // if the federatedClientSDL is empty, it is not added to the config
@@ -212,7 +228,9 @@ describe('Router Config Builder', () => {
 
     const accounts: ComposedSubgraph = {
       id: '0',
+      targetId: '0',
       name: 'accounts',
+      isFeatureSubgraph: false,
       sdl: fs.readFileSync(path.join(__dirname, 'testdata', 'simple-accounts.graphql'), {
         encoding: 'utf8',
       }),
@@ -224,7 +242,9 @@ describe('Router Config Builder', () => {
     };
     const products: ComposedSubgraph = {
       id: '1',
+      targetId: '1',
       name: 'products',
+      isFeatureSubgraph: false,
       sdl: fs.readFileSync(path.join(__dirname, 'testdata', 'simple-products-with-inaccessible.graphql'), {
         encoding: 'utf8',
       }),
@@ -255,7 +275,9 @@ describe('Router Config Builder', () => {
   test('that the builder config throws an error if normalization has failed', () => {
     const subgraph: ComposedSubgraph = {
       id: '',
+      targetId: '',
       name: '',
+      isFeatureSubgraph: false,
       sdl: `extend input Human {
         name: String!
       }`,
