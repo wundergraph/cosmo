@@ -45,7 +45,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useSessionStorage } from "@/hooks/use-session-storage";
 import { formatDate, formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import { CheckCircleIcon, ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import {
   ArrowLeftIcon,
   CheckCircledIcon,
@@ -747,7 +747,13 @@ const CheckDetails = ({
                     trafficCheckDays={data.trafficCheckDays}
                     createdAt={data.check.timestamp}
                   />
-                ) : null}
+                ) : (
+                  <EmptyState
+                    icon={<CheckCircleIcon className="text-success" />}
+                    title="No changes found."
+                    description="There are no changes in the proposed schema."
+                  />
+                )}
 
                 <FieldUsageSheet />
               </TabsContent>

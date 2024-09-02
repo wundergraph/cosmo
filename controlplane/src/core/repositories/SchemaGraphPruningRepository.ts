@@ -106,7 +106,7 @@ export class SchemaGraphPruningRepository {
         ),
       );
 
-    return graphPruningIssues.map((l) => {
+    const graphPruningResult = graphPruningIssues.map((l) => {
       const issue: GraphPruningIssueResult = {
         fieldPath: l.fieldPath,
         graphPruningRuleType: l.graphPruningRuleType,
@@ -118,5 +118,10 @@ export class SchemaGraphPruningRepository {
       };
       return issue;
     });
+
+    const graphPruningErrors = graphPruningResult.filter((l) => l.severity === LintSeverity.error);
+    const graphPruningWarnings = graphPruningResult.filter((l) => l.severity === LintSeverity.warn);
+
+    return [...graphPruningErrors, ...graphPruningWarnings];
   }
 }
