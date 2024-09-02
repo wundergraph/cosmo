@@ -1,5 +1,11 @@
 import { S3ClientConfig } from '@aws-sdk/client-s3';
 
+/**
+ * controlplane and cdn are using the same code for handling the s3 storage.
+ *
+ * see: controlplane/test/utils.s3storage.test.ts for further details
+ */
+
 interface S3StorageOptions {
   url: string;
   region?: string;
@@ -7,8 +13,6 @@ interface S3StorageOptions {
   username?: string;
   password?: string;
 }
-
-// see: controlplane/test/utils.s3storage.test.ts
 
 export function createS3ClientConfig(bucketName: string, opts: S3StorageOptions): S3ClientConfig {
   const url = new URL(opts.url);
