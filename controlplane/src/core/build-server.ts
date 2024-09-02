@@ -90,6 +90,8 @@ export interface BuildConfig {
     url: string;
     endpoint?: string;
     region?: string;
+    username?: string;
+    password?: string;
   };
   mailer: {
     smtpEnabled: boolean;
@@ -352,7 +354,7 @@ export default async function build(opts: BuildConfig) {
   }
 
   const bucketName = extractS3BucketName(opts.s3Storage.url);
-  const s3Config = createS3ClientConfig(opts.s3Storage.url, bucketName, opts.s3Storage.region, opts.s3Storage.endpoint);
+  const s3Config = createS3ClientConfig(bucketName, opts.s3Storage);
 
   const s3Client = new S3Client(s3Config);
   const blobStorage = new S3BlobStorage(s3Client, bucketName);

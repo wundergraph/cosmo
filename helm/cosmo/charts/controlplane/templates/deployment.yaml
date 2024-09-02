@@ -238,6 +238,20 @@ spec:
                   name: {{ include "controlplane.fullname" . }}-configmap
                   key: s3Endpoint
             {{- end }}
+            {{- if .Values.configuration.awsAccessKeyId }}
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: awsAccessKeyId
+            {{- end }}
+            {{- if .Values.configuration.awsSecretAccessKey }}
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: awsSecretAccessKey
+            {{- end }}
             - name: SMTP_ENABLED
               valueFrom:
                 configMapKeyRef:

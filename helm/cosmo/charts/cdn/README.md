@@ -16,6 +16,8 @@ WunderGraph Cosmo CDN
 | autoscaling.minReplicas | int | `1` |  |
 | autoscaling.targetCPUUtilizationPercentage | int | `80` |  |
 | commonLabels | object | `{}` | Add labels to all deployed resources |
+| configuration.awsAccessKeyId | string | `""` | Aws access key id, can be used instead of [username]:[password] in the url |
+| configuration.awsSecretAccessKey | string | `""` | Aws secret access key, can be used instead of [username]:[password] in the url |
 | configuration.s3Endpoint | string | `""` | The endpoint of the S3 bucket. |
 | configuration.s3Region | string | `"auto"` | The region where the S3 bucket is located. |
 | deploymentStrategy | object | `{}` |  |

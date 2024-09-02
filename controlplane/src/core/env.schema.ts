@@ -119,6 +119,13 @@ export const envVariables = z
     S3_STORAGE_URL: z.string(),
     S3_ENDPOINT: z.string().optional(),
     S3_REGION: z.string().default('auto'),
+    /**
+     * Either use:
+     *   https://username:password@cosmo-controlplane-bucket.s3.amazonaws.com
+     * Or set: AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+     */
+    AWS_ACCESS_KEY_ID: z.string().optional(),
+    AWS_SECRET_ACCESS_KEY: z.string().optional(),
 
     /**
      * Email

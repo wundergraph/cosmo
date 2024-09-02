@@ -148,6 +148,10 @@ configuration:
   s3Region: 'auto'
   # -- The endpoint of the S3 bucket.
   s3Endpoint: ''
+  # -- Aws access key id, can be used instead of [username]:[password] in the url
+  awsAccessKeyId: ''
+  # -- Aws secret access key, can be used instead of [username]:[password] in the url
+  awsSecretAccessKey: ''
 
 # -- Existing secret in the same namespace containing the authJwtSecret and s3StorageUrl. The secret keys have to match with current secret.
 existingSecret: ""

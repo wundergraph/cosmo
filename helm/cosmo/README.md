@@ -35,6 +35,8 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | cdn.commonLabels | object | `{}` | Add labels to all deployed resources |
+| cdn.configuration.awsAccessKeyId | string | `""` | Aws access key id, can be used instead of [username]:[password] in the url |
+| cdn.configuration.awsSecretAccessKey | string | `""` | Aws secret access key, can be used instead of [username]:[password] in the url |
 | cdn.configuration.s3Endpoint | string | `""` | The endpoint of the S3 bucket. |
 | cdn.configuration.s3Region | string | `"auto"` | The region where the S3 bucket is located. |
 | cdn.configuration.s3StorageUrl | string | `"http://minio:changeme@cosmo-minio:9000/cosmo"` |  |
@@ -51,6 +53,8 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | controlplane.commonLabels | object | `{}` | Add labels to all deployed resources |
 | controlplane.configuration.allowedOrigins[0] | string | `"http://studio.wundergraph.local"` |  |
 | controlplane.configuration.authRedirectUri | string | `"http://controlplane.wundergraph.local/v1/auth/callback"` |  |
+| controlplane.configuration.awsAccessKeyId | string | `""` | Aws access key id, can be used instead of [username]:[password] in the url |
+| controlplane.configuration.awsSecretAccessKey | string | `""` | Aws secret access key, can be used instead of [username]:[password] in the url |
 | controlplane.configuration.cdnBaseUrl | string | `"http://cosmo-cdn:8787"` |  |
 | controlplane.configuration.clickhouseDsn | string | `"http://default:changeme@cosmo-clickhouse:8123/?database=cosmo"` |  |
 | controlplane.configuration.clickhouseMigrationDsn | string | `"clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&max_execution_time=60"` |  |

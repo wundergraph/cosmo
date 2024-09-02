@@ -2,6 +2,7 @@ import { randomFill } from 'node:crypto';
 import { S3ClientConfig } from '@aws-sdk/client-s3';
 import { HandlerContext } from '@connectrpc/connect';
 import {
+  EnumStatusCode,
   GraphQLSubscriptionProtocol,
   GraphQLWebsocketSubprotocol,
 } from '@wundergraph/cosmo-connect/dist/common/common_pb';
@@ -13,7 +14,7 @@ import { uid } from 'uid/secure';
 import { AxiosError } from 'axios';
 import { isNetworkError, isRetryableError } from 'axios-retry';
 import { MemberRole, WebsocketSubprotocol } from '../db/models.js';
-import { AuthContext, DateRange, Label, ResponseMessage } from '../types/index.js';
+import { AuthContext, DateRange, Label, ResponseMessage, S3StorageOptions } from '../types/index.js';
 import { isAuthenticationError, isAuthorizationError, isPublicError } from './errors/errors.js';
 import { GraphKeyAuthContext } from './services/GraphApiTokenAuthenticator.js';
 
@@ -373,24 +374,21 @@ export function webhookAxiosRetryCond(err: AxiosError) {
   return isNetworkError(err) || isRetryableError(err);
 }
 
-export function createS3ClientConfig(
-  s3Url: string,
-  bucketName: string,
-  region: string | undefined,
-  endpoint: string | undefined,
-): S3ClientConfig {
-  const url = new URL(s3Url);
+export function createS3ClientConfig(bucketName: string, opts: S3StorageOptions): S3ClientConfig {
+  const url = new URL(opts.url);
+  const { region, username, password } = opts;
   const forcePathStyle = !isVirtualHostStyleUrl(url);
+  const endpoint = opts.endpoint || (forcePathStyle ? url.origin : url.origin.replace(`${bucketName}.`, ''));
 
-  const accessKeyId = url.username ?? '';
-  const secretAccessKey = url.password ?? '';
+  const accessKeyId = url.username || username || '';
+  const secretAccessKey = url.password || password || '';
 
-  if (forcePathStyle && !endpoint) {
-    endpoint = url.origin;
+  if (!accessKeyId || !secretAccessKey) {
+    throw new Error('Missing S3 credentials. Please provide access key ID and secret access key.');
   }
 
-  if (!forcePathStyle && !endpoint) {
-    endpoint = url.origin.replace(`${bucketName}.`, '');
+  if (!region) {
+    throw new Error('Missing region in S3 configuration.');
   }
 
   return {

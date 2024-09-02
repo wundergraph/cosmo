@@ -91,7 +91,11 @@ export const createS3BlobStorage = (storageUrl: string): BlobStorage => {
   const endpoint = url.searchParams.get('endpoint') ?? process.env.S3_ENDPOINT;
 
   const bucketName = extractS3BucketName(storageUrl);
-  const s3Config = createS3ClientConfig(storageUrl, bucketName, region, endpoint);
+  const s3Config = createS3ClientConfig(bucketName, {
+    url: storageUrl,
+    region,
+    endpoint,
+  });
   const s3Client = new S3Client(s3Config);
 
   return new S3BlobStorage(s3Client, bucketName);
