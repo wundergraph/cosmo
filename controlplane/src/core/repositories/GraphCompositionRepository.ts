@@ -311,7 +311,7 @@ export class GraphCompositionRepository {
     offset: number;
     dateRange: DateRange;
     excludeFeatureFlagCompositions: boolean;
-  }): Promise<GraphCompositionDTO[]> {
+  }) {
     const fedRepo = new FederatedGraphRepository(this.logger, this.db, organizationId);
     const conditions: SQL<unknown>[] = [
       eq(schemaVersion.targetId, fedGraphTargetId),
@@ -345,10 +345,15 @@ export class GraphCompositionRepository {
       .offset(offset)
       .execute();
 
-    const compositions: GraphCompositionDTO[] = [];
+    const compositions: (GraphCompositionDTO & {
+      hasMultipleChangedSubgraphs: boolean;
+      triggeredBySubgraphName: string;
+    })[] = [];
 
     for (const r of resp) {
       const isCurrentDeployed = await fedRepo.isLatestValidSchemaVersion(fedGraphTargetId, r.schemaVersionId);
+
+      const compositionSubgraphs = await this.getCompositionSubgraphs({ compositionId: r.id });
 
       compositions.push({
         id: r.id,
@@ -361,6 +366,8 @@ export class GraphCompositionRepository {
         routerConfigSignature: r.routerConfigSignature || undefined,
         admissionError: r.admissionError || undefined,
         deploymentError: r.deploymentError || undefined,
+        hasMultipleChangedSubgraphs: compositionSubgraphs.filter((s) => s.changeType !== 'unchanged').length > 1,
+        triggeredBySubgraphName: compositionSubgraphs.find((s) => s.changeType !== 'unchanged')?.name || '',
       });
     }
 

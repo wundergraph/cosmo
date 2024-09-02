@@ -1571,6 +1571,8 @@ message GraphComposition {
   optional string routerConfigSignature = 8;
   optional string admissionError = 9;
   optional string deploymentError = 10;
+  optional bool hasMultipleChangedSubgraphs = 11;
+  optional string triggeredBySubgraphName = 12;
 }
 
 message GraphCompositionSubgraph {
