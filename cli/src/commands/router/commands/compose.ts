@@ -126,6 +126,8 @@ export default (opts: BaseCommandOptions) => {
         const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
         return {
           id: `${index}`,
+          targetId: `${index}`,
+          isFeatureSubgraph: false,
           name: s.name,
           url: normalizeURL(s.routing_url),
           sdl: subgraphSDLs.get(s.name) ?? '',
@@ -232,6 +234,8 @@ export default (opts: BaseCommandOptions) => {
             const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
             return {
               id: `${index}`,
+              targetId: `${index}`,
+              isFeatureSubgraph: ff.feature_graphs.some((ffs) => ffs.name === s.name),
               name: s.name,
               url: normalizeURL(s.routing_url),
               sdl: subgraphSDLs.get(s.name) ?? '',
