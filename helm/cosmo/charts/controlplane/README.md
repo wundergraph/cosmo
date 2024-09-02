@@ -19,8 +19,6 @@ WunderGraph Cosmo Controlplane
 | commonLabels | object | `{}` | Add labels to all deployed resources |
 | configuration.allowedOrigins[0] | string | `"*"` |  |
 | configuration.authRedirectUri | string | `"http://controlplane.wundergraph.local/v1/auth/callback"` |  |
-| configuration.awsAccessKeyId | string | `""` | Aws access key id, can be used instead of [username]:[password] in the url |
-| configuration.awsSecretAccessKey | string | `""` | Aws secret access key, can be used instead of [username]:[password] in the url |
 | configuration.cdnBaseUrl | string | `"http://cosmo-cdn:8787"` | URL of the CDN to use for serving router configs and persistent operations |
 | configuration.clickhouseDsn | string | `"http://default:changeme@cosmo-clickhouse:8123?database=cosmo"` |  |
 | configuration.clickhouseMigrationDsn | string | `"clickhouse://default:changeme@cosmo-clickhouse:9000?database=cosmo"` |  |
@@ -51,8 +49,10 @@ WunderGraph Cosmo Controlplane
 | configuration.redisTlsCa | string | `""` | When connecting to a redis instance over TLS. Accept a cert in PEM format (as one-line with \n) or file. |
 | configuration.redisTlsCert | string | `""` |  |
 | configuration.redisTlsKey | string | `""` |  |
+| configuration.s3AccessKeyId | string | `""` | s3 access key id, can be used instead of [username]:[password] in the url |
 | configuration.s3Endpoint | string | `""` | The endpoint of the S3 bucket. |
 | configuration.s3Region | string | `"auto"` | The region where the S3 bucket is located. |
+| configuration.s3SecretAccessKey | string | `""` | s3 secret access key, can be used instead of [username]:[password] in the url |
 | configuration.s3StorageUrl | string | `"http://minio:changeme@cosmo-minio:9000/cosmo"` |  |
 | configuration.slackAppClientId | string | `""` |  |
 | configuration.slackAppClientSecret | string | `""` |  |

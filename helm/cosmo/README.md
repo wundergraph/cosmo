@@ -35,10 +35,10 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | cdn.commonLabels | object | `{}` | Add labels to all deployed resources |
-| cdn.configuration.awsAccessKeyId | string | `""` | Aws access key id, can be used instead of [username]:[password] in the url |
-| cdn.configuration.awsSecretAccessKey | string | `""` | Aws secret access key, can be used instead of [username]:[password] in the url |
+| cdn.configuration.s3AccessKeyId | string | `""` | s3 access key id, can be used instead of [username]:[password] in the url |
 | cdn.configuration.s3Endpoint | string | `""` | The endpoint of the S3 bucket. |
 | cdn.configuration.s3Region | string | `"auto"` | The region where the S3 bucket is located. |
+| cdn.configuration.s3SecretAccessKey | string | `""` | s3 secret access key, can be used instead of [username]:[password] in the url |
 | cdn.configuration.s3StorageUrl | string | `"http://minio:changeme@cosmo-minio:9000/cosmo"` |  |
 | clickhouse.auth.password | string | `"changeme"` |  |
 | clickhouse.auth.username | string | `"default"` |  |
@@ -53,8 +53,6 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | controlplane.commonLabels | object | `{}` | Add labels to all deployed resources |
 | controlplane.configuration.allowedOrigins[0] | string | `"http://studio.wundergraph.local"` |  |
 | controlplane.configuration.authRedirectUri | string | `"http://controlplane.wundergraph.local/v1/auth/callback"` |  |
-| controlplane.configuration.awsAccessKeyId | string | `""` | Aws access key id, can be used instead of [username]:[password] in the url |
-| controlplane.configuration.awsSecretAccessKey | string | `""` | Aws secret access key, can be used instead of [username]:[password] in the url |
 | controlplane.configuration.cdnBaseUrl | string | `"http://cosmo-cdn:8787"` |  |
 | controlplane.configuration.clickhouseDsn | string | `"http://default:changeme@cosmo-clickhouse:8123/?database=cosmo"` |  |
 | controlplane.configuration.clickhouseMigrationDsn | string | `"clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&max_execution_time=60"` |  |
@@ -70,8 +68,10 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | controlplane.configuration.prometheus.port | int | `8088` | The port where metrics are exposed. Default is port 8088. |
 | controlplane.configuration.redisHost | string | `"cosmo-redis-master"` |  |
 | controlplane.configuration.redisPort | int | `6379` |  |
+| controlplane.configuration.s3AccessKeyId | string | `""` | s3 access key id, can be used instead of [username]:[password] in the url |
 | controlplane.configuration.s3Endpoint | string | `""` | The endpoint of the S3 bucket. |
 | controlplane.configuration.s3Region | string | `"auto"` | The region where the S3 bucket is located. |
+| controlplane.configuration.s3SecretAccessKey | string | `""` | s3 secret access key, can be used instead of [username]:[password] in the url |
 | controlplane.configuration.s3StorageUrl | string | `"http://minio:changeme@cosmo-minio:9000/cosmo"` |  |
 | controlplane.configuration.smtp | object | `{"enabled":false,"host":"smtp.postmarkapp.com","password":"","port":587,"requireTls":true,"secure":true,"username":""}` | Use this section to configure the smtp server. |
 | controlplane.configuration.smtp.enabled | bool | `false` | Enables the smtp server. Default is false. |

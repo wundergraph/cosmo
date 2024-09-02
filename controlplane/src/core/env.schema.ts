@@ -122,10 +122,10 @@ export const envVariables = z
     /**
      * Either use:
      *   https://username:password@cosmo-controlplane-bucket.s3.amazonaws.com
-     * Or set: AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+     * Or set: S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY
      */
-    AWS_ACCESS_KEY_ID: z.string().optional(),
-    AWS_SECRET_ACCESS_KEY: z.string().optional(),
+    S3_ACCESS_KEY_ID: z.string().optional(),
+    S3_SECRET_ACCESS_KEY: z.string().optional(),
 
     /**
      * Email

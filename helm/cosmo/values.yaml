@@ -124,10 +124,10 @@ cdn:
     s3Region: 'auto'
     # -- The endpoint of the S3 bucket.
     s3Endpoint: ''
-    # -- Aws access key id, can be used instead of [username]:[password] in the url
-    awsAccessKeyId: ''
-    # -- Aws secret access key, can be used instead of [username]:[password] in the url
-    awsSecretAccessKey: ''
+    # -- s3 access key id, can be used instead of [username]:[password] in the url
+    s3AccessKeyId: ''
+    # -- s3 secret access key, can be used instead of [username]:[password] in the url
+    s3SecretAccessKey: ''
 
 # Cosmo Controlplane. For more options, please refer to the README.md
 controlplane:
@@ -198,10 +198,10 @@ controlplane:
     s3Region: 'auto'
     # -- The endpoint of the S3 bucket.
     s3Endpoint: ''
-    # -- Aws access key id, can be used instead of [username]:[password] in the url
-    awsAccessKeyId: ''
-    # -- Aws secret access key, can be used instead of [username]:[password] in the url
-    awsSecretAccessKey: ''
+    # -- s3 access key id, can be used instead of [username]:[password] in the url
+    s3AccessKeyId: ''
+    # -- s3 secret access key, can be used instead of [username]:[password] in the url
+    s3SecretAccessKey: ''
 
     cdnBaseUrl: 'http://cosmo-cdn:8787'
 

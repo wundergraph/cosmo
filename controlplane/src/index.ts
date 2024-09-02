@@ -43,6 +43,8 @@ const {
   S3_STORAGE_URL,
   S3_ENDPOINT,
   S3_REGION,
+  S3_ACCESS_KEY_ID,
+  S3_SECRET_ACCESS_KEY,
   SMTP_ENABLED,
   SMTP_HOST,
   SMTP_PORT,
@@ -122,6 +124,8 @@ const options: BuildConfig = {
     url: S3_STORAGE_URL,
     region: S3_REGION,
     endpoint: S3_ENDPOINT,
+    username: S3_ACCESS_KEY_ID,
+    password: S3_SECRET_ACCESS_KEY,
   },
   mailer: {
     smtpEnabled: SMTP_ENABLED,
