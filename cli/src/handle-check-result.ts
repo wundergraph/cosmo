@@ -53,7 +53,9 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
         resp.breakingChanges.length === 0 &&
         resp.compositionErrors.length === 0 &&
         resp.lintErrors.length === 0 &&
-        resp.graphPruneErrors.length === 0
+        resp.lintWarnings.length === 0 &&
+        resp.graphPruneErrors.length === 0 &&
+        resp.graphPruneWarnings.length === 0
       ) {
         console.log(
           `\nDetected no changes.\nDetected no lint issues.\nDetected no graph pruning issues.\n\n${studioCheckDestination}\n`,
@@ -82,7 +84,10 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
         } else {
           // Composition and breaking errors are considered failures because operations were affected by the change
           success =
-            resp.breakingChanges.length === 0 && resp.compositionErrors.length === 0 && resp.lintErrors.length === 0;
+            resp.breakingChanges.length === 0 &&
+            resp.compositionErrors.length === 0 &&
+            resp.lintErrors.length === 0 &&
+            resp.graphPruneErrors.length === 0;
 
           console.log(
             logSymbols.warning +
