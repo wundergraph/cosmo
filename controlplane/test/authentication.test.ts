@@ -52,6 +52,8 @@ describe('Authentication', (ctx) => {
         url: 'http://localhost:9000',
         region: 'auto',
         endpoint: 'localhost:9000',
+        username: 'minio',
+        password: 'changeme',
       },
       mailer: {
         smtpEnabled: false,
