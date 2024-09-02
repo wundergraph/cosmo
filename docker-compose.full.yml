@@ -274,6 +274,7 @@ services:
       PROMETHEUS_API_URL: 'http://admin:test@prometheus:9090/api/v1'
       S3_STORAGE_URL: ${S3_STORAGE_URL:-http://${MINIO_ROOT_USER:-minio}:${MINIO_ROOT_PASSWORD:-changeme}@minio:9000/cosmo}
       S3_REGION: ${S3_REGION_CDN:-${S3_REGION:-auto}}
+      S3_REGION: ${S3_REGION_CONTROLPLANE:-${S3_REGION:-auto}}
       CDN_BASE_URL: 'http://cdn:11000'
       REDIS_HOST: redis
       REDIS_PORT: 6379
