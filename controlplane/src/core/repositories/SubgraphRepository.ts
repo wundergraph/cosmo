@@ -36,7 +36,6 @@ import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
 import { hasLabelsChanged, normalizeLabels } from '../util.js';
 import { FeatureFlagRepository } from './FeatureFlagRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
-import { OrganizationRepository } from './OrganizationRepository.js';
 import { TargetRepository } from './TargetRepository.js';
 
 type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
@@ -1213,14 +1212,28 @@ export class SubgraphRepository {
     expiresAt: Date;
     isDeprecated: boolean;
   }) {
-    await this.db.insert(fieldGracePeriod).values({
-      subgraphId,
-      namespaceId,
-      organizationId: this.organizationId,
-      path,
-      expiresAt,
-      isDeprecated,
-    });
+    await this.db
+      .insert(fieldGracePeriod)
+      .values({
+        subgraphId,
+        namespaceId,
+        organizationId: this.organizationId,
+        path,
+        expiresAt,
+        isDeprecated,
+      })
+      .onConflictDoUpdate({
+        target: [
+          fieldGracePeriod.subgraphId,
+          fieldGracePeriod.namespaceId,
+          fieldGracePeriod.organizationId,
+          fieldGracePeriod.path,
+        ],
+        set: {
+          isDeprecated,
+          expiresAt,
+        },
+      });
   }
 
   public getSubgraphFieldsInGracePeriod({
@@ -1232,6 +1245,17 @@ export class SubgraphRepository {
     namespaceId: string;
     onlyDeprecated?: boolean;
   }) {
+    const conditions: SQL<unknown>[] = [
+      eq(fieldGracePeriod.subgraphId, subgraphId),
+      eq(fieldGracePeriod.namespaceId, namespaceId),
+      eq(fieldGracePeriod.organizationId, this.organizationId),
+      gt(fieldGracePeriod.expiresAt, new Date()),
+    ];
+
+    if (onlyDeprecated !== undefined) {
+      conditions.push(eq(fieldGracePeriod.isDeprecated, onlyDeprecated));
+    }
+
     return this.db
       .select({
         subgraphId: fieldGracePeriod.subgraphId,
@@ -1241,15 +1265,7 @@ export class SubgraphRepository {
         isDeprecated: fieldGracePeriod.isDeprecated,
       })
       .from(fieldGracePeriod)
-      .where(
-        and(
-          eq(fieldGracePeriod.subgraphId, subgraphId),
-          eq(fieldGracePeriod.namespaceId, namespaceId),
-          eq(fieldGracePeriod.organizationId, this.organizationId),
-          eq(fieldGracePeriod.isDeprecated, !!onlyDeprecated),
-          gt(fieldGracePeriod.expiresAt, new Date()),
-        ),
-      );
+      .where(and(...conditions));
   }
 
   public async deleteFieldGracePeriod({

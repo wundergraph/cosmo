@@ -1600,27 +1600,40 @@ export const schemaCheckGraphPruningActionRelations = relations(schemaCheckGraph
   }),
 }));
 
-export const fieldGracePeriod = pgTable('field_grace_period', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  subgraphId: uuid('subgraph_id')
-    .notNull()
-    .references(() => subgraphs.id, {
-      onDelete: 'cascade',
-    }),
-  organizationId: uuid('organization_id')
-    .notNull()
-    .references(() => organizations.id, {
-      onDelete: 'cascade',
-    }),
-  namespaceId: uuid('namespace_id')
-    .notNull()
-    .references(() => namespaces.id, {
-      onDelete: 'cascade',
-    }),
-  path: text('path').unique(),
-  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
-  isDeprecated: boolean('is_deprecated'),
-});
+export const fieldGracePeriod = pgTable(
+  'field_grace_period',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    subgraphId: uuid('subgraph_id')
+      .notNull()
+      .references(() => subgraphs.id, {
+        onDelete: 'cascade',
+      }),
+    organizationId: uuid('organization_id')
+      .notNull()
+      .references(() => organizations.id, {
+        onDelete: 'cascade',
+      }),
+    namespaceId: uuid('namespace_id')
+      .notNull()
+      .references(() => namespaces.id, {
+        onDelete: 'cascade',
+      }),
+    path: text('path'),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    isDeprecated: boolean('is_deprecated'),
+  },
+  (t) => {
+    return {
+      fieldGracePeriodIndex: uniqueIndex('unique_field_grace_period_idx').on(
+        t.subgraphId,
+        t.namespaceId,
+        t.organizationId,
+        t.path,
+      ),
+    };
+  },
+);
 
 export const fieldGracePeriodRelations = relations(fieldGracePeriod, ({ one }) => ({
   subgraph: one(subgraphs, {
