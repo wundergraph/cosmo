@@ -6,7 +6,7 @@ import {
   FieldConfiguration,
   Subgraph,
 } from '@wundergraph/composition';
-import { buildRouterConfig, ComposedSubgraph } from '@wundergraph/cosmo-shared';
+import { buildRouterConfig, ComposedSubgraph as IComposedSubgraph } from '@wundergraph/cosmo-shared';
 import { FastifyBaseLogger } from 'fastify';
 import { DocumentNode, parse, printSchema } from 'graphql';
 import {
@@ -79,6 +79,11 @@ export function buildRouterExecutionConfig(
     schemaVersionId: federatedSchemaVersionId,
   });
 }
+
+export type ComposedSubgraph = IComposedSubgraph & {
+  targetId: string;
+  isFeatureSubgraph: boolean;
+};
 
 export function subgraphDTOsToComposedSubgraphs(
   subgraphs: SubgraphDTO[],

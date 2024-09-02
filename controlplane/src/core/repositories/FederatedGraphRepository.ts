@@ -3,7 +3,7 @@ import { KeyObject, randomUUID } from 'node:crypto';
 import { PlainMessage } from '@bufbuild/protobuf';
 import { FeatureFlagRouterExecutionConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { CompositionError, DeploymentError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { ComposedSubgraph, joinLabel, normalizeURL } from '@wundergraph/cosmo-shared';
+import { joinLabel, normalizeURL } from '@wundergraph/cosmo-shared';
 import {
   and,
   asc,
@@ -53,6 +53,7 @@ import { BlobStorage } from '../blobstorage/index.js';
 import {
   BaseCompositionData,
   buildRouterExecutionConfig,
+  ComposedSubgraph,
   Composer,
   ContractBaseCompositionData,
   mapResultToComposedGraph,
