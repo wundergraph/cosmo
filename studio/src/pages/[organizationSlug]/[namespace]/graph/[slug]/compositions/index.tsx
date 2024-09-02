@@ -104,7 +104,7 @@ const CompositionsPage: NextPageWithLayout = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Id</TableHead>
-              <TableHead>Trigger By Subgraph</TableHead>
+              <TableHead>Triggered By Subgraph</TableHead>
               <TableHead>Actor</TableHead>
               <TableHead className="flex items-center space-x-1">
                 <div>Admission</div>
