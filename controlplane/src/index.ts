@@ -121,7 +121,7 @@ const options: BuildConfig = {
   s3Storage: {
     url: S3_STORAGE_URL,
     region: S3_REGION,
-    endpoint: S3_ENDPOINT || '',
+    endpoint: S3_ENDPOINT,
   },
   mailer: {
     smtpEnabled: SMTP_ENABLED,
