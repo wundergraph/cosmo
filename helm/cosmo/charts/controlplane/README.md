@@ -1,6 +1,6 @@
 # controlplane
 
-![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.104.0](https://img.shields.io/badge/AppVersion-0.104.0-informational?style=flat-square)
+![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.105.0](https://img.shields.io/badge/AppVersion-0.105.0-informational?style=flat-square)
 
 WunderGraph Cosmo Controlplane
 
@@ -49,6 +49,10 @@ WunderGraph Cosmo Controlplane
 | configuration.redisTlsCa | string | `""` | When connecting to a redis instance over TLS. Accept a cert in PEM format (as one-line with \n) or file. |
 | configuration.redisTlsCert | string | `""` |  |
 | configuration.redisTlsKey | string | `""` |  |
+| configuration.s3AccessKeyId | string | `""` | s3 access key id, can be used instead of [username]:[password] in the url |
+| configuration.s3Endpoint | string | `""` | The endpoint of the S3 bucket. |
+| configuration.s3Region | string | `"auto"` | The region where the S3 bucket is located. |
+| configuration.s3SecretAccessKey | string | `""` | s3 secret access key, can be used instead of [username]:[password] in the url |
 | configuration.s3StorageUrl | string | `"http://minio:changeme@cosmo-minio:9000/cosmo"` |  |
 | configuration.slackAppClientId | string | `""` |  |
 | configuration.slackAppClientSecret | string | `""` |  |
