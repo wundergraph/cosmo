@@ -1,6 +1,8 @@
 import { randomFill } from 'node:crypto';
+import { S3ClientConfig } from '@aws-sdk/client-s3';
 import { HandlerContext } from '@connectrpc/connect';
 import {
+  EnumStatusCode,
   GraphQLSubscriptionProtocol,
   GraphQLWebsocketSubprotocol,
 } from '@wundergraph/cosmo-connect/dist/common/common_pb';
@@ -12,7 +14,7 @@ import { uid } from 'uid/secure';
 import { AxiosError } from 'axios';
 import { isNetworkError, isRetryableError } from 'axios-retry';
 import { MemberRole, WebsocketSubprotocol } from '../db/models.js';
-import { AuthContext, DateRange, Label, ResponseMessage } from '../types/index.js';
+import { AuthContext, DateRange, Label, ResponseMessage, S3StorageOptions } from '../types/index.js';
 import { isAuthenticationError, isAuthorizationError, isPublicError } from './errors/errors.js';
 import { GraphKeyAuthContext } from './services/GraphApiTokenAuthenticator.js';
 
@@ -370,4 +372,47 @@ export function getValueOrDefault<K, V>(map: Map<K, V>, key: K, constructor: () 
 // HTTP methods including POST, PUT, DELETE, etc.
 export function webhookAxiosRetryCond(err: AxiosError) {
   return isNetworkError(err) || isRetryableError(err);
+}
+
+export function createS3ClientConfig(bucketName: string, opts: S3StorageOptions): S3ClientConfig {
+  const url = new URL(opts.url);
+  const { region, username, password } = opts;
+  const forcePathStyle = !isVirtualHostStyleUrl(url);
+  const endpoint = opts.endpoint || (forcePathStyle ? url.origin : url.origin.replace(`${bucketName}.`, ''));
+
+  const accessKeyId = url.username || username || '';
+  const secretAccessKey = url.password || password || '';
+
+  if (!accessKeyId || !secretAccessKey) {
+    throw new Error('Missing S3 credentials. Please provide access key ID and secret access key.');
+  }
+
+  if (!region) {
+    throw new Error('Missing region in S3 configuration.');
+  }
+
+  return {
+    region,
+    endpoint,
+    credentials: {
+      accessKeyId,
+      secretAccessKey,
+    },
+    forcePathStyle,
+  };
+}
+
+export function extractS3BucketName(s3Url: string) {
+  const url = new URL(s3Url);
+
+  if (isVirtualHostStyleUrl(url)) {
+    return url.hostname.split('.')[0];
+  }
+
+  // path based style
+  return url.pathname.slice(1);
+}
+
+export function isVirtualHostStyleUrl(url: URL) {
+  return url.hostname.split('.').length > 2;
 }

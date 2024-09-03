@@ -48,7 +48,13 @@ describe('Authentication', (ctx) => {
         clientID: '',
         clientSecret: '',
       },
-      s3StorageUrl: 'http://localhost:9000',
+      s3Storage: {
+        url: 'http://localhost:9000',
+        region: 'auto',
+        endpoint: 'localhost:9000',
+        username: 'minio',
+        password: 'changeme',
+      },
       mailer: {
         smtpEnabled: false,
         smtpHost: '',
