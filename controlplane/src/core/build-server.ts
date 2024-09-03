@@ -2,7 +2,6 @@ import Fastify, { FastifyBaseLogger } from 'fastify';
 import { S3Client } from '@aws-sdk/client-s3';
 import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
 import { cors, createContextValues } from '@connectrpc/connect';
-import { extractS3BucketName, createS3ClientConfig } from '@wundergraph/cosmo-shared';
 import fastifyCors from '@fastify/cors';
 import { pino, stdTimeFunctions, LoggerOptions } from 'pino';
 import { compressionBrotli, compressionGzip } from '@connectrpc/connect-node';
@@ -38,7 +37,7 @@ import { BillingRepository } from './repositories/BillingRepository.js';
 import { BillingService } from './services/BillingService.js';
 import { UserRepository } from './repositories/UserRepository.js';
 import { AIGraphReadmeQueue, createAIGraphReadmeWorker } from './workers/AIGraphReadmeWorker.js';
-import { fastifyLoggerId } from './util.js';
+import { fastifyLoggerId, createS3ClientConfig, extractS3BucketName } from './util.js';
 import { ApiKeyRepository } from './repositories/ApiKeyRepository.js';
 import { createDeleteOrganizationWorker, DeleteOrganizationQueue } from './workers/DeleteOrganizationWorker.js';
 

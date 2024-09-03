@@ -33,7 +33,6 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@bufbuild/protobuf": "^1.9.0",
-    "@aws-sdk/client-s3": "^3.529.1",
     "@graphql-tools/schema": "^8.5.1",
     "@graphql-tools/utils": "^9.2.1",
     "@wundergraph/composition": "workspace:*",
