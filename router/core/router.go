@@ -1661,6 +1661,9 @@ func newHTTPTransport(opts *SubgraphTransportOptions) *http.Transport {
 		TLSHandshakeTimeout:   opts.TLSHandshakeTimeout,
 		ResponseHeaderTimeout: opts.ResponseHeaderTimeout,
 		ExpectContinueTimeout: opts.ExpectContinueTimeout,
+		// Will return nil when HTTP(S)_PROXY does not exist or is empty.
+		// This will prevent the transport from handling the proxy when it is not needed.
+		Proxy: http.ProxyFromEnvironment,
 	}
 }
 

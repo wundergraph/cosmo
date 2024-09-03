@@ -101,6 +101,10 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | global.controlplane.jwtSecret | string | `"1YQ4YR18WWNEWCLUIUKN5WVQ31HWDHEM"` |  |
 | global.controlplane.port | int | `3001` |  |
 | global.controlplane.webUrl | string | `"http://controlplane.wundergraph.local"` |  |
+| global.debugProxy.enableNodePort | bool | `false` |  |
+| global.debugProxy.enableWebUi | bool | `false` |  |
+| global.debugProxy.enabled | bool | `false` |  |
+| global.debugProxy.webUrl | string | `"http://debug-proxy.wundergraph.local"` |  |
 | global.graphqlmetrics.enabled | bool | `true` |  |
 | global.graphqlmetrics.port | int | `4005` |  |
 | global.graphqlmetrics.webUrl | string | `"http://graphqlmetrics.wundergraph.local"` |  |
