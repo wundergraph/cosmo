@@ -225,7 +225,7 @@ configuration:
     # -- The port where metrics are exposed. Default is port 8088.
     port: 8088
     # -- The HTTP path where metrics are exposed. Default is "/metrics".
-    path: "/metrics"  # Use this section to configure the router's HTTP(S) proxy settings.
+    path: "/metrics"
 
   # Use this section to configure the router's HTTP(S) proxy settings.
   # When set the proxy is enabled.
