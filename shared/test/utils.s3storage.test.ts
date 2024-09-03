@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { createS3ClientConfig, extractS3BucketName, isVirtualHostStyleUrl } from '../src/core/util.js';
+import { createS3ClientConfig, extractS3BucketName, isVirtualHostStyleUrl } from '../src';
 
 describe('S3 Utils', () => {
   describe('createS3ClientConfig', () => {

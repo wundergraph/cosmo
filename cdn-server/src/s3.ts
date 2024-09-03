@@ -1,7 +1,7 @@
 import { GetObjectCommand, HeadObjectCommand, NoSuchKey, NotFound, S3Client } from '@aws-sdk/client-s3';
+import { extractS3BucketName, createS3ClientConfig } from '@wundergraph/cosmo-shared';
 import { BlobNotFoundError, BlobObject, BlobStorage } from '@wundergraph/cosmo-cdn';
 import { Context } from 'hono';
-import { createS3ClientConfig, extractS3BucketName } from './utils';
 
 /**
  * Retrieves objects from S3 given an S3Client and a bucket name
