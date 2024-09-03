@@ -859,6 +859,22 @@ export class OrganizationRepository {
     });
   }
 
+  public async insertUserRole(input: { orgMemberID: string; role: MemberRole }) {
+    await this.db
+      .insert(organizationMemberRoles)
+      .values({
+        organizationMemberId: input.orgMemberID,
+        role: input.role,
+      })
+      .execute();
+  }
+
+  public async deleteAllUserRoles(input: { orgMemberID: string }) {
+    await this.db
+      .delete(organizationMemberRoles)
+      .where(eq(organizationMemberRoles.organizationMemberId, input.orgMemberID));
+  }
+
   public async updateUserRole(input: {
     orgMemberID: string;
     organizationID: string;

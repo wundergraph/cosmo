@@ -295,43 +295,204 @@ const MemberCard = ({
                   >
                     {acceptedInvite ? "Remove member" : "Remove invitation"}
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      updateUserRole(
-                        {
-                          userID: user?.id,
-                          orgMemberUserID: memberUserID,
-                          role: role === "admin" ? "developer" : "admin",
-                        },
-                        {
-                          onSuccess: (d) => {
-                            toast({
-                              description:
-                                d.response?.details ||
-                                (role === "admin"
-                                  ? "Demoted member successfully."
-                                  : "Promoted member successfully."),
-                              duration: 3000,
-                            });
-                            refresh();
-                          },
-                          onError: (error) => {
-                            toast({
-                              description:
-                                role === "admin"
-                                  ? "Could not demote member. Please try again."
-                                  : "Could not promote member. Please try again.",
-                              duration: 3000,
-                            });
-                          },
-                        },
-                      );
-                    }}
-                  >
-                    {role === "admin"
-                      ? "Demote to developer"
-                      : "Promote to admin"}
-                  </DropdownMenuItem>
+                  {role === "admin" && (
+                    <>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          updateUserRole(
+                            {
+                              userID: user?.id,
+                              orgMemberUserID: memberUserID,
+                              role: "developer",
+                            },
+                            {
+                              onSuccess: (d) => {
+                                toast({
+                                  description:
+                                    d.response?.details ||
+                                    "Demoted member successfully.",
+                                  duration: 3000,
+                                });
+                                refresh();
+                              },
+                              onError: (error) => {
+                                toast({
+                                  description:
+                                    "Could not demote member. Please try again.",
+                                  duration: 3000,
+                                });
+                              },
+                            },
+                          );
+                        }}
+                      >
+                        Demote to developer
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          updateUserRole(
+                            {
+                              userID: user?.id,
+                              orgMemberUserID: memberUserID,
+                              role: "viewer",
+                            },
+                            {
+                              onSuccess: (d) => {
+                                toast({
+                                  description:
+                                    d.response?.details ||
+                                    "Demoted member successfully.",
+                                  duration: 3000,
+                                });
+                                refresh();
+                              },
+                              onError: (error) => {
+                                toast({
+                                  description:
+                                    "Could not demote member. Please try again.",
+                                  duration: 3000,
+                                });
+                              },
+                            },
+                          );
+                        }}
+                      >
+                        Demote to viewer
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  {role === "developer" && (
+                    <>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          updateUserRole(
+                            {
+                              userID: user?.id,
+                              orgMemberUserID: memberUserID,
+                              role: "admin",
+                            },
+                            {
+                              onSuccess: (d) => {
+                                toast({
+                                  description:
+                                    d.response?.details ||
+                                    "Promoted member successfully.",
+                                  duration: 3000,
+                                });
+                                refresh();
+                              },
+                              onError: (error) => {
+                                toast({
+                                  description:
+                                    "Could not promote member. Please try again.",
+                                  duration: 3000,
+                                });
+                              },
+                            },
+                          );
+                        }}
+                      >
+                        Promote to admin
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          updateUserRole(
+                            {
+                              userID: user?.id,
+                              orgMemberUserID: memberUserID,
+                              role: "viewer",
+                            },
+                            {
+                              onSuccess: (d) => {
+                                toast({
+                                  description:
+                                    d.response?.details ||
+                                    "Demoted member successfully.",
+                                  duration: 3000,
+                                });
+                                refresh();
+                              },
+                              onError: (error) => {
+                                toast({
+                                  description:
+                                    "Could not demote member. Please try again.",
+                                  duration: 3000,
+                                });
+                              },
+                            },
+                          );
+                        }}
+                      >
+                        Demote to viewer
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  {role === "viewer" && (
+                    <>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          updateUserRole(
+                            {
+                              userID: user?.id,
+                              orgMemberUserID: memberUserID,
+                              role: "admin",
+                            },
+                            {
+                              onSuccess: (d) => {
+                                toast({
+                                  description:
+                                    d.response?.details ||
+                                    "Promoted member successfully.",
+                                  duration: 3000,
+                                });
+                                refresh();
+                              },
+                              onError: (error) => {
+                                toast({
+                                  description:
+                                    "Could not promote member. Please try again.",
+                                  duration: 3000,
+                                });
+                              },
+                            },
+                          );
+                        }}
+                      >
+                        Promote to admin
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          updateUserRole(
+                            {
+                              userID: user?.id,
+                              orgMemberUserID: memberUserID,
+                              role: "developer",
+                            },
+                            {
+                              onSuccess: (d) => {
+                                toast({
+                                  description:
+                                    d.response?.details ||
+                                    "Promoted member successfully.",
+                                  duration: 3000,
+                                });
+                                refresh();
+                              },
+                              onError: (error) => {
+                                toast({
+                                  description:
+                                    "Could not promote member. Please try again.",
+                                  duration: 3000,
+                                });
+                              },
+                            },
+                          );
+                        }}
+                      >
+                        Promote to developer
+                      </DropdownMenuItem>
+                    </>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
