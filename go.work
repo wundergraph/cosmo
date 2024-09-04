@@ -9,6 +9,7 @@ use (
 	./graphqlmetrics
 	./router
 	./router-tests
+	./terraform-provider
 )
 
 //replace github.com/wundergraph/graphql-go-tools/v2 => ../graphql-go-tools/v2

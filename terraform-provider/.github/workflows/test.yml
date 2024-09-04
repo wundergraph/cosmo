@@ -1,0 +1,87 @@
+# Terraform Provider testing workflow.
+name: Tests
+
+# This GitHub action runs your tests for each pull request and push.
+# Optionally, you can turn it on using a schedule for regular testing.
+on:
+  pull_request:
+    paths-ignore:
+      - 'README.md'
+  push:
+    paths-ignore:
+      - 'README.md'
+
+# Testing only needs permissions to read the repository contents.
+permissions:
+  contents: read
+
+jobs:
+  # Ensure project builds before running testing matrix
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+      - run: go mod download
+      - run: go build -v .
+      - name: Run linters
+        uses: golangci/golangci-lint-action@aaa42aa0628b4ae2578232a66b541047968fac86 # v6.1.0
+        with:
+          version: latest
+
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+      # Temporarily download Terraform 1.8 prerelease for function documentation support.
+      # When Terraform 1.8.0 final is released, this can be removed.
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: '1.8.0-alpha20240216'
+          terraform_wrapper: false
+      - run: go generate ./...
+      - name: git diff
+        run: |
+          git diff --compact-summary --exit-code || \
+            (echo; echo "Unexpected difference in directories after code generation. Run 'go generate ./...' command and commit."; exit 1)
+
+  # Run acceptance tests in a matrix with Terraform CLI versions
+  test:
+    name: Terraform Provider Acceptance Tests
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        # list whatever Terraform versions here you would like to support
+        terraform:
+          - '1.0.*'
+          - '1.1.*'
+          - '1.2.*'
+          - '1.3.*'
+          - '1.4.*'
+    steps:
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: ${{ matrix.terraform }}
+          terraform_wrapper: false
+      - run: go mod download
+      - env:
+          TF_ACC: "1"
+        run: go test -v -cover ./internal/provider/
+        timeout-minutes: 10
