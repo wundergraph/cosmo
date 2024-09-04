@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dgraph-io/ristretto"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
+	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
 	"github.com/wundergraph/cosmo/router/pkg/metric"
@@ -39,7 +39,8 @@ type CustomTransport struct {
 	metricStore  metric.Provider
 	logger       *zap.Logger
 
-	sfCache *ristretto.Cache[uint64, *sfCacheItem]
+	sf   map[uint64]*sfCacheItem
+	sfMu *sync.RWMutex
 }
 
 type sfCacheItem struct {
@@ -66,11 +67,8 @@ func NewCustomTransport(
 		ct.roundTripper = roundTripper
 	}
 	if enableSingleFlight {
-		ct.sfCache, _ = ristretto.NewCache[uint64, *sfCacheItem](&ristretto.Config[uint64, *sfCacheItem]{
-			MaxCost:     1024,
-			NumCounters: 1024 * 10,
-			BufferItems: 64,
-		})
+		ct.sf = make(map[uint64]*sfCacheItem)
+		ct.sfMu = &sync.RWMutex{}
 	}
 
 	return ct
@@ -79,9 +77,10 @@ func NewCustomTransport(
 func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err error, resp *http.Response) {
 
 	reqContext := getRequestContext(req.Context())
-	baseFields := getAttributesFromOperationContext(reqContext.operation)
-
 	activeSubgraph := reqContext.ActiveSubgraph(req)
+
+	var baseFields []attribute.KeyValue
+
 	if activeSubgraph != nil {
 		baseFields = append(baseFields, otel.WgSubgraphName.String(activeSubgraph.Name))
 		baseFields = append(baseFields, otel.WgSubgraphID.String(activeSubgraph.Id))
@@ -90,6 +89,8 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 	if attributes := baseAttributesFromContext(req.Context()); attributes != nil {
 		baseFields = append(baseFields, attributes...)
 	}
+
+	baseFields = append(baseFields, reqContext.operation.Attributes()...)
 
 	inFlightDone := ct.metricStore.MeasureInFlight(req.Context(), baseFields...)
 	ct.metricStore.MeasureRequestSize(req.Context(), req.ContentLength, baseFields...)
@@ -173,17 +174,12 @@ func (ct *CustomTransport) RoundTrip(req *http.Request) (resp *http.Response, er
 	return resp, err
 }
 
-type responseWithBody struct {
-	res  *http.Response
-	body []byte
-}
-
 func (ct *CustomTransport) isUpgradeError(req *http.Request, res *http.Response) bool {
 	return req.Header.Get("Upgrade") != "" && res.StatusCode != http.StatusSwitchingProtocols
 }
 
 func (ct *CustomTransport) allowSingleFlight(req *http.Request) bool {
-	if ct.sfCache == nil {
+	if ct.sf == nil {
 		// Single flight is disabled
 		return false
 	}
@@ -226,9 +222,23 @@ func releaseBuffer(buf *bytes.Buffer) {
 func (ct *CustomTransport) roundTripSingleFlight(req *http.Request) (*http.Response, error) {
 
 	key := ct.singleFlightKey(req)
-	item, ok := ct.sfCache.Get(key)
-	if ok {
-		<-item.loaded
+	ct.sfMu.RLock()
+	item, shared := ct.sf[key]
+	ct.sfMu.RUnlock()
+
+	sfStats := resolve.GetSingleFlightStats(req.Context())
+	if sfStats != nil {
+		sfStats.SingleFlightUsed = true
+		sfStats.SingleFlightSharedResponse = shared
+	}
+
+	if shared {
+		select {
+		case <-item.loaded:
+		case <-req.Context().Done():
+			return nil, req.Context().Err()
+		}
+
 		res := &http.Response{}
 		res.Status = item.response.Status
 		res.StatusCode = item.response.StatusCode
@@ -245,11 +255,23 @@ func (ct *CustomTransport) roundTripSingleFlight(req *http.Request) (*http.Respo
 		return res, item.err
 	}
 
+	if sfStats != nil {
+		sfStats.SingleFlightUsed = true
+		sfStats.SingleFlightSharedResponse = false
+	}
+
 	item = &sfCacheItem{
 		loaded: make(chan struct{}),
 	}
-	ct.sfCache.SetWithTTL(key, item, 1, time.Millisecond*50)
-	defer close(item.loaded)
+	ct.sfMu.Lock()
+	ct.sf[key] = item
+	ct.sfMu.Unlock()
+	defer func() {
+		close(item.loaded)
+		ct.sfMu.Lock()
+		delete(ct.sf, key)
+		ct.sfMu.Unlock()
+	}()
 
 	res, err := ct.roundTripper.RoundTrip(req)
 	if err != nil {
@@ -257,8 +279,6 @@ func (ct *CustomTransport) roundTripSingleFlight(req *http.Request) (*http.Respo
 		return nil, err
 	}
 
-	// single flight is disallowed for mutations, including file uploads
-	// hence we don't need to worry about buffering the body here
 	buf := getBuffer()
 	defer releaseBuffer(buf)
 	_, err = buf.ReadFrom(res.Body)
@@ -352,9 +372,8 @@ func (t TransportFactory) RoundTripper(enableSingleFlight bool, transport http.R
 		trace.WithPreHandler(func(r *http.Request) {
 			span := otrace.SpanFromContext(r.Context())
 			reqContext := getRequestContext(r.Context())
-			operation := reqContext.operation
 
-			commonAttributeValues := getAttributesFromOperationContext(operation)
+			var commonAttributeValues []attribute.KeyValue
 
 			subgraph := reqContext.ActiveSubgraph(r)
 			if subgraph != nil {
@@ -365,6 +384,8 @@ func (t TransportFactory) RoundTripper(enableSingleFlight bool, transport http.R
 			if attributes := baseAttributesFromContext(r.Context()); attributes != nil {
 				commonAttributeValues = append(commonAttributeValues, attributes...)
 			}
+
+			commonAttributeValues = append(commonAttributeValues, reqContext.operation.Attributes()...)
 
 			span.SetAttributes(commonAttributeValues...)
 

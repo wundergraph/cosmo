@@ -141,6 +141,7 @@ func TestQueryPlans(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Header: http.Header{
 					"X-WG-Include-Query-Plan": []string{"true"},
+					"X-WG-Skip-Loader":        []string{"true"},
 					"X-WG-Trace":              []string{"true", "enable_predictable_debug_timings"},
 				},
 				Query: `query Requires {
@@ -162,6 +163,9 @@ func TestQueryPlans(t *testing.T) {
 			require.NoError(t, err)
 			resultBody := rex.ReplaceAllString(res.Body, "http://localhost/graphql")
 			g.Assert(t, "query_plan_with_trace_no_data", prettifyJSON(resultBody))
+			if t.Failed() {
+				t.Log(res.Body)
+			}
 		})
 	})
 }
