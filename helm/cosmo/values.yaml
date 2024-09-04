@@ -128,6 +128,8 @@ cdn:
     s3AccessKeyId: ''
     # -- s3 secret access key, can be used instead of [username]:[password] in the url
     s3SecretAccessKey: ''
+    # -- Forces usage of path style urls for S3. Default is true.
+    s3ForcePathStyle: 'true'
 
 # Cosmo Controlplane. For more options, please refer to the README.md
 controlplane:
@@ -202,6 +204,8 @@ controlplane:
     s3AccessKeyId: ''
     # -- s3 secret access key, can be used instead of [username]:[password] in the url
     s3SecretAccessKey: ''
+    # -- Forces usage of path style urls for S3. Default is true.
+    s3ForcePathStyle: 'true'
 
     cdnBaseUrl: 'http://cosmo-cdn:8787'
 
