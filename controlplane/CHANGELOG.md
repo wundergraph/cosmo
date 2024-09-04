@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.105.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.104.0...controlplane@0.105.0) (2024-09-03)
+
+### Features
+
+* make cosmo usable with aws s3  ([#1135](https://github.com/wundergraph/cosmo/issues/1135)) ([aa9b72f](https://github.com/wundergraph/cosmo/commit/aa9b72fe59a02557f11c2eed494f7691fea236aa)) (@AndreasZeissner)
+
 # [0.104.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.103.1...controlplane@0.104.0) (2024-08-28)
 
 ### Features

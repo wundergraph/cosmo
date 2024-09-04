@@ -1,6 +1,6 @@
 # cdn
 
-![Version: 0.0.1](https://img.shields.io/badge/Version-0.0.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.9.1](https://img.shields.io/badge/AppVersion-0.9.1-informational?style=flat-square)
+![Version: 0.0.1](https://img.shields.io/badge/Version-0.0.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.10.0](https://img.shields.io/badge/AppVersion-0.10.0-informational?style=flat-square)
 
 WunderGraph Cosmo CDN
 
@@ -16,7 +16,10 @@ WunderGraph Cosmo CDN
 | autoscaling.minReplicas | int | `1` |  |
 | autoscaling.targetCPUUtilizationPercentage | int | `80` |  |
 | commonLabels | object | `{}` | Add labels to all deployed resources |
-| configuration | string | `nil` |  |
+| configuration.s3AccessKeyId | string | `""` | s3 access key id, can be used instead of [username]:[password] in the url |
+| configuration.s3Endpoint | string | `""` | The endpoint of the S3 bucket. |
+| configuration.s3Region | string | `"auto"` | The region where the S3 bucket is located. |
+| configuration.s3SecretAccessKey | string | `""` | s3 secret access key, can be used instead of [username]:[password] in the url |
 | deploymentStrategy | object | `{}` |  |
 | existingSecret | string | `""` | Existing secret in the same namespace containing the authJwtSecret and s3StorageUrl. The secret keys have to match with current secret. |
 | extraEnvVars | list | `[]` | Allows to set additional environment variables on the container. Useful for global application non-specific settings. |
