@@ -81,7 +81,7 @@ generate:
 generate-go:
 	rm -rf router/gen && buf generate --path proto/wg/cosmo/node --path proto/wg/cosmo/common --path proto/wg/cosmo/graphqlmetrics --template buf.router.go.gen.yaml
 	rm -rf graphqlmetrics/gen && buf generate --path proto/wg/cosmo/graphqlmetrics --path proto/wg/cosmo/common --template buf.graphqlmetrics.go.gen.yaml
-	rm -rf terraform-provider/gen && buf generate --path proto/wg/cosmo/common --path proto/wg/cosmo/platform --template buf.terraform-provider.go.gen.yaml
+	rm -rf terraform-provider/gen && buf generate --path proto/wg/cosmo/common --path proto/wg/cosmo/node --path proto/wg/cosmo/platform --template buf.terraform-provider.go.gen.yaml
 
 start-cp:
 	pnpm -r run --filter './controlplane' dev

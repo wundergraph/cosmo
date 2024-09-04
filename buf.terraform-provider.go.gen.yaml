@@ -6,7 +6,7 @@ managed:
       module: buf.build/googleapis/googleapis
   override:
     - file_option: go_package_prefix
-      value: github.com/wundergraph/cosmo/terraform-provider/gen/proto
+      value: github.com/wundergraph/cosmo/terraform-provider-cosmo/gen/proto
 plugins:
   - local: protoc-gen-connect-go
     out: terraform-provider/gen/proto

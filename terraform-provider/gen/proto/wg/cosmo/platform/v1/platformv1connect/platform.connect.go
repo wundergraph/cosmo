@@ -10,7 +10,7 @@ import (
 	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
-	v1 "github.com/wundergraph/cosmo/terraform-provider/gen/proto/wg/cosmo/platform/v1"
+	v1 "github.com/wundergraph/cosmo/terraform-provider-cosmo/gen/proto/wg/cosmo/platform/v1"
 	http "net/http"
 	strings "strings"
 )
