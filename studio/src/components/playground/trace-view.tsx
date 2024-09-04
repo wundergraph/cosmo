@@ -15,9 +15,14 @@ import { EmptyState } from "../empty-state";
 import { Card } from "../ui/card";
 import { CLI } from "../ui/cli";
 import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
-import { FetchFlow } from "./fetch-flow";
+import {
+  ARTCustomEdge,
+  FetchFlow,
+  ReactFlowARTFetchNode,
+  ReactFlowARTMultiFetchNode,
+} from "./fetch-flow";
 import { FetchWaterfall } from "./fetch-waterfall";
-import { FetchNode, LoadStats } from "./types";
+import { ARTFetchNode, LoadStats } from "./types";
 
 const initialPaneWidth = 360;
 
@@ -48,7 +53,7 @@ const Trace = ({
   view: "tree" | "waterfall";
   subgraphs: { id: string; name: string }[];
 }) => {
-  const [tree, setTree] = useState<FetchNode>();
+  const [tree, setTree] = useState<ARTFetchNode>();
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
 
@@ -104,15 +109,15 @@ const Trace = ({
 
     let executeDurationSinceStart = 0;
 
-    const fetchMap = new Map<string, FetchNode>();
+    const fetchMap = new Map<string, ARTFetchNode>();
 
     const parseFetch = (
       fetch: any,
       parentId?: string,
-    ): FetchNode | undefined => {
+    ): ARTFetchNode | undefined => {
       if (!fetch) return;
 
-      const fetchNode: FetchNode = {
+      const fetchNode: ARTFetchNode = {
         id: fetch.id,
         parentId,
         type: fetch.type,
@@ -223,7 +228,7 @@ const Trace = ({
     const parseJsonOld = (
       json: any,
       parentId?: string,
-    ): FetchNode | undefined => {
+    ): ARTFetchNode | undefined => {
       const fetchNode = parseFetch(json.fetch, parentId);
 
       json.fields?.forEach((field: any) => {
@@ -252,10 +257,10 @@ const Trace = ({
     const parseFetchNew = (
       fetch: any,
       parentId?: string,
-    ): FetchNode | undefined => {
+    ): ARTFetchNode | undefined => {
       if (!fetch) return;
 
-      const fetchNode: FetchNode = {
+      const fetchNode: ARTFetchNode = {
         id: crypto.randomUUID(),
         parentId,
         type: fetch.kind,
@@ -400,30 +405,30 @@ const Trace = ({
         type: "parse",
         durationSinceStart: parseStats.duration_since_start_nanoseconds,
         durationLoad: parseStats.duration_nanoseconds,
-      } as FetchNode;
+      } as ARTFetchNode;
 
       const normalize = {
         id: "normalize",
         type: "normalize",
         durationSinceStart: normalizeStats.duration_since_start_nanoseconds,
         durationLoad: normalizeStats.duration_nanoseconds,
-      } as FetchNode;
+      } as ARTFetchNode;
 
       const validate = {
         id: "validate",
         type: "validate",
         durationSinceStart: validateStats.duration_since_start_nanoseconds,
         durationLoad: validateStats.duration_nanoseconds,
-      } as FetchNode;
+      } as ARTFetchNode;
 
       const plan = {
         id: "plan",
         type: "plan",
         durationSinceStart: plannerStats.duration_since_start_nanoseconds,
         durationLoad: plannerStats.duration_nanoseconds,
-      } as FetchNode;
+      } as ARTFetchNode;
 
-      let traceTree: FetchNode | undefined;
+      let traceTree: ARTFetchNode | undefined;
       if (parsedResponse.extensions.trace.version) {
         traceTree = parseJsonNew(parsedResponse.extensions.trace, plan.id);
         if (traceTree) {
@@ -484,14 +489,14 @@ const Trace = ({
         durationLoad:
           Number(gEndTimeNano - gStartTimeNano) - executeDurationSinceStart,
         children: [traceTree],
-      } as FetchNode;
+      } as ARTFetchNode;
 
       const root = {
         id: "root",
         type: "graphql",
         durationLoad: Number(gEndTimeNano - gStartTimeNano),
         children: [parse, normalize, validate, plan, execute],
-      } as FetchNode;
+      } as ARTFetchNode;
 
       setTree(root);
       setNodes(tempNodes);
@@ -503,6 +508,16 @@ const Trace = ({
       return;
     }
   }, [response, subgraphs]);
+
+  const nodeTypes = useMemo<any>(
+    () => ({
+      fetch: ReactFlowARTFetchNode,
+      multi: ReactFlowARTMultiFetchNode,
+    }),
+    [],
+  );
+
+  const edgeTypes = useMemo<any>(() => ({ fetch: ARTCustomEdge }), []);
 
   if (view === "waterfall" && tree) {
     try {
@@ -568,7 +583,12 @@ const Trace = ({
 
   return (
     <ReactFlowProvider>
-      <FetchFlow initialEdges={edges} initialNodes={nodes} />
+      <FetchFlow
+        initialEdges={edges}
+        initialNodes={nodes}
+        nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
+      />
     </ReactFlowProvider>
   );
 };

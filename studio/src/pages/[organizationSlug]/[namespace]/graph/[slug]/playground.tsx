@@ -6,6 +6,7 @@ import {
   GraphPageLayout,
 } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
+import { PlanView } from "@/components/playground/plan-view";
 import { TraceContext, TraceView } from "@/components/playground/trace-view";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -36,7 +37,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
@@ -61,6 +61,7 @@ import {
   PublishedOperationStatus,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import axios, { AxiosError } from "axios";
+import { sentenceCase } from "change-case";
 import crypto from "crypto";
 import { GraphiQL } from "graphiql";
 import { GraphQLSchema, parse, validate } from "graphql";
@@ -70,6 +71,7 @@ import { ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { FaNetworkWired } from "react-icons/fa";
 import { FiSave } from "react-icons/fi";
+import { LuLayoutDashboard } from "react-icons/lu";
 import { MdOutlineFeaturedPlayList } from "react-icons/md";
 import { PiBracketsCurly, PiDevices, PiGraphLight } from "react-icons/pi";
 import { TbDevicesCheck } from "react-icons/tb";
@@ -398,53 +400,95 @@ const PersistOperation = () => {
   );
 };
 
-const ResponseTabs = () => {
+const ResponseViewSelector = () => {
+  const [view, setView] = useState("response");
+
   const onValueChange = (val: string) => {
     const response = document.getElementsByClassName(
       "graphiql-response",
     )[0] as HTMLDivElement;
 
-    const visual = document.getElementById(
-      "response-visualization",
+    const art = document.getElementById("art-visualization") as HTMLDivElement;
+
+    const plan = document.getElementById(
+      "planner-visualization",
     ) as HTMLDivElement;
 
-    if (!response || !visual) {
+    if (!response || !art || !plan) {
       return;
     }
 
-    if (val === "plan") {
-      response.classList.add("!invisible");
-      visual.classList.remove("invisible");
-      visual.classList.remove("-z-50");
+    if (val === "request-trace") {
+      response.classList.add("invisible");
+      response.classList.add("-z-50");
+      plan.classList.add("invisible");
+      plan.classList.add("-z-50");
+
+      art.classList.remove("invisible");
+      art.classList.remove("-z-50");
+    } else if (val === "query-plan") {
+      response.classList.add("invisible");
+      response.classList.add("-z-50");
+      art.classList.add("invisible");
+      art.classList.add("-z-50");
+
+      plan.classList.remove("invisible");
+      plan.classList.remove("-z-50");
     } else {
-      response.classList.remove("!invisible");
-      visual.classList.add("-z-50");
-      visual.classList.add("invisible");
+      response.classList.remove("invisible");
+      response.classList.remove("-z-50");
+
+      art.classList.add("invisible");
+      art.classList.add("-z-50");
+      plan.classList.add("invisible");
+      plan.classList.add("-z-50");
+    }
+
+    setView(val);
+  };
+
+  const getIcon = (val: string) => {
+    if (val === "response") {
+      return <PiBracketsCurly className="h-4 w-4 flex-shrink-0" />;
+    } else if (val === "request-trace") {
+      return <FaNetworkWired className="h-4 w-4 flex-shrink-0" />;
+    } else {
+      return <LuLayoutDashboard className="h-4 w-4 flex-shrink-0" />;
     }
   };
 
   return (
-    <div className="flex items-center justify-center gap-x-2">
-      <Tabs
-        defaultValue="response"
-        className="w-full md:w-auto"
-        onValueChange={onValueChange}
-      >
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger className="!cursor-pointer" value="response" asChild>
+    <div>
+      <Select onValueChange={onValueChange}>
+        <SelectTrigger className="w-[180px]">
+          <SelectValue>
             <div className="flex items-center gap-x-2">
-              <PiBracketsCurly className="h-4 w-4 flex-shrink-0" />
+              {getIcon(view)}
+              {sentenceCase(view)}
+            </div>
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="response">
+            <div className="flex items-center gap-x-2">
+              {getIcon("response")}
               Response
             </div>
-          </TabsTrigger>
-          <TabsTrigger className="!cursor-pointer" value="plan" asChild>
+          </SelectItem>
+          <SelectItem value="request-trace">
             <div className="flex items-center gap-x-2">
-              <FaNetworkWired className="h-4 w-4 flex-shrink-0" />
-              Trace
+              {getIcon("request-trace")}
+              Request Trace
             </div>
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+          </SelectItem>
+          <SelectItem value="query-plan">
+            <div className="flex items-center gap-x-2">
+              {getIcon("query-plan")}
+              Query Plan
+            </div>
+          </SelectItem>
+        </SelectContent>
+      </Select>
     </div>
   );
 };
@@ -480,18 +524,21 @@ const ToggleClientValidation = () => {
 
 const PlaygroundPortal = () => {
   const tabDiv = document.getElementById("response-tabs");
-  const visDiv = document.getElementById("response-visualization");
+  const artDiv = document.getElementById("art-visualization");
+  const plannerDiv = document.getElementById("planner-visualization");
   const saveDiv = document.getElementById("save-button");
   const toggleClientValidation = document.getElementById(
     "toggle-client-validation",
   );
 
-  if (!tabDiv || !visDiv || !saveDiv || !toggleClientValidation) return null;
+  if (!tabDiv || !artDiv || !plannerDiv || !saveDiv || !toggleClientValidation)
+    return null;
 
   return (
     <>
-      {createPortal(<ResponseTabs />, tabDiv)}
-      {createPortal(<TraceView />, visDiv)}
+      {createPortal(<ResponseViewSelector />, tabDiv)}
+      {createPortal(<PlanView />, plannerDiv)}
+      {createPortal(<TraceView />, artDiv)}
       {createPortal(<PersistOperation />, saveDiv)}
       {createPortal(<ToggleClientValidation />, toggleClientValidation)}
     </>
@@ -589,10 +636,19 @@ const PlaygroundPage: NextPageWithLayout = () => {
       if (responseSectionParent) {
         responseSectionParent.id = "response-parent";
         responseSectionParent.classList.add("relative");
-        const div = document.createElement("div");
-        div.id = "response-visualization";
-        div.className = "flex flex-1 h-full w-full absolute invisible -z-50";
-        responseSectionParent.append(div);
+
+        const artWrapper = document.createElement("div");
+        artWrapper.id = "art-visualization";
+        artWrapper.className =
+          "flex flex-1 h-full w-full absolute invisible -z-50";
+
+        const plannerWrapper = document.createElement("div");
+        plannerWrapper.id = "planner-visualization";
+        plannerWrapper.className =
+          "flex flex-1 h-full w-full absolute invisible -z-50";
+
+        responseSectionParent.append(artWrapper);
+        responseSectionParent.append(plannerWrapper);
       }
     }
 

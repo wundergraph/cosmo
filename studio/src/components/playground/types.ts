@@ -7,13 +7,13 @@ export type LoadStatsEntry = {
 
 export type LoadStats = LoadStatsEntry[];
 
-export type FetchNode = {
+export type ARTFetchNode = {
   id: string;
   parentId?: string;
   type: string;
   dataSourceId?: string;
   dataSourceName?: string;
-  children: FetchNode[];
+  children: ARTFetchNode[];
   input?: any;
   rawInput?: any;
   output?: any;
@@ -36,4 +36,28 @@ export type FetchNode = {
   singleFlightSharedResponse: boolean;
   loadSkipped: boolean;
   loadStats?: LoadStats;
+};
+
+export type QueryPlanFetchNode = {
+  kind: string;
+  subgraphName: string;
+  subgraphId: string;
+  query: string;
+  representations?: {
+    kind: string;
+    typeName: string;
+    fragment: string;
+    fieldName?: string;
+  }[];
+};
+
+export type QueryPlanFetchTypeNode = {
+  kind: string;
+  fetch?: QueryPlanFetchNode;
+  children?: QueryPlanFetchTypeNode[];
+};
+
+export type QueryPlan = QueryPlanFetchTypeNode & {
+  version: string;
+  children: QueryPlanFetchTypeNode[];
 };
