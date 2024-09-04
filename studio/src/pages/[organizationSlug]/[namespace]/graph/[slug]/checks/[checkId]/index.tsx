@@ -45,7 +45,10 @@ import { useToast } from "@/components/ui/use-toast";
 import { useSessionStorage } from "@/hooks/use-session-storage";
 import { formatDate, formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
-import { CheckCircleIcon, ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import {
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+} from "@heroicons/react/24/outline";
 import {
   ArrowLeftIcon,
   CheckCircledIcon,
@@ -63,7 +66,9 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import {
   GetCheckSummaryResponse,
+  GraphPruningIssue,
   LintIssue,
+  LintSeverity,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatDistanceToNow, subDays } from "date-fns";
 import { useRouter } from "next/router";
@@ -189,6 +194,7 @@ const CheckOverviewPage: NextPageWithLayout = () => {
 
 const getDecorationCollection = (
   lintIssues: LintIssue[],
+  graphPruningIssues: GraphPruningIssue[],
 ): DecorationCollection[] => {
   const decorationCollection: DecorationCollection[] = [];
 
@@ -210,6 +216,31 @@ const getDecorationCollection = (
         inlineClassName:
           "underline decoration-red-500 decoration-wavy cursor-pointer z-50",
         isWholeLine: l.issueLocation.endLine === undefined,
+      },
+    });
+  }
+
+  for (const g of graphPruningIssues) {
+    if (!g.issueLocation) continue;
+    decorationCollection.push({
+      range: {
+        startLineNumber: g.issueLocation.line,
+        endLineNumber: g.issueLocation.endLine || g.issueLocation.line,
+        startColumn: g.issueLocation.column,
+        endColumn: g.issueLocation.endColumn || g.issueLocation.column,
+      },
+      options: {
+        hoverMessage: {
+          value: `${g.message}. (Rule: ${
+            g.graphPruningRuleType ? g.graphPruningRuleType : ""
+          })`,
+        },
+        inlineClassName: `underline ${
+          g.severity === LintSeverity.error
+            ? "decoration-red-500"
+            : "decoration-yellow-600"
+        } decoration-wavy cursor-pointer z-50`,
+        isWholeLine: true,
       },
     });
   }
@@ -288,7 +319,7 @@ const CheckDetails = ({
     data.check.isBreaking,
     data.check.hasClientTraffic,
     data.check.hasLintErrors,
-    data.check.hasGraphPruningErrors
+    data.check.hasGraphPruningErrors,
   );
 
   const currentAffectedGraph = data.affectedGraphs.find(
@@ -793,6 +824,7 @@ const CheckDetails = ({
                     disablePrettier
                     decorationCollections={getDecorationCollection(
                       data.lintIssues,
+                      data.graphPruningIssues,
                     )}
                     line={hash ? Number(hash.slice(1)) : undefined}
                   />
