@@ -7137,10 +7137,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           }
         }
 
-        await orgRepo.deleteAllUserRoles({
-          orgMemberID: orgMember.orgMemberID,
-        });
-
         switch (req.role) {
           case 'admin': {
             await opts.keycloakClient.client.users.addToGroup({
@@ -7171,7 +7167,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           }
         }
 
-        await orgRepo.insertUserRole({
+        await orgRepo.updateUserRole({
           orgMemberID: orgMember.orgMemberID,
           role: req.role,
         });
