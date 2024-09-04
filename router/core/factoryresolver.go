@@ -478,18 +478,16 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 
 	for _, node := range in.RootNodes {
 		out.RootNodes = append(out.RootNodes, plan.TypeField{
-			TypeName:   node.TypeName,
-			FieldNames: node.FieldNames,
-			// TODO requires engine changes
-			//ExternalFieldNames: node.ExternalFieldNames,
+			TypeName:           node.TypeName,
+			FieldNames:         node.FieldNames,
+			ExternalFieldNames: node.ExternalFieldNames,
 		})
 	}
 	for _, node := range in.ChildNodes {
 		out.ChildNodes = append(out.ChildNodes, plan.TypeField{
-			TypeName:   node.TypeName,
-			FieldNames: node.FieldNames,
-			// TODO requires engine changes
-			//ExternalFieldNames: node.ExternalFieldNames,
+			TypeName:           node.TypeName,
+			FieldNames:         node.FieldNames,
+			ExternalFieldNames: node.ExternalFieldNames,
 		})
 	}
 	for _, directive := range in.Directives {
@@ -500,11 +498,32 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 	}
 
 	for _, keyConfiguration := range in.Keys {
+		var conditions []plan.KeyCondition
+
+		if len(keyConfiguration.Conditions) > 0 {
+			conditions = make([]plan.KeyCondition, 0, len(keyConfiguration.Conditions))
+			for _, condition := range keyConfiguration.Conditions {
+				coordinates := make([]plan.KeyConditionCoordinate, 0, len(condition.FieldCoordinatesPath))
+				for _, coordinate := range condition.FieldCoordinatesPath {
+					coordinates = append(coordinates, plan.KeyConditionCoordinate{
+						TypeName:  coordinate.TypeName,
+						FieldName: coordinate.FieldName,
+					})
+				}
+
+				conditions = append(conditions, plan.KeyCondition{
+					Coordinates: coordinates,
+					FieldPath:   condition.FieldPath,
+				})
+			}
+		}
+
 		out.FederationMetaData.Keys = append(out.FederationMetaData.Keys, plan.FederationFieldConfiguration{
 			TypeName:              keyConfiguration.TypeName,
 			FieldName:             keyConfiguration.FieldName,
 			SelectionSet:          keyConfiguration.SelectionSet,
 			DisableEntityResolver: keyConfiguration.DisableEntityResolver,
+			Conditions:            conditions,
 		})
 	}
 	for _, providesConfiguration := range in.Provides {

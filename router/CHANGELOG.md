@@ -4,6 +4,25 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.107.4](https://github.com/wundergraph/cosmo/compare/router@0.107.3...router@0.107.4) (2024-08-30)
+
+### Bug Fixes
+
+* planning of provides, parent entity jump, conditional implicit keys, external fields ([#1092](https://github.com/wundergraph/cosmo/issues/1092)) ([0fe2cba](https://github.com/wundergraph/cosmo/commit/0fe2cbaa72fa7ba5dbbf97c1e95615f29f13af1f)) (@devsergiy)
+
+## [0.107.3](https://github.com/wundergraph/cosmo/compare/router@0.107.2...router@0.107.3) (2024-08-30)
+
+### Bug Fixes
+
+* support __typename for introspection query ([#1131](https://github.com/wundergraph/cosmo/issues/1131)) ([704170e](https://github.com/wundergraph/cosmo/commit/704170e7417ce6352b5eaea63b65f3dc5b772dd8)) (@devsergiy)
+
+## [0.107.2](https://github.com/wundergraph/cosmo/compare/router@0.107.1...router@0.107.2) (2024-08-28)
+
+### Bug Fixes
+
+* art render ([#1119](https://github.com/wundergraph/cosmo/issues/1119)) ([344d3db](https://github.com/wundergraph/cosmo/commit/344d3dbdff1758404903b9195708188a28be1898)) (@thisisnithin)
+* show actual error from network in playground ([#1126](https://github.com/wundergraph/cosmo/issues/1126)) ([a83c6e3](https://github.com/wundergraph/cosmo/commit/a83c6e3404e1d69e3de3a6e0db20332933bcb1ab)) (@thisisnithin)
+
 ## [0.107.1](https://github.com/wundergraph/cosmo/compare/router@0.107.0...router@0.107.1) (2024-08-22)
 
 ### Bug Fixes

@@ -1,6 +1,6 @@
 import { Subgraph } from '@wundergraph/composition';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
-import { SQL, and, asc, count, eq, inArray, like, sql } from 'drizzle-orm';
+import { SQL, and, asc, count, eq, getTableName, inArray, like, or, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { parse } from 'graphql';
@@ -235,7 +235,7 @@ export class FeatureFlagRepository {
     query,
   }: FeatureFlagListFilterOptions): Promise<FeatureSubgraphDTO[]> {
     const subgraphRepo = new SubgraphRepository(this.logger, this.db, this.organizationId);
-    const conditions: SQL<unknown>[] = [
+    const conditions: (SQL<unknown> | undefined)[] = [
       eq(targets.organizationId, this.organizationId),
       eq(targets.type, 'subgraph'),
       eq(subgraphs.isFeatureSubgraph, true),
@@ -246,7 +246,12 @@ export class FeatureFlagRepository {
     }
 
     if (query) {
-      conditions.push(like(targets.name, `%${query}%`));
+      conditions.push(
+        or(
+          like(schema.targets.name, `%${query}%`),
+          sql.raw(`${getTableName(schema.subgraphs)}.${schema.subgraphs.id.name}::text like '%${query}%'`),
+        ),
+      );
     }
 
     const featureSubgraphTargets = await this.db
