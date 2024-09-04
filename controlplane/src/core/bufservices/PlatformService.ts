@@ -8134,6 +8134,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
+
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
         const namespace = await namespaceRepo.byName(req.namespace);
         if (!namespace) {
@@ -8161,6 +8170,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<ConfigureNamespaceLintConfigResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
+
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
 
         const schemaLintRepo = new SchemaLintRepository(opts.db);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
