@@ -6998,7 +6998,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           return {
             response: {
               code: EnumStatusCode.ERR,
-              details: 'User does not have the permissions to the role of an organization member.',
+              details: 'User does not have the permissions to update the role of an organization member.',
             },
           };
         }
