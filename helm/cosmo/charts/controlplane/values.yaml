@@ -192,6 +192,8 @@ configuration:
   s3AccessKeyId: ''
   # -- s3 secret access key, can be used instead of [username]:[password] in the url
   s3SecretAccessKey: ''
+  # -- Forces usage of path style urls for S3. Default is true.
+  s3ForcePathStyle: 'true'
   stripeSecretKey: ''
   stripeWebhookSecret: ''
   # -- The default billing plan, eg `developer@1`

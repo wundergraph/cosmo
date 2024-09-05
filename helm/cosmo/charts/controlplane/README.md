@@ -51,6 +51,7 @@ WunderGraph Cosmo Controlplane
 | configuration.redisTlsKey | string | `""` |  |
 | configuration.s3AccessKeyId | string | `""` | s3 access key id, can be used instead of [username]:[password] in the url |
 | configuration.s3Endpoint | string | `""` | The endpoint of the S3 bucket. |
+| configuration.s3ForcePathStyle | string | `"true"` | Forces usage of path style urls for S3. Default is true. |
 | configuration.s3Region | string | `"auto"` | The region where the S3 bucket is located. |
 | configuration.s3SecretAccessKey | string | `""` | s3 secret access key, can be used instead of [username]:[password] in the url |
 | configuration.s3StorageUrl | string | `"http://minio:changeme@cosmo-minio:9000/cosmo"` |  |

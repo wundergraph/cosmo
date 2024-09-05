@@ -37,6 +37,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | cdn.commonLabels | object | `{}` | Add labels to all deployed resources |
 | cdn.configuration.s3AccessKeyId | string | `""` | s3 access key id, can be used instead of [username]:[password] in the url |
 | cdn.configuration.s3Endpoint | string | `""` | The endpoint of the S3 bucket. |
+| cdn.configuration.s3ForcePathStyle | string | `"true"` | Forces usage of path style urls for S3. Default is true. |
 | cdn.configuration.s3Region | string | `"auto"` | The region where the S3 bucket is located. |
 | cdn.configuration.s3SecretAccessKey | string | `""` | s3 secret access key, can be used instead of [username]:[password] in the url |
 | cdn.configuration.s3StorageUrl | string | `"http://minio:changeme@cosmo-minio:9000/cosmo"` |  |
@@ -70,6 +71,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | controlplane.configuration.redisPort | int | `6379` |  |
 | controlplane.configuration.s3AccessKeyId | string | `""` | s3 access key id, can be used instead of [username]:[password] in the url |
 | controlplane.configuration.s3Endpoint | string | `""` | The endpoint of the S3 bucket. |
+| controlplane.configuration.s3ForcePathStyle | string | `"true"` | Forces usage of path style urls for S3. Default is true. |
 | controlplane.configuration.s3Region | string | `"auto"` | The region where the S3 bucket is located. |
 | controlplane.configuration.s3SecretAccessKey | string | `""` | s3 secret access key, can be used instead of [username]:[password] in the url |
 | controlplane.configuration.s3StorageUrl | string | `"http://minio:changeme@cosmo-minio:9000/cosmo"` |  |
