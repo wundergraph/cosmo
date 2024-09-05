@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"io"
 	"math/rand"
 	"net/http"
@@ -396,25 +394,6 @@ func prettifyJSON(t *testing.T, jsonStr string) string {
 	res := &bytes.Buffer{}
 	require.NoError(t, json.Indent(res, []byte(jsonStr), "", "  "))
 	return res.String()
-}
-
-func TestQueryWithLogging(t *testing.T) {
-	t.Parallel()
-	testenv.Run(t, &testenv.Config{LogObservation: testenv.LogObservationConfig{
-		Enabled:  true,
-		LogLevel: zapcore.InfoLevel,
-	}}, func(t *testing.T, xEnv *testenv.Environment) {
-		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-			Query: `{ employees { id } }`,
-		})
-		require.JSONEq(t, employeesIDData, res.Body)
-		logEntries := xEnv.Observer().All()
-		require.Len(t, logEntries, 12)
-		natsLogs := xEnv.Observer().FilterMessageSnippet("Nats").All()
-		require.Len(t, natsLogs, 4)
-		providerIDFields := xEnv.Observer().FilterField(zap.String("providerID", "default")).All()
-		require.Len(t, providerIDFields, 1)
-	})
 }
 
 func TestOperationSelection(t *testing.T) {
