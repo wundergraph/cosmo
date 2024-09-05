@@ -343,7 +343,6 @@ const MemberCard = ({
                             },
                             {
                               onSuccess: (d) => {
-                                console.log("hey");
                                 toast({
                                   description:
                                     d.response?.details ||
