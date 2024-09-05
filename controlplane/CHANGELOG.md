@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.105.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.105.0...controlplane@0.105.1) (2024-09-05)
+
+### Bug Fixes
+
+* cdn and controlplane not respecting nested subdomains ([#1145](https://github.com/wundergraph/cosmo/issues/1145)) ([1598d6e](https://github.com/wundergraph/cosmo/commit/1598d6e421cf3b51997050d006faf9655fd96fdd)) (@AndreasZeissner)
+* log config upload failures as errors ([#1142](https://github.com/wundergraph/cosmo/issues/1142)) ([5965b77](https://github.com/wundergraph/cosmo/commit/5965b7757171fac8b369feec2336c1c0b79cd5e9)) (@thisisnithin)
+
 # [0.105.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.104.0...controlplane@0.105.0) (2024-09-03)
 
 ### Features
