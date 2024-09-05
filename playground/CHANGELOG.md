@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.3.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.2.2...@wundergraph/playground@0.3.0) (2024-09-05)
+
+### Features
+
+* query plan ui ([#1140](https://github.com/wundergraph/cosmo/issues/1140)) ([c255867](https://github.com/wundergraph/cosmo/commit/c25586728b34b177789a1d6a0fd9333e9e647959)) (@thisisnithin)
+
 ## [0.2.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.2.1...@wundergraph/playground@0.2.2) (2024-08-28)
 
 ### Bug Fixes
