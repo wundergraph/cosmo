@@ -17,9 +17,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { LuLayoutDashboard } from 'react-icons/lu';
 import { sentenceCase } from 'change-case';
 import { PlanView } from './plan-view';
+import { QueryPlan } from './types';
+import { useDebounce } from 'use-debounce';
 import 'graphiql/graphiql.css';
 import '@graphiql/plugin-explorer/dist/style.css';
 import '@/theme.css';
+
+const validateHeaders = (headers: Record<string, string>) => {
+  for (const headersKey in headers) {
+    if (!/^[\^`\-\w!#$%&'*+.|~]+$/.test(headersKey)) {
+      throw new TypeError(`Header name must be a valid HTTP token [${headersKey}]`);
+    }
+  }
+};
 
 const graphiQLFetch = async (
   schema: GraphQLSchema | null,
@@ -33,12 +43,7 @@ const graphiQLFetch = async (
       ...(init.headers as Record<string, string>),
     };
 
-    for (const headersKey in headers) {
-      // check invalid headers
-      if (!/^[\^`\-\w!#$%&'*+.|~]+$/.test(headersKey)) {
-        throw new TypeError(`Header name must be a valid HTTP token [${headersKey}]`);
-      }
-    }
+    validateHeaders(headers);
 
     if (schema && clientValidationEnabled) {
       const query = JSON.parse(init.body as string)?.query as string;
@@ -265,11 +270,15 @@ export const Playground = (input: {
 
   const [schema, setSchema] = useState<GraphQLSchema | null>(null);
 
+  const [query, setQuery] = useState<string | undefined>(undefined);
   const [headers, setHeaders] = useState(`{
   "X-WG-TRACE" : "true"
 }`);
 
   const [response, setResponse] = useState<string>('');
+
+  const [plan, setPlan] = useState<QueryPlan | undefined>(undefined);
+  const [planError, setPlanError] = useState<string>('');
 
   const [clientValidationEnabled, setClientValidationEnabled] = useState(true);
 
@@ -360,6 +369,53 @@ export const Playground = (input: {
     });
   }, [schema, clientValidationEnabled]);
 
+  const [debouncedQuery] = useDebounce(query, 300);
+
+  useEffect(() => {
+    const getPlan = async () => {
+      if (!schema || !debouncedQuery || !url) {
+        return;
+      }
+
+      try {
+        const errors = validate(schema, parse(debouncedQuery));
+        if (errors.length > 0) {
+          setPlanError('Invalid query');
+          return;
+        }
+
+        const requestHeaders: Record<string, string> = {
+          ...JSON.parse(headers),
+          'X-WG-Include-Query-Plan': 'true',
+          'X-WG-Skip-Loader': 'true',
+        };
+
+        validateHeaders(requestHeaders);
+
+        const response = await axios.post(
+          url,
+          {
+            query: debouncedQuery,
+          },
+          { headers: requestHeaders },
+        );
+
+        if (!response.data?.extensions?.queryPlan) {
+          setPlan(undefined);
+          return;
+        }
+
+        setPlanError('');
+        setPlan(response.data.extensions.queryPlan);
+      } catch (error: any) {
+        setPlan(undefined);
+        setPlanError(error.message || 'Network error');
+      }
+    };
+
+    getPlan();
+  }, [debouncedQuery, headers, url, schema]);
+
   return (
     <TooltipProvider>
       <TraceContext.Provider
@@ -367,6 +423,8 @@ export const Playground = (input: {
           headers,
           response,
           subgraphs: [],
+          plan,
+          planError,
           clientValidationEnabled,
           setClientValidationEnabled,
         }}
@@ -375,6 +433,7 @@ export const Playground = (input: {
           shouldPersistHeaders
           showPersistHeadersSettings={false}
           fetcher={fetcher}
+          onEditQuery={setQuery}
           headers={headers}
           onEditHeaders={setHeaders}
           plugins={[

@@ -22,7 +22,7 @@ import {
   ReactFlowARTMultiFetchNode,
 } from "./fetch-flow";
 import { FetchWaterfall } from "./fetch-waterfall";
-import { ARTFetchNode, LoadStats } from "./types";
+import { ARTFetchNode, LoadStats, QueryPlan } from "./types";
 
 const initialPaneWidth = 360;
 
@@ -31,6 +31,8 @@ export const TraceContext = createContext<{
   subgraphs: { id: string; name: string }[];
   headers: string;
   response: string;
+  plan?: QueryPlan;
+  planError?: string;
   clientValidationEnabled: boolean;
   setClientValidationEnabled: (val: boolean) => void;
 }>({
@@ -38,6 +40,8 @@ export const TraceContext = createContext<{
   subgraphs: [],
   headers: "",
   response: "",
+  plan: undefined,
+  planError: "",
   clientValidationEnabled: true,
   setClientValidationEnabled: () => {},
 });

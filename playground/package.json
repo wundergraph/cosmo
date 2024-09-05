@@ -60,7 +60,8 @@
     "react-dom": "^18.3.1",
     "react-icons": "^4.12.0",
     "react-move-hook": "^0.1.2",
-    "reactflow": "^11.10.1"
+    "reactflow": "^11.10.1",
+    "use-debounce": "^10.0.0"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.10",

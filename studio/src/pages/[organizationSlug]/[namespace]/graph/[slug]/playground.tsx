@@ -8,6 +8,7 @@ import {
 import { PageHeader } from "@/components/layout/head";
 import { PlanView } from "@/components/playground/plan-view";
 import { TraceContext, TraceView } from "@/components/playground/trace-view";
+import { QueryPlan } from "@/components/playground/types";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -75,7 +76,18 @@ import { LuLayoutDashboard } from "react-icons/lu";
 import { MdOutlineFeaturedPlayList } from "react-icons/md";
 import { PiBracketsCurly, PiDevices, PiGraphLight } from "react-icons/pi";
 import { TbDevicesCheck } from "react-icons/tb";
+import { useDebounce } from "use-debounce";
 import { z } from "zod";
+
+const validateHeaders = (headers: Record<string, string>) => {
+  for (const headersKey in headers) {
+    if (!/^[\^`\-\w!#$%&'*+.|~]+$/.test(headersKey)) {
+      throw new TypeError(
+        `Header name must be a valid HTTP token [${headersKey}]`,
+      );
+    }
+  }
+};
 
 const graphiQLFetch = async (
   onFetch: any,
@@ -92,14 +104,10 @@ const graphiQLFetch = async (
     };
 
     let hasTraceHeader = false;
-    for (const headersKey in headers) {
-      // check invalid headers
-      if (!/^[\^`\-\w!#$%&'*+.|~]+$/.test(headersKey)) {
-        throw new TypeError(
-          `Header name must be a valid HTTP token [${headersKey}]`,
-        );
-      }
 
+    validateHeaders(headers);
+
+    for (const headersKey in headers) {
       if (headersKey.toLowerCase() === "x-wg-trace") {
         hasTraceHeader = headers[headersKey] === "true";
         break;
@@ -600,6 +608,9 @@ const PlaygroundPage: NextPageWithLayout = () => {
 }`);
   const [response, setResponse] = useState<string>("");
 
+  const [plan, setPlan] = useState<QueryPlan | undefined>(undefined);
+  const [planError, setPlanError] = useState<string>("");
+
   const [clientValidationEnabled, setClientValidationEnabled] = useState(true);
 
   const [isGraphiqlRendered, setIsGraphiqlRendered] = useState(false);
@@ -775,6 +786,78 @@ const PlaygroundPage: NextPageWithLayout = () => {
     loadSchemaGraphId,
   ]);
 
+  const [debouncedQuery] = useDebounce(query, 300);
+
+  useEffect(() => {
+    const getPlan = async () => {
+      if (
+        !schema ||
+        !debouncedQuery ||
+        !routingUrl ||
+        !graphContext?.graphRequestToken
+      ) {
+        return;
+      }
+
+      try {
+        const errors = validate(schema, parse(debouncedQuery));
+        if (errors.length > 0) {
+          setPlanError("Invalid query");
+          return;
+        }
+
+        const requestHeaders: Record<string, string> = {
+          ...JSON.parse(headers),
+          "X-WG-Token": graphContext.graphRequestToken,
+          "X-WG-Include-Query-Plan": "true",
+          "X-WG-Skip-Loader": "true",
+        };
+
+        validateHeaders(requestHeaders);
+
+        if (type === "featureFlag") {
+          const featureFlag =
+            graphContext?.featureFlagsInLatestValidComposition.find(
+              (f) => f.id === loadSchemaGraphId,
+            );
+          if (featureFlag) {
+            requestHeaders["X-Feature-Flag"] = featureFlag.name;
+          }
+        }
+
+        const response = await axios.post(
+          routingUrl,
+          {
+            query: debouncedQuery,
+          },
+          { headers: requestHeaders },
+        );
+
+        if (!response.data?.extensions?.queryPlan) {
+          setPlan(undefined);
+          return;
+        }
+
+        setPlanError("");
+        setPlan(response.data.extensions.queryPlan);
+      } catch (error: any) {
+        setPlan(undefined);
+        setPlanError(error.message || "Network error");
+      }
+    };
+
+    getPlan();
+  }, [
+    debouncedQuery,
+    graphContext?.featureFlagsInLatestValidComposition,
+    graphContext?.graphRequestToken,
+    headers,
+    loadSchemaGraphId,
+    routingUrl,
+    schema,
+    type,
+  ]);
+
   const { theme } = useTheme();
 
   useEffect(() => {
@@ -800,6 +883,8 @@ const PlaygroundPage: NextPageWithLayout = () => {
         query,
         headers,
         response,
+        plan,
+        planError,
         subgraphs: graphContext.subgraphs,
         clientValidationEnabled,
         setClientValidationEnabled,
