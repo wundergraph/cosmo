@@ -48,6 +48,7 @@ import { NextPageWithLayout } from "@/lib/page";
 import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
+  NoSymbolIcon,
 } from "@heroicons/react/24/outline";
 import {
   ArrowLeftIcon,
@@ -77,6 +78,7 @@ import { PiBracketsCurlyBold, PiGraphLight } from "react-icons/pi";
 import { HiOutlineScissors } from "react-icons/hi2";
 import { GraphPruningIssuesTable } from "@/components/checks/graph-pruning-issues-table";
 import { SiLintcode } from "react-icons/si";
+import { cn } from "@/lib/utils";
 
 const ForceSuccess: React.FC<{ onSubmit: () => void }> = (props) => {
   return (
@@ -450,25 +452,64 @@ const CheckDetails = ({
 
               <Badge
                 variant="outline"
-                className="flex items-center space-x-1.5  py-2"
+                className={cn("flex items-center space-x-1.5 py-2", {
+                  "text-muted-foreground":
+                    data.lintIssues.length === 0 && !data.isLintingEnabled,
+                })}
               >
-                {getCheckIcon(!data.check.hasLintErrors)}
-                <span className="flex-1 truncate">Lint Errors</span>
-                <InfoTooltip>
-                  Describes if the proposed schema contains linting errors.
-                </InfoTooltip>
+                {data.lintIssues.length === 0 && !data.isLintingEnabled ? (
+                  <>
+                    <NoSymbolIcon className="h-4 w-4" />
+                    <span className="flex-1 truncate">Lint Errors</span>
+                    <InfoTooltip>
+                      Indicates if the proposed schema contains linting errors.
+                      Enable linting to see lint issues.
+                    </InfoTooltip>
+                  </>
+                ) : (
+                  <>
+                    {getCheckIcon(!data.check.hasLintErrors)}
+                    <span className="flex-1 truncate">Lint Errors</span>
+                    <InfoTooltip>
+                      Indicates if the proposed schema contains linting errors.
+                    </InfoTooltip>
+                  </>
+                )}
               </Badge>
 
               <Badge
                 variant="outline"
-                className="flex items-center space-x-1.5  py-2"
+                className={cn("flex items-center space-x-1.5 py-2", {
+                  "text-muted-foreground":
+                    data.graphPruningIssues.length === 0 &&
+                    !data.isGraphPruningEnabled,
+                })}
               >
-                {getCheckIcon(!data.check.hasGraphPruningErrors)}
-                <span className="flex-1 truncate">Graph Pruning Errors</span>
-                <InfoTooltip>
-                  Describes if the proposed schema contains graph pruning
-                  errors.
-                </InfoTooltip>
+                {data.graphPruningIssues.length === 0 &&
+                !data.isGraphPruningEnabled ? (
+                  <>
+                    <NoSymbolIcon className="h-4 w-4" />
+                    <span className="flex-1 truncate">
+                      Graph Pruning Errors
+                    </span>
+                    <InfoTooltip>
+                      Indicates if the proposed schema contains graph pruning
+                      errors. Enable graph pruning linter to see graph pruning
+                      issues.
+                    </InfoTooltip>
+                  </>
+                ) : (
+                  <>
+                    {getCheckIcon(!data.check.hasGraphPruningErrors)}
+                    <span className="flex-1 truncate">
+                      Graph Pruning Errors
+                    </span>
+                    <InfoTooltip>
+                      Indicates if the proposed schema contains graph pruning
+                      errors.
+                    </InfoTooltip>
+                  </>
+                )}
               </Badge>
             </dd>
           </div>
@@ -798,6 +839,7 @@ const CheckDetails = ({
                 <LintIssuesTable
                   lintIssues={data.lintIssues}
                   caption={`${data.lintIssues.length} issues found`}
+                  isLintingEnabled={data.isLintingEnabled}
                 />
               </TabsContent>
               <TabsContent
@@ -807,6 +849,7 @@ const CheckDetails = ({
                 <GraphPruningIssuesTable
                   pruneIssues={data.graphPruningIssues}
                   caption={`${data.graphPruningIssues.length} issues found`}
+                  isGraphPruningEnabled={data.isGraphPruningEnabled}
                 />
               </TabsContent>
               <TabsContent value="schema" className="relative w-full flex-1">

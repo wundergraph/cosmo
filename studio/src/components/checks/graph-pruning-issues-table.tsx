@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { CheckCircleIcon } from "@heroicons/react/24/outline";
+import { CheckCircleIcon, NoSymbolIcon } from "@heroicons/react/24/outline";
 import { Cross1Icon } from "@radix-ui/react-icons";
 import {
   GraphPruningIssue,
@@ -25,11 +25,35 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 export const GraphPruningIssuesTable = ({
   pruneIssues,
   caption,
+  isGraphPruningEnabled,
 }: {
   pruneIssues: GraphPruningIssue[];
   caption?: React.ReactNode;
+  isGraphPruningEnabled: boolean;
 }) => {
   const router = useRouter();
+
+  if (pruneIssues.length === 0 && !isGraphPruningEnabled) {
+    return (
+      <EmptyState
+        icon={<NoSymbolIcon className="text-gray-400" />}
+        title="Schema Graph Pruning is disabled"
+        description="Enable schema graph pruning to catch pruning issues in your schema."
+        actions={
+          <Button
+            size="sm"
+            onClick={() => {
+              router.push(
+                `/${router.query.organizationSlug}/lint-policy?namespace=${router.query.namespace}`,
+              );
+            }}
+          >
+            Navigate to Lint Policy
+          </Button>
+        }
+      />
+    );
+  }
 
   if (pruneIssues.length === 0) {
     return (
@@ -45,7 +69,7 @@ export const GraphPruningIssuesTable = ({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[200px]">Rule</TableHead>
+            <TableHead className="w-[300px]">Rule</TableHead>
             <TableHead>Field Path</TableHead>
             <TableHead>Message</TableHead>
             <TableHead className="w-[5px]"></TableHead>
@@ -67,7 +91,7 @@ export const GraphPruningIssuesTable = ({
                   ) : (
                     <CiWarning className="h-[15px] w-[15px]" />
                   )}
-                  <div className="block w-[200px] items-center truncate">
+                  <div className="block w-[300px] items-center truncate">
                     {l.graphPruningRuleType}
                   </div>
                 </div>
