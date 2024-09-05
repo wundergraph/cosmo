@@ -37,65 +37,23 @@ import {
 } from "../ui/select";
 import { useFeature } from "@/hooks/use-feature";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
+import { useUser } from "@/hooks/use-user";
 
-const fetchGracePeriodOptions = (
+const fetchPeriodOptions = (
   limit: number,
 ): { label: string; value: string }[] => {
-  if (limit === 7) {
-    return [
-      {
-        label: "3 days",
-        value: "3",
-      },
-      {
-        label: "7 days",
-        value: "7",
-      },
-    ];
-  } else if (limit === 14) {
-    return [
-      {
-        label: "3 days",
-        value: "3",
-      },
-      {
-        label: "7 days",
-        value: "7",
-      },
-      {
-        label: "10 days",
-        value: "10",
-      },
-      {
-        label: "14 days",
-        value: "14",
-      },
-    ];
-  } else if (limit === 30) {
-    return [
-      {
-        label: "3 days",
-        value: "3",
-      },
-      {
-        label: "7 days",
-        value: "7",
-      },
-      {
-        label: "10 days",
-        value: "10",
-      },
-      {
-        label: "14 days",
-        value: "14",
-      },
-      {
-        label: "30 days",
-        value: "30",
-      },
-    ];
-  }
-  return [];
+  const options = [
+    { label: "3 days", value: "3" },
+    { label: "7 days", value: "7" },
+    { label: "10 days", value: "10" },
+    { label: "14 days", value: "14" },
+    { label: "30 days", value: "30" },
+    { label: "45 days", value: "45" },
+    { label: "60 days", value: "60" },
+    { label: "90 days", value: "90" },
+  ];
+
+  return options.filter((option) => Number(option.value) <= limit);
 };
 
 export const GracePeriodDropdown = ({
@@ -108,8 +66,8 @@ export const GracePeriodDropdown = ({
   disabled: boolean;
 }) => {
   const limit = useFeatureLimit("field-grace-period", 7);
-  const options = fetchGracePeriodOptions(limit);
-  console.log(options, limit);
+  const options = fetchPeriodOptions(limit);
+
   return (
     <Select
       value={value}
@@ -135,6 +93,44 @@ export const GracePeriodDropdown = ({
   );
 };
 
+export const SchemaUsageCheckPeriodDropdown = ({
+  onChange,
+  value,
+  disabled,
+}: {
+  onChange: (value: string) => void;
+  value: string;
+  disabled: boolean;
+}) => {
+  // this is the limit used for schema usage check
+  const limit = useFeatureLimit("breaking-change-retention", 7);
+  const options = fetchPeriodOptions(limit);
+
+  return (
+    <Select
+      value={value}
+      onValueChange={(value) => {
+        onChange(value);
+      }}
+      disabled={disabled}
+    >
+      <SelectTrigger className="h-8 w-36">
+        <SelectValue placeholder={value} />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectGroup>
+          <SelectLabel>Schema Usage Check Period</SelectLabel>
+          {options.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectGroup>
+      </SelectContent>
+    </Select>
+  );
+};
+
 export const GraphPruningLintConfig = ({
   data,
   refetch,
@@ -142,9 +138,11 @@ export const GraphPruningLintConfig = ({
   data: GetNamespaceGraphPruningConfigResponse;
   refetch: () => void;
 }) => {
+  const user = useUser();
   const router = useRouter();
   const namespace = router.query.namespace as string;
   const feature = useFeature("field-grace-period");
+  const plan = user?.currentOrganization?.billing?.plan;
 
   const { mutate: configureGraphPruningRules, isPending: isConfiguring } =
     useMutation(configureNamespaceGraphPruningConfig);
@@ -230,11 +228,22 @@ export const GraphPruningLintConfig = ({
                   >
                     Learn more
                   </Link>
-                  <p>
-                    Note: The grace period is the time given to fields after
-                    they are added or updated. During this period, the fields
-                    are not checked for graph pruning issues.
-                  </p>
+                  <ul>
+                    <li>
+                      Grace Period: The time given to fields after they are
+                      added or updated. During this period, the fields are not
+                      checked for graph pruning issues.{" "}
+                    </li>
+                    <li>
+                      Schema Usage Check Period: The time period for which the
+                      schema usage of the field is checked.{" "}
+                      {`${
+                        plan !== "enterprise"
+                          ? "Only available on the enterprise plan."
+                          : ""
+                      }`}
+                    </li>
+                  </ul>
                 </CardDescription>
               </div>
               <Button
@@ -335,28 +344,56 @@ export const GraphPruningLintConfig = ({
                     <div></div>
 
                     <div className="ml-8 flex gap-x-3 md:ml-0">
-                      <GracePeriodDropdown
-                        onChange={(value) => {
-                          setSelectedPruneRules(
-                            selectedPruneRules.map((l) => {
-                              if (l.ruleName === rule.name) {
-                                return {
-                                  ...l,
-                                  gracePeriod: parseInt(value),
-                                } as GraphPruningConfig;
-                              } else {
-                                return l;
-                              }
-                            }),
-                          );
-                        }}
-                        value={
-                          selectedPruneRules
-                            .find((l) => l.ruleName === rule.name)
-                            ?.gracePeriod.toString() || "7"
-                        }
-                        disabled={!data.graphPrunerEnabled}
-                      />
+                      {rule.name !== "FORCE_DEPRECATION_BEFORE_DELETION" && (
+                        <>
+                          <SchemaUsageCheckPeriodDropdown
+                            onChange={(value) => {
+                              setSelectedPruneRules(
+                                selectedPruneRules.map((l) => {
+                                  if (l.ruleName === rule.name) {
+                                    return {
+                                      ...l,
+                                      schemaUsageCheckPeriod: parseInt(value),
+                                    } as GraphPruningConfig;
+                                  } else {
+                                    return l;
+                                  }
+                                }),
+                              );
+                            }}
+                            value={
+                              selectedPruneRules
+                                .find((l) => l.ruleName === rule.name)
+                                ?.schemaUsageCheckPeriod?.toString() || "7"
+                            }
+                            disabled={
+                              !data.graphPrunerEnabled || plan !== "enterprise"
+                            }
+                          />
+                          <GracePeriodDropdown
+                            onChange={(value) => {
+                              setSelectedPruneRules(
+                                selectedPruneRules.map((l) => {
+                                  if (l.ruleName === rule.name) {
+                                    return {
+                                      ...l,
+                                      gracePeriod: parseInt(value),
+                                    } as GraphPruningConfig;
+                                  } else {
+                                    return l;
+                                  }
+                                }),
+                              );
+                            }}
+                            value={
+                              selectedPruneRules
+                                .find((l) => l.ruleName === rule.name)
+                                ?.gracePeriod.toString() || "7"
+                            }
+                            disabled={!data.graphPrunerEnabled}
+                          />
+                        </>
+                      )}
                       <SeverityDropdown
                         value={
                           selectedPruneRules.find(

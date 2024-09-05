@@ -475,6 +475,8 @@ message GetCheckSummaryResponse {
   int32 traffic_check_days = 8;
   repeated LintIssue lintIssues = 9;
   repeated GraphPruningIssue graphPruningIssues = 10;
+  bool isLintingEnabled = 11;
+  bool isGraphPruningEnabled = 12;
 }
 
 message GetCheckOperationsRequest {
@@ -2012,6 +2014,7 @@ message GraphPruningConfig {
   LintSeverity severityLevel = 2;
   // grace period in days
   int32 gracePeriod = 3;
+  optional int32 schemaUsageCheckPeriod = 4; // in days
 }
 
 message ConfigureNamespaceGraphPruningConfigRequest {

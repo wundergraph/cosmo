@@ -3677,6 +3677,16 @@ export class GetCheckSummaryResponse extends Message<GetCheckSummaryResponse> {
    */
   graphPruningIssues: GraphPruningIssue[] = [];
 
+  /**
+   * @generated from field: bool isLintingEnabled = 11;
+   */
+  isLintingEnabled = false;
+
+  /**
+   * @generated from field: bool isGraphPruningEnabled = 12;
+   */
+  isGraphPruningEnabled = false;
+
   constructor(data?: PartialMessage<GetCheckSummaryResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3694,6 +3704,8 @@ export class GetCheckSummaryResponse extends Message<GetCheckSummaryResponse> {
     { no: 8, name: "traffic_check_days", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 9, name: "lintIssues", kind: "message", T: LintIssue, repeated: true },
     { no: 10, name: "graphPruningIssues", kind: "message", T: GraphPruningIssue, repeated: true },
+    { no: 11, name: "isLintingEnabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 12, name: "isGraphPruningEnabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckSummaryResponse {
@@ -15805,6 +15817,13 @@ export class GraphPruningConfig extends Message<GraphPruningConfig> {
    */
   gracePeriod = 0;
 
+  /**
+   * in days
+   *
+   * @generated from field: optional int32 schemaUsageCheckPeriod = 4;
+   */
+  schemaUsageCheckPeriod?: number;
+
   constructor(data?: PartialMessage<GraphPruningConfig>) {
     super();
     proto3.util.initPartial(data, this);
@@ -15816,6 +15835,7 @@ export class GraphPruningConfig extends Message<GraphPruningConfig> {
     { no: 1, name: "ruleName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "severityLevel", kind: "enum", T: proto3.getEnumType(LintSeverity) },
     { no: 3, name: "gracePeriod", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 4, name: "schemaUsageCheckPeriod", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GraphPruningConfig {

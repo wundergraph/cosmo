@@ -15,6 +15,7 @@ export class SchemaGraphPruningRepository {
         graphPruningRule: namespaceGraphPruningCheckConfig.graphPruningRule,
         severityLevel: namespaceGraphPruningCheckConfig.severityLevel,
         gracePeriod: namespaceGraphPruningCheckConfig.gracePeriod,
+        schemaUsageCheckPeriod: namespaceGraphPruningCheckConfig.schemaUsageCheckPeriod,
       })
       .from(namespaceGraphPruningCheckConfig)
       .where(eq(namespaceGraphPruningCheckConfig.namespaceId, namespaceId))
@@ -25,6 +26,7 @@ export class SchemaGraphPruningRepository {
         ruleName: l.graphPruningRule as GraphPruningRuleEnum,
         severity: l.severityLevel as LintSeverityLevel,
         gracePeriod: l.gracePeriod,
+        schemaUsageCheckPeriod: l.schemaUsageCheckPeriod,
       } as SchemaGraphPruningDTO;
     });
   }
@@ -49,6 +51,7 @@ export class SchemaGraphPruningRepository {
             severityLevel:
               l.severityLevel === LintSeverity.error ? ('error' as LintSeverityLevel) : ('warn' as LintSeverityLevel),
             gracePeriod: l.gracePeriod,
+            schemaUsageCheckPeriod: l.schemaUsageCheckPeriod,
           };
         }),
       );
