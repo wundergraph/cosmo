@@ -175,7 +175,7 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
             error.federatedGraphName,
             error.fieldPath,
             error.message,
-            error.issueLocation?.line,
+            error.issueLocation?.line || '-',
           ]);
         }
         for (const warning of resp.graphPruneWarnings) {
@@ -184,7 +184,7 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
             warning.federatedGraphName,
             warning.fieldPath,
             warning.message,
-            warning.issueLocation?.line,
+            warning.issueLocation?.line || '-',
           ]);
         }
         console.log(graphPruningIssuesTable.toString());

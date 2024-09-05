@@ -687,6 +687,13 @@
       "when": 1725274911176,
       "tag": "0097_fast_iceman",
       "breakpoints": true
+    },
+    {
+      "idx": 98,
+      "version": "7",
+      "when": 1725532036137,
+      "tag": "0098_slim_omega_sentinel",
+      "breakpoints": true
     }
   ]
 }

@@ -2347,6 +2347,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                   change.changeType === 'FIELD_ARGUMENT_REMOVED' ||
                   change.changeType === 'FIELD_DEPRECATION_ADDED',
               ),
+              removedFields: schemaChanges.changes.filter(
+                (change) => change.changeType === 'FIELD_REMOVED' || change.changeType === 'INPUT_FIELD_REMOVED',
+              ),
               organizationId: authContext.organizationId,
               rangeInDays: limit,
             });
@@ -9125,6 +9128,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const schemaCheckRepo = new SchemaCheckRepository(opts.db);
         const schemaLintRepo = new SchemaLintRepository(opts.db);
         const schemaGraphPruningRepo = new SchemaGraphPruningRepository(opts.db);
+        const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+
+        const namespace = await namespaceRepo.byName(req.namespace);
+        if (!namespace) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Namespace '${req.namespace}' not found`,
+            },
+            compositionErrors: [],
+            changes: [],
+            affectedGraphs: [],
+            trafficCheckDays: 0,
+            lintIssues: [],
+            graphPruningIssues: [],
+            isGraphPruningEnabled: false,
+            isLintingEnabled: false,
+          };
+        }
 
         const graph = await fedGraphRepo.byName(req.graphName, req.namespace);
 
@@ -9140,6 +9162,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             trafficCheckDays: 0,
             lintIssues: [],
             graphPruningIssues: [],
+            isGraphPruningEnabled: false,
+            isLintingEnabled: false,
           };
         }
 
@@ -9158,6 +9182,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             trafficCheckDays: 0,
             lintIssues: [],
             graphPruningIssues: [],
+            isGraphPruningEnabled: false,
+            isLintingEnabled: false,
           };
         }
 
@@ -9181,6 +9207,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           trafficCheckDays,
           lintIssues,
           graphPruningIssues,
+          isGraphPruningEnabled: namespace.enableGraphPruning,
+          isLintingEnabled: namespace.enableLinting,
         };
       });
     },

@@ -1,0 +1,2 @@
+ALTER TYPE "graph_pruning_rules" ADD VALUE 'FORCE_DEPRECATION_BEFORE_DELETION';--> statement-breakpoint
+ALTER TABLE "namespace_graph_pruning_check_config" ADD COLUMN "scheme_usage_check_period" integer;

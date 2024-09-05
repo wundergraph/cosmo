@@ -1526,7 +1526,11 @@ export const namespaceLintCheckConfigRelations = relations(namespaceLintCheckCon
   namespace: one(namespaces),
 }));
 
-export const graphPruningRulesEnum = pgEnum('graph_pruning_rules', ['UNUSED_FIELDS', 'DEPRECATED_FIELDS'] as const);
+export const graphPruningRulesEnum = pgEnum('graph_pruning_rules', [
+  'UNUSED_FIELDS',
+  'DEPRECATED_FIELDS',
+  'FORCE_DEPRECATION_BEFORE_DELETION',
+] as const);
 
 export const namespaceGraphPruningCheckConfig = pgTable('namespace_graph_pruning_check_config', {
   id: uuid('id').notNull().primaryKey().defaultRandom(),
@@ -1538,6 +1542,7 @@ export const namespaceGraphPruningCheckConfig = pgTable('namespace_graph_pruning
   graphPruningRule: graphPruningRulesEnum('graph_pruning_rule').notNull(),
   severityLevel: lintSeverityEnum('severity_level').notNull(),
   gracePeriod: integer('grace_period').notNull(),
+  schemaUsageCheckPeriod: integer('scheme_usage_check_period'), // in days
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 

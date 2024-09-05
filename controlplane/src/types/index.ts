@@ -584,6 +584,7 @@ type GraphPruningRuleType = Record<GraphPruningRuleEnum, GraphPruningRuleEnum>;
 export const GraphPruningRules: GraphPruningRuleType = {
   UNUSED_FIELDS: 'UNUSED_FIELDS',
   DEPRECATED_FIELDS: 'DEPRECATED_FIELDS',
+  FORCE_DEPRECATION_BEFORE_DELETION: 'FORCE_DEPRECATION_BEFORE_DELETION',
 };
 
 export interface SchemaGraphPruningDTO {
@@ -591,6 +592,7 @@ export interface SchemaGraphPruningDTO {
   ruleName: GraphPruningRuleEnum;
   // grace period in days
   gracePeriod: number;
+  schemaUsageCheckPeriod: number; // in days
 }
 
 export interface GraphPruningIssueResult {

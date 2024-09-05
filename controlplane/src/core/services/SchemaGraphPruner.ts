@@ -13,6 +13,7 @@ import { SchemaDiff } from '../composition/schemaCheck.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
 import { UsageRepository } from '../repositories/analytics/UsageRepository.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
+import { buildSchema } from '../composition/composition.js';
 
 export default class SchemaGraphPruner {
   constructor(
@@ -22,10 +23,11 @@ export default class SchemaGraphPruner {
     private schema: GraphQLSchema,
   ) {}
 
-  getAllFields = ({ onlyDeprecated }: { onlyDeprecated?: boolean }): Field[] => {
+  getAllFields = ({ schema, onlyDeprecated }: { schema?: GraphQLSchema; onlyDeprecated?: boolean }): Field[] => {
     const fields: Field[] = [];
+    const schemaToBeUsed = schema || this.schema;
 
-    const types = this.schema.getTypeMap();
+    const types = schemaToBeUsed.getTypeMap();
 
     for (const typeName in types) {
       const type = types[typeName];
@@ -191,12 +193,71 @@ export default class SchemaGraphPruner {
     return graphPruningIssues;
   };
 
+  fetchNonDeprecatedDeletedFields = ({
+    federatedGraphs,
+    severityLevel,
+    removedFields,
+    oldSchema,
+  }: {
+    federatedGraphs: FederatedGraphDTO[];
+    severityLevel: LintSeverityLevel;
+    removedFields: SchemaDiff[];
+    oldSchema: string;
+  }): GraphPruningIssueResult[] => {
+    let oldGraphQLSchema: GraphQLSchema | undefined;
+
+    try {
+      const { errors, normalizationResult } = buildSchema(oldSchema, false);
+      if (errors && errors.length > 0) {
+        oldGraphQLSchema = undefined;
+      }
+      if (normalizationResult?.schema) {
+        oldGraphQLSchema = normalizationResult.schema;
+      }
+    } catch {
+      oldGraphQLSchema = undefined;
+    }
+
+    const allDeprecatedFields = this.getAllFields({ schema: oldGraphQLSchema, onlyDeprecated: true });
+    const nonDeprecatedDeletedFields: SchemaDiff[] = [];
+    const graphPruningIssues: GraphPruningIssueResult[] = [];
+
+    for (const removedField of removedFields) {
+      if (!allDeprecatedFields.some((field) => field.path === removedField.path)) {
+        nonDeprecatedDeletedFields.push(removedField);
+      }
+    }
+
+    for (const federatedGraph of federatedGraphs) {
+      for (const field of nonDeprecatedDeletedFields) {
+        const [typeName, name] = field.path.split('.');
+        graphPruningIssues.push({
+          graphPruningRuleType: 'FORCE_DEPRECATION_BEFORE_DELETION',
+          severity: severityLevel === 'error' ? LintSeverity.error : LintSeverity.warn,
+          fieldPath: field.path,
+          message: `Field ${name} of type ${typeName} was removed without being deprecated first.`,
+          issueLocation: {
+            line: 0,
+            column: 0,
+            endLine: 0,
+            endColumn: 0,
+          },
+          federatedGraphId: federatedGraph.id,
+          federatedGraphName: federatedGraph.name,
+        });
+      }
+    }
+
+    return graphPruningIssues;
+  };
+
   schemaGraphPruneCheck = async ({
     subgraph,
     graphPruningConfigs,
     organizationId,
     rangeInDays,
     updatedFields,
+    removedFields,
   }: {
     subgraph: SubgraphDTO;
     graphPruningConfigs: SchemaGraphPruningDTO[];
@@ -204,6 +265,7 @@ export default class SchemaGraphPruner {
     rangeInDays: number;
     // fields that were added/updated in the proposed schema passed to the check command
     updatedFields: SchemaDiff[];
+    removedFields: SchemaDiff[];
   }): Promise<SchemaGraphPruningIssues> => {
     const graphPruneWarnings: GraphPruningIssueResult[] = [];
     const graphPruneErrors: GraphPruningIssueResult[] = [];
@@ -215,39 +277,65 @@ export default class SchemaGraphPruner {
     });
 
     for (const graphPruningConfig of graphPruningConfigs) {
-      const { ruleName, severity } = graphPruningConfig;
+      const { ruleName, severity, schemaUsageCheckPeriod } = graphPruningConfig;
 
-      if (ruleName === 'UNUSED_FIELDS') {
-        const unusedFields = await this.fetchUnusedFields({
-          subgraphId: subgraph.id,
-          namespaceId: subgraph.namespaceId,
-          organizationId,
-          federatedGraphs,
-          rangeInDays,
-          addedFields: updatedFields.filter((field) => field.changeType !== 'FIELD_DEPRECATION_ADDED'),
-          severityLevel: severity,
-        });
+      switch (ruleName) {
+        case 'UNUSED_FIELDS': {
+          const unusedFields = await this.fetchUnusedFields({
+            subgraphId: subgraph.id,
+            namespaceId: subgraph.namespaceId,
+            organizationId,
+            federatedGraphs,
+            rangeInDays: schemaUsageCheckPeriod || rangeInDays,
+            addedFields: updatedFields.filter((field) => field.changeType !== 'FIELD_DEPRECATION_ADDED'),
+            severityLevel: severity,
+          });
 
-        if (severity === 'error') {
-          graphPruneErrors.push(...unusedFields);
-        } else {
-          graphPruneWarnings.push(...unusedFields);
+          if (severity === 'error') {
+            graphPruneErrors.push(...unusedFields);
+          } else {
+            graphPruneWarnings.push(...unusedFields);
+          }
+
+          break;
         }
-      } else if (ruleName === 'DEPRECATED_FIELDS') {
-        const deprecatedFields = await this.fetchDeprecatedFields({
-          subgraphId: subgraph.id,
-          namespaceId: subgraph.namespaceId,
-          organizationId,
-          federatedGraphs,
-          rangeInDays,
-          severityLevel: severity,
-          addedDeprecatedFields: updatedFields.filter((field) => field.changeType === 'FIELD_DEPRECATION_ADDED'),
-        });
+        case 'DEPRECATED_FIELDS': {
+          const deprecatedFields = await this.fetchDeprecatedFields({
+            subgraphId: subgraph.id,
+            namespaceId: subgraph.namespaceId,
+            organizationId,
+            federatedGraphs,
+            rangeInDays: schemaUsageCheckPeriod || rangeInDays,
+            severityLevel: severity,
+            addedDeprecatedFields: updatedFields.filter((field) => field.changeType === 'FIELD_DEPRECATION_ADDED'),
+          });
 
-        if (severity === 'error') {
-          graphPruneErrors.push(...deprecatedFields);
-        } else {
-          graphPruneWarnings.push(...deprecatedFields);
+          if (severity === 'error') {
+            graphPruneErrors.push(...deprecatedFields);
+          } else {
+            graphPruneWarnings.push(...deprecatedFields);
+          }
+
+          break;
+        }
+        case 'FORCE_DEPRECATION_BEFORE_DELETION': {
+          const nonDeprecatedDeletedFields = this.fetchNonDeprecatedDeletedFields({
+            oldSchema: subgraph.schemaSDL,
+            federatedGraphs,
+            severityLevel: severity,
+            removedFields,
+          });
+
+          if (severity === 'error') {
+            graphPruneErrors.push(...nonDeprecatedDeletedFields);
+          } else {
+            graphPruneWarnings.push(...nonDeprecatedDeletedFields);
+          }
+
+          break;
+        }
+        default: {
+          throw new Error(`Unknown graph pruning rule: ${ruleName}`);
         }
       }
     }
