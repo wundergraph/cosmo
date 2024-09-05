@@ -4,10 +4,12 @@ import (
 	"context"
 	"net/http"
 	"net/url"
+	"strconv"
 	"sync"
 	"time"
 
 	graphqlmetrics "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"go.opentelemetry.io/otel/attribute"
 
@@ -373,6 +375,29 @@ type operationContext struct {
 	typeFieldUsageInfo []*graphqlmetrics.TypeFieldUsageInfo
 	argumentUsageInfo  []*graphqlmetrics.ArgumentUsageInfo
 	inputUsageInfo     []*graphqlmetrics.InputUsageInfo
+
+	attributes []attribute.KeyValue
+}
+
+func (o *operationContext) setAttributes() {
+	numberOfAttributes := 6
+	if o.persistedID != "" {
+		numberOfAttributes += 1
+	}
+	o.attributes = make([]attribute.KeyValue, numberOfAttributes)
+	o.attributes[0] = otel.WgClientName.String(o.clientInfo.Name)
+	o.attributes[1] = otel.WgClientVersion.String(o.clientInfo.Version)
+	o.attributes[2] = otel.WgOperationName.String(o.Name())
+	o.attributes[3] = otel.WgOperationType.String(o.Type())
+	o.attributes[4] = otel.WgOperationProtocol.String(o.Protocol().String())
+	o.attributes[5] = otel.WgOperationHash.String(strconv.FormatUint(o.Hash(), 10))
+	if o.persistedID != "" {
+		o.attributes[6] = otel.WgOperationPersistedID.String(o.PersistedID())
+	}
+}
+
+func (o *operationContext) Attributes() []attribute.KeyValue {
+	return o.attributes
 }
 
 func (o *operationContext) Variables() []byte {
