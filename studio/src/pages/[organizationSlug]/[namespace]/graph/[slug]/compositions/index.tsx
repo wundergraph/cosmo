@@ -34,11 +34,11 @@ import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { formatDateTime } from "@/lib/format-date";
 import { createDateRange } from "@/lib/insights-helpers";
 import { NextPageWithLayout } from "@/lib/page";
+import { cn } from "@/lib/utils";
 import { useQuery } from "@connectrpc/connect-query";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getCompositions } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { FeatureFlagComposition, GraphComposition } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatDistanceToNow, formatISO } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -69,7 +69,7 @@ const CompositionsPage: NextPageWithLayout = () => {
       offset: (pageNumber - 1) * limit,
       startDate: formatISO(startDate),
       endDate: formatISO(endDate),
-      excludeFeatureFlagCompositions: true
+      excludeFeatureFlagCompositions: true,
     },
     {
       placeholderData: (prev) => prev,
@@ -104,7 +104,8 @@ const CompositionsPage: NextPageWithLayout = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Id</TableHead>
-              <TableHead>Triggered By</TableHead>
+              <TableHead>Triggered By Subgraph</TableHead>
+              <TableHead>Actor</TableHead>
               <TableHead className="flex items-center space-x-1">
                 <div>Admission</div>
                 <div>
@@ -130,6 +131,8 @@ const CompositionsPage: NextPageWithLayout = () => {
                   admissionError,
                   routerConfigSignature,
                   deploymentError,
+                  hasMultipleChangedSubgraphs,
+                  triggeredBySubgraphName,
                 }) => {
                   const path = `${router.asPath.split("?")[0]}/${id}`;
                   return (
@@ -159,6 +162,15 @@ const CompositionsPage: NextPageWithLayout = () => {
                             </TooltipContent>
                           </Tooltip>
                         </div>
+                      </TableCell>
+                      <TableCell
+                        className={cn({
+                          italic: hasMultipleChangedSubgraphs,
+                        })}
+                      >
+                        {hasMultipleChangedSubgraphs
+                          ? "Multiple Subgraphs"
+                          : triggeredBySubgraphName}
                       </TableCell>
                       <TableCell>{createdBy}</TableCell>
                       <TableCell>

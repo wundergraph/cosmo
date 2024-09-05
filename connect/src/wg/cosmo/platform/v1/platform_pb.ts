@@ -12192,6 +12192,16 @@ export class GraphComposition extends Message<GraphComposition> {
    */
   deploymentError?: string;
 
+  /**
+   * @generated from field: optional bool hasMultipleChangedSubgraphs = 11;
+   */
+  hasMultipleChangedSubgraphs?: boolean;
+
+  /**
+   * @generated from field: optional string triggeredBySubgraphName = 12;
+   */
+  triggeredBySubgraphName?: string;
+
   constructor(data?: PartialMessage<GraphComposition>) {
     super();
     proto3.util.initPartial(data, this);
@@ -12210,6 +12220,8 @@ export class GraphComposition extends Message<GraphComposition> {
     { no: 8, name: "routerConfigSignature", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 9, name: "admissionError", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 10, name: "deploymentError", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 11, name: "hasMultipleChangedSubgraphs", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 12, name: "triggeredBySubgraphName", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GraphComposition {
@@ -12258,6 +12270,11 @@ export class GraphCompositionSubgraph extends Message<GraphCompositionSubgraph> 
    */
   isFeatureSubgraph = false;
 
+  /**
+   * @generated from field: string changeType = 6;
+   */
+  changeType = "";
+
   constructor(data?: PartialMessage<GraphCompositionSubgraph>) {
     super();
     proto3.util.initPartial(data, this);
@@ -12271,6 +12288,7 @@ export class GraphCompositionSubgraph extends Message<GraphCompositionSubgraph> 
     { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "target_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "isFeatureSubgraph", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 6, name: "changeType", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GraphCompositionSubgraph {

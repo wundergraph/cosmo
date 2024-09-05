@@ -540,11 +540,13 @@ export const namespacesRelations = relations(namespaces, ({ many }) => ({
   targets: many(targets),
 }));
 
+// Do not cascade delete on deletion of target. The registry should be untouched unless organization is deleted.
 export const schemaVersion = pgTable('schema_versions', {
   id: uuid('id').primaryKey().defaultRandom(),
-  targetId: uuid('target_id')
+  targetId: uuid('target_id').notNull(),
+  organizationId: uuid('organization_id')
     .notNull()
-    .references(() => targets.id, {
+    .references(() => organizations.id, {
       onDelete: 'cascade',
     }),
   // The actual schema definition of the graph. For GraphQL, this is the SDL.
@@ -1365,7 +1367,14 @@ export const graphCompositions = pgTable('graph_compositions', {
   isFeatureFlagComposition: boolean('is_feature_flag_composition').default(false).notNull(),
 });
 
-// stores the relation between the fedGraph schema versions and its respective subgraph schema versions
+export const graphCompositionSubgraphChangeTypeEnum = pgEnum('graph_composition_subgraph_change_type', [
+  'added',
+  'removed',
+  'updated',
+  'unchanged',
+] as const);
+
+// Store some data about subgraph redundantly in case a subgraph is deleted
 export const graphCompositionSubgraphs = pgTable('graph_composition_subgraphs', {
   id: uuid('id').notNull().primaryKey().defaultRandom(),
   graphCompositionId: uuid('graph_composition_id')
@@ -1373,11 +1382,16 @@ export const graphCompositionSubgraphs = pgTable('graph_composition_subgraphs', 
     .references(() => graphCompositions.id, {
       onDelete: 'cascade',
     }),
+  subgraphId: uuid('subgraph_id').notNull(),
+  subgraphTargetId: uuid('subgraph_target_id').notNull(),
+  subgraphName: text('subgraph_name').notNull(),
   schemaVersionId: uuid('schema_version_id')
     .notNull()
     .references(() => schemaVersion.id, {
       onDelete: 'cascade',
     }),
+  changeType: graphCompositionSubgraphChangeTypeEnum('change_type').notNull().default('unchanged'),
+  isFeatureSubgraph: boolean('is_feature_subgraph').default(false).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
