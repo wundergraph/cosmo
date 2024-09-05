@@ -318,6 +318,9 @@ services:
       GRAPHQL_METRICS_COLLECTOR_ENDPOINT: http://graphqlmetrics:4005
       GRAPH_API_TOKEN: ${ROUTER_TOKEN}
       CDN_URL: http://cdn:11000
+      HTTPS_PROXY: ${HTTPS_PROXY}
+      HTTP_PROXY: ${HTTP_PROXY}
+      NO_PROXY: ${NO_PROXY}
     restart: on-failure
     volumes:
       # Mount the example config from the repo into the working dir of the router binary location
@@ -397,6 +400,27 @@ services:
     profiles:
       - default
     restart: on-failure
+
+  # Use this to intercept request e.g. from the router by setting the HTTP(S)_PROXY env var to http://mitmproxy:9051.
+  # docker compose -f docker-compose.full.yml --profile proxy up -d mitmproxy
+  mitmproxy:
+    image: mitmproxy/mitmproxy:latest
+    command:
+      - mitmweb
+      - --web-host
+      - 0.0.0.0
+      - --web-port
+      - '8081'
+      - --mode
+      - regular@8080
+    restart: on-failure
+    profiles:
+      - proxy
+    networks:
+      - primary
+    ports:
+      - '9051:8080' # proxy
+      - '9050:8081' # web interface
 
 # This network is shared between this file and docker-compose.yml to
 # allow the demo subgraphs to communicate with the rest of the infra-networks:
