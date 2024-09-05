@@ -82,6 +82,7 @@ type (
 		modules           []Module
 		WebsocketStats    WebSocketsStatistics
 		playgroundHandler func(http.Handler) http.Handler
+		proxy             ProxyFunc
 	}
 
 	SubgraphTransportOptions struct {
@@ -482,7 +483,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 
 // newGraphServer creates a new server.
 func (r *Router) newServer(ctx context.Context, cfg *nodev1.RouterConfig) error {
-	server, err := newGraphServer(ctx, r, cfg)
+	server, err := newGraphServer(ctx, r, cfg, r.proxy)
 	if err != nil {
 		r.logger.Error("Failed to create graph server. Keeping the old server", zap.Error(err))
 		return err
@@ -1413,6 +1414,12 @@ func WithHealthChecks(healthChecks health.Checker) Option {
 	}
 }
 
+func WithProxy(proxy ProxyFunc) Option {
+	return func(r *Router) {
+		r.proxy = proxy
+	}
+}
+
 func WithReadinessCheckPath(path string) Option {
 	return func(r *Router) {
 		r.readinessCheckPath = path
@@ -1635,7 +1642,9 @@ func WithStorageProviders(cfg config.StorageProviders) Option {
 	}
 }
 
-func newHTTPTransport(opts *SubgraphTransportOptions) *http.Transport {
+type ProxyFunc func(req *http.Request) (*url.URL, error)
+
+func newHTTPTransport(opts *SubgraphTransportOptions, proxy ProxyFunc) *http.Transport {
 	dialer := &net.Dialer{
 		Timeout:   opts.DialTimeout,
 		KeepAlive: opts.KeepAliveProbeInterval,
@@ -1663,7 +1672,7 @@ func newHTTPTransport(opts *SubgraphTransportOptions) *http.Transport {
 		ExpectContinueTimeout: opts.ExpectContinueTimeout,
 		// Will return nil when HTTP(S)_PROXY does not exist or is empty.
 		// This will prevent the transport from handling the proxy when it is not needed.
-		Proxy: http.ProxyFromEnvironment,
+		Proxy: proxy,
 	}
 }
 
