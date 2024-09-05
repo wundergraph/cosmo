@@ -89,7 +89,7 @@ type (
 )
 
 // newGraphServer creates a new server instance.
-func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterConfig) (*graphServer, error) {
+func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterConfig, proxy ProxyFunc) (*graphServer, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	s := &graphServer{
 		context:                 ctx,
@@ -97,7 +97,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		Config:                  &r.Config,
 		websocketStats:          r.WebsocketStats,
 		metricStore:             rmetric.NewNoopMetrics(),
-		executionTransport:      newHTTPTransport(r.subgraphTransportOptions),
+		executionTransport:      newHTTPTransport(r.subgraphTransportOptions, proxy),
 		playgroundHandler:       r.playgroundHandler,
 		baseRouterConfigVersion: routerConfig.GetVersion(),
 		inFlightRequests:        &atomic.Uint64{},
