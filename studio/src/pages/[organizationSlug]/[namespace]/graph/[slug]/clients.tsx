@@ -100,6 +100,7 @@ import { useContext, useState } from "react";
 import { BiAnalyse } from "react-icons/bi";
 import { IoBarcodeSharp } from "react-icons/io5";
 import { z } from "zod";
+import { useUser } from "@/hooks/use-user";
 
 const getSnippets = ({
   clientName,
@@ -490,6 +491,7 @@ const FormSchema = z.object({
 type Input = z.infer<typeof FormSchema>;
 
 const CreateClient = ({ refresh }: { refresh: () => void }) => {
+  const user = useUser();
   const router = useRouter();
   const namespace = router.query.namespace as string;
   const slug = router.query.slug as string;
@@ -534,7 +536,14 @@ const CreateClient = ({ refresh }: { refresh: () => void }) => {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button>
+        <Button
+          disabled={
+            !checkUserAccess({
+              rolesToBe: ["admin", "developer"],
+              userRoles: user?.currentOrganization.roles || [],
+            })
+          }
+        >
           <PlusIcon className="mr-2" />
           Create Client
         </Button>

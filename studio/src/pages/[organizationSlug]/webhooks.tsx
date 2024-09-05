@@ -166,6 +166,7 @@ const Webhook = ({
     events: string[];
   };
 }) => {
+  const user = useContext(UserContext);
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
 
@@ -288,6 +289,10 @@ const Webhook = ({
         <Button
           variant={mode === "create" ? "default" : "secondary"}
           size={mode === "create" ? "default" : "icon"}
+          disabled={!checkUserAccess({
+            rolesToBe: ["admin", "developer"],
+            userRoles: user?.currentOrganization.roles || [],
+          })}
         >
           {mode === "create" ? (
             <>
@@ -507,12 +512,7 @@ const WebhooksPage: NextPageWithLayout = () => {
             </a>
           </>
         }
-        actions={
-          checkUserAccess({
-            rolesToBe: ["admin", "developer"],
-            userRoles: user?.currentOrganization.roles || [],
-          }) && <Webhook mode="create" refresh={() => refetch()} />
-        }
+        actions={<Webhook mode="create" refresh={() => refetch()} />}
       />
     );
   }

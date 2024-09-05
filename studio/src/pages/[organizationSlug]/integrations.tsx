@@ -587,28 +587,38 @@ const IntegrationsPage: NextPageWithLayout = () => {
           </>
         }
         actions={
-          checkUserAccess({
-            rolesToBe: ["admin", "developer"],
-            userRoles: user?.currentOrganization.roles || [],
-          }) && (
-            <>
-              <Button variant="default" size="default" asChild>
-                <Link
-                  href={`https://slack.com/oauth/v2/authorize?scope=incoming-webhook%2Cchat%3Awrite&user_scope=&redirect_uri=${slackRedirectURL}&client_id=${process.env.NEXT_PUBLIC_SLACK_CLIENT_ID}`}
-                >
-                  Integrate
-                </Link>
-              </Button>
-              {shouldCreate && (
-                <Integration
-                  mode="create"
-                  refresh={() => refetch()}
-                  open={true}
-                  code={code}
-                />
-              )}
-            </>
-          )
+          <>
+            <Button
+              variant="default"
+              size="default"
+              asChild={
+                checkUserAccess({
+                  rolesToBe: ["admin", "developer"],
+                  userRoles: user?.currentOrganization.roles || [],
+                })
+              }
+              disabled={
+                !checkUserAccess({
+                  rolesToBe: ["admin", "developer"],
+                  userRoles: user?.currentOrganization.roles || [],
+                })
+              }
+            >
+              <Link
+                href={`https://slack.com/oauth/v2/authorize?scope=incoming-webhook%2Cchat%3Awrite&user_scope=&redirect_uri=${slackRedirectURL}&client_id=${process.env.NEXT_PUBLIC_SLACK_CLIENT_ID}`}
+              >
+                Integrate
+              </Link>
+            </Button>
+            {shouldCreate && (
+              <Integration
+                mode="create"
+                refresh={() => refetch()}
+                open={true}
+                code={code}
+              />
+            )}
+          </>
         }
       />
     );
