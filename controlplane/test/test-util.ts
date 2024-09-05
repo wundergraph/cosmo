@@ -78,6 +78,7 @@ export const SetupTest = async function ({
   if (enableMultiUsers) {
     users.adminBobCompanyA = createTestContext('company-a', companyAOrganizationId);
     users.devJoeCompanyA = createTestContext('company-a', companyAOrganizationId, false, true, ['developer']);
+    users.viewerTimCompanyA = createTestContext('company-a', companyAOrganizationId, false, true, ['viewer']);
     users.adminJimCompanyB = createTestContext('company-b', randomUUID());
   }
 
@@ -200,6 +201,40 @@ export const SetupTest = async function ({
       });
       users.adminBobCompanyA.userId = id;
       await seedTest(queryConnection, users.adminBobCompanyA, createScimKey);
+    }
+    if (users.devJoeCompanyA) {
+      const id = await addKeycloakUser({
+        keycloakClient,
+        realmName: realm,
+        userTestData: {
+          userId: users.devJoeCompanyA.userId,
+          organizationId: users.devJoeCompanyA.organizationId,
+          organizationName: users.devJoeCompanyA.organizationName,
+          organizationSlug: users.devJoeCompanyA.organizationSlug,
+          email: users.devJoeCompanyA.email,
+          apiKey: users.devJoeCompanyA.apiKey,
+          roles: ['developer'],
+        },
+      });
+      users.devJoeCompanyA.userId = id;
+      await seedTest(queryConnection, users.devJoeCompanyA);
+    }
+    if (users.viewerTimCompanyA) {
+      const id = await addKeycloakUser({
+        keycloakClient,
+        realmName: realm,
+        userTestData: {
+          userId: users.viewerTimCompanyA.userId,
+          organizationId: users.viewerTimCompanyA.organizationId,
+          organizationName: users.viewerTimCompanyA.organizationName,
+          organizationSlug: users.viewerTimCompanyA.organizationSlug,
+          email: users.viewerTimCompanyA.email,
+          apiKey: users.viewerTimCompanyA.apiKey,
+          roles: ['developer'],
+        },
+      });
+      users.viewerTimCompanyA.userId = id;
+      await seedTest(queryConnection, users.viewerTimCompanyA);
     }
     if (users.adminJimCompanyB) {
       const id = await addKeycloakUser({
