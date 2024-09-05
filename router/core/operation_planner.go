@@ -131,10 +131,10 @@ func (p *OperationPlanner) plan(operation *ParsedOperation, options PlanOptions)
 		normalizationCacheHit:      operation.NormalizationCacheHit,
 		executionOptions:           options.ExecutionOptions,
 	}
-
 	if operation.IsPersistedOperation {
 		opContext.persistedID = operation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
 	}
+	opContext.setAttributes()
 
 	// if we have tracing enabled or want to include a query plan in the response we always prepare a new plan
 	// this is because in case of tracing, we're writing trace data to the plan
