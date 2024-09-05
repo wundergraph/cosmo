@@ -6,6 +6,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"io"
 	"net"
 	"net/http"
@@ -345,6 +347,10 @@ func TestMTLS(t *testing.T) {
 					CertFile: "testdata/tls/cert.pem",
 				},
 			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.DebugLevel,
+			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			req, err := http.NewRequestWithContext(xEnv.Context, http.MethodPost, xEnv.RouterURL, strings.NewReader(`query { employees { id } }`))
 			require.NoError(t, err)
@@ -365,6 +371,11 @@ func TestMTLS(t *testing.T) {
 			require.ErrorAs(t, err, &netOpErr)
 
 			require.Error(t, netOpErr, "remote error: tls: certificate required")
+
+			clientAuthLogs := xEnv.Observer().FilterMessageSnippet("Client auth enabled").All()
+			require.Len(t, clientAuthLogs, 1)
+			providerIDFields := xEnv.Observer().FilterField(zap.String("mode", "RequireAndVerifyClientCert")).All()
+			require.Len(t, providerIDFields, 1)
 		})
 	})
 
