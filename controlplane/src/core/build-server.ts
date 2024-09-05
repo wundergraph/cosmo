@@ -92,6 +92,7 @@ export interface BuildConfig {
     region?: string;
     username?: string;
     password?: string;
+    forcePathStyle?: boolean;
   };
   mailer: {
     smtpEnabled: boolean;
@@ -353,7 +354,7 @@ export default async function build(opts: BuildConfig) {
     throw new Error('S3 storage URL is required');
   }
 
-  const bucketName = extractS3BucketName(opts.s3Storage.url);
+  const bucketName = extractS3BucketName(opts.s3Storage);
   const s3Config = createS3ClientConfig(bucketName, opts.s3Storage);
 
   const s3Client = new S3Client(s3Config);
