@@ -327,13 +327,7 @@ export class Composer {
           },
         });
       } catch (err: any) {
-        this.logger.debug(
-          {
-            error: err,
-            federatedGraphId,
-          },
-          'Failed to upload the final router config to the blob storage',
-        );
+        this.logger.error(err, `Failed to upload the final router config for ${federatedGraphId} to the blob storage`);
         deploymentError = new RouterConfigUploadError('Failed to upload the final router config to the CDN', err);
       }
     }

@@ -576,3 +576,12 @@ export interface SchemaLintIssues {
   warnings: LintIssueResult[];
   errors: LintIssueResult[];
 }
+
+export interface S3StorageOptions {
+  url: string;
+  region?: string;
+  endpoint?: string;
+  username?: string;
+  password?: string;
+  forcePathStyle?: boolean;
+}

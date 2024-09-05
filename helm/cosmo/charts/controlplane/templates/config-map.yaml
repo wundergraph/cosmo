@@ -40,4 +40,11 @@ data:
   prometheusHost: "{{ .Values.configuration.prometheus.host }}"
   prometheusPort: "{{ .Values.configuration.prometheus.port }}"
   prometheusPath: "{{ .Values.configuration.prometheus.path }}"
+  {{- end }}
+  s3Region: "{{ .Values.configuration.s3Region }}"
+  {{- if .Values.configuration.s3Endpoint }}
+  s3Endpoint: "{{ .Values.configuration.s3Endpoint }}"
+  {{ end }}
+  {{- if .Values.configuration.s3ForcePathStyle }}
+  s3ForcePathStyle: "{{ .Values.configuration.s3ForcePathStyle }}"
   {{ end }}

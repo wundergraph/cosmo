@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.108.0](https://github.com/wundergraph/cosmo/compare/router@0.107.4...router@0.108.0) (2024-09-05)
+
+### Features
+
+* enable using HTTP(S)_PROXY in router  ([#1136](https://github.com/wundergraph/cosmo/issues/1136)) ([4600fdf](https://github.com/wundergraph/cosmo/commit/4600fdff6ab57541a6119e4e51180ed4403363a6)) (@AndreasZeissner)
+
 ## [0.107.4](https://github.com/wundergraph/cosmo/compare/router@0.107.3...router@0.107.4) (2024-08-30)
 
 ### Bug Fixes
