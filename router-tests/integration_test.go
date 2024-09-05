@@ -7,6 +7,9 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
+	"net/http/httptest"
+	"net/http/httputil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -300,6 +303,34 @@ func TestAnonymousQuery(t *testing.T) {
 			Query: `{ employees { id } }`,
 		})
 		require.JSONEq(t, employeesIDData, res.Body)
+	})
+}
+
+func TestProxy(t *testing.T) {
+
+	fakeSubgraph := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"data":{"employees":[{"id":1234}]}}`))
+	}))
+
+	u, err := url.Parse(fakeSubgraph.URL)
+	require.NoError(t, err)
+
+	proxy := httptest.NewServer(httputil.NewSingleHostReverseProxy(u))
+	require.NoError(t, err)
+
+	testenv.Run(t, &testenv.Config{
+		RouterOptions: []core.Option{
+			core.WithProxy(func(req *http.Request) (*url.URL, error) {
+				return url.Parse(proxy.URL)
+			}),
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			Query: `{ employees { id } }`,
+		})
+		require.Equal(t, `{"data":{"employees":[{"id":1234}]}}`, res.Body)
 	})
 }
 
