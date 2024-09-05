@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.10.1](https://github.com/wundergraph/cosmo/compare/cdn@0.10.0...cdn@0.10.1) (2024-09-05)
+
+### Bug Fixes
+
+* cdn and controlplane not respecting nested subdomains ([#1145](https://github.com/wundergraph/cosmo/issues/1145)) ([1598d6e](https://github.com/wundergraph/cosmo/commit/1598d6e421cf3b51997050d006faf9655fd96fdd)) (@AndreasZeissner)
+
 # [0.10.0](https://github.com/wundergraph/cosmo/compare/cdn@0.9.1...cdn@0.10.0) (2024-09-03)
 
 ### Features

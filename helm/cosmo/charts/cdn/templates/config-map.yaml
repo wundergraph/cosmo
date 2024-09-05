@@ -14,3 +14,6 @@ data:
   {{- if .Values.configuration.s3Endpoint }}
   s3Endpoint: "{{ .Values.configuration.s3Endpoint }}"
   {{- end }}
+  {{- if .Values.configuration.s3ForcePathStyle }}
+  s3ForcePathStyle: "{{ .Values.configuration.s3ForcePathStyle }}"
+  {{ end }}
