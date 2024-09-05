@@ -77,7 +77,6 @@ describe('S3 Utils', () => {
     });
   });
 
-  // Section: Virtual-hosted-style URL tests without forced path style
   describe('createS3ClientConfig without forced path style', () => {
     test('that it correctly configures an S3 client for a virtual-hosted-style URL', () => {
       const opts = {
