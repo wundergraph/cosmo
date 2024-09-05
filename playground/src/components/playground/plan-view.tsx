@@ -1,12 +1,48 @@
+import { Bars3BottomLeftIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import Editor, { loader, useMonaco } from '@monaco-editor/react';
 import { useContext, useEffect, useMemo, useState } from 'react';
 import { LuLayoutDashboard, LuNetwork } from 'react-icons/lu';
 import { Edge, Node, ReactFlowProvider } from 'reactflow';
 import { EmptyState } from '../empty-state';
+import { schemaViewerDarkTheme } from './monaco-dark-theme';
 import { CLI } from '../ui/cli';
+import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
 import { FetchFlow, ReactFlowQueryPlanFetchNode } from './fetch-flow';
+import { PlanPrinter } from './prettyPrint';
 import { TraceContext } from './trace-view';
 import { QueryPlan, QueryPlanFetchTypeNode } from './types';
-import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+
+const useResolvedTheme = (forcedTheme?: string) => {
+  const [theme, setTheme] = useState('light');
+
+  useEffect(() => {
+    const updateTheme = () => {
+      const body = document.body;
+      if (body.classList.contains('graphiql-dark')) {
+        setTheme('dark');
+      } else if (body.classList.contains('graphiql-light')) {
+        setTheme('light');
+      } else {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        setTheme(prefersDark ? 'dark' : 'light');
+      }
+
+      if (body.classList.contains('graphiql-light')) {
+        document.documentElement.classList.remove('!dark');
+      } else {
+        document.documentElement.classList.add('!dark');
+      }
+    };
+
+    updateTheme();
+    const observer = new MutationObserver(updateTheme);
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
+    return () => observer.disconnect();
+  }, []);
+
+  return forcedTheme || theme;
+};
 
 const PlanTree = ({ queryPlan }: { queryPlan: QueryPlan }) => {
   const [initialNodes, setInitialNodes] = useState<Node[]>([]);
@@ -84,7 +120,29 @@ const PlanTree = ({ queryPlan }: { queryPlan: QueryPlan }) => {
 };
 
 export const PlanView = () => {
-  const { plan, planError } = useContext(TraceContext);
+  const { plan, planError, forcedTheme } = useContext(TraceContext);
+
+  const [formattedPlan, setFormattedPlan] = useState<string | null>(null);
+  useEffect(() => {
+    if (plan) {
+      const printer = new PlanPrinter();
+      const prettyPrintedQueryPlan = printer.print(plan);
+      setFormattedPlan(prettyPrintedQueryPlan);
+    }
+  }, [plan]);
+
+  const [view, setView] = useState<'tree' | 'text'>('tree');
+
+  const selectedTheme = useResolvedTheme(forcedTheme);
+  const monaco = useMonaco();
+  useEffect(() => {
+    if (!monaco) return;
+    if (selectedTheme === 'dark') {
+      monaco.editor.setTheme('wg-dark');
+    } else {
+      monaco.editor.setTheme('light');
+    }
+  }, [selectedTheme, monaco]);
 
   if (planError) {
     return (
@@ -109,7 +167,78 @@ export const PlanView = () => {
 
   return (
     <div className="relative flex h-full w-full flex-1 flex-col font-sans">
-      <PlanTree queryPlan={plan} />
+      <Tabs defaultValue="tree" className="absolute bottom-3 right-4 z-30 w-max" onValueChange={(v: any) => setView(v)}>
+        <TabsList className="grid w-full grid-cols-2 shadow-lg">
+          <TabsTrigger value="tree">
+            <div className="flex items-center gap-x-2">
+              <LuNetwork />
+              Tree View
+            </div>
+          </TabsTrigger>
+          <TabsTrigger value="text">
+            <div className="flex items-center gap-x-2">
+              <Bars3BottomLeftIcon className="h-4 w-4" />
+              Text View
+            </div>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+      {view === 'tree' && <PlanTree queryPlan={plan} />}
+      {view === 'text' && (
+        <div className="scrollbar-custom h-full w-full overflow-auto rounded-xl">
+          <Editor
+            theme={selectedTheme === 'dark' ? 'wg-dark' : 'light'}
+            className="scrollbar-custom h-full"
+            language="customLang"
+            value={formattedPlan || ''}
+            options={{
+              fontSize: 14,
+              scrollbar: {
+                verticalScrollbarSize: 6,
+                horizontalScrollbarSize: 6,
+              },
+              smoothScrolling: true,
+              padding: {
+                top: 21,
+              },
+              minimap: {
+                enabled: false,
+              },
+            }}
+            beforeMount={(monaco) => {
+              monaco.editor.defineTheme('wg-dark', schemaViewerDarkTheme);
+              if (selectedTheme === 'dark') {
+                monaco.editor.setTheme('wg-dark');
+              }
+
+              monaco.languages.register({
+                id: 'customLang',
+              });
+              monaco.languages.setMonarchTokensProvider('customLang', {
+                // Define some basic tokens
+                tokenizer: {
+                  root: [
+                    // Match keywords followed by (service
+                    [/\b(\w+)(?=\s*\(service)/, 'keyword'],
+
+                    // Match Sequence, Parallel, Single followed by {
+                    [/\b(QueryPlan|Sequence|Parallel)(?=\s*{)/, 'keyword'],
+
+                    // Match keywords followed by { with previous line ending in }
+                    [/(?<=}\s*\n\s*)(\w+)/, 'keyword'],
+
+                    // Match service declarations: service: "serviceName"
+                    [/(service)(\s*:\s*)("[^"]*")/, ['identifier', '', 'string.service']],
+
+                    // Match variables: $variableName
+                    [/\$[a-zA-Z_]\w*/, 'variable'],
+                  ],
+                },
+              });
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };

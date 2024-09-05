@@ -427,6 +427,7 @@ export const Playground = (input: {
           planError,
           clientValidationEnabled,
           setClientValidationEnabled,
+          forcedTheme: input.theme,
         }}
       >
         <GraphiQL

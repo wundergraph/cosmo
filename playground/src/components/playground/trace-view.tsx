@@ -23,6 +23,7 @@ export const TraceContext = createContext<{
   planError?: string;
   clientValidationEnabled: boolean;
   setClientValidationEnabled: (val: boolean) => void;
+  forcedTheme?: 'light' | 'dark' | undefined;
 }>({
   query: undefined,
   subgraphs: [],
@@ -32,6 +33,7 @@ export const TraceContext = createContext<{
   planError: '',
   clientValidationEnabled: true,
   setClientValidationEnabled: () => {},
+  forcedTheme: undefined,
 });
 
 const Trace = ({

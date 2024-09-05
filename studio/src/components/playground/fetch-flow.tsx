@@ -257,9 +257,14 @@ export const ReactFlowQueryPlanFetchNode = ({
       <Handle type="target" position={Position.Top} isConnectable={false} />
       <div className="relative flex flex-col rounded-md border text-secondary-foreground">
         <div className="absolute inset-0 -z-10 bg-secondary/30 backdrop-blur-lg" />
-        <div className="flex items-start justify-between gap-x-4 border-b px-4 py-4">
+        <div className="flex items-start justify-between gap-x-4 border-b px-8 py-4">
           <p className="flex flex-col gap-y-2 text-sm font-medium subpixel-antialiased">
-            {data.fetch?.kind || data.kind} Fetch{" "}
+            {data.fetch?.kind || data.kind}
+            {["Parallel", "Sequence", "ParallelList"].includes(
+              data.fetch?.kind || data.kind,
+            )
+              ? ""
+              : " Fetch"}{" "}
             {data.fetch?.subgraphName ? `from ${data.fetch.subgraphName}` : ""}
           </p>
         </div>

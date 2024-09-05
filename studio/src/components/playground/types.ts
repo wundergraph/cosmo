@@ -38,17 +38,20 @@ export type ARTFetchNode = {
   loadStats?: LoadStats;
 };
 
+export type Representation = {
+  kind: string;
+  typeName: string;
+  fragment: string;
+  fieldName?: string;
+};
+
 export type QueryPlanFetchNode = {
   kind: string;
   subgraphName: string;
   subgraphId: string;
   query: string;
-  representations?: {
-    kind: string;
-    typeName: string;
-    fragment: string;
-    fieldName?: string;
-  }[];
+  path?: string;
+  representations?: Representation[];
 };
 
 export type QueryPlanFetchTypeNode = {
