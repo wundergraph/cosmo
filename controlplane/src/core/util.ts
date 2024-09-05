@@ -377,7 +377,7 @@ export function webhookAxiosRetryCond(err: AxiosError) {
 export function createS3ClientConfig(bucketName: string, opts: S3StorageOptions): S3ClientConfig {
   const url = new URL(opts.url);
   const { region, username, password } = opts;
-  const forcePathStyle = !isVirtualHostStyleUrl(url);
+  const forcePathStyle = opts.forcePathStyle ?? !isVirtualHostStyleUrl(url);
   const endpoint = opts.endpoint || (forcePathStyle ? url.origin : url.origin.replace(`${bucketName}.`, ''));
 
   const accessKeyId = url.username || username || '';
@@ -402,15 +402,14 @@ export function createS3ClientConfig(bucketName: string, opts: S3StorageOptions)
   };
 }
 
-export function extractS3BucketName(s3Url: string) {
-  const url = new URL(s3Url);
+export function extractS3BucketName(opts: S3StorageOptions) {
+  const url = new URL(opts.url);
 
-  if (isVirtualHostStyleUrl(url)) {
-    return url.hostname.split('.')[0];
+  if (opts.forcePathStyle || !isVirtualHostStyleUrl(url)) {
+    return url.pathname.slice(1);
   }
 
-  // path based style
-  return url.pathname.slice(1);
+  return url.hostname.split('.')[0];
 }
 
 export function isVirtualHostStyleUrl(url: URL) {

@@ -91,15 +91,19 @@ export const createS3BlobStorage = (storageUrl: string): BlobStorage => {
   const endpoint = url.searchParams.get('endpoint') ?? process.env.S3_ENDPOINT;
   const username = process.env.S3_ACCESS_KEY_ID || '';
   const password = process.env.S3_SECRET_ACCESS_KEY || '';
+  const forcePathStyle = process.env.S3_FORCE_PATH_STYLE === 'true';
 
-  const bucketName = extractS3BucketName(storageUrl);
-  const s3Config = createS3ClientConfig(bucketName, {
+  const opts = {
     url: storageUrl,
     region,
     endpoint,
     username,
     password,
-  });
+    forcePathStyle,
+  };
+
+  const bucketName = extractS3BucketName(opts);
+  const s3Config = createS3ClientConfig(bucketName, opts);
   const s3Client = new S3Client(s3Config);
 
   return new S3BlobStorage(s3Client, bucketName);
