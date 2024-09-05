@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
+
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -12,8 +15,6 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
-	"slices"
-	"strings"
 )
 
 var (
@@ -97,7 +98,7 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, data
 	}
 
 	// Ensure common attributes are set
-	baseAttributes = append(baseAttributes, getAttributesFromOperationContext(reqContext.operation)...)
+	baseAttributes = append(baseAttributes, reqContext.operation.Attributes()...)
 
 	if attributes := baseAttributesFromContext(reqContext.Request().Context()); attributes != nil {
 		baseAttributes = append(baseAttributes, attributes...)

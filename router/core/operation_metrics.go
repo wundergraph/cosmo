@@ -2,7 +2,6 @@ package core
 
 import (
 	"context"
-	"strconv"
 	"time"
 
 	"github.com/wundergraph/cosmo/router/pkg/otel"
@@ -110,28 +109,4 @@ func newOperationMetrics(opts OperationMetricsOptions) *OperationMetrics {
 		logger:               opts.Logger,
 		trackUsageInfo:       opts.TrackUsageInfo,
 	}
-}
-
-// getAttributesFromOperationContext returns the attributes that are common to both metrics and traces.
-func getAttributesFromOperationContext(operationContext *operationContext) []attribute.KeyValue {
-	if operationContext == nil {
-		return nil
-	}
-
-	var baseMetricAttributeValues []attribute.KeyValue
-
-	// Fields that are always present in the metrics and traces
-	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgClientName.String(operationContext.clientInfo.Name))
-	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgClientVersion.String(operationContext.clientInfo.Version))
-	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationName.String(operationContext.Name()))
-	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationType.String(operationContext.Type()))
-	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationProtocol.String(operationContext.Protocol().String()))
-	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationHash.String(strconv.FormatUint(operationContext.Hash(), 10)))
-
-	// Common Field that will be present in both metrics and traces if not empty
-	if operationContext.PersistedID() != "" {
-		baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationPersistedID.String(operationContext.PersistedID()))
-	}
-
-	return baseMetricAttributeValues
 }
