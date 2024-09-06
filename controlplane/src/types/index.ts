@@ -633,4 +633,5 @@ export interface S3StorageOptions {
   endpoint?: string;
   username?: string;
   password?: string;
+  forcePathStyle?: boolean;
 }

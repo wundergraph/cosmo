@@ -1586,6 +1586,8 @@ message GraphComposition {
   optional string routerConfigSignature = 8;
   optional string admissionError = 9;
   optional string deploymentError = 10;
+  optional bool hasMultipleChangedSubgraphs = 11;
+  optional string triggeredBySubgraphName = 12;
 }
 
 message GraphCompositionSubgraph {
@@ -1594,6 +1596,7 @@ message GraphCompositionSubgraph {
   string name = 3;
   string target_id = 4;
   bool isFeatureSubgraph = 5;
+  string changeType = 6;
 }
 
 message GetCompositionsRequest {

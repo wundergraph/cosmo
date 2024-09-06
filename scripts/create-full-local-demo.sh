@@ -20,6 +20,8 @@ wgc subgraph publish employees -n dev --routing-url https://employees-api.fly.de
 wgc subgraph publish family -n dev --routing-url https://family-api.fly.dev/graphql --schema ../demo/pkg/subgraphs/family/subgraph/schema.graphqls
 wgc subgraph publish hobbies -n dev --routing-url https://hobbies-api.fly.dev/graphql --schema ../demo/pkg/subgraphs/hobbies/subgraph/schema.graphqls
 wgc subgraph publish products -n dev --routing-url https://product-api.fly.dev/graphql --schema ../demo/pkg/subgraphs/products/subgraph/schema.graphqls
+wgc subgraph publish availability -n dev --routing-url https://availability-api.fly.dev/graphql --schema ../demo/pkg/subgraphs/availability/subgraph/schema.graphqls
+wgc subgraph publish mood -n dev --routing-url https://mood-api.fly.dev/graphql --schema ../demo/pkg/subgraphs/mood/subgraph/schema.graphqls
 
 # 4. Create a router token for development federated graph
 
@@ -41,6 +43,8 @@ wgc subgraph publish employees -n prod --routing-url https://employees-api.fly.d
 wgc subgraph publish family -n prod --routing-url https://family-api.fly.dev/graphql --schema ../demo/pkg/subgraphs/family/subgraph/schema.graphqls
 wgc subgraph publish hobbies -n prod --routing-url https://hobbies-api.fly.dev/graphql --schema ../demo/pkg/subgraphs/hobbies/subgraph/schema.graphqls
 wgc subgraph publish products -n prod --routing-url https://product-api.fly.dev/graphql --schema ../demo/pkg/subgraphs/products/subgraph/schema.graphqls
+wgc subgraph publish availability -n prod --routing-url https://availability-api.fly.dev/graphql --schema ../demo/pkg/subgraphs/availability/subgraph/schema.graphqls
+wgc subgraph publish mood -n prod --routing-url https://mood-api.fly.dev/graphql --schema ../demo/pkg/subgraphs/mood/subgraph/schema.graphqls
 
 # 4. Create a router token for prod federated graph
 

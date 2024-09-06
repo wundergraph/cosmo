@@ -511,6 +511,7 @@ export class SubgraphRepository {
         .insert(schemaVersion)
         .values({
           targetId: subgraph.targetId,
+          organizationId: this.organizationId,
           schemaSDL: data.subgraphSchema,
           isV2Graph: data.isV2Graph,
         })

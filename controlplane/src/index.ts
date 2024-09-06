@@ -45,6 +45,7 @@ const {
   S3_REGION,
   S3_ACCESS_KEY_ID,
   S3_SECRET_ACCESS_KEY,
+  S3_FORCE_PATH_STYLE,
   SMTP_ENABLED,
   SMTP_HOST,
   SMTP_PORT,
@@ -126,6 +127,7 @@ const options: BuildConfig = {
     endpoint: S3_ENDPOINT,
     username: S3_ACCESS_KEY_ID,
     password: S3_SECRET_ACCESS_KEY,
+    forcePathStyle: S3_FORCE_PATH_STYLE,
   },
   mailer: {
     smtpEnabled: SMTP_ENABLED,

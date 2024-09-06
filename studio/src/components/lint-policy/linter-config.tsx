@@ -15,13 +15,13 @@ import {
 import { useToast } from "../ui/use-toast";
 import { Switch } from "../ui/switch";
 import { useRouter } from "next/router";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import {
   GetNamespaceLintConfigResponse,
   LintConfig,
   LintSeverity,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { cn, countLintConfigsByCategory } from "@/lib/utils";
+import { checkUserAccess, cn, countLintConfigsByCategory } from "@/lib/utils";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   Card,
@@ -41,6 +41,7 @@ import {
   AccordionTrigger,
 } from "../ui/accordion";
 import { Checkbox } from "../ui/checkbox";
+import { UserContext } from "../app-provider";
 
 export const SeverityDropdown = ({
   onChange,
@@ -83,6 +84,7 @@ export const LinterConfig = ({
   data: GetNamespaceLintConfigResponse;
   refetch: () => void;
 }) => {
+  const user = useContext(UserContext);
   const router = useRouter();
   const namespace = router.query.namespace as string;
 
@@ -110,6 +112,12 @@ export const LinterConfig = ({
         </div>
         <Switch
           checked={linterEnabled}
+          disabled={
+            !checkUserAccess({
+              rolesToBe: ["admin", "developer"],
+              userRoles: user?.currentOrganization.roles || [],
+            })
+          }
           onCheckedChange={(checked) => {
             setLinterEnabled(checked);
             mutate(
@@ -171,7 +179,13 @@ export const LinterConfig = ({
               type="submit"
               variant="default"
               isLoading={isConfiguring}
-              disabled={!data.linterEnabled}
+              disabled={
+                !data.linterEnabled ||
+                !checkUserAccess({
+                  rolesToBe: ["admin", "developer"],
+                  userRoles: user?.currentOrganization.roles || [],
+                })
+              }
               onClick={() => {
                 configureLintRules(
                   {
@@ -249,6 +263,13 @@ export const LinterConfig = ({
                                 checked={selectedLintRules.some(
                                   (l) => l.ruleName === rule.name,
                                 )}
+                                disabled={
+                                  !checkUserAccess({
+                                    rolesToBe: ["admin", "developer"],
+                                    userRoles:
+                                      user?.currentOrganization.roles || [],
+                                  })
+                                }
                                 onCheckedChange={(checked) => {
                                   if (checked) {
                                     setSelectedLintRules([
