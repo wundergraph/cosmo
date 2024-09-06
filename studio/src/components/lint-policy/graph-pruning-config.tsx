@@ -25,7 +25,7 @@ import { docsBaseURL, graphPruningRules } from "@/lib/constants";
 import Link from "next/link";
 import { Checkbox } from "../ui/checkbox";
 import { SeverityDropdown } from "./linter-config";
-import { cn } from "@/lib/utils";
+import { checkUserAccess, cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -172,7 +172,13 @@ export const GraphPruningLintConfig = ({
         </div>
         <Switch
           checked={graphPruningEnabled}
-          disabled={!feature}
+          disabled={
+            !feature ||
+            !checkUserAccess({
+              rolesToBe: ["admin", "developer"],
+              userRoles: user?.currentOrganization.roles || [],
+            })
+          }
           onCheckedChange={(checked) => {
             setGraphPruningEnabled(checked);
             mutate(
@@ -251,7 +257,13 @@ export const GraphPruningLintConfig = ({
                 type="submit"
                 variant="default"
                 isLoading={isConfiguring}
-                disabled={!data.graphPrunerEnabled}
+                disabled={
+                  !data.graphPrunerEnabled ||
+                  !checkUserAccess({
+                    rolesToBe: ["admin", "developer"],
+                    userRoles: user?.currentOrganization.roles || [],
+                  })
+                }
                 onClick={() => {
                   configureGraphPruningRules(
                     {
@@ -306,7 +318,13 @@ export const GraphPruningLintConfig = ({
                       <Checkbox
                         id={rule.name}
                         className="h-5 w-5"
-                        disabled={!data.graphPrunerEnabled}
+                        disabled={
+                          !data.graphPrunerEnabled ||
+                          !checkUserAccess({
+                            rolesToBe: ["admin", "developer"],
+                            userRoles: user?.currentOrganization.roles || [],
+                          })
+                        }
                         checked={selectedPruneRules.some(
                           (l) => l.ruleName === rule.name,
                         )}

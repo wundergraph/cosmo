@@ -1,4 +1,36 @@
-import { useMutation, useQuery } from "@connectrpc/connect-query";
+import { useUser } from "@/hooks/use-user";
+import { docsBaseURL, lintCategories } from "@/lib/constants";
+import { checkUserAccess, cn, countLintConfigsByCategory } from "@/lib/utils";
+import { useMutation } from "@connectrpc/connect-query";
+import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+import {
+  configureNamespaceLintConfig,
+  enableLintingForTheNamespace,
+} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import {
+  GetNamespaceLintConfigResponse,
+  LintConfig,
+  LintSeverity,
+} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import Link from "next/link";
+import { useRouter } from "next/router";
+import { useState } from "react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "../ui/accordion";
+import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../ui/card";
+import { Checkbox } from "../ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -8,40 +40,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
-import {
-  configureNamespaceLintConfig,
-  enableLintingForTheNamespace,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { useToast } from "../ui/use-toast";
 import { Switch } from "../ui/switch";
-import { useRouter } from "next/router";
-import { useContext, useState } from "react";
-import {
-  GetNamespaceLintConfigResponse,
-  LintConfig,
-  LintSeverity,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { checkUserAccess, cn, countLintConfigsByCategory } from "@/lib/utils";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "../ui/card";
-import { docsBaseURL, lintCategories } from "@/lib/constants";
-import Link from "next/link";
-import { Badge } from "../ui/badge";
-import { Button } from "../ui/button";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "../ui/accordion";
-import { Checkbox } from "../ui/checkbox";
-import { UserContext } from "../app-provider";
+import { useToast } from "../ui/use-toast";
 
 export const SeverityDropdown = ({
   onChange,
@@ -84,7 +84,7 @@ export const LinterConfig = ({
   data: GetNamespaceLintConfigResponse;
   refetch: () => void;
 }) => {
-  const user = useContext(UserContext);
+  const user = useUser();
   const router = useRouter();
   const namespace = router.query.namespace as string;
 
