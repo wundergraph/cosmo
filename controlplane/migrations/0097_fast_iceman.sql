@@ -1,2 +1,0 @@
-ALTER TABLE "field_grace_period" DROP CONSTRAINT "field_grace_period_path_unique";--> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "unique_field_grace_period_idx" ON "field_grace_period" USING btree ("subgraph_id","namespace_id","organization_id","path");
