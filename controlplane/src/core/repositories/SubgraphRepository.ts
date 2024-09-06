@@ -1229,6 +1229,7 @@ export class SubgraphRepository {
           fieldGracePeriod.namespaceId,
           fieldGracePeriod.organizationId,
           fieldGracePeriod.path,
+          fieldGracePeriod.isDeprecated,
         ],
         set: {
           isDeprecated,

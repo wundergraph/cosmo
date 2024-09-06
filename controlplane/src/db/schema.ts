@@ -1649,6 +1649,7 @@ export const fieldGracePeriod = pgTable(
         t.namespaceId,
         t.organizationId,
         t.path,
+        t.isDeprecated,
       ),
     };
   },
