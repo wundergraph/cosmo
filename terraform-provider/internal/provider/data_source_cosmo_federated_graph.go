@@ -3,12 +3,13 @@ package provider
 import (
 	"context"
 	"fmt"
-	"net/http"
 
+	"connectrpc.com/connect"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	platform "github.com/wundergraph/cosmo/terraform-provider-cosmo/gen/proto/wg/cosmo/platform/v1"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -20,15 +21,14 @@ func NewFederatedGraphDataSource() datasource.DataSource {
 
 // FederatedGraphDataSource defines the data source implementation.
 type FederatedGraphDataSource struct {
-	client *http.Client
+	provider Provider
 }
 
 // FederatedGraphDataSourceModel describes the data source data model.
 type FederatedGraphDataSourceModel struct {
-	GraphId    types.String `tfsdk:"graph_id"`   // Added `graph_id` to the struct
-	GraphName  types.String `tfsdk:"graph_name"` // Graph name attribute
-	ServiceUrl types.String `tfsdk:"service_url"` // Service URL attribute
-	Id         types.String `tfsdk:"id"`         // Resource ID attribute
+	Name       types.String `tfsdk:"name"`
+	Namespace  types.String `tfsdk:"namespace"`
+	RoutingURL types.String `tfsdk:"routing_url"`
 }
 
 func (d *FederatedGraphDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -40,21 +40,17 @@ func (d *FederatedGraphDataSource) Schema(ctx context.Context, req datasource.Sc
 		MarkdownDescription: "Cosmo Federated Graph Data Source",
 
 		Attributes: map[string]schema.Attribute{
-			"graph_id": schema.StringAttribute{
-				MarkdownDescription: "ID of the federated graph",
-				Required:            true,
-			},
-			"graph_name": schema.StringAttribute{
+			"name": schema.StringAttribute{
 				MarkdownDescription: "Name of the federated graph",
 				Required:            true,
 			},
-			"service_url": schema.StringAttribute{
-				MarkdownDescription: "Service URL for the federated graph",
+			"namespace": schema.StringAttribute{
+				MarkdownDescription: "The namespace in which the federated graph is located. Defaults to 'default' if not provided.",
 				Optional:            true,
 			},
-			"id": schema.StringAttribute{
-				MarkdownDescription: "Computed ID for the resource",
-				Computed:            true,
+			"routing_url": schema.StringAttribute{
+				MarkdownDescription: "The URL of the federated graph service",
+				Optional:            true,
 			},
 		},
 	}
@@ -66,8 +62,7 @@ func (d *FederatedGraphDataSource) Configure(ctx context.Context, req datasource
 		return
 	}
 
-	client, ok := req.ProviderData.(*http.Client)
-
+	provider, ok := req.ProviderData.(*Provider)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
@@ -77,34 +72,53 @@ func (d *FederatedGraphDataSource) Configure(ctx context.Context, req datasource
 		return
 	}
 
-	d.client = client
+	d.provider = *provider
 }
 
 func (d *FederatedGraphDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var data FederatedGraphDataSourceModel
-
-	// Read Terraform configuration data into the model
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Simulate retrieving data for the federated graph
-	// You should replace this with the actual API call logic
-	// For example:
-	// httpResp, err := d.client.Get(serviceURL)
-	// if err != nil {
-	//     resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to retrieve data for federated graph, got error: %s", err))
-	//     return
-	// }
+	if data.Name.IsNull() || data.Name.ValueString() == "" {
+		resp.Diagnostics.AddError(
+			"Invalid Federated Subgraph Name",
+			"The 'name' attribute is required.",
+		)
+		return
+	}
 
-	// Hardcoding a response value to simulate an API response
-	data.Id = types.StringValue("cosmo-federated-graph-id")
+	var namespace string
+	if data.Namespace.IsNull() || data.Namespace.ValueString() == "" {
+		namespace = defaultNamespace
+	} else {
+		namespace = data.Namespace.ValueString()
+	}
 
-	// Log activity using tflog
+	name := data.Name.ValueString()
+	request := connect.NewRequest(&platform.GetFederatedGraphByNameRequest{
+		Name:      name,
+		Namespace: namespace,
+	})
+
+	request.Header().Set("Authorization", fmt.Sprintf("Bearer %s", d.provider.cosmoApiKey))
+	response, err := d.provider.client.GetFederatedGraphByName(ctx, request)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error creating federated subgraph",
+			fmt.Sprintf("Could not create federated subgraph: %s", err),
+		)
+		return
+	}
+
 	tflog.Trace(ctx, "retrieved federated graph data source")
+	data.Name = types.StringValue(response.Msg.Graph.Name)
+	data.Namespace = types.StringValue(response.Msg.Graph.Namespace)
+	data.RoutingURL = types.StringValue(response.Msg.Graph.RoutingURL)
 
-	// Save data into Terraform state
+	tflog.Trace(ctx, "retrieved federated graph data source")
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
