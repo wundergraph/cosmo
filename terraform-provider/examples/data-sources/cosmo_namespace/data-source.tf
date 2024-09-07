@@ -7,7 +7,6 @@ terraform {
   }
 }
 
-data "cosmo_federated_graph" "test" {
-  name      = var.name
-  namespace = var.namespace
+data "cosmo_namespace" "test" {
+  name = var.name
 }

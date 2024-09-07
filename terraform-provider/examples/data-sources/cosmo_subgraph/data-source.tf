@@ -7,7 +7,7 @@ terraform {
   }
 }
 
-data "cosmo_federated_graph" "test" {
+data "cosmo_subgraph" "test" {
   name      = var.name
   namespace = var.namespace
 }
