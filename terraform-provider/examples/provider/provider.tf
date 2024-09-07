@@ -16,6 +16,16 @@ module "resource_cosmo_federated_graph" {
   source = "../resources/cosmo_federated_graph"
 }
 
+module "resource_cosmo_namespace" {
+  source = "../resources/cosmo_namespace"
+}
+
+module "resource_cosmo_subgraph" {
+  source = "../resources/cosmo_subgraph"
+
+  depends_on = [ module.resource_cosmo_federated_graph ]
+}
+
 module "data_cosmo_federated_graph" {
   source = "../data-sources/cosmo_federated_graph"
 

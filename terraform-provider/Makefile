@@ -18,9 +18,6 @@ generate:
 	go generate ./...
 	terraform fmt -recursive ./examples/
 
-install: fmt
-	go generate
-
 tidy:
 	go mod tidy
 
@@ -54,8 +51,12 @@ build-all-arches:
 
 release: generate build-all-arches
 
-examples-e2e-apply: install
-	make -C examples e2e-apply
+include examples/Makefile
 
-examples-e2e-destroy:
-	make -C examples e2e-destroy
+e2e-cd-apply: 
+	make install 
+	make e2e-init
+	make e2e-apply 
+
+e2e-cd-destroy: 
+	make e2e-destroy 

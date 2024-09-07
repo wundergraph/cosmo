@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -12,8 +13,6 @@ import (
 const (
 	envCosmoApiUrl = "COSMO_API_URL"
 	envCosmoApiKey = "COSMO_API_KEY"
-
-	defaultNamespace = "default"
 )
 
 // convertLabelMatchers converts a Terraform list of strings to a slice of strings for use in the gRPC request.
@@ -68,6 +67,10 @@ func addDiagnosticErrorForDelete(resp *resource.DeleteResponse, title, message s
 }
 
 func addDiagnosticErrorForRead(resp *resource.ReadResponse, title, message string) {
+	resp.Diagnostics.AddError(title, message)
+}
+
+func addDiagnosticErrorForConfigure(resp *provider.ConfigureResponse, title, message string) {
 	resp.Diagnostics.AddError(title, message)
 }
 

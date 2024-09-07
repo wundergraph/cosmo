@@ -69,26 +69,11 @@ func (p *CosmoProvider) Configure(ctx context.Context, req provider.ConfigureReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	providerConfig, err := NewClient()
 
-	cosmoApiKey, ok := os.LookupEnv(envCosmoApiKey)
-	if !ok {
-		fmt.Println("COSMO_API_KEY environment variable not set")
-	}
-
-	cosmoApiUrl, ok := os.LookupEnv(envCosmoApiUrl)
-	if !ok {
-		fmt.Println("COSMO_API_KEY environment variable not set")
-	}
-
-	httpClient := http.Client{}
-	httpClient.Transport = &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
-	}
-
-	client := platformv1connect.NewPlatformServiceClient(&httpClient, cosmoApiUrl)
-	providerConfig := &Provider{
-		client:      client,
-		cosmoApiKey: cosmoApiKey,
+	if err != nil {
+		addDiagnosticErrorForConfigure(resp, "Error configuring client", err.Error())
+		return
 	}
 	resp.DataSourceData = providerConfig
 	resp.ResourceData = providerConfig
@@ -97,6 +82,8 @@ func (p *CosmoProvider) Configure(ctx context.Context, req provider.ConfigureReq
 func (p *CosmoProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewFederatedGraphResource,
+		NewNamespaceResource,
+		NewSubgraphResource,
 	}
 }
 
@@ -116,4 +103,27 @@ func New(version string) func() provider.Provider {
 			version: version,
 		}
 	}
+}
+
+func NewClient() (*Provider, error) {
+	cosmoApiKey, ok := os.LookupEnv(envCosmoApiKey)
+	if !ok {
+		return nil, fmt.Errorf("COSMO_API_KEY environment variable not set")
+	}
+
+	cosmoApiUrl, ok := os.LookupEnv(envCosmoApiUrl)
+	if !ok {
+		return nil, fmt.Errorf("COSMO_API_URL environment variable not set")
+	}
+
+	httpClient := http.Client{}
+	httpClient.Transport = &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+	}
+
+	client := platformv1connect.NewPlatformServiceClient(&httpClient, cosmoApiUrl)
+	return &Provider{
+		client:      client,
+		cosmoApiKey: cosmoApiKey,
+	}, nil
 }

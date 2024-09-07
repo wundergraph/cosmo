@@ -11,7 +11,6 @@ import (
 	"github.com/wundergraph/cosmo/terraform-provider-cosmo/gen/proto/wg/cosmo/platform/v1/platformv1connect"
 )
 
-// FederatedGraph represents the data required to create or update a federated graph.
 type FederatedGraph struct {
 	Name                   string
 	Namespace              string
@@ -22,15 +21,19 @@ type FederatedGraph struct {
 	LabelMatchers          []string
 }
 
-// CreateFederatedGraph creates a federated graph using the provided API client and graph data.
+type FederatedGraphAPI interface {
+	Create(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey string, graph FederatedGraph) (*platform.CreateFederatedGraphResponse, error)
+	Update(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey string, graph FederatedGraph) (*platform.UpdateFederatedGraphResponse, error)
+	Delete(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey, name, namespace string) error
+	Get(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey, name, namespace string) (*platform.GetFederatedGraphByNameResponse, error)
+}
+
 func CreateFederatedGraph(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey string, graph FederatedGraph) (*platform.CreateFederatedGraphResponse, error) {
-	// Safely handle AdmissionWebhookURL (check if it's nil before dereferencing)
 	var admissionWebhookURL string
 	if graph.AdmissionWebhookURL != nil {
 		admissionWebhookURL = *graph.AdmissionWebhookURL
 	}
 
-	// Create the request, using the safe values
 	request := connect.NewRequest(&platform.CreateFederatedGraphRequest{
 		Name:                   graph.Name,
 		Namespace:              graph.Namespace,
@@ -54,15 +57,12 @@ func CreateFederatedGraph(ctx context.Context, client platformv1connect.Platform
 	return response.Msg, nil
 }
 
-// UpdateFederatedGraph updates an existing federated graph using the provided API client and graph data.
 func UpdateFederatedGraph(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey string, graph FederatedGraph) (*platform.UpdateFederatedGraphResponse, error) {
-	// Safely handle AdmissionWebhookURL (check if it's nil before dereferencing)
 	var admissionWebhookURL *string
 	if graph.AdmissionWebhookURL != nil {
 		admissionWebhookURL = graph.AdmissionWebhookURL
 	}
 
-	// Create the request, using the safe values
 	request := connect.NewRequest(&platform.UpdateFederatedGraphRequest{
 		Name:                   graph.Name,
 		Namespace:              graph.Namespace,
@@ -85,7 +85,6 @@ func UpdateFederatedGraph(ctx context.Context, client platformv1connect.Platform
 	return response.Msg, nil
 }
 
-// DeleteFederatedGraph deletes a federated graph using the provided API client.
 func DeleteFederatedGraph(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey, name, namespace string) error {
 	request := connect.NewRequest(&platform.DeleteFederatedGraphRequest{
 		Name:      name,
@@ -101,7 +100,6 @@ func DeleteFederatedGraph(ctx context.Context, client platformv1connect.Platform
 	return nil
 }
 
-// GetFederatedGraph fetches a federated graph by name and namespace using the provided API client.
 func GetFederatedGraph(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey, name, namespace string) (*platform.GetFederatedGraphByNameResponse, error) {
 	request := connect.NewRequest(&platform.GetFederatedGraphByNameRequest{
 		Name:      name,
