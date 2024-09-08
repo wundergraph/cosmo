@@ -4424,6 +4424,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+        const auditLogRepo = new AuditLogRepository(opts.db);
         const orgWebhooks = new OrganizationWebhookService(
           opts.db,
           authContext.organizationId,
@@ -4536,6 +4537,19 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             authContext.userId,
           );
         }
+
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: req.enabled ? 'feature_flag.enabled' : 'feature_flag.disabled',
+          action: req.enabled ? 'enabled' : 'disabled',
+          actorId: authContext.userId,
+          auditableType: 'feature_flag',
+          auditableDisplayName: featureFlag.name,
+          actorDisplayName: authContext.userDisplayName,
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+          targetNamespaceId: featureFlag.namespaceId,
+          targetNamespaceDisplayName: featureFlag.namespace,
+        });
 
         if (compositionErrors.length > 0) {
           return {
