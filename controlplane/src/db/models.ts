@@ -64,7 +64,9 @@ export type AuditLogAction =
   | 'activated'
   | 'upgraded'
   | 'left'
-  | 'fetched';
+  | 'fetched'
+  | 'disabled'
+  | 'enabled';
 
 export type AuditLogFullAction =
   | 'namespace.created'
