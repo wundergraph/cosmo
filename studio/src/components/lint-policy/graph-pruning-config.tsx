@@ -1,7 +1,7 @@
 import { useMutation } from "@connectrpc/connect-query";
 import {
   configureNamespaceGraphPruningConfig,
-  enableGraphPruningForTheNamespace,
+  enableGraphPruning,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import {
   GetNamespaceGraphPruningConfigResponse,
@@ -146,7 +146,7 @@ export const GraphPruningLintConfig = ({
 
   const { mutate: configureGraphPruningRules, isPending: isConfiguring } =
     useMutation(configureNamespaceGraphPruningConfig);
-  const { mutate } = useMutation(enableGraphPruningForTheNamespace);
+  const { mutate } = useMutation(enableGraphPruning);
 
   const { toast } = useToast();
 
@@ -335,7 +335,7 @@ export const GraphPruningLintConfig = ({
                               {
                                 ruleName: rule.name,
                                 severityLevel: LintSeverity.warn,
-                                gracePeriod: 7,
+                                gracePeriodInDays: 7,
                               } as GraphPruningConfig,
                             ]);
                           } else {
@@ -371,7 +371,8 @@ export const GraphPruningLintConfig = ({
                                   if (l.ruleName === rule.name) {
                                     return {
                                       ...l,
-                                      schemaUsageCheckPeriod: parseInt(value),
+                                      schemaUsageCheckPeriodInDays:
+                                        parseInt(value),
                                     } as GraphPruningConfig;
                                   } else {
                                     return l;
@@ -382,7 +383,8 @@ export const GraphPruningLintConfig = ({
                             value={
                               selectedPruneRules
                                 .find((l) => l.ruleName === rule.name)
-                                ?.schemaUsageCheckPeriod?.toString() || "7"
+                                ?.schemaUsageCheckPeriodInDays?.toString() ||
+                              "7"
                             }
                             disabled={
                               !data.graphPrunerEnabled || plan !== "enterprise"
@@ -395,7 +397,7 @@ export const GraphPruningLintConfig = ({
                                   if (l.ruleName === rule.name) {
                                     return {
                                       ...l,
-                                      gracePeriod: parseInt(value),
+                                      gracePeriodInDays: parseInt(value),
                                     } as GraphPruningConfig;
                                   } else {
                                     return l;
@@ -406,7 +408,7 @@ export const GraphPruningLintConfig = ({
                             value={
                               selectedPruneRules
                                 .find((l) => l.ruleName === rule.name)
-                                ?.gracePeriod.toString() || "7"
+                                ?.gracePeriodInDays.toString() || "7"
                             }
                             disabled={!data.graphPrunerEnabled}
                           />
