@@ -590,9 +590,8 @@ export const GraphPruningRules: GraphPruningRuleType = {
 export interface SchemaGraphPruningDTO {
   severity: LintSeverityLevel;
   ruleName: GraphPruningRuleEnum;
-  // grace period in days
-  gracePeriod: number;
-  schemaUsageCheckPeriod: number; // in days
+  gracePeriodInDays: number;
+  schemaUsageCheckPeriodInDays: number;
 }
 
 export interface GraphPruningIssueResult {

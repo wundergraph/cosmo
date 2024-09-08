@@ -14,8 +14,8 @@ export class SchemaGraphPruningRepository {
       .select({
         graphPruningRule: namespaceGraphPruningCheckConfig.graphPruningRule,
         severityLevel: namespaceGraphPruningCheckConfig.severityLevel,
-        gracePeriod: namespaceGraphPruningCheckConfig.gracePeriod,
-        schemaUsageCheckPeriod: namespaceGraphPruningCheckConfig.schemaUsageCheckPeriod,
+        gracePeriodInDays: namespaceGraphPruningCheckConfig.gracePeriod,
+        schemaUsageCheckPeriodInDays: namespaceGraphPruningCheckConfig.schemaUsageCheckPeriod,
       })
       .from(namespaceGraphPruningCheckConfig)
       .where(eq(namespaceGraphPruningCheckConfig.namespaceId, namespaceId))
@@ -25,37 +25,39 @@ export class SchemaGraphPruningRepository {
       return {
         ruleName: l.graphPruningRule as GraphPruningRuleEnum,
         severity: l.severityLevel as LintSeverityLevel,
-        gracePeriod: l.gracePeriod,
-        schemaUsageCheckPeriod: l.schemaUsageCheckPeriod,
+        gracePeriodInDays: l.gracePeriodInDays,
+        schemaUsageCheckPeriodInDays: l.schemaUsageCheckPeriodInDays,
       } as SchemaGraphPruningDTO;
     });
   }
 
-  public async configureNamespaceGraphPruningConfigs({
+  public configureNamespaceGraphPruningConfigs({
     namespaceId,
     graphPruningConfigs,
   }: {
     namespaceId: string;
     graphPruningConfigs: GraphPruningConfig[];
   }) {
-    await this.db
-      .delete(namespaceGraphPruningCheckConfig)
-      .where(eq(namespaceGraphPruningCheckConfig.namespaceId, namespaceId));
+    return this.db.transaction(async (tx) => {
+      await tx
+        .delete(namespaceGraphPruningCheckConfig)
+        .where(eq(namespaceGraphPruningCheckConfig.namespaceId, namespaceId));
 
-    if (graphPruningConfigs.length > 0) {
-      await this.db.insert(namespaceGraphPruningCheckConfig).values(
-        graphPruningConfigs.map((l) => {
-          return {
-            namespaceId,
-            graphPruningRule: l.ruleName as GraphPruningRuleEnum,
-            severityLevel:
-              l.severityLevel === LintSeverity.error ? ('error' as LintSeverityLevel) : ('warn' as LintSeverityLevel),
-            gracePeriod: l.gracePeriod,
-            schemaUsageCheckPeriod: l.schemaUsageCheckPeriod,
-          };
-        }),
-      );
-    }
+      if (graphPruningConfigs.length > 0) {
+        await tx.insert(namespaceGraphPruningCheckConfig).values(
+          graphPruningConfigs.map((l) => {
+            return {
+              namespaceId,
+              graphPruningRule: l.ruleName as GraphPruningRuleEnum,
+              severityLevel:
+                l.severityLevel === LintSeverity.error ? ('error' as LintSeverityLevel) : ('warn' as LintSeverityLevel),
+              gracePeriod: l.gracePeriodInDays,
+              schemaUsageCheckPeriod: l.schemaUsageCheckPeriodInDays,
+            };
+          }),
+        );
+      }
+    });
   }
 
   public async addSchemaCheckGraphPruningIssues({

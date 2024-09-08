@@ -47,7 +47,7 @@ import {
   DeleteUserResponse,
   DeploymentError,
   EnableFeatureFlagResponse,
-  EnableGraphPruningForTheNamespaceResponse,
+  EnableGraphPruningResponse,
   EnableLintingForTheNamespaceResponse,
   Feature,
   FixSubgraphSchemaResponse,
@@ -8317,12 +8317,21 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    enableGraphPruningForTheNamespace: (req, ctx) => {
+    enableGraphPruning: (req, ctx) => {
       let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<EnableGraphPruningForTheNamespaceResponse>>(ctx, logger, async () => {
+      return handleError<PlainMessage<EnableGraphPruningResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
+
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
 
         const organizationRepo = new OrganizationRepository(logger, opts.db);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
@@ -8368,6 +8377,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<ConfigureNamespaceGraphPruningConfigResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
+
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
 
         const schemaGraphPruningRepo = new SchemaGraphPruningRepository(opts.db);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
@@ -11647,7 +11665,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             return {
               ruleName: l.ruleName,
               severityLevel: l.severity === 'error' ? LintSeverity.error : LintSeverity.warn,
-              gracePeriod: l.gracePeriod,
+              gracePeriodInDays: l.gracePeriodInDays,
             } as GraphPruningConfig;
           }),
           graphPrunerEnabled: namespace.enableGraphPruning,

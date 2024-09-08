@@ -2003,21 +2003,20 @@ message ConfigureNamespaceLintConfigResponse {
   Response response = 1;
 }
 
-message EnableGraphPruningForTheNamespaceRequest {
+message EnableGraphPruningRequest {
   string namespace = 1;
   bool enableGraphPruning = 2;
 }
 
-message EnableGraphPruningForTheNamespaceResponse {
+message EnableGraphPruningResponse {
   Response response = 1;
 }
 
 message GraphPruningConfig {
   string ruleName = 1;
   LintSeverity severityLevel = 2;
-  // grace period in days
-  int32 gracePeriod = 3;
-  optional int32 schemaUsageCheckPeriod = 4; // in days
+  int32 gracePeriodInDays = 3;
+  optional int32 schemaUsageCheckPeriodInDays = 4;
 }
 
 message ConfigureNamespaceGraphPruningConfigRequest {
@@ -2558,7 +2557,7 @@ service PlatformService {
   // GetNamespaceLintConfig returns the lint config of the namespace.
   rpc GetNamespaceLintConfig(GetNamespaceLintConfigRequest) returns (GetNamespaceLintConfigResponse) {}
   // EnablePruningForTheNamespace enables the graph pruning check for the namespace passed.
-  rpc EnableGraphPruningForTheNamespace(EnableGraphPruningForTheNamespaceRequest) returns (EnableGraphPruningForTheNamespaceResponse) {}
+  rpc EnableGraphPruning(EnableGraphPruningRequest) returns (EnableGraphPruningResponse) {}
   // ConfigureNamespaceGraphPruningConfig configures the graph pruning config of the organization.
   rpc ConfigureNamespaceGraphPruningConfig(ConfigureNamespaceGraphPruningConfigRequest) returns (ConfigureNamespaceGraphPruningConfigResponse) {}
   // GetNamespaceGraphPruningConfig returns the graph pruning config of the namespace.

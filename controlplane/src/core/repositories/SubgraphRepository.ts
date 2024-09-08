@@ -1333,11 +1333,11 @@ export class SubgraphRepository {
       const now = new Date();
       const gracePeriodForUnusedFields = addDays(
         now,
-        graphPruningConfigs.find((c) => c.ruleName === 'UNUSED_FIELDS')?.gracePeriod || 7,
+        graphPruningConfigs.find((c) => c.ruleName === 'UNUSED_FIELDS')?.gracePeriodInDays || 7,
       );
       const gracePeriodForDeprecatedFields = addDays(
         now,
-        graphPruningConfigs.find((c) => c.ruleName === 'DEPRECATED_FIELDS')?.gracePeriod || 7,
+        graphPruningConfigs.find((c) => c.ruleName === 'DEPRECATED_FIELDS')?.gracePeriodInDays || 7,
       );
       for (const field of fieldsAdded) {
         await this.addFieldGracePeriod({

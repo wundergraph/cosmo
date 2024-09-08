@@ -96,7 +96,7 @@ export default class SchemaGraphPruner {
         fields: fieldsToBeChecked,
         organizationId,
         federatedGraphId: federatedGraph.id,
-        range: rangeInDays * 24,
+        rangeInHours: rangeInDays * 24,
       });
       const unusedFields = allFields.filter((field) =>
         unusedFieldsWithTypeNames.some((f) => f.name === field.name && f.typeName === field.typeName),
@@ -106,7 +106,7 @@ export default class SchemaGraphPruner {
           graphPruningRuleType: 'UNUSED_FIELDS',
           severity: severityLevel === 'error' ? LintSeverity.error : LintSeverity.warn,
           fieldPath: field.path,
-          message: `Field ${field.name} of type ${field.typeName} has not used in the past ${rangeInDays} days`,
+          message: `Field ${field.name} of type ${field.typeName} has not been used in the past ${rangeInDays} days`,
           issueLocation: {
             line: field.location.line || 0,
             column: field.location.column || 0,
@@ -277,7 +277,7 @@ export default class SchemaGraphPruner {
     });
 
     for (const graphPruningConfig of graphPruningConfigs) {
-      const { ruleName, severity, schemaUsageCheckPeriod } = graphPruningConfig;
+      const { ruleName, severity, schemaUsageCheckPeriodInDays } = graphPruningConfig;
 
       switch (ruleName) {
         case 'UNUSED_FIELDS': {
@@ -286,7 +286,7 @@ export default class SchemaGraphPruner {
             namespaceId: subgraph.namespaceId,
             organizationId,
             federatedGraphs,
-            rangeInDays: schemaUsageCheckPeriod || rangeInDays,
+            rangeInDays: schemaUsageCheckPeriodInDays || rangeInDays,
             addedFields: updatedFields.filter((field) => field.changeType !== 'FIELD_DEPRECATION_ADDED'),
             severityLevel: severity,
           });
@@ -305,7 +305,7 @@ export default class SchemaGraphPruner {
             namespaceId: subgraph.namespaceId,
             organizationId,
             federatedGraphs,
-            rangeInDays: schemaUsageCheckPeriod || rangeInDays,
+            rangeInDays: schemaUsageCheckPeriodInDays || rangeInDays,
             severityLevel: severity,
             addedDeprecatedFields: updatedFields.filter((field) => field.changeType === 'FIELD_DEPRECATION_ADDED'),
           });

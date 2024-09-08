@@ -165,18 +165,18 @@ export class UsageRepository {
   public async getUnusedFields({
     organizationId,
     federatedGraphId,
-    range,
+    rangeInHours,
     fields,
   }: {
     organizationId: string;
     federatedGraphId: string;
-    range: number;
+    rangeInHours: number;
     fields: Field[];
   }): Promise<{ name: string; typeName: string }[]> {
     const arrayJoinFields = fields.map((field) => `('${field.name}', '${field.typeName}')`).join(', ');
     const {
       dateRange: { end, start },
-    } = parseTimeFilters(undefined, range);
+    } = parseTimeFilters(undefined, rangeInHours);
 
     const query = `
       WITH 
