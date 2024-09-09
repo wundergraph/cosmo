@@ -230,10 +230,12 @@ type EngineExecutionConfiguration struct {
 }
 
 type SecurityConfiguration struct {
-	BlockMutations              bool `yaml:"block_mutations" envDefault:"false" env:"SECURITY_BLOCK_MUTATIONS"`
-	BlockSubscriptions          bool `yaml:"block_subscriptions" envDefault:"false" env:"SECURITY_BLOCK_SUBSCRIPTIONS"`
-	BlockNonPersistedOperations bool `yaml:"block_non_persisted_operations" envDefault:"false" env:"SECURITY_BLOCK_NON_PERSISTED_OPERATIONS"`
-	MaxQueryDepth               int  `yaml:"max_query_depth,omitempty" envDefault:"0" env:"SECURITY_MAX_QUERY_DEPTH"`
+	BlockMutations                       bool  `yaml:"block_mutations" envDefault:"false" env:"SECURITY_BLOCK_MUTATIONS"`
+	BlockSubscriptions                   bool  `yaml:"block_subscriptions" envDefault:"false" env:"SECURITY_BLOCK_SUBSCRIPTIONS"`
+	BlockNonPersistedOperations          bool  `yaml:"block_non_persisted_operations" envDefault:"false" env:"SECURITY_BLOCK_NON_PERSISTED_OPERATIONS"`
+	MaxQueryDepth                        int   `yaml:"max_query_depth,omitempty" envDefault:"0" env:"SECURITY_MAX_QUERY_DEPTH"`
+	QueryDepthCacheSize                  int64 `yaml:"query_depth_cache_size,omitempty" envDefault:"1024" env:"SECURITY_QUERY_DEPTH_CACHE_SIZE"`
+	DisableDepthLimitPersistedOperations bool  `yaml:"disable_depth_limit_persisted_operations,omitempty" envDefault:"false" env:"SECURITY_DISABLE_DEPTH_LIMIT_PERSISTED_OPERATIONS"`
 }
 
 type OverrideRoutingURLConfiguration struct {

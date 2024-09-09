@@ -286,7 +286,9 @@
     "BlockMutations": false,
     "BlockSubscriptions": false,
     "BlockNonPersistedOperations": false,
-    "MaxQueryDepth": 0
+    "MaxQueryDepth": 0,
+    "QueryDepthCacheSize": 1024,
+    "DisableDepthLimitPersistedOperations": false
   },
   "EngineExecutionConfiguration": {
     "Debug": {

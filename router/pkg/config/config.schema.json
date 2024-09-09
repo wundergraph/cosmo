@@ -1368,8 +1368,18 @@
         },
         "max_query_depth": {
           "type": "integer",
-          "description": "The max depth limit for query. This limit prevents infinite querying, and also limits the size of the data returned. If the limit is 0, this limit isn't applied.",
+          "description": "The max depth limit for query (how many nested levels you can have in a query). This limit prevents infinite querying, and also limits the size of the data returned. If the limit is 0, this limit isn't applied.",
           "default": 0
+        },
+        "disable_depth_limit_persisted_operations": {
+          "type": "boolean",
+          "description": "Disable the max query depth limit for persisted operations. Since persisted operations are stored intentionally, users may want to disable the limit to consciously allow nested persisted operations.",
+          "default": false
+        },
+        "query_depth_cache_size": {
+          "type": "integer",
+          "default": 1024,
+          "description": "The size of the cache for query depth. If users set a max_query_depth, we cache the decision per query."
         }
       }
     },

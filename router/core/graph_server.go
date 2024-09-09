@@ -301,7 +301,7 @@ type graphMux struct {
 	planCache          ExecutionPlanCache[uint64, *planWithMetaData]
 	normalizationCache *ristretto.Cache[uint64, NormalizationCacheEntry]
 	validationCache    *ristretto.Cache[uint64, bool]
-	queryDepthCache    *ristretto.Cache[uint64, bool]
+	queryDepthCache    *ristretto.Cache[uint64, int]
 }
 
 func (s *graphMux) Shutdown(_ context.Context) {
@@ -397,15 +397,15 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		}
 	}
 
-	if s.securityConfiguration.MaxQueryDepth > 0 {
-		queryDepthCacheConfig := &ristretto.Config[uint64, bool]{
-			MaxCost:     1024,
-			NumCounters: 1024 * 10,
+	if s.securityConfiguration.MaxQueryDepth > 0 && s.securityConfiguration.QueryDepthCacheSize > 0 {
+		queryDepthCacheConfig := &ristretto.Config[uint64, int]{
+			MaxCost:     s.securityConfiguration.QueryDepthCacheSize,
+			NumCounters: s.securityConfiguration.QueryDepthCacheSize * 10,
 			BufferItems: 64,
 		}
-		gm.queryDepthCache, err = ristretto.NewCache[uint64, bool](queryDepthCacheConfig)
+		gm.queryDepthCache, err = ristretto.NewCache[uint64, int](queryDepthCacheConfig)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create validation cache: %w", err)
+			return nil, fmt.Errorf("failed to create query depth cache: %w", err)
 		}
 	}
 
@@ -653,6 +653,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		MaxUploadFiles:              s.fileUploadConfig.MaxFiles,
 		MaxUploadFileSize:           int(s.fileUploadConfig.MaxFileSizeBytes),
 		MaxQueryDepth:               s.securityConfiguration.MaxQueryDepth,
+		DisableDepthLimitPersisted:  s.securityConfiguration.DisableDepthLimitPersistedOperations,
 		AlwaysIncludeQueryPlan:      s.engineExecutionConfiguration.Debug.AlwaysIncludeQueryPlan,
 		AlwaysSkipLoader:            s.engineExecutionConfiguration.Debug.AlwaysSkipLoader,
 		QueryPlansEnabled:           s.Config.queryPlansEnabled,

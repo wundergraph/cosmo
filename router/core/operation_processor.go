@@ -86,7 +86,7 @@ type OperationProcessorOptions struct {
 	EnablePersistedOperationsCache bool
 	NormalizationCache             *ristretto.Cache[uint64, NormalizationCacheEntry]
 	ValidationCache                *ristretto.Cache[uint64, bool]
-	QueryDepthCache                *ristretto.Cache[uint64, bool]
+	QueryDepthCache                *ristretto.Cache[uint64, int]
 	ParseKitPoolSize               int
 }
 
@@ -124,7 +124,7 @@ type OperationCache struct {
 
 	normalizationCache *ristretto.Cache[uint64, NormalizationCacheEntry]
 	validationCache    *ristretto.Cache[uint64, bool]
-	queryDepthCache    *ristretto.Cache[uint64, bool]
+	queryDepthCache    *ristretto.Cache[uint64, int]
 }
 
 // OperationKit provides methods to parse, normalize and validate operations.
@@ -744,21 +744,18 @@ func (o *OperationKit) Validate(skipLoader bool) (cacheHit bool, err error) {
 }
 
 // ValidateQueryDepth validates that the operation query depth isn't greater than the max query depth.
-func (o *OperationKit) ValidateQueryDepth(maxQueryDepth int, operation, definition *ast.Document) (err error) {
-	if maxQueryDepth == 0 {
-		return nil
-	}
-
+func (o *OperationKit) ValidateQueryDepth(maxQueryDepth int, operation, definition *ast.Document) (bool, int, error) {
 	if o.cache != nil && o.cache.queryDepthCache != nil {
-		valid, cacheHit := o.cache.validationCache.Get(o.parsedOperation.ID)
+		depth, cacheHit := o.cache.queryDepthCache.Get(o.parsedOperation.ID)
 		if cacheHit {
+			valid := depth <= maxQueryDepth
 			if !valid {
-				return &httpGraphqlError{
-					message:    fmt.Sprintf("The query depth exceeds the max query depth allowed (%d)", maxQueryDepth),
+				return cacheHit, depth, &httpGraphqlError{
+					message:    fmt.Sprintf("The query depth %d exceeds the max query depth allowed (%d)", depth, maxQueryDepth),
 					statusCode: http.StatusBadRequest,
 				}
 			}
-			return nil
+			return cacheHit, depth, nil
 		}
 	}
 
@@ -767,16 +764,16 @@ func (o *OperationKit) ValidateQueryDepth(maxQueryDepth int, operation, definiti
 	valid := globalComplexityResult.Depth <= maxQueryDepth
 
 	if o.cache != nil && o.cache.queryDepthCache != nil {
-		o.cache.queryDepthCache.Set(o.parsedOperation.ID, valid, 1)
+		o.cache.queryDepthCache.Set(o.parsedOperation.ID, globalComplexityResult.Depth, 1)
 	}
 
 	if !valid {
-		return &httpGraphqlError{
+		return false, globalComplexityResult.Depth, &httpGraphqlError{
 			message:    fmt.Sprintf("The query depth %d exceeds the max query depth allowed (%d)", globalComplexityResult.Depth, maxQueryDepth),
 			statusCode: http.StatusBadRequest,
 		}
 	}
-	return nil
+	return false, globalComplexityResult.Depth, nil
 }
 
 var (
@@ -870,7 +867,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		if processor.operationCache == nil {
 			processor.operationCache = &OperationCache{}
 		}
-		processor.operationCache.validationCache = opts.QueryDepthCache
+		processor.operationCache.queryDepthCache = opts.QueryDepthCache
 	}
 	return processor
 }
