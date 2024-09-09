@@ -54,6 +54,9 @@ jobs:
         with:
           working-directory: ./terraform-provider
 
+      - name: Install tools
+        run: make setup-build-tools
+
       - name: Generate code
         run: make generate-go
 
