@@ -1550,6 +1550,11 @@
           "type": "integer",
           "default": 1024,
           "description": "The size of the validation cache."
+        },
+        "resolver_max_recyclable_parser_size": {
+          "type": "integer",
+          "default": 0,
+          "description": "Limits the size of the Parser that can be recycled back into the Pool. If set to 0, no limit is applied. This helps keep the Heap size more maintainable if you regularly perform large queries."
         }
       }
     },

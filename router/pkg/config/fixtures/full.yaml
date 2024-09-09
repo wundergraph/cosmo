@@ -212,6 +212,7 @@ engine:
   epoll_kqueue_conn_buffer_size: 128
   websocket_read_timeout: "5s"
   execution_plan_cache_size: 1024
+  resolver_max_recyclable_parser_size: 32768
   debug:
     report_websocket_connections: false
     report_memory_usage: false
