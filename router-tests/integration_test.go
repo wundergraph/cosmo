@@ -1009,6 +1009,26 @@ func TestMaxQueryDepth(t *testing.T) {
 			require.Equal(t, `{"errors":[{"message":"The query depth 3 exceeds the max query depth allowed (2)"}],"data":null}`, res.Body)
 		})
 	})
+
+	t.Run("max query depth blocks persisted queries over the limit", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+				securityConfiguration.MaxQueryDepth = 2
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := make(http.Header)
+			header.Add("graphql-client-name", "my-client")
+			res, _ := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
+				OperationName: []byte(`Find`),
+				Variables:     []byte(`{"criteria":  {"nationality":  "GERMAN"   }}`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "e33580cf6276de9a75fb3b1c4b7580fec2a1c8facd13f3487bf6c7c3f854f7e3"}}`),
+				Header:        header,
+			})
+			require.Equal(t, 400, res.Response.StatusCode)
+			require.Equal(t, `{"errors":[{"message":"The query depth 3 exceeds the max query depth allowed (2)"}],"data":null}`, res.Body)
+		})
+	})
 }
 
 func TestPartialOriginErrors(t *testing.T) {

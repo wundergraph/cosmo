@@ -6,8 +6,6 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/middleware/operation_complexity"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"io"
 	"net/http"
 	"strconv"
@@ -606,30 +604,9 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 	* Validate that the planned query doesn't exceed the maximum query depth configured
 	 */
 
-	if h.maxQueryDepth > 0 {
-		_, maxQueryDepthSpan := h.tracer.Start(req.Context(), "Operation - Checking Query Depth",
-			trace.WithSpanKind(trace.SpanKindInternal),
-			trace.WithAttributes(otel.WgEngineRequestTracingEnabled.Bool(httpOperation.traceOptions.Enable)),
-			trace.WithAttributes(attributes...),
-		)
-
-		operation := opContext.preparedPlan.operationDocument
-		definition := opContext.preparedPlan.schemaDocument
-		report := operationreport.Report{}
-		globalComplexityResult, _ := operation_complexity.CalculateOperationComplexity(operation, definition, &report)
-
-		if globalComplexityResult.Depth > h.maxQueryDepth {
-			err := &httpGraphqlError{
-				message:    fmt.Sprintf("The query depth %d exceeds the max query depth allowed (%d)", globalComplexityResult.Depth, h.maxQueryDepth),
-				statusCode: http.StatusBadRequest,
-			}
-
-			rtrace.AttachErrToSpan(maxQueryDepthSpan, err)
-			maxQueryDepthSpan.End()
-			return nil, err
-		}
-
-		maxQueryDepthSpan.End()
+	queryDepthErr := operationKit.ValidateQueryDepth(h.maxQueryDepth, opContext.preparedPlan.operationDocument, opContext.preparedPlan.schemaDocument)
+	if queryDepthErr != nil {
+		return nil, queryDepthErr
 	}
 
 	return opContext, nil

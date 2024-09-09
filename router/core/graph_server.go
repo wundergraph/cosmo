@@ -301,6 +301,7 @@ type graphMux struct {
 	planCache          ExecutionPlanCache[uint64, *planWithMetaData]
 	normalizationCache *ristretto.Cache[uint64, NormalizationCacheEntry]
 	validationCache    *ristretto.Cache[uint64, bool]
+	queryDepthCache    *ristretto.Cache[uint64, bool]
 }
 
 func (s *graphMux) Shutdown(_ context.Context) {
@@ -310,6 +311,9 @@ func (s *graphMux) Shutdown(_ context.Context) {
 	}
 	if s.validationCache != nil {
 		s.validationCache.Close()
+	}
+	if s.queryDepthCache != nil {
+		s.queryDepthCache.Close()
 	}
 }
 
@@ -388,6 +392,18 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			BufferItems: 64,
 		}
 		gm.validationCache, err = ristretto.NewCache[uint64, bool](validationCacheConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create validation cache: %w", err)
+		}
+	}
+
+	if s.securityConfiguration.MaxQueryDepth > 0 {
+		queryDepthCacheConfig := &ristretto.Config[uint64, bool]{
+			MaxCost:     1024,
+			NumCounters: 1024 * 10,
+			BufferItems: 64,
+		}
+		gm.queryDepthCache, err = ristretto.NewCache[uint64, bool](queryDepthCacheConfig)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create validation cache: %w", err)
 		}
@@ -575,6 +591,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		EnablePersistedOperationsCache: s.engineExecutionConfiguration.EnablePersistedOperationsCache,
 		NormalizationCache:             gm.normalizationCache,
 		ValidationCache:                gm.validationCache,
+		QueryDepthCache:                gm.queryDepthCache,
 		ParseKitPoolSize:               s.engineExecutionConfiguration.ParseKitPoolSize,
 	})
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
