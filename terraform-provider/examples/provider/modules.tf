@@ -23,3 +23,4 @@ module "cosmo-federated-graph" {
   // set this to false to add the resources to an existing namespace
   create_namespace = true
 }
+

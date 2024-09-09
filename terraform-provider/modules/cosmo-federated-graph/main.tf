@@ -29,3 +29,5 @@ resource "cosmo_subgraph" "subgraph" {
   namespace          = var.create_namespace ? cosmo_namespace.namespace["enabled"].name : data.cosmo_namespace.namespace["enabled"].name
   routing_url        = each.value.routing_url
 }
+
+

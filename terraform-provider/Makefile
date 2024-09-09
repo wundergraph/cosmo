@@ -21,7 +21,8 @@ tidy:
 	go mod tidy
 
 fmt:
-	go fmt ./...
+	go fmt internal/...
+	go fmt main.go
 	terraform fmt -recursive 
 
 build:
@@ -58,7 +59,7 @@ e2e-cd-apply:
 e2e-cd-destroy: 
 	make e2e-destroy 
 
-e2e-comso-apply: 
+e2e-cosmo-apply: 
 	FEATURE=examples/cosmo make install 
 	FEATURE=examples/cosmo make e2e-init 
 	FEATURE=examples/cosmo make e2e-apply 

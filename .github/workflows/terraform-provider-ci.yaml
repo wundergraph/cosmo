@@ -1,13 +1,14 @@
 name: Terraform Provider CI
 on:
+  # used for initial development purposes
   push:
     paths:
-      - "terraform-provider/**/*"
-      - ".github/workflows/terraform-provider-ci.yaml"
+      - 'terraform-provider/**/*'
+      - '.github/workflows/terraform-provider-ci.yaml'
   pull_request:
     paths:
-      - "terraform-provider/**/*"
-      - ".github/workflows/terraform-provider-ci.yaml"
+      - 'terraform-provider/**/*'
+      - '.github/workflows/terraform-provider-ci.yaml'
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}
@@ -15,6 +16,8 @@ concurrency:
 
 env:
   CI: true
+  COSMO_API_KEY: cosmo_669b576aaadc10ee1ae81d9193425705
+  COSMO_API_URL: http://localhost:3001
 
 jobs:
   build_test:
@@ -38,12 +41,6 @@ jobs:
         with:
           cache-dependency-path: terraform-provider/go.sum
           go-version: 1.21.5
-
-      - name: cache tflint plugin directory
-        uses: actions/cache@v4
-        with:
-          path: ~/.tflint.d/plugins
-          key: tflint-${{ hashFiles('.tflint.hcl') }}
 
       - name: setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -75,8 +72,30 @@ jobs:
         run: go mod download
         working-directory: ./terraform-provider
 
+      - uses: hoverkraft-tech/compose-action@v2.0.1
+        with:
+          compose-file: 'docker-compose.full.yml '
+          up-flags: '--remove-orphans --detach'
+          compose-flags: '--profile default'
+
+      - name: Execute tests in the running services
+        run: |
+          ./scripts/setup-fulldemo.sh
+
       - name: Run tests
         run: make testacc
+        working-directory: ./terraform-provider
+
+      - name: Run e2e-cd
+        run: |
+          make e2e-cd-apply
+          make e2e-cd-destroy
+        working-directory: ./terraform-provider
+
+      - name: Run e2e-cosmo
+        run: |
+          make e2e-cosmo-apply
+          make e2e-cosmo-destroy
         working-directory: ./terraform-provider
 
       - name: Build
