@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.109.1](https://github.com/wundergraph/cosmo/compare/router@0.109.0...router@0.109.1) (2024-09-09)
+
+### Bug Fixes
+
+* follow snake_case for all router logs ([#1114](https://github.com/wundergraph/cosmo/issues/1114)) ([e621548](https://github.com/wundergraph/cosmo/commit/e621548cf7d43a40f1b834aa1d37e942d06b1c04)) (@StarpTech)
+* setting cached operation name ([#1158](https://github.com/wundergraph/cosmo/issues/1158)) ([3f15811](https://github.com/wundergraph/cosmo/commit/3f1581199148cbcabef165c7ddebaecc4f309ca7)) (@devsergiy)
+
 # [0.109.0](https://github.com/wundergraph/cosmo/compare/router@0.108.0...router@0.109.0) (2024-09-05)
 
 ### Features

@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.107.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.106.0...controlplane@0.107.0) (2024-09-09)
+
+### Features
+
+* add audits for enabling and disabling of feature flags ([#1151](https://github.com/wundergraph/cosmo/issues/1151)) ([8059c49](https://github.com/wundergraph/cosmo/commit/8059c4903f9ee819c45c956a54819868336029d8)) (@JivusAyrus)
+
 # [0.106.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.105.1...controlplane@0.106.0) (2024-09-05)
 
 ### Features
