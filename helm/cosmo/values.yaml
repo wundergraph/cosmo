@@ -72,6 +72,28 @@ global:
     databaseUsername: 'postgres'
     databasePassword: 'changeme'
 
+    smtpServer:
+      # -- Use auth for connecting to the smtpServer.
+      auth: true
+      # -- Set replyToDisplayName.
+      replyToDisplayName: 'WunderGraph Cosmo'
+      # -- Set fromDisplayName.
+      fromDisplayName: 'WunderGraph Cosmo'
+      # -- Set username, maps to smtpServer.user in the imported keycloak realm
+      username: ''
+      # -- Set password to be used for connecting to the smtpServer.
+      password: '**********'
+      # -- Set 'from' email to be used.
+      from: 'system@wundergraph.com'
+      # -- Set mail host to be used, usually the same one as the one in the controlplane.
+      host: 'smtp.postmarkapp.com'
+      # -- The port of the mail server.
+      port: 587
+      # -- Enable or disable starttls.
+      starttls: true
+      # -- Enable or disable using ssl for the smtpServer connection.
+      ssl: false
+
   minio:
     enabled: true
 
@@ -92,12 +114,73 @@ ingress:
 
 # Cosmo CDN. For more options, please refer to the README.md
 cdn:
+  # -- Add labels to all deployed resources
+  commonLabels: {}
+
   configuration:
     # This must match the value used in controlplane.configuration.s3StorageUrl
     s3StorageUrl: 'http://minio:changeme@cosmo-minio:9000/cosmo'
+    # -- The region where the S3 bucket is located.
+    s3Region: 'auto'
+    # -- The endpoint of the S3 bucket.
+    s3Endpoint: ''
+    # -- s3 access key id, can be used instead of [username]:[password] in the url
+    s3AccessKeyId: ''
+    # -- s3 secret access key, can be used instead of [username]:[password] in the url
+    s3SecretAccessKey: ''
+    # -- Forces usage of path style urls for S3. Default is true.
+    s3ForcePathStyle: 'true'
 
 # Cosmo Controlplane. For more options, please refer to the README.md
 controlplane:
+  # -- Add labels to all deployed resources
+  commonLabels: {}
+
+  # -- Pass additional labels to all jobs
+  additionalJobLabels: {}
+
+  # -- Configure jobs to be executed in the control plane
+  jobs:
+    # -- Used to deactivate an organization with a reason and schedule deletion
+    deactivateOrganization:
+      # -- Enables the job to be run
+      enabled: false
+      # -- Adds additional labels to the job
+      additionalLabels: {}
+      # -- The slug of the organization
+      slug: 'foo'
+      # -- The unique identifier of the organization
+      id: '123'
+      # -- The reason for deactivation
+      reason: ''
+    # -- Used to activate an organization and remove the scheduled deletion
+    activateOrganization:
+      # -- Adds additional labels to the job
+      additionalLabels: {}
+      # -- Enables the job to be run
+      enabled: false
+      # -- The slug of the organization
+      slug: 'foo'
+      # -- The unique identifier of the organization
+      id: '123'
+    # -- Used to delete the user
+    deleteUser:
+      # -- Adds additional labels to the job
+      additionalLabels: {}
+      # -- Enables the job to be run
+      enabled: false
+      # -- The unique identifier of the user
+      id: '123'
+    clickhouseMigration:
+      # -- Adds additional labels to the clickhouse migration job (see: .Values.global.otelcollector)
+      additionalLabels: {}
+    databaseMigration:
+      # -- Adds additional labels to the database-migration job
+      additionalLabels: {}
+    seedOrganization:
+      # -- Adds additional labels to the job (see: .Values.global.seed)
+      additionalLabels: {}
+
   configuration:
     logLevel: 'debug'
     allowedOrigins:
@@ -111,7 +194,19 @@ controlplane:
     clickhouseMigrationDsn: 'clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&max_execution_time=60'
     redisHost: 'cosmo-redis-master'
     redisPort: 6379
+    # This must match the value used in cdn.configuration.s3StorageUrl
     s3StorageUrl: 'http://minio:changeme@cosmo-minio:9000/cosmo'
+    # -- The region where the S3 bucket is located.
+    s3Region: 'auto'
+    # -- The endpoint of the S3 bucket.
+    s3Endpoint: ''
+    # -- s3 access key id, can be used instead of [username]:[password] in the url
+    s3AccessKeyId: ''
+    # -- s3 secret access key, can be used instead of [username]:[password] in the url
+    s3SecretAccessKey: ''
+    # -- Forces usage of path style urls for S3. Default is true.
+    s3ForcePathStyle: 'true'
+
     cdnBaseUrl: 'http://cosmo-cdn:8787'
 
     # -- Use this section to configure the smtp server.
@@ -152,6 +247,9 @@ controlplane:
 
 # Cosmo Router. For more options, please refer to the CHART.md
 router:
+  # -- Add labels to all deployed resources
+  commonLabels: {}
+
   terminationGracePeriodSeconds: 60
   deploymentStrategy:
     rollingUpdate:
@@ -182,6 +280,9 @@ router:
 
 # Cosmo Open Telemetry Collector. For more options, please refer to the CHART.md
 otelcollector:
+  # -- Add labels to all deployed resources
+  commonLabels: {}
+
   configuration:
     # Use internal DNS name to access clickhouse
     clickhouseDsn: 'clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4'
@@ -206,6 +307,9 @@ otelcollector:
 
 # Cosmo GraphQL Metrics Collector. For more options, please refer to the CHART.md
 graphqlmetrics:
+  # -- Add labels to all deployed resources
+  commonLabels: {}
+
   configuration:
     # Use internal DNS name to access clickhouse
     clickhouseDsn: 'clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4'

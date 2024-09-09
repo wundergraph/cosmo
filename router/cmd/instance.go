@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 
 	"github.com/KimMachineGun/automemlimit/memlimit"
@@ -170,6 +171,11 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		core.WithRateLimitConfig(&cfg.RateLimit),
 	}
 
+	// HTTP_PROXY, HTTPS_PROXY and NO_PROXY
+	if hasProxyConfigured() {
+		core.WithProxy(http.ProxyFromEnvironment)
+	}
+
 	options = append(options, additionalOptions...)
 
 	if cfg.RouterRegistration && cfg.Graph.Token != "" {
@@ -205,4 +211,11 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 	}
 
 	return core.NewRouter(options...)
+}
+
+func hasProxyConfigured() bool {
+	_, httpProxy := os.LookupEnv("HTTP_PROXY")
+	_, httpsProxy := os.LookupEnv("HTTPS_PROXY")
+	_, noProxy := os.LookupEnv("NO_PROXY")
+	return httpProxy || httpsProxy || noProxy
 }

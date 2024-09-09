@@ -37,7 +37,7 @@ import { BillingRepository } from './repositories/BillingRepository.js';
 import { BillingService } from './services/BillingService.js';
 import { UserRepository } from './repositories/UserRepository.js';
 import { AIGraphReadmeQueue, createAIGraphReadmeWorker } from './workers/AIGraphReadmeWorker.js';
-import { fastifyLoggerId } from './util.js';
+import { fastifyLoggerId, createS3ClientConfig, extractS3BucketName } from './util.js';
 import { ApiKeyRepository } from './repositories/ApiKeyRepository.js';
 import { createDeleteOrganizationWorker, DeleteOrganizationQueue } from './workers/DeleteOrganizationWorker.js';
 
@@ -86,7 +86,14 @@ export interface BuildConfig {
   };
   slack: { clientID?: string; clientSecret?: string };
   cdnBaseUrl: string;
-  s3StorageUrl: string;
+  s3Storage: {
+    url: string;
+    endpoint?: string;
+    region?: string;
+    username?: string;
+    password?: string;
+    forcePathStyle?: boolean;
+  };
   mailer: {
     smtpEnabled: boolean;
     smtpHost?: string;
@@ -343,22 +350,14 @@ export default async function build(opts: BuildConfig) {
     });
   }
 
-  if (!opts.s3StorageUrl) {
+  if (!opts.s3Storage || !opts.s3Storage.url) {
     throw new Error('S3 storage URL is required');
   }
 
-  const url = new URL(opts.s3StorageUrl);
-  const s3Client = new S3Client({
-    // For AWS S3, the region can be set via the endpoint
-    region: 'auto',
-    endpoint: url.origin,
-    credentials: {
-      accessKeyId: url.username ?? '',
-      secretAccessKey: url.password ?? '',
-    },
-    forcePathStyle: true,
-  });
-  const bucketName = url.pathname.slice(1);
+  const bucketName = extractS3BucketName(opts.s3Storage);
+  const s3Config = createS3ClientConfig(bucketName, opts.s3Storage);
+
+  const s3Client = new S3Client(s3Config);
   const blobStorage = new S3BlobStorage(s3Client, bucketName);
 
   /**

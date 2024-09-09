@@ -4,6 +4,32 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.106.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.105.1...controlplane@0.106.0) (2024-09-05)
+
+### Features
+
+* add viewer role to ui ([#1137](https://github.com/wundergraph/cosmo/issues/1137)) ([23df809](https://github.com/wundergraph/cosmo/commit/23df809a58c57ea353aa79f5a503f580b1fc82d1)) (@JivusAyrus)
+* record changed subgraphs in composition ([#1134](https://github.com/wundergraph/cosmo/issues/1134)) ([f39ca8c](https://github.com/wundergraph/cosmo/commit/f39ca8c4dcd54bb3d9594bc8394ef287a7eb04cd)) (@thisisnithin)
+
+## [0.105.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.105.0...controlplane@0.105.1) (2024-09-05)
+
+### Bug Fixes
+
+* cdn and controlplane not respecting nested subdomains ([#1145](https://github.com/wundergraph/cosmo/issues/1145)) ([1598d6e](https://github.com/wundergraph/cosmo/commit/1598d6e421cf3b51997050d006faf9655fd96fdd)) (@AndreasZeissner)
+* log config upload failures as errors ([#1142](https://github.com/wundergraph/cosmo/issues/1142)) ([5965b77](https://github.com/wundergraph/cosmo/commit/5965b7757171fac8b369feec2336c1c0b79cd5e9)) (@thisisnithin)
+
+# [0.105.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.104.0...controlplane@0.105.0) (2024-09-03)
+
+### Features
+
+* make cosmo usable with aws s3  ([#1135](https://github.com/wundergraph/cosmo/issues/1135)) ([aa9b72f](https://github.com/wundergraph/cosmo/commit/aa9b72fe59a02557f11c2eed494f7691fea236aa)) (@AndreasZeissner)
+
+# [0.104.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.103.1...controlplane@0.104.0) (2024-08-28)
+
+### Features
+
+* display and filter for subgraph id ([#1127](https://github.com/wundergraph/cosmo/issues/1127)) ([cfe708a](https://github.com/wundergraph/cosmo/commit/cfe708aba6094573fe2dfa6526850d802c44ed87)) (@thisisnithin)
+
 ## [0.103.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.103.0...controlplane@0.103.1) (2024-08-20)
 
 ### Bug Fixes

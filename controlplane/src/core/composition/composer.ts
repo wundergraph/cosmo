@@ -6,7 +6,7 @@ import {
   FieldConfiguration,
   Subgraph,
 } from '@wundergraph/composition';
-import { buildRouterConfig, ComposedSubgraph } from '@wundergraph/cosmo-shared';
+import { buildRouterConfig, ComposedSubgraph as IComposedSubgraph } from '@wundergraph/cosmo-shared';
 import { FastifyBaseLogger } from 'fastify';
 import { DocumentNode, parse, printSchema } from 'graphql';
 import {
@@ -80,6 +80,11 @@ export function buildRouterExecutionConfig(
   });
 }
 
+export type ComposedSubgraph = IComposedSubgraph & {
+  targetId: string;
+  isFeatureSubgraph: boolean;
+};
+
 export function subgraphDTOsToComposedSubgraphs(
   subgraphs: SubgraphDTO[],
   result?: FederationResult,
@@ -99,6 +104,8 @@ export function subgraphDTOsToComposedSubgraphs(
     return {
       id: subgraph.id,
       name: subgraph.name,
+      targetId: subgraph.targetId,
+      isFeatureSubgraph: subgraph.isFeatureSubgraph,
       url: subgraph.routingUrl,
       sdl: subgraph.schemaSDL,
       schemaVersionId: subgraph.schemaVersionId,
@@ -320,13 +327,7 @@ export class Composer {
           },
         });
       } catch (err: any) {
-        this.logger.debug(
-          {
-            error: err,
-            federatedGraphId,
-          },
-          'Failed to upload the final router config to the blob storage',
-        );
+        this.logger.error(err, `Failed to upload the final router config for ${federatedGraphId} to the blob storage`);
         deploymentError = new RouterConfigUploadError('Failed to upload the final router config to the CDN', err);
       }
     }
@@ -437,7 +438,7 @@ export class Composer {
       targetId: composedGraph.targetID,
       composedSDL: composedGraph.composedSchema,
       clientSchema: composedGraph.federatedClientSchema,
-      subgraphSchemaVersionIds: composedGraph.subgraphs.map((s) => s.schemaVersionId!),
+      composedSubgraphs: composedGraph.subgraphs,
       compositionErrors: composedGraph.errors,
       composedById,
       schemaVersionId: federatedSchemaVersionId,

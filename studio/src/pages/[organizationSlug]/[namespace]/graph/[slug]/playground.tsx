@@ -1,3 +1,4 @@
+import { useApplyParams } from "@/components/analytics/use-apply-params";
 import { CodeViewer } from "@/components/code-viewer";
 import {
   getGraphLayout,
@@ -5,7 +6,9 @@ import {
   GraphPageLayout,
 } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
+import { PlanView } from "@/components/playground/plan-view";
 import { TraceContext, TraceView } from "@/components/playground/trace-view";
+import { QueryPlan } from "@/components/playground/types";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,19 +38,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { NextPageWithLayout } from "@/lib/page";
 import { parseSchema } from "@/lib/schema-helpers";
 import { cn } from "@/lib/utils";
+import { useMutation, useQuery } from "@connectrpc/connect-query";
 import { explorerPlugin } from "@graphiql/plugin-explorer";
 import { createGraphiQLFetcher } from "@graphiql/toolkit";
 import { SparklesIcon } from "@heroicons/react/24/outline";
 import { Component2Icon, MobileIcon } from "@radix-ui/react-icons";
 import { TooltipContent, TooltipTrigger } from "@radix-ui/react-tooltip";
-import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getClients,
@@ -59,6 +61,8 @@ import {
   PersistedOperation,
   PublishedOperationStatus,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import axios, { AxiosError } from "axios";
+import { sentenceCase } from "change-case";
 import crypto from "crypto";
 import { GraphiQL } from "graphiql";
 import { GraphQLSchema, parse, validate } from "graphql";
@@ -68,11 +72,22 @@ import { ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { FaNetworkWired } from "react-icons/fa";
 import { FiSave } from "react-icons/fi";
+import { LuLayoutDashboard } from "react-icons/lu";
+import { MdOutlineFeaturedPlayList } from "react-icons/md";
 import { PiBracketsCurly, PiDevices, PiGraphLight } from "react-icons/pi";
 import { TbDevicesCheck } from "react-icons/tb";
+import { useDebounce } from "use-debounce";
 import { z } from "zod";
-import { useApplyParams } from "@/components/analytics/use-apply-params";
-import { MdOutlineFeaturedPlayList } from "react-icons/md";
+
+const validateHeaders = (headers: Record<string, string>) => {
+  for (const headersKey in headers) {
+    if (!/^[\^`\-\w!#$%&'*+.|~]+$/.test(headersKey)) {
+      throw new TypeError(
+        `Header name must be a valid HTTP token [${headersKey}]`,
+      );
+    }
+  }
+};
 
 const graphiQLFetch = async (
   onFetch: any,
@@ -89,14 +104,10 @@ const graphiQLFetch = async (
     };
 
     let hasTraceHeader = false;
-    for (const headersKey in headers) {
-      // check invalid headers
-      if (!/^[\^`\-\w!#$%&'*+.|~]+$/.test(headersKey)) {
-        throw new TypeError(
-          `Header name must be a valid HTTP token [${headersKey}]`,
-        );
-      }
 
+    validateHeaders(headers);
+
+    for (const headersKey in headers) {
       if (headersKey.toLowerCase() === "x-wg-trace") {
         hasTraceHeader = headers[headersKey] === "true";
         break;
@@ -138,20 +149,37 @@ const graphiQLFetch = async (
       }
     }
 
-    const response = await fetch(url, {
-      ...init,
+    const axiosResponse = await axios({
+      method: init.method as "get" | "post" | "put" | "delete", // adjust method as per init
+      url: url.toString(),
       headers,
+      data: init.body,
     });
+
+    const response = new Response(JSON.stringify(axiosResponse.data), {
+      status: axiosResponse.status,
+      statusText: axiosResponse.statusText,
+      headers: new Headers(Object.entries(axiosResponse.headers)),
+    });
+
     onFetch(await response.clone().json());
     return response;
-  } catch (e) {
-    // @ts-expect-error
-    if (e?.message?.includes("Failed to fetch")) {
-      throw new Error(
-        "Unable to connect to the server. Please check if your server is running.",
-      );
+  } catch (error: any) {
+    if (error instanceof AxiosError) {
+      const errorInfo = {
+        message: error.message || "Network Error",
+        responseErrorCode: error.code,
+        responseStatusCode: error.response?.status,
+        responseHeaders: error.response?.headers,
+        responseBody: JSON.stringify(error.response?.data),
+        errorMessage: error.message,
+      };
+      const response = new Response(JSON.stringify(errorInfo));
+      onFetch(await response.clone().json());
+      return response;
+    } else {
+      throw error;
     }
-    throw e;
   }
 };
 
@@ -380,53 +408,95 @@ const PersistOperation = () => {
   );
 };
 
-const ResponseTabs = () => {
+const ResponseViewSelector = () => {
+  const [view, setView] = useState("response");
+
   const onValueChange = (val: string) => {
     const response = document.getElementsByClassName(
       "graphiql-response",
     )[0] as HTMLDivElement;
 
-    const visual = document.getElementById(
-      "response-visualization",
+    const art = document.getElementById("art-visualization") as HTMLDivElement;
+
+    const plan = document.getElementById(
+      "planner-visualization",
     ) as HTMLDivElement;
 
-    if (!response || !visual) {
+    if (!response || !art || !plan) {
       return;
     }
 
-    if (val === "plan") {
-      response.classList.add("!invisible");
-      visual.classList.remove("invisible");
-      visual.classList.remove("-z-50");
+    if (val === "request-trace") {
+      response.classList.add("invisible");
+      response.classList.add("-z-50");
+      plan.classList.add("invisible");
+      plan.classList.add("-z-50");
+
+      art.classList.remove("invisible");
+      art.classList.remove("-z-50");
+    } else if (val === "query-plan") {
+      response.classList.add("invisible");
+      response.classList.add("-z-50");
+      art.classList.add("invisible");
+      art.classList.add("-z-50");
+
+      plan.classList.remove("invisible");
+      plan.classList.remove("-z-50");
     } else {
-      response.classList.remove("!invisible");
-      visual.classList.add("-z-50");
-      visual.classList.add("invisible");
+      response.classList.remove("invisible");
+      response.classList.remove("-z-50");
+
+      art.classList.add("invisible");
+      art.classList.add("-z-50");
+      plan.classList.add("invisible");
+      plan.classList.add("-z-50");
+    }
+
+    setView(val);
+  };
+
+  const getIcon = (val: string) => {
+    if (val === "response") {
+      return <PiBracketsCurly className="h-4 w-4 flex-shrink-0" />;
+    } else if (val === "request-trace") {
+      return <FaNetworkWired className="h-4 w-4 flex-shrink-0" />;
+    } else {
+      return <LuLayoutDashboard className="h-4 w-4 flex-shrink-0" />;
     }
   };
 
   return (
-    <div className="flex items-center justify-center gap-x-2">
-      <Tabs
-        defaultValue="response"
-        className="w-full md:w-auto"
-        onValueChange={onValueChange}
-      >
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger className="!cursor-pointer" value="response" asChild>
+    <div>
+      <Select onValueChange={onValueChange}>
+        <SelectTrigger className="w-[180px]">
+          <SelectValue>
             <div className="flex items-center gap-x-2">
-              <PiBracketsCurly className="h-4 w-4 flex-shrink-0" />
+              {getIcon(view)}
+              {sentenceCase(view)}
+            </div>
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="response">
+            <div className="flex items-center gap-x-2">
+              {getIcon("response")}
               Response
             </div>
-          </TabsTrigger>
-          <TabsTrigger className="!cursor-pointer" value="plan" asChild>
+          </SelectItem>
+          <SelectItem value="request-trace">
             <div className="flex items-center gap-x-2">
-              <FaNetworkWired className="h-4 w-4 flex-shrink-0" />
-              Trace
+              {getIcon("request-trace")}
+              Request Trace
             </div>
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+          </SelectItem>
+          <SelectItem value="query-plan">
+            <div className="flex items-center gap-x-2">
+              {getIcon("query-plan")}
+              Query Plan
+            </div>
+          </SelectItem>
+        </SelectContent>
+      </Select>
     </div>
   );
 };
@@ -462,18 +532,21 @@ const ToggleClientValidation = () => {
 
 const PlaygroundPortal = () => {
   const tabDiv = document.getElementById("response-tabs");
-  const visDiv = document.getElementById("response-visualization");
+  const artDiv = document.getElementById("art-visualization");
+  const plannerDiv = document.getElementById("planner-visualization");
   const saveDiv = document.getElementById("save-button");
   const toggleClientValidation = document.getElementById(
     "toggle-client-validation",
   );
 
-  if (!tabDiv || !visDiv || !saveDiv || !toggleClientValidation) return null;
+  if (!tabDiv || !artDiv || !plannerDiv || !saveDiv || !toggleClientValidation)
+    return null;
 
   return (
     <>
-      {createPortal(<ResponseTabs />, tabDiv)}
-      {createPortal(<TraceView />, visDiv)}
+      {createPortal(<ResponseViewSelector />, tabDiv)}
+      {createPortal(<PlanView />, plannerDiv)}
+      {createPortal(<TraceView />, artDiv)}
       {createPortal(<PersistOperation />, saveDiv)}
       {createPortal(<ToggleClientValidation />, toggleClientValidation)}
     </>
@@ -535,13 +608,20 @@ const PlaygroundPage: NextPageWithLayout = () => {
 }`);
   const [response, setResponse] = useState<string>("");
 
+  const [plan, setPlan] = useState<QueryPlan | undefined>(undefined);
+  const [planError, setPlanError] = useState<string>("");
+
   const [clientValidationEnabled, setClientValidationEnabled] = useState(true);
 
   const [isGraphiqlRendered, setIsGraphiqlRendered] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (isMounted) return;
+    const responseTabs = document.getElementById("response-tabs");
+    if (responseTabs && isMounted) {
+      return;
+    }
 
     const header = document.getElementsByClassName(
       "graphiql-session-header-right",
@@ -567,10 +647,19 @@ const PlaygroundPage: NextPageWithLayout = () => {
       if (responseSectionParent) {
         responseSectionParent.id = "response-parent";
         responseSectionParent.classList.add("relative");
-        const div = document.createElement("div");
-        div.id = "response-visualization";
-        div.className = "flex flex-1 h-full w-full absolute invisible -z-50";
-        responseSectionParent.append(div);
+
+        const artWrapper = document.createElement("div");
+        artWrapper.id = "art-visualization";
+        artWrapper.className =
+          "flex flex-1 h-full w-full absolute invisible -z-50";
+
+        const plannerWrapper = document.createElement("div");
+        plannerWrapper.id = "planner-visualization";
+        plannerWrapper.className =
+          "flex flex-1 h-full w-full absolute invisible -z-50";
+
+        responseSectionParent.append(artWrapper);
+        responseSectionParent.append(plannerWrapper);
       }
     }
 
@@ -598,7 +687,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
     }
 
     setIsMounted(true);
-  }, [isMounted]);
+  });
 
   useEffect(() => {
     if (!isGraphiqlRendered && typeof query === "string") {
@@ -697,6 +786,78 @@ const PlaygroundPage: NextPageWithLayout = () => {
     loadSchemaGraphId,
   ]);
 
+  const [debouncedQuery] = useDebounce(query, 300);
+
+  useEffect(() => {
+    const getPlan = async () => {
+      if (
+        !schema ||
+        !debouncedQuery ||
+        !routingUrl ||
+        !graphContext?.graphRequestToken
+      ) {
+        return;
+      }
+
+      try {
+        const errors = validate(schema, parse(debouncedQuery));
+        if (errors.length > 0) {
+          setPlanError("Invalid query");
+          return;
+        }
+
+        const requestHeaders: Record<string, string> = {
+          ...JSON.parse(headers),
+          "X-WG-Token": graphContext.graphRequestToken,
+          "X-WG-Include-Query-Plan": "true",
+          "X-WG-Skip-Loader": "true",
+        };
+
+        validateHeaders(requestHeaders);
+
+        if (type === "featureFlag") {
+          const featureFlag =
+            graphContext?.featureFlagsInLatestValidComposition.find(
+              (f) => f.id === loadSchemaGraphId,
+            );
+          if (featureFlag) {
+            requestHeaders["X-Feature-Flag"] = featureFlag.name;
+          }
+        }
+
+        const response = await axios.post(
+          routingUrl,
+          {
+            query: debouncedQuery,
+          },
+          { headers: requestHeaders },
+        );
+
+        if (!response.data?.extensions?.queryPlan) {
+          setPlan(undefined);
+          return;
+        }
+
+        setPlanError("");
+        setPlan(response.data.extensions.queryPlan);
+      } catch (error: any) {
+        setPlan(undefined);
+        setPlanError(error.message || "Network error");
+      }
+    };
+
+    getPlan();
+  }, [
+    debouncedQuery,
+    graphContext?.featureFlagsInLatestValidComposition,
+    graphContext?.graphRequestToken,
+    headers,
+    loadSchemaGraphId,
+    routingUrl,
+    schema,
+    type,
+  ]);
+
   const { theme } = useTheme();
 
   useEffect(() => {
@@ -722,6 +883,8 @@ const PlaygroundPage: NextPageWithLayout = () => {
         query,
         headers,
         response,
+        plan,
+        planError,
         subgraphs: graphContext.subgraphs,
         clientValidationEnabled,
         setClientValidationEnabled,

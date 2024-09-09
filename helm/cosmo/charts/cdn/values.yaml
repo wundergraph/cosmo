@@ -11,6 +11,9 @@ image:
   # -- Overrides the image tag whose default is the chart appVersion.
   version: "latest"
 
+# -- Add labels to all deployed resources
+commonLabels: {}
+
 deploymentStrategy: {}
 
 imagePullSecrets: []
@@ -141,6 +144,16 @@ probes:
 #############################
 
 configuration:
+  # -- The region where the S3 bucket is located.
+  s3Region: 'auto'
+  # -- The endpoint of the S3 bucket.
+  s3Endpoint: ''
+  # -- s3 access key id, can be used instead of [username]:[password] in the url
+  s3AccessKeyId: ''
+  # -- s3 secret access key, can be used instead of [username]:[password] in the url
+  s3SecretAccessKey: ''
+  # -- Forces usage of path style urls for S3. Default is true.
+  s3ForcePathStyle: 'true'
 
 # -- Existing secret in the same namespace containing the authJwtSecret and s3StorageUrl. The secret keys have to match with current secret.
 existingSecret: ""

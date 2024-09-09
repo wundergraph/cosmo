@@ -1,6 +1,6 @@
 # studio
 
-![Version: 0.0.1](https://img.shields.io/badge/Version-0.0.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.83.5](https://img.shields.io/badge/AppVersion-0.83.5-informational?style=flat-square)
+![Version: 0.0.1](https://img.shields.io/badge/Version-0.0.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.87.0](https://img.shields.io/badge/AppVersion-0.87.0-informational?style=flat-square)
 
 WunderGraph Cosmo Studio.
 
@@ -15,6 +15,7 @@ WunderGraph Cosmo Studio.
 | autoscaling.maxReplicas | int | `100` |  |
 | autoscaling.minReplicas | int | `1` |  |
 | autoscaling.targetCPUUtilizationPercentage | int | `80` |  |
+| commonLabels | object | `{}` | Add labels to all deployed resources |
 | configuration.slackClientId | string | `""` | The client ID of the slack app to use for slack app integration |
 | configuration.stripePublishableKey | string | `""` | The publishable key of the stripe account to use for stripe integration |
 | deploymentStrategy | object | `{}` |  |

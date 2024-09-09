@@ -32,7 +32,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { docsBaseURL, lintCategories } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
-import { cn, countLintConfigsByCategory } from "@/lib/utils";
+import { checkUserAccess, cn, countLintConfigsByCategory } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
@@ -130,6 +130,12 @@ const LintPolicyPage: NextPageWithLayout = () => {
         </div>
         <Switch
           checked={linterEnabled}
+          disabled={
+            !checkUserAccess({
+              rolesToBe: ["admin", "developer"],
+              userRoles: user?.currentOrganization.roles || [],
+            })
+          }
           onCheckedChange={(checked) => {
             setLinterEnabled(checked);
             mutate(
@@ -191,7 +197,13 @@ const LintPolicyPage: NextPageWithLayout = () => {
               type="submit"
               variant="default"
               isLoading={isConfiguring}
-              disabled={!data.linterEnabled}
+              disabled={
+                !data.linterEnabled ||
+                !checkUserAccess({
+                  rolesToBe: ["admin", "developer"],
+                  userRoles: user?.currentOrganization.roles || [],
+                })
+              }
               onClick={() => {
                 configureLintRules(
                   {
@@ -269,6 +281,13 @@ const LintPolicyPage: NextPageWithLayout = () => {
                                 checked={selectedLintRules.some(
                                   (l) => l.ruleName === rule.name,
                                 )}
+                                disabled={
+                                  !checkUserAccess({
+                                    rolesToBe: ["admin", "developer"],
+                                    userRoles:
+                                      user?.currentOrganization.roles || [],
+                                  })
+                                }
                                 onCheckedChange={(checked) => {
                                   if (checked) {
                                     setSelectedLintRules([

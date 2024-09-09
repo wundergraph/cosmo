@@ -1,6 +1,6 @@
 # controlplane
 
-![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.99.0](https://img.shields.io/badge/AppVersion-0.99.0-informational?style=flat-square)
+![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.105.0](https://img.shields.io/badge/AppVersion-0.105.0-informational?style=flat-square)
 
 WunderGraph Cosmo Controlplane
 
@@ -10,11 +10,13 @@ WunderGraph Cosmo Controlplane
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
+| additionalJobLabels | object | `{}` | Pass additional labels to all jobs |
 | affinity | object | `{}` |  |
 | autoscaling.enabled | bool | `false` |  |
 | autoscaling.maxReplicas | int | `100` |  |
 | autoscaling.minReplicas | int | `1` |  |
 | autoscaling.targetCPUUtilizationPercentage | int | `80` |  |
+| commonLabels | object | `{}` | Add labels to all deployed resources |
 | configuration.allowedOrigins[0] | string | `"*"` |  |
 | configuration.authRedirectUri | string | `"http://controlplane.wundergraph.local/v1/auth/callback"` |  |
 | configuration.cdnBaseUrl | string | `"http://cosmo-cdn:8787"` | URL of the CDN to use for serving router configs and persistent operations |
@@ -47,6 +49,11 @@ WunderGraph Cosmo Controlplane
 | configuration.redisTlsCa | string | `""` | When connecting to a redis instance over TLS. Accept a cert in PEM format (as one-line with \n) or file. |
 | configuration.redisTlsCert | string | `""` |  |
 | configuration.redisTlsKey | string | `""` |  |
+| configuration.s3AccessKeyId | string | `""` | s3 access key id, can be used instead of [username]:[password] in the url |
+| configuration.s3Endpoint | string | `""` | The endpoint of the S3 bucket. |
+| configuration.s3ForcePathStyle | string | `"true"` | Forces usage of path style urls for S3. Default is true. |
+| configuration.s3Region | string | `"auto"` | The region where the S3 bucket is located. |
+| configuration.s3SecretAccessKey | string | `""` | s3 secret access key, can be used instead of [username]:[password] in the url |
 | configuration.s3StorageUrl | string | `"http://minio:changeme@cosmo-minio:9000/cosmo"` |  |
 | configuration.slackAppClientId | string | `""` |  |
 | configuration.slackAppClientSecret | string | `""` |  |
@@ -73,19 +80,25 @@ WunderGraph Cosmo Controlplane
 | imagePullSecrets | list | `[]` |  |
 | ingress.hosts | string | `nil` |  |
 | ingress.tls | list | `[]` |  |
-| jobs | object | `{"activateOrganization":{"enabled":false,"id":"123","slug":"foo"},"deactivateOrganization":{"enabled":false,"id":"123","reason":"","slug":"foo"},"deleteUser":{"enabled":false,"id":"123"}}` | Configure jobs to be executed in the control plane |
-| jobs.activateOrganization | object | `{"enabled":false,"id":"123","slug":"foo"}` | Used to activate an organization and remove the scheduled deletion |
+| jobs | object | `{"activateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","slug":"foo"},"clickhouseMigration":{"additionalLabels":{}},"databaseMigration":{"additionalLabels":{}},"deactivateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","reason":"","slug":"foo"},"deleteUser":{"additionalLabels":{},"enabled":false,"id":"123"},"seedOrganization":{"additionalLabels":{}}}` | Configure jobs to be executed in the control plane |
+| jobs.activateOrganization | object | `{"additionalLabels":{},"enabled":false,"id":"123","slug":"foo"}` | Used to activate an organization and remove the scheduled deletion |
+| jobs.activateOrganization.additionalLabels | object | `{}` | Adds additional labels to the job |
 | jobs.activateOrganization.enabled | bool | `false` | Enables the job to be run |
 | jobs.activateOrganization.id | string | `"123"` | The unique identifier of the organization |
 | jobs.activateOrganization.slug | string | `"foo"` | The slug of the organization |
-| jobs.deactivateOrganization | object | `{"enabled":false,"id":"123","reason":"","slug":"foo"}` | Used to deactivate an organization with a reason and schedule deletion |
+| jobs.clickhouseMigration.additionalLabels | object | `{}` | Adds additional labels to the clickhouse migration job (see: .Values.global.otelcollector) |
+| jobs.databaseMigration.additionalLabels | object | `{}` | Adds additional labels to the database-migration job |
+| jobs.deactivateOrganization | object | `{"additionalLabels":{},"enabled":false,"id":"123","reason":"","slug":"foo"}` | Used to deactivate an organization with a reason and schedule deletion |
+| jobs.deactivateOrganization.additionalLabels | object | `{}` | Adds additional labels to the job |
 | jobs.deactivateOrganization.enabled | bool | `false` | Enables the job to be run |
 | jobs.deactivateOrganization.id | string | `"123"` | The unique identifier of the organization |
 | jobs.deactivateOrganization.reason | string | `""` | The reason for deactivation |
 | jobs.deactivateOrganization.slug | string | `"foo"` | The slug of the organization |
-| jobs.deleteUser | object | `{"enabled":false,"id":"123"}` | Used to delete the user |
+| jobs.deleteUser | object | `{"additionalLabels":{},"enabled":false,"id":"123"}` | Used to delete the user |
+| jobs.deleteUser.additionalLabels | object | `{}` | Adds additional labels to the job |
 | jobs.deleteUser.enabled | bool | `false` | Enables the job to be run |
 | jobs.deleteUser.id | string | `"123"` | The unique identifier of the user |
+| jobs.seedOrganization.additionalLabels | object | `{}` | Adds additional labels to the job (see: .Values.global.seed) |
 | nameOverride | string | `""` | String to partially override common.names.fullname template (will maintain the release name) |
 | nodeSelector | object | `{}` |  |
 | podAnnotations | object | `{}` |  |

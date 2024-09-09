@@ -4,6 +4,26 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.88.0](https://github.com/wundergraph/cosmo/compare/studio@0.87.0...studio@0.88.0) (2024-09-05)
+
+### Features
+
+* add viewer role to ui ([#1137](https://github.com/wundergraph/cosmo/issues/1137)) ([23df809](https://github.com/wundergraph/cosmo/commit/23df809a58c57ea353aa79f5a503f580b1fc82d1)) (@JivusAyrus)
+* query plan ui ([#1140](https://github.com/wundergraph/cosmo/issues/1140)) ([c255867](https://github.com/wundergraph/cosmo/commit/c25586728b34b177789a1d6a0fd9333e9e647959)) (@thisisnithin)
+* record changed subgraphs in composition ([#1134](https://github.com/wundergraph/cosmo/issues/1134)) ([f39ca8c](https://github.com/wundergraph/cosmo/commit/f39ca8c4dcd54bb3d9594bc8394ef287a7eb04cd)) (@thisisnithin)
+
+# [0.87.0](https://github.com/wundergraph/cosmo/compare/studio@0.86.2...studio@0.87.0) (2024-08-28)
+
+### Bug Fixes
+
+* art render ([#1119](https://github.com/wundergraph/cosmo/issues/1119)) ([344d3db](https://github.com/wundergraph/cosmo/commit/344d3dbdff1758404903b9195708188a28be1898)) (@thisisnithin)
+* features aren't shown as enabled after enabling them ([#1117](https://github.com/wundergraph/cosmo/issues/1117)) ([c1d691a](https://github.com/wundergraph/cosmo/commit/c1d691ace729bfc88da23d3923b757247cb00f3e)) (@JivusAyrus)
+* show actual error from network in playground ([#1126](https://github.com/wundergraph/cosmo/issues/1126)) ([a83c6e3](https://github.com/wundergraph/cosmo/commit/a83c6e3404e1d69e3de3a6e0db20332933bcb1ab)) (@thisisnithin)
+
+### Features
+
+* display and filter for subgraph id ([#1127](https://github.com/wundergraph/cosmo/issues/1127)) ([cfe708a](https://github.com/wundergraph/cosmo/commit/cfe708aba6094573fe2dfa6526850d802c44ed87)) (@thisisnithin)
+
 ## [0.86.2](https://github.com/wundergraph/cosmo/compare/studio@0.86.1...studio@0.86.2) (2024-08-22)
 
 **Note:** Version bump only for package studio

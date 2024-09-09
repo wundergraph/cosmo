@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.8.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.7.0...helm-cosmo-router@0.8.0) (2024-09-05)
+
+
+### Features
+
+* enable using HTTP(S)_PROXY in router  ([#1136](https://github.com/wundergraph/cosmo/issues/1136)) ([4600fdf](https://github.com/wundergraph/cosmo/commit/4600fdff6ab57541a6119e4e51180ed4403363a6))
+
+## [0.7.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.6.0...helm-cosmo-router@0.7.0) (2024-08-29)
+
+
+### Features
+
+* **cosmo:** add setting commonLabels on subchart resources ([#1120](https://github.com/wundergraph/cosmo/issues/1120)) ([030dc6d](https://github.com/wundergraph/cosmo/commit/030dc6da6652508d041bb34715d867d3a54db004))
+
 ## [0.6.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router-v0.5.0...helm-cosmo-router@0.6.0) (2024-08-14)
 
 

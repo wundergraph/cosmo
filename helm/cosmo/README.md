@@ -2,7 +2,7 @@
 
 For a detailed deployment guide of the chart, including the full documentation, see the [DEV.md](DEV.md) file.
 
-![Version: 0.8.0](https://img.shields.io/badge/Version-0.8.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
+![Version: 0.11.1](https://img.shields.io/badge/Version-0.11.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
 
 This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle GraphQL API Management Solution.
 
@@ -34,6 +34,12 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
+| cdn.commonLabels | object | `{}` | Add labels to all deployed resources |
+| cdn.configuration.s3AccessKeyId | string | `""` | s3 access key id, can be used instead of [username]:[password] in the url |
+| cdn.configuration.s3Endpoint | string | `""` | The endpoint of the S3 bucket. |
+| cdn.configuration.s3ForcePathStyle | string | `"true"` | Forces usage of path style urls for S3. Default is true. |
+| cdn.configuration.s3Region | string | `"auto"` | The region where the S3 bucket is located. |
+| cdn.configuration.s3SecretAccessKey | string | `""` | s3 secret access key, can be used instead of [username]:[password] in the url |
 | cdn.configuration.s3StorageUrl | string | `"http://minio:changeme@cosmo-minio:9000/cosmo"` |  |
 | clickhouse.auth.password | string | `"changeme"` |  |
 | clickhouse.auth.username | string | `"default"` |  |
@@ -44,6 +50,8 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | clickhouse.replicaCount | int | `1` |  |
 | clickhouse.shards | int | `1` |  |
 | clickhouse.zookeeper.enabled | bool | `false` |  |
+| controlplane.additionalJobLabels | object | `{}` | Pass additional labels to all jobs |
+| controlplane.commonLabels | object | `{}` | Add labels to all deployed resources |
 | controlplane.configuration.allowedOrigins[0] | string | `"http://studio.wundergraph.local"` |  |
 | controlplane.configuration.authRedirectUri | string | `"http://controlplane.wundergraph.local/v1/auth/callback"` |  |
 | controlplane.configuration.cdnBaseUrl | string | `"http://cosmo-cdn:8787"` |  |
@@ -61,6 +69,11 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | controlplane.configuration.prometheus.port | int | `8088` | The port where metrics are exposed. Default is port 8088. |
 | controlplane.configuration.redisHost | string | `"cosmo-redis-master"` |  |
 | controlplane.configuration.redisPort | int | `6379` |  |
+| controlplane.configuration.s3AccessKeyId | string | `""` | s3 access key id, can be used instead of [username]:[password] in the url |
+| controlplane.configuration.s3Endpoint | string | `""` | The endpoint of the S3 bucket. |
+| controlplane.configuration.s3ForcePathStyle | string | `"true"` | Forces usage of path style urls for S3. Default is true. |
+| controlplane.configuration.s3Region | string | `"auto"` | The region where the S3 bucket is located. |
+| controlplane.configuration.s3SecretAccessKey | string | `""` | s3 secret access key, can be used instead of [username]:[password] in the url |
 | controlplane.configuration.s3StorageUrl | string | `"http://minio:changeme@cosmo-minio:9000/cosmo"` |  |
 | controlplane.configuration.smtp | object | `{"enabled":false,"host":"smtp.postmarkapp.com","password":"","port":587,"requireTls":true,"secure":true,"username":""}` | Use this section to configure the smtp server. |
 | controlplane.configuration.smtp.enabled | bool | `false` | Enables the smtp server. Default is false. |
@@ -70,6 +83,25 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | controlplane.configuration.smtp.requireTls | bool | `true` | Forces the client to use STARTTLS. Default is true. |
 | controlplane.configuration.smtp.secure | bool | `true` | Defines if the connection should use SSL. Default is true. |
 | controlplane.configuration.smtp.username | string | `""` | The username to use. Default is "". |
+| controlplane.jobs | object | `{"activateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","slug":"foo"},"clickhouseMigration":{"additionalLabels":{}},"databaseMigration":{"additionalLabels":{}},"deactivateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","reason":"","slug":"foo"},"deleteUser":{"additionalLabels":{},"enabled":false,"id":"123"},"seedOrganization":{"additionalLabels":{}}}` | Configure jobs to be executed in the control plane |
+| controlplane.jobs.activateOrganization | object | `{"additionalLabels":{},"enabled":false,"id":"123","slug":"foo"}` | Used to activate an organization and remove the scheduled deletion |
+| controlplane.jobs.activateOrganization.additionalLabels | object | `{}` | Adds additional labels to the job |
+| controlplane.jobs.activateOrganization.enabled | bool | `false` | Enables the job to be run |
+| controlplane.jobs.activateOrganization.id | string | `"123"` | The unique identifier of the organization |
+| controlplane.jobs.activateOrganization.slug | string | `"foo"` | The slug of the organization |
+| controlplane.jobs.clickhouseMigration.additionalLabels | object | `{}` | Adds additional labels to the clickhouse migration job (see: .Values.global.otelcollector) |
+| controlplane.jobs.databaseMigration.additionalLabels | object | `{}` | Adds additional labels to the database-migration job |
+| controlplane.jobs.deactivateOrganization | object | `{"additionalLabels":{},"enabled":false,"id":"123","reason":"","slug":"foo"}` | Used to deactivate an organization with a reason and schedule deletion |
+| controlplane.jobs.deactivateOrganization.additionalLabels | object | `{}` | Adds additional labels to the job |
+| controlplane.jobs.deactivateOrganization.enabled | bool | `false` | Enables the job to be run |
+| controlplane.jobs.deactivateOrganization.id | string | `"123"` | The unique identifier of the organization |
+| controlplane.jobs.deactivateOrganization.reason | string | `""` | The reason for deactivation |
+| controlplane.jobs.deactivateOrganization.slug | string | `"foo"` | The slug of the organization |
+| controlplane.jobs.deleteUser | object | `{"additionalLabels":{},"enabled":false,"id":"123"}` | Used to delete the user |
+| controlplane.jobs.deleteUser.additionalLabels | object | `{}` | Adds additional labels to the job |
+| controlplane.jobs.deleteUser.enabled | bool | `false` | Enables the job to be run |
+| controlplane.jobs.deleteUser.id | string | `"123"` | The unique identifier of the user |
+| controlplane.jobs.seedOrganization.additionalLabels | object | `{}` | Adds additional labels to the job (see: .Values.global.seed) |
 | global.cdn.enabled | bool | `true` |  |
 | global.cdn.port | int | `8787` |  |
 | global.cdn.webUrl | string | `"http://cdn.wundergraph.local"` |  |
@@ -95,6 +127,16 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | global.keycloak.loginRealm | string | `"master"` |  |
 | global.keycloak.port | int | `8080` |  |
 | global.keycloak.realm | string | `"cosmo"` |  |
+| global.keycloak.smtpServer.auth | bool | `true` | Use auth for connecting to the smtpServer. |
+| global.keycloak.smtpServer.from | string | `"system@wundergraph.com"` | Set 'from' email to be used. |
+| global.keycloak.smtpServer.fromDisplayName | string | `"WunderGraph Cosmo"` | Set fromDisplayName. |
+| global.keycloak.smtpServer.host | string | `"smtp.postmarkapp.com"` | Set mail host to be used, usually the same one as the one in the controlplane. |
+| global.keycloak.smtpServer.password | string | `"**********"` | Set password to be used for connecting to the smtpServer. |
+| global.keycloak.smtpServer.port | int | `587` | The port of the mail server. |
+| global.keycloak.smtpServer.replyToDisplayName | string | `"WunderGraph Cosmo"` | Set replyToDisplayName. |
+| global.keycloak.smtpServer.ssl | bool | `false` | Enable or disable using ssl for the smtpServer connection. |
+| global.keycloak.smtpServer.starttls | bool | `true` | Enable or disable starttls. |
+| global.keycloak.smtpServer.username | string | `""` | Set username, maps to smtpServer.user in the imported keycloak realm |
 | global.keycloak.webUrl | string | `"http://keycloak.wundergraph.local"` |  |
 | global.minio.enabled | bool | `true` |  |
 | global.otelcollector.enabled | bool | `true` |  |
@@ -110,6 +152,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | global.studio.enabled | bool | `true` |  |
 | global.studio.port | int | `3000` |  |
 | global.studio.webUrl | string | `"http://studio.wundergraph.local"` |  |
+| graphqlmetrics.commonLabels | object | `{}` | Add labels to all deployed resources |
 | graphqlmetrics.configuration.clickhouseDsn | string | `"clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4"` |  |
 | graphqlmetrics.configuration.prometheus.enabled | bool | `false` | Enables prometheus metrics support. Default is false. |
 | graphqlmetrics.configuration.prometheus.gcpMonitoring.enabled | bool | `false` | Enables gcp support . Default is false. |
@@ -156,6 +199,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | minio.persistence.size | string | `"1Gi"` |  |
 | minio.service.ports.minio | int | `9000` |  |
 | minio.service.ports.minio_admin | int | `9001` |  |
+| otelcollector.commonLabels | object | `{}` | Add labels to all deployed resources |
 | otelcollector.configuration.clickhouseDsn | string | `"clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4"` |  |
 | otelcollector.configuration.prometheus.enabled | bool | `false` | Enables prometheus metrics support. Default is false. |
 | otelcollector.configuration.prometheus.gcpMonitoring.enabled | bool | `false` | Enables gcp support . Default is false. |
@@ -181,6 +225,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | redis.master.persistence.enabled | bool | `true` |  |
 | redis.master.persistence.size | string | `"1Gi"` |  |
 | redis.replica.replicaCount | int | `0` |  |
+| router.commonLabels | object | `{}` | Add labels to all deployed resources |
 | router.configuration.cdnUrl | string | `"http://cosmo-cdn:8787"` | The URL of the Cosmo CDN. Should be internal to the cluster. |
 | router.configuration.controlplaneUrl | string | `"http://cosmo-controlplane:3001"` | The URL of the Cosmo Controlplane. Should be internal to the cluster. |
 | router.configuration.graphApiToken | string | `""` |  |

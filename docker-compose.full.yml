@@ -205,10 +205,15 @@ services:
       context: .
       dockerfile: cdn-server/Dockerfile
     environment:
-      - PORT=11000
-      - AUTH_JWT_SECRET=fkczyomvdprgvtmvkuhvprxuggkbgwld
-      - AUTH_ADMISSION_JWT_SECRET="uXDxJLEvrw4aafPfrf3rRotCoBzRfPEW"
-      - S3_STORAGE_URL=http://${MINIO_ROOT_USER:-minio}:${MINIO_ROOT_PASSWORD:-changeme}@minio:9000/cosmo
+      PORT: 11000
+      NODE_ENV: development
+      AUTH_JWT_SECRET: fkczyomvdprgvtmvkuhvprxuggkbgwld
+      AUTH_ADMISSION_JWT_SECRET: uXDxJLEvrw4aafPfrf3rRotCoBzRfPEW
+      S3_STORAGE_URL: ${S3_STORAGE_URL:-http://${MINIO_ROOT_USER:-minio}:${MINIO_ROOT_PASSWORD:-changeme}@minio:9000/cosmo}
+      S3_REGION: ${S3_REGION_CDN:-${S3_REGION:-auto}}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+      S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
     ports:
       - '11000:11000'
     networks:
@@ -270,7 +275,11 @@ services:
       KC_API_URL: 'http://keycloak:8080'
       KC_FRONTEND_URL: 'http://localhost:8080'
       PROMETHEUS_API_URL: 'http://admin:test@prometheus:9090/api/v1'
-      S3_STORAGE_URL: http://minio:changeme@minio:9000/cosmo
+      S3_STORAGE_URL: ${S3_STORAGE_URL:-http://${MINIO_ROOT_USER:-minio}:${MINIO_ROOT_PASSWORD:-changeme}@minio:9000/cosmo}
+      S3_REGION: ${S3_REGION_CONTROLPLANE:-${S3_REGION:-auto}}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+      S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
       CDN_BASE_URL: 'http://cdn:11000'
       REDIS_HOST: redis
       REDIS_PORT: 6379
@@ -309,6 +318,9 @@ services:
       GRAPHQL_METRICS_COLLECTOR_ENDPOINT: http://graphqlmetrics:4005
       GRAPH_API_TOKEN: ${ROUTER_TOKEN}
       CDN_URL: http://cdn:11000
+      HTTPS_PROXY: ${HTTPS_PROXY}
+      HTTP_PROXY: ${HTTP_PROXY}
+      NO_PROXY: ${NO_PROXY}
     restart: on-failure
     volumes:
       # Mount the example config from the repo into the working dir of the router binary location
@@ -388,6 +400,27 @@ services:
     profiles:
       - default
     restart: on-failure
+
+  # Use this to intercept request e.g. from the router by setting the HTTP(S)_PROXY env var to http://mitmproxy:9051.
+  # docker compose -f docker-compose.full.yml --profile proxy up -d mitmproxy
+  mitmproxy:
+    image: mitmproxy/mitmproxy:latest
+    command:
+      - mitmweb
+      - --web-host
+      - 0.0.0.0
+      - --web-port
+      - '8081'
+      - --mode
+      - regular@8080
+    restart: on-failure
+    profiles:
+      - proxy
+    networks:
+      - primary
+    ports:
+      - '9051:8080' # proxy
+      - '9050:8081' # web interface
 
 # This network is shared between this file and docker-compose.yml to
 # allow the demo subgraphs to communicate with the rest of the infra-networks:

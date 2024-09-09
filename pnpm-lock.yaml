@@ -17,10 +17,10 @@ importers:
         version: 3.1.0(@graphiql/react@0.22.4)(graphql@16.9.0)(react-dom@18.3.1)(react@18.3.1)
       '@graphiql/toolkit':
         specifier: ^0.9.1
-        version: 0.9.1(@types/node@18.19.21)(graphql@16.9.0)
+        version: 0.9.1(@types/node@20.12.12)(graphql@16.9.0)
       graphiql:
         specifier: ^3.3.2
-        version: 3.3.2(@codemirror/language@6.0.0)(@types/node@18.19.21)(graphql@16.9.0)(react-dom@18.3.1)(react@18.3.1)
+        version: 3.3.2(@codemirror/language@6.0.0)(@types/node@20.12.12)(graphql@16.9.0)(react-dom@18.3.1)(react@18.3.1)
     devDependencies:
       '@bufbuild/buf':
         specifier: ^1.34.0
@@ -30,7 +30,7 @@ importers:
         version: 1.10.0(@bufbuild/protobuf@1.10.0)
       '@commitlint/cli':
         specifier: 19.2.1
-        version: 19.2.1(@types/node@18.19.21)(typescript@5.5.2)
+        version: 19.2.1(@types/node@20.12.12)(typescript@5.5.2)
       '@commitlint/config-conventional':
         specifier: 19.1.0
         version: 19.1.0
@@ -66,7 +66,7 @@ importers:
         version: 3.0.3
       vitest:
         specifier: ^2.0.3
-        version: 2.0.3(@types/node@18.19.21)
+        version: 2.0.3(@types/node@20.12.12)
 
   admission-server:
     dependencies:
@@ -199,6 +199,9 @@ importers:
       graphql:
         specifier: 16.9.0
         version: 16.9.0
+      https-proxy-agent:
+        specifier: ^7.0.5
+        version: 7.0.5
       inquirer:
         specifier: ^9.2.7
         version: 9.2.7
@@ -226,6 +229,9 @@ importers:
       picocolors:
         specifier: ^1.0.0
         version: 1.0.0
+      undici:
+        specifier: ^6.19.8
+        version: 6.19.8
     devDependencies:
       '@types/cli-progress':
         specifier: ^3.11.5
@@ -244,7 +250,7 @@ importers:
         version: 4.0.5
       '@types/node':
         specifier: ^20.3.1
-        version: 20.3.1
+        version: 20.12.12
       del-cli:
         specifier: ^5.0.0
         version: 5.0.0
@@ -268,7 +274,7 @@ importers:
         version: 5.5.2
       vitest:
         specifier: ^2.0.3
-        version: 2.0.3(@types/node@20.3.1)
+        version: 2.0.3(@types/node@20.12.12)
 
   composition:
     dependencies:
@@ -573,12 +579,21 @@ importers:
       '@heroicons/react':
         specifier: ^2.0.18
         version: 2.0.18(react@18.3.1)
+      '@monaco-editor/react':
+        specifier: ^4.6.0
+        version: 4.6.0(monaco-editor@0.45.0)(react-dom@18.3.1)(react@18.3.1)
       '@radix-ui/react-dialog':
         specifier: ^1.0.4
         version: 1.0.5(@types/react-dom@18.3.0)(@types/react@18.3.3)(react-dom@18.3.1)(react@18.3.1)
       '@radix-ui/react-icons':
         specifier: ^1.3.0
         version: 1.3.0(react@18.3.1)
+      '@radix-ui/react-scroll-area':
+        specifier: ^1.0.5
+        version: 1.0.5(@types/react-dom@18.3.0)(@types/react@18.3.3)(react-dom@18.3.1)(react@18.3.1)
+      '@radix-ui/react-select':
+        specifier: ^1.2.2
+        version: 1.2.2(@types/react-dom@18.3.0)(@types/react@18.3.3)(react-dom@18.3.1)(react@18.3.1)
       '@radix-ui/react-separator':
         specifier: ^1.0.3
         version: 1.0.3(@types/react-dom@18.3.0)(@types/react@18.3.3)(react-dom@18.3.1)(react@18.3.1)
@@ -591,6 +606,9 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: ^1.0.7
         version: 1.1.2(@types/react-dom@18.3.0)(@types/react@18.3.3)(react-dom@18.3.1)(react@18.3.1)
+      axios:
+        specifier: ^1.7.2
+        version: 1.7.2
       change-case:
         specifier: ^5.2.0
         version: 5.4.4
@@ -612,6 +630,9 @@ importers:
       graphql-ws:
         specifier: ^5.16.0
         version: 5.16.0(graphql@16.9.0)
+      monaco-editor:
+        specifier: ^0.45.0
+        version: 0.45.0
       prettier:
         specifier: ^3.1.0
         version: 3.2.5
@@ -636,6 +657,9 @@ importers:
       reactflow:
         specifier: ^11.10.1
         version: 11.11.4(@types/react@18.3.3)(react-dom@18.3.1)(react@18.3.1)
+      use-debounce:
+        specifier: ^10.0.0
+        version: 10.0.0(react@18.3.1)
     devDependencies:
       '@tailwindcss/typography':
         specifier: ^0.5.10
@@ -860,6 +884,9 @@ importers:
       '@wundergraph/cosmo-connect':
         specifier: workspace:*
         version: link:../connect
+      axios:
+        specifier: ^1.7.2
+        version: 1.7.2
       bowser:
         specifier: ^2.11.0
         version: 2.11.0
@@ -3400,14 +3427,14 @@ packages:
     dev: false
     optional: true
 
-  /@commitlint/cli@19.2.1(@types/node@18.19.21)(typescript@5.5.2):
+  /@commitlint/cli@19.2.1(@types/node@20.12.12)(typescript@5.5.2):
     resolution: {integrity: sha512-cbkYUJsLqRomccNxvoJTyv5yn0bSy05BBizVyIcLACkRbVUqYorC351Diw/XFSWC/GtpwiwT2eOvQgFZa374bg==}
     engines: {node: '>=v18'}
     hasBin: true
     dependencies:
       '@commitlint/format': 19.0.3
       '@commitlint/lint': 19.1.0
-      '@commitlint/load': 19.2.0(@types/node@18.19.21)(typescript@5.5.2)
+      '@commitlint/load': 19.2.0(@types/node@20.12.12)(typescript@5.5.2)
       '@commitlint/read': 19.2.1
       '@commitlint/types': 19.0.3
       execa: 8.0.1
@@ -3476,7 +3503,7 @@ packages:
       '@commitlint/types': 19.0.3
     dev: true
 
-  /@commitlint/load@19.2.0(@types/node@18.19.21)(typescript@5.5.2):
+  /@commitlint/load@19.2.0(@types/node@20.12.12)(typescript@5.5.2):
     resolution: {integrity: sha512-XvxxLJTKqZojCxaBQ7u92qQLFMMZc4+p9qrIq/9kJDy8DOrEa7P1yx7Tjdc2u2JxIalqT4KOGraVgCE7eCYJyQ==}
     engines: {node: '>=v18'}
     dependencies:
@@ -3486,7 +3513,7 @@ packages:
       '@commitlint/types': 19.0.3
       chalk: 5.3.0
       cosmiconfig: 9.0.0(typescript@5.5.2)
-      cosmiconfig-typescript-loader: 5.0.0(@types/node@18.19.21)(cosmiconfig@9.0.0)(typescript@5.5.2)
+      cosmiconfig-typescript-loader: 5.0.0(@types/node@20.12.12)(cosmiconfig@9.0.0)(typescript@5.5.2)
       lodash.isplainobject: 4.0.6
       lodash.merge: 4.6.2
       lodash.uniq: 4.5.0
@@ -5155,7 +5182,7 @@ packages:
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
     dependencies:
       ajv: 6.12.6
-      debug: 4.3.4
+      debug: 4.3.5
       espree: 9.6.1
       globals: 13.20.0
       ignore: 5.2.4
@@ -5282,21 +5309,21 @@ packages:
       react: 18.3.1
       react-dom: ^16.8.0 || ^17 || ^18
     dependencies:
-      '@graphiql/react': 0.22.4(@codemirror/language@6.0.0)(@types/node@18.19.21)(graphql@16.9.0)(react-dom@18.3.1)(react@18.3.1)
+      '@graphiql/react': 0.22.4(@codemirror/language@6.0.0)(@types/node@20.12.12)(graphql@16.9.0)(react-dom@18.3.1)(react@18.3.1)
       graphiql-explorer: 0.9.0(graphql@16.9.0)(react-dom@18.3.1)(react@18.3.1)
       graphql: 16.9.0
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
     dev: false
 
-  /@graphiql/react@0.22.4(@codemirror/language@6.0.0)(@types/node@18.19.21)(graphql@16.9.0)(react-dom@18.3.1)(react@18.3.1):
+  /@graphiql/react@0.22.4(@codemirror/language@6.0.0)(@types/node@20.12.12)(graphql@16.9.0)(react-dom@18.3.1)(react@18.3.1):
     resolution: {integrity: sha512-FsupNjAUJ17qhdyCjKo150wpNH7gr0ScAm/Rmk7VHP4Mh0Osid+1bKLPtXEOjGI+InuTPSKhJw3Zbm8dD3+o1A==}
     peerDependencies:
       graphql: 16.9.0
       react: 18.3.1
       react-dom: ^16.8.0 || ^17 || ^18
     dependencies:
-      '@graphiql/toolkit': 0.9.1(@types/node@18.19.21)(graphql@16.9.0)
+      '@graphiql/toolkit': 0.9.1(@types/node@20.12.12)(graphql@16.9.0)
       '@headlessui/react': 1.7.15(react-dom@18.3.1)(react@18.3.1)
       '@radix-ui/react-dialog': 1.0.5(react-dom@18.3.1)(react@18.3.1)
       '@radix-ui/react-dropdown-menu': 2.0.5(react-dom@18.3.1)(react@18.3.1)
@@ -5322,7 +5349,7 @@ packages:
       - graphql-ws
     dev: false
 
-  /@graphiql/toolkit@0.9.1(@types/node@18.19.21)(graphql@16.9.0):
+  /@graphiql/toolkit@0.9.1(@types/node@20.12.12)(graphql@16.9.0):
     resolution: {integrity: sha512-LVt9pdk0830so50ZnU2Znb2rclcoWznG8r8asqAENzV0U1FM1kuY0sdPpc/rBc9MmmNgnB6A+WZzDhq6dbhTHA==}
     peerDependencies:
       graphql: 16.9.0
@@ -5333,7 +5360,7 @@ packages:
     dependencies:
       '@n1ru4l/push-pull-async-iterable-iterator': 3.2.0
       graphql: 16.9.0
-      meros: 1.3.0(@types/node@18.19.21)
+      meros: 1.3.0(@types/node@20.12.12)
     transitivePeerDependencies:
       - '@types/node'
     dev: false
@@ -5773,7 +5800,7 @@ packages:
     engines: {node: '>=10.10.0'}
     dependencies:
       '@humanwhocodes/object-schema': 2.0.1
-      debug: 4.3.4
+      debug: 4.3.5
       minimatch: 3.1.2
     transitivePeerDependencies:
       - supports-color
@@ -5865,7 +5892,7 @@ packages:
       '@inquirer/figures': 1.0.5
       '@inquirer/type': 1.5.1
       '@types/mute-stream': 0.0.4
-      '@types/node': 22.1.0
+      '@types/node': 22.5.0
       '@types/wrap-ansi': 3.0.0
       ansi-escapes: 4.3.2
       cli-spinners: 2.9.2
@@ -6720,7 +6747,7 @@ packages:
     dependencies:
       http-proxy-agent: 7.0.0
       https-proxy-agent: 7.0.2
-      lru-cache: 10.0.1
+      lru-cache: 10.4.3
       socks-proxy-agent: 8.0.2
     transitivePeerDependencies:
       - supports-color
@@ -6790,7 +6817,7 @@ packages:
     engines: {node: ^16.14.0 || >=18.0.0}
     dependencies:
       '@npmcli/promise-spawn': 7.0.0
-      lru-cache: 10.0.1
+      lru-cache: 10.4.3
       npm-pick-manifest: 9.0.0
       proc-log: 3.0.0
       promise-inflight: 1.0.1
@@ -6954,7 +6981,7 @@ packages:
       '@octokit/request-error': 5.0.1
       '@octokit/types': 12.0.0
       deprecation: 2.3.1
-      lru-cache: 10.0.1
+      lru-cache: 10.4.3
       universal-github-app-jwt: 1.1.1
       universal-user-agent: 6.0.0
     dev: false
@@ -7709,7 +7736,7 @@ packages:
   /@radix-ui/number@1.0.1:
     resolution: {integrity: sha512-T5gIdVO2mmPW3NNhjNgEP3cqMXjXL9UbO0BzWcXfvdBs+BohbQxvd/K5hSVKmn9/lbTdsQVKbUcP5WLCwvUbBg==}
     dependencies:
-      '@babel/runtime': 7.23.4
+      '@babel/runtime': 7.24.5
     dev: false
 
   /@radix-ui/primitive@1.0.0:
@@ -7926,7 +7953,7 @@ packages:
       '@types/react-dom':
         optional: true
     dependencies:
-      '@babel/runtime': 7.23.4
+      '@babel/runtime': 7.24.5
       '@radix-ui/primitive': 1.0.1
       '@radix-ui/react-compose-refs': 1.0.1(@types/react@18.3.3)(react@18.3.1)
       '@radix-ui/react-context': 1.0.1(@types/react@18.3.3)(react@18.3.1)
@@ -7954,7 +7981,7 @@ packages:
       '@types/react-dom':
         optional: true
     dependencies:
-      '@babel/runtime': 7.23.4
+      '@babel/runtime': 7.24.5
       '@radix-ui/react-compose-refs': 1.0.1(@types/react@18.3.3)(react@18.3.1)
       '@radix-ui/react-context': 1.0.1(@types/react@18.3.3)(react@18.3.1)
       '@radix-ui/react-primitive': 1.0.3(@types/react-dom@18.3.0)(@types/react@18.3.3)(react-dom@18.3.1)(react@18.3.1)
@@ -7978,7 +8005,7 @@ packages:
       '@types/react-dom':
         optional: true
     dependencies:
-      '@babel/runtime': 7.23.4
+      '@babel/runtime': 7.24.5
       '@radix-ui/react-compose-refs': 1.0.1(react@18.3.1)
       '@radix-ui/react-context': 1.0.1(react@18.3.1)
       '@radix-ui/react-primitive': 1.0.3(react-dom@18.3.1)(react@18.3.1)
@@ -8005,7 +8032,7 @@ packages:
       '@types/react':
         optional: true
     dependencies:
-      '@babel/runtime': 7.23.4
+      '@babel/runtime': 7.24.5
       '@types/react': 18.3.3
       react: 18.3.1
     dev: false
@@ -8019,7 +8046,7 @@ packages:
       '@types/react':
         optional: true
     dependencies:
-      '@babel/runtime': 7.23.4
+      '@babel/runtime': 7.24.5
       react: 18.3.1
     dev: false
 
@@ -8066,7 +8093,7 @@ packages:
       '@types/react':
         optional: true
     dependencies:
-      '@babel/runtime': 7.23.4
+      '@babel/runtime': 7.24.5
       '@types/react': 18.3.3
       react: 18.3.1
     dev: false
@@ -8080,7 +8107,7 @@ packages:
       '@types/react':
         optional: true
     dependencies:
-      '@babel/runtime': 7.23.4
+      '@babel/runtime': 7.24.5
       react: 18.3.1
     dev: false
 
@@ -8245,7 +8272,7 @@ packages:
       '@types/react':
         optional: true
     dependencies:
-      '@babel/runtime': 7.23.4
+      '@babel/runtime': 7.24.5
       '@types/react': 18.3.3
       react: 18.3.1
     dev: false
@@ -8259,7 +8286,7 @@ packages:
       '@types/react':
         optional: true
     dependencies:
-      '@babel/runtime': 7.23.4
+      '@babel/runtime': 7.24.5
       react: 18.3.1
     dev: false
 
@@ -8461,7 +8488,7 @@ packages:
       '@types/react-dom':
         optional: true
     dependencies:
-      '@babel/runtime': 7.22.6
+      '@babel/runtime': 7.24.5
       '@radix-ui/primitive': 1.0.1
       '@radix-ui/react-compose-refs': 1.0.1(react@18.3.1)
       '@radix-ui/react-context': 1.0.1(react@18.3.1)
@@ -8667,7 +8694,7 @@ packages:
       '@types/react':
         optional: true
     dependencies:
-      '@babel/runtime': 7.23.4
+      '@babel/runtime': 7.24.5
       '@radix-ui/react-use-layout-effect': 1.0.1(@types/react@18.3.3)(react@18.3.1)
       '@types/react': 18.3.3
       react: 18.3.1
@@ -8682,7 +8709,7 @@ packages:
       '@types/react':
         optional: true
     dependencies:
-      '@babel/runtime': 7.23.4
+      '@babel/runtime': 7.24.5
       '@radix-ui/react-use-layout-effect': 1.0.1(react@18.3.1)
       react: 18.3.1
     dev: false
@@ -8748,7 +8775,7 @@ packages:
       '@types/react-dom':
         optional: true
     dependencies:
-      '@babel/runtime': 7.23.4
+      '@babel/runtime': 7.24.5
       '@radix-ui/primitive': 1.0.1
       '@radix-ui/react-collection': 1.0.3(@types/react-dom@18.3.0)(@types/react@18.3.3)(react-dom@18.3.1)(react@18.3.1)
       '@radix-ui/react-compose-refs': 1.0.1(@types/react@18.3.3)(react@18.3.1)
@@ -8786,7 +8813,7 @@ packages:
       '@types/react-dom':
         optional: true
     dependencies:
-      '@babel/runtime': 7.23.4
+      '@babel/runtime': 7.24.5
       '@radix-ui/primitive': 1.0.1
       '@radix-ui/react-collection': 1.0.3(react-dom@18.3.1)(react@18.3.1)
       '@radix-ui/react-compose-refs': 1.0.1(react@18.3.1)
@@ -8803,7 +8830,7 @@ packages:
       '@radix-ui/react-roving-focus': 1.0.4(react-dom@18.3.1)(react@18.3.1)
       '@radix-ui/react-slot': 1.0.2(react@18.3.1)
       '@radix-ui/react-use-callback-ref': 1.0.1(react@18.3.1)
-      aria-hidden: 1.2.3
+      aria-hidden: 1.2.4
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
       react-remove-scroll: 2.5.5(react@18.3.1)
@@ -8915,7 +8942,7 @@ packages:
       '@types/react-dom':
         optional: true
     dependencies:
-      '@babel/runtime': 7.23.4
+      '@babel/runtime': 7.24.5
       '@floating-ui/react-dom': 2.0.1(react-dom@18.3.1)(react@18.3.1)
       '@radix-ui/react-arrow': 1.0.3(@types/react-dom@18.3.0)(@types/react@18.3.3)(react-dom@18.3.1)(react@18.3.1)
       '@radix-ui/react-compose-refs': 1.0.1(@types/react@18.3.3)(react@18.3.1)
@@ -9146,7 +9173,7 @@ packages:
       '@types/react-dom':
         optional: true
     dependencies:
-      '@babel/runtime': 7.23.4
+      '@babel/runtime': 7.24.5
       '@radix-ui/react-compose-refs': 1.0.1(@types/react@18.3.3)(react@18.3.1)
       '@radix-ui/react-use-layout-effect': 1.0.1(@types/react@18.3.3)(react@18.3.1)
       '@types/react': 18.3.3
@@ -9168,7 +9195,7 @@ packages:
       '@types/react-dom':
         optional: true
     dependencies:
-      '@babel/runtime': 7.23.4
+      '@babel/runtime': 7.24.5
       '@radix-ui/react-compose-refs': 1.0.1(react@18.3.1)
       '@radix-ui/react-use-layout-effect': 1.0.1(react@18.3.1)
       react: 18.3.1
@@ -9374,7 +9401,7 @@ packages:
       '@types/react-dom':
         optional: true
     dependencies:
-      '@babel/runtime': 7.23.4
+      '@babel/runtime': 7.24.5
       '@radix-ui/number': 1.0.1
       '@radix-ui/primitive': 1.0.1
       '@radix-ui/react-compose-refs': 1.0.1(@types/react@18.3.3)(react@18.3.1)
@@ -9403,7 +9430,7 @@ packages:
       '@types/react-dom':
         optional: true
     dependencies:
-      '@babel/runtime': 7.22.6
+      '@babel/runtime': 7.24.5
       '@radix-ui/number': 1.0.1
       '@radix-ui/primitive': 1.0.1
       '@radix-ui/react-collection': 1.0.3(@types/react-dom@18.3.0)(@types/react@18.3.3)(react-dom@18.3.1)(react@18.3.1)
@@ -9425,7 +9452,7 @@ packages:
       '@radix-ui/react-visually-hidden': 1.0.3(@types/react-dom@18.3.0)(@types/react@18.3.3)(react-dom@18.3.1)(react@18.3.1)
       '@types/react': 18.3.3
       '@types/react-dom': 18.3.0
-      aria-hidden: 1.2.3
+      aria-hidden: 1.2.4
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
       react-remove-scroll: 2.5.5(@types/react@18.3.3)(react@18.3.1)
@@ -9769,7 +9796,7 @@ packages:
       '@types/react':
         optional: true
     dependencies:
-      '@babel/runtime': 7.23.4
+      '@babel/runtime': 7.24.5
       '@types/react': 18.3.3
       react: 18.3.1
     dev: false
@@ -9783,7 +9810,7 @@ packages:
       '@types/react':
         optional: true
     dependencies:
-      '@babel/runtime': 7.23.4
+      '@babel/runtime': 7.24.5
       react: 18.3.1
     dev: false
 
@@ -9831,7 +9858,7 @@ packages:
       '@types/react':
         optional: true
     dependencies:
-      '@babel/runtime': 7.23.4
+      '@babel/runtime': 7.24.5
       '@radix-ui/react-use-callback-ref': 1.0.1(@types/react@18.3.3)(react@18.3.1)
       '@types/react': 18.3.3
       react: 18.3.1
@@ -9846,7 +9873,7 @@ packages:
       '@types/react':
         optional: true
     dependencies:
-      '@babel/runtime': 7.23.4
+      '@babel/runtime': 7.24.5
       '@radix-ui/react-use-callback-ref': 1.0.1(react@18.3.1)
       react: 18.3.1
     dev: false
@@ -9962,7 +9989,7 @@ packages:
       '@types/react':
         optional: true
     dependencies:
-      '@babel/runtime': 7.23.4
+      '@babel/runtime': 7.24.5
       '@types/react': 18.3.3
       react: 18.3.1
     dev: false
@@ -9976,7 +10003,7 @@ packages:
       '@types/react':
         optional: true
     dependencies:
-      '@babel/runtime': 7.23.4
+      '@babel/runtime': 7.24.5
       react: 18.3.1
     dev: false
 
@@ -10014,7 +10041,7 @@ packages:
       '@types/react':
         optional: true
     dependencies:
-      '@babel/runtime': 7.23.4
+      '@babel/runtime': 7.24.5
       '@types/react': 18.3.3
       react: 18.3.1
     dev: false
@@ -10084,7 +10111,7 @@ packages:
       '@types/react':
         optional: true
     dependencies:
-      '@babel/runtime': 7.23.4
+      '@babel/runtime': 7.24.5
       '@radix-ui/react-use-layout-effect': 1.0.1(@types/react@18.3.3)(react@18.3.1)
       '@types/react': 18.3.3
       react: 18.3.1
@@ -10099,7 +10126,7 @@ packages:
       '@types/react':
         optional: true
     dependencies:
-      '@babel/runtime': 7.23.4
+      '@babel/runtime': 7.24.5
       '@radix-ui/react-use-layout-effect': 1.0.1(react@18.3.1)
       react: 18.3.1
     dev: false
@@ -12141,7 +12168,7 @@ packages:
   /@types/cli-progress@3.11.5:
     resolution: {integrity: sha512-D4PbNRbviKyppS5ivBGyFO29POlySLmA2HyUFE4p5QGazAMM3CwkKWcvTl8gvElSuxRh6FPKL8XmidX873ou4g==}
     dependencies:
-      '@types/node': 20.11.26
+      '@types/node': 20.12.12
     dev: true
 
   /@types/cli-table@0.3.1:
@@ -12163,7 +12190,7 @@ packages:
   /@types/connect@3.4.36:
     resolution: {integrity: sha512-P63Zd/JUGq+PdrM1lv0Wv5SBYeA2+CORvbrXbngriYY0jzLUWfQMQQxOhjONEz/wlHOAxOdY7CY65rgQdTjq2w==}
     dependencies:
-      '@types/node': 20.3.1
+      '@types/node': 20.12.12
     dev: false
 
   /@types/conventional-commits-parser@5.0.0:
@@ -12372,7 +12399,7 @@ packages:
   /@types/decompress@4.2.7:
     resolution: {integrity: sha512-9z+8yjKr5Wn73Pt17/ldnmQToaFHZxK0N1GHysuk/JIPT8RIdQeoInM01wWPgypRcvb6VH1drjuFpQ4zmY437g==}
     dependencies:
-      '@types/node': 20.11.26
+      '@types/node': 20.12.12
     dev: true
 
   /@types/ejs@3.1.5:
@@ -12497,7 +12524,7 @@ packages:
   /@types/mysql@2.15.22:
     resolution: {integrity: sha512-wK1pzsJVVAjYCSZWQoWHziQZbNggXFDUEIGf54g4ZM/ERuP86uGdWeKZWMYlqTPMZfHJJvLPyogXGvCOg87yLQ==}
     dependencies:
-      '@types/node': 20.3.1
+      '@types/node': 20.12.12
     dev: false
 
   /@types/node-fetch@2.6.11:
@@ -12516,6 +12543,7 @@ packages:
     resolution: {integrity: sha512-YwOMmyhNnAWijOBQweOJnQPl068Oqd4K3OFbTc6AHJwzweUwwWG3GIFY74OKks2PJUDkQPeddOQES9mLn1CTEQ==}
     dependencies:
       undici-types: 5.26.5
+    dev: true
 
   /@types/node@20.12.12:
     resolution: {integrity: sha512-eWLDGF/FOSPtAvEqeRAQ4C8LSA7M1I7i0ky1I8U7kD1J5ITyW3AsRhQrKVoWf5pFKZ2kILsEGJhsI9r93PYnOw==}
@@ -12524,6 +12552,7 @@ packages:
 
   /@types/node@20.3.1:
     resolution: {integrity: sha512-EhcH/wvidPy1WeML3TtYFGR83UzjxeWRen9V402T8aUGYsCHOmfoisV3ZSg03gAFIbLq8TnWOJ0f4cALtnSEUg==}
+    dev: true
 
   /@types/node@20.8.10:
     resolution: {integrity: sha512-TlgT8JntpcbmKUFzjhsyhGfP2fsiz1Mv56im6enJ905xG1DAYesxJaeSbGqQmAw8OWPdhyJGhGSQGKRNJ45u9w==}
@@ -12537,16 +12566,16 @@ packages:
       undici-types: 5.26.5
     dev: true
 
-  /@types/node@22.1.0:
-    resolution: {integrity: sha512-AOmuRF0R2/5j1knA3c6G3HOk523Ga+l+ZXltX8SF1+5oqcXijjfTd8fY3XRZqSihEu9XhtQnKYLmkFaoxgsJHw==}
+  /@types/node@22.5.0:
+    resolution: {integrity: sha512-DkFrJOe+rfdHTqqMg0bSNlGlQ85hSoh2TPzZyhHsXnMtligRWpxUySiyw8FY14ITt24HVCiQPWxS3KO/QlGmWg==}
     dependencies:
-      undici-types: 6.13.0
+      undici-types: 6.19.8
     dev: true
 
   /@types/nodemailer@6.4.14:
     resolution: {integrity: sha512-fUWthHO9k9DSdPCSPRqcu6TWhYyxTBg382vlNIttSe9M7XfsT06y0f24KHXtbnijPGGRIcVvdKHTNikOI6qiHA==}
     dependencies:
-      '@types/node': 20.11.26
+      '@types/node': 20.12.12
     dev: true
 
   /@types/normalize-package-data@2.4.1:
@@ -12570,7 +12599,7 @@ packages:
   /@types/pg@8.6.1:
     resolution: {integrity: sha512-1Kc4oAGzAl7uqUStZCDvaLFqZrW9qWSjXOmBfdgyBP5La7Us6Mg4GBvRlSoaZMhQF/zSj1C8CtKMBkoiT8eL8w==}
     dependencies:
-      '@types/node': 20.3.1
+      '@types/node': 20.12.12
       pg-protocol: 1.6.1
       pg-types: 2.2.0
     dev: false
@@ -12624,7 +12653,7 @@ packages:
   /@types/stream-json@1.7.7:
     resolution: {integrity: sha512-hHG7cLQ09H/m9i0jzL6UJAeLLxIWej90ECn0svO4T8J0nGcl89xZDQ2ujT4WKlvg0GWkcxJbjIDzW/v7BYUM6Q==}
     dependencies:
-      '@types/node': 20.11.26
+      '@types/node': 20.12.12
       '@types/stream-chain': 2.0.1
     dev: true
 
@@ -12910,7 +12939,7 @@ packages:
     dependencies:
       '@typescript-eslint/types': 5.62.0
       '@typescript-eslint/visitor-keys': 5.62.0
-      debug: 4.3.4
+      debug: 4.3.5
       globby: 11.1.0
       is-glob: 4.0.3
       semver: 7.5.4
@@ -12991,7 +13020,7 @@ packages:
   /@typescript/vfs@1.5.0:
     resolution: {integrity: sha512-AJS307bPgbsZZ9ggCT3wwpg3VbTKMFNHfaY/uF0ahSkYYrPF2dSSKDNIDIQAHm9qJqbLvCsSJH7yN4Vs/CsMMg==}
     dependencies:
-      debug: 4.3.4
+      debug: 4.3.5
     transitivePeerDependencies:
       - supports-color
     dev: true
@@ -13379,10 +13408,9 @@ packages:
     resolution: {integrity: sha512-o/zjMZRhJxny7OyEF+Op8X+efiELC7k7yOjMzgfzVqOzXqkBkWI79YoTdOtsuWd5BWhAGAuOY/Xa6xpiaWXiNg==}
     engines: {node: '>= 14'}
     dependencies:
-      debug: 4.3.4
+      debug: 4.3.5
     transitivePeerDependencies:
       - supports-color
-    dev: true
 
   /agentkeepalive@4.5.0:
     resolution: {integrity: sha512-5GG/5IbQQpC9FpkRGsSvZI5QYeSCzlJHdpBQntCsuTOxhKD8lqKhrleg2Yi7yvMIf82Ycmmqln9U8V9qwEiJew==}
@@ -14023,7 +14051,7 @@ packages:
       '@npmcli/fs': 3.1.0
       fs-minipass: 3.0.3
       glob: 10.3.10
-      lru-cache: 10.0.1
+      lru-cache: 10.4.3
       minipass: 7.0.3
       minipass-collect: 1.0.2
       minipass-flush: 1.0.5
@@ -14691,7 +14719,7 @@ packages:
     resolution: {integrity: sha512-ZQBvi1DcpJ4GDqanjucZ2Hj3wEO5pZDS89BWbkcrvdxksJorwUDDZamX9ldFkp9aw2lmBDLgkObEA4DWNJ9FYQ==}
     dev: false
 
-  /cosmiconfig-typescript-loader@5.0.0(@types/node@18.19.21)(cosmiconfig@9.0.0)(typescript@5.5.2):
+  /cosmiconfig-typescript-loader@5.0.0(@types/node@20.12.12)(cosmiconfig@9.0.0)(typescript@5.5.2):
     resolution: {integrity: sha512-+8cK7jRAReYkMwMiG+bxhcNKiHJDM6bR9FD/nGBXOWdMLuYawjF5cGrtLilJ+LGd3ZjCXnJjR5DkfWPoIVlqJA==}
     engines: {node: '>=v16'}
     peerDependencies:
@@ -14699,7 +14727,7 @@ packages:
       cosmiconfig: '>=8.2'
       typescript: '>=4'
     dependencies:
-      '@types/node': 18.19.21
+      '@types/node': 20.12.12
       cosmiconfig: 9.0.0(typescript@5.5.2)
       jiti: 1.19.1
       typescript: 5.5.2
@@ -16693,7 +16721,7 @@ packages:
     peerDependencies:
       eslint: ^3 || ^4 || ^5 || ^6 || ^7 || ^8
     dependencies:
-      '@babel/runtime': 7.23.4
+      '@babel/runtime': 7.24.5
       aria-query: 5.3.0
       array-includes: 3.1.6
       array.prototype.flatmap: 1.3.1
@@ -16722,11 +16750,11 @@ packages:
       builtins: 5.0.1
       eslint: 8.52.0
       eslint-plugin-es-x: 7.2.0(eslint@8.52.0)
-      ignore: 5.3.1
-      is-core-module: 2.13.1
+      ignore: 5.2.4
+      is-core-module: 2.12.1
       minimatch: 3.1.2
-      resolve: 1.22.8
-      semver: 7.6.2
+      resolve: 1.22.2
+      semver: 7.5.4
     dev: true
 
   /eslint-plugin-n@16.0.1(eslint@8.53.0):
@@ -16756,11 +16784,11 @@ packages:
       builtins: 5.0.1
       eslint: 8.57.0
       eslint-plugin-es-x: 7.2.0(eslint@8.57.0)
-      ignore: 5.3.1
-      is-core-module: 2.13.1
+      ignore: 5.2.4
+      is-core-module: 2.12.1
       minimatch: 3.1.2
-      resolve: 1.22.8
-      semver: 7.6.2
+      resolve: 1.22.2
+      semver: 7.5.4
     dev: true
 
   /eslint-plugin-node@11.1.0(eslint@8.52.0):
@@ -18137,15 +18165,15 @@ packages:
       react-dom: 18.3.1(react@18.3.1)
     dev: false
 
-  /graphiql@3.3.2(@codemirror/language@6.0.0)(@types/node@18.19.21)(graphql@16.9.0)(react-dom@18.3.1)(react@18.3.1):
+  /graphiql@3.3.2(@codemirror/language@6.0.0)(@types/node@20.12.12)(graphql@16.9.0)(react-dom@18.3.1)(react@18.3.1):
     resolution: {integrity: sha512-LJ8Q6UM3kUzTXvybud9a4sj/QBEVHwHWd5Oc3OjLp9DQiKjqVY/2P/Q3RdPQD/MihwaO+6eC69R4MYnPQGd2Hw==}
     peerDependencies:
       graphql: 16.9.0
       react: 18.3.1
       react-dom: ^16.8.0 || ^17 || ^18
     dependencies:
-      '@graphiql/react': 0.22.4(@codemirror/language@6.0.0)(@types/node@18.19.21)(graphql@16.9.0)(react-dom@18.3.1)(react@18.3.1)
-      '@graphiql/toolkit': 0.9.1(@types/node@18.19.21)(graphql@16.9.0)
+      '@graphiql/react': 0.22.4(@codemirror/language@6.0.0)(@types/node@20.12.12)(graphql@16.9.0)(react-dom@18.3.1)(react@18.3.1)
+      '@graphiql/toolkit': 0.9.1(@types/node@20.12.12)(graphql@16.9.0)
       graphql: 16.9.0
       graphql-language-service: 5.2.1(graphql@16.9.0)
       markdown-it: 14.1.0
@@ -18474,14 +18502,14 @@ packages:
     resolution: {integrity: sha512-ICclEpTLhHj+zCuSb2/usoNXSVkxUSIopre+b1w8NDY9Dntp9LO4vLdHYI336TH8sAqwrRgnSfdkBG2/YpisHA==}
     engines: {node: ^16.14.0 || >=18.0.0}
     dependencies:
-      lru-cache: 10.0.1
+      lru-cache: 10.4.3
     dev: true
 
   /hosted-git-info@7.0.1:
     resolution: {integrity: sha512-+K84LB1DYwMHoHSgaOY/Jfhw3ucPmSET5v98Ke/HdNSw4a0UktWzyW1mjhjpuxxTqOOsfWT/7iVshHmVZ4IpOA==}
     engines: {node: ^16.14.0 || >=18.0.0}
     dependencies:
-      lru-cache: 10.0.1
+      lru-cache: 10.4.3
     dev: true
 
   /hosted-git-info@7.0.2:
@@ -18540,7 +18568,7 @@ packages:
     engines: {node: '>= 14'}
     dependencies:
       agent-base: 7.1.0
-      debug: 4.3.4
+      debug: 4.3.5
     transitivePeerDependencies:
       - supports-color
     dev: true
@@ -18560,10 +18588,20 @@ packages:
     engines: {node: '>= 14'}
     dependencies:
       agent-base: 7.1.0
-      debug: 4.3.4
+      debug: 4.3.5
     transitivePeerDependencies:
       - supports-color
     dev: true
+
+  /https-proxy-agent@7.0.5:
+    resolution: {integrity: sha512-1e4Wqeblerz+tMKPIq2EMGiiWW1dIjZOksyHWSUm1rmuvw/how9hBHZ38lAGj5ID4Ik6EdkOw7NmWPy6LAwalw==}
+    engines: {node: '>= 14'}
+    dependencies:
+      agent-base: 7.1.0
+      debug: 4.3.5
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
 
   /human-signals@2.1.0:
     resolution: {integrity: sha512-B4FFZ6q/T2jhhksgkbEW3HBvWIfDW85snkQgawt07S7J5QXTk6BkNV+0yAeZrM5QpMAdYlocGoljn0sJ/WQkFw==}
@@ -19229,7 +19267,7 @@ packages:
     resolution: {integrity: sha512-7vuh85V5cdDofPyxn58nrPjBktZo0u9x1g8WtjQol+jZDaE+fhN+cIvTj11GndBnMnyfrUOG1sZQxCdjKh+DKg==}
     engines: {node: '>= 10.13.0'}
     dependencies:
-      '@types/node': 20.3.1
+      '@types/node': 20.12.12
       merge-stream: 2.0.0
       supports-color: 8.1.1
     dev: false
@@ -19755,10 +19793,6 @@ packages:
     dependencies:
       tslib: 2.6.2
 
-  /lru-cache@10.0.1:
-    resolution: {integrity: sha512-IJ4uwUTi2qCccrioU6g9g/5rvvVl13bsdczUUcqbciD9iLr095yj8DQKdObriEvuNSx325N1rV1O0sJFszx75g==}
-    engines: {node: 14 || >=16.14}
-
   /lru-cache@10.4.3:
     resolution: {integrity: sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ==}
 
@@ -20105,6 +20139,18 @@ packages:
         optional: true
     dependencies:
       '@types/node': 18.19.21
+    dev: false
+
+  /meros@1.3.0(@types/node@20.12.12):
+    resolution: {integrity: sha512-2BNGOimxEz5hmjUG2FwoxCt5HN7BXdaWyFqEwxPTrJzVdABtrL4TiHTcsWSFAxPQ/tOnEaQEJh3qWq71QRMY+w==}
+    engines: {node: '>=13'}
+    peerDependencies:
+      '@types/node': '>=13'
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
+    dependencies:
+      '@types/node': 20.12.12
     dev: false
 
   /micromark-core-commonmark@2.0.0:
@@ -21502,7 +21548,7 @@ packages:
     resolution: {integrity: sha512-MkhCqzzBEpPvxxQ71Md0b1Kk51W01lrYvlMzSUaIzNsODdd7mqhiimSZlr+VegAz5Z6Vzt9Xg2ttE//XBhH3EQ==}
     engines: {node: '>=16 || 14 >=14.17'}
     dependencies:
-      lru-cache: 10.0.1
+      lru-cache: 10.4.3
       minipass: 7.0.3
     dev: true
 
@@ -22482,22 +22528,6 @@ packages:
     engines: {node: '>=0.10.0'}
     dev: true
 
-  /react-remove-scroll-bar@2.3.4(@types/react@18.3.3)(react@18.3.1):
-    resolution: {integrity: sha512-63C4YQBUt0m6ALadE9XV56hV8BgJWDmmTPY758iIJjfQKt2nYwoUrPk0LXRXcB/yIj82T1/Ixfdpdk68LwIB0A==}
-    engines: {node: '>=10'}
-    peerDependencies:
-      '@types/react': ^16.8.0 || ^17.0.0 || ^18.0.0
-      react: 18.3.1
-    peerDependenciesMeta:
-      '@types/react':
-        optional: true
-    dependencies:
-      '@types/react': 18.3.3
-      react: 18.3.1
-      react-style-singleton: 2.2.1(@types/react@18.3.3)(react@18.3.1)
-      tslib: 2.6.2
-    dev: false
-
   /react-remove-scroll-bar@2.3.6(@types/react@18.3.3)(react@18.3.1):
     resolution: {integrity: sha512-DtSYaao4mBmX+HDo5YWYdBWQwYIQQshUV/dVxFxK+KM26Wjwp1gZ6rv6OC3oujI6Bfu6Xyg3TwK533AQutsn/g==}
     engines: {node: '>=10'}
@@ -22560,10 +22590,10 @@ packages:
     dependencies:
       '@types/react': 18.3.3
       react: 18.3.1
-      react-remove-scroll-bar: 2.3.4(@types/react@18.3.3)(react@18.3.1)
+      react-remove-scroll-bar: 2.3.6(@types/react@18.3.3)(react@18.3.1)
       react-style-singleton: 2.2.1(@types/react@18.3.3)(react@18.3.1)
       tslib: 2.6.2
-      use-callback-ref: 1.3.0(@types/react@18.3.3)(react@18.3.1)
+      use-callback-ref: 1.3.2(@types/react@18.3.3)(react@18.3.1)
       use-sidecar: 1.1.2(@types/react@18.3.3)(react@18.3.1)
     dev: false
 
@@ -23478,7 +23508,7 @@ packages:
     engines: {node: '>= 14'}
     dependencies:
       agent-base: 7.1.0
-      debug: 4.3.4
+      debug: 4.3.5
       socks: 2.7.1
     transitivePeerDependencies:
       - supports-color
@@ -23820,7 +23850,7 @@ packages:
     resolution: {integrity: sha512-Je2USTpUib3hApIgoHXViLoYkDLp+AXdUJvJ6aMQ/AcvZK1PcC7N8nTceh+0gpdotX8izlWN4QyVdMcptubHBQ==}
     engines: {node: '>=12.*'}
     dependencies:
-      '@types/node': 20.11.26
+      '@types/node': 20.12.12
       qs: 6.11.2
     dev: false
 
@@ -24538,8 +24568,8 @@ packages:
   /undici-types@5.26.5:
     resolution: {integrity: sha512-JlCMO+ehdEIKqlFxk6IfVoAUVmgz7cU7zD/h9XZ0qzeosSHmUJVOzSQvvYSYWXkFXC+IfLKSIffhv0sVZup6pA==}
 
-  /undici-types@6.13.0:
-    resolution: {integrity: sha512-xtFJHudx8S2DSoujjMd1WeWvn7KKWFRESZTMeL1RptAYERu29D6jphMjjY+vn96jvN3kVPDNxU/E13VTaXj6jg==}
+  /undici-types@6.19.8:
+    resolution: {integrity: sha512-ve2KP6f/JnbPBFyobGHuerC9g1FYGn/F8n1LWTwNxCEzd6IfqTwUQcNXgEtmmQ6DlRrC1hrSrBnCZPokRrDHjw==}
     dev: true
 
   /undici@5.28.4:
@@ -24547,6 +24577,11 @@ packages:
     engines: {node: '>=14.0'}
     dependencies:
       '@fastify/busboy': 2.1.1
+    dev: false
+
+  /undici@6.19.8:
+    resolution: {integrity: sha512-U8uCCl2x9TK3WANvmBavymRzxbfFYG+tAu+fgx3zxQy3qdagQqBLwJVrdyO1TBfUXvfKveMKJZhpvUYoOjM+4g==}
+    engines: {node: '>=18.17'}
     dev: false
 
   /unicorn-magic@0.1.0:
@@ -24732,21 +24767,6 @@ packages:
 
   /urlpattern-polyfill@8.0.2:
     resolution: {integrity: sha512-Qp95D4TPJl1kC9SKigDcqgyM2VDVO4RiJc2d4qe5GrYm+zbIQCWWKAFaJNQ4BhdFeDGwBmAxqJBwWSJDb9T3BQ==}
-    dev: false
-
-  /use-callback-ref@1.3.0(@types/react@18.3.3)(react@18.3.1):
-    resolution: {integrity: sha512-3FT9PRuRdbB9HfXhEq35u4oZkvpJ5kuYbpqhCfmiZyReuRgpnhDlbr2ZEnnuS0RrJAPn6l23xjFg9kpDM+Ms7w==}
-    engines: {node: '>=10'}
-    peerDependencies:
-      '@types/react': ^16.8.0 || ^17.0.0 || ^18.0.0
-      react: 18.3.1
-    peerDependenciesMeta:
-      '@types/react':
-        optional: true
-    dependencies:
-      '@types/react': 18.3.3
-      react: 18.3.1
-      tslib: 2.6.2
     dev: false
 
   /use-callback-ref@1.3.2(@types/react@18.3.3)(react@18.3.1):

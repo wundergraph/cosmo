@@ -1,7 +1,7 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import { CompositionError, DeploymentError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
-import { SQL, and, asc, count, desc, eq, gt, inArray, like, lt, notInArray, or, sql } from 'drizzle-orm';
+import { SQL, and, asc, count, desc, eq, getTableName, gt, inArray, like, lt, notInArray, or, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { WebsocketSubprotocol } from '../../db/models.js';
@@ -507,6 +507,7 @@ export class SubgraphRepository {
         .insert(schemaVersion)
         .values({
           targetId: subgraph.targetId,
+          organizationId: this.organizationId,
           schemaSDL: data.subgraphSchema,
           isV2Graph: data.isV2Graph,
         })
@@ -545,7 +546,7 @@ export class SubgraphRepository {
   }
 
   public async list(opts: SubgraphListFilterOptions): Promise<SubgraphDTO[]> {
-    const conditions: SQL<unknown>[] = [
+    const conditions: (SQL<unknown> | undefined)[] = [
       eq(schema.targets.organizationId, this.organizationId),
       eq(schema.targets.type, 'subgraph'),
     ];
@@ -555,7 +556,12 @@ export class SubgraphRepository {
     }
 
     if (opts.query) {
-      conditions.push(like(schema.targets.name, `%${opts.query}%`));
+      conditions.push(
+        or(
+          like(schema.targets.name, `%${opts.query}%`),
+          sql.raw(`${getTableName(schema.subgraphs)}.${schema.subgraphs.id.name}::text like '%${opts.query}%'`),
+        ),
+      );
     }
 
     if (opts.excludeFeatureSubgraphs) {

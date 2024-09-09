@@ -11,6 +11,9 @@ image:
   # -- Overrides the image tag whose default is the chart appVersion.
   version: 'latest'
 
+# -- Add labels to all deployed resources
+commonLabels: {}
+
 deploymentStrategy: {}
 
 imagePullSecrets: []
@@ -181,6 +184,16 @@ configuration:
   slackAppClientId: ''
   slackAppClientSecret: ''
   s3StorageUrl: 'http://minio:changeme@cosmo-minio:9000/cosmo'
+  # -- The region where the S3 bucket is located.
+  s3Region: 'auto'
+  # -- The endpoint of the S3 bucket.
+  s3Endpoint: ''
+  # -- s3 access key id, can be used instead of [username]:[password] in the url
+  s3AccessKeyId: ''
+  # -- s3 secret access key, can be used instead of [username]:[password] in the url
+  s3SecretAccessKey: ''
+  # -- Forces usage of path style urls for S3. Default is true.
+  s3ForcePathStyle: 'true'
   stripeSecretKey: ''
   stripeWebhookSecret: ''
   # -- The default billing plan, eg `developer@1`
@@ -228,12 +241,17 @@ configuration:
 # -- Existing secret in the same namespace containing the ControlPlane Secrets. The secret keys have to match with current secret.
 existingSecret: ""
 
+# -- Pass additional labels to all jobs
+additionalJobLabels: {}
+
 # -- Configure jobs to be executed in the control plane
 jobs:
   # -- Used to deactivate an organization with a reason and schedule deletion
   deactivateOrganization:
     # -- Enables the job to be run
     enabled: false
+    # -- Adds additional labels to the job
+    additionalLabels: {}
     # -- The slug of the organization
     slug: 'foo'
     # -- The unique identifier of the organization
@@ -242,6 +260,8 @@ jobs:
     reason: ''
   # -- Used to activate an organization and remove the scheduled deletion
   activateOrganization:
+    # -- Adds additional labels to the job
+    additionalLabels: {}
     # -- Enables the job to be run
     enabled: false
     # -- The slug of the organization
@@ -250,7 +270,18 @@ jobs:
     id: '123'
   # -- Used to delete the user
   deleteUser:
+    # -- Adds additional labels to the job
+    additionalLabels: {}
     # -- Enables the job to be run
     enabled: false
     # -- The unique identifier of the user
     id: '123'
+  clickhouseMigration:
+    # -- Adds additional labels to the clickhouse migration job (see: .Values.global.otelcollector)
+    additionalLabels: {}
+  databaseMigration:
+    # -- Adds additional labels to the database-migration job
+    additionalLabels: {}
+  seedOrganization:
+    # -- Adds additional labels to the job (see: .Values.global.seed)
+    additionalLabels: {}

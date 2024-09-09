@@ -673,6 +673,13 @@
       "when": 1723022647113,
       "tag": "0095_tan_moon_knight",
       "breakpoints": true
+    },
+    {
+      "idx": 96,
+      "version": "7",
+      "when": 1725251037898,
+      "tag": "0096_red_bug",
+      "breakpoints": true
     }
   ]
 }

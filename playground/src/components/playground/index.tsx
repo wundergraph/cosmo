@@ -12,9 +12,24 @@ import { TbDevicesCheck } from 'react-icons/tb';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import axios, { AxiosError } from 'axios';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { LuLayoutDashboard } from 'react-icons/lu';
+import { sentenceCase } from 'change-case';
+import { PlanView } from './plan-view';
+import { QueryPlan } from './types';
+import { useDebounce } from 'use-debounce';
 import 'graphiql/graphiql.css';
 import '@graphiql/plugin-explorer/dist/style.css';
 import '@/theme.css';
+
+const validateHeaders = (headers: Record<string, string>) => {
+  for (const headersKey in headers) {
+    if (!/^[\^`\-\w!#$%&'*+.|~]+$/.test(headersKey)) {
+      throw new TypeError(`Header name must be a valid HTTP token [${headersKey}]`);
+    }
+  }
+};
 
 const graphiQLFetch = async (
   schema: GraphQLSchema | null,
@@ -28,12 +43,7 @@ const graphiQLFetch = async (
       ...(init.headers as Record<string, string>),
     };
 
-    for (const headersKey in headers) {
-      // check invalid headers
-      if (!/^[\^`\-\w!#$%&'*+.|~]+$/.test(headersKey)) {
-        throw new TypeError(`Header name must be a valid HTTP token [${headersKey}]`);
-      }
-    }
+    validateHeaders(headers);
 
     if (schema && clientValidationEnabled) {
       const query = JSON.parse(init.body as string)?.query as string;
@@ -61,56 +71,126 @@ const graphiQLFetch = async (
       }
     }
 
-    const response = await fetch(url, init);
+    const axiosResponse = await axios({
+      method: init.method as 'get' | 'post' | 'put' | 'delete', // adjust method as per init
+      url: url.toString(),
+      headers,
+      data: init.body,
+    });
+
+    const response = new Response(JSON.stringify(axiosResponse.data), {
+      status: axiosResponse.status,
+      statusText: axiosResponse.statusText,
+      headers: new Headers(Object.entries(axiosResponse.headers)),
+    });
+
     onFetch(await response.clone().json());
     return response;
-  } catch (e) {
-    // @ts-expect-error
-    if (e?.message?.includes('Failed to fetch')) {
-      throw new Error('Unable to connect to the server. Please check if your server is running.');
+  } catch (error: any) {
+    if (error instanceof AxiosError) {
+      const errorInfo = {
+        message: error.message || 'Network Error',
+        responseErrorCode: error.code,
+        responseStatusCode: error.response?.status,
+        responseHeaders: error.response?.headers,
+        responseBody: JSON.stringify(error.response?.data),
+        errorMessage: error.message,
+      };
+      const response = new Response(JSON.stringify(errorInfo));
+      onFetch(await response.clone().json());
+      return response;
+    } else {
+      throw error;
     }
-    throw e;
   }
 };
 
-const ResponseTabs = () => {
+const ResponseViewSelector = () => {
+  const [view, setView] = useState('response');
+
   const onValueChange = (val: string) => {
     const response = document.getElementsByClassName('graphiql-response')[0] as HTMLDivElement;
 
-    const visual = document.getElementById('response-visualization') as HTMLDivElement;
+    const art = document.getElementById('art-visualization') as HTMLDivElement;
 
-    if (!response || !visual) {
+    const plan = document.getElementById('planner-visualization') as HTMLDivElement;
+
+    if (!response || !art || !plan) {
       return;
     }
 
-    if (val === 'plan') {
-      response.classList.add('!invisible');
-      visual.classList.remove('invisible');
-      visual.classList.remove('-z-50');
+    if (val === 'request-trace') {
+      response.classList.add('invisible');
+      response.classList.add('-z-50');
+      plan.classList.add('invisible');
+      plan.classList.add('-z-50');
+
+      art.classList.remove('invisible');
+      art.classList.remove('-z-50');
+    } else if (val === 'query-plan') {
+      response.classList.add('invisible');
+      response.classList.add('-z-50');
+      art.classList.add('invisible');
+      art.classList.add('-z-50');
+
+      plan.classList.remove('invisible');
+      plan.classList.remove('-z-50');
     } else {
-      response.classList.remove('!invisible');
-      visual.classList.add('-z-50');
-      visual.classList.add('invisible');
+      response.classList.remove('invisible');
+      response.classList.remove('-z-50');
+
+      art.classList.add('invisible');
+      art.classList.add('-z-50');
+      plan.classList.add('invisible');
+      plan.classList.add('-z-50');
+    }
+
+    setView(val);
+  };
+
+  const getIcon = (val: string) => {
+    if (val === 'response') {
+      return <PiBracketsCurly className="h-4 w-4 flex-shrink-0" />;
+    } else if (val === 'request-trace') {
+      return <FaNetworkWired className="h-4 w-4 flex-shrink-0" />;
+    } else {
+      return <LuLayoutDashboard className="h-4 w-4 flex-shrink-0" />;
     }
   };
 
   return (
-    <Tabs defaultValue="response" className="w-full md:w-auto" onValueChange={onValueChange}>
-      <TabsList className="grid w-full grid-cols-2">
-        <TabsTrigger className="!cursor-pointer" value="response" asChild>
-          <div className="flex items-center gap-x-2">
-            <PiBracketsCurly className="h-4 w-4 flex-shrink-0" />
-            Response
-          </div>
-        </TabsTrigger>
-        <TabsTrigger className="!cursor-pointer" value="plan" asChild>
-          <div className="flex items-center gap-x-2">
-            <FaNetworkWired className="h-4 w-4 flex-shrink-0" />
-            Trace
-          </div>
-        </TabsTrigger>
-      </TabsList>
-    </Tabs>
+    <div>
+      <Select onValueChange={onValueChange}>
+        <SelectTrigger className="w-[180px]">
+          <SelectValue>
+            <div className="flex items-center gap-x-2">
+              {getIcon(view)}
+              {sentenceCase(view)}
+            </div>
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="response">
+            <div className="flex items-center gap-x-2">
+              {getIcon('response')}
+              Response
+            </div>
+          </SelectItem>
+          <SelectItem value="request-trace">
+            <div className="flex items-center gap-x-2">
+              {getIcon('request-trace')}
+              Request Trace
+            </div>
+          </SelectItem>
+          <SelectItem value="query-plan">
+            <div className="flex items-center gap-x-2">
+              {getIcon('query-plan')}
+              Query Plan
+            </div>
+          </SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
   );
 };
 
@@ -142,16 +222,19 @@ const ToggleClientValidation = () => {
 
 const PlaygroundPortal = () => {
   const tabDiv = document.getElementById('response-tabs');
-  const visDiv = document.getElementById('response-visualization');
-  const logo = document.getElementById('graphiql-wg-logo');
+  const artDiv = document.getElementById('art-visualization');
+  const plannerDiv = document.getElementById('planner-visualization');
   const toggleClientValidation = document.getElementById('toggle-client-validation');
+  const logo = document.getElementById('graphiql-wg-logo');
 
-  if (!tabDiv || !visDiv || !logo || !toggleClientValidation) return null;
+  if (!tabDiv || !artDiv || !plannerDiv || !toggleClientValidation || !logo) return null;
 
   return (
     <>
-      {createPortal(<ResponseTabs />, tabDiv)}
-      {createPortal(<TraceView />, visDiv)}
+      {createPortal(<ResponseViewSelector />, tabDiv)}
+      {createPortal(<PlanView />, plannerDiv)}
+      {createPortal(<TraceView />, artDiv)}
+      {createPortal(<ToggleClientValidation />, toggleClientValidation)}
       {createPortal(
         <a href="https://wundergraph.com">
           <svg
@@ -172,7 +255,6 @@ const PlaygroundPortal = () => {
         </a>,
         logo,
       )}
-      {createPortal(<ToggleClientValidation />, toggleClientValidation)}
     </>
   );
 };
@@ -188,16 +270,23 @@ export const Playground = (input: {
 
   const [schema, setSchema] = useState<GraphQLSchema | null>(null);
 
+  const [query, setQuery] = useState<string | undefined>(undefined);
   const [headers, setHeaders] = useState(`{
   "X-WG-TRACE" : "true"
 }`);
 
   const [response, setResponse] = useState<string>('');
 
+  const [plan, setPlan] = useState<QueryPlan | undefined>(undefined);
+  const [planError, setPlanError] = useState<string>('');
+
   const [clientValidationEnabled, setClientValidationEnabled] = useState(true);
 
   useEffect(() => {
-    if (isMounted) return;
+    const responseTabs = document.getElementById('response-tabs');
+    if (responseTabs && isMounted) {
+      return;
+    }
 
     const sidebar = document.getElementsByClassName('graphiql-sidebar-section')[0];
 
@@ -226,10 +315,17 @@ export const Playground = (input: {
       if (responseSectionParent) {
         responseSectionParent.id = 'response-parent';
         responseSectionParent.classList.add('relative');
-        const div = document.createElement('div');
-        div.id = 'response-visualization';
-        div.className = 'flex flex-1 h-full w-full absolute invisible -z-50';
-        responseSectionParent.append(div);
+
+        const artWrapper = document.createElement('div');
+        artWrapper.id = 'art-visualization';
+        artWrapper.className = 'flex flex-1 h-full w-full absolute invisible -z-50';
+
+        const plannerWrapper = document.createElement('div');
+        plannerWrapper.id = 'planner-visualization';
+        plannerWrapper.className = 'flex flex-1 h-full w-full absolute invisible -z-50';
+
+        responseSectionParent.append(artWrapper);
+        responseSectionParent.append(plannerWrapper);
       }
     }
 
@@ -242,7 +338,7 @@ export const Playground = (input: {
     }
 
     setIsMounted(true);
-  }, [isMounted]);
+  });
 
   const getSchema = async () => {
     const res = await fetch(url, {
@@ -273,6 +369,53 @@ export const Playground = (input: {
     });
   }, [schema, clientValidationEnabled]);
 
+  const [debouncedQuery] = useDebounce(query, 300);
+
+  useEffect(() => {
+    const getPlan = async () => {
+      if (!schema || !debouncedQuery || !url) {
+        return;
+      }
+
+      try {
+        const errors = validate(schema, parse(debouncedQuery));
+        if (errors.length > 0) {
+          setPlanError('Invalid query');
+          return;
+        }
+
+        const requestHeaders: Record<string, string> = {
+          ...JSON.parse(headers),
+          'X-WG-Include-Query-Plan': 'true',
+          'X-WG-Skip-Loader': 'true',
+        };
+
+        validateHeaders(requestHeaders);
+
+        const response = await axios.post(
+          url,
+          {
+            query: debouncedQuery,
+          },
+          { headers: requestHeaders },
+        );
+
+        if (!response.data?.extensions?.queryPlan) {
+          setPlan(undefined);
+          return;
+        }
+
+        setPlanError('');
+        setPlan(response.data.extensions.queryPlan);
+      } catch (error: any) {
+        setPlan(undefined);
+        setPlanError(error.message || 'Network error');
+      }
+    };
+
+    getPlan();
+  }, [debouncedQuery, headers, url, schema]);
+
   return (
     <TooltipProvider>
       <TraceContext.Provider
@@ -280,14 +423,18 @@ export const Playground = (input: {
           headers,
           response,
           subgraphs: [],
+          plan,
+          planError,
           clientValidationEnabled,
           setClientValidationEnabled,
+          forcedTheme: input.theme,
         }}
       >
         <GraphiQL
           shouldPersistHeaders
           showPersistHeadersSettings={false}
           fetcher={fetcher}
+          onEditQuery={setQuery}
           headers={headers}
           onEditHeaders={setHeaders}
           plugins={[

@@ -11,6 +11,9 @@ image:
   # -- Overrides the image tag whose default is the chart appVersion.
   version: "latest"
 
+# -- Add labels to all deployed resources
+commonLabels: {}
+
 deploymentStrategy: {}
 
 imagePullSecrets: []
@@ -223,3 +226,12 @@ configuration:
     port: 8088
     # -- The HTTP path where metrics are exposed. Default is "/metrics".
     path: "/metrics"
+
+  # Use this section to configure the router's HTTP(S) proxy settings.
+  # When set the proxy is enabled.
+  # -- The URL of the HTTPS proxy server. Default is an empty string.
+  httpsProxy: ''
+  # -- The URL of the HTTP proxy server. Default is an empty string.
+  httpProxy: ''
+  # -- NO_PROXY is a comma-separated list of hosts or domains for which the proxy should not be used.
+  noProxy: ''

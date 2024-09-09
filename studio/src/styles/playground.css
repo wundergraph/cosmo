@@ -62,3 +62,11 @@ body.graphiql-dark [data-radix-popper-content-wrapper] {
 .graphiql-explorer-root > :first-child {
   @apply !overflow-hidden;
 }
+
+.graphiql-session-header-right {
+  @apply flex-shrink-0
+}
+
+.graphiql-tabs  {
+  @apply z-10;
+}

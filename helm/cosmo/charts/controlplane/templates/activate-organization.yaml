@@ -4,8 +4,8 @@ kind: Job
 metadata:
   # We truncate the organization id to keep within 52 characters for the name. We add the full id in the annotations.
   name: "{{ include "controlplane.fullname" . }}-activate-org-{{ trunc 8 .Values.jobs.activateOrganization.id }}"
-  labels:
-    {{- include "controlplane.labels" . | nindent 4 }}
+  labels: 
+    {{- include "controlplane.job.labels" (dict "additionalLabels" .Values.jobs.activateOrganization.additionalLabels "context" .) | nindent 4 }}
   annotations:
     organization-id: {{ .Values.jobs.activateOrganization.id }}
     # Run the job after installing the helm chart
@@ -24,7 +24,7 @@ spec:
     metadata:
       name: "{{ include "controlplane.fullname" . }}-activate-organization"
       labels:
-        {{- include "controlplane.labels" . | nindent 8 }}
+        {{- include "controlplane.job.labels" (dict "additionalLabels" .Values.jobs.activateOrganization.additionalLabels "context" .) | nindent 8 }}
     spec:
       restartPolicy: OnFailure
       {{- with .Values.imagePullSecrets }}
