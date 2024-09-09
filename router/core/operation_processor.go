@@ -363,7 +363,7 @@ func (o *OperationKit) Parse() error {
 		}
 		operationCount++
 		ref := o.kit.doc.RootNodes[i].Ref
-		name := o.kit.doc.Input.ByteSliceString(o.kit.doc.OperationDefinitions[ref].Name)
+		name := string(o.kit.doc.OperationDefinitionNameBytes(ref))
 		if len(name) == 0 {
 			anonymousOperationCount++
 			if anonymousOperationDefinitionRef == -1 {
