@@ -81,8 +81,8 @@ func (p *CosmoProvider) Configure(ctx context.Context, req provider.ConfigureReq
 func (p *CosmoProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		services.NewFederatedGraphResource, // Updated to new package
-		services.NewNamespaceResource,       // Updated to new package
-		services.NewSubgraphResource,        // Updated to new package
+		services.NewNamespaceResource,      // Updated to new package
+		services.NewSubgraphResource,       // Updated to new package
 	}
 }
 

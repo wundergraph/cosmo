@@ -11,13 +11,13 @@ import (
 
 func CreateSubgraph(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey string, name string, namespace string, routingUrl string, baseSubgraphName *string, labels []*platformv1.Label, subscriptionUrl *string, readme *string, isEventDrivenGraph *bool, isFeatureSubgraph *bool) error {
 	request := connect.NewRequest(&platformv1.CreateFederatedSubgraphRequest{
-		Name:               name,
-		BaseSubgraphName:   baseSubgraphName,
-		Namespace:          namespace,
-		RoutingUrl:         &routingUrl,
-		Labels:             labels,
-		SubscriptionUrl:    subscriptionUrl,
-		Readme:             readme,
+		Name:             name,
+		BaseSubgraphName: baseSubgraphName,
+		Namespace:        namespace,
+		RoutingUrl:       &routingUrl,
+		Labels:           labels,
+		SubscriptionUrl:  subscriptionUrl,
+		Readme:           readme,
 		// TODO: implement
 		// WebsocketSubprotocol: websocketSubprotocol,
 		IsEventDrivenGraph: isEventDrivenGraph,

@@ -137,12 +137,12 @@ func (r *FederatedGraphResource) Create(ctx context.Context, req resource.Create
 	}
 
 	graph := platformv1.FederatedGraph{
-		Name:                   data.Name.ValueString(),
-		Namespace:              data.Namespace.ValueString(),
-		RoutingURL:             data.ServiceUrl.ValueString(),
-		AdmissionWebhookUrl:    data.AdmissionWebhookURL.ValueStringPointer(),
-		Readme:                 data.Readme.ValueStringPointer(),
-		LabelMatchers:          labelMatchers,
+		Name:                data.Name.ValueString(),
+		Namespace:           data.Namespace.ValueString(),
+		RoutingURL:          data.ServiceUrl.ValueString(),
+		AdmissionWebhookUrl: data.AdmissionWebhookURL.ValueStringPointer(),
+		Readme:              data.Readme.ValueStringPointer(),
+		LabelMatchers:       labelMatchers,
 	}
 
 	var admissionWebhookSecret *string
@@ -233,11 +233,11 @@ func (r *FederatedGraphResource) Update(ctx context.Context, req resource.Update
 	}
 
 	graph := platformv1.FederatedGraph{
-		Name:                   data.Name.ValueString(),
-		Namespace:              data.Namespace.ValueString(),
-		RoutingURL:             data.ServiceUrl.ValueString(),
-		AdmissionWebhookUrl:    data.AdmissionWebhookURL.ValueStringPointer(),
-		LabelMatchers:          labelMatchers,
+		Name:                data.Name.ValueString(),
+		Namespace:           data.Namespace.ValueString(),
+		RoutingURL:          data.ServiceUrl.ValueString(),
+		AdmissionWebhookUrl: data.AdmissionWebhookURL.ValueStringPointer(),
+		LabelMatchers:       labelMatchers,
 	}
 
 	var admissionWebhookSecret *string

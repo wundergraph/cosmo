@@ -24,14 +24,14 @@ type SubgraphResourceModel struct {
 	Namespace            types.String `tfsdk:"namespace"`
 	RoutingUrl           types.String `tfsdk:"routing_url"`
 	BaseSubgraphName     types.String `tfsdk:"base_subgraph_name"`
-	Labels               types.List   `tfsdk:"labels"` 
-	SubscriptionUrl      types.String `tfsdk:"subscription_url"`      
-	Readme               types.String `tfsdk:"readme"`               
-	WebsocketSubprotocol  types.String `tfsdk:"websocket_subprotocol"` 
-	IsEventDrivenGraph    types.Bool   `tfsdk:"is_event_driven_graph"` 
-	IsFeatureSubgraph     types.Bool   `tfsdk:"is_feature_subgraph"`   
-	Headers               types.List   `tfsdk:"headers"`
-	UnsetLabels           types.Bool   `tfsdk:"unset_labels"`
+	Labels               types.List   `tfsdk:"labels"`
+	SubscriptionUrl      types.String `tfsdk:"subscription_url"`
+	Readme               types.String `tfsdk:"readme"`
+	WebsocketSubprotocol types.String `tfsdk:"websocket_subprotocol"`
+	IsEventDrivenGraph   types.Bool   `tfsdk:"is_event_driven_graph"`
+	IsFeatureSubgraph    types.Bool   `tfsdk:"is_feature_subgraph"`
+	Headers              types.List   `tfsdk:"headers"`
+	UnsetLabels          types.Bool   `tfsdk:"unset_labels"`
 }
 
 func NewSubgraphResource() resource.Resource {
@@ -73,7 +73,7 @@ func (r *SubgraphResource) Schema(ctx context.Context, req resource.SchemaReques
 				MarkdownDescription: "The namespace in which the subgraph is located.",
 			},
 			"routing_url": schema.StringAttribute{
-				Required: true,
+				Required:            true,
 				MarkdownDescription: "The routing URL of the subgraph.",
 			},
 			"base_subgraph_name": schema.StringAttribute{
@@ -103,7 +103,7 @@ func (r *SubgraphResource) Schema(ctx context.Context, req resource.SchemaReques
 			"headers": schema.ListAttribute{
 				Optional:            true,
 				MarkdownDescription: "Headers for the subgraph.",
-				ElementType:        types.StringType,
+				ElementType:         types.StringType,
 			},
 			"unset_labels": schema.BoolAttribute{
 				Optional:            true,
@@ -112,7 +112,7 @@ func (r *SubgraphResource) Schema(ctx context.Context, req resource.SchemaReques
 			"labels": schema.ListAttribute{
 				Optional:            true,
 				MarkdownDescription: "Labels for the subgraph.",
-				ElementType:        types.StringType,
+				ElementType:         types.StringType,
 			},
 		},
 	}
@@ -137,7 +137,7 @@ func (r *SubgraphResource) Create(ctx context.Context, req resource.CreateReques
 		labels = append(labels, &platformv1.Label{
 			Key:   labelParts[0],
 			Value: labelParts[1],
-		})	
+		})
 	}
 
 	err = api.CreateSubgraph(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, data.Name.ValueString(), data.Namespace.ValueString(), data.RoutingUrl.ValueString(), data.BaseSubgraphName.ValueStringPointer(), labels, data.SubscriptionUrl.ValueStringPointer(), data.Readme.ValueStringPointer(), data.IsEventDrivenGraph.ValueBoolPointer(), data.IsFeatureSubgraph.ValueBoolPointer())
@@ -205,7 +205,7 @@ func (r *SubgraphResource) Update(ctx context.Context, req resource.UpdateReques
 		labels = append(labels, &platformv1.Label{
 			Key:   labelParts[0],
 			Value: labelParts[1],
-		})	
+		})
 	}
 
 	var unsetLabels *bool
