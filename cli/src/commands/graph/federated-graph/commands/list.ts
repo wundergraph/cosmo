@@ -16,7 +16,7 @@ type OutputFile = {
   routingURL: string;
   isComposable: boolean;
   lastUpdatedAt: string;
-  contract: {
+  contract?: {
     sourceFederatedGraphId: string;
     excludeTags: string[];
   };
@@ -77,7 +77,7 @@ export default (opts: BaseCommandOptions) => {
             isComposable: g.isComposable,
             lastUpdatedAt: g.lastUpdatedAt,
             contract: g.contract,
-          }) as OutputFile[number],
+          }) satisfies OutputFile[number],
       );
       await writeFile(resolve(options.out), JSON.stringify(output));
       process.exit(0);
