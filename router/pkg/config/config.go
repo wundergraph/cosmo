@@ -164,13 +164,14 @@ type BackoffJitterRetry struct {
 
 type HeaderRules struct {
 	// All is a set of rules that apply to all requests
-	All       GlobalHeaderRule            `yaml:"all,omitempty"`
-	Subgraphs map[string]GlobalHeaderRule `yaml:"subgraphs,omitempty"`
+	All       *GlobalHeaderRule            `yaml:"all,omitempty"`
+	Subgraphs map[string]*GlobalHeaderRule `yaml:"subgraphs,omitempty"`
 }
 
 type GlobalHeaderRule struct {
 	// Request is a set of rules that apply to requests
-	Request []RequestHeaderRule `yaml:"request,omitempty"`
+	Request  []*RequestHeaderRule  `yaml:"request,omitempty"`
+	Response []*ResponseHeaderRule `yaml:"response,omitempty"`
 }
 
 type HeaderRuleOperation string
@@ -190,6 +191,36 @@ type RequestHeaderRule struct {
 	Rename string `yaml:"rename,omitempty"`
 	// Default is the default value to set if the header is not present
 	Default string `yaml:"default"`
+}
+
+type ResponseHeaderRuleAlgorithm string
+
+const (
+	// ResponseHeaderRuleAlgorithmFirstWrite propagates the first response header from a subgraph to the client
+	ResponseHeaderRuleAlgorithmFirstWrite ResponseHeaderRuleAlgorithm = "first_write"
+	// ResponseHeaderRuleAlgorithmLastWrite propagates the last response header from a subgraph to the client
+	ResponseHeaderRuleAlgorithmLastWrite ResponseHeaderRuleAlgorithm = "last_write"
+	// ResponseHeaderRuleAlgorithmAppend appends all response headers from all subgraphs to a comma separated list of values in the client response
+	ResponseHeaderRuleAlgorithmAppend ResponseHeaderRuleAlgorithm = "append"
+	// ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl propagates the most restrictive cache control header from all subgraph responses to the client
+	ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl ResponseHeaderRuleAlgorithm = "most_restrictive_cache_control"
+)
+
+type ResponseHeaderRule struct {
+	// Operation describes the header operation to perform e.g. "propagate"
+	Operation HeaderRuleOperation `yaml:"op"`
+	// Matching is the regex to match the header name against
+	Matching string `yaml:"matching"`
+	// Named is the exact header name to match
+	Named string `yaml:"named"`
+	// Rename renames the header's key to the provided value
+	Rename string `yaml:"rename,omitempty"`
+	// Default is the default value to set if the header is not present
+	Default string `yaml:"default"`
+	// Algorithm is the algorithm to use when multiple headers are present
+	Algorithm ResponseHeaderRuleAlgorithm `yaml:"algorithm,omitempty"`
+	// OnlyEnableOnClientRequestGet only propagates the header if the client request is a GET request
+	OnlyEnableOnClientRequestGet bool `yaml:"only_enable_on_client_request_get,omitempty"`
 }
 
 type EngineDebugConfiguration struct {
