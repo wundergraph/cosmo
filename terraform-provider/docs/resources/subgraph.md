@@ -3,12 +3,12 @@
 page_title: "cosmo_subgraph Resource - cosmo"
 subcategory: ""
 description: |-
-  
+  Cosmo Subgraph Resource
 ---
 
 # cosmo_subgraph (Resource)
 
-
+Cosmo Subgraph Resource
 
 ## Example Usage
 
@@ -35,11 +35,22 @@ resource "cosmo_subgraph" "test" {
 
 ### Required
 
-- `base_subgraph_name` (String)
-- `name` (String)
-- `namespace` (String)
-- `routing_url` (String)
+- `name` (String) The name of the subgraph.
+- `namespace` (String) The namespace in which the subgraph is located.
+- `routing_url` (String) The routing URL of the subgraph.
+
+### Optional
+
+- `base_subgraph_name` (String) The base subgraph name.
+- `headers` (List of String) Headers for the subgraph.
+- `is_event_driven_graph` (Boolean) Indicates if the subgraph is event-driven.
+- `is_feature_subgraph` (Boolean) Indicates if the subgraph is a feature subgraph.
+- `labels` (List of String) Labels for the subgraph.
+- `readme` (String) The readme for the subgraph.
+- `subscription_url` (String) The subscription URL for the subgraph.
+- `unset_labels` (Boolean) Unset labels for the subgraph.
+- `websocket_subprotocol` (String) The websocket subprotocol for the subgraph.
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The unique identifier of the subgraph resource.
