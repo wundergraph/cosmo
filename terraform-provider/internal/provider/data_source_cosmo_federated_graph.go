@@ -110,45 +110,33 @@ func (d *FederatedGraphDataSource) Read(ctx context.Context, req datasource.Read
 		return
 	}
 
-	// Validate that the name is set
 	if data.Name.IsNull() || data.Name.ValueString() == "" {
-		resp.Diagnostics.AddError(
-			"Invalid Federated Graph Name",
-			"The 'name' attribute is required.",
-		)
+		addDiagnosticError(resp, "Invalid Federated Graph Name", "The 'name' attribute is required.")
 		return
 	}
 
-	// Default namespace if not provided
 	namespace := data.Namespace.ValueString()
 	if namespace == "" {
 		namespace = "default"
 	}
 
-	// Fetch the federated graph via the API
 	apiResponse, err := api.GetFederatedGraph(ctx, d.provider.client, d.provider.cosmoApiKey, data.Name.ValueString(), namespace)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Reading Federated Graph",
-			fmt.Sprintf("Could not read federated graph: %s", err),
-		)
+		addDiagnosticError(resp, "Error Reading Federated Graph", fmt.Sprintf("Could not read federated graph: %s", err))
 		return
 	}
 
-	// Update state with the fetched data
 	graph := apiResponse.Graph
 	data.Name = types.StringValue(graph.Name)
 	data.Namespace = types.StringValue(graph.Namespace)
 	data.ServiceUrl = types.StringValue(graph.RoutingURL)
 
-	// Handle Readme pointer safely
 	if graph.Readme != nil {
 		data.Readme = types.StringValue(*graph.Readme)
 	} else {
 		data.Readme = types.StringNull()
 	}
 
-	// Handle AdmissionWebhookURL pointer safely
 	if graph.AdmissionWebhookUrl != nil {
 		data.AdmissionWebhookUrl = types.StringValue(*graph.AdmissionWebhookUrl)
 	} else {

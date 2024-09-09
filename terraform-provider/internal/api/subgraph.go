@@ -5,39 +5,31 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	platform "github.com/wundergraph/cosmo/terraform-provider-cosmo/gen/proto/wg/cosmo/platform/v1"
+	platformv1 "github.com/wundergraph/cosmo/terraform-provider-cosmo/gen/proto/wg/cosmo/platform/v1"
 	"github.com/wundergraph/cosmo/terraform-provider-cosmo/gen/proto/wg/cosmo/platform/v1/platformv1connect"
 )
 
-type SubgraphAPI interface {
-	Create(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey, name, namespace, routingUrl string) error
-	Update(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey, name, namespace, routingUrl string) error
-	Delete(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey, name, namespace string) error
-	Get(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey, name, namespace string) (*platform.Subgraph, error)
-}
-
-type Subgraph struct {
-	Id               string
-	Name             string
-	Namespace        string
-	RoutingURL       string
-	BaseSubgraphName *string
-}
-
-func CreateSubgraph(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey string, name string, namespace string, routingUrl string, baseSubgraphName *string) error {
-	request := connect.NewRequest(&platform.CreateFederatedSubgraphRequest{
-		Name:             name,
-		BaseSubgraphName: baseSubgraphName,
-		Namespace:        namespace,
-		RoutingUrl:       &routingUrl,
+func CreateSubgraph(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey string, name string, namespace string, routingUrl string, baseSubgraphName *string, labels []*platformv1.Label, subscriptionUrl *string, readme *string, isEventDrivenGraph *bool, isFeatureSubgraph *bool) error {
+	request := connect.NewRequest(&platformv1.CreateFederatedSubgraphRequest{
+		Name:               name,
+		BaseSubgraphName:   baseSubgraphName,
+		Namespace:          namespace,
+		RoutingUrl:         &routingUrl,
+		Labels:             labels,
+		SubscriptionUrl:    subscriptionUrl,
+		Readme:             readme,
+		// TODO: implement
+		// WebsocketSubprotocol: websocketSubprotocol,
+		IsEventDrivenGraph: isEventDrivenGraph,
+		IsFeatureSubgraph:  isFeatureSubgraph,
 	})
 	request.Header().Set("Authorization", fmt.Sprintf("Bearer %s", apiKey))
 	_, err := client.CreateFederatedSubgraph(ctx, request)
 	return err
 }
 
-func UpdateSubgraph(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey, name, namespace, routingUrl string, labels []*platform.Label, headers []string, subscriptionUrl, readme *string, unsetLabels *bool) error {
-	request := connect.NewRequest(&platform.UpdateSubgraphRequest{
+func UpdateSubgraph(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey, name, namespace, routingUrl string, labels []*platformv1.Label, headers []string, subscriptionUrl, readme *string, unsetLabels *bool) error {
+	request := connect.NewRequest(&platformv1.UpdateSubgraphRequest{
 		Name:            name,
 		RoutingUrl:      &routingUrl,
 		Labels:          labels,
@@ -53,7 +45,7 @@ func UpdateSubgraph(ctx context.Context, client platformv1connect.PlatformServic
 }
 
 func DeleteSubgraph(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey, name, namespace string) error {
-	request := connect.NewRequest(&platform.DeleteFederatedSubgraphRequest{
+	request := connect.NewRequest(&platformv1.DeleteFederatedSubgraphRequest{
 		SubgraphName: name,
 		Namespace:    namespace,
 	})
@@ -62,8 +54,8 @@ func DeleteSubgraph(ctx context.Context, client platformv1connect.PlatformServic
 	return err
 }
 
-func GetSubgraph(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey, name, namespace string) (*Subgraph, error) {
-	request := connect.NewRequest(&platform.GetSubgraphByNameRequest{
+func GetSubgraph(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey, name, namespace string) (*platformv1.Subgraph, error) {
+	request := connect.NewRequest(&platformv1.GetSubgraphByNameRequest{
 		Name:      name,
 		Namespace: namespace,
 	})
@@ -73,7 +65,7 @@ func GetSubgraph(ctx context.Context, client platformv1connect.PlatformServiceCl
 		return nil, err
 	}
 
-	subgraph := &Subgraph{
+	subgraph := &platformv1.Subgraph{
 		Id:         response.Msg.Graph.Id,
 		Name:       response.Msg.Graph.Name,
 		Namespace:  response.Msg.Graph.Namespace,

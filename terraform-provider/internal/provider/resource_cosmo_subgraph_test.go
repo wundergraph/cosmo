@@ -10,7 +10,6 @@ import (
 func TestAccSubgraphResource(t *testing.T) {
 	rName := "test-subgraph"
 	rNamespace := "default"
-	rRoutingUrl := "https://example.com/graphql"
 	rBaseSubgraphName := "base-subgraph"
 
 	resource.Test(t, resource.TestCase{
@@ -18,12 +17,12 @@ func TestAccSubgraphResource(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccSubgraphResourceConfig(rName, rNamespace, rRoutingUrl, rBaseSubgraphName),
+				Config: testAccSubgraphResourceConfig(rName, rNamespace, rBaseSubgraphName),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("cosmo_subgraph.test", "name", rName),
 					resource.TestCheckResourceAttr("cosmo_subgraph.test", "namespace", rNamespace),
-					resource.TestCheckResourceAttr("cosmo_subgraph.test", "routing_url", rRoutingUrl),
 					resource.TestCheckResourceAttr("cosmo_subgraph.test", "base_subgraph_name", rBaseSubgraphName),
+					resource.TestCheckResourceAttr("cosmo_subgraph.test", "labels.#", "2"),
 				),
 			},
 			{
@@ -34,13 +33,13 @@ func TestAccSubgraphResource(t *testing.T) {
 	})
 }
 
-func testAccSubgraphResourceConfig(name, namespace, routingUrl, baseSubgraphName string) string {
+func testAccSubgraphResourceConfig(name, namespace, baseSubgraphName string) string {
 	return fmt.Sprintf(`
 resource "cosmo_subgraph" "test" {
   name                = "%s"
   namespace           = "%s"
-  routing_url         = "%s"
   base_subgraph_name  = "%s"
+  labels              = ["team=backend", "stage=dev"] // Add labels to the configuration
 }
-`, name, namespace, routingUrl, baseSubgraphName)
+`, name, namespace, baseSubgraphName)
 }

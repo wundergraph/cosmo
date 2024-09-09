@@ -5,26 +5,20 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	platform "github.com/wundergraph/cosmo/terraform-provider-cosmo/gen/proto/wg/cosmo/platform/v1"
+
+	platformv1 "github.com/wundergraph/cosmo/terraform-provider-cosmo/gen/proto/wg/cosmo/platform/v1"
 	"github.com/wundergraph/cosmo/terraform-provider-cosmo/gen/proto/wg/cosmo/platform/v1/platformv1connect"
 )
 
-type NamespaceAPI interface {
-	Create(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey, name string) error
-	Rename(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey, oldName, newName string) error
-	Delete(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey, name string) error
-	List(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey string) ([]*platform.Namespace, error)
-}
-
 func CreateNamespace(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey, name string) error {
-	request := connect.NewRequest(&platform.CreateNamespaceRequest{Name: name})
+	request := connect.NewRequest(&platformv1.CreateNamespaceRequest{Name: name})
 	request.Header().Set("Authorization", fmt.Sprintf("Bearer %s", apiKey))
 	_, err := client.CreateNamespace(ctx, request)
 	return err
 }
 
 func RenameNamespace(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey, oldName, newName string) error {
-	request := connect.NewRequest(&platform.RenameNamespaceRequest{
+	request := connect.NewRequest(&platformv1.RenameNamespaceRequest{
 		Name:    oldName,
 		NewName: newName,
 	})
@@ -34,14 +28,14 @@ func RenameNamespace(ctx context.Context, client platformv1connect.PlatformServi
 }
 
 func DeleteNamespace(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey, name string) error {
-	request := connect.NewRequest(&platform.DeleteNamespaceRequest{Name: name})
+	request := connect.NewRequest(&platformv1.DeleteNamespaceRequest{Name: name})
 	request.Header().Set("Authorization", fmt.Sprintf("Bearer %s", apiKey))
 	_, err := client.DeleteNamespace(ctx, request)
 	return err
 }
 
-func ListNamespaces(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey string) ([]*platform.Namespace, error) {
-	request := connect.NewRequest(&platform.GetNamespacesRequest{})
+func ListNamespaces(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey string) ([]*platformv1.Namespace, error) {
+	request := connect.NewRequest(&platformv1.GetNamespacesRequest{})
 	request.Header().Set("Authorization", fmt.Sprintf("Bearer %s", apiKey))
 	response, err := client.GetNamespaces(ctx, request)
 	if err != nil {

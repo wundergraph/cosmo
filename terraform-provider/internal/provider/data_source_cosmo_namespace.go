@@ -78,26 +78,17 @@ func (d *NamespaceDataSource) Read(ctx context.Context, req datasource.ReadReque
 		return
 	}
 
-	// Validate that the name is set
 	if data.Name.IsNull() || data.Name.ValueString() == "" {
-		resp.Diagnostics.AddError(
-			"Invalid Namespace Name",
-			"The 'name' attribute is required.",
-		)
+		addDiagnosticError(resp, "Invalid Namespace Name", "The 'name' attribute is required.")
 		return
 	}
 
-	// Fetch the namespaces via the API
 	namespaces, err := api.ListNamespaces(ctx, d.provider.client, d.provider.cosmoApiKey)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Reading Namespaces",
-			fmt.Sprintf("Could not read namespaces: %s", err),
-		)
+		addDiagnosticError(resp, "Error Reading Namespaces", fmt.Sprintf("Could not read namespaces: %s", err))
 		return
 	}
 
-	// Find the requested namespace
 	var foundNamespace *platformv1.Namespace
 	for _, namespace := range namespaces {
 		if namespace.Name == data.Name.ValueString() {
@@ -107,14 +98,10 @@ func (d *NamespaceDataSource) Read(ctx context.Context, req datasource.ReadReque
 	}
 
 	if foundNamespace == nil {
-		resp.Diagnostics.AddError(
-			"Namespace Not Found",
-			fmt.Sprintf("Namespace with name '%s' not found", data.Name.ValueString()),
-		)
+		addDiagnosticError(resp, "Namespace Not Found", fmt.Sprintf("Namespace with name '%s' not found", data.Name.ValueString()))
 		return
 	}
 
-	// Update state with the fetched data
 	data.Id = types.StringValue(foundNamespace.Name)
 	data.Name = types.StringValue(foundNamespace.Name)
 

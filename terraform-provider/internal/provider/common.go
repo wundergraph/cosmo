@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -38,15 +39,14 @@ func convertAndValidateLabelMatchers(data types.List, resp interface{}) ([]strin
 	if err != nil {
 		switch r := resp.(type) {
 		case *resource.CreateResponse:
-			addDiagnosticErrorForCreate(r, "Invalid Label Matchers", fmt.Sprintf("Error converting label matchers: %s", err))
+			addDiagnosticError(r, "Invalid Label Matchers", fmt.Sprintf("Error converting label matchers: %s", err))
 		case *resource.UpdateResponse:
-			addDiagnosticErrorForUpdate(r, "Invalid Label Matchers", fmt.Sprintf("Error converting label matchers: %s", err))
+			addDiagnosticError(r, "Invalid Label Matchers", fmt.Sprintf("Error converting label matchers: %s", err))
 		case *resource.DeleteResponse:
-			addDiagnosticErrorForDelete(r, "Invalid Label Matchers", fmt.Sprintf("Error converting label matchers: %s", err))
+			addDiagnosticError(r, "Invalid Label Matchers", fmt.Sprintf("Error converting label matchers: %s", err))
 		case *resource.ReadResponse:
-			addDiagnosticErrorForRead(r, "Invalid Label Matchers", fmt.Sprintf("Error converting label matchers: %s", err))
+			addDiagnosticError(r, "Invalid Label Matchers", fmt.Sprintf("Error converting label matchers: %s", err))
 		default:
-			// Handle unknown types if necessary
 			fmt.Printf("Unhandled response type: %T\n", resp)
 		}
 	}
@@ -54,31 +54,40 @@ func convertAndValidateLabelMatchers(data types.List, resp interface{}) ([]strin
 }
 
 // Generalized function for adding errors to diagnostics
-func addDiagnosticErrorForCreate(resp *resource.CreateResponse, title, message string) {
-	resp.Diagnostics.AddError(title, message)
-}
-
-func addDiagnosticErrorForUpdate(resp *resource.UpdateResponse, title, message string) {
-	resp.Diagnostics.AddError(title, message)
-}
-
-func addDiagnosticErrorForDelete(resp *resource.DeleteResponse, title, message string) {
-	resp.Diagnostics.AddError(title, message)
-}
-
-func addDiagnosticErrorForRead(resp *resource.ReadResponse, title, message string) {
-	resp.Diagnostics.AddError(title, message)
-}
-
-func addDiagnosticErrorForConfigure(resp *provider.ConfigureResponse, title, message string) {
-	resp.Diagnostics.AddError(title, message)
+func addDiagnosticError(resp interface{}, title, message string) {
+	switch r := resp.(type) {
+	case *resource.CreateResponse:
+		r.Diagnostics.AddError(title, message)
+	case *resource.UpdateResponse:
+		r.Diagnostics.AddError(title, message)
+	case *resource.DeleteResponse:
+		r.Diagnostics.AddError(title, message)
+	case *resource.ReadResponse:
+		r.Diagnostics.AddError(title, message)
+	case *provider.ConfigureResponse:
+		r.Diagnostics.AddError(title, message)
+	case *resource.SchemaResponse:
+		r.Diagnostics.AddError(title, message)
+	case *resource.ConfigureResponse:
+		r.Diagnostics.AddError(title, message)
+	case *resource.ImportStateResponse:
+		r.Diagnostics.AddError(title, message)
+	case *datasource.ReadResponse:
+		r.Diagnostics.AddError(title, message)
+	case *datasource.ConfigureResponse:
+		r.Diagnostics.AddError(title, message)
+	case *datasource.SchemaResponse:
+		r.Diagnostics.AddError(title, message)
+	default:
+		panic(fmt.Sprintf("Unhandled response type: %T", resp))
+	}
 }
 
 // Centralized logging function
 func logAction(ctx context.Context, action, resourceID, name, namespace string) {
 	tflog.Trace(ctx, fmt.Sprintf("%s federated graph resource", action), map[string]interface{}{
-		"id":        resourceID,
-		"name":      name,
-		"namespace": namespace,
-	})
+			"id":        resourceID,
+			"name":      name,
+			"namespace": namespace,
+		})
 }

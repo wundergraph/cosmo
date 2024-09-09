@@ -72,7 +72,7 @@ func (p *CosmoProvider) Configure(ctx context.Context, req provider.ConfigureReq
 	providerConfig, err := NewClient()
 
 	if err != nil {
-		addDiagnosticErrorForConfigure(resp, "Error configuring client", err.Error())
+		addDiagnosticError(resp, "Error configuring client", err.Error())
 		return
 	}
 	resp.DataSourceData = providerConfig

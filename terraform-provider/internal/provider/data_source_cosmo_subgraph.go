@@ -87,33 +87,21 @@ func (d *SubgraphDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	// Validate that the name and namespace are set
 	if data.Name.IsNull() || data.Name.ValueString() == "" {
-		resp.Diagnostics.AddError(
-			"Invalid Subgraph Name",
-			"The 'name' attribute is required.",
-		)
+		addDiagnosticError(resp, "Invalid Subgraph Name", "The 'name' attribute is required.")
 		return
 	}
 	if data.Namespace.IsNull() || data.Namespace.ValueString() == "" {
-		resp.Diagnostics.AddError(
-			"Invalid Namespace",
-			"The 'namespace' attribute is required.",
-		)
+		addDiagnosticError(resp, "Invalid Namespace", "The 'namespace' attribute is required.")
 		return
 	}
 
-	// Fetch the subgraph via the API
 	subgraph, err := api.GetSubgraph(ctx, d.provider.client, d.provider.cosmoApiKey, data.Name.ValueString(), data.Namespace.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Reading Subgraph",
-			fmt.Sprintf("Could not read subgraph: %s", err),
-		)
+		addDiagnosticError(resp, "Error Reading Subgraph", fmt.Sprintf("Could not read subgraph: %s", err))
 		return
 	}
 
-	// Update state with the fetched data
 	data.Id = types.StringValue(subgraph.Id)
 	data.Name = types.StringValue(subgraph.Name)
 	data.Namespace = types.StringValue(subgraph.Namespace)

@@ -7,39 +7,24 @@ import (
 	"connectrpc.com/connect"
 	"github.com/wundergraph/cosmo/terraform-provider-cosmo/gen/proto/wg/cosmo/common"
 
-	platform "github.com/wundergraph/cosmo/terraform-provider-cosmo/gen/proto/wg/cosmo/platform/v1"
+	platformv1 "github.com/wundergraph/cosmo/terraform-provider-cosmo/gen/proto/wg/cosmo/platform/v1" // Updated import statement
 	"github.com/wundergraph/cosmo/terraform-provider-cosmo/gen/proto/wg/cosmo/platform/v1/platformv1connect"
 )
 
-type FederatedGraph struct {
-	Name                   string
-	Namespace              string
-	RoutingUrl             string
-	AdmissionWebhookURL    *string
-	AdmissionWebhookSecret *string
-	Readme                 *string
-	LabelMatchers          []string
-}
-
-type FederatedGraphAPI interface {
-	Create(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey string, graph FederatedGraph) (*platform.CreateFederatedGraphResponse, error)
-	Update(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey string, graph FederatedGraph) (*platform.UpdateFederatedGraphResponse, error)
-	Delete(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey, name, namespace string) error
-	Get(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey, name, namespace string) (*platform.GetFederatedGraphByNameResponse, error)
-}
-
-func CreateFederatedGraph(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey string, graph FederatedGraph) (*platform.CreateFederatedGraphResponse, error) {
+func CreateFederatedGraph(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey string, admissionWebhookSecret *string, graph *platformv1.FederatedGraph) (*platformv1.CreateFederatedGraphResponse, error) {
 	var admissionWebhookURL string
-	if graph.AdmissionWebhookURL != nil {
-		admissionWebhookURL = *graph.AdmissionWebhookURL
+	if graph.AdmissionWebhookUrl != nil {
+		admissionWebhookURL = *graph.AdmissionWebhookUrl // Dereference only if not nil
+	} else {
+		admissionWebhookURL = "" // Handle nil case
 	}
 
-	request := connect.NewRequest(&platform.CreateFederatedGraphRequest{
+	request := connect.NewRequest(&platformv1.CreateFederatedGraphRequest{
 		Name:                   graph.Name,
 		Namespace:              graph.Namespace,
-		RoutingUrl:             graph.RoutingUrl,
+		RoutingUrl:             graph.RoutingURL,
 		AdmissionWebhookURL:    admissionWebhookURL,
-		AdmissionWebhookSecret: graph.AdmissionWebhookSecret,
+		AdmissionWebhookSecret: admissionWebhookSecret,
 		Readme:                 graph.Readme,
 		LabelMatchers:          graph.LabelMatchers,
 	})
@@ -57,18 +42,18 @@ func CreateFederatedGraph(ctx context.Context, client platformv1connect.Platform
 	return response.Msg, nil
 }
 
-func UpdateFederatedGraph(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey string, graph FederatedGraph) (*platform.UpdateFederatedGraphResponse, error) {
+func UpdateFederatedGraph(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey string, admissionWebhookSecret *string, graph *platformv1.FederatedGraph) (*platformv1.UpdateFederatedGraphResponse, error) {
 	var admissionWebhookURL *string
-	if graph.AdmissionWebhookURL != nil {
-		admissionWebhookURL = graph.AdmissionWebhookURL
+	if graph.AdmissionWebhookUrl != nil {
+		admissionWebhookURL = graph.AdmissionWebhookUrl
 	}
 
-	request := connect.NewRequest(&platform.UpdateFederatedGraphRequest{
+	request := connect.NewRequest(&platformv1.UpdateFederatedGraphRequest{
 		Name:                   graph.Name,
 		Namespace:              graph.Namespace,
-		RoutingUrl:             graph.RoutingUrl,
+		RoutingUrl:             graph.RoutingURL,
 		AdmissionWebhookURL:    admissionWebhookURL,
-		AdmissionWebhookSecret: graph.AdmissionWebhookSecret,
+		AdmissionWebhookSecret: admissionWebhookSecret,
 		LabelMatchers:          graph.LabelMatchers,
 	})
 
@@ -86,7 +71,7 @@ func UpdateFederatedGraph(ctx context.Context, client platformv1connect.Platform
 }
 
 func DeleteFederatedGraph(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey, name, namespace string) error {
-	request := connect.NewRequest(&platform.DeleteFederatedGraphRequest{
+	request := connect.NewRequest(&platformv1.DeleteFederatedGraphRequest{
 		Name:      name,
 		Namespace: namespace,
 	})
@@ -100,8 +85,8 @@ func DeleteFederatedGraph(ctx context.Context, client platformv1connect.Platform
 	return nil
 }
 
-func GetFederatedGraph(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey, name, namespace string) (*platform.GetFederatedGraphByNameResponse, error) {
-	request := connect.NewRequest(&platform.GetFederatedGraphByNameRequest{
+func GetFederatedGraph(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey, name, namespace string) (*platformv1.GetFederatedGraphByNameResponse, error) {
+	request := connect.NewRequest(&platformv1.GetFederatedGraphByNameRequest{
 		Name:      name,
 		Namespace: namespace,
 	})

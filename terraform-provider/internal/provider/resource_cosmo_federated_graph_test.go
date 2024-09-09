@@ -19,6 +19,8 @@ func TestAccFederatedGraphResource(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("cosmo_federated_graph.test", "name", rName),
 					resource.TestCheckResourceAttr("cosmo_federated_graph.test", "readme", "Initial readme content"),
+					resource.TestCheckResourceAttr("cosmo_federated_graph.test", "service_url", "https://example.com"),
+					resource.TestCheckResourceAttr("cosmo_federated_graph.test", "label_matchers.#", "2"),
 				),
 			},
 			{
@@ -35,7 +37,7 @@ func testAccFederatedGraphResourceConfig(name string) string {
 resource "cosmo_federated_graph" "test" {
   name                   = "%s"
   namespace              = "default"
-  service_url            = "https://example.ccom"
+  service_url            = "https://example.com"
   readme                 = "Initial readme content"
   label_matchers         = ["team=backend", "stage=dev"]
 }
