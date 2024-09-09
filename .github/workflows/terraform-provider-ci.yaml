@@ -1,0 +1,81 @@
+name: Terraform Provider CI
+on:
+  push:
+    paths:
+      - "terraform-provider/**/*"
+      - ".github/workflows/terraform-provider-ci.yaml"
+  pull_request:
+    paths:
+      - "terraform-provider/**/*"
+      - ".github/workflows/terraform-provider-ci.yaml"
+
+concurrency:
+  group: ${{github.workflow}}-${{github.head_ref}}
+  cancel-in-progress: true
+
+env:
+  CI: true
+
+jobs:
+  build_test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('terraform-provider/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - uses: ./.github/actions/go
+        with:
+          cache-dependency-path: terraform-provider/go.sum
+          go-version: 1.21.5
+
+      - name: cache tflint plugin directory
+        uses: actions/cache@v4
+        with:
+          path: ~/.tflint.d/plugins
+          key: tflint-${{ hashFiles('.tflint.hcl') }}
+
+      - name: setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.5
+
+      - uses: ./.github/actions/go-mod-tidy
+        with:
+          working-directory: ./terraform-provider
+
+      - name: Generate code
+        run: make generate-go
+
+      - name: Terraform fmt
+        run: make fmt
+        working-directory: ./terraform-provider
+
+      - name: Terraform docs
+        run: make generate
+        working-directory: ./terraform-provider
+
+      - name: Check if git is not dirty after generating files
+        run: git diff --no-ext-diff --exit-code
+
+      - name: Install dependencies
+        run: go mod download
+        working-directory: ./terraform-provider
+
+      - name: Run tests
+        run: make testacc
+        working-directory: ./terraform-provider
+
+      - name: Build
+        run: make build
+        working-directory: ./terraform-provider
