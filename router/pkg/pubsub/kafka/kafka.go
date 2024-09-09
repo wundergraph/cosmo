@@ -137,7 +137,7 @@ func (p *kafkaPubSub) topicPoller(ctx context.Context, client *kgo.Client, updat
 func (p *kafkaPubSub) Subscribe(ctx context.Context, event pubsub_datasource.KafkaSubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
 
 	log := p.logger.With(
-		zap.String("providerID", event.ProviderID),
+		zap.String("provider_id", event.ProviderID),
 		zap.String("method", "subscribe"),
 		zap.Strings("topics", event.Topics),
 	)
@@ -185,7 +185,7 @@ func (p *kafkaPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Kaf
 // The event is written with a dedicated write client.
 func (p *kafkaPubSub) Publish(ctx context.Context, event pubsub_datasource.KafkaPublishEventConfiguration) error {
 	log := p.logger.With(
-		zap.String("providerID", event.ProviderID),
+		zap.String("provider_id", event.ProviderID),
 		zap.String("method", "publish"),
 		zap.String("topic", event.Topic),
 	)

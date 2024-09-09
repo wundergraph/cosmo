@@ -154,8 +154,8 @@ func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *
 		writeRequestErrors(r, w, httpErr.StatusCode(), graphqlerrors.RequestErrorsFromError(err), requestLogger)
 	case errors.As(err, &poNotFoundErr):
 		requestLogger.Debug("persisted operation not found",
-			zap.String("sha256Hash", poNotFoundErr.Sha256Hash),
-			zap.String("clientName", poNotFoundErr.ClientName))
+			zap.String("sha256_hash", poNotFoundErr.Sha256Hash),
+			zap.String("client_name", poNotFoundErr.ClientName))
 		writeRequestErrors(r, w, http.StatusBadRequest, graphqlerrors.RequestErrorsFromError(errors.New("persisted Query not found")), requestLogger)
 	case errors.As(err, &reportErr):
 		report := reportErr.Report()
