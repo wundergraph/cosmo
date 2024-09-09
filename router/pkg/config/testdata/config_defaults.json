@@ -173,7 +173,8 @@
   "SecurityConfiguration": {
     "BlockMutations": false,
     "BlockSubscriptions": false,
-    "BlockNonPersistedOperations": false
+    "BlockNonPersistedOperations": false,
+    "MaxQueryDepth": 0
   },
   "EngineExecutionConfiguration": {
     "Debug": {
