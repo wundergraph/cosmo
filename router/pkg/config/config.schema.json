@@ -1365,6 +1365,11 @@
           "type": "boolean",
           "default": false,
           "description": "Block non-persisted Operations. If the value is true, the non-persisted operations are blocked."
+        },
+        "max_query_depth": {
+          "type": "integer",
+          "description": "The max depth limit for query. This limit prevents infinite querying, and also limits the size of the data returned. If the limit is 0, this limit isn't applied.",
+          "default": 0
         }
       }
     },

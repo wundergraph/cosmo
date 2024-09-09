@@ -6,6 +6,8 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/middleware/operation_complexity"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"io"
 	"net/http"
 	"strconv"
@@ -43,6 +45,7 @@ type PreHandlerOptions struct {
 	TracerProvider     *sdktrace.TracerProvider
 	MaxUploadFiles     int
 	MaxUploadFileSize  int
+	MaxQueryDepth      int
 
 	FlushTelemetryAfterResponse bool
 	FileUploadEnabled           bool
@@ -76,6 +79,7 @@ type PreHandler struct {
 	fileUploadEnabled           bool
 	maxUploadFiles              int
 	maxUploadFileSize           int
+	maxQueryDepth               int
 	bodyReadBuffers             *sync.Pool
 	trackSchemaUsageInfo        bool
 }
@@ -115,6 +119,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		fileUploadEnabled:      opts.FileUploadEnabled,
 		maxUploadFiles:         opts.MaxUploadFiles,
 		maxUploadFileSize:      opts.MaxUploadFileSize,
+		maxQueryDepth:          opts.MaxQueryDepth,
 		bodyReadBuffers:        &sync.Pool{},
 		alwaysIncludeQueryPlan: opts.AlwaysIncludeQueryPlan,
 		alwaysSkipLoader:       opts.AlwaysSkipLoader,
@@ -596,6 +601,36 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 	enginePlanSpan.End()
 
 	httpOperation.traceTimings.EndPlanning()
+
+	/**
+	* Validate that the planned query doesn't exceed the maximum query depth configured
+	 */
+
+	if h.maxQueryDepth > 0 {
+		_, maxQueryDepthSpan := h.tracer.Start(req.Context(), "Operation - Checking Query Depth",
+			trace.WithSpanKind(trace.SpanKindInternal),
+			trace.WithAttributes(otel.WgEngineRequestTracingEnabled.Bool(httpOperation.traceOptions.Enable)),
+			trace.WithAttributes(attributes...),
+		)
+
+		operation := opContext.preparedPlan.operationDocument
+		definition := opContext.preparedPlan.schemaDocument
+		report := operationreport.Report{}
+		globalComplexityResult, _ := operation_complexity.CalculateOperationComplexity(operation, definition, &report)
+
+		if globalComplexityResult.Depth > h.maxQueryDepth {
+			err := &httpGraphqlError{
+				message:    fmt.Sprintf("The query depth %d exceeds the max query depth allowed (%d)", globalComplexityResult.Depth, h.maxQueryDepth),
+				statusCode: http.StatusBadRequest,
+			}
+
+			rtrace.AttachErrToSpan(maxQueryDepthSpan, err)
+			maxQueryDepthSpan.End()
+			return nil, err
+		}
+
+		maxQueryDepthSpan.End()
+	}
 
 	return opContext, nil
 }

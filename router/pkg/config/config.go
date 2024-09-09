@@ -233,6 +233,7 @@ type SecurityConfiguration struct {
 	BlockMutations              bool `yaml:"block_mutations" envDefault:"false" env:"SECURITY_BLOCK_MUTATIONS"`
 	BlockSubscriptions          bool `yaml:"block_subscriptions" envDefault:"false" env:"SECURITY_BLOCK_SUBSCRIPTIONS"`
 	BlockNonPersistedOperations bool `yaml:"block_non_persisted_operations" envDefault:"false" env:"SECURITY_BLOCK_NON_PERSISTED_OPERATIONS"`
+	MaxQueryDepth               int  `yaml:"max_query_depth,omitempty" envDefault:"0" env:"SECURITY_MAX_QUERY_DEPTH"`
 }
 
 type OverrideRoutingURLConfiguration struct {

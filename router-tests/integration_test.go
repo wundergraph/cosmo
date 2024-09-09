@@ -965,6 +965,52 @@ func TestBlockNonPersistedOperations(t *testing.T) {
 	})
 }
 
+func TestMaxQueryDepth(t *testing.T) {
+	t.Parallel()
+	t.Run("max query depth of 0 doesn't block", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+				securityConfiguration.MaxQueryDepth = 0
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employee(id:1) { id details { forename surname } } }`,
+			})
+			require.JSONEq(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+		})
+	})
+
+	t.Run("allows queries up to the max depth", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+				securityConfiguration.MaxQueryDepth = 3
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employee(id:1) { id details { forename surname } } }`,
+			})
+			require.JSONEq(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+		})
+	})
+
+	t.Run("max query depth blocks queries over the limit", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+				securityConfiguration.MaxQueryDepth = 2
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, _ := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `{ employee(id:1) { id details { forename surname } } }`,
+			})
+			require.Equal(t, 400, res.Response.StatusCode)
+			require.Equal(t, `{"errors":[{"message":"The query depth 3 exceeds the max query depth allowed (2)"}],"data":null}`, res.Body)
+		})
+	})
+}
+
 func TestPartialOriginErrors(t *testing.T) {
 	t.Parallel()
 	testenv.Run(t, &testenv.Config{
