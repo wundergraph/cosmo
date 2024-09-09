@@ -16,16 +16,13 @@ testacc:
 
 generate:
 	go generate ./...
-	terraform fmt -recursive ./examples/
 
 tidy:
 	go mod tidy
 
 fmt:
 	go fmt ./...
-
-test: tidy generate testacc
-
+	terraform fmt -recursive 
 
 build:
 	go build -o bin/${BINARY}
