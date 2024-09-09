@@ -6,8 +6,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/function"
@@ -15,7 +13,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/wundergraph/cosmo/terraform-provider-cosmo/gen/proto/wg/cosmo/platform/v1/platformv1connect"
+	"github.com/wundergraph/cosmo/terraform-provider-cosmo/internal/client"
+	"github.com/wundergraph/cosmo/terraform-provider-cosmo/internal/services"
+	"github.com/wundergraph/cosmo/terraform-provider-cosmo/internal/utils"
 )
 
 // Ensure CosmoProvider satisfies various provider interfaces.
@@ -31,8 +31,7 @@ type CosmoProvider struct {
 }
 
 type Provider struct {
-	client      platformv1connect.PlatformServiceClient
-	cosmoApiKey string
+	*client.PlatformClient
 }
 
 // CosmoProviderModel describes the provider data model.
@@ -50,11 +49,11 @@ func (p *CosmoProvider) Schema(ctx context.Context, req provider.SchemaRequest, 
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"cosmo_api_url": schema.StringAttribute{
-				MarkdownDescription: fmt.Sprintf("The Api Url to be used: %s", envCosmoApiUrl),
+				MarkdownDescription: fmt.Sprintf("The Api Url to be used: %s", utils.EnvCosmoApiUrl),
 				Optional:            true,
 			},
 			"cosmo_api_key": schema.StringAttribute{
-				MarkdownDescription: fmt.Sprintf("The Api Key to be used: %s", envCosmoApiKey),
+				MarkdownDescription: fmt.Sprintf("The Api Key to be used: %s", utils.EnvCosmoApiKey),
 				Optional:            true,
 			},
 		},
@@ -69,10 +68,10 @@ func (p *CosmoProvider) Configure(ctx context.Context, req provider.ConfigureReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	providerConfig, err := NewClient()
+	providerConfig, err := client.NewClient()
 
 	if err != nil {
-		addDiagnosticError(resp, "Error configuring client", err.Error())
+		utils.AddDiagnosticError(resp, "Error configuring client", err.Error())
 		return
 	}
 	resp.DataSourceData = providerConfig
@@ -81,17 +80,17 @@ func (p *CosmoProvider) Configure(ctx context.Context, req provider.ConfigureReq
 
 func (p *CosmoProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		NewFederatedGraphResource,
-		NewNamespaceResource,
-		NewSubgraphResource,
+		services.NewFederatedGraphResource, // Updated to new package
+		services.NewNamespaceResource,       // Updated to new package
+		services.NewSubgraphResource,        // Updated to new package
 	}
 }
 
 func (p *CosmoProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
-		NewFederatedGraphDataSource,
-		NewSubgraphDataSource,
-		NewNamespaceDataSource,
+		services.NewFederatedGraphDataSource, // Ensure this is moved to services
+		services.NewSubgraphDataSource,       // Ensure this is moved to services
+		services.NewNamespaceDataSource,      // Ensure this is moved to services
 	}
 }
 
@@ -105,27 +104,4 @@ func New(version string) func() provider.Provider {
 			version: version,
 		}
 	}
-}
-
-func NewClient() (*Provider, error) {
-	cosmoApiKey, ok := os.LookupEnv(envCosmoApiKey)
-	if !ok {
-		return nil, fmt.Errorf("COSMO_API_KEY environment variable not set")
-	}
-
-	cosmoApiUrl, ok := os.LookupEnv(envCosmoApiUrl)
-	if !ok {
-		return nil, fmt.Errorf("COSMO_API_URL environment variable not set")
-	}
-
-	httpClient := http.Client{}
-	httpClient.Transport = &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
-	}
-
-	client := platformv1connect.NewPlatformServiceClient(&httpClient, cosmoApiUrl)
-	return &Provider{
-		client:      client,
-		cosmoApiKey: cosmoApiKey,
-	}, nil
 }

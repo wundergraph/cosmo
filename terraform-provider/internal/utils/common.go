@@ -1,4 +1,4 @@
-package provider
+package utils
 
 import (
 	"context"
@@ -12,12 +12,12 @@ import (
 )
 
 const (
-	envCosmoApiUrl = "COSMO_API_URL"
-	envCosmoApiKey = "COSMO_API_KEY"
+	EnvCosmoApiUrl = "COSMO_API_URL"
+	EnvCosmoApiKey = "COSMO_API_KEY"
 )
 
 // convertLabelMatchers converts a Terraform list of strings to a slice of strings for use in the gRPC request.
-func convertLabelMatchers(labelMatchersList types.List) ([]string, error) {
+func ConvertLabelMatchers(labelMatchersList types.List) ([]string, error) {
 	var labelMatchers []string
 	if labelMatchersList.IsNull() {
 		return nil, nil
@@ -34,18 +34,18 @@ func convertLabelMatchers(labelMatchersList types.List) ([]string, error) {
 	return labelMatchers, nil
 }
 
-func convertAndValidateLabelMatchers(data types.List, resp interface{}) ([]string, error) {
-	labelMatchers, err := convertLabelMatchers(data)
+func ConvertAndValidateLabelMatchers(data types.List, resp interface{}) ([]string, error) {
+	labelMatchers, err := ConvertLabelMatchers(data)
 	if err != nil {
 		switch r := resp.(type) {
 		case *resource.CreateResponse:
-			addDiagnosticError(r, "Invalid Label Matchers", fmt.Sprintf("Error converting label matchers: %s", err))
+			AddDiagnosticError(r, "Invalid Label Matchers", fmt.Sprintf("Error converting label matchers: %s", err))
 		case *resource.UpdateResponse:
-			addDiagnosticError(r, "Invalid Label Matchers", fmt.Sprintf("Error converting label matchers: %s", err))
+			AddDiagnosticError(r, "Invalid Label Matchers", fmt.Sprintf("Error converting label matchers: %s", err))
 		case *resource.DeleteResponse:
-			addDiagnosticError(r, "Invalid Label Matchers", fmt.Sprintf("Error converting label matchers: %s", err))
+			AddDiagnosticError(r, "Invalid Label Matchers", fmt.Sprintf("Error converting label matchers: %s", err))
 		case *resource.ReadResponse:
-			addDiagnosticError(r, "Invalid Label Matchers", fmt.Sprintf("Error converting label matchers: %s", err))
+			AddDiagnosticError(r, "Invalid Label Matchers", fmt.Sprintf("Error converting label matchers: %s", err))
 		default:
 			fmt.Printf("Unhandled response type: %T\n", resp)
 		}
@@ -54,7 +54,7 @@ func convertAndValidateLabelMatchers(data types.List, resp interface{}) ([]strin
 }
 
 // Generalized function for adding errors to diagnostics
-func addDiagnosticError(resp interface{}, title, message string) {
+func AddDiagnosticError(resp interface{}, title, message string) {
 	switch r := resp.(type) {
 	case *resource.CreateResponse:
 		r.Diagnostics.AddError(title, message)
@@ -84,7 +84,7 @@ func addDiagnosticError(resp interface{}, title, message string) {
 }
 
 // Centralized logging function
-func logAction(ctx context.Context, action, resourceID, name, namespace string) {
+func LogAction(ctx context.Context, action, resourceID, name, namespace string) {
 	tflog.Trace(ctx, fmt.Sprintf("%s federated graph resource", action), map[string]interface{}{
 			"id":        resourceID,
 			"name":      name,

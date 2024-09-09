@@ -1,4 +1,4 @@
-package provider
+package services
 
 import (
 	"context"
@@ -9,6 +9,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/wundergraph/cosmo/terraform-provider-cosmo/internal/api"
+	"github.com/wundergraph/cosmo/terraform-provider-cosmo/internal/client"
+	"github.com/wundergraph/cosmo/terraform-provider-cosmo/internal/utils"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -20,7 +22,7 @@ func NewSubgraphDataSource() datasource.DataSource {
 
 // SubgraphDataSource defines the data source implementation.
 type SubgraphDataSource struct {
-	provider Provider
+	*client.PlatformClient
 }
 
 // SubgraphDataSourceModel describes the data source data model.
@@ -61,22 +63,17 @@ func (d *SubgraphDataSource) Schema(ctx context.Context, req datasource.SchemaRe
 }
 
 func (d *SubgraphDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
 	}
 
-	provider, ok := req.ProviderData.(*Provider)
+	client, ok := req.ProviderData.(*client.PlatformClient)
 	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *Provider, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-
+		utils.AddDiagnosticError(resp, "Unexpected Data Source Configure Type", fmt.Sprintf("Expected *http.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData))
 		return
 	}
 
-	d.provider = *provider
+	d.PlatformClient = client
 }
 
 func (d *SubgraphDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
@@ -88,17 +85,17 @@ func (d *SubgraphDataSource) Read(ctx context.Context, req datasource.ReadReques
 	}
 
 	if data.Name.IsNull() || data.Name.ValueString() == "" {
-		addDiagnosticError(resp, "Invalid Subgraph Name", "The 'name' attribute is required.")
+		utils.AddDiagnosticError(resp, "Invalid Subgraph Name", "The 'name' attribute is required.")
 		return
 	}
 	if data.Namespace.IsNull() || data.Namespace.ValueString() == "" {
-		addDiagnosticError(resp, "Invalid Namespace", "The 'namespace' attribute is required.")
+		utils.AddDiagnosticError(resp, "Invalid Namespace", "The 'namespace' attribute is required.")
 		return
 	}
 
-	subgraph, err := api.GetSubgraph(ctx, d.provider.client, d.provider.cosmoApiKey, data.Name.ValueString(), data.Namespace.ValueString())
+	subgraph, err := api.GetSubgraph(ctx, d.PlatformClient.Client, d.PlatformClient.CosmoApiKey, data.Name.ValueString(), data.Namespace.ValueString())
 	if err != nil {
-		addDiagnosticError(resp, "Error Reading Subgraph", fmt.Sprintf("Could not read subgraph: %s", err))
+		utils.AddDiagnosticError(resp, "Error Reading Subgraph", fmt.Sprintf("Could not read subgraph: %s", err))
 		return
 	}
 

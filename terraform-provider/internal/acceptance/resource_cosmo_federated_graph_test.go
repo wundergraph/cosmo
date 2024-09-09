@@ -1,4 +1,4 @@
-package provider
+package acceptance
 
 import (
 	"fmt"
@@ -11,8 +11,8 @@ func TestAccFederatedGraphResource(t *testing.T) {
 	rName := "test-graph"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		PreCheck:                 func() { TestAccPreCheck(t) },
+		ProtoV6ProviderFactories: TestAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccFederatedGraphResourceConfig(rName),

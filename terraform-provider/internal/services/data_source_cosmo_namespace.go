@@ -1,4 +1,4 @@
-package provider
+package services
 
 import (
 	"context"
@@ -10,6 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	platformv1 "github.com/wundergraph/cosmo/terraform-provider-cosmo/gen/proto/wg/cosmo/platform/v1"
 	"github.com/wundergraph/cosmo/terraform-provider-cosmo/internal/api"
+	"github.com/wundergraph/cosmo/terraform-provider-cosmo/internal/client"
+	"github.com/wundergraph/cosmo/terraform-provider-cosmo/internal/utils"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -21,7 +23,7 @@ func NewNamespaceDataSource() datasource.DataSource {
 
 // NamespaceDataSource defines the data source implementation.
 type NamespaceDataSource struct {
-	provider Provider
+	*client.PlatformClient
 }
 
 // NamespaceDataSourceModel describes the data source data model.
@@ -52,22 +54,17 @@ func (d *NamespaceDataSource) Schema(ctx context.Context, req datasource.SchemaR
 }
 
 func (d *NamespaceDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
 	}
 
-	provider, ok := req.ProviderData.(*Provider)
+	client, ok := req.ProviderData.(*client.PlatformClient)
 	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *Provider, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-
+		utils.AddDiagnosticError(resp, "Unexpected Data Source Configure Type", fmt.Sprintf("Expected *http.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData))
 		return
 	}
 
-	d.provider = *provider
+	d.PlatformClient = client
 }
 
 func (d *NamespaceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
@@ -79,13 +76,13 @@ func (d *NamespaceDataSource) Read(ctx context.Context, req datasource.ReadReque
 	}
 
 	if data.Name.IsNull() || data.Name.ValueString() == "" {
-		addDiagnosticError(resp, "Invalid Namespace Name", "The 'name' attribute is required.")
+		utils.AddDiagnosticError(resp, "Invalid Namespace Name", "The 'name' attribute is required.")
 		return
 	}
 
-	namespaces, err := api.ListNamespaces(ctx, d.provider.client, d.provider.cosmoApiKey)
+	namespaces, err := api.ListNamespaces(ctx, d.PlatformClient.Client, d.PlatformClient.CosmoApiKey)
 	if err != nil {
-		addDiagnosticError(resp, "Error Reading Namespaces", fmt.Sprintf("Could not read namespaces: %s", err))
+		utils.AddDiagnosticError(resp, "Error Reading Namespaces", fmt.Sprintf("Could not read namespaces: %s", err))
 		return
 	}
 
@@ -98,7 +95,7 @@ func (d *NamespaceDataSource) Read(ctx context.Context, req datasource.ReadReque
 	}
 
 	if foundNamespace == nil {
-		addDiagnosticError(resp, "Namespace Not Found", fmt.Sprintf("Namespace with name '%s' not found", data.Name.ValueString()))
+		utils.AddDiagnosticError(resp, "Namespace Not Found", fmt.Sprintf("Namespace with name '%s' not found", data.Name.ValueString()))
 		return
 	}
 

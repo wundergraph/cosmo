@@ -1,4 +1,4 @@
-package provider
+package services
 
 import (
 	"context"
@@ -18,6 +18,8 @@ import (
 	"github.com/wundergraph/cosmo/terraform-provider-cosmo/gen/proto/wg/cosmo/common"
 	platformv1 "github.com/wundergraph/cosmo/terraform-provider-cosmo/gen/proto/wg/cosmo/platform/v1"
 	"github.com/wundergraph/cosmo/terraform-provider-cosmo/internal/api"
+	"github.com/wundergraph/cosmo/terraform-provider-cosmo/internal/client"
+	"github.com/wundergraph/cosmo/terraform-provider-cosmo/internal/utils"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -30,7 +32,7 @@ func NewFederatedGraphResource() resource.Resource {
 
 // FederatedGraphResource defines the resource implementation for federated graphs.
 type FederatedGraphResource struct {
-	provider Provider
+	*client.PlatformClient
 }
 
 // FederatedGraphResourceModel describes the resource data model for a federated graph.
@@ -103,22 +105,17 @@ func (r *FederatedGraphResource) Schema(ctx context.Context, req resource.Schema
 }
 
 func (r *FederatedGraphResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
 	}
 
-	provider, ok := req.ProviderData.(*Provider)
+	client, ok := req.ProviderData.(*client.PlatformClient)
 	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *http.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-
+		utils.AddDiagnosticError(resp, "Unexpected Data Source Configure Type", fmt.Sprintf("Expected *http.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData))
 		return
 	}
 
-	r.provider = *provider
+	r.PlatformClient = client
 }
 
 func (r *FederatedGraphResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -130,11 +127,11 @@ func (r *FederatedGraphResource) Create(ctx context.Context, req resource.Create
 	}
 
 	if data.Name.IsNull() || data.Name.ValueString() == "" {
-		addDiagnosticError(resp, "Invalid Federated Graph Name", "The 'name' attribute is required.")
+		utils.AddDiagnosticError(resp, "Invalid Federated Graph Name", "The 'name' attribute is required.")
 		return
 	}
 
-	labelMatchers, err := convertAndValidateLabelMatchers(data.LabelMatchers, resp)
+	labelMatchers, err := utils.ConvertAndValidateLabelMatchers(data.LabelMatchers, resp)
 	if err != nil {
 		return
 	}
@@ -153,26 +150,26 @@ func (r *FederatedGraphResource) Create(ctx context.Context, req resource.Create
 		admissionWebhookSecret = data.AdmissionWebhookSecret.ValueStringPointer()
 	}
 
-	apiResponse, err := api.CreateFederatedGraph(ctx, r.provider.client, r.provider.cosmoApiKey, admissionWebhookSecret, &graph)
+	apiResponse, err := api.CreateFederatedGraph(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, admissionWebhookSecret, &graph)
 	if err != nil {
-		addDiagnosticError(resp, "Error Creating Federated Graph", fmt.Sprintf("Could not create federated graph: %s", err))
+		utils.AddDiagnosticError(resp, "Error Creating Federated Graph", fmt.Sprintf("Could not create federated graph: %s", err))
 		return
 	}
 
 	if len(apiResponse.CompositionErrors) > 0 {
-		addDiagnosticError(resp, "Composition Error", fmt.Sprintf("Composition errors: %v", apiResponse.CompositionErrors))
+		utils.AddDiagnosticError(resp, "Composition Error", fmt.Sprintf("Composition errors: %v", apiResponse.CompositionErrors))
 		return
 	}
 
-	res, err := api.GetFederatedGraph(ctx, r.provider.client, r.provider.cosmoApiKey, graph.Name, graph.Namespace)
+	res, err := api.GetFederatedGraph(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, graph.Name, graph.Namespace)
 	if err != nil {
-		addDiagnosticError(resp, "Error Retrieving Federated Graph", fmt.Sprintf("Could not retrieve federated graph: %s", err))
+		utils.AddDiagnosticError(resp, "Error Retrieving Federated Graph", fmt.Sprintf("Could not retrieve federated graph: %s", err))
 		return
 	}
 
 	data.Id = types.StringValue(res.Graph.GetId())
 
-	logAction(ctx, "created", data.Id.ValueString(), data.Name.ValueString(), data.Namespace.ValueString())
+	utils.LogAction(ctx, "created", data.Id.ValueString(), data.Name.ValueString(), data.Namespace.ValueString())
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -186,18 +183,18 @@ func (r *FederatedGraphResource) Read(ctx context.Context, req resource.ReadRequ
 	}
 
 	if data.Id.IsNull() || data.Id.ValueString() == "" {
-		addDiagnosticError(resp, "Invalid Resource ID", "Cannot read federated graph without an ID.")
+		utils.AddDiagnosticError(resp, "Invalid Resource ID", "Cannot read federated graph without an ID.")
 		return
 	}
 
-	apiResponse, err := api.GetFederatedGraph(ctx, r.provider.client, r.provider.cosmoApiKey, data.Name.ValueString(), data.Namespace.ValueString())
+	apiResponse, err := api.GetFederatedGraph(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, data.Name.ValueString(), data.Namespace.ValueString())
 	if err != nil {
-		addDiagnosticError(resp, "Error Reading Federated Graph", fmt.Sprintf("Could not read federated graph: %s", err))
+		utils.AddDiagnosticError(resp, "Error Reading Federated Graph", fmt.Sprintf("Could not read federated graph: %s", err))
 		return
 	}
 
 	if apiResponse.GetResponse().Code != common.EnumStatusCode_OK {
-		addDiagnosticError(resp, "Error Reading Federated Graph", fmt.Sprintf("Failed to retrieve federated graph with status code: %v, details: %s", apiResponse.GetResponse().Code, apiResponse.GetResponse().GetDetails()))
+		utils.AddDiagnosticError(resp, "Error Reading Federated Graph", fmt.Sprintf("Failed to retrieve federated graph with status code: %v, details: %s", apiResponse.GetResponse().Code, apiResponse.GetResponse().GetDetails()))
 		return
 	}
 
@@ -212,7 +209,7 @@ func (r *FederatedGraphResource) Read(ctx context.Context, req resource.ReadRequ
 	}
 	data.LabelMatchers = types.ListValueMust(types.StringType, labelMatchers)
 
-	logAction(ctx, "read", data.Id.ValueString(), data.Name.ValueString(), data.Namespace.ValueString())
+	utils.LogAction(ctx, "read", data.Id.ValueString(), data.Name.ValueString(), data.Namespace.ValueString())
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -226,11 +223,11 @@ func (r *FederatedGraphResource) Update(ctx context.Context, req resource.Update
 	}
 
 	if data.Id.IsNull() || data.Id.ValueString() == "" {
-		addDiagnosticError(resp, "Invalid Resource ID", "Cannot update federated graph because the resource ID is missing.")
+		utils.AddDiagnosticError(resp, "Invalid Resource ID", "Cannot update federated graph because the resource ID is missing.")
 		return
 	}
 
-	labelMatchers, err := convertAndValidateLabelMatchers(data.LabelMatchers, resp)
+	labelMatchers, err := utils.ConvertAndValidateLabelMatchers(data.LabelMatchers, resp)
 	if err != nil {
 		return
 	}
@@ -248,18 +245,18 @@ func (r *FederatedGraphResource) Update(ctx context.Context, req resource.Update
 		admissionWebhookSecret = data.AdmissionWebhookSecret.ValueStringPointer()
 	}
 
-	apiResponse, err := api.UpdateFederatedGraph(ctx, r.provider.client, r.provider.cosmoApiKey, admissionWebhookSecret, &graph)
+	apiResponse, err := api.UpdateFederatedGraph(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, admissionWebhookSecret, &graph)
 	if err != nil {
-		addDiagnosticError(resp, "Error Updating Federated Graph", fmt.Sprintf("Could not update federated graph: %s", err))
+		utils.AddDiagnosticError(resp, "Error Updating Federated Graph", fmt.Sprintf("Could not update federated graph: %s", err))
 		return
 	}
 
 	if len(apiResponse.CompositionErrors) > 0 {
-		addDiagnosticError(resp, "Composition Error", fmt.Sprintf("Composition errors: %v", apiResponse.CompositionErrors))
+		utils.AddDiagnosticError(resp, "Composition Error", fmt.Sprintf("Composition errors: %v", apiResponse.CompositionErrors))
 		return
 	}
 
-	logAction(ctx, "updated", data.Id.ValueString(), data.Name.ValueString(), data.Namespace.ValueString())
+	utils.LogAction(ctx, "updated", data.Id.ValueString(), data.Name.ValueString(), data.Namespace.ValueString())
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -273,17 +270,18 @@ func (r *FederatedGraphResource) Delete(ctx context.Context, req resource.Delete
 	}
 
 	if data.Id.IsNull() || data.Id.ValueString() == "" {
-		addDiagnosticError(resp, "Invalid Resource ID", "Cannot delete the federated graph because the resource ID is missing.")
+		utils.AddDiagnosticError(resp, "Invalid Resource ID", "Cannot delete the federated graph because the resource ID is missing.")
 		return
 	}
 
-	err := api.DeleteFederatedGraph(ctx, r.provider.client, r.provider.cosmoApiKey, data.Name.ValueString(), data.Namespace.ValueString())
+	err := api.DeleteFederatedGraph(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, data.Name.ValueString(), data.Namespace.ValueString())
+
 	if err != nil {
-		addDiagnosticError(resp, "Error Deleting Federated Graph", fmt.Sprintf("Could not delete federated graph: %s", err))
+		utils.AddDiagnosticError(resp, "Error Deleting Federated Graph", fmt.Sprintf("Could not delete federated graph: %s", err))
 		return
 	}
 
-	logAction(ctx, "deleted", data.Id.ValueString(), data.Name.ValueString(), data.Namespace.ValueString())
+	utils.LogAction(ctx, "deleted", data.Id.ValueString(), data.Name.ValueString(), data.Namespace.ValueString())
 }
 
 func (r *FederatedGraphResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

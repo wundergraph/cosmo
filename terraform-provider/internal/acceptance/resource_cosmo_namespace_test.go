@@ -1,4 +1,4 @@
-package provider
+package acceptance
 
 import (
 	"fmt"
@@ -11,8 +11,8 @@ func TestAccNamespaceResource(t *testing.T) {
 	rName := "test-namespace"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		PreCheck:                 func() { TestAccPreCheck(t) },
+		ProtoV6ProviderFactories: TestAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccNamespaceResourceConfig(rName),

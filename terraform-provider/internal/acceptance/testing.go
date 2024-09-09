@@ -1,13 +1,11 @@
-// Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
-
-package provider
+package acceptance
 
 import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/wundergraph/cosmo/terraform-provider-cosmo/internal/provider"
 )
 
 // testAccProtoV6ProviderFactories are used to instantiate a provider during
@@ -15,7 +13,7 @@ import (
 // CLI command executed to create a provider server to which the CLI can
 // reattach.
 var TestAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
-	"cosmo": providerserver.NewProtocol6WithError(New("cosmo")()),
+	"cosmo": providerserver.NewProtocol6WithError(provider.New("cosmo")()),
 }
 
 func TestAccPreCheck(t *testing.T) {

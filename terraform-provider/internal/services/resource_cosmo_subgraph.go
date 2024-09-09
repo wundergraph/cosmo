@@ -1,4 +1,4 @@
-package provider
+package services
 
 import (
 	"context"
@@ -10,10 +10,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	platformv1 "github.com/wundergraph/cosmo/terraform-provider-cosmo/gen/proto/wg/cosmo/platform/v1"
 	"github.com/wundergraph/cosmo/terraform-provider-cosmo/internal/api"
+	"github.com/wundergraph/cosmo/terraform-provider-cosmo/internal/client"
+	"github.com/wundergraph/cosmo/terraform-provider-cosmo/internal/utils"
 )
 
 type SubgraphResource struct {
-	provider *Provider
+	*client.PlatformClient
 }
 
 type SubgraphResourceModel struct {
@@ -40,7 +42,14 @@ func (r *SubgraphResource) Configure(ctx context.Context, req resource.Configure
 	if req.ProviderData == nil {
 		return
 	}
-	r.provider = req.ProviderData.(*Provider)
+
+	client, ok := req.ProviderData.(*client.PlatformClient)
+	if !ok {
+		utils.AddDiagnosticError(resp, "Unexpected Data Source Configure Type", fmt.Sprintf("Expected *http.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData))
+		return
+	}
+
+	r.PlatformClient = client
 }
 
 func (r *SubgraphResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -117,7 +126,7 @@ func (r *SubgraphResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	stringLabels, err := convertAndValidateLabelMatchers(data.Labels, resp)
+	stringLabels, err := utils.ConvertAndValidateLabelMatchers(data.Labels, resp)
 	if err != nil {
 		return
 	}
@@ -131,15 +140,15 @@ func (r *SubgraphResource) Create(ctx context.Context, req resource.CreateReques
 		})	
 	}
 
-	err = api.CreateSubgraph(ctx, r.provider.client, r.provider.cosmoApiKey, data.Name.ValueString(), data.Namespace.ValueString(), data.RoutingUrl.ValueString(), data.BaseSubgraphName.ValueStringPointer(), labels, data.SubscriptionUrl.ValueStringPointer(), data.Readme.ValueStringPointer(), data.IsEventDrivenGraph.ValueBoolPointer(), data.IsFeatureSubgraph.ValueBoolPointer())
+	err = api.CreateSubgraph(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, data.Name.ValueString(), data.Namespace.ValueString(), data.RoutingUrl.ValueString(), data.BaseSubgraphName.ValueStringPointer(), labels, data.SubscriptionUrl.ValueStringPointer(), data.Readme.ValueStringPointer(), data.IsEventDrivenGraph.ValueBoolPointer(), data.IsFeatureSubgraph.ValueBoolPointer())
 	if err != nil {
-		addDiagnosticError(resp, "Error Creating Subgraph", fmt.Sprintf("Could not create subgraph: %s", err))
+		utils.AddDiagnosticError(resp, "Error Creating Subgraph", fmt.Sprintf("Could not create subgraph: %s", err))
 		return
 	}
 
-	subgraph, err := api.GetSubgraph(ctx, r.provider.client, r.provider.cosmoApiKey, data.Name.ValueString(), data.Namespace.ValueString())
+	subgraph, err := api.GetSubgraph(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, data.Name.ValueString(), data.Namespace.ValueString())
 	if err != nil {
-		addDiagnosticError(resp, "Error Fetching Created Subgraph", fmt.Sprintf("Could not fetch created subgraph: %s", err))
+		utils.AddDiagnosticError(resp, "Error Fetching Created Subgraph", fmt.Sprintf("Could not fetch created subgraph: %s", err))
 		return
 	}
 
@@ -163,9 +172,9 @@ func (r *SubgraphResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	subgraph, err := api.GetSubgraph(ctx, r.provider.client, r.provider.cosmoApiKey, data.Name.ValueString(), data.Namespace.ValueString())
+	subgraph, err := api.GetSubgraph(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, data.Name.ValueString(), data.Namespace.ValueString())
 	if err != nil {
-		addDiagnosticError(resp, "Error Reading Subgraph", fmt.Sprintf("Could not read subgraph: %s", err))
+		utils.AddDiagnosticError(resp, "Error Reading Subgraph", fmt.Sprintf("Could not read subgraph: %s", err))
 		return
 	}
 
@@ -185,7 +194,7 @@ func (r *SubgraphResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	stringLabels, err := convertAndValidateLabelMatchers(data.Labels, resp)
+	stringLabels, err := utils.ConvertAndValidateLabelMatchers(data.Labels, resp)
 	if err != nil {
 		return
 	}
@@ -205,20 +214,20 @@ func (r *SubgraphResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	headers := convertToHeaders(data.Headers)
-	err = api.UpdateSubgraph(ctx, r.provider.client, r.provider.cosmoApiKey, data.Name.ValueString(), data.Namespace.ValueString(), data.RoutingUrl.ValueString(), labels, headers, data.SubscriptionUrl.ValueStringPointer(), data.Readme.ValueStringPointer(), unsetLabels)
+	err = api.UpdateSubgraph(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, data.Name.ValueString(), data.Namespace.ValueString(), data.RoutingUrl.ValueString(), labels, headers, data.SubscriptionUrl.ValueStringPointer(), data.Readme.ValueStringPointer(), unsetLabels)
 	if err != nil {
-		addDiagnosticError(resp, "Error Updating Subgraph", fmt.Sprintf("Could not update subgraph: %s", err))
+		utils.AddDiagnosticError(resp, "Error Updating Subgraph", fmt.Sprintf("Could not update subgraph: %s", err))
 		return
 	}
 	if err != nil {
-		addDiagnosticError(resp, "Error Updating Subgraph", fmt.Sprintf("Could not update subgraph: %s", err))
+		utils.AddDiagnosticError(resp, "Error Updating Subgraph", fmt.Sprintf("Could not update subgraph: %s", err))
 		return
 	}
 
 	// Fetch the updated subgraph again
-	subgraph, err := api.GetSubgraph(ctx, r.provider.client, r.provider.cosmoApiKey, data.Name.ValueString(), data.Namespace.ValueString())
+	subgraph, err := api.GetSubgraph(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, data.Name.ValueString(), data.Namespace.ValueString())
 	if err != nil {
-		addDiagnosticError(resp, "Error Fetching Updated Subgraph", fmt.Sprintf("Could not fetch updated subgraph: %s", err))
+		utils.AddDiagnosticError(resp, "Error Fetching Updated Subgraph", fmt.Sprintf("Could not fetch updated subgraph: %s", err))
 		return
 	}
 
@@ -234,9 +243,9 @@ func (r *SubgraphResource) Delete(ctx context.Context, req resource.DeleteReques
 		return
 	}
 
-	err := api.DeleteSubgraph(ctx, r.provider.client, r.provider.cosmoApiKey, data.Name.ValueString(), data.Namespace.ValueString())
+	err := api.DeleteSubgraph(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, data.Name.ValueString(), data.Namespace.ValueString())
 	if err != nil {
-		addDiagnosticError(resp, "Error Deleting Subgraph", fmt.Sprintf("Could not delete subgraph: %s", err))
+		utils.AddDiagnosticError(resp, "Error Deleting Subgraph", fmt.Sprintf("Could not delete subgraph: %s", err))
 		return
 	}
 }

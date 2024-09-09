@@ -1,4 +1,4 @@
-package provider
+package acceptance
 
 import (
 	"fmt"
@@ -13,8 +13,8 @@ func TestAccSubgraphResource(t *testing.T) {
 	rBaseSubgraphName := "base-subgraph"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		PreCheck:                 func() { TestAccPreCheck(t) },
+		ProtoV6ProviderFactories: TestAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccSubgraphResourceConfig(rName, rNamespace, rBaseSubgraphName),
@@ -39,7 +39,8 @@ resource "cosmo_subgraph" "test" {
   name                = "%s"
   namespace           = "%s"
   base_subgraph_name  = "%s"
-  labels              = ["team=backend", "stage=dev"] // Add labels to the configuration
+  routing_url         = "https://example.com"
+  labels              = ["team=backend", "stage=dev"]
 }
 `, name, namespace, baseSubgraphName)
 }
