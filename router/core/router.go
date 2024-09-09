@@ -472,10 +472,10 @@ func NewRouter(opts ...Option) (*Router, error) {
 	}
 
 	for _, source := range r.eventsConfig.Providers.Nats {
-		r.logger.Info("Nats Event source enabled", zap.String("providerID", source.ID), zap.String("url", source.URL))
+		r.logger.Info("Nats Event source enabled", zap.String("provider_id", source.ID), zap.String("url", source.URL))
 	}
 	for _, source := range r.eventsConfig.Providers.Kafka {
-		r.logger.Info("Kafka Event source enabled", zap.String("providerID", source.ID), zap.Strings("brokers", source.Brokers))
+		r.logger.Info("Kafka Event source enabled", zap.String("provider_id", source.ID), zap.Strings("brokers", source.Brokers))
 	}
 
 	return r, nil
