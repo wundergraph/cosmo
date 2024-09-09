@@ -1,35 +1,35 @@
 locals {
   stages = {
-    dev = {},
-    stg = {},
+    dev  = {},
+    stg  = {},
     prod = {}
   }
   subgraphs = {
     "product-api" = {
-        routing_url = "http://product-api:3000/graphql"
+      routing_url = "http://product-api:3000/graphql"
     },
     "employees-api" = {
-        routing_url = "http://employees-api:3000/graphql"
+      routing_url = "http://employees-api:3000/graphql"
     }
     "family-api" = {
-        routing_url = "http://family-api:3000/graphql"
+      routing_url = "http://family-api:3000/graphql"
     },
     "hobbies-api" = {
-        routing_url = "http://hobbies-api:3000/graphql"
+      routing_url = "http://hobbies-api:3000/graphql"
     },
     "availability-api" = {
-        routing_url = "http://availability-api:3000/graphql"
+      routing_url = "http://availability-api:3000/graphql"
     },
   }
   stage_subgrahs = merge(flatten([
     for key, value in local.stages : {
       for subgraph, subgraph_value in local.subgraphs :
       "${key}-${subgraph}" => {
-        "stage" = key
-        "subgraph" = subgraph
+        "stage"       = key
+        "subgraph"    = subgraph
         "routing_url" = subgraph_value.routing_url
       }
-  }])...) 
+  }])...)
 }
 
 // create a namespace for each stage
