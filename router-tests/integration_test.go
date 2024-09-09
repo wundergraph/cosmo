@@ -1039,7 +1039,7 @@ func TestMaxQueryDepth(t *testing.T) {
 		})
 	})
 
-	t.Run("max query depth doesn't block persisted queries if set", func(t *testing.T) {
+	t.Run("max query depth doesn't block persisted queries if DisableDepthLimitPersistedOperations set", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
@@ -1061,7 +1061,7 @@ func TestMaxQueryDepth(t *testing.T) {
 		})
 	})
 
-	t.Run("query depth caches", func(t *testing.T) {
+	t.Run("query depth validation caches success and failure runs", func(t *testing.T) {
 		t.Parallel()
 
 		metricReader := metric.NewManualReader()
