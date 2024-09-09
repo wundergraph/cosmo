@@ -21,8 +21,7 @@ tidy:
 	go mod tidy
 
 fmt:
-	go fmt internal/...
-	go fmt main.go
+	go fmt ./...
 	terraform fmt -recursive 
 
 build:
