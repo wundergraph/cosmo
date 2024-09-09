@@ -60,3 +60,11 @@ e2e-cd-apply:
 
 e2e-cd-destroy: 
 	make e2e-destroy 
+
+e2e-comso-apply: 
+	FEATURE=examples/cosmo make install 
+	FEATURE=examples/cosmo make e2e-init 
+	FEATURE=examples/cosmo make e2e-apply 
+
+e2e-cosmo-destroy: 
+	FEATURE=examples/cosmo make e2e-destroy 
