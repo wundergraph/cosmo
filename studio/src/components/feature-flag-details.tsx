@@ -25,9 +25,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 const FeatureFlagOverview = ({
   federatedGraphs,
   featureSubgraphs,
+  isEnabled,
 }: {
   federatedGraphs: { federatedGraph: FederatedGraph; isConnected: boolean }[];
   featureSubgraphs: Subgraph[];
+  isEnabled: boolean;
 }) => {
   const router = useRouter();
   const slug = router.query.slug as string;
@@ -60,6 +62,24 @@ const FeatureFlagOverview = ({
                 command: `npx wgc feature-flag update <feature-flag-name> --namespace ${router.query.namespace} --feature-subgraphs <featureSubgraphs...>`,
               },
             ]}
+          />
+        }
+      />
+    );
+  } else if (!isEnabled) {
+    content = (
+      <EmptyState
+        icon={<ExclamationTriangleIcon className="text-red-500" />}
+        title="Feature flag is not used for composition."
+        description={
+          <>
+            Feature flag is disabled. To enable the feature flag, use the below
+            command.
+          </>
+        }
+        actions={
+          <CLI
+            command={`npx wgc feature-flag enable <feature-flag-name> --namespace <namespace>`}
           />
         }
       />
@@ -188,7 +208,9 @@ export const FeatureFlagDetails = ({
           </div>
           <div className="flex-start flex max-w-[250px] flex-1 flex-col gap-2 ">
             <dt className="text-sm text-muted-foreground">Created By</dt>
-            <dd className="whitespace-nowrap text-sm">{createdBy || "unknown user"}</dd>
+            <dd className="whitespace-nowrap text-sm">
+              {createdBy || "unknown user"}
+            </dd>
           </div>
           <div className="flex-start flex max-w-[250px] flex-1 flex-col gap-2 ">
             <dt className="text-sm text-muted-foreground">Created At</dt>
@@ -289,6 +311,7 @@ export const FeatureFlagDetails = ({
                   <FeatureFlagOverview
                     featureSubgraphs={featureSubgraphs}
                     federatedGraphs={federatedGraphs}
+                    isEnabled={isEnabled}
                   />
                 </TabsContent>
               )}
