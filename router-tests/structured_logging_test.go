@@ -19,7 +19,7 @@ func TestRouterStartLogs(t *testing.T) {
 		require.Len(t, logEntries, 11)
 		natsLogs := xEnv.Observer().FilterMessageSnippet("Nats Event source enabled").All()
 		require.Len(t, natsLogs, 4)
-		providerIDFields := xEnv.Observer().FilterField(zap.String("providerID", "default")).All()
+		providerIDFields := xEnv.Observer().FilterField(zap.String("provider_id", "default")).All()
 		require.Len(t, providerIDFields, 1)
 		kafkaLogs := xEnv.Observer().FilterMessageSnippet("Kafka Event source enabled").All()
 		require.Len(t, kafkaLogs, 2)
@@ -51,11 +51,11 @@ func TestQueryWithLogging(t *testing.T) {
 			"status": int64(200),
 			"method": "POST",
 			"path":   "/graphql",
-			"query":  "",
+			"query":  "", // http query is empty
 			"ip":     "[REDACTED]",
 		}
 		additionalExpectedKeys := []string{
-			"user-agent", "latency", "config_version", "request_id",
+			"user_agent", "latency", "config_version", "request_id",
 		}
 		require.Len(t, requestContext, len(expectedValues)+len(additionalExpectedKeys))
 		for key, val := range expectedValues {

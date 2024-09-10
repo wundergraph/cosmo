@@ -54,7 +54,7 @@ type natsPubSub struct {
 
 func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.NatsSubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
 	log := p.logger.With(
-		zap.String("providerID", event.ProviderID),
+		zap.String("provider_id", event.ProviderID),
 		zap.String("method", "subscribe"),
 		zap.Strings("subjects", event.Subjects),
 	)
@@ -92,14 +92,14 @@ func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Nats
 					}
 
 					for msg := range msgBatch.Messages() {
-						log.Debug("subscription update", zap.String("messageSubject", msg.Subject()), zap.ByteString("data", msg.Data()))
+						log.Debug("subscription update", zap.String("message_subject", msg.Subject()), zap.ByteString("data", msg.Data()))
 
 						updater.Update(msg.Data())
 
 						// Acknowledge the message after it has been processed
 						ackErr := msg.Ack()
 						if ackErr != nil {
-							log.Error("error acknowledging message", zap.String("messageSubject", msg.Subject()), zap.Error(ackErr))
+							log.Error("error acknowledging message", zap.String("message_subject", msg.Subject()), zap.Error(ackErr))
 							return
 						}
 					}
@@ -116,7 +116,7 @@ func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Nats
 	for i, subject := range event.Subjects {
 		subscription, err := p.conn.ChanSubscribe(subject, msgChan)
 		if err != nil {
-			log.Error("error subscribing to NATS subject", zap.Error(err), zap.String("subscriptionSubject", subject))
+			log.Error("error subscribing to NATS subject", zap.Error(err), zap.String("subscription_subject", subject))
 			return pubsub.NewError(fmt.Sprintf(`failed to subscribe to NATS subject "%s"`, subject), err)
 		}
 		subscriptions[i] = subscription
@@ -130,7 +130,7 @@ func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Nats
 		for {
 			select {
 			case msg := <-msgChan:
-				log.Debug("subscription update", zap.String("messageSubject", msg.Subject), zap.ByteString("data", msg.Data))
+				log.Debug("subscription update", zap.String("message_subject", msg.Subject), zap.ByteString("data", msg.Data))
 
 				updater.Update(msg.Data)
 			case <-p.ctx.Done():
@@ -148,7 +148,7 @@ func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Nats
 				for _, subscription := range subscriptions {
 					if err := subscription.Unsubscribe(); err != nil {
 						log.Error("error unsubscribing from NATS subject after subscription context cancellation",
-							zap.Error(err), zap.String("subscriptionSubject", subscription.Subject),
+							zap.Error(err), zap.String("subscription_subject", subscription.Subject),
 						)
 					}
 				}
@@ -162,7 +162,7 @@ func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Nats
 
 func (p *natsPubSub) Publish(_ context.Context, event pubsub_datasource.NatsPublishAndRequestEventConfiguration) error {
 	log := p.logger.With(
-		zap.String("providerID", event.ProviderID),
+		zap.String("provider_id", event.ProviderID),
 		zap.String("method", "publish"),
 		zap.String("subject", event.Subject),
 	)
@@ -180,7 +180,7 @@ func (p *natsPubSub) Publish(_ context.Context, event pubsub_datasource.NatsPubl
 
 func (p *natsPubSub) Request(ctx context.Context, event pubsub_datasource.NatsPublishAndRequestEventConfiguration, w io.Writer) error {
 	log := p.logger.With(
-		zap.String("providerID", event.ProviderID),
+		zap.String("provider_id", event.ProviderID),
 		zap.String("method", "request"),
 		zap.String("subject", event.Subject),
 	)

@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.88.1](https://github.com/wundergraph/cosmo/compare/studio@0.88.0...studio@0.88.1) (2024-09-09)
+
+### Bug Fixes
+
+* disabled state of feature flag overview page ([#1150](https://github.com/wundergraph/cosmo/issues/1150)) ([ecbb399](https://github.com/wundergraph/cosmo/commit/ecbb399ab72500a3c994b41cb41e291f19ba08fb)) (@JivusAyrus)
+
 # [0.88.0](https://github.com/wundergraph/cosmo/compare/studio@0.87.0...studio@0.88.0) (2024-09-05)
 
 ### Features
