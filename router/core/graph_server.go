@@ -301,6 +301,7 @@ type graphMux struct {
 	planCache          ExecutionPlanCache[uint64, *planWithMetaData]
 	normalizationCache *ristretto.Cache[uint64, NormalizationCacheEntry]
 	validationCache    *ristretto.Cache[uint64, bool]
+	queryDepthCache    *ristretto.Cache[uint64, int]
 }
 
 func (s *graphMux) Shutdown(_ context.Context) {
@@ -310,6 +311,9 @@ func (s *graphMux) Shutdown(_ context.Context) {
 	}
 	if s.validationCache != nil {
 		s.validationCache.Close()
+	}
+	if s.queryDepthCache != nil {
+		s.queryDepthCache.Close()
 	}
 }
 
@@ -390,6 +394,18 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		gm.validationCache, err = ristretto.NewCache[uint64, bool](validationCacheConfig)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create validation cache: %w", err)
+		}
+	}
+
+	if s.securityConfiguration.DepthLimit.Enabled && s.securityConfiguration.DepthLimit.CacheSize > 0 {
+		queryDepthCacheConfig := &ristretto.Config[uint64, int]{
+			MaxCost:     s.securityConfiguration.DepthLimit.CacheSize,
+			NumCounters: s.securityConfiguration.DepthLimit.CacheSize * 10,
+			BufferItems: 64,
+		}
+		gm.queryDepthCache, err = ristretto.NewCache[uint64, int](queryDepthCacheConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create query depth cache: %w", err)
 		}
 	}
 
@@ -575,6 +591,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		EnablePersistedOperationsCache: s.engineExecutionConfiguration.EnablePersistedOperationsCache,
 		NormalizationCache:             gm.normalizationCache,
 		ValidationCache:                gm.validationCache,
+		QueryDepthCache:                gm.queryDepthCache,
 		ParseKitPoolSize:               s.engineExecutionConfiguration.ParseKitPoolSize,
 	})
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
@@ -635,6 +652,9 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		FileUploadEnabled:           s.fileUploadConfig.Enabled,
 		MaxUploadFiles:              s.fileUploadConfig.MaxFiles,
 		MaxUploadFileSize:           int(s.fileUploadConfig.MaxFileSizeBytes),
+		QueryDepthEnabled:           s.securityConfiguration.DepthLimit.Enabled,
+		QueryDepthLimit:             s.securityConfiguration.DepthLimit.Limit,
+		QueryIgnorePersistent:       s.securityConfiguration.DepthLimit.IgnorePersistedOperations,
 		AlwaysIncludeQueryPlan:      s.engineExecutionConfiguration.Debug.AlwaysIncludeQueryPlan,
 		AlwaysSkipLoader:            s.engineExecutionConfiguration.Debug.AlwaysSkipLoader,
 		QueryPlansEnabled:           s.Config.queryPlansEnabled,

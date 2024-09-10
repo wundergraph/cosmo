@@ -4,6 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/trace"
+	tracetest2 "go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"io"
 	"math/rand"
 	"net/http"
@@ -963,6 +968,171 @@ func TestBlockNonPersistedOperations(t *testing.T) {
 			require.Equal(t, `{"errors":[{"message":"non-persisted operation is blocked"}],"data":null}`, res.Body)
 		})
 	})
+}
+
+func TestQueryDepthLimit(t *testing.T) {
+	t.Parallel()
+	t.Run("max query depth of 0 doesn't block", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+				securityConfiguration.DepthLimit.Enabled = true
+				securityConfiguration.DepthLimit.Limit = 0
+				securityConfiguration.DepthLimit.CacheSize = 1024
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employee(id:1) { id details { forename surname } } }`,
+			})
+			require.JSONEq(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+		})
+	})
+
+	t.Run("allows queries up to the max depth", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+				securityConfiguration.DepthLimit.Enabled = true
+				securityConfiguration.DepthLimit.Limit = 3
+				securityConfiguration.DepthLimit.CacheSize = 1024
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employee(id:1) { id details { forename surname } } }`,
+			})
+			require.JSONEq(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+		})
+	})
+
+	t.Run("max query depth blocks queries over the limit", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+				securityConfiguration.DepthLimit.Enabled = true
+				securityConfiguration.DepthLimit.Limit = 2
+				securityConfiguration.DepthLimit.CacheSize = 1024
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, _ := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `{ employee(id:1) { id details { forename surname } } }`,
+			})
+			require.Equal(t, 400, res.Response.StatusCode)
+			require.Equal(t, `{"errors":[{"message":"The query depth 3 exceeds the max query depth allowed (2)"}],"data":null}`, res.Body)
+		})
+	})
+
+	t.Run("max query depth blocks persisted queries over the limit", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+				securityConfiguration.DepthLimit.Enabled = true
+				securityConfiguration.DepthLimit.Limit = 2
+				securityConfiguration.DepthLimit.CacheSize = 1024
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := make(http.Header)
+			header.Add("graphql-client-name", "my-client")
+			res, _ := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
+				OperationName: []byte(`Find`),
+				Variables:     []byte(`{"criteria":  {"nationality":  "GERMAN"   }}`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "e33580cf6276de9a75fb3b1c4b7580fec2a1c8facd13f3487bf6c7c3f854f7e3"}}`),
+				Header:        header,
+			})
+			require.Equal(t, 400, res.Response.StatusCode)
+			require.Equal(t, `{"errors":[{"message":"The query depth 3 exceeds the max query depth allowed (2)"}],"data":null}`, res.Body)
+		})
+	})
+
+	t.Run("max query depth doesn't block persisted queries if DisableDepthLimitPersistedOperations set", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+				securityConfiguration.DepthLimit.Enabled = true
+				securityConfiguration.DepthLimit.Limit = 2
+				securityConfiguration.DepthLimit.CacheSize = 1024
+				securityConfiguration.DepthLimit.IgnorePersistedOperations = true
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := make(http.Header)
+			header.Add("graphql-client-name", "my-client")
+			res, _ := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
+				OperationName: []byte(`Find`),
+				Variables:     []byte(`{"criteria":  {"nationality":  "GERMAN"   }}`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "e33580cf6276de9a75fb3b1c4b7580fec2a1c8facd13f3487bf6c7c3f854f7e3"}}`),
+				Header:        header,
+			})
+			require.Equal(t, 200, res.Response.StatusCode)
+			//require.Equal(t, `{"errors":[{"message":"The query depth 3 exceeds the max query depth allowed (2)"}],"data":null}`, res.Body)
+		})
+	})
+
+	t.Run("query depth validation caches success and failure runs", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+		exporter := tracetest.NewInMemoryExporter(t)
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+			MetricReader:  metricReader,
+			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+				securityConfiguration.DepthLimit.Enabled = true
+				securityConfiguration.DepthLimit.Limit = 2
+				securityConfiguration.DepthLimit.CacheSize = 1024
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			failedRes, _ := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `{ employee(id:1) { id details { forename surname } } }`,
+			})
+			require.Equal(t, 400, failedRes.Response.StatusCode)
+			require.Equal(t, `{"errors":[{"message":"The query depth 3 exceeds the max query depth allowed (2)"}],"data":null}`, failedRes.Body)
+
+			testSpan := requireSpanWithName(t, exporter, "Operation - Validate")
+			require.Contains(t, testSpan.Attributes(), otel.WgQueryDepth.Int(3))
+			require.Contains(t, testSpan.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
+			exporter.Reset()
+
+			failedRes2, _ := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `{ employee(id:1) { id details { forename surname } } }`,
+			})
+			require.Equal(t, 400, failedRes2.Response.StatusCode)
+			require.Equal(t, `{"errors":[{"message":"The query depth 3 exceeds the max query depth allowed (2)"}],"data":null}`, failedRes2.Body)
+
+			testSpan2 := requireSpanWithName(t, exporter, "Operation - Validate")
+			require.Contains(t, testSpan2.Attributes(), otel.WgQueryDepth.Int(3))
+			require.Contains(t, testSpan2.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
+			exporter.Reset()
+
+			successRes := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, successRes.Body)
+			testSpan3 := requireSpanWithName(t, exporter, "Operation - Validate")
+			require.Contains(t, testSpan3.Attributes(), otel.WgQueryDepth.Int(2))
+			require.Contains(t, testSpan3.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
+			exporter.Reset()
+
+			successRes2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, successRes2.Body)
+			testSpan4 := requireSpanWithName(t, exporter, "Operation - Validate")
+			require.Contains(t, testSpan4.Attributes(), otel.WgQueryDepth.Int(2))
+			require.Contains(t, testSpan4.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
+		})
+	})
+}
+
+func requireSpanWithName(t *testing.T, exporter *tracetest2.InMemoryExporter, name string) trace.ReadOnlySpan {
+	sn := exporter.GetSpans().Snapshots()
+	var testSpan trace.ReadOnlySpan
+	for _, span := range sn {
+		if span.Name() == name {
+			testSpan = span
+			break
+		}
+	}
+	require.NotNil(t, testSpan)
+	return testSpan
 }
 
 func TestPartialOriginErrors(t *testing.T) {
