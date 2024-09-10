@@ -32,19 +32,20 @@ import (
 )
 
 type PreHandlerOptions struct {
-	Logger                     *zap.Logger
-	Executor                   *Executor
-	Metrics                    RouterMetrics
-	OperationProcessor         *OperationProcessor
-	Planner                    *OperationPlanner
-	AccessController           *AccessController
-	OperationBlocker           *OperationBlocker
-	RouterPublicKey            *ecdsa.PublicKey
-	TracerProvider             *sdktrace.TracerProvider
-	MaxUploadFiles             int
-	MaxUploadFileSize          int
-	MaxQueryDepth              int
-	DisableDepthLimitPersisted bool
+	Logger                *zap.Logger
+	Executor              *Executor
+	Metrics               RouterMetrics
+	OperationProcessor    *OperationProcessor
+	Planner               *OperationPlanner
+	AccessController      *AccessController
+	OperationBlocker      *OperationBlocker
+	RouterPublicKey       *ecdsa.PublicKey
+	TracerProvider        *sdktrace.TracerProvider
+	MaxUploadFiles        int
+	MaxUploadFileSize     int
+	QueryDepthEnabled     bool
+	QueryDepthLimit       int
+	QueryIgnorePersistent bool
 
 	FlushTelemetryAfterResponse bool
 	FileUploadEnabled           bool
@@ -58,30 +59,31 @@ type PreHandlerOptions struct {
 }
 
 type PreHandler struct {
-	log                              *zap.Logger
-	executor                         *Executor
-	metrics                          RouterMetrics
-	operationProcessor               *OperationProcessor
-	planner                          *OperationPlanner
-	accessController                 *AccessController
-	operationBlocker                 *OperationBlocker
-	developmentMode                  bool
-	alwaysIncludeQueryPlan           bool
-	alwaysSkipLoader                 bool
-	queryPlansEnabled                bool
-	routerPublicKey                  *ecdsa.PublicKey
-	enableRequestTracing             bool
-	tracerProvider                   *sdktrace.TracerProvider
-	flushTelemetryAfterResponse      bool
-	tracer                           trace.Tracer
-	traceExportVariables             bool
-	fileUploadEnabled                bool
-	maxUploadFiles                   int
-	maxUploadFileSize                int
-	maxQueryDepth                    int
-	disableQueryLimitForPersistedOps bool
-	bodyReadBuffers                  *sync.Pool
-	trackSchemaUsageInfo             bool
+	log                         *zap.Logger
+	executor                    *Executor
+	metrics                     RouterMetrics
+	operationProcessor          *OperationProcessor
+	planner                     *OperationPlanner
+	accessController            *AccessController
+	operationBlocker            *OperationBlocker
+	developmentMode             bool
+	alwaysIncludeQueryPlan      bool
+	alwaysSkipLoader            bool
+	queryPlansEnabled           bool
+	routerPublicKey             *ecdsa.PublicKey
+	enableRequestTracing        bool
+	tracerProvider              *sdktrace.TracerProvider
+	flushTelemetryAfterResponse bool
+	tracer                      trace.Tracer
+	traceExportVariables        bool
+	fileUploadEnabled           bool
+	maxUploadFiles              int
+	maxUploadFileSize           int
+	queryDepthEnabled           bool
+	queryDepthLimit             int
+	queryIgnorePersistent       bool
+	bodyReadBuffers             *sync.Pool
+	trackSchemaUsageInfo        bool
 }
 
 type httpOperation struct {
@@ -116,12 +118,12 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 			"wundergraph/cosmo/router/pre_handler",
 			trace.WithInstrumentationVersion("0.0.1"),
 		),
-		fileUploadEnabled:                opts.FileUploadEnabled,
-		maxUploadFiles:                   opts.MaxUploadFiles,
-		maxUploadFileSize:                opts.MaxUploadFileSize,
-		maxQueryDepth:                    opts.MaxQueryDepth,
-		disableQueryLimitForPersistedOps: opts.DisableDepthLimitPersisted,
-
+		fileUploadEnabled:      opts.FileUploadEnabled,
+		maxUploadFiles:         opts.MaxUploadFiles,
+		maxUploadFileSize:      opts.MaxUploadFileSize,
+		queryDepthEnabled:      opts.QueryDepthEnabled,
+		queryDepthLimit:        opts.QueryDepthLimit,
+		queryIgnorePersistent:  opts.QueryIgnorePersistent,
 		bodyReadBuffers:        &sync.Pool{},
 		alwaysIncludeQueryPlan: opts.AlwaysIncludeQueryPlan,
 		alwaysSkipLoader:       opts.AlwaysSkipLoader,
@@ -562,8 +564,8 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 
 	// Validate that the planned query doesn't exceed the maximum query depth configured
 	// This check runs if they've configured a max query depth, and it can optionally be turned off for persisted operations
-	if h.maxQueryDepth > 0 && (!operationKit.parsedOperation.IsPersistedOperation || operationKit.parsedOperation.IsPersistedOperation && !h.disableQueryLimitForPersistedOps) {
-		cacheHit, depth, queryDepthErr := operationKit.ValidateQueryDepth(h.maxQueryDepth, operationKit.kit.doc, h.executor.RouterSchema)
+	if h.queryDepthEnabled && h.queryDepthLimit > 0 && (!operationKit.parsedOperation.IsPersistedOperation || operationKit.parsedOperation.IsPersistedOperation && !h.queryIgnorePersistent) {
+		cacheHit, depth, queryDepthErr := operationKit.ValidateQueryDepth(h.queryDepthLimit, operationKit.kit.doc, h.executor.RouterSchema)
 		engineValidateSpan.SetAttributes(otel.WgQueryDepth.Int(depth))
 		engineValidateSpan.SetAttributes(otel.WgQueryDepthCacheHit.Bool(cacheHit))
 		if queryDepthErr != nil {

@@ -397,10 +397,10 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		}
 	}
 
-	if s.securityConfiguration.MaxQueryDepth > 0 && s.securityConfiguration.QueryDepthCacheSize > 0 {
+	if s.securityConfiguration.DepthLimit.Enabled && s.securityConfiguration.DepthLimit.CacheSize > 0 {
 		queryDepthCacheConfig := &ristretto.Config[uint64, int]{
-			MaxCost:     s.securityConfiguration.QueryDepthCacheSize,
-			NumCounters: s.securityConfiguration.QueryDepthCacheSize * 10,
+			MaxCost:     s.securityConfiguration.DepthLimit.CacheSize,
+			NumCounters: s.securityConfiguration.DepthLimit.CacheSize * 10,
 			BufferItems: 64,
 		}
 		gm.queryDepthCache, err = ristretto.NewCache[uint64, int](queryDepthCacheConfig)
@@ -652,8 +652,9 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		FileUploadEnabled:           s.fileUploadConfig.Enabled,
 		MaxUploadFiles:              s.fileUploadConfig.MaxFiles,
 		MaxUploadFileSize:           int(s.fileUploadConfig.MaxFileSizeBytes),
-		MaxQueryDepth:               s.securityConfiguration.MaxQueryDepth,
-		DisableDepthLimitPersisted:  s.securityConfiguration.DisableDepthLimitPersistedOperations,
+		QueryDepthEnabled:           s.securityConfiguration.DepthLimit.Enabled,
+		QueryDepthLimit:             s.securityConfiguration.DepthLimit.Limit,
+		QueryIgnorePersistent:       s.securityConfiguration.DepthLimit.IgnorePersistedOperations,
 		AlwaysIncludeQueryPlan:      s.engineExecutionConfiguration.Debug.AlwaysIncludeQueryPlan,
 		AlwaysSkipLoader:            s.engineExecutionConfiguration.Debug.AlwaysSkipLoader,
 		QueryPlansEnabled:           s.Config.queryPlansEnabled,

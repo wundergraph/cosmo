@@ -970,14 +970,15 @@ func TestBlockNonPersistedOperations(t *testing.T) {
 	})
 }
 
-func TestMaxQueryDepth(t *testing.T) {
+func TestQueryDepthLimit(t *testing.T) {
 	t.Parallel()
 	t.Run("max query depth of 0 doesn't block", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-				securityConfiguration.MaxQueryDepth = 0
-				securityConfiguration.QueryDepthCacheSize = 1024
+				securityConfiguration.DepthLimit.Enabled = true
+				securityConfiguration.DepthLimit.Limit = 0
+				securityConfiguration.DepthLimit.CacheSize = 1024
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -991,8 +992,9 @@ func TestMaxQueryDepth(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-				securityConfiguration.MaxQueryDepth = 3
-				securityConfiguration.QueryDepthCacheSize = 1024
+				securityConfiguration.DepthLimit.Enabled = true
+				securityConfiguration.DepthLimit.Limit = 3
+				securityConfiguration.DepthLimit.CacheSize = 1024
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -1006,8 +1008,9 @@ func TestMaxQueryDepth(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-				securityConfiguration.MaxQueryDepth = 2
-				securityConfiguration.QueryDepthCacheSize = 1024
+				securityConfiguration.DepthLimit.Enabled = true
+				securityConfiguration.DepthLimit.Limit = 2
+				securityConfiguration.DepthLimit.CacheSize = 1024
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, _ := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
@@ -1022,8 +1025,9 @@ func TestMaxQueryDepth(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-				securityConfiguration.MaxQueryDepth = 2
-				securityConfiguration.QueryDepthCacheSize = 1024
+				securityConfiguration.DepthLimit.Enabled = true
+				securityConfiguration.DepthLimit.Limit = 2
+				securityConfiguration.DepthLimit.CacheSize = 1024
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			header := make(http.Header)
@@ -1043,9 +1047,10 @@ func TestMaxQueryDepth(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-				securityConfiguration.MaxQueryDepth = 2
-				securityConfiguration.QueryDepthCacheSize = 1024
-				securityConfiguration.DisableDepthLimitPersistedOperations = true
+				securityConfiguration.DepthLimit.Enabled = true
+				securityConfiguration.DepthLimit.Limit = 2
+				securityConfiguration.DepthLimit.CacheSize = 1024
+				securityConfiguration.DepthLimit.IgnorePersistedOperations = true
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			header := make(http.Header)
@@ -1070,8 +1075,9 @@ func TestMaxQueryDepth(t *testing.T) {
 			TraceExporter: exporter,
 			MetricReader:  metricReader,
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-				securityConfiguration.MaxQueryDepth = 2
-				securityConfiguration.QueryDepthCacheSize = 1024
+				securityConfiguration.DepthLimit.Enabled = true
+				securityConfiguration.DepthLimit.Limit = 2
+				securityConfiguration.DepthLimit.CacheSize = 1024
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			failedRes, _ := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
