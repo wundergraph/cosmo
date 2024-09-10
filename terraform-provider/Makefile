@@ -27,10 +27,14 @@ fmt:
 build:
 	go build -o bin/${BINARY}
 
-install: build
+install:
 	rm -f ~/.terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${VERSION}/${OS_ARCH}/${BINARY}
 	mkdir -p ~/.terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${VERSION}/${OS_ARCH}
 	mv bin/${BINARY} ~/.terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${VERSION}/${OS_ARCH}
+
+clean-local:
+	rm -rf bin
+	rm -rf ~/.terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${VERSION}/${OS_ARCH}
 
 build-all-arches:
 	GOOS=darwin GOARCH=amd64 go build -o ./bin/${BINARY}_${VERSION}_darwin_amd64
@@ -50,26 +54,48 @@ release: generate build-all-arches
 
 include examples/Makefile
 
-e2e-cd-apply: 
-	make install 
-	make e2e-init
-	make e2e-apply 
+.PHONY: e2e-apply-cd e2e-destroy-cd e2e-clean-cd
+.PHONY: e2e-apply-cosmo e2e-destroy-cosmo e2e-clean-cosmo
+.PHONY: e2e-apply-cosmo-monograph e2e-destroy-cosmo-monograph e2e-clean-cosmo-monograph
+.PHONY: e2e-cd e2e-cosmo e2e-cosmo-monograph clean
 
-e2e-cd-destroy: 
+e2e-apply-cd:
+	FEATURE=examples/provider make e2e-init
+	FEATURE=examples/provider make e2e-apply 
+
+e2e-destroy-cd: 
 	make e2e-destroy 
 
-e2e-cosmo-apply: 
-	FEATURE=examples/cosmo make install 
+e2e-clean-cd: 
+	make e2e-clean 
+
+e2e-apply-cosmo: 
 	FEATURE=examples/cosmo make e2e-init 
 	FEATURE=examples/cosmo make e2e-apply 
 
-e2e-cosmo-destroy: 
+e2e-destroy-cosmo: 
 	FEATURE=examples/cosmo make e2e-destroy 
 
-e2e-cosmo-monograph-apply: 
-	FEATURE=examples/resources/comso_monograph make install 
+e2e-clean-cosmo: 
+	FEATURE=examples/cosmo make e2e-clean
+
+e2e-apply-cosmo-monograph: 
 	FEATURE=examples/resources/comso_monograph make e2e-init 
 	FEATURE=examples/resources/comso_monograph make e2e-apply 
 
-e2e-cosmo-monograph-destroy: 
+e2e-destroy-cosmo-monograph: 
 	FEATURE=examples/resources/comso_monograph make e2e-destroy 
+
+e2e-clean-cosmo-monograph: 
+	FEATURE=examples/resources/comso_monograph make e2e-clean
+
+## Convenience targets to run specific e2e tests
+
+e2e-cd: e2e-apply-cd e2e-destroy-cd
+e2e-cosmo: e2e-apply-cosmo e2e-destroy-cosmo
+e2e-cosmo-monograph: e2e-apply-cosmo-monograph e2e-destroy-cosmo-monograph
+
+e2e: e2e-cd e2e-cosmo e2e-cosmo-monograph
+
+clean: e2e-clean-cd e2e-clean-cosmo e2e-clean-cosmo-monograph clean-local
+destroy: e2e-destroy-cd e2e-destroy-cosmo e2e-destroy-cosmo-monograph
