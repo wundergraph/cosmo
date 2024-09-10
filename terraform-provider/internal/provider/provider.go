@@ -83,6 +83,7 @@ func (p *CosmoProvider) Resources(ctx context.Context) []func() resource.Resourc
 		services.NewFederatedGraphResource,
 		services.NewNamespaceResource,
 		services.NewSubgraphResource,
+		services.NewMonographResource,
 	}
 }
 
@@ -91,6 +92,7 @@ func (p *CosmoProvider) DataSources(ctx context.Context) []func() datasource.Dat
 		services.NewFederatedGraphDataSource,
 		services.NewSubgraphDataSource,
 		services.NewNamespaceDataSource,
+		services.NewMonographDataSource,
 	}
 }
 
