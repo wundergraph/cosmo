@@ -10,6 +10,6 @@ output "namespace" {
   value = cosmo_federated_graph.test.namespace
 }
 
-output "service_url" {
-  value = cosmo_federated_graph.test.service_url
+output "routing_url" {
+  value = cosmo_federated_graph.test.routing_url
 }

@@ -17,7 +17,7 @@ variable "create_namespace" {
 variable "federated_graph" {
   type = object({
     name        = string
-    service_url = string
+    routing_url = string
   })
   description = "The parameters of the federated graph"
 }

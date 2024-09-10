@@ -11,7 +11,7 @@ data "cosmo_namespace" "namespace" {
 resource "cosmo_federated_graph" "federated_graph" {
   for_each    = !var.attach_subgraphs ? { "enabled" : true } : {}
   name        = var.federated_graph.name
-  service_url = var.federated_graph.service_url
+  routing_url = var.federated_graph.routing_url
   namespace   = var.create_namespace ? cosmo_namespace.namespace["enabled"].name : data.cosmo_namespace.namespace["enabled"].name
 }
 

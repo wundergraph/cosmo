@@ -7,7 +7,7 @@ module "cosmo-federated-graph" {
 
   federated_graph = {
     name        = "dev-federated-graph"
-    service_url = "http://localhost:3000"
+    routing_url = "http://localhost:3000"
   }
   subgraphs = {
     "subgraph-1" = {

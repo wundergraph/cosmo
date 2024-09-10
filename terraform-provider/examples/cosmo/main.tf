@@ -46,7 +46,7 @@ resource "cosmo_federated_graph" "federated_graph" {
   for_each = local.stages
 
   name        = "${each.key}-federated-graph"
-  service_url = "http://${each.key}.localhost:3000"
+  routing_url = "http://${each.key}.localhost:3000"
   namespace   = cosmo_namespace.namespace[each.key].name
 }
 
