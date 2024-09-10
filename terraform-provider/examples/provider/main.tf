@@ -8,7 +8,7 @@ module "resource_cosmo_federated_graph" {
   source = "../resources/cosmo_federated_graph"
 
   name        = "terraform-federated-graph-demo"
-  service_url = "http://localhost:3000"
+  routing_url = "http://localhost:3000"
   namespace   = module.resource_cosmo_namespace.name
 }
 

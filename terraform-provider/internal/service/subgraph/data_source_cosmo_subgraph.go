@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -27,10 +28,18 @@ type SubgraphDataSource struct {
 
 // SubgraphDataSourceModel describes the data source data model.
 type SubgraphDataSourceModel struct {
-	Id         types.String `tfsdk:"id"`
-	Name       types.String `tfsdk:"name"`
-	Namespace  types.String `tfsdk:"namespace"`
-	RoutingUrl types.String `tfsdk:"routing_url"`
+	Id                   types.String `tfsdk:"id"`
+	Name                 types.String `tfsdk:"name"`
+	Namespace            types.String `tfsdk:"namespace"`
+	RoutingUrl           types.String `tfsdk:"routing_url"`
+	BaseSubgraphName     types.String `tfsdk:"base_subgraph_name"`
+	Labels               types.List   `tfsdk:"labels"`
+	SubscriptionUrl      types.String `tfsdk:"subscription_url"`
+	Readme               types.String `tfsdk:"readme"`
+	WebsocketSubprotocol types.String `tfsdk:"websocket_subprotocol"`
+	IsEventDrivenGraph   types.Bool   `tfsdk:"is_event_driven_graph"`
+	IsFeatureSubgraph    types.Bool   `tfsdk:"is_feature_subgraph"`
+	Headers              types.List   `tfsdk:"headers"`
 }
 
 func (d *SubgraphDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -57,6 +66,40 @@ func (d *SubgraphDataSource) Schema(ctx context.Context, req datasource.SchemaRe
 			"routing_url": schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "The routing URL of the subgraph.",
+			},
+			"base_subgraph_name": schema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "The base subgraph name.",
+			},
+			"subscription_url": schema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "The subscription URL for the subgraph.",
+			},
+			"readme": schema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "The readme for the subgraph.",
+			},
+			"websocket_subprotocol": schema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "The websocket subprotocol for the subgraph.",
+			},
+			"is_event_driven_graph": schema.BoolAttribute{
+				Computed:            true,
+				MarkdownDescription: "Indicates if the subgraph is event-driven.",
+			},
+			"is_feature_subgraph": schema.BoolAttribute{
+				Computed:            true,
+				MarkdownDescription: "Indicates if the subgraph is a feature subgraph.",
+			},
+			"headers": schema.ListAttribute{
+				Computed:            true,
+				MarkdownDescription: "Headers for the subgraph.",
+				ElementType:         types.StringType,
+			},
+			"labels": schema.ListAttribute{
+				Computed:            true,
+				MarkdownDescription: "Labels for the subgraph.",
+				ElementType:         types.StringType,
 			},
 		},
 	}
@@ -99,10 +142,20 @@ func (d *SubgraphDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	data.Id = types.StringValue(subgraph.Id)
-	data.Name = types.StringValue(subgraph.Name)
-	data.Namespace = types.StringValue(subgraph.Namespace)
-	data.RoutingUrl = types.StringValue(subgraph.RoutingURL)
+	data.Id = types.StringValue(subgraph.GetBaseSubgraphId())
+	data.Name = types.StringValue(subgraph.GetName())
+	data.Namespace = types.StringValue(subgraph.GetNamespace())
+	data.RoutingUrl = types.StringValue(subgraph.GetRoutingURL())
+
+	var labels []attr.Value
+	for _, matcher := range subgraph.GetLabels() {
+		labels = append(labels, types.StringValue(fmt.Sprintf("%s=%s", matcher.GetKey(), matcher.GetValue())))
+	}
+
+	data.Labels = types.ListValueMust(types.StringType, labels)
+	data.Readme = types.StringValue(subgraph.GetReadme())
+	data.IsEventDrivenGraph = types.BoolValue(subgraph.GetIsEventDrivenGraph())
+	data.IsFeatureSubgraph = types.BoolValue(subgraph.GetIsFeatureSubgraph())
 
 	tflog.Trace(ctx, "Read subgraph data source", map[string]interface{}{
 		"id": data.Id.ValueString(),

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -150,10 +151,10 @@ func (r *MonographResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 
-	data.Id = types.StringValue(monograph.Id)
-	data.Name = types.StringValue(monograph.Name)
-	data.Namespace = types.StringValue(monograph.Namespace)
-	data.RoutingURL = types.StringValue(monograph.RoutingURL)
+	data.Id = types.StringValue(monograph.GetId())
+	data.Name = types.StringValue(monograph.GetName())
+	data.Namespace = types.StringValue(monograph.GetNamespace())
+	data.RoutingURL = types.StringValue(monograph.GetRoutingURL())
 
 	if monograph.Readme != nil {
 		data.Readme = types.StringValue(*monograph.Readme)
@@ -219,4 +220,8 @@ func (r *MonographResource) Delete(ctx context.Context, req resource.DeleteReque
 		utils.AddDiagnosticError(resp, "Error Deleting Monograph", fmt.Sprintf("Could not delete monograph: %s", err))
 		return
 	}
+}
+
+func (r *MonographResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }

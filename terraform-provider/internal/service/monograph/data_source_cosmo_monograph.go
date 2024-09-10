@@ -27,9 +27,14 @@ type MonographDataSource struct {
 
 // MonographDataSourceModel describes the data source data model.
 type MonographDataSourceModel struct {
-	Id        types.String `tfsdk:"id"`
-	Name      types.String `tfsdk:"name"`
-	Namespace types.String `tfsdk:"namespace"`
+	Id                     types.String `tfsdk:"id"`
+	Name                   types.String `tfsdk:"name"`
+	Namespace              types.String `tfsdk:"namespace"`
+	Readme                 types.String `tfsdk:"readme"`
+	RoutingURL             types.String `tfsdk:"routing_url"`
+	AdmissionWebhookUrl    types.String `tfsdk:"admission_webhook_url"`
+	AdmissionWebhookSecret types.String `tfsdk:"admission_webhook_secret"`
+	LabelMatchers          types.List   `tfsdk:"label_matchers"`
 }
 
 // Metadata returns the data source type name.
@@ -53,6 +58,28 @@ func (d *MonographDataSource) Schema(ctx context.Context, req datasource.SchemaR
 			"namespace": schema.StringAttribute{
 				Optional:            true,
 				MarkdownDescription: "The namespace in which the monograph is located.",
+			},
+			"readme": schema.StringAttribute{
+				MarkdownDescription: "Readme content for the federated graph.",
+				Computed:            true,
+			},
+			"admission_webhook_url": schema.StringAttribute{
+				MarkdownDescription: "The URL for the admission webhook that will be triggered during graph operations.",
+				Computed:            true,
+			},
+			"admission_webhook_secret": schema.StringAttribute{
+				MarkdownDescription: "The secret token used to authenticate the admission webhook requests.",
+				Computed:            true,
+				Sensitive:           true,
+			},
+			"label_matchers": schema.ListAttribute{
+				MarkdownDescription: "A list of label matchers used to select the services that will form the federated graph.",
+				Computed:            true,
+				ElementType:         types.StringType,
+			},
+			"routing_url": schema.StringAttribute{
+				MarkdownDescription: "The URL for the federated graph.",
+				Computed:            true,
 			},
 		},
 	}
@@ -101,6 +128,9 @@ func (d *MonographDataSource) Read(ctx context.Context, req datasource.ReadReque
 	data.Id = types.StringValue(monograph.GetId())
 	data.Name = types.StringValue(monograph.GetName())
 	data.Namespace = types.StringValue(monograph.GetNamespace())
+	data.RoutingURL = types.StringValue(monograph.GetRoutingURL())
+	data.Readme = types.StringValue(monograph.GetReadme())
+	data.AdmissionWebhookUrl = types.StringValue(monograph.GetAdmissionWebhookUrl())
 
 	tflog.Trace(ctx, "Read monograph data source", map[string]interface{}{
 		"id": data.Id.ValueString(),

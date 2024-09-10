@@ -24,7 +24,7 @@ terraform {
 
 resource "cosmo_federated_graph" "test" {
   name        = var.name
-  service_url = var.service_url
+  routing_url = var.routing_url
   namespace   = var.namespace
 }
 ```
@@ -34,7 +34,7 @@ resource "cosmo_federated_graph" "test" {
 
 ### Required
 
-- `service_url` (String) The URL of the service that routes requests to the federated graph. Defaults to 'https://default-service-url.com' if not provided.
+- `routing_url` (String) The URL of the service that routes requests to the federated graph.
 
 ### Optional
 

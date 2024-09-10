@@ -2,7 +2,7 @@ variable "name" {
   type = string
 }
 
-variable "service_url" {
+variable "routing_url" {
   type = string
 }
 

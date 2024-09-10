@@ -32,7 +32,7 @@ type FederatedGraphDataSourceModel struct {
 	Name                   types.String `tfsdk:"name"`
 	Namespace              types.String `tfsdk:"namespace"`
 	Readme                 types.String `tfsdk:"readme"`
-	ServiceUrl             types.String `tfsdk:"service_url"`
+	RoutingURL             types.String `tfsdk:"routing_url"`
 	AdmissionWebhookUrl    types.String `tfsdk:"admission_webhook_url"`
 	AdmissionWebhookSecret types.String `tfsdk:"admission_webhook_secret"`
 	LabelMatchers          types.List   `tfsdk:"label_matchers"`
@@ -57,29 +57,29 @@ func (d *FederatedGraphDataSource) Schema(ctx context.Context, req datasource.Sc
 			},
 			"namespace": schema.StringAttribute{
 				MarkdownDescription: "The namespace in which the federated graph is located.",
-				Optional:            true,
+				Required:            true,
 			},
 			"readme": schema.StringAttribute{
 				MarkdownDescription: "Readme content for the federated graph.",
-				Optional:            true,
+				Computed:            true,
 			},
 			"admission_webhook_url": schema.StringAttribute{
 				MarkdownDescription: "The URL for the admission webhook that will be triggered during graph operations.",
-				Optional:            true,
+				Computed:            true,
 			},
 			"admission_webhook_secret": schema.StringAttribute{
 				MarkdownDescription: "The secret token used to authenticate the admission webhook requests.",
-				Optional:            true,
+				Computed:            true,
 				Sensitive:           true,
-			},
-			"service_url": schema.StringAttribute{
-				MarkdownDescription: "The URL of the service that routes requests to the federated graph.",
-				Optional:            true,
 			},
 			"label_matchers": schema.ListAttribute{
 				MarkdownDescription: "A list of label matchers used to select the services that will form the federated graph.",
-				Optional:            true,
+				Computed:            true,
 				ElementType:         types.StringType,
+			},
+			"routing_url": schema.StringAttribute{
+				MarkdownDescription: "The URL for the federated graph.",
+				Computed:            true,
 			},
 		},
 	}
@@ -127,24 +127,14 @@ func (d *FederatedGraphDataSource) Read(ctx context.Context, req datasource.Read
 	data.Id = types.StringValue(graph.GetId())
 	data.Name = types.StringValue(graph.GetName())
 	data.Namespace = types.StringValue(graph.GetNamespace())
-	data.ServiceUrl = types.StringValue(graph.GetRoutingURL())
-	data.Readme = types.StringValue(graph.GetReadme())
-	data.AdmissionWebhookUrl = types.StringValue(graph.GetAdmissionWebhookUrl())
+	data.RoutingURL = types.StringValue(graph.GetRoutingURL())
 
 	if graph.Readme != nil {
 		data.Readme = types.StringValue(*graph.Readme)
-	} else {
-		data.Readme = types.StringNull()
-	}
-
-	if graph.AdmissionWebhookUrl != nil {
-		data.AdmissionWebhookUrl = types.StringValue(*graph.AdmissionWebhookUrl)
-	} else {
-		data.AdmissionWebhookUrl = types.StringNull()
 	}
 
 	var labelMatchers []attr.Value
-	for _, matcher := range graph.LabelMatchers {
+	for _, matcher := range graph.GetLabelMatchers() {
 		labelMatchers = append(labelMatchers, types.StringValue(matcher))
 	}
 	data.LabelMatchers = types.ListValueMust(types.StringType, labelMatchers)

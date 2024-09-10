@@ -41,8 +41,8 @@ type FederatedGraphResourceModel struct {
 	Name                   types.String `tfsdk:"name"`
 	Namespace              types.String `tfsdk:"namespace"`
 	Readme                 types.String `tfsdk:"readme"`
-	ServiceUrl             types.String `tfsdk:"service_url"`
-	AdmissionWebhookURL    types.String `tfsdk:"admission_webhook_url"`
+	RoutingURL             types.String `tfsdk:"routing_url"`
+	AdmissionWebhookUrl    types.String `tfsdk:"admission_webhook_url"`
 	AdmissionWebhookSecret types.String `tfsdk:"admission_webhook_secret"`
 	LabelMatchers          types.List   `tfsdk:"label_matchers"`
 }
@@ -86,8 +86,8 @@ func (r *FederatedGraphResource) Schema(ctx context.Context, req resource.Schema
 				Optional:            true,
 				Sensitive:           true,
 			},
-			"service_url": schema.StringAttribute{
-				MarkdownDescription: "The URL of the service that routes requests to the federated graph. Defaults to 'https://default-service-url.com' if not provided.",
+			"routing_url": schema.StringAttribute{
+				MarkdownDescription: "The URL of the service that routes requests to the federated graph.",
 				Required:            true,
 			},
 			"label_matchers": schema.ListAttribute{
@@ -136,11 +136,11 @@ func (r *FederatedGraphResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	graph := platformv1.FederatedGraph{
+	apiGraph := platformv1.FederatedGraph{
 		Name:                data.Name.ValueString(),
 		Namespace:           data.Namespace.ValueString(),
-		RoutingURL:          data.ServiceUrl.ValueString(),
-		AdmissionWebhookUrl: data.AdmissionWebhookURL.ValueStringPointer(),
+		RoutingURL:          data.RoutingURL.ValueString(),
+		AdmissionWebhookUrl: data.AdmissionWebhookUrl.ValueStringPointer(),
 		Readme:              data.Readme.ValueStringPointer(),
 		LabelMatchers:       labelMatchers,
 	}
@@ -150,9 +150,9 @@ func (r *FederatedGraphResource) Create(ctx context.Context, req resource.Create
 		admissionWebhookSecret = data.AdmissionWebhookSecret.ValueStringPointer()
 	}
 
-	apiResponse, err := api.CreateFederatedGraph(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, admissionWebhookSecret, &graph)
+	apiResponse, err := api.CreateFederatedGraph(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, admissionWebhookSecret, &apiGraph)
 	if err != nil {
-		utils.AddDiagnosticError(resp, "Error Creating Federated Graph", fmt.Sprintf("Could not create federated graph: %s", err))
+		utils.AddDiagnosticError(resp, "Error Creating Federated Graph", fmt.Sprintf("Could not create federated graph: %s, graph name: %s, routing url: %s", err, apiGraph.GetName(), apiGraph.GetRoutingURL()))
 		return
 	}
 
@@ -161,13 +161,21 @@ func (r *FederatedGraphResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	res, err := api.GetFederatedGraph(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, graph.Name, graph.Namespace)
+	getGraphResponse, err := api.GetFederatedGraph(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, apiGraph.Name, apiGraph.Namespace)
 	if err != nil {
 		utils.AddDiagnosticError(resp, "Error Retrieving Federated Graph", fmt.Sprintf("Could not retrieve federated graph: %s", err))
 		return
 	}
 
-	data.Id = types.StringValue(res.Graph.GetId())
+	graph := getGraphResponse.Graph
+	data.Id = types.StringValue(graph.GetId())
+	data.Name = types.StringValue(graph.GetName())
+	data.Namespace = types.StringValue(graph.GetNamespace())
+	data.RoutingURL = types.StringValue(graph.GetRoutingURL())
+
+	if graph.Readme != nil {
+		data.Readme = types.StringValue(*graph.Readme)
+	}
 
 	utils.LogAction(ctx, "created", data.Id.ValueString(), data.Name.ValueString(), data.Namespace.ValueString())
 
@@ -200,9 +208,13 @@ func (r *FederatedGraphResource) Read(ctx context.Context, req resource.ReadRequ
 
 	graph := apiResponse.Graph
 	data.Id = types.StringValue(graph.GetId())
-	data.Name = types.StringValue(graph.Name)
-	data.Namespace = types.StringValue(graph.Namespace)
-	data.ServiceUrl = types.StringValue(graph.RoutingURL)
+	data.Name = types.StringValue(graph.GetName())
+	data.Namespace = types.StringValue(graph.GetNamespace())
+	data.RoutingURL = types.StringValue(graph.GetRoutingURL())
+
+	if graph.Readme != nil {
+		data.Readme = types.StringValue(*graph.Readme)
+	}
 
 	var labelMatchers []attr.Value
 	for _, matcher := range graph.LabelMatchers {
@@ -236,9 +248,10 @@ func (r *FederatedGraphResource) Update(ctx context.Context, req resource.Update
 	graph := platformv1.FederatedGraph{
 		Name:                data.Name.ValueString(),
 		Namespace:           data.Namespace.ValueString(),
-		RoutingURL:          data.ServiceUrl.ValueString(),
-		AdmissionWebhookUrl: data.AdmissionWebhookURL.ValueStringPointer(),
+		RoutingURL:          data.RoutingURL.ValueString(),
+		AdmissionWebhookUrl: data.AdmissionWebhookUrl.ValueStringPointer(),
 		LabelMatchers:       labelMatchers,
+		Readme:              data.Readme.ValueStringPointer(),
 	}
 
 	var admissionWebhookSecret *string
@@ -286,6 +299,5 @@ func (r *FederatedGraphResource) Delete(ctx context.Context, req resource.Delete
 }
 
 func (r *FederatedGraphResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	// Import the federated graph based on the ID
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }

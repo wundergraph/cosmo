@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/wundergraph/cosmo/terraform-provider-cosmo/internal/acceptance"
 )
 
 func TestAccSubgraphDataSource(t *testing.T) {
-	rName := "test-subgraph-unique" // Ensure a unique name
+	rName := acctest.RandomWithPrefix("test-subgraph")
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acceptance.TestAccPreCheck(t) },

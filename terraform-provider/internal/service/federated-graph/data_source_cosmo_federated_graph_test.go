@@ -35,7 +35,7 @@ func testAccFederatedGraphDataSourceConfig(name string) string {
 resource "cosmo_federated_graph" "test" {
   name      = "%s"
   namespace = "default"
-  service_url = "https://example.com"
+  routing_url = "https://example.com"
 }
 
 data "cosmo_federated_graph" "test" {

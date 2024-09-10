@@ -38,5 +38,13 @@ data "cosmo_subgraph" "test" {
 
 ### Read-Only
 
+- `base_subgraph_name` (String) The base subgraph name.
+- `headers` (List of String) Headers for the subgraph.
 - `id` (String) The unique identifier of the subgraph resource.
+- `is_event_driven_graph` (Boolean) Indicates if the subgraph is event-driven.
+- `is_feature_subgraph` (Boolean) Indicates if the subgraph is a feature subgraph.
+- `labels` (List of String) Labels for the subgraph.
+- `readme` (String) The readme for the subgraph.
 - `routing_url` (String) The routing URL of the subgraph.
+- `subscription_url` (String) The subscription URL for the subgraph.
+- `websocket_subprotocol` (String) The websocket subprotocol for the subgraph.

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -22,16 +23,16 @@ type SubgraphResourceModel struct {
 	Id                   types.String `tfsdk:"id"`
 	Name                 types.String `tfsdk:"name"`
 	Namespace            types.String `tfsdk:"namespace"`
-	RoutingUrl           types.String `tfsdk:"routing_url"`
+	RoutingURL           types.String `tfsdk:"routing_url"`
 	BaseSubgraphName     types.String `tfsdk:"base_subgraph_name"`
-	Labels               types.List   `tfsdk:"labels"`
 	SubscriptionUrl      types.String `tfsdk:"subscription_url"`
 	Readme               types.String `tfsdk:"readme"`
 	WebsocketSubprotocol types.String `tfsdk:"websocket_subprotocol"`
 	IsEventDrivenGraph   types.Bool   `tfsdk:"is_event_driven_graph"`
 	IsFeatureSubgraph    types.Bool   `tfsdk:"is_feature_subgraph"`
-	Headers              types.List   `tfsdk:"headers"`
 	UnsetLabels          types.Bool   `tfsdk:"unset_labels"`
+	Headers              types.List   `tfsdk:"headers"`
+	Labels               types.List   `tfsdk:"labels"`
 }
 
 func NewSubgraphResource() resource.Resource {
@@ -140,7 +141,7 @@ func (r *SubgraphResource) Create(ctx context.Context, req resource.CreateReques
 		})
 	}
 
-	err = api.CreateSubgraph(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, data.Name.ValueString(), data.Namespace.ValueString(), data.RoutingUrl.ValueString(), data.BaseSubgraphName.ValueStringPointer(), labels, data.SubscriptionUrl.ValueStringPointer(), data.Readme.ValueStringPointer(), data.IsEventDrivenGraph.ValueBoolPointer(), data.IsFeatureSubgraph.ValueBoolPointer())
+	err = api.CreateSubgraph(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, data.Name.ValueString(), data.Namespace.ValueString(), data.RoutingURL.ValueString(), data.BaseSubgraphName.ValueStringPointer(), labels, data.SubscriptionUrl.ValueStringPointer(), data.Readme.ValueStringPointer(), data.IsEventDrivenGraph.ValueBoolPointer(), data.IsFeatureSubgraph.ValueBoolPointer())
 	if err != nil {
 		utils.AddDiagnosticError(resp, "Error Creating Subgraph", fmt.Sprintf("Could not create subgraph: %s", err))
 		return
@@ -152,10 +153,7 @@ func (r *SubgraphResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	data.Id = types.StringValue(subgraph.Id)
-	data.Name = types.StringValue(subgraph.Name)
-	data.Namespace = types.StringValue(subgraph.Namespace)
-	data.RoutingUrl = types.StringValue(subgraph.RoutingURL)
+	data.Id = types.StringValue(subgraph.GetId())
 
 	if subgraph.BaseSubgraphName != nil {
 		data.BaseSubgraphName = types.StringValue(*subgraph.BaseSubgraphName)
@@ -178,10 +176,10 @@ func (r *SubgraphResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	data.Id = types.StringValue(subgraph.Id)
-	data.Name = types.StringValue(subgraph.Name)
-	data.Namespace = types.StringValue(subgraph.Namespace)
-	data.RoutingUrl = types.StringValue(subgraph.RoutingURL)
+	data.Id = types.StringValue(subgraph.GetId())
+	data.Name = types.StringValue(subgraph.GetName())
+	data.Namespace = types.StringValue(subgraph.GetNamespace())
+	data.RoutingURL = types.StringValue(subgraph.GetRoutingURL())
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -213,8 +211,8 @@ func (r *SubgraphResource) Update(ctx context.Context, req resource.UpdateReques
 		unsetLabels = &[]bool{true}[0]
 	}
 
-	headers := convertToHeaders(data.Headers)
-	err = api.UpdateSubgraph(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, data.Name.ValueString(), data.Namespace.ValueString(), data.RoutingUrl.ValueString(), labels, headers, data.SubscriptionUrl.ValueStringPointer(), data.Readme.ValueStringPointer(), unsetLabels)
+	headers := utils.ConvertHeadersToStringList(data.Headers)
+	err = api.UpdateSubgraph(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, data.Name.ValueString(), data.Namespace.ValueString(), data.RoutingURL.ValueString(), labels, headers, data.SubscriptionUrl.ValueStringPointer(), data.Readme.ValueStringPointer(), unsetLabels)
 	if err != nil {
 		utils.AddDiagnosticError(resp, "Error Updating Subgraph", fmt.Sprintf("Could not update subgraph: %s", err))
 		return
@@ -224,7 +222,6 @@ func (r *SubgraphResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	// Fetch the updated subgraph again
 	subgraph, err := api.GetSubgraph(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, data.Name.ValueString(), data.Namespace.ValueString())
 	if err != nil {
 		utils.AddDiagnosticError(resp, "Error Fetching Updated Subgraph", fmt.Sprintf("Could not fetch updated subgraph: %s", err))
@@ -250,13 +247,6 @@ func (r *SubgraphResource) Delete(ctx context.Context, req resource.DeleteReques
 	}
 }
 
-// Helper function to convert headers from List to []string
-func convertToHeaders(headersList types.List) []string {
-	var headers []string
-	for _, header := range headersList.Elements() {
-		if headerStr, ok := header.(types.String); ok {
-			headers = append(headers, headerStr.ValueString())
-		}
-	}
-	return headers
+func (r *SubgraphResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }

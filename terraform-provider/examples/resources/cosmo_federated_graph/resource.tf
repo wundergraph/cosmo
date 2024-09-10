@@ -9,7 +9,8 @@ terraform {
 
 resource "cosmo_federated_graph" "test" {
   name        = var.name
-  service_url = var.service_url
+  routing_url = var.routing_url
   namespace   = var.namespace
 }
+
 
