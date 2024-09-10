@@ -73,7 +73,11 @@ func (p *CosmoProvider) Configure(ctx context.Context, req provider.ConfigureReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	providerConfig, err := client.NewClient()
+
+	cosmoApiKey := data.CosmoApiKey.ValueString()
+	cosmoApiUrl := data.CosmoApiUrl.ValueString()
+
+	providerConfig, err := client.NewClient(cosmoApiKey, cosmoApiUrl)
 
 	if err != nil {
 		utils.AddDiagnosticError(resp, "Error configuring client", err.Error())

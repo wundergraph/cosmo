@@ -14,7 +14,7 @@ type PlatformClient struct {
 	CosmoApiKey string
 }
 
-func NewClient() (*PlatformClient, error) {
+func NewClient(apiKey, apiUrl string) (*PlatformClient, error) {
 	cosmoApiKey, ok := os.LookupEnv(utils.EnvCosmoApiKey)
 	if !ok {
 		return nil, fmt.Errorf("COSMO_API_KEY environment variable not set")
@@ -22,7 +22,7 @@ func NewClient() (*PlatformClient, error) {
 
 	cosmoApiUrl, ok := os.LookupEnv(utils.EnvCosmoApiUrl)
 	if !ok {
-		return nil, fmt.Errorf("COSMO_API_URL environment variable not set")
+		cosmoApiUrl = "https://cosmo-cp.wundergraph.com"
 	}
 
 	httpClient := http.Client{}
