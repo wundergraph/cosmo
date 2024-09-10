@@ -283,15 +283,15 @@
     }
   },
   "SecurityConfiguration": {
-    "BlockMutations": false,
-    "BlockSubscriptions": false,
-    "BlockNonPersistedOperations": false,
-    "QueryDepthConfiguration": {
+    "DepthLimit": {
       "Enabled": false,
       "Limit": 0,
       "CacheSize": 1024,
       "IgnorePersistedOperations": false
-    }
+    },
+    "BlockMutations": false,
+    "BlockSubscriptions": false,
+    "BlockNonPersistedOperations": false
   },
   "EngineExecutionConfiguration": {
     "Debug": {
