@@ -1,5 +1,5 @@
 {
-  "id": "685af9c6-4016-475a-8d7e-8f4cb6f93a92",
+  "id": "ca3746f4-c1d1-427f-9594-3215b170c9f1",
   "prevId": "7f972522-b763-4b4e-ac90-53e7f4b9a093",
   "version": "7",
   "dialect": "postgresql",
@@ -4886,7 +4886,7 @@
       "values": [
         "UNUSED_FIELDS",
         "DEPRECATED_FIELDS",
-        "FORCE_DEPRECATION_BEFORE_DELETION"
+        "REQUIRE_DEPRECATION_BEFORE_DELETION"
       ]
     },
     "public.integration_type": {

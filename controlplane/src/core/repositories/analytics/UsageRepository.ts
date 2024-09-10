@@ -177,6 +177,12 @@ export class UsageRepository {
     const {
       dateRange: { end, start },
     } = parseTimeFilters(undefined, rangeInHours);
+    // all_fields is a table of all fields and its typenames that we want to check if they are unused.
+    // used_fields is table which contains the fields that are used in the given time range.
+    // We then left join all_fields with used_fields and select the fields that do not have an entry in used_fields.
+    // which will give us the fields that are not used.
+
+    // In the used_fields query, we use ARRAY JOIN to expand the TypeNames array into separate rows.
 
     const query = `
       WITH 
@@ -203,6 +209,8 @@ export class UsageRepository {
                 Timestamp >= startDate AND Timestamp <= endDate
                 AND OrganizationID = '${organizationId}'
                 AND FederatedGraphID = '${federatedGraphId}'
+            GROUP BY
+                FieldName, TypeName
         )
       SELECT
           all_fields.Name as name,
@@ -244,6 +252,12 @@ export class UsageRepository {
       dateRange: { end, start },
     } = parseTimeFilters(undefined, range);
 
+    // all_fields is a table of all fields and their typenames that we want to check if they are used.
+    // used_fields is table which contains the fields and their typenames that are used in the given time range.
+    // We then inner join all_fields with used_fields and select all the entries.
+    // which will give us the fields that are used.
+
+    // In the used_fields query, we use ARRAY JOIN to expand the TypeNames array into separate rows.
     const query = `
       WITH 
         toDateTime('${start}') AS startDate,
@@ -269,6 +283,8 @@ export class UsageRepository {
                 Timestamp >= startDate AND Timestamp <= endDate
                 AND OrganizationID = '${organizationId}'
                 AND FederatedGraphID = '${federatedGraphId}'
+            GROUP BY
+                FieldName, TypeName
         )
       SELECT
           all_fields.Name as name,

@@ -584,7 +584,7 @@ type GraphPruningRuleType = Record<GraphPruningRuleEnum, GraphPruningRuleEnum>;
 export const GraphPruningRules: GraphPruningRuleType = {
   UNUSED_FIELDS: 'UNUSED_FIELDS',
   DEPRECATED_FIELDS: 'DEPRECATED_FIELDS',
-  FORCE_DEPRECATION_BEFORE_DELETION: 'FORCE_DEPRECATION_BEFORE_DELETION',
+  REQUIRE_DEPRECATION_BEFORE_DELETION: 'REQUIRE_DEPRECATION_BEFORE_DELETION',
 };
 
 export interface SchemaGraphPruningDTO {

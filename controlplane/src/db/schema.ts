@@ -1543,7 +1543,7 @@ export const namespaceLintCheckConfigRelations = relations(namespaceLintCheckCon
 export const graphPruningRulesEnum = pgEnum('graph_pruning_rules', [
   'UNUSED_FIELDS',
   'DEPRECATED_FIELDS',
-  'FORCE_DEPRECATION_BEFORE_DELETION',
+  'REQUIRE_DEPRECATION_BEFORE_DELETION',
 ] as const);
 
 export const namespaceGraphPruningCheckConfig = pgTable('namespace_graph_pruning_check_config', {

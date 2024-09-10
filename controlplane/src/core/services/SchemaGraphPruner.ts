@@ -232,7 +232,7 @@ export default class SchemaGraphPruner {
       for (const field of nonDeprecatedDeletedFields) {
         const [typeName, name] = field.path.split('.');
         graphPruningIssues.push({
-          graphPruningRuleType: 'FORCE_DEPRECATION_BEFORE_DELETION',
+          graphPruningRuleType: 'REQUIRE_DEPRECATION_BEFORE_DELETION',
           severity: severityLevel === 'error' ? LintSeverity.error : LintSeverity.warn,
           fieldPath: field.path,
           message: `Field ${name} of type ${typeName} was removed without being deprecated first.`,
@@ -318,7 +318,7 @@ export default class SchemaGraphPruner {
 
           break;
         }
-        case 'FORCE_DEPRECATION_BEFORE_DELETION': {
+        case 'REQUIRE_DEPRECATION_BEFORE_DELETION': {
           const nonDeprecatedDeletedFields = this.fetchNonDeprecatedDeletedFields({
             oldSchema: subgraph.schemaSDL,
             federatedGraphs,
