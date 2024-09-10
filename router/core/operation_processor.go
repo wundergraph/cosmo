@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/middleware/operation_complexity"
 	"io"
 	"net/http"
 	"net/url"
@@ -85,6 +86,7 @@ type OperationProcessorOptions struct {
 	EnablePersistedOperationsCache bool
 	NormalizationCache             *ristretto.Cache[uint64, NormalizationCacheEntry]
 	ValidationCache                *ristretto.Cache[uint64, bool]
+	QueryDepthCache                *ristretto.Cache[uint64, int]
 	ParseKitPoolSize               int
 }
 
@@ -122,6 +124,7 @@ type OperationCache struct {
 
 	normalizationCache *ristretto.Cache[uint64, NormalizationCacheEntry]
 	validationCache    *ristretto.Cache[uint64, bool]
+	queryDepthCache    *ristretto.Cache[uint64, int]
 }
 
 // OperationKit provides methods to parse, normalize and validate operations.
@@ -740,6 +743,39 @@ func (o *OperationKit) Validate(skipLoader bool) (cacheHit bool, err error) {
 	return
 }
 
+// ValidateQueryDepth validates that the operation query depth isn't greater than the max query depth.
+func (o *OperationKit) ValidateQueryDepth(maxQueryDepth int, operation, definition *ast.Document) (bool, int, error) {
+	if o.cache != nil && o.cache.queryDepthCache != nil {
+		depth, cacheHit := o.cache.queryDepthCache.Get(o.parsedOperation.ID)
+		if cacheHit {
+			valid := depth <= maxQueryDepth
+			if !valid {
+				return cacheHit, depth, &httpGraphqlError{
+					message:    fmt.Sprintf("The query depth %d exceeds the max query depth allowed (%d)", depth, maxQueryDepth),
+					statusCode: http.StatusBadRequest,
+				}
+			}
+			return cacheHit, depth, nil
+		}
+	}
+
+	report := operationreport.Report{}
+	globalComplexityResult, _ := operation_complexity.CalculateOperationComplexity(operation, definition, &report)
+	valid := globalComplexityResult.Depth <= maxQueryDepth
+
+	if o.cache != nil && o.cache.queryDepthCache != nil {
+		o.cache.queryDepthCache.Set(o.parsedOperation.ID, globalComplexityResult.Depth, 1)
+	}
+
+	if !valid {
+		return false, globalComplexityResult.Depth, &httpGraphqlError{
+			message:    fmt.Sprintf("The query depth %d exceeds the max query depth allowed (%d)", globalComplexityResult.Depth, maxQueryDepth),
+			statusCode: http.StatusBadRequest,
+		}
+	}
+	return false, globalComplexityResult.Depth, nil
+}
+
 var (
 	literalIF = []byte("if")
 )
@@ -826,6 +862,12 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 			processor.operationCache = &OperationCache{}
 		}
 		processor.operationCache.validationCache = opts.ValidationCache
+	}
+	if opts.QueryDepthCache != nil {
+		if processor.operationCache == nil {
+			processor.operationCache = &OperationCache{}
+		}
+		processor.operationCache.queryDepthCache = opts.QueryDepthCache
 	}
 	return processor
 }

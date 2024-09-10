@@ -283,6 +283,12 @@
     }
   },
   "SecurityConfiguration": {
+    "DepthLimit": {
+      "Enabled": false,
+      "Limit": 0,
+      "CacheSize": 1024,
+      "IgnorePersistedOperations": false
+    },
     "BlockMutations": false,
     "BlockSubscriptions": false,
     "BlockNonPersistedOperations": false
