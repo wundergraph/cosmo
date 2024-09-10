@@ -134,6 +134,8 @@ func (r *MonographResource) Create(ctx context.Context, req resource.CreateReque
 		data.Readme = types.StringValue(*monograph.Readme)
 	}
 
+	utils.LogAction(ctx, "created", data.Id.ValueString(), data.Name.ValueString(), data.Namespace.ValueString())
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -159,6 +161,8 @@ func (r *MonographResource) Read(ctx context.Context, req resource.ReadRequest, 
 	if monograph.Readme != nil {
 		data.Readme = types.StringValue(*monograph.Readme)
 	}
+
+	utils.LogAction(ctx, "read", data.Id.ValueString(), data.Name.ValueString(), data.Namespace.ValueString())
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -204,6 +208,8 @@ func (r *MonographResource) Update(ctx context.Context, req resource.UpdateReque
 	data.Id = types.StringValue(monograph.GetId())
 	data.Name = types.StringValue(monograph.GetName())
 
+	utils.LogAction(ctx, "updated", data.Id.ValueString(), data.Name.ValueString(), data.Namespace.ValueString())
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -220,6 +226,8 @@ func (r *MonographResource) Delete(ctx context.Context, req resource.DeleteReque
 		utils.AddDiagnosticError(resp, "Error Deleting Monograph", fmt.Sprintf("Could not delete monograph: %s", err))
 		return
 	}
+
+	utils.LogAction(ctx, "deleted", data.Id.ValueString(), data.Name.ValueString(), data.Namespace.ValueString())
 }
 
 func (r *MonographResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

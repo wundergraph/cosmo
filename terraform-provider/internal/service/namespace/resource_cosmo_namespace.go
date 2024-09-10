@@ -85,6 +85,8 @@ func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateReque
 	data.Id = types.StringValue(namespace.Id)
 	data.Name = types.StringValue(namespace.Name)
 
+	utils.LogAction(ctx, "created", data.Id.ValueString(), data.Name.ValueString(), "")
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -104,6 +106,8 @@ func (r *NamespaceResource) Read(ctx context.Context, req resource.ReadRequest, 
 
 	data.Id = types.StringValue(namespace.Id)
 	data.Name = types.StringValue(namespace.Name)
+
+	utils.LogAction(ctx, "read", data.Id.ValueString(), data.Name.ValueString(), "")
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -127,6 +131,10 @@ func (r *NamespaceResource) Update(ctx context.Context, req resource.UpdateReque
 		utils.AddDiagnosticError(resp, "Error Updating Namespace", fmt.Sprintf("Could not update namespace: %s", err))
 		return
 	}
+
+	utils.LogAction(ctx, "updated", data.Id.ValueString(), data.Name.ValueString(), "")
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r *NamespaceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -142,6 +150,8 @@ func (r *NamespaceResource) Delete(ctx context.Context, req resource.DeleteReque
 		utils.AddDiagnosticError(resp, "Error Deleting Namespace", fmt.Sprintf("Could not delete namespace: %s", err))
 		return
 	}
+
+	utils.LogAction(ctx, "deleted", data.Id.ValueString(), data.Name.ValueString(), "")
 }
 
 func getNamespaceByName(ctx context.Context, client platformv1connect.PlatformServiceClient, cosmoApiKey string, name string) (*platformv1.Namespace, error) {

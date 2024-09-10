@@ -53,7 +53,6 @@ func ConvertAndValidateLabelMatchers(data types.List, resp interface{}) ([]strin
 	return labelMatchers, err
 }
 
-// Generalized function for adding errors to diagnostics
 func AddDiagnosticError(resp interface{}, title, message string) {
 	switch r := resp.(type) {
 	case *resource.CreateResponse:
@@ -83,7 +82,6 @@ func AddDiagnosticError(resp interface{}, title, message string) {
 	}
 }
 
-// Centralized logging function
 func LogAction(ctx context.Context, action, resourceID, name, namespace string) {
 	tflog.Trace(ctx, fmt.Sprintf("%s federated graph resource", action), map[string]interface{}{
 		"id":        resourceID,

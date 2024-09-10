@@ -159,6 +159,8 @@ func (r *SubgraphResource) Create(ctx context.Context, req resource.CreateReques
 		data.BaseSubgraphName = types.StringValue(*subgraph.BaseSubgraphName)
 	}
 
+	utils.LogAction(ctx, "created", data.Id.ValueString(), data.Name.ValueString(), data.Namespace.ValueString())
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -180,6 +182,8 @@ func (r *SubgraphResource) Read(ctx context.Context, req resource.ReadRequest, r
 	data.Name = types.StringValue(subgraph.GetName())
 	data.Namespace = types.StringValue(subgraph.GetNamespace())
 	data.RoutingURL = types.StringValue(subgraph.GetRoutingURL())
+
+	utils.LogAction(ctx, "read", data.Id.ValueString(), data.Name.ValueString(), data.Namespace.ValueString())
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -228,7 +232,10 @@ func (r *SubgraphResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	data.Id = types.StringValue(subgraph.Id)
+	data.Id = types.StringValue(subgraph.GetId())
+
+	utils.LogAction(ctx, "updated", data.Id.ValueString(), data.Name.ValueString(), data.Namespace.ValueString())
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -245,6 +252,8 @@ func (r *SubgraphResource) Delete(ctx context.Context, req resource.DeleteReques
 		utils.AddDiagnosticError(resp, "Error Deleting Subgraph", fmt.Sprintf("Could not delete subgraph: %s", err))
 		return
 	}
+
+	utils.LogAction(ctx, "deleted", data.Id.ValueString(), data.Name.ValueString(), data.Namespace.ValueString())
 }
 
 func (r *SubgraphResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
