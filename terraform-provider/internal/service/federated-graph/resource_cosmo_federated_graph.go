@@ -1,4 +1,4 @@
-package services
+package federated_graph
 
 import (
 	"context"
@@ -199,6 +199,7 @@ func (r *FederatedGraphResource) Read(ctx context.Context, req resource.ReadRequ
 	}
 
 	graph := apiResponse.Graph
+	data.Id = types.StringValue(graph.GetId())
 	data.Name = types.StringValue(graph.Name)
 	data.Namespace = types.StringValue(graph.Namespace)
 	data.ServiceUrl = types.StringValue(graph.RoutingURL)

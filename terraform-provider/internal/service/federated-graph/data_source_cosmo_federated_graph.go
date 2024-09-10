@@ -1,4 +1,4 @@
-package services
+package federated_graph
 
 import (
 	"context"
@@ -124,9 +124,12 @@ func (d *FederatedGraphDataSource) Read(ctx context.Context, req datasource.Read
 	}
 
 	graph := apiResponse.Graph
-	data.Name = types.StringValue(graph.Name)
-	data.Namespace = types.StringValue(graph.Namespace)
-	data.ServiceUrl = types.StringValue(graph.RoutingURL)
+	data.Id = types.StringValue(graph.GetId())
+	data.Name = types.StringValue(graph.GetName())
+	data.Namespace = types.StringValue(graph.GetNamespace())
+	data.ServiceUrl = types.StringValue(graph.GetRoutingURL())
+	data.Readme = types.StringValue(graph.GetReadme())
+	data.AdmissionWebhookUrl = types.StringValue(graph.GetAdmissionWebhookUrl())
 
 	if graph.Readme != nil {
 		data.Readme = types.StringValue(*graph.Readme)

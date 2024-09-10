@@ -12,7 +12,7 @@ default: testacc
 
 .PHONY: testacc
 testacc:
-	TF_ACC=1 go test ./... -v $(TESTARGS) -timeout 120m
+	TF_ACC=1 go test $(TEST) -v -timeout 120m
 
 generate:
 	go generate ./...
@@ -65,3 +65,11 @@ e2e-cosmo-apply:
 
 e2e-cosmo-destroy: 
 	FEATURE=examples/cosmo make e2e-destroy 
+
+e2e-cosmo-monograph-apply: 
+	FEATURE=examples/resources/comso_monograph make install 
+	FEATURE=examples/resources/comso_monograph make e2e-init 
+	FEATURE=examples/resources/comso_monograph make e2e-apply 
+
+e2e-cosmo-monograph-destroy: 
+	FEATURE=examples/resources/comso_monograph make e2e-destroy 

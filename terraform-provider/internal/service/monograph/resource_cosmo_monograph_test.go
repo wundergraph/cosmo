@@ -1,10 +1,11 @@
-package acceptance
+package monograph_test
 
 import (
 	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/wundergraph/cosmo/terraform-provider-cosmo/internal/acceptance"
 )
 
 func TestAccMonographResource(t *testing.T) {
@@ -14,8 +15,8 @@ func TestAccMonographResource(t *testing.T) {
 	rRoutingURL := "http://example.com/routing"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { TestAccPreCheck(t) },
-		ProtoV6ProviderFactories: TestAccProtoV6ProviderFactories,
+		PreCheck:                 func() { acceptance.TestAccPreCheck(t) },
+		ProtoV6ProviderFactories: acceptance.TestAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccMonographResourceConfig(rName, rNamespace, rGraphUrl, rRoutingURL),
@@ -30,7 +31,6 @@ func TestAccMonographResource(t *testing.T) {
 			{
 				ResourceName:      "cosmo_monograph.test",
 				RefreshState:       true,
-				ImportStateId: 		rName,
 			},
 		},
 	})

@@ -1,4 +1,4 @@
-package services
+package monograph
 
 import (
 	"context"
@@ -128,7 +128,7 @@ func (r *MonographResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	data.Id = types.StringValue(monograph.Id)
+	data.Id = types.StringValue(monograph.GetId())
 	if monograph.Readme != nil {
 		data.Readme = types.StringValue(*monograph.Readme)
 	}
@@ -200,7 +200,8 @@ func (r *MonographResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 
-	data.Id = types.StringValue(monograph.Id)
+	data.Id = types.StringValue(monograph.GetId())
+	data.Name = types.StringValue(monograph.GetName())
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }

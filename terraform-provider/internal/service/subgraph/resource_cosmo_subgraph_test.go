@@ -1,10 +1,11 @@
-package acceptance
+package subgraph_test
 
 import (
 	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/wundergraph/cosmo/terraform-provider-cosmo/internal/acceptance"
 )
 
 func TestAccSubgraphResource(t *testing.T) {
@@ -13,8 +14,8 @@ func TestAccSubgraphResource(t *testing.T) {
 	rBaseSubgraphName := "base-subgraph"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { TestAccPreCheck(t) },
-		ProtoV6ProviderFactories: TestAccProtoV6ProviderFactories,
+		PreCheck:                 func() { acceptance.TestAccPreCheck(t) },
+		ProtoV6ProviderFactories: acceptance.TestAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccSubgraphResourceConfig(rName, rNamespace, rBaseSubgraphName),

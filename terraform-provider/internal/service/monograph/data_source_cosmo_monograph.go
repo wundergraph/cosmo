@@ -1,4 +1,4 @@
-package services
+package monograph
 
 import (
 	"context"
@@ -30,7 +30,6 @@ type MonographDataSourceModel struct {
 	Id        types.String `tfsdk:"id"`
 	Name      types.String `tfsdk:"name"`
 	Namespace types.String `tfsdk:"namespace"`
-	Content   types.String `tfsdk:"content"`
 }
 
 // Metadata returns the data source type name.
@@ -54,10 +53,6 @@ func (d *MonographDataSource) Schema(ctx context.Context, req datasource.SchemaR
 			"namespace": schema.StringAttribute{
 				Optional:            true,
 				MarkdownDescription: "The namespace in which the monograph is located.",
-			},
-			"content": schema.StringAttribute{
-				Computed:            true,
-				MarkdownDescription: "The content of the monograph.",
 			},
 		},
 	}
@@ -97,15 +92,15 @@ func (d *MonographDataSource) Read(ctx context.Context, req datasource.ReadReque
 		namespace = "default"
 	}
 
-	_, err := api.GetMonograph(ctx, d.PlatformClient.Client, d.PlatformClient.CosmoApiKey, data.Name.ValueString(), namespace)
+	monograph, err := api.GetMonograph(ctx, d.PlatformClient.Client, d.PlatformClient.CosmoApiKey, data.Name.ValueString(), namespace)
 	if err != nil {
 		utils.AddDiagnosticError(resp, "Error Reading Monograph", fmt.Sprintf("Could not read monograph: %s", err))
 		return
 	}
 
-	// data.Id = types.StringValue(apiResponse.Id)
-	// data.Content = types.StringValue(apiResponse.Content)
-	// data.Namespace = types.StringValue(apiResponse.Namespace)
+	data.Id = types.StringValue(monograph.GetId())
+	data.Name = types.StringValue(monograph.GetName())
+	data.Namespace = types.StringValue(monograph.GetNamespace())
 
 	tflog.Trace(ctx, "Read monograph data source", map[string]interface{}{
 		"id": data.Id.ValueString(),
