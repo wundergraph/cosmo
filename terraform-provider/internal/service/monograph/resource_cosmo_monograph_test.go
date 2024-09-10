@@ -29,8 +29,8 @@ func TestAccMonographResource(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      "cosmo_monograph.test",
-				RefreshState:       true,
+				ResourceName: "cosmo_monograph.test",
+				RefreshState: true,
 			},
 		},
 	})
