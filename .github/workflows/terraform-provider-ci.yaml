@@ -1,10 +1,5 @@
 name: Terraform Provider CI
 on:
-  # used for initial development purposes
-  push:
-    paths:
-      - 'terraform-provider/**/*'
-      - '.github/workflows/terraform-provider-ci.yaml'
   pull_request:
     paths:
       - 'terraform-provider/**/*'
