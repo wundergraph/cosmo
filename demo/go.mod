@@ -5,7 +5,7 @@ go 1.21.5
 toolchain go1.22.0
 
 require (
-	github.com/99designs/gqlgen v0.17.45
+	github.com/99designs/gqlgen v0.17.49
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.1
 	github.com/nats-io/nats.go v1.35.0
