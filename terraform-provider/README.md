@@ -1,64 +1,86 @@
-# Terraform Provider Scaffolding (Terraform Plugin Framework)
+# Cosmo Terraform Provider
 
-_This template repository is built on the [Terraform Plugin Framework](https://github.com/hashicorp/terraform-plugin-framework). The template repository built on the [Terraform Plugin SDK](https://github.com/hashicorp/terraform-plugin-sdk) can be found at [terraform-provider-scaffolding](https://github.com/hashicorp/terraform-provider-scaffolding). See [Which SDK Should I Use?](https://developer.hashicorp.com/terraform/plugin/framework-benefits) in the Terraform documentation for additional information._
-
-This repository is a _template_ for a [Terraform](https://www.terraform.io) provider. It is intended as a starting point for creating Terraform providers, containing:
-
-- A resource and a data source (`internal/provider/`),
-- Examples (`examples/`) and generated documentation (`docs/`),
-- Miscellaneous meta files.
-
-These files contain boilerplate code that you will need to edit to create your own Terraform provider. Tutorials for creating Terraform providers can be found on the [HashiCorp Developer](https://developer.hashicorp.com/terraform/tutorials/providers-plugin-framework) platform. _Terraform Plugin Framework specific guides are titled accordingly._
-
-Please see the [GitHub template repository documentation](https://help.github.com/en/github/creating-cloning-and-archiving-repositories/creating-a-repository-from-a-template) for how to create a new repository from this template on GitHub.
-
-Once you've written your provider, you'll want to [publish it on the Terraform Registry](https://developer.hashicorp.com/terraform/registry/providers/publishing) so that others can use it.
+This repository is for the [Cosmo](https://registry.terraform.io/wundergraph/cosmo) Terraform provider, designed to manage Cosmo resources within Terraform. It includes a resource and a data source, examples, and generated documentation.
 
 ## Requirements
 
-- [Terraform](https://developer.hashicorp.com/terraform/downloads) >= 1.0
+- [Terraform](https://developer.hashiCorp.com/terraform/downloads) >= 1.0
 - [Go](https://golang.org/doc/install) >= 1.21
+
+## Implemented Resources
+
+The Cosmo Terraform provider includes the following resources and data sources:
+
+### Resources
+
+- [cosmo_namespace](docs/resources/namespace.md): Manages namespaces within Cosmo.
+- [cosmo_monograph](docs/resources/monograph.md): Manages monographs in Cosmo.
+- [cosmo_federated_graph](docs/resources/federated_graph.md): Manages federated graphs in Cosmo.
+- [cosmo_subgraph](docs/resources/subgraph.md): Manages subgraphs in Cosmo.
+
+### Data Sources
+
+- [cosmo_namespace](docs/data-sources/namespace.md): Retrieves information about namespaces in Cosmo.
+- [cosmo_monograph](docs/data-sources/monograph.md): Retrieves information about monographs in Cosmo.
+- [cosmo_federated_graph](docs/data-sources/federated_graph.md): Retrieves information about federated graphs in Cosmo.
+- [cosmo_subgraph](docs/data-sources/subgraph.md): Retrieves information about subgraphs in Cosmo.
+
+Each resource and data source allows you to define and manage specific aspects of your Cosmo infrastructure seamlessly within Terraform.
 
 ## Building The Provider
 
-1. Clone the repository
-1. Enter the repository directory
-1. Build the provider using the Go `install` command:
+To build the provider, clone the repository, enter the directory, and run `make install` to compile and install the provider binary. Note that the `install` command will first build the provider to ensure the binary is up to date.
 
-```shell
-go install
-```
+## Usage
 
-## Adding Dependencies
+To use the Cosmo Terraform provider:
 
-This provider uses [Go modules](https://github.com/golang/go/wiki/Modules).
-Please see the Go documentation for the most up to date information about using Go modules.
+1. **Install the Provider**: Run the following command to build and install the provider binary locally for use with end-to-end tests:
 
-To add a new dependency `github.com/author/dependency` to your Terraform provider:
+   ```bash
+   make clean build install
+   ```
 
-```shell
-go get github.com/author/dependency
-go mod tidy
-```
+2. **Run Tests**: Execute acceptance tests to ensure the provider works as expected:
 
-Then commit the changes to `go.mod` and `go.sum`.
+   ```bash
+   make testacc
+   ```
 
-## Using the provider
+3. **Generate Files**: Update any generated files with this command:
 
-Fill this in for each provider
+   ```bash
+   make generate
+   ```
 
-## Developing the Provider
+4. **Format Code**: Format Go and Terraform files for consistency:
 
-If you wish to work on the provider, you'll first need [Go](http://www.golang.org) installed on your machine (see [Requirements](#requirements) above).
+   ```bash
+   make fmt
+   ```
 
-To compile the provider, run `go install`. This will build the provider and put the provider binary in the `$GOPATH/bin` directory.
+5. **Build for All Architectures**: Compile the provider for various operating systems and architectures:
 
-To generate or update documentation, run `go generate`.
+   ```bash
+   make build-all-arches
+   ```
 
-In order to run the full suite of Acceptance tests, run `make testacc`.
+## Makefile Tasks
 
-_Note:_ Acceptance tests create real resources, and often cost money to run.
+The Makefile includes several tasks to facilitate development and testing. For local development, `make build install` should be used to install the provider locally.
 
-```shell
-make testacc
-```
+- **default**: Runs acceptance tests.
+- **testacc**: Runs tests with a timeout.
+- **generate**: Updates generated files.
+- **tidy**: Cleans up the `go.mod` file.
+- **fmt**: Formats code.
+- **build**: Compiles the provider binary.
+- **install**: Installs the binary in the Terraform plugin directory after building it.
+- **build-all-arches**: Compiles the binary for multiple OS and architectures.
+- **release**: Generates files and builds binaries for all architectures.
+- **e2e-cd-apply**: Runs end-to-end tests for apply. (References: `examples/provider`)
+- **e2e-cd-destroy**: Runs end-to-end tests for destroy. (References: `examples/provider`)
+- **e2e-cosmo-apply**: Runs end-to-end tests for the cosmo feature. (References: `examples/cosmo`)
+- **e2e-cosmo-destroy**: Runs end-to-end tests for cosmo destroy. (References: `examples/cosmo`)
+- **e2e-cosmo-monograph-apply**: Runs end-to-end tests for the monograph feature. (References: `examples/resources/comso_monograph`)
+- **e2e-cosmo-monograph-destroy**: Runs end-to-end tests for monograph destroy. (References: `examples/resources/comso_monograph`)
