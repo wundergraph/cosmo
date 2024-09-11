@@ -1,5 +1,22 @@
 import { ConstDirectiveNode, ConstValueNode, FieldDefinitionNode, Kind, StringValueNode } from 'graphql';
-import { FIELD, REQUIRES_SCOPES, SCOPES, UNION } from './string-constants';
+import {
+  BOOLEAN_SCALAR,
+  ENUM,
+  ENUM_VALUE,
+  FIELD,
+  FLOAT_SCALAR,
+  INPUT_OBJECT,
+  INPUT_VALUE,
+  INT_SCALAR,
+  INTERFACE,
+  NULL,
+  OBJECT,
+  REQUIRES_SCOPES,
+  SCALAR,
+  SCOPES,
+  STRING_SCALAR,
+  UNION,
+} from './string-constants';
 import { invalidKeyFatalError } from '../errors/errors';
 import { EnumTypeNode, InterfaceTypeNode, ObjectTypeNode, ScalarTypeNode, stringToNameNode } from '../ast/utils';
 import { FieldConfiguration } from '../router-configuration/router-configuration';
@@ -118,68 +135,133 @@ export function addSetsAndReturnMutationBoolean<T>(source: Set<T>, target: Set<T
 export function kindToTypeString(kind: Kind): string {
   switch (kind) {
     case Kind.BOOLEAN: {
-      return 'boolean';
+      return BOOLEAN_SCALAR;
     }
     case Kind.ENUM:
     // intentional fallthrough
     case Kind.ENUM_TYPE_DEFINITION: {
-      return 'enum';
+      return ENUM;
     }
     case Kind.ENUM_TYPE_EXTENSION: {
-      return 'enum extension';
+      return 'Enum extension';
     }
     case Kind.ENUM_VALUE_DEFINITION: {
-      return 'enum value';
+      return ENUM_VALUE;
     }
     case Kind.FIELD_DEFINITION: {
       return FIELD;
     }
     case Kind.FLOAT: {
-      return 'float';
+      return FLOAT_SCALAR;
     }
     case Kind.INPUT_OBJECT_TYPE_DEFINITION: {
-      return 'input object';
+      return INPUT_OBJECT;
     }
     case Kind.INPUT_OBJECT_TYPE_EXTENSION: {
-      return 'input object extension';
+      return 'Input Object extension';
     }
     case Kind.INPUT_VALUE_DEFINITION: {
-      return 'input value';
+      return INPUT_VALUE;
     }
     case Kind.INT: {
-      return 'int';
+      return INT_SCALAR;
     }
     case Kind.INTERFACE_TYPE_DEFINITION: {
-      return 'interface';
+      return INTERFACE;
     }
     case Kind.INTERFACE_TYPE_EXTENSION: {
-      return 'interface extension';
+      return 'Interface extension';
     }
     case Kind.NULL: {
-      return 'null';
+      return NULL;
     }
     case Kind.OBJECT:
     // intentional fallthrough
     case Kind.OBJECT_TYPE_DEFINITION: {
-      return 'object';
+      return OBJECT;
     }
     case Kind.OBJECT_TYPE_EXTENSION: {
-      return 'object extension';
+      return 'Object extension';
     }
     case Kind.STRING: {
-      return 'string';
+      return STRING_SCALAR;
     }
     case Kind.SCALAR_TYPE_DEFINITION: {
-      return 'scalar';
+      return SCALAR;
     }
     case Kind.SCALAR_TYPE_EXTENSION: {
-      return 'scalar extension';
+      return 'Scalar extension';
     }
     case Kind.UNION_TYPE_DEFINITION: {
       return UNION;
     }
     case Kind.UNION_TYPE_EXTENSION: {
-      return 'union extension';
+      return 'Union extension';
+    }
+    default:
+      return kind;
+  }
+}
+
+export function kindToConvertedTypeString(kind: Kind): string {
+  switch (kind) {
+    case Kind.BOOLEAN: {
+      return BOOLEAN_SCALAR;
+    }
+    case Kind.ENUM:
+    // intentional fallthrough
+    case Kind.ENUM_TYPE_DEFINITION:
+    // intentional fallthrough
+    case Kind.ENUM_TYPE_EXTENSION: {
+      return ENUM;
+    }
+    case Kind.ENUM_VALUE_DEFINITION: {
+      return ENUM_VALUE;
+    }
+    case Kind.FIELD_DEFINITION: {
+      return FIELD;
+    }
+    case Kind.FLOAT: {
+      return FLOAT_SCALAR;
+    }
+    case Kind.INPUT_OBJECT_TYPE_DEFINITION:
+    // intentional fallthrough
+    case Kind.INPUT_OBJECT_TYPE_EXTENSION: {
+      return INPUT_OBJECT;
+    }
+    case Kind.INPUT_VALUE_DEFINITION: {
+      return INPUT_VALUE;
+    }
+    case Kind.INT: {
+      return INT_SCALAR;
+    }
+    case Kind.INTERFACE_TYPE_DEFINITION:
+    // intentional fallthrough
+    case Kind.INTERFACE_TYPE_EXTENSION: {
+      return INTERFACE;
+    }
+    case Kind.NULL: {
+      return NULL;
+    }
+    case Kind.OBJECT:
+    // intentional fallthrough
+    case Kind.OBJECT_TYPE_DEFINITION:
+    // intentional fallthrough
+    case Kind.OBJECT_TYPE_EXTENSION: {
+      return OBJECT;
+    }
+    case Kind.STRING: {
+      return STRING_SCALAR;
+    }
+    case Kind.SCALAR_TYPE_DEFINITION:
+    // intentional fallthrough
+    case Kind.SCALAR_TYPE_EXTENSION: {
+      return SCALAR;
+    }
+    case Kind.UNION_TYPE_DEFINITION:
+    // intentional fallthrough
+    case Kind.UNION_TYPE_EXTENSION: {
+      return UNION;
     }
     default:
       return kind;

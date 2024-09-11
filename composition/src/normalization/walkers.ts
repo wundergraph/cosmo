@@ -3,12 +3,9 @@ import {
   duplicateDirectiveDefinitionError,
   duplicateEnumValueDefinitionError,
   duplicateFieldDefinitionError,
+  duplicateInputFieldDefinitionError,
   duplicateOperationTypeDefinitionError,
-  duplicateTypeDefinitionError,
-  duplicateValueExtensionError,
-  incompatibleExtensionKindsError,
   invalidOperationTypeDefinitionError,
-  noDefinedUnionMembersError,
   unexpectedParentKindForChildError,
 } from '../errors/errors';
 import { NormalizationFactory } from './normalization-factory';
@@ -29,18 +26,14 @@ import {
   setAndGetValue,
   upsertEntityDataProperties,
 } from '../utils/utils';
-import { isNodeExtension, isNodeInterfaceObject, isObjectLikeNodeEntity, SchemaNode } from '../ast/utils';
+import { isNodeInterfaceObject, isObjectLikeNodeEntity, SchemaNode } from '../ast/utils';
 import { extractFieldSetValue, newFieldSetData, newKeyFieldSetData } from './utils';
 import {
   ANY_SCALAR,
   ENTITIES_FIELD,
   ENTITY_UNION,
   EVENT_DIRECTIVE_NAMES,
-  EXTENSIONS,
-  N_A,
   PARENT_DEFINITION_DATA,
-  PARENT_DEFINITION_DATA_MAP,
-  PARENT_EXTENSION_DATA_MAP,
   PROVIDES,
   REQUIRES,
   RootTypeName,
@@ -50,23 +43,12 @@ import {
   SUBSCRIPTION_FILTER,
 } from '../utils/string-constants';
 import {
-  addEnumDefinitionDataByNode,
-  addEnumExtensionDataByNode,
   addEnumValueDataByNode,
   addFieldDataByNode,
   addInheritedDirectivesToFieldData,
-  addInputObjectDefinitionDataByNode,
-  addInputObjectExtensionDataByNode,
   addInputValueDataByNode,
-  addInterfaceDefinitionDataByNode,
-  addObjectDefinitionDataByNode,
-  addScalarDefinitionDataByNode,
-  addScalarExtensionDataByNode,
-  addUnionDefinitionDataByNode,
-  addUnionExtensionDataByNode,
   extractArguments,
   extractDirectives,
-  extractUniqueUnionMembers,
   getRenamedRootTypeName,
   isTypeNameRootType,
   ObjectData,
@@ -151,10 +133,11 @@ export function upsertDirectiveSchemaAndEntityDefinitions(nf: NormalizationFacto
     },
     InterfaceTypeExtension: {
       enter(node) {
+        const typeName = node.name.value;
+        nf.internalGraph.addOrUpdateNode(typeName, { isAbstract: true });
         if (!isObjectLikeNodeEntity(node)) {
           return;
         }
-        const typeName = node.name.value;
         const keyFieldSetData = getValueOrDefault(nf.keyFieldSetDataByTypeName, typeName, newKeyFieldSetData);
         nf.extractKeyFieldSets(node, keyFieldSetData);
         upsertEntityDataProperties(nf.entityDataByTypeName, {
@@ -171,6 +154,13 @@ export function upsertDirectiveSchemaAndEntityDefinitions(nf: NormalizationFacto
         }
         const typeName = node.name.value;
         if (isNodeInterfaceObject(node)) {
+          nf.entityInterfaceDataByTypeName.set(typeName, {
+            fieldDatas: [],
+            interfaceObjectFieldNames: new Set<string>(),
+            interfaceFieldNames: new Set<string>(),
+            isInterfaceObject: true,
+            typeName,
+          });
           nf.internalGraph.addOrUpdateNode(typeName, { isAbstract: true });
         }
         const keyFieldSetData = getValueOrDefault(nf.keyFieldSetDataByTypeName, typeName, newKeyFieldSetData);
@@ -233,73 +223,18 @@ export function upsertDirectiveSchemaAndEntityDefinitions(nf: NormalizationFacto
     },
     UnionTypeDefinition: {
       enter(node) {
-        const typeName = node.name.value;
-        if (typeName === ENTITY_UNION) {
-          return false;
+        if (node.name.value === ENTITY_UNION) {
+          return;
         }
-        // Also adds concrete types to the internal graph
-        nf.addConcreteTypesForUnion(node);
-        if (nf.parentDefinitionDataByTypeName.has(typeName)) {
-          nf.errors.push(duplicateTypeDefinitionError(kindToTypeString(node.kind), typeName));
-          return false;
-        }
-        addUnionDefinitionDataByNode(
-          nf.parentDefinitionDataByTypeName,
-          node,
-          nf.errors,
-          nf.directiveDefinitionByDirectiveName,
-          nf.handledRepeatedDirectivesByHostPath,
-          nf.concreteTypeNamesByAbstractTypeName,
-          nf.referencedTypeNames,
-        );
+        nf.upsertUnionByNode(node);
       },
     },
     UnionTypeExtension: {
       enter(node) {
-        const typeName = node.name.value;
-        if (typeName === ENTITY_UNION) {
+        if (node.name.value === ENTITY_UNION) {
           return false;
         }
-        const extension = nf.parentExtensionDataByTypeName.get(typeName);
-        if (!node.types?.length) {
-          nf.errors.push(noDefinedUnionMembersError(typeName, true));
-          return false;
-        }
-        // Also adds concrete types to the internal graph
-        nf.addConcreteTypesForUnion(node);
-        if (extension) {
-          if (extension.kind !== Kind.UNION_TYPE_EXTENSION) {
-            nf.errors.push(incompatibleExtensionKindsError(node, extension.kind));
-            return false;
-          }
-          extractDirectives(
-            node,
-            extension.directivesByDirectiveName,
-            nf.errors,
-            nf.directiveDefinitionByDirectiveName,
-            nf.handledRepeatedDirectivesByHostPath,
-            typeName,
-          );
-          extractUniqueUnionMembers(
-            node.types,
-            extension.memberByMemberTypeName,
-            nf.errors,
-            typeName,
-            nf.concreteTypeNamesByAbstractTypeName,
-            nf.referencedTypeNames,
-          );
-          return false;
-        }
-        addUnionExtensionDataByNode(
-          nf.parentExtensionDataByTypeName,
-          node,
-          nf.errors,
-          nf.directiveDefinitionByDirectiveName,
-          nf.handledRepeatedDirectivesByHostPath,
-          nf.concreteTypeNamesByAbstractTypeName,
-          nf.referencedTypeNames,
-        );
-        return false;
+        nf.upsertUnionByNode(node, true);
       },
     },
   });
@@ -325,17 +260,8 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
     EnumTypeDefinition: {
       enter(node) {
         nf.originalParentTypeName = node.name.value;
-        nf.internalGraph.addOrUpdateNode(nf.originalParentTypeName, { isLeaf: true });
-        if (nf.parentDefinitionDataByTypeName.has(nf.originalParentTypeName)) {
-          nf.errors.push(duplicateTypeDefinitionError(kindToTypeString(node.kind), nf.originalParentTypeName));
-          return false;
-        }
         nf.lastParentNodeKind = node.kind;
-        const directivesByDirectiveName = nf.extractDirectivesAndAuthorization(
-          node,
-          new Map<string, ConstDirectiveNode[]>(),
-        );
-        addEnumDefinitionDataByNode(nf.parentDefinitionDataByTypeName, node, directivesByDirectiveName);
+        nf.upsertEnumDataByNode(node);
       },
       leave() {
         nf.originalParentTypeName = '';
@@ -345,39 +271,24 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
     EnumTypeExtension: {
       enter(node) {
         nf.originalParentTypeName = node.name.value;
-        // todo can this be removed? why was it here?
-        // nf.internalGraph.addNode(nf.originalParentTypeName);
         nf.lastParentNodeKind = node.kind;
-        nf.isCurrentParentExtension = true;
-        const extension = nf.parentExtensionDataByTypeName.get(nf.originalParentTypeName);
-        if (extension) {
-          if (extension.kind !== Kind.ENUM_TYPE_EXTENSION) {
-            nf.errors.push(incompatibleExtensionKindsError(node, extension.kind));
-            return false;
-          }
-          nf.extractDirectivesAndAuthorization(node, extension.directivesByDirectiveName);
-          return;
-        }
-        const directivesByDirectiveName = nf.extractDirectivesAndAuthorization(
-          node,
-          new Map<string, ConstDirectiveNode[]>(),
-        );
-        addEnumExtensionDataByNode(nf.parentExtensionDataByTypeName, node, directivesByDirectiveName);
+        nf.upsertEnumDataByNode(node, true);
       },
       leave() {
         nf.originalParentTypeName = '';
         nf.lastParentNodeKind = Kind.NULL;
-        nf.isCurrentParentExtension = false;
       },
     },
     EnumValueDefinition: {
       enter(node) {
         nf.childName = node.name.value;
         nf.lastChildNodeKind = node.kind;
-        const parentData = nf.isCurrentParentExtension
-          ? getOrThrowError(nf.parentExtensionDataByTypeName, nf.originalParentTypeName, EXTENSIONS)
-          : getOrThrowError(nf.parentDefinitionDataByTypeName, nf.originalParentTypeName, PARENT_DEFINITION_DATA);
-        if (parentData.kind !== Kind.ENUM_TYPE_DEFINITION && parentData.kind !== Kind.ENUM_TYPE_EXTENSION) {
+        const parentData = getOrThrowError(
+          nf.parentDefinitionDataByTypeName,
+          nf.originalParentTypeName,
+          PARENT_DEFINITION_DATA,
+        );
+        if (parentData.kind !== Kind.ENUM_TYPE_DEFINITION) {
           nf.errors.push(
             unexpectedParentKindForChildError(
               nf.originalParentTypeName,
@@ -387,13 +298,10 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
               kindToTypeString(node.kind),
             ),
           );
-          return false;
+          return;
         }
         if (parentData.enumValueDataByValueName.has(nf.childName)) {
-          const error = nf.isCurrentParentExtension
-            ? duplicateValueExtensionError('enum', nf.originalParentTypeName, nf.childName)
-            : duplicateEnumValueDefinitionError(nf.childName, nf.originalParentTypeName);
-          nf.errors.push(error);
+          nf.errors.push(duplicateEnumValueDefinitionError(nf.originalParentTypeName, nf.childName));
           return;
         }
         addEnumValueDataByNode(
@@ -436,28 +344,27 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
         if (!BASE_SCALARS.has(fieldNamedTypeName)) {
           nf.referencedTypeNames.add(fieldNamedTypeName);
         }
-        const parentData = nf.isCurrentParentExtension
-          ? getOrThrowError(nf.parentExtensionDataByTypeName, nf.originalParentTypeName, EXTENSIONS)
-          : getOrThrowError(nf.parentDefinitionDataByTypeName, nf.originalParentTypeName, PARENT_DEFINITION_DATA);
-        if (
-          parentData.kind !== Kind.OBJECT_TYPE_DEFINITION &&
-          parentData.kind !== Kind.OBJECT_TYPE_EXTENSION &&
-          parentData.kind !== Kind.INTERFACE_TYPE_DEFINITION &&
-          parentData.kind !== Kind.INTERFACE_TYPE_EXTENSION
-        ) {
+        const parentData = getOrThrowError(
+          nf.parentDefinitionDataByTypeName,
+          nf.originalParentTypeName,
+          PARENT_DEFINITION_DATA,
+        );
+        if (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION && parentData.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
           nf.errors.push(
             unexpectedParentKindForChildError(
               nf.originalParentTypeName,
-              'object, object extension, interface, or interface extension',
+              '"Object" or "Interface"',
               kindToTypeString(parentData.kind),
               nf.childName,
               kindToTypeString(node.kind),
             ),
           );
-          return false;
+          return;
         }
         if (parentData.fieldDataByFieldName.has(nf.childName)) {
-          nf.errors.push(duplicateFieldDefinitionError(nf.childName, nf.originalParentTypeName));
+          nf.errors.push(
+            duplicateFieldDefinitionError(kindToTypeString(parentData.kind), parentData.name, nf.childName),
+          );
           return;
         }
         const argumentDataByArgumentName = extractArguments(
@@ -521,19 +428,8 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
     InputObjectTypeDefinition: {
       enter(node) {
         nf.originalParentTypeName = node.name.value;
-        if (nf.parentDefinitionDataByTypeName.has(nf.originalParentTypeName)) {
-          nf.errors.push(duplicateTypeDefinitionError(kindToTypeString(node.kind), nf.originalParentTypeName));
-          return false;
-        }
         nf.lastParentNodeKind = node.kind;
-        addInputObjectDefinitionDataByNode(
-          nf.parentDefinitionDataByTypeName,
-          node,
-          nf.directiveDefinitionByDirectiveName,
-          nf.handledRepeatedDirectivesByHostPath,
-          nf.subgraphName,
-          nf.errors,
-        );
+        nf.upsertInputObjectByNode(node);
       },
       leave() {
         nf.lastParentNodeKind = Kind.NULL;
@@ -544,35 +440,11 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
       enter(node) {
         nf.originalParentTypeName = node.name.value;
         nf.lastParentNodeKind = node.kind;
-        nf.isCurrentParentExtension = true;
-        const extension = nf.parentExtensionDataByTypeName.get(nf.originalParentTypeName);
-        if (extension) {
-          if (extension.kind !== Kind.INPUT_OBJECT_TYPE_EXTENSION) {
-            nf.errors.push(incompatibleExtensionKindsError(node, extension.kind));
-            return false;
-          }
-          extractDirectives(
-            node,
-            extension.directivesByDirectiveName,
-            nf.errors,
-            nf.directiveDefinitionByDirectiveName,
-            nf.handledRepeatedDirectivesByHostPath,
-            nf.originalParentTypeName,
-          );
-          return;
-        }
-        addInputObjectExtensionDataByNode(
-          nf.parentExtensionDataByTypeName,
-          node,
-          nf.directiveDefinitionByDirectiveName,
-          nf.handledRepeatedDirectivesByHostPath,
-          nf.errors,
-        );
+        nf.upsertInputObjectByNode(node, true);
       },
       leave() {
         nf.originalParentTypeName = '';
         nf.lastParentNodeKind = Kind.NULL;
-        nf.isCurrentParentExtension = false;
       },
     },
     InputValueDefinition: {
@@ -593,13 +465,12 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
         if (!BASE_SCALARS.has(namedInputValueTypeName)) {
           nf.referencedTypeNames.add(namedInputValueTypeName);
         }
-        const parentData = nf.isCurrentParentExtension
-          ? getOrThrowError(nf.parentExtensionDataByTypeName, nf.originalParentTypeName, EXTENSIONS)
-          : getOrThrowError(nf.parentDefinitionDataByTypeName, nf.originalParentTypeName, PARENT_DEFINITION_DATA);
-        if (
-          parentData.kind !== Kind.INPUT_OBJECT_TYPE_DEFINITION &&
-          parentData.kind !== Kind.INPUT_OBJECT_TYPE_EXTENSION
-        ) {
+        const parentData = getOrThrowError(
+          nf.parentDefinitionDataByTypeName,
+          nf.originalParentTypeName,
+          PARENT_DEFINITION_DATA,
+        );
+        if (parentData.kind !== Kind.INPUT_OBJECT_TYPE_DEFINITION) {
           nf.errors.push(
             unexpectedParentKindForChildError(
               nf.originalParentTypeName,
@@ -612,7 +483,7 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           return false;
         }
         if (parentData.inputValueDataByValueName.has(name)) {
-          nf.errors.push(duplicateValueExtensionError('input', nf.originalParentTypeName, name));
+          nf.errors.push(duplicateInputFieldDefinitionError(nf.originalParentTypeName, name));
           return;
         }
         addInputValueDataByNode(
@@ -636,40 +507,14 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
     },
     InterfaceTypeDefinition: {
       enter(node) {
-        const typeName = node.name.value;
-        nf.originalParentTypeName = typeName;
+        nf.originalParentTypeName = node.name.value;
         nf.lastParentNodeKind = node.kind;
-        if (isNodeExtension(node)) {
-          return nf.handleExtensionWithFields(node);
-        }
-        if (nf.parentDefinitionDataByTypeName.has(typeName)) {
-          nf.errors.push(duplicateTypeDefinitionError(kindToTypeString(node.kind), typeName));
-          return false;
-        }
-        const entityInterfaceData = nf.entityInterfaceDataByTypeName.get(typeName);
-        addInterfaceDefinitionDataByNode(
-          nf.parentDefinitionDataByTypeName,
-          node,
-          nf.errors,
-          nf.directiveDefinitionByDirectiveName,
-          nf.handledRepeatedDirectivesByHostPath,
-          !!entityInterfaceData,
-          nf.subgraphName,
-        );
-        if (!entityInterfaceData) {
-          return;
-        }
-        for (const fieldNode of node.fields || []) {
-          entityInterfaceData.interfaceFieldNames.add(fieldNode.name.value);
-        }
+        nf.upsertInterfaceDataByNode(node);
       },
       leave() {
-        // @extends treats the node as an extension, so fetch the correct data
-        const parentData = nf.isCurrentParentExtension
-          ? getOrThrowError(nf.parentExtensionDataByTypeName, nf.originalParentTypeName, PARENT_EXTENSION_DATA_MAP)
-          : getOrThrowError(nf.parentDefinitionDataByTypeName, nf.originalParentTypeName, PARENT_DEFINITION_DATA_MAP);
-        removeInheritableDirectivesFromParentWithFieldsData(parentData);
-        nf.isCurrentParentExtension = false;
+        removeInheritableDirectivesFromParentWithFieldsData(
+          getOrThrowError(nf.parentDefinitionDataByTypeName, nf.originalParentTypeName, PARENT_DEFINITION_DATA),
+        );
         nf.originalParentTypeName = '';
         nf.lastParentNodeKind = Kind.NULL;
       },
@@ -678,23 +523,22 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
       enter(node) {
         nf.originalParentTypeName = node.name.value;
         nf.lastParentNodeKind = node.kind;
-        return nf.handleExtensionWithFields(node);
+        nf.upsertInterfaceDataByNode(node, true);
       },
       leave() {
         removeInheritableDirectivesFromParentWithFieldsData(
-          getOrThrowError(nf.parentExtensionDataByTypeName, nf.originalParentTypeName, PARENT_EXTENSION_DATA_MAP),
+          getOrThrowError(nf.parentDefinitionDataByTypeName, nf.originalParentTypeName, PARENT_DEFINITION_DATA),
         );
-        nf.isCurrentParentExtension = false;
         nf.originalParentTypeName = '';
         nf.lastParentNodeKind = Kind.NULL;
       },
     },
     ObjectTypeDefinition: {
       enter(node) {
-        nf.originalParentTypeName = node.name.value;
-        if (nf.originalParentTypeName === SERVICE_OBJECT) {
+        if (node.name.value === SERVICE_OBJECT) {
           return false;
         }
+        nf.originalParentTypeName = node.name.value;
         isParentRootType = isTypeNameRootType(nf.originalParentTypeName, nf.operationTypeNodeByTypeName);
         nf.renamedParentTypeName = getRenamedRootTypeName(nf.originalParentTypeName, nf.operationTypeNodeByTypeName);
         nf.originalTypeNameByRenamedTypeName.set(nf.renamedParentTypeName, nf.originalParentTypeName);
@@ -702,37 +546,14 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           ? nf.internalGraph.getRootNode(nf.renamedParentTypeName as RootTypeName)
           : nf.internalGraph.addOrUpdateNode(nf.renamedParentTypeName);
         nf.lastParentNodeKind = node.kind;
-        nf.addConcreteTypesForImplementedInterfaces(node);
-        nf.handleInterfaceObject(node);
-        // handling for @extends directive
-        if (isNodeExtension(node)) {
-          return nf.handleExtensionWithFields(node, isParentRootType);
-        }
-        if (nf.parentDefinitionDataByTypeName.has(nf.originalParentTypeName)) {
-          nf.errors.push(duplicateTypeDefinitionError(kindToTypeString(node.kind), nf.originalParentTypeName));
-          return false;
-        }
-        addObjectDefinitionDataByNode(
-          nf.parentDefinitionDataByTypeName,
-          node,
-          nf.errors,
-          nf.directiveDefinitionByDirectiveName,
-          nf.handledRepeatedDirectivesByHostPath,
-          isObjectLikeNodeEntity(node),
-          isParentRootType,
-          nf.subgraphName || N_A,
-          nf.renamedParentTypeName,
-        );
+        nf.upsertObjectDataByNode(node);
       },
       leave() {
-        // @extends treats the node as an extension, so fetch the correct data
-        const parentData = nf.isCurrentParentExtension
-          ? getOrThrowError(nf.parentExtensionDataByTypeName, nf.originalParentTypeName, PARENT_EXTENSION_DATA_MAP)
-          : getOrThrowError(nf.parentDefinitionDataByTypeName, nf.originalParentTypeName, PARENT_DEFINITION_DATA_MAP);
-        removeInheritableDirectivesFromParentWithFieldsData(parentData);
+        removeInheritableDirectivesFromParentWithFieldsData(
+          getOrThrowError(nf.parentDefinitionDataByTypeName, nf.originalParentTypeName, PARENT_DEFINITION_DATA),
+        );
         currentParentNode = undefined;
         isParentRootType = false;
-        nf.isCurrentParentExtension = false;
         nf.originalParentTypeName = '';
         nf.renamedParentTypeName = '';
         nf.lastParentNodeKind = Kind.NULL;
@@ -740,10 +561,10 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
     },
     ObjectTypeExtension: {
       enter(node) {
-        nf.originalParentTypeName = node.name.value;
-        if (nf.originalParentTypeName === SERVICE_OBJECT) {
+        if (node.name.value === SERVICE_OBJECT) {
           return false;
         }
+        nf.originalParentTypeName = node.name.value;
         isParentRootType = isTypeNameRootType(nf.originalParentTypeName, nf.operationTypeNodeByTypeName);
         nf.renamedParentTypeName = getRenamedRootTypeName(nf.originalParentTypeName, nf.operationTypeNodeByTypeName);
         nf.originalTypeNameByRenamedTypeName.set(nf.renamedParentTypeName, nf.originalParentTypeName);
@@ -751,16 +572,14 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           ? nf.internalGraph.getRootNode(nf.renamedParentTypeName as RootTypeName)
           : nf.internalGraph.addOrUpdateNode(nf.renamedParentTypeName);
         nf.lastParentNodeKind = node.kind;
-        nf.addConcreteTypesForImplementedInterfaces(node);
-        return nf.handleExtensionWithFields(node, isParentRootType);
+        nf.upsertObjectDataByNode(node, true);
       },
       leave() {
         removeInheritableDirectivesFromParentWithFieldsData(
-          getOrThrowError(nf.parentExtensionDataByTypeName, nf.originalParentTypeName, PARENT_EXTENSION_DATA_MAP),
+          getOrThrowError(nf.parentDefinitionDataByTypeName, nf.originalParentTypeName, PARENT_DEFINITION_DATA),
         );
         currentParentNode = undefined;
         isParentRootType = false;
-        nf.isCurrentParentExtension = false;
         nf.originalParentTypeName = '';
         nf.renamedParentTypeName = '';
         nf.lastParentNodeKind = Kind.NULL;
@@ -768,21 +587,12 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
     },
     ScalarTypeDefinition: {
       enter(node) {
+        if (node.name.value === ANY_SCALAR) {
+          return false;
+        }
         nf.originalParentTypeName = node.name.value;
-        if (nf.originalParentTypeName === ANY_SCALAR) {
-          return false;
-        }
-        if (nf.parentDefinitionDataByTypeName.has(nf.originalParentTypeName)) {
-          nf.errors.push(duplicateTypeDefinitionError(kindToTypeString(node.kind), nf.originalParentTypeName));
-          return false;
-        }
-        nf.internalGraph.addOrUpdateNode(nf.originalParentTypeName, { isLeaf: true });
         nf.lastParentNodeKind = node.kind;
-        const directivesByDirectiveName = nf.extractDirectivesAndAuthorization(
-          node,
-          new Map<string, ConstDirectiveNode[]>(),
-        );
-        addScalarDefinitionDataByNode(nf.parentDefinitionDataByTypeName, node, directivesByDirectiveName);
+        nf.upsertScalarByNode(node);
       },
       leave() {
         nf.originalParentTypeName = '';
@@ -791,28 +601,12 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
     },
     ScalarTypeExtension: {
       enter(node) {
+        if (node.name.value === ANY_SCALAR) {
+          return false;
+        }
         nf.originalParentTypeName = node.name.value;
-        if (nf.originalParentTypeName === ANY_SCALAR) {
-          return false;
-        }
         nf.lastParentNodeKind = node.kind;
-        // todo
-        // nf.internalGraph.addOrUpdateNode(nf.originalParentTypeName, { isLeaf: true });
-        const extension = nf.parentExtensionDataByTypeName.get(nf.originalParentTypeName);
-        if (extension) {
-          if (extension.kind !== Kind.SCALAR_TYPE_EXTENSION) {
-            nf.errors.push(incompatibleExtensionKindsError(node, extension.kind));
-            return false;
-          }
-          nf.extractDirectivesAndAuthorization(node, extension.directivesByDirectiveName);
-          return false;
-        }
-        const directivesByDirectiveName = nf.extractDirectivesAndAuthorization(
-          node,
-          new Map<string, ConstDirectiveNode[]>(),
-        );
-        addScalarExtensionDataByNode(nf.parentExtensionDataByTypeName, node, directivesByDirectiveName);
-        return false;
+        nf.upsertScalarByNode(node, true);
       },
       leave() {
         nf.originalParentTypeName = '';
@@ -904,9 +698,7 @@ export function consolidateAuthorizationDirectives(nf: NormalizationFactory, def
     },
     ObjectTypeDefinition: {
       enter(node) {
-        const parentData =
-          nf.parentDefinitionDataByTypeName.get(node.name.value) ||
-          nf.parentExtensionDataByTypeName.get(node.name.value);
+        const parentData = nf.parentDefinitionDataByTypeName.get(node.name.value);
         if (!parentData) {
           return false;
         }
@@ -922,9 +714,7 @@ export function consolidateAuthorizationDirectives(nf: NormalizationFactory, def
     },
     ObjectTypeExtension: {
       enter(node) {
-        const parentData =
-          nf.parentDefinitionDataByTypeName.get(node.name.value) ||
-          nf.parentExtensionDataByTypeName.get(node.name.value);
+        const parentData = nf.parentDefinitionDataByTypeName.get(node.name.value);
         if (!parentData) {
           return false;
         }

@@ -7,11 +7,11 @@ import { joinLabel } from '@wundergraph/cosmo-shared';
 import {
   ImplementationErrors,
   incompatibleArgumentTypesError,
-  incompatibleParentKindMergeError,
+  incompatibleParentKindMergeError, INPUT_OBJECT, INTERFACE,
   InvalidFieldImplementation,
   invalidInterfaceImplementationError,
-  invalidRequiredInputValueError,
-  noQueryRootTypeError,
+  invalidRequiredInputValueError, noBaseDefinitionForExtensionError,
+  noQueryRootTypeError, OBJECT,
 } from '@wundergraph/composition';
 import { composeSubgraphs } from '../src/core/composition/composition.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
@@ -28,7 +28,7 @@ describe('Composition error tests', (ctx) => {
     await afterAllSetup(dbname);
   });
 
-  test('Should cause a composition error due to extension of the type which doesnt exist', async (testContext) => {
+  test('that an error is returned if an Object extension orphan remains after federation', async () => {
     const { client, server } = await SetupTest({ dbname });
 
     const pandasSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV1/pandas.graphql'));
@@ -78,14 +78,14 @@ describe('Composition error tests', (ctx) => {
       schema: productsSchema,
     });
     expect(publishFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
-    expect(publishFederatedSubgraphResp.compositionErrors[0].message).toBe(
-      'Extension error:\n Could not extend the type "User" because no base definition exists.',
+    expect(publishFederatedSubgraphResp.compositionErrors[0].message).toStrictEqual(
+      noBaseDefinitionForExtensionError(OBJECT, 'User').message,
     );
 
     await server.close();
   });
 
-  test('Should cause composition errors on merging a list type with a non-list version', () => {
+  test('that an error is returned when attempting federate a List type with a non-List type', () => {
     const subgraph1 = {
       name: 'subgraph1',
       url: '',
@@ -301,10 +301,10 @@ describe('Composition error tests', (ctx) => {
     const { errors } = composeSubgraphs([subgraph1, subgraph2]);
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(1);
-    expect(errors![0]).toStrictEqual(incompatibleParentKindMergeError('SameName', 'object', 'interface'));
+    expect(errors![0]).toStrictEqual(incompatibleParentKindMergeError('SameName', OBJECT, INTERFACE));
   });
 
-  test('Should cause composition errors if a type does not implement one of its interface after merge', () => {
+  test('that composition errors are returned if a type does not satisfy its implemented Interfaces after federation', () => {
     const subgraph1 = {
       definitions: parse(`
         type Query {
@@ -344,7 +344,7 @@ describe('Composition error tests', (ctx) => {
     expect(errors![0]).toStrictEqual(
       invalidInterfaceImplementationError(
         'TypeB',
-        'object',
+        OBJECT,
         new Map<string, ImplementationErrors>([
           [
             'InterfaceA',
@@ -423,7 +423,7 @@ describe('Composition error tests', (ctx) => {
     const { errors } = composeSubgraphs([subgraph1, subgraph2]);
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(invalidRequiredInputValueError(
-      'input object',
+      INPUT_OBJECT,
       'InputA',
       [{ inputValueName: 'b', missingSubgraphs: ['subgraph1'], requiredSubgraphs: ['subgraph2'] }],
       false,

@@ -9,7 +9,7 @@ import {
 import { stringToNamedTypeNode, stringToNameNode } from '../ast/utils';
 import {
   allChildDefinitionsAreInaccessibleError,
-  allExternalFieldsError,
+  allExternalFieldInstancesError,
   federationFactoryInitializationFatalError,
   fieldTypeMergeFatalError,
   inaccessibleQueryRootTypeError,
@@ -17,7 +17,6 @@ import {
   inaccessibleSubscriptionFieldConditionFieldPathFieldErrorMessage,
   incompatibleArgumentTypesError,
   incompatibleChildTypesError,
-  incompatibleObjectExtensionOrphanBaseTypeError,
   incompatibleParentKindFatalError,
   incompatibleParentKindMergeError,
   incompatibleSharedEnumError,
@@ -32,7 +31,7 @@ import {
   invalidSubscriptionFieldConditionFieldPathParentErrorMessage,
   invalidSubscriptionFilterDirectiveError,
   minimumSubgraphRequirementError,
-  noBaseTypeExtensionError,
+  noBaseDefinitionForExtensionError,
   nonLeafSubscriptionFieldConditionFieldPathFinalFieldErrorMessage,
   noQueryRootTypeError,
   orScopesLimitError,
@@ -69,6 +68,7 @@ import {
   AUTHENTICATED,
   CONDITION,
   DEPRECATED,
+  ENUM_VALUE,
   FIELD,
   FIELD_PATH,
   IN_UPPER,
@@ -140,9 +140,10 @@ import { batchNormalize } from '../normalization/normalization-factory';
 import { isNodeQuery } from '../normalization/utils';
 import {
   ChildData,
-  DefinitionWithFieldsData,
+  CompositeOutputData,
   EnumDefinitionData,
   EnumValueData,
+  ExtensionType,
   FieldData,
   InputObjectDefinitionData,
   InputValueData,
@@ -167,6 +168,7 @@ import {
   getValidFieldArgumentNodes,
   isLeafKind,
   isNodeDataInaccessible,
+  isParentDataRootType,
   isTypeRequired,
   isTypeValidImplementation,
   MergeMethod,
@@ -174,7 +176,7 @@ import {
   pushAuthorizationDirectives,
   setLongestDescription,
   setMutualExecutableLocations,
-  upsertPersistedDirectivesData,
+  setParentDataExtensionType,
   validateExternalAndShareable,
 } from '../schema-building/utils';
 import { ObjectExtensionData } from '../schema-building/type-extension-data';
@@ -206,7 +208,6 @@ export class FederationFactory {
   isVersionTwo = false;
   namedInputValueTypeNames = new Set<string>();
   namedOutputTypeNames = new Set<string>();
-  objectExtensionDataByTypeName = new Map<string, ObjectExtensionData>();
   parentDefinitionDataByTypeName = new Map<string, ParentDefinitionData>();
   parentTagDataByTypeName = new Map<string, ParentTagData>();
   pathsByNamedTypeName = new Map<string, Set<string>>();
@@ -236,7 +237,7 @@ export class FederationFactory {
     this.warnings = options.warnings;
   }
 
-  getValidImplementedInterfaces(data: DefinitionWithFieldsData): NamedTypeNode[] {
+  getValidImplementedInterfaces(data: CompositeOutputData): NamedTypeNode[] {
     const interfaces: NamedTypeNode[] = [];
     if (data.implementedInterfaceTypeNames.size < 1) {
       return interfaces;
@@ -359,13 +360,8 @@ export class FederationFactory {
       'internalSubgraphBySubgraphName',
     );
     const parentDefinitionDataByTypeName = internalSubgraph.parentDefinitionDataByTypeName;
-    const parentExtensionDataByTypeName = internalSubgraph.parentExtensionDataByTypeName;
-    const objectData =
-      parentDefinitionDataByTypeName.get(entityData.typeName) || parentExtensionDataByTypeName.get(entityData.typeName);
-    if (
-      !objectData ||
-      (objectData.kind !== Kind.OBJECT_TYPE_DEFINITION && objectData.kind !== Kind.OBJECT_TYPE_EXTENSION)
-    ) {
+    const objectData = parentDefinitionDataByTypeName.get(entityData.typeName);
+    if (!objectData || objectData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
       throw incompatibleParentKindFatalError(
         entityData.typeName,
         Kind.OBJECT_TYPE_DEFINITION,
@@ -388,7 +384,6 @@ export class FederationFactory {
       implicitKeys,
       objectData,
       parentDefinitionDataByTypeName,
-      parentExtensionDataByTypeName,
     });
     for (const [typeName, entityInterfaceFederationData] of this.entityInterfaceFederationDataByTypeName) {
       if (!entityInterfaceFederationData.concreteTypeNames?.has(entityData.typeName)) {
@@ -405,7 +400,6 @@ export class FederationFactory {
         implicitKeys,
         objectData,
         parentDefinitionDataByTypeName,
-        parentExtensionDataByTypeName,
         graphNode,
       });
     }
@@ -434,7 +428,6 @@ export class FederationFactory {
     graphNode: GraphNode,
   ) {
     const parentDefinitionDataByTypeName = internalSubgraph.parentDefinitionDataByTypeName;
-    const parentExtensionDataByTypeName = internalSubgraph.parentExtensionDataByTypeName;
     const interfaceObjectData = parentDefinitionDataByTypeName.get(interfaceObjectTypeName);
     if (!interfaceObjectData || interfaceObjectData.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
       throw incompatibleParentKindFatalError(
@@ -457,7 +450,6 @@ export class FederationFactory {
       implicitKeys,
       objectData: interfaceObjectData,
       parentDefinitionDataByTypeName,
-      parentExtensionDataByTypeName,
       graphNode,
     });
     if (implicitKeys.length < 1) {
@@ -844,6 +836,9 @@ export class FederationFactory {
         case Kind.INTERFACE_TYPE_DEFINITION:
         // intentional fallthrough
         case Kind.OBJECT_TYPE_DEFINITION:
+          if (isParentDataRootType(incomingData)) {
+            incomingData.extensionType = ExtensionType.NONE;
+          }
           for (const fieldData of incomingData.fieldDataByFieldName.values()) {
             fieldData.node = {
               arguments: [],
@@ -903,7 +898,6 @@ export class FederationFactory {
           return;
       }
     }
-    setLongestDescription(existingData, incomingData);
     if (existingData.kind !== incomingData.kind) {
       if (
         !entityInterfaceData ||
@@ -921,6 +915,8 @@ export class FederationFactory {
         return;
       }
     }
+    setLongestDescription(existingData, incomingData);
+    setParentDataExtensionType(existingData, incomingData);
     switch (existingData.kind) {
       case Kind.ENUM_TYPE_DEFINITION:
         existingData.appearances += 1;
@@ -954,13 +950,13 @@ export class FederationFactory {
         if (isParentInaccessible && !existingData.isInaccessible) {
           this.propagateInaccessibilityToExistingChildren(existingData);
         }
-        const definitionWithFieldsData = incomingData as DefinitionWithFieldsData;
+        const compositeOutputData = incomingData as CompositeOutputData;
         addIterableValuesToSet(
-          definitionWithFieldsData.implementedInterfaceTypeNames,
+          compositeOutputData.implementedInterfaceTypeNames,
           existingData.implementedInterfaceTypeNames,
         );
-        addIterableValuesToSet(definitionWithFieldsData.subgraphNames, existingData.subgraphNames);
-        for (const fieldData of definitionWithFieldsData.fieldDataByFieldName.values()) {
+        addIterableValuesToSet(compositeOutputData.subgraphNames, existingData.subgraphNames);
+        for (const fieldData of compositeOutputData.fieldDataByFieldName.values()) {
           this.upsertFieldData(
             existingData.fieldDataByFieldName,
             fieldData,
@@ -977,84 +973,6 @@ export class FederationFactory {
       default:
         // Scalar type
         return;
-    }
-  }
-
-  upsertObjectExtensionData(incomingData: ObjectExtensionData) {
-    const existingData = this.objectExtensionDataByTypeName.get(incomingData.name);
-    const baseData = existingData || incomingData;
-    extractPersistedDirectives(
-      baseData.persistedDirectivesData,
-      incomingData.directivesByDirectiveName,
-      this.persistedDirectiveDefinitionByDirectiveName,
-    );
-    this.recordTagNamesByPath(baseData);
-    const isParentInaccessible = isNodeDataInaccessible(baseData);
-    if (isParentInaccessible) {
-      this.inaccessiblePaths.add(incomingData.name);
-    }
-    if (!existingData) {
-      incomingData.node = {
-        kind: incomingData.kind,
-        name: stringToNameNode(incomingData.name),
-      };
-      for (const fieldData of incomingData.fieldDataByFieldName.values()) {
-        fieldData.node = {
-          arguments: [],
-          directives: [],
-          kind: fieldData.node.kind,
-          name: stringToNameNode(fieldData.name),
-          type: fieldData.type,
-        };
-        const fieldPath = `${fieldData.renamedParentTypeName}.${fieldData.name}`;
-        getValueOrDefault(this.pathsByNamedTypeName, fieldData.namedTypeName, () => new Set<string>()).add(fieldPath);
-        this.namedOutputTypeNames.add(fieldData.namedTypeName);
-        extractPersistedDirectives(
-          fieldData.persistedDirectivesData,
-          fieldData.directivesByDirectiveName,
-          this.persistedDirectiveDefinitionByDirectiveName,
-        );
-        this.recordTagNamesByPath(fieldData, fieldPath);
-        const isFieldInaccessible = isNodeDataInaccessible(fieldData);
-        if (isParentInaccessible || isFieldInaccessible) {
-          this.inaccessiblePaths.add(fieldPath);
-        }
-        for (const [argumentName, inputValueData] of fieldData.argumentDataByArgumentName) {
-          inputValueData.node = {
-            directives: [],
-            kind: inputValueData.node.kind,
-            name: stringToNameNode(inputValueData.name),
-            type: inputValueData.type,
-          };
-          const namedArgumentTypeName = getTypeNodeNamedTypeName(inputValueData.type);
-          getValueOrDefault(this.pathsByNamedTypeName, namedArgumentTypeName, () => new Set<string>()).add(
-            inputValueData.renamedPath,
-          );
-          this.namedInputValueTypeNames.add(namedArgumentTypeName);
-          extractPersistedDirectives(
-            inputValueData.persistedDirectivesData,
-            inputValueData.directivesByDirectiveName,
-            this.persistedDirectiveDefinitionByDirectiveName,
-          );
-          this.recordTagNamesByPath(inputValueData, `${incomingData.name}.${argumentName}`);
-          this.handleArgumentInaccessibility(
-            isParentInaccessible || isFieldInaccessible,
-            inputValueData,
-            inputValueData.renamedPath,
-            fieldPath,
-          );
-        }
-      }
-      this.objectExtensionDataByTypeName.set(incomingData.name, incomingData);
-      return;
-    }
-    if (isParentInaccessible && !existingData.isInaccessible) {
-      this.propagateInaccessibilityToExistingChildren(existingData);
-    }
-    addIterableValuesToSet(incomingData.implementedInterfaceTypeNames, existingData.implementedInterfaceTypeNames);
-    addIterableValuesToSet(incomingData.subgraphNames, existingData.subgraphNames);
-    for (const fieldData of incomingData.fieldDataByFieldName.values()) {
-      this.upsertFieldData(existingData.fieldDataByFieldName, fieldData, isParentInaccessible);
     }
   }
 
@@ -1076,57 +994,6 @@ export class FederationFactory {
             this.inaccessiblePaths.add(inputValueData.renamedPath);
           }
         }
-    }
-  }
-
-  upsertValidObjectExtensionData(incomingData: ObjectExtensionData) {
-    const isParentInaccessible = isNodeDataInaccessible(incomingData);
-    const existingData = this.parentDefinitionDataByTypeName.get(incomingData.name);
-    if (!existingData) {
-      if (incomingData.isRootType) {
-        const authorizationData = this.authorizationDataByParentTypeName.get(incomingData.name);
-        for (const fieldData of incomingData.fieldDataByFieldName.values()) {
-          pushAuthorizationDirectives(fieldData, authorizationData);
-        }
-        this.parentDefinitionDataByTypeName.set(incomingData.name, {
-          directivesByDirectiveName: incomingData.directivesByDirectiveName,
-          fieldDataByFieldName: incomingData.fieldDataByFieldName,
-          implementedInterfaceTypeNames: incomingData.implementedInterfaceTypeNames,
-          isRootType: true,
-          isInaccessible: isParentInaccessible,
-          isEntity: false,
-          kind: Kind.OBJECT_TYPE_DEFINITION,
-          name: incomingData.name,
-          node: {
-            kind: Kind.OBJECT_TYPE_DEFINITION,
-            name: stringToNameNode(incomingData.name),
-          },
-          persistedDirectivesData: incomingData.persistedDirectivesData,
-          renamedTypeName: incomingData.renamedTypeName,
-          subgraphNames: incomingData.subgraphNames,
-        });
-        return;
-      }
-      this.errors.push(noBaseTypeExtensionError(incomingData.name));
-      return;
-    }
-    if (existingData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
-      this.errors.push(
-        incompatibleObjectExtensionOrphanBaseTypeError(existingData.name, kindToTypeString(existingData.kind)),
-      );
-      return;
-    }
-    upsertPersistedDirectivesData(existingData.persistedDirectivesData, incomingData.persistedDirectivesData);
-    if (isParentInaccessible) {
-      this.inaccessiblePaths.add(incomingData.name);
-      // If the type was not previously known to be inaccessible, the existing children and arguments must be updated
-      if (!existingData.isInaccessible) {
-        this.propagateInaccessibilityToExistingChildren(existingData);
-      }
-    }
-    addIterableValuesToSet(incomingData.implementedInterfaceTypeNames, existingData.implementedInterfaceTypeNames);
-    for (const fieldData of incomingData.fieldDataByFieldName.values()) {
-      this.upsertFieldData(existingData.fieldDataByFieldName, fieldData, isParentInaccessible);
     }
   }
 
@@ -1186,9 +1053,6 @@ export class FederationFactory {
       renameRootTypes(this, internalSubgraph);
       for (const parentDefinitionData of internalSubgraph.parentDefinitionDataByTypeName.values()) {
         this.upsertParentDefinitionData(parentDefinitionData, internalSubgraph.name);
-      }
-      for (const objectExtensionData of internalSubgraph.parentExtensionDataByTypeName.values()) {
-        this.upsertObjectExtensionData(objectExtensionData);
       }
       if (shouldSkipPersistedExecutableDirectives) {
         continue;
@@ -1361,6 +1225,11 @@ export class FederationFactory {
 
   pushParentDefinitionDataToDocumentDefinitions(interfaceImplementations: InterfaceImplementationData[]) {
     for (const [parentTypeName, parentDefinitionData] of this.parentDefinitionDataByTypeName) {
+      if (parentDefinitionData.extensionType !== ExtensionType.NONE) {
+        this.errors.push(
+          noBaseDefinitionForExtensionError(kindToTypeString(parentDefinitionData.kind), parentTypeName),
+        );
+      }
       switch (parentDefinitionData.kind) {
         case Kind.ENUM_TYPE_DEFINITION:
           const enumValueNodes: MutableEnumValueNode[] = [];
@@ -1421,7 +1290,7 @@ export class FederationFactory {
               allChildDefinitionsAreInaccessibleError(
                 kindToTypeString(parentDefinitionData.kind),
                 parentTypeName,
-                'enum value',
+                ENUM_VALUE,
               ),
             );
             break;
@@ -1536,7 +1405,7 @@ export class FederationFactory {
             }
             if (invalidFieldNames.subgraphNamesByExternalFieldName.size > 0) {
               this.errors.push(
-                allExternalFieldsError(parentTypeName, invalidFieldNames.subgraphNamesByExternalFieldName),
+                allExternalFieldInstancesError(parentTypeName, invalidFieldNames.subgraphNamesByExternalFieldName),
               );
             }
           }
@@ -1634,9 +1503,6 @@ export class FederationFactory {
   federateSubgraphData() {
     this.federateInternalSubgraphData();
     this.handleEntityInterfaces();
-    for (const objectExtensionData of this.objectExtensionDataByTypeName.values()) {
-      this.upsertValidObjectExtensionData(objectExtensionData);
-    }
     // generate the map of tag data that is used by contracts
     this.generateTagData();
     this.pushVersionTwoDirectiveDefinitionsToDocumentDefinitions();
@@ -2092,7 +1958,7 @@ export class FederationFactory {
         invalidSubscriptionFilterDirectiveError(fieldPath, [
           subscriptionFilterConditionInvalidInputFieldTypeErrorMessage(
             CONDITION,
-            'object',
+            OBJECT,
             kindToTypeString(argumentNode.value.kind),
           ),
         ]),
@@ -2129,9 +1995,7 @@ export class FederationFactory {
         continue;
       }
 
-      const namedTypeData =
-        this.parentDefinitionDataByTypeName.get(data.fieldData.namedTypeName) ||
-        this.objectExtensionDataByTypeName.get(data.fieldData.namedTypeName);
+      const namedTypeData = this.parentDefinitionDataByTypeName.get(data.fieldData.namedTypeName);
 
       /* An undefined namedTypeData should be impossible.
        * If the type were unknown, it would have resulted in an earlier normalization error.

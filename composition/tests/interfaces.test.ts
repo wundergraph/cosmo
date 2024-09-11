@@ -1,40 +1,287 @@
 import {
+  duplicateFieldDefinitionError,
   federateSubgraphs,
   ImplementationErrors,
+  INTERFACE,
   InvalidFieldImplementation,
   invalidImplementedTypeError,
+  invalidInterfaceImplementationError,
+  noBaseDefinitionForExtensionError,
   noFieldDefinitionsError,
   normalizeSubgraph,
   normalizeSubgraphFromString,
-  selfImplementationError,
+  OBJECT,
   parse,
+  SCALAR,
+  selfImplementationError,
   Subgraph,
-  invalidInterfaceImplementationError,
 } from '../src';
 import { describe, expect, test } from 'vitest';
-import { normalizeString, schemaToSortedNormalizedString, versionTwoRouterDefinitions } from './utils/utils';
+import {
+  baseDirectiveDefinitions,
+  normalizeString,
+  schemaToSortedNormalizedString,
+  versionOneRouterDefinitions,
+  versionTwoRouterDefinitions,
+} from './utils/utils';
 
 describe('Interface tests', () => {
   describe('Normalization tests', () => {
-    test('that an error is returned if an interface does not define any fields', () => {
-      const { errors } = normalizeSubgraphFromString(`
-        interface Interface
-      `);
-      expect(errors).toBeDefined();
-      expect(errors![0]).toStrictEqual(noFieldDefinitionsError('interface', 'Interface'));
+    test('that an Interface extension orphan is valid', () => {
+      const { errors, normalizationResult } = normalizeSubgraph(subgraphR.definitions, subgraphR.name);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(normalizationResult!.schema)).toBe(
+        normalizeString(
+          baseDirectiveDefinitions +
+            `
+          interface Interface {
+            name: String!
+          }
+          
+          scalar openfed__FieldSet
+        `,
+        ),
+      );
     });
 
-    test('that an error is returned if an extended interface does not define any fields', () => {
-      const { errors } = normalizeSubgraphFromString(`
-        interface Interface
-        
-        extend interface Interface @tag(name: "test")
-      `);
-      expect(errors).toBeDefined();
-      expect(errors![0]).toStrictEqual(noFieldDefinitionsError('interface', 'Interface'));
+    test('that an Interface can be extended #1', () => {
+      const { errors, normalizationResult } = normalizeSubgraph(subgraphAE.definitions, subgraphAE.name);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(normalizationResult!.schema)).toBe(
+        normalizeString(
+          baseDirectiveDefinitions +
+            `
+          interface Interface {
+            age: Int!
+            name: String!
+          }
+          
+          scalar openfed__FieldSet
+        `,
+        ),
+      );
     });
 
-    test('that errors are returned if implemented interface fields are invalid #1', () => {
+    test('that an Interface can be extended #2', () => {
+      const { errors, normalizationResult } = normalizeSubgraph(subgraphAF.definitions, subgraphAF.name);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(normalizationResult!.schema)).toBe(
+        normalizeString(
+          baseDirectiveDefinitions +
+            `
+          interface Interface {
+            age: Int!
+            name: String!
+          }
+          
+          scalar openfed__FieldSet
+        `,
+        ),
+      );
+    });
+
+    test('that an Interface stub can be extended #1', () => {
+      const { errors, normalizationResult } = normalizeSubgraph(subgraphV.definitions, subgraphV.name);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(normalizationResult!.schema)).toBe(
+        normalizeString(
+          baseDirectiveDefinitions +
+            `
+          interface Interface {
+            name: String!
+          }
+          
+          scalar openfed__FieldSet
+        `,
+        ),
+      );
+    });
+
+    test('that an Interface stub can be extended #2', () => {
+      const { errors, normalizationResult } = normalizeSubgraph(subgraphW.definitions, subgraphW.name);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(normalizationResult!.schema)).toBe(
+        normalizeString(
+          baseDirectiveDefinitions +
+            `
+          interface Interface {
+            name: String!
+          }
+          
+          scalar openfed__FieldSet
+        `,
+        ),
+      );
+    });
+
+    test('that an Interface stub can be extended #3', () => {
+      const { errors, normalizationResult } = normalizeSubgraph(subgraphX.definitions, subgraphX.name);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(normalizationResult!.schema)).toBe(
+        normalizeString(
+          baseDirectiveDefinitions +
+            `
+          interface Interface @tag(name: "name") {
+            name: String!
+          }
+          
+          scalar openfed__FieldSet
+        `,
+        ),
+      );
+    });
+
+    test('that an Interface stub can be extended #4', () => {
+      const { errors, normalizationResult } = normalizeSubgraph(subgraphY.definitions, subgraphY.name);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(normalizationResult!.schema)).toBe(
+        normalizeString(
+          baseDirectiveDefinitions +
+            `
+          interface Interface @tag(name: "name") {
+            name: String!
+          }
+          
+          scalar openfed__FieldSet
+        `,
+        ),
+      );
+    });
+
+    test('that an Interface stub can be extended #5', () => {
+      const { errors, normalizationResult } = normalizeSubgraph(subgraphZ.definitions, subgraphZ.name);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(normalizationResult!.schema)).toBe(
+        normalizeString(
+          baseDirectiveDefinitions +
+            `
+          interface Interface @tag(name: "name") {
+            name: String!
+          }
+          
+          scalar openfed__FieldSet
+        `,
+        ),
+      );
+    });
+
+    test('that an Interface can be extended with just a directive #1', () => {
+      const { errors, normalizationResult } = normalizeSubgraph(subgraphAA.definitions, subgraphAA.name);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(normalizationResult!.schema)).toBe(
+        normalizeString(
+          baseDirectiveDefinitions +
+            `
+          interface Interface @tag(name: "name") {
+            name: String!
+          }
+          
+          scalar openfed__FieldSet
+        `,
+        ),
+      );
+    });
+
+    test('that an Interface can be extended with just a directive #2', () => {
+      const { errors, normalizationResult } = normalizeSubgraph(subgraphAB.definitions, subgraphAB.name);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(normalizationResult!.schema)).toBe(
+        normalizeString(
+          baseDirectiveDefinitions +
+            `
+          interface Interface @tag(name: "name") {
+            name: String!
+          }
+          
+          scalar openfed__FieldSet
+        `,
+        ),
+      );
+    });
+
+    test('that an Interface extension can be extended with just a directive #1', () => {
+      const { errors, normalizationResult } = normalizeSubgraph(subgraphAC.definitions, subgraphAC.name);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(normalizationResult!.schema)).toBe(
+        normalizeString(
+          baseDirectiveDefinitions +
+            `
+          interface Interface @tag(name: "name") {
+            name: String!
+          }
+          
+          scalar openfed__FieldSet
+        `,
+        ),
+      );
+    });
+
+    test('that an Interface extension can be extended with just a directive #2', () => {
+      const { errors, normalizationResult } = normalizeSubgraph(subgraphAD.definitions, subgraphAD.name);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(normalizationResult!.schema)).toBe(
+        normalizeString(
+          baseDirectiveDefinitions +
+            `
+          interface Interface @tag(name: "name") {
+            name: String!
+          }
+          
+          scalar openfed__FieldSet
+        `,
+        ),
+      );
+    });
+
+    test('that an error is returned if a final Interface does not define any Fields', () => {
+      const { errors } = normalizeSubgraph(subgraphI.definitions, subgraphI.name);
+      expect(errors).toBeDefined();
+      expect(errors![0]).toStrictEqual(noFieldDefinitionsError(INTERFACE, INTERFACE));
+    });
+
+    test('that an error is returned if a final Interface extension does not define any Fields', () => {
+      const { errors } = normalizeSubgraph(subgraphJ.definitions, subgraphJ.name);
+      expect(errors).toBeDefined();
+      expect(errors![0]).toStrictEqual(noFieldDefinitionsError(INTERFACE, INTERFACE));
+    });
+
+    test('that an error is returned if a final extended Interface does not define any Fields #1', () => {
+      const { errors } = normalizeSubgraph(subgraphK.definitions, subgraphK.name);
+      expect(errors).toBeDefined();
+      expect(errors![0]).toStrictEqual(noFieldDefinitionsError(INTERFACE, INTERFACE));
+    });
+
+    test('that an error is returned if a final extended Interface does not define any Fields #2', () => {
+      const { errors } = normalizeSubgraph(subgraphL.definitions, subgraphL.name);
+      expect(errors).toBeDefined();
+      expect(errors![0]).toStrictEqual(noFieldDefinitionsError(INTERFACE, INTERFACE));
+    });
+
+    test('that an error is returned if an Interface defines a duplicate Field', () => {
+      const { errors } = normalizeSubgraph(subgraphM.definitions, subgraphM.name);
+      expect(errors).toBeDefined();
+      expect(errors![0]).toStrictEqual(duplicateFieldDefinitionError(INTERFACE, INTERFACE, 'name'));
+    });
+
+    test('that an error is returned if an Interface extension defines a duplicate Field', () => {
+      const { errors } = normalizeSubgraph(subgraphN.definitions, subgraphN.name);
+      expect(errors).toBeDefined();
+      expect(errors![0]).toStrictEqual(duplicateFieldDefinitionError(INTERFACE, INTERFACE, 'name'));
+    });
+
+    test('that an error is returned if an extended Interface defines a duplicate Field #1', () => {
+      const { errors } = normalizeSubgraph(subgraphO.definitions, subgraphO.name);
+      expect(errors).toBeDefined();
+      expect(errors![0]).toStrictEqual(duplicateFieldDefinitionError(INTERFACE, INTERFACE, 'name'));
+    });
+
+    test('that an error is returned if an extended Interface defines a duplicate Field #2', () => {
+      const { errors } = normalizeSubgraph(subgraphP.definitions, subgraphP.name);
+      expect(errors).toBeDefined();
+      expect(errors![0]).toStrictEqual(duplicateFieldDefinitionError(INTERFACE, INTERFACE, 'name'));
+    });
+
+    test('that errors are returned if implemented Interface Fields are invalid #1', () => {
       const { errors } = normalizeSubgraphFromString(`
         interface Animal {
           name: String!
@@ -59,7 +306,7 @@ describe('Interface tests', () => {
       expect(errors![0]).toStrictEqual(
         invalidInterfaceImplementationError(
           'Pet',
-          'interface',
+          INTERFACE,
           new Map<string, ImplementationErrors>([
             [
               'Animal',
@@ -88,7 +335,7 @@ describe('Interface tests', () => {
       expect(errors![1]).toStrictEqual(
         invalidInterfaceImplementationError(
           'Cat',
-          'object',
+          OBJECT,
           new Map<string, ImplementationErrors>([
             [
               'Pet',
@@ -163,7 +410,7 @@ describe('Interface tests', () => {
           sound(e: Int!): String!
         }
         
-        type Cat @extends {
+        extend type Cat {
           name: String!
         }  
       `);
@@ -172,7 +419,7 @@ describe('Interface tests', () => {
       expect(errors![0]).toStrictEqual(
         invalidInterfaceImplementationError(
           'Pet',
-          'interface',
+          INTERFACE,
           new Map<string, ImplementationErrors>([
             [
               'Animal',
@@ -201,7 +448,7 @@ describe('Interface tests', () => {
       expect(errors![1]).toStrictEqual(
         invalidInterfaceImplementationError(
           'Cat',
-          'object',
+          OBJECT,
           new Map<string, ImplementationErrors>([
             [
               'Pet',
@@ -250,10 +497,10 @@ describe('Interface tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         invalidImplementedTypeError(
-          'Object',
+          OBJECT,
           new Map<string, string>([
-            ['Interface', 'object'],
-            ['Scalar', 'scalar'],
+            [INTERFACE, OBJECT],
+            [SCALAR, SCALAR],
           ]),
         ),
       );
@@ -268,7 +515,47 @@ describe('Interface tests', () => {
   });
 
   describe('Federation tests', () => {
-    test('that interfaces merge by union', () => {
+    test('that an Interface type and extension definition federate successfully #1.1', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphQ, subgraphR, subgraphU]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionOneRouterDefinitions +
+            `
+          interface Interface {
+            age: Int!
+            name: String!
+          }
+          
+          type Query {
+            dummy: String!
+          }
+        `,
+        ),
+      );
+    });
+
+    test('that an Interface type and extension definition federate successfully #1.1', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphQ, subgraphU, subgraphR]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionOneRouterDefinitions +
+            `
+          interface Interface {
+            age: Int!
+            name: String!
+          }
+          
+          type Query {
+            dummy: String!
+          }
+        `,
+        ),
+      );
+    });
+
+    test('that Interfaces merge by union', () => {
       const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
@@ -304,7 +591,7 @@ describe('Interface tests', () => {
       );
     });
 
-    test('that interfaces and implementations merge by union', () => {
+    test('that Interfaces and implementations merge by union', () => {
       const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphC]);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
@@ -338,7 +625,7 @@ describe('Interface tests', () => {
       );
     });
 
-    test('that nested interfaces merge by union', () => {
+    test('that nested Interfaces merge by union', () => {
       const { errors, federationResult } = federateSubgraphs([subgraphC, subgraphD]);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
@@ -369,14 +656,14 @@ describe('Interface tests', () => {
       );
     });
 
-    test('that errors are returned if implemented interface fields are invalid #1', () => {
+    test('that errors are returned if implemented Interface Fields are invalid #1', () => {
       const { errors } = federateSubgraphs([subgraphE, subgraphF]);
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(2);
       expect(errors![0]).toStrictEqual(
         invalidInterfaceImplementationError(
           'Cat',
-          'object',
+          OBJECT,
           new Map<string, ImplementationErrors>([
             [
               'Pet',
@@ -398,7 +685,7 @@ describe('Interface tests', () => {
       expect(errors![1]).toStrictEqual(
         invalidInterfaceImplementationError(
           'Dog',
-          'object',
+          OBJECT,
           new Map<string, ImplementationErrors>([
             [
               'Pet',
@@ -446,6 +733,187 @@ describe('Interface tests', () => {
         ),
       );
     });
+
+    test('that an error is returned if federation results in an Interface extension orphan', () => {
+      const { errors } = federateSubgraphs([subgraphQ, subgraphR]);
+      expect(errors).toHaveLength(1);
+      expect(errors![0]).toStrictEqual(noBaseDefinitionForExtensionError(INTERFACE, INTERFACE));
+    });
+
+    test('that a V1 Interface with @extends directive federates with a base definition #1.1', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphQ, subgraphS, subgraphU]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionOneRouterDefinitions +
+            `
+          interface Interface {
+            age: Int!
+            name: String!
+          }
+          
+          type Query {
+            dummy: String!
+          }
+        `,
+        ),
+      );
+    });
+
+    test('that a V1 Interface with @extends directive federates with a base definition #1.2', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphQ, subgraphU, subgraphS]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionOneRouterDefinitions +
+            `
+          interface Interface {
+            age: Int!
+            name: String!
+          }
+          
+          type Query {
+            dummy: String!
+          }
+        `,
+        ),
+      );
+    });
+
+    test('that an error is returned if federation results in a V1 Interface with @extends directive orphan #1', () => {
+      const { errors } = federateSubgraphs([subgraphQ, subgraphS]);
+      expect(errors).toHaveLength(1);
+      expect(errors![0]).toStrictEqual(noBaseDefinitionForExtensionError(INTERFACE, INTERFACE));
+    });
+
+    test('that an error is returned if federation results in a V1 Interface with @extends directive orphan #2.1', () => {
+      const { errors } = federateSubgraphs([subgraphQ, subgraphR, subgraphS]);
+      expect(errors).toHaveLength(1);
+      expect(errors![0]).toStrictEqual(noBaseDefinitionForExtensionError(INTERFACE, INTERFACE));
+    });
+
+    test('that an error is returned if federation results in a V1 Interface with @extends directive orphan #2.2', () => {
+      const { errors } = federateSubgraphs([subgraphQ, subgraphS, subgraphR]);
+      expect(errors).toHaveLength(1);
+      expect(errors![0]).toStrictEqual(noBaseDefinitionForExtensionError(INTERFACE, INTERFACE));
+    });
+
+    test('that a V2 Interface @extends directive orphan is valid #1', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphQ, subgraphT]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoRouterDefinitions +
+            `
+          scalar Dummy @inaccessible
+          
+          interface Interface {
+            name: String!
+          }
+          
+          type Query {
+            dummy: String!
+          }
+
+          scalar openfed__Scope
+        `,
+        ),
+      );
+    });
+
+    test('that a V2 Interface @extends directive orphan is valid with another base type #1.1', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphQ, subgraphT, subgraphU]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoRouterDefinitions +
+            `
+                scalar Dummy @inaccessible
+
+                interface Interface {
+                  age: Int!
+                  name: String!
+                }
+
+                type Query {
+                  dummy: String!
+                }
+
+                scalar openfed__Scope
+        `,
+        ),
+      );
+    });
+
+    test('that a V2 Interface @extends directive orphan is valid with another base type #1.2', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphQ, subgraphT, subgraphU]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoRouterDefinitions +
+            `
+                scalar Dummy @inaccessible
+
+                interface Interface {
+                  age: Int!
+                  name: String!
+                }
+
+                type Query {
+                  dummy: String!
+                }
+
+                scalar openfed__Scope
+        `,
+        ),
+      );
+    });
+
+    test('that a V2 Interface @extends directive orphan is valid with another extension #1.1', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphQ, subgraphR, subgraphT]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoRouterDefinitions +
+            `
+          scalar Dummy @inaccessible
+
+          interface Interface {
+            name: String!
+          }
+          
+          type Query {
+            dummy: String!
+          }
+          
+          scalar openfed__Scope
+        `,
+        ),
+      );
+    });
+
+    test('that a V2 Interface @extends directive orphan is valid with another extension #1.2', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphQ, subgraphT, subgraphR]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoRouterDefinitions +
+            `
+          scalar Dummy @inaccessible
+
+          interface Interface {
+            name: String!
+          }
+          
+          type Query {
+            dummy: String!
+          }
+          
+          scalar openfed__Scope
+        `,
+        ),
+      );
+    });
   });
 });
 
@@ -461,7 +929,7 @@ const subgraphA: Subgraph = {
       name: String!
     }
     
-    interface Character @extends {
+    extend interface Character {
       age: Int!
     }
 
@@ -604,6 +1072,284 @@ const subgraphH: Subgraph = {
   definitions: parse(`
     interface Interface implements Interface {
       name: String!
+    }
+  `),
+};
+
+const subgraphI: Subgraph = {
+  name: 'subgraph-i',
+  url: '',
+  definitions: parse(`
+    interface Interface
+  `),
+};
+
+const subgraphJ: Subgraph = {
+  name: 'subgraph-j',
+  url: '',
+  definitions: parse(`
+    extend interface Interface @tag(name: "test")
+  `),
+};
+
+const subgraphK: Subgraph = {
+  name: 'subgraph-k',
+  url: '',
+  definitions: parse(`
+    interface Interface
+    extend interface Interface @tag(name: "test")
+  `),
+};
+
+const subgraphL: Subgraph = {
+  name: 'subgraph-l',
+  url: '',
+  definitions: parse(`
+    extend interface Interface @tag(name: "test")
+    interface Interface
+  `),
+};
+
+const subgraphM: Subgraph = {
+  name: 'subgraph-m',
+  url: '',
+  definitions: parse(`
+    interface Interface {
+      name: String!
+      name: String!
+    }
+  `),
+};
+
+const subgraphN: Subgraph = {
+  name: 'subgraph-n',
+  url: '',
+  definitions: parse(`
+    extend interface Interface {
+      name: String!
+      name: String!
+    }
+  `),
+};
+
+const subgraphO: Subgraph = {
+  name: 'subgraph-o',
+  url: '',
+  definitions: parse(`
+    interface Interface {
+      name: String!
+    }
+    
+    extend interface Interface {
+      name: String!
+    }
+  `),
+};
+
+const subgraphP: Subgraph = {
+  name: 'subgraph-p',
+  url: '',
+  definitions: parse(`
+    extend interface Interface {
+      name: String!
+    }
+    
+    interface Interface {
+      name: String!
+    }
+  `),
+};
+
+const subgraphQ: Subgraph = {
+  name: 'subgraph-q',
+  url: '',
+  definitions: parse(`
+    type Query {
+      dummy: String!
+    }
+  `),
+};
+
+const subgraphR: Subgraph = {
+  name: 'subgraph-r',
+  url: '',
+  definitions: parse(`
+    extend interface Interface {
+      name: String!
+    }
+  `),
+};
+
+const subgraphS: Subgraph = {
+  name: 'subgraph-s',
+  url: '',
+  definitions: parse(`
+    interface Interface @extends {
+      name: String!
+    }
+  `),
+};
+
+const subgraphT: Subgraph = {
+  name: 'subgraph-t',
+  url: '',
+  definitions: parse(`
+    interface Interface @extends {
+      name: String!
+    }
+    
+    scalar Dummy @inaccessible
+  `),
+};
+
+const subgraphU: Subgraph = {
+  name: 'subgraph-u',
+  url: '',
+  definitions: parse(`
+    interface Interface {
+      age: Int!
+    }
+  `),
+};
+
+const subgraphV: Subgraph = {
+  name: 'subgraph-v',
+  url: '',
+  definitions: parse(`
+    interface Interface
+    
+    extend interface Interface {
+      name: String!
+    }
+  `),
+};
+
+const subgraphW: Subgraph = {
+  name: 'subgraph-w',
+  url: '',
+  definitions: parse(`
+    extend interface Interface {
+      name: String!
+    }
+    
+    interface Interface
+  `),
+};
+
+const subgraphX: Subgraph = {
+  name: 'subgraph-x',
+  url: '',
+  definitions: parse(`
+    interface Interface
+    
+    extend interface Interface {
+      name: String!
+    }
+    
+    extend interface Interface @tag(name: "name")
+  `),
+};
+
+const subgraphY: Subgraph = {
+  name: 'subgraph-y',
+  url: '',
+  definitions: parse(`
+    extend interface Interface {
+      name: String!
+    }
+    
+    interface Interface
+    
+    extend interface Interface @tag(name: "name")
+  `),
+};
+
+const subgraphZ: Subgraph = {
+  name: 'subgraph-z',
+  url: '',
+  definitions: parse(`
+    extend interface Interface @tag(name: "name")
+    
+    extend interface Interface {
+      name: String!
+    }
+    
+    interface Interface
+  `),
+};
+
+const subgraphAA: Subgraph = {
+  name: 'subgraph-aa',
+  url: '',
+  definitions: parse(`
+    interface Interface {
+      name: String!
+    }
+    
+    extend interface Interface @tag(name: "name")
+  `),
+};
+
+const subgraphAB: Subgraph = {
+  name: 'subgraph-ab',
+  url: '',
+  definitions: parse(`
+    extend interface Interface @tag(name: "name")
+    
+    interface Interface {
+      name: String!
+    }
+  `),
+};
+
+const subgraphAC: Subgraph = {
+  name: 'subgraph-ac',
+  url: '',
+  definitions: parse(`
+    extend interface Interface {
+      name: String!
+    }
+
+    extend interface Interface @tag(name: "name")
+  `),
+};
+
+const subgraphAD: Subgraph = {
+  name: 'subgraph-ad',
+  url: '',
+  definitions: parse(`
+    extend interface Interface @tag(name: "name")
+    
+    extend interface Interface {
+      name: String!
+    }
+  `),
+};
+
+const subgraphAE: Subgraph = {
+  name: 'subgraph-ae',
+  url: '',
+  definitions: parse(`
+    interface Interface {
+      age: Int!
+    }
+    
+    extend interface Interface {
+      name: String!
+    }
+  `),
+};
+
+const subgraphAF: Subgraph = {
+  name: 'subgraph-af',
+  url: '',
+  definitions: parse(`
+    extend interface Interface {
+      name: String!
+    }
+    
+    interface Interface {
+      age: Int!
     }
   `),
 };

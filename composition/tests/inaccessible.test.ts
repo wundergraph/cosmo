@@ -5,10 +5,12 @@ import {
   FieldData,
   ImplementationErrors,
   inaccessibleRequiredArgumentError,
+  INTERFACE,
   InvalidFieldImplementation,
   invalidFieldShareabilityError,
   invalidInterfaceImplementationError,
   normalizeSubgraph,
+  OBJECT,
   ObjectDefinitionData,
   parse,
   Subgraph,
@@ -19,7 +21,7 @@ import {
   versionTwoClientDefinitions,
   versionTwoRouterDefinitions,
 } from './utils/utils';
-import { FIELD, UNION } from '../src/utils/string-constants';
+import { FIELD, UNION } from '../src';
 
 describe('@inaccessible tests', () => {
   test('that inaccessible fields are included in client schema but not the router schema', () => {
@@ -189,10 +191,10 @@ describe('@inaccessible tests', () => {
     expect(errors![0]).toStrictEqual(
       invalidInterfaceImplementationError(
         'Entity',
-        'object',
+        OBJECT,
         new Map<string, ImplementationErrors>([
           [
-            'Interface',
+            INTERFACE,
             {
               invalidFieldImplementations: new Map<string, InvalidFieldImplementation>(),
               unimplementedFields: ['name'],
@@ -209,10 +211,10 @@ describe('@inaccessible tests', () => {
     expect(errors![0]).toStrictEqual(
       invalidInterfaceImplementationError(
         'Entity',
-        'object',
+        OBJECT,
         new Map<string, ImplementationErrors>([
           [
-            'Interface',
+            INTERFACE,
             {
               invalidFieldImplementations: new Map<string, InvalidFieldImplementation>(),
               unimplementedFields: ['name'],
@@ -226,25 +228,25 @@ describe('@inaccessible tests', () => {
   test('that an error is returned if all fields defined on an object are declared @inaccessible', () => {
     const { errors } = federateSubgraphs([subgraphA, subgraphI]);
     expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(allChildDefinitionsAreInaccessibleError('object', 'Object', FIELD));
+    expect(errors![0]).toStrictEqual(allChildDefinitionsAreInaccessibleError(OBJECT, OBJECT, FIELD));
   });
 
   test('that an error is returned if all fields defined on an extended object are declared @inaccessible', () => {
     const { errors } = federateSubgraphs([subgraphA, subgraphJ]);
     expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(allChildDefinitionsAreInaccessibleError('object', 'Object', FIELD));
+    expect(errors![0]).toStrictEqual(allChildDefinitionsAreInaccessibleError(OBJECT, OBJECT, FIELD));
   });
 
   test('that an error is returned if all fields defined on an interface are declared @inaccessible', () => {
     const { errors } = federateSubgraphs([subgraphA, subgraphK]);
     expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(allChildDefinitionsAreInaccessibleError('interface', 'Interface', FIELD));
+    expect(errors![0]).toStrictEqual(allChildDefinitionsAreInaccessibleError(INTERFACE, INTERFACE, FIELD));
   });
 
   test('that an error is returned if all fields defined on an extended interface are declared @inaccessible', () => {
     const { errors } = federateSubgraphs([subgraphA, subgraphL]);
     expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(allChildDefinitionsAreInaccessibleError('interface', 'Interface', FIELD));
+    expect(errors![0]).toStrictEqual(allChildDefinitionsAreInaccessibleError(INTERFACE, INTERFACE, FIELD));
   });
 
   test('that an inaccessible interface without accessible references is removed from the client schema', () => {
@@ -613,6 +615,36 @@ describe('@inaccessible tests', () => {
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(allChildDefinitionsAreInaccessibleError(UNION, 'Union', 'union member type'));
   });
+
+  test('that an @inaccessible only needs to be declared on a single field #1.1', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphY, subgraphZ, subgraphAA]);
+    expect(errors).toBeUndefined();
+  });
+
+  test('that an @inaccessible only needs to be declared on a single field #1.2', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphY, subgraphAA, subgraphZ]);
+    expect(errors).toBeUndefined();
+  });
+
+  test('that an @inaccessible only needs to be declared on a single field #1.3', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphZ, subgraphY, subgraphAA]);
+    expect(errors).toBeUndefined();
+  });
+
+  test('that an @inaccessible only needs to be declared on a single field #1.3', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphZ, subgraphAA, subgraphY]);
+    expect(errors).toBeUndefined();
+  });
+
+  test('that an @inaccessible only needs to be declared on a single field #1.3', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphAA, subgraphY, subgraphZ]);
+    expect(errors).toBeUndefined();
+  });
+
+  test('that an @inaccessible only needs to be declared on a single field #1.3', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphAA, subgraphZ, subgraphY]);
+    expect(errors).toBeUndefined();
+  });
 });
 
 const subgraphA: Subgraph = {
@@ -966,10 +998,55 @@ const subgraphX: Subgraph = {
   name: 'subgraph-x',
   url: '',
   definitions: parse(`
-    type Object @inaccessible{
+    type Object @inaccessible {
       name: String!
     }
     
     union Union = Object
+  `),
+};
+
+const subgraphY: Subgraph = {
+  name: 'subgraph-y',
+  url: '',
+  definitions: parse(`
+    type Query @shareable {
+      object: Object!
+    }
+    
+    type Object @shareable {
+      id: ID!
+      inaccessibleField: String! @inaccessible
+    }
+  `),
+};
+
+const subgraphZ: Subgraph = {
+  name: 'subgraph-z',
+  url: '',
+  definitions: parse(`
+    type Query @shareable {
+      object: Object!
+    }
+    
+    type Object @shareable {
+      age: Int!
+      inaccessibleField: String! @inaccessible
+    }
+  `),
+};
+
+const subgraphAA: Subgraph = {
+  name: 'subgraph-aa',
+  url: '',
+  definitions: parse(`
+    type Query @shareable {
+      object: Object!
+    }
+    
+    type Object @shareable {
+      name: String!
+      inaccessibleField: String!
+    }
   `),
 };

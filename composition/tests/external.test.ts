@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import {
-  allExternalFieldsError,
+  allExternalFieldInstancesError,
   EXTERNAL,
   externalInterfaceFieldsError,
   externalInterfaceFieldsWarning,
@@ -36,7 +36,7 @@ describe('@external directive tests', () => {
           externalFieldThree: Float
         }
         
-        type Object @external @extends {
+        extend type Object @external {
           """
             This is the description for Object.externalFieldFour
           """
@@ -74,7 +74,7 @@ describe('@external directive tests', () => {
 
     test('that @external declared on the object level applies to all its defined fields #1.2', () => {
       const { errors, normalizationResult } = normalizeSubgraphFromString(`
-        type Object @external @extends {
+        extend type Object @external {
           """
             This is the description for Object.externalFieldFour
           """
@@ -582,11 +582,14 @@ describe('@external directive tests', () => {
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
-        allExternalFieldsError('Entity', new Map<string, Array<string>>([['name', ['subgraph-h', 'subgraph-i']]])),
+        allExternalFieldInstancesError(
+          'Entity',
+          new Map<string, Array<string>>([['name', ['subgraph-h', 'subgraph-i']]]),
+        ),
       );
     });
 
-    test('that composition is successful if at least one field is not declared @external', () => {
+    test('that composition is successful if at least one field is not declared @external #1', () => {
       const { errors, federationResult } = federateSubgraphs([subgraphJ, subgraphK]);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
@@ -595,6 +598,46 @@ describe('@external directive tests', () => {
             `
             type Entity {
               id: ID!
+            }
+
+            type Query {
+              entity: Entity!
+            }
+          `,
+        ),
+      );
+    });
+
+    test('that composition is successful if at least one field is not declared @external #2.1', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphL, subgraphM]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionOneRouterDefinitions +
+            `
+            type Entity {
+              id: ID!
+              name: String!
+            }
+
+            type Query {
+              entity: Entity!
+            }
+          `,
+        ),
+      );
+    });
+
+    test('that composition is successful if at least one field is not declared @external #2.2', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphM, subgraphL]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionOneRouterDefinitions +
+            `
+            type Entity {
+              id: ID!
+              name: String!
             }
 
             type Query {
@@ -779,6 +822,32 @@ const subgraphK: Subgraph = {
   definitions: parse(`
     type Entity @key(fields: "id") {
       id: ID!
+    }
+  `),
+};
+
+const subgraphL: Subgraph = {
+  name: 'subgraph-l',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entity: Entity!
+    }
+
+    type Entity @key(fields: "id") {
+      id: ID!
+      name: String!
+    }
+  `),
+};
+
+const subgraphM: Subgraph = {
+  name: 'subgraph-m',
+  url: '',
+  definitions: parse(`
+    extend type Entity @key(fields: "id") {
+      id: ID! @external
+      name: String! @external
     }
   `),
 };

@@ -76,17 +76,6 @@ export const versionTwoBaseSchema =
   scalar openfed__Scope
 `;
 
-// The V2 definitions that are persisted in the raw federated schema
-export const versionTwoPersistedBaseSchema =
-  versionOnePersistedBaseSchema +
-  `
-  directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
-  directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
-  directive @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
-  
-  scalar openfed__Scope
-`;
-
 export const schemaQueryDefinition = `
 schema {
   query: Query

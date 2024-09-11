@@ -30,7 +30,7 @@ describe('@shareable directive tests', () => {
           shareableFieldThree: Float
         }
         
-        type Object @shareable @extends {
+        extend type Object @shareable {
           """
             This is the description for Object.shareableFieldFour
           """
@@ -69,7 +69,7 @@ describe('@shareable directive tests', () => {
 
     test('that @shareable declared on the object level applies to all its defined fields #1.2', () => {
       const { errors, normalizationResult } = normalizeSubgraphFromString(`
-        type Object @shareable @extends {
+        extend type Object @shareable {
           """
             This is the description for Object.shareableFieldFour
           """

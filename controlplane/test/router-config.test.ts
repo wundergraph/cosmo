@@ -1,4 +1,4 @@
-import { noQueryRootTypeError } from '@wundergraph/composition';
+import { noBaseDefinitionForExtensionError, noQueryRootTypeError, OBJECT } from '@wundergraph/composition';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel, routerConfigFromJsonString } from '@wundergraph/cosmo-shared';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
@@ -276,9 +276,8 @@ describe('Router Config', (ctx) => {
     });
 
     expect(graph.response?.code).toBe(EnumStatusCode.OK);
-    expect(graph.graph?.compositionErrors).toBe(
-      'Error: Extension error:\n' + ' Could not extend the type "User" because no base definition exists.',
-    );
+    expect(graph.graph?.compositionErrors)
+      .toStrictEqual(noBaseDefinitionForExtensionError(OBJECT, 'User').toString());
     expect(graph.graph?.isComposable).toBe(false);
 
     const tokenResp = await client.generateRouterToken({

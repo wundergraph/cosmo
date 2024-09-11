@@ -21,6 +21,8 @@ import {
   SchemaExtensionNode,
   SelectionSetNode,
   StringValueNode,
+  TypeDefinitionNode,
+  TypeExtensionNode,
   UnionTypeDefinitionNode,
   UnionTypeExtensionNode,
 } from 'graphql';
@@ -47,10 +49,10 @@ import {
   SUBSCRIPTION,
   UNION_UPPER,
 } from '../utils/string-constants';
-import { duplicateInterfaceError } from '../errors/errors';
-import { ObjectLikeTypeNode } from '../schema-building/ast';
+import { duplicateImplementedInterfaceError } from '../errors/errors';
+import { CompositeOutputNode } from '../schema-building/ast';
 
-export function isObjectLikeNodeEntity(node: ObjectLikeTypeNode): boolean {
+export function isObjectLikeNodeEntity(node: CompositeOutputNode): boolean {
   if (!node.directives?.length) {
     return false;
   }
@@ -61,6 +63,7 @@ export function isObjectLikeNodeEntity(node: ObjectLikeTypeNode): boolean {
   }
   return false;
 }
+
 export function isNodeInterfaceObject(node: ObjectTypeDefinitionNode): boolean {
   if (!node.directives?.length) {
     return false;
@@ -83,26 +86,6 @@ export function isNodeExtension(node: ObjectTypeDefinitionNode | InterfaceTypeDe
     }
   }
   return false;
-}
-
-export function extractInterfaces(
-  node: InterfaceTypeDefinitionNode | InterfaceTypeExtensionNode | ObjectTypeDefinitionNode | ObjectTypeExtensionNode,
-  interfaces: Set<string>,
-  errors?: Error[],
-): Set<string> {
-  if (!node.interfaces) {
-    return interfaces;
-  }
-  const parentTypeName = node.name.value;
-  for (const face of node.interfaces) {
-    const name = face.name.value;
-    if (errors && interfaces.has(name)) {
-      errors.push(duplicateInterfaceError(name, parentTypeName));
-      continue;
-    }
-    interfaces.add(name);
-  }
-  return interfaces;
 }
 
 export function areBaseAndExtensionKindsCompatible(baseKind: Kind, extensionKind: Kind, typeName: string): boolean {

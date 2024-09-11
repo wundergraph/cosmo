@@ -2,10 +2,11 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { addSeconds, formatISO, subDays } from 'date-fns';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, Mock, test, vi } from 'vitest';
+import { noBaseDefinitionForExtensionError, OBJECT } from "@wundergraph/composition";
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import { SchemaChangeType } from '../src/types/index.js';
-import { SetupTest } from './test-util.js';
+import { DEFAULT_NAMESPACE, SetupTest } from './test-util.js';
 
 let dbname = '';
 
@@ -92,7 +93,7 @@ describe('CheckSubgraphSchema', (ctx) => {
 
     const createFederatedGraphResp = await client.createFederatedGraph({
       name: federatedGraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       labelMatchers: [joinLabel(label)],
       routingUrl: 'http://localhost:8081',
     });
@@ -100,7 +101,7 @@ describe('CheckSubgraphSchema', (ctx) => {
 
     let resp = await client.createFederatedSubgraph({
       name: subgraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       labels: [label],
       routingUrl: 'http://localhost:8080',
     });
@@ -109,7 +110,7 @@ describe('CheckSubgraphSchema', (ctx) => {
 
     resp = await client.publishFederatedSubgraph({
       name: subgraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       schema: 'type Query { hello: String! }',
     });
 
@@ -117,14 +118,12 @@ describe('CheckSubgraphSchema', (ctx) => {
 
     const checkResp = await client.checkSubgraphSchema({
       subgraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       schema: Uint8Array.from(Buffer.from('type Query { hello: String! } extend type Product { hello: String! }')),
     });
     expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
-    expect(checkResp.compositionErrors.length).not.toBe(0);
-    expect(checkResp.compositionErrors[0].message).toBe(
-      `Extension error:\n Could not extend the type "Product" because no base definition exists.`,
-    );
+    expect(checkResp.compositionErrors).toHaveLength(1);
+    expect(checkResp.compositionErrors[0].message).toBe(noBaseDefinitionForExtensionError(OBJECT, 'Product').message);
 
     await server.close();
   });
@@ -159,8 +158,8 @@ describe('CheckSubgraphSchema', (ctx) => {
       schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
     });
     expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
-    expect(checkResp.compositionErrors.length).toBe(0);
-    expect(checkResp.breakingChanges.length).toBe(0);
+    expect(checkResp.compositionErrors).toHaveLength(0);
+    expect(checkResp.breakingChanges).toHaveLength(0);
 
     await server.close();
   });
