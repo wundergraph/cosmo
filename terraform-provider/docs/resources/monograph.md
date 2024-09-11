@@ -24,7 +24,10 @@ Cosmo Monograph Resource
 
 ### Optional
 
+- `admission_webhook_secret` (String) The admission webhook secret for the monograph.
+- `admission_webhook_url` (String) The admission webhook URL for the monograph.
 - `readme` (String) The readme for the subgraph.
+- `subscription_protocol` (String) The subscription protocol for the subgraph.
 - `subscription_url` (String) The subscription URL for the subgraph.
 - `websocket_subprotocol` (String) The websocket subprotocol for the subgraph.
 

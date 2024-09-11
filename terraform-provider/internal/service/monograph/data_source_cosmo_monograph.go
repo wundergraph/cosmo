@@ -32,9 +32,11 @@ type MonographDataSourceModel struct {
 	Namespace              types.String `tfsdk:"namespace"`
 	Readme                 types.String `tfsdk:"readme"`
 	RoutingURL             types.String `tfsdk:"routing_url"`
-	AdmissionWebhookUrl    types.String `tfsdk:"admission_webhook_url"`
 	AdmissionWebhookSecret types.String `tfsdk:"admission_webhook_secret"`
 	LabelMatchers          types.List   `tfsdk:"label_matchers"`
+	WebsocketSubprotocol   types.String `tfsdk:"websocket_subprotocol"`
+	SubscriptionProtocol   types.String `tfsdk:"subscription_protocol"`
+	AdmissionWebhookURL    types.String `tfsdk:"admission_webhook_url"`
 }
 
 // Metadata returns the data source type name.
@@ -76,6 +78,14 @@ func (d *MonographDataSource) Schema(ctx context.Context, req datasource.SchemaR
 				MarkdownDescription: "A list of label matchers used to select the services that will form the federated graph.",
 				Computed:            true,
 				ElementType:         types.StringType,
+			},
+			"websocket_subprotocol": schema.StringAttribute{
+				MarkdownDescription: "The websocket subprotocol for the monograph.",
+				Computed:            true,
+			},
+			"subscription_protocol": schema.StringAttribute{
+				MarkdownDescription: "The subscription protocol for the monograph.",
+				Computed:            true,
 			},
 			"routing_url": schema.StringAttribute{
 				MarkdownDescription: "The URL for the federated graph.",
@@ -130,7 +140,7 @@ func (d *MonographDataSource) Read(ctx context.Context, req datasource.ReadReque
 	data.Namespace = types.StringValue(monograph.GetNamespace())
 	data.RoutingURL = types.StringValue(monograph.GetRoutingURL())
 	data.Readme = types.StringValue(monograph.GetReadme())
-	data.AdmissionWebhookUrl = types.StringValue(monograph.GetAdmissionWebhookUrl())
+	data.AdmissionWebhookURL = types.StringValue(monograph.GetAdmissionWebhookUrl())
 
 	tflog.Trace(ctx, "Read monograph data source", map[string]interface{}{
 		"id": data.Id.ValueString(),

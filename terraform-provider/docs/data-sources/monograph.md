@@ -46,3 +46,5 @@ data "cosmo_monograph" "example" {
 - `label_matchers` (List of String) A list of label matchers used to select the services that will form the federated graph.
 - `readme` (String) Readme content for the federated graph.
 - `routing_url` (String) The URL for the federated graph.
+- `subscription_protocol` (String) The subscription protocol for the monograph.
+- `websocket_subprotocol` (String) The websocket subprotocol for the monograph.
