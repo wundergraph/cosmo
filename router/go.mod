@@ -143,4 +143,4 @@ require (
 	nhooyr.io/websocket v1.8.11 // indirect
 )
 
-replace github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
+//replace github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
