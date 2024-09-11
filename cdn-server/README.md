@@ -53,3 +53,5 @@ The following environment variables are available:
 - **S3_ACCESS_KEY_ID**: Your access key ID for S3 storage. This may be left empty when using `https://username:password@minio/bucket`.
 
 - **S3_SECRET_ACCESS_KEY**: Your secret access key for S3 storage. This may be left empty when using `https://username:password@minio/bucket`.
+
+- **S3_FORCE_PATH_STYLE**: Whether to force path style URLs for S3 storage. Default is `true`. Set to `false` when using AWS S3.
