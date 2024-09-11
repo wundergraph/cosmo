@@ -82,6 +82,7 @@ type (
 		modules           []Module
 		WebsocketStats    WebSocketsStatistics
 		playgroundHandler func(http.Handler) http.Handler
+		proxy             ProxyFunc
 	}
 
 	SubgraphTransportOptions struct {
@@ -471,10 +472,10 @@ func NewRouter(opts ...Option) (*Router, error) {
 	}
 
 	for _, source := range r.eventsConfig.Providers.Nats {
-		r.logger.Info("Nats Event source enabled", zap.String("providerID", source.ID), zap.String("url", source.URL))
+		r.logger.Info("Nats Event source enabled", zap.String("provider_id", source.ID), zap.String("url", source.URL))
 	}
 	for _, source := range r.eventsConfig.Providers.Kafka {
-		r.logger.Info("Kafka Event source enabled", zap.String("providerID", source.ID), zap.Strings("brokers", source.Brokers))
+		r.logger.Info("Kafka Event source enabled", zap.String("provider_id", source.ID), zap.Strings("brokers", source.Brokers))
 	}
 
 	return r, nil
@@ -482,7 +483,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 
 // newGraphServer creates a new server.
 func (r *Router) newServer(ctx context.Context, cfg *nodev1.RouterConfig) error {
-	server, err := newGraphServer(ctx, r, cfg)
+	server, err := newGraphServer(ctx, r, cfg, r.proxy)
 	if err != nil {
 		r.logger.Error("Failed to create graph server. Keeping the old server", zap.Error(err))
 		return err
@@ -823,7 +824,7 @@ func (r *Router) buildClients() error {
 		pClient = c
 
 		r.logger.Info("Use CDN as storage provider for persisted operations",
-			zap.String("providerID", provider.ID),
+			zap.String("provider_id", provider.ID),
 		)
 	} else if provider, ok := s3Providers[r.persistedOperationsConfig.Storage.ProviderID]; ok {
 
@@ -842,7 +843,7 @@ func (r *Router) buildClients() error {
 		pClient = c
 
 		r.logger.Info("Use S3 as storage provider for persisted operations",
-			zap.String("providerID", provider.ID),
+			zap.String("provider_id", provider.ID),
 		)
 	} else if r.graphApiToken != "" {
 		if r.persistedOperationsConfig.Storage.ProviderID != "" {
@@ -909,7 +910,7 @@ func (r *Router) buildClients() error {
 			rClient = c
 
 			r.logger.Info("Polling for execution config updates from CDN in the background",
-				zap.String("providerID", provider.ID),
+				zap.String("provider_id", provider.ID),
 				zap.String("interval", r.routerConfigPollerConfig.PollInterval.String()),
 			)
 		} else if provider, ok := s3Providers[r.routerConfigPollerConfig.Storage.ProviderID]; ok {
@@ -928,7 +929,7 @@ func (r *Router) buildClients() error {
 			rClient = c
 
 			r.logger.Info("Polling for execution config updates from S3 storage in the background",
-				zap.String("providerID", provider.ID),
+				zap.String("provider_id", provider.ID),
 				zap.String("interval", r.routerConfigPollerConfig.PollInterval.String()),
 			)
 		} else {
@@ -1413,6 +1414,12 @@ func WithHealthChecks(healthChecks health.Checker) Option {
 	}
 }
 
+func WithProxy(proxy ProxyFunc) Option {
+	return func(r *Router) {
+		r.proxy = proxy
+	}
+}
+
 func WithReadinessCheckPath(path string) Option {
 	return func(r *Router) {
 		r.readinessCheckPath = path
@@ -1635,7 +1642,9 @@ func WithStorageProviders(cfg config.StorageProviders) Option {
 	}
 }
 
-func newHTTPTransport(opts *SubgraphTransportOptions) *http.Transport {
+type ProxyFunc func(req *http.Request) (*url.URL, error)
+
+func newHTTPTransport(opts *SubgraphTransportOptions, proxy ProxyFunc) *http.Transport {
 	dialer := &net.Dialer{
 		Timeout:   opts.DialTimeout,
 		KeepAlive: opts.KeepAliveProbeInterval,
@@ -1661,6 +1670,9 @@ func newHTTPTransport(opts *SubgraphTransportOptions) *http.Transport {
 		TLSHandshakeTimeout:   opts.TLSHandshakeTimeout,
 		ResponseHeaderTimeout: opts.ResponseHeaderTimeout,
 		ExpectContinueTimeout: opts.ExpectContinueTimeout,
+		// Will return nil when HTTP(S)_PROXY does not exist or is empty.
+		// This will prevent the transport from handling the proxy when it is not needed.
+		Proxy: proxy,
 	}
 }
 

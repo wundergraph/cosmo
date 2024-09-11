@@ -1,6 +1,6 @@
 # router
 
-![Version: 0.7.0](https://img.shields.io/badge/Version-0.7.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.107.2](https://img.shields.io/badge/AppVersion-0.107.2-informational?style=flat-square)
+![Version: 0.8.0](https://img.shields.io/badge/Version-0.8.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.107.2](https://img.shields.io/badge/AppVersion-0.107.2-informational?style=flat-square)
 
 This is the official Helm Chart for the WunderGraph Cosmo Router.
 
@@ -21,7 +21,10 @@ This is the official Helm Chart for the WunderGraph Cosmo Router.
 | configuration.executionConfig | string | `""` | The execution config file to statically configure the router. If set, polling of the config is disabled. If your config exceeds 1MB (Kubernetes limit), you have to mount it as a file and set the path in routerConfigPath instead |
 | configuration.graphApiToken | string | `"replace-me"` | The router token is used to authenticate the router against the controlplane (required) |
 | configuration.graphqlMetricsCollectorUrl | string | `""` | The URL of the Cosmo GraphQL Metrics Collector. Should be internal to the cluster. Default to cloud if not set. |
+| configuration.httpProxy | string | `""` | The URL of the HTTP proxy server. Default is an empty string. |
+| configuration.httpsProxy | string | `""` | The URL of the HTTPS proxy server. Default is an empty string. |
 | configuration.logLevel | string | `"info"` | The log level of the router. Default to info if not set. |
+| configuration.noProxy | string | `""` | NO_PROXY is a comma-separated list of hosts or domains for which the proxy should not be used. |
 | configuration.otelCollectorUrl | string | `""` | The URL of the Cosmo GraphQL OTEL Collector. Should be internal to the cluster. Default to cloud if not set. |
 | configuration.prometheus.enabled | bool | `true` | Enables prometheus metrics support. Default is true. |
 | configuration.prometheus.path | string | `"/metrics"` | The HTTP path where metrics are exposed. Default is "/metrics". |

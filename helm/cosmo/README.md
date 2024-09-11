@@ -2,7 +2,7 @@
 
 For a detailed deployment guide of the chart, including the full documentation, see the [DEV.md](DEV.md) file.
 
-![Version: 0.10.0](https://img.shields.io/badge/Version-0.10.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
+![Version: 0.11.1](https://img.shields.io/badge/Version-0.11.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
 
 This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle GraphQL API Management Solution.
 
@@ -35,6 +35,11 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | cdn.commonLabels | object | `{}` | Add labels to all deployed resources |
+| cdn.configuration.s3AccessKeyId | string | `""` | s3 access key id, can be used instead of [username]:[password] in the url |
+| cdn.configuration.s3Endpoint | string | `""` | The endpoint of the S3 bucket. |
+| cdn.configuration.s3ForcePathStyle | string | `"true"` | Forces usage of path style urls for S3. Default is true. |
+| cdn.configuration.s3Region | string | `"auto"` | The region where the S3 bucket is located. |
+| cdn.configuration.s3SecretAccessKey | string | `""` | s3 secret access key, can be used instead of [username]:[password] in the url |
 | cdn.configuration.s3StorageUrl | string | `"http://minio:changeme@cosmo-minio:9000/cosmo"` |  |
 | clickhouse.auth.password | string | `"changeme"` |  |
 | clickhouse.auth.username | string | `"default"` |  |
@@ -64,6 +69,11 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | controlplane.configuration.prometheus.port | int | `8088` | The port where metrics are exposed. Default is port 8088. |
 | controlplane.configuration.redisHost | string | `"cosmo-redis-master"` |  |
 | controlplane.configuration.redisPort | int | `6379` |  |
+| controlplane.configuration.s3AccessKeyId | string | `""` | s3 access key id, can be used instead of [username]:[password] in the url |
+| controlplane.configuration.s3Endpoint | string | `""` | The endpoint of the S3 bucket. |
+| controlplane.configuration.s3ForcePathStyle | string | `"true"` | Forces usage of path style urls for S3. Default is true. |
+| controlplane.configuration.s3Region | string | `"auto"` | The region where the S3 bucket is located. |
+| controlplane.configuration.s3SecretAccessKey | string | `""` | s3 secret access key, can be used instead of [username]:[password] in the url |
 | controlplane.configuration.s3StorageUrl | string | `"http://minio:changeme@cosmo-minio:9000/cosmo"` |  |
 | controlplane.configuration.smtp | object | `{"enabled":false,"host":"smtp.postmarkapp.com","password":"","port":587,"requireTls":true,"secure":true,"username":""}` | Use this section to configure the smtp server. |
 | controlplane.configuration.smtp.enabled | bool | `false` | Enables the smtp server. Default is false. |

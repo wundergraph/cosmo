@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.11.1](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.11.0...helm-cosmo@0.11.1) (2024-09-05)
+
+
+### Bug Fixes
+
+* cdn and controlplane not respecting nested subdomains ([#1145](https://github.com/wundergraph/cosmo/issues/1145)) ([1598d6e](https://github.com/wundergraph/cosmo/commit/1598d6e421cf3b51997050d006faf9655fd96fdd))
+
+## [0.11.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.10.0...helm-cosmo@0.11.0) (2024-09-03)
+
+
+### Features
+
+* make cosmo usable with aws s3  ([#1135](https://github.com/wundergraph/cosmo/issues/1135)) ([aa9b72f](https://github.com/wundergraph/cosmo/commit/aa9b72fe59a02557f11c2eed494f7691fea236aa))
+
 ## [0.10.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.9.0...helm-cosmo@0.10.0) (2024-08-29)
 
 

@@ -5,6 +5,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"net/http"
 	"sync"
 	"testing"
@@ -25,7 +27,10 @@ func TestNatsEvents(t *testing.T) {
 	t.Run("subscribe async", func(t *testing.T) {
 		t.Parallel()
 
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		testenv.Run(t, &testenv.Config{LogObservation: testenv.LogObservationConfig{
+			Enabled:  true,
+			LogLevel: zapcore.InfoLevel,
+		}}, func(t *testing.T, xEnv *testenv.Environment) {
 			var subscriptionOne struct {
 				employeeUpdated struct {
 					ID      float64 `graphql:"id"`
@@ -82,6 +87,11 @@ func TestNatsEvents(t *testing.T) {
 			xEnv.WaitForMessagesSent(2, time.Second*10)
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
 			xEnv.WaitForConnectionCount(0, time.Second*10)
+
+			natsLogs := xEnv.Observer().FilterMessageSnippet("Nats").All()
+			require.Len(t, natsLogs, 4)
+			providerIDFields := xEnv.Observer().FilterField(zap.String("provider_id", "my-nats")).All()
+			require.Len(t, providerIDFields, 1)
 		})
 	})
 

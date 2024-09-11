@@ -128,6 +128,27 @@ spec:
                   name: {{ include "router.secretName" . }}
                   key: graphApiToken
             {{- end }}
+            {{- if .Values.configuration.httpsProxy }}
+            - name: HTTPS_PROXY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "router.secretName" . }}
+                  key: httpsProxy
+            {{- end }}
+            {{- if .Values.configuration.httpProxy }}
+            - name: HTTP_PROXY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "router.secretName" . }}
+                  key: httpProxy
+            {{- end }}
+            {{- if .Values.configuration.noProxy }}
+            - name: NO_PROXY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "router.secretName" . }}
+                  key: noProxy
+            {{- end }}
             - name: PROMETHEUS_ENABLED
               valueFrom:
                 configMapKeyRef:

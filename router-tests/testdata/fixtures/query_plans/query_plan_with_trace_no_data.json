@@ -1,23 +1,5 @@
 {
-  "data": {
-    "products": [
-      {
-        "__typename": "Consultancy",
-        "lead": {
-          "__typename": "Employee",
-          "id": 1,
-          "derivedMood": "HAPPY"
-        },
-        "isLeadAvailable": false
-      },
-      {
-        "__typename": "Cosmo"
-      },
-      {
-        "__typename": "SDK"
-      }
-    ]
-  },
+  "data": null,
   "extensions": {
     "queryPlan": {
       "version": "1",
@@ -87,56 +69,56 @@
               "kind": "Single",
               "fetch": {
                 "kind": "BatchEntity",
-                "path": "products",
+                "path": "products.@.lead",
                 "subgraphName": "employees",
                 "subgraphId": "0",
                 "fetchId": 3,
                 "dependsOnFetchIds": [
                   0,
-                  2
+                  1
                 ],
                 "representations": [
                   {
-                    "kind": "@key",
-                    "typeName": "Consultancy",
-                    "fragment": "fragment Key on Consultancy {\n    __typename\n    upc\n}"
+                    "kind": "@requires",
+                    "typeName": "Employee",
+                    "fieldName": "derivedMood",
+                    "fragment": "fragment Requires_for_derivedMood on Employee {\n    currentMood\n}"
                   },
                   {
-                    "kind": "@requires",
-                    "typeName": "Consultancy",
-                    "fieldName": "isLeadAvailable",
-                    "fragment": "fragment Requires_for_isLeadAvailable on Consultancy {\n    lead {\n        isAvailable\n    }\n}"
+                    "kind": "@key",
+                    "typeName": "Employee",
+                    "fragment": "fragment Key on Employee {\n    __typename\n    id\n}"
                   }
                 ],
-                "query": "query($representations: [_Any!]!){\n    _entities(representations: $representations){\n        __typename\n        ... on Consultancy {\n            isLeadAvailable\n        }\n    }\n}"
+                "query": "query($representations: [_Any!]!){\n    _entities(representations: $representations){\n        __typename\n        ... on Employee {\n            derivedMood\n        }\n    }\n}"
               }
             },
             {
               "kind": "Single",
               "fetch": {
                 "kind": "BatchEntity",
-                "path": "products.@.lead",
+                "path": "products",
                 "subgraphName": "employees",
                 "subgraphId": "0",
                 "fetchId": 4,
                 "dependsOnFetchIds": [
-                  1,
-                  0
+                  0,
+                  2
                 ],
                 "representations": [
                   {
-                    "kind": "@key",
-                    "typeName": "Employee",
-                    "fragment": "fragment Key on Employee {\n    __typename\n    id\n}"
+                    "kind": "@requires",
+                    "typeName": "Consultancy",
+                    "fieldName": "isLeadAvailable",
+                    "fragment": "fragment Requires_for_isLeadAvailable on Consultancy {\n    lead {\n        isAvailable\n    }\n}"
                   },
                   {
-                    "kind": "@requires",
-                    "typeName": "Employee",
-                    "fieldName": "derivedMood",
-                    "fragment": "fragment Requires_for_derivedMood on Employee {\n    currentMood\n}"
+                    "kind": "@key",
+                    "typeName": "Consultancy",
+                    "fragment": "fragment Key on Consultancy {\n    __typename\n    upc\n}"
                   }
                 ],
-                "query": "query($representations: [_Any!]!){\n    _entities(representations: $representations){\n        __typename\n        ... on Employee {\n            derivedMood\n        }\n    }\n}"
+                "query": "query($representations: [_Any!]!){\n    _entities(representations: $representations){\n        __typename\n        ... on Consultancy {\n            isLeadAvailable\n        }\n    }\n}"
               }
             }
           ]
@@ -181,134 +163,7 @@
             "fetch": {
               "kind": "Single",
               "path": "",
-              "source_id": "0",
-              "trace": {
-                "raw_input_data": {},
-                "input": {
-                  "body": {
-                    "query": "{products {__typename ... on Consultancy {lead {__typename id} __typename upc}}}"
-                  },
-                  "header": {},
-                  "method": "POST",
-                  "url": "http://localhost/graphql"
-                },
-                "output": {
-                  "data": {
-                    "products": [
-                      {
-                        "lead": {
-                          "__typename": "Employee",
-                          "id": 1
-                        },
-                        "__typename": "Consultancy",
-                        "upc": "consultancy"
-                      },
-                      {
-                        "__typename": "Cosmo"
-                      },
-                      {
-                        "__typename": "SDK"
-                      }
-                    ]
-                  },
-                  "extensions": {
-                    "trace": {
-                      "request": {
-                        "method": "POST",
-                        "url": "http://localhost/graphql",
-                        "headers": {
-                          "Accept": [
-                            "application/json"
-                          ],
-                          "Accept-Encoding": [
-                            "gzip",
-                            "deflate"
-                          ],
-                          "Content-Type": [
-                            "application/json"
-                          ]
-                        }
-                      },
-                      "response": {
-                        "status_code": 200,
-                        "status": "200 OK",
-                        "headers": {
-                          "Content-Length": [
-                            "183"
-                          ],
-                          "Content-Type": [
-                            "application/json"
-                          ]
-                        },
-                        "body_size": 183
-                      }
-                    }
-                  }
-                },
-                "duration_since_start_nanoseconds": 1,
-                "duration_since_start_pretty": "1ns",
-                "duration_load_nanoseconds": 1,
-                "duration_load_pretty": "1ns",
-                "single_flight_used": true,
-                "single_flight_shared_response": false,
-                "load_skipped": false,
-                "load_stats": {
-                  "get_conn": {
-                    "duration_since_start_nanoseconds": 1,
-                    "duration_since_start_pretty": "1ns",
-                    "host_port": ""
-                  },
-                  "got_conn": {
-                    "duration_since_start_nanoseconds": 1,
-                    "duration_since_start_pretty": "1ns",
-                    "reused": false,
-                    "was_idle": false,
-                    "idle_time_nanoseconds": 0,
-                    "idle_time_pretty": ""
-                  },
-                  "got_first_response_byte": {
-                    "duration_since_start_nanoseconds": 1,
-                    "duration_since_start_pretty": "1ns"
-                  },
-                  "dns_start": {
-                    "duration_since_start_nanoseconds": 0,
-                    "duration_since_start_pretty": "",
-                    "host": ""
-                  },
-                  "dns_done": {
-                    "duration_since_start_nanoseconds": 0,
-                    "duration_since_start_pretty": ""
-                  },
-                  "connect_start": {
-                    "duration_since_start_nanoseconds": 1,
-                    "duration_since_start_pretty": "1ns",
-                    "network": "",
-                    "addr": ""
-                  },
-                  "connect_done": {
-                    "duration_since_start_nanoseconds": 1,
-                    "duration_since_start_pretty": "1ns",
-                    "network": "",
-                    "addr": ""
-                  },
-                  "tls_handshake_start": {
-                    "duration_since_start_nanoseconds": 0,
-                    "duration_since_start_pretty": ""
-                  },
-                  "tls_handshake_done": {
-                    "duration_since_start_nanoseconds": 0,
-                    "duration_since_start_pretty": ""
-                  },
-                  "wrote_headers": {
-                    "duration_since_start_nanoseconds": 1,
-                    "duration_since_start_pretty": "1ns"
-                  },
-                  "wrote_request": {
-                    "duration_since_start_nanoseconds": 1,
-                    "duration_since_start_pretty": "1ns"
-                  }
-                }
-              }
+              "source_id": "0"
             }
           },
           {
@@ -319,135 +174,7 @@
                 "fetch": {
                   "kind": "BatchEntity",
                   "path": "products.@.lead",
-                  "source_id": "6",
-                  "trace": {
-                    "raw_input_data": {
-                      "__typename": "Employee",
-                      "id": 1
-                    },
-                    "input": {
-                      "body": {
-                        "query": "query($representations: [_Any!]!){_entities(representations: $representations){__typename ... on Employee {currentMood}}}",
-                        "variables": {
-                          "representations": [
-                            {
-                              "__typename": "Employee",
-                              "id": 1
-                            }
-                          ]
-                        }
-                      },
-                      "header": {},
-                      "method": "POST",
-                      "url": "http://localhost/graphql"
-                    },
-                    "output": {
-                      "data": {
-                        "_entities": [
-                          {
-                            "__typename": "Employee",
-                            "currentMood": "HAPPY"
-                          }
-                        ]
-                      },
-                      "extensions": {
-                        "trace": {
-                          "request": {
-                            "method": "POST",
-                            "url": "http://localhost/graphql",
-                            "headers": {
-                              "Accept": [
-                                "application/json"
-                              ],
-                              "Accept-Encoding": [
-                                "gzip",
-                                "deflate"
-                              ],
-                              "Content-Type": [
-                                "application/json"
-                              ]
-                            }
-                          },
-                          "response": {
-                            "status_code": 200,
-                            "status": "200 OK",
-                            "headers": {
-                              "Content-Length": [
-                                "72"
-                              ],
-                              "Content-Type": [
-                                "application/json"
-                              ]
-                            },
-                            "body_size": 72
-                          }
-                        }
-                      }
-                    },
-                    "duration_since_start_nanoseconds": 1,
-                    "duration_since_start_pretty": "1ns",
-                    "duration_load_nanoseconds": 1,
-                    "duration_load_pretty": "1ns",
-                    "single_flight_used": true,
-                    "single_flight_shared_response": false,
-                    "load_skipped": false,
-                    "load_stats": {
-                      "get_conn": {
-                        "duration_since_start_nanoseconds": 1,
-                        "duration_since_start_pretty": "1ns",
-                        "host_port": ""
-                      },
-                      "got_conn": {
-                        "duration_since_start_nanoseconds": 1,
-                        "duration_since_start_pretty": "1ns",
-                        "reused": false,
-                        "was_idle": false,
-                        "idle_time_nanoseconds": 0,
-                        "idle_time_pretty": ""
-                      },
-                      "got_first_response_byte": {
-                        "duration_since_start_nanoseconds": 1,
-                        "duration_since_start_pretty": "1ns"
-                      },
-                      "dns_start": {
-                        "duration_since_start_nanoseconds": 0,
-                        "duration_since_start_pretty": "",
-                        "host": ""
-                      },
-                      "dns_done": {
-                        "duration_since_start_nanoseconds": 0,
-                        "duration_since_start_pretty": ""
-                      },
-                      "connect_start": {
-                        "duration_since_start_nanoseconds": 1,
-                        "duration_since_start_pretty": "1ns",
-                        "network": "",
-                        "addr": ""
-                      },
-                      "connect_done": {
-                        "duration_since_start_nanoseconds": 1,
-                        "duration_since_start_pretty": "1ns",
-                        "network": "",
-                        "addr": ""
-                      },
-                      "tls_handshake_start": {
-                        "duration_since_start_nanoseconds": 0,
-                        "duration_since_start_pretty": ""
-                      },
-                      "tls_handshake_done": {
-                        "duration_since_start_nanoseconds": 0,
-                        "duration_since_start_pretty": ""
-                      },
-                      "wrote_headers": {
-                        "duration_since_start_nanoseconds": 1,
-                        "duration_since_start_pretty": "1ns"
-                      },
-                      "wrote_request": {
-                        "duration_since_start_nanoseconds": 1,
-                        "duration_since_start_pretty": "1ns"
-                      }
-                    }
-                  }
+                  "source_id": "6"
                 }
               },
               {
@@ -455,135 +182,7 @@
                 "fetch": {
                   "kind": "BatchEntity",
                   "path": "products.@.lead",
-                  "source_id": "5",
-                  "trace": {
-                    "raw_input_data": {
-                      "__typename": "Employee",
-                      "id": 1
-                    },
-                    "input": {
-                      "body": {
-                        "query": "query($representations: [_Any!]!){_entities(representations: $representations){__typename ... on Employee {isAvailable}}}",
-                        "variables": {
-                          "representations": [
-                            {
-                              "__typename": "Employee",
-                              "id": 1
-                            }
-                          ]
-                        }
-                      },
-                      "header": {},
-                      "method": "POST",
-                      "url": "http://localhost/graphql"
-                    },
-                    "output": {
-                      "data": {
-                        "_entities": [
-                          {
-                            "__typename": "Employee",
-                            "isAvailable": false
-                          }
-                        ]
-                      },
-                      "extensions": {
-                        "trace": {
-                          "request": {
-                            "method": "POST",
-                            "url": "http://localhost/graphql",
-                            "headers": {
-                              "Accept": [
-                                "application/json"
-                              ],
-                              "Accept-Encoding": [
-                                "gzip",
-                                "deflate"
-                              ],
-                              "Content-Type": [
-                                "application/json"
-                              ]
-                            }
-                          },
-                          "response": {
-                            "status_code": 200,
-                            "status": "200 OK",
-                            "headers": {
-                              "Content-Length": [
-                                "70"
-                              ],
-                              "Content-Type": [
-                                "application/json"
-                              ]
-                            },
-                            "body_size": 70
-                          }
-                        }
-                      }
-                    },
-                    "duration_since_start_nanoseconds": 1,
-                    "duration_since_start_pretty": "1ns",
-                    "duration_load_nanoseconds": 1,
-                    "duration_load_pretty": "1ns",
-                    "single_flight_used": true,
-                    "single_flight_shared_response": false,
-                    "load_skipped": false,
-                    "load_stats": {
-                      "get_conn": {
-                        "duration_since_start_nanoseconds": 1,
-                        "duration_since_start_pretty": "1ns",
-                        "host_port": ""
-                      },
-                      "got_conn": {
-                        "duration_since_start_nanoseconds": 1,
-                        "duration_since_start_pretty": "1ns",
-                        "reused": false,
-                        "was_idle": false,
-                        "idle_time_nanoseconds": 0,
-                        "idle_time_pretty": ""
-                      },
-                      "got_first_response_byte": {
-                        "duration_since_start_nanoseconds": 1,
-                        "duration_since_start_pretty": "1ns"
-                      },
-                      "dns_start": {
-                        "duration_since_start_nanoseconds": 0,
-                        "duration_since_start_pretty": "",
-                        "host": ""
-                      },
-                      "dns_done": {
-                        "duration_since_start_nanoseconds": 0,
-                        "duration_since_start_pretty": ""
-                      },
-                      "connect_start": {
-                        "duration_since_start_nanoseconds": 1,
-                        "duration_since_start_pretty": "1ns",
-                        "network": "",
-                        "addr": ""
-                      },
-                      "connect_done": {
-                        "duration_since_start_nanoseconds": 1,
-                        "duration_since_start_pretty": "1ns",
-                        "network": "",
-                        "addr": ""
-                      },
-                      "tls_handshake_start": {
-                        "duration_since_start_nanoseconds": 0,
-                        "duration_since_start_pretty": ""
-                      },
-                      "tls_handshake_done": {
-                        "duration_since_start_nanoseconds": 0,
-                        "duration_since_start_pretty": ""
-                      },
-                      "wrote_headers": {
-                        "duration_since_start_nanoseconds": 1,
-                        "duration_since_start_pretty": "1ns"
-                      },
-                      "wrote_request": {
-                        "duration_since_start_nanoseconds": 1,
-                        "duration_since_start_pretty": "1ns"
-                      }
-                    }
-                  }
+                  "source_id": "5"
                 }
               }
             ]
@@ -595,292 +194,16 @@
                 "kind": "Single",
                 "fetch": {
                   "kind": "BatchEntity",
-                  "path": "products",
-                  "source_id": "0",
-                  "trace": {
-                    "raw_input_data": [
-                      {
-                        "lead": {
-                          "__typename": "Employee",
-                          "id": 1,
-                          "currentMood": "HAPPY",
-                          "isAvailable": false
-                        },
-                        "__typename": "Consultancy",
-                        "upc": "consultancy"
-                      },
-                      {
-                        "__typename": "Cosmo"
-                      },
-                      {
-                        "__typename": "SDK"
-                      }
-                    ],
-                    "input": {
-                      "body": {
-                        "query": "query($representations: [_Any!]!){_entities(representations: $representations){__typename ... on Consultancy {isLeadAvailable}}}",
-                        "variables": {
-                          "representations": [
-                            {
-                              "__typename": "Consultancy",
-                              "lead": {
-                                "isAvailable": false
-                              },
-                              "upc": "consultancy"
-                            }
-                          ]
-                        }
-                      },
-                      "header": {},
-                      "method": "POST",
-                      "url": "http://localhost/graphql"
-                    },
-                    "output": {
-                      "data": {
-                        "_entities": [
-                          {
-                            "__typename": "Consultancy",
-                            "isLeadAvailable": false
-                          }
-                        ]
-                      },
-                      "extensions": {
-                        "trace": {
-                          "request": {
-                            "method": "POST",
-                            "url": "http://localhost/graphql",
-                            "headers": {
-                              "Accept": [
-                                "application/json"
-                              ],
-                              "Accept-Encoding": [
-                                "gzip",
-                                "deflate"
-                              ],
-                              "Content-Type": [
-                                "application/json"
-                              ]
-                            }
-                          },
-                          "response": {
-                            "status_code": 200,
-                            "status": "200 OK",
-                            "headers": {
-                              "Content-Length": [
-                                "77"
-                              ],
-                              "Content-Type": [
-                                "application/json"
-                              ]
-                            },
-                            "body_size": 77
-                          }
-                        }
-                      }
-                    },
-                    "duration_since_start_nanoseconds": 1,
-                    "duration_since_start_pretty": "1ns",
-                    "duration_load_nanoseconds": 1,
-                    "duration_load_pretty": "1ns",
-                    "single_flight_used": true,
-                    "single_flight_shared_response": false,
-                    "load_skipped": false,
-                    "load_stats": {
-                      "get_conn": {
-                        "duration_since_start_nanoseconds": 1,
-                        "duration_since_start_pretty": "1ns",
-                        "host_port": ""
-                      },
-                      "got_conn": {
-                        "duration_since_start_nanoseconds": 1,
-                        "duration_since_start_pretty": "1ns",
-                        "reused": false,
-                        "was_idle": false,
-                        "idle_time_nanoseconds": 0,
-                        "idle_time_pretty": ""
-                      },
-                      "got_first_response_byte": {
-                        "duration_since_start_nanoseconds": 1,
-                        "duration_since_start_pretty": "1ns"
-                      },
-                      "dns_start": {
-                        "duration_since_start_nanoseconds": 0,
-                        "duration_since_start_pretty": "",
-                        "host": ""
-                      },
-                      "dns_done": {
-                        "duration_since_start_nanoseconds": 0,
-                        "duration_since_start_pretty": ""
-                      },
-                      "connect_start": {
-                        "duration_since_start_nanoseconds": 1,
-                        "duration_since_start_pretty": "1ns",
-                        "network": "",
-                        "addr": ""
-                      },
-                      "connect_done": {
-                        "duration_since_start_nanoseconds": 1,
-                        "duration_since_start_pretty": "1ns",
-                        "network": "",
-                        "addr": ""
-                      },
-                      "tls_handshake_start": {
-                        "duration_since_start_nanoseconds": 0,
-                        "duration_since_start_pretty": ""
-                      },
-                      "tls_handshake_done": {
-                        "duration_since_start_nanoseconds": 0,
-                        "duration_since_start_pretty": ""
-                      },
-                      "wrote_headers": {
-                        "duration_since_start_nanoseconds": 1,
-                        "duration_since_start_pretty": "1ns"
-                      },
-                      "wrote_request": {
-                        "duration_since_start_nanoseconds": 1,
-                        "duration_since_start_pretty": "1ns"
-                      }
-                    }
-                  }
+                  "path": "products.@.lead",
+                  "source_id": "0"
                 }
               },
               {
                 "kind": "Single",
                 "fetch": {
                   "kind": "BatchEntity",
-                  "path": "products.@.lead",
-                  "source_id": "0",
-                  "trace": {
-                    "raw_input_data": {
-                      "__typename": "Employee",
-                      "id": 1,
-                      "currentMood": "HAPPY",
-                      "isAvailable": false
-                    },
-                    "input": {
-                      "body": {
-                        "query": "query($representations: [_Any!]!){_entities(representations: $representations){__typename ... on Employee {derivedMood}}}",
-                        "variables": {
-                          "representations": [
-                            {
-                              "__typename": "Employee",
-                              "currentMood": "HAPPY",
-                              "id": 1
-                            }
-                          ]
-                        }
-                      },
-                      "header": {},
-                      "method": "POST",
-                      "url": "http://localhost/graphql"
-                    },
-                    "output": {
-                      "data": {
-                        "_entities": [
-                          {
-                            "__typename": "Employee",
-                            "derivedMood": "HAPPY"
-                          }
-                        ]
-                      },
-                      "extensions": {
-                        "trace": {
-                          "request": {
-                            "method": "POST",
-                            "url": "http://localhost/graphql",
-                            "headers": {
-                              "Accept": [
-                                "application/json"
-                              ],
-                              "Accept-Encoding": [
-                                "gzip",
-                                "deflate"
-                              ],
-                              "Content-Type": [
-                                "application/json"
-                              ]
-                            }
-                          },
-                          "response": {
-                            "status_code": 200,
-                            "status": "200 OK",
-                            "headers": {
-                              "Content-Length": [
-                                "72"
-                              ],
-                              "Content-Type": [
-                                "application/json"
-                              ]
-                            },
-                            "body_size": 72
-                          }
-                        }
-                      }
-                    },
-                    "duration_since_start_nanoseconds": 1,
-                    "duration_since_start_pretty": "1ns",
-                    "duration_load_nanoseconds": 1,
-                    "duration_load_pretty": "1ns",
-                    "single_flight_used": true,
-                    "single_flight_shared_response": false,
-                    "load_skipped": false,
-                    "load_stats": {
-                      "get_conn": {
-                        "duration_since_start_nanoseconds": 1,
-                        "duration_since_start_pretty": "1ns",
-                        "host_port": ""
-                      },
-                      "got_conn": {
-                        "duration_since_start_nanoseconds": 1,
-                        "duration_since_start_pretty": "1ns",
-                        "reused": false,
-                        "was_idle": false,
-                        "idle_time_nanoseconds": 0,
-                        "idle_time_pretty": ""
-                      },
-                      "got_first_response_byte": {
-                        "duration_since_start_nanoseconds": 1,
-                        "duration_since_start_pretty": "1ns"
-                      },
-                      "dns_start": {
-                        "duration_since_start_nanoseconds": 0,
-                        "duration_since_start_pretty": "",
-                        "host": ""
-                      },
-                      "dns_done": {
-                        "duration_since_start_nanoseconds": 0,
-                        "duration_since_start_pretty": ""
-                      },
-                      "connect_start": {
-                        "duration_since_start_nanoseconds": 0,
-                        "duration_since_start_pretty": "",
-                        "network": "",
-                        "addr": ""
-                      },
-                      "connect_done": {
-                        "duration_since_start_nanoseconds": 0,
-                        "duration_since_start_pretty": "",
-                        "network": "",
-                        "addr": ""
-                      },
-                      "tls_handshake_start": {
-                        "duration_since_start_nanoseconds": 0,
-                        "duration_since_start_pretty": ""
-                      },
-                      "tls_handshake_done": {
-                        "duration_since_start_nanoseconds": 0,
-                        "duration_since_start_pretty": ""
-                      },
-                      "wrote_headers": {
-                        "duration_since_start_nanoseconds": 1,
-                        "duration_since_start_pretty": "1ns"
-                      },
-                      "wrote_request": {
-                        "duration_since_start_nanoseconds": 1,
-                        "duration_since_start_pretty": "1ns"
-                      }
-                    }
-                  }
+                  "path": "products",
+                  "source_id": "0"
                 }
               }
             ]
