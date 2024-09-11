@@ -9,7 +9,7 @@ import {
 import { stringToNamedTypeNode, stringToNameNode } from '../ast/utils';
 import {
   allChildDefinitionsAreInaccessibleError,
-  allExternalFieldsError,
+  allExternalFieldInstancesError,
   federationFactoryInitializationFatalError,
   fieldTypeMergeFatalError,
   inaccessibleQueryRootTypeError,
@@ -1405,7 +1405,7 @@ export class FederationFactory {
             }
             if (invalidFieldNames.subgraphNamesByExternalFieldName.size > 0) {
               this.errors.push(
-                allExternalFieldsError(parentTypeName, invalidFieldNames.subgraphNamesByExternalFieldName),
+                allExternalFieldInstancesError(parentTypeName, invalidFieldNames.subgraphNamesByExternalFieldName),
               );
             }
           }

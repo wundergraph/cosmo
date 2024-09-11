@@ -178,7 +178,8 @@ export function duplicateOperationTypeDefinitionError(
 
 export function noBaseDefinitionForExtensionError(typeString: string, typeName: string): Error {
   return new Error(
-    `The ${typeString} "${typeName}" is an extension, but there is no definition of "${typeName}" in any subgraph.`,
+    `The ${typeString} "${typeName}" is an extension,` +
+      ` but there is no base ${typeString} definition of "${typeName}" in any subgraph.`,
   );
 }
 
@@ -1524,7 +1525,10 @@ export function unresolvablePathError(
   return new Error(message);
 }
 
-export function allExternalFieldsError(typeName: string, subgraphNamesByFieldName: Map<string, Array<string>>): Error {
+export function allExternalFieldInstancesError(
+  typeName: string,
+  subgraphNamesByFieldName: Map<string, Array<string>>,
+): Error {
   let message =
     `The Object "${typeName}" is invalid because the following Field definition` +
     (subgraphNamesByFieldName.size > 1 ? 's are' : ' is') +

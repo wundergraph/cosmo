@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import {
-  allExternalFieldsError,
+  allExternalFieldInstancesError,
   ConfigurationData,
   duplicateDirectiveArgumentDefinitionsErrorMessage,
   federateSubgraphs,
@@ -580,7 +580,7 @@ describe('events Configuration tests', () => {
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(3);
       expect(errors![0]).toStrictEqual(
-        allExternalFieldsError(
+        allExternalFieldInstancesError(
           'Entity',
           new Map<string, Array<string>>([
             ['id', ['subgraph-h']],
@@ -590,7 +590,7 @@ describe('events Configuration tests', () => {
       );
       expect(errors![1]).toStrictEqual(noBaseDefinitionForExtensionError(OBJECT, OBJECT));
       expect(errors![2]).toStrictEqual(
-        allExternalFieldsError(OBJECT, new Map<string, Array<string>>([['id', ['subgraph-h']]])),
+        allExternalFieldInstancesError(OBJECT, new Map<string, Array<string>>([['id', ['subgraph-h']]])),
       );
     });
 
