@@ -10,7 +10,7 @@ import (
 	"github.com/wundergraph/cosmo/terraform-provider-cosmo/gen/proto/wg/cosmo/platform/v1/platformv1connect"
 )
 
-func CreateMonograph(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey string, name string, namespace string, routingUrl string, graphUrl string, subscriptionUrl *string, readme *string, websocketSubprotocol *int32) error {
+func CreateMonograph(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey string, name string, namespace string, routingUrl string, graphUrl string, subscriptionUrl *string, readme *string, websocketSubprotocol string, subscriptionProtocol string, admissionWebhookUrl string, admissionWebhookSecret string) error {
 	request := connect.NewRequest(&platformv1.CreateMonographRequest{
 		Name:                 name,
 		Namespace:            namespace,
@@ -18,14 +18,17 @@ func CreateMonograph(ctx context.Context, client platformv1connect.PlatformServi
 		GraphUrl:             graphUrl,
 		SubscriptionUrl:      subscriptionUrl,
 		Readme:               readme,
-		WebsocketSubprotocol: (*common.GraphQLWebsocketSubprotocol)(websocketSubprotocol),
+		WebsocketSubprotocol: resolveWebsocketSubprotocol(websocketSubprotocol),
+		SubscriptionProtocol: resolveSubscriptionProtocol(subscriptionProtocol),
+		AdmissionWebhookURL:    admissionWebhookUrl,
+		AdmissionWebhookSecret: &admissionWebhookSecret,
 	})
 	request.Header().Set("Authorization", fmt.Sprintf("Bearer %s", apiKey))
 	_, err := client.CreateMonograph(ctx, request)
 	return err
 }
 
-func UpdateMonograph(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey string, name string, namespace string, routingUrl string, graphUrl string, subscriptionUrl *string, readme *string, websocketSubprotocol *int32) error {
+func UpdateMonograph(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey string, name string, namespace string, routingUrl string, graphUrl string, subscriptionUrl *string, readme *string, websocketSubprotocol string, subscriptionProtocol string, admissionWebhookUrl string, admissionWebhookSecret string) error {
 	request := connect.NewRequest(&platformv1.UpdateMonographRequest{
 		Name:                 name,
 		Namespace:            namespace,
@@ -33,7 +36,10 @@ func UpdateMonograph(ctx context.Context, client platformv1connect.PlatformServi
 		GraphUrl:             graphUrl,
 		SubscriptionUrl:      subscriptionUrl,
 		Readme:               readme,
-		WebsocketSubprotocol: (*common.GraphQLWebsocketSubprotocol)(websocketSubprotocol),
+		WebsocketSubprotocol: resolveWebsocketSubprotocol(websocketSubprotocol),
+		SubscriptionProtocol: resolveSubscriptionProtocol(subscriptionProtocol),
+		AdmissionWebhookURL:    &admissionWebhookUrl,
+		AdmissionWebhookSecret: &admissionWebhookSecret,
 	})
 	request.Header().Set("Authorization", fmt.Sprintf("Bearer %s", apiKey))
 	_, err := client.UpdateMonograph(ctx, request)
