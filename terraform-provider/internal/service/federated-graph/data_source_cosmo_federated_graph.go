@@ -92,7 +92,7 @@ func (d *FederatedGraphDataSource) Configure(ctx context.Context, req datasource
 
 	client, ok := req.ProviderData.(*client.PlatformClient)
 	if !ok {
-		utils.AddDiagnosticError(resp, "Unexpected Data Source Configure Type", fmt.Sprintf("Expected *http.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData))
+		utils.AddDiagnosticError(resp, ErrUnexpectedDataSourceType, fmt.Sprintf("Expected *http.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData))
 		return
 	}
 
@@ -108,7 +108,7 @@ func (d *FederatedGraphDataSource) Read(ctx context.Context, req datasource.Read
 	}
 
 	if data.Name.IsNull() || data.Name.ValueString() == "" {
-		utils.AddDiagnosticError(resp, "Invalid Federated Graph Name", "The 'name' attribute is required.")
+		utils.AddDiagnosticError(resp, ErrInvalidGraphName, "The 'name' attribute is required.")
 		return
 	}
 
@@ -119,7 +119,7 @@ func (d *FederatedGraphDataSource) Read(ctx context.Context, req datasource.Read
 
 	apiResponse, err := api.GetFederatedGraph(ctx, d.PlatformClient.Client, d.PlatformClient.CosmoApiKey, data.Name.ValueString(), namespace)
 	if err != nil {
-		utils.AddDiagnosticError(resp, "Error Reading Federated Graph", fmt.Sprintf("Could not read federated graph: %s", err))
+		utils.AddDiagnosticError(resp, ErrReadingGraph, fmt.Sprintf("Could not read federated graph: %s", err))
 		return
 	}
 

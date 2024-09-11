@@ -35,7 +35,7 @@ func (r *NamespaceResource) Configure(ctx context.Context, req resource.Configur
 
 	client, ok := req.ProviderData.(*client.PlatformClient)
 	if !ok {
-		utils.AddDiagnosticError(resp, "Unexpected Data Source Configure Type", fmt.Sprintf("Expected *http.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData))
+		utils.AddDiagnosticError(resp, ErrUnexpectedDataSourceType, fmt.Sprintf("Expected *client.PlatformClient, got: %T. Please report this issue to the provider developers.", req.ProviderData))
 		return
 	}
 
@@ -70,15 +70,20 @@ func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
+	if data.Name.IsNull() || data.Name.ValueString() == "" {
+		utils.AddDiagnosticError(resp, ErrInvalidNamespaceName, "The 'name' attribute is required.")
+		return
+	}
+
 	err := api.CreateNamespace(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, data.Name.ValueString())
 	if err != nil {
-		utils.AddDiagnosticError(resp, "Error Creating Namespace", fmt.Sprintf("Could not create namespace: %s", err))
+		utils.AddDiagnosticError(resp, ErrCreatingNamespace, fmt.Sprintf("Could not create namespace: %s, name: %s", err, data.Name.ValueString()))
 		return
 	}
 
 	namespace, err := getNamespaceByName(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, data.Name.ValueString())
 	if err != nil {
-		utils.AddDiagnosticError(resp, "Error Reading Namespace", err.Error())
+		utils.AddDiagnosticError(resp, ErrReadingNamespace, err.Error())
 		return
 	}
 
@@ -100,7 +105,7 @@ func (r *NamespaceResource) Read(ctx context.Context, req resource.ReadRequest, 
 
 	namespace, err := getNamespaceByName(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, data.Name.ValueString())
 	if err != nil {
-		utils.AddDiagnosticError(resp, "Error Reading Namespace", err.Error())
+		utils.AddDiagnosticError(resp, ErrReadingNamespace, err.Error())
 		return
 	}
 
@@ -114,21 +119,28 @@ func (r *NamespaceResource) Read(ctx context.Context, req resource.ReadRequest, 
 
 func (r *NamespaceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var data NamespaceResourceModel
+	var state NamespaceResourceModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
+	if data.Name.ValueString() != state.Name.ValueString() {
+		utils.AddDiagnosticError(resp, ErrUpdatingNamespace, "Changing the namespace name requires recreation.")
+		return
+	}
+
 	namespace, err := getNamespaceByName(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, data.Name.ValueString())
 	if err != nil {
-		utils.AddDiagnosticError(resp, "Error Reading Namespace", err.Error())
+		utils.AddDiagnosticError(resp, ErrReadingNamespace, err.Error())
 		return
 	}
 
 	err = api.RenameNamespace(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, namespace.Name, data.Name.String())
 	if err != nil {
-		utils.AddDiagnosticError(resp, "Error Updating Namespace", fmt.Sprintf("Could not update namespace: %s", err))
+		utils.AddDiagnosticError(resp, ErrUpdatingNamespace, fmt.Sprintf("Could not update namespace: %s", err))
 		return
 	}
 
@@ -147,7 +159,7 @@ func (r *NamespaceResource) Delete(ctx context.Context, req resource.DeleteReque
 
 	err := api.DeleteNamespace(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, data.Name.ValueString())
 	if err != nil {
-		utils.AddDiagnosticError(resp, "Error Deleting Namespace", fmt.Sprintf("Could not delete namespace: %s", err))
+		utils.AddDiagnosticError(resp, ErrDeletingNamespace, fmt.Sprintf("Could not delete namespace: %s", err))
 		return
 	}
 

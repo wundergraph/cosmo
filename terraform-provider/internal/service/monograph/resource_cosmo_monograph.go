@@ -106,7 +106,7 @@ func (r *MonographResource) Configure(ctx context.Context, req resource.Configur
 
 	client, ok := req.ProviderData.(*client.PlatformClient)
 	if !ok {
-		utils.AddDiagnosticError(resp, "Unexpected Data Source Configure Type", fmt.Sprintf("Expected *http.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData))
+		utils.AddDiagnosticError(resp, ErrUnexpectedDataSourceType, fmt.Sprintf("Expected *http.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData))
 		return
 	}
 
@@ -118,6 +118,11 @@ func (r *MonographResource) Create(ctx context.Context, req resource.CreateReque
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if data.Name.IsNull() || data.Name.ValueString() == "" {
+		utils.AddDiagnosticError(resp, ErrInvalidMonographName, fmt.Sprintf("The 'name' attribute is required for monograph in namespace: %s", data.Namespace.ValueString()))
 		return
 	}
 
@@ -137,13 +142,13 @@ func (r *MonographResource) Create(ctx context.Context, req resource.CreateReque
 		data.AdmissionWebhookSecret.ValueString(),
 	)
 	if err != nil {
-		utils.AddDiagnosticError(resp, "Error Creating Monograph", fmt.Sprintf("Could not create monograph: %s", err))
+		utils.AddDiagnosticError(resp, ErrCreatingMonograph, fmt.Sprintf("Could not create monograph: %s, name: %s, namespace: %s", err, data.Name.ValueString(), data.Namespace.ValueString()))
 		return
 	}
 
 	monograph, err := api.GetMonograph(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, data.Name.ValueString(), data.Namespace.ValueString())
 	if err != nil {
-		utils.AddDiagnosticError(resp, "Error Fetching Created Monograph", fmt.Sprintf("Could not fetch created monograph: %s", err))
+		utils.AddDiagnosticError(resp, ErrRetrievingMonograph, fmt.Sprintf("Could not retrieve monograph: %s, name: %s, namespace: %s", err, data.Name.ValueString(), data.Namespace.ValueString()))
 		return
 	}
 
@@ -167,7 +172,7 @@ func (r *MonographResource) Read(ctx context.Context, req resource.ReadRequest, 
 
 	monograph, err := api.GetMonograph(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, data.Name.ValueString(), data.Namespace.ValueString())
 	if err != nil {
-		utils.AddDiagnosticError(resp, "Error Reading Monograph", fmt.Sprintf("Could not read monograph: %s", err))
+		utils.AddDiagnosticError(resp, ErrReadingMonograph, fmt.Sprintf("Could not read monograph: %s, name: %s, namespace: %s", err, data.Name.ValueString(), data.Namespace.ValueString()))
 		return
 	}
 
@@ -209,13 +214,13 @@ func (r *MonographResource) Update(ctx context.Context, req resource.UpdateReque
 		data.AdmissionWebhookSecret.ValueString(),
 	)
 	if err != nil {
-		utils.AddDiagnosticError(resp, "Error Updating Monograph", fmt.Sprintf("Could not update monograph: %s", err))
+		utils.AddDiagnosticError(resp, ErrUpdatingMonograph, fmt.Sprintf("Could not update monograph: %s, name: %s, namespace: %s", err, data.Name.ValueString(), data.Namespace.ValueString()))
 		return
 	}
 
 	monograph, err := api.GetMonograph(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, data.Name.ValueString(), data.Namespace.ValueString())
 	if err != nil {
-		utils.AddDiagnosticError(resp, "Error Fetching Updated Monograph", fmt.Sprintf("Could not fetch updated monograph: %s", err))
+		utils.AddDiagnosticError(resp, ErrRetrievingMonograph, fmt.Sprintf("Could not fetch updated monograph: %s, name: %s, namespace: %s", err, data.Name.ValueString(), data.Namespace.ValueString()))
 		return
 	}
 
@@ -237,7 +242,7 @@ func (r *MonographResource) Delete(ctx context.Context, req resource.DeleteReque
 
 	err := api.DeleteMonograph(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, data.Name.ValueString(), data.Namespace.ValueString())
 	if err != nil {
-		utils.AddDiagnosticError(resp, "Error Deleting Monograph", fmt.Sprintf("Could not delete monograph: %s", err))
+		utils.AddDiagnosticError(resp, ErrDeletingMonograph, fmt.Sprintf("Could not delete monograph: %s, name: %s, namespace: %s", err, data.Name.ValueString(), data.Namespace.ValueString()))
 		return
 	}
 

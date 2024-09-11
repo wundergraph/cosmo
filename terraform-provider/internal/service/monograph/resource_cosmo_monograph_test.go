@@ -13,6 +13,7 @@ func TestAccMonographResource(t *testing.T) {
 	rNamespace := "default"
 	rGraphUrl := "http://example.com/graphql"
 	rRoutingURL := "http://example.com/routing"
+	updatedRoutingURL := "http://example.com/updated-routing"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acceptance.TestAccPreCheck(t) },
@@ -29,6 +30,12 @@ func TestAccMonographResource(t *testing.T) {
 				),
 			},
 			{
+				Config: testAccMonographResourceConfig(rName, rNamespace, rGraphUrl, updatedRoutingURL),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("cosmo_monograph.test", "routing_url", updatedRoutingURL),
+				),
+			},
+			{
 				ResourceName: "cosmo_monograph.test",
 				RefreshState: true,
 			},
@@ -39,10 +46,10 @@ func TestAccMonographResource(t *testing.T) {
 func testAccMonographResourceConfig(name, namespace, graphUrl, routingURL string) string {
 	return fmt.Sprintf(`
 resource "cosmo_monograph" "test" {
-	name = "%s"
-	namespace = "%s"
-	graph_url = "%s"
+	name       = "%s"
+	namespace  = "%s"
+	graph_url  = "%s"
 	routing_url = "%s"
 }
-	`, name, namespace, graphUrl, routingURL)
+`, name, namespace, graphUrl, routingURL)
 }

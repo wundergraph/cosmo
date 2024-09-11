@@ -60,7 +60,7 @@ func (d *NamespaceDataSource) Configure(ctx context.Context, req datasource.Conf
 
 	client, ok := req.ProviderData.(*client.PlatformClient)
 	if !ok {
-		utils.AddDiagnosticError(resp, "Unexpected Data Source Configure Type", fmt.Sprintf("Expected *http.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData))
+		utils.AddDiagnosticError(resp, ErrUnexpectedDataSourceType, fmt.Sprintf("Expected *client.PlatformClient, got: %T. Please report this issue to the provider developers.", req.ProviderData))
 		return
 	}
 
@@ -76,26 +76,26 @@ func (d *NamespaceDataSource) Read(ctx context.Context, req datasource.ReadReque
 	}
 
 	if data.Name.IsNull() || data.Name.ValueString() == "" {
-		utils.AddDiagnosticError(resp, "Invalid Namespace Name", "The 'name' attribute is required.")
+		utils.AddDiagnosticError(resp, ErrInvalidNamespaceName, "The 'name' attribute is required.")
 		return
 	}
 
-	namespaces, err := api.ListNamespaces(ctx, d.PlatformClient.Client, d.PlatformClient.CosmoApiKey)
+	namespaceData, err := api.ListNamespaces(ctx, d.PlatformClient.Client, d.PlatformClient.CosmoApiKey)
 	if err != nil {
-		utils.AddDiagnosticError(resp, "Error Reading Namespaces", fmt.Sprintf("Could not read namespaces: %s", err))
+		utils.AddDiagnosticError(resp, ErrReadingNamespace, fmt.Sprintf("Could not read namespace: %s, name: %s, namespace: %s", err, data.Name.ValueString(), data.Name.ValueString()))
 		return
 	}
 
 	var foundNamespace *platformv1.Namespace
-	for _, namespace := range namespaces {
-		if namespace.Name == data.Name.ValueString() {
-			foundNamespace = namespace
+	for _, ns := range namespaceData {
+		if ns.Name == data.Name.ValueString() {
+			foundNamespace = ns
 			break
 		}
 	}
 
 	if foundNamespace == nil {
-		utils.AddDiagnosticError(resp, "Namespace Not Found", fmt.Sprintf("Namespace with name '%s' not found", data.Name.ValueString()))
+		utils.AddDiagnosticError(resp, ErrRetrievingNamespace, fmt.Sprintf("Namespace with name '%s' not found", data.Name.ValueString()))
 		return
 	}
 

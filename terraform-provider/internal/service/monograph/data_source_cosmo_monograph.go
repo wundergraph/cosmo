@@ -103,7 +103,7 @@ func (d *MonographDataSource) Configure(ctx context.Context, req datasource.Conf
 
 	client, ok := req.ProviderData.(*client.PlatformClient)
 	if !ok {
-		utils.AddDiagnosticError(resp, "Unexpected Data Source Configure Type", fmt.Sprintf("Expected *client.PlatformClient, got: %T. Please report this issue to the provider developers.", req.ProviderData))
+		utils.AddDiagnosticError(resp, ErrUnexpectedDataSourceType, fmt.Sprintf("Expected *client.PlatformClient, got: %T. Please report this issue to the provider developers.", req.ProviderData))
 		return
 	}
 
@@ -120,7 +120,7 @@ func (d *MonographDataSource) Read(ctx context.Context, req datasource.ReadReque
 	}
 
 	if data.Name.IsNull() || data.Name.ValueString() == "" {
-		utils.AddDiagnosticError(resp, "Invalid Monograph Name", "The 'name' attribute is required.")
+		utils.AddDiagnosticError(resp, ErrInvalidMonographName, fmt.Sprintf("The 'name' attribute is required for monograph in namespace: %s", data.Namespace.ValueString()))
 		return
 	}
 
@@ -131,7 +131,7 @@ func (d *MonographDataSource) Read(ctx context.Context, req datasource.ReadReque
 
 	monograph, err := api.GetMonograph(ctx, d.PlatformClient.Client, d.PlatformClient.CosmoApiKey, data.Name.ValueString(), namespace)
 	if err != nil {
-		utils.AddDiagnosticError(resp, "Error Reading Monograph", fmt.Sprintf("Could not read monograph: %s", err))
+		utils.AddDiagnosticError(resp, ErrReadingMonograph, fmt.Sprintf("Could not read monograph: %s, name: %s, namespace: %s", err, data.Name.ValueString(), namespace))
 		return
 	}
 
