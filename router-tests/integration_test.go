@@ -1053,7 +1053,7 @@ func TestQueryDepthLimit(t *testing.T) {
 				Query: `{ employee(id:1) { id details { forename surname } } }`,
 			})
 			require.Equal(t, 400, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"The query depth 3 exceeds the max query depth allowed (2)"}],"data":null}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"The query depth 3 exceeds the max query depth allowed (2)"}]}`, res.Body)
 		})
 	})
 
@@ -1075,7 +1075,7 @@ func TestQueryDepthLimit(t *testing.T) {
 				Header:        header,
 			})
 			require.Equal(t, 400, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"The query depth 3 exceeds the max query depth allowed (2)"}],"data":null}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"The query depth 3 exceeds the max query depth allowed (2)"}]}`, res.Body)
 		})
 	})
 
@@ -1098,7 +1098,7 @@ func TestQueryDepthLimit(t *testing.T) {
 				Header:        header,
 			})
 			require.Equal(t, 200, res.Response.StatusCode)
-			//require.Equal(t, `{"errors":[{"message":"The query depth 3 exceeds the max query depth allowed (2)"}],"data":null}`, res.Body)
+			require.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, res.Body)
 		})
 	})
 
@@ -1120,7 +1120,7 @@ func TestQueryDepthLimit(t *testing.T) {
 				Query: `{ employee(id:1) { id details { forename surname } } }`,
 			})
 			require.Equal(t, 400, failedRes.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"The query depth 3 exceeds the max query depth allowed (2)"}],"data":null}`, failedRes.Body)
+			require.Equal(t, `{"errors":[{"message":"The query depth 3 exceeds the max query depth allowed (2)"}]}`, failedRes.Body)
 
 			testSpan := requireSpanWithName(t, exporter, "Operation - Validate")
 			require.Contains(t, testSpan.Attributes(), otel.WgQueryDepth.Int(3))
@@ -1131,7 +1131,7 @@ func TestQueryDepthLimit(t *testing.T) {
 				Query: `{ employee(id:1) { id details { forename surname } } }`,
 			})
 			require.Equal(t, 400, failedRes2.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"The query depth 3 exceeds the max query depth allowed (2)"}],"data":null}`, failedRes2.Body)
+			require.Equal(t, `{"errors":[{"message":"The query depth 3 exceeds the max query depth allowed (2)"}]}`, failedRes2.Body)
 
 			testSpan2 := requireSpanWithName(t, exporter, "Operation - Validate")
 			require.Contains(t, testSpan2.Attributes(), otel.WgQueryDepth.Int(3))
