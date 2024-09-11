@@ -4,8 +4,11 @@ import {
   DirectiveDefinitionNode,
   DirectiveNode,
   DocumentNode,
+  EnumTypeDefinitionNode,
+  EnumTypeExtensionNode,
   FieldDefinitionNode,
   GraphQLSchema,
+  InputObjectTypeExtensionNode,
   InterfaceTypeDefinitionNode,
   InterfaceTypeExtensionNode,
   Kind,
@@ -15,17 +18,19 @@ import {
   OperationTypeDefinitionNode,
   OperationTypeNode,
   print,
+  ScalarTypeDefinitionNode,
+  ScalarTypeExtensionNode,
   StringValueNode,
+  TypeDefinitionNode,
+  TypeExtensionNode,
   TypeNode,
 } from 'graphql';
 import {
-  areBaseAndExtensionKindsCompatible,
   EnumTypeNode,
   extractExecutableDirectiveLocations,
-  extractInterfaces,
+  formatDescription,
+  InputObjectTypeNode,
   InterfaceTypeNode,
-  isNodeInterfaceObject,
-  isObjectLikeNodeEntity,
   ObjectTypeNode,
   operationTypeNodeToDefaultType,
   safeParse,
@@ -67,6 +72,7 @@ import {
   InvalidArgument,
   InvalidFieldImplementation,
   isNodeKindInterface,
+  kindToConvertedTypeString,
   kindToTypeString,
   maxOrScopes,
   mergeAuthorizationDataByAND,
@@ -79,16 +85,14 @@ import {
   upsertFieldAuthorizationData,
 } from '../utils/utils';
 import {
-  duplicateEnumValueDefinitionError,
-  duplicateFieldDefinitionError,
-  duplicateInterfaceExtensionError,
+  duplicateImplementedInterfaceError,
   duplicateOverriddenFieldErrorMessage,
   duplicateOverriddenFieldsError,
+  duplicateTypeDefinitionError,
+  duplicateUnionMemberDefinitionError,
   equivalentSourceAndTargetOverrideErrorMessage,
   expectedEntityError,
   externalInterfaceFieldsError,
-  incompatibleExtensionError,
-  incompatibleExtensionKindsError,
   invalidArgumentsError,
   invalidDirectiveArgumentTypeErrorMessage,
   invalidDirectiveError,
@@ -117,8 +121,12 @@ import {
   invalidSubgraphNamesError,
   invalidSubscriptionFilterLocationError,
   invalidUnionMemberTypeError,
-  noBaseTypeExtensionError,
+  multipleNamedTypeDefinitionError,
+  noBaseScalarDefinitionError,
+  noDefinedEnumValuesError,
+  noDefinedUnionMembersError,
   noFieldDefinitionsError,
+  noInputValueDefinitionsError,
   nonEntityObjectExtensionsEventDrivenErrorMessage,
   nonExternalKeyFieldNamesEventDrivenErrorMessage,
   nonKeyComposingObjectTypeNamesEventDrivenErrorMessage,
@@ -149,9 +157,9 @@ import {
   ENTITIES_FIELD,
   EVENT_DIRECTIVE_NAMES,
   EXTENDS,
-  EXTERNAL,
   FIELDS,
   FROM,
+  IGNORED_PARENT_DIRECTIVES,
   INACCESSIBLE,
   KEY,
   MUTATION,
@@ -169,6 +177,7 @@ import {
   REQUEST,
   REQUIRES_SCOPES,
   RESOLVABLE,
+  ROOT_TYPE_NAMES,
   SCHEMA,
   SCOPES,
   SERVICE_FIELD,
@@ -199,7 +208,11 @@ import {
   upsertParentsAndChildren,
 } from './walkers';
 import {
+  CompositeOutputData,
+  EnumValueData,
+  ExtensionType,
   FieldData,
+  InputValueData,
   ParentDefinitionData,
   ParentWithFieldsData,
   PersistedDirectiveDefinitionData,
@@ -207,35 +220,33 @@ import {
   UnionDefinitionData,
 } from '../schema-building/type-definition-data';
 import {
-  EnumExtensionData,
-  ExtensionWithFieldsData,
-  InputObjectExtensionData,
-  ObjectExtensionData,
-  ParentExtensionData,
-  ScalarExtensionData,
-  UnionExtensionData,
-} from '../schema-building/type-extension-data';
-import {
-  addExtensionWithFieldsDataByNode,
   addPersistedDirectiveDefinitionDataByNode,
   ConditionalFieldData,
-  convertKindForExtension,
-  extractDirectives,
+  getCompositeOutputNodeByData,
   getDirectiveValidationErrors,
   getEnumNodeByData,
   getInputObjectNodeByData,
   getParentTypeName,
-  getParentWithFieldsNodeByData,
   getScalarNodeByData,
   getSchemaNodeByData,
   getUnionNodeByData,
   isTypeValidImplementation,
+  newPersistedDirectivesData,
   ObjectData,
 } from '../schema-building/utils';
-import { getTypeNodeNamedTypeName, ObjectLikeTypeNode } from '../schema-building/ast';
+import {
+  CompositeOutputNode,
+  getMutableEnumNode,
+  getMutableInputObjectNode,
+  getMutableInterfaceNode,
+  getMutableObjectNode,
+  getMutableScalarNode,
+  getMutableUnionNode,
+  getTypeNodeNamedTypeName,
+} from '../schema-building/ast';
 import { InvalidRootTypeFieldEventsDirectiveData } from '../errors/utils';
 import { Graph } from '../resolvability-graph/graph';
-import { UnionTypeDefinitionNode, UnionTypeExtensionNode } from 'graphql/index';
+import { NamedTypeNode, UnionTypeDefinitionNode, UnionTypeExtensionNode } from 'graphql/index';
 
 export type NormalizationResult = {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
@@ -251,7 +262,6 @@ export type NormalizationResult = {
   operationTypes: Map<string, OperationTypeNode>;
   overridesByTargetSubgraphName: Map<string, Map<string, Set<string>>>;
   parentDefinitionDataByTypeName: Map<string, ParentDefinitionData>;
-  parentExtensionDataByTypeName: Map<string, ObjectExtensionData>;
   persistedDirectiveDefinitionDataByDirectiveName: Map<string, PersistedDirectiveDefinitionData>;
   schema: GraphQLSchema;
   subgraphAST: DocumentNode;
@@ -322,7 +332,6 @@ export class NormalizationFactory {
   operationTypeNodeByTypeName = new Map<string, OperationTypeNode>();
   originalTypeNameByRenamedTypeName = new Map<string, string>();
   parentDefinitionDataByTypeName = new Map<string, ParentDefinitionData>();
-  parentExtensionDataByTypeName = new Map<string, ParentExtensionData>();
   originalParentTypeName = '';
   parentsWithChildArguments = new Set<string>();
   overridesByTargetSubgraphName = new Map<string, Map<string, Set<string>>>();
@@ -547,79 +556,450 @@ export class NormalizationFactory {
     return directivesByDirectiveName;
   }
 
-  mergeUniqueInterfaces(extensionInterfaces: Set<string>, interfaces: Set<string>, typeName: string) {
-    for (const interfaceName of extensionInterfaces) {
-      if (!interfaces.has(interfaceName)) {
-        interfaces.add(interfaceName);
+  isTypeNameRootType(typeName: string): boolean {
+    return ROOT_TYPE_NAMES.has(typeName) || this.operationTypeNodeByTypeName.has(typeName);
+  }
+
+  extractDirectives(
+    node: TypeDefinitionNode | TypeExtensionNode,
+    directivesByDirectiveName: Map<string, ConstDirectiveNode[]>,
+    hostPath: string,
+    isArgument = false,
+  ): Map<string, ConstDirectiveNode[]> {
+    if (!node.directives) {
+      return directivesByDirectiveName;
+    }
+    const entityKeys = new Set<string>();
+    for (const directiveNode of node.directives) {
+      const errorMessages = getDirectiveValidationErrors(
+        directiveNode,
+        node.kind,
+        directivesByDirectiveName,
+        this.directiveDefinitionByDirectiveName,
+        this.handledRepeatedDirectivesByHostPath,
+        hostPath,
+        isArgument,
+      );
+      const directiveName = directiveNode.name.value;
+      if (errorMessages.length > 0) {
+        this.errors.push(invalidDirectiveError(directiveName, hostPath, errorMessages));
         continue;
       }
-      this.errors.push(duplicateInterfaceExtensionError(interfaceName, typeName));
+      if (IGNORED_PARENT_DIRECTIVES.has(directiveName)) {
+        continue;
+      }
+      if (directiveName === KEY) {
+        // The argument was validated earlier
+        const entityKey = (directiveNode.arguments![0].value as StringValueNode).value;
+        if (entityKeys.has(entityKey)) {
+          continue;
+        }
+        entityKeys.add(entityKey);
+      }
+      const existingDirectives = directivesByDirectiveName.get(directiveName);
+      existingDirectives
+        ? existingDirectives.push(directiveNode)
+        : directivesByDirectiveName.set(directiveName, [directiveNode]);
+    }
+    return directivesByDirectiveName;
+  }
+
+  /* ExtensionType uses a trichotomy rather than a boolean because @extends is still a definition.
+   * A definition and another definition with @extends would still be an error, so it cannot be treated
+   * as a regular extension.
+   * V1 definitions with @extends need a base type.
+   */
+  getNodeExtensionType(
+    isRealExtension: boolean,
+    directivesByDirectiveName: Map<string, ConstDirectiveNode[]>,
+    isRootType = false,
+  ): ExtensionType {
+    // If the extend keyword is present, it's simply an extension
+    if (isRealExtension) {
+      return ExtensionType.REAL;
+    }
+    /*
+     * @extends is not interpreted as an extension under the following circumstances:
+     * 1. It's a root type
+     * 2. It's a V2 subgraph
+     * 3. And (of course) if @extends isn't defined at all
+     */
+    if (isRootType || this.isSubgraphVersionTwo || !directivesByDirectiveName.has(EXTENDS)) {
+      return ExtensionType.NONE;
+    }
+    // If it's a V1 subgraph and defines @extends, it is considered an extension across subgraphs
+    return ExtensionType.EXTENDS;
+  }
+
+  setParentDataExtensionType(parentData: ParentDefinitionData, incomingExtensionType: ExtensionType) {
+    switch (parentData.extensionType) {
+      case ExtensionType.EXTENDS:
+      // intentional fallthrough
+      case ExtensionType.NONE: {
+        if (incomingExtensionType === ExtensionType.REAL) {
+          return;
+        }
+        this.errors.push(duplicateTypeDefinitionError(kindToTypeString(parentData.kind), parentData.name));
+        return;
+      }
+      default: {
+        parentData.extensionType = incomingExtensionType;
+      }
     }
   }
 
-  handleInterfaceObject(node: ObjectTypeDefinitionNode) {
-    if (!isNodeInterfaceObject(node)) {
-      return;
+  extractImplementedInterfaceTypeNames(
+    node: InterfaceTypeDefinitionNode | InterfaceTypeExtensionNode | ObjectTypeDefinitionNode | ObjectTypeExtensionNode,
+    implementedInterfaceTypeNames: Set<string>,
+  ): Set<string> {
+    if (!node.interfaces) {
+      return implementedInterfaceTypeNames;
     }
+    const parentTypeName = node.name.value;
+    for (const implementedInterface of node.interfaces) {
+      const interfaceTypeName = implementedInterface.name.value;
+      if (implementedInterfaceTypeNames.has(interfaceTypeName)) {
+        this.errors.push(
+          duplicateImplementedInterfaceError(kindToConvertedTypeString(node.kind), parentTypeName, interfaceTypeName),
+        );
+        continue;
+      }
+      implementedInterfaceTypeNames.add(interfaceTypeName);
+    }
+    return implementedInterfaceTypeNames;
+  }
+
+  updateCompositeOutputDataByNode(
+    node: CompositeOutputNode,
+    parentData: CompositeOutputData,
+    directivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>,
+    extensionType: ExtensionType,
+  ) {
+    this.setParentDataExtensionType(parentData, extensionType);
+    this.extractImplementedInterfaceTypeNames(node, parentData.implementedInterfaceTypeNames);
+    parentData.isEntity ||= directivesByDirectiveName.has(KEY);
+    parentData.isInaccessible ||= directivesByDirectiveName.has(INACCESSIBLE);
+    parentData.subgraphNames.add(this.subgraphName);
+    parentData.description ||= formatDescription('description' in node ? node.description : undefined);
+  }
+
+  addConcreteTypeNamesForImplementedInterfaces(interfaceTypeNames: Set<string>, concreteTypeName: string) {
+    for (const interfaceName of interfaceTypeNames) {
+      getValueOrDefault(this.concreteTypeNamesByAbstractTypeName, interfaceName, () => new Set<string>()).add(
+        concreteTypeName,
+      );
+      this.internalGraph.addEdge(
+        this.internalGraph.addOrUpdateNode(interfaceName, { isAbstract: true }),
+        this.internalGraph.addOrUpdateNode(concreteTypeName),
+        concreteTypeName,
+        true,
+      );
+    }
+  }
+
+  upsertInterfaceDataByNode(
+    node: InterfaceTypeDefinitionNode | InterfaceTypeExtensionNode,
+    isRealExtension: boolean = false,
+  ) {
     const typeName = node.name.value;
-    if (this.entityInterfaceDataByTypeName.has(typeName)) {
-      // TODO error
+    const parentData = this.parentDefinitionDataByTypeName.get(typeName);
+    const directivesByDirectiveName = this.extractDirectives(
+      node,
+      parentData?.directivesByDirectiveName || new Map<string, ConstDirectiveNode[]>(),
+      typeName,
+    );
+    const extensionType = this.getNodeExtensionType(isRealExtension, directivesByDirectiveName);
+    const entityInterfaceData = this.entityInterfaceDataByTypeName.get(typeName);
+    if (entityInterfaceData && node.fields) {
+      for (const fieldNode of node.fields) {
+        entityInterfaceData.interfaceFieldNames.add(fieldNode.name.value);
+      }
+    }
+    if (parentData) {
+      if (parentData.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
+        this.errors.push(
+          multipleNamedTypeDefinitionError(
+            typeName,
+            kindToTypeString(parentData.kind),
+            kindToConvertedTypeString(node.kind),
+          ),
+        );
+        return;
+      }
+      this.updateCompositeOutputDataByNode(node, parentData, directivesByDirectiveName, extensionType);
       return;
     }
-    this.entityInterfaceDataByTypeName.set(typeName, {
-      fieldDatas: [],
-      interfaceObjectFieldNames: new Set<string>(node.fields?.map((field) => field.name.value)),
-      interfaceFieldNames: new Set<string>(),
-      isInterfaceObject: true,
-      typeName,
+    this.parentDefinitionDataByTypeName.set(typeName, {
+      directivesByDirectiveName,
+      extensionType,
+      fieldDataByFieldName: new Map<string, FieldData>(),
+      implementedInterfaceTypeNames: this.extractImplementedInterfaceTypeNames(node, new Set<string>()),
+      isEntity: directivesByDirectiveName.has(KEY),
+      isInaccessible: directivesByDirectiveName.has(INACCESSIBLE),
+      kind: Kind.INTERFACE_TYPE_DEFINITION,
+      name: typeName,
+      node: getMutableInterfaceNode(node.name),
+      persistedDirectivesData: newPersistedDirectivesData(),
+      subgraphNames: new Set<string>([this.subgraphName]),
+      description: formatDescription('description' in node ? node.description : undefined),
     });
   }
 
-  handleExtensionWithFields(
-    node: InterfaceTypeDefinitionNode | InterfaceTypeExtensionNode | ObjectTypeDefinitionNode | ObjectTypeExtensionNode,
-    isRootType = false,
-  ): false | void {
-    this.isCurrentParentExtension = true;
-    const parentExtensionData = this.parentExtensionDataByTypeName.get(this.originalParentTypeName);
-    const convertedKind = convertKindForExtension(node);
-    if (parentExtensionData) {
-      if (parentExtensionData.kind !== convertedKind) {
-        this.errors.push(incompatibleExtensionKindsError(node, parentExtensionData.kind));
-        return false;
-      }
-      extractDirectives(
-        node,
-        parentExtensionData.directivesByDirectiveName,
-        this.errors,
-        this.directiveDefinitionByDirectiveName,
-        this.handledRepeatedDirectivesByHostPath,
-        this.originalParentTypeName,
-      );
-      extractInterfaces(node, parentExtensionData.implementedInterfaceTypeNames, this.errors);
-      return;
+  getRenamedRootTypeName(typeName: string) {
+    const operationTypeNode = this.operationTypeNodeByTypeName.get(typeName);
+    if (!operationTypeNode) {
+      return typeName;
     }
-    const isEntity = isObjectLikeNodeEntity(node);
-    addExtensionWithFieldsDataByNode(
-      this.parentExtensionDataByTypeName,
-      node,
-      this.errors,
-      this.directiveDefinitionByDirectiveName,
-      this.handledRepeatedDirectivesByHostPath,
-      isEntity,
-      isRootType,
-      this.subgraphName,
-      this.renamedParentTypeName,
-    );
-    const entityInterfaceData = this.entityInterfaceDataByTypeName.get(this.renamedParentTypeName);
-    if (!entityInterfaceData) {
-      return;
-    }
-    for (const fieldNode of node.fields || []) {
-      entityInterfaceData.interfaceFieldNames.add(fieldNode.name.value);
+    switch (operationTypeNode) {
+      case OperationTypeNode.MUTATION:
+        return MUTATION;
+      case OperationTypeNode.SUBSCRIPTION:
+        return SUBSCRIPTION;
+      default:
+        return QUERY;
     }
   }
 
-  extractKeyFieldSets(node: ObjectLikeTypeNode, keyFieldSetData: KeyFieldSetData) {
+  addInterfaceObjectFieldsByNode(node: ObjectTypeDefinitionNode | ObjectTypeExtensionNode) {
+    const typeName = node.name.value;
+    const entityInterfaceData = this.entityInterfaceDataByTypeName.get(typeName);
+    if (!entityInterfaceData || !entityInterfaceData.isInterfaceObject || !node.fields) {
+      return;
+    }
+    for (const fieldNode of node.fields) {
+      entityInterfaceData.interfaceObjectFieldNames.add(fieldNode.name.value);
+    }
+  }
+
+  upsertObjectDataByNode(node: ObjectTypeDefinitionNode | ObjectTypeExtensionNode, isRealExtension: boolean = false) {
+    const typeName = node.name.value;
+    const parentData = this.parentDefinitionDataByTypeName.get(typeName);
+    const directivesByDirectiveName = this.extractDirectives(
+      node,
+      parentData?.directivesByDirectiveName || new Map<string, ConstDirectiveNode[]>(),
+      typeName,
+    );
+    const isRootType = this.isTypeNameRootType(typeName);
+    const extensionType = this.getNodeExtensionType(isRealExtension, directivesByDirectiveName, isRootType);
+    this.addInterfaceObjectFieldsByNode(node);
+    if (parentData) {
+      if (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
+        this.errors.push(
+          multipleNamedTypeDefinitionError(
+            typeName,
+            kindToTypeString(parentData.kind),
+            kindToConvertedTypeString(node.kind),
+          ),
+        );
+        return;
+      }
+      this.updateCompositeOutputDataByNode(node, parentData, directivesByDirectiveName, extensionType);
+      this.addConcreteTypeNamesForImplementedInterfaces(parentData.implementedInterfaceTypeNames, typeName);
+      return;
+    }
+    const implementedInterfaceTypeNames = this.extractImplementedInterfaceTypeNames(node, new Set<string>());
+    this.addConcreteTypeNamesForImplementedInterfaces(implementedInterfaceTypeNames, typeName);
+    this.parentDefinitionDataByTypeName.set(typeName, {
+      directivesByDirectiveName,
+      extensionType,
+      fieldDataByFieldName: new Map<string, FieldData>(),
+      implementedInterfaceTypeNames,
+      isEntity: directivesByDirectiveName.has(KEY),
+      isInaccessible: directivesByDirectiveName.has(INACCESSIBLE),
+      isRootType,
+      kind: Kind.OBJECT_TYPE_DEFINITION,
+      name: typeName,
+      node: getMutableObjectNode(node.name),
+      persistedDirectivesData: newPersistedDirectivesData(),
+      renamedTypeName: this.getRenamedRootTypeName(typeName),
+      subgraphNames: new Set<string>([this.subgraphName]),
+      description: formatDescription('description' in node ? node.description : undefined),
+    });
+  }
+
+  upsertEnumDataByNode(node: EnumTypeDefinitionNode | EnumTypeExtensionNode, isRealExtension: boolean = false) {
+    const typeName = node.name.value;
+    this.internalGraph.addOrUpdateNode(typeName, { isLeaf: true });
+    const parentData = this.parentDefinitionDataByTypeName.get(typeName);
+    const directivesByDirectiveName = this.extractDirectivesAndAuthorization(
+      node,
+      parentData?.directivesByDirectiveName || new Map<string, ConstDirectiveNode[]>(),
+    );
+    const extensionType = this.getNodeExtensionType(isRealExtension, directivesByDirectiveName);
+    if (parentData) {
+      if (parentData.kind !== Kind.ENUM_TYPE_DEFINITION) {
+        this.errors.push(
+          multipleNamedTypeDefinitionError(
+            typeName,
+            kindToTypeString(parentData.kind),
+            kindToConvertedTypeString(node.kind),
+          ),
+        );
+        return;
+      }
+      this.setParentDataExtensionType(parentData, extensionType);
+      parentData.description ||= formatDescription('description' in node ? node.description : undefined);
+      return;
+    }
+    this.parentDefinitionDataByTypeName.set(typeName, {
+      appearances: 1,
+      directivesByDirectiveName,
+      extensionType,
+      enumValueDataByValueName: new Map<string, EnumValueData>(),
+      kind: Kind.ENUM_TYPE_DEFINITION,
+      name: typeName,
+      node: getMutableEnumNode(node.name),
+      persistedDirectivesData: newPersistedDirectivesData(),
+      description: formatDescription('description' in node ? node.description : undefined),
+    });
+  }
+
+  upsertInputObjectByNode(node: InputObjectTypeNode | InputObjectTypeExtensionNode, isRealExtension: boolean = false) {
+    const typeName = node.name.value;
+    const parentData = this.parentDefinitionDataByTypeName.get(typeName);
+    const directivesByDirectiveName = this.extractDirectives(
+      node,
+      parentData?.directivesByDirectiveName || new Map<string, ConstDirectiveNode[]>(),
+      typeName,
+    );
+    const extensionType = this.getNodeExtensionType(isRealExtension, directivesByDirectiveName);
+    if (parentData) {
+      if (parentData.kind !== Kind.INPUT_OBJECT_TYPE_DEFINITION) {
+        this.errors.push(
+          multipleNamedTypeDefinitionError(
+            typeName,
+            kindToTypeString(parentData.kind),
+            kindToConvertedTypeString(node.kind),
+          ),
+        );
+        return;
+      }
+      this.setParentDataExtensionType(parentData, extensionType);
+      parentData.isInaccessible ||= directivesByDirectiveName.has(INACCESSIBLE);
+      parentData.subgraphNames.add(this.subgraphName);
+      parentData.description ||= formatDescription('description' in node ? node.description : undefined);
+      return;
+    }
+    this.parentDefinitionDataByTypeName.set(typeName, {
+      directivesByDirectiveName,
+      extensionType,
+      inputValueDataByValueName: new Map<string, InputValueData>(),
+      isInaccessible: directivesByDirectiveName.has(INACCESSIBLE),
+      kind: Kind.INPUT_OBJECT_TYPE_DEFINITION,
+      name: typeName,
+      node: getMutableInputObjectNode(node.name),
+      persistedDirectivesData: newPersistedDirectivesData(),
+      subgraphNames: new Set<string>([this.subgraphName]),
+      description: formatDescription('description' in node ? node.description : undefined),
+    });
+  }
+
+  upsertScalarByNode(node: ScalarTypeDefinitionNode | ScalarTypeExtensionNode, isRealExtension: boolean = false) {
+    const typeName = node.name.value;
+    this.internalGraph.addOrUpdateNode(typeName, { isLeaf: true });
+    const parentData = this.parentDefinitionDataByTypeName.get(typeName);
+    const directivesByDirectiveName = this.extractDirectivesAndAuthorization(
+      node,
+      parentData?.directivesByDirectiveName || new Map<string, ConstDirectiveNode[]>(),
+    );
+    const extensionType = this.getNodeExtensionType(isRealExtension, directivesByDirectiveName);
+    if (parentData) {
+      if (parentData.kind !== Kind.SCALAR_TYPE_DEFINITION) {
+        this.errors.push(
+          multipleNamedTypeDefinitionError(
+            typeName,
+            kindToTypeString(parentData.kind),
+            kindToConvertedTypeString(node.kind),
+          ),
+        );
+        return;
+      }
+      this.setParentDataExtensionType(parentData, extensionType);
+      parentData.description ||= formatDescription('description' in node ? node.description : undefined);
+      return;
+    }
+    this.parentDefinitionDataByTypeName.set(typeName, {
+      directivesByDirectiveName,
+      extensionType,
+      kind: Kind.SCALAR_TYPE_DEFINITION,
+      name: typeName,
+      node: getMutableScalarNode(node.name),
+      persistedDirectivesData: newPersistedDirectivesData(),
+      description: formatDescription('description' in node ? node.description : undefined),
+    });
+  }
+
+  extractUnionMembers(
+    node: UnionTypeDefinitionNode | UnionTypeExtensionNode,
+    membersByMemberTypeName: Map<string, NamedTypeNode>,
+  ): Map<string, NamedTypeNode> {
+    if (!node.types) {
+      return membersByMemberTypeName;
+    }
+    const unionTypeName = node.name.value;
+    for (const member of node.types) {
+      const memberTypeName = member.name.value;
+      if (membersByMemberTypeName.has(memberTypeName)) {
+        this.errors.push(duplicateUnionMemberDefinitionError(unionTypeName, memberTypeName));
+        continue;
+      }
+      getValueOrDefault(this.concreteTypeNamesByAbstractTypeName, unionTypeName, () => new Set<string>()).add(
+        memberTypeName,
+      );
+      /*
+       * Scalars are never valid Union member types.
+       * However, base scalars are not upserted to the type definition data.
+       * Consequently, reference checks would yield unknown type errors in addition to invalid member errors.
+       * This check prevents error doubling were a Union member a base Scalar.
+       * */
+      if (!BASE_SCALARS.has(memberTypeName)) {
+        this.referencedTypeNames.add(memberTypeName);
+      }
+      membersByMemberTypeName.set(memberTypeName, member);
+    }
+    return membersByMemberTypeName;
+  }
+
+  upsertUnionByNode(node: UnionTypeDefinitionNode | UnionTypeExtensionNode, isRealExtension: boolean = false) {
+    const typeName = node.name.value;
+    const parentData = this.parentDefinitionDataByTypeName.get(typeName);
+    const directivesByDirectiveName = this.extractDirectives(
+      node,
+      parentData?.directivesByDirectiveName || new Map<string, ConstDirectiveNode[]>(),
+      typeName,
+    );
+    const extensionType = this.getNodeExtensionType(isRealExtension, directivesByDirectiveName);
+    // Also adds the concrete type name edges to the internal graph
+    this.addConcreteTypeNamesForUnion(node);
+    if (parentData) {
+      if (parentData.kind !== Kind.UNION_TYPE_DEFINITION) {
+        this.errors.push(
+          multipleNamedTypeDefinitionError(
+            typeName,
+            kindToTypeString(parentData.kind),
+            kindToConvertedTypeString(node.kind),
+          ),
+        );
+        return;
+      }
+      this.setParentDataExtensionType(parentData, extensionType);
+      this.extractUnionMembers(node, parentData.memberByMemberTypeName);
+      parentData.description ||= formatDescription('description' in node ? node.description : undefined);
+      return;
+    }
+    this.parentDefinitionDataByTypeName.set(typeName, {
+      directivesByDirectiveName,
+      extensionType,
+      kind: Kind.UNION_TYPE_DEFINITION,
+      memberByMemberTypeName: this.extractUnionMembers(node, new Map<string, NamedTypeNode>()),
+      name: typeName,
+      node: getMutableUnionNode(node.name),
+      persistedDirectivesData: newPersistedDirectivesData(),
+      description: formatDescription('description' in node ? node.description : undefined),
+    });
+  }
+
+  extractKeyFieldSets(node: CompositeOutputNode, keyFieldSetData: KeyFieldSetData) {
     const isUnresolvableByRawKeyFieldSet = keyFieldSetData.isUnresolvableByKeyFieldSet;
     const parentTypeName = node.name.value;
     if (!node.directives?.length) {
@@ -1246,33 +1626,6 @@ export class NormalizationFactory {
     const nonKeyFieldNameByFieldPath = new Map<string, string>();
     const nonEntityExtensionTypeNames = new Set<string>();
     const invalidObjectTypeNames = new Set<string>();
-    for (const [typeName, data] of this.parentExtensionDataByTypeName) {
-      if (data.kind !== Kind.OBJECT_TYPE_EXTENSION) {
-        continue;
-      }
-      // If a required events directive is returned, the parent type is a root type
-      if (data.isRootType) {
-        this.validateEventDrivenRootType(
-          data,
-          invalidEventsDirectiveDataByRootFieldPath,
-          invalidResponseTypeStringByRootFieldPath,
-          invalidResponseTypeNameByMutationPath,
-        );
-        continue;
-      }
-      const keyFieldNames = this.keyFieldNamesByParentTypeName.get(typeName);
-      if (!keyFieldNames || !data.isEntity) {
-        nonEntityExtensionTypeNames.add(typeName);
-        continue;
-      }
-      this.validateEventDrivenKeyDefinition(typeName, invalidKeyFieldSetsByEntityTypeName);
-      this.validateEventDrivenObjectFields(
-        data.fieldDataByFieldName,
-        keyFieldNames,
-        nonExternalKeyFieldNameByFieldPath,
-        nonKeyFieldNameByFieldPath,
-      );
-    }
     for (const [typeName, data] of this.parentDefinitionDataByTypeName) {
       // validate edfs__PublishResult and edfs__NatsStreamConfiguration separately
       if (typeName === EDFS_PUBLISH_RESULT || typeName === EDFS_NATS_STREAM_CONFIGURATION) {
@@ -1347,15 +1700,18 @@ export class NormalizationFactory {
   }
 
   validateUnionMembers(data: UnionDefinitionData) {
+    if (data.memberByMemberTypeName.size < 1) {
+      this.errors.push(noDefinedUnionMembersError(data.name));
+      return;
+    }
     const invalidMembers: string[] = [];
     for (const memberName of data.memberByMemberTypeName.keys()) {
-      const memberData =
-        this.parentDefinitionDataByTypeName.get(memberName) || this.parentExtensionDataByTypeName.get(memberName);
+      const memberData = this.parentDefinitionDataByTypeName.get(memberName);
       // Invalid references are propagated as an error elsewhere
       if (!memberData) {
         continue;
       }
-      if (memberData.kind !== Kind.OBJECT_TYPE_DEFINITION && memberData.kind !== Kind.OBJECT_TYPE_EXTENSION) {
+      if (memberData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
         invalidMembers.push(`"${memberName}", which is type "${kindToTypeString(memberData.kind)}"`);
       }
     }
@@ -1383,7 +1739,7 @@ export class NormalizationFactory {
     }
   }
 
-  addConcreteTypesForUnion(node: UnionTypeDefinitionNode | UnionTypeExtensionNode) {
+  addConcreteTypeNamesForUnion(node: UnionTypeDefinitionNode | UnionTypeExtensionNode) {
     if (!node.types || node.types.length < 1) {
       return;
     }
@@ -1421,15 +1777,10 @@ export class NormalizationFactory {
 
   validateAndAddKeysToConfiguration() {
     for (const [parentTypeName, keyFieldSetData] of this.keyFieldSetDataByTypeName) {
-      const parentData =
-        this.parentDefinitionDataByTypeName.get(parentTypeName) ||
-        this.parentExtensionDataByTypeName.get(parentTypeName);
+      const parentData = this.parentDefinitionDataByTypeName.get(parentTypeName);
       if (
         !parentData ||
-        (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION &&
-          parentData.kind != Kind.OBJECT_TYPE_EXTENSION &&
-          parentData.kind !== Kind.INTERFACE_TYPE_DEFINITION &&
-          parentData.kind !== Kind.INTERFACE_TYPE_EXTENSION)
+        (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION && parentData.kind !== Kind.INTERFACE_TYPE_DEFINITION)
       ) {
         this.errors.push(undefinedObjectLikeParentError(parentTypeName));
         continue;
@@ -1526,186 +1877,13 @@ export class NormalizationFactory {
         getSchemaNodeByData(this.schemaDefinition, this.errors, this.directiveDefinitionByDirectiveName),
       );
     }
-
-    const validParentExtensionOrphansByTypeName = new Map<string, ObjectExtensionData>();
-    const handledParentTypeNames = new Set<string>();
-    for (const [extensionTypeName, parentExtensionData] of this.parentExtensionDataByTypeName) {
-      const isEntity = this.entityDataByTypeName.has(extensionTypeName);
-      const newParentTypeName =
-        parentExtensionData.kind === Kind.OBJECT_TYPE_EXTENSION
-          ? parentExtensionData.renamedTypeName || extensionTypeName
-          : extensionTypeName;
-      const configurationData: ConfigurationData = {
-        fieldNames: new Set<string>(),
-        isRootNode: isEntity,
-        typeName: newParentTypeName,
-      };
-      this.configurationDataByParentTypeName.set(newParentTypeName, configurationData);
-      if (parentExtensionData.kind === Kind.OBJECT_TYPE_EXTENSION) {
-        if (this.operationTypeNodeByTypeName.has(extensionTypeName)) {
-          configurationData.isRootNode = true;
-          parentExtensionData.fieldDataByFieldName.delete(SERVICE_FIELD);
-          parentExtensionData.fieldDataByFieldName.delete(ENTITIES_FIELD);
-        }
-        addFieldNamesToConfigurationData(parentExtensionData.fieldDataByFieldName, configurationData);
-      }
-      const parentDefinitionData = this.parentDefinitionDataByTypeName.get(extensionTypeName);
-      if (!parentDefinitionData) {
-        if (parentExtensionData.kind !== Kind.OBJECT_TYPE_EXTENSION) {
-          this.errors.push(noBaseTypeExtensionError(extensionTypeName));
-        } else {
-          this.validateInterfaceImplementations(parentExtensionData);
-          validParentExtensionOrphansByTypeName.set(extensionTypeName, parentExtensionData);
-          definitions.push(
-            getParentWithFieldsNodeByData(
-              parentExtensionData,
-              this.errors,
-              this.directiveDefinitionByDirectiveName,
-              this.authorizationDataByParentTypeName,
-            ),
-          );
-        }
-        continue;
-      }
-      if (!areBaseAndExtensionKindsCompatible(parentDefinitionData.kind, parentExtensionData.kind, extensionTypeName)) {
-        this.errors.push(
-          incompatibleExtensionError(extensionTypeName, parentDefinitionData.kind, parentExtensionData.kind),
-        );
-        continue;
-      }
-      switch (parentDefinitionData.kind) {
-        case Kind.ENUM_TYPE_DEFINITION:
-          const enumExtensionData = parentExtensionData as EnumExtensionData;
-          for (const [valueName, enumValueDefinitionNode] of enumExtensionData.enumValueDataByValueName) {
-            if (!parentDefinitionData.enumValueDataByValueName.has(valueName)) {
-              parentDefinitionData.enumValueDataByValueName.set(valueName, enumValueDefinitionNode);
-              continue;
-            }
-            this.errors.push(duplicateEnumValueDefinitionError(valueName, extensionTypeName));
-          }
-          definitions.push(
-            getEnumNodeByData(
-              parentDefinitionData,
-              this.errors,
-              this.directiveDefinitionByDirectiveName,
-              this.authorizationDataByParentTypeName,
-              enumExtensionData,
-            ),
-          );
-          break;
-        case Kind.INPUT_OBJECT_TYPE_DEFINITION:
-          const inputObjectExtensionData = parentExtensionData as InputObjectExtensionData;
-          for (const [fieldName, inputValueDefinitionNode] of inputObjectExtensionData.inputValueDataByValueName) {
-            if (!parentDefinitionData.inputValueDataByValueName.has(fieldName)) {
-              parentDefinitionData.inputValueDataByValueName.set(fieldName, inputValueDefinitionNode);
-              continue;
-            }
-            this.errors.push(duplicateFieldDefinitionError(fieldName, extensionTypeName));
-          }
-          definitions.push(
-            getInputObjectNodeByData(
-              parentDefinitionData,
-              this.errors,
-              this.directiveDefinitionByDirectiveName,
-              this.authorizationDataByParentTypeName,
-              inputObjectExtensionData,
-            ),
-          );
-          break;
-        case Kind.INTERFACE_TYPE_DEFINITION:
-        // intentional fallthrough
-        case Kind.OBJECT_TYPE_DEFINITION:
-          const extensionWithFieldsData = parentExtensionData as ExtensionWithFieldsData;
-          const operationTypeNode = this.operationTypeNodeByTypeName.get(extensionTypeName);
-          const isObject = parentDefinitionData.kind === Kind.OBJECT_TYPE_DEFINITION;
-          const externalInterfaceFieldNames: Array<string> = [];
-          if (operationTypeNode) {
-            configurationData.isRootNode = true;
-            extensionWithFieldsData.fieldDataByFieldName.delete(SERVICE_FIELD);
-            extensionWithFieldsData.fieldDataByFieldName.delete(ENTITIES_FIELD);
-          }
-          for (const [fieldName, fieldData] of extensionWithFieldsData.fieldDataByFieldName) {
-            if (!isObject && fieldData.isExternalBySubgraphName.get(this.subgraphName)) {
-              externalInterfaceFieldNames.push(fieldName);
-            }
-            if (fieldData.argumentDataByArgumentName.size > 0) {
-              // Arguments can only be fully validated once all parents types are known
-              this.validateArguments(fieldData, `${extensionTypeName}.${fieldName}`);
-            }
-            if (parentDefinitionData.fieldDataByFieldName.has(fieldName)) {
-              this.errors.push(duplicateFieldDefinitionError(fieldName, extensionTypeName));
-              continue;
-            }
-            parentDefinitionData.fieldDataByFieldName.set(fieldName, fieldData);
-            if (!fieldData.argumentDataByArgumentName.has(EXTERNAL)) {
-              configurationData.fieldNames.add(fieldName);
-            }
-          }
-          this.mergeUniqueInterfaces(
-            extensionWithFieldsData.implementedInterfaceTypeNames,
-            parentDefinitionData.implementedInterfaceTypeNames,
-            extensionTypeName,
-          );
-          this.validateInterfaceImplementations(parentDefinitionData);
-          definitions.push(
-            getParentWithFieldsNodeByData(
-              parentDefinitionData,
-              this.errors,
-              this.directiveDefinitionByDirectiveName,
-              this.authorizationDataByParentTypeName,
-              extensionWithFieldsData,
-            ),
-          );
-          if (externalInterfaceFieldNames.length > 0) {
-            this.isSubgraphVersionTwo
-              ? this.errors.push(externalInterfaceFieldsError(extensionTypeName, externalInterfaceFieldNames))
-              : this.warnings.push(
-                  externalInterfaceFieldsWarning(this.subgraphName, extensionTypeName, externalInterfaceFieldNames),
-                );
-          }
-          // Interfaces and objects must define at least one field
-          if (
-            parentDefinitionData.fieldDataByFieldName.size < 1 &&
-            !isNodeQuery(extensionTypeName, operationTypeNode)
-          ) {
-            this.errors.push(noFieldDefinitionsError(kindToTypeString(parentDefinitionData.kind), extensionTypeName));
-          }
-          // Add the base type field names to the configuration data
-          addFieldNamesToConfigurationData(parentDefinitionData.fieldDataByFieldName, configurationData);
-          break;
-        case Kind.SCALAR_TYPE_DEFINITION:
-          definitions.push(
-            getScalarNodeByData(
-              parentDefinitionData,
-              this.errors,
-              this.directiveDefinitionByDirectiveName,
-              parentExtensionData as ScalarExtensionData,
-            ),
-          );
-          break;
-        case Kind.UNION_TYPE_DEFINITION:
-          definitions.push(
-            getUnionNodeByData(
-              parentDefinitionData,
-              this.errors,
-              this.directiveDefinitionByDirectiveName,
-              parentExtensionData as UnionExtensionData,
-            ),
-          );
-          this.validateUnionMembers(parentDefinitionData);
-          break;
-        default:
-          throw unexpectedKindFatalError(extensionTypeName);
-      }
-      // At this point, the base type has been dealt with, so it doesn't need to be dealt with again
-      handledParentTypeNames.add(extensionTypeName);
-    }
     for (const [parentTypeName, parentDefinitionData] of this.parentDefinitionDataByTypeName) {
-      if (handledParentTypeNames.has(parentTypeName)) {
-        continue;
-      }
       switch (parentDefinitionData.kind) {
         case Kind.ENUM_TYPE_DEFINITION:
+          if (parentDefinitionData.enumValueDataByValueName.size < 1) {
+            this.errors.push(noDefinedEnumValuesError(parentTypeName));
+            break;
+          }
           definitions.push(
             getEnumNodeByData(
               parentDefinitionData,
@@ -1716,6 +1894,10 @@ export class NormalizationFactory {
           );
           break;
         case Kind.INPUT_OBJECT_TYPE_DEFINITION:
+          if (parentDefinitionData.inputValueDataByValueName.size < 1) {
+            this.errors.push(noInputValueDefinitionsError(parentTypeName));
+            break;
+          }
           definitions.push(
             getInputObjectNodeByData(
               parentDefinitionData,
@@ -1783,7 +1965,7 @@ export class NormalizationFactory {
           addFieldNamesToConfigurationData(parentDefinitionData.fieldDataByFieldName, configurationData);
           this.validateInterfaceImplementations(parentDefinitionData);
           definitions.push(
-            getParentWithFieldsNodeByData(
+            getCompositeOutputNodeByData(
               parentDefinitionData,
               this.errors,
               this.directiveDefinitionByDirectiveName,
@@ -1796,6 +1978,10 @@ export class NormalizationFactory {
           }
           break;
         case Kind.SCALAR_TYPE_DEFINITION:
+          if (parentDefinitionData.extensionType === ExtensionType.REAL) {
+            this.errors.push(noBaseScalarDefinitionError(parentTypeName));
+            break;
+          }
           definitions.push(
             getScalarNodeByData(parentDefinitionData, this.errors, this.directiveDefinitionByDirectiveName),
           );
@@ -1817,27 +2003,22 @@ export class NormalizationFactory {
       // If an operation type name was not declared, use the default
       const operationTypeName = operationTypeNode ? getTypeNodeNamedTypeName(operationTypeNode.type) : defaultTypeName;
       // If a custom type is used, the default type should not be defined
-      if (
-        operationTypeName !== defaultTypeName &&
-        (this.parentDefinitionDataByTypeName.has(defaultTypeName) ||
-          this.parentExtensionDataByTypeName.has(defaultTypeName))
-      ) {
+      if (operationTypeName !== defaultTypeName && this.parentDefinitionDataByTypeName.has(defaultTypeName)) {
         this.errors.push(invalidRootTypeDefinitionError(operationType, operationTypeName, defaultTypeName));
         continue;
       }
       const objectData = this.parentDefinitionDataByTypeName.get(operationTypeName);
-      const extensionData = this.parentExtensionDataByTypeName.get(operationTypeName);
       // operationTypeNode is truthy if an operation type was explicitly declared
       if (operationTypeNode) {
         // If the type is not defined in the schema, it's always an error
-        if (!objectData && !extensionData) {
+        if (!objectData) {
           this.errors.push(undefinedTypeError(operationTypeName));
           continue;
         }
         // Add the explicitly defined type to the map for the federation-factory
         this.operationTypeNodeByTypeName.set(operationTypeName, operationType);
       }
-      if (!objectData && !extensionData) {
+      if (!objectData) {
         continue;
       }
       const rootNode = this.configurationDataByParentTypeName.get(defaultTypeName);
@@ -1845,52 +2026,31 @@ export class NormalizationFactory {
         rootNode.isRootNode = true;
         rootNode.typeName = defaultTypeName;
       }
-      const parentDatas = [objectData, extensionData];
-      for (const parentData of parentDatas) {
-        if (!parentData) {
-          continue;
-        }
-        if (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION && parentData.kind !== Kind.OBJECT_TYPE_EXTENSION) {
-          this.errors.push(operationDefinitionError(operationTypeName, operationType, parentData.kind));
-          continue;
-        }
-        // Root types fields whose response type is an extension orphan could be valid through a federated graph
-        // However, the field would have to be shareable to ever be valid TODO
-        for (const fieldData of parentData.fieldDataByFieldName.values()) {
-          const fieldTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
-          if (
-            !BASE_SCALARS.has(fieldTypeName) &&
-            !this.parentDefinitionDataByTypeName.has(fieldTypeName) &&
-            !validParentExtensionOrphansByTypeName.has(fieldTypeName)
-          ) {
-            this.errors.push(undefinedTypeError(fieldTypeName));
-          }
+      if (objectData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
+        this.errors.push(operationDefinitionError(operationTypeName, operationType, objectData.kind));
+        continue;
+      }
+      for (const fieldData of objectData.fieldDataByFieldName.values()) {
+        const fieldTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
+        if (!BASE_SCALARS.has(fieldTypeName) && !this.parentDefinitionDataByTypeName.has(fieldTypeName)) {
+          this.errors.push(undefinedTypeError(fieldTypeName));
         }
       }
     }
     for (const referencedTypeName of this.referencedTypeNames) {
       if (
-        this.parentDefinitionDataByTypeName.has(referencedTypeName) ||
-        this.entityDataByTypeName.has(referencedTypeName)
+        !this.parentDefinitionDataByTypeName.has(referencedTypeName) &&
+        !this.entityDataByTypeName.has(referencedTypeName)
       ) {
-        continue;
-      }
-      const extension = this.parentExtensionDataByTypeName.get(referencedTypeName);
-      if (!extension || extension.kind !== Kind.OBJECT_TYPE_EXTENSION) {
         this.errors.push(undefinedTypeError(referencedTypeName));
       }
     }
     this.validateAndAddKeysToConfiguration();
     for (const [parentTypeName, fieldSetData] of this.fieldSetDataByTypeName) {
-      const parentData =
-        this.parentDefinitionDataByTypeName.get(parentTypeName) ||
-        this.parentExtensionDataByTypeName.get(parentTypeName);
+      const parentData = this.parentDefinitionDataByTypeName.get(parentTypeName);
       if (
         !parentData ||
-        (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION &&
-          parentData.kind != Kind.OBJECT_TYPE_EXTENSION &&
-          parentData.kind !== Kind.INTERFACE_TYPE_DEFINITION &&
-          parentData.kind !== Kind.INTERFACE_TYPE_EXTENSION)
+        (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION && parentData.kind !== Kind.INTERFACE_TYPE_DEFINITION)
       ) {
         this.errors.push(undefinedObjectLikeParentError(parentTypeName));
         continue;
@@ -1946,7 +2106,6 @@ export class NormalizationFactory {
         originalTypeNameByRenamedTypeName: this.originalTypeNameByRenamedTypeName,
         overridesByTargetSubgraphName: this.overridesByTargetSubgraphName,
         parentDefinitionDataByTypeName: this.parentDefinitionDataByTypeName,
-        parentExtensionDataByTypeName: validParentExtensionOrphansByTypeName,
         persistedDirectiveDefinitionDataByDirectiveName,
         subgraphAST: newAST,
         subgraphString: print(newAST),
@@ -2033,7 +2192,6 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
         operationTypes: normalizationResult.operationTypes,
         overriddenFieldNamesByParentTypeName: new Map<string, Set<string>>(),
         parentDefinitionDataByTypeName: normalizationResult.parentDefinitionDataByTypeName,
-        parentExtensionDataByTypeName: normalizationResult.parentExtensionDataByTypeName,
         persistedDirectiveDefinitionDataByDirectiveName:
           normalizationResult.persistedDirectiveDefinitionDataByDirectiveName,
         schema: normalizationResult.schema,

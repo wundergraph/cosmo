@@ -2,10 +2,13 @@ import {
   federateSubgraphs,
   incompatibleObjectExtensionOrphanBaseTypeError,
   incompatibleParentKindMergeError,
+  INPUT_OBJECT,
   invalidSubgraphNamesError,
-  noBaseTypeExtensionError,
+  noBaseDefinitionForExtensionError,
   noQueryRootTypeError,
+  OBJECT,
   parse,
+  SCALAR,
   Subgraph,
 } from '../src';
 import { describe, expect, test } from 'vitest';
@@ -545,7 +548,7 @@ describe('FederationFactory tests', () => {
     const { errors } = federateSubgraphs([subgraphC, subgraphD]);
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(1);
-    expect(errors![0]).toStrictEqual(noBaseTypeExtensionError('Entity'));
+    expect(errors![0]).toStrictEqual(noBaseDefinitionForExtensionError(OBJECT, 'Entity'));
   });
 
   test('that root types are promoted', () => {
@@ -866,25 +869,25 @@ describe('FederationFactory tests', () => {
   test('that an error is returned when merging incompatible types #1.1', () => {
     const { errors } = federateSubgraphs([subgraphR, subgraphS]);
     expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(incompatibleParentKindMergeError('Object', 'scalar', 'object'));
+    expect(errors![0]).toStrictEqual(incompatibleParentKindMergeError(OBJECT, SCALAR, OBJECT));
   });
 
   test('that an error is returned when merging incompatible types #1.2', () => {
     const { errors } = federateSubgraphs([subgraphS, subgraphR]);
     expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(incompatibleParentKindMergeError('Object', 'object', 'scalar'));
+    expect(errors![0]).toStrictEqual(incompatibleParentKindMergeError(OBJECT, OBJECT, SCALAR));
   });
 
   test('that an error is returned when merging an object extension orphan with an incompatible base type #1.1', () => {
     const { errors } = federateSubgraphs([subgraphT, subgraphU]);
     expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(incompatibleObjectExtensionOrphanBaseTypeError('Object', 'input object'));
+    expect(errors![0]).toStrictEqual(incompatibleParentKindMergeError(OBJECT, OBJECT, INPUT_OBJECT));
   });
 
   test('that an error is returned when merging an object extension orphan with an incompatible base type #1.2', () => {
     const { errors } = federateSubgraphs([subgraphU, subgraphT]);
     expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(incompatibleObjectExtensionOrphanBaseTypeError('Object', 'input object'));
+    expect(errors![0]).toStrictEqual(incompatibleParentKindMergeError(OBJECT, INPUT_OBJECT, OBJECT));
   });
 
   test('that renaming a root type also renames field return types of the same type #1.1', () => {
