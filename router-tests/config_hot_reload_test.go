@@ -254,7 +254,7 @@ func TestConfigHotReload(t *testing.T) {
 				})
 				require.NoError(t, err)
 				require.Equal(t, res.Response.StatusCode, 200)
-				require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0'."}],"data":{"employees":null}}`, res.Body)
+				require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees'."}],"data":{"employees":null}}`, res.Body)
 			}()
 
 			// Let's wait a bit to make sure all requests are in flight

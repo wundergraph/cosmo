@@ -165,10 +165,14 @@ services:
       dockerfile: cdn-server/Dockerfile
     environment:
       PORT: 11000
+      NODE_ENV: development
       AUTH_JWT_SECRET: fkczyomvdprgvtmvkuhvprxuggkbgwld
       AUTH_ADMISSION_JWT_SECRET: uXDxJLEvrw4aafPfrf3rRotCoBzRfPEW
       S3_STORAGE_URL: ${S3_STORAGE_URL:-http://${MINIO_ROOT_USER:-minio}:${MINIO_ROOT_PASSWORD:-changeme}@minio:9000/cosmo}
       S3_REGION: ${S3_REGION_CDN:-${S3_REGION:-auto}}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+      S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
     ports:
       - '11000:11000'
     networks:

@@ -10,13 +10,23 @@ import (
 	"time"
 
 	"github.com/99designs/gqlgen/graphql"
+	"github.com/vektah/gqlparser/v2/gqlerror"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/model"
 )
 
 // RootFieldThrowsError is the resolver for the rootFieldThrowsError field.
 func (r *employeeResolver) RootFieldThrowsError(ctx context.Context, obj *model.Employee) (*string, error) {
-	return nil, fmt.Errorf("error resolving RootFieldThrowsError for Employee %d", obj.ID)
+	graphql.AddError(ctx, &gqlerror.Error{
+		Path:    graphql.GetPath(ctx),
+		Message: fmt.Sprintf("error resolving RootFieldThrowsError for Employee %d", obj.ID),
+		Extensions: map[string]interface{}{
+			"code": "ERROR_CODE",
+			"foo":  "bar",
+		},
+	})
+
+	return nil, nil
 }
 
 // RootFieldErrorWrapper is the resolver for the rootFieldErrorWrapper field.
