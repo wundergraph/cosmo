@@ -65,7 +65,7 @@ func (r *FederatedGraphResource) Schema(ctx context.Context, req resource.Schema
 			},
 			"name": schema.StringAttribute{
 				MarkdownDescription: "The name of the federated graph. This is used to identify the graph and must be unique within the namespace.",
-				Optional:            true,
+				Required:            true,
 			},
 			"namespace": schema.StringAttribute{
 				MarkdownDescription: "The namespace in which the federated graph is located. Defaults to 'default' if not provided.",

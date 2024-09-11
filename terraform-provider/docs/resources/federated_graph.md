@@ -34,6 +34,7 @@ resource "cosmo_federated_graph" "test" {
 
 ### Required
 
+- `name` (String) The name of the federated graph. This is used to identify the graph and must be unique within the namespace.
 - `routing_url` (String) The URL of the service that routes requests to the federated graph.
 
 ### Optional
@@ -41,7 +42,6 @@ resource "cosmo_federated_graph" "test" {
 - `admission_webhook_secret` (String, Sensitive) The secret token used to authenticate the admission webhook requests.
 - `admission_webhook_url` (String) The URL for the admission webhook that will be triggered during graph operations.
 - `label_matchers` (List of String) A list of label matchers used to select the services that will form the federated graph.
-- `name` (String) The name of the federated graph. This is used to identify the graph and must be unique within the namespace.
 - `namespace` (String) The namespace in which the federated graph is located. Defaults to 'default' if not provided.
 - `readme` (String) Readme content for the federated graph.
 
