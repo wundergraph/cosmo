@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	platformv1 "github.com/wundergraph/cosmo/terraform-provider-cosmo/gen/proto/wg/cosmo/platform/v1"
 	"github.com/wundergraph/cosmo/terraform-provider-cosmo/internal/api"
@@ -26,8 +28,9 @@ type SubgraphResourceModel struct {
 	RoutingURL           types.String `tfsdk:"routing_url"`
 	BaseSubgraphName     types.String `tfsdk:"base_subgraph_name"`
 	SubscriptionUrl      types.String `tfsdk:"subscription_url"`
-	Readme               types.String `tfsdk:"readme"`
+	SubscriptionProtocol types.String `tfsdk:"subscription_protocol"`
 	WebsocketSubprotocol types.String `tfsdk:"websocket_subprotocol"`
+	Readme               types.String `tfsdk:"readme"`
 	IsEventDrivenGraph   types.Bool   `tfsdk:"is_event_driven_graph"`
 	IsFeatureSubgraph    types.Bool   `tfsdk:"is_feature_subgraph"`
 	UnsetLabels          types.Bool   `tfsdk:"unset_labels"`
@@ -85,6 +88,13 @@ func (r *SubgraphResource) Schema(ctx context.Context, req resource.SchemaReques
 				Optional:            true,
 				MarkdownDescription: "The subscription URL for the subgraph.",
 			},
+			"subscription_protocol": schema.StringAttribute{
+				Optional:            true,
+				MarkdownDescription: "The subscription protocol for the subgraph.",
+				Validators: []validator.String{
+					stringvalidator.OneOf(api.GraphQLSubscriptionProtocolWS, api.GraphQLSubscriptionProtocolSSE, api.GraphQLSubscriptionProtocolSSEPost),
+				},
+			},
 			"readme": schema.StringAttribute{
 				Optional:            true,
 				MarkdownDescription: "The readme for the subgraph.",
@@ -92,6 +102,9 @@ func (r *SubgraphResource) Schema(ctx context.Context, req resource.SchemaReques
 			"websocket_subprotocol": schema.StringAttribute{
 				Optional:            true,
 				MarkdownDescription: "The websocket subprotocol for the subgraph.",
+				Validators: []validator.String{
+					stringvalidator.OneOf(api.GraphQLWebsocketSubprotocolDefault, api.GraphQLWebsocketSubprotocolGraphQLWS, api.GraphQLWebsocketSubprotocolGraphQLTransportWS),
+				},
 			},
 			"is_event_driven_graph": schema.BoolAttribute{
 				Optional:            true,
@@ -141,7 +154,7 @@ func (r *SubgraphResource) Create(ctx context.Context, req resource.CreateReques
 		})
 	}
 
-	err = api.CreateSubgraph(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, data.Name.ValueString(), data.Namespace.ValueString(), data.RoutingURL.ValueString(), data.BaseSubgraphName.ValueStringPointer(), labels, data.SubscriptionUrl.ValueStringPointer(), data.Readme.ValueStringPointer(), data.IsEventDrivenGraph.ValueBoolPointer(), data.IsFeatureSubgraph.ValueBoolPointer())
+	err = api.CreateSubgraph(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, data.Name.ValueString(), data.Namespace.ValueString(), data.RoutingURL.ValueString(), data.BaseSubgraphName.ValueStringPointer(), labels, data.SubscriptionUrl.ValueStringPointer(), data.Readme.ValueStringPointer(), data.IsEventDrivenGraph.ValueBoolPointer(), data.IsFeatureSubgraph.ValueBoolPointer(), data.SubscriptionProtocol.ValueString(), data.WebsocketSubprotocol.ValueString())
 	if err != nil {
 		utils.AddDiagnosticError(resp, "Error Creating Subgraph", fmt.Sprintf("Could not create subgraph: %s", err))
 		return
@@ -154,6 +167,9 @@ func (r *SubgraphResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	data.Id = types.StringValue(subgraph.GetId())
+	data.Name = types.StringValue(subgraph.GetName())
+	data.Namespace = types.StringValue(subgraph.GetNamespace())
+	data.RoutingURL = types.StringValue(subgraph.GetRoutingURL())
 
 	if subgraph.BaseSubgraphName != nil {
 		data.BaseSubgraphName = types.StringValue(*subgraph.BaseSubgraphName)
@@ -216,11 +232,7 @@ func (r *SubgraphResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	headers := utils.ConvertHeadersToStringList(data.Headers)
-	err = api.UpdateSubgraph(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, data.Name.ValueString(), data.Namespace.ValueString(), data.RoutingURL.ValueString(), labels, headers, data.SubscriptionUrl.ValueStringPointer(), data.Readme.ValueStringPointer(), unsetLabels)
-	if err != nil {
-		utils.AddDiagnosticError(resp, "Error Updating Subgraph", fmt.Sprintf("Could not update subgraph: %s", err))
-		return
-	}
+	err = api.UpdateSubgraph(ctx, r.PlatformClient.Client, r.PlatformClient.CosmoApiKey, data.Name.ValueString(), data.Namespace.ValueString(), data.RoutingURL.ValueString(), labels, headers, data.SubscriptionUrl.ValueStringPointer(), data.Readme.ValueStringPointer(), unsetLabels, data.SubscriptionProtocol.ValueString(), data.WebsocketSubprotocol.ValueString())
 	if err != nil {
 		utils.AddDiagnosticError(resp, "Error Updating Subgraph", fmt.Sprintf("Could not update subgraph: %s", err))
 		return
@@ -233,6 +245,7 @@ func (r *SubgraphResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	data.Id = types.StringValue(subgraph.GetId())
+	data.Name = types.StringValue(subgraph.GetName())
 
 	utils.LogAction(ctx, "updated", data.Id.ValueString(), data.Name.ValueString(), data.Namespace.ValueString())
 

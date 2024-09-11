@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/wundergraph/cosmo/terraform-provider-cosmo/internal/acceptance"
 )
 
 func TestAccSubgraphResource(t *testing.T) {
-	rName := "test-subgraph"
+	rName := acctest.RandomWithPrefix("test-subgraph")
 	rNamespace := "default"
 	rBaseSubgraphName := "base-subgraph"
 

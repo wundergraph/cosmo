@@ -35,6 +35,7 @@ type SubgraphDataSourceModel struct {
 	BaseSubgraphName     types.String `tfsdk:"base_subgraph_name"`
 	Labels               types.List   `tfsdk:"labels"`
 	SubscriptionUrl      types.String `tfsdk:"subscription_url"`
+	SubscriptionProtocol types.String `tfsdk:"subscription_protocol"`
 	Readme               types.String `tfsdk:"readme"`
 	WebsocketSubprotocol types.String `tfsdk:"websocket_subprotocol"`
 	IsEventDrivenGraph   types.Bool   `tfsdk:"is_event_driven_graph"`
@@ -74,6 +75,10 @@ func (d *SubgraphDataSource) Schema(ctx context.Context, req datasource.SchemaRe
 			"subscription_url": schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "The subscription URL for the subgraph.",
+			},
+			"subscription_protocol": schema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "The subscription protocol for the subgraph.",
 			},
 			"readme": schema.StringAttribute{
 				Computed:            true,
@@ -156,6 +161,8 @@ func (d *SubgraphDataSource) Read(ctx context.Context, req datasource.ReadReques
 	data.Readme = types.StringValue(subgraph.GetReadme())
 	data.IsEventDrivenGraph = types.BoolValue(subgraph.GetIsEventDrivenGraph())
 	data.IsFeatureSubgraph = types.BoolValue(subgraph.GetIsFeatureSubgraph())
+	data.SubscriptionProtocol = types.StringValue(subgraph.GetSubscriptionProtocol())
+	data.WebsocketSubprotocol = types.StringValue(subgraph.GetWebsocketSubprotocol())
 
 	tflog.Trace(ctx, "Read subgraph data source", map[string]interface{}{
 		"id": data.Id.ValueString(),
