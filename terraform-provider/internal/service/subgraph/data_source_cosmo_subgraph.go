@@ -151,6 +151,7 @@ func (d *SubgraphDataSource) Read(ctx context.Context, req datasource.ReadReques
 	data.Name = types.StringValue(subgraph.GetName())
 	data.Namespace = types.StringValue(subgraph.GetNamespace())
 	data.RoutingUrl = types.StringValue(subgraph.GetRoutingURL())
+	data.BaseSubgraphName = types.StringValue(subgraph.GetBaseSubgraphName())
 
 	var labels []attr.Value
 	for _, matcher := range subgraph.GetLabels() {

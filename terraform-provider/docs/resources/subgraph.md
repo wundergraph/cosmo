@@ -35,13 +35,13 @@ resource "cosmo_subgraph" "test" {
 
 ### Required
 
+- `base_subgraph_name` (String) The base subgraph name.
 - `name` (String) The name of the subgraph.
 - `namespace` (String) The namespace in which the subgraph is located.
 - `routing_url` (String) The routing URL of the subgraph.
 
 ### Optional
 
-- `base_subgraph_name` (String) The base subgraph name.
 - `headers` (List of String) Headers for the subgraph.
 - `is_event_driven_graph` (Boolean) Indicates if the subgraph is event-driven.
 - `is_feature_subgraph` (Boolean) Indicates if the subgraph is a feature subgraph.

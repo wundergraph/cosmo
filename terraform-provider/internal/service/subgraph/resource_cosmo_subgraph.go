@@ -81,7 +81,7 @@ func (r *SubgraphResource) Schema(ctx context.Context, req resource.SchemaReques
 				MarkdownDescription: "The routing URL of the subgraph.",
 			},
 			"base_subgraph_name": schema.StringAttribute{
-				Optional:            true,
+				Required:            true,
 				MarkdownDescription: "The base subgraph name.",
 			},
 			"subscription_url": schema.StringAttribute{
@@ -171,10 +171,6 @@ func (r *SubgraphResource) Create(ctx context.Context, req resource.CreateReques
 	data.Namespace = types.StringValue(subgraph.GetNamespace())
 	data.RoutingURL = types.StringValue(subgraph.GetRoutingURL())
 
-	if subgraph.BaseSubgraphName != nil {
-		data.BaseSubgraphName = types.StringValue(*subgraph.BaseSubgraphName)
-	}
-
 	utils.LogAction(ctx, "created", data.Id.ValueString(), data.Name.ValueString(), data.Namespace.ValueString())
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -246,6 +242,8 @@ func (r *SubgraphResource) Update(ctx context.Context, req resource.UpdateReques
 
 	data.Id = types.StringValue(subgraph.GetId())
 	data.Name = types.StringValue(subgraph.GetName())
+	data.Namespace = types.StringValue(subgraph.GetNamespace())
+	data.RoutingURL = types.StringValue(subgraph.GetRoutingURL())
 
 	utils.LogAction(ctx, "updated", data.Id.ValueString(), data.Name.ValueString(), data.Namespace.ValueString())
 
