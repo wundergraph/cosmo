@@ -1,5 +1,6 @@
 import { GraphQLSchema, isInputObjectType, isInterfaceType, isObjectType } from 'graphql';
 import { LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import pLimit from 'p-limit';
 import {
   FederatedGraphDTO,
   Field,
@@ -82,6 +83,7 @@ export default class SchemaGraphPruner {
     addedFields: SchemaDiff[];
     severityLevel: LintSeverityLevel;
   }): Promise<GraphPruningIssueResult[]> => {
+    const limit = pLimit(5);
     const allFields = this.getAllFields({});
     const fieldsInGracePeriod = await this.subgraphRepo.getSubgraphFieldsInGracePeriod({ subgraphId, namespaceId });
 
@@ -90,14 +92,30 @@ export default class SchemaGraphPruner {
     });
 
     const graphPruningIssues: GraphPruningIssueResult[] = [];
+    const input = [];
 
     for (const federatedGraph of federatedGraphs) {
-      const unusedFieldsWithTypeNames = await this.usageRepo.getUnusedFields({
-        fields: fieldsToBeChecked,
-        organizationId,
-        federatedGraphId: federatedGraph.id,
-        rangeInHours: rangeInDays * 24,
-      });
+      input.push(
+        limit(async () => {
+          const unusedFieldsWithTypeNames = await this.usageRepo.getUnusedFields({
+            fields: fieldsToBeChecked,
+            organizationId,
+            federatedGraphId: federatedGraph.id,
+            rangeInHours: rangeInDays * 24,
+          });
+          return {
+            federatedGraphId: federatedGraph.id,
+            federatedGraphName: federatedGraph.name,
+            unusedFieldsWithTypeNames,
+          };
+        }),
+      );
+    }
+
+    const result = await Promise.all(input);
+
+    for (const r of result) {
+      const { federatedGraphId, federatedGraphName, unusedFieldsWithTypeNames } = r;
       const unusedFields = allFields.filter((field) =>
         unusedFieldsWithTypeNames.some((f) => f.name === field.name && f.typeName === field.typeName),
       );
@@ -113,8 +131,8 @@ export default class SchemaGraphPruner {
             endLine: field.location.endLine,
             endColumn: field.location.endColumn,
           },
-          federatedGraphId: federatedGraph.id,
-          federatedGraphName: federatedGraph.name,
+          federatedGraphId,
+          federatedGraphName,
         });
       }
     }
@@ -139,6 +157,7 @@ export default class SchemaGraphPruner {
     severityLevel: LintSeverityLevel;
     addedDeprecatedFields: SchemaDiff[];
   }): Promise<GraphPruningIssueResult[]> => {
+    const limit = pLimit(5);
     const allDeprecatedFields = this.getAllFields({ onlyDeprecated: true });
     const deprecatedFieldsInGracePeriod = await this.subgraphRepo.getSubgraphFieldsInGracePeriod({
       subgraphId,
@@ -158,14 +177,30 @@ export default class SchemaGraphPruner {
     }
 
     const graphPruningIssues: GraphPruningIssueResult[] = [];
+    const input = [];
 
     for (const federatedGraph of federatedGraphs) {
-      const usedDeprecatedFieldsWithTypeNames = await this.usageRepo.getUsedFields({
-        fields: deprecatedFieldsToBeChecked,
-        organizationId,
-        federatedGraphId: federatedGraph.id,
-        range: rangeInDays * 24,
-      });
+      input.push(
+        limit(async () => {
+          const usedDeprecatedFieldsWithTypeNames = await this.usageRepo.getUsedFields({
+            fields: deprecatedFieldsToBeChecked,
+            organizationId,
+            federatedGraphId: federatedGraph.id,
+            range: rangeInDays * 24,
+          });
+          return {
+            federatedGraphId: federatedGraph.id,
+            federatedGraphName: federatedGraph.name,
+            usedDeprecatedFieldsWithTypeNames,
+          };
+        }),
+      );
+    }
+
+    const result = await Promise.all(input);
+
+    for (const r of result) {
+      const { federatedGraphId, federatedGraphName, usedDeprecatedFieldsWithTypeNames } = r;
 
       for (const field of deprecatedFieldsToBeChecked) {
         const isUsed = usedDeprecatedFieldsWithTypeNames.some(
@@ -184,8 +219,8 @@ export default class SchemaGraphPruner {
             endLine: field.location.endLine,
             endColumn: field.location.endColumn,
           },
-          federatedGraphId: federatedGraph.id,
-          federatedGraphName: federatedGraph.name,
+          federatedGraphId,
+          federatedGraphName,
         });
       }
     }
