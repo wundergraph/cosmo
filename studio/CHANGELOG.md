@@ -4,6 +4,20 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.88.1](https://github.com/wundergraph/cosmo/compare/studio@0.88.0...studio@0.88.1) (2024-09-09)
+
+### Bug Fixes
+
+* disabled state of feature flag overview page ([#1150](https://github.com/wundergraph/cosmo/issues/1150)) ([ecbb399](https://github.com/wundergraph/cosmo/commit/ecbb399ab72500a3c994b41cb41e291f19ba08fb)) (@JivusAyrus)
+
+# [0.88.0](https://github.com/wundergraph/cosmo/compare/studio@0.87.0...studio@0.88.0) (2024-09-05)
+
+### Features
+
+* add viewer role to ui ([#1137](https://github.com/wundergraph/cosmo/issues/1137)) ([23df809](https://github.com/wundergraph/cosmo/commit/23df809a58c57ea353aa79f5a503f580b1fc82d1)) (@JivusAyrus)
+* query plan ui ([#1140](https://github.com/wundergraph/cosmo/issues/1140)) ([c255867](https://github.com/wundergraph/cosmo/commit/c25586728b34b177789a1d6a0fd9333e9e647959)) (@thisisnithin)
+* record changed subgraphs in composition ([#1134](https://github.com/wundergraph/cosmo/issues/1134)) ([f39ca8c](https://github.com/wundergraph/cosmo/commit/f39ca8c4dcd54bb3d9594bc8394ef287a7eb04cd)) (@thisisnithin)
+
 # [0.87.0](https://github.com/wundergraph/cosmo/compare/studio@0.86.2...studio@0.87.0) (2024-08-28)
 
 ### Bug Fixes

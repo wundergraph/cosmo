@@ -122,6 +122,8 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Router logs are snake_case
+
 	fields := []zapcore.Field{
 		zap.Int("status", ww.Status()),
 		zap.String("method", r.Method),
@@ -129,7 +131,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		zap.String("query", query),
 		// Has to be set by a middleware before this one
 		zap.String("ip", remoteAddr),
-		zap.String("user-agent", r.UserAgent()),
+		zap.String("user_agent", r.UserAgent()),
 		zap.Duration("latency", latency),
 	}
 	if h.timeFormat != "" {
@@ -140,7 +142,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		span := trace.SpanFromContext(r.Context())
 		spanContext := span.SpanContext()
 		if spanContext.HasTraceID() {
-			fields = append(fields, zap.String("traceID", spanContext.TraceID().String()))
+			fields = append(fields, zap.String("trace_id", spanContext.TraceID().String()))
 		}
 	}
 

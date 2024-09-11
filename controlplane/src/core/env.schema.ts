@@ -126,7 +126,22 @@ export const envVariables = z
      */
     S3_ACCESS_KEY_ID: z.string().optional(),
     S3_SECRET_ACCESS_KEY: z.string().optional(),
-
+    /**
+     * Enforces path style URLs handling, e.g.:
+     *   https://username:password@virtualhost.r2.cloudflarestorage.com/cosmo-cdn
+     *
+     * S3_STORAGE_URL="https://username:password@virtualhost.r2.cloudflarestorage.com/cosmo-cdn"
+     *
+     * S3_REGION="auto"
+     * S3_ENDPOINT="https://virtualhost.r2.cloudflarestorage.com"
+     * S3_FORCE_PATH_STYLE="true"
+     *
+     * The bucket will be "cosmo-cdn" otherwise it would be "virtualhost"
+     */
+    S3_FORCE_PATH_STYLE: z
+      .string()
+      .transform((val) => val === 'true')
+      .default('true'),
     /**
      * Email
      */

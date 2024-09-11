@@ -64,7 +64,13 @@ spec:
                 configMapKeyRef:
                   name: {{ include "cdn.fullname" . }}-configmap
                   key: s3Region
-
+            {{- if .Values.configuration.s3ForcePathStyle }}
+            - name: S3_FORCE_PATH_STYLE
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "cdn.fullname" . }}-configmap
+                  key: s3ForcePathStyle
+            {{- end }}
             {{- if .Values.configuration.s3Endpoint }}
             - name: S3_ENDPOINT
               valueFrom:
