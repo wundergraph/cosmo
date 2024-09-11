@@ -30,13 +30,13 @@ func CreateSubgraph(ctx context.Context, client platformv1connect.PlatformServic
 
 func UpdateSubgraph(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey, name, namespace, routingUrl string, labels []*platformv1.Label, headers []string, subscriptionUrl, readme *string, unsetLabels *bool, websocketSubprotocol string, subscriptionProtocol string) error {
 	request := connect.NewRequest(&platformv1.UpdateSubgraphRequest{
-		Name:            name,
-		RoutingUrl:      &routingUrl,
-		Labels:          labels,
-		Headers:         headers,
-		SubscriptionUrl: subscriptionUrl,
-		Readme:          readme,
-		Namespace:       namespace,
+		Name:                 name,
+		RoutingUrl:           &routingUrl,
+		Labels:               labels,
+		Headers:              headers,
+		SubscriptionUrl:      subscriptionUrl,
+		Readme:               readme,
+		Namespace:            namespace,
 		UnsetLabels:          unsetLabels,
 		WebsocketSubprotocol: resolveWebsocketSubprotocol(websocketSubprotocol),
 		SubscriptionProtocol: resolveSubscriptionProtocol(subscriptionProtocol),

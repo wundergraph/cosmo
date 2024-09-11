@@ -12,14 +12,14 @@ import (
 
 func CreateMonograph(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey string, name string, namespace string, routingUrl string, graphUrl string, subscriptionUrl *string, readme *string, websocketSubprotocol string, subscriptionProtocol string, admissionWebhookUrl string, admissionWebhookSecret string) error {
 	request := connect.NewRequest(&platformv1.CreateMonographRequest{
-		Name:                 name,
-		Namespace:            namespace,
-		RoutingUrl:           routingUrl,
-		GraphUrl:             graphUrl,
-		SubscriptionUrl:      subscriptionUrl,
-		Readme:               readme,
-		WebsocketSubprotocol: resolveWebsocketSubprotocol(websocketSubprotocol),
-		SubscriptionProtocol: resolveSubscriptionProtocol(subscriptionProtocol),
+		Name:                   name,
+		Namespace:              namespace,
+		RoutingUrl:             routingUrl,
+		GraphUrl:               graphUrl,
+		SubscriptionUrl:        subscriptionUrl,
+		Readme:                 readme,
+		WebsocketSubprotocol:   resolveWebsocketSubprotocol(websocketSubprotocol),
+		SubscriptionProtocol:   resolveSubscriptionProtocol(subscriptionProtocol),
 		AdmissionWebhookURL:    admissionWebhookUrl,
 		AdmissionWebhookSecret: &admissionWebhookSecret,
 	})
@@ -30,14 +30,14 @@ func CreateMonograph(ctx context.Context, client platformv1connect.PlatformServi
 
 func UpdateMonograph(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey string, name string, namespace string, routingUrl string, graphUrl string, subscriptionUrl *string, readme *string, websocketSubprotocol string, subscriptionProtocol string, admissionWebhookUrl string, admissionWebhookSecret string) error {
 	request := connect.NewRequest(&platformv1.UpdateMonographRequest{
-		Name:                 name,
-		Namespace:            namespace,
-		RoutingUrl:           routingUrl,
-		GraphUrl:             graphUrl,
-		SubscriptionUrl:      subscriptionUrl,
-		Readme:               readme,
-		WebsocketSubprotocol: resolveWebsocketSubprotocol(websocketSubprotocol),
-		SubscriptionProtocol: resolveSubscriptionProtocol(subscriptionProtocol),
+		Name:                   name,
+		Namespace:              namespace,
+		RoutingUrl:             routingUrl,
+		GraphUrl:               graphUrl,
+		SubscriptionUrl:        subscriptionUrl,
+		Readme:                 readme,
+		WebsocketSubprotocol:   resolveWebsocketSubprotocol(websocketSubprotocol),
+		SubscriptionProtocol:   resolveSubscriptionProtocol(subscriptionProtocol),
 		AdmissionWebhookURL:    &admissionWebhookUrl,
 		AdmissionWebhookSecret: &admissionWebhookSecret,
 	})

@@ -20,16 +20,16 @@ type MonographResource struct {
 }
 
 type MonographResourceModel struct {
-	Id                   types.String `tfsdk:"id"`
-	Name                 types.String `tfsdk:"name"`
-	Namespace            types.String `tfsdk:"namespace"`
-	SubscriptionUrl      types.String `tfsdk:"subscription_url"`
-	WebsocketSubprotocol types.String `tfsdk:"websocket_subprotocol"`
-	SubscriptionProtocol types.String `tfsdk:"subscription_protocol"`
-	GraphUrl             types.String `tfsdk:"graph_url"`
-	RoutingURL           types.String `tfsdk:"routing_url"`
-	Readme               types.String `tfsdk:"readme"`
-	AdmissionWebhookURL  types.String `tfsdk:"admission_webhook_url"`
+	Id                     types.String `tfsdk:"id"`
+	Name                   types.String `tfsdk:"name"`
+	Namespace              types.String `tfsdk:"namespace"`
+	SubscriptionUrl        types.String `tfsdk:"subscription_url"`
+	WebsocketSubprotocol   types.String `tfsdk:"websocket_subprotocol"`
+	SubscriptionProtocol   types.String `tfsdk:"subscription_protocol"`
+	GraphUrl               types.String `tfsdk:"graph_url"`
+	RoutingURL             types.String `tfsdk:"routing_url"`
+	Readme                 types.String `tfsdk:"readme"`
+	AdmissionWebhookURL    types.String `tfsdk:"admission_webhook_url"`
 	AdmissionWebhookSecret types.String `tfsdk:"admission_webhook_secret"`
 }
 
