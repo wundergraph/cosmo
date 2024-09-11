@@ -42,10 +42,10 @@ export function externalInterfaceFieldsWarning(
     versionOneWarningPropagationMessage(subgraphName) +
       `The interface "${typeName}" is invalid because the following field definition` +
       (fieldNames.length > 1 ? 's are' : ' is') +
-      ` declared @external:\n "` +
+      ` declared "@external":\n "` +
       fieldNames.join(QUOTATION_JOIN) +
       `"\n` +
-      `Interface fields should not be declared @external. This is because interface fields do not resolve directly,` +
+      `Interface fields should not be declared "@external". This is because interface fields do not resolve directly,` +
       ` but the "@external" directive relates to whether a field instance can be resolved` +
       ` by the subgraph in which it is defined.`,
   );

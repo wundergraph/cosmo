@@ -2,7 +2,6 @@ import { DocumentNode, GraphQLSchema, OperationTypeNode } from 'graphql';
 import { EntityInterfaceSubgraphData } from '../utils/utils';
 import { ConfigurationData } from '../router-configuration/router-configuration';
 import { ParentDefinitionData, PersistedDirectiveDefinitionData } from '../schema-building/type-definition-data';
-import { ObjectExtensionData } from '../schema-building/type-extension-data';
 import { ConditionalFieldData } from '../schema-building/utils';
 
 export type Subgraph = {
@@ -22,7 +21,6 @@ export type InternalSubgraph = {
   operationTypes: Map<string, OperationTypeNode>;
   overriddenFieldNamesByParentTypeName: Map<string, Set<string>>;
   parentDefinitionDataByTypeName: Map<string, ParentDefinitionData>;
-  parentExtensionDataByTypeName: Map<string, ObjectExtensionData>;
   persistedDirectiveDefinitionDataByDirectiveName: Map<string, PersistedDirectiveDefinitionData>;
   schema: GraphQLSchema;
   url: string;
