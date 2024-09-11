@@ -114,7 +114,7 @@ import {
   InvalidRequiredInputValueData,
   mapToArrayOfValues,
 } from '../utils/utils';
-import { INHERITABLE_DIRECTIVE_NAMES, V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME, } from '../utils/constants';
+import { INHERITABLE_DIRECTIVE_NAMES, V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME } from '../utils/constants';
 import {
   FieldConfiguration,
   FieldSetCondition,

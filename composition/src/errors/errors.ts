@@ -515,11 +515,11 @@ export function invalidInterfaceImplementationError(
   const messages: string[] = [];
   for (const [interfaceName, implementationErrors] of implementationErrorsByInterfaceTypeName) {
     let message =
-      ` The implementation of interface "${interfaceName}" by "${parentTypeName}"` + ` is invalid because:\n`;
+      ` The implementation of Interface "${interfaceName}" by "${parentTypeName}"` + ` is invalid because:\n`;
     const unimplementedFieldsLength = implementationErrors.unimplementedFields.length;
     if (unimplementedFieldsLength) {
       message +=
-        `  The following field${unimplementedFieldsLength > 1 ? 's are' : ' is'} not implemented: "` +
+        `  The following Field${unimplementedFieldsLength > 1 ? 's are' : ' is'} not implemented: "` +
         implementationErrors.unimplementedFields.join('", "') +
         '"\n';
     }
@@ -527,10 +527,10 @@ export function invalidInterfaceImplementationError(
       const unimplementedArgumentsSize = invalidFieldImplementation.unimplementedArguments.size;
       const invalidArgumentsLength = invalidFieldImplementation.invalidImplementedArguments.length;
       const invalidAdditionalArgumentsSize = invalidFieldImplementation.invalidAdditionalArguments.size;
-      message += `  The field "${fieldName}" is invalid because:\n`;
+      message += `  The Field "${fieldName}" is invalid because:\n`;
       if (unimplementedArgumentsSize) {
         message +=
-          `   The following argument${unimplementedArgumentsSize > 1 ? 's are' : ' is'} not implemented: "` +
+          `   The following Argument${unimplementedArgumentsSize > 1 ? 's are' : ' is'} not implemented: "` +
           [...invalidFieldImplementation.unimplementedArguments].join('", "') +
           '"\n';
       }
@@ -538,17 +538,17 @@ export function invalidInterfaceImplementationError(
         message += `   The following implemented argument${invalidArgumentsLength > 1 ? 's are' : ' is'} invalid:\n`;
         for (const invalidArgument of invalidFieldImplementation.invalidImplementedArguments) {
           message +=
-            `    The argument "${invalidArgument.argumentName}" must define type "` +
+            `    The Argument "${invalidArgument.argumentName}" must define type "` +
             invalidArgument.expectedType +
             `" and not "${invalidArgument.actualType}"\n`;
         }
       }
       if (invalidAdditionalArgumentsSize) {
         message +=
-          `   If a field from an interface is implemented, any additional arguments that were not defined` +
-          ` on the original interface field must be optional (nullable).\n`;
+          `   If a Field from an Interface is implemented, any additional Arguments that were not defined` +
+          ` on the original Interface Field must be optional (nullable).\n`;
         message +=
-          `    The following additional argument` +
+          `    The following additional Argument` +
           (invalidFieldImplementation.invalidAdditionalArguments.size > 1 ? `s are` : ` is`) +
           ` not defined as optional: "` +
           [...invalidFieldImplementation.invalidAdditionalArguments].join(`", "`) +
@@ -563,14 +563,14 @@ export function invalidInterfaceImplementationError(
       }
       if (invalidFieldImplementation.isInaccessible) {
         message +=
-          `   The field has been declared @inaccessible; however, the same field has not been declared @inaccessible` +
-          ` on the interface definition.\n   Consequently, the interface implementation cannot be satisfied.\n`;
+          `   The field has been declared "@inaccessible"; however, the same field has not been declared "@inaccessible"` +
+          ` on the Interface definition.\n   Consequently, the Interface implementation cannot be satisfied.\n`;
       }
     }
     messages.push(message);
   }
   return new Error(
-    `The ${parentTypeString} "${parentTypeName}" has the following interface implementation errors:\n` +
+    `The ${parentTypeString} "${parentTypeName}" has the following Interface implementation errors:\n` +
       messages.join('\n'),
   );
 }

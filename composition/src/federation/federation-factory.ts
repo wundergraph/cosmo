@@ -997,57 +997,6 @@ export class FederationFactory {
     }
   }
 
-  // upsertValidObjectExtensionData(incomingData: ObjectExtensionData) {
-  //   const isParentInaccessible = isNodeDataInaccessible(incomingData);
-  //   const existingData = this.parentDefinitionDataByTypeName.get(incomingData.name);
-  //   if (!existingData) {
-  //     if (incomingData.isRootType) {
-  //       const authorizationData = this.authorizationDataByParentTypeName.get(incomingData.name);
-  //       for (const fieldData of incomingData.fieldDataByFieldName.values()) {
-  //         pushAuthorizationDirectives(fieldData, authorizationData);
-  //       }
-  //       this.parentDefinitionDataByTypeName.set(incomingData.name, {
-  //         directivesByDirectiveName: incomingData.directivesByDirectiveName,
-  //         fieldDataByFieldName: incomingData.fieldDataByFieldName,
-  //         implementedInterfaceTypeNames: incomingData.implementedInterfaceTypeNames,
-  //         isRootType: true,
-  //         isInaccessible: isParentInaccessible,
-  //         isEntity: false,
-  //         kind: Kind.OBJECT_TYPE_DEFINITION,
-  //         name: incomingData.name,
-  //         node: {
-  //           kind: Kind.OBJECT_TYPE_DEFINITION,
-  //           name: stringToNameNode(incomingData.name),
-  //         },
-  //         persistedDirectivesData: incomingData.persistedDirectivesData,
-  //         renamedTypeName: incomingData.renamedTypeName,
-  //         subgraphNames: incomingData.subgraphNames,
-  //       });
-  //       return;
-  //     }
-  //     this.errors.push(noBaseTypeExtensionError(incomingData.name));
-  //     return;
-  //   }
-  //   if (existingData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
-  //     this.errors.push(
-  //       incompatibleObjectExtensionOrphanBaseTypeError(existingData.name, kindToTypeString(existingData.kind)),
-  //     );
-  //     return;
-  //   }
-  //   upsertPersistedDirectivesData(existingData.persistedDirectivesData, incomingData.persistedDirectivesData);
-  //   if (isParentInaccessible) {
-  //     this.inaccessiblePaths.add(incomingData.name);
-  //     // If the type was not previously known to be inaccessible, the existing children and arguments must be updated
-  //     if (!existingData.isInaccessible) {
-  //       this.propagateInaccessibilityToExistingChildren(existingData);
-  //     }
-  //   }
-  //   addIterableValuesToSet(incomingData.implementedInterfaceTypeNames, existingData.implementedInterfaceTypeNames);
-  //   for (const fieldData of incomingData.fieldDataByFieldName.values()) {
-  //     this.upsertFieldData(existingData.fieldDataByFieldName, fieldData, isParentInaccessible);
-  //   }
-  // }
-
   upsertPersistedDirectiveDefinitionData(incomingData: PersistedDirectiveDefinitionData, subgraphNumber: number) {
     const name = incomingData.name;
     const existingData = this.potentialPersistedDirectiveDefinitionDataByDirectiveName.get(name);

@@ -218,18 +218,18 @@ If an instance defines a default value, that default value must be consistently 
 `))}function $8(e,t){return`The ${(0,qm.numberToOrdinal)(e+1)} subgraph in the array did not define a name. Consequently, any further errors will temporarily identify this subgraph as "${t}".`}function q8(e,t,n){return new Error(`The schema definition defines the "${e}" operation as type "${t}". However, "${t}" was also used for the "${n}" operation.
  If explicitly defined, each operation type must be a unique and valid Object type.`)}function K8(e,t,n){return new Error(`The schema definition defines the "${e}" operation as type "${t}". However, the schema also defines another type named "${n}", which is the default (root) type name for the "${e}" operation.
 For federation, it is only possible to use the default root types names ("Mutation", "Query", "Subscription") as operation definitions. No other definitions with these default root type names are valid.`)}function G8(e){let t="The subgraph has syntax errors and could not be parsed.";return e&&(t+=`
- The reason provided was: `+e.message),new Error(t)}function Q8(e,t,n){let r=[];for(let[i,s]of n){let o=` The implementation of interface "${i}" by "${e}" is invalid because:
-`,u=s.unimplementedFields.length;u&&(o+=`  The following field${u>1?"s are":" is"} not implemented: "`+s.unimplementedFields.join('", "')+`"
-`);for(let[l,d]of s.invalidFieldImplementations){let p=d.unimplementedArguments.size,y=d.invalidImplementedArguments.length,N=d.invalidAdditionalArguments.size;if(o+=`  The field "${l}" is invalid because:
-`,p&&(o+=`   The following argument${p>1?"s are":" is"} not implemented: "`+[...d.unimplementedArguments].join('", "')+`"
+ The reason provided was: `+e.message),new Error(t)}function Q8(e,t,n){let r=[];for(let[i,s]of n){let o=` The implementation of Interface "${i}" by "${e}" is invalid because:
+`,u=s.unimplementedFields.length;u&&(o+=`  The following Field${u>1?"s are":" is"} not implemented: "`+s.unimplementedFields.join('", "')+`"
+`);for(let[l,d]of s.invalidFieldImplementations){let p=d.unimplementedArguments.size,y=d.invalidImplementedArguments.length,N=d.invalidAdditionalArguments.size;if(o+=`  The Field "${l}" is invalid because:
+`,p&&(o+=`   The following Argument${p>1?"s are":" is"} not implemented: "`+[...d.unimplementedArguments].join('", "')+`"
 `),y){o+=`   The following implemented argument${y>1?"s are":" is"} invalid:
-`;for(let I of d.invalidImplementedArguments)o+=`    The argument "${I.argumentName}" must define type "`+I.expectedType+`" and not "${I.actualType}"
-`}N&&(o+=`   If a field from an interface is implemented, any additional arguments that were not defined on the original interface field must be optional (nullable).
-`,o+="    The following additional argument"+(d.invalidAdditionalArguments.size>1?"s are":" is")+' not defined as optional: "'+[...d.invalidAdditionalArguments].join('", "')+`"
+`;for(let I of d.invalidImplementedArguments)o+=`    The Argument "${I.argumentName}" must define type "`+I.expectedType+`" and not "${I.actualType}"
+`}N&&(o+=`   If a Field from an Interface is implemented, any additional Arguments that were not defined on the original Interface Field must be optional (nullable).
+`,o+="    The following additional Argument"+(d.invalidAdditionalArguments.size>1?"s are":" is")+' not defined as optional: "'+[...d.invalidAdditionalArguments].join('", "')+`"
 `),d.implementedResponseType&&(o+=`   The implemented response type "${d.implementedResponseType}" is not a valid subset (equally or more restrictive) of the response type "`+d.originalResponseType+`" for "${i}.${l}".
-`),d.isInaccessible&&(o+=`   The field has been declared @inaccessible; however, the same field has not been declared @inaccessible on the interface definition.
-   Consequently, the interface implementation cannot be satisfied.
-`)}r.push(o)}return new Error(`The ${t} "${e}" has the following interface implementation errors:
+`),d.isInaccessible&&(o+=`   The field has been declared "@inaccessible"; however, the same field has not been declared "@inaccessible" on the Interface definition.
+   Consequently, the Interface implementation cannot be satisfied.
+`)}r.push(o)}return new Error(`The ${t} "${e}" has the following Interface implementation errors:
 `+r.join(`
 `))}function Y8(e,t,n,r=!0){let i=r?It.ARGUMENT:It.INPUT_FIELD,s=`The ${e} "${t}" could not be federated because:
 `;for(let o of n)s+=` The ${i} "${o.inputValueName}" is required in the following subgraph`+(o.requiredSubgraphs.length>1?"s":"")+': "'+o.requiredSubgraphs.join('", "')+`"
