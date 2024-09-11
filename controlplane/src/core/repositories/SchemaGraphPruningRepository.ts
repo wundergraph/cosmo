@@ -26,7 +26,7 @@ export class SchemaGraphPruningRepository {
         ruleName: l.graphPruningRule as GraphPruningRuleEnum,
         severity: l.severityLevel as LintSeverityLevel,
         gracePeriodInDays: l.gracePeriodInDays,
-        schemaUsageCheckPeriodInDays: l.schemaUsageCheckPeriodInDays,
+        schemaUsageCheckPeriodInDays: l.schemaUsageCheckPeriodInDays || undefined,
       } as SchemaGraphPruningDTO;
     });
   }

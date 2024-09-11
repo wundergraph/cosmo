@@ -11680,6 +11680,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               ruleName: l.ruleName,
               severityLevel: l.severity === 'error' ? LintSeverity.error : LintSeverity.warn,
               gracePeriodInDays: l.gracePeriodInDays,
+              schemaUsageCheckPeriodInDays: l.schemaUsageCheckPeriodInDays,
             } as GraphPruningConfig;
           }),
           graphPrunerEnabled: namespace.enableGraphPruning,

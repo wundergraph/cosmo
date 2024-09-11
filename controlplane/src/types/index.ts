@@ -591,7 +591,7 @@ export interface SchemaGraphPruningDTO {
   severity: LintSeverityLevel;
   ruleName: GraphPruningRuleEnum;
   gracePeriodInDays: number;
-  schemaUsageCheckPeriodInDays: number;
+  schemaUsageCheckPeriodInDays?: number;
 }
 
 export interface GraphPruningIssueResult {
