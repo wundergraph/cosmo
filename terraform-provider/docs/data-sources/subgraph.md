@@ -46,5 +46,6 @@ data "cosmo_subgraph" "test" {
 - `labels` (List of String) Labels for the subgraph.
 - `readme` (String) The readme for the subgraph.
 - `routing_url` (String) The routing URL of the subgraph.
+- `subscription_protocol` (String) The subscription protocol for the subgraph.
 - `subscription_url` (String) The subscription URL for the subgraph.
 - `websocket_subprotocol` (String) The websocket subprotocol for the subgraph.

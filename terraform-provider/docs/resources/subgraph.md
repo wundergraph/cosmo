@@ -47,6 +47,7 @@ resource "cosmo_subgraph" "test" {
 - `is_feature_subgraph` (Boolean) Indicates if the subgraph is a feature subgraph.
 - `labels` (List of String) Labels for the subgraph.
 - `readme` (String) The readme for the subgraph.
+- `subscription_protocol` (String) The subscription protocol for the subgraph.
 - `subscription_url` (String) The subscription URL for the subgraph.
 - `unset_labels` (Boolean) Unset labels for the subgraph.
 - `websocket_subprotocol` (String) The websocket subprotocol for the subgraph.
