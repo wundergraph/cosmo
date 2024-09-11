@@ -21,10 +21,17 @@ import {
 } from './ast';
 import { ExtensionWithFieldsData } from './type-extension-data';
 
+export enum ExtensionType {
+  EXTENDS,
+  NONE,
+  REAL,
+}
+
 export type EnumDefinitionData = {
   appearances: number;
   directivesByDirectiveName: Map<string, ConstDirectiveNode[]>;
   enumValueDataByValueName: Map<string, EnumValueData>;
+  extensionType: ExtensionType;
   kind: Kind.ENUM_TYPE_DEFINITION;
   name: string;
   node: MutableEnumNode;
@@ -61,6 +68,7 @@ export type FieldData = {
 
 export type InputObjectDefinitionData = {
   directivesByDirectiveName: Map<string, ConstDirectiveNode[]>;
+  extensionType: ExtensionType;
   inputValueDataByValueName: Map<string, InputValueData>;
   isInaccessible: boolean;
   kind: Kind.INPUT_OBJECT_TYPE_DEFINITION;
@@ -89,6 +97,7 @@ export type InputValueData = {
 
 export type InterfaceDefinitionData = {
   directivesByDirectiveName: Map<string, ConstDirectiveNode[]>;
+  extensionType: ExtensionType;
   fieldDataByFieldName: Map<string, FieldData>;
   implementedInterfaceTypeNames: Set<string>;
   isEntity: boolean;
@@ -103,6 +112,7 @@ export type InterfaceDefinitionData = {
 
 export type ObjectDefinitionData = {
   directivesByDirectiveName: Map<string, ConstDirectiveNode[]>;
+  extensionType: ExtensionType;
   fieldDataByFieldName: Map<string, FieldData>;
   implementedInterfaceTypeNames: Set<string>;
   isEntity: boolean;
@@ -135,6 +145,7 @@ export type PersistedDirectivesData = {
 
 export type ScalarDefinitionData = {
   directivesByDirectiveName: Map<string, ConstDirectiveNode[]>;
+  extensionType: ExtensionType;
   kind: Kind.SCALAR_TYPE_DEFINITION;
   name: string;
   node: MutableScalarNode;
@@ -152,6 +163,7 @@ export type SchemaData = {
 
 export type UnionDefinitionData = {
   directivesByDirectiveName: Map<string, ConstDirectiveNode[]>;
+  extensionType: ExtensionType;
   kind: Kind.UNION_TYPE_DEFINITION;
   name: string;
   memberByMemberTypeName: Map<string, NamedTypeNode>;
@@ -168,11 +180,11 @@ export type ParentDefinitionData =
   | ScalarDefinitionData
   | UnionDefinitionData;
 
-export type ParentWithFieldsData = DefinitionWithFieldsData | ExtensionWithFieldsData;
+export type ParentWithFieldsData = CompositeOutputData | ExtensionWithFieldsData;
 
 export type ChildData = EnumValueData | FieldData | InputValueData;
 
-export type DefinitionWithFieldsData = InterfaceDefinitionData | ObjectDefinitionData;
+export type CompositeOutputData = InterfaceDefinitionData | ObjectDefinitionData;
 
 export type DefinitionData =
   | EnumDefinitionData

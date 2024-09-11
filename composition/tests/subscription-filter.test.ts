@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 import {
   federateSubgraphs,
   inaccessibleSubscriptionFieldConditionFieldPathFieldErrorMessage,
+  INT_SCALAR,
   invalidDirectiveError,
   invalidInputFieldTypeErrorMessage,
   invalidRepeatedDirectiveErrorMessage,
@@ -149,7 +150,7 @@ describe('@openfed__subscriptionFilter tests', () => {
       expect(federationResult!.fieldConfigurations).toStrictEqual([
         {
           argumentNames: [],
-          fieldName: FIELD,
+          fieldName: 'field',
           subscriptionFilterCondition: {
             in: {
               fieldPath: ['id'],
@@ -168,7 +169,7 @@ describe('@openfed__subscriptionFilter tests', () => {
       expect(federationResult!.fieldConfigurations).toStrictEqual([
         {
           argumentNames: [],
-          fieldName: FIELD,
+          fieldName: 'field',
           typeName: SUBSCRIPTION,
           subscriptionFilterCondition: {
             and: [
@@ -245,7 +246,7 @@ describe('@openfed__subscriptionFilter tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         invalidSubscriptionFilterDirectiveError(`Subscription.field`, [
-          subscriptionFilterConditionInvalidInputFieldTypeErrorMessage(CONDITION, 'object', 'int'),
+          subscriptionFilterConditionInvalidInputFieldTypeErrorMessage(CONDITION, OBJECT, INT_SCALAR),
         ]),
       );
     });

@@ -24,6 +24,7 @@ import {
   FIELD_PATH,
   IN_UPPER,
   INPUT_FIELD,
+  INTERFACE,
   NOT_UPPER,
   OR_UPPER,
   QUOTATION_JOIN,
@@ -41,6 +42,17 @@ import { UnresolvableFieldData } from '../resolvability-graph/utils';
 import { FieldSetDirective } from '../schema-building/utils';
 
 export const minimumSubgraphRequirementError = new Error('At least one subgraph is required for federation.');
+
+export function multipleNamedTypeDefinitionError(
+  typeName: string,
+  firstTypeString: string,
+  secondTypeString: string,
+): Error {
+  return new Error(
+    `The named type "${typeName}" is defined as both types "${firstTypeString}" and "${secondTypeString}".` +
+      `\nHowever, there must be only one type named "${typeName}".`,
+  );
+}
 
 export function incompatibleExtensionError(typeName: string, baseKind: Kind, extensionKind: Kind) {
   return new Error(
@@ -124,39 +136,34 @@ export function invalidSubgraphNamesError(names: string[], invalidNameErrorMessa
   return new Error(message);
 }
 
-export function duplicateFieldDefinitionError(fieldName: string, typeName: string): Error {
-  return new Error(`Extension error:\n Field "${fieldName}" already exists on type "${typeName}".`);
-}
-
 export function duplicateDirectiveDefinitionError(directiveName: string) {
-  return new Error(`The directive "${directiveName}" has already been defined.`);
+  return new Error(`The directive "${directiveName}" must only be defined once.`);
 }
 
-export function duplicateEnumValueDefinitionError(valueName: string, typeName: string): Error {
-  return new Error(`Extension error:\n Value "${valueName}" already exists on enum "${typeName}".`);
+export function duplicateEnumValueDefinitionError(enumTypeName: string, valueName: string): Error {
+  return new Error(`The Enum "${enumTypeName}" must only define the Enum Value definition "${valueName}" once.`);
 }
 
-export function duplicateInterfaceExtensionError(interfaceName: string, typeName: string): Error {
-  return new Error(`Extension error:\n Interface "${interfaceName}" is already implemented by type "${typeName}".`);
+export function duplicateFieldDefinitionError(typeString: string, typeName: string, fieldName: string): Error {
+  return new Error(`The ${typeString} "${typeName}" must only define Field definition "${fieldName}" once.`);
 }
 
-export function duplicateInterfaceError(interfaceName: string, typeName: string): Error {
-  return new Error(`Interface "${interfaceName}" can only be defined on type "${typeName}" once.`);
-}
-
-export function duplicateUnionMemberExtensionError(memberName: string, typeName: string): Error {
-  return new Error(`Extension error:\n Member "${memberName}" already exists on union "${typeName}".`);
-}
-
-export function duplicateValueExtensionError(parentType: string, typeName: string, childName: string) {
+export function duplicateInputFieldDefinitionError(inputObjectTypeName: string, fieldName: string): Error {
   return new Error(
-    `Extension error:\n` +
-      ` More than one extension attempts to extend ${parentType} "${typeName}" with the value "${childName}".`,
+    `The Input Object "${inputObjectTypeName}" must only define the Input Field definition "${fieldName}" once.`,
   );
 }
 
+export function duplicateImplementedInterfaceError(typeString: string, typeName: string, interfaceName: string): Error {
+  return new Error(`The ${typeString} "${typeName}" must only implement the Interface "${interfaceName}" once.`);
+}
+
+export function duplicateUnionMemberDefinitionError(unionTypeName: string, memberName: string): Error {
+  return new Error(`The Union "${unionTypeName}" must only define the Union Member "${memberName}" once.`);
+}
+
 export function duplicateTypeDefinitionError(type: string, typeName: string): Error {
-  return new Error(`The ${type} "${typeName}" can only be defined once.`);
+  return new Error(`The ${type} "${typeName}" must only be defined once.`);
 }
 
 export function duplicateOperationTypeDefinitionError(
@@ -169,14 +176,24 @@ export function duplicateOperationTypeDefinitionError(
   );
 }
 
-export function noBaseTypeExtensionError(typeName: string): Error {
-  return new Error(`Extension error:\n Could not extend the type "${typeName}" because no base definition exists.`);
+export function noBaseDefinitionForExtensionError(typeString: string, typeName: string): Error {
+  return new Error(
+    `The ${typeString} "${typeName}" is an extension, but there is no definition of "${typeName}" in any subgraph.`,
+  );
 }
 
-export function noDefinedUnionMembersError(unionTypeName: string, extension = false): Error {
+export function noBaseScalarDefinitionError(typeName: string): Error {
   return new Error(
-    `The union ` + (extension ? 'extension' : '') + ` "${unionTypeName}" must define at least one union member.`,
+    `The scalar extension "${typeName}" is invalid because no base definition is defined in the subgraph.`,
   );
+}
+
+export function noDefinedUnionMembersError(unionTypeName: string): Error {
+  return new Error(`The Union "${unionTypeName}" must define at least one Union Member.`);
+}
+
+export function noDefinedEnumValuesError(enumTypeName: string): Error {
+  return new Error(`The Enum "${enumTypeName}" must define at least one Enum Value.`);
 }
 
 export function operationDefinitionError(typeName: string, operationType: OperationTypeNode, actualType: Kind): Error {
@@ -245,10 +262,6 @@ export function invalidRepeatedFederatedDirectiveErrorMessage(directiveName: str
     `The definition for the directive "${directiveName}" does not define it as repeatable,` +
       ` but the directive has been declared on more than one instance of the type "${hostPath}".`,
   );
-}
-
-export function duplicateUnionMemberError(memberTypeName: string, unionTypeName: string): Error {
-  return new Error(`Member "${memberTypeName}" must only be defined on union "${unionTypeName}" once.`);
 }
 
 export function invalidDirectiveError(directiveName: string, hostPath: string, errorMessages: string[]): Error {
@@ -385,17 +398,7 @@ export function incompatibleParentKindMergeError(
   actualTypeString: string,
 ): Error {
   return new Error(
-    ` When merging types, expected "${parentTypeName}" to be type ${expectedTypeString} but received "${actualTypeString}".`,
-  );
-}
-
-export function incompatibleObjectExtensionOrphanBaseTypeError(
-  parentTypeName: string,
-  actualTypeString: string,
-): Error {
-  return new Error(
-    ` When merging the object extension orphan "${parentTypeName}", expected an existing object base type` +
-      ` but received "${actualTypeString}".`,
+    ` When merging types, expected "${parentTypeName}" to be type "${expectedTypeString}" but received "${actualTypeString}".`,
   );
 }
 
@@ -873,7 +876,7 @@ export function invalidInlineFragmentTypeConditionErrorMessage(
     ` This is because an inline fragment with the type condition "${typeConditionName}" is defined on the` +
     ` selection set corresponding to the ` +
     getSelectionSetLocationWithTypeString(fieldCoordinatesPath, selectionSetTypeName, parentTypeString);
-  if (parentTypeString === 'interface') {
+  if (parentTypeString === INTERFACE) {
     return message + ` However, "${typeConditionName}" does not implement "${selectionSetTypeName}"`;
   }
   return message + ` However, "${typeConditionName}" is not a member of "${selectionSetTypeName}".`;
@@ -914,6 +917,10 @@ export function duplicateOverriddenFieldsError(errorMessages: string[]): Error {
 
 export function noFieldDefinitionsError(typeString: string, typeName: string): Error {
   return new Error(`The ${typeString} "${typeName}" is invalid because it does not define any fields.`);
+}
+
+export function noInputValueDefinitionsError(inputTypeName: string): Error {
+  return new Error(`The Input Object "${inputTypeName}" is invalid because it does not define any input values.`);
 }
 
 export function allChildDefinitionsAreInaccessibleError(
@@ -1137,8 +1144,9 @@ export function nonKeyFieldNamesEventDrivenErrorMessage(nonKeyFieldNameByFieldPa
 
 export function nonEntityObjectExtensionsEventDrivenErrorMessage(typeNames: string[]): string {
   return (
-    ` Only root types and entities (objects that define one or more primary keys with the "@key" directive) may` +
-    ` be defined as object extensions in an Event Driven graph. Consequently, the following object extension` +
+    `Only root types and entities (objects that define one or more primary keys with the "@key" directive) may` +
+    ` be defined as object extensions in an Event Driven graph.` +
+    `\nConsequently, the following object extension` +
     ` definition` +
     (typeNames.length > 1 ? 's are' : ' is') +
     ` invalid:\n  "` +
@@ -1518,9 +1526,9 @@ export function unresolvablePathError(
 
 export function allExternalFieldsError(typeName: string, subgraphNamesByFieldName: Map<string, Array<string>>): Error {
   let message =
-    `The object "${typeName}" is invalid because the following field definition` +
+    `The Object "${typeName}" is invalid because the following Field definition` +
     (subgraphNamesByFieldName.size > 1 ? 's are' : ' is') +
-    ` declared @external on all instances of that field:\n`;
+    ` declared "@external" on all instances of that Field:\n`;
   for (const [fieldName, subgraphNames] of subgraphNamesByFieldName) {
     message +=
       ` "${fieldName}" in subgraph` +
@@ -1529,7 +1537,7 @@ export function allExternalFieldsError(typeName: string, subgraphNamesByFieldNam
       subgraphNames.join(QUOTATION_JOIN) +
       `"\n`;
   }
-  message += `At least one instance of a field definition must always be resolvable (and therefore not declared @external).`;
+  message += `At least one instance of a Field definition must always be resolvable (and therefore not declared "@external").`;
   return new Error(message);
 }
 

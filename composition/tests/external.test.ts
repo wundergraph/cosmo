@@ -36,7 +36,7 @@ describe('@external directive tests', () => {
           externalFieldThree: Float
         }
         
-        type Object @external @extends {
+        extend type Object @external {
           """
             This is the description for Object.externalFieldFour
           """
@@ -74,7 +74,7 @@ describe('@external directive tests', () => {
 
     test('that @external declared on the object level applies to all its defined fields #1.2', () => {
       const { errors, normalizationResult } = normalizeSubgraphFromString(`
-        type Object @external @extends {
+        extend type Object @external {
           """
             This is the description for Object.externalFieldFour
           """

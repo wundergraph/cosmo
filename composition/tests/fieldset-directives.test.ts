@@ -7,6 +7,7 @@ import {
   duplicateFieldInFieldSetErrorMessage,
   federateSubgraphs,
   FieldSetDirective,
+  INTERFACE,
   invalidInlineFragmentTypeConditionErrorMessage,
   invalidInlineFragmentTypeErrorMessage,
   invalidKeyDirectivesError,
@@ -18,12 +19,15 @@ import {
   nonExternalConditionalFieldWarning,
   normalizeSubgraph,
   normalizeSubgraphFromString,
+  OBJECT,
   parse,
   PROVIDES,
   REQUIRES,
+  SCALAR,
   Subgraph,
   undefinedFieldInFieldSetErrorMessage,
   unexpectedArgumentErrorMessage,
+  UNION,
   unparsableFieldSetErrorMessage,
 } from '../src';
 
@@ -147,7 +151,7 @@ describe('openfed_FieldSet tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         invalidKeyDirectivesError('Entity', [
-          abstractTypeInKeyFieldSetErrorMessage(`id`, 'Entity.id', 'Interface', 'interface'),
+          abstractTypeInKeyFieldSetErrorMessage(`id`, 'Entity.id', INTERFACE, INTERFACE),
         ]),
       );
     });
@@ -171,9 +175,7 @@ describe('openfed_FieldSet tests', () => {
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
-        invalidKeyDirectivesError('Entity', [
-          abstractTypeInKeyFieldSetErrorMessage(`id`, 'Entity.id', 'Union', 'union'),
-        ]),
+        invalidKeyDirectivesError('Entity', [abstractTypeInKeyFieldSetErrorMessage(`id`, 'Entity.id', UNION, UNION)]),
       );
     });
 
@@ -240,7 +242,7 @@ describe('openfed_FieldSet tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         invalidKeyDirectivesError('Entity', [
-          invalidSelectionSetDefinitionErrorMessage('id { something }', ['Entity.id'], 'ID', 'scalar'),
+          invalidSelectionSetDefinitionErrorMessage('id { something }', ['Entity.id'], 'ID', SCALAR),
         ]),
       );
     });
@@ -258,7 +260,7 @@ describe('openfed_FieldSet tests', () => {
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
-        invalidKeyDirectivesError('Entity', [invalidSelectionSetErrorMessage('id', ['Entity.id'], 'Object', 'object')]),
+        invalidKeyDirectivesError('Entity', [invalidSelectionSetErrorMessage('id', ['Entity.id'], OBJECT, OBJECT)]),
       );
     });
 
@@ -288,7 +290,7 @@ describe('openfed_FieldSet tests', () => {
             'id { object { object } }',
             ['AnotherObject.object'],
             'YetAnotherObject',
-            'object',
+            OBJECT,
           ),
         ]),
       );
@@ -569,7 +571,7 @@ describe('openfed_FieldSet tests', () => {
               'interface { ... on AnotherObject { name } }',
               ['Entity.interface'],
               'AnotherObject',
-              'interface',
+              INTERFACE,
               'I',
             ),
         ]),
@@ -684,7 +686,7 @@ describe('openfed_FieldSet tests', () => {
               'union { ... on YetAnotherObject { name } }',
               ['Entity.union'],
               'YetAnotherObject',
-              'union',
+              UNION,
               'U',
             ),
         ]),
@@ -1106,8 +1108,8 @@ describe('openfed_FieldSet tests', () => {
             invalidInlineFragmentTypeConditionErrorMessage(
               'interface { ... on Object { age } }',
               ['Entity.interface'],
-              'Object',
-              'interface',
+              OBJECT,
+              INTERFACE,
               'I',
             ),
         ]),
@@ -1207,7 +1209,7 @@ describe('openfed_FieldSet tests', () => {
               'union { ... on AnotherObject { age } }',
               ['Entity.union'],
               'AnotherObject',
-              'union',
+              UNION,
               'U',
             ),
         ]),
