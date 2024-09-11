@@ -9,7 +9,6 @@ import { visit } from 'graphql';
 import { ENTITIES_FIELD, OPERATION_TO_DEFAULT, PARENT_DEFINITION_DATA, SERVICE_FIELD } from '../utils/string-constants';
 import { getOrThrowError } from '../utils/utils';
 import { operationTypeNodeToDefaultType } from '../ast/utils';
-import { ObjectExtensionData } from '../schema-building/type-extension-data';
 import { renameNamedTypeName } from '../schema-building/type-merging';
 
 export function renameRootTypes(ff: FederationFactory, subgraph: InternalSubgraph) {
@@ -100,10 +99,10 @@ export function renameRootTypes(ff: FederationFactory, subgraph: InternalSubgrap
           ? getOrThrowError(operationTypeNodeToDefaultType, operationType, OPERATION_TO_DEFAULT)
           : originalTypeName;
         parentData = getOrThrowError(
-          subgraph.parentExtensionDataByTypeName,
+          subgraph.parentDefinitionDataByTypeName,
           originalTypeName,
           PARENT_DEFINITION_DATA,
-        ) as ObjectExtensionData;
+        ) as ObjectDefinitionData;
         isParentRootType = parentData.isRootType;
         ff.addValidPrimaryKeyTargetsToEntityData(originalTypeName);
         overriddenFieldNames = subgraph.overriddenFieldNamesByParentTypeName.get(originalTypeName);
@@ -111,8 +110,8 @@ export function renameRootTypes(ff: FederationFactory, subgraph: InternalSubgrap
           return;
         }
         parentData.name = parentTypeName;
-        subgraph.parentExtensionDataByTypeName.set(parentTypeName, parentData);
-        subgraph.parentExtensionDataByTypeName.delete(originalTypeName);
+        subgraph.parentDefinitionDataByTypeName.set(parentTypeName, parentData);
+        subgraph.parentDefinitionDataByTypeName.delete(originalTypeName);
       },
       leave() {
         parentData = undefined;

@@ -360,9 +360,8 @@ function validateNonRepeatableFieldSet(
         definedFields[currentDepth].add(fieldName);
         const isExternal = fieldData.isExternalBySubgraphName.get(nf.subgraphName);
         const namedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
-        // The child could itself be a parent and could exist as an object extension
-        const namedTypeData =
-          nf.parentDefinitionDataByTypeName.get(namedTypeName) || nf.parentExtensionDataByTypeName.get(namedTypeName);
+        // The child could itself be a parent
+        const namedTypeData = nf.parentDefinitionDataByTypeName.get(namedTypeName);
         // The base scalars are not in the parents map
         if (
           BASE_SCALARS.has(namedTypeName) ||
@@ -437,7 +436,6 @@ function validateNonRepeatableFieldSet(
         }
         if (
           namedTypeData.kind === Kind.OBJECT_TYPE_DEFINITION ||
-          namedTypeData.kind === Kind.OBJECT_TYPE_EXTENSION ||
           namedTypeData.kind === Kind.INTERFACE_TYPE_DEFINITION ||
           namedTypeData.kind === Kind.UNION_TYPE_DEFINITION
         ) {
@@ -479,9 +477,7 @@ function validateNonRepeatableFieldSet(
           );
           return BREAK;
         }
-        const fragmentNamedTypeData =
-          nf.parentDefinitionDataByTypeName.get(typeConditionName) ||
-          nf.parentExtensionDataByTypeName.get(typeConditionName);
+        const fragmentNamedTypeData = nf.parentDefinitionDataByTypeName.get(typeConditionName);
         if (!fragmentNamedTypeData) {
           errorMessage = unknownInlineFragmentTypeConditionErrorMessage(
             fieldSet,
@@ -494,7 +490,6 @@ function validateNonRepeatableFieldSet(
         if (
           fragmentNamedTypeData.kind !== Kind.INTERFACE_TYPE_DEFINITION &&
           fragmentNamedTypeData.kind !== Kind.OBJECT_TYPE_DEFINITION &&
-          fragmentNamedTypeData.kind !== Kind.OBJECT_TYPE_EXTENSION &&
           fragmentNamedTypeData.kind !== Kind.UNION_TYPE_DEFINITION
         ) {
           errorMessage = invalidInlineFragmentTypeConditionTypeErrorMessage(
@@ -687,15 +682,14 @@ export function validateKeyFieldSets(
             currentPath.pop();
             return;
           }
-          // The child could itself be a parent and could exist as an object extension
-          const namedTypeData =
-            nf.parentDefinitionDataByTypeName.get(namedTypeName) || nf.parentExtensionDataByTypeName.get(namedTypeName);
+          // The child could itself be a parent
+          const namedTypeData = nf.parentDefinitionDataByTypeName.get(namedTypeName);
           if (!namedTypeData) {
             // Should not be possible to receive this error
             errorMessages.push(unknownTypeInFieldSetErrorMessage(fieldSet, fieldCoordinates, namedTypeName));
             return BREAK;
           }
-          if (namedTypeData.kind === Kind.OBJECT_TYPE_DEFINITION || namedTypeData.kind === Kind.OBJECT_TYPE_EXTENSION) {
+          if (namedTypeData.kind === Kind.OBJECT_TYPE_DEFINITION) {
             shouldDefineSelectionSet = true;
             parentWithFieldsDatas.push(namedTypeData);
             return;
@@ -828,15 +822,13 @@ function getFieldSetParent(
   );
   const fieldNamedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
 
-  const childData =
-    factory.parentDefinitionDataByTypeName.get(fieldNamedTypeName) ||
-    factory.parentExtensionDataByTypeName.get(fieldNamedTypeName);
-  if (!childData || (childData.kind !== Kind.OBJECT_TYPE_DEFINITION && childData.kind !== Kind.OBJECT_TYPE_EXTENSION)) {
+  const namedTypeData = factory.parentDefinitionDataByTypeName.get(fieldNamedTypeName);
+  if (!namedTypeData || namedTypeData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
     return {
       errorString: unknownProvidedObjectErrorMessage(`${parentTypeName}.${fieldName}`, fieldNamedTypeName),
     };
   }
-  return { fieldSetParentData: childData };
+  return { fieldSetParentData: namedTypeData };
 }
 
 function validateProvidesOrRequires(

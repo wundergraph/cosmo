@@ -7,7 +7,7 @@ import {
 } from '../router-configuration/router-configuration';
 import { InternalSubgraph, SubgraphConfig } from '../subgraph/subgraph';
 import {
-  DefinitionWithFieldsData,
+  CompositeOutputData,
   FieldData,
   InterfaceDefinitionData,
   ObjectDefinitionData,
@@ -87,7 +87,7 @@ export function newChildTagData(name: string): ChildTagData {
 }
 
 export type InterfaceImplementationData = {
-  data: DefinitionWithFieldsData;
+  data: CompositeOutputData;
   clientSchemaFieldNodes: MutableFieldNode[];
 };
 
@@ -111,9 +111,8 @@ export type VisitFieldSetOptions = {
   configurationData: ConfigurationData;
   fieldSets: Set<string>;
   implicitKeys: Array<RequiredFieldConfiguration>;
-  objectData: ObjectDefinitionData | ObjectExtensionData | InterfaceDefinitionData;
+  objectData: ObjectDefinitionData | InterfaceDefinitionData;
   parentDefinitionDataByTypeName: Map<string, ParentDefinitionData>;
-  parentExtensionDataByTypeName: Map<string, ParentExtensionData>;
   graphNode?: GraphNode;
 };
 
@@ -124,7 +123,6 @@ export function validateImplicitFieldSets({
   implicitKeys,
   objectData,
   parentDefinitionDataByTypeName,
-  parentExtensionDataByTypeName,
   graphNode,
 }: VisitFieldSetOptions) {
   for (const fieldSet of fieldSets) {
@@ -187,17 +185,13 @@ export function validateImplicitFieldSets({
           if (BASE_SCALARS.has(namedTypeName)) {
             return;
           }
-          // The child could itself be a parent and could exist as an object extension
-          const fieldNamedTypeData =
-            parentDefinitionDataByTypeName.get(namedTypeName) || parentExtensionDataByTypeName.get(namedTypeName);
+          // The child could itself be a parent
+          const fieldNamedTypeData = parentDefinitionDataByTypeName.get(namedTypeName);
           if (!fieldNamedTypeData) {
             shouldAddKeyFieldSet = false;
             return BREAK;
           }
-          if (
-            fieldNamedTypeData.kind === Kind.OBJECT_TYPE_DEFINITION ||
-            fieldNamedTypeData.kind === Kind.OBJECT_TYPE_EXTENSION
-          ) {
+          if (fieldNamedTypeData.kind === Kind.OBJECT_TYPE_DEFINITION) {
             shouldDefineSelectionSet = true;
             parentDatas.push(fieldNamedTypeData);
             return;
