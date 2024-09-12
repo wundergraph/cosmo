@@ -4,6 +4,14 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.110.0](https://github.com/wundergraph/cosmo/compare/router@0.109.1...router@0.110.0) (2024-09-12)
+
+### Features
+
+* add max query depth ([#1153](https://github.com/wundergraph/cosmo/issues/1153)) ([5475a96](https://github.com/wundergraph/cosmo/commit/5475a961af7e772d9e9a5563cf8f20657ce68c30)) (@df-wg)
+* make the maximum recycleable parser cache size configurable ([#1157](https://github.com/wundergraph/cosmo/issues/1157)) ([2b051bd](https://github.com/wundergraph/cosmo/commit/2b051bd3edbc2f8889fd6fd69b73d47798faab48)) (@jfroundjian)
+* subgraph error propagation improvements ([#1164](https://github.com/wundergraph/cosmo/issues/1164)) ([2700061](https://github.com/wundergraph/cosmo/commit/27000616aa96de67a33e90fbddfcd851d815f2ab)) (@StarpTech)
+
 ## [0.109.1](https://github.com/wundergraph/cosmo/compare/router@0.109.0...router@0.109.1) (2024-09-09)
 
 ### Bug Fixes
