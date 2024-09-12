@@ -70,6 +70,7 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 		RewriteSubgraphErrorPaths:    opts.RouterEngineConfig.SubgraphErrorPropagation.RewritePaths,
 		OmitSubgraphErrorLocations:   opts.RouterEngineConfig.SubgraphErrorPropagation.OmitLocations,
 		OmitSubgraphErrorExtensions:  opts.RouterEngineConfig.SubgraphErrorPropagation.OmitExtensions,
+		MaxRecyclableParserSize:      opts.RouterEngineConfig.Execution.ResolverMaxRecyclableParserSize,
 	}
 
 	switch opts.RouterEngineConfig.SubgraphErrorPropagation.Mode {
