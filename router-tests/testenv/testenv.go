@@ -573,12 +573,13 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			CacheSize: 1024 * 1024,
 		},
 		SubgraphErrorPropagation: config.SubgraphErrorPropagationConfiguration{
-			Enabled:              true,
-			PropagateStatusCodes: true,
-			Mode:                 config.SubgraphErrorPropagationModeWrapped,
-			OmitExtensions:       false,
-			OmitLocations:        true,
-			RewritePaths:         true,
+			Enabled:                true,
+			PropagateStatusCodes:   true,
+			Mode:                   config.SubgraphErrorPropagationModeWrapped,
+			OmitExtensions:         false,
+			OmitLocations:          true,
+			RewritePaths:           true,
+			AllowedExtensionFields: []string{"code"},
 		},
 	}
 

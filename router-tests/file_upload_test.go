@@ -34,7 +34,7 @@ func TestSingleFileUpload_InvalidFileFormat(t *testing.T) {
 			Query:     "mutation ($file: Upload!){singleUpload(file: $file)}",
 			Variables: []byte(`{"file":"invalid_format"}`),
 		})
-		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0'.","extensions":{"errors":[{"message":"string is not an Upload","path":["singleUpload","file"]}],"statusCode":200}}],"data":null}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees'.","extensions":{"errors":[{"message":"string is not an Upload","path":["singleUpload","file"]}],"statusCode":200}}],"data":null}`, res.Body)
 	})
 }
 
@@ -45,7 +45,7 @@ func TestSingleFileUpload_NoFileProvided(t *testing.T) {
 			Query:     "mutation ($file: Upload!){singleUpload(file: $file)}",
 			Variables: []byte(`{"file":null}`),
 		})
-		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0'.","extensions":{"errors":[{"message":"cannot be null","path":["variable","file"],"extensions":{"code":"GRAPHQL_VALIDATION_FAILED"}}],"statusCode":422}}],"data":null}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees'.","extensions":{"errors":[{"message":"cannot be null","path":["variable","file"],"extensions":{"code":"GRAPHQL_VALIDATION_FAILED"}}],"statusCode":422}}],"data":null}`, res.Body)
 	})
 }
 
@@ -67,7 +67,7 @@ func TestFileUpload_FilesSizeExceedsLimit(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, res.Response.StatusCode)
-		require.Equal(t, `{"errors":[{"message":"file too large to upload"}],"data":null}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"file too large to upload"}]}`, res.Body)
 	})
 }
 
@@ -89,7 +89,7 @@ func TestFileUpload_FilesExceedsLimit(t *testing.T) {
 			Variables: []byte(`{"files":[null, null, null]}`),
 			Files:     files,
 		})
-		require.Equal(t, `{"errors":[{"message":"too many files: 3, max allowed: 2"}],"data":null}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"too many files: 3, max allowed: 2"}]}`, res.Body)
 	})
 }
 
@@ -115,7 +115,7 @@ func TestMultipleFilesUpload_InvalidFileFormat(t *testing.T) {
 			Query:     "mutation($files: [Upload!]!) { multipleUpload(files: $files)}",
 			Variables: []byte(`{"files":["invalid_format1", "invalid_format2"]}`),
 		})
-		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0'.","extensions":{"errors":[{"message":"string is not an Upload","path":["multipleUpload","files",0]}],"statusCode":200}}],"data":null}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees'.","extensions":{"errors":[{"message":"string is not an Upload","path":["multipleUpload","files",0]}],"statusCode":200}}],"data":null}`, res.Body)
 	})
 }
 
@@ -127,7 +127,7 @@ func TestMultipleFilesUpload_NoFilesProvided(t *testing.T) {
 			Variables: []byte(`{"files":null}`),
 		})
 		fmt.Println(res.Body)
-		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0'.","extensions":{"errors":[{"message":"cannot be null","path":["variable","files"],"extensions":{"code":"GRAPHQL_VALIDATION_FAILED"}}],"statusCode":422}}],"data":null}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees'.","extensions":{"errors":[{"message":"cannot be null","path":["variable","files"],"extensions":{"code":"GRAPHQL_VALIDATION_FAILED"}}],"statusCode":422}}],"data":null}`, res.Body)
 	})
 }
 
@@ -144,6 +144,6 @@ func TestFileUpload_UploadDisabled(t *testing.T) {
 			Variables: []byte(`{"files":[null]}`),
 			Files:     files,
 		})
-		require.Equal(t, `{"errors":[{"message":"file upload disabled"}],"data":null}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"file upload disabled"}]}`, res.Body)
 	})
 }

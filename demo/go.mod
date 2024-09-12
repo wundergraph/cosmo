@@ -5,16 +5,16 @@ go 1.21.5
 toolchain go1.22.0
 
 require (
-	github.com/99designs/gqlgen v0.17.45
+	github.com/99designs/gqlgen v0.17.49
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.1
 	github.com/nats-io/nats.go v1.35.0
 	github.com/ravilushqa/otelgqlgen v0.13.1
 	github.com/rs/cors v1.11.0
-	github.com/vektah/gqlparser/v2 v2.5.11
+	github.com/vektah/gqlparser/v2 v2.5.16
 	github.com/wundergraph/cosmo/composition-go v0.0.0-20240124120900-5effe48a4a1d
-	github.com/wundergraph/cosmo/router v0.0.0-20240909183504-3f1581199148
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.78
+	github.com/wundergraph/cosmo/router v0.0.0-20240912132447-ee5b56f587ef
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.80
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/otel v1.28.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.23.1
@@ -29,7 +29,7 @@ require (
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/cpuguy83/go-md2man/v2 v2.0.3 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.4 // indirect
 	github.com/dlclark/regexp2 v1.11.0 // indirect
 	github.com/dop251/goja v0.0.0-20230906160731-9410bcaa81d2 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
@@ -55,14 +55,14 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
-	github.com/sosodev/duration v1.2.0 // indirect
+	github.com/sosodev/duration v1.3.1 // indirect
 	github.com/tidwall/gjson v1.17.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
-	github.com/urfave/cli/v2 v2.27.1 // indirect
-	github.com/wundergraph/astjson v0.0.0-20240827102346-5fc60fe30f9c // indirect
-	github.com/xrash/smetrics v0.0.0-20231213231151-1d8dd44e695e // indirect
+	github.com/urfave/cli/v2 v2.27.2 // indirect
+	github.com/wundergraph/astjson v0.0.0-20240910140849-bb15f94bd362 // indirect
+	github.com/xrash/smetrics v0.0.0-20240312152122-5f08fbb34913 // indirect
 	go.opentelemetry.io/contrib v1.16.1 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.23.1 // indirect
 	go.opentelemetry.io/otel/metric v1.28.0 // indirect

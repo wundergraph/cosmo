@@ -26,9 +26,9 @@ require (
 	github.com/tidwall/gjson v1.17.0
 	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
-	github.com/wundergraph/cosmo/demo v0.0.0-20240909183504-3f1581199148
-	github.com/wundergraph/cosmo/router v0.0.0-20240909183504-3f1581199148
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.78
+	github.com/wundergraph/cosmo/demo v0.0.0-20240912132447-ee5b56f587ef
+	github.com/wundergraph/cosmo/router v0.0.0-20240912132447-ee5b56f587ef
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.80
 	go.opentelemetry.io/otel v1.28.0
 	go.opentelemetry.io/otel/sdk v1.28.0
 	go.opentelemetry.io/otel/sdk/metric v1.28.0
@@ -42,7 +42,7 @@ require (
 require (
 	connectrpc.com/connect v1.16.2 // indirect
 	dario.cat/mergo v1.0.0 // indirect
-	github.com/99designs/gqlgen v0.17.45 // indirect
+	github.com/99designs/gqlgen v0.17.49 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
 	github.com/MicahParks/keyfunc/v2 v2.1.0 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
@@ -59,7 +59,7 @@ require (
 	github.com/containerd/containerd v1.7.12 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/cpuguy83/dockercfg v0.3.1 // indirect
-	github.com/cpuguy83/go-md2man/v2 v2.0.3 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.4 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgraph-io/ristretto v0.1.2-0.20240723054643-f5997484152c // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
@@ -131,17 +131,17 @@ require (
 	github.com/shirou/gopsutil/v3 v3.24.3 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
-	github.com/sosodev/duration v1.2.0 // indirect
+	github.com/sosodev/duration v1.3.1 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/twmb/franz-go/pkg/kmsg v1.7.0 // indirect
-	github.com/urfave/cli/v2 v2.27.1 // indirect
-	github.com/vektah/gqlparser/v2 v2.5.11 // indirect
-	github.com/wundergraph/astjson v0.0.0-20240827102346-5fc60fe30f9c // indirect
-	github.com/xrash/smetrics v0.0.0-20231213231151-1d8dd44e695e // indirect
+	github.com/urfave/cli/v2 v2.27.2 // indirect
+	github.com/vektah/gqlparser/v2 v2.5.16 // indirect
+	github.com/wundergraph/astjson v0.0.0-20240910140849-bb15f94bd362 // indirect
+	github.com/xrash/smetrics v0.0.0-20240312152122-5f08fbb34913 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1 // indirect
 	go.opentelemetry.io/contrib/propagators/b3 v1.23.0 // indirect

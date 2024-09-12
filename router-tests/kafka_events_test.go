@@ -518,7 +518,7 @@ func TestKafkaEvents(t *testing.T) {
 			require.Equal(t, "event: next", string(eventNext))
 			data, _, err := reader.ReadLine()
 			require.NoError(t, err)
-			require.Equal(t, "data: {\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}],\"data\":null}", string(data))
+			require.Equal(t, "data: {\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}", string(data))
 
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
 			xEnv.WaitForConnectionCount(0, time.Second*10)
