@@ -19,6 +19,12 @@
       "release-type": "helm",
       "package-name": "helm-cosmo-router",
       "component": "helm-cosmo-router"
+    },
+    "terraform-provider": {
+      "release-type": "go",
+      "skip-github-release": true,
+      "package-name": "terraform-provider-cosmo",
+      "component": "terraform-provider-cosmo"
     }
   }
 }

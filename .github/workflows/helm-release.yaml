@@ -55,3 +55,12 @@ jobs:
           registry-username: ${{ github.actor }}
           registry-password: ${{ secrets.GITHUB_TOKEN }}
           make-target: publish-router-chart
+
+      - uses: ./.github/actions/terraform-provider-release
+        if: ${{ steps.release.outputs['terraform-provider--release_created'] }}
+        with:
+          working-directory: ./terraform-provider
+          gpg-private-key: ${{ secrets.TERRAFORM_PROVIDER_GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.TERRAFORM_PROVIDER_GPG_PASSPHRASE }}
+          go-release-token: ${{ secrets.GITHUB_TOKEN }}
+          release-tag: ${{ steps.release.outputs['terraform-provider--tag_name'] }}

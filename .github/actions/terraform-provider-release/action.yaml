@@ -1,0 +1,42 @@
+---
+name: terraform-provider-release
+description: release the terraform provider to https://registry.terraform.io/
+
+inputs:
+  working-directory:
+    description: 'The working directory of your provider'
+    required: true
+  gpg-private-key:
+    description: 'The private key to use for the release'
+    required: true
+  passphrase:
+    description: 'The passphrase to use for the private key'
+    required: true
+  go-release-token:
+    description: 'The token to use for the GoReleaser'
+    required: true
+  release-tag:
+    description: 'The tag to use for the release'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: ./.github/actions/go
+
+    - name: Import GPG key
+      uses: crazy-max/ghaction-import-gpg@v6.1.0
+      id: import_gpg
+      with:
+        gpg_private_key: ${{ inputs.gpg-private-key }}
+        passphrase: ${{ inputs.passphrase }}
+
+    - name: Run GoReleaser
+      uses: goreleaser/goreleaser-action@v6.0.0
+      with:
+        args: release --clean
+        version: ${{ inputs.release-tag }}
+        workdir: ${{ inputs.working-directory }}
+      env:
+        GITHUB_TOKEN: ${{ inputs.go-release-token }}
+        GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
