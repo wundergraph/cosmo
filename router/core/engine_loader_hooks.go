@@ -41,9 +41,9 @@ func NewEngineRequestHooks(metricStore metric.Provider) resolve.LoaderHooks {
 	}
 }
 
-func (f *EngineLoaderHooks) OnLoad(ctx context.Context, dataSourceID string) context.Context {
+func (f *EngineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInfo) context.Context {
 
-	if resolve.IsIntrospectionDataSource(dataSourceID) {
+	if resolve.IsIntrospectionDataSource(ds.ID) {
 		return ctx
 	}
 
@@ -60,21 +60,21 @@ func (f *EngineLoaderHooks) OnLoad(ctx context.Context, dataSourceID string) con
 
 	ctx, span := f.tracer.Start(ctx, "Engine - Fetch", trace.WithAttributes(baseAttributes...))
 
-	subgraph := reqContext.SubgraphByID(dataSourceID)
+	subgraph := reqContext.SubgraphByID(ds.ID)
 	if subgraph != nil {
 		span.SetAttributes(rotel.WgSubgraphName.String(subgraph.Name))
 	}
 
 	span.SetAttributes(
-		rotel.WgSubgraphID.String(dataSourceID),
+		rotel.WgSubgraphID.String(ds.ID),
 	)
 
 	return ctx
 }
 
-func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, dataSourceID string, err error) {
+func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds resolve.DataSourceInfo, err error) {
 
-	if resolve.IsIntrospectionDataSource(dataSourceID) {
+	if resolve.IsIntrospectionDataSource(ds.ID) {
 		return
 	}
 
@@ -87,7 +87,7 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, data
 	span := trace.SpanFromContext(ctx)
 	defer span.End()
 
-	activeSubgraph := reqContext.SubgraphByID(dataSourceID)
+	activeSubgraph := reqContext.SubgraphByID(ds.ID)
 
 	baseAttributes := []attribute.KeyValue{
 		// Subgraph response status code

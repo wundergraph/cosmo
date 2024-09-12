@@ -24,7 +24,7 @@ func TestPersistedOperationOverGET(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"persisted Query not found"}],"data":null}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"persisted Query not found"}]}`, res.Body)
 		})
 	})
 
@@ -70,7 +70,7 @@ func TestPersistedOperationOverGET(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusMethodNotAllowed, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"Mutations can only be sent over HTTP POST"}],"data":null}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"Mutations can only be sent over HTTP POST"}]}`, res.Body)
 		})
 	})
 }

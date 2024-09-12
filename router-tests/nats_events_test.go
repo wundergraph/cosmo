@@ -361,7 +361,7 @@ func TestNatsEvents(t *testing.T) {
 			require.Equal(t, "event: next", string(eventNextOne))
 			dataOne, _, err := readerOne.ReadLine()
 			require.NoError(t, err)
-			require.Equal(t, "data: {\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}],\"data\":null}", string(dataOne))
+			require.Equal(t, "data: {\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}", string(dataOne))
 
 			reqTwo, err := http.NewRequest(http.MethodPost, xEnv.GraphQLServeSentEventsURL(), bytes.NewReader(subscribePayloadTwo))
 			require.NoError(t, err)
@@ -382,7 +382,7 @@ func TestNatsEvents(t *testing.T) {
 			require.Equal(t, "event: next", string(eventNextTwo))
 			dataTwo, _, err := readerTwo.ReadLine()
 			require.NoError(t, err)
-			require.Equal(t, "data: {\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}],\"data\":null}", string(dataTwo))
+			require.Equal(t, "data: {\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}", string(dataTwo))
 		})
 	})
 
