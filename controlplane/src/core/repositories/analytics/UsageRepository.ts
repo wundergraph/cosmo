@@ -203,7 +203,7 @@ export class UsageRepository {
                 DISTINCT on (FieldName, TypeName) FieldName,
                 TypeName
             from
-                gql_metrics_schema_usage_5m_90d 
+                gql_metrics_schema_usage_lite_1d_90d 
                 ARRAY JOIN TypeNames AS TypeName
             where
                 Timestamp >= startDate AND Timestamp <= endDate
@@ -277,7 +277,7 @@ export class UsageRepository {
                 DISTINCT on (FieldName, TypeName) FieldName,
                 TypeName
             from
-                gql_metrics_schema_usage_5m_90d 
+                gql_metrics_schema_usage_lite_1d_90d 
                 ARRAY JOIN TypeNames AS TypeName
             where
                 Timestamp >= startDate AND Timestamp <= endDate

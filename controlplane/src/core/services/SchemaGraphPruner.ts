@@ -52,10 +52,10 @@ export default class SchemaGraphPruner {
           typeName,
           path: `${typeName}.${field.name}`,
           location: {
-            line: field.astNode?.name.loc?.startToken.line,
-            column: field.astNode?.name.loc?.startToken.column,
-            endLine: field.astNode?.name.loc?.endToken.line,
-            endColumn: field.astNode?.name.loc?.endToken.column,
+            line: field.astNode?.loc?.startToken.line,
+            column: field.astNode?.loc?.startToken.column,
+            endLine: field.astNode?.loc?.endToken.line,
+            endColumn: field.astNode?.loc?.endToken.column,
           },
           isDeprecated: !!field.deprecationReason,
         });

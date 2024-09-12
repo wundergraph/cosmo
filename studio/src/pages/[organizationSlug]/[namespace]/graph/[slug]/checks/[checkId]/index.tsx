@@ -242,7 +242,7 @@ const getDecorationCollection = (
             ? "decoration-red-500"
             : "decoration-yellow-600"
         } decoration-wavy cursor-pointer z-50`,
-        isWholeLine: true,
+        isWholeLine: g.issueLocation.endLine === undefined,
       },
     });
   }

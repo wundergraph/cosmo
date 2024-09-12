@@ -153,10 +153,11 @@ import {
 import { isValidUrl, joinLabel } from '@wundergraph/cosmo-shared';
 import { subHours } from 'date-fns';
 import { FastifyBaseLogger } from 'fastify';
-import { DocumentNode, GraphQLSchema, buildASTSchema, parse } from 'graphql';
+import { DocumentNode, GraphQLSchema, buildASTSchema as graphQLBuildASTSchema, parse } from 'graphql';
 import { validate } from 'graphql/validation/index.js';
 import { uid } from 'uid/secure';
 import { validate as validateUUID } from 'uuid';
+import { buildASTSchema } from '@wundergraph/composition';
 import {
   DateRange,
   FeatureFlagDTO,
@@ -211,8 +212,6 @@ import { ApiKeyGenerator } from '../services/ApiGenerator.js';
 import ApolloMigrator from '../services/ApolloMigrator.js';
 import { BillingService } from '../services/BillingService.js';
 import OidcProvider from '../services/OidcProvider.js';
-import SchemaGraphPruner from '../services/SchemaGraphPruner.js';
-import SchemaLinter from '../services/SchemaLinter.js';
 import {
   InspectorOperationResult,
   InspectorSchemaChange,
@@ -2157,7 +2156,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         if (newSchemaSDL) {
           try {
             // Here we check if the schema is valid as a subgraph SDL
-            const { errors, normalizationResult } = buildSchema(newSchemaSDL, false);
+            const { errors } = buildSchema(newSchemaSDL);
             if (errors && errors.length > 0) {
               return {
                 response: {
@@ -2175,7 +2174,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                 graphPruneErrors: [],
               };
             }
-            newGraphQLSchema = normalizationResult?.schema;
+            const parsedSchema = parse(newSchemaSDL);
+            // this new GraphQL schema conatins the location info
+            newGraphQLSchema = buildASTSchema(parsedSchema, { assumeValid: true, assumeValidSDL: true });
           } catch (e: any) {
             return {
               response: {
@@ -7737,7 +7738,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
         const graphAST = parse(schema.schema);
-        const graphSchema = buildASTSchema(graphAST);
+        const graphSchema = graphQLBuildASTSchema(graphAST);
         for (const operation of req.operations) {
           const contents = operation.contents;
           let opAST: DocumentNode;
