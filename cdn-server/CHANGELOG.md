@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.10.2](https://github.com/wundergraph/cosmo/compare/cdn@0.10.1...cdn@0.10.2) (2024-09-12)
+
+### Bug Fixes
+
+* missing env vars in the docker-compose ([#1162](https://github.com/wundergraph/cosmo/issues/1162)) ([c595a94](https://github.com/wundergraph/cosmo/commit/c595a940e49a2569f50e2d107b8081387fe81d90)) (@AndreasZeissner)
+
 ## [0.10.1](https://github.com/wundergraph/cosmo/compare/cdn@0.10.0...cdn@0.10.1) (2024-09-05)
 
 ### Bug Fixes

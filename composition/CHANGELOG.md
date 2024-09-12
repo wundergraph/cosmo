@@ -4,6 +4,10 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.28.5](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.28.4...@wundergraph/composition@0.28.5) (2024-09-12)
+
+**Note:** Version bump only for package @wundergraph/composition
+
 ## [0.28.4](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.28.3...@wundergraph/composition@0.28.4) (2024-08-28)
 
 ### Bug Fixes
