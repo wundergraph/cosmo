@@ -125,27 +125,26 @@ export class SchemaGraphPruningRepository {
         ),
       );
 
-    
-      const graphPruningErrors: GraphPruningIssueResult[] = [];
-      const graphPruningWarnings: GraphPruningIssueResult[] = [];
+    const graphPruningErrors: GraphPruningIssueResult[] = [];
+    const graphPruningWarnings: GraphPruningIssueResult[] = [];
 
-      for (const g of graphPruningIssues) {
-        const issue: GraphPruningIssueResult = {
-          fieldPath: g.fieldPath,
-          graphPruningRuleType: g.graphPruningRuleType,
-          issueLocation: g.location,
-          message: g.message || '',
-          severity: g.isError ? LintSeverity.error : LintSeverity.warn,
-          federatedGraphId: g.federatedGraphId,
-          federatedGraphName: g.federatedGraphName,
-        };
+    for (const g of graphPruningIssues) {
+      const issue: GraphPruningIssueResult = {
+        fieldPath: g.fieldPath,
+        graphPruningRuleType: g.graphPruningRuleType,
+        issueLocation: g.location,
+        message: g.message || '',
+        severity: g.isError ? LintSeverity.error : LintSeverity.warn,
+        federatedGraphId: g.federatedGraphId,
+        federatedGraphName: g.federatedGraphName,
+      };
 
-        if (g.isError) {
-          graphPruningErrors.push(issue);
-        } else {
-          graphPruningWarnings.push(issue);
-        }
+      if (g.isError) {
+        graphPruningErrors.push(issue);
+      } else {
+        graphPruningWarnings.push(issue);
       }
+    }
 
     return [...graphPruningErrors, ...graphPruningWarnings];
   }
