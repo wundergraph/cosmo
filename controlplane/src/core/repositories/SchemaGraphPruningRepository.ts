@@ -1,10 +1,23 @@
 import { GraphPruningConfig, LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { and, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { GraphQLSchema } from 'graphql';
 import { GraphPruningRuleEnum } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import { namespaceGraphPruningCheckConfig, schemaCheckGraphPruningAction } from '../../db/schema.js';
-import { GraphPruningIssueResult, LintSeverityLevel, SchemaGraphPruningDTO } from '../../types/index.js';
+import {
+  GraphPruningIssueResult,
+  LintSeverityLevel,
+  SchemaGraphPruningDTO,
+  SchemaGraphPruningIssues,
+  SubgraphDTO,
+} from '../../types/index.js';
+import { ClickHouseClient } from '../clickhouse/index.js';
+import { GetDiffBetweenGraphsSuccess } from '../composition/schemaCheck.js';
+import SchemaGraphPruner from '../services/SchemaGraphPruner.js';
+import { UsageRepository } from './analytics/UsageRepository.js';
+import { FederatedGraphRepository } from './FederatedGraphRepository.js';
+import { SubgraphRepository } from './SubgraphRepository.js';
 
 export class SchemaGraphPruningRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>) {}
@@ -128,5 +141,66 @@ export class SchemaGraphPruningRepository {
     const graphPruningWarnings = graphPruningResult.filter((l) => l.severity === LintSeverity.warn);
 
     return [...graphPruningErrors, ...graphPruningWarnings];
+  }
+
+  public async performSchemaGraphPruningCheck({
+    newGraphQLSchema,
+    namespaceID,
+    organizationID,
+    schemaCheckID,
+    isGraphPruningEnabled,
+    subgraph,
+    chClient,
+    schemaChanges,
+    rangeInDays,
+    subgraphRepo,
+    fedGraphRepo,
+  }: {
+    newGraphQLSchema: GraphQLSchema | undefined;
+    namespaceID: string;
+    organizationID: string;
+    schemaCheckID: string;
+    isGraphPruningEnabled: boolean;
+    subgraph: SubgraphDTO;
+    chClient: ClickHouseClient | undefined;
+    schemaChanges: GetDiffBetweenGraphsSuccess;
+    rangeInDays: number;
+    fedGraphRepo: FederatedGraphRepository;
+    subgraphRepo: SubgraphRepository;
+  }) {
+    let graphPruningIssues: SchemaGraphPruningIssues = { warnings: [], errors: [] };
+    if (isGraphPruningEnabled && chClient && newGraphQLSchema) {
+      const graphPruningConfigs = await this.getNamespaceGraphPruningConfig(namespaceID);
+      if (graphPruningConfigs.length > 0) {
+        const usageRepo = new UsageRepository(chClient);
+        const schemaGraphPruner = new SchemaGraphPruner(fedGraphRepo, subgraphRepo, usageRepo, newGraphQLSchema);
+
+        graphPruningIssues = await schemaGraphPruner.schemaGraphPruneCheck({
+          subgraph,
+          graphPruningConfigs,
+          updatedFields: schemaChanges.changes.filter(
+            (change) =>
+              change.changeType === 'FIELD_ADDED' ||
+              change.changeType === 'FIELD_TYPE_CHANGED' ||
+              change.changeType === 'INPUT_FIELD_ADDED' ||
+              change.changeType === 'INPUT_FIELD_TYPE_CHANGED' ||
+              change.changeType === 'FIELD_ARGUMENT_ADDED' ||
+              change.changeType === 'FIELD_ARGUMENT_REMOVED' ||
+              change.changeType === 'FIELD_DEPRECATION_ADDED',
+          ),
+          removedFields: schemaChanges.changes.filter(
+            (change) => change.changeType === 'FIELD_REMOVED' || change.changeType === 'INPUT_FIELD_REMOVED',
+          ),
+          organizationId: organizationID,
+          rangeInDays,
+        });
+
+        await this.addSchemaCheckGraphPruningIssues({
+          schemaCheckId: schemaCheckID,
+          graphPruningIssues: [...graphPruningIssues.warnings, ...graphPruningIssues.errors],
+        });
+      }
+    }
+    return graphPruningIssues;
   }
 }

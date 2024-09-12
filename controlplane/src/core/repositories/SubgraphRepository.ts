@@ -1274,12 +1274,12 @@ export class SubgraphRepository {
     subgraphId,
     namespaceId,
     path,
-    onlyDeprecated,
+    isDeprecated,
   }: {
     subgraphId: string;
     namespaceId: string;
     path: string;
-    onlyDeprecated: boolean;
+    isDeprecated: boolean;
   }) {
     const conditions: SQL<unknown>[] = [
       eq(fieldGracePeriod.subgraphId, subgraphId),
@@ -1288,9 +1288,29 @@ export class SubgraphRepository {
       eq(fieldGracePeriod.path, path),
     ];
 
-    if (onlyDeprecated) {
-      conditions.push(eq(fieldGracePeriod.isDeprecated, onlyDeprecated));
+    if (isDeprecated) {
+      conditions.push(eq(fieldGracePeriod.isDeprecated, isDeprecated));
     }
+    await this.db
+      .delete(fieldGracePeriod)
+      .where(and(...conditions))
+      .execute();
+  }
+
+  public async deleteExpiredGracePeriodFields({
+    subgraphId,
+    namespaceId,
+  }: {
+    subgraphId: string;
+    namespaceId: string;
+  }) {
+    const conditions: SQL<unknown>[] = [
+      eq(fieldGracePeriod.subgraphId, subgraphId),
+      eq(fieldGracePeriod.namespaceId, namespaceId),
+      eq(fieldGracePeriod.organizationId, this.organizationId),
+      lt(fieldGracePeriod.expiresAt, new Date()),
+    ];
+
     await this.db
       .delete(fieldGracePeriod)
       .where(and(...conditions))
@@ -1367,7 +1387,7 @@ export class SubgraphRepository {
           subgraphId,
           path: field.path,
           namespaceId,
-          onlyDeprecated: true,
+          isDeprecated: true,
         });
       }
 
@@ -1376,9 +1396,11 @@ export class SubgraphRepository {
           subgraphId,
           path: field.path,
           namespaceId,
-          onlyDeprecated: false,
+          isDeprecated: false,
         });
       }
     }
+
+    await this.deleteExpiredGracePeriodFields({ subgraphId, namespaceId });
   }
 }

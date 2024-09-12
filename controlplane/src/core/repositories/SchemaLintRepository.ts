@@ -3,8 +3,9 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { LintConfig, LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import * as schema from '../../db/schema.js';
 import { namespaceLintCheckConfig, schemaCheckLintAction } from '../../db/schema.js';
-import { SchemaLintDTO, LintSeverityLevel, LintIssueResult } from '../../types/index.js';
+import { SchemaLintDTO, LintSeverityLevel, LintIssueResult, SchemaLintIssues } from '../../types/index.js';
 import { LintRuleEnum } from '../../db/models.js';
+import SchemaLinter from '../services/SchemaLinter.js';
 
 export class SchemaLintRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>) {}
@@ -91,5 +92,36 @@ export class SchemaLintRepository {
         severity: l.isError ? LintSeverity.error : LintSeverity.warn,
       } as LintIssueResult;
     });
+  }
+
+  public async performSchemaLintCheck({
+    newSchemaSDL,
+    namespaceId,
+    schemaCheckID,
+    isLintingEnabled,
+  }: {
+    newSchemaSDL: string;
+    namespaceId: string;
+    schemaCheckID: string;
+    isLintingEnabled: boolean;
+  }) {
+    let lintIssues: SchemaLintIssues = { warnings: [], errors: [] };
+    if (isLintingEnabled && newSchemaSDL !== '') {
+      const schemaLinter = new SchemaLinter();
+      const lintConfigs = await this.getNamespaceLintConfig(namespaceId);
+      if (lintConfigs.length > 0) {
+        lintIssues = await schemaLinter.schemaLintCheck({
+          schema: newSchemaSDL,
+          rulesInput: lintConfigs,
+        });
+      }
+    }
+
+    await this.addSchemaCheckLintIssues({
+      schemaCheckId: schemaCheckID,
+      lintIssues: [...lintIssues.warnings, ...lintIssues.errors],
+    });
+
+    return lintIssues;
   }
 }

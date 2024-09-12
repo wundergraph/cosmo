@@ -2310,56 +2310,27 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           }
         }
 
-        let lintIssues: SchemaLintIssues = { warnings: [], errors: [] };
-        if (namespace.enableLinting && newSchemaSDL !== '') {
-          const schemaLinter = new SchemaLinter();
-          const lintConfigs = await schemaLintRepo.getNamespaceLintConfig(namespace.id);
-          if (lintConfigs.length > 0) {
-            lintIssues = await schemaLinter.schemaLintCheck({
-              schema: newSchemaSDL,
-              rulesInput: lintConfigs,
-            });
-          }
-        }
-
-        await schemaLintRepo.addSchemaCheckLintIssues({
-          schemaCheckId: schemaCheckID,
-          lintIssues: [...lintIssues.warnings, ...lintIssues.errors],
+        const lintIssues: SchemaLintIssues = await schemaLintRepo.performSchemaLintCheck({
+          schemaCheckID,
+          newSchemaSDL,
+          namespaceId: namespace.id,
+          isLintingEnabled: namespace.enableLinting,
         });
 
-        let graphPruningIssues: SchemaGraphPruningIssues = { warnings: [], errors: [] };
-        if (namespace.enableGraphPruning && opts.chClient && newGraphQLSchema) {
-          const graphPruningConfigs = await schemaGraphPruningRepo.getNamespaceGraphPruningConfig(namespace.id);
-          if (graphPruningConfigs.length > 0) {
-            const usageRepo = new UsageRepository(opts.chClient);
-            const schemaGraphPruner = new SchemaGraphPruner(fedGraphRepo, subgraphRepo, usageRepo, newGraphQLSchema);
-
-            graphPruningIssues = await schemaGraphPruner.schemaGraphPruneCheck({
-              subgraph,
-              graphPruningConfigs,
-              updatedFields: schemaChanges.changes.filter(
-                (change) =>
-                  change.changeType === 'FIELD_ADDED' ||
-                  change.changeType === 'FIELD_TYPE_CHANGED' ||
-                  change.changeType === 'INPUT_FIELD_ADDED' ||
-                  change.changeType === 'INPUT_FIELD_TYPE_CHANGED' ||
-                  change.changeType === 'FIELD_ARGUMENT_ADDED' ||
-                  change.changeType === 'FIELD_ARGUMENT_REMOVED' ||
-                  change.changeType === 'FIELD_DEPRECATION_ADDED',
-              ),
-              removedFields: schemaChanges.changes.filter(
-                (change) => change.changeType === 'FIELD_REMOVED' || change.changeType === 'INPUT_FIELD_REMOVED',
-              ),
-              organizationId: authContext.organizationId,
-              rangeInDays: limit,
-            });
-
-            await schemaGraphPruningRepo.addSchemaCheckGraphPruningIssues({
-              schemaCheckId: schemaCheckID,
-              graphPruningIssues: [...graphPruningIssues.warnings, ...graphPruningIssues.errors],
-            });
-          }
-        }
+        const graphPruningIssues: SchemaGraphPruningIssues =
+          await schemaGraphPruningRepo.performSchemaGraphPruningCheck({
+            newGraphQLSchema,
+            schemaCheckID,
+            subgraph,
+            namespaceID: namespace.id,
+            organizationID: authContext.organizationId,
+            isGraphPruningEnabled: namespace.enableGraphPruning,
+            schemaChanges,
+            chClient: opts.chClient,
+            fedGraphRepo,
+            subgraphRepo,
+            rangeInDays: limit,
+          });
 
         // Update the overall schema check with the results
         await schemaCheckRepo.update({
