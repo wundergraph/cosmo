@@ -24,7 +24,11 @@
         { "id": "changelog-retention", "limit": 7 },
         { "id": "breaking-change-retention", "limit": 7 },
         { "id": "trace-sampling-rate", "limit": 0.1 },
-        { "id": "feature-flags", "limit": 0 }
+        { "id": "feature-flags", "limit": 0 },
+        {
+          "id": "field-grace-period",
+          "limit": 0
+        }
       ]
     },
     "launch@1": {

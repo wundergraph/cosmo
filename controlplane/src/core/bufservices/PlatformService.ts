@@ -8335,7 +8335,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           organizationId: authContext.organizationId,
           featureId: 'field-grace-period',
         });
-        if (!fieldGracePeriod || !fieldGracePeriod.enabled) {
+        if (!fieldGracePeriod || !fieldGracePeriod.limit) {
           return {
             response: {
               code: EnumStatusCode.ERR,
