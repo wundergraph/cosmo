@@ -72,7 +72,7 @@ require (
 	github.com/klauspost/compress v1.17.9
 	github.com/minio/minio-go/v7 v7.0.74
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1
-	github.com/wundergraph/astjson v0.0.0-20240827102346-5fc60fe30f9c
+	github.com/wundergraph/astjson v0.0.0-20240910140849-bb15f94bd362
 	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8
 	golang.org/x/text v0.16.0
 )

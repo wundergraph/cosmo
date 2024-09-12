@@ -1544,6 +1544,11 @@
           "default": 8,
           "description": "The size of the ParseKit pool. The ParseKit pool provides re-usable Resources for parsing, normalizing, validating and planning GraphQL Operations. Setting the pool size to a value much higher than the number of CPU Threads available will not improve performance, but only increase memory usage."
         },
+        "resolver_max_recyclable_parser_size": {
+          "type": "integer",
+          "default": 32768,
+          "description": "Limits the size of the Parser that can be recycled back into the Pool. If set to 0, no limit is applied. This helps keep the Heap size more maintainable if you regularly perform large queries."
+        },
         "enable_validation_cache": {
           "type": "boolean",
           "default": true,

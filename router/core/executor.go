@@ -73,6 +73,7 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 		AllowedErrorExtensionFields:        opts.RouterEngineConfig.SubgraphErrorPropagation.AllowedExtensionFields,
 		AttachServiceNameToErrorExtensions: opts.RouterEngineConfig.SubgraphErrorPropagation.AttachServiceName,
 		DefaultErrorExtensionCode:          opts.RouterEngineConfig.SubgraphErrorPropagation.DefaultExtensionCode,
+		MaxRecyclableParserSize:      opts.RouterEngineConfig.Execution.ResolverMaxRecyclableParserSize,
 	}
 
 	switch opts.RouterEngineConfig.SubgraphErrorPropagation.Mode {
