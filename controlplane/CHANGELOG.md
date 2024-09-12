@@ -4,6 +4,26 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.107.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.106.0...controlplane@0.107.0) (2024-09-09)
+
+### Features
+
+* add audits for enabling and disabling of feature flags ([#1151](https://github.com/wundergraph/cosmo/issues/1151)) ([8059c49](https://github.com/wundergraph/cosmo/commit/8059c4903f9ee819c45c956a54819868336029d8)) (@JivusAyrus)
+
+# [0.106.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.105.1...controlplane@0.106.0) (2024-09-05)
+
+### Features
+
+* add viewer role to ui ([#1137](https://github.com/wundergraph/cosmo/issues/1137)) ([23df809](https://github.com/wundergraph/cosmo/commit/23df809a58c57ea353aa79f5a503f580b1fc82d1)) (@JivusAyrus)
+* record changed subgraphs in composition ([#1134](https://github.com/wundergraph/cosmo/issues/1134)) ([f39ca8c](https://github.com/wundergraph/cosmo/commit/f39ca8c4dcd54bb3d9594bc8394ef287a7eb04cd)) (@thisisnithin)
+
+## [0.105.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.105.0...controlplane@0.105.1) (2024-09-05)
+
+### Bug Fixes
+
+* cdn and controlplane not respecting nested subdomains ([#1145](https://github.com/wundergraph/cosmo/issues/1145)) ([1598d6e](https://github.com/wundergraph/cosmo/commit/1598d6e421cf3b51997050d006faf9655fd96fdd)) (@AndreasZeissner)
+* log config upload failures as errors ([#1142](https://github.com/wundergraph/cosmo/issues/1142)) ([5965b77](https://github.com/wundergraph/cosmo/commit/5965b7757171fac8b369feec2336c1c0b79cd5e9)) (@thisisnithin)
+
 # [0.105.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.104.0...controlplane@0.105.0) (2024-09-03)
 
 ### Features

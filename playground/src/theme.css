@@ -113,10 +113,6 @@
   }
 }
 
-html {
-  @apply !dark;
-}
-
 @layer utilities {
   .scrollbar-custom {
     @apply transition-colors scrollbar-thin scrollbar-thumb-rounded-md scrollbar-thumb-secondary/80 hover:scrollbar-thumb-muted;
@@ -161,7 +157,7 @@ body.graphiql-dark [data-radix-popper-content-wrapper] {
 }
 
 .graphiql-container {
-  @apply h-screen !font-sans;
+  @apply !h-screen !font-sans;
 }
 
 .graphiql-plugin,

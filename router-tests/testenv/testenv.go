@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go.uber.org/zap/zaptest/observer"
 	"io"
 	"log"
 	"math/rand"
@@ -123,6 +124,7 @@ type Config struct {
 	PrometheusRegistry                 *prometheus.Registry
 	ShutdownDelay                      time.Duration
 	NoRetryClient                      bool
+	LogObservation                     LogObservationConfig
 }
 
 type SubgraphsConfig struct {
@@ -143,6 +145,11 @@ type SubgraphConfig struct {
 	Middleware   func(http.Handler) http.Handler
 	Delay        time.Duration
 	CloseOnStart bool
+}
+
+type LogObservationConfig struct {
+	Enabled  bool
+	LogLevel zapcore.Level
 }
 
 var (
@@ -403,7 +410,30 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		client = retryClient.StandardClient()
 	}
 
-	rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdn, natsData.Server)
+	var (
+		zapLogger   *zap.Logger
+		logObserver *observer.ObservedLogs
+	)
+
+	if oc := cfg.LogObservation; oc.Enabled {
+		var zCore zapcore.Core
+		zCore, logObserver = observer.New(oc.LogLevel)
+		zapLogger = zap.New(zCore)
+	} else {
+		ec := zap.NewProductionEncoderConfig()
+		ec.EncodeDuration = zapcore.SecondsDurationEncoder
+		ec.TimeKey = "time"
+
+		syncer := zapcore.AddSync(os.Stderr)
+
+		zapLogger = zap.New(zapcore.NewCore(
+			zapcore.NewConsoleEncoder(ec),
+			syncer,
+			zapcore.ErrorLevel,
+		))
+	}
+
+	rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdn, natsData.Server, zapLogger)
 	if err != nil {
 		return nil, err
 	}
@@ -510,6 +540,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		KafkaClient:             kafkaClient,
 		shutdownDelay:           cfg.ShutdownDelay,
 		shutdown:                atomic.NewBool(false),
+		logObserver:             logObserver,
 		Servers: []*httptest.Server{
 			employeesServer,
 			familyServer,
@@ -534,7 +565,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	return e, nil
 }
 
-func configureRouter(listenerAddr string, testConfig *Config, routerConfig *nodev1.RouterConfig, cdn *httptest.Server, natsServer *natsserver.Server) (*core.Router, error) {
+func configureRouter(listenerAddr string, testConfig *Config, routerConfig *nodev1.RouterConfig, cdn *httptest.Server, natsServer *natsserver.Server, zapLogger *zap.Logger) (*core.Router, error) {
 	cfg := config.Config{
 		Graph: config.Graph{},
 		CDN: config.CDNConfiguration{
@@ -554,18 +585,6 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	if testConfig.ModifyCDNConfig != nil {
 		testConfig.ModifyCDNConfig(&cfg.CDN)
 	}
-
-	ec := zap.NewProductionEncoderConfig()
-	ec.EncodeDuration = zapcore.SecondsDurationEncoder
-	ec.TimeKey = "time"
-
-	syncer := zapcore.AddSync(os.Stderr)
-
-	zapLogger := zap.New(zapcore.NewCore(
-		zapcore.NewConsoleEncoder(ec),
-		syncer,
-		zapcore.ErrorLevel,
-	))
 
 	t := jwt.New(jwt.SigningMethodHS256)
 	t.Claims = testTokenClaims()
@@ -833,8 +852,9 @@ type Environment struct {
 	SubgraphRequestCount  *SubgraphRequestCount
 	KafkaAdminClient      *kadm.Client
 	KafkaClient           *kgo.Client
-	shutdownDelay         time.Duration
+	logObserver           *observer.ObservedLogs
 
+	shutdownDelay       time.Duration
 	extraURLQueryValues url.Values
 
 	routerConfigVersionMain string
@@ -851,6 +871,14 @@ func (e *Environment) RouterConfigVersionMyFF() string {
 
 func (e *Environment) SetExtraURLQueryValues(values url.Values) {
 	e.extraURLQueryValues = values
+}
+
+func (e *Environment) Observer() *observer.ObservedLogs {
+	if e.logObserver == nil {
+		e.t.Fatal("Log observation is not enabled. Enable it in the environment config")
+	}
+
+	return e.logObserver
 }
 
 // Shutdown closes all resources associated with the test environment. Can be called multiple times but will only

@@ -32,17 +32,20 @@ import (
 )
 
 type PreHandlerOptions struct {
-	Logger             *zap.Logger
-	Executor           *Executor
-	Metrics            RouterMetrics
-	OperationProcessor *OperationProcessor
-	Planner            *OperationPlanner
-	AccessController   *AccessController
-	OperationBlocker   *OperationBlocker
-	RouterPublicKey    *ecdsa.PublicKey
-	TracerProvider     *sdktrace.TracerProvider
-	MaxUploadFiles     int
-	MaxUploadFileSize  int
+	Logger                *zap.Logger
+	Executor              *Executor
+	Metrics               RouterMetrics
+	OperationProcessor    *OperationProcessor
+	Planner               *OperationPlanner
+	AccessController      *AccessController
+	OperationBlocker      *OperationBlocker
+	RouterPublicKey       *ecdsa.PublicKey
+	TracerProvider        *sdktrace.TracerProvider
+	MaxUploadFiles        int
+	MaxUploadFileSize     int
+	QueryDepthEnabled     bool
+	QueryDepthLimit       int
+	QueryIgnorePersistent bool
 
 	FlushTelemetryAfterResponse bool
 	FileUploadEnabled           bool
@@ -76,6 +79,9 @@ type PreHandler struct {
 	fileUploadEnabled           bool
 	maxUploadFiles              int
 	maxUploadFileSize           int
+	queryDepthEnabled           bool
+	queryDepthLimit             int
+	queryIgnorePersistent       bool
 	bodyReadBuffers             *sync.Pool
 	trackSchemaUsageInfo        bool
 }
@@ -115,6 +121,9 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		fileUploadEnabled:      opts.FileUploadEnabled,
 		maxUploadFiles:         opts.MaxUploadFiles,
 		maxUploadFileSize:      opts.MaxUploadFileSize,
+		queryDepthEnabled:      opts.QueryDepthEnabled,
+		queryDepthLimit:        opts.QueryDepthLimit,
+		queryIgnorePersistent:  opts.QueryIgnorePersistent,
 		bodyReadBuffers:        &sync.Pool{},
 		alwaysIncludeQueryPlan: opts.AlwaysIncludeQueryPlan,
 		alwaysSkipLoader:       opts.AlwaysSkipLoader,
@@ -551,6 +560,20 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 		// we skip the validation of variables as we're not using them
 		// this allows us to generate query plans without having to provide variables
 		engineValidateSpan.SetAttributes(otel.WgVariablesValidationSkipped.Bool(true))
+	}
+
+	// Validate that the planned query doesn't exceed the maximum query depth configured
+	// This check runs if they've configured a max query depth, and it can optionally be turned off for persisted operations
+	if h.queryDepthEnabled && h.queryDepthLimit > 0 && (!operationKit.parsedOperation.IsPersistedOperation || operationKit.parsedOperation.IsPersistedOperation && !h.queryIgnorePersistent) {
+		cacheHit, depth, queryDepthErr := operationKit.ValidateQueryDepth(h.queryDepthLimit, operationKit.kit.doc, h.executor.RouterSchema)
+		engineValidateSpan.SetAttributes(otel.WgQueryDepth.Int(depth))
+		engineValidateSpan.SetAttributes(otel.WgQueryDepthCacheHit.Bool(cacheHit))
+		if queryDepthErr != nil {
+			rtrace.AttachErrToSpan(engineValidateSpan, err)
+			engineValidateSpan.End()
+
+			return nil, queryDepthErr
+		}
 	}
 	engineValidateSpan.End()
 

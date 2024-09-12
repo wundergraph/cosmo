@@ -1,15 +1,14 @@
 import {
   duplicateDirectiveDefinitionError,
   duplicateEnumValueDefinitionError,
-  duplicateFieldDefinitionError,
   duplicateTypeDefinitionError,
-  duplicateUnionMemberExtensionError,
+  ENUM,
   invalidDirectiveError,
   invalidKeyDirectivesError,
   invalidProvidesOrRequiresDirectivesError,
   invalidSelectionSetErrorMessage,
-  noBaseTypeExtensionError,
   normalizeSubgraphFromString,
+  OBJECT,
   undefinedDirectiveErrorMessage,
   undefinedFieldInFieldSetErrorMessage,
   undefinedTypeError,
@@ -19,7 +18,9 @@ import { readFileSync } from 'fs';
 import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
 import {
+  baseDirectiveDefinitions,
   normalizeString,
+  schemaQueryDefinition,
   schemaToSortedNormalizedString,
   versionOneBaseSchema,
   versionTwoBaseSchema,
@@ -275,18 +276,7 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(1);
-    expect(errors![0]).toStrictEqual(duplicateEnumValueDefinitionError('D', 'Alphabet'));
-  });
-
-  test('that an enum extension orphan returns an error', () => {
-    const { errors } = normalizeSubgraphFromString(`
-      extend enum Alphabet {
-        D
-      }
-    `);
-    expect(errors).toBeDefined();
-    expect(errors).toHaveLength(1);
-    expect(errors![0]).toStrictEqual(noBaseTypeExtensionError('Alphabet'));
+    expect(errors![0]).toStrictEqual(duplicateEnumValueDefinitionError('Alphabet', 'D'));
   });
 
   test('that redefining an enum returns an error', () => {
@@ -301,7 +291,7 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(1);
-    expect(errors![0]).toStrictEqual(duplicateTypeDefinitionError('enum', 'Alphabet'));
+    expect(errors![0]).toStrictEqual(duplicateTypeDefinitionError(ENUM, 'Alphabet'));
   });
 
   test('that interfaces are normalized', () => {
@@ -340,49 +330,7 @@ describe('Normalization tests', () => {
     );
   });
 
-  test('that extending an interface with a field that already exists returns an error', () => {
-    const { errors } = normalizeSubgraphFromString(`
-      interface Human {
-        name: String
-        age: Int
-      }
-      
-      extend interface Human {
-        age: Int
-      }
-    `);
-    expect(errors).toBeDefined();
-    expect(errors).toHaveLength(1);
-    expect(errors![0]).toStrictEqual(duplicateFieldDefinitionError('age', 'Human'));
-  });
-
-  test('that an interface extension orphan returns an error', () => {
-    const { errors } = normalizeSubgraphFromString(`
-      extend interface Human {
-        height: Int
-      }
-    `);
-    expect(errors).toBeDefined();
-    expect(errors).toHaveLength(1);
-    expect(errors![0]).toStrictEqual(noBaseTypeExtensionError('Human'));
-  });
-
-  test('that redefining an interface returns an error', () => {
-    const { errors } = normalizeSubgraphFromString(`
-      interface Human {
-        name: String
-      }
-      
-      interface Human {
-        age: Int
-      }
-    `);
-    expect(errors).toBeDefined();
-    expect(errors).toHaveLength(1);
-    expect(errors![0]).toStrictEqual(duplicateTypeDefinitionError('interface', 'Human'));
-  });
-
-  test('that input objects are normalized', () => {
+  test('that Input Objects are normalized', () => {
     const { errors, normalizationResult } = normalizeSubgraphFromString(`
       directive @CustomDirectiveOne on INPUT_OBJECT
       directive @CustomDirectiveTwo on INPUT_FIELD_DEFINITION
@@ -416,48 +364,6 @@ describe('Normalization tests', () => {
       }`,
       ),
     );
-  });
-
-  test('that extending an input object with a field that already exists returns an error', () => {
-    const { errors } = normalizeSubgraphFromString(`
-      input Input {
-        name: String
-        age: Int
-      }
-      
-      extend input Input {
-        age: Int
-      }
-    `);
-    expect(errors).toBeDefined();
-    expect(errors).toHaveLength(1);
-    expect(errors![0]).toStrictEqual(duplicateFieldDefinitionError('age', 'Input'));
-  });
-
-  test('that an input object extension orphan returns an error', () => {
-    const { errors } = normalizeSubgraphFromString(`
-      extend input Input {
-        height: Int
-      }
-    `);
-    expect(errors).toBeDefined();
-    expect(errors).toHaveLength(1);
-    expect(errors![0]).toStrictEqual(noBaseTypeExtensionError('Input'));
-  });
-
-  test('that redefining an input object returns an error', () => {
-    const { errors } = normalizeSubgraphFromString(`
-      input Input {
-        name: String
-      }
-      
-      input Input {
-        age: Int
-      }
-    `);
-    expect(errors).toBeDefined();
-    expect(errors).toHaveLength(1);
-    expect(errors![0]).toStrictEqual(duplicateTypeDefinitionError('input object', 'Input'));
   });
 
   test('that object types are normalized successfully', () => {
@@ -497,57 +403,6 @@ describe('Normalization tests', () => {
     );
   });
 
-  test('that extending an object with a field that already exists returns an error', () => {
-    const { errors } = normalizeSubgraphFromString(`
-      type Object {
-        name: String
-        age: Int
-      }
-      
-      extend type Object {
-        age: Int
-      }
-    `);
-    expect(errors).toBeDefined();
-    expect(errors).toHaveLength(1);
-    expect(errors![0]).toStrictEqual(duplicateFieldDefinitionError('age', 'Object'));
-  });
-
-  test('that an object extension orphan is accepted', () => {
-    const { errors, normalizationResult } = normalizeSubgraphFromString(`
-      extend type Object {
-        height: Int
-      }
-    `);
-    expect(errors).toBeUndefined();
-    const subgraphString = normalizationResult!.subgraphString;
-    expect(normalizeString(subgraphString!)).toBe(
-      normalizeString(
-        versionOneBaseSchema +
-          `
-      extend type Object {
-        height: Int
-      }
-    `,
-      ),
-    );
-  });
-
-  test('that redefining an object returns an error', () => {
-    const { errors } = normalizeSubgraphFromString(`
-      type Object {
-        name: String
-      }
-      
-      type Object {
-        age: Int
-      }
-    `);
-    expect(errors).toBeDefined();
-    expect(errors).toHaveLength(1);
-    expect(errors![0]).toStrictEqual(duplicateTypeDefinitionError('object', 'Object'));
-  });
-
   test('that scalars are normalized', () => {
     const { errors, normalizationResult } = normalizeSubgraphFromString(`
       directive @CustomDirectiveOne on SCALAR
@@ -569,26 +424,6 @@ describe('Normalization tests', () => {
       scalar JSON @CustomDirectiveOne @CustomDirectiveTwo`,
       ),
     );
-  });
-
-  test('that a scalar extension orphan returns an error', () => {
-    const { errors } = normalizeSubgraphFromString(`
-      directive @CustomDirectiveOne on SCALAR
-      extend scalar JSON @CustomDirectiveOne
-    `);
-    expect(errors).toBeDefined();
-    expect(errors).toHaveLength(1);
-    expect(errors![0]).toStrictEqual(noBaseTypeExtensionError('JSON'));
-  });
-
-  test('that redefined scalars return an error', () => {
-    const { errors } = normalizeSubgraphFromString(`
-      scalar JSON
-      scalar JSON
-    `);
-    expect(errors).toBeDefined();
-    expect(errors).toHaveLength(1);
-    expect(errors![0]).toStrictEqual(duplicateTypeDefinitionError('scalar', 'JSON'));
   });
 
   test('that unions are normalized', () => {
@@ -649,57 +484,6 @@ describe('Normalization tests', () => {
     );
   });
 
-  test('that extending a union with a member that already exists returns an error', () => {
-    const { errors } = normalizeSubgraphFromString(`
-      union Cats = Treacle | Muffin
-      
-      extend union Cats = Muffin
-      
-      type Treacle {
-        age: Int
-      }
-      
-      type Muffin {
-        age: Int
-      } 
-    `);
-    expect(errors).toBeDefined();
-    expect(errors).toHaveLength(1);
-    expect(errors![0]).toStrictEqual(duplicateUnionMemberExtensionError('Muffin', 'Cats'));
-  });
-
-  test('that redefining a union returns an error', () => {
-    const { errors } = normalizeSubgraphFromString(`
-      union Cats = Treacle | Muffin
-      
-      union Cats = Treacle | Muffin
-      
-      type Treacle {
-        age: Int
-      }
-      
-      type Muffin {
-        age: Int
-      } 
-    `);
-    expect(errors).toBeDefined();
-    expect(errors).toHaveLength(1);
-    expect(errors![0]).toStrictEqual(duplicateTypeDefinitionError('union', 'Cats'));
-  });
-
-  test('that a union extension orphan returns an error', () => {
-    const { errors } = normalizeSubgraphFromString(`
-      extend union Cats = Pepper
-      
-      type Pepper {
-        age: Int
-      }  
-    `);
-    expect(errors).toBeDefined();
-    expect(errors).toHaveLength(1);
-    expect(errors![0]).toStrictEqual(noBaseTypeExtensionError('Cats'));
-  });
-
   test('that a union without members returns an error', () => {
     const { errors } = normalizeSubgraphFromString(`
       union Cats =
@@ -749,7 +533,7 @@ describe('Normalization tests', () => {
       }
     `);
     expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(duplicateEnumValueDefinitionError('ADMIN', 'UserRole'));
+    expect(errors![0]).toStrictEqual(duplicateEnumValueDefinitionError('UserRole', 'ADMIN'));
   });
 
   test('Should return an error when a enum values have special characters', () => {
@@ -808,10 +592,10 @@ describe('Normalization tests', () => {
         versionOneBaseSchema +
           `
         type Product @key(fields: "id") {
-          name: String
           id: ID! @tag(name: "hi-from-inventory")
           dimensions: ProductDimension
           delivery(zip: String): DeliveryEstimates
+          name: String
         }
         
         type ProductDimension {
@@ -860,38 +644,41 @@ describe('Normalization tests', () => {
         }
     `);
     expect(errors).toBeUndefined();
-    const subgraphString = normalizationResult!.subgraphString;
-    expect(normalizeString(subgraphString!)).toBe(
+    expect(schemaToSortedNormalizedString(normalizationResult!.schema)).toBe(
       normalizeString(
-        versionOneBaseSchema +
+        schemaQueryDefinition +
+          baseDirectiveDefinitions +
           `
-      extend type Query {
-        allProducts: [Product]
-        product(id: ID!): Product
-      }
-      
-      extend type User @key(fields: "email") {
-        email: ID!
-        totalProductsCreated: Int
-      }
-      
       type Product @key(fields: "id") @key(fields: "sku package") @key(fields: "sku variation { id }") {
-        id: ID! @tag(name: "hi-from-products")
-        sku: String @tag(name: "hi-from-products")
-        package: String
-        variation: ProductVariation
-        dimensions: ProductDimension
         createdBy: User
+        dimensions: ProductDimension
+        id: ID! @tag(name: "hi-from-products")
+        package: String
+        sku: String @tag(name: "hi-from-products")
+        variation: ProductVariation
+      }
+
+      type ProductDimension {
+        size: String
+        weight: Float
       }
       
       type ProductVariation {
         id: ID!
       }
+
+      type Query {
+        allProducts: [Product]
+        product(id: ID!): Product
+      }
       
-      type ProductDimension {
-        size: String
-        weight: Float
-      }`,
+      type User @key(fields: "email") {
+        email: ID!
+        totalProductsCreated: Int
+      }
+
+      scalar openfed__FieldSet
+      `,
       ),
     );
   });
@@ -1608,12 +1395,7 @@ describe('Normalization tests', () => {
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(
       invalidKeyDirectivesError('Entity', [
-        invalidSelectionSetErrorMessage(
-          'id organization { id details }',
-          ['Organization.details'],
-          'Details',
-          'object',
-        ),
+        invalidSelectionSetErrorMessage('id organization { id details }', ['Organization.details'], 'Details', OBJECT),
       ]),
     );
   });
@@ -1678,74 +1460,6 @@ describe('Normalization tests', () => {
           'id',
         ),
       ]),
-    );
-  });
-
-  test('that objects and interfaces can be extended using the @extends directive', () => {
-    const { errors, normalizationResult } = normalizeSubgraphFromString(`
-      interface Account {
-        name: String!
-      }
-      
-      extend interface Account {
-        age: Int!
-      }
-      
-      interface Account @extends @tag(name: "interface test") {
-        email: String!
-      }
-      
-      type User implements Account {
-        name: String!
-      }
-      
-      extend type User@tag(name: "object test") {
-        age: Int!
-      }
-      
-      type User @extends {
-        email: String!
-      }
-    `);
-    expect(errors).toBeUndefined();
-    const subgraphString = normalizationResult!.subgraphString;
-    expect(normalizeString(subgraphString!)).toBe(
-      normalizeString(
-        versionOneBaseSchema +
-          `
-        interface Account @tag(name: "interface test") {
-          name: String!
-          age: Int!
-          email: String!
-        }
-
-        type User implements Account @tag(name: "object test") {
-          name: String!
-          age: Int!
-          email: String!
-        }  
-    `,
-      ),
-    );
-  });
-
-  test('that extensions declared with @extends remain as extensions', () => {
-    const { errors, normalizationResult } = normalizeSubgraphFromString(`
-      type User @extends @key(fields: "name") {
-        name: String!
-      }
-    `);
-    expect(errors).toBeUndefined();
-    const subgraphString = normalizationResult!.subgraphString;
-    expect(normalizeString(subgraphString!)).toBe(
-      normalizeString(
-        versionOneBaseSchema +
-          `
-        extend type User @key(fields: "name") {
-          name: String!
-        }
-    `,
-      ),
     );
   });
 

@@ -677,6 +677,8 @@ github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.49/go.mod h1:YCJyt5TSr4luj4
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.56/go.mod h1:YCJyt5TSr4luj4YWFGk93ayC/0KwHVEJmhgcNhcfLBc=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.76 h1:lwQGp7vnchd2ubaVnN4ipfTQtZL4zWk78thm28owdt8=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.76/go.mod h1:OOXfCcPh4nO6rwmaDtmngfbClfr8Wg0TIEmmuBUHJAk=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.78 h1:9PoR0UBTMvdRNULsUNvC6au2NVMKN0TJ0+sTh+ziMM4=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.78/go.mod h1:OOXfCcPh4nO6rwmaDtmngfbClfr8Wg0TIEmmuBUHJAk=
 github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=
 github.com/x448/float16 v0.8.4/go.mod h1:14CWIYCyZA/cWjXOioeEpHeN/83MdbZDRQHoFcYsOfg=
 github.com/xdg-go/pbkdf2 v1.0.0 h1:Su7DPu48wXMwC3bs7MCNG+z4FhcyEuz5dlvchbq0B0c=

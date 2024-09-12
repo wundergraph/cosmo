@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import {
+  allExternalFieldInstancesError,
   ConfigurationData,
   duplicateDirectiveArgumentDefinitionsErrorMessage,
   federateSubgraphs,
@@ -15,11 +16,13 @@ import {
   InvalidRootTypeFieldEventsDirectiveData,
   invalidRootTypeFieldEventsDirectivesErrorMessage,
   invalidRootTypeFieldResponseTypesEventDrivenErrorMessage,
+  noBaseDefinitionForExtensionError,
   nonEntityObjectExtensionsEventDrivenErrorMessage,
   nonExternalKeyFieldNamesEventDrivenErrorMessage,
   nonKeyFieldNamesEventDrivenErrorMessage,
   normalizeSubgraph,
   normalizeSubgraphFromString,
+  OBJECT,
   parse,
   Subgraph,
   subgraphValidationError,
@@ -575,11 +578,19 @@ describe('events Configuration tests', () => {
     test('that an error is returned if the events graph contains a non-entity object extension', () => {
       const { errors } = federateSubgraphs([subgraphH]);
       expect(errors).toBeDefined();
-      expect(errors).toHaveLength(1);
+      expect(errors).toHaveLength(3);
       expect(errors![0]).toStrictEqual(
-        subgraphValidationError('subgraph-h', [
-          invalidEventDrivenGraphError([nonEntityObjectExtensionsEventDrivenErrorMessage(['Object'])]),
-        ]),
+        allExternalFieldInstancesError(
+          'Entity',
+          new Map<string, Array<string>>([
+            ['id', ['subgraph-h']],
+            ['object', ['subgraph-h']],
+          ]),
+        ),
+      );
+      expect(errors![1]).toStrictEqual(noBaseDefinitionForExtensionError(OBJECT, OBJECT));
+      expect(errors![2]).toStrictEqual(
+        allExternalFieldInstancesError(OBJECT, new Map<string, Array<string>>([['id', ['subgraph-h']]])),
       );
     });
 
