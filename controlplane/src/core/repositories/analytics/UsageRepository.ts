@@ -186,7 +186,7 @@ export class UsageRepository {
 
     const query = `
       WITH 
-        toDateTime('${start}') AS startDate,
+        toStartOfDay(toDateTime('${start}')) AS startDate,
         toDateTime('${end}') AS endDate,
         all_fields AS (
           SELECT
@@ -260,7 +260,7 @@ export class UsageRepository {
     // In the used_fields query, we use ARRAY JOIN to expand the TypeNames array into separate rows.
     const query = `
       WITH 
-        toDateTime('${start}') AS startDate,
+        toStartOfDay(toDateTime('${start}')) AS startDate,
         toDateTime('${end}') AS endDate,
         all_fields AS (
           SELECT
