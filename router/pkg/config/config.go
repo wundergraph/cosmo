@@ -625,6 +625,10 @@ type Config struct {
 	PersistedOperationsConfig PersistedOperationsConfig `yaml:"persisted_operations"`
 }
 
+func (c *Config) Validate() error {
+	return validateConfig(c, JSONSchema)
+}
+
 type LoadResult struct {
 	Config        Config
 	DefaultLoaded bool
@@ -685,15 +689,13 @@ func LoadConfig(configFilePath string, envOverride string) (*LoadResult, error) 
 
 		configFileBytes = []byte(configYamlData)
 
-		err = ValidateConfig(configFileBytes, JSONSchema)
-		if err != nil {
-			return nil, fmt.Errorf("router config validation error: %w", err)
-		}
-
-		// Unmarshal the final config
-
 		if err := yaml.Unmarshal(configFileBytes, &cfg.Config); err != nil {
 			return nil, err
+		}
+
+		err = cfg.Config.Validate()
+		if err != nil {
+			return nil, fmt.Errorf("router config validation error: %w", err)
 		}
 	}
 
