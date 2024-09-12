@@ -1,12 +1,16 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { Mock, afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
-import { GraphPruningConfig, Label, LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  GraphPruningConfig,
+  GraphPruningIssue,
+  LintSeverity
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { pino } from 'pino';
-import { TestUser, afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
+import { Mock, afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
-import { SubgraphRepository } from '../src/core/repositories/SubgraphRepository.js';
 import { NamespaceRepository } from '../src/core/repositories/NamespaceRepository.js';
+import { SubgraphRepository } from '../src/core/repositories/SubgraphRepository.js';
+import { TestUser, afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
 import { SetupTest } from './test-util.js';
 
 let dbname = '';
@@ -340,37 +344,37 @@ describe('Graph Pruning Tests', (ctx) => {
     expect(checkResp.breakingChanges.length).toBe(2);
     expect(checkResp.graphPruneErrors).toHaveLength(1);
     expect(checkResp.graphPruneErrors).toEqual([
-      {
+      new GraphPruningIssue({
         federatedGraphName,
         fieldPath: 'Hello.a',
         graphPruningRuleType: 'UNUSED_FIELDS',
         issueLocation: {
           column: 3,
-          endColumn: 3,
+          endColumn: 14,
           endLine: 8,
           line: 8,
         },
         message: 'Field a of type Hello has not been used in the past 7 days',
         severity: LintSeverity.error,
-      },
+      }),
     ]);
     expect(checkResp.graphPruneWarnings).toHaveLength(2);
     expect(checkResp.graphPruneWarnings).toEqual([
-      {
+      new GraphPruningIssue({
         federatedGraphName,
         fieldPath: 'Hello.a',
         graphPruningRuleType: 'DEPRECATED_FIELDS',
         issueLocation: {
           column: 3,
-          endColumn: 3,
+          endColumn: 14,
           endLine: 8,
           line: 8,
         },
         message:
           'Field a of type Hello was deprecated, is no longer in use, and is now safe for removal following the expiration of the grace period.',
         severity: LintSeverity.warn,
-      },
-      {
+      }),
+      new GraphPruningIssue({
         federatedGraphName,
         fieldPath: 'Hello.removedField',
         graphPruningRuleType: 'REQUIRE_DEPRECATION_BEFORE_DELETION',
@@ -382,7 +386,7 @@ describe('Graph Pruning Tests', (ctx) => {
         },
         message: 'Field removedField of type Hello was removed without being deprecated first.',
         severity: LintSeverity.warn,
-      },
+      }),
     ]);
 
     await server.close();
