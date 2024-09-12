@@ -42,7 +42,6 @@ CREATE TABLE IF NOT EXISTS gql_metrics_schema_usage_lite_1d_90d
 )
 ENGINE = ReplacingMergeTree(Timestamp)
 PARTITION BY toDate(Timestamp)
-PRIMARY KEY (FederatedGraphID, OrganizationID, Timestamp)
 ORDER BY (FederatedGraphID, OrganizationID, ClientName, ClientVersion, RouterConfigVersion, OperationHash, Path, FieldName, NamedType, TypeNames, SubgraphIDs, IsArgument, IsInput, toUnixTimestamp(Timestamp))
 -- We store 90 days of data in this table.
 TTL toDateTime(Timestamp) + toIntervalDay(90) SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1
