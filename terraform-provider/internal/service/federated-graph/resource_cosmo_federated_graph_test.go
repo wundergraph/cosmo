@@ -75,14 +75,3 @@ resource "cosmo_federated_graph" "test" {
 }
 `, name, namespace, routingURL, readme)
 }
-
-func testAccMonographResourceConfig(name, namespace, routingURL, federatedGraphRoutingURL string) string {
-	return fmt.Sprintf(`
-resource "cosmo_monograph" "test" {
-  name      	= "%s"
-  namespace 	= "%s"
-  routing_url 	= "%s"
-  federated_graph_routing_url 	= "%s"
-}
-`, name, namespace, routingURL, federatedGraphRoutingURL)
-}

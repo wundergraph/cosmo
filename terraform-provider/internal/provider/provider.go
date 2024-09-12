@@ -20,6 +20,7 @@ import (
 	federated_graph "github.com/wundergraph/cosmo/terraform-provider-cosmo/internal/service/federated-graph"
 	monograph "github.com/wundergraph/cosmo/terraform-provider-cosmo/internal/service/monograph"
 	namespace "github.com/wundergraph/cosmo/terraform-provider-cosmo/internal/service/namespace"
+	router_token "github.com/wundergraph/cosmo/terraform-provider-cosmo/internal/service/router-token"
 	subgraph "github.com/wundergraph/cosmo/terraform-provider-cosmo/internal/service/subgraph"
 )
 
@@ -93,6 +94,7 @@ func (p *CosmoProvider) Resources(ctx context.Context) []func() resource.Resourc
 		namespace.NewNamespaceResource,
 		subgraph.NewSubgraphResource,
 		monograph.NewMonographResource,
+		router_token.NewTokenResource,
 	}
 }
 
