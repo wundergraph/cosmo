@@ -21,7 +21,7 @@ const (
 	employeesQuery                = `{"query":"{ employees { id } }"}`
 	employeesQueryRequiringClaims = `{"query":"{ employees { id startDate } }"}`
 	employeesExpectedData         = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
-	unauthorizedExpectedData      = `{"errors":[{"message":"unauthorized"}],"data":null}`
+	unauthorizedExpectedData      = `{"errors":[{"message":"unauthorized"}]}`
 	xAuthenticatedByHeader        = "X-Authenticated-By"
 )
 
@@ -294,7 +294,7 @@ func TestAuthentication(t *testing.T) {
 			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"unauthorized"}],"data":null}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"unauthorized"}]}`, string(data))
 		})
 	})
 	t.Run("reject unauthorized no token", func(t *testing.T) {
@@ -566,7 +566,7 @@ func TestAuthentication(t *testing.T) {
 			require.Equal(t, http.StatusOK, res.StatusCode)
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"Unauthorized request to Subgraph '3', Reason: missing required scopes."},{"message":"Unauthorized to load field 'Mutation.addFact', Reason: missing required scopes.","path":["addFact"]}],"data":null,"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Mutation","fieldName":"addFact"},"required":[["write:fact"],["write:all"]]}],"actualScopes":["read:miscellaneous","read:all"]}}}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized request to Subgraph 'products', Reason: missing required scopes."},{"message":"Unauthorized to load field 'Mutation.addFact', Reason: missing required scopes.","path":["addFact"]}],"data":null,"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Mutation","fieldName":"addFact"},"required":[["write:fact"],["write:all"]]}],"actualScopes":["read:miscellaneous","read:all"]}}}`, string(data))
 		})
 	})
 	t.Run("mutation with scope missing for mutation root field (with reject)", func(t *testing.T) {

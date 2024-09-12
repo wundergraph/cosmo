@@ -248,12 +248,17 @@
     }
   },
   "SubgraphErrorPropagation": {
-    "Enabled": false,
+    "Enabled": true,
     "PropagateStatusCodes": false,
     "Mode": "wrapped",
     "RewritePaths": true,
     "OmitLocations": true,
-    "OmitExtensions": false
+    "OmitExtensions": false,
+    "AttachServiceName": true,
+    "DefaultExtensionCode": "DOWNSTREAM_SERVICE_ERROR",
+    "AllowedExtensionFields": [
+      "code"
+    ]
   },
   "StorageProviders": {
     "S3": null,

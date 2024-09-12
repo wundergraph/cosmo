@@ -29,7 +29,7 @@ func TestNoError(t *testing.T) {
 	body, err := io.ReadAll(rr.Result().Body)
 	require.NoError(t, err)
 
-	require.Equal(t, `{"errors":[{"message":"Internal Error"}],"data":null}`, string(body))
+	require.Equal(t, `{"errors":[{"message":"Internal Error"}]}`, string(body))
 }
 
 func TestSingleError(t *testing.T) {
@@ -50,7 +50,7 @@ func TestSingleError(t *testing.T) {
 	body, err := io.ReadAll(rr.Result().Body)
 	require.NoError(t, err)
 
-	require.Equal(t, `{"errors":[{"message":"test"}],"data":null}`, string(body))
+	require.Equal(t, `{"errors":[{"message":"test"}]}`, string(body))
 }
 
 func TestSortingModulesByPriority(t *testing.T) {
