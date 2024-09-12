@@ -490,7 +490,7 @@ const CheckDetails = ({
                   <>
                     <NoSymbolIcon className="h-4 w-4" />
                     <span className="flex-1 truncate">
-                      Graph Pruning Errors
+                      Pruning Errors
                     </span>
                     <InfoTooltip>
                       Indicates if the proposed schema contains graph pruning
@@ -502,7 +502,7 @@ const CheckDetails = ({
                   <>
                     {getCheckIcon(!data.check.hasGraphPruningErrors)}
                     <span className="flex-1 truncate">
-                      Graph Pruning Errors
+                      Pruning Errors
                     </span>
                     <InfoTooltip>
                       Indicates if the proposed schema contains graph pruning
@@ -700,7 +700,7 @@ const CheckDetails = ({
                     }}
                   >
                     <HiOutlineScissors className="flex-shrink-0" />
-                    Graph Pruning Issues
+                    Pruning Issues
                     {data.graphPruningIssues.length ? (
                       <Badge
                         variant="muted"

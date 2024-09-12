@@ -236,7 +236,7 @@ const ChecksPage: NextPageWithLayout = () => {
                           >
                             {getCheckIcon(!hasGraphPruningErrors)}
                             <span className="flex-1 truncate">
-                              Graph Pruning Errors
+                              Pruning Errors
                             </span>
                           </Badge>
                         </div>
