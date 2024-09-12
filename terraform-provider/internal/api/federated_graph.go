@@ -5,10 +5,9 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/wundergraph/cosmo/terraform-provider-cosmo/gen/proto/wg/cosmo/common"
-
-	platformv1 "github.com/wundergraph/cosmo/terraform-provider-cosmo/gen/proto/wg/cosmo/platform/v1"
-	"github.com/wundergraph/cosmo/terraform-provider-cosmo/gen/proto/wg/cosmo/platform/v1/platformv1connect"
+	"github.com/wundergraph/cosmo/connect-go/wg/cosmo/common"
+	platformv1 "github.com/wundergraph/cosmo/connect-go/wg/cosmo/platform/v1"
+	"github.com/wundergraph/cosmo/connect-go/wg/cosmo/platform/v1/platformv1connect"
 )
 
 func CreateFederatedGraph(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey string, admissionWebhookSecret *string, graph *platformv1.FederatedGraph) (*platformv1.CreateFederatedGraphResponse, error) {

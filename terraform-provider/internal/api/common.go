@@ -1,7 +1,7 @@
 package api
 
 import (
-	"github.com/wundergraph/cosmo/terraform-provider-cosmo/gen/proto/wg/cosmo/common"
+	"github.com/wundergraph/cosmo/connect-go/wg/cosmo/common"
 )
 
 const (

@@ -1,6 +1,6 @@
 module github.com/wundergraph/cosmo/terraform-provider-cosmo
 
-go 1.21.5
+go 1.22.0
 
 require (
 	connectrpc.com/connect v1.16.2
@@ -9,6 +9,7 @@ require (
 	github.com/hashicorp/terraform-plugin-framework-validators v0.13.0
 	github.com/hashicorp/terraform-plugin-go v0.23.0
 	github.com/hashicorp/terraform-plugin-log v0.9.0
+	github.com/wundergraph/cosmo/connect-go v0.0.0-20240912174639-638540986b46
 	google.golang.org/protobuf v1.34.0
 )
 

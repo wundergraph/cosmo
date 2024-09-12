@@ -6,8 +6,8 @@ import (
 
 	"connectrpc.com/connect"
 
-	platformv1 "github.com/wundergraph/cosmo/terraform-provider-cosmo/gen/proto/wg/cosmo/platform/v1"
-	"github.com/wundergraph/cosmo/terraform-provider-cosmo/gen/proto/wg/cosmo/platform/v1/platformv1connect"
+	platformv1 "github.com/wundergraph/cosmo/connect-go/wg/cosmo/platform/v1"
+	"github.com/wundergraph/cosmo/connect-go/wg/cosmo/platform/v1/platformv1connect"
 )
 
 func CreateNamespace(ctx context.Context, client platformv1connect.PlatformServiceClient, apiKey, name string) error {
