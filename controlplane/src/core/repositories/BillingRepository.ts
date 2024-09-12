@@ -60,8 +60,8 @@ export class BillingRepository {
     });
   }
 
-  public async insertPlan(planId: string | null, organizationId: string) {
-    await this.db
+  public insertPlan(planId: string | null, organizationId: string) {
+    return this.db
       .insert(organizationBilling)
       .values({
         plan: planId,

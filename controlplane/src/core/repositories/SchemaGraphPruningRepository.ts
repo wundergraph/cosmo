@@ -35,12 +35,13 @@ export class SchemaGraphPruningRepository {
       .execute();
 
     return orgGraphPruningConfigs.map((l) => {
-      return {
+      const graphPruningDTO: SchemaGraphPruningDTO = {
         ruleName: l.graphPruningRule as GraphPruningRuleEnum,
         severity: l.severityLevel as LintSeverityLevel,
         gracePeriodInDays: l.gracePeriodInDays,
         schemaUsageCheckPeriodInDays: l.schemaUsageCheckPeriodInDays || undefined,
-      } as SchemaGraphPruningDTO;
+      };
+      return graphPruningDTO;
     });
   }
 

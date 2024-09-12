@@ -149,21 +149,21 @@ describe('Graph Pruning Tests', (ctx) => {
     expect(getNamespaceGraphPruningConfigResponse.configs).toStrictEqual([]);
 
     const graphPruningConfigs = [
-      {
+      new GraphPruningConfig({
         ruleName: 'UNUSED_FIELDS',
         severityLevel: LintSeverity.error,
         gracePeriodInDays: 7,
-      } as GraphPruningConfig,
-      {
+      }),
+      new GraphPruningConfig({
         ruleName: 'DEPRECATED_FIELDS',
         severityLevel: LintSeverity.warn,
         gracePeriodInDays: 7,
-      } as GraphPruningConfig,
-      {
+      }),
+      new GraphPruningConfig({
         ruleName: 'REQUIRE_DEPRECATION_BEFORE_DELETION',
         severityLevel: LintSeverity.warn,
         gracePeriodInDays: 7,
-      } as GraphPruningConfig,
+      }),
     ];
 
     const configureGraphPruningConfigResponse = await client.configureNamespaceGraphPruningConfig({
@@ -199,21 +199,21 @@ describe('Graph Pruning Tests', (ctx) => {
     authenticator.changeUser(TestUser.viewerTimCompanyA);
 
     const graphPruningConfigs = [
-      {
+      new GraphPruningConfig({
         ruleName: 'UNUSED_FIELDS',
         severityLevel: LintSeverity.error,
         gracePeriodInDays: 7,
-      } as GraphPruningConfig,
-      {
+      }),
+      new GraphPruningConfig({
         ruleName: 'DEPRECATED_FIELDS',
         severityLevel: LintSeverity.warn,
         gracePeriodInDays: 7,
-      } as GraphPruningConfig,
-      {
+      }),
+      new GraphPruningConfig({
         ruleName: 'REQUIRE_DEPRECATION_BEFORE_DELETION',
         severityLevel: LintSeverity.warn,
         gracePeriodInDays: 7,
-      } as GraphPruningConfig,
+      }),
     ];
 
     const configureGraphPruningConfigResponse = await client.configureNamespaceGraphPruningConfig({
@@ -268,21 +268,21 @@ describe('Graph Pruning Tests', (ctx) => {
     expect(response.response?.code).toBe(EnumStatusCode.OK);
 
     const graphPruningConfigs = [
-      {
+      new GraphPruningConfig({
         ruleName: 'UNUSED_FIELDS',
         severityLevel: LintSeverity.error,
         gracePeriodInDays: 7,
-      } as GraphPruningConfig,
-      {
+      }),
+      new GraphPruningConfig({
         ruleName: 'DEPRECATED_FIELDS',
         severityLevel: LintSeverity.warn,
         gracePeriodInDays: 7,
-      } as GraphPruningConfig,
-      {
+      }),
+      new GraphPruningConfig({
         ruleName: 'REQUIRE_DEPRECATION_BEFORE_DELETION',
         severityLevel: LintSeverity.warn,
         gracePeriodInDays: 7,
-      } as GraphPruningConfig,
+      }),
     ];
 
     const configureGraphPruningConfigResponse = await client.configureNamespaceGraphPruningConfig({
@@ -426,21 +426,21 @@ describe('Graph Pruning Tests', (ctx) => {
     expect(response.response?.code).toBe(EnumStatusCode.OK);
 
     const graphPruningConfigs = [
-      {
+      new GraphPruningConfig({
         ruleName: 'UNUSED_FIELDS',
         severityLevel: LintSeverity.error,
         gracePeriodInDays: 7,
-      } as GraphPruningConfig,
-      {
+      }),
+      new GraphPruningConfig({
         ruleName: 'DEPRECATED_FIELDS',
         severityLevel: LintSeverity.warn,
         gracePeriodInDays: 7,
-      } as GraphPruningConfig,
-      {
+      }),
+      new GraphPruningConfig({
         ruleName: 'REQUIRE_DEPRECATION_BEFORE_DELETION',
         severityLevel: LintSeverity.warn,
         gracePeriodInDays: 7,
-      } as GraphPruningConfig,
+      }),
     ];
 
     const configureGraphPruningConfigResponse = await client.configureNamespaceGraphPruningConfig({

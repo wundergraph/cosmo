@@ -28,18 +28,22 @@ export default class SchemaGraphPruner {
     const fields: Field[] = [];
     const schemaToBeUsed = schema || this.schema;
 
+    // fetching all the types from the schema
     const types = schemaToBeUsed.getTypeMap();
 
     for (const typeName in types) {
       const type = types[typeName];
+      // skipping unwanted types
       if (typeName.startsWith('__')) {
         continue;
       }
 
+      // checking if the type is an object type, interface type, or input object type
       if (!isObjectType(type) && !isInterfaceType(type) && !isInputObjectType(type)) {
         continue;
       }
 
+      // fetching all the fields from the type
       const fieldMap = type.getFields();
 
       for (const fieldName in fieldMap) {
@@ -85,8 +89,10 @@ export default class SchemaGraphPruner {
   }): Promise<GraphPruningIssueResult[]> => {
     const limit = pLimit(5);
     const allFields = this.getAllFields({});
+    // fetching all the fields of this subgraph that are in grace period
     const fieldsInGracePeriod = await this.subgraphRepo.getSubgraphFieldsInGracePeriod({ subgraphId, namespaceId });
 
+    // filtering out the fields that are in grace period and the fields that were added in the proposed schema
     const fieldsToBeChecked = allFields.filter((field) => {
       return !fieldsInGracePeriod.some((f) => f.path === field.path) && !addedFields.some((f) => f.path === field.path);
     });
@@ -159,12 +165,14 @@ export default class SchemaGraphPruner {
   }): Promise<GraphPruningIssueResult[]> => {
     const limit = pLimit(5);
     const allDeprecatedFields = this.getAllFields({ onlyDeprecated: true });
+    // fetching all the deprecated fields of this subgraph that are in grace period
     const deprecatedFieldsInGracePeriod = await this.subgraphRepo.getSubgraphFieldsInGracePeriod({
       subgraphId,
       namespaceId,
       onlyDeprecated: true,
     });
 
+    // filtering out the deprecated fields that are in grace period and the deprecated fields that were added in the proposed schema
     const deprecatedFieldsToBeChecked = allDeprecatedFields.filter((field) => {
       return (
         !deprecatedFieldsInGracePeriod.some((f) => f.path === field.path) &&
@@ -258,6 +266,7 @@ export default class SchemaGraphPruner {
     const graphPruningIssues: GraphPruningIssueResult[] = [];
 
     for (const removedField of removedFields) {
+      // getting all the fields that were removed without being deprecated first
       if (!allDeprecatedFields.some((field) => field.path === removedField.path)) {
         nonDeprecatedDeletedFields.push(removedField);
       }
