@@ -129,7 +129,6 @@ export class UsageRepository {
     namedType?: string;
     range?: number;
     dateRange?: DateRange;
-    routerConfigVersion?: string;
     organizationId: string;
     federatedGraphId: string;
   }) {
