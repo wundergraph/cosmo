@@ -4,6 +4,10 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.22.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.22.0...aws-lambda-router@0.22.1) (2024-09-13)
+
+**Note:** Version bump only for package aws-lambda-router
+
 # [0.22.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.21.5...aws-lambda-router@0.22.0) (2024-09-12)
 
 ### Features
