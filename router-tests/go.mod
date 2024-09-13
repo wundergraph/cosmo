@@ -26,9 +26,9 @@ require (
 	github.com/tidwall/gjson v1.17.0
 	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
-	github.com/wundergraph/cosmo/demo v0.0.0-20240912132447-ee5b56f587ef
-	github.com/wundergraph/cosmo/router v0.0.0-20240912132447-ee5b56f587ef
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.80
+	github.com/wundergraph/cosmo/demo v0.0.0-20240913074702-2ed3533dc18e
+	github.com/wundergraph/cosmo/router v0.0.0-20240913074702-2ed3533dc18e
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.81
 	go.opentelemetry.io/otel v1.28.0
 	go.opentelemetry.io/otel/sdk v1.28.0
 	go.opentelemetry.io/otel/sdk/metric v1.28.0
