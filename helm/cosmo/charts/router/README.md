@@ -1,6 +1,6 @@
 # router
 
-![Version: 0.8.0](https://img.shields.io/badge/Version-0.8.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.107.2](https://img.shields.io/badge/AppVersion-0.107.2-informational?style=flat-square)
+![Version: 0.8.0](https://img.shields.io/badge/Version-0.8.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.110.0](https://img.shields.io/badge/AppVersion-0.110.0-informational?style=flat-square)
 
 This is the official Helm Chart for the WunderGraph Cosmo Router.
 
@@ -43,7 +43,6 @@ This is the official Helm Chart for the WunderGraph Cosmo Router.
 | image.pullPolicy | string | `"IfNotPresent"` |  |
 | image.registry | string | `"ghcr.io"` |  |
 | image.repository | string | `"wundergraph/cosmo/router"` |  |
-| image.version | string | `"latest"` | Overrides the image tag whose default is the chart appVersion. |
 | imagePullSecrets | list | `[]` |  |
 | ingress.hosts | string | `nil` |  |
 | ingress.tls | list | `[]` |  |
