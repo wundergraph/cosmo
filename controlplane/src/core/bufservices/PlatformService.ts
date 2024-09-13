@@ -8331,11 +8331,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const fieldGracePeriod = await organizationRepo.getFeature({
+        const fieldPruningGracePeriod = await organizationRepo.getFeature({
           organizationId: authContext.organizationId,
-          featureId: 'field-grace-period',
+          featureId: 'field-pruning-grace-period',
         });
-        if (!fieldGracePeriod || !fieldGracePeriod.limit) {
+        if (!fieldPruningGracePeriod || !fieldPruningGracePeriod.limit) {
           return {
             response: {
               code: EnumStatusCode.ERR,

@@ -257,7 +257,8 @@ const UsagesPage: NextPageWithLayout = () => {
                   Field Grace Period Limit
                 </dt>
                 <dd className="w-1/3 px-2 text-right text-sm font-medium">
-                  <FeatureLimit id="field-grace-period" fallback={30} /> days
+                  <FeatureLimit id="field-pruning-grace-period" fallback={30} />{" "}
+                  days
                 </dd>
               </div>
               <div className="flex">

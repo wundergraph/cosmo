@@ -65,7 +65,7 @@ export const GracePeriodDropdown = ({
   value: string;
   disabled: boolean;
 }) => {
-  const limit = useFeatureLimit("field-grace-period", 7);
+  const limit = useFeatureLimit("field-pruning-grace-period", 7);
   const options = fetchPeriodOptions(limit);
 
   return (
@@ -141,7 +141,7 @@ export const GraphPruningLintConfig = ({
   const user = useUser();
   const router = useRouter();
   const namespace = router.query.namespace as string;
-  const feature = useFeature("field-grace-period");
+  const feature = useFeature("field-pruning-grace-period");
   const plan = user?.currentOrganization?.billing?.plan;
 
   const { mutate: configureGraphPruningRules, isPending: isConfiguring } =
