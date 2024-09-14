@@ -366,6 +366,8 @@ keycloak:
     enabled: true
   cache:
     enabled: false
+  # Is set to 'small' by default which is too small and runs in OOMKilled
+  resourcesPreset: none
   postgresql:
     enabled: false
   extraEnvVars:
