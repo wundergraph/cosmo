@@ -35,7 +35,6 @@
                 <script src="${script}" type="text/javascript"></script>
             </#list>
         </#if>
-         <script type="module" src="${url.resourcesPath}/js/passwordVisibility.js"></script>
     </head>
 
     <body class="${properties.kcBodyClass!}">
