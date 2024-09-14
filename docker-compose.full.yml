@@ -150,7 +150,9 @@ services:
   keycloak:
     image: ghcr.io/wundergraph/cosmo/keycloak:${DC_KEYCLOAK_VERSION:-latest}
     environment:
-      KEYCLOAK_EXTRA_ARGS: '--import-realm --health-enabled=true'
+      KEYCLOAK_EXTRA_ARGS: '--import-realm --optimized'
+      KEYCLOAK_ENABLE_HEALTH_ENDPOINTS: 'true'
+      KEYCLOAK_ENABLE_STATISTICS: 'true'
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-changeme}
       KEYCLOAK_DATABASE_PORT: ${POSTGRES_PORT:-5432}
