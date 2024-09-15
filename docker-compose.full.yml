@@ -1,4 +1,3 @@
-version: '3.8'
 name: 'full-cosmo'
 services:
   # Services for the demo
