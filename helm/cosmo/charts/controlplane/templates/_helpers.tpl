@@ -9,10 +9,12 @@ Expand the name of the chart.
 Create the image path for the passed in image field
 */}}
 {{- define "controlplane.image" -}}
-{{- if eq (substr 0 7 .Values.image.version) "sha256:" -}}
+{{- if and (.Values.image.version) (eq (substr 0 7 .Values.image.version) "sha256:") -}}
 {{- printf "%s/%s@%s" .Values.image.registry .Values.image.repository .Values.image.version -}}
+{{- else if .Values.image.version -}}
+{{- printf "%s/%s:%s" .Values.image.registry .Values.image.repository .Values.image.version -}}
 {{- else -}}
-{{- printf "%s/%s:%s" .Values.image.registry .Values.image.repository (.Values.image.version | default .Chart.AppVersion) -}}
+{{- printf "%s/%s:%s" .Values.image.registry .Values.image.repository .Chart.AppVersion -}}
 {{- end -}}
 {{- end -}}
 

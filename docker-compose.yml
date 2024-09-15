@@ -1,4 +1,3 @@
-version: '3.8'
 name: cosmo-dev
 services:
   postgres:
@@ -25,7 +24,9 @@ services:
       context: keycloak
       dockerfile: Dockerfile
     environment:
-      KEYCLOAK_EXTRA_ARGS: '--import-realm --health-enabled=true'
+      KEYCLOAK_EXTRA_ARGS: '--import-realm --optimized'
+      KEYCLOAK_ENABLE_HEALTH_ENDPOINTS: 'true'
+      KEYCLOAK_ENABLE_STATISTICS: 'true'
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-changeme}
       KEYCLOAK_DATABASE_PORT: ${POSTGRES_PORT:-5432}
