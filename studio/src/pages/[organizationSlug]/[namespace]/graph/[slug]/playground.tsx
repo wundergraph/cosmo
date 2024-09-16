@@ -633,7 +633,9 @@ const PlaygroundPage: NextPageWithLayout = () => {
     setStoredHeaders(tempHeaders);
   }, [setStoredHeaders, tempHeaders]);
 
-  const [headers, setHeaders] = useState("{}");
+  const [headers, setHeaders] = useState(`{
+  "X-WG-TRACE" : "true"
+}`);
   const [response, setResponse] = useState<string>("");
 
   const [plan, setPlan] = useState<QueryPlan | undefined>(undefined);
