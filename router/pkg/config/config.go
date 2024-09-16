@@ -232,8 +232,6 @@ type ResponseHeaderRule struct {
 	Default string `yaml:"default"`
 	// Algorithm is the algorithm to use when multiple headers are present
 	Algorithm ResponseHeaderRuleAlgorithm `yaml:"algorithm,omitempty"`
-	// OnlyEnableOnClientRequestGet only propagates the header if the client request is a GET request
-	OnlyEnableOnClientRequestGet bool `yaml:"only_enable_on_client_request_get,omitempty"`
 }
 
 func (r *ResponseHeaderRule) GetOperation() HeaderRuleOperation {

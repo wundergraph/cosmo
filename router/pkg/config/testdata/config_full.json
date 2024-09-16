@@ -135,8 +135,7 @@
           "Named": "X-Custom-Header",
           "Rename": "",
           "Default": "",
-          "Algorithm": "append",
-          "OnlyEnableOnClientRequestGet": false
+          "Algorithm": "append"
         }
       ]
     },
@@ -158,8 +157,7 @@
             "Named": "",
             "Rename": "",
             "Default": "",
-            "Algorithm": "most_restrictive_cache_control",
-            "OnlyEnableOnClientRequestGet": false
+            "Algorithm": "most_restrictive_cache_control"
           }
         ]
       }
