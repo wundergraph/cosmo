@@ -33,7 +33,6 @@ WunderGraph Cosmo Open Telemetry Collector.
 | image.pullPolicy | string | `"IfNotPresent"` |  |
 | image.registry | string | `"ghcr.io"` |  |
 | image.repository | string | `"wundergraph/cosmo/otelcollector"` |  |
-| image.version | string | `"latest"` |  |
 | imagePullSecrets | list | `[]` |  |
 | ingress.hosts | string | `nil` |  |
 | ingress.tls | list | `[]` |  |
