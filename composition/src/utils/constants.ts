@@ -15,6 +15,7 @@ import {
   CONDITION,
   CONSUMER_NAME,
   DEFAULT_EDFS_PROVIDER_ID,
+  DEFER,
   DEPRECATED,
   EDFS_KAFKA_PUBLISH,
   EDFS_KAFKA_SUBSCRIBE,
@@ -30,14 +31,18 @@ import {
   FIELD_PATH,
   FIELD_SET_SCALAR,
   FIELDS,
+  FRAGMENT_SPREAD_UPPER,
   FROM,
+  IF,
   IN_UPPER,
   INACCESSIBLE,
+  INLINE_FRAGMENT_UPPER,
   INPUT_FIELD_DEFINITION_UPPER,
   INPUT_OBJECT_UPPER,
   INTERFACE_OBJECT,
   INTERFACE_UPPER,
   KEY,
+  LABEL,
   LINK,
   NAME,
   NOT_UPPER,
@@ -767,6 +772,34 @@ export const EDFS_NATS_STREAM_CONFIGURATION_DEFINITION: MutableInputObjectNode =
       },
     },
   ],
+};
+
+export const DEFER_DEFINITION: MutableDirectiveDefinitionNode = {
+  arguments: [
+    {
+      directives: [],
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(IF),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: stringToNamedTypeNode(BOOLEAN_SCALAR),
+      },
+      defaultValue: {
+        kind: Kind.BOOLEAN,
+        value: true,
+      },
+    },
+    {
+      directives: [],
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(LABEL),
+      type: stringToNamedTypeNode(STRING_SCALAR),
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([FRAGMENT_SPREAD_UPPER, INLINE_FRAGMENT_UPPER]),
+  name: stringToNameNode(DEFER),
+  repeatable: false,
 };
 
 export const INHERITABLE_DIRECTIVE_NAMES = [EXTERNAL, SHAREABLE];

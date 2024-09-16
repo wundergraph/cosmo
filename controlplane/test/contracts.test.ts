@@ -584,7 +584,9 @@ describe('Contract tests', (ctx) => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(sdlResponse.response?.code).toEqual(EnumStatusCode.OK);
-    expect(sdlResponse.clientSchema).toEqual(`type Query {
+    expect(sdlResponse.clientSchema).toEqual(`directive @defer(if: Boolean! = true, label: String) on FRAGMENT_SPREAD | INLINE_FRAGMENT
+
+type Query {
   hello: String!
 }`);
 
@@ -599,7 +601,9 @@ describe('Contract tests', (ctx) => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(sdlResponse2.response?.code).toEqual(EnumStatusCode.OK);
-    expect(sdlResponse2.clientSchema).toEqual(`type Query {
+    expect(sdlResponse2.clientSchema).toEqual(`directive @defer(if: Boolean! = true, label: String) on FRAGMENT_SPREAD | INLINE_FRAGMENT
+
+type Query {
   hello: String!
   hi: String!
 }`);
@@ -652,7 +656,9 @@ describe('Contract tests', (ctx) => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(sdlResponse.response?.code).toEqual(EnumStatusCode.OK);
-    expect(sdlResponse.clientSchema).toEqual(`type Query {
+    expect(sdlResponse.clientSchema).toEqual(`directive @defer(if: Boolean! = true, label: String) on FRAGMENT_SPREAD | INLINE_FRAGMENT
+
+type Query {
   hello: String!
   test: String!
 }`);
@@ -667,7 +673,9 @@ describe('Contract tests', (ctx) => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(sdlResponse2.response?.code).toEqual(EnumStatusCode.OK);
-    expect(sdlResponse2.clientSchema).toEqual(`type Query {
+    expect(sdlResponse2.clientSchema).toEqual(`directive @defer(if: Boolean! = true, label: String) on FRAGMENT_SPREAD | INLINE_FRAGMENT
+
+type Query {
   hello: String!
 }`);
 
@@ -723,7 +731,9 @@ describe('Contract tests', (ctx) => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(sdlResponse.response?.code).toEqual(EnumStatusCode.OK);
-    expect(sdlResponse.clientSchema).toEqual(`type Query {
+    expect(sdlResponse.clientSchema).toEqual(`directive @defer(if: Boolean! = true, label: String) on FRAGMENT_SPREAD | INLINE_FRAGMENT
+
+type Query {
   hello: String!
   test: String!
 }`);
@@ -739,7 +749,9 @@ describe('Contract tests', (ctx) => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(sdlResponse2.response?.code).toEqual(EnumStatusCode.OK);
-    expect(sdlResponse2.clientSchema).toEqual(`type Query {
+    expect(sdlResponse2.clientSchema).toEqual(`directive @defer(if: Boolean! = true, label: String) on FRAGMENT_SPREAD | INLINE_FRAGMENT
+
+type Query {
   hello: String!
 }`);
 
@@ -783,7 +795,9 @@ describe('Contract tests', (ctx) => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(sdlResponse.response?.code).toEqual(EnumStatusCode.OK);
-    expect(sdlResponse.clientSchema).toEqual(`type Query {
+    expect(sdlResponse.clientSchema).toEqual(`directive @defer(if: Boolean! = true, label: String) on FRAGMENT_SPREAD | INLINE_FRAGMENT
+
+type Query {
   hello: String!
   test: String!
 }`);
@@ -800,7 +814,9 @@ describe('Contract tests', (ctx) => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(sdlResponse2.response?.code).toEqual(EnumStatusCode.OK);
-    expect(sdlResponse2.clientSchema).toEqual(`type Query {
+    expect(sdlResponse2.clientSchema).toEqual(`directive @defer(if: Boolean! = true, label: String) on FRAGMENT_SPREAD | INLINE_FRAGMENT
+
+type Query {
   hello: String!
 }`);
 
@@ -863,7 +879,9 @@ describe('Contract tests', (ctx) => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(sdlResponse.response?.code).toEqual(EnumStatusCode.OK);
-    expect(sdlResponse.clientSchema).toEqual(`type Query {
+    expect(sdlResponse.clientSchema).toEqual(`directive @defer(if: Boolean! = true, label: String) on FRAGMENT_SPREAD | INLINE_FRAGMENT
+
+type Query {
   hello: String!
   test: String!
 }`);
@@ -880,7 +898,9 @@ describe('Contract tests', (ctx) => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(sdlResponse2.response?.code).toEqual(EnumStatusCode.OK);
-    expect(sdlResponse2.clientSchema).toEqual(`type Query {
+    expect(sdlResponse2.clientSchema).toEqual(`directive @defer(if: Boolean! = true, label: String) on FRAGMENT_SPREAD | INLINE_FRAGMENT
+
+type Query {
   hello: String!
 }`);
 
@@ -1125,6 +1145,7 @@ describe('Contract tests', (ctx) => {
         query: Query
         mutation: Mutation
       }
+      directive @defer(if: Boolean! = true, label: String) on FRAGMENT_SPREAD | INLINE_FRAGMENT
       directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
       directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
       
@@ -1166,6 +1187,8 @@ describe('Contract tests', (ctx) => {
       }
     `));
     expect(normalizeString(executionConfig.engineConfig!.graphqlClientSchema!)).toBe(normalizeString(`
+      directive @defer(if: Boolean! = true, label: String) on FRAGMENT_SPREAD | INLINE_FRAGMENT
+      
       type Query {
         user(id: ID!): User!
         product(sku: ID!): User!
@@ -1219,6 +1242,7 @@ describe('Contract tests', (ctx) => {
         query: Query
         mutation: Mutation
       }
+      directive @defer(if: Boolean! = true, label: String) on FRAGMENT_SPREAD | INLINE_FRAGMENT
       directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
       directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
       
@@ -1261,6 +1285,8 @@ describe('Contract tests', (ctx) => {
       }
     `));
     expect(normalizeString(newExecutionConfig.engineConfig!.graphqlClientSchema!)).toBe(normalizeString(`
+      directive @defer(if: Boolean! = true, label: String) on FRAGMENT_SPREAD | INLINE_FRAGMENT
+
       type Query {
         user(id: ID!): User!
         product(sku: ID!): User!
