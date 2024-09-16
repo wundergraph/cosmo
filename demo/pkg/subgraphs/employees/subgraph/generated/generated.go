@@ -915,7 +915,6 @@ scalar Upload
 
 type Mutation {
   updateEmployeeTag(id: Int!, tag: String!): Employee
-
   singleUpload(file: Upload!): Boolean!
   multipleUpload(files: [Upload!]!): Boolean!
 }

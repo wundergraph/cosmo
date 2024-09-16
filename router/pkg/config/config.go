@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/unique"
 	"os"
 	"time"
 
@@ -227,6 +228,7 @@ type EngineExecutionConfiguration struct {
 	ParseKitPoolSize                       int                      `envDefault:"16" env:"ENGINE_PARSEKIT_POOL_SIZE" yaml:"parsekit_pool_size,omitempty"`
 	EnableValidationCache                  bool                     `envDefault:"true" env:"ENGINE_ENABLE_VALIDATION_CACHE" yaml:"enable_validation_cache"`
 	ValidationCacheSize                    int64                    `envDefault:"1024" env:"ENGINE_VALIDATION_CACHE_SIZE" yaml:"validation_cache_size,omitempty"`
+	ResolverMaxRecyclableParserSize        int                      `envDefault:"32768" env:"ENGINE_RESOLVER_MAX_RECYCLABLE_PARSER_SIZE" yaml:"resolver_max_recyclable_parser_size,omitempty"`
 }
 
 type SecurityConfiguration struct {
@@ -449,12 +451,15 @@ const (
 )
 
 type SubgraphErrorPropagationConfiguration struct {
-	Enabled              bool                         `yaml:"enabled" envDefault:"false" env:"SUBGRAPH_ERROR_PROPAGATION_ENABLED"`
-	PropagateStatusCodes bool                         `yaml:"propagate_status_codes" envDefault:"false" env:"SUBGRAPH_ERROR_PROPAGATION_STATUS_CODES"`
-	Mode                 SubgraphErrorPropagationMode `yaml:"mode" envDefault:"wrapped" env:"SUBGRAPH_ERROR_PROPAGATION_MODE"`
-	RewritePaths         bool                         `yaml:"rewrite_paths" envDefault:"true" env:"SUBGRAPH_ERROR_PROPAGATION_REWRITE_PATHS"`
-	OmitLocations        bool                         `yaml:"omit_locations" envDefault:"true" env:"SUBGRAPH_ERROR_PROPAGATION_OMIT_LOCATIONS"`
-	OmitExtensions       bool                         `yaml:"omit_extensions" envDefault:"false" env:"SUBGRAPH_ERROR_PROPAGATION_OMIT_EXTENSIONS"`
+	Enabled                bool                         `yaml:"enabled" envDefault:"true" env:"SUBGRAPH_ERROR_PROPAGATION_ENABLED"`
+	PropagateStatusCodes   bool                         `yaml:"propagate_status_codes" envDefault:"false" env:"SUBGRAPH_ERROR_PROPAGATION_STATUS_CODES"`
+	Mode                   SubgraphErrorPropagationMode `yaml:"mode" envDefault:"wrapped" env:"SUBGRAPH_ERROR_PROPAGATION_MODE"`
+	RewritePaths           bool                         `yaml:"rewrite_paths" envDefault:"true" env:"SUBGRAPH_ERROR_PROPAGATION_REWRITE_PATHS"`
+	OmitLocations          bool                         `yaml:"omit_locations" envDefault:"true" env:"SUBGRAPH_ERROR_PROPAGATION_OMIT_LOCATIONS"`
+	OmitExtensions         bool                         `yaml:"omit_extensions" envDefault:"false" env:"SUBGRAPH_ERROR_PROPAGATION_OMIT_EXTENSIONS"`
+	AttachServiceName      bool                         `yaml:"attach_service_name" envDefault:"true" env:"SUBGRAPH_ERROR_PROPAGATION_ATTACH_SERVICE_NAME"`
+	DefaultExtensionCode   string                       `yaml:"default_extension_code" envDefault:"DOWNSTREAM_SERVICE_ERROR" env:"SUBGRAPH_ERROR_PROPAGATION_DEFAULT_EXTENSION_CODE"`
+	AllowedExtensionFields []string                     `yaml:"allowed_extension_fields" envDefault:"code" env:"SUBGRAPH_ERROR_PROPAGATION_ALLOWED_EXTENSION_FIELDS"`
 }
 
 type StorageProviders struct {
@@ -648,6 +653,7 @@ func LoadConfig(configFilePath string, envOverride string) (*LoadResult, error) 
 		cfg.Config.JSONLog = false
 		cfg.Config.SubgraphErrorPropagation.Enabled = true
 		cfg.Config.SubgraphErrorPropagation.PropagateStatusCodes = true
+		cfg.Config.SubgraphErrorPropagation.AllowedExtensionFields = unique.SliceElements(append(cfg.Config.SubgraphErrorPropagation.AllowedExtensionFields, "code", "stacktrace"))
 	}
 
 	return cfg, nil
