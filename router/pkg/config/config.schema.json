@@ -1142,6 +1142,7 @@
         "cache_size": {
           "type": "string",
           "default": "100MB",
+          "deprecated": true,
           "deprecationMessage": "The cache_size is deprecated. Please use the persisted_operations.cache instead.",
           "bytes": {
             "minimum": "10MB"
@@ -1288,6 +1289,7 @@
     "router_config_path": {
       "type": "string",
       "format": "file-path",
+      "deprecated": true,
       "deprecationMessage": "The router_config_path is deprecated. Please use the execution_config.file instead.",
       "description": "The path of the router execution config file. This file contains the information how your graph is resolved and configured. The path is specified as a string with the format 'path/to/file'."
     },
@@ -1298,7 +1300,8 @@
     },
     "override_routing_url": {
       "type": "object",
-      "description": "The configuration for the override routing URL. The override routing URL is used to override the routing URL for subgraphs. Please use the overrides section because this option is deprecated",
+      "description": "The configuration for the override routing URL. The override routing URL is used to override the routing URL for subgraphs.",
+      "deprecationMessage": "The override_routing_url is deprecated. Please use the overrides.subgraphs.routing_url instead.",
       "deprecated": true,
       "additionalProperties": false,
       "properties": {
@@ -1541,6 +1544,11 @@
           "default": 8,
           "description": "The size of the ParseKit pool. The ParseKit pool provides re-usable Resources for parsing, normalizing, validating and planning GraphQL Operations. Setting the pool size to a value much higher than the number of CPU Threads available will not improve performance, but only increase memory usage."
         },
+        "resolver_max_recyclable_parser_size": {
+          "type": "integer",
+          "default": 32768,
+          "description": "Limits the size of the Parser that can be recycled back into the Pool. If set to 0, no limit is applied. This helps keep the Heap size more maintainable if you regularly perform large queries."
+        },
         "enable_validation_cache": {
           "type": "boolean",
           "default": true,
@@ -1560,7 +1568,9 @@
       "properties": {
         "enabled": {
           "type": "boolean",
-          "default": false,
+          "default": true,
+          "deprecated": true,
+          "deprecationMessage": "Enabled is deprecated. It was only relevant for 'wrapped' mode. Please remove it from your configuration. Subgraph errors will always be propagated to the client but only the message and code extension field. This can be customized with the other fields in this configuration.",
           "description": "Enable error propagation. If the value is true (default: false), Subgraph errors will be propagated to the client."
         },
         "mode": {
@@ -1573,6 +1583,24 @@
           "type": "boolean",
           "default": true,
           "description": "Rewrite the paths of the Subgraph errors. If the value is true (default), the paths of the Subgraph errors will be rewritten to match the Schema of the Federated Graph."
+        },
+        "attach_service_name": {
+          "type": "boolean",
+          "default": true,
+          "description": "Attach the service name to each Subgraph error. If the value is true (default), the service name will be attached to the Subgraph errors."
+        },
+        "default_extension_code": {
+          "type": "string",
+          "default": "DOWNSTREAM_SERVICE_ERROR",
+          "description": "The default extension code. The default extension code is used to specify the default code for the Subgraph errors when the code is not present."
+        },
+        "allowed_extension_fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": ["code"],
+          "description": "The allowed extension fields. The allowed extension fields are used to specify which fields of the Subgraph errors are allowed to be propagated to the client."
         },
         "omit_locations": {
           "type": "boolean",
@@ -1587,7 +1615,7 @@
         "propagate_status_codes": {
           "type": "boolean",
           "default": false,
-          "description": "Propagate Subgraph status codes. If the value is true (default: false), Subgraph Response status codes will be propagated to the client in the errors.extensions.code field."
+          "description": "Propagate Subgraph HTTP status codes. If the value is true (default: false), Subgraph HTTP response status codes will be propagated to the client in the extensions statusCode field."
         }
       }
     }

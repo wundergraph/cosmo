@@ -326,7 +326,8 @@
     "NormalizationCacheSize": 1024,
     "ParseKitPoolSize": 16,
     "EnableValidationCache": true,
-    "ValidationCacheSize": 1024
+    "ValidationCacheSize": 1024,
+    "ResolverMaxRecyclableParserSize": 4096
   },
   "WebSocket": {
     "Enabled": true,
@@ -359,12 +360,17 @@
     }
   },
   "SubgraphErrorPropagation": {
-    "Enabled": false,
+    "Enabled": true,
     "PropagateStatusCodes": false,
     "Mode": "wrapped",
     "RewritePaths": true,
     "OmitLocations": true,
-    "OmitExtensions": false
+    "OmitExtensions": false,
+    "AttachServiceName": true,
+    "DefaultExtensionCode": "DOWNSTREAM_SERVICE_ERROR",
+    "AllowedExtensionFields": [
+      "code"
+    ]
   },
   "StorageProviders": {
     "S3": [

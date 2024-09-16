@@ -62,14 +62,18 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 	}
 
 	options := resolve.ResolverOptions{
-		MaxConcurrency:               opts.RouterEngineConfig.Execution.MaxConcurrentResolvers,
-		Debug:                        opts.RouterEngineConfig.Execution.Debug.EnableResolverDebugging,
-		Reporter:                     opts.Reporter,
-		PropagateSubgraphErrors:      opts.RouterEngineConfig.SubgraphErrorPropagation.Enabled,
-		PropagateSubgraphStatusCodes: opts.RouterEngineConfig.SubgraphErrorPropagation.PropagateStatusCodes,
-		RewriteSubgraphErrorPaths:    opts.RouterEngineConfig.SubgraphErrorPropagation.RewritePaths,
-		OmitSubgraphErrorLocations:   opts.RouterEngineConfig.SubgraphErrorPropagation.OmitLocations,
-		OmitSubgraphErrorExtensions:  opts.RouterEngineConfig.SubgraphErrorPropagation.OmitExtensions,
+		MaxConcurrency:                     opts.RouterEngineConfig.Execution.MaxConcurrentResolvers,
+		Debug:                              opts.RouterEngineConfig.Execution.Debug.EnableResolverDebugging,
+		Reporter:                           opts.Reporter,
+		PropagateSubgraphErrors:            opts.RouterEngineConfig.SubgraphErrorPropagation.Enabled,
+		PropagateSubgraphStatusCodes:       opts.RouterEngineConfig.SubgraphErrorPropagation.PropagateStatusCodes,
+		RewriteSubgraphErrorPaths:          opts.RouterEngineConfig.SubgraphErrorPropagation.RewritePaths,
+		OmitSubgraphErrorLocations:         opts.RouterEngineConfig.SubgraphErrorPropagation.OmitLocations,
+		OmitSubgraphErrorExtensions:        opts.RouterEngineConfig.SubgraphErrorPropagation.OmitExtensions,
+		AllowedErrorExtensionFields:        opts.RouterEngineConfig.SubgraphErrorPropagation.AllowedExtensionFields,
+		AttachServiceNameToErrorExtensions: opts.RouterEngineConfig.SubgraphErrorPropagation.AttachServiceName,
+		DefaultErrorExtensionCode:          opts.RouterEngineConfig.SubgraphErrorPropagation.DefaultExtensionCode,
+		MaxRecyclableParserSize:            opts.RouterEngineConfig.Execution.ResolverMaxRecyclableParserSize,
 	}
 
 	switch opts.RouterEngineConfig.SubgraphErrorPropagation.Mode {
