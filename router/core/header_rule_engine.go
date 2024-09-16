@@ -106,6 +106,7 @@ type HeaderPropagation struct {
 	rules            *config.HeaderRules
 	hasRequestRules  bool
 	hasResponseRules bool
+	defaultCacheRule string
 }
 
 func NewHeaderPropagation(rules *config.HeaderRules) (*HeaderPropagation, error) {
@@ -287,7 +288,7 @@ func (h *HeaderPropagation) applyResponseRuleKeyValue(res *http.Response, propag
 		propagation.header.Add(key, value)
 		propagation.m.Unlock()
 	case config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl:
-		h.applyResponseRuleMostRestrictiveCacheControl(res, propagation)
+		h.applyResponseRuleMostRestrictiveCacheControl(res, propagation, rule)
 	}
 }
 
@@ -382,7 +383,7 @@ func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.R
 	}
 }
 
-func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *http.Response, propagation *responseHeaderPropagation) {
+func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *http.Response, propagation *responseHeaderPropagation, rule *config.ResponseHeaderRule) {
 	ctx := res.Request.Context()
 	tracer := rtrace.TracerFromContext(ctx)
 	commonAttributes := []attribute.KeyValue{
@@ -429,10 +430,24 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 	propagation.m.Lock()
 	defer propagation.m.Unlock()
 
+	defaultResponseCache, _ := cachedirective.ParseResponseCacheControl(rule.Default)
+	defaultCacheControlObj := &cachedirective.Object{
+		RespDirectives: defaultResponseCache,
+	}
+
 	if propagation.previousCacheControl == nil {
-		propagation.previousCacheControl = obj
-		propagation.header.Set(cacheControlKey, res.Header.Get(cacheControlKey))
-		return
+		if rule.Default != "" {
+			propagation.previousCacheControl = defaultCacheControlObj
+			propagation.header.Set(cacheControlKey, rule.Default)
+		} else {
+			propagation.previousCacheControl = obj
+			propagation.header.Set(cacheControlKey, res.Header.Get(cacheControlKey))
+			return
+		}
+	} else if rule.Default != "" && isMoreRestrictive(defaultCacheControlObj, propagation.previousCacheControl) {
+		fmt.Println("Overwriting previous cache control with the current subgraph default")
+		propagation.previousCacheControl = defaultCacheControlObj
+		propagation.header.Set(cacheControlKey, rule.Default)
 	}
 
 	if !expiresHeader.IsZero() && (propagation.previousCacheControl.RespExpiresHeader.IsZero() || expiresHeader.Before(propagation.previousCacheControl.RespExpiresHeader)) {

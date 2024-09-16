@@ -32,6 +32,12 @@ func TestHeaderPropagation(t *testing.T) {
 	  }
 	}`
 
+	const queryEmployeeWithNoHobby = `{
+	  employee(id: 1) {
+		id
+	  }
+	}`
+
 	getRule := func(alg config.ResponseHeaderRuleAlgorithm, named string) *config.ResponseHeaderRule {
 		rule := &config.ResponseHeaderRule{
 			Operation: config.HeaderRuleOperationPropagate,
@@ -412,6 +418,103 @@ func TestHeaderPropagation(t *testing.T) {
 				now := time.Now().Add(5 * time.Minute)                        // Example expiration
 				require.WithinDuration(t, now, parsedExpires, 20*time.Second) // Ensure expiration is within expected range
 				require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
+			})
+		})
+
+		t.Run("default value adds max age", func(t *testing.T) {
+			t.Parallel()
+
+			t.Run("global default age sets for all requests", func(t *testing.T) {
+				t.Parallel()
+				testenv.Run(t, &testenv.Config{
+					RouterOptions: []core.Option{
+						core.WithHeaderRules(config.HeaderRules{
+							All: &config.GlobalHeaderRule{
+								Response: []*config.ResponseHeaderRule{
+									{
+										Operation: config.HeaderRuleOperationPropagate,
+										Algorithm: config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl,
+										Default:   "max-age=300",
+									},
+								},
+							},
+						})},
+					Subgraphs: cacheOptions("", ""),
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: queryEmployeeWithHobby,
+					})
+					cc := res.Response.Header.Get("Cache-Control")
+					require.Equal(t, "max-age=300", cc) // Shorter max-age wins
+					require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
+				})
+			})
+
+			t.Run("partial default age sets for requests with information", func(t *testing.T) {
+				t.Parallel()
+				alg := config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl
+				testenv.Run(t, &testenv.Config{
+					RouterOptions: []core.Option{
+						core.WithHeaderRules(config.HeaderRules{
+							Subgraphs: map[string]*config.GlobalHeaderRule{
+								"employees": {
+									Response: []*config.ResponseHeaderRule{
+										getRule(alg, ""),
+									},
+								},
+								"hobbies": {
+									Response: []*config.ResponseHeaderRule{
+										{
+											Operation: config.HeaderRuleOperationPropagate,
+											Algorithm: config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl,
+											Default:   "max-age=300",
+										},
+									},
+								},
+							},
+						})},
+					Subgraphs: cacheOptions("", ""),
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: queryEmployeeWithHobby,
+					})
+					cc := res.Response.Header.Get("Cache-Control")
+					require.Equal(t, "max-age=300", cc) // Shorter max-age wins
+					require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
+				})
+			})
+
+			t.Run("partial default age doesn't set for unassociated requests", func(t *testing.T) {
+				t.Parallel()
+				testenv.Run(t, &testenv.Config{
+					RouterOptions: []core.Option{
+						core.WithHeaderRules(config.HeaderRules{
+							Subgraphs: map[string]*config.GlobalHeaderRule{
+								"employees": {
+									Response: []*config.ResponseHeaderRule{
+										getRule(config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl, ""),
+									},
+								},
+								"hobbies": {
+									Response: []*config.ResponseHeaderRule{
+										{
+											Operation: config.HeaderRuleOperationPropagate,
+											Algorithm: config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl,
+											Default:   "max-age=300",
+										},
+									},
+								},
+							},
+						})},
+					Subgraphs: cacheOptions("", ""),
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: queryEmployeeWithNoHobby,
+					})
+					cc := res.Response.Header.Get("Cache-Control")
+					require.Equal(t, "", cc)
+					require.Equal(t, `{"data":{"employee":{"id":1}}}`, res.Body)
+				})
 			})
 		})
 	})

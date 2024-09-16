@@ -1705,7 +1705,27 @@
           "description": "The algorith, to use when multiple headers are present. The supported operations are '\"first_write\", \"last_write\", \"append\", and \"most_restrictive_cache_control\"'. The 'first_write' retains the first value of a given header. The 'last_write' retains the last value of a given header. The 'append' appends all values of a given header. The 'most_restrictive_cache_control' specifically focuses on the 'Cache-Control'/'Expiration' headers, and applies the most restrictive value encountered from a subgraph"
         }
       },
-      "required": ["op"]
+      "required": ["op", "algorithm"],
+      "if": {
+        "properties": {
+          "algorithm": { "const": "most_restrictive_cache_control" }
+        }
+      },
+      "then": {
+        "properties": {
+          "matching": { "not": {} },
+          "named": { "not": {} },
+          "rename": { "not": {} }
+        },
+        "required": ["op", "algorithm"]
+      },
+      "else": {
+        "properties": {
+          "matching": {},
+          "named": {},
+          "rename": {}
+        }
+      }
     }
   }
 }
