@@ -106,7 +106,6 @@ type HeaderPropagation struct {
 	rules            *config.HeaderRules
 	hasRequestRules  bool
 	hasResponseRules bool
-	defaultCacheRule string
 }
 
 func NewHeaderPropagation(rules *config.HeaderRules) (*HeaderPropagation, error) {
