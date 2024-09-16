@@ -70,6 +70,8 @@ func TestFederateSubgraphs(t *testing.T) {
 		expectedSDL = `
 			directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
 
+			directive @defer(if: Boolean! = true, label: String) on FRAGMENT_SPREAD | INLINE_FRAGMENT
+
 			directive @deprecated(reason: String = "No longer supported") on ARGUMENT_DEFINITION | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION
 
 			directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
