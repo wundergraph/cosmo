@@ -128,7 +128,17 @@
           "Default": "123"
         }
       ],
-      "Response": null
+      "Response": [
+        {
+          "Operation": "propagate",
+          "Matching": "",
+          "Named": "X-Custom-Header",
+          "Rename": "",
+          "Default": "",
+          "Algorithm": "append",
+          "OnlyEnableOnClientRequestGet": false
+        }
+      ]
     },
     "Subgraphs": {
       "specific-subgraph": {
@@ -141,7 +151,17 @@
             "Default": "some-secret"
           }
         ],
-        "Response": null
+        "Response": [
+          {
+            "Operation": "propagate",
+            "Matching": "",
+            "Named": "",
+            "Rename": "",
+            "Default": "",
+            "Algorithm": "most_restrictive_cache_control",
+            "OnlyEnableOnClientRequestGet": false
+          }
+        ]
       }
     }
   },
