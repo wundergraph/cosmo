@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.2](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.11.1...helm-cosmo@0.11.2) (2024-09-16)
+
+
+### Bug Fixes
+
+* use appVersion by default, optimize keycloak startup time ([#1170](https://github.com/wundergraph/cosmo/issues/1170)) ([82c2bb9](https://github.com/wundergraph/cosmo/commit/82c2bb98d568fd7973fa700a84bec7ce4c0c51cf))
+
 ## [0.11.1](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.11.0...helm-cosmo@0.11.1) (2024-09-05)
 
 
