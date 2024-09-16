@@ -180,6 +180,11 @@ const (
 	HeaderRuleOperationPropagate HeaderRuleOperation = "propagate"
 )
 
+type HeaderRule interface {
+	GetOperation() HeaderRuleOperation
+	GetMatching() string
+}
+
 type RequestHeaderRule struct {
 	// Operation describes the header operation to perform e.g. "propagate"
 	Operation HeaderRuleOperation `yaml:"op"`
@@ -191,6 +196,14 @@ type RequestHeaderRule struct {
 	Rename string `yaml:"rename,omitempty"`
 	// Default is the default value to set if the header is not present
 	Default string `yaml:"default"`
+}
+
+func (r *RequestHeaderRule) GetOperation() HeaderRuleOperation {
+	return r.Operation
+}
+
+func (r *RequestHeaderRule) GetMatching() string {
+	return r.Matching
 }
 
 type ResponseHeaderRuleAlgorithm string
@@ -221,6 +234,14 @@ type ResponseHeaderRule struct {
 	Algorithm ResponseHeaderRuleAlgorithm `yaml:"algorithm,omitempty"`
 	// OnlyEnableOnClientRequestGet only propagates the header if the client request is a GET request
 	OnlyEnableOnClientRequestGet bool `yaml:"only_enable_on_client_request_get,omitempty"`
+}
+
+func (r *ResponseHeaderRule) GetOperation() HeaderRuleOperation {
+	return r.Operation
+}
+
+func (r *ResponseHeaderRule) GetMatching() string {
+	return r.Matching
 }
 
 type EngineDebugConfiguration struct {

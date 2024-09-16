@@ -3,6 +3,11 @@ package core
 import (
 	"context"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"io"
 	"net/http"
 	"regexp"
@@ -11,10 +16,8 @@ import (
 	"time"
 
 	cachedirective "github.com/pquerna/cachecontrol/cacheobject"
-	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
 var (
@@ -87,7 +90,9 @@ type headerPropagationWriter struct {
 func (h *headerPropagationWriter) Write(p []byte) (n int, err error) {
 	if h.propagateHeaders {
 		for k, v := range h.headerPropagation.header {
-			h.writer.Header()[k] = v
+			for _, el := range v {
+				h.writer.Header().Add(k, el)
+			}
 		}
 		h.propagateHeaders = false
 	}
@@ -104,7 +109,6 @@ type HeaderPropagation struct {
 }
 
 func NewHeaderPropagation(rules *config.HeaderRules) (*HeaderPropagation, error) {
-
 	if rules == nil {
 		return nil, nil
 	}
@@ -121,57 +125,61 @@ func NewHeaderPropagation(rules *config.HeaderRules) (*HeaderPropagation, error)
 		regex: map[string]*regexp.Regexp{},
 	}
 
-	var rhrs []*config.RequestHeaderRule
+	rhrs, rhrrs := hf.getAllRules()
+	hf.hasRequestRules = len(rhrs) > 0
+	hf.hasResponseRules = len(rhrrs) > 0
 
-	rhrs = append(rhrs, rules.All.Request...)
+	if err := hf.collectRuleMatchers(rhrs, rhrrs); err != nil {
+		return nil, err
+	}
 
-	for _, subgraph := range rules.Subgraphs {
+	return &hf, nil
+}
+
+func (hf *HeaderPropagation) getAllRules() ([]*config.RequestHeaderRule, []*config.ResponseHeaderRule) {
+	rhrs := hf.rules.All.Request
+	for _, subgraph := range hf.rules.Subgraphs {
 		rhrs = append(rhrs, subgraph.Request...)
 	}
 
-	for i, rule := range rhrs {
-		switch rule.Operation {
-		case config.HeaderRuleOperationPropagate:
-			if rule.Matching != "" {
-				regex, err := regexp.Compile(rule.Matching)
-				if err != nil {
-					return nil, fmt.Errorf("invalid regex '%s' for header rule %d: %w", rule.Matching, i, err)
-				}
-				hf.regex[rule.Matching] = regex
-			}
-		default:
-			return nil, fmt.Errorf("unhandled operation '%s' for header rule %+v", rule.Operation, rule)
-		}
-	}
-
-	hf.hasRequestRules = len(rhrs) > 0
-
-	var rhrrs []*config.ResponseHeaderRule
-
-	rhrrs = append(rhrrs, rules.All.Response...)
-
-	for _, subgraph := range rules.Subgraphs {
+	rhrrs := hf.rules.All.Response
+	for _, subgraph := range hf.rules.Subgraphs {
 		rhrrs = append(rhrrs, subgraph.Response...)
 	}
 
-	for i, rule := range rhrrs {
-		switch rule.Operation {
-		case config.HeaderRuleOperationPropagate:
-			if rule.Matching != "" {
-				regex, err := regexp.Compile(rule.Matching)
-				if err != nil {
-					return nil, fmt.Errorf("invalid regex '%s' for header rule %d: %w", rule.Matching, i, err)
-				}
-				hf.regex[rule.Matching] = regex
+	return rhrs, rhrrs
+}
+
+func (hf *HeaderPropagation) processRule(rule config.HeaderRule, index int) error {
+	switch rule.GetOperation() {
+	case config.HeaderRuleOperationPropagate:
+		if rule.GetMatching() != "" {
+			regex, err := regexp.Compile(rule.GetMatching())
+			if err != nil {
+				return fmt.Errorf("invalid regex '%s' for header rule %d: %w", rule.GetMatching(), index, err)
 			}
-		default:
-			return nil, fmt.Errorf("unhandled operation '%s' for header rule %+v", rule.Operation, rule)
+			hf.regex[rule.GetMatching()] = regex
+		}
+	default:
+		return fmt.Errorf("unhandled operation '%s' for header rule %+v", rule.GetOperation(), rule)
+	}
+	return nil
+}
+
+func (hf *HeaderPropagation) collectRuleMatchers(rhrs []*config.RequestHeaderRule, rhrrs []*config.ResponseHeaderRule) error {
+	for i, rule := range rhrs {
+		if err := hf.processRule(rule, i); err != nil {
+			return err
 		}
 	}
 
-	hf.hasResponseRules = len(rhrrs) > 0
+	for i, rule := range rhrrs {
+		if err := hf.processRule(rule, i); err != nil {
+			return err
+		}
+	}
 
-	return &hf, nil
+	return nil
 }
 
 func (h *HeaderPropagation) HasRequestRules() bool {
@@ -189,7 +197,6 @@ func (h *HeaderPropagation) HasResponseRules() bool {
 }
 
 func (h *HeaderPropagation) OnOriginRequest(request *http.Request, ctx RequestContext) (*http.Request, *http.Response) {
-
 	for _, rule := range h.rules.All.Request {
 		h.applyRequestRule(ctx, request, rule)
 	}
@@ -207,7 +214,6 @@ func (h *HeaderPropagation) OnOriginRequest(request *http.Request, ctx RequestCo
 }
 
 func (h *HeaderPropagation) OnOriginResponse(resp *http.Response, ctx RequestContext) *http.Response {
-
 	propagation := getResponseHeaderPropagation(resp.Request.Context())
 	if propagation == nil {
 		return resp
@@ -247,9 +253,7 @@ func (h *HeaderPropagation) applyResponseRule(propagation *responseHeaderPropaga
 		}
 
 		return
-	}
-
-	if rule.Matching != "" {
+	} else if rule.Matching != "" {
 		if regex, ok := h.regex[rule.Matching]; ok {
 			for name := range res.Header {
 				if regex.MatchString(name) {
@@ -260,6 +264,9 @@ func (h *HeaderPropagation) applyResponseRule(propagation *responseHeaderPropaga
 				}
 			}
 		}
+	} else if rule.Algorithm == config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl {
+		// Explicitly apply the CacheControl algorithm on the headers
+		h.applyResponseRuleKeyValue(res, propagation, rule, "", "")
 	}
 }
 
@@ -267,7 +274,7 @@ func (h *HeaderPropagation) applyResponseRuleKeyValue(res *http.Response, propag
 	switch rule.Algorithm {
 	case config.ResponseHeaderRuleAlgorithmFirstWrite:
 		propagation.m.Lock()
-		if _, ok := propagation.header[key]; !ok {
+		if val := propagation.header.Get(key); val == "" {
 			propagation.header.Set(key, value)
 		}
 		propagation.m.Unlock()
@@ -280,12 +287,11 @@ func (h *HeaderPropagation) applyResponseRuleKeyValue(res *http.Response, propag
 		propagation.header.Add(key, value)
 		propagation.m.Unlock()
 	case config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl:
-		h.applyResponseRuleMostRestrictiveCacheControl(res, propagation, key)
+		h.applyResponseRuleMostRestrictiveCacheControl(res, propagation)
 	}
 }
 
 func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.Request, rule *config.RequestHeaderRule) {
-
 	if rule.Operation != config.HeaderRuleOperationPropagate {
 		return
 	}
@@ -376,7 +382,19 @@ func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.R
 	}
 }
 
-func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *http.Response, propagation *responseHeaderPropagation, cacheControlKey string) {
+func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *http.Response, propagation *responseHeaderPropagation) {
+	ctx := res.Request.Context()
+	tracer := rtrace.TracerFromContext(ctx)
+	commonAttributes := []attribute.KeyValue{
+		otel.WgOperationProtocol.String(OperationProtocolHTTP.String()),
+	}
+
+	_, span := tracer.Start(ctx, "HeaderPropagation - RestrictiveCacheControl",
+		trace.WithSpanKind(trace.SpanKindInternal),
+		trace.WithAttributes(commonAttributes...),
+	)
+
+	cacheControlKey := "Cache-Control"
 	reqDir, _ := cachedirective.ParseRequestCacheControl(res.Request.Header.Get(cacheControlKey))
 	resDir, _ := cachedirective.ParseResponseCacheControl(res.Header.Get(cacheControlKey))
 	expiresHeader, _ := http.ParseTime(res.Header.Get("Expires"))
@@ -391,8 +409,6 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 		RespDateHeader:         dateHeader,
 		RespLastModifiedHeader: lastModifiedHeader,
 
-		//CacheIsPrivate: false,
-
 		ReqDirectives: reqDir,
 		ReqHeaders:    res.Request.Header,
 		ReqMethod:     res.Request.Method,
@@ -404,10 +420,11 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 	cachedirective.CachableObject(obj, &rv)
 	cachedirective.ExpirationObject(obj, &rv)
 
-	fmt.Println("Errors: ", rv.OutErr)
-	fmt.Println("Reasons to not cache: ", rv.OutReasons)
-	fmt.Println("Warning headers to add: ", rv.OutWarnings)
-	fmt.Println("Expiration: ", rv.OutExpirationTime.String())
+	span.SetAttributes(
+		otel.WgResponseCacheControlReasons.String(fmt.Sprint(rv.OutReasons)),
+		otel.WgResponseCacheControlWarnings.String(fmt.Sprint(rv.OutWarnings)),
+		otel.WgResponseCacheControlExpiration.String(rv.OutExpirationTime.String()),
+	)
 
 	propagation.m.Lock()
 	defer propagation.m.Unlock()
@@ -418,7 +435,48 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 		return
 	}
 
-	// TODO: if the previous cache control is more restrictive than the current one, keep it, otherwise, update it
+	if !expiresHeader.IsZero() && (propagation.previousCacheControl.RespExpiresHeader.IsZero() || expiresHeader.Before(propagation.previousCacheControl.RespExpiresHeader)) {
+		propagation.previousCacheControl = obj
+		propagation.header.Set("Expires", res.Header.Get("Expires"))
+	}
+
+	// Compare the previous cache control with the current one to find the most restrictive
+	if isMoreRestrictive(propagation.previousCacheControl, obj) {
+		// Keep the previous cache control, which is more restrictive
+		fmt.Println("Keeping the previous cache control as it's more restrictive")
+	} else {
+		// The current cache control is more restrictive, so update it
+		fmt.Println("Updating to the current cache control as it's more restrictive")
+		propagation.previousCacheControl = obj
+		propagation.header.Set(cacheControlKey, res.Header.Get(cacheControlKey))
+	}
+}
+
+// isMoreRestrictive compares two cachedirective.Object instances and returns true if the first is more restrictive
+func isMoreRestrictive(prev *cachedirective.Object, curr *cachedirective.Object) bool {
+	// Example comparison logic: check if "no-store" or "no-cache" are present, which are more restrictive
+	if prev.RespDirectives.NoStore || curr.RespDirectives.NoStore {
+		return true // No store is the most restrictive
+	}
+	if prev.RespDirectives.NoCachePresent && !curr.RespDirectives.NoCachePresent {
+		return true // No-cache is more restrictive than not having it
+	}
+	if curr.RespDirectives.NoCachePresent && !prev.RespDirectives.NoCachePresent {
+		return false // Current response has no-cache, which is more restrictive
+	}
+
+	// Compare max-age: the shorter max-age is more restrictive
+	if prev.RespDirectives.MaxAge > 0 && curr.RespDirectives.MaxAge > 0 {
+		return prev.RespDirectives.MaxAge < curr.RespDirectives.MaxAge
+	}
+
+	// If neither has max-age, but one has other expiration controls like Expires header, use that
+	if !prev.RespExpiresHeader.IsZero() && !curr.RespExpiresHeader.IsZero() {
+		return prev.RespExpiresHeader.Before(curr.RespExpiresHeader)
+	}
+
+	// Fallback: if they are equal in restrictiveness, keep the previous one
+	return true
 }
 
 // SubgraphRules returns the list of header rules for the subgraph with the given name

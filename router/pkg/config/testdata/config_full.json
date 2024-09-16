@@ -127,7 +127,8 @@
           "Rename": "",
           "Default": "123"
         }
-      ]
+      ],
+      "Response": null
     },
     "Subgraphs": {
       "specific-subgraph": {
@@ -139,7 +140,8 @@
             "Rename": "",
             "Default": "some-secret"
           }
-        ]
+        ],
+        "Response": null
       }
     }
   },
