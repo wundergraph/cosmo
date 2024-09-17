@@ -376,7 +376,6 @@ export interface GraphApiKeyDTO {
   id: string;
   name: string;
   token: string;
-  lastUsedAt?: string;
   createdAt: string;
   creatorEmail: string | null;
 }

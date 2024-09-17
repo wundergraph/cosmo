@@ -9687,7 +9687,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             id: rest.id,
             name: rest.name,
             createdAt: rest.createdAt,
-            lastUsedAt: rest.lastUsedAt || '',
             creatorEmail: rest.creatorEmail || '',
           })),
         };

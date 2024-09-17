@@ -680,6 +680,13 @@
       "when": 1725251037898,
       "tag": "0096_red_bug",
       "breakpoints": true
+    },
+    {
+      "idx": 97,
+      "version": "7",
+      "when": 1726561482493,
+      "tag": "0097_dry_jack_flag",
+      "breakpoints": true
     }
   ]
 }
