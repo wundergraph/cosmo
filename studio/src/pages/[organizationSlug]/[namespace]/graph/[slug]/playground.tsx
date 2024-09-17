@@ -41,6 +41,7 @@ import {
 import { Tooltip } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
+import { useLocalStorage } from "@/hooks/use-local-storage";
 import { NextPageWithLayout } from "@/lib/page";
 import { parseSchema } from "@/lib/schema-helpers";
 import { cn } from "@/lib/utils";
@@ -603,6 +604,35 @@ const PlaygroundPage: NextPageWithLayout = () => {
   const [query, setQuery] = useState<string | undefined>(
     operation ? decodeURIComponent(operation) : undefined,
   );
+
+  const [storedHeaders, setStoredHeaders] = useLocalStorage(
+    "graphiql:headers",
+    "",
+    {
+      deserializer(value) {
+        return value;
+      },
+      serializer(value) {
+        return value;
+      },
+    },
+  );
+  const [tempHeaders, setTempHeaders] = useState<any>();
+
+  useEffect(() => {
+    if (!storedHeaders || tempHeaders) {
+      return;
+    }
+    setTempHeaders(storedHeaders);
+  }, [storedHeaders, tempHeaders]);
+
+  useEffect(() => {
+    if (!tempHeaders) {
+      return;
+    }
+    setStoredHeaders(tempHeaders);
+  }, [setStoredHeaders, tempHeaders]);
+
   const [headers, setHeaders] = useState(`{
   "X-WG-TRACE" : "true"
 }`);
@@ -898,7 +928,9 @@ const PlaygroundPage: NextPageWithLayout = () => {
           query={query}
           variables={variables ? decodeURIComponent(variables) : undefined}
           onEditQuery={setQuery}
-          headers={headers}
+          defaultHeaders={`{
+  "X-WG-TRACE" : "true"
+}`}
           onEditHeaders={setHeaders}
           plugins={[
             explorerPlugin({
