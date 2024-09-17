@@ -247,8 +247,8 @@ github.com/wundergraph/astjson v0.0.0-20240910140849-bb15f94bd362 h1:MxNSJqQFJyh
 github.com/wundergraph/astjson v0.0.0-20240910140849-bb15f94bd362/go.mod h1:eOTL6acwctsN4F3b7YE+eE2t8zcJ/doLm9sZzsxxxrE=
 github.com/wundergraph/cosmo/router v0.0.0-20240917083803-9ac159070f12 h1:j11xczYYLj72ylDw7T7UQwX+OAPBhJmfh/sbl0tngfo=
 github.com/wundergraph/cosmo/router v0.0.0-20240917083803-9ac159070f12/go.mod h1:hcEocQnviSg+gumcym4MmgTXvdjNy9HuQHP6ns7L3x0=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.82 h1:z1iO9Vr4ueP91yAQ0nkO1op/m2imRyXccV/EnJtFQiU=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.82/go.mod h1:zkPVYJu1iQd0y1fBNj+oXe9uMI/33TSoiXEsKSAESZY=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.83 h1:h55NpJRtcYqLZ6VwQcXWs4XU6+imjOmN1naQWpji/1Y=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.83/go.mod h1:zkPVYJu1iQd0y1fBNj+oXe9uMI/33TSoiXEsKSAESZY=
 github.com/yusufpapurcu/wmi v1.2.4 h1:zFUKzehAFReQwLys1b/iSMl+JQGSCSjtVqQn9bBrPo0=
 github.com/yusufpapurcu/wmi v1.2.4/go.mod h1:SBZ9tNy3G9/m5Oi98Zks0QjeHVDvuK0qfxQmPyzfmi0=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1 h1:aFJWCqJMNjENlcleuuOkGAPH82y0yULBScfXcIEdS24=
