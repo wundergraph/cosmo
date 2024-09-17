@@ -266,12 +266,15 @@ const PlaygroundPortal = () => {
   );
 };
 
-export const Playground = (input: {
-  routingUrl?: string;
-  hideLogo?: boolean;
-  theme?: 'light' | 'dark' | undefined;
-  scripts?: GraphiQLScripts;
-}) => {
+export const Playground = (
+  input: {
+    routingUrl?: string;
+    hideLogo?: boolean;
+    theme?: 'light' | 'dark' | undefined;
+    scripts?: GraphiQLScripts;
+    fetch?: typeof fetch;
+  },
+) => {
   const url = input.routingUrl || import.meta.env.VITE_ROUTING_URL || '{{graphqlURL}}';
 
   const [isMounted, setIsMounted] = useState(false);
@@ -374,7 +377,8 @@ export const Playground = (input: {
   });
 
   const getSchema = async () => {
-    const res = await fetch(url, {
+    const fetchFunc = input.fetch ? input.fetch : fetch;
+    const res = await fetchFunc(url, {
       body: JSON.stringify({
         operationName: 'IntrospectionQuery',
         query: getIntrospectionQuery(),
