@@ -31,17 +31,24 @@ const validateHeaders = (headers: Record<string, string>) => {
   }
 };
 
+type GraphiQLScripts = {
+  transformHeaders?: (headers: Record<string, string>) => Record<string, string>;
+};
+
 const graphiQLFetch = async (
   schema: GraphQLSchema | null,
   clientValidationEnabled: boolean,
+  scripts: GraphiQLScripts | undefined,
   onFetch: any,
   url: URL,
   init: RequestInit,
 ) => {
   try {
-    const headers: Record<string, string> = {
-      ...(init.headers as Record<string, string>),
-    };
+    const headers: Record<string, string> = scripts?.transformHeaders
+      ? scripts.transformHeaders(init.headers as Record<string, string>)
+      : {
+          ...(init.headers as Record<string, string>),
+        };
 
     validateHeaders(headers);
 
@@ -263,6 +270,7 @@ export const Playground = (input: {
   routingUrl?: string;
   hideLogo?: boolean;
   theme?: 'light' | 'dark' | undefined;
+  scripts?: GraphiQLScripts;
 }) => {
   const url = input.routingUrl || import.meta.env.VITE_ROUTING_URL || '{{graphqlURL}}';
 
@@ -390,7 +398,7 @@ export const Playground = (input: {
       url: url,
       subscriptionUrl: window.location.protocol.replace('http', 'ws') + '//' + window.location.host + url,
       fetch: (...args) =>
-        graphiQLFetch(schema, clientValidationEnabled, onFetch, args[0] as URL, args[1] as RequestInit),
+        graphiQLFetch(schema, clientValidationEnabled, input.scripts, onFetch, args[0] as URL, args[1] as RequestInit),
     });
   }, [schema, clientValidationEnabled]);
 
