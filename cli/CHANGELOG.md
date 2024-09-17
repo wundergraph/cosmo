@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.64.2](https://github.com/wundergraph/cosmo/compare/wgc@0.64.1...wgc@0.64.2) (2024-09-17)
+
+### Bug Fixes
+
+* remove lastUsedAt for graph tokens ([#1180](https://github.com/wundergraph/cosmo/issues/1180)) ([9ac1590](https://github.com/wundergraph/cosmo/commit/9ac159070f122b45aaa37661143575cfa8fa5b27)) (@thisisnithin)
+
 ## [0.64.1](https://github.com/wundergraph/cosmo/compare/wgc@0.64.0...wgc@0.64.1) (2024-09-12)
 
 **Note:** Version bump only for package wgc
