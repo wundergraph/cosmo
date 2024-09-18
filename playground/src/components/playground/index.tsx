@@ -44,11 +44,10 @@ const graphiQLFetch = async (
   init: RequestInit,
 ) => {
   try {
+    const initialHeaders = init.headers as Record<string, string>;
     const headers: Record<string, string> = scripts?.transformHeaders
-      ? scripts.transformHeaders(init.headers as Record<string, string>)
-      : {
-          ...(init.headers as Record<string, string>),
-        };
+      ? scripts.transformHeaders(initialHeaders)
+      : { ...initialHeaders };
 
     validateHeaders(headers);
 
@@ -266,15 +265,13 @@ const PlaygroundPortal = () => {
   );
 };
 
-export const Playground = (
-  input: {
-    routingUrl?: string;
-    hideLogo?: boolean;
-    theme?: 'light' | 'dark' | undefined;
-    scripts?: GraphiQLScripts;
-    fetch?: typeof fetch;
-  },
-) => {
+export const Playground = (input: {
+  routingUrl?: string;
+  hideLogo?: boolean;
+  theme?: 'light' | 'dark' | undefined;
+  scripts?: GraphiQLScripts;
+  fetch?: typeof fetch;
+}) => {
   const url = input.routingUrl || import.meta.env.VITE_ROUTING_URL || '{{graphqlURL}}';
 
   const [isMounted, setIsMounted] = useState(false);
