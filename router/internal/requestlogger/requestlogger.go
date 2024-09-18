@@ -178,7 +178,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				fields = append(fields, zap.Bool("broken_pipe", brokenPipe))
 				h.logger.WithOptions(zap.AddStacktrace(zapcore.DPanicLevel)).Error(path, fields...)
 			} else {
-				h.logger.WithOptions(zap.AddStacktrace(zapcore.DPanicLevel)).Error("[Recovery from panic]", fields...)
+				h.logger.Error("[Recovery from panic]", fields...)
 			}
 
 			// rethrow the error to the recover middleware can handle it
