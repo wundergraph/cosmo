@@ -133,7 +133,7 @@ func (l *Loader) LoadInternedString(engineConfig *nodev1.EngineConfiguration, st
 
 type RouterEngineConfiguration struct {
 	Execution                config.EngineExecutionConfiguration
-	Headers                  config.HeaderRules
+	Headers                  *config.HeaderRules
 	Events                   config.EventsConfiguration
 	SubgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
 }
@@ -314,7 +314,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				}
 			}
 
-			dataSourceRules := FetchURLRules(&routerEngineConfig.Headers, subgraphs, subscriptionUrl)
+			dataSourceRules := FetchURLRules(routerEngineConfig.Headers, subgraphs, subscriptionUrl)
 			forwardedClientHeaders, forwardedClientRegexps, err := PropagatedHeaders(dataSourceRules)
 			if err != nil {
 				return nil, fmt.Errorf("error parsing header rules for data source %s: %w", in.Id, err)

@@ -27,17 +27,17 @@ func TestForwardHeaders(t *testing.T) {
 	)
 
 	headerRules := config.HeaderRules{
-		All: config.GlobalHeaderRule{
-			Request: []config.RequestHeaderRule{
+		All: &config.GlobalHeaderRule{
+			Request: []*config.RequestHeaderRule{
 				{
 					Operation: config.HeaderRuleOperationPropagate,
 					Named:     headerNameInGlobalRule,
 				},
 			},
 		},
-		Subgraphs: map[string]config.GlobalHeaderRule{
+		Subgraphs: map[string]*config.GlobalHeaderRule{
 			"test1": {
-				Request: []config.RequestHeaderRule{
+				Request: []*config.RequestHeaderRule{
 					{
 						Operation: config.HeaderRuleOperationPropagate,
 						Matching:  "(?i)^bar.*",
@@ -246,8 +246,8 @@ func TestForwardRenamedHeaders(t *testing.T) {
 	)
 
 	headerRules := config.HeaderRules{
-		All: config.GlobalHeaderRule{
-			Request: []config.RequestHeaderRule{
+		All: &config.GlobalHeaderRule{
+			Request: []*config.RequestHeaderRule{
 				{
 					Operation: config.HeaderRuleOperationPropagate,
 					Named:     headerNameInGlobalRule,
@@ -255,9 +255,9 @@ func TestForwardRenamedHeaders(t *testing.T) {
 				},
 			},
 		},
-		Subgraphs: map[string]config.GlobalHeaderRule{
+		Subgraphs: map[string]*config.GlobalHeaderRule{
 			"test1": {
-				Request: []config.RequestHeaderRule{
+				Request: []*config.RequestHeaderRule{
 					{
 						Operation: config.HeaderRuleOperationPropagate,
 						Matching:  "(?i)^bar.*",

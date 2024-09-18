@@ -151,13 +151,19 @@ headers:
       - op: "propagate"
         named: "X-User-Id"
         default: "123"             # Set the value when the header was not set
-
+    response:
+      - op: "propagate"
+        algorithm: "append"
+        named: "X-Custom-Header"
   subgraphs:
     specific-subgraph: # Will only affect this subgraph
       request:
         - op: "propagate"
           named: Subgraph-Secret
           default: "some-secret"
+      response:
+        - op: "propagate"
+          algorithm: "most_restrictive_cache_control"
 
 # Authentication and Authorization
 # See https://cosmo-docs.wundergraph.com/router/authentication-and-authorization for more information

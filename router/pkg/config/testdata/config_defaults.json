@@ -82,9 +82,7 @@
   },
   "Modules": null,
   "Headers": {
-    "All": {
-      "Request": null
-    },
+    "All": null,
     "Subgraphs": null
   },
   "TrafficShaping": {

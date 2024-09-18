@@ -127,6 +127,16 @@
           "Rename": "",
           "Default": "123"
         }
+      ],
+      "Response": [
+        {
+          "Operation": "propagate",
+          "Matching": "",
+          "Named": "X-Custom-Header",
+          "Rename": "",
+          "Default": "",
+          "Algorithm": "append"
+        }
       ]
     },
     "Subgraphs": {
@@ -138,6 +148,16 @@
             "Named": "Subgraph-Secret",
             "Rename": "",
             "Default": "some-secret"
+          }
+        ],
+        "Response": [
+          {
+            "Operation": "propagate",
+            "Matching": "",
+            "Named": "",
+            "Rename": "",
+            "Default": "",
+            "Algorithm": "most_restrictive_cache_control"
           }
         ]
       }

@@ -516,8 +516,8 @@ func TestWebSockets(t *testing.T) {
 	t.Run("subscription with header propagation", func(t *testing.T) {
 		t.Parallel()
 		headerRules := config.HeaderRules{
-			All: config.GlobalHeaderRule{
-				Request: []config.RequestHeaderRule{
+			All: &config.GlobalHeaderRule{
+				Request: []*config.RequestHeaderRule{
 					{
 						Operation: config.HeaderRuleOperationPropagate,
 						Named:     "Authorization",
@@ -652,8 +652,8 @@ func TestWebSockets(t *testing.T) {
 	t.Run("empty allow lists should allow all headers and query args", func(t *testing.T) {
 		t.Parallel()
 		headerRules := config.HeaderRules{
-			All: config.GlobalHeaderRule{
-				Request: []config.RequestHeaderRule{
+			All: &config.GlobalHeaderRule{
+				Request: []*config.RequestHeaderRule{
 					{
 						Operation: config.HeaderRuleOperationPropagate,
 						Named:     "Authorization",
@@ -795,8 +795,8 @@ func TestWebSockets(t *testing.T) {
 	t.Run("subscription with header propagation sse subgraph post", func(t *testing.T) {
 		t.Parallel()
 		headerRules := config.HeaderRules{
-			All: config.GlobalHeaderRule{
-				Request: []config.RequestHeaderRule{
+			All: &config.GlobalHeaderRule{
+				Request: []*config.RequestHeaderRule{
 					{
 						Operation: config.HeaderRuleOperationPropagate,
 						Named:     "Authorization",
@@ -910,8 +910,8 @@ func TestWebSockets(t *testing.T) {
 	t.Run("subscription with header propagation sse subgraph get", func(t *testing.T) {
 		t.Parallel()
 		headerRules := config.HeaderRules{
-			All: config.GlobalHeaderRule{
-				Request: []config.RequestHeaderRule{
+			All: &config.GlobalHeaderRule{
+				Request: []*config.RequestHeaderRule{
 					{
 						Operation: config.HeaderRuleOperationPropagate,
 						Named:     "Authorization",
