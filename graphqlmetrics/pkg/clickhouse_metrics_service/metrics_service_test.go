@@ -1,4 +1,4 @@
-package core
+package clickhouse_metrics_service
 
 import (
 	"context"
@@ -23,7 +23,7 @@ func TestPublishGraphQLMetrics(t *testing.T) {
 
 	db := test.GetTestDatabase(t)
 
-	msvc := NewMetricsService(zap.NewNop(), db)
+	msvc := New(zap.NewNop(), db)
 
 	req := &graphqlmetricsv1.PublishGraphQLRequestMetricsRequest{
 		SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{
@@ -136,7 +136,7 @@ func TestPublishAggregatedGraphQLMetrics(t *testing.T) {
 
 	db := test.GetTestDatabase(t)
 
-	msvc := NewMetricsService(zap.NewNop(), db)
+	msvc := New(zap.NewNop(), db)
 
 	req := &graphqlmetricsv1.PublishAggregatedGraphQLRequestMetricsRequest{
 		Aggregation: []*graphqlmetricsv1.SchemaUsageInfoAggregation{
@@ -251,7 +251,7 @@ func TestAuthentication(t *testing.T) {
 
 	db := test.GetTestDatabase(t)
 
-	msvc := NewMetricsService(zap.NewNop(), db)
+	msvc := New(zap.NewNop(), db)
 
 	req := &graphqlmetricsv1.PublishGraphQLRequestMetricsRequest{
 		SchemaUsage: nil,
