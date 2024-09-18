@@ -149,7 +149,7 @@ body.graphiql-dark [data-radix-popper-content-wrapper] {
 .graphiql-history-header,
 .graphiql-doc-explorer-title,
 .doc-explorer-title {
-  @apply text-2xl font-bold text-primary-foreground;
+  @apply text-2xl font-bold text-foreground;
 }
 
 .doc-explorer-title {

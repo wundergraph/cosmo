@@ -7008,11 +7008,6 @@ export class RouterToken extends Message<RouterToken> {
   createdAt = "";
 
   /**
-   * @generated from field: string lastUsedAt = 4;
-   */
-  lastUsedAt = "";
-
-  /**
    * @generated from field: string creatorEmail = 5;
    */
   creatorEmail = "";
@@ -7028,7 +7023,6 @@ export class RouterToken extends Message<RouterToken> {
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "createdAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "lastUsedAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "creatorEmail", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
