@@ -178,6 +178,7 @@ type HeaderRuleOperation string
 
 const (
 	HeaderRuleOperationPropagate HeaderRuleOperation = "propagate"
+	HeaderRuleOperationSet       HeaderRuleOperation = "set"
 )
 
 type HeaderRule interface {
@@ -188,6 +189,7 @@ type HeaderRule interface {
 type RequestHeaderRule struct {
 	// Operation describes the header operation to perform e.g. "propagate"
 	Operation HeaderRuleOperation `yaml:"op"`
+	// Propagate options
 	// Matching is the regex to match the header name against
 	Matching string `yaml:"matching"`
 	// Named is the exact header name to match
@@ -196,6 +198,12 @@ type RequestHeaderRule struct {
 	Rename string `yaml:"rename,omitempty"`
 	// Default is the default value to set if the header is not present
 	Default string `yaml:"default"`
+
+	// Set header options
+	// Name is the name of the header to set
+	Name string `yaml:"name"`
+	// Value is the value of the header to set
+	Value string `yaml:"value"`
 }
 
 func (r *RequestHeaderRule) GetOperation() HeaderRuleOperation {
@@ -232,6 +240,12 @@ type ResponseHeaderRule struct {
 	Default string `yaml:"default"`
 	// Algorithm is the algorithm to use when multiple headers are present
 	Algorithm ResponseHeaderRuleAlgorithm `yaml:"algorithm,omitempty"`
+
+	// Set header options
+	// Name is the name of the header to set
+	Name string `yaml:"name"`
+	// Value is the value of the header to set
+	Value string `yaml:"value"`
 }
 
 func (r *ResponseHeaderRule) GetOperation() HeaderRuleOperation {
