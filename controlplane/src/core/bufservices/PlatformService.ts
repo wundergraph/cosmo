@@ -386,7 +386,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
             await auditLogRepo.addAuditLog({
               organizationId: authContext.organizationId,
-              auditAction: 'federated_graph.created',
+              auditAction: 'federated_graph.deleted',
               action: 'deleted',
               actorId: authContext.userId,
               auditableType: 'federated_graph',
