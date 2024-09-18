@@ -38,7 +38,7 @@ func TestHeaderPropagation(t *testing.T) {
 	  }
 	}`
 
-	getRule := func(alg config.ResponseHeaderRuleAlgorithm, named string) *config.ResponseHeaderRule {
+	getRule := func(alg config.ResponseHeaderRuleAlgorithm, named, defaultVal string) *config.ResponseHeaderRule {
 		rule := &config.ResponseHeaderRule{
 			Operation: config.HeaderRuleOperationPropagate,
 			Algorithm: alg,
@@ -46,28 +46,31 @@ func TestHeaderPropagation(t *testing.T) {
 		if named != "" {
 			rule.Named = named
 		}
+		if defaultVal != "" {
+			rule.Default = defaultVal
+		}
 		return rule
 	}
 
-	global := func(alg config.ResponseHeaderRuleAlgorithm, named string) []core.Option {
+	global := func(alg config.ResponseHeaderRuleAlgorithm, named, defaultVal string) []core.Option {
 		return []core.Option{
 			core.WithHeaderRules(config.HeaderRules{
 				All: &config.GlobalHeaderRule{
 					Response: []*config.ResponseHeaderRule{
-						getRule(alg, named),
+						getRule(alg, named, defaultVal),
 					},
 				},
 			}),
 		}
 	}
 
-	partial := func(alg config.ResponseHeaderRuleAlgorithm, named string) []core.Option {
+	partial := func(alg config.ResponseHeaderRuleAlgorithm, named, defaultVal string) []core.Option {
 		return []core.Option{
 			core.WithHeaderRules(config.HeaderRules{
 				Subgraphs: map[string]*config.GlobalHeaderRule{
 					"employees": {
 						Response: []*config.ResponseHeaderRule{
-							getRule(alg, named),
+							getRule(alg, named, defaultVal),
 						},
 					},
 				},
@@ -75,18 +78,18 @@ func TestHeaderPropagation(t *testing.T) {
 		}
 	}
 
-	local := func(alg config.ResponseHeaderRuleAlgorithm, named string) []core.Option {
+	local := func(alg config.ResponseHeaderRuleAlgorithm, named, defaultValA, defaultValB string) []core.Option {
 		return []core.Option{
 			core.WithHeaderRules(config.HeaderRules{
 				Subgraphs: map[string]*config.GlobalHeaderRule{
 					"employees": {
 						Response: []*config.ResponseHeaderRule{
-							getRule(alg, named),
+							getRule(alg, named, defaultValA),
 						},
 					},
 					"hobbies": {
 						Response: []*config.ResponseHeaderRule{
-							getRule(alg, named),
+							getRule(alg, named, defaultValB),
 						},
 					},
 				},
@@ -162,7 +165,7 @@ func TestHeaderPropagation(t *testing.T) {
 		t.Run("global last write wins", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
-				RouterOptions: global(config.ResponseHeaderRuleAlgorithmLastWrite, customHeader),
+				RouterOptions: global(config.ResponseHeaderRuleAlgorithmLastWrite, customHeader, ""),
 				Subgraphs:     subgraphsPropagateCustomHeader,
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -177,7 +180,7 @@ func TestHeaderPropagation(t *testing.T) {
 		t.Run("local last write wins", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
-				RouterOptions: local(config.ResponseHeaderRuleAlgorithmLastWrite, customHeader),
+				RouterOptions: local(config.ResponseHeaderRuleAlgorithmLastWrite, customHeader, "", ""),
 				Subgraphs:     subgraphsPropagateCustomHeader,
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -192,7 +195,7 @@ func TestHeaderPropagation(t *testing.T) {
 		t.Run("partial last write wins", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
-				RouterOptions: partial(config.ResponseHeaderRuleAlgorithmLastWrite, customHeader),
+				RouterOptions: partial(config.ResponseHeaderRuleAlgorithmLastWrite, customHeader, ""),
 				Subgraphs:     subgraphsPropagateCustomHeader,
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -210,7 +213,7 @@ func TestHeaderPropagation(t *testing.T) {
 		t.Run("global first write wins", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
-				RouterOptions: global(config.ResponseHeaderRuleAlgorithmFirstWrite, customHeader),
+				RouterOptions: global(config.ResponseHeaderRuleAlgorithmFirstWrite, customHeader, ""),
 				Subgraphs:     subgraphsPropagateCustomHeader,
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -225,7 +228,7 @@ func TestHeaderPropagation(t *testing.T) {
 		t.Run("local first write wins", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
-				RouterOptions: local(config.ResponseHeaderRuleAlgorithmFirstWrite, customHeader),
+				RouterOptions: local(config.ResponseHeaderRuleAlgorithmFirstWrite, customHeader, "", ""),
 				Subgraphs:     subgraphsPropagateCustomHeader,
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -240,7 +243,7 @@ func TestHeaderPropagation(t *testing.T) {
 		t.Run("partial first write wins", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
-				RouterOptions: partial(config.ResponseHeaderRuleAlgorithmFirstWrite, customHeader),
+				RouterOptions: partial(config.ResponseHeaderRuleAlgorithmFirstWrite, customHeader, ""),
 				Subgraphs:     subgraphsPropagateCustomHeader,
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -258,7 +261,7 @@ func TestHeaderPropagation(t *testing.T) {
 		t.Run("global append headers", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
-				RouterOptions: global(config.ResponseHeaderRuleAlgorithmAppend, customHeader),
+				RouterOptions: global(config.ResponseHeaderRuleAlgorithmAppend, customHeader, ""),
 				Subgraphs:     subgraphsPropagateCustomHeader,
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -273,7 +276,7 @@ func TestHeaderPropagation(t *testing.T) {
 		t.Run("local append headers", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
-				RouterOptions: local(config.ResponseHeaderRuleAlgorithmAppend, customHeader),
+				RouterOptions: local(config.ResponseHeaderRuleAlgorithmAppend, customHeader, "", ""),
 				Subgraphs:     subgraphsPropagateCustomHeader,
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -288,7 +291,7 @@ func TestHeaderPropagation(t *testing.T) {
 		t.Run("partial append headers", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
-				RouterOptions: partial(config.ResponseHeaderRuleAlgorithmAppend, customHeader),
+				RouterOptions: partial(config.ResponseHeaderRuleAlgorithmAppend, customHeader, ""),
 				Subgraphs:     subgraphsPropagateCustomHeader,
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -306,7 +309,7 @@ func TestHeaderPropagation(t *testing.T) {
 		t.Run("global most restrictive cache control", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
-				RouterOptions: global(config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl, ""),
+				RouterOptions: global(config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl, "", ""),
 				Subgraphs:     cacheOptions("max-age=120", "max-age=60"),
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -322,7 +325,7 @@ func TestHeaderPropagation(t *testing.T) {
 		t.Run("local most restrictive cache control", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
-				RouterOptions: local(config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl, ""),
+				RouterOptions: local(config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl, "", "", ""),
 				Subgraphs:     cacheOptions("max-age=120", "max-age=60"),
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -338,7 +341,7 @@ func TestHeaderPropagation(t *testing.T) {
 		t.Run("partial most restrictive cache control", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
-				RouterOptions: partial(config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl, ""),
+				RouterOptions: partial(config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl, "", ""),
 				Subgraphs:     cacheOptions("max-age=120", "max-age=60"),
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -354,7 +357,7 @@ func TestHeaderPropagation(t *testing.T) {
 		t.Run("global no-store wins", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
-				RouterOptions: global(config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl, ""),
+				RouterOptions: global(config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl, "", ""),
 				Subgraphs:     cacheOptions("no-store", "max-age=300"),
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -370,8 +373,23 @@ func TestHeaderPropagation(t *testing.T) {
 		t.Run("global no-cache wins", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
-				RouterOptions: global(config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl, ""),
+				RouterOptions: global(config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl, "", ""),
 				Subgraphs:     cacheOptions("no-cache", "max-age=300"),
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				cc := res.Response.Header.Get("Cache-Control")
+				require.Equal(t, "no-cache", cc) // no-cache wins over max-age
+				require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
+			})
+		})
+
+		t.Run("global no-cache wins against no value", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: global(config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl, "", ""),
+				Subgraphs:     cacheOptions("no-cache", ""),
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: queryEmployeeWithHobby,
@@ -386,7 +404,7 @@ func TestHeaderPropagation(t *testing.T) {
 		t.Run("global shortest max-age wins", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
-				RouterOptions: global(config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl, ""),
+				RouterOptions: global(config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl, "", ""),
 				Subgraphs:     cacheOptions("max-age=600", "max-age=300"),
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -402,7 +420,7 @@ func TestHeaderPropagation(t *testing.T) {
 		t.Run("global earliest Expires wins", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
-				RouterOptions: global(config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl, ""),
+				RouterOptions: global(config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl, "", ""),
 				Subgraphs:     subgraphsWithExpiresHeader,
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -427,19 +445,8 @@ func TestHeaderPropagation(t *testing.T) {
 			t.Run("global default age sets for all requests", func(t *testing.T) {
 				t.Parallel()
 				testenv.Run(t, &testenv.Config{
-					RouterOptions: []core.Option{
-						core.WithHeaderRules(config.HeaderRules{
-							All: &config.GlobalHeaderRule{
-								Response: []*config.ResponseHeaderRule{
-									{
-										Operation: config.HeaderRuleOperationPropagate,
-										Algorithm: config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl,
-										Default:   "max-age=300",
-									},
-								},
-							},
-						})},
-					Subgraphs: cacheOptions("", ""),
+					RouterOptions: global(config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl, "", "max-age=300"),
+					Subgraphs:     cacheOptions("", "max-age=600"),
 				}, func(t *testing.T, xEnv *testenv.Environment) {
 					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 						Query: queryEmployeeWithHobby,
@@ -450,30 +457,56 @@ func TestHeaderPropagation(t *testing.T) {
 				})
 			})
 
+			t.Run("global no-cache sets for all requests", func(t *testing.T) {
+				t.Parallel()
+				testenv.Run(t, &testenv.Config{
+					RouterOptions: global(config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl, "", "no-cache"),
+					Subgraphs:     cacheOptions("", "max-age=600"),
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: queryEmployeeWithHobby,
+					})
+					cc := res.Response.Header.Get("Cache-Control")
+					require.Equal(t, "no-cache", cc) // Shorter max-age wins
+					require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
+				})
+			})
+
+			t.Run("global default age sets for all requests", func(t *testing.T) {
+				t.Parallel()
+				testenv.Run(t, &testenv.Config{
+					RouterOptions: global(config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl, "", "no-cache"),
+					Subgraphs:     cacheOptions("max-age=60", "max-age=300"),
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: queryEmployeeWithHobby,
+					})
+					cc := res.Response.Header.Get("Cache-Control")
+					require.Equal(t, "no-cache", cc) // Shorter max-age wins
+					require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
+				})
+			})
+
+			t.Run("allows subgraph to override default", func(t *testing.T) {
+				t.Parallel()
+				testenv.Run(t, &testenv.Config{
+					RouterOptions: global(config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl, "", "max-age=300"),
+					Subgraphs:     cacheOptions("max-age=60", "max-age=180"),
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: queryEmployeeWithHobby,
+					})
+					cc := res.Response.Header.Get("Cache-Control")
+					require.Equal(t, "max-age=60", cc) // Shorter max-age wins
+					require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
+				})
+			})
+
 			t.Run("partial default age sets for requests with information", func(t *testing.T) {
 				t.Parallel()
-				alg := config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl
 				testenv.Run(t, &testenv.Config{
-					RouterOptions: []core.Option{
-						core.WithHeaderRules(config.HeaderRules{
-							Subgraphs: map[string]*config.GlobalHeaderRule{
-								"employees": {
-									Response: []*config.ResponseHeaderRule{
-										getRule(alg, ""),
-									},
-								},
-								"hobbies": {
-									Response: []*config.ResponseHeaderRule{
-										{
-											Operation: config.HeaderRuleOperationPropagate,
-											Algorithm: config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl,
-											Default:   "max-age=300",
-										},
-									},
-								},
-							},
-						})},
-					Subgraphs: cacheOptions("", ""),
+					RouterOptions: local(config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl, "", "", "max-age=300"),
+					Subgraphs:     cacheOptions("", ""),
 				}, func(t *testing.T, xEnv *testenv.Environment) {
 					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 						Query: queryEmployeeWithHobby,
@@ -487,26 +520,8 @@ func TestHeaderPropagation(t *testing.T) {
 			t.Run("partial default age doesn't set for unassociated requests", func(t *testing.T) {
 				t.Parallel()
 				testenv.Run(t, &testenv.Config{
-					RouterOptions: []core.Option{
-						core.WithHeaderRules(config.HeaderRules{
-							Subgraphs: map[string]*config.GlobalHeaderRule{
-								"employees": {
-									Response: []*config.ResponseHeaderRule{
-										getRule(config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl, ""),
-									},
-								},
-								"hobbies": {
-									Response: []*config.ResponseHeaderRule{
-										{
-											Operation: config.HeaderRuleOperationPropagate,
-											Algorithm: config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl,
-											Default:   "max-age=300",
-										},
-									},
-								},
-							},
-						})},
-					Subgraphs: cacheOptions("", ""),
+					RouterOptions: local(config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl, "", "", "max-age=300"),
+					Subgraphs:     cacheOptions("", ""),
 				}, func(t *testing.T, xEnv *testenv.Environment) {
 					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 						Query: queryEmployeeWithNoHobby,
@@ -514,6 +529,22 @@ func TestHeaderPropagation(t *testing.T) {
 					cc := res.Response.Header.Get("Cache-Control")
 					require.Equal(t, "", cc)
 					require.Equal(t, `{"data":{"employee":{"id":1}}}`, res.Body)
+				})
+			})
+
+			t.Run("no-cache is set for all mutations", func(t *testing.T) {
+				t.Parallel()
+				testenv.Run(t, &testenv.Config{
+					RouterOptions: global(config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl, "", "max-age=300"),
+					Subgraphs:     cacheOptions("", ""),
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `mutation { updateEmployeeTag(id: 1, tag: "test") { id tag } }`,
+					})
+					cc := res.Response.Header.Get("Cache-Control")
+					require.Equal(t, "no-cache", cc)
+					require.Equal(t, http.StatusOK, res.Response.StatusCode)
+					require.Equal(t, `{"data":{"updateEmployeeTag":{"id":1,"tag":"test"}}}`, res.Body)
 				})
 			})
 		})

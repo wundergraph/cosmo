@@ -383,6 +383,8 @@ func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.R
 }
 
 func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *http.Response, propagation *responseHeaderPropagation, rule *config.ResponseHeaderRule) {
+	cacheControlKey := "Cache-Control"
+
 	ctx := res.Request.Context()
 	tracer := rtrace.TracerFromContext(ctx)
 	commonAttributes := []attribute.KeyValue{
@@ -394,7 +396,13 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 		trace.WithAttributes(commonAttributes...),
 	)
 
-	cacheControlKey := "Cache-Control"
+	// Set no-cache for all mutations, to ensure that requests to mutate data always work as expected (without returning cached data)
+	if resolve.SingleFlightDisallowed(ctx) {
+		var noCache = "no-cache"
+		propagation.header.Set(cacheControlKey, noCache)
+		return
+	}
+
 	reqDir, _ := cachedirective.ParseRequestCacheControl(res.Request.Header.Get(cacheControlKey))
 	resDir, _ := cachedirective.ParseResponseCacheControl(res.Header.Get(cacheControlKey))
 	expiresHeader, _ := http.ParseTime(res.Header.Get("Expires"))
