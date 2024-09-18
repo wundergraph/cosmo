@@ -154,7 +154,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		if err := recover(); err != nil {
 
-			latency := time.Now().Sub(start)
+			latency := time.Since(start)
 
 			// Check for a broken connection, as it is not really a
 			// condition that warrants a panic stack trace.
