@@ -333,6 +333,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 		"apollographql-client-version",
 		// Required for WunderGraph ART
 		"x-wg-trace",
+		"x-wg-disable-tracing",
 		"x-wg-token",
 		"x-wg-skip-loader",
 		"x-wg-include-query-plan",
