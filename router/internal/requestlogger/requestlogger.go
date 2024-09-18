@@ -3,12 +3,15 @@ package requestlogger
 import (
 	"crypto/sha256"
 	"fmt"
+	"go.opentelemetry.io/otel/trace"
+	"net"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
 
-	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -97,20 +100,10 @@ func New(logger *zap.Logger, opts ...Option) func(h http.Handler) http.Handler {
 }
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+
 	start := time.Now()
-	// some evil middlewares modify this values
 	path := r.URL.Path
 	query := r.URL.RawQuery
-
-	ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
-	h.handler.ServeHTTP(ww, r)
-
-	end := time.Now()
-	latency := end.Sub(start)
-	if h.utc {
-		end = end.UTC()
-	}
-
 	remoteAddr := r.RemoteAddr
 
 	if h.ipAnonymizationConfig != nil && h.ipAnonymizationConfig.Enabled {
@@ -122,28 +115,15 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Router logs are snake_case
+	// All fields are snake_case
 
 	fields := []zapcore.Field{
-		zap.Int("status", ww.Status()),
 		zap.String("method", r.Method),
 		zap.String("path", path),
 		zap.String("query", query),
-		// Has to be set by a middleware before this one
+		// Has to be processed by a middleware before this one
 		zap.String("ip", remoteAddr),
 		zap.String("user_agent", r.UserAgent()),
-		zap.Duration("latency", latency),
-	}
-	if h.timeFormat != "" {
-		fields = append(fields, zap.String("time", end.Format(h.timeFormat)))
-	}
-
-	if h.traceID {
-		span := trace.SpanFromContext(r.Context())
-		spanContext := span.SpanContext()
-		if spanContext.HasTraceID() {
-			fields = append(fields, zap.String("trace_id", spanContext.TraceID().String()))
-		}
 	}
 
 	if len(h.fields) > 0 {
@@ -154,6 +134,68 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fields = append(fields, h.context(r)...)
 	}
 
-	h.logger.Info(path, fields...)
+	if h.utc {
+		start = start.UTC()
+	}
 
+	if h.timeFormat != "" {
+		fields = append(fields, zap.String("time", start.Format(h.timeFormat)))
+	}
+
+	if h.traceID {
+		span := trace.SpanFromContext(r.Context())
+		spanContext := span.SpanContext()
+		if spanContext.HasTraceID() {
+			fields = append(fields, zap.String("trace_id", spanContext.TraceID().String()))
+		}
+	}
+
+	defer func() {
+
+		if err := recover(); err != nil {
+
+			latency := time.Now().Sub(start)
+
+			// Check for a broken connection, as it is not really a
+			// condition that warrants a panic stack trace.
+			var brokenPipe bool
+			if ne, ok := err.(*net.OpError); ok {
+				if se, ok := ne.Err.(*os.SyscallError); ok {
+					if strings.Contains(strings.ToLower(se.Error()), "broken pipe") || strings.Contains(strings.ToLower(se.Error()), "connection reset by peer") {
+						brokenPipe = true
+					}
+				}
+			}
+
+			fields = append(fields,
+				// Internal Server Error. Although the status code is not set, it will be in the recover middleware
+				zap.Int("status", 500),
+				zap.Duration("latency", latency),
+				zap.Any("error", err),
+			)
+
+			if brokenPipe {
+				fields = append(fields, zap.Bool("broken_pipe", brokenPipe))
+				h.logger.WithOptions(zap.AddStacktrace(zapcore.DPanicLevel)).Error(path, fields...)
+			} else {
+				h.logger.WithOptions(zap.AddStacktrace(zapcore.DPanicLevel)).Error("[Recovery from panic]", fields...)
+			}
+
+			// rethrow the error to the recover middleware can handle it
+			panic(err)
+		}
+
+	}()
+
+	ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+	h.handler.ServeHTTP(ww, r)
+	end := time.Now()
+	latency := end.Sub(start)
+
+	resFields := []zapcore.Field{
+		zap.Duration("latency", latency),
+		zap.Int("status", ww.Status()),
+	}
+
+	h.logger.Info(path, append(fields, resFields...)...)
 }
