@@ -225,6 +225,10 @@ func (s *MetricsService) PublishGraphQLMetrics(
 		return nil, errNotAuthenticated
 	}
 
+	if len(req.Msg.SchemaUsage) == 0 {
+		return res, nil
+	}
+
 	dispatched := s.pool.TrySubmit(func() {
 		var (
 			storedOperations, storedMetrics int
@@ -287,8 +291,17 @@ func (s *MetricsService) PublishAggregatedGraphQLMetrics(ctx context.Context, re
 		return nil, errNotAuthenticated
 	}
 
+	if len(req.Msg.Aggregation) == 0 {
+		return res, nil
+	}
+
 	schemaUsage := make([]*graphqlmetricsv1.SchemaUsageInfo, len(req.Msg.Aggregation))
 	for i, agg := range req.Msg.Aggregation {
+		// Skip if there are no metrics to write
+		if len(agg.SchemaUsage.TypeFieldMetrics) == 0 && len(agg.SchemaUsage.ArgumentMetrics) == 0 && len(agg.SchemaUsage.InputMetrics) == 0 {
+			continue
+		}
+
 		for j := range agg.SchemaUsage.ArgumentMetrics {
 			agg.SchemaUsage.ArgumentMetrics[j].Count = agg.RequestCount
 		}
