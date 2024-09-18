@@ -688,6 +688,7 @@ enum Unit {
   CodeBlock = 4;
   StatusCode = 5;
   TraceID = 6;
+  SpanID = 7;
 }
 
 enum AnalyticsViewFilterOperator {
@@ -914,6 +915,7 @@ message Span {
 
 message GetTraceRequest {
   string id = 1;
+  string span_id = 2;
 }
 
 message GetTraceResponse {
