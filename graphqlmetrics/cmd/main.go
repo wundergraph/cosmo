@@ -2,22 +2,18 @@ package main
 
 import (
 	"context"
+	_ "github.com/amacneil/dbmate/v2/pkg/driver/clickhouse"
+	"github.com/wundergraph/cosmo/graphqlmetrics/core"
+	"github.com/wundergraph/cosmo/graphqlmetrics/internal/logging"
+	"github.com/wundergraph/cosmo/graphqlmetrics/pkg/clickhouse_client"
+	"github.com/wundergraph/cosmo/graphqlmetrics/pkg/clickhouse_metrics_service"
+	"github.com/wundergraph/cosmo/graphqlmetrics/pkg/config"
+	"go.uber.org/zap"
 	"log"
-	"net/url"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
-
-	"github.com/ClickHouse/clickhouse-go/v2"
-	"github.com/amacneil/dbmate/v2/pkg/dbmate"
-	_ "github.com/amacneil/dbmate/v2/pkg/driver/clickhouse"
-	"github.com/wundergraph/cosmo/graphqlmetrics/config"
-	"github.com/wundergraph/cosmo/graphqlmetrics/core"
-	"github.com/wundergraph/cosmo/graphqlmetrics/internal/logging"
-	"github.com/wundergraph/cosmo/graphqlmetrics/pkg/telemetry"
-	"go.uber.org/automaxprocs/maxprocs"
-	"go.uber.org/zap"
 )
 
 func main() {
@@ -38,12 +34,6 @@ func main() {
 			zap.String("service_version", core.Version),
 		)
 
-	// Automatically set GOMAXPROCS to avoid CPU throttling on containerized environments
-	_, err = maxprocs.Set(maxprocs.Logger(logger.Sugar().Debugf))
-	if err != nil {
-		logger.Fatal("Could not set max GOMAXPROCS", zap.Error(err))
-	}
-
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt,
 		syscall.SIGHUP,  // process is detached from terminal
 		syscall.SIGTERM, // default for kill
@@ -53,83 +43,20 @@ func main() {
 	)
 	defer stop()
 
-	options, err := clickhouse.ParseDSN(cfg.ClickHouseDSN)
+	chConn, err := clickhouse_client.CreateConnection(ctx, cfg.ClickHouseDSN, isDebug, core.Version, logger)
 	if err != nil {
-		logger.Fatal("Could not parse dsn", zap.Error(err))
+		logger.Fatal("Could not create clickhouse connection", zap.Error(err))
 	}
 
-	options.Compression = &clickhouse.Compression{
-		Method: clickhouse.CompressionLZ4,
-	}
-	if isDebug {
-		options.Debug = true
-		options.Debugf = func(format string, v ...any) {
-			logger.Sugar().With(zap.String("subsystem", "clickhouse-go")).Debugf(format, v...)
-		}
-	}
-	options.ClientInfo = clickhouse.ClientInfo{
-		Products: []struct {
-			Name    string
-			Version string
-		}{
-			{Name: "graphqlmetrics", Version: core.Version},
-		},
-	}
-	options.MaxIdleConns = 16
-	options.MaxOpenConns = 32
-
-	logger.Info("Connecting to clickhouse",
-		zap.Int("maxOpenConns", options.MaxOpenConns),
-		zap.Int("maxIdleConns", options.MaxIdleConns),
-		zap.String("dialTimeout", options.DialTimeout.String()),
-		zap.String("connMaxLifetime", options.ConnMaxLifetime.String()),
-		zap.Any("settings", options.Settings),
-	)
-
-	conn, err := clickhouse.Open(options)
+	ms := clickhouse_metrics_service.New(logger, chConn)
 	if err != nil {
-		logger.Fatal("Could not open clickhouse", zap.Error(err))
+		logger.Fatal("Could not create S3 metrics service", zap.Error(err))
 	}
 
-	if err := conn.Ping(ctx); err != nil {
-		logger.Fatal("Could not ping clickhouse", zap.Error(err))
-	} else {
-		logger.Info("Connected to clickhouse")
+	svr, err := core.NewServer(ctx, cfg, ms)
+	if err != nil {
+		logger.Fatal("Could not create server", zap.Error(err))
 	}
-
-	// Database migrations
-
-	chDNS, _ := url.Parse(cfg.ClickHouseDSN)
-	migrator := dbmate.New(chDNS)
-	migrator.MigrationsDir = []string{"migrations"}
-	migrator.AutoDumpSchema = false
-	migrator.Log = zap.NewStdLog(logger).Writer()
-	migrator.MigrationsTableName = "graphqlmetrics_schema_migrations"
-	if err := migrator.CreateAndMigrate(); err != nil {
-		log.Fatal("Could not migrate", zap.Error(err))
-	} else {
-		logger.Info("Migration is up to date")
-	}
-
-	ms := core.NewMetricsService(logger, conn)
-
-	metricsConfig := telemetry.NewTelemetryConfig(
-		core.Version,
-		telemetry.PrometheusConfig{
-			Enabled:    cfg.IsPrometheusEnabled,
-			ListenAddr: cfg.PrometheusListenAddr,
-			Path:       cfg.PrometheusPath,
-		},
-	)
-
-	svr := core.NewServer(
-		ctx,
-		ms,
-		core.WithJwtSecret([]byte(cfg.IngestJWTSecret)),
-		core.WithListenAddr(cfg.ListenAddr),
-		core.WithLogger(logger),
-		core.WithMetrics(metricsConfig),
-	)
 
 	go func() {
 		if err := svr.Start(); err != nil {
@@ -149,10 +76,12 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		ms.Shutdown(cfg.ShutdownDelay)
+		if err := ms.Shutdown(cfg.ShutdownDelay); err != nil {
+			logger.Error("Could not shutdown metrics service", zap.Error(err))
+		}
 	}()
 
-	// enforce a maximum shutdown delay
+	// Enforce a maximum shutdown delay
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownDelay)
 	defer cancel()
 
@@ -163,6 +92,6 @@ func main() {
 	// Wait for all background tasks to finish (not coupled to the server)
 	wg.Wait()
 
-	logger.Debug("Server exiting")
+	logger.Debug("Collector exiting")
 	os.Exit(0)
 }

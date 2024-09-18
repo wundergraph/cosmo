@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/graphqlmetrics/pkg/clickhouse_metrics_service"
+	"github.com/wundergraph/cosmo/graphqlmetrics/pkg/telemetry"
 	"io"
 	"net/http"
 	"os"
@@ -21,7 +23,6 @@ import (
 	"github.com/stretchr/testify/require"
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
-	"github.com/wundergraph/cosmo/graphqlmetrics/pkg/telemetry"
 	"github.com/wundergraph/cosmo/graphqlmetrics/test"
 	"go.uber.org/zap"
 	brotli "go.withmatt.com/connect-brotli"
@@ -82,13 +83,13 @@ func TestExposingPrometheusMetrics(t *testing.T) {
 	}
 
 	db := test.GetTestDatabase(t)
-	msvc := NewMetricsService(zap.NewNop(), db)
+	msvc := clickhouse_metrics_service.New(zap.NewNop(), db)
 	ctx, stop := newServerCtx()
 	defer stop()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svr := NewServer(ctx, msvc,
+			svr := NewCollector(ctx, msvc,
 				WithListenAddr("0.0.0.0:0"),
 				WithMetrics(&telemetry.Config{
 					Prometheus: tt.prom,
@@ -154,9 +155,9 @@ func TestValidateExposedMetrics(t *testing.T) {
 	defer stop()
 
 	db := test.GetTestDatabase(t)
-	msvc := NewMetricsService(zap.NewNop(), db)
+	msvc := clickhouse_metrics_service.New(zap.NewNop(), db)
 
-	svr := NewServer(ctx, msvc,
+	svr := NewCollector(ctx, msvc,
 		WithListenAddr(mainListenAddr),
 		WithJwtSecret([]byte(ingestJWTSecret)),
 		WithMetrics(&telemetry.Config{
@@ -344,9 +345,9 @@ func TestValidateExposedAttirbutesWithoutClaims(t *testing.T) {
 	defer stop()
 
 	db := test.GetTestDatabase(t)
-	msvc := NewMetricsService(zap.NewNop(), db)
+	msvc := clickhouse_metrics_service.New(zap.NewNop(), db)
 
-	svr := NewServer(ctx, msvc,
+	svr := NewCollector(ctx, msvc,
 		WithListenAddr(mainListenAddr),
 		WithJwtSecret([]byte(ingestJWTSecret)),
 		WithMetrics(&telemetry.Config{
