@@ -186,7 +186,7 @@ const TraceSheet: React.FC<any> = (props) => {
       previousTrace();
     },
     {},
-    [traceId],
+    [traceId, spanId],
   );
 
   useHotkeys(
@@ -195,7 +195,7 @@ const TraceSheet: React.FC<any> = (props) => {
       nextTrace();
     },
     {},
-    [traceId],
+    [traceId, spanId],
   );
 
   return (
