@@ -186,7 +186,7 @@ func TestQueryWithLoggingPanic(t *testing.T) {
 			"error":      "implement me",
 		}
 		additionalExpectedKeys := []string{
-			"latency", "config_version", "request_id",
+			"latency", "config_version", "request_id", "stack",
 		}
 		require.Len(t, requestContext, len(expectedValues)+len(additionalExpectedKeys))
 		for key, val := range expectedValues {

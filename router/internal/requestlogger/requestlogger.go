@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -171,11 +172,20 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				// Internal Server Error. Although the status code is not set, it will be in the recover middleware
 				zap.Int("status", 500),
 				zap.Duration("latency", latency),
-				zap.Any("error", err),
 			)
+
+			if e, ok := err.(error); ok {
+				fields = append(fields, zap.Error(e))
+			} else {
+				fields = append(fields,
+					zap.Any("error", err),
+					zap.String("stack", string(debug.Stack())),
+				)
+			}
 
 			if brokenPipe {
 				fields = append(fields, zap.Bool("broken_pipe", brokenPipe))
+				// Avoid logging the stack trace for broken pipe errors
 				h.logger.WithOptions(zap.AddStacktrace(zapcore.DPanicLevel)).Error(path, fields...)
 			} else {
 				h.logger.Error("[Recovery from panic]", fields...)
