@@ -6842,6 +6842,11 @@ export class GetTraceRequest extends Message<GetTraceRequest> {
    */
   spanId = "";
 
+  /**
+   * @generated from field: string federated_graph_id = 3;
+   */
+  federatedGraphId = "";
+
   constructor(data?: PartialMessage<GetTraceRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -6852,6 +6857,7 @@ export class GetTraceRequest extends Message<GetTraceRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "span_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "federated_graph_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetTraceRequest {

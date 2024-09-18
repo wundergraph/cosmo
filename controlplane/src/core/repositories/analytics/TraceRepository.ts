@@ -6,7 +6,12 @@ import { timestampToNanoseconds } from './util.js';
 export class TraceRepository {
   constructor(private client: ClickHouseClient) {}
 
-  public async getTrace(traceID: string, spanID: string, organizationID: string): Promise<PlainMessage<Span>[]> {
+  public async getTrace(
+    traceID: string,
+    spanID: string,
+    organizationID: string,
+    federatedGraphId: string,
+  ): Promise<PlainMessage<Span>[]> {
     const columns = `
         Timestamp as timestamp,
         TraceId as traceId,
@@ -48,7 +53,13 @@ export class TraceRepository {
     WITH RECURSIVE spans AS (
       SELECT ${columns}
       FROM otel_traces
-      WHERE (TraceId = trace_id) AND (Timestamp >= start) AND (Timestamp <= end) AND SpanAttributes['wg.organization.id'] = '${organizationID}' AND spanId = '${spanID}'
+      WHERE 
+        (TraceId = trace_id) 
+        AND (Timestamp >= start) 
+        AND (Timestamp <= end) 
+        AND SpanAttributes['wg.organization.id'] = '${organizationID}'
+        AND SpanAttributes['wg.federated_graph.id'] = '${federatedGraphId}'
+        AND spanId = '${spanID}'
       
       UNION ALL
       

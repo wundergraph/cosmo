@@ -22,7 +22,8 @@ import parserBabel from "prettier/plugins/babel";
 import * as prettierPluginEstree from "prettier/plugins/estree";
 import graphQLPlugin from "prettier/plugins/graphql";
 import * as prettier from "prettier/standalone";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
+import { GraphContext } from "../layout/graph-layout";
 
 export const TraceDetails = ({ ast }: { ast: GraphQLSchema | null }) => {
   const { query } = useRouter();
@@ -33,6 +34,8 @@ export const TraceDetails = ({ ast }: { ast: GraphQLSchema | null }) => {
   const [variables, setVariables] = useState("");
   const [isTruncated, setTruncated] = useState(false);
 
+  const graphContext = useContext(GraphContext);
+
   const traceId = query.traceID as string;
   const spanId = query.spanID as string;
 
@@ -41,6 +44,7 @@ export const TraceDetails = ({ ast }: { ast: GraphQLSchema | null }) => {
     {
       id: traceId,
       spanId: spanId,
+      federatedGraphId: graphContext?.graph?.id,
     },
     {
       refetchInterval: 10000,

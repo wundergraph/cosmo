@@ -916,6 +916,7 @@ message Span {
 message GetTraceRequest {
   string id = 1;
   string span_id = 2;
+  string federated_graph_id = 3;
 }
 
 message GetTraceResponse {

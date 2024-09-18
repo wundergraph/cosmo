@@ -9384,7 +9384,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const traceRepo = new TraceRepository(opts.chClient);
 
-        const spans = await traceRepo.getTrace(req.id, req.spanId, authContext.organizationId);
+        const spans = await traceRepo.getTrace(req.id, req.spanId, authContext.organizationId, req.federatedGraphId);
 
         return {
           response: {
