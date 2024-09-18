@@ -18,9 +18,9 @@ func TestPropagateHeaderRule(t *testing.T) {
 
 	t.Run("Should propagate with named header name / named", func(t *testing.T) {
 
-		ht, err := NewHeaderTransformer(config.HeaderRules{
-			All: config.GlobalHeaderRule{
-				Request: []config.RequestHeaderRule{
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			All: &config.GlobalHeaderRule{
+				Request: []*config.RequestHeaderRule{
 					{
 						Operation: "propagate",
 						Named:     "X-Test-1",
@@ -55,9 +55,9 @@ func TestPropagateHeaderRule(t *testing.T) {
 	})
 
 	t.Run("Should propagate based on matching regex / matching", func(t *testing.T) {
-		ht, err := NewHeaderTransformer(config.HeaderRules{
-			All: config.GlobalHeaderRule{
-				Request: []config.RequestHeaderRule{
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			All: &config.GlobalHeaderRule{
+				Request: []*config.RequestHeaderRule{
 					{
 						Operation: "propagate",
 						Matching:  "(?i)X-Test-.*",
@@ -93,9 +93,9 @@ func TestPropagateHeaderRule(t *testing.T) {
 	})
 
 	t.Run("Should propagate with default value / named + default", func(t *testing.T) {
-		ht, err := NewHeaderTransformer(config.HeaderRules{
-			All: config.GlobalHeaderRule{
-				Request: []config.RequestHeaderRule{
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			All: &config.GlobalHeaderRule{
+				Request: []*config.RequestHeaderRule{
 					{
 						Operation: "propagate",
 						Named:     "X-Test-1",
@@ -128,7 +128,7 @@ func TestPropagateHeaderRule(t *testing.T) {
 
 	t.Run("Should not propagate as disallowed headers / named", func(t *testing.T) {
 
-		rules := []config.RequestHeaderRule{
+		rules := []*config.RequestHeaderRule{
 			{
 				Operation: "propagate",
 				Named:     "X-Test-1",
@@ -136,14 +136,14 @@ func TestPropagateHeaderRule(t *testing.T) {
 		}
 
 		for _, name := range ignoredHeaders {
-			rules = append(rules, config.RequestHeaderRule{
+			rules = append(rules, &config.RequestHeaderRule{
 				Operation: "propagate",
 				Named:     name,
 			})
 		}
 
-		ht, err := NewHeaderTransformer(config.HeaderRules{
-			All: config.GlobalHeaderRule{
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			All: &config.GlobalHeaderRule{
 				Request: rules,
 			},
 		})
@@ -180,9 +180,9 @@ func TestRenamePropagateHeaderRule(t *testing.T) {
 
 	t.Run("Rename header / named", func(t *testing.T) {
 
-		ht, err := NewHeaderTransformer(config.HeaderRules{
-			All: config.GlobalHeaderRule{
-				Request: []config.RequestHeaderRule{
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			All: &config.GlobalHeaderRule{
+				Request: []*config.RequestHeaderRule{
 					{
 						Operation: "propagate",
 						Named:     "X-Test-1",
@@ -219,9 +219,9 @@ func TestRenamePropagateHeaderRule(t *testing.T) {
 
 	t.Run("Rename based on matching regex pattern / matching", func(t *testing.T) {
 
-		ht, err := NewHeaderTransformer(config.HeaderRules{
-			All: config.GlobalHeaderRule{
-				Request: []config.RequestHeaderRule{
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			All: &config.GlobalHeaderRule{
+				Request: []*config.RequestHeaderRule{
 					{
 						Operation: "propagate",
 						Matching:  "(?i)X-Test-.*",
@@ -265,7 +265,7 @@ func TestRenamePropagateHeaderRule(t *testing.T) {
 
 	t.Run("Should not rename to disallowed headers / named", func(t *testing.T) {
 
-		rules := []config.RequestHeaderRule{
+		rules := []*config.RequestHeaderRule{
 			{
 				Operation: "propagate",
 				Named:     "X-Test-Old",
@@ -274,15 +274,15 @@ func TestRenamePropagateHeaderRule(t *testing.T) {
 		}
 
 		for _, name := range ignoredHeaders {
-			rules = append(rules, config.RequestHeaderRule{
+			rules = append(rules, &config.RequestHeaderRule{
 				Operation: "propagate",
 				Named:     fmt.Sprintf("X-Test-%s", name),
 				Rename:    name,
 			})
 		}
 
-		ht, err := NewHeaderTransformer(config.HeaderRules{
-			All: config.GlobalHeaderRule{
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			All: &config.GlobalHeaderRule{
 				Request: rules,
 			},
 		})
@@ -316,9 +316,9 @@ func TestRenamePropagateHeaderRule(t *testing.T) {
 
 func TestSkipAllIgnoredHeaders(t *testing.T) {
 
-	ht, err := NewHeaderTransformer(config.HeaderRules{
-		All: config.GlobalHeaderRule{
-			Request: []config.RequestHeaderRule{
+	ht, err := NewHeaderPropagation(&config.HeaderRules{
+		All: &config.GlobalHeaderRule{
+			Request: []*config.RequestHeaderRule{
 				{
 					Operation: "propagate",
 					Matching:  "(?i).*",
@@ -361,10 +361,10 @@ func TestSubgraphPropagateHeaderRule(t *testing.T) {
 
 	t.Run("Should propagate set header / named", func(t *testing.T) {
 
-		ht, err := NewHeaderTransformer(config.HeaderRules{
-			Subgraphs: map[string]config.GlobalHeaderRule{
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			Subgraphs: map[string]*config.GlobalHeaderRule{
 				"subgraph-1": {
-					Request: []config.RequestHeaderRule{
+					Request: []*config.RequestHeaderRule{
 						{
 							Operation: "propagate",
 							Named:     "X-Test-Subgraph",
@@ -410,10 +410,10 @@ func TestSubgraphPropagateHeaderRule(t *testing.T) {
 	})
 
 	t.Run("Should propagate set header / matching", func(t *testing.T) {
-		ht, err := NewHeaderTransformer(config.HeaderRules{
-			Subgraphs: map[string]config.GlobalHeaderRule{
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			Subgraphs: map[string]*config.GlobalHeaderRule{
 				"subgraph-1": {
-					Request: []config.RequestHeaderRule{
+					Request: []*config.RequestHeaderRule{
 						{
 							Operation: "propagate",
 							Matching:  "(?i)X-Test-.*",
@@ -458,7 +458,7 @@ func TestSubgraphPropagateHeaderRule(t *testing.T) {
 	})
 
 	t.Run("Should not propagate disallowed header / named", func(t *testing.T) {
-		rules := []config.RequestHeaderRule{
+		rules := []*config.RequestHeaderRule{
 			{
 				Operation: "propagate",
 				Named:     "X-Test-Subgraph",
@@ -466,14 +466,14 @@ func TestSubgraphPropagateHeaderRule(t *testing.T) {
 		}
 
 		for _, name := range ignoredHeaders {
-			rules = append(rules, config.RequestHeaderRule{
+			rules = append(rules, &config.RequestHeaderRule{
 				Operation: "propagate",
 				Named:     name,
 			})
 		}
 
-		ht, err := NewHeaderTransformer(config.HeaderRules{
-			Subgraphs: map[string]config.GlobalHeaderRule{
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			Subgraphs: map[string]*config.GlobalHeaderRule{
 				"subgraph-1": {
 					Request: rules,
 				},
@@ -521,7 +521,7 @@ func TestSubgraphPropagateHeaderRule(t *testing.T) {
 
 	t.Run("Should not propagate disallowed headers / matching", func(t *testing.T) {
 
-		rules := []config.RequestHeaderRule{
+		rules := []*config.RequestHeaderRule{
 			{
 				Operation: "propagate",
 				Matching:  ".*",
@@ -529,15 +529,15 @@ func TestSubgraphPropagateHeaderRule(t *testing.T) {
 		}
 
 		for _, name := range ignoredHeaders {
-			rules = append(rules, config.RequestHeaderRule{
+			rules = append(rules, &config.RequestHeaderRule{
 				Operation: "propagate",
 				Named:     fmt.Sprintf("X-Test-%s", name),
 				Rename:    name,
 			})
 		}
 
-		ht, err := NewHeaderTransformer(config.HeaderRules{
-			Subgraphs: map[string]config.GlobalHeaderRule{
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			Subgraphs: map[string]*config.GlobalHeaderRule{
 				"subgraph-1": {
 					Request: rules,
 				},
@@ -588,10 +588,10 @@ func TestSubgraphPropagateHeaderRule(t *testing.T) {
 func TestSubgraphRenamePropagateHeaderRule(t *testing.T) {
 
 	t.Run("Should rename header / named", func(t *testing.T) {
-		ht, err := NewHeaderTransformer(config.HeaderRules{
-			Subgraphs: map[string]config.GlobalHeaderRule{
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			Subgraphs: map[string]*config.GlobalHeaderRule{
 				"subgraph-1": {
-					Request: []config.RequestHeaderRule{
+					Request: []*config.RequestHeaderRule{
 						{
 							Operation: "propagate",
 							Named:     "X-Test-Subgraph",
@@ -637,10 +637,10 @@ func TestSubgraphRenamePropagateHeaderRule(t *testing.T) {
 	})
 
 	t.Run("Should fallback to default value when header value is not set / named", func(t *testing.T) {
-		ht, err := NewHeaderTransformer(config.HeaderRules{
-			Subgraphs: map[string]config.GlobalHeaderRule{
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			Subgraphs: map[string]*config.GlobalHeaderRule{
 				"subgraph-1": {
-					Request: []config.RequestHeaderRule{
+					Request: []*config.RequestHeaderRule{
 						{
 							Operation: "propagate",
 							Rename:    "X-Test-Subgraph-Renamed-2",
@@ -687,10 +687,10 @@ func TestSubgraphRenamePropagateHeaderRule(t *testing.T) {
 	})
 
 	t.Run("Should rename header and don't fallback to default value when header is set / named", func(t *testing.T) {
-		ht, err := NewHeaderTransformer(config.HeaderRules{
-			Subgraphs: map[string]config.GlobalHeaderRule{
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			Subgraphs: map[string]*config.GlobalHeaderRule{
 				"subgraph-1": {
-					Request: []config.RequestHeaderRule{
+					Request: []*config.RequestHeaderRule{
 						{
 							Operation: "propagate",
 							Rename:    "X-Test-Subgraph-Renamed",
@@ -737,10 +737,10 @@ func TestSubgraphRenamePropagateHeaderRule(t *testing.T) {
 	})
 
 	t.Run("Should rename headers based / matching rule", func(t *testing.T) {
-		ht, err := NewHeaderTransformer(config.HeaderRules{
-			Subgraphs: map[string]config.GlobalHeaderRule{
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			Subgraphs: map[string]*config.GlobalHeaderRule{
 				"subgraph-1": {
-					Request: []config.RequestHeaderRule{
+					Request: []*config.RequestHeaderRule{
 						{
 							Operation: "propagate",
 							Rename:    "X-Test-Subgraph-Renamed",
@@ -786,10 +786,10 @@ func TestSubgraphRenamePropagateHeaderRule(t *testing.T) {
 	})
 
 	t.Run("Should rename headers and fallback to default value when header value is not set / matching rule", func(t *testing.T) {
-		ht, err := NewHeaderTransformer(config.HeaderRules{
-			Subgraphs: map[string]config.GlobalHeaderRule{
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			Subgraphs: map[string]*config.GlobalHeaderRule{
 				"subgraph-1": {
-					Request: []config.RequestHeaderRule{
+					Request: []*config.RequestHeaderRule{
 						{
 							Operation: "propagate",
 							Rename:    "X-Test-Subgraph-Default-Renamed",
@@ -838,9 +838,9 @@ func TestSubgraphRenamePropagateHeaderRule(t *testing.T) {
 
 func TestInvalidRegex(t *testing.T) {
 
-	_, err := NewHeaderTransformer(config.HeaderRules{
-		All: config.GlobalHeaderRule{
-			Request: []config.RequestHeaderRule{
+	_, err := NewHeaderPropagation(&config.HeaderRules{
+		All: &config.GlobalHeaderRule{
+			Request: []*config.RequestHeaderRule{
 				{
 					Operation: "propagate",
 					Matching:  "[",
