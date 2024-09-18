@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"go.uber.org/zap/zaptest/observer"
 	"io"
 	"log"
 	"math/rand"
@@ -24,6 +23,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"go.uber.org/zap/zaptest/observer"
 
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 

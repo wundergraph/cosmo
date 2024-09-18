@@ -961,6 +961,12 @@
               "items": {
                 "$ref": "#/definitions/traffic_shaping_header_rule"
               }
+            },
+            "response": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/traffic_shaping_header_response_rule"
+              }
             }
           }
         },
@@ -974,6 +980,12 @@
                 "type": "array",
                 "items": {
                   "$ref": "#/definitions/traffic_shaping_header_rule"
+                }
+              },
+              "response": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/traffic_shaping_header_response_rule"
                 }
               }
             }
@@ -1655,6 +1667,66 @@
         }
       },
       "required": ["op"]
+    },
+    "traffic_shaping_header_response_rule": {
+      "type": "object",
+      "description": "The configuration for all subgraphs. The configuration is used to configure the traffic shaping for all subgraphs.",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "type": "string",
+          "enum": ["propagate"],
+          "examples": ["propagate"],
+          "description": "The operation to perform on the header. The supported operations are 'propagate'. The 'propagate' operation is used to propagate the header to the subgraphs."
+        },
+        "matching": {
+          "type": "string",
+          "examples": ["(?i)^X-Custom-.*"],
+          "description": "The matching rule for the header. The matching rule is a regular expression that is used to match the header. Can't be used with 'named'."
+        },
+        "named": {
+          "type": "string",
+          "examples": ["X-Test-Header"],
+          "description": "The name of the header to match. Use the canonical version e.g. X-Test-Header. Can't be used with 'matching'."
+        },
+        "rename": {
+          "type": "string",
+          "examples": ["X-Rename-Test-Header"],
+          "description": "Rename is used to  rename the named or the matching headers. It can be used with either the named or the matching."
+        },
+        "default": {
+          "type": "string",
+          "examples": ["default-value"],
+          "description": "The default value of the header in case it is not present in the request."
+        },
+        "algorithm": {
+          "type": "string",
+          "enum": ["first_write", "last_write", "append", "most_restrictive_cache_control"],
+          "examples": ["first_write"],
+          "description": "The algorith, to use when multiple headers are present. The supported operations are '\"first_write\", \"last_write\", \"append\", and \"most_restrictive_cache_control\"'. The 'first_write' retains the first value of a given header. The 'last_write' retains the last value of a given header. The 'append' appends all values of a given header. The 'most_restrictive_cache_control' specifically focuses on the 'Cache-Control'/'Expiration' headers, and applies the most restrictive value encountered from a subgraph"
+        }
+      },
+      "required": ["op", "algorithm"],
+      "if": {
+        "properties": {
+          "algorithm": { "const": "most_restrictive_cache_control" }
+        }
+      },
+      "then": {
+        "properties": {
+          "matching": { "not": {} },
+          "named": { "not": {} },
+          "rename": { "not": {} }
+        },
+        "required": ["op", "algorithm"]
+      },
+      "else": {
+        "properties": {
+          "matching": {},
+          "named": {},
+          "rename": {}
+        }
+      }
     }
   }
 }
