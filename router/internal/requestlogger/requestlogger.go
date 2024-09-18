@@ -7,7 +7,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"runtime/debug"
 	"strings"
 	"time"
 
@@ -179,7 +178,6 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			} else {
 				fields = append(fields,
 					zap.Any("error", err),
-					zap.String("stack", string(debug.Stack())),
 				)
 			}
 

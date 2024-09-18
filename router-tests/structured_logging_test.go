@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"fmt"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"go.uber.org/zap"
@@ -22,7 +23,16 @@ var (
 type MyPanicModule struct{}
 
 func (m MyPanicModule) OnOriginRequest(req *http.Request, ctx core.RequestContext) (*http.Request, *http.Response) {
-	panic("implement me")
+
+	if req.Header.Get("panic-with-string") == "true" {
+		panic("implement me")
+	}
+
+	if req.Header.Get("panic-with-error") == "true" {
+		panic(fmt.Errorf("implement me"))
+	}
+
+	return req, nil
 }
 
 func (m MyPanicModule) Module() core.ModuleInfo {
@@ -81,7 +91,7 @@ func TestQueryWithLogging(t *testing.T) {
 			"ip":     "[REDACTED]",
 		}
 		additionalExpectedKeys := []string{
-			"user_agent", "latency", "config_version", "request_id",
+			"user_agent", "latency", "config_version", "request_id", "pid", "hostname",
 		}
 		require.Len(t, requestContext, len(expectedValues)+len(additionalExpectedKeys))
 		for key, val := range expectedValues {
@@ -135,7 +145,7 @@ func TestQueryWithLoggingError(t *testing.T) {
 			"user_agent": "Go-http-client/1.1",
 		}
 		additionalExpectedKeys := []string{
-			"latency", "config_version", "request_id",
+			"latency", "config_version", "request_id", "pid", "hostname",
 		}
 		require.Len(t, requestContext, len(expectedValues)+len(additionalExpectedKeys))
 		for key, val := range expectedValues {
@@ -150,12 +160,19 @@ func TestQueryWithLoggingError(t *testing.T) {
 	})
 }
 
-func TestQueryWithLoggingPanic(t *testing.T) {
+func TestQueryWithLoggingPanicWithString(t *testing.T) {
 	t.Parallel()
 	testenv.Run(t, &testenv.Config{
 		NoRetryClient: true,
 		RouterOptions: []core.Option{
 			core.WithCustomModules(&MyPanicModule{}),
+			core.WithHeaderRules(config.HeaderRules{
+				All: &config.GlobalHeaderRule{
+					Request: []*config.RequestHeaderRule{
+						{Named: "panic-with-string", Operation: config.HeaderRuleOperationPropagate},
+					},
+				},
+			}),
 			core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
 				EnableSingleFlight:     true,
 				MaxConcurrentResolvers: 1,
@@ -167,6 +184,9 @@ func TestQueryWithLoggingPanic(t *testing.T) {
 			LogLevel: zapcore.InfoLevel,
 		}}, func(t *testing.T, xEnv *testenv.Environment) {
 		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			Header: map[string][]string{
+				"panic-with-string": {"true"},
+			},
 			Query: `{ employees { id } }`,
 		})
 		require.NoError(t, err)
@@ -186,9 +206,79 @@ func TestQueryWithLoggingPanic(t *testing.T) {
 			"error":      "implement me",
 		}
 		additionalExpectedKeys := []string{
-			"latency", "config_version", "request_id", "stack",
+			"latency", "config_version", "request_id", "pid", "hostname",
 		}
+
 		require.Len(t, requestContext, len(expectedValues)+len(additionalExpectedKeys))
+
+		require.NotEmpty(t, logEntries[12].Stack)
+
+		for key, val := range expectedValues {
+			mapVal, exists := requestContext[key]
+			require.Truef(t, exists, "key '%s' not found", key)
+			require.Equalf(t, mapVal, val, "expected '%v', got '%v'", val, mapVal)
+		}
+
+		for _, key := range additionalExpectedKeys {
+			_, exists := requestContext[key]
+			require.Truef(t, exists, "key '%s' not found", key)
+		}
+	})
+}
+
+func TestQueryWithLoggingPanicWithError(t *testing.T) {
+	t.Parallel()
+	testenv.Run(t, &testenv.Config{
+		NoRetryClient: true,
+		RouterOptions: []core.Option{
+			core.WithCustomModules(&MyPanicModule{}),
+			core.WithHeaderRules(config.HeaderRules{
+				All: &config.GlobalHeaderRule{
+					Request: []*config.RequestHeaderRule{
+						{Named: "panic-with-error", Operation: config.HeaderRuleOperationPropagate},
+					},
+				},
+			}),
+			core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+				EnableSingleFlight:     true,
+				MaxConcurrentResolvers: 1,
+			}),
+			core.WithSubgraphRetryOptions(false, 0, 0, 0),
+		},
+		LogObservation: testenv.LogObservationConfig{
+			Enabled:  true,
+			LogLevel: zapcore.InfoLevel,
+		}}, func(t *testing.T, xEnv *testenv.Environment) {
+		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			Header: map[string][]string{
+				"panic-with-error": {"true"},
+			},
+			Query: `{ employees { id } }`,
+		})
+		require.NoError(t, err)
+		require.Equal(t, "", res.Body)
+		logEntries := xEnv.Observer().All()
+		require.Len(t, logEntries, 13)
+		requestLog := xEnv.Observer().FilterMessage("[Recovery from panic]")
+		require.Equal(t, requestLog.Len(), 1)
+		requestContext := requestLog.All()[0].ContextMap()
+		expectedValues := map[string]interface{}{
+			"status":     int64(500),
+			"method":     "POST",
+			"path":       "/graphql",
+			"query":      "", // http query is empty
+			"ip":         "[REDACTED]",
+			"user_agent": "Go-http-client/1.1",
+			"error":      "implement me",
+		}
+		additionalExpectedKeys := []string{
+			"latency", "config_version", "request_id", "pid", "hostname",
+		}
+
+		require.Len(t, requestContext, len(expectedValues)+len(additionalExpectedKeys))
+
+		require.NotEmpty(t, logEntries[12].Stack)
+
 		for key, val := range expectedValues {
 			mapVal, exists := requestContext[key]
 			require.Truef(t, exists, "key '%s' not found", key)
