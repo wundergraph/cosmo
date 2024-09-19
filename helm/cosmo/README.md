@@ -185,7 +185,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | keycloak.image.pullPolicy | string | `"IfNotPresent"` |  |
 | keycloak.image.registry | string | `"ghcr.io"` |  |
 | keycloak.image.repository | string | `"wundergraph/cosmo/keycloak"` |  |
-| keycloak.image.tag | string | `"latest"` |  |
+| keycloak.image.tag | string | `"0.10.4"` |  |
 | keycloak.metrics.enabled | bool | `true` |  |
 | keycloak.podAnnotations."kapp.k14s.io/change-group" | string | `"cosmo.apps.keycloak.wundergraph.com/deployment"` | Support for k14s.io. This annotation will form a group to coordinate deployments with kapp. |
 | keycloak.podAnnotations."kapp.k14s.io/change-rule.postgresql" | string | `"upsert after upserting cosmo.apps.postgresql.wundergraph.com/deployment"` | Support for k14s.io. This annotation will wait for the postgresql deployments to be ready before deploying. |
