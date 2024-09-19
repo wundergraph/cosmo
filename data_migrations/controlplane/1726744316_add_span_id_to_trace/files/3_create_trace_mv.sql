@@ -34,3 +34,6 @@ WHERE -- Only include router root spans
     OR -- For backwards compatibility (router < 0.61.2)
     SpanAttributes [ 'wg.component.name' ] = 'router-server'
 ORDER BY Timestamp DESC;
+
+-- Drop the temporary materialized view
+DROP VIEW IF EXISTS cosmo.temp_traces_mv;
