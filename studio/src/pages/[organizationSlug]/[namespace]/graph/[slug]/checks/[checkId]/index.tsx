@@ -45,7 +45,11 @@ import { useToast } from "@/components/ui/use-toast";
 import { useSessionStorage } from "@/hooks/use-session-storage";
 import { formatDate, formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import {
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+  NoSymbolIcon,
+} from "@heroicons/react/24/outline";
 import {
   ArrowLeftIcon,
   CheckCircledIcon,
@@ -63,12 +67,18 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import {
   GetCheckSummaryResponse,
+  GraphPruningIssue,
   LintIssue,
+  LintSeverity,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatDistanceToNow, subDays } from "date-fns";
 import { useRouter } from "next/router";
 import React, { useContext, useMemo } from "react";
 import { PiBracketsCurlyBold, PiGraphLight } from "react-icons/pi";
+import { HiOutlineScissors } from "react-icons/hi2";
+import { GraphPruningIssuesTable } from "@/components/checks/graph-pruning-issues-table";
+import { SiLintcode } from "react-icons/si";
+import { cn } from "@/lib/utils";
 
 const ForceSuccess: React.FC<{ onSubmit: () => void }> = (props) => {
   return (
@@ -186,6 +196,7 @@ const CheckOverviewPage: NextPageWithLayout = () => {
 
 const getDecorationCollection = (
   lintIssues: LintIssue[],
+  graphPruningIssues: GraphPruningIssue[],
 ): DecorationCollection[] => {
   const decorationCollection: DecorationCollection[] = [];
 
@@ -207,6 +218,31 @@ const getDecorationCollection = (
         inlineClassName:
           "underline decoration-red-500 decoration-wavy cursor-pointer z-50",
         isWholeLine: l.issueLocation.endLine === undefined,
+      },
+    });
+  }
+
+  for (const g of graphPruningIssues) {
+    if (!g.issueLocation) continue;
+    decorationCollection.push({
+      range: {
+        startLineNumber: g.issueLocation.line,
+        endLineNumber: g.issueLocation.endLine || g.issueLocation.line,
+        startColumn: g.issueLocation.column,
+        endColumn: g.issueLocation.endColumn || g.issueLocation.column,
+      },
+      options: {
+        hoverMessage: {
+          value: `${g.message}. (Rule: ${
+            g.graphPruningRuleType ? g.graphPruningRuleType : ""
+          })`,
+        },
+        inlineClassName: `underline ${
+          g.severity === LintSeverity.error
+            ? "decoration-red-500"
+            : "decoration-yellow-600"
+        } decoration-wavy cursor-pointer z-50`,
+        isWholeLine: g.issueLocation.endLine === undefined,
       },
     });
   }
@@ -285,6 +321,7 @@ const CheckDetails = ({
     data.check.isBreaking,
     data.check.hasClientTraffic,
     data.check.hasLintErrors,
+    data.check.hasGraphPruningErrors,
   );
 
   const currentAffectedGraph = data.affectedGraphs.find(
@@ -373,10 +410,10 @@ const CheckDetails = ({
         </dl>
       </div>
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        <dl className="flex flex-col flex-shrink-0 space-y-6 overflow-hidden border-b px-4 py-4 lg:block lg:min-h-full lg:w-[240px] lg:space-y-8 lg:overflow-auto lg:border-b-0 lg:border-r lg:px-6 xl:w-[260px] xl:px-8">
+        <dl className="flex flex-shrink-0 flex-col space-y-6 overflow-hidden border-b px-4 py-4 lg:block lg:min-h-full lg:w-[240px] lg:space-y-8 lg:overflow-auto lg:border-b-0 lg:border-r lg:px-6 xl:w-[260px] xl:px-8">
           <div className="col-span-3 flex flex-col">
             <dt className="mb-2 text-sm text-muted-foreground">Tasks</dt>
-            <dd className="flex flex-wrap flex-row gap-2 lg:flex lg:flex-col">
+            <dd className="flex flex-row flex-wrap gap-2 lg:flex lg:flex-col">
               <Badge
                 variant="outline"
                 className="flex items-center space-x-1.5 py-2"
@@ -415,13 +452,64 @@ const CheckDetails = ({
 
               <Badge
                 variant="outline"
-                className="flex items-center space-x-1.5  py-2"
+                className={cn("flex items-center space-x-1.5 py-2", {
+                  "text-muted-foreground":
+                    data.lintIssues.length === 0 && !data.isLintingEnabled,
+                })}
               >
-                {getCheckIcon(!data.check.hasLintErrors)}
-                <span className="flex-1 truncate">Lint Errors</span>
-                <InfoTooltip>
-                  Describes if the proposed schema contains linting errors.
-                </InfoTooltip>
+                {data.lintIssues.length === 0 && !data.isLintingEnabled ? (
+                  <>
+                    <NoSymbolIcon className="h-4 w-4" />
+                    <span className="flex-1 truncate">Lint Errors</span>
+                    <InfoTooltip>
+                      Indicates if the proposed schema contains linting errors.
+                      Enable linting to see lint issues.
+                    </InfoTooltip>
+                  </>
+                ) : (
+                  <>
+                    {getCheckIcon(!data.check.hasLintErrors)}
+                    <span className="flex-1 truncate">Lint Errors</span>
+                    <InfoTooltip>
+                      Indicates if the proposed schema contains linting errors.
+                    </InfoTooltip>
+                  </>
+                )}
+              </Badge>
+
+              <Badge
+                variant="outline"
+                className={cn("flex items-center space-x-1.5 py-2", {
+                  "text-muted-foreground":
+                    data.graphPruningIssues.length === 0 &&
+                    !data.isGraphPruningEnabled,
+                })}
+              >
+                {data.graphPruningIssues.length === 0 &&
+                !data.isGraphPruningEnabled ? (
+                  <>
+                    <NoSymbolIcon className="h-4 w-4" />
+                    <span className="flex-1 truncate">
+                      Pruning Errors
+                    </span>
+                    <InfoTooltip>
+                      Indicates if the proposed schema contains graph pruning
+                      errors. Enable graph pruning linter to see graph pruning
+                      issues.
+                    </InfoTooltip>
+                  </>
+                ) : (
+                  <>
+                    {getCheckIcon(!data.check.hasGraphPruningErrors)}
+                    <span className="flex-1 truncate">
+                      Pruning Errors
+                    </span>
+                    <InfoTooltip>
+                      Indicates if the proposed schema contains graph pruning
+                      errors.
+                    </InfoTooltip>
+                  </>
+                )}
               </Badge>
             </dd>
           </div>
@@ -550,7 +638,7 @@ const CheckDetails = ({
             className="flex h-full min-h-0 flex-col"
           >
             <div className="flex flex-row px-4 py-4 lg:px-6">
-              <TabsList className="overflow-x-auto scrollbar-none justify-start">
+              <TabsList className="justify-start overflow-x-auto scrollbar-none">
                 <TabsTrigger
                   value="changes"
                   className="flex items-center gap-x-2"
@@ -589,7 +677,7 @@ const CheckDetails = ({
                   <Link
                     href={{ query: { ...router.query, tab: "lintIssues" } }}
                   >
-                    <PiBracketsCurlyBold className="flex-shrink-0" />
+                    <SiLintcode className="flex-shrink-0" />
                     Lint Issues
                     {data.lintIssues.length ? (
                       <Badge
@@ -597,6 +685,28 @@ const CheckDetails = ({
                         className="bg-white px-1.5 text-current dark:bg-gray-900/60"
                       >
                         {data.lintIssues.length}
+                      </Badge>
+                    ) : null}
+                  </Link>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="graphPruningIssues"
+                  className="flex items-center gap-x-2"
+                  asChild
+                >
+                  <Link
+                    href={{
+                      query: { ...router.query, tab: "graphPruningIssues" },
+                    }}
+                  >
+                    <HiOutlineScissors className="flex-shrink-0" />
+                    Pruning Issues
+                    {data.graphPruningIssues.length ? (
+                      <Badge
+                        variant="muted"
+                        className="bg-white px-1.5 text-current dark:bg-gray-900/60"
+                      >
+                        {data.graphPruningIssues.length}
                       </Badge>
                     ) : null}
                   </Link>
@@ -709,7 +819,13 @@ const CheckDetails = ({
                     trafficCheckDays={data.trafficCheckDays}
                     createdAt={data.check.timestamp}
                   />
-                ) : null}
+                ) : (
+                  <EmptyState
+                    icon={<CheckCircleIcon className="text-success" />}
+                    title="No changes found."
+                    description="There are no changes in the proposed schema."
+                  />
+                )}
 
                 <FieldUsageSheet />
               </TabsContent>
@@ -723,6 +839,17 @@ const CheckDetails = ({
                 <LintIssuesTable
                   lintIssues={data.lintIssues}
                   caption={`${data.lintIssues.length} issues found`}
+                  isLintingEnabled={data.isLintingEnabled}
+                />
+              </TabsContent>
+              <TabsContent
+                value="graphPruningIssues"
+                className="w-full space-y-4 px-4 lg:px-6"
+              >
+                <GraphPruningIssuesTable
+                  pruneIssues={data.graphPruningIssues}
+                  caption={`${data.graphPruningIssues.length} issues found`}
+                  isGraphPruningEnabled={data.isGraphPruningEnabled}
                 />
               </TabsContent>
               <TabsContent value="schema" className="relative w-full flex-1">
@@ -734,12 +861,13 @@ const CheckDetails = ({
                     variant="outline"
                   />
                 </div>
-                <div className="scrollbar-custom h-full w-full min-h-[300px] overflow-auto">
+                <div className="scrollbar-custom h-full min-h-[300px] w-full overflow-auto">
                   <SDLViewerMonaco
                     schema={sdl}
                     disablePrettier
                     decorationCollections={getDecorationCollection(
                       data.lintIssues,
+                      data.graphPruningIssues,
                     )}
                     line={hash ? Number(hash.slice(1)) : undefined}
                   />

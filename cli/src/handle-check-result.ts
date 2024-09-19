@@ -24,6 +24,18 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
     wordWrap: true,
   });
 
+  const graphPruningIssuesTable = new Table({
+    head: [
+      pc.bold(pc.white('RULE')),
+      pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+      pc.bold(pc.white('FIELD_PATH')),
+      pc.bold(pc.white('MESSAGE')),
+      pc.bold(pc.white('LINE NUMBER')),
+    ],
+    colAligns: ['left', 'left', 'left', 'left', 'center'],
+    wordWrap: true,
+  });
+
   let success = false;
   let finalStatement = '';
 
@@ -41,9 +53,13 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
         resp.breakingChanges.length === 0 &&
         resp.compositionErrors.length === 0 &&
         resp.lintErrors.length === 0 &&
-        resp.lintWarnings.length === 0
+        resp.lintWarnings.length === 0 &&
+        resp.graphPruneErrors.length === 0 &&
+        resp.graphPruneWarnings.length === 0
       ) {
-        console.log(`\nDetected no changes.\nDetected no lint issues.\n\n${studioCheckDestination}\n`);
+        console.log(
+          `\nDetected no changes.\nDetected no lint issues.\nDetected no graph pruning issues.\n\n${studioCheckDestination}\n`,
+        );
 
         success = true;
 
@@ -57,18 +73,23 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
         if (resp.operationUsageStats.totalOperations === 0) {
           // Composition errors are still considered failures, otherwise we can consider this a success
           // because no operations were affected by the change
-          success = resp.compositionErrors.length === 0 && resp.lintErrors.length === 0;
+          success =
+            resp.compositionErrors.length === 0 && resp.lintErrors.length === 0 && resp.graphPruneErrors.length === 0;
           console.log(`No operations were affected by this schema change.`);
           finalStatement = `This schema change didn't affect any operations from existing client traffic.`;
         } else if (resp.operationUsageStats.totalOperations === resp.operationUsageStats.safeOperations) {
           // This is also a success because changes to these operations were marked as safe
-          success = resp.compositionErrors.length === 0 && resp.lintErrors.length === 0;
+          success =
+            resp.compositionErrors.length === 0 && resp.lintErrors.length === 0 && resp.graphPruneErrors.length === 0;
           console.log(`${resp.operationUsageStats.totalOperations} operations were considered safe due to overrides.`);
           finalStatement = `This schema change affected operations with safe overrides.`;
         } else {
           // Composition and breaking errors are considered failures because operations were affected by the change
           success =
-            resp.breakingChanges.length === 0 && resp.compositionErrors.length === 0 && resp.lintErrors.length === 0;
+            resp.breakingChanges.length === 0 &&
+            resp.compositionErrors.length === 0 &&
+            resp.lintErrors.length === 0 &&
+            resp.graphPruneErrors.length === 0;
 
           console.log(
             logSymbols.warning +
@@ -144,6 +165,29 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
           ]);
         }
         console.log(lintIssuesTable.toString());
+      }
+
+      if (resp.graphPruneErrors.length > 0 || resp.graphPruneWarnings.length > 0) {
+        console.log('\nDetected graph pruning issues:');
+        for (const error of resp.graphPruneErrors) {
+          graphPruningIssuesTable.push([
+            `${logSymbols.error} ${pc.red(error.graphPruningRuleType)}`,
+            error.federatedGraphName,
+            error.fieldPath,
+            error.message,
+            error.issueLocation?.line || '-',
+          ]);
+        }
+        for (const warning of resp.graphPruneWarnings) {
+          graphPruningIssuesTable.push([
+            `${logSymbols.warning} ${pc.yellow(warning.graphPruningRuleType)}`,
+            warning.federatedGraphName,
+            warning.fieldPath,
+            warning.message,
+            warning.issueLocation?.line || '-',
+          ]);
+        }
+        console.log(graphPruningIssuesTable.toString());
       }
 
       if (success) {
