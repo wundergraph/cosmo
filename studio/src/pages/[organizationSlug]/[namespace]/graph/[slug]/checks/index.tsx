@@ -163,12 +163,14 @@ const ChecksPage: NextPageWithLayout = () => {
                   timestamp,
                   ghDetails,
                   hasLintErrors,
+                  hasGraphPruningErrors,
                 }) => {
                   const isSuccessful = isCheckSuccessful(
                     isComposable,
                     isBreaking,
                     hasClientTraffic,
                     hasLintErrors,
+                    hasGraphPruningErrors,
                   );
 
                   const path = `${router.asPath.split("?")[0]}/${id}`;
@@ -227,6 +229,15 @@ const ChecksPage: NextPageWithLayout = () => {
                           <Badge variant="outline" className="gap-2 py-1.5">
                             {getCheckIcon(!hasLintErrors)}{" "}
                             <span>Lint Errors</span>
+                          </Badge>
+                          <Badge
+                            variant="outline"
+                            className="flex items-center space-x-1.5  py-2"
+                          >
+                            {getCheckIcon(!hasGraphPruningErrors)}
+                            <span className="flex-1 truncate">
+                              Pruning Errors
+                            </span>
                           </Badge>
                         </div>
                       </TableCell>

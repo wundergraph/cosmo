@@ -172,8 +172,7 @@ type (
 		routerMiddlewares         []func(http.Handler) http.Handler
 		preOriginHandlers         []TransportPreHandler
 		postOriginHandlers        []TransportPostHandler
-		headerRuleEngine          *HeaderRuleEngine
-		headerRules               config.HeaderRules
+		headerRules               *config.HeaderRules
 		subgraphTransportOptions  *SubgraphTransportOptions
 		graphqlMetricsConfig      *GraphQLMetricsConfig
 		routerTrafficConfig       *config.RouterTrafficConfiguration
@@ -310,14 +309,17 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.livenessCheckPath = "/health/live"
 	}
 
-	hr, err := NewHeaderTransformer(r.headerRules)
+	hr, err := NewHeaderPropagation(r.headerRules)
 	if err != nil {
 		return nil, err
 	}
 
-	r.headerRuleEngine = hr
-
-	r.preOriginHandlers = append(r.preOriginHandlers, r.headerRuleEngine.OnOriginRequest)
+	if hr.HasRequestRules() {
+		r.preOriginHandlers = append(r.preOriginHandlers, hr.OnOriginRequest)
+	}
+	if hr.HasResponseRules() {
+		r.postOriginHandlers = append(r.postOriginHandlers, hr.OnOriginResponse)
+	}
 
 	defaultHeaders := []string{
 		// Common headers
@@ -333,6 +335,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 		"apollographql-client-version",
 		// Required for WunderGraph ART
 		"x-wg-trace",
+		"x-wg-disable-tracing",
 		"x-wg-token",
 		"x-wg-skip-loader",
 		"x-wg-include-query-plan",
@@ -1448,7 +1451,7 @@ func WithEvents(cfg config.EventsConfiguration) Option {
 
 func WithHeaderRules(headers config.HeaderRules) Option {
 	return func(r *Router) {
-		r.headerRules = headers
+		r.headerRules = &headers
 	}
 }
 

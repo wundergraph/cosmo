@@ -687,6 +687,13 @@
       "when": 1726561482493,
       "tag": "0097_dry_jack_flag",
       "breakpoints": true
+    },
+    {
+      "idx": 98,
+      "version": "7",
+      "when": 1726738204175,
+      "tag": "0098_flowery_gunslinger",
+      "breakpoints": true
     }
   ]
 }

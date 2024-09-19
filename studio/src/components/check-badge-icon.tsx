@@ -6,8 +6,9 @@ const isCheckSuccessful = (
   isBreaking: boolean,
   hasClientTraffic: boolean,
   hasLintErrors: boolean,
+  hasGraphPruningErrors: boolean
 ) => {
-  return isComposable && (!isBreaking || (isBreaking && !hasClientTraffic)) && !hasLintErrors;
+  return isComposable && (!isBreaking || (isBreaking && !hasClientTraffic)) && !hasLintErrors && !hasGraphPruningErrors;
 };
 
 const getCheckBadge = (successful: boolean, isForced: boolean) => {

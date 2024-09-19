@@ -443,6 +443,7 @@ export const namespaces = pgTable(
       onDelete: 'set null',
     }),
     enableLinting: boolean('enable_linting').default(false).notNull(),
+    enableGraphPruning: boolean('enable_graph_pruning').default(false).notNull(),
   },
   (t) => {
     return {
@@ -653,6 +654,7 @@ export const schemaChecks = pgTable('schema_checks', {
   isDeleted: boolean('is_deleted').default(false),
   hasBreakingChanges: boolean('has_breaking_changes').default(false),
   hasLintErrors: boolean('has_lint_errors').default(false),
+  hasGraphPruningErrors: boolean('has_graph_pruning_errors').default(false),
   hasClientTraffic: boolean('has_client_traffic').default(false),
   proposedSubgraphSchemaSDL: text('proposed_subgraph_schema_sdl'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -1537,6 +1539,33 @@ export const namespaceLintCheckConfigRelations = relations(namespaceLintCheckCon
   namespace: one(namespaces),
 }));
 
+export const graphPruningRulesEnum = pgEnum('graph_pruning_rules', [
+  'UNUSED_FIELDS',
+  'DEPRECATED_FIELDS',
+  'REQUIRE_DEPRECATION_BEFORE_DELETION',
+] as const);
+
+export const namespaceGraphPruningCheckConfig = pgTable('namespace_graph_pruning_check_config', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  namespaceId: uuid('namespace_id')
+    .notNull()
+    .references(() => namespaces.id, {
+      onDelete: 'cascade',
+    }),
+  graphPruningRule: graphPruningRulesEnum('graph_pruning_rule').notNull(),
+  severityLevel: lintSeverityEnum('severity_level').notNull(),
+  gracePeriod: integer('grace_period').notNull(),
+  schemaUsageCheckPeriod: integer('scheme_usage_check_period'), // in days
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const namespaceGraphPruningCheckConfigRelations = relations(namespaceGraphPruningCheckConfig, ({ one }) => ({
+  namespace: one(namespaces, {
+    fields: [namespaceGraphPruningCheckConfig.namespaceId],
+    references: [namespaces.id],
+  }),
+}));
+
 export const schemaCheckLintAction = pgTable('schema_check_lint_action', {
   id: uuid('id').primaryKey().defaultRandom(),
   schemaCheckId: uuid('schema_check_id')
@@ -1555,5 +1584,87 @@ export const schemaCheckLintActionRelations = relations(schemaCheckLintAction, (
   check: one(schemaChecks, {
     fields: [schemaCheckLintAction.schemaCheckId],
     references: [schemaChecks.id],
+  }),
+}));
+
+export const schemaCheckGraphPruningAction = pgTable('schema_check_graph_pruning_action', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  schemaCheckId: uuid('schema_check_id')
+    .notNull()
+    .references(() => schemaChecks.id, {
+      onDelete: 'cascade',
+    }),
+  graphPruningRuleType: graphPruningRulesEnum('graph_pruning_rule').notNull(),
+  fieldPath: text('field_path').notNull(),
+  message: text('message'),
+  isError: boolean('is_error').default(false),
+  location: customJson<{ line: number; column: number; endLine?: number; endColumn?: number }>('location').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  federatedGraphId: uuid('federated_graph_id')
+    .notNull()
+    .references(() => federatedGraphs.id, {
+      onDelete: 'cascade',
+    }),
+});
+
+export const schemaCheckGraphPruningActionRelations = relations(schemaCheckGraphPruningAction, ({ one }) => ({
+  check: one(schemaChecks, {
+    fields: [schemaCheckGraphPruningAction.schemaCheckId],
+    references: [schemaChecks.id],
+  }),
+  federatedGraph: one(federatedGraphs, {
+    fields: [schemaCheckGraphPruningAction.federatedGraphId],
+    references: [federatedGraphs.id],
+  }),
+}));
+
+export const fieldGracePeriod = pgTable(
+  'field_grace_period',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    subgraphId: uuid('subgraph_id')
+      .notNull()
+      .references(() => subgraphs.id, {
+        onDelete: 'cascade',
+      }),
+    organizationId: uuid('organization_id')
+      .notNull()
+      .references(() => organizations.id, {
+        onDelete: 'cascade',
+      }),
+    namespaceId: uuid('namespace_id')
+      .notNull()
+      .references(() => namespaces.id, {
+        onDelete: 'cascade',
+      }),
+    path: text('path'),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    isDeprecated: boolean('is_deprecated'),
+  },
+  (t) => {
+    return {
+      fieldGracePeriodIndex: uniqueIndex('unique_field_grace_period_idx').on(
+        t.subgraphId,
+        t.namespaceId,
+        t.organizationId,
+        t.path,
+        t.isDeprecated,
+      ),
+    };
+  },
+);
+
+export const fieldGracePeriodRelations = relations(fieldGracePeriod, ({ one }) => ({
+  subgraph: one(subgraphs, {
+    fields: [fieldGracePeriod.subgraphId],
+    references: [subgraphs.id],
+  }),
+  namespace: one(namespaces, {
+    fields: [fieldGracePeriod.namespaceId],
+    references: [namespaces.id],
+  }),
+  organization: one(organizations, {
+    fields: [fieldGracePeriod.organizationId],
+    references: [organizations.id],
   }),
 }));

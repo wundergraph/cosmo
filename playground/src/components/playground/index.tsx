@@ -31,17 +31,23 @@ const validateHeaders = (headers: Record<string, string>) => {
   }
 };
 
+type GraphiQLScripts = {
+  transformHeaders?: (headers: Record<string, string>) => Record<string, string>;
+};
+
 const graphiQLFetch = async (
   schema: GraphQLSchema | null,
   clientValidationEnabled: boolean,
+  scripts: GraphiQLScripts | undefined,
   onFetch: any,
   url: URL,
   init: RequestInit,
 ) => {
   try {
-    const headers: Record<string, string> = {
-      ...(init.headers as Record<string, string>),
-    };
+    const initialHeaders = init.headers as Record<string, string>;
+    const headers: Record<string, string> = scripts?.transformHeaders
+      ? scripts.transformHeaders(initialHeaders)
+      : { ...initialHeaders };
 
     validateHeaders(headers);
 
@@ -263,6 +269,8 @@ export const Playground = (input: {
   routingUrl?: string;
   hideLogo?: boolean;
   theme?: 'light' | 'dark' | undefined;
+  scripts?: GraphiQLScripts;
+  fetch?: typeof fetch;
 }) => {
   const url = input.routingUrl || import.meta.env.VITE_ROUTING_URL || '{{graphqlURL}}';
 
@@ -366,7 +374,8 @@ export const Playground = (input: {
   });
 
   const getSchema = async () => {
-    const res = await fetch(url, {
+    const fetchFunc = input.fetch ? input.fetch : fetch;
+    const res = await fetchFunc(url, {
       body: JSON.stringify({
         operationName: 'IntrospectionQuery',
         query: getIntrospectionQuery(),
@@ -390,11 +399,12 @@ export const Playground = (input: {
       url: url,
       subscriptionUrl: window.location.protocol.replace('http', 'ws') + '//' + window.location.host + url,
       fetch: (...args) =>
-        graphiQLFetch(schema, clientValidationEnabled, onFetch, args[0] as URL, args[1] as RequestInit),
+        graphiQLFetch(schema, clientValidationEnabled, input.scripts, onFetch, args[0] as URL, args[1] as RequestInit),
     });
   }, [schema, clientValidationEnabled]);
 
   const [debouncedQuery] = useDebounce(query, 300);
+  const [debouncedHeaders] = useDebounce(headers, 300);
 
   useEffect(() => {
     const getPlan = async () => {
@@ -409,10 +419,13 @@ export const Playground = (input: {
           return;
         }
 
+        const existingHeaders = JSON.parse(debouncedHeaders || '{}');
+        delete existingHeaders['X-WG-TRACE'];
         const requestHeaders: Record<string, string> = {
-          ...JSON.parse(headers),
+          ...existingHeaders,
           'X-WG-Include-Query-Plan': 'true',
           'X-WG-Skip-Loader': 'true',
+          'X-WG-DISABLE-TRACING': 'true',
         };
 
         validateHeaders(requestHeaders);
@@ -439,7 +452,7 @@ export const Playground = (input: {
     };
 
     getPlan();
-  }, [debouncedQuery, headers, url, schema]);
+  }, [debouncedQuery, debouncedHeaders, url, schema]);
 
   return (
     <TooltipProvider>

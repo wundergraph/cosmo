@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.23.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.22.1...graphqlmetrics@0.23.0) (2024-09-19)
+
+### Features
+
+* add graph pruning ([#1133](https://github.com/wundergraph/cosmo/issues/1133)) ([b5718cd](https://github.com/wundergraph/cosmo/commit/b5718cd66bc7f0d14cb16b3d0a6d395e846968e4)) (@JivusAyrus)
+
+## [0.22.1](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.22.0...graphqlmetrics@0.22.1) (2024-09-18)
+
+### Bug Fixes
+
+* **collector:** dont process empty schema usage metrics ([#1191](https://github.com/wundergraph/cosmo/issues/1191)) ([73b5d67](https://github.com/wundergraph/cosmo/commit/73b5d67769875bc77303f0e5a96293b72013138e)) (@StarpTech)
+
 # [0.22.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.21.1...graphqlmetrics@0.22.0) (2024-08-19)
 
 ### Features

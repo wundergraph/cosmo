@@ -115,8 +115,8 @@ type PlanOptions struct {
 	TrackSchemaUsageInfo bool
 }
 
-func (p *OperationPlanner) plan(operation *ParsedOperation, options PlanOptions) (*operationContext, error) {
-	opContext := &operationContext{
+func (p *OperationPlanner) plan(operation *ParsedOperation, options PlanOptions) (opContext *operationContext, err error) {
+	opContext = &operationContext{
 		name:                       operation.Request.OperationName,
 		opType:                     operation.Type,
 		content:                    operation.NormalizedRepresentation,
@@ -184,13 +184,13 @@ func (p *OperationPlanner) plan(operation *ParsedOperation, options PlanOptions)
 		if !ok {
 			return nil, errors.New("unexpected prepared plan type")
 		}
-		if options.TrackSchemaUsageInfo {
-			opContext.typeFieldUsageInfo = opContext.preparedPlan.typeFieldUsageInfo
-			opContext.argumentUsageInfo = opContext.preparedPlan.argumentUsageInfo
-			opContext.inputUsageInfo, err = graphqlschemausage.GetInputUsageInfo(opContext.preparedPlan.operationDocument, p.executor.RouterSchema, opContext.variables)
-			if err != nil {
-				return nil, err
-			}
+	}
+	if options.TrackSchemaUsageInfo {
+		opContext.typeFieldUsageInfo = opContext.preparedPlan.typeFieldUsageInfo
+		opContext.argumentUsageInfo = opContext.preparedPlan.argumentUsageInfo
+		opContext.inputUsageInfo, err = graphqlschemausage.GetInputUsageInfo(opContext.preparedPlan.operationDocument, p.executor.RouterSchema, opContext.variables)
+		if err != nil {
+			return nil, err
 		}
 	}
 	return opContext, nil
