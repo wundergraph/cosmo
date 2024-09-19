@@ -163,3 +163,10 @@ check-buf:
 
 buf-lint:
 	buf lint
+
+new-gm-data-migration:
+	@if [ -z "$(name)" ]; then \
+		echo "Usage: make new-data-migration name=<migration_name>"; \
+		exit 1; \
+	fi
+	mkdir -p data_migrations/graphqlmetrics/$(shell date +%s)_$(name)
