@@ -699,6 +699,7 @@
             "Apollo-Graphql-Client-Name",
             "Apollo-Graphql-Client-Version",
             "x-wg-trace",
+            "x-wg-disable-tracing",
             "x-wg-token",
             "x-wg-include-query-plan",
             "x-wg-skip-loader",
