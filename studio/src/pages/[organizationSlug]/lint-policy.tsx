@@ -1,117 +1,49 @@
-import { UserContext } from "@/components/app-provider";
 import { NamespaceSelector } from "@/components/dashboard/NamespaceSelector";
 import { EmptyState } from "@/components/empty-state";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Badge } from "@/components/ui/badge";
+import { GraphPruningLintConfig } from "@/components/lint-policy/graph-pruning-config";
+import { LinterConfig } from "@/components/lint-policy/linter-config";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Loader } from "@/components/ui/loader";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/components/ui/use-toast";
-import { docsBaseURL, lintCategories } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
-import { checkUserAccess, cn, countLintConfigsByCategory } from "@/lib/utils";
+import { useQuery } from "@connectrpc/connect-query";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
-  configureNamespaceLintConfig,
-  enableLintingForTheNamespace,
-  getNamespaceLintConfig,
+  getNamespaceGraphPruningConfig,
+  getNamespaceLintConfig
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import {
-  LintConfig,
-  LintSeverity,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import Link from "next/link";
 import { useRouter } from "next/router";
-import { useContext, useEffect, useState } from "react";
-
-const SeverityDropdown = ({
-  onChange,
-  value,
-}: {
-  onChange: (value: string) => void;
-  value: "error" | "warn";
-}) => {
-  return (
-    <Select
-      value={value}
-      onValueChange={(value) => {
-        onChange(value);
-      }}
-    >
-      <SelectTrigger className="h-8 w-36">
-        <SelectValue placeholder={value} />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectGroup>
-          <SelectLabel>Lint Severity</SelectLabel>
-          {["warn", "error"].map((pageSize) => (
-            <SelectItem key={pageSize} value={`${pageSize}`}>
-              {pageSize}
-            </SelectItem>
-          ))}
-        </SelectGroup>
-      </SelectContent>
-    </Select>
-  );
-};
 
 const LintPolicyPage: NextPageWithLayout = () => {
-  const user = useContext(UserContext);
   const router = useRouter();
   const namespace = router.query.namespace as string;
   const { data, isLoading, refetch, error } = useQuery(getNamespaceLintConfig, {
     namespace: namespace || "default",
   });
-  const { mutate: configureLintRules, isPending: isConfiguring } = useMutation(
-    configureNamespaceLintConfig,
-  );
 
-  const { mutate } = useMutation(enableLintingForTheNamespace);
+  const {
+    data: graphPruningConfig,
+    isLoading: fetchingGraphPruningConfig,
+    refetch: refetchGraphPruningConfig,
+    error: graphPruningConfigFetchError,
+  } = useQuery(getNamespaceGraphPruningConfig, {
+    namespace: namespace || "default",
+  });
 
-  const { toast } = useToast();
-
-  const [linterEnabled, setLinterEnabled] = useState(false);
-  const [selectedLintRules, setSelectedLintRules] = useState<LintConfig[]>([]);
-  const [countByCategory, setCountByCategory] = useState<number[]>();
-
-  useEffect(() => {
-    if (!data) return;
-    setSelectedLintRules(data.configs);
-    setLinterEnabled(data.linterEnabled);
-    setCountByCategory(countLintConfigsByCategory(data.configs));
-  }, [data]);
-
-  if (isLoading) return <Loader fullscreen />;
-  if (error || data?.response?.code !== EnumStatusCode.OK)
+  if (isLoading || fetchingGraphPruningConfig) return <Loader fullscreen />;
+  if (
+    error ||
+    graphPruningConfigFetchError ||
+    !data ||
+    !graphPruningConfig ||
+    data?.response?.code !== EnumStatusCode.OK ||
+    graphPruningConfig?.response?.code !== EnumStatusCode.OK
+  )
     return (
       <EmptyState
         icon={<ExclamationTriangleIcon />}
-        title="Could not retrieve the lint config of the namesapce"
+        title="Could not retrieve the lint policy of the namesapce"
         description={
           data?.response?.details || error?.message || "Please try again"
         }
@@ -121,243 +53,8 @@ const LintPolicyPage: NextPageWithLayout = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex w-full items-center justify-between">
-        <div className="flex flex-col gap-y-1">
-          <h3 className="font-semibold tracking-tight">Enable Linter</h3>
-          <p className="text-sm text-muted-foreground">
-            Run the lint check on all the check operations of this namespace.
-          </p>
-        </div>
-        <Switch
-          checked={linterEnabled}
-          disabled={
-            !checkUserAccess({
-              rolesToBe: ["admin", "developer"],
-              userRoles: user?.currentOrganization.roles || [],
-            })
-          }
-          onCheckedChange={(checked) => {
-            setLinterEnabled(checked);
-            mutate(
-              {
-                namespace,
-                enableLinting: checked,
-              },
-              {
-                onSuccess: (d) => {
-                  if (d.response?.code === EnumStatusCode.OK) {
-                    toast({
-                      description: checked
-                        ? "Linter enabled successfully."
-                        : "Linter disabled successfully",
-                      duration: 3000,
-                    });
-                  } else if (d.response?.details) {
-                    toast({
-                      description: d.response.details,
-                      duration: 3000,
-                    });
-                  }
-                  refetch();
-                },
-                onError: (error) => {
-                  toast({
-                    description: checked
-                      ? "Could not enable the linter. Please try again."
-                      : "Could not disable the linter. Please try again.",
-                    duration: 3000,
-                  });
-                },
-              },
-            );
-          }}
-        />
-      </div>
-      <Card>
-        <CardHeader>
-          <div className="flex w-full items-center justify-between">
-            <div className="flex flex-col gap-y-1">
-              <CardTitle>Lint Rules</CardTitle>
-              <CardDescription className="text-sm text-muted-foreground">
-                {data.linterEnabled
-                  ? "Configure the linter rules and its severity levels for the lint check performed during each check operation of this namespace."
-                  : "Enable the linter to configure the lint rules."}{" "}
-                <Link
-                  href={docsBaseURL + "/studio/lint-policy"}
-                  className="text-primary"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Learn more
-                </Link>
-              </CardDescription>
-            </div>
-            <Button
-              className="mt-2"
-              type="submit"
-              variant="default"
-              isLoading={isConfiguring}
-              disabled={
-                !data.linterEnabled ||
-                !checkUserAccess({
-                  rolesToBe: ["admin", "developer"],
-                  userRoles: user?.currentOrganization.roles || [],
-                })
-              }
-              onClick={() => {
-                configureLintRules(
-                  {
-                    namespace,
-                    configs: selectedLintRules,
-                  },
-                  {
-                    onSuccess: (d) => {
-                      if (d.response?.code === EnumStatusCode.OK) {
-                        toast({
-                          description: "Lint Policy applied succesfully.",
-                          duration: 3000,
-                        });
-                      } else if (d.response?.details) {
-                        toast({
-                          description: d.response.details,
-                          duration: 3000,
-                        });
-                      }
-                      refetch();
-                    },
-                    onError: (error) => {
-                      toast({
-                        description:
-                          "Could not apply the lint policy. Please try again.",
-                        duration: 3000,
-                      });
-                    },
-                  },
-                );
-              }}
-            >
-              Apply
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Accordion type="single" collapsible disabled={!data.linterEnabled}>
-            {lintCategories.map((lintCategory, index) => {
-              return (
-                <AccordionItem value={index.toString()} key={index.toString()}>
-                  <AccordionTrigger
-                    className={cn("hover:no-underline", {
-                      "cursor-not-allowed text-muted-foreground":
-                        !data.linterEnabled,
-                    })}
-                    disabled={!data.linterEnabled}
-                  >
-                    <div className="flex w-full flex-col items-start gap-y-1">
-                      <div className="flex items-center gap-x-2">
-                        <span>{lintCategory.title}</span>
-                        {countByCategory && (
-                          <Badge variant="muted">
-                            {`${countByCategory[index]} of ${lintCategory.rules.length}`}
-                          </Badge>
-                        )}
-                      </div>
-                      <span className="text-left text-muted-foreground">
-                        {lintCategory.description}
-                      </span>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <div className="mt-2 flex w-full flex-col gap-y-3">
-                      {lintCategory.rules.map((rule, index) => {
-                        return (
-                          <div
-                            className="flex w-full flex-col justify-between gap-y-4 rounded-md border p-4 md:flex-row md:items-center"
-                            key={index + rule.name}
-                          >
-                            <div className="flex items-start gap-x-4">
-                              <Checkbox
-                                id={rule.name}
-                                className="h-5 w-5"
-                                checked={selectedLintRules.some(
-                                  (l) => l.ruleName === rule.name,
-                                )}
-                                disabled={
-                                  !checkUserAccess({
-                                    rolesToBe: ["admin", "developer"],
-                                    userRoles:
-                                      user?.currentOrganization.roles || [],
-                                  })
-                                }
-                                onCheckedChange={(checked) => {
-                                  if (checked) {
-                                    setSelectedLintRules([
-                                      ...selectedLintRules,
-                                      {
-                                        ruleName: rule.name,
-                                        severityLevel: LintSeverity.warn,
-                                      } as LintConfig,
-                                    ]);
-                                  } else {
-                                    setSelectedLintRules(
-                                      selectedLintRules.filter(
-                                        (l) => l.ruleName !== rule.name,
-                                      ),
-                                    );
-                                  }
-                                }}
-                              />
-                              <div className="flex flex-col gap-y-1">
-                                <label
-                                  htmlFor={rule.name}
-                                  className="break-all text-sm font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                >
-                                  {rule.name}
-                                </label>
-                                <span className="text-sm text-muted-foreground">
-                                  {rule.description}
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="ml-8 md:ml-0">
-                              <SeverityDropdown
-                                value={
-                                  selectedLintRules.find(
-                                    (l) => l.ruleName === rule.name,
-                                  )?.severityLevel === LintSeverity.error
-                                    ? "error"
-                                    : "warn"
-                                }
-                                onChange={(value) => {
-                                  setSelectedLintRules(
-                                    selectedLintRules.map((l) => {
-                                      if (l.ruleName === rule.name) {
-                                        return {
-                                          ...l,
-                                          severityLevel:
-                                            value === "error"
-                                              ? LintSeverity.error
-                                              : LintSeverity.warn,
-                                        } as LintConfig;
-                                      } else {
-                                        return l;
-                                      }
-                                    }),
-                                  );
-                                }}
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              );
-            })}
-          </Accordion>
-        </CardContent>
-      </Card>
+      <LinterConfig data={data} refetch={refetch} />
+      <GraphPruningLintConfig data={graphPruningConfig} refetch={refetchGraphPruningConfig} />
     </div>
   );
 };

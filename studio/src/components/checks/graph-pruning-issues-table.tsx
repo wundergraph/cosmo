@@ -1,8 +1,8 @@
 import { cn } from "@/lib/utils";
 import { CheckCircleIcon, NoSymbolIcon } from "@heroicons/react/24/outline";
-import { Cross1Icon, EyeOpenIcon } from "@radix-ui/react-icons";
+import { Cross1Icon } from "@radix-ui/react-icons";
 import {
-  LintIssue,
+  GraphPruningIssue,
   LintSeverity,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import Link from "next/link";
@@ -22,23 +22,23 @@ import {
 } from "../ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
-export const LintIssuesTable = ({
-  lintIssues,
+export const GraphPruningIssuesTable = ({
+  pruneIssues,
   caption,
-  isLintingEnabled,
+  isGraphPruningEnabled,
 }: {
-  lintIssues: LintIssue[];
+  pruneIssues: GraphPruningIssue[];
   caption?: React.ReactNode;
-  isLintingEnabled: boolean;
+  isGraphPruningEnabled: boolean;
 }) => {
   const router = useRouter();
 
-  if (lintIssues.length === 0 && !isLintingEnabled) {
+  if (pruneIssues.length === 0 && !isGraphPruningEnabled) {
     return (
       <EmptyState
         icon={<NoSymbolIcon className="text-gray-400" />}
-        title="Schema Linting is disabled"
-        description="Enable schema linting to catch linting issues in your schema."
+        title="Schema Graph Pruning is disabled"
+        description="Enable schema graph pruning to catch pruning issues in your schema."
         actions={
           <Button
             size="sm"
@@ -55,27 +55,28 @@ export const LintIssuesTable = ({
     );
   }
 
-  if (lintIssues.length === 0) {
+  if (pruneIssues.length === 0) {
     return (
       <EmptyState
         icon={<CheckCircleIcon className="text-success" />}
-        title="Lint Check Successful"
-        description="There are no lint issues in the proposed schema."
+        title="Graph Prune Check Successful"
+        description="There are no graph pruning issues in the proposed schema."
       />
     );
   }
   return (
-    <TableWrapper>
+    <TableWrapper className="max-h-full">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[380px]">Severity</TableHead>
+            <TableHead className="w-[300px]">Rule</TableHead>
+            <TableHead>Field Path</TableHead>
             <TableHead>Message</TableHead>
             <TableHead className="w-[5px]"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {lintIssues.map((l, i) => (
+          {pruneIssues.map((l, i) => (
             <TableRow key={l.severity + l.message} className="group">
               <TableCell
                 className={cn(
@@ -90,15 +91,12 @@ export const LintIssuesTable = ({
                   ) : (
                     <CiWarning className="h-[15px] w-[15px]" />
                   )}
-                  <div
-                    className={cn("block w-[350px] items-center truncate", {
-                      "text-center": !l.lintRuleType,
-                    })}
-                  >
-                    {l.lintRuleType || "-"}
+                  <div className="block w-[300px] items-center truncate">
+                    {l.graphPruningRuleType}
                   </div>
                 </div>
               </TableCell>
+              <TableCell>{l.fieldPath}</TableCell>
               <TableCell>{l.message}</TableCell>
               <TableCell>
                 <div className="flex items-center gap-x-2">

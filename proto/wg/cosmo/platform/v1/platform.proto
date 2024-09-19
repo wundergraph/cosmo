@@ -216,6 +216,15 @@ message LintIssue{
   LintLocation issueLocation = 4;
 }
 
+message GraphPruningIssue{
+  string graphPruningRuleType = 1;
+  LintSeverity severity = 2;
+  string fieldPath = 3;
+  string message = 4;
+  LintLocation issueLocation = 5;
+  string federatedGraphName = 6;
+}
+
 message CheckSubgraphSchemaResponse {
   Response response = 1;
   repeated SchemaChange breakingChanges = 2;
@@ -227,6 +236,8 @@ message CheckSubgraphSchemaResponse {
   repeated CheckedFederatedGraphs checked_federated_graphs = 7;
   repeated LintIssue lintWarnings = 8;
   repeated LintIssue lintErrors = 9;
+  repeated GraphPruningIssue graphPruneWarnings = 10;
+  repeated GraphPruningIssue graphPruneErrors = 11;
 }
 
 message FixSubgraphSchemaResponse {
@@ -428,6 +439,7 @@ message SchemaCheck {
   bool isDeleted = 9;
   optional GhDetails ghDetails = 10;
   bool hasLintErrors = 11;
+  bool hasGraphPruningErrors = 12;
 }
 
 message GetChecksByFederatedGraphNameResponse {
@@ -462,6 +474,9 @@ message GetCheckSummaryResponse {
   repeated string compositionErrors = 7;
   int32 traffic_check_days = 8;
   repeated LintIssue lintIssues = 9;
+  repeated GraphPruningIssue graphPruningIssues = 10;
+  bool isLintingEnabled = 11;
+  bool isGraphPruningEnabled = 12;
 }
 
 message GetCheckOperationsRequest {
@@ -1987,6 +2002,41 @@ message ConfigureNamespaceLintConfigResponse {
   Response response = 1;
 }
 
+message EnableGraphPruningRequest {
+  string namespace = 1;
+  bool enableGraphPruning = 2;
+}
+
+message EnableGraphPruningResponse {
+  Response response = 1;
+}
+
+message GraphPruningConfig {
+  string ruleName = 1;
+  LintSeverity severityLevel = 2;
+  int32 gracePeriodInDays = 3;
+  optional int32 schemaUsageCheckPeriodInDays = 4;
+}
+
+message ConfigureNamespaceGraphPruningConfigRequest {
+  string namespace = 1;
+  repeated GraphPruningConfig configs = 2;
+}
+
+message ConfigureNamespaceGraphPruningConfigResponse {
+  Response response = 1;
+}
+
+message GetNamespaceGraphPruningConfigRequest {
+  string namespace = 1;
+}
+
+message GetNamespaceGraphPruningConfigResponse {
+  Response response = 1;
+  bool graphPrunerEnabled = 2;
+  repeated GraphPruningConfig configs = 3;
+}
+
 message MigrateMonographRequest {
   string name = 1;
   string namespace = 2;
@@ -2505,6 +2555,12 @@ service PlatformService {
   rpc ConfigureNamespaceLintConfig(ConfigureNamespaceLintConfigRequest) returns (ConfigureNamespaceLintConfigResponse) {}
   // GetNamespaceLintConfig returns the lint config of the namespace.
   rpc GetNamespaceLintConfig(GetNamespaceLintConfigRequest) returns (GetNamespaceLintConfigResponse) {}
+  // EnablePruningForTheNamespace enables the graph pruning check for the namespace passed.
+  rpc EnableGraphPruning(EnableGraphPruningRequest) returns (EnableGraphPruningResponse) {}
+  // ConfigureNamespaceGraphPruningConfig configures the graph pruning config of the organization.
+  rpc ConfigureNamespaceGraphPruningConfig(ConfigureNamespaceGraphPruningConfigRequest) returns (ConfigureNamespaceGraphPruningConfigResponse) {}
+  // GetNamespaceGraphPruningConfig returns the graph pruning config of the namespace.
+  rpc GetNamespaceGraphPruningConfig(GetNamespaceGraphPruningConfigRequest) returns (GetNamespaceGraphPruningConfigResponse) {}
   // GetFeatureFlags returns the feature flags of the namespace
   rpc GetFeatureFlags(GetFeatureFlagsRequest) returns (GetFeatureFlagsResponse) {}
   // GetFeatureFlagByName returns the feature flag of the namespace

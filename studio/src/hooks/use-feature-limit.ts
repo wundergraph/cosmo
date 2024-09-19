@@ -13,5 +13,5 @@ export const useFeatureLimit = <Fallback extends number | undefined>(
   orgId?: string,
 ): Fallback extends number ? number : number | undefined => {
   const feature = useFeature(featureId, orgId);
-  return (feature?.limit || fallback) as any;
+  return (feature?.limit !== undefined ? feature.limit : fallback) as any;
 };

@@ -74,7 +74,7 @@ export class SchemaUsageTrafficInspector {
                last_value(OperationName) as operationName,
                min(toUnixTimestamp(Timestamp)) as firstSeen,
                max(toUnixTimestamp(Timestamp)) as lastSeen
-        FROM ${this.client.database}.gql_metrics_schema_usage_5m_90d
+        FROM ${this.client.database}.gql_metrics_schema_usage_lite_1d_90d
         WHERE
           -- Filter first on date and customer to reduce the amount of data
           Timestamp >= toStartOfDay(now()) - interval ${filter.daysToConsider} day AND
