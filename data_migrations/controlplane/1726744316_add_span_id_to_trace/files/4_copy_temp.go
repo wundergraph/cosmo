@@ -12,27 +12,32 @@ import (
 )
 
 const (
-	concurrencyLimit = 10 // Limit the number of concurrent insertions
+	CopierConcurrencyLimit = 10 // Limit the number of concurrent insertions
 )
 
-var connectionString string
+// DataCopier struct to encapsulate the variables and methods
+type DataCopier struct {
+	ConnectionString string
+}
 
-func generateCopySQLCommand(startDate, endDate string) string {
+// GenerateCopySQLCommand creates the SQL command for copying data for the given date range
+func (dc *DataCopier) GenerateCopySQLCommand(startDate, endDate string) string {
 	return fmt.Sprintf(`INSERT INTO cosmo.traces
 SELECT *
 FROM cosmo.temp_traces
 WHERE toDate(Timestamp) BETWEEN '%s' AND '%s'`, startDate, endDate)
 }
 
-func executeCopySQLCommand(startDate, endDate string, wg *sync.WaitGroup, semaphore chan struct{}) {
+// ExecuteCopySQLCommand runs the copy command and handles retries
+func (dc *DataCopier) ExecuteCopySQLCommand(startDate, endDate string, wg *sync.WaitGroup, semaphore chan struct{}) {
 	defer wg.Done()
 	semaphore <- struct{}{} // Acquire semaphore
 
 	const maxRetries = 5
 	const retryDelay = 5 * time.Second
 
-	sqlCommand := generateCopySQLCommand(startDate, endDate)
-	cmd := exec.Command("clickhouse", "client", connectionString, "--send-timeout", "30000", "--receive-timeout", "30000", "--secure", "--query", sqlCommand)
+	sqlCommand := dc.GenerateCopySQLCommand(startDate, endDate)
+	cmd := exec.Command("clickhouse", "client", dc.ConnectionString, "--send-timeout", "30000", "--receive-timeout", "30000", "--secure", "--query", sqlCommand)
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
@@ -56,7 +61,7 @@ func executeCopySQLCommand(startDate, endDate string, wg *sync.WaitGroup, semaph
 
 	if !success {
 		log.Printf("Failed to copy data from %s to %s after %d attempts: %s\n", startDate, endDate, maxRetries, errorMessage)
-		appendToFile("copy_error_log.txt", fmt.Sprintf("%s to %s: %s\n", startDate, endDate, errorMessage))
+		dc.AppendToFile("copy_error_log.txt", fmt.Sprintf("%s to %s: %s\n", startDate, endDate, errorMessage))
 	} else {
 		log.Printf("Successfully copied data from %s to %s\n", startDate, endDate)
 	}
@@ -64,7 +69,8 @@ func executeCopySQLCommand(startDate, endDate string, wg *sync.WaitGroup, semaph
 	<-semaphore // Release semaphore
 }
 
-func appendToFile(filename, text string) {
+// AppendToFile appends text to a file
+func (dc *DataCopier) AppendToFile(filename, text string) {
 	f, err := os.OpenFile(filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		log.Printf("Failed to open error log: %v", err)
@@ -77,8 +83,9 @@ func appendToFile(filename, text string) {
 	}
 }
 
-func getMinMaxDate(query string) string {
-	cmd := exec.Command("clickhouse", "client", connectionString, "--send-timeout", "30000", "--receive-timeout", "30000", "--secure", "--query", query)
+// GetMinMaxDate runs a query and returns the result as a string
+func (dc *DataCopier) GetMinMaxDate(query string) string {
+	cmd := exec.Command("clickhouse", "client", dc.ConnectionString, "--send-timeout", "30000", "--receive-timeout", "30000", "--secure", "--query", query)
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
@@ -88,14 +95,38 @@ func getMinMaxDate(query string) string {
 	return strings.TrimSpace(out.String())
 }
 
+// DateToSeconds converts date string to Unix seconds
+func (dc *DataCopier) DateToSeconds(dateStr string) int64 {
+	layout := "2006-01-02 15:04:05"
+	t, err := time.Parse(layout, dateStr)
+	if err != nil {
+		log.Fatalf("Failed to parse date: %v", err)
+	}
+	return t.Unix()
+}
+
+// IncrementDate increments the given date string by one day
+func (dc *DataCopier) IncrementDate(dateStr string) string {
+	layout := "2006-01-02"
+	t, err := time.Parse(layout, dateStr)
+	if err != nil {
+		log.Fatalf("Failed to parse date: %v", err)
+	}
+	return t.AddDate(0, 0, 1).Format(layout)
+}
+
 func main() {
 	if len(os.Args) < 2 {
 		log.Fatalf("Usage: %s <connection_string>", os.Args[0])
 	}
-	connectionString = os.Args[1]
 
-	startDate := getMinMaxDate("SELECT toDate(min(Timestamp)) FROM cosmo.temp_traces FORMAT TabSeparated")
-	endDate := getMinMaxDate("SELECT toDate(max(Timestamp)) FROM cosmo.temp_traces FORMAT TabSeparated")
+	// Initialize the DataCopier struct
+	dataCopier := DataCopier{
+		ConnectionString: os.Args[1],
+	}
+
+	startDate := dataCopier.GetMinMaxDate("SELECT toDate(min(Timestamp)) FROM cosmo.temp_traces FORMAT TabSeparated")
+	endDate := dataCopier.GetMinMaxDate("SELECT toDate(max(Timestamp)) FROM cosmo.temp_traces FORMAT TabSeparated")
 
 	if startDate == "" || endDate == "" {
 		log.Fatal("Failed to retrieve start_date or end_date from the database.")
@@ -105,35 +136,17 @@ func main() {
 	log.Printf("End date: %s\n", endDate)
 
 	var wg sync.WaitGroup
-	semaphore := make(chan struct{}, concurrencyLimit)
+	semaphore := make(chan struct{}, CopierConcurrencyLimit)
 
 	// Assuming we want to copy data day by day, use a loop to iterate through each date
 	currentDate := startDate
-	for dateToSeconds(currentDate+" 00:00:00") <= dateToSeconds(endDate+" 23:59:59") {
+	for dataCopier.DateToSeconds(currentDate+" 00:00:00") <= dataCopier.DateToSeconds(endDate+" 23:59:59") {
 		wg.Add(1)
 		// Assuming copying data day by day
-		go executeCopySQLCommand(currentDate, currentDate, &wg, semaphore)
-		currentDate = incrementDate(currentDate)
+		go dataCopier.ExecuteCopySQLCommand(currentDate, currentDate, &wg, semaphore)
+		currentDate = dataCopier.IncrementDate(currentDate)
 	}
 
 	wg.Wait()
 	log.Println("Data copy from temp_traces to traces completed.")
-}
-
-func dateToSeconds(dateStr string) int64 {
-	layout := "2006-01-02 15:04:05"
-	t, err := time.Parse(layout, dateStr)
-	if err != nil {
-		log.Fatalf("Failed to parse date: %v", err)
-	}
-	return t.Unix()
-}
-
-func incrementDate(dateStr string) string {
-	layout := "2006-01-02"
-	t, err := time.Parse(layout, dateStr)
-	if err != nil {
-		log.Fatalf("Failed to parse date: %v", err)
-	}
-	return t.AddDate(0, 0, 1).Format(layout)
 }

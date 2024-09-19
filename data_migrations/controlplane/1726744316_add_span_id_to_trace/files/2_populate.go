@@ -14,12 +14,16 @@ import (
 )
 
 const (
-	concurrencyLimit = 20
+	ConcurrencyLimit = 20
 )
 
-var connectionString string
+// Repopulator struct to encapsulate the variables and methods
+type Repopulator struct {
+	ConnectionString string
+}
 
-func dateToSeconds(dateStr string) int64 {
+// DateToSeconds converts date string to Unix seconds
+func (r *Repopulator) DateToSeconds(dateStr string) int64 {
 	layout := "2006-01-02 15:04:05"
 	t, err := time.Parse(layout, dateStr)
 	if err != nil {
@@ -28,7 +32,8 @@ func dateToSeconds(dateStr string) int64 {
 	return t.Unix()
 }
 
-func incrementDate(dateStr string) string {
+// IncrementDate increments the given date string by one day
+func (r *Repopulator) IncrementDate(dateStr string) string {
 	layout := "2006-01-02"
 	t, err := time.Parse(layout, dateStr)
 	if err != nil {
@@ -37,7 +42,8 @@ func incrementDate(dateStr string) string {
 	return t.AddDate(0, 0, 1).Format(layout)
 }
 
-func generateSQLCommand(dateStr string, hour int) string {
+// GenerateSQLCommand creates the SQL command for the given date and hour
+func (r *Repopulator) GenerateSQLCommand(dateStr string, hour int) string {
 	return fmt.Sprintf(`INSERT INTO cosmo.traces
 SETTINGS max_insert_threads = 32, async_insert=1, wait_for_async_insert=1
 SELECT
@@ -77,15 +83,16 @@ WHERE
     AND toHour(Timestamp) = %d`, dateStr, hour)
 }
 
-func executeSQLCommand(dateStr string, hour int, wg *sync.WaitGroup, semaphore chan struct{}) {
+// ExecuteSQLCommand runs the SQL command and handles retries
+func (r *Repopulator) ExecuteSQLCommand(dateStr string, hour int, wg *sync.WaitGroup, semaphore chan struct{}) {
 	defer wg.Done()
 	semaphore <- struct{}{}
 
 	const maxRetries = 5
 	const retryDelay = 5 * time.Second
 
-	sqlCommand := generateSQLCommand(dateStr, hour)
-	cmd := exec.Command("clickhouse", "client", connectionString, "--send-timeout", "30000", "--receive-timeout", "30000", "--secure", "--query", sqlCommand)
+	sqlCommand := r.GenerateSQLCommand(dateStr, hour)
+	cmd := exec.Command("clickhouse", "client", r.ConnectionString, "--send-timeout", "30000", "--receive-timeout", "30000", "--secure", "--query", sqlCommand)
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
@@ -109,7 +116,7 @@ func executeSQLCommand(dateStr string, hour int, wg *sync.WaitGroup, semaphore c
 
 	if !success {
 		log.Printf("Error occurred while processing date: %s hour: %d: %v\n", dateStr, hour, finalErr)
-		appendToFile("error_log.txt", fmt.Sprintf("%s %02d %s\n", dateStr, hour, finalErr.Error()))
+		r.AppendToFile("error_log.txt", fmt.Sprintf("%s %02d %s\n", dateStr, hour, finalErr.Error()))
 	} else {
 		log.Printf("Successfully processed date: %s hour: %02d\n", dateStr, hour)
 	}
@@ -117,7 +124,8 @@ func executeSQLCommand(dateStr string, hour int, wg *sync.WaitGroup, semaphore c
 	<-semaphore
 }
 
-func appendToFile(filename, text string) {
+// AppendToFile appends text to a file
+func (r *Repopulator) AppendToFile(filename, text string) {
 	f, err := os.OpenFile(filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		log.Printf("Failed to open error log: %v", err)
@@ -130,8 +138,9 @@ func appendToFile(filename, text string) {
 	}
 }
 
-func getMinMaxDate(query string) string {
-	cmd := exec.Command("clickhouse", "client", connectionString, "--send-timeout", "30000", "--receive-timeout", "30000", "--secure", "--query", query)
+// GetMinMaxDate runs a query and returns the result as a string
+func (r *Repopulator) GetMinMaxDate(query string) string {
+	cmd := exec.Command("clickhouse", "client", r.ConnectionString, "--send-timeout", "30000", "--receive-timeout", "30000", "--secure", "--query", query)
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
@@ -142,7 +151,10 @@ func getMinMaxDate(query string) string {
 }
 
 func main() {
-	connectionString = os.Args[1]
+	// Initialize the Repopulator struct
+	repopulator := Repopulator{
+		ConnectionString: os.Args[1],
+	}
 
 	retry := false
 	if len(os.Args) > 2 && os.Args[2] == "--retry" {
@@ -151,8 +163,8 @@ func main() {
 
 	var startDate, endDate string
 	if !retry {
-		startDate = getMinMaxDate("SELECT toDate(min(Timestamp)) FROM cosmo.otel_traces FORMAT TabSeparated")
-		endDate = getMinMaxDate("SELECT toDate(max(Timestamp)) FROM cosmo.otel_traces FORMAT TabSeparated")
+		startDate = repopulator.GetMinMaxDate("SELECT toDate(min(Timestamp)) FROM cosmo.otel_traces FORMAT TabSeparated")
+		endDate = repopulator.GetMinMaxDate("SELECT toDate(max(Timestamp)) FROM cosmo.otel_traces FORMAT TabSeparated")
 
 		if startDate == "" || endDate == "" {
 			log.Fatal("Failed to retrieve start_date or end_date from the database.")
@@ -165,7 +177,7 @@ func main() {
 	}
 
 	var wg sync.WaitGroup
-	semaphore := make(chan struct{}, concurrencyLimit)
+	semaphore := make(chan struct{}, ConcurrencyLimit)
 
 	if retry {
 		file, err := os.Open("error_log.txt")
@@ -197,16 +209,16 @@ func main() {
 			hour, _ := strconv.Atoi(dateHour[1])
 			println(date, hour)
 			wg.Add(1)
-			go executeSQLCommand(date, hour, &wg, semaphore)
+			go repopulator.ExecuteSQLCommand(date, hour, &wg, semaphore)
 		}
 	} else {
 		currentDate := startDate
-		for dateToSeconds(currentDate+" 00:00:00") <= dateToSeconds(endDate+" 23:59:59") {
+		for repopulator.DateToSeconds(currentDate+" 00:00:00") <= repopulator.DateToSeconds(endDate+" 23:59:59") {
 			for hour := 0; hour < 24; hour++ {
 				wg.Add(1)
-				go executeSQLCommand(currentDate, hour, &wg, semaphore)
+				go repopulator.ExecuteSQLCommand(currentDate, hour, &wg, semaphore)
 			}
-			currentDate = incrementDate(currentDate)
+			currentDate = repopulator.IncrementDate(currentDate)
 		}
 	}
 
