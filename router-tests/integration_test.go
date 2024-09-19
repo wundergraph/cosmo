@@ -4,11 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/otel"
-	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
-	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/trace"
-	tracetest2 "go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"io"
 	"math/rand"
 	"net/http"
@@ -23,6 +18,12 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/trace"
+	tracetest2 "go.opentelemetry.io/otel/sdk/trace/tracetest"
 
 	"github.com/buger/jsonparser"
 	"github.com/sebdah/goldie/v2"
@@ -172,6 +173,30 @@ func TestExecutionPlanCache(t *testing.T) {
 		require.Equal(t, http.StatusOK, res.Response.StatusCode)
 		require.Equal(t, "HIT", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
 		require.Equal(t, `{"data":{"findEmployees":[{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res.Body)
+	})
+}
+
+func TestTypenameValidation(t *testing.T) {
+	t.Parallel()
+
+	testenv.Run(t, &testenv.Config{
+		Subgraphs: testenv.SubgraphsConfig{
+			GlobalMiddleware: func(handler http.Handler) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(http.StatusOK)
+					_, _ = w.Write([]byte(`{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"__typename":"wrongTypeName"},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"__typename":"wrongTypeName"},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"__typename":"wrongTypeName"},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"__typename":"wrongTypeName"}]}}`))
+				})
+			},
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			Query:     `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname} __typename}}`,
+			Variables: json.RawMessage(`{"criteria":{"nationality":"GERMAN"}}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, res.Response.StatusCode)
+		require.Equal(t, `{"errors":[{"message":"Subgraph 'family' returned invalid value 'wrongTypeName' for __typename field.","path":["findEmployees",0,"__typename"],"extensions":{"code":"INVALID_GRAPHQL"}}],"data":null}`, res.Body)
 	})
 }
 
