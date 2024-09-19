@@ -680,13 +680,6 @@
       "when": 1725251037898,
       "tag": "0096_red_bug",
       "breakpoints": true
-    },
-    {
-      "idx": 97,
-      "version": "7",
-      "when": 1725969030278,
-      "tag": "0097_gifted_bill_hollister",
-      "breakpoints": true
     }
   ]
 }
