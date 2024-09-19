@@ -404,6 +404,7 @@ export const Playground = (input: {
   }, [schema, clientValidationEnabled]);
 
   const [debouncedQuery] = useDebounce(query, 300);
+  const [debouncedHeaders] = useDebounce(headers, 300);
 
   useEffect(() => {
     const getPlan = async () => {
@@ -418,10 +419,13 @@ export const Playground = (input: {
           return;
         }
 
+        const existingHeaders = JSON.parse(debouncedHeaders || '{}');
+        delete existingHeaders['X-WG-TRACE'];
         const requestHeaders: Record<string, string> = {
-          ...JSON.parse(headers),
+          ...existingHeaders,
           'X-WG-Include-Query-Plan': 'true',
           'X-WG-Skip-Loader': 'true',
+          'X-WG-DISABLE-TRACING': 'true',
         };
 
         validateHeaders(requestHeaders);
@@ -448,7 +452,7 @@ export const Playground = (input: {
     };
 
     getPlan();
-  }, [debouncedQuery, headers, url, schema]);
+  }, [debouncedQuery, debouncedHeaders, url, schema]);
 
   return (
     <TooltipProvider>

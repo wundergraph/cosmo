@@ -46,6 +46,10 @@ func CommonRequestFilter(r *http.Request) bool {
 	if r.Method == "GET" && r.Header.Get("Upgrade") != "" {
 		return false
 	}
+	// Ignore if client disables tracing through header
+	if r.Header.Get("X-WG-DISABLE-TRACING") == "true" {
+		return false
+	}
 	return true
 }
 
