@@ -165,7 +165,7 @@ export const GraphPruningLintConfig = ({
             Enable Graph Pruning Linter
           </h3>
           <p className="text-sm text-muted-foreground">
-            {feature
+            {!!feature?.limit
               ? "Run the graph prune lint check on all the check operations of this namespace."
               : "Upgrade your billing plan to use this feature."}
           </p>
@@ -173,7 +173,7 @@ export const GraphPruningLintConfig = ({
         <Switch
           checked={graphPruningEnabled}
           disabled={
-            !feature ||
+            !feature?.limit ||
             !checkUserAccess({
               rolesToBe: ["admin", "developer"],
               userRoles: user?.currentOrganization.roles || [],
@@ -216,7 +216,7 @@ export const GraphPruningLintConfig = ({
           }}
         />
       </div>
-      {feature && (
+      {!!feature?.limit && (
         <Card>
           <CardHeader>
             <div className="flex w-full items-center justify-between">
