@@ -284,8 +284,8 @@ export type BatchNormalizationContainer = {
   errors?: Array<Error>;
 };
 
-export function normalizeSubgraphFromString(subgraphSDL: string): NormalizationResultContainer {
-  const { error, documentNode } = safeParse(subgraphSDL);
+export function normalizeSubgraphFromString(subgraphSDL: string, noLocation = true): NormalizationResultContainer {
+  const { error, documentNode } = safeParse(subgraphSDL, noLocation);
   if (error || !documentNode) {
     return { errors: [subgraphInvalidSyntaxError(error)], warnings: [] };
   }

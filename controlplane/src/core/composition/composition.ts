@@ -35,6 +35,6 @@ export function composeSubgraphs(subgraphs: Subgraph[]): FederationResultContain
 /**
  * Normalizes and builds a GraphQLSchema from a string. It is not the same as buildSchema from graphql-js.
  */
-export function buildSchema(schema: string): NormalizationResultContainer {
-  return normalizeSubgraphFromString(schema);
+export function buildSchema(schema: string, noLocation = true): NormalizationResultContainer {
+  return normalizeSubgraphFromString(schema, noLocation);
 }

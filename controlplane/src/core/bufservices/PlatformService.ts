@@ -4,7 +4,6 @@ import { ServiceImpl } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { OrganizationEventName, PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
-import { validate as validateUUID } from 'uuid';
 import {
   AcceptOrDeclineInvitationResponse,
   AddReadmeResponse,
@@ -13,6 +12,7 @@ import {
   CheckFederatedGraphResponse,
   CheckSubgraphSchemaResponse,
   CompositionError,
+  ConfigureNamespaceGraphPruningConfigResponse,
   ConfigureNamespaceLintConfigResponse,
   CreateAPIKeyResponse,
   CreateBillingPortalSessionResponse,
@@ -47,26 +47,26 @@ import {
   DeleteUserResponse,
   DeploymentError,
   EnableFeatureFlagResponse,
+  EnableGraphPruningResponse,
   EnableLintingForTheNamespaceResponse,
   Feature,
   FixSubgraphSchemaResponse,
   ForceCheckSuccessResponse,
   GenerateRouterTokenResponse,
+  GetAPIKeysResponse,
   GetAllDiscussionsResponse,
   GetAllOverridesResponse,
   GetAnalyticsViewResponse,
-  GetAPIKeysResponse,
   GetAuditLogsResponse,
   GetBillingPlansResponse,
   GetChangelogBySchemaVersionResponse,
   GetCheckOperationsResponse,
-  GetChecksByFederatedGraphNameResponse,
   GetCheckSummaryResponse,
+  GetChecksByFederatedGraphNameResponse,
   GetClientsResponse,
   GetCompositionDetailsResponse,
   GetCompositionsResponse,
   GetDashboardAnalyticsViewResponse,
-  GetWebhookDeliveryDetailsResponse,
   GetDiscussionResponse,
   GetDiscussionSchemasResponse,
   GetFeatureFlagByNameResponse,
@@ -76,14 +76,15 @@ import {
   GetFeatureSubgraphsResponse,
   GetFederatedGraphByNameResponse,
   GetFederatedGraphChangelogResponse,
-  GetFederatedGraphsBySubgraphLabelsResponse,
   GetFederatedGraphSDLByNameResponse,
+  GetFederatedGraphsBySubgraphLabelsResponse,
   GetFederatedGraphsResponse,
   GetFieldUsageResponse,
   GetGraphMetricsResponse,
   GetInvitationsResponse,
   GetLatestSubgraphSDLResponse,
   GetMetricsErrorRateResponse,
+  GetNamespaceGraphPruningConfigResponse,
   GetNamespaceLintConfigResponse,
   GetNamespacesResponse,
   GetOIDCProviderResponse,
@@ -97,8 +98,8 @@ import {
   GetOrganizationWebhookMetaResponse,
   GetPendingOrganizationMembersResponse,
   GetPersistedOperationsResponse,
-  GetRoutersResponse,
   GetRouterTokensResponse,
+  GetRoutersResponse,
   GetSdlBySchemaVersionResponse,
   GetSubgraphByNameResponse,
   GetSubgraphMembersResponse,
@@ -109,6 +110,8 @@ import {
   GetTraceResponse,
   GetUserAccessiblePermissionsResponse,
   GetUserAccessibleResourcesResponse,
+  GetWebhookDeliveryDetailsResponse,
+  GraphPruningConfig,
   InviteUserResponse,
   IsGitHubAppInstalledResponse,
   IsMemberLimitReachedResponse,
@@ -119,11 +122,11 @@ import {
   MigrateMonographResponse,
   MoveGraphResponse,
   Permission,
-  PublishedOperation,
-  PublishedOperationStatus,
   PublishFederatedSubgraphResponse,
   PublishMonographResponse,
   PublishPersistedOperationsResponse,
+  PublishedOperation,
+  PublishedOperationStatus,
   RedeliverWebhookResponse,
   RemoveInvitationResponse,
   RemoveOperationIgnoreAllOverrideResponse,
@@ -140,9 +143,9 @@ import {
   UpdateFederatedGraphResponse,
   UpdateIntegrationConfigResponse,
   UpdateMonographResponse,
+  UpdateOrgMemberRoleResponse,
   UpdateOrganizationDetailsResponse,
   UpdateOrganizationWebhookConfigResponse,
-  UpdateOrgMemberRoleResponse,
   UpdateSubgraphResponse,
   UpgradePlanResponse,
   WhoAmIResponse,
@@ -150,9 +153,11 @@ import {
 import { isValidUrl, joinLabel } from '@wundergraph/cosmo-shared';
 import { subHours } from 'date-fns';
 import { FastifyBaseLogger } from 'fastify';
-import { buildASTSchema, DocumentNode, parse } from 'graphql';
+import { DocumentNode, GraphQLSchema, buildASTSchema as graphQLBuildASTSchema, parse } from 'graphql';
 import { validate } from 'graphql/validation/index.js';
 import { uid } from 'uid/secure';
+import { validate as validateUUID } from 'uuid';
+import { buildASTSchema } from '@wundergraph/composition';
 import {
   DateRange,
   FeatureFlagDTO,
@@ -161,6 +166,7 @@ import {
   GraphApiKeyJwtPayload,
   GraphCompositionDTO,
   PublishedOperationData,
+  SchemaGraphPruningIssues,
   SchemaLintIssues,
   SubgraphDTO,
   UpdatedPersistedOperation,
@@ -168,6 +174,7 @@ import {
 import { Composer } from '../composition/composer.js';
 import { buildSchema, composeSubgraphs } from '../composition/composition.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
+import { apiKeyPermissions } from '../constants.js';
 import { audiences, nowInSeconds, signJwtHS256 } from '../crypto/jwt.js';
 import { AuthenticationError, PublicError } from '../errors/errors.js';
 import { OpenAIGraphql } from '../openai-graphql/index.js';
@@ -176,6 +183,7 @@ import { AuditLogRepository } from '../repositories/AuditLogRepository.js';
 import { BillingRepository } from '../repositories/BillingRepository.js';
 import { ContractRepository } from '../repositories/ContractRepository.js';
 import { DiscussionRepository } from '../repositories/DiscussionRepository.js';
+import { FeatureFlagRepository } from '../repositories/FeatureFlagRepository.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { GitHubRepository } from '../repositories/GitHubRepository.js';
 import { GraphCompositionRepository } from '../repositories/GraphCompositionRepository.js';
@@ -185,6 +193,7 @@ import { OperationsRepository } from '../repositories/OperationsRepository.js';
 import { OrganizationInvitationRepository } from '../repositories/OrganizationInvitationRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { SchemaCheckRepository } from '../repositories/SchemaCheckRepository.js';
+import { SchemaGraphPruningRepository } from '../repositories/SchemaGraphPruningRepository.js';
 import { SchemaLintRepository } from '../repositories/SchemaLintRepository.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
 import { TargetRepository } from '../repositories/TargetRepository.js';
@@ -204,10 +213,10 @@ import ApolloMigrator from '../services/ApolloMigrator.js';
 import { BillingService } from '../services/BillingService.js';
 import OidcProvider from '../services/OidcProvider.js';
 import {
-  collectOperationUsageStats,
   InspectorOperationResult,
   InspectorSchemaChange,
   SchemaUsageTrafficInspector,
+  collectOperationUsageStats,
 } from '../services/SchemaUsageTrafficInspector.js';
 import Slack from '../services/Slack.js';
 import {
@@ -228,10 +237,6 @@ import {
   validateDateRanges,
 } from '../util.js';
 import { OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
-import { apiKeyPermissions } from '../constants.js';
-import SchemaLinter from '../services/SchemaLinter.js';
-import { FeatureFlagRepository } from '../repositories/FeatureFlagRepository.js';
-import { AdmissionWebhookController, ValidateConfigRequest } from '../services/AdmissionWebhookController.js';
 import { RedeliverWebhookService } from '../webhooks/RedeliverWebhookService.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
@@ -2041,6 +2046,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
         const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const schemaLintRepo = new SchemaLintRepository(opts.db);
+        const schemaGraphPruningRepo = new SchemaGraphPruningRepository(opts.db);
         const schemaCheckRepo = new SchemaCheckRepository(opts.db);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
         const contractRepo = new ContractRepository(logger, opts.db, authContext.organizationId);
@@ -2061,6 +2067,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             checkedFederatedGraphs: [],
             lintWarnings: [],
             lintErrors: [],
+            graphPruneWarnings: [],
+            graphPruneErrors: [],
           };
         }
 
@@ -2078,6 +2086,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             checkedFederatedGraphs: [],
             lintWarnings: [],
             lintErrors: [],
+            graphPruneWarnings: [],
+            graphPruneErrors: [],
           };
         }
 
@@ -2095,6 +2105,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             checkedFederatedGraphs: [],
             lintWarnings: [],
             lintErrors: [],
+            graphPruneWarnings: [],
+            graphPruneErrors: [],
           };
         }
 
@@ -2113,6 +2125,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             checkedFederatedGraphs: [],
             lintWarnings: [],
             lintErrors: [],
+            graphPruneWarnings: [],
+            graphPruneErrors: [],
           };
         }
 
@@ -2131,10 +2145,58 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             checkedFederatedGraphs: [],
             lintWarnings: [],
             lintErrors: [],
+            graphPruneWarnings: [],
+            graphPruneErrors: [],
           };
         }
 
         const newSchemaSDL = req.delete ? '' : new TextDecoder().decode(req.schema);
+        let newGraphQLSchema: GraphQLSchema | undefined;
+
+        if (newSchemaSDL) {
+          try {
+            // Here we check if the schema is valid as a subgraph SDL
+            const { errors } = buildSchema(newSchemaSDL);
+            if (errors && errors.length > 0) {
+              return {
+                response: {
+                  code: EnumStatusCode.ERR_INVALID_SUBGRAPH_SCHEMA,
+                  details: errors.map((e) => e.toString()).join('\n'),
+                },
+                breakingChanges: [],
+                nonBreakingChanges: [],
+                compositionErrors: [],
+                checkId: '',
+                checkedFederatedGraphs: [],
+                lintWarnings: [],
+                lintErrors: [],
+                graphPruneWarnings: [],
+                graphPruneErrors: [],
+              };
+            }
+            if (namespace.enableGraphPruning) {
+              const parsedSchema = parse(newSchemaSDL);
+              // this new GraphQL schema conatins the location info
+              newGraphQLSchema = buildASTSchema(parsedSchema, { assumeValid: true, assumeValidSDL: true });
+            }
+          } catch (e: any) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR_INVALID_SUBGRAPH_SCHEMA,
+                details: e.message,
+              },
+              breakingChanges: [],
+              nonBreakingChanges: [],
+              compositionErrors: [],
+              checkId: '',
+              checkedFederatedGraphs: [],
+              lintWarnings: [],
+              lintErrors: [],
+              graphPruneWarnings: [],
+              graphPruneErrors: [],
+            };
+          }
+        }
 
         const schemaCheckID = await schemaCheckRepo.create({
           targetId: subgraph.targetId,
@@ -2157,6 +2219,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             checkedFederatedGraphs: [],
             lintWarnings: [],
             lintErrors: [],
+            graphPruneWarnings: [],
+            graphPruneErrors: [],
           };
         }
 
@@ -2249,22 +2313,27 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           }
         }
 
-        let lintIssues: SchemaLintIssues = { warnings: [], errors: [] };
-        if (namespace.enableLinting && newSchemaSDL !== '') {
-          const lintConfigs = await schemaLintRepo.getNamespaceLintConfig(namespace.id);
-          if (lintConfigs.length > 0) {
-            const schemaLinter = new SchemaLinter();
-            lintIssues = await schemaLinter.schemaLintCheck({
-              schema: newSchemaSDL,
-              rulesInput: lintConfigs,
-            });
-          }
-        }
-
-        await schemaLintRepo.addSchemaCheckLintIssues({
-          schemaCheckId: schemaCheckID,
-          lintIssues: [...lintIssues.warnings, ...lintIssues.errors],
+        const lintIssues: SchemaLintIssues = await schemaLintRepo.performSchemaLintCheck({
+          schemaCheckID,
+          newSchemaSDL,
+          namespaceId: namespace.id,
+          isLintingEnabled: namespace.enableLinting,
         });
+
+        const graphPruningIssues: SchemaGraphPruningIssues =
+          await schemaGraphPruningRepo.performSchemaGraphPruningCheck({
+            newGraphQLSchema,
+            schemaCheckID,
+            subgraph,
+            namespaceID: namespace.id,
+            organizationID: authContext.organizationId,
+            isGraphPruningEnabled: namespace.enableGraphPruning,
+            schemaChanges,
+            chClient: opts.chClient,
+            fedGraphRepo,
+            subgraphRepo,
+            rangeInDays: limit,
+          });
 
         // Update the overall schema check with the results
         await schemaCheckRepo.update({
@@ -2272,6 +2341,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           hasClientTraffic,
           hasBreakingChanges,
           hasLintErrors: lintIssues.errors.length > 0,
+          hasGraphPruningErrors: graphPruningIssues.errors.length > 0,
         });
 
         if (req.gitInfo && opts.githubApp) {
@@ -2311,6 +2381,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           })),
           lintWarnings: lintIssues.warnings,
           lintErrors: lintIssues.errors,
+          graphPruneWarnings: graphPruningIssues.warnings,
+          graphPruneErrors: graphPruningIssues.errors,
         };
       });
     },
@@ -2705,6 +2777,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         );
         const auditLogRepo = new AuditLogRepository(opts.db);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+        const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
+        const schemaGraphPruningRepo = new SchemaGraphPruningRepository(opts.db);
 
         req.namespace = req.namespace || DefaultNamespace;
 
@@ -2761,7 +2835,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
         const routingUrl = req.routingUrl || '';
         let subgraph = await subgraphRepo.byName(req.name, req.namespace);
         let baseSubgraphID = '';
@@ -3003,6 +3076,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           targetNamespaceId: subgraph.namespaceId,
           targetNamespaceDisplayName: subgraph.namespace,
         });
+
+        if (namespace.enableGraphPruning) {
+          const graphPruningConfigs = await schemaGraphPruningRepo.getNamespaceGraphPruningConfig(namespace.id);
+          await subgraphRepo.handleSubgraphFieldGracePeriods({
+            subgraphId: subgraph.id,
+            namespaceId: subgraph.namespaceId,
+            schemaSDL: subgraph.schemaSDL,
+            newSchemaSDL: req.schema,
+            graphPruningConfigs,
+          });
+        }
 
         if (
           opts.openaiApiKey &&
@@ -7656,7 +7740,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
         const graphAST = parse(schema.schema);
-        const graphSchema = buildASTSchema(graphAST);
+        const graphSchema = graphQLBuildASTSchema(graphAST);
         for (const operation of req.operations) {
           const contents = operation.contents;
           let opAST: DocumentNode;
@@ -8211,6 +8295,103 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         await schemaLintRepo.configureNamespaceLintConfig({
           namespaceId: namespace.id,
           lintConfigs: req.configs,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    enableGraphPruning: (req, ctx) => {
+      let logger = getLogger(ctx, opts.logger);
+
+      return handleError<PlainMessage<EnableGraphPruningResponse>>(ctx, logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
+
+        const organizationRepo = new OrganizationRepository(logger, opts.db);
+        const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+        const namespace = await namespaceRepo.byName(req.namespace);
+        if (!namespace) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Namespace '${req.namespace}' not found`,
+            },
+          };
+        }
+
+        const fieldPruningGracePeriod = await organizationRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'field-pruning-grace-period',
+        });
+        if (!fieldPruningGracePeriod || !fieldPruningGracePeriod.limit) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `Upgrade to a paid plan to enable graph pruning`,
+            },
+          };
+        }
+
+        await namespaceRepo.toggleEnableGraphPruning({
+          id: namespace.id,
+          enableGraphPruning: req.enableGraphPruning,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    configureNamespaceGraphPruningConfig: (req, ctx) => {
+      let logger = getLogger(ctx, opts.logger);
+
+      return handleError<PlainMessage<ConfigureNamespaceGraphPruningConfigResponse>>(ctx, logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
+
+        const schemaGraphPruningRepo = new SchemaGraphPruningRepository(opts.db);
+        const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+
+        const namespace = await namespaceRepo.byName(req.namespace);
+        if (!namespace) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Namespace '${req.namespace}' not found`,
+            },
+            configs: [],
+          };
+        }
+
+        await schemaGraphPruningRepo.configureNamespaceGraphPruningConfigs({
+          namespaceId: namespace.id,
+          graphPruningConfigs: req.configs,
         });
 
         return {
@@ -8986,6 +9167,26 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
         const schemaCheckRepo = new SchemaCheckRepository(opts.db);
         const schemaLintRepo = new SchemaLintRepository(opts.db);
+        const schemaGraphPruningRepo = new SchemaGraphPruningRepository(opts.db);
+        const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+
+        const namespace = await namespaceRepo.byName(req.namespace);
+        if (!namespace) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Namespace '${req.namespace}' not found`,
+            },
+            compositionErrors: [],
+            changes: [],
+            affectedGraphs: [],
+            trafficCheckDays: 0,
+            lintIssues: [],
+            graphPruningIssues: [],
+            isGraphPruningEnabled: false,
+            isLintingEnabled: false,
+          };
+        }
 
         const graph = await fedGraphRepo.byName(req.graphName, req.namespace);
 
@@ -9000,6 +9201,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             affectedGraphs: [],
             trafficCheckDays: 0,
             lintIssues: [],
+            graphPruningIssues: [],
+            isGraphPruningEnabled: false,
+            isLintingEnabled: false,
           };
         }
 
@@ -9017,12 +9221,19 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             affectedGraphs: [],
             trafficCheckDays: 0,
             lintIssues: [],
+            graphPruningIssues: [],
+            isGraphPruningEnabled: false,
+            isLintingEnabled: false,
           };
         }
 
         const { trafficCheckDays } = await schemaCheckRepo.getFederatedGraphConfigForCheckId(req.checkId, graph.id);
 
         const lintIssues = await schemaLintRepo.getSchemaCheckLintIsssues({ schemaCheckId: req.checkId });
+        const graphPruningIssues = await schemaGraphPruningRepo.getSchemaCheckGraphPruningIsssues({
+          schemaCheckId: req.checkId,
+          federatedGraphId: graph.id,
+        });
 
         return {
           response: {
@@ -9035,6 +9246,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           compositionErrors: checkDetails.compositionErrors,
           trafficCheckDays,
           lintIssues,
+          graphPruningIssues,
+          isGraphPruningEnabled: namespace.enableGraphPruning,
+          isLintingEnabled: namespace.enableLinting,
         };
       });
     },
@@ -11361,6 +11575,47 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             } as LintConfig;
           }),
           linterEnabled: namespace.enableLinting,
+        };
+      });
+    },
+
+    getNamespaceGraphPruningConfig: (req, ctx) => {
+      let logger = getLogger(ctx, opts.logger);
+
+      return handleError<PlainMessage<GetNamespaceGraphPruningConfigResponse>>(ctx, logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
+        const schemaGraphPruningRepo = new SchemaGraphPruningRepository(opts.db);
+        const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+
+        const namespace = await namespaceRepo.byName(req.namespace);
+        if (!namespace) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Namespace '${req.namespace}' not found`,
+            },
+            configs: [],
+            graphPrunerEnabled: false,
+          };
+        }
+
+        const graphPruningConfigs = await schemaGraphPruningRepo.getNamespaceGraphPruningConfig(namespace.id);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          configs: graphPruningConfigs.map((l) => {
+            return new GraphPruningConfig({
+              ruleName: l.ruleName,
+              severityLevel: l.severity === 'error' ? LintSeverity.error : LintSeverity.warn,
+              gracePeriodInDays: l.gracePeriodInDays,
+              schemaUsageCheckPeriodInDays: l.schemaUsageCheckPeriodInDays,
+            });
+          }),
+          graphPrunerEnabled: namespace.enableGraphPruning,
         };
       });
     },
