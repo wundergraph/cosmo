@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.112.0](https://github.com/wundergraph/cosmo/compare/router@0.111.1...router@0.112.0) (2024-09-19)
+
+### Features
+
+* disable tracing through headers ([#1189](https://github.com/wundergraph/cosmo/issues/1189)) ([c23fd77](https://github.com/wundergraph/cosmo/commit/c23fd77871db68f7dc33b04ee1ac742476475817)) (@thisisnithin)
+* return error from Router when Subgraph returns invalid value for __typename field ([#1194](https://github.com/wundergraph/cosmo/issues/1194)) ([b99d2fd](https://github.com/wundergraph/cosmo/commit/b99d2fdcd8b311028d11b501addb9d69e61c7df8)) (@jensneuse)
+
 ## [0.111.1](https://github.com/wundergraph/cosmo/compare/router@0.111.0...router@0.111.1) (2024-09-19)
 
 ### Bug Fixes
