@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.5.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.4.0...@wundergraph/playground@0.5.0) (2024-09-19)
+
+### Features
+
+* disable tracing through headers ([#1189](https://github.com/wundergraph/cosmo/issues/1189)) ([c23fd77](https://github.com/wundergraph/cosmo/commit/c23fd77871db68f7dc33b04ee1ac742476475817)) (@thisisnithin)
+
 # [0.4.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.3.1...@wundergraph/playground@0.4.0) (2024-09-18)
 
 ### Features

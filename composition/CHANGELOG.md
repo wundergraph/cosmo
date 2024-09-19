@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.29.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.28.5...@wundergraph/composition@0.29.0) (2024-09-19)
+
+### Features
+
+* add graph pruning ([#1133](https://github.com/wundergraph/cosmo/issues/1133)) ([b5718cd](https://github.com/wundergraph/cosmo/commit/b5718cd66bc7f0d14cb16b3d0a6d395e846968e4)) (@JivusAyrus)
+
 ## [0.28.5](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.28.4...@wundergraph/composition@0.28.5) (2024-09-12)
 
 **Note:** Version bump only for package @wundergraph/composition

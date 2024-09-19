@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.23.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.22.2...aws-lambda-router@0.23.0) (2024-09-19)
+
+### Features
+
+* return error from Router when Subgraph returns invalid value for __typename field ([#1194](https://github.com/wundergraph/cosmo/issues/1194)) ([b99d2fd](https://github.com/wundergraph/cosmo/commit/b99d2fdcd8b311028d11b501addb9d69e61c7df8)) (@jensneuse)
+
 ## [0.22.2](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.22.1...aws-lambda-router@0.22.2) (2024-09-17)
 
 ### Bug Fixes
