@@ -10,7 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"go.uber.org/zap/zaptest/observer"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"io"
 	"log"
 	"math/rand"
@@ -24,6 +24,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"go.uber.org/zap/zaptest/observer"
 
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 
@@ -418,19 +420,14 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	if oc := cfg.LogObservation; oc.Enabled {
 		var zCore zapcore.Core
 		zCore, logObserver = observer.New(oc.LogLevel)
-		zapLogger = zap.New(zCore)
+		zapLogger = logging.NewZapLoggerWithCore(zCore, true)
 	} else {
 		ec := zap.NewProductionEncoderConfig()
 		ec.EncodeDuration = zapcore.SecondsDurationEncoder
 		ec.TimeKey = "time"
 
 		syncer := zapcore.AddSync(os.Stderr)
-
-		zapLogger = zap.New(zapcore.NewCore(
-			zapcore.NewConsoleEncoder(ec),
-			syncer,
-			zapcore.ErrorLevel,
-		))
+		zapLogger = logging.NewZapLoggerWithSyncer(syncer, false, true, zapcore.ErrorLevel)
 	}
 
 	rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdn, natsData.Server, zapLogger)

@@ -6,11 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"io"
 	"net/http"
 	"strings"
-
-	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 
 	"go.opentelemetry.io/otel/attribute"
 
@@ -80,6 +79,7 @@ type HandlerOptions struct {
 	EnableExecutionPlanCacheResponseHeader      bool
 	EnablePersistedOperationCacheResponseHeader bool
 	EnableNormalizationCacheResponseHeader      bool
+	EnableResponseHeaderPropagation             bool
 	WebSocketStats                              WebSocketsStatistics
 	TracerProvider                              trace.TracerProvider
 	Authorizer                                  *CosmoAuthorizer
@@ -96,6 +96,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		enableExecutionPlanCacheResponseHeader: opts.EnableExecutionPlanCacheResponseHeader,
 		enablePersistedOperationCacheResponseHeader: opts.EnablePersistedOperationCacheResponseHeader,
 		enableNormalizationCacheResponseHeader:      opts.EnableNormalizationCacheResponseHeader,
+		enableResponseHeaderPropagation:             opts.EnableResponseHeaderPropagation,
 		websocketStats:                              opts.WebSocketStats,
 		tracer: opts.TracerProvider.Tracer(
 			"wundergraph/cosmo/router/graphql_handler",
@@ -135,6 +136,7 @@ type GraphQLHandler struct {
 	enableExecutionPlanCacheResponseHeader      bool
 	enablePersistedOperationCacheResponseHeader bool
 	enableNormalizationCacheResponseHeader      bool
+	enableResponseHeaderPropagation             bool
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -182,7 +184,10 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case *plan.SynchronousResponsePlan:
 		w.Header().Set("Content-Type", "application/json")
 		h.setDebugCacheHeaders(w, operationCtx)
-		resp, err := h.executor.Resolver.ResolveGraphQLResponse(ctx, p.Response, nil, w)
+		if h.enableResponseHeaderPropagation {
+			ctx = WithResponseHeaderPropagation(ctx)
+		}
+		resp, err := h.executor.Resolver.ResolveGraphQLResponse(ctx, p.Response, nil, HeaderPropagationWriter(w, ctx.Context()))
 		if err != nil {
 			requestLogger.Error("unable to resolve response", zap.Error(err))
 			trackResponseError(ctx.Context(), err)

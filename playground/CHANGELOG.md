@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.4.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.3.1...@wundergraph/playground@0.4.0) (2024-09-18)
+
+### Features
+
+* allow playground consumers to customize headers ([#1183](https://github.com/wundergraph/cosmo/issues/1183)) ([80a7755](https://github.com/wundergraph/cosmo/commit/80a77550b0e8188602bf508e54224725c04e1ef8)) (@clayne11)
+
+## [0.3.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.3.0...@wundergraph/playground@0.3.1) (2024-09-17)
+
+### Bug Fixes
+
+* persisting headers in playground and styling ([#1177](https://github.com/wundergraph/cosmo/issues/1177)) ([223a4d7](https://github.com/wundergraph/cosmo/commit/223a4d7f5a14406e0010df2e953c868466a9ace4)) (@thisisnithin)
+
 # [0.3.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.2.2...@wundergraph/playground@0.3.0) (2024-09-05)
 
 ### Features

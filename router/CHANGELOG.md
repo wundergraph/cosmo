@@ -4,6 +4,30 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.111.1](https://github.com/wundergraph/cosmo/compare/router@0.111.0...router@0.111.1) (2024-09-19)
+
+### Bug Fixes
+
+* **router:** ensure consistent request logs in error conditions ([#1192](https://github.com/wundergraph/cosmo/issues/1192)) ([e16ca1a](https://github.com/wundergraph/cosmo/commit/e16ca1a4034cd70bd99c72a9eeddd10b4c43d106)) (@StarpTech)
+
+# [0.111.0](https://github.com/wundergraph/cosmo/compare/router@0.110.2...router@0.111.0) (2024-09-18)
+
+### Bug Fixes
+
+* propagate schema usage info for cached query plans as well ([#1186](https://github.com/wundergraph/cosmo/issues/1186)) ([dd00099](https://github.com/wundergraph/cosmo/commit/dd00099efb682f02ceb81f086980abc0851d4e21)) (@jensneuse)
+
+### Features
+
+* add response header propagation ([#1155](https://github.com/wundergraph/cosmo/issues/1155)) ([67f7545](https://github.com/wundergraph/cosmo/commit/67f7545b6073ea2abbda8f4f974f88deb38e668a)) (@jensneuse)
+* allow playground consumers to customize headers ([#1183](https://github.com/wundergraph/cosmo/issues/1183)) ([80a7755](https://github.com/wundergraph/cosmo/commit/80a77550b0e8188602bf508e54224725c04e1ef8)) (@clayne11)
+
+## [0.110.2](https://github.com/wundergraph/cosmo/compare/router@0.110.1...router@0.110.2) (2024-09-17)
+
+### Bug Fixes
+
+* ignore empty errors array ([#1181](https://github.com/wundergraph/cosmo/issues/1181)) ([bc5dda3](https://github.com/wundergraph/cosmo/commit/bc5dda393f727d8ee3483ea7e53c89377a0d2722)) (@devsergiy)
+* persisting headers in playground and styling ([#1177](https://github.com/wundergraph/cosmo/issues/1177)) ([223a4d7](https://github.com/wundergraph/cosmo/commit/223a4d7f5a14406e0010df2e953c868466a9ace4)) (@thisisnithin)
+
 ## [0.110.1](https://github.com/wundergraph/cosmo/compare/router@0.110.0...router@0.110.1) (2024-09-13)
 
 **Note:** Version bump only for package router

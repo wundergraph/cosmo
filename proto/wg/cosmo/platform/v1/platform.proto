@@ -949,7 +949,6 @@ message RouterToken {
   string id = 1;
   string name = 2;
   string createdAt = 3;
-  string lastUsedAt = 4;
   string creatorEmail = 5;
 }
 

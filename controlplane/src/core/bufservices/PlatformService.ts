@@ -391,7 +391,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
             await auditLogRepo.addAuditLog({
               organizationId: authContext.organizationId,
-              auditAction: 'federated_graph.created',
+              auditAction: 'federated_graph.deleted',
               action: 'deleted',
               actorId: authContext.userId,
               auditableType: 'federated_graph',
@@ -9899,7 +9899,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             id: rest.id,
             name: rest.name,
             createdAt: rest.createdAt,
-            lastUsedAt: rest.lastUsedAt || '',
             creatorEmail: rest.creatorEmail || '',
           })),
         };
@@ -9989,7 +9988,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         logger = enrichLogger(ctx, logger, authContext);
 
         const federatedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
-        const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
         if (!opts.chClient) {
@@ -10037,51 +10035,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        let routerConfigVersion = graph.composedSchemaVersionId;
-        if (req.featureFlagName) {
-          const featureFlag = await featureFlagRepo.getFeatureFlagByName({
-            featureFlagName: req.featureFlagName,
-            namespaceId: namespace.id,
-          });
-
-          if (!featureFlag) {
-            return {
-              response: {
-                code: EnumStatusCode.ERR_NOT_FOUND,
-                details: `Feature flag '${req.featureFlagName}' not found`,
-              },
-              clients: [],
-              requestSeries: [],
-            };
-          }
-
-          if (routerConfigVersion) {
-            const ffSchemaVersion = await featureFlagRepo.getFeatureFlagSchemaVersionByBaseSchemaVersion({
-              baseSchemaVersionId: routerConfigVersion,
-              featureFlagId: featureFlag.id,
-            });
-
-            if (!ffSchemaVersion) {
-              return {
-                response: {
-                  code: EnumStatusCode.ERR_NOT_FOUND,
-                  details: `Feature flag '${req.featureFlagName}' isnt part of the latest composition.`,
-                },
-                clients: [],
-                requestSeries: [],
-              };
-            }
-            routerConfigVersion = ffSchemaVersion.schemaVersionId;
-          }
-        }
-
         const { clients, requestSeries, meta } = await usageRepo.getFieldUsage({
           federatedGraphId: graph.id,
           organizationId: authContext.organizationId,
           typename: req.typename,
           field: req.field,
-          // In the schema UI we only show the latest valid version which represents the composed schema
-          routerConfigVersion,
           namedType: req.namedType,
           range: req.range,
           dateRange: dr,

@@ -882,7 +882,6 @@ export const graphApiTokens = pgTable(
       .references(() => federatedGraphs.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     token: text('token').unique().notNull(),
-    lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
     createdBy: uuid('created_by').references(() => users.id, {
       // Deleting a user should not delete the token because it is a shared resource
       onDelete: 'set null',

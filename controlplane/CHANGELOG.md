@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.107.5](https://github.com/wundergraph/cosmo/compare/controlplane@0.107.4...controlplane@0.107.5) (2024-09-18)
+
+### Bug Fixes
+
+* delete federated graph audit in deleteNamespace ([#1187](https://github.com/wundergraph/cosmo/issues/1187)) ([db59706](https://github.com/wundergraph/cosmo/commit/db5970658e276c30277efe116984fa3ae7939ca8)) (@JivusAyrus)
+
+## [0.107.4](https://github.com/wundergraph/cosmo/compare/controlplane@0.107.3...controlplane@0.107.4) (2024-09-17)
+
+### Bug Fixes
+
+* remove lastUsedAt for graph tokens ([#1180](https://github.com/wundergraph/cosmo/issues/1180)) ([9ac1590](https://github.com/wundergraph/cosmo/commit/9ac159070f122b45aaa37661143575cfa8fa5b27)) (@thisisnithin)
+
+## [0.107.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.107.2...controlplane@0.107.3) (2024-09-13)
+
+### Bug Fixes
+
+* dont scope schema usage to single schema version ([#1171](https://github.com/wundergraph/cosmo/issues/1171)) ([859afa8](https://github.com/wundergraph/cosmo/commit/859afa85c603ceb618f8352dee0f8e658ec3836a)) (@StarpTech)
+
 ## [0.107.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.107.1...controlplane@0.107.2) (2024-09-13)
 
 **Note:** Version bump only for package controlplane

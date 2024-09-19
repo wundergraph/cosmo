@@ -34,7 +34,6 @@ WunderGraph Cosmo GraphQL Metrics Collector
 | image.pullPolicy | string | `"IfNotPresent"` |  |
 | image.registry | string | `"ghcr.io"` |  |
 | image.repository | string | `"wundergraph/cosmo/graphqlmetrics"` |  |
-| image.version | string | `"latest"` | Overrides the image tag whose default is the chart appVersion. |
 | imagePullSecrets | list | `[]` |  |
 | ingress.hosts | string | `nil` |  |
 | ingress.tls | list | `[]` |  |

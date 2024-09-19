@@ -168,10 +168,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		s.publicKey = publicKey
 	}
 
-	recoveryHandler := recoveryhandler.New(
-		recoveryhandler.WithLogger(s.logger),
-		recoveryhandler.WithPrintStack(),
-	)
+	recoveryHandler := recoveryhandler.New()
 
 	httpRouter := chi.NewRouter()
 
@@ -611,6 +608,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		EnableExecutionPlanCacheResponseHeader: s.engineExecutionConfiguration.EnableExecutionPlanCacheResponseHeader,
 		EnablePersistedOperationCacheResponseHeader: s.engineExecutionConfiguration.Debug.EnablePersistedOperationsCacheResponseHeader,
 		EnableNormalizationCacheResponseHeader:      s.engineExecutionConfiguration.Debug.EnableNormalizationCacheResponseHeader,
+		EnableResponseHeaderPropagation:             s.headerRules != nil,
 		WebSocketStats:                              s.websocketStats,
 		TracerProvider:                              s.tracerProvider,
 		Authorizer:                                  NewCosmoAuthorizer(authorizerOptions),

@@ -1,0 +1,30 @@
+name: Proto CI
+on:
+  pull_request:
+    paths:
+      - "connect-go/**/*"
+      - "proto/**/*"
+      - ".github/workflows/connect-go-ci.yaml"
+
+concurrency:
+  group: ${{github.workflow}}-${{github.head_ref}}
+  cancel-in-progress: true
+
+env:
+  CI: true
+
+jobs:
+  build_test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/go
+
+      - name: Install tools
+        run: make setup-build-tools
+
+      - name: Generate code
+        run: make generate-go
+
+      - name: Check if git is not dirty after generating files
+        run: git diff --no-ext-diff --exit-code
