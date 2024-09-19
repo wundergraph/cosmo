@@ -130,6 +130,7 @@ import {
 import {
   AUTHENTICATED_DEFINITION,
   BASE_SCALARS,
+  DEFER_DEFINITION,
   DEPRECATED_DEFINITION,
   INACCESSIBLE_DEFINITION,
   REQUIRES_SCOPES_DEFINITION,
@@ -193,7 +194,7 @@ import { Warning } from '../warnings/warnings';
 export class FederationFactory {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
   concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>;
-  clientDefinitions: MutableTypeDefinitionNode[] = [DEPRECATED_DEFINITION];
+  clientDefinitions: MutableTypeDefinitionNode[] = [DEFER_DEFINITION, DEPRECATED_DEFINITION];
   currentSubgraphName = '';
   entityDataByTypeName: Map<string, EntityData>;
   entityInterfaceFederationDataByTypeName: Map<string, EntityInterfaceFederationData>;
@@ -220,7 +221,7 @@ export class FederationFactory {
   ]);
   persistedDirectiveDefinitions = new Set<string>([AUTHENTICATED, DEPRECATED, INACCESSIBLE, TAG, REQUIRES_SCOPES]);
   potentialPersistedDirectiveDefinitionDataByDirectiveName = new Map<string, PersistedDirectiveDefinitionData>();
-  routerDefinitions: MutableTypeDefinitionNode[] = [DEPRECATED_DEFINITION, TAG_DEFINITION];
+  routerDefinitions: MutableTypeDefinitionNode[] = [DEFER_DEFINITION, DEPRECATED_DEFINITION, TAG_DEFINITION];
   shareableErrorTypeNames = new Map<string, Set<string>>();
   subscriptionFilterDataByFieldPath = new Map<string, SubscriptionFilterData>();
   isMaxDepth = false;
@@ -1546,6 +1547,7 @@ export class FederationFactory {
     }
     this.routerDefinitions = [
       AUTHENTICATED_DEFINITION,
+      DEFER_DEFINITION,
       DEPRECATED_DEFINITION,
       INACCESSIBLE_DEFINITION,
       REQUIRES_SCOPES_DEFINITION,
@@ -1554,6 +1556,7 @@ export class FederationFactory {
     ];
     this.clientDefinitions = [
       AUTHENTICATED_DEFINITION,
+      DEFER_DEFINITION,
       DEPRECATED_DEFINITION,
       REQUIRES_SCOPES_DEFINITION,
       SCOPE_SCALAR_DEFINITION,

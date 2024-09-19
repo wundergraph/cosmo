@@ -1,6 +1,5 @@
 import {
   federateSubgraphs,
-  incompatibleObjectExtensionOrphanBaseTypeError,
   incompatibleParentKindMergeError,
   INPUT_OBJECT,
   invalidSubgraphNamesError,
@@ -785,6 +784,7 @@ describe('FederationFactory tests', () => {
       normalizeString(
         schemaQueryDefinition +
           `
+        directive @defer(if: Boolean! = true, label: String) on FRAGMENT_SPREAD | INLINE_FRAGMENT
         directive @executableDirective(optionalArgInAll: Float, requiredArgInAll: String!, requiredArgInSome: Int!) on FIELD
         directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION  
         
