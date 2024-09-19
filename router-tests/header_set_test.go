@@ -29,12 +29,6 @@ func TestHeaderSet(t *testing.T) {
 	  }
 	}`
 
-	const queryEmployeeWithNoHobby = `{
-	  employee(id: 1) {
-		id
-	  }
-	}`
-
 	t.Run("RequestSet", func(t *testing.T) {
 		getRule := func(name, val string) *config.RequestHeaderRule {
 			rule := &config.RequestHeaderRule{
