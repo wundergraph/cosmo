@@ -2174,9 +2174,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                 graphPruneErrors: [],
               };
             }
-            const parsedSchema = parse(newSchemaSDL);
-            // this new GraphQL schema conatins the location info
-            newGraphQLSchema = buildASTSchema(parsedSchema, { assumeValid: true, assumeValidSDL: true });
+            if (namespace.enableGraphPruning) {
+              const parsedSchema = parse(newSchemaSDL);
+              // this new GraphQL schema conatins the location info
+              newGraphQLSchema = buildASTSchema(parsedSchema, { assumeValid: true, assumeValidSDL: true });
+            }
           } catch (e: any) {
             return {
               response: {
