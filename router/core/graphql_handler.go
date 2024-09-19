@@ -6,11 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"io"
 	"net/http"
 	"strings"
-
-	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 
 	"go.opentelemetry.io/otel/attribute"
 

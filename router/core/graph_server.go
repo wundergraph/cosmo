@@ -168,10 +168,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		s.publicKey = publicKey
 	}
 
-	recoveryHandler := recoveryhandler.New(
-		recoveryhandler.WithLogger(s.logger),
-		recoveryhandler.WithPrintStack(),
-	)
+	recoveryHandler := recoveryhandler.New()
 
 	httpRouter := chi.NewRouter()
 

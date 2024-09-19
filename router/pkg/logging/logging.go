@@ -18,7 +18,7 @@ const (
 type RequestIDKey struct{}
 
 func New(prettyLogging bool, debug bool, level zapcore.Level) *zap.Logger {
-	return newZapLogger(zapcore.AddSync(os.Stdout), prettyLogging, debug, level)
+	return NewZapLoggerWithSyncer(zapcore.AddSync(os.Stdout), prettyLogging, debug, level)
 }
 
 func zapBaseEncoderConfig() zapcore.EncoderConfig {
@@ -60,15 +60,8 @@ func attachBaseFields(logger *zap.Logger) *zap.Logger {
 	return logger
 }
 
-func newZapLogger(syncer zapcore.WriteSyncer, prettyLogging bool, debug bool, level zapcore.Level) *zap.Logger {
-	var encoder zapcore.Encoder
+func defaultZapCoreOptions(debug bool) []zap.Option {
 	var zapOpts []zap.Option
-
-	if prettyLogging {
-		encoder = zapConsoleEncoder()
-	} else {
-		encoder = ZapJsonEncoder()
-	}
 
 	if debug {
 		zapOpts = append(zapOpts, zap.AddCaller())
@@ -76,15 +69,31 @@ func newZapLogger(syncer zapcore.WriteSyncer, prettyLogging bool, debug bool, le
 
 	zapOpts = append(zapOpts, zap.AddStacktrace(zap.ErrorLevel))
 
+	return zapOpts
+}
+
+func NewZapLoggerWithCore(core zapcore.Core, debug bool) *zap.Logger {
+	zapLogger := zap.New(core, defaultZapCoreOptions(debug)...)
+
+	zapLogger = attachBaseFields(zapLogger)
+
+	return zapLogger
+}
+
+func NewZapLoggerWithSyncer(syncer zapcore.WriteSyncer, prettyLogging bool, debug bool, level zapcore.Level) *zap.Logger {
+	var encoder zapcore.Encoder
+
+	if prettyLogging {
+		encoder = zapConsoleEncoder()
+	} else {
+		encoder = ZapJsonEncoder()
+	}
+
 	zapLogger := zap.New(zapcore.NewCore(
 		encoder,
 		syncer,
 		level,
-	), zapOpts...)
-
-	if prettyLogging {
-		return zapLogger
-	}
+	), defaultZapCoreOptions(debug)...)
 
 	zapLogger = attachBaseFields(zapLogger)
 
