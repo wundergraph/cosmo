@@ -65,4 +65,4 @@ After applying the migration, ensure that the system is functioning as expected.
 
 ## Potential Issues & Troubleshooting
 
-- **Data mismatch**: If there are discrepancies in the row count, check for errors in the `error_log.txt` file written by the above script.
+- **Data mismatch**: If there are discrepancies in the row count, check for errored dates in the `error_log.txt` file written by the populate script and rerun it with the `--retry` option. This will rerun for just the errored dates
