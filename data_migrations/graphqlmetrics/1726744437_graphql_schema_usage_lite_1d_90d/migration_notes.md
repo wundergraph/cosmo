@@ -26,31 +26,8 @@ Please ensure the latest version of Cosmo has been deployed. This migration is o
 - **Controlplane**: 0.108.0
 
 Once the new graphlmetrics is deployed, the new tables `gql_metrics_schema_usage_lite_1d_90d` and `gql_metrics_schema_usage_lite_1d_90d_mv` will be created automatically.
-Please run the below query to insert data into `gql_metrics_schema_usage_lite_1d_90d` from `gql_metrics_schema_usage_5m_90d`.
 
-```sql
-INSERT INTO gql_metrics_schema_usage_lite_1d_90d
-SELECT
-    -- Aggregate data into daily (1d) buckets
-    toStartOfDay(Timestamp) as Timestamp,
-    toLowCardinality(OrganizationID) as OrganizationID,
-    toLowCardinality(FederatedGraphID) as FederatedGraphID,
-    toLowCardinality(RouterConfigVersion) as RouterConfigVersion,
-    toLowCardinality(OperationHash) as OperationHash,
-    -- OperationName is already part of the hash, no need to group by it
-    toLowCardinality(OperationName) as OperationName,
-    toLowCardinality(OperationType) as OperationType,
-    Path as Path,
-    toLowCardinality(arrayElement(Path, -1)) as FieldName,
-    TypeNames as TypeNames,
-    toLowCardinality(NamedType) as NamedType,
-    toLowCardinality(ClientName) as ClientName,
-    toLowCardinality(ClientVersion) as ClientVersion,
-    SubgraphIDs as SubgraphIDs,
-    IsArgument as IsArgument,
-    IsInput as IsInput
-FROM gql_metrics_schema_usage_5m_90d;
-```
+Please run the [sql query](./insert_into_gql_metrics_schema_usage_lite_1d_90d.sql) to insert data into `gql_metrics_schema_usage_lite_1d_90d` from `gql_metrics_schema_usage_5m_90d`.
 
 ### Step 3: Verify Data Integrity
 Once the data has been migrated, it is important to verify the integrity and accuracy of the data. Use the following SQL queries to check that the data has been correctly migrated:
