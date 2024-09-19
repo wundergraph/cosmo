@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.107.5](https://github.com/wundergraph/cosmo/compare/controlplane@0.107.4...controlplane@0.107.5) (2024-09-18)
+
+### Bug Fixes
+
+* delete federated graph audit in deleteNamespace ([#1187](https://github.com/wundergraph/cosmo/issues/1187)) ([db59706](https://github.com/wundergraph/cosmo/commit/db5970658e276c30277efe116984fa3ae7939ca8)) (@JivusAyrus)
+
 ## [0.107.4](https://github.com/wundergraph/cosmo/compare/controlplane@0.107.3...controlplane@0.107.4) (2024-09-17)
 
 ### Bug Fixes
