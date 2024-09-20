@@ -64,8 +64,8 @@ export class TraceRepository {
       UNION ALL
       
       SELECT ${columns}
-      FROM ${this.client.database}.otel_traces t
-      INNER JOIN spans s ON t.ParentSpanId = s.spanId AND t.TraceId = s.traceId
+      FROM spans s, ${this.client.database}.otel_traces as t
+      WHERE t.ParentSpanId = s.spanId AND t.TraceId = s.traceId
     ),
     '${traceID}' AS trace_id,
     (
