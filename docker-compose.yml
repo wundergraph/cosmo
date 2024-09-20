@@ -125,7 +125,7 @@ services:
       - dev
 
   clickhouse:
-    image: clickhouse/clickhouse-server:${DC_CLICKHOUSE_VERSION:-24.2.2}
+    image: clickhouse/clickhouse-server:${DC_CLICKHOUSE_VERSION:-24.6}
     environment:
       CLICKHOUSE_DB: ${CLICKHOUSE_DATABASE:-cosmo}
       CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
@@ -188,7 +188,7 @@ services:
       - '8222:8222'
       - '6222:6222'
     command:
-      - "--js"
+      - '--js'
     networks:
       - primary
     profiles:
@@ -225,7 +225,7 @@ services:
   kafka:
     image: bitnami/kafka:3.7.0
     ports:
-      - "9092:9092"
+      - '9092:9092'
     environment:
       KAFKA_ENABLE_KRAFT: yes
       KAFKA_CFG_PROCESS_ROLES: controller,broker

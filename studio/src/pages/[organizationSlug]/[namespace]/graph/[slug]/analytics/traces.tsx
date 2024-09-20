@@ -150,8 +150,11 @@ const TraceSheet: React.FC<any> = (props) => {
   const router = useRouter();
 
   const traceId = router.query.traceID as string;
+  const spanId = router.query.spanID as string;
 
-  const index = props.data.findIndex((r: any) => r.traceId === traceId);
+  const index = props.data.findIndex(
+    (r: any) => r.traceId === traceId && r.spanId === spanId,
+  );
 
   const [size, setSize] = useState<keyof typeof sizes>("default");
 
@@ -159,6 +162,7 @@ const TraceSheet: React.FC<any> = (props) => {
     if (index + 1 < props.data.length) {
       const newQuery = { ...router.query };
       newQuery["traceID"] = props.data[index + 1].traceId;
+      newQuery["spanID"] = props.data[index + 1].spanId;
       router.replace({
         query: newQuery,
       });
@@ -169,6 +173,7 @@ const TraceSheet: React.FC<any> = (props) => {
     if (index - 1 >= 0) {
       const newQuery = { ...router.query };
       newQuery["traceID"] = props.data[index - 1].traceId;
+      newQuery["spanID"] = props.data[index - 1].spanId;
       router.replace({
         query: newQuery,
       });
@@ -181,7 +186,7 @@ const TraceSheet: React.FC<any> = (props) => {
       previousTrace();
     },
     {},
-    [traceId],
+    [traceId, spanId],
   );
 
   useHotkeys(
@@ -190,17 +195,18 @@ const TraceSheet: React.FC<any> = (props) => {
       nextTrace();
     },
     {},
-    [traceId],
+    [traceId, spanId],
   );
 
   return (
     <Sheet
       modal={false}
-      open={!!traceId}
+      open={!!traceId && !!spanId}
       onOpenChange={(isOpen) => {
         if (!isOpen) {
           const newQuery = { ...router.query };
           delete newQuery["traceID"];
+          delete newQuery["spanID"];
           router.replace({
             query: newQuery,
           });
@@ -281,7 +287,7 @@ const TraceSheet: React.FC<any> = (props) => {
             </TooltipContent>
           </Tooltip>
         </SheetHeader>
-        {traceId && <TraceDetails ast={props.ast} />}
+        {traceId && spanId && <TraceDetails ast={props.ast} />}
       </SheetContent>
     </Sheet>
   );

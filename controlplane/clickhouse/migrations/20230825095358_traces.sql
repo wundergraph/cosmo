@@ -4,6 +4,7 @@
 
 CREATE TABLE IF NOT EXISTS traces (
    TraceId String CODEC (ZSTD(3)),
+   SpanId String CODEC (ZSTD(3)),
    Timestamp DateTime('UTC') CODEC (Delta(4), ZSTD(3)),
    OperationName String CODEC (ZSTD(3)),
    OperationType LowCardinality(String) CODEC (ZSTD(3)),
