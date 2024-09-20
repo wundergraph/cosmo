@@ -152,6 +152,7 @@ func (hf *HeaderPropagation) getAllRules() ([]*config.RequestHeaderRule, []*conf
 
 func (hf *HeaderPropagation) processRule(rule config.HeaderRule, index int) error {
 	switch rule.GetOperation() {
+	case config.HeaderRuleOperationSet:
 	case config.HeaderRuleOperationPropagate:
 		if rule.GetMatching() != "" {
 			regex, err := regexp.Compile(rule.GetMatching())
@@ -236,6 +237,11 @@ func (h *HeaderPropagation) OnOriginResponse(resp *http.Response, ctx RequestCon
 }
 
 func (h *HeaderPropagation) applyResponseRule(propagation *responseHeaderPropagation, res *http.Response, rule *config.ResponseHeaderRule) {
+	if rule.Operation == config.HeaderRuleOperationSet {
+		propagation.header.Set(rule.Name, rule.Value)
+		return
+	}
+
 	if rule.Operation != config.HeaderRuleOperationPropagate {
 		return
 	}
@@ -292,6 +298,11 @@ func (h *HeaderPropagation) applyResponseRuleKeyValue(res *http.Response, propag
 }
 
 func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.Request, rule *config.RequestHeaderRule) {
+	if rule.Operation == config.HeaderRuleOperationSet {
+		request.Header.Set(rule.Name, rule.Value)
+		return
+	}
+
 	if rule.Operation != config.HeaderRuleOperationPropagate {
 		return
 	}
@@ -535,6 +546,11 @@ func FetchURLRules(rules *config.HeaderRules, subgraphs []*nodev1.Subgraph, rout
 func PropagatedHeaders(rules []*config.RequestHeaderRule) (headerNames []string, headerNameRegexps []*regexp.Regexp, err error) {
 	for _, rule := range rules {
 		switch rule.Operation {
+		case config.HeaderRuleOperationSet:
+			if rule.Name == "" || rule.Value == "" {
+				return nil, nil, fmt.Errorf("invalid header set rule %+v, no header name/value combination", rule)
+			}
+			headerNames = append(headerNames, rule.Name)
 		case config.HeaderRuleOperationPropagate:
 			if rule.Matching != "" {
 				re, err := regexp.Compile(rule.Matching)
