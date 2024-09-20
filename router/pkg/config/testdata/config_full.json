@@ -111,21 +111,36 @@
           "Matching": "",
           "Named": "X-Test-Header",
           "Rename": "",
-          "Default": ""
+          "Default": "",
+          "Name": "",
+          "Value": ""
         },
         {
           "Operation": "propagate",
           "Matching": "(?i)^X-Custom-.*",
           "Named": "",
           "Rename": "",
-          "Default": ""
+          "Default": "",
+          "Name": "",
+          "Value": ""
         },
         {
           "Operation": "propagate",
           "Matching": "",
           "Named": "X-User-Id",
           "Rename": "",
-          "Default": "123"
+          "Default": "123",
+          "Name": "",
+          "Value": ""
+        },
+        {
+          "Operation": "set",
+          "Matching": "",
+          "Named": "",
+          "Rename": "",
+          "Default": "",
+          "Name": "X-API-Key",
+          "Value": "some-secret"
         }
       ],
       "Response": [
@@ -135,7 +150,9 @@
           "Named": "X-Custom-Header",
           "Rename": "",
           "Default": "",
-          "Algorithm": "append"
+          "Algorithm": "append",
+          "Name": "",
+          "Value": ""
         }
       ]
     },
@@ -147,7 +164,9 @@
             "Matching": "",
             "Named": "Subgraph-Secret",
             "Rename": "",
-            "Default": "some-secret"
+            "Default": "some-secret",
+            "Name": "",
+            "Value": ""
           }
         ],
         "Response": [
@@ -157,7 +176,19 @@
             "Named": "",
             "Rename": "",
             "Default": "",
-            "Algorithm": "most_restrictive_cache_control"
+            "Algorithm": "most_restrictive_cache_control",
+            "Name": "",
+            "Value": ""
+          },
+          {
+            "Operation": "set",
+            "Matching": "",
+            "Named": "",
+            "Rename": "",
+            "Default": "",
+            "Algorithm": "",
+            "Name": "X-Subgraph-Key",
+            "Value": "some-subgraph-secret"
           }
         ]
       }
