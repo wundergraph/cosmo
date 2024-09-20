@@ -463,7 +463,7 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 			return
 		}
 	} else if rule.Default != "" && isMoreRestrictive(defaultCacheControlObj, propagation.previousCacheControl) {
-		fmt.Println("Overwriting previous cache control with the current subgraph default")
+		// Overwriting previous cache control with the current subgraph default
 		propagation.previousCacheControl = defaultCacheControlObj
 		propagation.header.Set(cacheControlKey, rule.Default)
 	}
@@ -474,12 +474,8 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 	}
 
 	// Compare the previous cache control with the current one to find the most restrictive
-	if isMoreRestrictive(propagation.previousCacheControl, obj) {
-		// Keep the previous cache control, which is more restrictive
-		fmt.Println("Keeping the previous cache control as it's more restrictive")
-	} else {
+	if !isMoreRestrictive(propagation.previousCacheControl, obj) {
 		// The current cache control is more restrictive, so update it
-		fmt.Println("Updating to the current cache control as it's more restrictive")
 		propagation.previousCacheControl = obj
 		propagation.header.Set(cacheControlKey, res.Header.Get(cacheControlKey))
 	}
