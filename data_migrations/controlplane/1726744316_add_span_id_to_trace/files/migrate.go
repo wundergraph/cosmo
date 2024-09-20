@@ -294,14 +294,15 @@ func main() {
 	var endTimestamp time.Time
 	var processedRanges map[string]bool
 
-	// Clear the contents of success log if run from scratch
-	if !resume && !retry {
+	if !retry && !resume {
+		// Clear the contents of success log and error log if run from scratch
 		if err := os.WriteFile("success_log.txt", []byte{}, 0644); err != nil {
 			log.Fatalf("Failed to clear success log: %v", err)
 		}
-	}
+		if err := os.WriteFile("error_log.txt", []byte{}, 0644); err != nil {
+			log.Fatalf("Failed to clear error log: %v", err)
+		}
 
-	if !retry && !resume {
 		// Recreate tables and get the time when the materialized view was created
 		endTimestamp = repopulator.RecreateTables()
 
@@ -352,7 +353,7 @@ func main() {
 			log.Fatalf("Failed to read error log: %v", err)
 		}
 
-		// Clear the contents of the error_log.txt
+		// Clear the contents of the error_log.txt after all lines are read
 		if err := os.WriteFile("error_log.txt", []byte{}, 0644); err != nil {
 			log.Fatalf("Failed to clear error log: %v", err)
 		}
