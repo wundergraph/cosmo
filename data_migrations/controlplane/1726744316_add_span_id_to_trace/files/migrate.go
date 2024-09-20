@@ -137,7 +137,7 @@ func (r *Repopulator) GenerateSQLCommand(startTime, endTime time.Time) string {
 	startTimeStr := r.FormatDateTime(startTime)
 	endTimeStr := r.FormatDateTime(endTime)
 	return fmt.Sprintf(`INSERT INTO cosmo.traces
-SETTINGS max_insert_threads = 32, async_insert=1, wait_for_async_insert=1
+SETTINGS max_insert_threads = 32
 SELECT
     TraceId,
     SpanId,
