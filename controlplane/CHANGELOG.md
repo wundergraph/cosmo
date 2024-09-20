@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.108.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.108.2...controlplane@0.108.3) (2024-09-20)
+
+### Bug Fixes
+
+* set allow_experimental_analyzer = 1 for recursive query ([#1201](https://github.com/wundergraph/cosmo/issues/1201)) ([eb7c74d](https://github.com/wundergraph/cosmo/commit/eb7c74d3c385e4dc2d9587999ef37af5f40cf5ac)) (@thisisnithin)
+
 ## [0.108.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.108.1...controlplane@0.108.2) (2024-09-20)
 
 ### Bug Fixes
