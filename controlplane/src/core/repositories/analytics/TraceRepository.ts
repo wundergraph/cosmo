@@ -6,20 +6,13 @@ import { timestampToNanoseconds } from './util.js';
 export class TraceRepository {
   constructor(private client: ClickHouseClient) {}
 
-  public async getTrace(traceID: string, organizationID: string): Promise<PlainMessage<Span>[]> {
-    const query = `
-    WITH '${traceID}' AS trace_id,
-    (
-        SELECT min(Start)
-        FROM ${this.client.database}.otel_traces_trace_id_ts
-        WHERE TraceId = trace_id
-    ) AS start,
-    (
-        SELECT max(End) + 1
-        FROM ${this.client.database}.otel_traces_trace_id_ts
-        WHERE TraceId = trace_id
-    ) AS end
-    SELECT  
+  public async getTrace(
+    traceID: string,
+    spanID: string,
+    organizationID: string,
+    federatedGraphId: string,
+  ): Promise<PlainMessage<Span>[]> {
+    const columns = `
         Timestamp as timestamp,
         TraceId as traceId,
         SpanId as spanId,
@@ -54,9 +47,40 @@ export class TraceRepository {
         SpanAttributes['wg.router.version'] as attrRouterVersion,
         SpanAttributes['wg.operation.persisted_id'] as attrOperationPersistedId,
         SpanAttributes['wg.federated_graph.id'] as attrFederatedGraphId
-    FROM ${this.client.database}.otel_traces
-    WHERE (TraceId = trace_id) AND (Timestamp >= start) AND (Timestamp <= end) AND SpanAttributes['wg.organization.id'] = '${organizationID}'
-    ORDER BY Timestamp ASC
+    `;
+
+    const query = `
+    WITH RECURSIVE spans AS (
+      SELECT ${columns}
+      FROM otel_traces
+      WHERE 
+        (TraceId = trace_id) 
+        AND (Timestamp >= start) 
+        AND (Timestamp <= end) 
+        AND SpanAttributes['wg.organization.id'] = '${organizationID}'
+        AND SpanAttributes['wg.federated_graph.id'] = '${federatedGraphId}'
+        AND spanId = '${spanID}'
+      
+      UNION ALL
+      
+      SELECT ${columns}
+      FROM otel_traces t
+      INNER JOIN spans s ON t.ParentSpanId = s.spanId AND t.TraceId = s.traceId
+    ),
+    '${traceID}' AS trace_id,
+    (
+        SELECT min(Start)
+        FROM ${this.client.database}.otel_traces_trace_id_ts
+        WHERE TraceId = trace_id
+    ) AS start,
+    (
+        SELECT max(End) + 1
+        FROM ${this.client.database}.otel_traces_trace_id_ts
+        WHERE TraceId = trace_id
+    ) AS end
+    SELECT *
+    FROM spans
+    ORDER BY timestamp ASC
     LIMIT 1000
     `;
 

@@ -120,6 +120,11 @@ export enum Unit {
    * @generated from enum value: TraceID = 6;
    */
   TraceID = 6,
+
+  /**
+   * @generated from enum value: SpanID = 7;
+   */
+  SpanID = 7,
 }
 // Retrieve enum metadata with: proto3.getEnumType(Unit)
 proto3.util.setEnumType(Unit, "wg.cosmo.platform.v1.Unit", [
@@ -130,6 +135,7 @@ proto3.util.setEnumType(Unit, "wg.cosmo.platform.v1.Unit", [
   { no: 4, name: "CodeBlock" },
   { no: 5, name: "StatusCode" },
   { no: 6, name: "TraceID" },
+  { no: 7, name: "SpanID" },
 ]);
 
 /**
@@ -6934,6 +6940,16 @@ export class GetTraceRequest extends Message<GetTraceRequest> {
    */
   id = "";
 
+  /**
+   * @generated from field: string span_id = 2;
+   */
+  spanId = "";
+
+  /**
+   * @generated from field: string federated_graph_id = 3;
+   */
+  federatedGraphId = "";
+
   constructor(data?: PartialMessage<GetTraceRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -6943,6 +6959,8 @@ export class GetTraceRequest extends Message<GetTraceRequest> {
   static readonly typeName = "wg.cosmo.platform.v1.GetTraceRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "span_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "federated_graph_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetTraceRequest {
