@@ -24,6 +24,22 @@ type Graph struct {
 	SignKey string `yaml:"sign_key,omitempty" env:"GRAPH_CONFIG_SIGN_KEY"`
 }
 
+type CustomStaticAttribute struct {
+	Key   string `yaml:"key"`
+	Value string `yaml:"value"`
+}
+
+type CustomDynamicAttribute struct {
+	RequestHeader string `yaml:"request_header"`
+	ContextField  string `yaml:"context_field"`
+}
+
+type CustomAttribute struct {
+	Key       string                  `yaml:"key"`
+	Default   string                  `yaml:"default"`
+	ValueFrom *CustomDynamicAttribute `yaml:"value_from,omitempty"`
+}
+
 type TracingExporterConfig struct {
 	BatchTimeout  time.Duration `yaml:"batch_timeout,omitempty" envDefault:"10s"`
 	ExportTimeout time.Duration `yaml:"export_timeout,omitempty" envDefault:"30s"`
@@ -87,25 +103,10 @@ type MetricsOTLP struct {
 	Exporters     []MetricsOTLPExporter `yaml:"exporters"`
 }
 
-type OtelResourceAttribute struct {
-	Key   string `yaml:"key"`
-	Value string `yaml:"value"`
-}
-
-type OtelAttributeFromValue struct {
-	RequestHeader string `yaml:"request_header"`
-}
-
-type OtelAttribute struct {
-	Key       string                  `yaml:"key"`
-	Default   string                  `yaml:"default"`
-	ValueFrom *OtelAttributeFromValue `yaml:"value_from,omitempty"`
-}
-
 type Telemetry struct {
 	ServiceName        string                  `yaml:"service_name" envDefault:"cosmo-router" env:"TELEMETRY_SERVICE_NAME"`
-	Attributes         []OtelAttribute         `yaml:"attributes"`
-	ResourceAttributes []OtelResourceAttribute `yaml:"resource_attributes"`
+	Attributes         []CustomAttribute       `yaml:"attributes"`
+	ResourceAttributes []CustomStaticAttribute `yaml:"resource_attributes"`
 	Tracing            Tracing                 `yaml:"tracing"`
 	Metrics            Metrics                 `yaml:"metrics"`
 }
@@ -565,6 +566,20 @@ type PersistedOperationsConfig struct {
 	Storage PersistedOperationsStorageConfig `yaml:"storage"`
 }
 
+type AccessLogsConfig struct {
+	Enabled bool              `yaml:"enabled" env:"ACCESS_LOGS_ENABLED" envDefault:"true"`
+	Fields  []CustomAttribute `yaml:"fields,omitempty" env:"ACCESS_LOGS_FIELDS"`
+}
+
+type AccessLogsOutputConfig struct {
+	Stdout bool                        `yaml:"stdout" env:"ACCESS_LOGS_OUTPUT_STDOUT" envDefault:"true"`
+	File   *AccessLogsFileOutputConfig `yaml:"file,omitempty" env:"ACCESS_LOGS_FILE_OUTPUT"`
+}
+
+type AccessLogsFileOutputConfig struct {
+	Path string `yaml:"path" env:"ACCESS_LOGS_FILE_OUTPUT_PATH" envDefault:"access.log"`
+}
+
 type Config struct {
 	Version string `yaml:"version,omitempty" ignored:"true"`
 
@@ -581,6 +596,7 @@ type Config struct {
 	Headers        HeaderRules            `yaml:"headers,omitempty"`
 	TrafficShaping TrafficShapingRules    `yaml:"traffic_shaping,omitempty"`
 	FileUpload     FileUpload             `yaml:"file_upload,omitempty"`
+	AccessLogs     AccessLogsConfig       `yaml:"access_logs,omitempty"`
 
 	ListenAddr                    string                      `yaml:"listen_addr" envDefault:"localhost:3002" env:"LISTEN_ADDR"`
 	ControlplaneURL               string                      `yaml:"controlplane_url" envDefault:"https://cosmo-cp.wundergraph.com" env:"CONTROLPLANE_URL"`

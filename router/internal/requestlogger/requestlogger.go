@@ -3,6 +3,8 @@ package requestlogger
 import (
 	"crypto/sha256"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/attribute_baggage"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"go.opentelemetry.io/otel/trace"
 	"net"
 	"net/http"
@@ -46,7 +48,8 @@ type handler struct {
 	context               Fn
 	handler               http.Handler
 	logger                *zap.Logger
-	fields                []zapcore.Field
+	baseFields            []zapcore.Field
+	customFields          []config.CustomAttribute
 }
 
 func parseOptions(r *handler, opts ...Option) http.Handler {
@@ -60,6 +63,12 @@ func parseOptions(r *handler, opts ...Option) http.Handler {
 func WithAnonymization(ipConfig *IPAnonymizationConfig) Option {
 	return func(r *handler) {
 		r.ipAnonymizationConfig = ipConfig
+	}
+}
+
+func WithCustomFields(fields []config.CustomAttribute) Option {
+	return func(r *handler) {
+		r.customFields = fields
 	}
 }
 
@@ -78,7 +87,7 @@ func WithNoTimeField() Option {
 
 func WithFields(fields ...zapcore.Field) Option {
 	return func(r *handler) {
-		r.fields = fields
+		r.baseFields = fields
 	}
 }
 
@@ -94,7 +103,10 @@ func WithDefaultOptions() Option {
 
 func New(logger *zap.Logger, opts ...Option) func(h http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
-		r := &handler{handler: h, logger: logger}
+		r := &handler{
+			handler: h,
+			logger:  logger.With(zap.String("log_type", "request")),
+		}
 		return parseOptions(r, opts...)
 	}
 }
@@ -126,8 +138,8 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		zap.String("user_agent", r.UserAgent()),
 	}
 
-	if len(h.fields) > 0 {
-		fields = append(fields, h.fields...)
+	if len(h.baseFields) > 0 {
+		fields = append(fields, h.baseFields...)
 	}
 
 	if h.context != nil {
@@ -195,6 +207,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	}()
 
+	ab := attribute_baggage.GetAttributeContext(r.Context())
 	ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 	h.handler.ServeHTTP(ww, r)
 	end := time.Now()
@@ -203,6 +216,39 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	resFields := []zapcore.Field{
 		zap.Duration("latency", latency),
 		zap.Int("status", ww.Status()),
+	}
+
+	if ab != nil {
+		for _, field := range h.customFields {
+			if field.ValueFrom.RequestHeader != "" {
+				if v := r.Header.Get(field.ValueFrom.RequestHeader); v != "" {
+					resFields = append(resFields, zap.String(field.Key, v))
+				} else if field.Default != "" {
+					resFields = append(resFields, zap.String(field.Key, field.Default))
+				}
+			}
+
+			if v, ok := ab.StringAttributes[field.ValueFrom.ContextField]; ok {
+				resFields = append(resFields, zap.String(field.Key, v))
+			} else if field.Default != "" {
+				resFields = append(resFields, zap.String(field.Key, field.Default))
+			}
+
+			if v, ok := ab.SliceAttributes[field.ValueFrom.ContextField]; ok {
+				resFields = append(resFields, zap.Strings(field.Key, v))
+			} else if field.Default != "" {
+				resFields = append(resFields, zap.String(field.Key, field.Default))
+			}
+
+			if v, ok := ab.DurationAttributes[field.ValueFrom.ContextField]; ok {
+				resFields = append(resFields, zap.Duration(field.Key, v))
+			} else if field.Default != "" {
+				var n float32
+				if _, err := fmt.Sscanf(field.Default, "%f", &n); err == nil {
+					resFields = append(resFields, zap.Float32(field.Key, n))
+				}
+			}
+		}
 	}
 
 	h.logger.Info(path, append(fields, resFields...)...)

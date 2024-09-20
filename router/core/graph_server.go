@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/attribute_baggage"
 	"net/http"
 	"net/url"
 	"strings"
@@ -476,6 +477,10 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		}),
 	}
 
+	if len(s.accessLogsConfig.Fields) > 0 {
+		requestLoggerOpts = append(requestLoggerOpts, requestlogger.WithCustomFields(s.accessLogsConfig.Fields))
+	}
+
 	if s.ipAnonymization.Enabled {
 		requestLoggerOpts = append(requestLoggerOpts, requestlogger.WithAnonymization(&requestlogger.IPAnonymizationConfig{
 			Enabled: s.ipAnonymization.Enabled,
@@ -493,6 +498,12 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	httpRouter.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			r = r.WithContext(withSubgraphResolver(r.Context(), subgraphResolver))
+
+			if s.accessLogsConfig.Enabled {
+				ab := attribute_baggage.Get()
+				defer attribute_baggage.Put(ab)
+				r = r.WithContext(attribute_baggage.WithAttributeContext(r.Context(), ab))
+			}
 
 			// For debugging purposes, we can validate from what version of the config the request is coming from
 			if s.setConfigVersionHeader {

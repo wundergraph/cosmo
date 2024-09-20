@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/attribute_baggage"
 	"slices"
 	"strings"
 
@@ -78,6 +79,7 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 		return
 	}
 
+	ab := attribute_baggage.GetAttributeContext(ctx)
 	reqContext := getRequestContext(ctx)
 
 	if reqContext == nil {
@@ -127,10 +129,9 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 								errorCode = code
 							}
 						}
-
 					}
 
-					if errorCode != "" {
+					if errorCode != "" && !slices.Contains(errorCodesAttr, errorCode) {
 						errorCodesAttr = append(errorCodesAttr, errorCode)
 						span.AddEvent(fmt.Sprintf("Downstream error %d", i+1),
 							trace.WithAttributes(
@@ -146,8 +147,12 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 		// Reduce cardinality of error codes
 		slices.Sort(errorCodesAttr)
 
-		if len(errorCodesAttr) > 0 {
+		if ab != nil {
+			ab.AddSliceAttribute(attribute_baggage.GraphQLErrorCodesField, errorCodesAttr...)
+			ab.AddSliceAttribute(attribute_baggage.GraphQLErrorServicesField, ds.Name)
+		}
 
+		if len(errorCodesAttr) > 0 {
 			// Create individual metrics for each error code
 			for _, code := range errorCodesAttr {
 				f.metricStore.MeasureRequestError(ctx,

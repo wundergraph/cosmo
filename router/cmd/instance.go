@@ -157,6 +157,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 				Required: cfg.TLS.Server.ClientAuth.Required,
 			},
 		}),
+		core.WithAccessLogs(cfg.AccessLogs),
 		core.WithDevelopmentMode(cfg.DevelopmentMode),
 		core.WithTracing(core.TraceConfigFromTelemetry(&cfg.Telemetry)),
 		core.WithMetrics(core.MetricConfigFromTelemetry(&cfg.Telemetry)),

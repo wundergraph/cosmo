@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/attribute_baggage"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
 	"io"
 	"net/http"
@@ -337,7 +338,6 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 
 		art.SetRequestTracingStats(r.Context(), traceOptions, traceTimings)
-
 		requestContext := buildRequestContext(w, r, opContext, requestLogger)
 		metrics.AddOperationContext(opContext)
 
@@ -381,6 +381,8 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 
 	}()
 
+	ab := attribute_baggage.GetAttributeContext(req.Context())
+
 	// Handle the case when operation information are provided as GET parameters
 	if req.Method == http.MethodGet {
 		if err := operationKit.UnmarshalOperationFromURL(req.URL); err != nil {
@@ -421,6 +423,7 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 		)
 
 		httpOperation.traceTimings.StartParse()
+		startParsing := time.Now()
 
 		err = operationKit.Parse()
 		if err != nil {
@@ -431,8 +434,17 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 			return nil, err
 		}
 
+		if ab != nil {
+			ab.AddDurationAttribute(attribute_baggage.OperationParsingTimeField, time.Since(startParsing))
+		}
+
 		httpOperation.traceTimings.EndParse()
 		engineParseSpan.End()
+	}
+
+	if ab != nil {
+		ab.AddSliceAttribute(attribute_baggage.OperationNameField, operationKit.parsedOperation.Request.OperationName)
+		ab.AddSliceAttribute(attribute_baggage.OperationTypeField, operationKit.parsedOperation.Type)
 	}
 
 	// Give the buffer back to the pool as soon as we're done with it
@@ -467,6 +479,11 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 
 	if operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil &&
 		operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash != "" {
+
+		if ab != nil {
+			ab.AddSliceAttribute(attribute_baggage.OperationNameField, operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
+		}
+
 		persistedIDAttribute := otel.WgOperationPersistedID.String(operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
 		attributes = append(attributes, persistedIDAttribute)
 		httpOperation.routerSpan.SetAttributes(persistedIDAttribute)
@@ -478,6 +495,7 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 	 */
 
 	httpOperation.traceTimings.StartNormalize()
+	startNormalization := time.Now()
 
 	_, engineNormalizeSpan := h.tracer.Start(req.Context(), "Operation - Normalize",
 		trace.WithSpanKind(trace.SpanKindInternal),
@@ -512,6 +530,10 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 		return nil, err
 	}
 
+	if ab != nil {
+		ab.AddDurationAttribute(attribute_baggage.OperationNormalizationField, time.Since(startNormalization))
+	}
+
 	engineNormalizeSpan.SetAttributes(otel.WgNormalizationCacheHit.Bool(cached))
 
 	if operationKit.parsedOperation.IsPersistedOperation {
@@ -541,6 +563,8 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 		httpOperation.traceTimings.StartValidate()
 	}
 
+	startValidation := time.Now()
+
 	_, engineValidateSpan := h.tracer.Start(req.Context(), "Operation - Validate",
 		trace.WithSpanKind(trace.SpanKindInternal),
 		trace.WithAttributes(attributes...),
@@ -552,6 +576,10 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 		engineValidateSpan.End()
 
 		return nil, err
+	}
+
+	if ab != nil {
+		ab.AddDurationAttribute(attribute_baggage.OperationValidationTimeField, time.Since(startValidation))
 	}
 
 	engineValidateSpan.SetAttributes(otel.WgValidationCacheHit.Bool(validationCached))
@@ -587,6 +615,7 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 	// and always plan the operation
 	// this allows us to "write" to the plan
 	httpOperation.traceTimings.StartPlanning()
+	startPlanning := time.Now()
 
 	_, enginePlanSpan := h.tracer.Start(req.Context(), "Operation - Plan",
 		trace.WithSpanKind(trace.SpanKindInternal),
@@ -612,6 +641,10 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 		httpOperation.requestLogger.Error("failed to plan operation", zap.Error(err))
 
 		return nil, err
+	}
+
+	if ab != nil {
+		ab.AddDurationAttribute(attribute_baggage.OperationPlanningTimeField, time.Since(startPlanning))
 	}
 
 	enginePlanSpan.SetAttributes(otel.WgEnginePlanCacheHit.Bool(opContext.planCacheHit))

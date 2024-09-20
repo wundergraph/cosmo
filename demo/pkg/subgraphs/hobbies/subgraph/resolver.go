@@ -24,6 +24,7 @@ func (r *Resolver) Employees(hobby model.Hobby) ([]*model.Employee, error) {
 			}
 		}
 	}
+
 	return res, nil
 }
 

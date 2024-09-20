@@ -4,3 +4,39 @@
 # This file is used to debugging purposes only.
 
 version: "1"
+
+# New logging configuration
+access_logs:
+  enabled: true
+  output:
+    stdout: true
+    file:
+      path: "/var/log/gateway/access.log"
+  fields:
+    - key: "service"
+      value_from:
+        request_header: "x-service"
+    - key: "operationName"
+      value_from:
+        context_field: operation_name
+    - key: "errorCodes"
+      value_from:
+        context_field: graphql_error_codes
+    - key: "operationType"
+      value_from:
+        context_field: operation_type
+    - key: "serviceNames"
+      value_from:
+        context_field: graphql_error_service_names
+    - key: "operationParsingTime"
+      value_from:
+        context_field: operation_parsing_time
+    - key: "operationPlanningTime"
+      value_from:
+        context_field: operation_planning_time
+    - key: "operationNormalizationTime"
+      value_from:
+        context_field: operation_normalization_time
+    - key: "operationValidationTime"
+      value_from:
+        context_field: operation_validation_time

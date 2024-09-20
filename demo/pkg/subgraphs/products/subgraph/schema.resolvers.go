@@ -7,6 +7,9 @@ package subgraph
 import (
 	"context"
 	"errors"
+	"fmt"
+	"github.com/99designs/gqlgen/graphql"
+	"github.com/vektah/gqlparser/v2/gqlerror"
 
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/products/subgraph/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/products/subgraph/model"
@@ -62,7 +65,18 @@ func (r *mutationResolver) AddFact(ctx context.Context, fact model.TopSecretFact
 
 // ProductTypes is the resolver for the productTypes field.
 func (r *queriesResolver) ProductTypes(ctx context.Context) ([]model.Products, error) {
-	return products, nil
+	fmt.Println("error resolving field employees ----------------------------------------")
+
+	graphql.AddError(ctx, &gqlerror.Error{
+		Path:    graphql.GetPath(ctx),
+		Message: fmt.Sprintf("error resolving field %s", "employees"),
+		Extensions: map[string]interface{}{
+			"code": "ERROR_CODE",
+			"foo":  "bar",
+		},
+	})
+
+	return nil, nil
 }
 
 // TopSecretFederationFacts is the resolver for the topSecretFederationFacts field.

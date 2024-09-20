@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"github.com/wundergraph/cosmo/router/internal/attribute_baggage"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -143,6 +144,8 @@ type requestContext struct {
 	operation *operationContext
 	// subgraphResolver can be used to resolve Subgraph by ID or by request
 	subgraphResolver *SubgraphResolver
+	// attributeBaggage is the attribute container for the request
+	attributeBaggage *attribute_baggage.AttributeBaggage
 }
 
 func (c *requestContext) Operation() OperationContext {

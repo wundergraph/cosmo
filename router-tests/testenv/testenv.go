@@ -120,8 +120,8 @@ type Config struct {
 	DisableParentBasedSampler          bool
 	TLSConfig                          *core.TlsConfig
 	TraceExporter                      trace.SpanExporter
-	OtelAttributes                     []config.OtelAttribute
-	OtelResourceAttributes             []config.OtelResourceAttribute
+	OtelAttributes                     []config.CustomAttribute
+	OtelResourceAttributes             []config.CustomStaticAttribute
 	MetricReader                       metric.Reader
 	PrometheusRegistry                 *prometheus.Registry
 	ShutdownDelay                      time.Duration
