@@ -49,14 +49,38 @@ export class TraceRepository {
         SpanAttributes['wg.federated_graph.id'] as attrFederatedGraphId
     `;
 
+    const getStartEndQuery = `
+      WITH '${traceID}' AS trace_id,
+      (
+          SELECT min(Start)
+          FROM ${this.client.database}.otel_traces_trace_id_ts
+          WHERE TraceId = trace_id
+      ) AS start,
+      (
+          SELECT max(End) + 1
+          FROM ${this.client.database}.otel_traces_trace_id_ts
+          WHERE TraceId = trace_id
+      ) AS end
+      SELECT start, end
+    `;
+
+    const startEndResults = await this.client.queryPromise(getStartEndQuery);
+
+    if (!Array.isArray(startEndResults)) {
+      return [];
+    }
+
+    const start = startEndResults[0].start;
+    const end = startEndResults[0].end;
+
     const query = `
     WITH RECURSIVE spans AS (
       SELECT ${columns}
-      FROM otel_traces
+      FROM ${this.client.database}.otel_traces
       WHERE 
-        (TraceId = trace_id) 
-        AND (Timestamp >= start) 
-        AND (Timestamp <= end) 
+        (TraceId = '${traceID}') 
+        AND (Timestamp >= '${start}') 
+        AND (Timestamp <= '${end}') 
         AND SpanAttributes['wg.organization.id'] = '${organizationID}'
         AND SpanAttributes['wg.federated_graph.id'] = '${federatedGraphId}'
         AND spanId = '${spanID}'
@@ -64,20 +88,9 @@ export class TraceRepository {
       UNION ALL
       
       SELECT ${columns}
-      FROM otel_traces t
+      FROM ${this.client.database}.otel_traces t
       INNER JOIN spans s ON t.ParentSpanId = s.spanId AND t.TraceId = s.traceId
-    ),
-    '${traceID}' AS trace_id,
-    (
-        SELECT min(Start)
-        FROM ${this.client.database}.otel_traces_trace_id_ts
-        WHERE TraceId = trace_id
-    ) AS start,
-    (
-        SELECT max(End) + 1
-        FROM ${this.client.database}.otel_traces_trace_id_ts
-        WHERE TraceId = trace_id
-    ) AS end
+    )
     SELECT *
     FROM spans
     ORDER BY timestamp ASC
