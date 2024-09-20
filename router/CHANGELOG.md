@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.113.0](https://github.com/wundergraph/cosmo/compare/router@0.112.0...router@0.113.0) (2024-09-20)
+
+### Bug Fixes
+
+* remove printlns ([#1198](https://github.com/wundergraph/cosmo/issues/1198)) ([8b8fc88](https://github.com/wundergraph/cosmo/commit/8b8fc880eace135d957e5b572e6c5ba810ee51cf)) (@df-wg)
+
+### Features
+
+* implement set header ([#1196](https://github.com/wundergraph/cosmo/issues/1196)) ([c3cc9ec](https://github.com/wundergraph/cosmo/commit/c3cc9ec7dd17a8ee56422eb5d52361d4f781eb3f)) (@df-wg)
+
 # [0.112.0](https://github.com/wundergraph/cosmo/compare/router@0.111.1...router@0.112.0) (2024-09-19)
 
 ### Features
