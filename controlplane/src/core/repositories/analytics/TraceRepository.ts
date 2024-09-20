@@ -54,9 +54,9 @@ export class TraceRepository {
       SELECT ${columns}
       FROM ${this.client.database}.otel_traces
       WHERE 
-        (TraceId = trace_id) 
-        AND (Timestamp >= start) 
-        AND (Timestamp <= end) 
+        TraceId = trace_id
+        AND Timestamp >= start 
+        AND Timestamp <= end
         AND SpanAttributes['wg.organization.id'] = '${organizationID}'
         AND SpanAttributes['wg.federated_graph.id'] = '${federatedGraphId}'
         AND spanId = '${spanID}'
