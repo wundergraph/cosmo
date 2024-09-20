@@ -1757,7 +1757,7 @@
         },
         "value": {
           "type": "string",
-          "examples": ["${env.SECRET_FOR_SUBGRAPH}"],
+          "examples": ["My-Secret-Value"],
           "description": "The value to set for the header. This can include environment variables."
         }
       },
