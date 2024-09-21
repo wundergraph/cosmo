@@ -4,6 +4,30 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.108.4](https://github.com/wundergraph/cosmo/compare/controlplane@0.108.3...controlplane@0.108.4) (2024-09-20)
+
+### Bug Fixes
+
+* apply filters to recursive part ([#1202](https://github.com/wundergraph/cosmo/issues/1202)) ([3b96e20](https://github.com/wundergraph/cosmo/commit/3b96e2094fcd23e313f7811e2aae33f200f9f52d)) (@thisisnithin)
+
+## [0.108.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.108.2...controlplane@0.108.3) (2024-09-20)
+
+### Bug Fixes
+
+* set allow_experimental_analyzer = 1 for recursive query ([#1201](https://github.com/wundergraph/cosmo/issues/1201)) ([eb7c74d](https://github.com/wundergraph/cosmo/commit/eb7c74d3c385e4dc2d9587999ef37af5f40cf5ac)) (@thisisnithin)
+
+## [0.108.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.108.1...controlplane@0.108.2) (2024-09-20)
+
+### Bug Fixes
+
+* recursive query syntax ([#1199](https://github.com/wundergraph/cosmo/issues/1199)) ([5f42eeb](https://github.com/wundergraph/cosmo/commit/5f42eeb159bbd4b61b6d4535775dc200fee1ac76)) (@thisisnithin)
+
+## [0.108.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.108.0...controlplane@0.108.1) (2024-09-20)
+
+### Bug Fixes
+
+* handle duplicate traces with same traceId ([#1190](https://github.com/wundergraph/cosmo/issues/1190)) ([b562816](https://github.com/wundergraph/cosmo/commit/b562816cc5b0dd9477590966fb9dcf7f10de3444)) (@thisisnithin)
+
 # [0.108.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.107.5...controlplane@0.108.0) (2024-09-19)
 
 ### Bug Fixes

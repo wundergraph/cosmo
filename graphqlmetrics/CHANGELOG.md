@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.23.1](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.23.0...graphqlmetrics@0.23.1) (2024-09-20)
+
+### Bug Fixes
+
+* handle empty batch of metrics ([#1200](https://github.com/wundergraph/cosmo/issues/1200)) ([4af9beb](https://github.com/wundergraph/cosmo/commit/4af9beb65cfb2f16b24d199fc6f603d083719001)) (@StarpTech)
+
 # [0.23.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.22.1...graphqlmetrics@0.23.0) (2024-09-19)
 
 ### Features

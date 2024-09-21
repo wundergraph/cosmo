@@ -1042,13 +1042,19 @@
             "request": {
               "type": "array",
               "items": {
-                "$ref": "#/definitions/traffic_shaping_header_rule"
+                "oneOf": [
+                  { "$ref": "#/definitions/traffic_shaping_header_rule" },
+                  { "$ref": "#/definitions/set_header_rule" }
+                ]
               }
             },
             "response": {
               "type": "array",
               "items": {
-                "$ref": "#/definitions/traffic_shaping_header_response_rule"
+                "oneOf": [
+                  { "$ref": "#/definitions/traffic_shaping_header_response_rule" },
+                  { "$ref": "#/definitions/set_header_rule" }
+                ]
               }
             }
           }
@@ -1062,13 +1068,19 @@
               "request": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/definitions/traffic_shaping_header_rule"
+                  "oneOf": [
+                    { "$ref": "#/definitions/traffic_shaping_header_rule" },
+                    { "$ref": "#/definitions/set_header_rule" }
+                  ]
                 }
               },
               "response": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/definitions/traffic_shaping_header_response_rule"
+                  "oneOf": [
+                    { "$ref": "#/definitions/traffic_shaping_header_response_rule" },
+                    { "$ref": "#/definitions/set_header_rule" }
+                  ]
                 }
               }
             }
@@ -1810,6 +1822,29 @@
           "rename": {}
         }
       }
+    },
+    "set_header_rule": {
+      "type": "object",
+      "description": "The configuration for setting headers. This is used to set specific headers in requests or responses.",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "type": "string",
+          "const": "set",
+          "description": "The 'set' operation is used to set a specific header value."
+        },
+        "name": {
+          "type": "string",
+          "examples": ["X-API-Key"],
+          "description": "The name of the header to set."
+        },
+        "value": {
+          "type": "string",
+          "examples": ["My-Secret-Value"],
+          "description": "The value to set for the header. This can include environment variables."
+        }
+      },
+      "required": ["op", "name", "value"]
     }
   }
 }
