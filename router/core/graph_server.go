@@ -472,9 +472,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			requestLogger := s.logger.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 			r = r.WithContext(withSubgraphResolver(r.Context(), subgraphResolver))
-
-			opContext := &operationContext{}
-			r = r.WithContext(withRequestContext(r.Context(), buildRequestContext(w, r, opContext, requestLogger)))
+			r = r.WithContext(withRequestContext(r.Context(), buildRequestContext(w, r, nil, requestLogger)))
 
 			// For debugging purposes, we can validate from what version of the config the request is coming from
 			if s.setConfigVersionHeader {
@@ -520,10 +518,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 				requestContext := getRequestContext(request.Context())
 				resFields := make([]zapcore.Field, 0, len(s.accessLogsConfig.Fields))
 				resFields = append(resFields, zap.String("request_id", middleware.GetReqID(request.Context())))
-
-				if !s.accessLogsConfig.Enabled {
-					return resFields
-				}
 
 				for _, field := range s.accessLogsConfig.Fields {
 					if field.ValueFrom.RequestHeader != "" {

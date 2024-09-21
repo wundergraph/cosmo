@@ -172,8 +172,9 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		)
 
 		requestContext := getRequestContext(r.Context())
-		routerSpan := trace.SpanFromContext(r.Context())
 		requestLogger := requestContext.logger
+
+		routerSpan := trace.SpanFromContext(r.Context())
 
 		clientInfo := NewClientInfoFromRequest(r)
 		commonAttributes := []attribute.KeyValue{
@@ -182,7 +183,9 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			otel.WgOperationProtocol.String(OperationProtocolHTTP.String()),
 		}
 
-		requestContext.operation.clientInfo = *clientInfo
+		requestContext.operation = &operationContext{
+			clientInfo: *clientInfo,
+		}
 
 		executionOptions, traceOptions, err := h.parseRequestOptions(r, clientInfo, requestLogger)
 		if err != nil {
@@ -347,7 +350,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 
-		// Update the request on the context with the new request to work with the latest context
+		// The request needs to be updated to get the latest context
 		requestContext.request = r
 
 		// Call the final handler that resolves the operation

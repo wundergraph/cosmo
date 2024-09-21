@@ -70,10 +70,11 @@ func TestRouterStartLogs(t *testing.T) {
 
 func TestQueryWithLogging(t *testing.T) {
 	t.Parallel()
-	testenv.Run(t, &testenv.Config{LogObservation: testenv.LogObservationConfig{
-		Enabled:  true,
-		LogLevel: zapcore.InfoLevel,
-	}}, func(t *testing.T, xEnv *testenv.Environment) {
+	testenv.Run(t, &testenv.Config{
+		LogObservation: testenv.LogObservationConfig{
+			Enabled:  true,
+			LogLevel: zapcore.InfoLevel,
+		}}, func(t *testing.T, xEnv *testenv.Environment) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `{ employees { id } }`,
 		})
@@ -84,11 +85,12 @@ func TestQueryWithLogging(t *testing.T) {
 		require.Equal(t, requestLog.Len(), 1)
 		requestContext := requestLog.All()[0].ContextMap()
 		expectedValues := map[string]interface{}{
-			"status": int64(200),
-			"method": "POST",
-			"path":   "/graphql",
-			"query":  "", // http query is empty
-			"ip":     "[REDACTED]",
+			"log_type": "request",
+			"status":   int64(200),
+			"method":   "POST",
+			"path":     "/graphql",
+			"query":    "", // http query is empty
+			"ip":       "[REDACTED]",
 		}
 		additionalExpectedKeys := []string{
 			"user_agent", "latency", "config_version", "request_id", "pid", "hostname",
@@ -137,6 +139,7 @@ func TestQueryWithLoggingError(t *testing.T) {
 		require.Equal(t, requestLog.Len(), 1)
 		requestContext := requestLog.All()[0].ContextMap()
 		expectedValues := map[string]interface{}{
+			"log_type":   "request",
 			"status":     int64(200),
 			"method":     "POST",
 			"path":       "/graphql",
@@ -197,6 +200,7 @@ func TestQueryWithLoggingPanicWithString(t *testing.T) {
 		require.Equal(t, requestLog.Len(), 1)
 		requestContext := requestLog.All()[0].ContextMap()
 		expectedValues := map[string]interface{}{
+			"log_type":   "request",
 			"status":     int64(500),
 			"method":     "POST",
 			"path":       "/graphql",
@@ -263,6 +267,7 @@ func TestQueryWithLoggingPanicWithError(t *testing.T) {
 		require.Equal(t, requestLog.Len(), 1)
 		requestContext := requestLog.All()[0].ContextMap()
 		expectedValues := map[string]interface{}{
+			"log_type":   "request",
 			"status":     int64(500),
 			"method":     "POST",
 			"path":       "/graphql",

@@ -657,6 +657,9 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithGracePeriod(15 * time.Second),
 		core.WithIntrospection(true),
 		core.WithQueryPlans(true),
+		core.WithAccessLogs(config.AccessLogsConfig{
+			Enabled: true,
+		}),
 		core.WithEvents(config.EventsConfiguration{
 			Providers: config.EventProviders{
 				Nats:  natsEventSources,

@@ -224,7 +224,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if h.context != nil {
-		fields = append(fields, h.context(r)...)
+		resFields = append(resFields, h.context(r)...)
 	}
 
 	h.logger.Info(path, append(fields, resFields...)...)
