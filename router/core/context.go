@@ -2,7 +2,6 @@ package core
 
 import (
 	"context"
-	"github.com/wundergraph/cosmo/router/internal/attribute_baggage"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -144,8 +143,10 @@ type requestContext struct {
 	operation *operationContext
 	// subgraphResolver can be used to resolve Subgraph by ID or by request
 	subgraphResolver *SubgraphResolver
-	// attributeBaggage is the attribute container for the request
-	attributeBaggage *attribute_baggage.AttributeBaggage
+	// errorCodes is a list of error codes that are returned by the operation
+	errorCodes []string
+	// errorServices is a list of error services that are returned by the operation
+	errorServices []string
 }
 
 func (c *requestContext) Operation() OperationContext {
@@ -324,8 +325,6 @@ func (c *requestContext) Authentication() authentication.Authentication {
 	return authentication.FromContext(c.request.Context())
 }
 
-type operationContextKey struct{}
-
 type OperationContext interface {
 	// Name is the name of the operation
 	Name() string
@@ -380,6 +379,11 @@ type operationContext struct {
 	inputUsageInfo     []*graphqlmetrics.InputUsageInfo
 
 	attributes []attribute.KeyValue
+
+	parsingTime       time.Duration
+	validationTime    time.Duration
+	planningTime      time.Duration
+	normalizationTime time.Duration
 }
 
 func (o *operationContext) setAttributes() {
@@ -437,24 +441,6 @@ func (o *operationContext) Protocol() OperationProtocol {
 
 func (o *operationContext) ClientInfo() ClientInfo {
 	return o.clientInfo
-}
-
-func withOperationContext(ctx context.Context, operation *operationContext) context.Context {
-	return context.WithValue(ctx, operationContextKey{}, operation)
-}
-
-// getOperationContext returns the request context.
-// It provides information about the current operation like the name, type, hash and content.
-// If no operation context is found, nil is returned.
-func getOperationContext(ctx context.Context) *operationContext {
-	if ctx == nil {
-		return nil
-	}
-	op := ctx.Value(operationContextKey{})
-	if op == nil {
-		return nil
-	}
-	return op.(*operationContext)
 }
 
 // isMutationRequest returns true if the current request is a mutation request
@@ -522,5 +508,7 @@ func buildRequestContext(w http.ResponseWriter, r *http.Request, opContext *oper
 		request:          r,
 		operation:        opContext,
 		subgraphResolver: subgraphResolverFromContext(r.Context()),
+		errorCodes:       make([]string, 0),
+		errorServices:    make([]string, 0),
 	}
 }

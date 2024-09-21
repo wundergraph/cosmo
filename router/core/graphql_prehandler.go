@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/attribute_baggage"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
 	"io"
 	"net/http"
@@ -21,7 +20,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/wundergraph/cosmo/router/pkg/art"
-	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 
@@ -163,7 +161,6 @@ func (h *PreHandler) releaseBodyReadBuffer(buf *bytes.Buffer) {
 
 func (h *PreHandler) Handler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestLogger := h.log.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 
 		var (
 			// In GraphQL the statusCode does not always express the error state of the request
@@ -174,7 +171,9 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			traceTimings *art.TraceTimings
 		)
 
+		requestContext := getRequestContext(r.Context())
 		routerSpan := trace.SpanFromContext(r.Context())
+		requestLogger := requestContext.logger
 
 		clientInfo := NewClientInfoFromRequest(r)
 		commonAttributes := []attribute.KeyValue{
@@ -183,12 +182,18 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			otel.WgOperationProtocol.String(OperationProtocolHTTP.String()),
 		}
 
+		requestContext.operation.clientInfo = *clientInfo
+
 		executionOptions, traceOptions, err := h.parseRequestOptions(r, clientInfo, requestLogger)
 		if err != nil {
 			finalErr = err
 			writeRequestErrors(r, w, http.StatusBadRequest, graphqlerrors.RequestErrorsFromError(err), requestLogger)
 			return
 		}
+
+		requestContext.operation.protocol = OperationProtocolHTTP
+		requestContext.operation.executionOptions = executionOptions
+		requestContext.operation.traceOptions = traceOptions
 
 		if traceOptions.Enable {
 			r = r.WithContext(resolve.SetTraceStart(r.Context(), traceOptions.EnablePredictableDebugTimings))
@@ -338,18 +343,13 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 
 		art.SetRequestTracingStats(r.Context(), traceOptions, traceTimings)
-		requestContext := buildRequestContext(w, r, opContext, requestLogger)
 		metrics.AddOperationContext(opContext)
 
-		ctxWithRequest := withRequestContext(r.Context(), requestContext)
-		ctxWithOperation := withOperationContext(ctxWithRequest, opContext)
 		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
-
-		newReq := r.WithContext(ctxWithOperation)
 
 		// Call the final handler that resolves the operation
 		// and enrich the context to make it available in the request context as well for metrics etc.
-		next.ServeHTTP(ww, newReq)
+		next.ServeHTTP(ww, r)
 
 		statusCode = ww.Status()
 		writtenBytes = ww.BytesWritten()
@@ -381,7 +381,7 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 
 	}()
 
-	ab := attribute_baggage.GetAttributeContext(req.Context())
+	requestContext := getRequestContext(req.Context())
 
 	// Handle the case when operation information are provided as GET parameters
 	if req.Method == http.MethodGet {
@@ -401,16 +401,22 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 		// If we have files, we need to set them on the parsed operation
 		if len(httpOperation.files) > 0 {
 			operationKit.parsedOperation.Files = httpOperation.files
+			requestContext.operation.files = httpOperation.files
 		}
 	}
+
+	requestContext.operation.extensions = operationKit.parsedOperation.Request.Extensions
+	requestContext.operation.variables = operationKit.parsedOperation.Request.Variables
 
 	var skipParse bool
 
 	if operationKit.parsedOperation.IsPersistedOperation {
+		requestContext.operation.persistedID = operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
 		skipParse, err = operationKit.FetchPersistedOperation(req.Context(), httpOperation.clientInfo, httpOperation.attributes)
 		if err != nil {
 			return nil, err
 		}
+		requestContext.operation.persistedOperationCacheHit = operationKit.parsedOperation.PersistedOperationCacheHit
 	}
 
 	// If the persistent operation is already in the cache, we skip the parse step
@@ -434,18 +440,14 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 			return nil, err
 		}
 
-		if ab != nil {
-			ab.AddDurationAttribute(attribute_baggage.OperationParsingTimeField, time.Since(startParsing))
-		}
+		requestContext.operation.parsingTime = time.Since(startParsing)
 
 		httpOperation.traceTimings.EndParse()
 		engineParseSpan.End()
 	}
 
-	if ab != nil {
-		ab.AddSliceAttribute(attribute_baggage.OperationNameField, operationKit.parsedOperation.Request.OperationName)
-		ab.AddSliceAttribute(attribute_baggage.OperationTypeField, operationKit.parsedOperation.Type)
-	}
+	requestContext.operation.name = operationKit.parsedOperation.Request.OperationName
+	requestContext.operation.opType = operationKit.parsedOperation.Type
 
 	// Give the buffer back to the pool as soon as we're done with it
 	h.releaseBodyReadBuffer(buf)
@@ -479,11 +481,6 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 
 	if operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil &&
 		operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash != "" {
-
-		if ab != nil {
-			ab.AddSliceAttribute(attribute_baggage.OperationNameField, operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
-		}
-
 		persistedIDAttribute := otel.WgOperationPersistedID.String(operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
 		attributes = append(attributes, persistedIDAttribute)
 		httpOperation.routerSpan.SetAttributes(persistedIDAttribute)
@@ -511,6 +508,9 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 		return nil, err
 	}
 
+	requestContext.operation.hash = operationKit.parsedOperation.ID
+	requestContext.operation.normalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
+
 	operationHashAttribute := otel.WgOperationHash.String(strconv.FormatUint(operationKit.parsedOperation.ID, 10))
 	attributes = append(attributes, operationHashAttribute)
 
@@ -530,9 +530,8 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 		return nil, err
 	}
 
-	if ab != nil {
-		ab.AddDurationAttribute(attribute_baggage.OperationNormalizationField, time.Since(startNormalization))
-	}
+	requestContext.operation.content = operationKit.parsedOperation.NormalizedRepresentation
+	requestContext.operation.normalizationTime = time.Since(startNormalization)
 
 	engineNormalizeSpan.SetAttributes(otel.WgNormalizationCacheHit.Bool(cached))
 
@@ -578,9 +577,7 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 		return nil, err
 	}
 
-	if ab != nil {
-		ab.AddDurationAttribute(attribute_baggage.OperationValidationTimeField, time.Since(startValidation))
-	}
+	requestContext.operation.validationTime = time.Since(startValidation)
 
 	engineValidateSpan.SetAttributes(otel.WgValidationCacheHit.Bool(validationCached))
 	if httpOperation.executionOptions.SkipLoader {
@@ -631,7 +628,7 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 		TrackSchemaUsageInfo: h.trackSchemaUsageInfo,
 	}
 
-	opContext, err := h.planner.plan(operationKit.parsedOperation, planOptions)
+	err = h.planner.plan(requestContext.operation, planOptions)
 	if err != nil {
 
 		rtrace.AttachErrToSpan(enginePlanSpan, err)
@@ -643,17 +640,17 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 		return nil, err
 	}
 
-	if ab != nil {
-		ab.AddDurationAttribute(attribute_baggage.OperationPlanningTimeField, time.Since(startPlanning))
-	}
+	requestContext.operation.planningTime = time.Since(startPlanning)
 
-	enginePlanSpan.SetAttributes(otel.WgEnginePlanCacheHit.Bool(opContext.planCacheHit))
+	enginePlanSpan.SetAttributes(otel.WgEnginePlanCacheHit.Bool(requestContext.operation.planCacheHit))
 
 	enginePlanSpan.End()
 
 	httpOperation.traceTimings.EndPlanning()
 
-	return opContext, nil
+	requestContext.operation.setAttributes()
+
+	return requestContext.operation, nil
 }
 
 // flushMetrics flushes all metrics to the respective exporters

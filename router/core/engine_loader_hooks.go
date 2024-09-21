@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/attribute_baggage"
 	"slices"
 	"strings"
 
@@ -79,7 +78,6 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 		return
 	}
 
-	ab := attribute_baggage.GetAttributeContext(ctx)
 	reqContext := getRequestContext(ctx)
 
 	if reqContext == nil {
@@ -147,10 +145,11 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 		// Reduce cardinality of error codes
 		slices.Sort(errorCodesAttr)
 
-		if ab != nil {
-			ab.AddSliceAttribute(attribute_baggage.GraphQLErrorCodesField, errorCodesAttr...)
-			ab.AddSliceAttribute(attribute_baggage.GraphQLErrorServicesField, ds.Name)
-		}
+		// reqContext is reset after the request is finished
+		// we append here to have all information available
+		// when all subgraphs have finished
+		reqContext.errorCodes = append(reqContext.errorCodes, errorCodesAttr...)
+		reqContext.errorServices = append(reqContext.errorServices, ds.Name)
 
 		if len(errorCodesAttr) > 0 {
 			// Create individual metrics for each error code

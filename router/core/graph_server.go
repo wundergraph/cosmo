@@ -5,9 +5,10 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/attribute_baggage"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -465,45 +466,15 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		baseLogFields = append(baseLogFields, zap.String("feature_flag", featureFlagName))
 	}
 
-	// Request logger
-	requestLoggerOpts := []requestlogger.Option{
-		requestlogger.WithDefaultOptions(),
-		requestlogger.WithNoTimeField(),
-		requestlogger.WithFields(baseLogFields...),
-		requestlogger.WithRequestFields(func(request *http.Request) []zapcore.Field {
-			return []zapcore.Field{
-				zap.String("request_id", middleware.GetReqID(request.Context())),
-			}
-		}),
-	}
-
-	if len(s.accessLogsConfig.Fields) > 0 {
-		requestLoggerOpts = append(requestLoggerOpts, requestlogger.WithCustomFields(s.accessLogsConfig.Fields))
-	}
-
-	if s.ipAnonymization.Enabled {
-		requestLoggerOpts = append(requestLoggerOpts, requestlogger.WithAnonymization(&requestlogger.IPAnonymizationConfig{
-			Enabled: s.ipAnonymization.Enabled,
-			Method:  requestlogger.IPAnonymizationMethod(s.ipAnonymization.Method),
-		}))
-	}
-
-	requestLogger := requestlogger.New(
-		s.logger,
-		requestLoggerOpts...,
-	)
-
 	// Enrich the request context with the subgraph information which is required for custom modules and tracing
 	subgraphResolver := NewSubgraphResolver(subgraphs)
 	httpRouter.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			requestLogger := s.logger.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 			r = r.WithContext(withSubgraphResolver(r.Context(), subgraphResolver))
 
-			if s.accessLogsConfig.Enabled {
-				ab := attribute_baggage.Get()
-				defer attribute_baggage.Put(ab)
-				r = r.WithContext(attribute_baggage.WithAttributeContext(r.Context(), ab))
-			}
+			opContext := &operationContext{}
+			r = r.WithContext(withRequestContext(r.Context(), buildRequestContext(w, r, opContext, requestLogger)))
 
 			// For debugging purposes, we can validate from what version of the config the request is coming from
 			if s.setConfigVersionHeader {
@@ -538,7 +509,84 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	if traceHandler != nil {
 		httpRouter.Use(traceHandler.Handler)
 	}
-	httpRouter.Use(requestLogger)
+
+	if s.accessLogsConfig.Enabled {
+		// Request logger
+		requestLoggerOpts := []requestlogger.Option{
+			requestlogger.WithDefaultOptions(),
+			requestlogger.WithNoTimeField(),
+			requestlogger.WithFields(baseLogFields...),
+			requestlogger.WithRequestFields(func(request *http.Request) []zapcore.Field {
+				requestContext := getRequestContext(request.Context())
+				resFields := make([]zapcore.Field, 0, len(s.accessLogsConfig.Fields))
+				resFields = append(resFields, zap.String("request_id", middleware.GetReqID(request.Context())))
+
+				if !s.accessLogsConfig.Enabled {
+					return resFields
+				}
+
+				for _, field := range s.accessLogsConfig.Fields {
+					if field.ValueFrom.RequestHeader != "" {
+						if v := request.Header.Get(field.ValueFrom.RequestHeader); v != "" {
+							resFields = append(resFields, zap.String(field.Key, v))
+						} else if field.Default != "" {
+							resFields = append(resFields, zap.String(field.Key, field.Default))
+						}
+					}
+
+					if field.ValueFrom.ContextField != "" {
+						switch field.ValueFrom.ContextField {
+						case requestlogger.OperationNameField,
+							requestlogger.OperationTypeField,
+							requestlogger.GraphQLErrorServicesField,
+							requestlogger.GraphQLErrorCodesField,
+							requestlogger.PersistedOperationSha256Field:
+							if v := requestContext.errorCodes; len(v) > 0 {
+								resFields = append(resFields, zap.Strings(field.Key, v))
+							} else if field.Default != "" {
+								resFields = append(resFields, zap.String(field.Key, field.Default))
+							}
+						case requestlogger.OperationPlanningTimeField,
+							requestlogger.OperationNormalizationTimeField,
+							requestlogger.OperationParsingTimeField,
+							requestlogger.OperationValidationTimeField:
+							if v := requestContext.operation.normalizationTime; v > 0 {
+								resFields = append(resFields, zap.Duration(field.Key, v))
+							} else if field.Default != "" {
+								if v, err := strconv.ParseInt(field.Default, 10, 64); err == nil {
+									resFields = append(resFields, zap.Duration(field.Key, time.Duration(v)))
+								}
+							}
+						case requestlogger.OperationHashField:
+							if v := requestContext.operation.hash; v != 0 {
+								resFields = append(resFields, zap.Uint64(field.Key, v))
+							} else if field.Default != "" {
+								resFields = append(resFields, zap.String(field.Key, field.Default))
+							}
+						default:
+							s.logger.Warn("Unknown context field", zap.String("field", field.ValueFrom.ContextField))
+						}
+					}
+				}
+
+				return resFields
+			}),
+		}
+
+		if s.ipAnonymization.Enabled {
+			requestLoggerOpts = append(requestLoggerOpts, requestlogger.WithAnonymization(&requestlogger.IPAnonymizationConfig{
+				Enabled: s.ipAnonymization.Enabled,
+				Method:  requestlogger.IPAnonymizationMethod(s.ipAnonymization.Method),
+			}))
+		}
+
+		requestLogger := requestlogger.New(
+			s.logger,
+			requestLoggerOpts...,
+		)
+
+		httpRouter.Use(requestLogger)
+	}
 
 	routerEngineConfig := &RouterEngineConfiguration{
 		Execution:                s.engineExecutionConfiguration,
@@ -704,10 +752,10 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		func(handler http.Handler) http.Handler {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-				opCtx := getOperationContext(r.Context())
+				requestContext := getRequestContext(r.Context())
 
 				// We don't want to count any type of subscriptions e.g. SSE as in-flight requests because they are long-lived
-				if opCtx != nil && opCtx.opType != OperationTypeSubscription {
+				if requestContext != nil && requestContext.operation != nil && requestContext.operation.opType != OperationTypeSubscription {
 					s.inFlightRequests.Add(1)
 
 					// Counting like this is safe because according to the go http.ServeHTTP documentation

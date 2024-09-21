@@ -3,8 +3,6 @@ package requestlogger
 import (
 	"crypto/sha256"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/attribute_baggage"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 	"go.opentelemetry.io/otel/trace"
 	"net"
 	"net/http"
@@ -16,6 +14,19 @@ import (
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+)
+
+const (
+	OperationNameField              = "operation_name"
+	OperationHashField              = "operation_hash"
+	OperationTypeField              = "operation_type"
+	GraphQLErrorCodesField          = "graphql_error_codes"
+	GraphQLErrorServicesField       = "graphql_error_service_names"
+	OperationParsingTimeField       = "operation_parsing_time"
+	OperationValidationTimeField    = "operation_validation_time"
+	OperationPlanningTimeField      = "operation_planning_time"
+	OperationNormalizationTimeField = "operation_normalization_time"
+	PersistedOperationSha256Field   = "persisted_operation_sha256"
 )
 
 type Fn func(r *http.Request) []zapcore.Field
@@ -49,7 +60,6 @@ type handler struct {
 	handler               http.Handler
 	logger                *zap.Logger
 	baseFields            []zapcore.Field
-	customFields          []config.CustomAttribute
 }
 
 func parseOptions(r *handler, opts ...Option) http.Handler {
@@ -63,12 +73,6 @@ func parseOptions(r *handler, opts ...Option) http.Handler {
 func WithAnonymization(ipConfig *IPAnonymizationConfig) Option {
 	return func(r *handler) {
 		r.ipAnonymizationConfig = ipConfig
-	}
-}
-
-func WithCustomFields(fields []config.CustomAttribute) Option {
-	return func(r *handler) {
-		r.customFields = fields
 	}
 }
 
@@ -142,10 +146,6 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fields = append(fields, h.baseFields...)
 	}
 
-	if h.context != nil {
-		fields = append(fields, h.context(r)...)
-	}
-
 	if h.utc {
 		start = start.UTC()
 	}
@@ -185,6 +185,12 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				zap.Duration("latency", latency),
 			)
 
+			// This is only called on panic so it is safe to call it here again
+			// to gather all the fields that are needed for logging
+			if h.context != nil {
+				fields = append(fields, h.context(r)...)
+			}
+
 			if e, ok := err.(error); ok {
 				fields = append(fields, zap.Error(e))
 			} else {
@@ -207,7 +213,6 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	}()
 
-	ab := attribute_baggage.GetAttributeContext(r.Context())
 	ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 	h.handler.ServeHTTP(ww, r)
 	end := time.Now()
@@ -218,37 +223,8 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		zap.Int("status", ww.Status()),
 	}
 
-	if ab != nil {
-		for _, field := range h.customFields {
-			if field.ValueFrom.RequestHeader != "" {
-				if v := r.Header.Get(field.ValueFrom.RequestHeader); v != "" {
-					resFields = append(resFields, zap.String(field.Key, v))
-				} else if field.Default != "" {
-					resFields = append(resFields, zap.String(field.Key, field.Default))
-				}
-			}
-
-			if v, ok := ab.StringAttributes[field.ValueFrom.ContextField]; ok {
-				resFields = append(resFields, zap.String(field.Key, v))
-			} else if field.Default != "" {
-				resFields = append(resFields, zap.String(field.Key, field.Default))
-			}
-
-			if v, ok := ab.SliceAttributes[field.ValueFrom.ContextField]; ok {
-				resFields = append(resFields, zap.Strings(field.Key, v))
-			} else if field.Default != "" {
-				resFields = append(resFields, zap.String(field.Key, field.Default))
-			}
-
-			if v, ok := ab.DurationAttributes[field.ValueFrom.ContextField]; ok {
-				resFields = append(resFields, zap.Duration(field.Key, v))
-			} else if field.Default != "" {
-				var n float32
-				if _, err := fmt.Sscanf(field.Default, "%f", &n); err == nil {
-					resFields = append(resFields, zap.Float32(field.Key, n))
-				}
-			}
-		}
+	if h.context != nil {
+		fields = append(fields, h.context(r)...)
 	}
 
 	h.logger.Info(path, append(fields, resFields...)...)

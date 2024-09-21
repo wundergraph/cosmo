@@ -5,6 +5,8 @@
 
 version: "1"
 
+log_level: info
+
 # New logging configuration
 access_logs:
   enabled: true
@@ -19,6 +21,9 @@ access_logs:
     - key: "operationName"
       value_from:
         context_field: operation_name
+    - key: "operationHash"
+      value_from:
+        context_field: operation_hash
     - key: "errorCodes"
       value_from:
         context_field: graphql_error_codes
