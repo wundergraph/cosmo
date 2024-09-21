@@ -780,6 +780,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 	}
 
 	opContext.hash = operationKit.parsedOperation.ID
+	opContext.normalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
 
 	if err := operationKit.NormalizeVariables(); err != nil {
 		return nil, nil, err
@@ -787,7 +788,6 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 
 	opContext.normalizationTime = time.Since(startNormalization)
 	opContext.content = operationKit.parsedOperation.NormalizedRepresentation
-	opContext.normalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
 
 	startValidation := time.Now()
 

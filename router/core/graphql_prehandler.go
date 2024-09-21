@@ -508,6 +508,8 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 		return nil, err
 	}
 
+	engineNormalizeSpan.SetAttributes(otel.WgNormalizationCacheHit.Bool(cached))
+
 	requestContext.operation.hash = operationKit.parsedOperation.ID
 	requestContext.operation.normalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
 
@@ -532,8 +534,6 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 
 	requestContext.operation.content = operationKit.parsedOperation.NormalizedRepresentation
 	requestContext.operation.normalizationTime = time.Since(startNormalization)
-
-	engineNormalizeSpan.SetAttributes(otel.WgNormalizationCacheHit.Bool(cached))
 
 	if operationKit.parsedOperation.IsPersistedOperation {
 		engineNormalizeSpan.SetAttributes(otel.WgEnginePersistedOperationCacheHit.Bool(operationKit.parsedOperation.PersistedOperationCacheHit))
