@@ -8,6 +8,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -296,24 +297,39 @@ func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.M
 }
 
 type graphMux struct {
-	mux                *chi.Mux
-	planCache          ExecutionPlanCache[uint64, *planWithMetaData]
-	normalizationCache *ristretto.Cache[uint64, NormalizationCacheEntry]
-	validationCache    *ristretto.Cache[uint64, bool]
-	queryDepthCache    *ristretto.Cache[uint64, int]
+	mux                  *chi.Mux
+	planCache            ExecutionPlanCache[uint64, *planWithMetaData]
+	normalizationCache   *ristretto.Cache[uint64, NormalizationCacheEntry]
+	validationCache      *ristretto.Cache[uint64, bool]
+	queryDepthCache      *ristretto.Cache[uint64, int]
+	accessLogsFileLogger *logging.BufferedLogger
 }
 
-func (s *graphMux) Shutdown(_ context.Context) {
+func (s *graphMux) Shutdown(_ context.Context) error {
+
+	var err error
+
 	s.planCache.Close()
+
 	if s.normalizationCache != nil {
 		s.normalizationCache.Close()
 	}
+
 	if s.validationCache != nil {
 		s.validationCache.Close()
 	}
+
 	if s.queryDepthCache != nil {
 		s.queryDepthCache.Close()
 	}
+
+	if s.accessLogsFileLogger != nil {
+		if err := s.accessLogsFileLogger.Close(); err != nil {
+			err = errors.Join(err, err)
+		}
+	}
+
+	return err
 }
 
 // buildGraphMux creates a new graph mux with the given feature flags and engine configuration.
@@ -509,7 +525,44 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	}
 
 	if s.accessLogsConfig.Enabled {
-		// Request logger
+		var accessLogger *zap.Logger
+
+		if s.accessLogsConfig.Output.File != nil {
+			file, err := os.OpenFile(s.accessLogsConfig.Output.File.Path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+			if err != nil {
+				return nil, err
+			}
+			if s.accessLogsConfig.Buffer.Enabled {
+				gm.accessLogsFileLogger, err = logging.NewZapBufferedLogger(logging.BufferedLoggerOptions{
+					WS:            file,
+					BufferSize:    int(s.accessLogsConfig.Buffer.BufferSize.Uint64()),
+					FlushInterval: s.accessLogsConfig.Buffer.FlushInterval,
+					Debug:         false,
+					Level:         zap.InfoLevel,
+				})
+				if err != nil {
+					return nil, fmt.Errorf("failed to create access log logger: %w", err)
+				}
+				accessLogger = gm.accessLogsFileLogger.Logger
+			} else {
+				accessLogger = logging.NewZapLoggerWithSyncer(file, false, false, zap.InfoLevel)
+			}
+		} else if s.accessLogsConfig.Buffer.Enabled {
+			gm.accessLogsFileLogger, err = logging.NewZapBufferedLogger(logging.BufferedLoggerOptions{
+				WS:            os.Stdout,
+				BufferSize:    int(s.accessLogsConfig.Buffer.BufferSize.Uint64()),
+				FlushInterval: s.accessLogsConfig.Buffer.FlushInterval,
+				Debug:         false,
+				Level:         zap.InfoLevel,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("failed to create access log logger: %w", err)
+			}
+			accessLogger = gm.accessLogsFileLogger.Logger
+		} else {
+			accessLogger = logging.NewZapLoggerWithSyncer(os.Stdout, false, false, zap.InfoLevel)
+		}
+
 		requestLoggerOpts := []requestlogger.Option{
 			requestlogger.WithDefaultOptions(),
 			requestlogger.WithNoTimeField(),
@@ -530,20 +583,20 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 					if field.ValueFrom.ContextField != "" {
 						switch field.ValueFrom.ContextField {
-						case requestlogger.OperationNameField,
-							requestlogger.OperationTypeField,
-							requestlogger.GraphQLErrorServicesField,
-							requestlogger.GraphQLErrorCodesField,
-							requestlogger.PersistedOperationSha256Field:
+						case OperationNameLogField,
+							OperationTypeLogField,
+							GraphQLErrorServicesLogField,
+							GraphQLErrorCodesLogField,
+							PersistedOperationSha256LogField:
 							if v := requestContext.errorCodes; len(v) > 0 {
 								resFields = append(resFields, zap.Strings(field.Key, v))
 							} else if field.Default != "" {
 								resFields = append(resFields, zap.String(field.Key, field.Default))
 							}
-						case requestlogger.OperationPlanningTimeField,
-							requestlogger.OperationNormalizationTimeField,
-							requestlogger.OperationParsingTimeField,
-							requestlogger.OperationValidationTimeField:
+						case OperationPlanningTimeLogField,
+							OperationNormalizationTimeLogField,
+							OperationParsingTimeLogField,
+							OperationValidationTimeLogField:
 							if v := requestContext.operation.normalizationTime; v > 0 {
 								resFields = append(resFields, zap.Duration(field.Key, v))
 							} else if field.Default != "" {
@@ -551,7 +604,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 									resFields = append(resFields, zap.Duration(field.Key, time.Duration(v)))
 								}
 							}
-						case requestlogger.OperationHashField:
+						case OperationHashLogField:
 							if v := requestContext.operation.hash; v != 0 {
 								resFields = append(resFields, zap.Uint64(field.Key, v))
 							} else if field.Default != "" {
@@ -575,7 +628,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		}
 
 		requestLogger := requestlogger.New(
-			s.logger,
+			accessLogger,
 			requestLoggerOpts...,
 		)
 
@@ -945,7 +998,10 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 	// Shutdown all graphs muxes to release resources
 	// e.g. planner cache
 	for _, mux := range s.graphMuxes {
-		mux.Shutdown(ctx)
+		if err := mux.Shutdown(ctx); err != nil {
+			s.logger.Error("Failed to shutdown graph mux", zap.Error(err))
+			finalErr = errors.Join(finalErr, err)
+		}
 	}
 
 	return finalErr

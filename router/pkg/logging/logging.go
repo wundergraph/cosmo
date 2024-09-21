@@ -100,6 +100,37 @@ func NewZapLoggerWithSyncer(syncer zapcore.WriteSyncer, prettyLogging bool, debu
 	return zapLogger
 }
 
+type BufferedLogger struct {
+	Logger              *zap.Logger
+	bufferedWriteSyncer *zapcore.BufferedWriteSyncer
+}
+
+type BufferedLoggerOptions struct {
+	WS            *os.File
+	BufferSize    int
+	FlushInterval time.Duration
+	Debug         bool
+	Level         zapcore.Level
+}
+
+func NewZapBufferedLogger(options BufferedLoggerOptions) (*BufferedLogger, error) {
+	fl := &BufferedLogger{}
+
+	fl.bufferedWriteSyncer = &zapcore.BufferedWriteSyncer{
+		WS:            options.WS,
+		Size:          256 * 1024, // 256 kB
+		FlushInterval: 5 * time.Second,
+	}
+
+	fl.Logger = NewZapLoggerWithSyncer(fl.bufferedWriteSyncer, false, options.Debug, options.Level)
+
+	return fl, nil
+}
+
+func (f *BufferedLogger) Close() error {
+	return f.bufferedWriteSyncer.Stop()
+}
+
 func ZapLogLevelFromString(logLevel string) (zapcore.Level, error) {
 	switch strings.ToUpper(logLevel) {
 	case "DEBUG":

@@ -16,19 +16,6 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-const (
-	OperationNameField              = "operation_name"
-	OperationHashField              = "operation_hash"
-	OperationTypeField              = "operation_type"
-	GraphQLErrorCodesField          = "graphql_error_codes"
-	GraphQLErrorServicesField       = "graphql_error_service_names"
-	OperationParsingTimeField       = "operation_parsing_time"
-	OperationValidationTimeField    = "operation_validation_time"
-	OperationPlanningTimeField      = "operation_planning_time"
-	OperationNormalizationTimeField = "operation_normalization_time"
-	PersistedOperationSha256Field   = "persisted_operation_sha256"
-)
-
 type Fn func(r *http.Request) []zapcore.Field
 
 // Option provides a functional approach to define

@@ -400,6 +400,34 @@
           "description": "Enable the access logs. The access logs are used to log the incoming requests. By default, the access logs are enabled and logged to the standard output.",
           "default": true
         },
+        "buffer": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable the buffer. The buffer is used to buffer the logs before writing them to the output. The default value is true."
+            },
+            "flush_interval": {
+              "type": "string",
+              "description": "The interval at which the buffer is flushed. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+              "default": "10s",
+              "duration": {
+                "minimum": "100ms",
+                "maximum": "1m"
+              }
+            },
+            "size": {
+              "type": "string",
+              "default": "256KB",
+              "bytes": {
+                "minimum": "1KB"
+              },
+              "format": "bytes-string",
+              "description": "The size of the buffer. The default value is 256KB."
+            }
+          }
+        },
         "output": {
           "type": "object",
           "additionalProperties": false,
