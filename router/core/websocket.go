@@ -747,7 +747,6 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 	}
 
 	opContext.extensions = operationKit.parsedOperation.Request.Extensions
-	opContext.variables = operationKit.parsedOperation.Request.Variables
 
 	var skipParse bool
 
@@ -788,6 +787,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 
 	opContext.normalizationTime = time.Since(startNormalization)
 	opContext.content = operationKit.parsedOperation.NormalizedRepresentation
+	opContext.variables = operationKit.parsedOperation.Request.Variables
 
 	startValidation := time.Now()
 

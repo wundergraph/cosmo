@@ -347,6 +347,9 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 
+		// Update the request on the context with the new request to work with the latest context
+		requestContext.request = r
+
 		// Call the final handler that resolves the operation
 		// and enrich the context to make it available in the request context as well for metrics etc.
 		next.ServeHTTP(ww, r)
@@ -533,6 +536,7 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 	}
 
 	requestContext.operation.content = operationKit.parsedOperation.NormalizedRepresentation
+	requestContext.operation.variables = operationKit.parsedOperation.Request.Variables
 	requestContext.operation.normalizationTime = time.Since(startNormalization)
 
 	if operationKit.parsedOperation.IsPersistedOperation {
@@ -628,6 +632,8 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 		TrackSchemaUsageInfo: h.trackSchemaUsageInfo,
 	}
 
+	requestContext.operation.setAttributes()
+
 	err = h.planner.plan(requestContext.operation, planOptions)
 	if err != nil {
 
@@ -647,8 +653,6 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 	enginePlanSpan.End()
 
 	httpOperation.traceTimings.EndPlanning()
-
-	requestContext.operation.setAttributes()
 
 	return requestContext.operation, nil
 }
