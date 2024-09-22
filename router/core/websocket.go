@@ -763,6 +763,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 	if !skipParse {
 		startParsing := time.Now()
 		if err := operationKit.Parse(); err != nil {
+			opContext.parsingTime = time.Since(startParsing)
 			return nil, nil, err
 		}
 		opContext.parsingTime = time.Since(startParsing)
@@ -775,6 +776,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 	startNormalization := time.Now()
 
 	if _, err := operationKit.NormalizeOperation(); err != nil {
+		opContext.normalizationTime = time.Since(startNormalization)
 		return nil, nil, err
 	}
 
@@ -782,6 +784,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 	opContext.normalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
 
 	if err := operationKit.NormalizeVariables(); err != nil {
+		opContext.normalizationTime = time.Since(startNormalization)
 		return nil, nil, err
 	}
 
@@ -792,6 +795,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 	startValidation := time.Now()
 
 	if _, err := operationKit.Validate(executionOptions.SkipLoader); err != nil {
+		opContext.validationTime = time.Since(startValidation)
 		return nil, nil, err
 	}
 
@@ -801,6 +805,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 
 	err = h.planner.plan(opContext, planOptions)
 	if err != nil {
+		opContext.planningTime = time.Since(startPlanning)
 		return operationKit.parsedOperation, nil, err
 	}
 

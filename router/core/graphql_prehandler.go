@@ -440,7 +440,7 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 		err = operationKit.Parse()
 		if err != nil {
 			rtrace.AttachErrToSpan(engineParseSpan, err)
-
+			requestContext.operation.parsingTime = time.Since(startParsing)
 			engineParseSpan.End()
 
 			return nil, err
@@ -508,7 +508,7 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 	cached, err := operationKit.NormalizeOperation()
 	if err != nil {
 		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
-
+		requestContext.operation.normalizationTime = time.Since(startNormalization)
 		engineNormalizeSpan.End()
 
 		return nil, err
@@ -532,7 +532,7 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 	err = operationKit.NormalizeVariables()
 	if err != nil {
 		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
-
+		requestContext.operation.normalizationTime = time.Since(startNormalization)
 		engineNormalizeSpan.End()
 
 		return nil, err
@@ -578,7 +578,7 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 	validationCached, err := operationKit.Validate(httpOperation.executionOptions.SkipLoader)
 	if err != nil {
 		rtrace.AttachErrToSpan(engineValidateSpan, err)
-
+		requestContext.operation.validationTime = time.Since(startValidation)
 		engineValidateSpan.End()
 
 		return nil, err

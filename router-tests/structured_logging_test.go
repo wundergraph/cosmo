@@ -68,198 +68,45 @@ func TestRouterStartLogs(t *testing.T) {
 	})
 }
 
-func TestQueryWithLogging(t *testing.T) {
-	t.Parallel()
-	testenv.Run(t, &testenv.Config{
-		LogObservation: testenv.LogObservationConfig{
-			Enabled:  true,
-			LogLevel: zapcore.InfoLevel,
-		}}, func(t *testing.T, xEnv *testenv.Environment) {
-		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-			Query: `{ employees { id } }`,
-		})
-		require.JSONEq(t, employeesIDData, res.Body)
-		logEntries := xEnv.Observer().All()
-		require.Len(t, logEntries, 12)
-		requestLog := xEnv.Observer().FilterMessage("/graphql")
-		require.Equal(t, requestLog.Len(), 1)
-		requestContext := requestLog.All()[0].ContextMap()
-		expectedValues := map[string]interface{}{
-			"log_type": "request",
-			"status":   int64(200),
-			"method":   "POST",
-			"path":     "/graphql",
-			"query":    "", // http query is empty
-			"ip":       "[REDACTED]",
-		}
-		additionalExpectedKeys := []string{
-			"user_agent", "latency", "config_version", "request_id", "pid", "hostname",
-		}
-		checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
-	})
-}
-
-func TestQueryWithLoggingError(t *testing.T) {
-	t.Parallel()
-	testenv.Run(t, &testenv.Config{
-		NoRetryClient: true,
-		Subgraphs: testenv.SubgraphsConfig{
-			Employees: testenv.SubgraphConfig{
-				CloseOnStart: true,
-			},
-		},
-		RouterOptions: []core.Option{
-			core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
-				EnableSingleFlight:     true,
-				MaxConcurrentResolvers: 1,
-			}),
-			core.WithSubgraphRetryOptions(false, 0, 0, 0),
-		},
-		LogObservation: testenv.LogObservationConfig{
-			Enabled:  true,
-			LogLevel: zapcore.InfoLevel,
-		}}, func(t *testing.T, xEnv *testenv.Environment) {
-		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-			Query: `{ employees { id } }`,
-		})
-		require.NoError(t, err)
-		require.JSONEq(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees'."}],"data":{"employees":null}}`, res.Body)
-		logEntries := xEnv.Observer().All()
-		require.Len(t, logEntries, 13)
-		requestLog := xEnv.Observer().FilterMessage("/graphql")
-		require.Equal(t, requestLog.Len(), 1)
-		requestContext := requestLog.All()[0].ContextMap()
-		expectedValues := map[string]interface{}{
-			"log_type":   "request",
-			"status":     int64(200),
-			"method":     "POST",
-			"path":       "/graphql",
-			"query":      "",
-			"ip":         "[REDACTED]",
-			"user_agent": "Go-http-client/1.1",
-		}
-		additionalExpectedKeys := []string{
-			"latency", "config_version", "request_id", "pid", "hostname",
-		}
-		checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
-	})
-}
-
-func TestQueryWithLoggingPanicWithString(t *testing.T) {
-	t.Parallel()
-	testenv.Run(t, &testenv.Config{
-		NoRetryClient: true,
-		RouterOptions: []core.Option{
-			core.WithCustomModules(&MyPanicModule{}),
-			core.WithHeaderRules(config.HeaderRules{
-				All: &config.GlobalHeaderRule{
-					Request: []*config.RequestHeaderRule{
-						{Named: "panic-with-string", Operation: config.HeaderRuleOperationPropagate},
-					},
-				},
-			}),
-			core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
-				EnableSingleFlight:     true,
-				MaxConcurrentResolvers: 1,
-			}),
-			core.WithSubgraphRetryOptions(false, 0, 0, 0),
-		},
-		LogObservation: testenv.LogObservationConfig{
-			Enabled:  true,
-			LogLevel: zapcore.InfoLevel,
-		}}, func(t *testing.T, xEnv *testenv.Environment) {
-		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-			Header: map[string][]string{
-				"panic-with-string": {"true"},
-			},
-			Query: `{ employees { id } }`,
-		})
-		require.NoError(t, err)
-		require.Equal(t, "", res.Body)
-		logEntries := xEnv.Observer().All()
-		require.Len(t, logEntries, 13)
-		requestLog := xEnv.Observer().FilterMessage("[Recovery from panic]")
-		require.Equal(t, requestLog.Len(), 1)
-		requestContext := requestLog.All()[0].ContextMap()
-		expectedValues := map[string]interface{}{
-			"log_type":   "request",
-			"status":     int64(500),
-			"method":     "POST",
-			"path":       "/graphql",
-			"query":      "",
-			"ip":         "[REDACTED]",
-			"user_agent": "Go-http-client/1.1",
-			"error":      "implement me", // From panic
-		}
-		additionalExpectedKeys := []string{
-			"latency", "config_version", "request_id", "pid", "hostname",
-		}
-		require.NotEmpty(t, logEntries[12].Stack)
-
-		checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
-	})
-}
-
-func TestQueryWithLoggingPanicWithError(t *testing.T) {
-	t.Parallel()
-	testenv.Run(t, &testenv.Config{
-		NoRetryClient: true,
-		RouterOptions: []core.Option{
-			core.WithCustomModules(&MyPanicModule{}),
-			core.WithHeaderRules(config.HeaderRules{
-				All: &config.GlobalHeaderRule{
-					Request: []*config.RequestHeaderRule{
-						{Named: "panic-with-error", Operation: config.HeaderRuleOperationPropagate},
-					},
-				},
-			}),
-			core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
-				EnableSingleFlight:     true,
-				MaxConcurrentResolvers: 1,
-			}),
-			core.WithSubgraphRetryOptions(false, 0, 0, 0),
-		},
-		LogObservation: testenv.LogObservationConfig{
-			Enabled:  true,
-			LogLevel: zapcore.InfoLevel,
-		}}, func(t *testing.T, xEnv *testenv.Environment) {
-		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-			Header: map[string][]string{
-				"panic-with-error": {"true"},
-			},
-			Query: `{ employees { id } }`,
-		})
-		require.NoError(t, err)
-		require.Equal(t, "", res.Body)
-		logEntries := xEnv.Observer().All()
-		require.Len(t, logEntries, 13)
-		requestLog := xEnv.Observer().FilterMessage("[Recovery from panic]")
-		require.Equal(t, requestLog.Len(), 1)
-		requestContext := requestLog.All()[0].ContextMap()
-		expectedValues := map[string]interface{}{
-			"log_type":   "request",
-			"status":     int64(500),
-			"method":     "POST",
-			"path":       "/graphql",
-			"query":      "", // http query is empty
-			"ip":         "[REDACTED]",
-			"user_agent": "Go-http-client/1.1",
-			"error":      "implement me",
-		}
-		additionalExpectedKeys := []string{
-			"latency", "config_version", "request_id", "pid", "hostname",
-		}
-
-		require.NotEmpty(t, logEntries[12].Stack)
-
-		checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
-	})
-}
-
 func TestAccessLogs(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("Simple", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			}}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+			logEntries := xEnv.Observer().All()
+			require.Len(t, logEntries, 12)
+			requestLog := xEnv.Observer().FilterMessage("/graphql")
+			require.Equal(t, requestLog.Len(), 1)
+			requestContext := requestLog.All()[0].ContextMap()
+			expectedValues := map[string]interface{}{
+				"log_type": "request",
+				"status":   int64(200),
+				"method":   "POST",
+				"path":     "/graphql",
+				"query":    "", // http query is empty
+				"ip":       "[REDACTED]",
+			}
+			additionalExpectedKeys := []string{
+				"user_agent", "latency", "config_version", "request_id", "pid", "hostname",
+			}
+			checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
+		})
+	})
 
 	t.Run("Add custom access log fields", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			AccessLogFields: []config.CustomAttribute{
 				{
@@ -352,12 +199,516 @@ func TestAccessLogs(t *testing.T) {
 			checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 		})
 	})
+
+	t.Run("Fallback to default value", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			AccessLogFields: []config.CustomAttribute{
+				{
+					Key:     "service_name",
+					Default: "default-service-name",
+					ValueFrom: &config.CustomDynamicAttribute{
+						RequestHeader: "service-name",
+					},
+				},
+				{
+					Key:     "operation_sha256",
+					Default: "default-sha256", // Makes less sense, but it's just for testing‚
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.PersistedOperationSha256ContextField,
+					},
+				},
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			}}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query employees { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+			logEntries := xEnv.Observer().All()
+			require.Len(t, logEntries, 12)
+			requestLog := xEnv.Observer().FilterMessage("/graphql")
+			require.Equal(t, requestLog.Len(), 1)
+			requestContext := requestLog.All()[0].ContextMap()
+			expectedValues := map[string]interface{}{
+				"log_type":         "request",
+				"status":           int64(200),
+				"method":           "POST",
+				"path":             "/graphql",
+				"query":            "",
+				"ip":               "[REDACTED]",
+				"service_name":     "default-service-name", // From header
+				"operation_sha256": "default-sha256",       // From context
+			}
+			additionalExpectedKeys := []string{
+				"user_agent",
+				"latency",
+				"config_version",
+				"request_id",
+				"pid",
+				"hostname",
+			}
+			checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
+		})
+	})
+
+	t.Run("Log when operation parsing fails", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			AccessLogFields: []config.CustomAttribute{
+				{
+					Key:     "service_name",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						RequestHeader: "service-name",
+					},
+				},
+				{
+					Key:     "operation_hash",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.OperationHashContextField,
+					},
+				},
+				{
+					Key:     "operation_name",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.OperationNameContextField,
+					},
+				},
+				{
+					Key:     "operation_type",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.OperationTypeContextField,
+					},
+				},
+				{
+					Key:     "normalized_time",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.OperationNormalizationTimeContextField,
+					},
+				},
+				{
+					Key:     "parsed_time",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.OperationParsingTimeContextField,
+					},
+				},
+				{
+					Key:     "validation_time",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.OperationValidationTimeContextField,
+					},
+				},
+			},
+			NoRetryClient: true,
+			RouterOptions: []core.Option{
+				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableSingleFlight:     true,
+					MaxConcurrentResolvers: 1,
+				}),
+				core.WithSubgraphRetryOptions(false, 0, 0, 0),
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			}}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Header: map[string][]string{
+					"service-name": {"service-name"},
+				},
+				Query: `query employees { employees { id } `, // Missing closing bracket
+			})
+			require.NoError(t, err)
+			require.Equal(t, `{"errors":[{"message":"unexpected token - got: EOF want one of: [RBRACE IDENT SPREAD]","locations":[{"line":0,"column":0}]}]}`, res.Body)
+			logEntries := xEnv.Observer().All()
+			require.Len(t, logEntries, 12)
+			requestLog := xEnv.Observer().FilterMessage("/graphql")
+			require.Equal(t, requestLog.Len(), 1)
+			requestContext := requestLog.All()[0].ContextMap()
+			expectedValues := map[string]interface{}{
+				"log_type":     "request",
+				"status":       int64(200),
+				"method":       "POST",
+				"path":         "/graphql",
+				"query":        "", // http query is empty
+				"ip":           "[REDACTED]",
+				"user_agent":   "Go-http-client/1.1",
+				"service_name": "service-name", // From header
+			}
+			additionalExpectedKeys := []string{
+				"latency",
+				"config_version",
+				"request_id",
+				"pid",
+				"hostname",
+				"parsed_time",
+			}
+
+			checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
+		})
+	})
+
+	t.Run("Log when operation normalization fails", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			AccessLogFields: []config.CustomAttribute{
+				{
+					Key:     "service_name",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						RequestHeader: "service-name",
+					},
+				},
+				{
+					Key:     "operation_hash",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.OperationHashContextField,
+					},
+				},
+				{
+					Key:     "operation_name",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.OperationNameContextField,
+					},
+				},
+				{
+					Key:     "operation_type",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.OperationTypeContextField,
+					},
+				},
+				{
+					Key:     "normalized_time",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.OperationNormalizationTimeContextField,
+					},
+				},
+				{
+					Key:     "parsed_time",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.OperationParsingTimeContextField,
+					},
+				},
+				{
+					Key:     "validation_time",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.OperationValidationTimeContextField,
+					},
+				},
+			},
+			NoRetryClient: true,
+			RouterOptions: []core.Option{
+				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableSingleFlight:     true,
+					MaxConcurrentResolvers: 1,
+				}),
+				core.WithSubgraphRetryOptions(false, 0, 0, 0),
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			}}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Header: map[string][]string{
+					"service-name": {"service-name"},
+				},
+				Query: `query employees { notExists { id } }`, // Missing closing bracket
+			})
+			require.NoError(t, err)
+			require.Equal(t, `{"errors":[{"message":"field: notExists not defined on type: Query","path":["query","notExists"]}]}`, res.Body)
+			logEntries := xEnv.Observer().All()
+			require.Len(t, logEntries, 12)
+			requestLog := xEnv.Observer().FilterMessage("/graphql")
+			require.Equal(t, requestLog.Len(), 1)
+			requestContext := requestLog.All()[0].ContextMap()
+			expectedValues := map[string]interface{}{
+				"log_type":       "request",
+				"status":         int64(200),
+				"method":         "POST",
+				"path":           "/graphql",
+				"query":          "", // http query is empty
+				"ip":             "[REDACTED]",
+				"user_agent":     "Go-http-client/1.1",
+				"service_name":   "service-name", // From header
+				"operation_type": "query",        // From context
+				"operation_name": "employees",    // From context
+			}
+			additionalExpectedKeys := []string{
+				"latency",
+				"config_version",
+				"request_id",
+				"pid",
+				"hostname",
+				"parsed_time",
+				"normalized_time",
+			}
+
+			checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
+		})
+	})
+
+	t.Run("Log when panic occurs on execution / error value", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			AccessLogFields: []config.CustomAttribute{
+				{
+					Key:     "service_name",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						RequestHeader: "service-name",
+					},
+				},
+				{
+					Key:     "operation_hash",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.OperationHashContextField,
+					},
+				},
+				{
+					Key:     "operation_name",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.OperationNameContextField,
+					},
+				},
+				{
+					Key:     "operation_type",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.OperationTypeContextField,
+					},
+				},
+				{
+					Key:     "normalized_time",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.OperationNormalizationTimeContextField,
+					},
+				},
+				{
+					Key:     "parsed_time",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.OperationParsingTimeContextField,
+					},
+				},
+				{
+					Key:     "validation_time",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.OperationValidationTimeContextField,
+					},
+				},
+			},
+			NoRetryClient: true,
+			RouterOptions: []core.Option{
+				core.WithCustomModules(&MyPanicModule{}),
+				core.WithHeaderRules(config.HeaderRules{
+					All: &config.GlobalHeaderRule{
+						Request: []*config.RequestHeaderRule{
+							{Named: "panic-with-error", Operation: config.HeaderRuleOperationPropagate},
+						},
+					},
+				}),
+				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableSingleFlight:     true,
+					MaxConcurrentResolvers: 1,
+				}),
+				core.WithSubgraphRetryOptions(false, 0, 0, 0),
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			}}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Header: map[string][]string{
+					"panic-with-error": {"true"},
+					"service-name":     {"service-name"},
+				},
+				Query: `query employees { employees { id } }`,
+			})
+			require.NoError(t, err)
+			require.Equal(t, "", res.Body)
+			logEntries := xEnv.Observer().All()
+			require.Len(t, logEntries, 13)
+			requestLog := xEnv.Observer().FilterMessage("[Recovery from panic]")
+			require.Equal(t, requestLog.Len(), 1)
+			requestContext := requestLog.All()[0].ContextMap()
+			expectedValues := map[string]interface{}{
+				"log_type":       "request",
+				"status":         int64(500),
+				"method":         "POST",
+				"path":           "/graphql",
+				"query":          "", // http query is empty
+				"ip":             "[REDACTED]",
+				"user_agent":     "Go-http-client/1.1",
+				"error":          "implement me",
+				"service_name":   "service-name",         // From header
+				"operation_hash": "14226210703439426856", // From context
+				"operation_name": "employees",            // From context
+				"operation_type": "query",                // From context
+			}
+			additionalExpectedKeys := []string{
+				"latency",
+				"config_version",
+				"request_id",
+				"pid",
+				"hostname",
+				"normalized_time",
+				"parsed_time",
+				"validation_time",
+			}
+
+			require.NotEmpty(t, logEntries[12].Stack)
+
+			checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
+		})
+	})
+
+	t.Run("Log when panic occurs on execution / string", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			AccessLogFields: []config.CustomAttribute{
+				{
+					Key:     "service_name",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						RequestHeader: "service-name",
+					},
+				},
+				{
+					Key:     "operation_hash",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.OperationHashContextField,
+					},
+				},
+				{
+					Key:     "operation_name",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.OperationNameContextField,
+					},
+				},
+				{
+					Key:     "operation_type",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.OperationTypeContextField,
+					},
+				},
+				{
+					Key:     "normalized_time",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.OperationNormalizationTimeContextField,
+					},
+				},
+				{
+					Key:     "parsed_time",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.OperationParsingTimeContextField,
+					},
+				},
+				{
+					Key:     "validation_time",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.OperationValidationTimeContextField,
+					},
+				},
+			},
+			NoRetryClient: true,
+			RouterOptions: []core.Option{
+				core.WithCustomModules(&MyPanicModule{}),
+				core.WithHeaderRules(config.HeaderRules{
+					All: &config.GlobalHeaderRule{
+						Request: []*config.RequestHeaderRule{
+							{Named: "panic-with-string", Operation: config.HeaderRuleOperationPropagate},
+						},
+					},
+				}),
+				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableSingleFlight:     true,
+					MaxConcurrentResolvers: 1,
+				}),
+				core.WithSubgraphRetryOptions(false, 0, 0, 0),
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			}}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Header: map[string][]string{
+					"panic-with-string": {"true"},
+					"service-name":      {"service-name"},
+				},
+				Query: `query employees { employees { id } }`,
+			})
+			require.NoError(t, err)
+			require.Equal(t, "", res.Body)
+			logEntries := xEnv.Observer().All()
+			require.Len(t, logEntries, 13)
+			requestLog := xEnv.Observer().FilterMessage("[Recovery from panic]")
+			require.Equal(t, requestLog.Len(), 1)
+			requestContext := requestLog.All()[0].ContextMap()
+			expectedValues := map[string]interface{}{
+				"log_type":       "request",
+				"status":         int64(500),
+				"method":         "POST",
+				"path":           "/graphql",
+				"query":          "", // http query is empty
+				"ip":             "[REDACTED]",
+				"user_agent":     "Go-http-client/1.1",
+				"error":          "implement me",
+				"service_name":   "service-name",         // From header
+				"operation_hash": "14226210703439426856", // From context
+				"operation_name": "employees",            // From context
+				"operation_type": "query",                // From context
+			}
+			additionalExpectedKeys := []string{
+				"latency",
+				"config_version",
+				"request_id",
+				"pid",
+				"hostname",
+				"normalized_time",
+				"parsed_time",
+				"validation_time",
+			}
+
+			require.NotEmpty(t, logEntries[12].Stack)
+
+			checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
+		})
+	})
 }
 
 func checkValues(t *testing.T, requestContext map[string]interface{}, expectedValues map[string]interface{}, additionalExpectedKeys []string) {
 	t.Helper()
 
-	require.Len(t, requestContext, len(expectedValues)+len(additionalExpectedKeys))
+	require.Lenf(t, requestContext, len(expectedValues)+len(additionalExpectedKeys), "unexpected number of keys")
 
 	for key, val := range expectedValues {
 		mapVal, exists := requestContext[key]
