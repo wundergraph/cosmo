@@ -2335,6 +2335,39 @@ Downstream errors:
 			})
 		})
 
+		t.Run("Correctly pass along Datadog headers", func(t *testing.T) {
+			t.Parallel()
+
+			exporter := tracetest.NewInMemoryExporter(t)
+
+			testenv.Run(t, &testenv.Config{
+				TraceExporter:    exporter,
+				DatadogTelemetry: true,
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{
+						Middleware: func(handler http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								require.Equal(t, datadogTraceId, r.Header.Get("x-datadog-trace-id"))
+								require.NotEqual(t, "12345", r.Header.Get("x-datadog-parent-id"))
+								require.Equal(t, "1", r.Header.Get("x-datadog-sampling-priority"))
+								handler.ServeHTTP(w, r)
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id } }`,
+					Header: map[string][]string{
+						"x-datadog-trace-id":          {datadogTraceId},
+						"x-datadog-parent-id":         {"12345"},
+						"x-datadog-sampling-priority": {"1"},
+					},
+				})
+				require.JSONEq(t, employeesIDData, res.Body)
+			})
+		})
+
 		t.Run("Doesn't propagate headers in datadog format if datadog config is not set", func(t *testing.T) {
 			t.Parallel()
 
