@@ -95,16 +95,7 @@ func TestQueryWithLogging(t *testing.T) {
 		additionalExpectedKeys := []string{
 			"user_agent", "latency", "config_version", "request_id", "pid", "hostname",
 		}
-		require.Len(t, requestContext, len(expectedValues)+len(additionalExpectedKeys))
-		for key, val := range expectedValues {
-			mapVal, exists := requestContext[key]
-			require.Truef(t, exists, "key '%s' not found", key)
-			require.Equalf(t, mapVal, val, "expected '%v', got '%v'", val, mapVal)
-		}
-		for _, key := range additionalExpectedKeys {
-			_, exists := requestContext[key]
-			require.Truef(t, exists, "key '%s' not found", key)
-		}
+		checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 	})
 }
 
@@ -143,23 +134,14 @@ func TestQueryWithLoggingError(t *testing.T) {
 			"status":     int64(200),
 			"method":     "POST",
 			"path":       "/graphql",
-			"query":      "", // http query is empty
+			"query":      "",
 			"ip":         "[REDACTED]",
 			"user_agent": "Go-http-client/1.1",
 		}
 		additionalExpectedKeys := []string{
 			"latency", "config_version", "request_id", "pid", "hostname",
 		}
-		require.Len(t, requestContext, len(expectedValues)+len(additionalExpectedKeys))
-		for key, val := range expectedValues {
-			mapVal, exists := requestContext[key]
-			require.Truef(t, exists, "key '%s' not found", key)
-			require.Equalf(t, mapVal, val, "expected '%v', got '%v'", val, mapVal)
-		}
-		for _, key := range additionalExpectedKeys {
-			_, exists := requestContext[key]
-			require.Truef(t, exists, "key '%s' not found", key)
-		}
+		checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 	})
 }
 
@@ -204,29 +186,17 @@ func TestQueryWithLoggingPanicWithString(t *testing.T) {
 			"status":     int64(500),
 			"method":     "POST",
 			"path":       "/graphql",
-			"query":      "", // http query is empty
+			"query":      "",
 			"ip":         "[REDACTED]",
 			"user_agent": "Go-http-client/1.1",
-			"error":      "implement me",
+			"error":      "implement me", // From panic
 		}
 		additionalExpectedKeys := []string{
 			"latency", "config_version", "request_id", "pid", "hostname",
 		}
-
-		require.Len(t, requestContext, len(expectedValues)+len(additionalExpectedKeys))
-
 		require.NotEmpty(t, logEntries[12].Stack)
 
-		for key, val := range expectedValues {
-			mapVal, exists := requestContext[key]
-			require.Truef(t, exists, "key '%s' not found", key)
-			require.Equalf(t, mapVal, val, "expected '%v', got '%v'", val, mapVal)
-		}
-
-		for _, key := range additionalExpectedKeys {
-			_, exists := requestContext[key]
-			require.Truef(t, exists, "key '%s' not found", key)
-		}
+		checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 	})
 }
 
@@ -280,18 +250,122 @@ func TestQueryWithLoggingPanicWithError(t *testing.T) {
 			"latency", "config_version", "request_id", "pid", "hostname",
 		}
 
-		require.Len(t, requestContext, len(expectedValues)+len(additionalExpectedKeys))
-
 		require.NotEmpty(t, logEntries[12].Stack)
 
-		for key, val := range expectedValues {
-			mapVal, exists := requestContext[key]
-			require.Truef(t, exists, "key '%s' not found", key)
-			require.Equalf(t, mapVal, val, "expected '%v', got '%v'", val, mapVal)
-		}
-		for _, key := range additionalExpectedKeys {
-			_, exists := requestContext[key]
-			require.Truef(t, exists, "key '%s' not found", key)
-		}
+		checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 	})
+}
+
+func TestAccessLogs(t *testing.T) {
+
+	t.Run("Add custom access log fields", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			AccessLogFields: []config.CustomAttribute{
+				{
+					Key:     "service_name",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						RequestHeader: "service-name",
+					},
+				},
+				{
+					Key:     "operation_hash",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.OperationHashContextField,
+					},
+				},
+				{
+					Key:     "operation_name",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.OperationNameContextField,
+					},
+				},
+				{
+					Key:     "operation_type",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.OperationTypeContextField,
+					},
+				},
+				{
+					Key:     "normalized_time",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.OperationNormalizationTimeContextField,
+					},
+				},
+				{
+					Key:     "parsed_time",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.OperationParsingTimeContextField,
+					},
+				},
+				{
+					Key:     "validation_time",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.OperationValidationTimeContextField,
+					},
+				},
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			}}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:  `query employees { employees { id } }`,
+				Header: map[string][]string{"service-name": {"service-name"}},
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+			logEntries := xEnv.Observer().All()
+			require.Len(t, logEntries, 12)
+			requestLog := xEnv.Observer().FilterMessage("/graphql")
+			require.Equal(t, requestLog.Len(), 1)
+			requestContext := requestLog.All()[0].ContextMap()
+			expectedValues := map[string]interface{}{
+				"log_type":       "request",
+				"status":         int64(200),
+				"method":         "POST",
+				"path":           "/graphql",
+				"query":          "",
+				"ip":             "[REDACTED]",
+				"service_name":   "service-name",         // From header
+				"operation_hash": "14226210703439426856", // From context
+				"operation_name": "employees",            // From context
+				"operation_type": "query",                // From context
+			}
+			additionalExpectedKeys := []string{
+				"user_agent",
+				"latency",
+				"config_version",
+				"request_id",
+				"pid",
+				"hostname",
+				"normalized_time",
+				"parsed_time",
+				"validation_time",
+			}
+			checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
+		})
+	})
+}
+
+func checkValues(t *testing.T, requestContext map[string]interface{}, expectedValues map[string]interface{}, additionalExpectedKeys []string) {
+	t.Helper()
+
+	require.Len(t, requestContext, len(expectedValues)+len(additionalExpectedKeys))
+
+	for key, val := range expectedValues {
+		mapVal, exists := requestContext[key]
+		require.Truef(t, exists, "key '%s' not found", key)
+		require.Equalf(t, mapVal, val, "expected '%v', got '%v'", val, mapVal)
+	}
+	for _, key := range additionalExpectedKeys {
+		_, exists := requestContext[key]
+		require.Truef(t, exists, "key '%s' not found", key)
+	}
 }

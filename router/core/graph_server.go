@@ -8,7 +8,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -324,8 +323,8 @@ func (s *graphMux) Shutdown(_ context.Context) error {
 	}
 
 	if s.accessLogsFileLogger != nil {
-		if err := s.accessLogsFileLogger.Close(); err != nil {
-			err = errors.Join(err, err)
+		if aErr := s.accessLogsFileLogger.Close(); aErr != nil {
+			err = errors.Join(err, aErr)
 		}
 	}
 
@@ -524,92 +523,44 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		httpRouter.Use(traceHandler.Handler)
 	}
 
-	if s.accessLogsConfig.Enabled {
-		var accessLogger *zap.Logger
-
-		if s.accessLogsConfig.Output.File != nil {
-			file, err := os.OpenFile(s.accessLogsConfig.Output.File.Path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
-			if err != nil {
-				return nil, err
-			}
-			if s.accessLogsConfig.Buffer.Enabled {
-				gm.accessLogsFileLogger, err = logging.NewZapBufferedLogger(logging.BufferedLoggerOptions{
-					WS:            file,
-					BufferSize:    int(s.accessLogsConfig.Buffer.BufferSize.Uint64()),
-					FlushInterval: s.accessLogsConfig.Buffer.FlushInterval,
-					Debug:         false,
-					Level:         zap.InfoLevel,
-				})
-				if err != nil {
-					return nil, fmt.Errorf("failed to create access log logger: %w", err)
-				}
-				accessLogger = gm.accessLogsFileLogger.Logger
-			} else {
-				accessLogger = logging.NewZapLoggerWithSyncer(file, false, false, zap.InfoLevel)
-			}
-		} else if s.accessLogsConfig.Buffer.Enabled {
-			gm.accessLogsFileLogger, err = logging.NewZapBufferedLogger(logging.BufferedLoggerOptions{
-				WS:            os.Stdout,
-				BufferSize:    int(s.accessLogsConfig.Buffer.BufferSize.Uint64()),
-				FlushInterval: s.accessLogsConfig.Buffer.FlushInterval,
-				Debug:         false,
-				Level:         zap.InfoLevel,
-			})
-			if err != nil {
-				return nil, fmt.Errorf("failed to create access log logger: %w", err)
-			}
-			accessLogger = gm.accessLogsFileLogger.Logger
-		} else {
-			accessLogger = logging.NewZapLoggerWithSyncer(os.Stdout, false, false, zap.InfoLevel)
-		}
-
+	if s.accessLogsConfig != nil && s.accessLogsConfig.Logger != nil {
 		requestLoggerOpts := []requestlogger.Option{
 			requestlogger.WithDefaultOptions(),
 			requestlogger.WithNoTimeField(),
 			requestlogger.WithFields(baseLogFields...),
 			requestlogger.WithRequestFields(func(request *http.Request) []zapcore.Field {
 				requestContext := getRequestContext(request.Context())
-				resFields := make([]zapcore.Field, 0, len(s.accessLogsConfig.Fields))
+				resFields := make([]zapcore.Field, 0, len(s.accessLogsConfig.Attributes))
 				resFields = append(resFields, zap.String("request_id", middleware.GetReqID(request.Context())))
 
-				for _, field := range s.accessLogsConfig.Fields {
+				for _, field := range s.accessLogsConfig.Attributes {
 					if field.ValueFrom.RequestHeader != "" {
-						if v := request.Header.Get(field.ValueFrom.RequestHeader); v != "" {
-							resFields = append(resFields, zap.String(field.Key, v))
-						} else if field.Default != "" {
-							resFields = append(resFields, zap.String(field.Key, field.Default))
-						}
+						resFields = append(resFields, NewStringLogField(request.Header.Get(field.ValueFrom.RequestHeader), field))
+						continue
 					}
 
 					if field.ValueFrom.ContextField != "" {
 						switch field.ValueFrom.ContextField {
-						case OperationNameLogField,
-							OperationTypeLogField,
-							GraphQLErrorServicesLogField,
-							GraphQLErrorCodesLogField,
-							PersistedOperationSha256LogField:
-							if v := requestContext.errorCodes; len(v) > 0 {
-								resFields = append(resFields, zap.Strings(field.Key, v))
-							} else if field.Default != "" {
-								resFields = append(resFields, zap.String(field.Key, field.Default))
-							}
-						case OperationPlanningTimeLogField,
-							OperationNormalizationTimeLogField,
-							OperationParsingTimeLogField,
-							OperationValidationTimeLogField:
-							if v := requestContext.operation.normalizationTime; v > 0 {
-								resFields = append(resFields, zap.Duration(field.Key, v))
-							} else if field.Default != "" {
-								if v, err := strconv.ParseInt(field.Default, 10, 64); err == nil {
-									resFields = append(resFields, zap.Duration(field.Key, time.Duration(v)))
-								}
-							}
-						case OperationHashLogField:
-							if v := requestContext.operation.hash; v != 0 {
-								resFields = append(resFields, zap.Uint64(field.Key, v))
-							} else if field.Default != "" {
-								resFields = append(resFields, zap.String(field.Key, field.Default))
-							}
+						case OperationNameContextField:
+							resFields = append(resFields, NewStringLogField(requestContext.operation.name, field))
+						case OperationTypeContextField:
+							resFields = append(resFields, NewStringLogField(requestContext.operation.opType, field))
+						case GraphQLErrorServicesContextField:
+							resFields = append(resFields, NewStringSliceLogField(requestContext.errorServices, field))
+						case GraphQLErrorCodesContextField:
+							resFields = append(resFields, NewStringSliceLogField(requestContext.errorCodes, field))
+						case PersistedOperationSha256ContextField:
+							resFields = append(resFields, NewStringLogField(requestContext.operation.persistedID, field))
+						case OperationPlanningTimeContextField:
+							resFields = append(resFields, NewDurationLogField(requestContext.operation.planningTime, field))
+						case OperationNormalizationTimeContextField:
+							resFields = append(resFields, NewDurationLogField(requestContext.operation.normalizationTime, field))
+						case OperationParsingTimeContextField:
+							resFields = append(resFields, NewDurationLogField(requestContext.operation.parsingTime, field))
+						case OperationValidationTimeContextField:
+							resFields = append(resFields, NewDurationLogField(requestContext.operation.validationTime, field))
+						case OperationHashContextField:
+							resFields = append(resFields, NewStringLogField(strconv.FormatUint(requestContext.operation.hash, 10), field))
 						default:
 							s.logger.Warn("Unknown context field", zap.String("field", field.ValueFrom.ContextField))
 						}
@@ -628,7 +579,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		}
 
 		requestLogger := requestlogger.New(
-			accessLogger,
+			s.accessLogsConfig.Logger,
 			requestLoggerOpts...,
 		)
 

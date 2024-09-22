@@ -589,8 +589,8 @@ type AccessLogsConfig struct {
 
 type AccessLogsBufferConfig struct {
 	Enabled bool `yaml:"enabled" env:"ACCESS_LOGS_BUFFER_ENABLED" envDefault:"false"`
-	// BufferSize is the maximum number of log entries to buffer before flushing
-	BufferSize BytesString `yaml:"size" envDefault:"256KB" env:"ACCESS_LOGS_BUFFER_SIZE"`
+	// Size is the maximum number of log entries to buffer before flushing
+	Size BytesString `yaml:"size" envDefault:"256KB" env:"ACCESS_LOGS_BUFFER_SIZE"`
 	// FlushInterval is the maximum time to wait before flushing the buffer
 	FlushInterval time.Duration `yaml:"flush_interval" envDefault:"10s" env:"ACCESS_LOGS_FLUSH_INTERVAL"`
 }

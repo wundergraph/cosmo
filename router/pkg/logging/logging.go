@@ -118,8 +118,8 @@ func NewZapBufferedLogger(options BufferedLoggerOptions) (*BufferedLogger, error
 
 	fl.bufferedWriteSyncer = &zapcore.BufferedWriteSyncer{
 		WS:            options.WS,
-		Size:          256 * 1024, // 256 kB
-		FlushInterval: 5 * time.Second,
+		Size:          options.BufferSize,
+		FlushInterval: options.FlushInterval,
 	}
 
 	fl.Logger = NewZapLoggerWithSyncer(fl.bufferedWriteSyncer, false, options.Debug, options.Level)
@@ -129,6 +129,10 @@ func NewZapBufferedLogger(options BufferedLoggerOptions) (*BufferedLogger, error
 
 func (f *BufferedLogger) Close() error {
 	return f.bufferedWriteSyncer.Stop()
+}
+
+func NewLogFile(path string) (*os.File, error) {
+	return os.OpenFile(path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 }
 
 func ZapLogLevelFromString(logLevel string) (zapcore.Level, error) {

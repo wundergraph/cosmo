@@ -129,6 +129,11 @@ type (
 		Path  string
 	}
 
+	AccessLogsConfig struct {
+		Attributes []config.CustomAttribute
+		Logger     *zap.Logger
+	}
+
 	// Config defines the configuration options for the Router.
 	Config struct {
 		clusterName               string
@@ -183,7 +188,7 @@ type (
 		processStartTime          time.Time
 		developmentMode           bool
 		healthcheck               health.Checker
-		accessLogsConfig          config.AccessLogsConfig
+		accessLogsConfig          *AccessLogsConfig
 		// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
 		localhostFallbackInsideDocker bool
 
@@ -1622,7 +1627,7 @@ func WithSubgraphErrorPropagation(cfg config.SubgraphErrorPropagationConfigurati
 	}
 }
 
-func WithAccessLogs(cfg config.AccessLogsConfig) Option {
+func WithAccessLogs(cfg *AccessLogsConfig) Option {
 	return func(r *Router) {
 		r.accessLogsConfig = cfg
 	}
