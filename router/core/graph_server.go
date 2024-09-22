@@ -533,6 +533,11 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 				resFields := make([]zapcore.Field, 0, len(s.accessLogsConfig.Attributes))
 				resFields = append(resFields, zap.String("request_id", middleware.GetReqID(request.Context())))
 
+				// Attach the response error to the log
+				if requestContext.error != nil {
+					resFields = append(resFields, zap.Error(requestContext.error))
+				}
+
 				for _, field := range s.accessLogsConfig.Attributes {
 					if field.ValueFrom.RequestHeader != "" {
 						resFields = append(resFields, NewStringLogField(request.Header.Get(field.ValueFrom.RequestHeader), field))
@@ -541,43 +546,43 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 					if field.ValueFrom.ContextField != "" {
 						switch field.ValueFrom.ContextField {
-						case OperationNameContextField:
+						case ContextFieldOperationName:
 							if v := NewStringLogField(requestContext.operation.name, field); v != zap.Skip() {
 								resFields = append(resFields, v)
 							}
-						case OperationTypeContextField:
+						case ContextFieldOperationType:
 							if v := NewStringLogField(requestContext.operation.opType, field); v != zap.Skip() {
 								resFields = append(resFields, v)
 							}
-						case GraphQLErrorServicesContextField:
+						case ContextFieldGraphQLErrorServices:
 							if v := NewStringSliceLogField(requestContext.errorServices, field); v != zap.Skip() {
 								resFields = append(resFields, v)
 							}
-						case GraphQLErrorCodesContextField:
+						case ContextFieldGraphQLErrorCodes:
 							if v := NewStringSliceLogField(requestContext.errorCodes, field); v != zap.Skip() {
 								resFields = append(resFields, v)
 							}
-						case PersistedOperationSha256ContextField:
+						case ContextFieldPersistedOperationSha256:
 							if v := NewStringLogField(requestContext.operation.persistedID, field); v != zap.Skip() {
 								resFields = append(resFields, v)
 							}
-						case OperationPlanningTimeContextField:
+						case ContextFieldOperationPlanningTime:
 							if v := NewDurationLogField(requestContext.operation.planningTime, field); v != zap.Skip() {
 								resFields = append(resFields, v)
 							}
-						case OperationNormalizationTimeContextField:
+						case ContextFieldOperationNormalizationTime:
 							if v := NewDurationLogField(requestContext.operation.normalizationTime, field); v != zap.Skip() {
 								resFields = append(resFields, v)
 							}
-						case OperationParsingTimeContextField:
+						case ContextFieldOperationParsingTime:
 							if v := NewDurationLogField(requestContext.operation.parsingTime, field); v != zap.Skip() {
 								resFields = append(resFields, v)
 							}
-						case OperationValidationTimeContextField:
+						case ContextFieldOperationValidationTime:
 							if v := NewDurationLogField(requestContext.operation.validationTime, field); v != zap.Skip() {
 								resFields = append(resFields, v)
 							}
-						case OperationHashContextField:
+						case ContextFieldOperationHash:
 							if requestContext.operation.hash == 0 {
 								break
 							}

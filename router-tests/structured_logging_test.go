@@ -120,42 +120,42 @@ func TestAccessLogs(t *testing.T) {
 					Key:     "operation_hash",
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.OperationHashContextField,
+						ContextField: core.ContextFieldOperationHash,
 					},
 				},
 				{
 					Key:     "operation_name",
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.OperationNameContextField,
+						ContextField: core.ContextFieldOperationName,
 					},
 				},
 				{
 					Key:     "operation_type",
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.OperationTypeContextField,
+						ContextField: core.ContextFieldOperationType,
 					},
 				},
 				{
 					Key:     "normalized_time",
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.OperationNormalizationTimeContextField,
+						ContextField: core.ContextFieldOperationNormalizationTime,
 					},
 				},
 				{
 					Key:     "parsed_time",
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.OperationParsingTimeContextField,
+						ContextField: core.ContextFieldOperationParsingTime,
 					},
 				},
 				{
 					Key:     "validation_time",
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.OperationValidationTimeContextField,
+						ContextField: core.ContextFieldOperationValidationTime,
 					},
 				},
 			},
@@ -216,7 +216,7 @@ func TestAccessLogs(t *testing.T) {
 					Key:     "operation_sha256",
 					Default: "default-sha256", // Makes less sense, but it's just for testing‚
 					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.PersistedOperationSha256ContextField,
+						ContextField: core.ContextFieldPersistedOperationSha256,
 					},
 				},
 			},
@@ -271,42 +271,42 @@ func TestAccessLogs(t *testing.T) {
 					Key:     "operation_hash",
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.OperationHashContextField,
+						ContextField: core.ContextFieldOperationHash,
 					},
 				},
 				{
 					Key:     "operation_name",
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.OperationNameContextField,
+						ContextField: core.ContextFieldOperationName,
 					},
 				},
 				{
 					Key:     "operation_type",
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.OperationTypeContextField,
+						ContextField: core.ContextFieldOperationType,
 					},
 				},
 				{
 					Key:     "normalized_time",
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.OperationNormalizationTimeContextField,
+						ContextField: core.ContextFieldOperationNormalizationTime,
 					},
 				},
 				{
 					Key:     "parsed_time",
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.OperationParsingTimeContextField,
+						ContextField: core.ContextFieldOperationParsingTime,
 					},
 				},
 				{
 					Key:     "validation_time",
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.OperationValidationTimeContextField,
+						ContextField: core.ContextFieldOperationValidationTime,
 					},
 				},
 			},
@@ -374,42 +374,42 @@ func TestAccessLogs(t *testing.T) {
 					Key:     "operation_hash",
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.OperationHashContextField,
+						ContextField: core.ContextFieldOperationHash,
 					},
 				},
 				{
 					Key:     "operation_name",
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.OperationNameContextField,
+						ContextField: core.ContextFieldOperationName,
 					},
 				},
 				{
 					Key:     "operation_type",
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.OperationTypeContextField,
+						ContextField: core.ContextFieldOperationType,
 					},
 				},
 				{
 					Key:     "normalized_time",
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.OperationNormalizationTimeContextField,
+						ContextField: core.ContextFieldOperationNormalizationTime,
 					},
 				},
 				{
 					Key:     "parsed_time",
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.OperationParsingTimeContextField,
+						ContextField: core.ContextFieldOperationParsingTime,
 					},
 				},
 				{
 					Key:     "validation_time",
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.OperationValidationTimeContextField,
+						ContextField: core.ContextFieldOperationValidationTime,
 					},
 				},
 			},
@@ -480,42 +480,42 @@ func TestAccessLogs(t *testing.T) {
 					Key:     "operation_hash",
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.OperationHashContextField,
+						ContextField: core.ContextFieldOperationHash,
 					},
 				},
 				{
 					Key:     "operation_name",
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.OperationNameContextField,
+						ContextField: core.ContextFieldOperationName,
 					},
 				},
 				{
 					Key:     "operation_type",
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.OperationTypeContextField,
+						ContextField: core.ContextFieldOperationType,
 					},
 				},
 				{
 					Key:     "normalized_time",
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.OperationNormalizationTimeContextField,
+						ContextField: core.ContextFieldOperationNormalizationTime,
 					},
 				},
 				{
 					Key:     "parsed_time",
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.OperationParsingTimeContextField,
+						ContextField: core.ContextFieldOperationParsingTime,
 					},
 				},
 				{
 					Key:     "validation_time",
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.OperationValidationTimeContextField,
+						ContextField: core.ContextFieldOperationValidationTime,
 					},
 				},
 			},
@@ -600,42 +600,42 @@ func TestAccessLogs(t *testing.T) {
 					Key:     "operation_hash",
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.OperationHashContextField,
+						ContextField: core.ContextFieldOperationHash,
 					},
 				},
 				{
 					Key:     "operation_name",
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.OperationNameContextField,
+						ContextField: core.ContextFieldOperationName,
 					},
 				},
 				{
 					Key:     "operation_type",
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.OperationTypeContextField,
+						ContextField: core.ContextFieldOperationType,
 					},
 				},
 				{
 					Key:     "normalized_time",
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.OperationNormalizationTimeContextField,
+						ContextField: core.ContextFieldOperationNormalizationTime,
 					},
 				},
 				{
 					Key:     "parsed_time",
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.OperationParsingTimeContextField,
+						ContextField: core.ContextFieldOperationParsingTime,
 					},
 				},
 				{
 					Key:     "validation_time",
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.OperationValidationTimeContextField,
+						ContextField: core.ContextFieldOperationValidationTime,
 					},
 				},
 			},
@@ -713,14 +713,14 @@ func TestAccessLogs(t *testing.T) {
 					Key:     "error_codes",
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.GraphQLErrorCodesContextField,
+						ContextField: core.ContextFieldGraphQLErrorCodes,
 					},
 				},
 				{
 					Key:     "service_names",
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.GraphQLErrorServicesContextField,
+						ContextField: core.ContextFieldGraphQLErrorServices,
 					},
 				},
 			},
@@ -749,7 +749,7 @@ func TestAccessLogs(t *testing.T) {
 			})
 			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'products' at Path 'employees'.","extensions":{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}],"statusCode":403}}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
 			logEntries := xEnv.Observer().All()
-			require.Len(t, logEntries, 13)
+			require.Len(t, logEntries, 12)
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
@@ -770,6 +770,7 @@ func TestAccessLogs(t *testing.T) {
 				"request_id",
 				"pid",
 				"hostname",
+				"error",
 			}
 
 			checkValues(t, requestContext, expectedValues, additionalExpectedKeys)

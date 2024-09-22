@@ -9,16 +9,16 @@ import (
 
 // Context field names used to expose information about the operation being executed.
 const (
-	OperationNameContextField              = "operation_name"
-	OperationHashContextField              = "operation_hash"
-	OperationTypeContextField              = "operation_type"
-	GraphQLErrorCodesContextField          = "graphql_error_codes"
-	GraphQLErrorServicesContextField       = "graphql_error_service_names"
-	OperationParsingTimeContextField       = "operation_parsing_time"
-	OperationValidationTimeContextField    = "operation_validation_time"
-	OperationPlanningTimeContextField      = "operation_planning_time"
-	OperationNormalizationTimeContextField = "operation_normalization_time"
-	PersistedOperationSha256ContextField   = "persisted_operation_sha256"
+	ContextFieldOperationName              = "operation_name"
+	ContextFieldOperationHash              = "operation_hash"
+	ContextFieldOperationType              = "operation_type"
+	ContextFieldGraphQLErrorCodes          = "graphql_error_codes"
+	ContextFieldGraphQLErrorServices       = "graphql_error_service_names"
+	ContextFieldOperationParsingTime       = "operation_parsing_time"
+	ContextFieldOperationValidationTime    = "operation_validation_time"
+	ContextFieldOperationPlanningTime      = "operation_planning_time"
+	ContextFieldOperationNormalizationTime = "operation_normalization_time"
+	ContextFieldPersistedOperationSha256   = "persisted_operation_sha256"
 )
 
 // Helper functions to create zap fields for custom attributes.
