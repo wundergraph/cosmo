@@ -1,10 +1,7 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import {
-    GetDiscussionRequest,
-    GetDiscussionResponse
-} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { GetDiscussionRequest, GetDiscussionResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { DiscussionRepository } from '../../repositories/DiscussionRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';

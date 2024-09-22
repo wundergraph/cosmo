@@ -3,7 +3,7 @@ import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   GetOperationContentRequest,
-  GetOperationContentResponse
+  GetOperationContentResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';

@@ -2,8 +2,8 @@ import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
-    RenameNamespaceRequest,
-    RenameNamespaceResponse
+  RenameNamespaceRequest,
+  RenameNamespaceResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';

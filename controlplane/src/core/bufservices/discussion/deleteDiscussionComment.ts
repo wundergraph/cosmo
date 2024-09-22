@@ -2,8 +2,8 @@ import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
-    DeleteDiscussionCommentRequest,
-    DeleteDiscussionCommentResponse
+  DeleteDiscussionCommentRequest,
+  DeleteDiscussionCommentResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { DiscussionRepository } from '../../repositories/DiscussionRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';

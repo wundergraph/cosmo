@@ -1,7 +1,10 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { CreateMonographRequest, CreateMonographResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  CreateMonographRequest,
+  CreateMonographResponse,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl, joinLabel } from '@wundergraph/cosmo-shared';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
@@ -9,7 +12,14 @@ import { DefaultNamespace, NamespaceRepository } from '../../repositories/Namesp
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { createRandomInternalLabel, enrichLogger, formatSubscriptionProtocol, formatWebsocketSubprotocol, getLogger, handleError } from '../../util.js';
+import {
+  createRandomInternalLabel,
+  enrichLogger,
+  formatSubscriptionProtocol,
+  formatWebsocketSubprotocol,
+  getLogger,
+  handleError,
+} from '../../util.js';
 
 export function createMonograph(
   opts: RouterOptions,
