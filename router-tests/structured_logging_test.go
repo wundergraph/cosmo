@@ -464,7 +464,7 @@ func TestAccessLogs(t *testing.T) {
 		})
 	})
 
-	t.Run("Log when panic occurs on execution / error value", func(t *testing.T) {
+	t.Run("Log when panic occurs on execution / error panic", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
@@ -584,7 +584,7 @@ func TestAccessLogs(t *testing.T) {
 		})
 	})
 
-	t.Run("Log when panic occurs on execution / string", func(t *testing.T) {
+	t.Run("Log when panic occurs on execution / string panic", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
