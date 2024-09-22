@@ -34,6 +34,12 @@ var (
 		"Accept-Encoding",
 		"Accept-Charset",
 		"Accept",
+
+		// Web Socket negotiation headers. We must never propagate the client headers to the upstream.
+		"Sec-WebSocket-Extensions",
+		"Sec-Websocket-Key",
+		"Sec-Websocket-Protocol",
+		"Sec-Websocket-Version",
 	}
 )
 
