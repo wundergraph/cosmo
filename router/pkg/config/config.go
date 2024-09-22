@@ -59,6 +59,7 @@ type PropagationConfig struct {
 	Jaeger       bool `yaml:"jaeger"`
 	B3           bool `yaml:"b3"`
 	Baggage      bool `yaml:"baggage"`
+	Datadog      bool `yaml:"datadog"`
 }
 
 type Prometheus struct {

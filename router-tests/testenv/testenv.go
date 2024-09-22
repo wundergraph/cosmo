@@ -126,6 +126,7 @@ type Config struct {
 	PrometheusRegistry                 *prometheus.Registry
 	ShutdownDelay                      time.Duration
 	NoRetryClient                      bool
+	DatadogTelemetry                   bool
 	LogObservation                     LogObservationConfig
 }
 
@@ -690,6 +691,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 				Exporters:          []config.TracingExporter{},
 				Propagation: config.PropagationConfig{
 					TraceContext: true,
+					Datadog:      testConfig.DatadogTelemetry,
 				},
 				TracingGlobalFeatures: config.TracingGlobalFeatures{},
 			},
