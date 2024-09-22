@@ -48,11 +48,12 @@ type Executor struct {
 }
 
 type ExecutorBuildOptions struct {
-	EngineConfig       *nodev1.EngineConfiguration
-	Subgraphs          []*nodev1.Subgraph
-	RouterEngineConfig *RouterEngineConfiguration
-	PubSubProviders    *EnginePubSubProviders
-	Reporter           resolve.Reporter
+	EngineConfig             *nodev1.EngineConfiguration
+	Subgraphs                []*nodev1.Subgraph
+	RouterEngineConfig       *RouterEngineConfiguration
+	PubSubProviders          *EnginePubSubProviders
+	Reporter                 resolve.Reporter
+	ApolloCompatibilityFlags config.ApolloCompatibilityFlags
 }
 
 func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *ExecutorBuildOptions) (*Executor, error) {
@@ -74,6 +75,10 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 		AttachServiceNameToErrorExtensions: opts.RouterEngineConfig.SubgraphErrorPropagation.AttachServiceName,
 		DefaultErrorExtensionCode:          opts.RouterEngineConfig.SubgraphErrorPropagation.DefaultExtensionCode,
 		MaxRecyclableParserSize:            opts.RouterEngineConfig.Execution.ResolverMaxRecyclableParserSize,
+	}
+
+	if opts.ApolloCompatibilityFlags.ValueCompletion {
+		options.ResolvableOptions.ApolloCompatibilityValueCompletionInExtensions = true
 	}
 
 	switch opts.RouterEngineConfig.SubgraphErrorPropagation.Mode {

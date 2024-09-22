@@ -1643,6 +1643,23 @@
           "description": "Propagate Subgraph HTTP status codes. If the value is true (default: false), Subgraph HTTP response status codes will be propagated to the client in the extensions statusCode field."
         }
       }
+    },
+    "apollo_compatibility_flags": {
+      "type": "object",
+      "description": "To enable full compatibility with Apollo Federation, Apollo Gateway and Apollo Router, you can enable certain compatibility flags, allowing you to use Cosmo Router as a drop-in replacement for Apollo.",
+      "additionalProperties": false,
+      "properties": {
+        "enable_all": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable all Apollo compatibility flags. If the value is true, all Apollo compatibility flags are enabled."
+        },
+        "value_completion": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable Apollo compatible value completion. If the value is true, invalid __typename values will be returned in extensions.valueCompletion instead of errors."
+        }
+      }
     }
   },
   "definitions": {

@@ -2,9 +2,10 @@ package config
 
 import (
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/unique"
 	"os"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/internal/unique"
 
 	"github.com/goccy/go-yaml"
 
@@ -579,6 +580,11 @@ type PersistedOperationsConfig struct {
 	Storage PersistedOperationsStorageConfig `yaml:"storage"`
 }
 
+type ApolloCompatibilityFlags struct {
+	EnableAll       bool `yaml:"enable_all" envDefault:"false" env:"APOLLO_COMPATIBILITY_ENABLE_ALL"`
+	ValueCompletion bool `yaml:"value_completion" envDefault:"false" env:"APOLLO_COMPATIBILITY_VALUE_COMPLETION"`
+}
+
 type Config struct {
 	Version string `yaml:"version,omitempty" ignored:"true"`
 
@@ -637,6 +643,7 @@ type Config struct {
 	StorageProviders          StorageProviders          `yaml:"storage_providers"`
 	ExecutionConfig           ExecutionConfig           `yaml:"execution_config"`
 	PersistedOperationsConfig PersistedOperationsConfig `yaml:"persisted_operations"`
+	ApolloCompatibilityFlags  ApolloCompatibilityFlags  `yaml:"apollo_compatibility_flags"`
 }
 
 type LoadResult struct {

@@ -164,6 +164,7 @@ type (
 		cdnConfig                 config.CDNConfiguration
 		persistedOperationClient  persistedoperation.Client
 		persistedOperationsConfig config.PersistedOperationsConfig
+		apolloCompatibilityFlags  config.ApolloCompatibilityFlags
 		storageProviders          config.StorageProviders
 		eventsConfig              config.EventsConfiguration
 		prometheusServer          *http.Server
@@ -1636,6 +1637,15 @@ func WithConfigPollerConfig(cfg *RouterConfigPollerConfig) Option {
 func WithPersistedOperationsConfig(cfg config.PersistedOperationsConfig) Option {
 	return func(r *Router) {
 		r.persistedOperationsConfig = cfg
+	}
+}
+
+func WithApolloCompatibilityFlagsConfig(cfg config.ApolloCompatibilityFlags) Option {
+	return func(r *Router) {
+		if cfg.EnableAll {
+			cfg.ValueCompletion = true
+		}
+		r.apolloCompatibilityFlags = cfg
 	}
 }
 
