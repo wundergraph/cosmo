@@ -809,6 +809,11 @@ export class CheckSubgraphSchemaRequest extends Message<CheckSubgraphSchemaReque
    */
   namespace = "";
 
+  /**
+   * @generated from field: optional bool skip_traffic_check = 6;
+   */
+  skipTrafficCheck?: boolean;
+
   constructor(data?: PartialMessage<CheckSubgraphSchemaRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -822,6 +827,7 @@ export class CheckSubgraphSchemaRequest extends Message<CheckSubgraphSchemaReque
     { no: 3, name: "gitInfo", kind: "message", T: GitInfo },
     { no: 4, name: "delete", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 5, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "skip_traffic_check", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckSubgraphSchemaRequest {
@@ -1895,6 +1901,11 @@ export class CheckSubgraphSchemaResponse extends Message<CheckSubgraphSchemaResp
    */
   graphPruneErrors: GraphPruningIssue[] = [];
 
+  /**
+   * @generated from field: optional bool client_traffic_check_skipped = 12;
+   */
+  clientTrafficCheckSkipped?: boolean;
+
   constructor(data?: PartialMessage<CheckSubgraphSchemaResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1914,6 +1925,7 @@ export class CheckSubgraphSchemaResponse extends Message<CheckSubgraphSchemaResp
     { no: 9, name: "lintErrors", kind: "message", T: LintIssue, repeated: true },
     { no: 10, name: "graphPruneWarnings", kind: "message", T: GraphPruningIssue, repeated: true },
     { no: 11, name: "graphPruneErrors", kind: "message", T: GraphPruningIssue, repeated: true },
+    { no: 12, name: "client_traffic_check_skipped", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckSubgraphSchemaResponse {
@@ -3399,6 +3411,11 @@ export class SchemaCheck extends Message<SchemaCheck> {
    */
   hasGraphPruningErrors = false;
 
+  /**
+   * @generated from field: bool client_traffic_check_skipped = 13;
+   */
+  clientTrafficCheckSkipped = false;
+
   constructor(data?: PartialMessage<SchemaCheck>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3419,6 +3436,7 @@ export class SchemaCheck extends Message<SchemaCheck> {
     { no: 10, name: "ghDetails", kind: "message", T: SchemaCheck_GhDetails, opt: true },
     { no: 11, name: "hasLintErrors", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 12, name: "hasGraphPruningErrors", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 13, name: "client_traffic_check_skipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SchemaCheck {
@@ -3847,6 +3865,11 @@ export class GetCheckOperationsResponse extends Message<GetCheckOperationsRespon
    */
   createdAt = "";
 
+  /**
+   * @generated from field: bool client_traffic_check_skipped = 5;
+   */
+  clientTrafficCheckSkipped = false;
+
   constructor(data?: PartialMessage<GetCheckOperationsResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3859,6 +3882,7 @@ export class GetCheckOperationsResponse extends Message<GetCheckOperationsRespon
     { no: 2, name: "operations", kind: "message", T: GetCheckOperationsResponse_CheckOperation, repeated: true },
     { no: 3, name: "traffic_check_days", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 4, name: "created_at", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "client_traffic_check_skipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckOperationsResponse {

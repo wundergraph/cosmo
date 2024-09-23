@@ -818,6 +818,7 @@ export class SubgraphRepository {
         ghDetails: true,
         hasLintErrors: true,
         hasGraphPruningErrors: true,
+        clientTrafficCheckSkipped: true,
       },
       limit,
       offset,
@@ -855,6 +856,7 @@ export class SubgraphRepository {
           : undefined,
         hasLintErrors: c.hasLintErrors ?? false,
         hasGraphPruningErrors: c.hasGraphPruningErrors ?? false,
+        clientTrafficCheckSkipped: c.clientTrafficCheckSkipped ?? false,
       })),
       checksCount,
     };
@@ -954,6 +956,7 @@ export class SubgraphRepository {
         : undefined,
       hasLintErrors: check.hasLintErrors ?? false,
       hasGraphPruningErrors: check.hasGraphPruningErrors ?? false,
+      clientTrafficCheckSkipped: check.clientTrafficCheckSkipped ?? false,
     };
   }
 

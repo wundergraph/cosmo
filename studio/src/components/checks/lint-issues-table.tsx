@@ -41,14 +41,13 @@ export const LintIssuesTable = ({
         description="Enable schema linting to catch linting issues in your schema."
         actions={
           <Button
-            size="sm"
             onClick={() => {
               router.push(
                 `/${router.query.organizationSlug}/lint-policy?namespace=${router.query.namespace}`,
               );
             }}
           >
-            Navigate to Lint Policy
+            Configure Lint Policy
           </Button>
         }
       />

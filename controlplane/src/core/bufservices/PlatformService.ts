@@ -2202,6 +2202,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           targetId: subgraph.targetId,
           isDeleted: !!req.delete,
           proposedSubgraphSchemaSDL: newSchemaSDL,
+          trafficCheckSkipped: req.skipTrafficCheck,
         });
 
         const schemaChanges = await getDiffBetweenGraphs(subgraph.schemaSDL, newSchemaSDL);
@@ -2280,9 +2281,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             });
           }
 
-          // We don't collect operation usage when we have composition errors or
-          // when we don't have any inspectable changes. That means any breaking change is really breaking
-          if (composition.errors.length > 0 || inspectorChanges.length === 0) {
+          /* 
+          We don't collect operation usage when 
+          1. we have composition errors
+          2. when we don't have any inspectable changes. 
+          3. When user wants to skip the traffic check altogether
+          That means any breaking change is really breaking
+          */
+          if (composition.errors.length > 0 || inspectorChanges.length === 0 || req.skipTrafficCheck) {
             continue;
           }
 
@@ -2383,6 +2389,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           lintErrors: lintIssues.errors,
           graphPruneWarnings: graphPruningIssues.warnings,
           graphPruneErrors: graphPruningIssues.errors,
+          clientTrafficCheckSkipped: req.skipTrafficCheck,
         };
       });
     },
@@ -9275,6 +9282,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             operations: [],
             trafficCheckDays: 0,
             createdAt: '',
+            clientTrafficCheckSkipped: false,
           };
         }
 
@@ -9290,6 +9298,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             operations: [],
             trafficCheckDays: 0,
             createdAt: '',
+            clientTrafficCheckSkipped: false,
           };
         }
 
@@ -9325,6 +9334,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           })),
           trafficCheckDays,
           createdAt: check.timestamp,
+          clientTrafficCheckSkipped: check.clientTrafficCheckSkipped || false,
         };
       });
     },
