@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.24.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.23.1...graphqlmetrics@0.24.0) (2024-09-23)
+
+### Features
+
+* add apollo compatibility mode with support for valueCompletion ([#1205](https://github.com/wundergraph/cosmo/issues/1205)) ([18b1ef0](https://github.com/wundergraph/cosmo/commit/18b1ef01b12945d2f3acc80ea9548a17f9effa21)) (@jensneuse)
+
 ## [0.23.1](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.23.0...graphqlmetrics@0.23.1) (2024-09-20)
 
 ### Bug Fixes
