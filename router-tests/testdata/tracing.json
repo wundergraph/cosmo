@@ -817,7 +817,7 @@
                     ],
                     "input": {
                       "body": {
-                        "query": "query($representations: [_Any!]!){_entities(representations: $representations){__typename ... on Employee {details {forename surname hasChildren}}}}",
+                        "query": "query($representations: [_Any!]!){_entities(representations: $representations){... on Employee {__typename details {forename surname hasChildren}}}}",
                         "variables": {
                           "representations": [
                             {
@@ -1189,7 +1189,7 @@
                     ],
                     "input": {
                       "body": {
-                        "query": "query($representations: [_Any!]!){_entities(representations: $representations){__typename ... on Employee {hobbies {__typename ... on Exercise {category} ... on Flying {planeModels yearsOfExperience} ... on Gaming {name genres yearsOfExperience} ... on Programming {languages} ... on Travelling {countriesLived {__typename key {name}}} ... on Other {name}}}}}",
+                        "query": "query($representations: [_Any!]!){_entities(representations: $representations){... on Employee {__typename hobbies {__typename ... on Exercise {category} ... on Flying {planeModels yearsOfExperience} ... on Gaming {name genres yearsOfExperience} ... on Programming {languages} ... on Travelling {countriesLived {__typename key {name}}} ... on Other {name}}}}}",
                         "variables": {
                           "representations": [
                             {
@@ -1780,7 +1780,7 @@
                 ],
                 "input": {
                   "body": {
-                    "query": "query($representations: [_Any!]!){_entities(representations: $representations){__typename ... on Country {language}}}",
+                    "query": "query($representations: [_Any!]!){_entities(representations: $representations){... on Country {__typename language}}}",
                     "variables": {
                       "representations": [
                         {
