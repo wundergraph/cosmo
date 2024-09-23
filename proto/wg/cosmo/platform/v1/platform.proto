@@ -80,6 +80,7 @@ message CheckSubgraphSchemaRequest {
   // Check breaking changes and composition when this subgraph is deleted
   optional bool delete = 4;
   string namespace = 5;
+  optional bool skip_traffic_check = 6;
 }
 
 message FixSubgraphSchemaRequest {
@@ -238,6 +239,7 @@ message CheckSubgraphSchemaResponse {
   repeated LintIssue lintErrors = 9;
   repeated GraphPruningIssue graphPruneWarnings = 10;
   repeated GraphPruningIssue graphPruneErrors = 11;
+  optional bool client_traffic_check_skipped = 12;
 }
 
 message FixSubgraphSchemaResponse {
@@ -440,6 +442,7 @@ message SchemaCheck {
   optional GhDetails ghDetails = 10;
   bool hasLintErrors = 11;
   bool hasGraphPruningErrors = 12;
+  bool client_traffic_check_skipped = 13;
 }
 
 message GetChecksByFederatedGraphNameResponse {
@@ -501,6 +504,7 @@ message GetCheckOperationsResponse {
   repeated CheckOperation operations = 2;
   int32 traffic_check_days = 3;
   string created_at = 4;
+  bool client_traffic_check_skipped = 5;
 }
 
 message GetOperationContentRequest {

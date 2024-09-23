@@ -1,0 +1,2 @@
+ALTER TABLE "schema_checks" ADD COLUMN "client_traffic_check_skipped" boolean DEFAULT false;--> statement-breakpoint
+ALTER TABLE "schema_checks" ADD COLUMN "client_traffic_ignored" boolean DEFAULT false;

@@ -41,14 +41,13 @@ export const GraphPruningIssuesTable = ({
         description="Enable schema graph pruning to catch pruning issues in your schema."
         actions={
           <Button
-            size="sm"
             onClick={() => {
               router.push(
                 `/${router.query.organizationSlug}/lint-policy?namespace=${router.query.namespace}`,
               );
             }}
           >
-            Navigate to Lint Policy
+            Configure Lint Policy
           </Button>
         }
       />
