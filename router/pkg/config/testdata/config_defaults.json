@@ -280,5 +280,11 @@
       "ProviderID": "",
       "ObjectPrefix": ""
     }
+  },
+  "ApolloCompatibilityFlags": {
+    "EnableAll": false,
+    "ValueCompletion": {
+      "Enabled": false
+    }
   }
 }
