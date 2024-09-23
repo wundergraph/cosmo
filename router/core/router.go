@@ -1643,7 +1643,7 @@ func WithPersistedOperationsConfig(cfg config.PersistedOperationsConfig) Option 
 func WithApolloCompatibilityFlagsConfig(cfg config.ApolloCompatibilityFlags) Option {
 	return func(r *Router) {
 		if cfg.EnableAll {
-			cfg.ValueCompletion = true
+			cfg.ValueCompletion.Enabled = true
 		}
 		r.apolloCompatibilityFlags = cfg
 	}

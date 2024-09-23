@@ -581,8 +581,12 @@ type PersistedOperationsConfig struct {
 }
 
 type ApolloCompatibilityFlags struct {
-	EnableAll       bool `yaml:"enable_all" envDefault:"false" env:"APOLLO_COMPATIBILITY_ENABLE_ALL"`
-	ValueCompletion bool `yaml:"value_completion" envDefault:"false" env:"APOLLO_COMPATIBILITY_VALUE_COMPLETION"`
+	EnableAll       bool                               `yaml:"enable_all" envDefault:"false" env:"APOLLO_COMPATIBILITY_ENABLE_ALL"`
+	ValueCompletion ApolloCompatibilityValueCompletion `yaml:"value_completion"`
+}
+
+type ApolloCompatibilityValueCompletion struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_VALUE_COMPLETION_ENABLED"`
 }
 
 type Config struct {

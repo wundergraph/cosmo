@@ -77,7 +77,7 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 		MaxRecyclableParserSize:            opts.RouterEngineConfig.Execution.ResolverMaxRecyclableParserSize,
 	}
 
-	if opts.ApolloCompatibilityFlags.ValueCompletion {
+	if opts.ApolloCompatibilityFlags.ValueCompletion.Enabled {
 		options.ResolvableOptions.ApolloCompatibilityValueCompletionInExtensions = true
 	}
 

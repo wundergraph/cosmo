@@ -283,6 +283,8 @@
   },
   "ApolloCompatibilityFlags": {
     "EnableAll": false,
-    "ValueCompletion": false
+    "ValueCompletion": {
+      "Enabled": false
+    }
   }
 }

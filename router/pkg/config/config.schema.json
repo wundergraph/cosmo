@@ -1655,9 +1655,15 @@
           "description": "Enable all Apollo compatibility flags. If the value is true, all Apollo compatibility flags are enabled."
         },
         "value_completion": {
-          "type": "boolean",
-          "default": false,
-          "description": "Enable Apollo compatible value completion. If the value is true, invalid __typename values will be returned in extensions.valueCompletion instead of errors."
+          "type": "object",
+          "description": "Invalid __typename values will be returned in extensions.valueCompletion instead of errors.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
         }
       }
     }
