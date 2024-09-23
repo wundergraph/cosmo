@@ -22,6 +22,7 @@ export class SchemaCheckRepository {
     isComposable?: boolean;
     isDeleted?: boolean;
     proposedSubgraphSchemaSDL: string;
+    trafficCheckSkipped?: boolean;
   }): Promise<string> {
     const insertedSchemaCheck = await this.db
       .insert(schemaChecks)
@@ -30,6 +31,7 @@ export class SchemaCheckRepository {
         isComposable: data.isComposable,
         isDeleted: data.isDeleted,
         proposedSubgraphSchemaSDL: data.proposedSubgraphSchemaSDL,
+        clientTrafficCheckSkipped: data.trafficCheckSkipped || false,
       })
       .returning()
       .execute();
