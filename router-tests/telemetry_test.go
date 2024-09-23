@@ -2348,7 +2348,7 @@ Downstream errors:
 						Middleware: func(handler http.Handler) http.Handler {
 							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 								require.Equal(t, datadogTraceId, r.Header.Get("x-datadog-trace-id"))
-								require.NotEqual(t, "12345", r.Header.Get("x-datadog-parent-id"))
+								require.NotEqual(t, "6023947403358210776", r.Header.Get("x-datadog-parent-id"))
 								require.Equal(t, "1", r.Header.Get("x-datadog-sampling-priority"))
 								handler.ServeHTTP(w, r)
 							})
@@ -2360,11 +2360,16 @@ Downstream errors:
 					Query: `query myQuery { employees { id } }`,
 					Header: map[string][]string{
 						"x-datadog-trace-id":          {datadogTraceId},
-						"x-datadog-parent-id":         {"12345"},
+						"x-datadog-parent-id":         {"6023947403358210776"},
 						"x-datadog-sampling-priority": {"1"},
 					},
 				})
 				require.JSONEq(t, employeesIDData, res.Body)
+
+				sn := exporter.GetSpans().Snapshots()
+				require.GreaterOrEqual(t, len(sn), 1)
+				require.Equal(t, "00000000000000008448eb211c80319c", sn[0].SpanContext().TraceID().String())
+				//require.Equal(t, "6179b4f63c68cdfd", sn[0].SpanContext().SpanID().String())
 			})
 		})
 
