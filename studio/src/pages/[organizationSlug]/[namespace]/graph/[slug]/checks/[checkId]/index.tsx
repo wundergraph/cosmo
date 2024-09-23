@@ -333,6 +333,8 @@ const CheckDetails = ({
 
   const reason = !data.check.isComposable
     ? "Composition errors were found"
+    : data.check.isBreaking && data.check?.clientTrafficCheckSkipped
+    ? "Breaking changes were detected"
     : data.check.isBreaking && data.check.hasClientTraffic
     ? "Operations were affected by breaking changes"
     : data.check.isBreaking && !data.check.hasClientTraffic
