@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.89.2](https://github.com/wundergraph/cosmo/compare/studio@0.89.1...studio@0.89.2) (2024-09-23)
+
+### Bug Fixes
+
+* ui and default value of the graph pruning config ([#1208](https://github.com/wundergraph/cosmo/issues/1208)) ([912d80a](https://github.com/wundergraph/cosmo/commit/912d80ad1d9067bddd8e01488d3ac77e9cd03e08)) (@JivusAyrus)
+
 ## [0.89.1](https://github.com/wundergraph/cosmo/compare/studio@0.89.0...studio@0.89.1) (2024-09-20)
 
 ### Bug Fixes
