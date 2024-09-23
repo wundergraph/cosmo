@@ -70,14 +70,17 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
 
       // No operations usage stats mean the check was not performed against any live traffic
       if (resp.operationUsageStats) {
-        if (resp.operationUsageStats.totalOperations === 0) {
+        if (resp.operationUsageStats.totalOperations === 0 && !resp.clientTrafficCheckSkipped) {
           // Composition errors are still considered failures, otherwise we can consider this a success
           // because no operations were affected by the change
           success =
             resp.compositionErrors.length === 0 && resp.lintErrors.length === 0 && resp.graphPruneErrors.length === 0;
           console.log(`No operations were affected by this schema change.`);
           finalStatement = `This schema change didn't affect any operations from existing client traffic.`;
-        } else if (resp.operationUsageStats.totalOperations === resp.operationUsageStats.safeOperations) {
+        } else if (
+          resp.operationUsageStats.totalOperations === resp.operationUsageStats.safeOperations &&
+          !resp.clientTrafficCheckSkipped
+        ) {
           // This is also a success because changes to these operations were marked as safe
           success =
             resp.compositionErrors.length === 0 && resp.lintErrors.length === 0 && resp.graphPruneErrors.length === 0;
@@ -91,22 +94,34 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
             resp.lintErrors.length === 0 &&
             resp.graphPruneErrors.length === 0;
 
-          console.log(
-            logSymbols.warning +
-              ` Compared ${pc.bold(resp.breakingChanges.length)} breaking change's impacting ${pc.bold(
-                resp.operationUsageStats.totalOperations - resp.operationUsageStats.safeOperations,
-              )} operations. ${
-                resp.operationUsageStats.safeOperations > 0
-                  ? `Also, ${resp.operationUsageStats.safeOperations} operations marked safe due to overrides.`
-                  : ''
-              } \nFound client activity between ` +
-              pc.underline(new Date(resp.operationUsageStats.firstSeenAt).toLocaleString()) +
-              ` and ` +
-              pc.underline(new Date(resp.operationUsageStats.lastSeenAt).toLocaleString()),
-          );
-          finalStatement = `This check has encountered ${pc.bold(
-            `${resp.breakingChanges.length}`,
-          )} breaking change's that would break operations from existing client traffic.`;
+          const { breakingChanges, operationUsageStats, clientTrafficCheckSkipped } = resp;
+          const { totalOperations, safeOperations, firstSeenAt, lastSeenAt } = operationUsageStats;
+
+          if (breakingChanges.length > 0) {
+            const warningMessage = [logSymbols.warning, ` Found ${pc.bold(breakingChanges.length)} breaking changes.`];
+
+            if (totalOperations > 0) {
+              warningMessage.push(`${pc.bold(totalOperations - safeOperations)} operations impacted.`);
+            }
+
+            if (safeOperations > 0) {
+              warningMessage.push(`In addition, ${safeOperations} operations marked safe due to overrides.`);
+            }
+
+            if (!clientTrafficCheckSkipped) {
+              warningMessage.push(
+                `\nFound client activity between ${pc.underline(
+                  new Date(firstSeenAt).toLocaleString(),
+                )} and ${pc.underline(new Date(lastSeenAt).toLocaleString())}.`,
+              );
+            }
+
+            console.log(warningMessage.join(''));
+
+            finalStatement = `This check has encountered ${pc.bold(`${breakingChanges.length}`)} breaking changes${
+              clientTrafficCheckSkipped ? `.` : ` that would break operations from existing client traffic.`
+            }`;
+          }
         }
       }
 

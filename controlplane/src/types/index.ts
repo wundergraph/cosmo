@@ -160,6 +160,7 @@ export interface SchemaCheckDTO {
   };
   hasLintErrors: boolean;
   hasGraphPruningErrors: boolean;
+  clientTrafficCheckSkipped: boolean;
 }
 
 export interface SchemaCheckSummaryDTO extends SchemaCheckDTO {
