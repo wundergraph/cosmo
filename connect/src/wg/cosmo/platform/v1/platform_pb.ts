@@ -3416,6 +3416,16 @@ export class SchemaCheck extends Message<SchemaCheck> {
    */
   clientTrafficCheckSkipped = false;
 
+  /**
+   * @generated from field: bool lint_skipped = 14;
+   */
+  lintSkipped = false;
+
+  /**
+   * @generated from field: bool graph_pruning_skipped = 15;
+   */
+  graphPruningSkipped = false;
+
   constructor(data?: PartialMessage<SchemaCheck>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3437,6 +3447,8 @@ export class SchemaCheck extends Message<SchemaCheck> {
     { no: 11, name: "hasLintErrors", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 12, name: "hasGraphPruningErrors", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 13, name: "client_traffic_check_skipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 14, name: "lint_skipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 15, name: "graph_pruning_skipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SchemaCheck {
@@ -3701,16 +3713,6 @@ export class GetCheckSummaryResponse extends Message<GetCheckSummaryResponse> {
    */
   graphPruningIssues: GraphPruningIssue[] = [];
 
-  /**
-   * @generated from field: bool isLintingEnabled = 11;
-   */
-  isLintingEnabled = false;
-
-  /**
-   * @generated from field: bool isGraphPruningEnabled = 12;
-   */
-  isGraphPruningEnabled = false;
-
   constructor(data?: PartialMessage<GetCheckSummaryResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3728,8 +3730,6 @@ export class GetCheckSummaryResponse extends Message<GetCheckSummaryResponse> {
     { no: 8, name: "traffic_check_days", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 9, name: "lintIssues", kind: "message", T: LintIssue, repeated: true },
     { no: 10, name: "graphPruningIssues", kind: "message", T: GraphPruningIssue, repeated: true },
-    { no: 11, name: "isLintingEnabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 12, name: "isGraphPruningEnabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckSummaryResponse {

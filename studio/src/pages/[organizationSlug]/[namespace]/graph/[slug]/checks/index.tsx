@@ -167,6 +167,8 @@ const ChecksPage: NextPageWithLayout = () => {
                   hasLintErrors,
                   hasGraphPruningErrors,
                   clientTrafficCheckSkipped,
+                  lintSkipped,
+                  graphPruningSkipped,
                 }) => {
                   const isSuccessful = isCheckSuccessful(
                     isComposable,
@@ -223,7 +225,7 @@ const ChecksPage: NextPageWithLayout = () => {
                           </Badge>
 
                           <Badge variant="outline" className="gap-2 py-1.5">
-                            {getCheckIcon(!isBreaking)}{" "}
+                            {getCheckIcon(!isBreaking)}
                             <span>Breaking changes</span>
                           </Badge>
                           <Badge
@@ -238,18 +240,39 @@ const ChecksPage: NextPageWithLayout = () => {
                               <NoSymbolIcon className="h-4 w-4" />
                             ) : (
                               getCheckIcon(!hasClientTraffic)
-                            )}{" "}
+                            )}
                             <span>Operations</span>
                           </Badge>
-                          <Badge variant="outline" className="gap-2 py-1.5">
-                            {getCheckIcon(!hasLintErrors)}{" "}
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "gap-2 py-1.5",
+                              !hasLintErrors &&
+                                lintSkipped &&
+                                "text-muted-foreground",
+                            )}
+                          >
+                            {!hasLintErrors && lintSkipped ? (
+                              <NoSymbolIcon className="h-4 w-4" />
+                            ) : (
+                              getCheckIcon(!hasLintErrors)
+                            )}
                             <span>Lint Errors</span>
                           </Badge>
                           <Badge
                             variant="outline"
-                            className="flex items-center space-x-1.5  py-2"
+                            className={cn(
+                              "gap-2 py-1.5",
+                              !hasGraphPruningErrors &&
+                                graphPruningSkipped &&
+                                "text-muted-foreground",
+                            )}
                           >
-                            {getCheckIcon(!hasGraphPruningErrors)}
+                            {!hasGraphPruningErrors && graphPruningSkipped ? (
+                              <NoSymbolIcon className="h-4 w-4" />
+                            ) : (
+                              getCheckIcon(!hasGraphPruningErrors)
+                            )}
                             <span className="flex-1 truncate">
                               Pruning Errors
                             </span>

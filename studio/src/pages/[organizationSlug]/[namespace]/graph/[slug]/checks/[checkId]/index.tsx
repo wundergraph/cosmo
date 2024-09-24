@@ -449,7 +449,7 @@ const CheckDetails = ({
                     "text-muted-foreground",
                 )}
               >
-                {data.lintIssues.length === 0 && !data.isLintingEnabled ? (
+                {data.check?.clientTrafficCheckSkipped ? (
                   <>
                     <NoSymbolIcon className="h-4 w-4" />
                     <span className="flex-1 truncate">Operations</span>
@@ -475,10 +475,10 @@ const CheckDetails = ({
                 variant="outline"
                 className={cn("flex items-center space-x-1.5 py-2", {
                   "text-muted-foreground":
-                    data.lintIssues.length === 0 && !data.isLintingEnabled,
+                    data.lintIssues.length === 0 && data.check.lintSkipped,
                 })}
               >
-                {data.lintIssues.length === 0 && !data.isLintingEnabled ? (
+                {data.lintIssues.length === 0 && data.check?.lintSkipped ? (
                   <>
                     <NoSymbolIcon className="h-4 w-4" />
                     <span className="flex-1 truncate">Lint Errors</span>
@@ -503,11 +503,11 @@ const CheckDetails = ({
                 className={cn("flex items-center space-x-1.5 py-2", {
                   "text-muted-foreground":
                     data.graphPruningIssues.length === 0 &&
-                    !data.isGraphPruningEnabled,
+                    data.check?.graphPruningSkipped,
                 })}
               >
                 {data.graphPruningIssues.length === 0 &&
-                !data.isGraphPruningEnabled ? (
+                data.check?.graphPruningSkipped ? (
                   <>
                     <NoSymbolIcon className="h-4 w-4" />
                     <span className="flex-1 truncate">Pruning Errors</span>
@@ -856,7 +856,7 @@ const CheckDetails = ({
                 <LintIssuesTable
                   lintIssues={data.lintIssues}
                   caption={`${data.lintIssues.length} issues found`}
-                  isLintingEnabled={data.isLintingEnabled}
+                  isLintingEnabled={!data.check?.lintSkipped}
                 />
               </TabsContent>
               <TabsContent
@@ -866,7 +866,7 @@ const CheckDetails = ({
                 <GraphPruningIssuesTable
                   pruneIssues={data.graphPruningIssues}
                   caption={`${data.graphPruningIssues.length} issues found`}
-                  isGraphPruningEnabled={data.isGraphPruningEnabled}
+                  isGraphPruningEnabled={!data.check?.graphPruningSkipped}
                 />
               </TabsContent>
               <TabsContent value="schema" className="relative w-full flex-1">
