@@ -1714,6 +1714,9 @@ func TraceConfigFromTelemetry(cfg *config.Telemetry) *rtrace.Config {
 	if cfg.Tracing.Propagation.Jaeger {
 		propagators = append(propagators, rtrace.PropagatorJaeger)
 	}
+	if cfg.Tracing.Propagation.Datadog {
+		propagators = append(propagators, rtrace.PropagatorDatadog)
+	}
 	if cfg.Tracing.Propagation.Baggage {
 		propagators = append(propagators, rtrace.PropagatorBaggage)
 	}
