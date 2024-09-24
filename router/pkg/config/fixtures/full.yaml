@@ -70,6 +70,7 @@ telemetry:
       jaeger: false
       # https://github.com/openzipkin/b3-propagation (zipkin)
       b3: false
+      datadog: true
     exporters:
       # If no exporters are defined, the default one is used
       - exporter: http # or grpc

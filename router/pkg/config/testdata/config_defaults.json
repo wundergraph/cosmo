@@ -18,7 +18,8 @@
         "TraceContext": true,
         "Jaeger": false,
         "B3": false,
-        "Baggage": false
+        "Baggage": false,
+        "Datadog": false
       },
       "ExportGraphQLVariables": false,
       "WithNewRoot": false

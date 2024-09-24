@@ -549,6 +549,10 @@
                   "type": "boolean",
                   "description": "Enable the B3 propagation. See https://github.com/openzipkin/b3-propagation (zipkin) for more information."
                 },
+                "datadog": {
+                  "type": "boolean",
+                  "description": "Enable the Datadog propagation."
+                },
                 "baggage": {
                   "type": "boolean",
                   "description": "Enable the baggage propagation. See https://www.w3.org/TR/baggage/ for more information."
