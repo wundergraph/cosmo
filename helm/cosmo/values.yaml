@@ -403,9 +403,6 @@ clickhouse:
   # 1 replica for development
   zookeeper:
     enabled: false
-  resources:
-    memory: 2Gi
-    cpu: 1
   persistence:
     # 2Gi for development
     size: 2Gi
