@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.11.2...helm-cosmo@0.12.0) (2024-09-24)
+
+
+### Features
+
+* update clickhouse and keycloak charts ([#1214](https://github.com/wundergraph/cosmo/issues/1214)) ([dea6595](https://github.com/wundergraph/cosmo/commit/dea65954c8180d562527f425157ddfeaee83ad44))
+
 ## [0.11.2](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.11.1...helm-cosmo@0.11.2) (2024-09-16)
 
 
