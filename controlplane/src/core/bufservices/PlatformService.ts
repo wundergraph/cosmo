@@ -8422,19 +8422,33 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const repo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
-        // Namespace is optional, if not provided, we get all the subgraphs
-        const namespace = await namespaceRepo.byName(req.namespace);
+        let namespaceId: string | undefined;
+
+        if (req.namespace) {
+          const namespace = await namespaceRepo.byName(req.namespace);
+          if (!namespace) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR_NOT_FOUND,
+                details: `Could not find namespace ${req.namespace}`,
+              },
+              graphs: [],
+              count: 0,
+            };
+          }
+          namespaceId = namespace.id;
+        }
 
         const list: SubgraphDTO[] = await repo.list({
           limit: req.limit,
           offset: req.offset,
-          namespaceId: namespace?.id,
+          namespaceId,
           query: req.query,
           excludeFeatureSubgraphs: req.excludeFeatureSubgraphs,
         });
 
         const count = await repo.count({
-          namespaceId: namespace?.id,
+          namespaceId,
           query: req.query,
           limit: 0,
           offset: 0,
@@ -8575,13 +8589,26 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
-        // Namespace is optional, if not provided, we get all the federated graphs
-        const namespace = await namespaceRepo.byName(req.namespace);
+        let namespaceId: string | undefined;
+
+        if (req.namespace) {
+          const namespace = await namespaceRepo.byName(req.namespace);
+          if (!namespace) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR_NOT_FOUND,
+                details: `Could not find namespace ${req.namespace}`,
+              },
+              graphs: [],
+            };
+          }
+          namespaceId = namespace.id;
+        }
 
         const list: FederatedGraphDTO[] = await fedGraphRepo.list({
           limit: req.limit,
           offset: req.offset,
-          namespaceId: namespace?.id,
+          namespaceId,
           supportsFederation: req.supportsFederation,
         });
 
@@ -11687,17 +11714,31 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
-        // Namespace is optional, if not provided, we get all the subgraphs
-        const namespace = await namespaceRepo.byName(req.namespace);
+        let namespaceId: string | undefined;
+
+        if (req.namespace) {
+          const namespace = await namespaceRepo.byName(req.namespace);
+          if (!namespace) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR_NOT_FOUND,
+                details: `Could not find namespace ${req.namespace}`,
+              },
+              featureFlags: [],
+              totalCount: 0,
+            };
+          }
+          namespaceId = namespace.id;
+        }
 
         const featureFlags = await featureFlagRepo.getFeatureFlags({
           limit: req.limit,
           offset: req.offset,
-          namespaceId: namespace?.id,
+          namespaceId,
           query: req.query,
         });
 
-        const totalCount = await featureFlagRepo.getFeatureFlagsCount({ namespaceId: namespace?.id });
+        const totalCount = await featureFlagRepo.getFeatureFlagsCount({ namespaceId });
 
         return {
           response: {
