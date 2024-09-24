@@ -27,7 +27,7 @@ func TestPropagateHeaderRule(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, config.CacheControlPolicy{})
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -64,7 +64,7 @@ func TestPropagateHeaderRule(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, config.CacheControlPolicy{})
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -103,7 +103,7 @@ func TestPropagateHeaderRule(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, config.CacheControlPolicy{})
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -146,7 +146,7 @@ func TestPropagateHeaderRule(t *testing.T) {
 			All: &config.GlobalHeaderRule{
 				Request: rules,
 			},
-		})
+		}, config.CacheControlPolicy{})
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -190,7 +190,7 @@ func TestRenamePropagateHeaderRule(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, config.CacheControlPolicy{})
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -235,7 +235,7 @@ func TestRenamePropagateHeaderRule(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, config.CacheControlPolicy{})
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -285,7 +285,7 @@ func TestRenamePropagateHeaderRule(t *testing.T) {
 			All: &config.GlobalHeaderRule{
 				Request: rules,
 			},
-		})
+		}, config.CacheControlPolicy{})
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -325,7 +325,7 @@ func TestSkipAllIgnoredHeaders(t *testing.T) {
 				},
 			},
 		},
-	})
+	}, config.CacheControlPolicy{})
 	assert.Nil(t, err)
 
 	rr := httptest.NewRecorder()
@@ -372,7 +372,7 @@ func TestSubgraphPropagateHeaderRule(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, config.CacheControlPolicy{})
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -421,7 +421,7 @@ func TestSubgraphPropagateHeaderRule(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, config.CacheControlPolicy{})
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -478,7 +478,7 @@ func TestSubgraphPropagateHeaderRule(t *testing.T) {
 					Request: rules,
 				},
 			},
-		})
+		}, config.CacheControlPolicy{})
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -542,7 +542,7 @@ func TestSubgraphPropagateHeaderRule(t *testing.T) {
 					Request: rules,
 				},
 			},
-		})
+		}, config.CacheControlPolicy{})
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -600,7 +600,7 @@ func TestSubgraphRenamePropagateHeaderRule(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, config.CacheControlPolicy{})
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -650,7 +650,7 @@ func TestSubgraphRenamePropagateHeaderRule(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, config.CacheControlPolicy{})
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -700,7 +700,7 @@ func TestSubgraphRenamePropagateHeaderRule(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, config.CacheControlPolicy{})
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -749,7 +749,7 @@ func TestSubgraphRenamePropagateHeaderRule(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, config.CacheControlPolicy{})
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -799,7 +799,7 @@ func TestSubgraphRenamePropagateHeaderRule(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, config.CacheControlPolicy{})
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -847,6 +847,6 @@ func TestInvalidRegex(t *testing.T) {
 				},
 			},
 		},
-	})
+	}, config.CacheControlPolicy{})
 	assert.Error(t, err)
 }
