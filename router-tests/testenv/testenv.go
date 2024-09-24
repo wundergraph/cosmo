@@ -126,7 +126,7 @@ type Config struct {
 	PrometheusRegistry                 *prometheus.Registry
 	ShutdownDelay                      time.Duration
 	NoRetryClient                      bool
-	DatadogTelemetry                   bool
+	PropagationConfig                  config.PropagationConfig
 	LogObservation                     LogObservationConfig
 }
 
@@ -680,19 +680,18 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	}
 
 	if testConfig.TraceExporter != nil {
+		testConfig.PropagationConfig.TraceContext = true
+
 		c := core.TraceConfigFromTelemetry(&config.Telemetry{
 			ServiceName:        "cosmo-router",
 			Attributes:         testConfig.OtelAttributes,
 			ResourceAttributes: testConfig.OtelResourceAttributes,
 			Tracing: config.Tracing{
-				Enabled:            true,
-				SamplingRate:       1,
-				ParentBasedSampler: !testConfig.DisableParentBasedSampler,
-				Exporters:          []config.TracingExporter{},
-				Propagation: config.PropagationConfig{
-					TraceContext: true,
-					Datadog:      testConfig.DatadogTelemetry,
-				},
+				Enabled:               true,
+				SamplingRate:          1,
+				ParentBasedSampler:    !testConfig.DisableParentBasedSampler,
+				Exporters:             []config.TracingExporter{},
+				Propagation:           testConfig.PropagationConfig,
 				TracingGlobalFeatures: config.TracingGlobalFeatures{},
 			},
 		})

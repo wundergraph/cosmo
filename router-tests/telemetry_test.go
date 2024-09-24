@@ -2271,6 +2271,10 @@ Downstream errors:
 	t.Run("Datadog Propagation", func(t *testing.T) {
 		var (
 			datadogTraceId = "9532127138774266268"
+			testPropConfig = config.PropagationConfig{
+				TraceContext: true,
+				Datadog:      true,
+			}
 		)
 
 		t.Run("Datadog headers are propagated if enabled", func(t *testing.T) {
@@ -2279,8 +2283,8 @@ Downstream errors:
 			exporter := tracetest.NewInMemoryExporter(t)
 
 			testenv.Run(t, &testenv.Config{
-				TraceExporter:    exporter,
-				DatadogTelemetry: true,
+				TraceExporter:     exporter,
+				PropagationConfig: testPropConfig,
 				Subgraphs: testenv.SubgraphsConfig{
 					Employees: testenv.SubgraphConfig{
 						Middleware: func(handler http.Handler) http.Handler {
@@ -2310,8 +2314,8 @@ Downstream errors:
 			exporter := tracetest.NewInMemoryExporter(t)
 
 			testenv.Run(t, &testenv.Config{
-				TraceExporter:    exporter,
-				DatadogTelemetry: true,
+				TraceExporter:     exporter,
+				PropagationConfig: testPropConfig,
 				Subgraphs: testenv.SubgraphsConfig{
 					Employees: testenv.SubgraphConfig{
 						Middleware: func(handler http.Handler) http.Handler {
@@ -2341,8 +2345,8 @@ Downstream errors:
 			exporter := tracetest.NewInMemoryExporter(t)
 
 			testenv.Run(t, &testenv.Config{
-				TraceExporter:    exporter,
-				DatadogTelemetry: true,
+				TraceExporter:     exporter,
+				PropagationConfig: testPropConfig,
 				Subgraphs: testenv.SubgraphsConfig{
 					Employees: testenv.SubgraphConfig{
 						Middleware: func(handler http.Handler) http.Handler {
@@ -2369,7 +2373,6 @@ Downstream errors:
 				sn := exporter.GetSpans().Snapshots()
 				require.GreaterOrEqual(t, len(sn), 1)
 				require.Equal(t, "00000000000000008448eb211c80319c", sn[0].SpanContext().TraceID().String())
-				//require.Equal(t, "6179b4f63c68cdfd", sn[0].SpanContext().SpanID().String())
 			})
 		})
 
@@ -2379,8 +2382,8 @@ Downstream errors:
 			exporter := tracetest.NewInMemoryExporter(t)
 
 			testenv.Run(t, &testenv.Config{
-				TraceExporter:    exporter,
-				DatadogTelemetry: false,
+				TraceExporter:     exporter,
+				PropagationConfig: config.PropagationConfig{Datadog: false},
 				Subgraphs: testenv.SubgraphsConfig{
 					Employees: testenv.SubgraphConfig{
 						Middleware: func(handler http.Handler) http.Handler {

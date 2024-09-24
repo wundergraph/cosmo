@@ -551,7 +551,7 @@
                 },
                 "datadog": {
                   "type": "boolean",
-                  "description": "Enable the Datadog propagation, using https://github.com/tonglil/opentelemetry-go-datadog-propagator."
+                  "description": "Enable the Datadog propagation."
                 },
                 "baggage": {
                   "type": "boolean",
