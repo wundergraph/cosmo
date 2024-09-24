@@ -2,14 +2,14 @@ package config
 
 import (
 	"fmt"
-	"github.com/caarlos0/env/v11"
-	"gopkg.in/yaml.v3"
 	"os"
 	"time"
 
-	"github.com/wundergraph/cosmo/router/internal/unique"
-
+	"github.com/caarlos0/env/v11"
+	"github.com/goccy/go-yaml"
 	"github.com/joho/godotenv"
+
+	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 )
 

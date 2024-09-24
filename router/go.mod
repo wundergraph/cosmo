@@ -67,7 +67,7 @@ require (
 require (
 	github.com/KimMachineGun/automemlimit v0.6.1
 	github.com/bep/debounce v1.2.1
-	github.com/caarlos0/env/v11 v11.2.2
+	github.com/caarlos0/env/v11 v11.1.0
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/klauspost/compress v1.17.9
 	github.com/minio/minio-go/v7 v7.0.74
@@ -77,7 +77,6 @@ require (
 	github.com/wundergraph/astjson v0.0.0-20240910140849-bb15f94bd362
 	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8
 	golang.org/x/text v0.16.0
-	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -144,6 +143,7 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20240102182953-50ed04b92917 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240102182953-50ed04b92917 // indirect
 	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	nhooyr.io/websocket v1.8.11 // indirect
 )
 
