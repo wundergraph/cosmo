@@ -108,11 +108,21 @@ type HeaderPropagation struct {
 	hasResponseRules bool
 }
 
+func initHeaderRules(rules *config.HeaderRules) {
+	if rules.All == nil {
+		rules.All = &config.GlobalHeaderRule{}
+	}
+	if rules.Subgraphs == nil {
+		rules.Subgraphs = make(map[string]*config.GlobalHeaderRule)
+	}
+}
+
 func NewHeaderPropagation(rules *config.HeaderRules) (*HeaderPropagation, error) {
 	if rules == nil {
 		return nil, nil
 	}
 
+	initHeaderRules(rules)
 	hf := HeaderPropagation{
 		rules: rules,
 		regex: map[string]*regexp.Regexp{},
@@ -134,13 +144,7 @@ func AddCacheControlPolicyToRules(rules *config.HeaderRules, cacheControl config
 		rules = &config.HeaderRules{}
 	}
 
-	if rules.All == nil {
-		rules.All = &config.GlobalHeaderRule{}
-	}
-	if rules.Subgraphs == nil {
-		rules.Subgraphs = make(map[string]*config.GlobalHeaderRule)
-	}
-
+	initHeaderRules(rules)
 	if cacheControl.Enabled {
 		rules.All.Response = append(rules.All.Response, &config.ResponseHeaderRule{
 			Operation: config.HeaderRuleOperationPropagate,
