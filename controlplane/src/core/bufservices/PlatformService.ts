@@ -2203,6 +2203,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           isDeleted: !!req.delete,
           proposedSubgraphSchemaSDL: newSchemaSDL,
           trafficCheckSkipped: req.skipTrafficCheck,
+          lintSkipped: !namespace.enableLinting,
+          graphPruningSkipped: !namespace.enableGraphPruning,
         });
 
         const schemaChanges = await getDiffBetweenGraphs(subgraph.schemaSDL, newSchemaSDL);
@@ -9295,8 +9297,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           trafficCheckDays,
           lintIssues,
           graphPruningIssues,
-          isGraphPruningEnabled: namespace.enableGraphPruning,
-          isLintingEnabled: namespace.enableLinting,
         };
       });
     },

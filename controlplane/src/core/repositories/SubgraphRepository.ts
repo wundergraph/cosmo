@@ -807,18 +807,7 @@ export class SubgraphRepository {
 
     const checkList = await this.db.query.schemaChecks.findMany({
       columns: {
-        id: true,
-        targetId: true,
-        createdAt: true,
-        isComposable: true,
-        isDeleted: true,
-        hasBreakingChanges: true,
-        hasClientTraffic: true,
-        forcedSuccess: true,
-        ghDetails: true,
-        hasLintErrors: true,
-        hasGraphPruningErrors: true,
-        clientTrafficCheckSkipped: true,
+        proposedSubgraphSchemaSDL: false,
       },
       limit,
       offset,
@@ -857,6 +846,8 @@ export class SubgraphRepository {
         hasLintErrors: c.hasLintErrors ?? false,
         hasGraphPruningErrors: c.hasGraphPruningErrors ?? false,
         clientTrafficCheckSkipped: c.clientTrafficCheckSkipped ?? false,
+        lintSkipped: c.lintSkipped ?? false,
+        graphPruningSkipped: c.graphPruningSkipped ?? false,
       })),
       checksCount,
     };
@@ -957,6 +948,8 @@ export class SubgraphRepository {
       hasLintErrors: check.hasLintErrors ?? false,
       hasGraphPruningErrors: check.hasGraphPruningErrors ?? false,
       clientTrafficCheckSkipped: check.clientTrafficCheckSkipped ?? false,
+      lintSkipped: check.lintSkipped ?? false,
+      graphPruningSkipped: check.graphPruningSkipped ?? false,
     };
   }
 

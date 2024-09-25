@@ -443,6 +443,8 @@ message SchemaCheck {
   bool hasLintErrors = 11;
   bool hasGraphPruningErrors = 12;
   bool client_traffic_check_skipped = 13;
+  bool lint_skipped = 14;
+  bool graph_pruning_skipped = 15;
 }
 
 message GetChecksByFederatedGraphNameResponse {
@@ -478,8 +480,6 @@ message GetCheckSummaryResponse {
   int32 traffic_check_days = 8;
   repeated LintIssue lintIssues = 9;
   repeated GraphPruningIssue graphPruningIssues = 10;
-  bool isLintingEnabled = 11;
-  bool isGraphPruningEnabled = 12;
 }
 
 message GetCheckOperationsRequest {
