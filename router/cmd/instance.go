@@ -104,6 +104,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		core.WithPlayground(cfg.PlaygroundEnabled),
 		core.WithGraphApiToken(cfg.Graph.Token),
 		core.WithPersistedOperationsConfig(cfg.PersistedOperationsConfig),
+		core.WithApolloCompatibilityFlagsConfig(cfg.ApolloCompatibilityFlags),
 		core.WithStorageProviders(cfg.StorageProviders),
 		core.WithGraphQLPath(cfg.GraphQLPath),
 		core.WithModulesConfig(cfg.Modules),

@@ -656,6 +656,9 @@ export const schemaChecks = pgTable('schema_checks', {
   hasLintErrors: boolean('has_lint_errors').default(false),
   hasGraphPruningErrors: boolean('has_graph_pruning_errors').default(false),
   hasClientTraffic: boolean('has_client_traffic').default(false),
+  clientTrafficCheckSkipped: boolean('client_traffic_check_skipped').default(false),
+  lintSkipped: boolean('lint_skipped'),
+  graphPruningSkipped: boolean('graph_pruning_skipped'),
   proposedSubgraphSchemaSDL: text('proposed_subgraph_schema_sdl'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   ghDetails: customJson('gh_details').$type<{

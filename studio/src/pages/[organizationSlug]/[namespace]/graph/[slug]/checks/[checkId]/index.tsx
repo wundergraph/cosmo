@@ -322,6 +322,7 @@ const CheckDetails = ({
     data.check.hasClientTraffic,
     data.check.hasLintErrors,
     data.check.hasGraphPruningErrors,
+    data.check.clientTrafficCheckSkipped,
   );
 
   const currentAffectedGraph = data.affectedGraphs.find(
@@ -332,6 +333,8 @@ const CheckDetails = ({
 
   const reason = !data.check.isComposable
     ? "Composition errors were found"
+    : data.check.isBreaking && data.check?.clientTrafficCheckSkipped
+    ? "Breaking changes were detected"
     : data.check.isBreaking && data.check.hasClientTraffic
     ? "Operations were affected by breaking changes"
     : data.check.isBreaking && !data.check.hasClientTraffic
@@ -440,24 +443,41 @@ const CheckDetails = ({
 
               <Badge
                 variant="outline"
-                className="flex items-center space-x-1.5  py-2"
+                className={cn(
+                  "flex items-center space-x-1.5 py-2",
+                  data.check?.clientTrafficCheckSkipped &&
+                    "text-muted-foreground",
+                )}
               >
-                {getCheckIcon(!data.check.hasClientTraffic)}
-                <span className="flex-1 truncate">Operations</span>
-                <InfoTooltip>
-                  Describes if the proposed schema affects any client operations
-                  based on real usage data.
-                </InfoTooltip>
+                {data.check?.clientTrafficCheckSkipped ? (
+                  <>
+                    <NoSymbolIcon className="h-4 w-4" />
+                    <span className="flex-1 truncate">Operations</span>
+                    <InfoTooltip>
+                      Describes if the proposed schema affects any client
+                      operations based on real usage data. You skipped this
+                      check.
+                    </InfoTooltip>
+                  </>
+                ) : (
+                  <>
+                    {getCheckIcon(!data.check.hasClientTraffic)}
+                    <span className="flex-1 truncate">Operations</span>
+                    <InfoTooltip>
+                      Describes if the proposed schema affects any client
+                      operations based on real usage data.
+                    </InfoTooltip>
+                  </>
+                )}
               </Badge>
 
               <Badge
                 variant="outline"
                 className={cn("flex items-center space-x-1.5 py-2", {
-                  "text-muted-foreground":
-                    data.lintIssues.length === 0 && !data.isLintingEnabled,
+                  "text-muted-foreground": data.check.lintSkipped,
                 })}
               >
-                {data.lintIssues.length === 0 && !data.isLintingEnabled ? (
+                {data.check?.lintSkipped ? (
                   <>
                     <NoSymbolIcon className="h-4 w-4" />
                     <span className="flex-1 truncate">Lint Errors</span>
@@ -480,18 +500,13 @@ const CheckDetails = ({
               <Badge
                 variant="outline"
                 className={cn("flex items-center space-x-1.5 py-2", {
-                  "text-muted-foreground":
-                    data.graphPruningIssues.length === 0 &&
-                    !data.isGraphPruningEnabled,
+                  "text-muted-foreground": data.check?.graphPruningSkipped,
                 })}
               >
-                {data.graphPruningIssues.length === 0 &&
-                !data.isGraphPruningEnabled ? (
+                {data.check?.graphPruningSkipped ? (
                   <>
                     <NoSymbolIcon className="h-4 w-4" />
-                    <span className="flex-1 truncate">
-                      Pruning Errors
-                    </span>
+                    <span className="flex-1 truncate">Pruning Errors</span>
                     <InfoTooltip>
                       Indicates if the proposed schema contains graph pruning
                       errors. Enable graph pruning linter to see graph pruning
@@ -501,9 +516,7 @@ const CheckDetails = ({
                 ) : (
                   <>
                     {getCheckIcon(!data.check.hasGraphPruningErrors)}
-                    <span className="flex-1 truncate">
-                      Pruning Errors
-                    </span>
+                    <span className="flex-1 truncate">Pruning Errors</span>
                     <InfoTooltip>
                       Indicates if the proposed schema contains graph pruning
                       errors.
@@ -839,7 +852,7 @@ const CheckDetails = ({
                 <LintIssuesTable
                   lintIssues={data.lintIssues}
                   caption={`${data.lintIssues.length} issues found`}
-                  isLintingEnabled={data.isLintingEnabled}
+                  isLintingEnabled={!data.check?.lintSkipped}
                 />
               </TabsContent>
               <TabsContent
@@ -849,7 +862,7 @@ const CheckDetails = ({
                 <GraphPruningIssuesTable
                   pruneIssues={data.graphPruningIssues}
                   caption={`${data.graphPruningIssues.length} issues found`}
-                  isGraphPruningEnabled={data.isGraphPruningEnabled}
+                  isGraphPruningEnabled={!data.check?.graphPruningSkipped}
                 />
               </TabsContent>
               <TabsContent value="schema" className="relative w-full flex-1">

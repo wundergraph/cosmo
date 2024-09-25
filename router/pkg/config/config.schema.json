@@ -549,6 +549,10 @@
                   "type": "boolean",
                   "description": "Enable the B3 propagation. See https://github.com/openzipkin/b3-propagation (zipkin) for more information."
                 },
+                "datadog": {
+                  "type": "boolean",
+                  "description": "Enable the Datadog propagation."
+                },
                 "baggage": {
                   "type": "boolean",
                   "description": "Enable the baggage propagation. See https://www.w3.org/TR/baggage/ for more information."
@@ -1641,6 +1645,29 @@
           "type": "boolean",
           "default": false,
           "description": "Propagate Subgraph HTTP status codes. If the value is true (default: false), Subgraph HTTP response status codes will be propagated to the client in the extensions statusCode field."
+        }
+      }
+    },
+    "apollo_compatibility_flags": {
+      "type": "object",
+      "description": "To enable full compatibility with Apollo Federation, Apollo Gateway and Apollo Router, you can enable certain compatibility flags, allowing you to use Cosmo Router as a drop-in replacement for Apollo.",
+      "additionalProperties": false,
+      "properties": {
+        "enable_all": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable all Apollo compatibility flags. If the value is true, all Apollo compatibility flags are enabled."
+        },
+        "value_completion": {
+          "type": "object",
+          "description": "Invalid __typename values will be returned in extensions.valueCompletion instead of errors.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
         }
       }
     }
