@@ -169,13 +169,9 @@ type SubgraphCacheControlRule struct {
 }
 
 type CacheControlPolicy struct {
-	Enabled   bool                       `yaml:"enabled" envDefault:"false" env:"CACHE_CONTROL_ENABLED"`
-	Value     string                     `yaml:"value" env:"CACHE_CONTROL_VALUE"`
+	Enabled   bool                       `yaml:"enabled" envDefault:"false" env:"CACHE_CONTROL_POLICY_ENABLED"`
+	Value     string                     `yaml:"value" env:"CACHE_CONTROL_POLICY_VALUE"`
 	Subgraphs []SubgraphCacheControlRule `yaml:"subgraphs,omitempty"`
-}
-
-func (c CacheControlPolicy) HasValues() bool {
-	return c.Enabled || c.Subgraphs != nil && len(c.Subgraphs) > 0
 }
 
 type HeaderRules struct {
