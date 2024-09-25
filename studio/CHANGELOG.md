@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.90.2](https://github.com/wundergraph/cosmo/compare/studio@0.90.1...studio@0.90.2) (2024-09-25)
+
+### Bug Fixes
+
+* handle empty query in plan ([#1219](https://github.com/wundergraph/cosmo/issues/1219)) ([37af012](https://github.com/wundergraph/cosmo/commit/37af0123d8185897a5842616377be320b696037c)) (@thisisnithin)
+* record if linters were skipped for a check run ([#1217](https://github.com/wundergraph/cosmo/issues/1217)) ([9cdee41](https://github.com/wundergraph/cosmo/commit/9cdee416b288a08120ea5d8a09e054cf5f3fb5bd)) (@thisisnithin)
+
 ## [0.90.1](https://github.com/wundergraph/cosmo/compare/studio@0.90.0...studio@0.90.1) (2024-09-24)
 
 ### Bug Fixes
