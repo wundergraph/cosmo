@@ -49,7 +49,7 @@ export type QueryPlanFetchNode = {
   kind: string;
   subgraphName: string;
   subgraphId: string;
-  query: string;
+  query?: string;
   path?: string;
   representations?: Representation[];
 };
