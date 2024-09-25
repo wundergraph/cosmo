@@ -23,17 +23,31 @@ export function getFeatureFlags(
     const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
-    // Namespace is optional, if not provided, we get all the subgraphs
-    const namespace = await namespaceRepo.byName(req.namespace);
+    let namespaceId: string | undefined;
+    // Namespace is optional, if not provided, we get all the feature flags
+    if (req.namespace) {
+      const namespace = await namespaceRepo.byName(req.namespace);
+      if (!namespace) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR_NOT_FOUND,
+            details: `Could not find namespace ${req.namespace}`,
+          },
+          featureFlags: [],
+          totalCount: 0,
+        };
+      }
+      namespaceId = namespace.id;
+    }
 
     const featureFlags = await featureFlagRepo.getFeatureFlags({
       limit: req.limit,
       offset: req.offset,
-      namespaceId: namespace?.id,
+      namespaceId,
       query: req.query,
     });
 
-    const totalCount = await featureFlagRepo.getFeatureFlagsCount({ namespaceId: namespace?.id });
+    const totalCount = await featureFlagRepo.getFeatureFlagsCount({ namespaceId });
 
     return {
       response: {

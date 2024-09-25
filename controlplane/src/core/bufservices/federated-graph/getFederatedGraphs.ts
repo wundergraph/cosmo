@@ -29,13 +29,26 @@ export function getFederatedGraphs(
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
+    let namespaceId: string | undefined;
     // Namespace is optional, if not provided, we get all the federated graphs
-    const namespace = await namespaceRepo.byName(req.namespace);
+    if (req.namespace) {
+      const namespace = await namespaceRepo.byName(req.namespace);
+      if (!namespace) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR_NOT_FOUND,
+            details: `Could not find namespace ${req.namespace}`,
+          },
+          graphs: [],
+        };
+      }
+      namespaceId = namespace.id;
+    }
 
     const list: FederatedGraphDTO[] = await fedGraphRepo.list({
       limit: req.limit,
       offset: req.offset,
-      namespaceId: namespace?.id,
+      namespaceId,
       supportsFederation: req.supportsFederation,
     });
 

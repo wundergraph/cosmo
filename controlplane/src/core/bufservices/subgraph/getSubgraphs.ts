@@ -22,19 +22,33 @@ export function getSubgraphs(
     const repo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
+    let namespaceId: string | undefined;
     // Namespace is optional, if not provided, we get all the subgraphs
-    const namespace = await namespaceRepo.byName(req.namespace);
+    if (req.namespace) {
+      const namespace = await namespaceRepo.byName(req.namespace);
+      if (!namespace) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR_NOT_FOUND,
+            details: `Could not find namespace ${req.namespace}`,
+          },
+          graphs: [],
+          count: 0,
+        };
+      }
+      namespaceId = namespace.id;
+    }
 
     const list: SubgraphDTO[] = await repo.list({
       limit: req.limit,
       offset: req.offset,
-      namespaceId: namespace?.id,
+      namespaceId,
       query: req.query,
       excludeFeatureSubgraphs: req.excludeFeatureSubgraphs,
     });
 
     const count = await repo.count({
-      namespaceId: namespace?.id,
+      namespaceId,
       query: req.query,
       limit: 0,
       offset: 0,

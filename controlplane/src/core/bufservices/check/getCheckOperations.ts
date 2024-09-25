@@ -38,6 +38,7 @@ export function getCheckOperations(
         operations: [],
         trafficCheckDays: 0,
         createdAt: '',
+        clientTrafficCheckSkipped: false,
       };
     }
 
@@ -53,6 +54,7 @@ export function getCheckOperations(
         operations: [],
         trafficCheckDays: 0,
         createdAt: '',
+        clientTrafficCheckSkipped: false,
       };
     }
 
@@ -88,6 +90,7 @@ export function getCheckOperations(
       })),
       trafficCheckDays,
       createdAt: check.timestamp,
+      clientTrafficCheckSkipped: check.clientTrafficCheckSkipped || false,
     };
   });
 }

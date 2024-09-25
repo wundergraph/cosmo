@@ -24,18 +24,32 @@ export function getFeatureSubgraphs(
     const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
-    // Namespace is optional, if not provided, we get all the subgraphs
-    const namespace = await namespaceRepo.byName(req.namespace);
+    let namespaceId: string | undefined;
+    // Namespace is optional, if not provided, we get all the feature subgraphs
+    if (req.namespace) {
+      const namespace = await namespaceRepo.byName(req.namespace);
+      if (!namespace) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR_NOT_FOUND,
+            details: `Could not find namespace ${req.namespace}`,
+          },
+          featureSubgraphs: [],
+          count: 0,
+        };
+      }
+      namespaceId = namespace.id;
+    }
 
     const list = await featureFlagRepo.getFeatureSubgraphs({
       limit: req.limit,
       offset: req.offset,
-      namespaceId: namespace?.id,
+      namespaceId,
       query: req.query,
     });
 
     const count = await featureFlagRepo.getFeatureSubgraphsCount({
-      namespaceId: namespace?.id,
+      namespaceId,
       query: req.query,
       limit: 0,
       offset: 0,

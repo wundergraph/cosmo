@@ -202,6 +202,9 @@ export function checkSubgraphSchema(
       targetId: subgraph.targetId,
       isDeleted: !!req.delete,
       proposedSubgraphSchemaSDL: newSchemaSDL,
+      trafficCheckSkipped: req.skipTrafficCheck,
+      lintSkipped: !namespace.enableLinting,
+      graphPruningSkipped: !namespace.enableGraphPruning,
     });
 
     const schemaChanges = await getDiffBetweenGraphs(subgraph.schemaSDL, newSchemaSDL);
@@ -280,9 +283,14 @@ export function checkSubgraphSchema(
         });
       }
 
-      // We don't collect operation usage when we have composition errors or
-      // when we don't have any inspectable changes. That means any breaking change is really breaking
-      if (composition.errors.length > 0 || inspectorChanges.length === 0) {
+      /* 
+          We don't collect operation usage when 
+          1. we have composition errors
+          2. when we don't have any inspectable changes. 
+          3. When user wants to skip the traffic check altogether
+          That means any breaking change is really breaking
+          */
+      if (composition.errors.length > 0 || inspectorChanges.length === 0 || req.skipTrafficCheck) {
         continue;
       }
 
@@ -382,6 +390,7 @@ export function checkSubgraphSchema(
       lintErrors: lintIssues.errors,
       graphPruneWarnings: graphPruningIssues.warnings,
       graphPruneErrors: graphPruningIssues.errors,
+      clientTrafficCheckSkipped: req.skipTrafficCheck,
     };
   });
 }

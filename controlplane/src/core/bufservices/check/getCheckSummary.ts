@@ -109,8 +109,6 @@ export function getCheckSummary(
       trafficCheckDays,
       lintIssues,
       graphPruningIssues,
-      isGraphPruningEnabled: namespace.enableGraphPruning,
-      isLintingEnabled: namespace.enableLinting,
     };
   });
 }
