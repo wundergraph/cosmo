@@ -37,8 +37,8 @@ export const GraphPruningIssuesTable = ({
     return (
       <EmptyState
         icon={<NoSymbolIcon className="text-gray-400" />}
-        title="Schema Graph Pruning is disabled"
-        description="Enable schema graph pruning to catch pruning issues in your schema."
+        title="Schema Graph Pruning Skipped"
+        description="Pruning was skipped for this run. Configure it to catch pruning issues in your schema."
         actions={
           <Button
             onClick={() => {

@@ -37,8 +37,8 @@ export const LintIssuesTable = ({
     return (
       <EmptyState
         icon={<NoSymbolIcon className="text-gray-400" />}
-        title="Schema Linting is disabled"
-        description="Enable schema linting to catch linting issues in your schema."
+        title="Schema Linting Skipped"
+        description="Linting was skipped for this run. Configure it to catch linting issues in your schema."
         actions={
           <Button
             onClick={() => {

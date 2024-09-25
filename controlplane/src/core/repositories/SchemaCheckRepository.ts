@@ -23,6 +23,8 @@ export class SchemaCheckRepository {
     isDeleted?: boolean;
     proposedSubgraphSchemaSDL: string;
     trafficCheckSkipped?: boolean;
+    lintSkipped?: boolean;
+    graphPruningSkipped?: boolean;
   }): Promise<string> {
     const insertedSchemaCheck = await this.db
       .insert(schemaChecks)
@@ -32,6 +34,8 @@ export class SchemaCheckRepository {
         isDeleted: data.isDeleted,
         proposedSubgraphSchemaSDL: data.proposedSubgraphSchemaSDL,
         clientTrafficCheckSkipped: data.trafficCheckSkipped || false,
+        lintSkipped: data.lintSkipped || false,
+        graphPruningSkipped: data.graphPruningSkipped || false,
       })
       .returning()
       .execute();
