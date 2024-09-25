@@ -852,9 +852,7 @@ const CheckDetails = ({
                 <LintIssuesTable
                   lintIssues={data.lintIssues}
                   caption={`${data.lintIssues.length} issues found`}
-                  isLintingEnabled={
-                    data.lintIssues.length > 0 || !data.check?.lintSkipped
-                  }
+                  isLintingEnabled={!data.check?.lintSkipped}
                 />
               </TabsContent>
               <TabsContent
@@ -864,10 +862,7 @@ const CheckDetails = ({
                 <GraphPruningIssuesTable
                   pruneIssues={data.graphPruningIssues}
                   caption={`${data.graphPruningIssues.length} issues found`}
-                  isGraphPruningEnabled={
-                    data.graphPruningIssues.length > 0 ||
-                    !data.check?.graphPruningSkipped
-                  }
+                  isGraphPruningEnabled={!data.check?.graphPruningSkipped}
                 />
               </TabsContent>
               <TabsContent value="schema" className="relative w-full flex-1">
