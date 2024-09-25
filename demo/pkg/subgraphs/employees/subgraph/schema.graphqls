@@ -130,7 +130,7 @@ type Employee implements Identifiable @key(fields: "id") {
   details: Details! @shareable
   id: Int!
   tag: String!
-  role: RoleType
+  role: RoleType!
   notes: String @shareable
   updatedAt: String!
   startDate: String! @requiresScopes(scopes: [["read:employee", "read:private"], ["read:all"]])
