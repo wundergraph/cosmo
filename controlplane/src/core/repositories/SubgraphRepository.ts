@@ -846,8 +846,8 @@ export class SubgraphRepository {
         hasLintErrors: c.hasLintErrors ?? false,
         hasGraphPruningErrors: c.hasGraphPruningErrors ?? false,
         clientTrafficCheckSkipped: c.clientTrafficCheckSkipped ?? false,
-        lintSkipped: c.lintSkipped ?? true,
-        graphPruningSkipped: c.graphPruningSkipped ?? true,
+        lintSkipped: c.lintSkipped ?? false,
+        graphPruningSkipped: c.graphPruningSkipped ?? false,
       })),
       checksCount,
     };
@@ -948,8 +948,8 @@ export class SubgraphRepository {
       hasLintErrors: check.hasLintErrors ?? false,
       hasGraphPruningErrors: check.hasGraphPruningErrors ?? false,
       clientTrafficCheckSkipped: check.clientTrafficCheckSkipped ?? false,
-      lintSkipped: check.lintSkipped ?? true,
-      graphPruningSkipped: check.graphPruningSkipped ?? true,
+      lintSkipped: check.lintSkipped ?? false,
+      graphPruningSkipped: check.graphPruningSkipped ?? false,
     };
   }
 

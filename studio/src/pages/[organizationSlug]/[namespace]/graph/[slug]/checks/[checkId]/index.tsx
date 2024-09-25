@@ -474,11 +474,10 @@ const CheckDetails = ({
               <Badge
                 variant="outline"
                 className={cn("flex items-center space-x-1.5 py-2", {
-                  "text-muted-foreground":
-                    data.lintIssues.length === 0 && data.check.lintSkipped,
+                  "text-muted-foreground": data.check.lintSkipped,
                 })}
               >
-                {data.lintIssues.length === 0 && data.check?.lintSkipped ? (
+                {data.check?.lintSkipped ? (
                   <>
                     <NoSymbolIcon className="h-4 w-4" />
                     <span className="flex-1 truncate">Lint Errors</span>
@@ -501,13 +500,10 @@ const CheckDetails = ({
               <Badge
                 variant="outline"
                 className={cn("flex items-center space-x-1.5 py-2", {
-                  "text-muted-foreground":
-                    data.graphPruningIssues.length === 0 &&
-                    data.check?.graphPruningSkipped,
+                  "text-muted-foreground": data.check?.graphPruningSkipped,
                 })}
               >
-                {data.graphPruningIssues.length === 0 &&
-                data.check?.graphPruningSkipped ? (
+                {data.check?.graphPruningSkipped ? (
                   <>
                     <NoSymbolIcon className="h-4 w-4" />
                     <span className="flex-1 truncate">Pruning Errors</span>

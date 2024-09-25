@@ -247,12 +247,10 @@ const ChecksPage: NextPageWithLayout = () => {
                             variant="outline"
                             className={cn(
                               "gap-2 py-1.5",
-                              !hasLintErrors &&
-                                lintSkipped &&
-                                "text-muted-foreground",
+                              lintSkipped && "text-muted-foreground",
                             )}
                           >
-                            {!hasLintErrors && lintSkipped ? (
+                            {lintSkipped ? (
                               <NoSymbolIcon className="h-4 w-4" />
                             ) : (
                               getCheckIcon(!hasLintErrors)
@@ -263,12 +261,10 @@ const ChecksPage: NextPageWithLayout = () => {
                             variant="outline"
                             className={cn(
                               "gap-2 py-1.5",
-                              !hasGraphPruningErrors &&
-                                graphPruningSkipped &&
-                                "text-muted-foreground",
+                              graphPruningSkipped && "text-muted-foreground",
                             )}
                           >
-                            {!hasGraphPruningErrors && graphPruningSkipped ? (
+                            {graphPruningSkipped ? (
                               <NoSymbolIcon className="h-4 w-4" />
                             ) : (
                               getCheckIcon(!hasGraphPruningErrors)
