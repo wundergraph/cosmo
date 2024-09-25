@@ -206,6 +206,9 @@ export const PlanView = () => {
                     // Match keywords followed by (service
                     [/\b(\w+)(?=\s*\(service)/, "keyword"],
 
+                    // Match Flatten followed by (path
+                    [/\b(Flatten)(?=\s*\(path)/, "keyword"],
+
                     // Match Sequence, Parallel, Single followed by {
                     [/\b(QueryPlan|Sequence|Parallel)(?=\s*{)/, "keyword"],
 
@@ -214,7 +217,7 @@ export const PlanView = () => {
 
                     // Match service declarations: service: "serviceName"
                     [
-                      /(service)(\s*:\s*)("[^"]*")/,
+                      /(service|path)(\s*:\s*)("[^"]*")/,
                       ["identifier", "", "string.service"],
                     ],
 

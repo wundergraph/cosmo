@@ -1,10 +1,10 @@
-import { QueryPlanFetchNode, QueryPlanFetchTypeNode, Representation } from './types';
+import { QueryPlan, QueryPlanFetchNode, QueryPlanFetchTypeNode, Representation } from './types';
 
 export class PlanPrinter {
   depth: number = 0;
   buf: string[] = [];
 
-  print(plan: QueryPlanFetchTypeNode): string {
+  print(plan: QueryPlan): string {
     this.buf = [];
     this.printText('QueryPlan {');
     this.printPlanNode(plan, true);
@@ -57,7 +57,10 @@ export class PlanPrinter {
     if (fetch.representations) {
       this.printRepresentations(fetch.representations);
     }
-    this.printQuery(fetch.query);
+
+    if (fetch.query) {
+      this.printQuery(fetch.query);
+    }
 
     this.depth--;
     this.printText('}');
