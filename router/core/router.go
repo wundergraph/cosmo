@@ -311,12 +311,11 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.livenessCheckPath = "/health/live"
 	}
 
-	hr, err := NewHeaderPropagation(r.headerRules, r.cacheControlPolicy)
+	r.headerRules = AddCacheControlPolicyToRules(r.headerRules, r.cacheControlPolicy)
+	hr, err := NewHeaderPropagation(r.headerRules)
 	if err != nil {
 		return nil, err
 	}
-	// As part of the header propagation initialization, it creates additional header rules from the cache control policy
-	r.headerRules = hr.rules
 
 	if hr.HasRequestRules() {
 		r.preOriginHandlers = append(r.preOriginHandlers, hr.OnOriginRequest)

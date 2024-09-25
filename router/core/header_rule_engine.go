@@ -108,24 +108,15 @@ type HeaderPropagation struct {
 	hasResponseRules bool
 }
 
-func NewHeaderPropagation(rules *config.HeaderRules, cachePolicy config.CacheControlPolicy) (*HeaderPropagation, error) {
+func NewHeaderPropagation(rules *config.HeaderRules) (*HeaderPropagation, error) {
 	if rules == nil {
-		rules = &config.HeaderRules{}
-	}
-
-	if rules.All == nil {
-		rules.All = &config.GlobalHeaderRule{}
-	}
-	if rules.Subgraphs == nil {
-		rules.Subgraphs = make(map[string]*config.GlobalHeaderRule)
+		return nil, nil
 	}
 
 	hf := HeaderPropagation{
 		rules: rules,
 		regex: map[string]*regexp.Regexp{},
 	}
-
-	hf.convertCacheToRules(cachePolicy)
 
 	rhrs, rhrrs := hf.getAllRules()
 	hf.hasRequestRules = len(rhrs) > 0
@@ -138,9 +129,20 @@ func NewHeaderPropagation(rules *config.HeaderRules, cachePolicy config.CacheCon
 	return &hf, nil
 }
 
-func (hf *HeaderPropagation) convertCacheToRules(cacheControl config.CacheControlPolicy) {
+func AddCacheControlPolicyToRules(rules *config.HeaderRules, cacheControl config.CacheControlPolicy) *config.HeaderRules {
+	if rules == nil {
+		rules = &config.HeaderRules{}
+	}
+
+	if rules.All == nil {
+		rules.All = &config.GlobalHeaderRule{}
+	}
+	if rules.Subgraphs == nil {
+		rules.Subgraphs = make(map[string]*config.GlobalHeaderRule)
+	}
+
 	if cacheControl.Enabled {
-		hf.rules.All.Response = append(hf.rules.All.Response, &config.ResponseHeaderRule{
+		rules.All.Response = append(rules.All.Response, &config.ResponseHeaderRule{
 			Operation: config.HeaderRuleOperationPropagate,
 			Algorithm: config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl,
 			Default:   cacheControl.Value,
@@ -148,19 +150,21 @@ func (hf *HeaderPropagation) convertCacheToRules(cacheControl config.CacheContro
 	}
 
 	for _, graph := range cacheControl.Subgraphs {
-		rules, ok := hf.rules.Subgraphs[graph.Name]
+		subgraphRules, ok := rules.Subgraphs[graph.Name]
 		if !ok {
-			rules = &config.GlobalHeaderRule{Response: make([]*config.ResponseHeaderRule, 0)}
+			subgraphRules = &config.GlobalHeaderRule{Response: make([]*config.ResponseHeaderRule, 0)}
 		}
 
-		rules.Response = append(rules.Response, &config.ResponseHeaderRule{
+		subgraphRules.Response = append(subgraphRules.Response, &config.ResponseHeaderRule{
 			Operation: config.HeaderRuleOperationPropagate,
 			Algorithm: config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl,
 			Default:   graph.Value,
 		})
 
-		hf.rules.Subgraphs[graph.Name] = rules
+		rules.Subgraphs[graph.Name] = subgraphRules
 	}
+
+	return rules
 }
 
 func (hf *HeaderPropagation) getAllRules() ([]*config.RequestHeaderRule, []*config.ResponseHeaderRule) {
