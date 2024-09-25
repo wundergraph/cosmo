@@ -142,6 +142,9 @@ func NewHeaderPropagation(rules *config.HeaderRules) (*HeaderPropagation, error)
 func AddCacheControlPolicyToRules(rules *config.HeaderRules, cacheControl config.CacheControlPolicy) *config.HeaderRules {
 	if rules == nil {
 		rules = &config.HeaderRules{}
+		if !cacheControl.Enabled && cacheControl.Subgraphs == nil {
+			return nil
+		}
 	}
 
 	initHeaderRules(rules)
