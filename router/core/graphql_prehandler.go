@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
 	"io"
 	"net/http"
 	"strconv"
@@ -13,22 +12,22 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/pkg/errors"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
+	"go.uber.org/zap"
 
 	"github.com/wundergraph/cosmo/router/pkg/art"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
-
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/pkg/errors"
-	"go.uber.org/zap"
-
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 type PreHandlerOptions struct {
@@ -55,6 +54,7 @@ type PreHandlerOptions struct {
 	AlwaysIncludeQueryPlan      bool
 	AlwaysSkipLoader            bool
 	QueryPlansEnabled           bool
+	QueryPlansLoggingEnabled    bool
 	TrackSchemaUsageInfo        bool
 }
 
@@ -69,7 +69,8 @@ type PreHandler struct {
 	developmentMode             bool
 	alwaysIncludeQueryPlan      bool
 	alwaysSkipLoader            bool
-	queryPlansEnabled           bool
+	queryPlansEnabled           bool // queryPlansEnabled is a flag to enable query plans output in the extensions
+	queryPlansLoggingEnabled    bool // queryPlansLoggingEnabled is a flag to enable logging of query plans
 	routerPublicKey             *ecdsa.PublicKey
 	enableRequestTracing        bool
 	tracerProvider              *sdktrace.TracerProvider
@@ -118,17 +119,18 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 			"wundergraph/cosmo/router/pre_handler",
 			trace.WithInstrumentationVersion("0.0.1"),
 		),
-		fileUploadEnabled:      opts.FileUploadEnabled,
-		maxUploadFiles:         opts.MaxUploadFiles,
-		maxUploadFileSize:      opts.MaxUploadFileSize,
-		queryDepthEnabled:      opts.QueryDepthEnabled,
-		queryDepthLimit:        opts.QueryDepthLimit,
-		queryIgnorePersistent:  opts.QueryIgnorePersistent,
-		bodyReadBuffers:        &sync.Pool{},
-		alwaysIncludeQueryPlan: opts.AlwaysIncludeQueryPlan,
-		alwaysSkipLoader:       opts.AlwaysSkipLoader,
-		queryPlansEnabled:      opts.QueryPlansEnabled,
-		trackSchemaUsageInfo:   opts.TrackSchemaUsageInfo,
+		fileUploadEnabled:        opts.FileUploadEnabled,
+		maxUploadFiles:           opts.MaxUploadFiles,
+		maxUploadFileSize:        opts.MaxUploadFileSize,
+		queryDepthEnabled:        opts.QueryDepthEnabled,
+		queryDepthLimit:          opts.QueryDepthLimit,
+		queryIgnorePersistent:    opts.QueryIgnorePersistent,
+		bodyReadBuffers:          &sync.Pool{},
+		alwaysIncludeQueryPlan:   opts.AlwaysIncludeQueryPlan,
+		alwaysSkipLoader:         opts.AlwaysSkipLoader,
+		queryPlansEnabled:        opts.QueryPlansEnabled,
+		queryPlansLoggingEnabled: opts.QueryPlansLoggingEnabled,
+		trackSchemaUsageInfo:     opts.TrackSchemaUsageInfo,
 	}
 }
 
@@ -612,6 +614,13 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 		httpOperation.requestLogger.Error("failed to plan operation", zap.Error(err))
 
 		return nil, err
+	}
+
+	if h.queryPlansLoggingEnabled {
+		switch p := opContext.preparedPlan.preparedPlan.(type) {
+		case *plan.SynchronousResponsePlan:
+			h.log.Info(fmt.Sprintf("Query Plan:\n%s", p.Response.Fetches.QueryPlan().PrettyPrint()))
+		}
 	}
 
 	enginePlanSpan.SetAttributes(otel.WgEnginePlanCacheHit.Bool(opContext.planCacheHit))
