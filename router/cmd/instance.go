@@ -162,6 +162,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		core.WithTracing(core.TraceConfigFromTelemetry(&cfg.Telemetry)),
 		core.WithMetrics(core.MetricConfigFromTelemetry(&cfg.Telemetry)),
 		core.WithEngineExecutionConfig(cfg.EngineExecutionConfiguration),
+		core.WithCacheControlPolicy(cfg.CacheControl),
 		core.WithSecurityConfig(cfg.SecurityConfiguration),
 		core.WithAuthorizationConfig(&cfg.Authorization),
 		core.WithWebSocketConfiguration(&cfg.WebSocket),

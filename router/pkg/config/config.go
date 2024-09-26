@@ -5,12 +5,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/wundergraph/cosmo/router/internal/unique"
-
-	"github.com/goccy/go-yaml"
-
 	"github.com/caarlos0/env/v11"
+	"github.com/goccy/go-yaml"
 	"github.com/joho/godotenv"
+
+	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 )
 
@@ -162,6 +161,17 @@ type BackoffJitterRetry struct {
 	MaxAttempts int           `yaml:"max_attempts" envDefault:"5"`
 	MaxDuration time.Duration `yaml:"max_duration" envDefault:"10s"`
 	Interval    time.Duration `yaml:"interval" envDefault:"3s"`
+}
+
+type SubgraphCacheControlRule struct {
+	Name  string `yaml:"name"`
+	Value string `yaml:"value"`
+}
+
+type CacheControlPolicy struct {
+	Enabled   bool                       `yaml:"enabled" envDefault:"false" env:"CACHE_CONTROL_POLICY_ENABLED"`
+	Value     string                     `yaml:"value" env:"CACHE_CONTROL_POLICY_VALUE"`
+	Subgraphs []SubgraphCacheControlRule `yaml:"subgraphs,omitempty"`
 }
 
 type HeaderRules struct {
@@ -593,14 +603,15 @@ type ApolloCompatibilityValueCompletion struct {
 type Config struct {
 	Version string `yaml:"version,omitempty" ignored:"true"`
 
-	InstanceID     string           `yaml:"instance_id,omitempty" env:"INSTANCE_ID"`
-	Graph          Graph            `yaml:"graph,omitempty"`
-	Telemetry      Telemetry        `yaml:"telemetry,omitempty"`
-	GraphqlMetrics GraphqlMetrics   `yaml:"graphql_metrics,omitempty"`
-	CORS           CORS             `yaml:"cors,omitempty"`
-	Cluster        Cluster          `yaml:"cluster,omitempty"`
-	Compliance     ComplianceConfig `yaml:"compliance,omitempty"`
-	TLS            TLSConfiguration `yaml:"tls,omitempty"`
+	InstanceID     string             `yaml:"instance_id,omitempty" env:"INSTANCE_ID"`
+	Graph          Graph              `yaml:"graph,omitempty"`
+	Telemetry      Telemetry          `yaml:"telemetry,omitempty"`
+	GraphqlMetrics GraphqlMetrics     `yaml:"graphql_metrics,omitempty"`
+	CORS           CORS               `yaml:"cors,omitempty"`
+	Cluster        Cluster            `yaml:"cluster,omitempty"`
+	Compliance     ComplianceConfig   `yaml:"compliance,omitempty"`
+	TLS            TLSConfiguration   `yaml:"tls,omitempty"`
+	CacheControl   CacheControlPolicy `yaml:"cache_control_policy"`
 
 	Modules        map[string]interface{} `yaml:"modules,omitempty"`
 	Headers        HeaderRules            `yaml:"headers,omitempty"`

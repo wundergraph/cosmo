@@ -81,6 +81,11 @@
       }
     }
   },
+  "CacheControl": {
+    "Enabled": false,
+    "Value": "",
+    "Subgraphs": null
+  },
   "Modules": null,
   "Headers": {
     "All": null,
