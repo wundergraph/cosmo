@@ -55,6 +55,7 @@ type PreHandlerOptions struct {
 	AlwaysSkipLoader            bool
 	QueryPlansEnabled           bool
 	TrackSchemaUsageInfo        bool
+	ComputeOperationSha256      bool
 }
 
 type PreHandler struct {
@@ -83,6 +84,7 @@ type PreHandler struct {
 	queryIgnorePersistent       bool
 	bodyReadBuffers             *sync.Pool
 	trackSchemaUsageInfo        bool
+	computeOperationSha256      bool
 }
 
 type httpOperation struct {
@@ -128,6 +130,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		alwaysSkipLoader:       opts.AlwaysSkipLoader,
 		queryPlansEnabled:      opts.QueryPlansEnabled,
 		trackSchemaUsageInfo:   opts.TrackSchemaUsageInfo,
+		computeOperationSha256: opts.ComputeOperationSha256,
 	}
 }
 
@@ -409,6 +412,17 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 			operationKit.parsedOperation.Files = httpOperation.files
 			requestContext.operation.files = httpOperation.files
 		}
+	}
+
+	// Compute the operation sha256 hash as soon as possible for observability reasons
+	if h.computeOperationSha256 {
+		if err := operationKit.ComputeOperationSha256(); err != nil {
+			return nil, &httpGraphqlError{
+				message:    fmt.Sprintf("error hashing operation: %s", err),
+				statusCode: http.StatusInternalServerError,
+			}
+		}
+		requestContext.operation.sha256Hash = operationKit.parsedOperation.Sha256Hash
 	}
 
 	requestContext.operation.extensions = operationKit.parsedOperation.Request.Extensions

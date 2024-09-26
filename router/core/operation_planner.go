@@ -87,7 +87,7 @@ func (p *OperationPlanner) preparePlan(ctx *operationContext) (*planWithMetaData
 	if report.HasErrors() {
 		return nil, &reportError{report: &report}
 	}
-	post := postprocess.NewProcessor()
+	post := postprocess.NewProcessor(postprocess.CollectDataSourceInfo())
 	post.Process(preparedPlan)
 
 	out := &planWithMetaData{

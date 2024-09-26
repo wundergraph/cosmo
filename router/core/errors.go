@@ -4,11 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
-	"net"
-	"net/http"
-
 	"github.com/hashicorp/go-multierror"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
+	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
@@ -17,6 +15,8 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
+	"net"
+	"net/http"
 )
 
 type errorType int
@@ -106,6 +106,48 @@ func trackResponseError(ctx context.Context, err error) {
 	reqCtx.error = err
 
 	rtrace.AttachErrToSpan(trace.SpanFromContext(ctx), err)
+}
+
+func getAggregatedSubgraphErrorCodes(err error) []string {
+
+	if unwrapped, ok := err.(interface{ Unwrap() []error }); ok {
+
+		errs := unwrapped.Unwrap()
+
+		errorCodes := make([]string, 0)
+
+		for _, e := range errs {
+			var subgraphError *resolve.SubgraphError
+			if errors.As(e, &subgraphError) {
+				errorCodes = append(errorCodes, subgraphError.Codes()...)
+			}
+		}
+
+		return errorCodes
+	}
+
+	return nil
+}
+
+func getAggregatedSubgraphServiceNames(err error) []string {
+
+	if unwrapped, ok := err.(interface{ Unwrap() []error }); ok {
+
+		errs := unwrapped.Unwrap()
+
+		serviceNames := make([]string, 0, len(errs))
+
+		for _, e := range errs {
+			var subgraphError *resolve.SubgraphError
+			if errors.As(e, &subgraphError) {
+				serviceNames = append(serviceNames, subgraphError.DataSourceInfo.Name)
+			}
+		}
+
+		return unique.SliceElements(serviceNames)
+	}
+
+	return nil
 }
 
 // propagateSubgraphErrors propagates the subgraph errors to the request context

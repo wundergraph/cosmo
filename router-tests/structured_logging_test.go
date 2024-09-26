@@ -124,6 +124,13 @@ func TestAccessLogs(t *testing.T) {
 					},
 				},
 				{
+					Key:     "operation_sha256",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.ContextFieldOperationSha256,
+					},
+				},
+				{
 					Key:     "operation_name",
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
@@ -174,16 +181,17 @@ func TestAccessLogs(t *testing.T) {
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
 			expectedValues := map[string]interface{}{
-				"log_type":       "request",
-				"status":         int64(200),
-				"method":         "POST",
-				"path":           "/graphql",
-				"query":          "",
-				"ip":             "[REDACTED]",
-				"service_name":   "service-name",         // From header
-				"operation_hash": "14226210703439426856", // From context
-				"operation_name": "employees",            // From context
-				"operation_type": "query",                // From context
+				"log_type":         "request",
+				"status":           int64(200),
+				"method":           "POST",
+				"path":             "/graphql",
+				"query":            "",
+				"ip":               "[REDACTED]",
+				"service_name":     "service-name",                                                     // From header
+				"operation_hash":   "14226210703439426856",                                             // From context
+				"operation_sha256": "c13e0fafb0a3a72e74c19df743fedee690fe133554a17a9408747585a0d1b423", // From context
+				"operation_name":   "employees",                                                        // From context
+				"operation_type":   "query",                                                            // From context
 			}
 			additionalExpectedKeys := []string{
 				"user_agent",

@@ -177,22 +177,27 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx = h.configureRateLimiting(ctx)
 
-	defer propagateSubgraphErrors(ctx)
-
 	switch p := requestContext.operation.preparedPlan.preparedPlan.(type) {
 	case *plan.SynchronousResponsePlan:
 		w.Header().Set("Content-Type", "application/json")
 		h.setDebugCacheHeaders(w, requestContext.operation)
+
 		if h.enableResponseHeaderPropagation {
 			ctx = WithResponseHeaderPropagation(ctx)
 		}
+
+		defer propagateSubgraphErrors(ctx)
+
 		resp, err := h.executor.Resolver.ResolveGraphQLResponse(ctx, p.Response, nil, HeaderPropagationWriter(w, ctx.Context()))
+		requestContext.dataSources = p.Response.DataSources
+
 		if err != nil {
 			requestContext.logger.Error("unable to resolve response", zap.Error(err))
 			trackResponseError(ctx.Context(), err)
 			h.WriteError(ctx, err, p.Response, w)
 			return
 		}
+
 		graphqlExecutionSpan.SetAttributes(rotel.WgAcquireResolverWaitTimeMs.Int64(resp.ResolveAcquireWaitTime.Milliseconds()))
 	case *plan.SubscriptionResponsePlan:
 		var (
@@ -200,6 +205,8 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			ok     bool
 		)
 		h.setDebugCacheHeaders(w, requestContext.operation)
+
+		defer propagateSubgraphErrors(ctx)
 		ctx, writer, ok = GetSubscriptionResponseWriter(ctx, ctx.Variables, r, w)
 		if !ok {
 			requestContext.logger.Error("unable to get subscription response writer", zap.Error(errCouldNotFlushResponse))
@@ -207,6 +214,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errCouldNotFlushResponse), requestContext.logger)
 			return
 		}
+
 		h.websocketStats.ConnectionsInc()
 		defer h.websocketStats.ConnectionsDec()
 

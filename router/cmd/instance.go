@@ -185,13 +185,13 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 			Attributes: cfg.AccessLogs.Fields,
 		}
 
-		if cfg.AccessLogs.Output.File != nil {
+		if cfg.AccessLogs.Output.File.Enabled {
 			f, err := logging.NewLogFile(cfg.AccessLogs.Output.File.Path)
 			if err != nil {
 				return nil, fmt.Errorf("could not create log file: %w", err)
 			}
 			if cfg.AccessLogs.Buffer.Enabled {
-				bl, err := logging.NewZapBufferedLogger(logging.BufferedLoggerOptions{
+				bl, err := logging.NewJSONZapBufferedLogger(logging.BufferedLoggerOptions{
 					WS:            f,
 					BufferSize:    int(cfg.AccessLogs.Buffer.Size.Uint64()),
 					FlushInterval: cfg.AccessLogs.Buffer.FlushInterval,
@@ -203,22 +203,25 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 				}
 				c.Logger = bl.Logger
 			} else {
-				c.Logger = logging.NewZapLoggerWithSyncer(f, false, false, zap.InfoLevel)
+				c.Logger = logging.NewZapAccessLoggerWithSyncer(f)
 			}
-		} else if cfg.AccessLogs.Buffer.Enabled {
-			bl, err := logging.NewZapBufferedLogger(logging.BufferedLoggerOptions{
-				WS:            os.Stdout,
-				BufferSize:    int(cfg.AccessLogs.Buffer.Size.Uint64()),
-				FlushInterval: cfg.AccessLogs.Buffer.FlushInterval,
-				Debug:         false,
-				Level:         zap.InfoLevel,
-			})
-			if err != nil {
-				return nil, fmt.Errorf("could not create buffered logger: %w", err)
+		} else if cfg.AccessLogs.Output.Stdout.Enabled {
+
+			if cfg.AccessLogs.Buffer.Enabled {
+				bl, err := logging.NewJSONZapBufferedLogger(logging.BufferedLoggerOptions{
+					WS:            os.Stdout,
+					BufferSize:    int(cfg.AccessLogs.Buffer.Size.Uint64()),
+					FlushInterval: cfg.AccessLogs.Buffer.FlushInterval,
+					Debug:         false,
+					Level:         zap.InfoLevel,
+				})
+				if err != nil {
+					return nil, fmt.Errorf("could not create buffered logger: %w", err)
+				}
+				c.Logger = bl.Logger
+			} else {
+				c.Logger = logging.NewZapAccessLoggerWithSyncer(os.Stdout)
 			}
-			c.Logger = bl.Logger
-		} else {
-			c.Logger = logging.NewZapLoggerWithSyncer(os.Stdout, false, false, zap.InfoLevel)
 		}
 
 		options = append(options, core.WithAccessLogs(c))

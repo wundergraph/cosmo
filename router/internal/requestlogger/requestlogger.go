@@ -16,7 +16,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type Fn func(r *http.Request) []zapcore.Field
+type BaseFn func(r *http.Request) []zapcore.Field
 
 // Option provides a functional approach to define
 // configuration for a handler; such as setting the logging
@@ -43,7 +43,7 @@ type handler struct {
 	skipPaths             []string
 	ipAnonymizationConfig *IPAnonymizationConfig
 	traceID               bool // optionally log Open Telemetry TraceID
-	context               Fn
+	context               BaseFn
 	handler               http.Handler
 	logger                *zap.Logger
 	baseFields            []zapcore.Field
@@ -63,7 +63,7 @@ func WithAnonymization(ipConfig *IPAnonymizationConfig) Option {
 	}
 }
 
-func WithRequestFields(fn Fn) Option {
+func WithRequestFields(fn BaseFn) Option {
 	return func(r *handler) {
 		r.context = fn
 	}

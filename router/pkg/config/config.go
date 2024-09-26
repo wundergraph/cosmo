@@ -596,12 +596,17 @@ type AccessLogsBufferConfig struct {
 }
 
 type AccessLogsOutputConfig struct {
-	Stdout bool                        `yaml:"stdout" env:"ACCESS_LOGS_OUTPUT_STDOUT"`
-	File   *AccessLogsFileOutputConfig `yaml:"file,omitempty" env:"ACCESS_LOGS_FILE_OUTPUT"`
+	Stdout AccessLogsStdOutOutputConfig `yaml:"stdout" env:"ACCESS_LOGS_OUTPUT_STDOUT"`
+	File   AccessLogsFileOutputConfig   `yaml:"file,omitempty" env:"ACCESS_LOGS_FILE_OUTPUT"`
+}
+
+type AccessLogsStdOutOutputConfig struct {
+	Enabled bool `yaml:"enabled" envDefault:"true" env:"ACCESS_LOGS_OUTPUT_STDOUT_ENABLED"`
 }
 
 type AccessLogsFileOutputConfig struct {
-	Path string `yaml:"path" env:"ACCESS_LOGS_FILE_OUTPUT_PATH" envDefault:"access.log"`
+	Enabled bool   `yaml:"enabled" env:"ACCESS_LOGS_OUTPUT_FILE_ENABLED" envDefault:"false"`
+	Path    string `yaml:"path" env:"ACCESS_LOGS_FILE_OUTPUT_PATH" envDefault:"access.log"`
 }
 
 type Config struct {
@@ -743,6 +748,7 @@ func LoadConfig(configFilePath string, envOverride string) (*LoadResult, error) 
 		cfg.Config.JSONLog = false
 		cfg.Config.SubgraphErrorPropagation.Enabled = true
 		cfg.Config.SubgraphErrorPropagation.PropagateStatusCodes = true
+		cfg.Config.SubgraphErrorPropagation.OmitLocations = false
 		cfg.Config.SubgraphErrorPropagation.AllowedExtensionFields = unique.SliceElements(append(cfg.Config.SubgraphErrorPropagation.AllowedExtensionFields, "code", "stacktrace"))
 	}
 

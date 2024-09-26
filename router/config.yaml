@@ -6,15 +6,12 @@
 version: "1"
 
 log_level: info
-
+dev_mode: true
 access_logs:
   enabled: true
-  buffer:
-    enabled: false
-    size: 256KB
-    flush_interval: 10s
   output:
     file:
+      enabled: true
       path: "access.log"
   fields:
     - key: "service"
@@ -23,6 +20,15 @@ access_logs:
     - key: "operationName"
       value_from:
         context_field: operation_name
+    - key: "operationSha256"
+      value_from:
+        context_field: operation_sha256
+    - key: "responseErrorMessage"
+      value_from:
+        context_field: response_error_message
+    - key: "serviceNames"
+      value_from:
+        context_field: operation_service_names
     - key: "operationHash"
       value_from:
         context_field: operation_hash
@@ -32,6 +38,9 @@ access_logs:
     - key: "operationType"
       value_from:
         context_field: operation_type
+    - key: "persistentOperationSha256"
+      value_from:
+        context_field: persisted_operation_sha256
     - key: "serviceNames"
       value_from:
         context_field: graphql_error_service_names

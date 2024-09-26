@@ -430,16 +430,25 @@
         },
         "output": {
           "type": "object",
+          "description": "The log destination. The supported destinations are stdout and file. Only one option can be enabled. The destination is stdout.",
           "additionalProperties": false,
           "properties": {
             "stdout": {
-              "type": "boolean",
-              "default": true
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                }
+              }
             },
             "file": {
               "type": "object",
               "additionalProperties": false,
               "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
                 "path": {
                   "type": "string",
                   "description": "The path to the log file. The path is used to specify the path to the log file."
@@ -482,7 +491,21 @@
                   "context_field": {
                     "type": "string",
                     "description": "The field name of the context from which to extract the value. The value is only extracted when a context is available otherwise the default value is used.",
-                    "enum": ["operation_name", "operation_type", "operation_hash", "persisted_operation_sha256", "graphql_error_codes", "graphql_error_service_names", "operation_parsing_time", "operation_validation_time", "operation_planning_time", "operation_normalization_time"]
+                    "enum": [
+                      "operation_name",
+                      "operation_type",
+                      "operation_service_names",
+                      "operation_hash",
+                      "persisted_operation_sha256",
+                      "operation_sha256",
+                      "response_error_message",
+                      "graphql_error_codes",
+                      "graphql_error_service_names",
+                      "operation_parsing_time",
+                      "operation_validation_time",
+                      "operation_planning_time",
+                      "operation_normalization_time"
+                    ]
                   }
                 }
               }

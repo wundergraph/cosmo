@@ -143,10 +143,8 @@ type requestContext struct {
 	operation *operationContext
 	// subgraphResolver can be used to resolve Subgraph by ID or by request
 	subgraphResolver *SubgraphResolver
-	// errorCodes is a list of error codes that are returned by the operation
-	errorCodes []string
-	// errorServices is a list of error services that are returned by the operation
-	errorServices []string
+	// dataSources the list of datasources involved in resolving the operation
+	dataSources []resolve.DataSourceInfo
 }
 
 func (c *requestContext) Operation() OperationContext {
@@ -369,7 +367,9 @@ type operationContext struct {
 	initialPayload   []byte
 	extensions       []byte
 	persistedID      string
-	protocol         OperationProtocol
+	// Hash on the original operation
+	sha256Hash string
+	protocol   OperationProtocol
 
 	persistedOperationCacheHit bool
 	normalizationCacheHit      bool
@@ -508,7 +508,5 @@ func buildRequestContext(w http.ResponseWriter, r *http.Request, opContext *oper
 		request:          r,
 		operation:        opContext,
 		subgraphResolver: subgraphResolverFromContext(r.Context()),
-		errorCodes:       make([]string, 0),
-		errorServices:    make([]string, 0),
 	}
 }

@@ -92,6 +92,7 @@ type (
 
 // newGraphServer creates a new server instance.
 func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterConfig, proxy ProxyFunc) (*graphServer, error) {
+
 	ctx, cancel := context.WithCancel(ctx)
 	s := &graphServer{
 		context:                 ctx,
@@ -301,6 +302,7 @@ type graphMux struct {
 	normalizationCache   *ristretto.Cache[uint64, NormalizationCacheEntry]
 	validationCache      *ristretto.Cache[uint64, bool]
 	queryDepthCache      *ristretto.Cache[uint64, int]
+	operationHashCache   *ristretto.Cache[uint64, string]
 	accessLogsFileLogger *logging.BufferedLogger
 }
 
@@ -423,6 +425,26 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		}
 	}
 
+	computeSha256 := false
+	for _, aa := range s.accessLogsConfig.Attributes {
+		if aa.ValueFrom != nil && aa.ValueFrom.ContextField == ContextFieldOperationSha256 {
+			computeSha256 = true
+			break
+		}
+	}
+
+	if computeSha256 {
+		operationHashCacheConfig := &ristretto.Config[uint64, string]{
+			MaxCost:     s.engineExecutionConfiguration.NormalizationCacheSize,
+			NumCounters: s.engineExecutionConfiguration.NormalizationCacheSize * 10,
+			BufferItems: 64,
+		}
+		gm.operationHashCache, err = ristretto.NewCache[uint64, string](operationHashCacheConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create operation hash cache: %w", err)
+		}
+	}
+
 	metrics := NewRouterMetrics(&routerMetricsConfig{
 		metrics:             s.metricStore,
 		gqlMetricsExporter:  s.gqlMetricsExporter,
@@ -528,73 +550,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			requestlogger.WithDefaultOptions(),
 			requestlogger.WithNoTimeField(),
 			requestlogger.WithFields(baseLogFields...),
-			requestlogger.WithRequestFields(func(request *http.Request) []zapcore.Field {
-				requestContext := getRequestContext(request.Context())
-				resFields := make([]zapcore.Field, 0, len(s.accessLogsConfig.Attributes))
-				resFields = append(resFields, zap.String("request_id", middleware.GetReqID(request.Context())))
-
-				// Attach the response error to the log
-				if requestContext.error != nil {
-					resFields = append(resFields, zap.Error(requestContext.error))
-				}
-
-				for _, field := range s.accessLogsConfig.Attributes {
-					if field.ValueFrom.RequestHeader != "" {
-						resFields = append(resFields, NewStringLogField(request.Header.Get(field.ValueFrom.RequestHeader), field))
-						continue
-					}
-
-					if field.ValueFrom.ContextField != "" {
-						switch field.ValueFrom.ContextField {
-						case ContextFieldOperationName:
-							if v := NewStringLogField(requestContext.operation.name, field); v != zap.Skip() {
-								resFields = append(resFields, v)
-							}
-						case ContextFieldOperationType:
-							if v := NewStringLogField(requestContext.operation.opType, field); v != zap.Skip() {
-								resFields = append(resFields, v)
-							}
-						case ContextFieldGraphQLErrorServices:
-							if v := NewStringSliceLogField(requestContext.errorServices, field); v != zap.Skip() {
-								resFields = append(resFields, v)
-							}
-						case ContextFieldGraphQLErrorCodes:
-							if v := NewStringSliceLogField(requestContext.errorCodes, field); v != zap.Skip() {
-								resFields = append(resFields, v)
-							}
-						case ContextFieldPersistedOperationSha256:
-							if v := NewStringLogField(requestContext.operation.persistedID, field); v != zap.Skip() {
-								resFields = append(resFields, v)
-							}
-						case ContextFieldOperationPlanningTime:
-							if v := NewDurationLogField(requestContext.operation.planningTime, field); v != zap.Skip() {
-								resFields = append(resFields, v)
-							}
-						case ContextFieldOperationNormalizationTime:
-							if v := NewDurationLogField(requestContext.operation.normalizationTime, field); v != zap.Skip() {
-								resFields = append(resFields, v)
-							}
-						case ContextFieldOperationParsingTime:
-							if v := NewDurationLogField(requestContext.operation.parsingTime, field); v != zap.Skip() {
-								resFields = append(resFields, v)
-							}
-						case ContextFieldOperationValidationTime:
-							if v := NewDurationLogField(requestContext.operation.validationTime, field); v != zap.Skip() {
-								resFields = append(resFields, v)
-							}
-						case ContextFieldOperationHash:
-							if requestContext.operation.hash == 0 {
-								break
-							}
-							resFields = append(resFields, NewStringLogField(strconv.FormatUint(requestContext.operation.hash, 10), field))
-						default:
-							s.logger.Warn("Unknown context field", zap.String("field", field.ValueFrom.ContextField))
-						}
-					}
-				}
-
-				return resFields
-			}),
+			requestlogger.WithRequestFields(s.accessLogsFieldHandler),
 		}
 
 		if s.ipAnonymization.Enabled {
@@ -672,6 +628,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		NormalizationCache:             gm.normalizationCache,
 		ValidationCache:                gm.validationCache,
 		QueryDepthCache:                gm.queryDepthCache,
+		OperationHashCache:             gm.operationHashCache,
 		ParseKitPoolSize:               s.engineExecutionConfiguration.ParseKitPoolSize,
 	})
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
@@ -740,6 +697,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		AlwaysSkipLoader:            s.engineExecutionConfiguration.Debug.AlwaysSkipLoader,
 		QueryPlansEnabled:           s.Config.queryPlansEnabled,
 		TrackSchemaUsageInfo:        s.graphqlMetricsConfig.Enabled,
+		ComputeOperationSha256:      computeSha256,
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
@@ -805,6 +763,93 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	s.graphMuxes = append(s.graphMuxes, gm)
 
 	return gm, nil
+}
+
+func (s *graphServer) accessLogsFieldHandler(request *http.Request) []zapcore.Field {
+	requestContext := getRequestContext(request.Context())
+	resFields := make([]zapcore.Field, 0, len(s.accessLogsConfig.Attributes))
+	resFields = append(resFields, zap.String("request_id", middleware.GetReqID(request.Context())))
+
+	for _, field := range s.accessLogsConfig.Attributes {
+		if field.ValueFrom.RequestHeader != "" {
+			resFields = append(resFields, NewStringLogField(request.Header.Get(field.ValueFrom.RequestHeader), field))
+			continue
+		}
+
+		if field.ValueFrom.ContextField != "" {
+			switch field.ValueFrom.ContextField {
+			case ContextFieldOperationName:
+				if v := NewStringLogField(requestContext.operation.name, field); v != zap.Skip() {
+					resFields = append(resFields, v)
+				}
+			case ContextFieldOperationType:
+				if v := NewStringLogField(requestContext.operation.opType, field); v != zap.Skip() {
+					resFields = append(resFields, v)
+				}
+			case ContextFieldResponseErrorMessage:
+				if requestContext.error != nil {
+					if v := NewStringLogField(requestContext.error.Error(), field); v != zap.Skip() {
+						resFields = append(resFields, v)
+					}
+				}
+			case ContextFieldOperationServices:
+				var operationServiceNames []string
+				for _, ds := range requestContext.dataSources {
+					operationServiceNames = append(operationServiceNames, ds.Name)
+				}
+				if v := NewStringSliceLogField(operationServiceNames, field); v != zap.Skip() {
+					resFields = append(resFields, v)
+				}
+			case ContextFieldGraphQLErrorServices:
+				if requestContext.error != nil {
+					errorServiceNames := getAggregatedSubgraphServiceNames(requestContext.error)
+					if v := NewStringSliceLogField(errorServiceNames, field); v != zap.Skip() {
+						resFields = append(resFields, v)
+					}
+				}
+			case ContextFieldGraphQLErrorCodes:
+				if requestContext.error != nil {
+					errorCodes := getAggregatedSubgraphErrorCodes(requestContext.error)
+					if v := NewStringSliceLogField(errorCodes, field); v != zap.Skip() {
+						resFields = append(resFields, v)
+					}
+				}
+			case ContextFieldPersistedOperationSha256:
+				if v := NewStringLogField(requestContext.operation.persistedID, field); v != zap.Skip() {
+					resFields = append(resFields, v)
+				}
+			case ContextFieldOperationPlanningTime:
+				if v := NewDurationLogField(requestContext.operation.planningTime, field); v != zap.Skip() {
+					resFields = append(resFields, v)
+				}
+			case ContextFieldOperationNormalizationTime:
+				if v := NewDurationLogField(requestContext.operation.normalizationTime, field); v != zap.Skip() {
+					resFields = append(resFields, v)
+				}
+			case ContextFieldOperationParsingTime:
+				if v := NewDurationLogField(requestContext.operation.parsingTime, field); v != zap.Skip() {
+					resFields = append(resFields, v)
+				}
+			case ContextFieldOperationValidationTime:
+				if v := NewDurationLogField(requestContext.operation.validationTime, field); v != zap.Skip() {
+					resFields = append(resFields, v)
+				}
+			case ContextFieldOperationSha256:
+				if v := NewStringLogField(requestContext.operation.sha256Hash, field); v != zap.Skip() {
+					resFields = append(resFields, v)
+				}
+			case ContextFieldOperationHash:
+				if requestContext.operation.hash == 0 {
+					break
+				}
+				resFields = append(resFields, NewStringLogField(strconv.FormatUint(requestContext.operation.hash, 10), field))
+			default:
+				s.logger.Error("Unknown context field for access logs", zap.String("field", field.ValueFrom.ContextField))
+			}
+		}
+	}
+
+	return resFields
 }
 
 func (s *graphServer) buildPubSubConfiguration(ctx context.Context, engineConfig *nodev1.EngineConfiguration, routerEngineCfg *RouterEngineConfiguration) error {

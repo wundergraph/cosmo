@@ -12,6 +12,8 @@ const (
 	ContextFieldOperationName              = "operation_name"
 	ContextFieldOperationHash              = "operation_hash"
 	ContextFieldOperationType              = "operation_type"
+	ContextFieldOperationServices          = "operation_service_names"
+	ContextFieldResponseErrorMessage       = "response_error_message"
 	ContextFieldGraphQLErrorCodes          = "graphql_error_codes"
 	ContextFieldGraphQLErrorServices       = "graphql_error_service_names"
 	ContextFieldOperationParsingTime       = "operation_parsing_time"
@@ -19,6 +21,7 @@ const (
 	ContextFieldOperationPlanningTime      = "operation_planning_time"
 	ContextFieldOperationNormalizationTime = "operation_normalization_time"
 	ContextFieldPersistedOperationSha256   = "persisted_operation_sha256"
+	ContextFieldOperationSha256            = "operation_sha256"
 )
 
 // Helper functions to create zap fields for custom attributes.

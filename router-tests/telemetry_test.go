@@ -2157,11 +2157,7 @@ func TestTelemetry(t *testing.T) {
 
 			require.True(t, given.Equals(&want))
 
-			require.Equal(t, sdktrace.Status{Code: codes.Error, Description: `Failed to fetch from Subgraph 'products' at Path: 'employees'.
-Downstream errors:
-1. Subgraph error at Path 'foo', Message: Unauthorized, Extension Code: UNAUTHORIZED.
-2. Subgraph error at Path 'bar', Message: MyErrorMessage, Extension Code: YOUR_ERROR_CODE.
-`}, sn[8].Status())
+			require.Equal(t, sdktrace.Status{Code: codes.Error, Description: `Failed to fetch from Subgraph 'products' at Path: 'employees'.`}, sn[8].Status())
 
 			events := sn[8].Events()
 			require.Len(t, events, 3, "expected 2 events, one for the fetch and one two downstream GraphQL errors")
@@ -2183,11 +2179,7 @@ Downstream errors:
 			require.Equal(t, "query myQuery", sn[10].Name())
 			require.Equal(t, trace.SpanKindServer, sn[10].SpanKind())
 			require.Equal(t, codes.Error, sn[10].Status().Code)
-			require.Contains(t, sn[10].Status().Description, `Failed to fetch from Subgraph 'products' at Path: 'employees'.
-Downstream errors:
-1. Subgraph error at Path 'foo', Message: Unauthorized, Extension Code: UNAUTHORIZED.
-2. Subgraph error at Path 'bar', Message: MyErrorMessage, Extension Code: YOUR_ERROR_CODE.
-`)
+			require.Contains(t, sn[10].Status().Description, `Failed to fetch from Subgraph 'products' at Path: 'employees'.`)
 		})
 	})
 
