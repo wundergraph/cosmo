@@ -108,18 +108,21 @@ type HeaderPropagation struct {
 	hasResponseRules bool
 }
 
-func NewHeaderPropagation(rules *config.HeaderRules) (*HeaderPropagation, error) {
-	if rules == nil {
-		return nil, nil
-	}
-
+func initHeaderRules(rules *config.HeaderRules) {
 	if rules.All == nil {
 		rules.All = &config.GlobalHeaderRule{}
 	}
 	if rules.Subgraphs == nil {
 		rules.Subgraphs = make(map[string]*config.GlobalHeaderRule)
 	}
+}
 
+func NewHeaderPropagation(rules *config.HeaderRules) (*HeaderPropagation, error) {
+	if rules == nil {
+		return nil, nil
+	}
+
+	initHeaderRules(rules)
 	hf := HeaderPropagation{
 		rules: rules,
 		regex: map[string]*regexp.Regexp{},
@@ -134,6 +137,41 @@ func NewHeaderPropagation(rules *config.HeaderRules) (*HeaderPropagation, error)
 	}
 
 	return &hf, nil
+}
+
+func AddCacheControlPolicyToRules(rules *config.HeaderRules, cacheControl config.CacheControlPolicy) *config.HeaderRules {
+	if rules == nil {
+		rules = &config.HeaderRules{}
+		if !cacheControl.Enabled && cacheControl.Subgraphs == nil {
+			return nil
+		}
+	}
+
+	initHeaderRules(rules)
+	if cacheControl.Enabled {
+		rules.All.Response = append(rules.All.Response, &config.ResponseHeaderRule{
+			Operation: config.HeaderRuleOperationPropagate,
+			Algorithm: config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl,
+			Default:   cacheControl.Value,
+		})
+	}
+
+	for _, graph := range cacheControl.Subgraphs {
+		subgraphRules, ok := rules.Subgraphs[graph.Name]
+		if !ok {
+			subgraphRules = &config.GlobalHeaderRule{Response: make([]*config.ResponseHeaderRule, 0)}
+		}
+
+		subgraphRules.Response = append(subgraphRules.Response, &config.ResponseHeaderRule{
+			Operation: config.HeaderRuleOperationPropagate,
+			Algorithm: config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl,
+			Default:   graph.Value,
+		})
+
+		rules.Subgraphs[graph.Name] = subgraphRules
+	}
+
+	return rules
 }
 
 func (hf *HeaderPropagation) getAllRules() ([]*config.RequestHeaderRule, []*config.ResponseHeaderRule) {

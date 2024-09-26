@@ -99,6 +99,16 @@
       }
     }
   },
+  "CacheControl": {
+    "Enabled": true,
+    "Value": "max-age=180, public",
+    "Subgraphs": [
+      {
+        "Name": "products",
+        "Value": "max-age=60, public"
+      }
+    ]
+  },
   "Modules": {
     "myModule": {
       "value": 1
@@ -171,16 +181,6 @@
           }
         ],
         "Response": [
-          {
-            "Operation": "propagate",
-            "Matching": "",
-            "Named": "",
-            "Rename": "",
-            "Default": "",
-            "Algorithm": "most_restrictive_cache_control",
-            "Name": "",
-            "Value": ""
-          },
           {
             "Operation": "set",
             "Matching": "",

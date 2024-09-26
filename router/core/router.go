@@ -160,6 +160,7 @@ type (
 		healthCheckPath           string
 		readinessCheckPath        string
 		livenessCheckPath         string
+		cacheControlPolicy        config.CacheControlPolicy
 		routerConfigPollerConfig  *RouterConfigPollerConfig
 		cdnConfig                 config.CDNConfiguration
 		persistedOperationClient  persistedoperation.Client
@@ -310,6 +311,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.livenessCheckPath = "/health/live"
 	}
 
+	r.headerRules = AddCacheControlPolicyToRules(r.headerRules, r.cacheControlPolicy)
 	hr, err := NewHeaderPropagation(r.headerRules)
 	if err != nil {
 		return nil, err
@@ -1453,6 +1455,12 @@ func WithEvents(cfg config.EventsConfiguration) Option {
 func WithHeaderRules(headers config.HeaderRules) Option {
 	return func(r *Router) {
 		r.headerRules = &headers
+	}
+}
+
+func WithCacheControlPolicy(cfg config.CacheControlPolicy) Option {
+	return func(r *Router) {
+		r.cacheControlPolicy = cfg
 	}
 }
 

@@ -1009,7 +1009,45 @@
         }
       }
     },
-    "modules": {
+    "cache_control_policy": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Determines whether cache control policy is enabled.",
+          "examples": [true]
+        },
+        "value": {
+          "type": "string",
+          "description": "Global cache control value.",
+          "examples": ["max-age=180, public"]
+        },
+        "subgraphs": {
+          "type": "array",
+          "description": "Subgraph-specific cache control settings.",
+          "required": ["name"],
+          "additionalProperties": false,
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Name of the subgraph.",
+                "examples": ["products"]
+              },
+              "value": {
+                "type": "string",
+                "description": "Cache control value for the subgraph.",
+                "examples": ["max-age=60, public"]
+              }
+            }
+          }
+        }
+      },
+      "required": ["enabled"],
+      "additionalProperties": false
+    },
+  "modules": {
       "type": "object",
       "description": "The configuration for the modules. The modules are used to extend the functionality of the router. The modules are specified as a map of module names to module configurations. It needs to match with the name of the module and the configuration of the module. See https://cosmo-docs.wundergraph.com/router/custom-modules for more information.",
       "additionalProperties": {
@@ -1740,32 +1778,12 @@
         },
         "algorithm": {
           "type": "string",
-          "enum": ["first_write", "last_write", "append", "most_restrictive_cache_control"],
+          "enum": ["first_write", "last_write", "append"],
           "examples": ["first_write"],
-          "description": "The algorith, to use when multiple headers are present. The supported operations are '\"first_write\", \"last_write\", \"append\", and \"most_restrictive_cache_control\"'. The 'first_write' retains the first value of a given header. The 'last_write' retains the last value of a given header. The 'append' appends all values of a given header. The 'most_restrictive_cache_control' specifically focuses on the 'Cache-Control'/'Expiration' headers, and applies the most restrictive value encountered from a subgraph"
+          "description": "The algorith, to use when multiple headers are present. The supported operations are '\"first_write\", \"last_write\", and \"append\". The 'first_write' retains the first value of a given header. The 'last_write' retains the last value of a given header. The 'append' appends all values of a given header."
         }
       },
-      "required": ["op", "algorithm"],
-      "if": {
-        "properties": {
-          "algorithm": { "const": "most_restrictive_cache_control" }
-        }
-      },
-      "then": {
-        "properties": {
-          "matching": { "not": {} },
-          "named": { "not": {} },
-          "rename": { "not": {} }
-        },
-        "required": ["op", "algorithm"]
-      },
-      "else": {
-        "properties": {
-          "matching": {},
-          "named": {},
-          "rename": {}
-        }
-      }
+      "required": ["op", "algorithm"]
     },
     "set_header_rule": {
       "type": "object",

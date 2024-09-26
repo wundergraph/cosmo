@@ -127,6 +127,7 @@ type Config struct {
 	ShutdownDelay                      time.Duration
 	NoRetryClient                      bool
 	PropagationConfig                  config.PropagationConfig
+	CacheControlPolicy                 config.CacheControlPolicy
 	LogObservation                     LogObservationConfig
 }
 
@@ -579,6 +580,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			RewritePaths:           true,
 			AllowedExtensionFields: []string{"code"},
 		},
+		CacheControl: testConfig.CacheControlPolicy,
 	}
 
 	if testConfig.ModifyCDNConfig != nil {
@@ -650,6 +652,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithPlayground(true),
 		core.WithEngineExecutionConfig(engineExecutionConfig),
 		core.WithSecurityConfig(cfg.SecurityConfiguration),
+		core.WithCacheControlPolicy(cfg.CacheControl),
 		core.WithCDN(cfg.CDN),
 		core.WithListenerAddr(listenerAddr),
 		core.WithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation),
