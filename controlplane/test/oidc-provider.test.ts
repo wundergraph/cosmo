@@ -19,7 +19,7 @@ describe('OIDC provider', (ctx) => {
     const { client, server, users } = await SetupTest({ dbname });
 
     const createOIDCProviderResponse = await client.createOIDCProvider({
-      discoveryEndpoint: 'http://localhost:8080/realms/cosmo/.well-known/openid-configuration',
+      discoveryEndpoint: 'http://localhost:8080/realms/test/.well-known/openid-configuration',
       clientID: '0oab1c2',
       clientSecrect: 'secret',
       mappers: [
@@ -47,7 +47,7 @@ describe('OIDC provider', (ctx) => {
     const { client, server, users } = await SetupTest({ dbname });
 
     const createOIDCProviderResponse = await client.createOIDCProvider({
-      discoveryEndpoint: 'http://localhost:8080/realms/cosmo/.well-known/openid-configuration',
+      discoveryEndpoint: 'http://localhost:8080/realms/test/.well-known/openid-configuration',
       clientID: '0oab1c2',
       clientSecrect: 'secret',
       mappers: [
@@ -81,7 +81,7 @@ describe('OIDC provider', (ctx) => {
     const { client, server, users } = await SetupTest({ dbname });
 
     const createOIDCProviderResponse = await client.createOIDCProvider({
-      discoveryEndpoint: 'http://localhost:8080/realms/cosmo/.well-known/openid-configuration',
+      discoveryEndpoint: 'http://localhost:8080/realms/test/.well-known/openid-configuration',
       clientID: '0oab1c2',
       clientSecrect: 'secret',
       mappers: [
