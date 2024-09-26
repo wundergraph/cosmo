@@ -23,6 +23,15 @@ export function updateIDPMappers(
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
+    if (!authContext.isAdmin) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `The user doesnt have the permissions to perform this operation`,
+        },
+      };
+    }
+
     const oidcProvider = new OidcProvider();
     const oidcRepo = new OidcRepository(opts.db);
 
