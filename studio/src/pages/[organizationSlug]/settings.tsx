@@ -441,6 +441,9 @@ const UpdateIDPMappers = ({
         onInteractOutside={(event) => {
           event.preventDefault();
         }}
+        onCloseClick={() => {
+          updateMappers(currentMappers);
+        }}
       >
         <DialogHeader>
           <DialogTitle>Update group mappers</DialogTitle>
