@@ -160,9 +160,9 @@ github.com/wundergraph/astjson v0.0.0-20240910140849-bb15f94bd362 h1:MxNSJqQFJyh
 github.com/wundergraph/astjson v0.0.0-20240910140849-bb15f94bd362/go.mod h1:eOTL6acwctsN4F3b7YE+eE2t8zcJ/doLm9sZzsxxxrE=
 github.com/wundergraph/cosmo/composition-go v0.0.0-20240124120900-5effe48a4a1d h1:NEUrhuqOaTO1dpW8pz2tu6dKbQAqFvgiF/m4NXdzZm0=
 github.com/wundergraph/cosmo/composition-go v0.0.0-20240124120900-5effe48a4a1d/go.mod h1:9I3gPMAlAY+m1/cFL20iN7XHTyuZd3VT5ijccdU/FsI=
-github.com/wundergraph/cosmo/router v0.0.0-20240923105518-02594e0c21a5 h1:qMAJB/ViAa8SlbNZA0JkPHVdxD2Sfyx35gHNzkQ3dCI=
-github.com/wundergraph/cosmo/router v0.0.0-20240923105518-02594e0c21a5/go.mod h1:DzdYWLtxdc46a6uh5ZAJIwfaeQPVN7+xRHVKHA1fQXg=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.86 h1:bo87Jw2/yDaSH6RBB4RpKiqW2ZYHKC9lYyEqX65lUo0=
+github.com/wundergraph/cosmo/router v0.0.0-20240926091419-7c3781f4f507 h1:uojstbUpR4s6uO3+PJCU/nJ8CT5rq1L7Q94jdf+OiG4=
+github.com/wundergraph/cosmo/router v0.0.0-20240926091419-7c3781f4f507/go.mod h1:44kgNdnRaJVugapwUGRCbO27ziXNQTITJusRMmbl08c=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.87 h1:YImj5ke1rmFk/d68jv2PRjCerTpHZgX2Y2qcUvZY4Uw=
 github.com/xrash/smetrics v0.0.0-20240312152122-5f08fbb34913 h1:+qGGcbkzsfDQNPPe9UDgpxAWQrhbbBXOYJFQDq/dtJw=
 github.com/xrash/smetrics v0.0.0-20240312152122-5f08fbb34913/go.mod h1:4aEEwZQutDLsQv2Deui4iYQ6DWTxR14g6m8Wv88+Xqk=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
