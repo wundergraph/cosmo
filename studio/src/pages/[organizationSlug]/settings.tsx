@@ -59,10 +59,7 @@ import { calURL, docsBaseURL, scimBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
 import { MinusCircledIcon, PlusIcon } from "@radix-ui/react-icons";
-import {
-  useQuery,
-  useMutation,
-} from "@connectrpc/connect-query";
+import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   createOIDCProvider,
@@ -71,6 +68,7 @@ import {
   getOIDCProvider,
   leaveOrganization,
   updateFeatureSettings,
+  updateIDPMappers,
   updateOrganizationDetails,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import {
@@ -247,7 +245,7 @@ const NewMapper = ({
   mapper: Mapper;
 }) => {
   type CreateMapperFormInput = z.infer<typeof createMapperSchema>;
-  const [dbRole, setDbRole] = useState(dbRoleOptions[0]);
+  const [dbRole, setDbRole] = useState(mapper.dbRole);
 
   const {
     register,
@@ -295,6 +293,7 @@ const NewMapper = ({
           <Input
             className="w-full"
             type="text"
+            value={mapper.ssoGroup}
             placeholder="groupName or regex"
             {...register("ssoGroup")}
             onInput={(e) => {
@@ -369,6 +368,106 @@ const AddNewMappers = ({
         <p>{mappers.length === 0 ? "Add" : "Add another"}</p>
       </Button>
     </>
+  );
+};
+
+const UpdateIDPMappers = ({
+  currentMappers,
+  refetchProviderData,
+}: {
+  currentMappers: MapperInput[];
+  refetchProviderData: () => void;
+}) => {
+  const [open, setOpen] = useState(false);
+  const { mutate, isPending } = useMutation(updateIDPMappers);
+
+  const { toast } = useToast();
+
+  const [mappers, updateMappers] = useState<MapperInput[]>(currentMappers);
+
+  const mutateMappers = () => {
+    const groupMappers = mappers.map((m) => {
+      return { role: m.dbRole, ssoGroup: m.ssoGroup };
+    });
+
+    groupMappers.push({
+      role: "Viewer",
+      ssoGroup: ".*",
+    });
+
+    mutate(
+      {
+        mappers: groupMappers,
+      },
+      {
+        onSuccess: (d) => {
+          if (d.response?.code === EnumStatusCode.OK) {
+            toast({
+              description: "Group mappers updated successfully.",
+              duration: 3000,
+            });
+            setOpen(false);
+            refetchProviderData();
+          } else if (d.response?.details) {
+            toast({ description: d.response.details, duration: 4000 });
+            setOpen(false);
+          }
+        },
+        onError: (error) => {
+          toast({
+            description:
+              "Could not update the group mappers. Please try again.",
+            duration: 3000,
+          });
+          setOpen(false);
+        },
+      },
+    );
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={() => {
+        setOpen(!open);
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button className="md:ml-auto" type="submit" variant="secondary">
+          Update Mappers
+        </Button>
+      </DialogTrigger>
+      <DialogContent
+        onInteractOutside={(event) => {
+          event.preventDefault();
+        }}
+        onCloseClick={() => {
+          updateMappers(currentMappers);
+        }}
+      >
+        <DialogHeader>
+          <DialogTitle>Update group mappers</DialogTitle>
+          <DialogDescription>Map your groups to cosmo roles.</DialogDescription>
+        </DialogHeader>
+        <div className="flex justify-between px-1 text-sm font-bold">
+          <span>Role in cosmo</span>
+          <span className="pr-12">Group in the provider</span>
+        </div>
+        <AddNewMappers mappers={mappers} updateMappers={updateMappers} />
+        <Button
+          disabled={!saveSchema.safeParse(mappers).success}
+          variant="default"
+          size="lg"
+          type="submit"
+          isLoading={isPending}
+          onClick={() => {
+            mutateMappers();
+          }}
+        >
+          Update
+        </Button>
+      </DialogContent>
+    </Dialog>
   );
 };
 
@@ -510,85 +609,97 @@ const OpenIDConnectProvider = ({
         {oidc && (
           <>
             {providerData && providerData.name ? (
-              <AlertDialog
-                open={
-                  user?.currentOrganization.roles.includes("admin")
-                    ? alertOpen
-                    : false
-                }
-                onOpenChange={setAlertOpen}
-              >
-                <AlertDialogTrigger asChild>
-                  <Button
-                    className="md:ml-auto"
-                    type="submit"
-                    variant="destructive"
-                    disabled={
-                      !user?.currentOrganization.roles.includes("admin")
-                    }
-                  >
-                    Disconnect
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>
-                      Are you sure you want to disconnect the oidc provider?
-                    </AlertDialogTitle>
-                    <AlertDialogDescription
-                      className="flex flex-col gap-y-1"
-                      asChild
-                    >
-                      <div>
-                        <p>
-                          All members who are connected to the SSO will be
-                          logged out and downgraded to the viewer role.
-                        </p>
-                        <p>Reconnecting will result in a new login url.</p>
-                        <p>This action cannot be undone.</p>
-                      </div>
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      className={buttonVariants({ variant: "destructive" })}
-                      type="button"
-                      onClick={() => {
-                        deleteOidcProvider(
-                          {},
-                          {
-                            onSuccess: (d) => {
-                              if (d.response?.code === EnumStatusCode.OK) {
-                                refetch();
-                                toast({
-                                  description:
-                                    "OIDC provider disconnected successfully.",
-                                  duration: 3000,
-                                });
-                              } else if (d.response?.details) {
-                                toast({
-                                  description: d.response.details,
-                                  duration: 4000,
-                                });
-                              }
-                            },
-                            onError: (error) => {
-                              toast({
-                                description:
-                                  "Could not disconnect the OIDC provider. Please try again.",
-                                duration: 3000,
-                              });
-                            },
-                          },
-                        );
-                      }}
+              <div className="ml-auto flex gap-x-3">
+                <UpdateIDPMappers
+                  currentMappers={providerData.mappers.map((m) => {
+                    return {
+                      id: Date.now(),
+                      dbRole: m.role,
+                      ssoGroup: m.ssoGroup,
+                    };
+                  })}
+                  refetchProviderData={refetch}
+                />
+                <AlertDialog
+                  open={
+                    user?.currentOrganization.roles.includes("admin")
+                      ? alertOpen
+                      : false
+                  }
+                  onOpenChange={setAlertOpen}
+                >
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      className="md:ml-auto"
+                      type="submit"
+                      variant="destructive"
+                      disabled={
+                        !user?.currentOrganization.roles.includes("admin")
+                      }
                     >
                       Disconnect
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        Are you sure you want to disconnect the oidc provider?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription
+                        className="flex flex-col gap-y-1"
+                        asChild
+                      >
+                        <div>
+                          <p>
+                            All members who are connected to the SSO will be
+                            logged out and downgraded to the viewer role.
+                          </p>
+                          <p>Reconnecting will result in a new login url.</p>
+                          <p>This action cannot be undone.</p>
+                        </div>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        className={buttonVariants({ variant: "destructive" })}
+                        type="button"
+                        onClick={() => {
+                          deleteOidcProvider(
+                            {},
+                            {
+                              onSuccess: (d) => {
+                                if (d.response?.code === EnumStatusCode.OK) {
+                                  refetch();
+                                  toast({
+                                    description:
+                                      "OIDC provider disconnected successfully.",
+                                    duration: 3000,
+                                  });
+                                } else if (d.response?.details) {
+                                  toast({
+                                    description: d.response.details,
+                                    duration: 4000,
+                                  });
+                                }
+                              },
+                              onError: (error) => {
+                                toast({
+                                  description:
+                                    "Could not disconnect the OIDC provider. Please try again.",
+                                  duration: 3000,
+                                });
+                              },
+                            },
+                          );
+                        }}
+                      >
+                        Disconnect
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
             ) : (
               <Dialog
                 open={open}
