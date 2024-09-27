@@ -6,7 +6,6 @@ import (
 	"errors"
 	"github.com/hashicorp/go-multierror"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
-	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
@@ -17,6 +16,7 @@ import (
 	"go.uber.org/zap"
 	"net"
 	"net/http"
+	"slices"
 )
 
 type errorType int
@@ -144,7 +144,7 @@ func getAggregatedSubgraphServiceNames(err error) []string {
 			}
 		}
 
-		return unique.SliceElements(serviceNames)
+		return slices.Compact(serviceNames)
 	}
 
 	return nil
