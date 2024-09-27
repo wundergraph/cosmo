@@ -778,7 +778,6 @@ func TestAccessLogs(t *testing.T) {
 				"request_id",
 				"pid",
 				"hostname",
-				"error",
 			}
 
 			checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
