@@ -1,13 +1,17 @@
 package integration_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"math"
 	"net/http"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -66,6 +70,65 @@ func TestRouterStartLogs(t *testing.T) {
 		serverListeningLog := xEnv.Observer().FilterMessage("Server listening and serving")
 		require.Equal(t, serverListeningLog.Len(), 1)
 	})
+}
+
+func TestAccessLogsFileOutput(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("Simple", func(t *testing.T) {
+		t.Parallel()
+
+		fp := filepath.Join(os.TempDir(), "access.log")
+		f, err := logging.NewLogFile(filepath.Join(os.TempDir(), "access.log"))
+		require.NoError(t, err)
+
+		t.Cleanup(func() {
+			require.NoError(t, f.Close())
+			require.NoError(t, os.RemoveAll(fp))
+		})
+
+		logger := logging.NewZapAccessLoggerWithSyncer(f)
+		require.NoError(t, err)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessLogs(&core.AccessLogsConfig{
+					Attributes: []config.CustomAttribute{},
+					Logger:     logger,
+				}),
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			}}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+			data, err := os.ReadFile(fp)
+			require.NoError(t, err)
+
+			var logEntry map[string]interface{}
+			require.NoError(t, json.Unmarshal(data, &logEntry))
+
+			require.Equal(t, logEntry["level"], "info")
+			require.Equal(t, logEntry["status"], float64(200))
+			require.Equal(t, logEntry["method"], "POST")
+			require.Equal(t, logEntry["msg"], "/graphql")
+			require.Equal(t, logEntry["log_type"], "request")
+			require.Equal(t, logEntry["user_agent"], "Go-http-client/1.1")
+			require.NotEmpty(t, logEntry["request_id"])
+			require.NotEmpty(t, logEntry["hostname"])
+			require.NotEmpty(t, logEntry["config_version"])
+			require.NotEmpty(t, logEntry["pid"])
+			require.NotEmpty(t, logEntry["time"])
+			require.NotEmpty(t, logEntry["ip"])
+			require.Equal(t, logEntry["query"], "")
+			require.NotEmpty(t, logEntry["latency"])
+		})
+	})
+
 }
 
 func TestAccessLogs(t *testing.T) {
