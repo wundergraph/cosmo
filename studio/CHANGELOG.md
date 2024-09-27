@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.91.0](https://github.com/wundergraph/cosmo/compare/studio@0.90.2...studio@0.91.0) (2024-09-27)
+
+### Features
+
+* add option to update the mappers of an IDP ([#1222](https://github.com/wundergraph/cosmo/issues/1222)) ([00c7b2e](https://github.com/wundergraph/cosmo/commit/00c7b2e159790c99ec62d3c7d6f99c0ef7c8bb70)) (@JivusAyrus)
+
 ## [0.90.2](https://github.com/wundergraph/cosmo/compare/studio@0.90.1...studio@0.90.2) (2024-09-25)
 
 ### Bug Fixes
