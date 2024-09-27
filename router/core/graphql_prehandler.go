@@ -619,7 +619,13 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 	if h.queryPlansLoggingEnabled {
 		switch p := opContext.preparedPlan.preparedPlan.(type) {
 		case *plan.SynchronousResponsePlan:
-			h.log.Info(fmt.Sprintf("Query Plan:\n%s", p.Response.Fetches.QueryPlan().PrettyPrint()))
+			printedPlan := p.Response.Fetches.QueryPlan().PrettyPrint()
+
+			if h.developmentMode {
+				h.log.Sugar().Debugf("Query Plan:\n%s", printedPlan)
+			} else {
+				h.log.Debug("Query Plan", zap.String("query_plan", printedPlan))
+			}
 		}
 	}
 
