@@ -2259,4 +2259,144 @@ func TestTelemetry(t *testing.T) {
 			require.Equal(t, "exception", events[0].Name)
 		})
 	})
+
+	t.Run("Datadog Propagation", func(t *testing.T) {
+		var (
+			datadogTraceId = "9532127138774266268"
+			testPropConfig = config.PropagationConfig{
+				TraceContext: true,
+				Datadog:      true,
+			}
+		)
+
+		t.Run("Datadog headers are propagated if enabled", func(t *testing.T) {
+			t.Parallel()
+
+			exporter := tracetest.NewInMemoryExporter(t)
+
+			testenv.Run(t, &testenv.Config{
+				TraceExporter:     exporter,
+				PropagationConfig: testPropConfig,
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{
+						Middleware: func(handler http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								require.Equal(t, datadogTraceId, r.Header.Get("x-datadog-trace-id"))
+								require.NotEqual(t, "", r.Header.Get("x-datadog-parent-id"))
+								require.Equal(t, "1", r.Header.Get("x-datadog-sampling-priority"))
+								handler.ServeHTTP(w, r)
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id } }`,
+					Header: map[string][]string{
+						"traceparent": {"00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203332-01"}, // 01 = sampled
+					},
+				})
+				require.JSONEq(t, employeesIDData, res.Body)
+			})
+		})
+
+		t.Run("Datadog headers correctly recognize sampling bit", func(t *testing.T) {
+			t.Parallel()
+
+			exporter := tracetest.NewInMemoryExporter(t)
+
+			testenv.Run(t, &testenv.Config{
+				TraceExporter:     exporter,
+				PropagationConfig: testPropConfig,
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{
+						Middleware: func(handler http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								require.Equal(t, datadogTraceId, r.Header.Get("x-datadog-trace-id"))
+								require.NotEqual(t, "", r.Header.Get("x-datadog-parent-id"))
+								require.Equal(t, "0", r.Header.Get("x-datadog-sampling-priority"))
+								handler.ServeHTTP(w, r)
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id } }`,
+					Header: map[string][]string{
+						"traceparent": {"00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203332-00"}, // 01 = sampled
+					},
+				})
+				require.JSONEq(t, employeesIDData, res.Body)
+			})
+		})
+
+		t.Run("Correctly pass along Datadog headers", func(t *testing.T) {
+			t.Parallel()
+
+			exporter := tracetest.NewInMemoryExporter(t)
+
+			testenv.Run(t, &testenv.Config{
+				TraceExporter:     exporter,
+				PropagationConfig: testPropConfig,
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{
+						Middleware: func(handler http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								require.Equal(t, datadogTraceId, r.Header.Get("x-datadog-trace-id"))
+								require.NotEqual(t, "6023947403358210776", r.Header.Get("x-datadog-parent-id"))
+								require.Equal(t, "1", r.Header.Get("x-datadog-sampling-priority"))
+								handler.ServeHTTP(w, r)
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id } }`,
+					Header: map[string][]string{
+						"x-datadog-trace-id":          {datadogTraceId},
+						"x-datadog-parent-id":         {"6023947403358210776"},
+						"x-datadog-sampling-priority": {"1"},
+					},
+				})
+				require.JSONEq(t, employeesIDData, res.Body)
+
+				sn := exporter.GetSpans().Snapshots()
+				require.GreaterOrEqual(t, len(sn), 1)
+				require.Equal(t, "00000000000000008448eb211c80319c", sn[0].SpanContext().TraceID().String())
+			})
+		})
+
+		t.Run("Doesn't propagate headers in datadog format if datadog config is not set", func(t *testing.T) {
+			t.Parallel()
+
+			exporter := tracetest.NewInMemoryExporter(t)
+
+			testenv.Run(t, &testenv.Config{
+				TraceExporter:     exporter,
+				PropagationConfig: config.PropagationConfig{Datadog: false},
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{
+						Middleware: func(handler http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								require.Equal(t, "", r.Header.Get("x-datadog-trace-id"))
+								require.Equal(t, "", r.Header.Get("x-datadog-parent-id"))
+								require.Equal(t, "", r.Header.Get("x-datadog-sampling-priority"))
+								handler.ServeHTTP(w, r)
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id } }`,
+					Header: map[string][]string{
+						"traceparent": {"00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203332-00"}, // 01 = sampled
+					},
+				})
+				require.JSONEq(t, employeesIDData, res.Body)
+			})
+		})
+	})
 }

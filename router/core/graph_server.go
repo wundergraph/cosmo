@@ -609,11 +609,12 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	executor, err := ecb.Build(
 		ctx,
 		&ExecutorBuildOptions{
-			EngineConfig:       engineConfig,
-			Subgraphs:          configSubgraphs,
-			RouterEngineConfig: routerEngineConfig,
-			PubSubProviders:    s.pubSubProviders,
-			Reporter:           s.websocketStats,
+			EngineConfig:             engineConfig,
+			Subgraphs:                configSubgraphs,
+			RouterEngineConfig:       routerEngineConfig,
+			PubSubProviders:          s.pubSubProviders,
+			Reporter:                 s.websocketStats,
+			ApolloCompatibilityFlags: s.apolloCompatibilityFlags,
 		},
 	)
 	if err != nil {

@@ -15,6 +15,10 @@ export default (opts: BaseCommandOptions) => {
   command.option('-n, --namespace [string]', 'The namespace of the subgraph.');
   command.option('--schema <path-to-schema>', 'The path of the new schema file.');
   command.option('--delete', 'Run checks in case the subgraph is deleted.');
+  command.option(
+    '--skip-traffic-check',
+    'This will skip checking for client traffic and any breaking change will fail the run.',
+  );
 
   command.action(async (name, options) => {
     let schemaFile;
@@ -46,6 +50,7 @@ export default (opts: BaseCommandOptions) => {
         schema,
         gitInfo,
         delete: options.delete,
+        skipTrafficCheck: options.skipTrafficCheck,
       },
       {
         headers: getBaseHeaders(),

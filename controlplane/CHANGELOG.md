@@ -4,6 +4,19 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.109.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.109.0...controlplane@0.109.1) (2024-09-25)
+
+### Bug Fixes
+
+* record if linters were skipped for a check run ([#1217](https://github.com/wundergraph/cosmo/issues/1217)) ([9cdee41](https://github.com/wundergraph/cosmo/commit/9cdee416b288a08120ea5d8a09e054cf5f3fb5bd)) (@thisisnithin)
+* return error if the namespace doesnt exist while listing graphs ([#1216](https://github.com/wundergraph/cosmo/issues/1216)) ([3bc8035](https://github.com/wundergraph/cosmo/commit/3bc80350c3fd0c26f0cbb9b54dfdedf8edc59a70)) (@JivusAyrus)
+
+# [0.109.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.108.4...controlplane@0.109.0) (2024-09-23)
+
+### Features
+
+* option to skip traffic check in schema check ([#1211](https://github.com/wundergraph/cosmo/issues/1211)) ([d9fd83a](https://github.com/wundergraph/cosmo/commit/d9fd83ab99d2f2fc8e5f99a4cdb3abb8a1a7837c)) (@thisisnithin)
+
 ## [0.108.4](https://github.com/wundergraph/cosmo/compare/controlplane@0.108.3...controlplane@0.108.4) (2024-09-20)
 
 ### Bug Fixes

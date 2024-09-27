@@ -330,13 +330,17 @@ export const GraphPruningLintConfig = ({
                         )}
                         onCheckedChange={(checked) => {
                           if (checked) {
+                            const config = new GraphPruningConfig({
+                              ruleName: rule.name,
+                              severityLevel: LintSeverity.warn,
+                              gracePeriodInDays: 7,
+                            });
+                            if (plan === "enterprise") {
+                              config.schemaUsageCheckPeriodInDays = 7;
+                            }
                             setSelectedPruneRules([
                               ...selectedPruneRules,
-                              {
-                                ruleName: rule.name,
-                                severityLevel: LintSeverity.warn,
-                                gracePeriodInDays: 7,
-                              } as GraphPruningConfig,
+                              config,
                             ]);
                           } else {
                             setSelectedPruneRules(
@@ -362,7 +366,7 @@ export const GraphPruningLintConfig = ({
                     <div></div>
 
                     <div className="ml-8 flex gap-x-3 md:ml-0">
-                      {rule.name !== "FORCE_DEPRECATION_BEFORE_DELETION" && (
+                      {rule.name !== "REQUIRE_DEPRECATION_BEFORE_DELETION" && (
                         <>
                           <SchemaUsageCheckPeriodDropdown
                             onChange={(value) => {

@@ -809,6 +809,11 @@ export class CheckSubgraphSchemaRequest extends Message<CheckSubgraphSchemaReque
    */
   namespace = "";
 
+  /**
+   * @generated from field: optional bool skip_traffic_check = 6;
+   */
+  skipTrafficCheck?: boolean;
+
   constructor(data?: PartialMessage<CheckSubgraphSchemaRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -822,6 +827,7 @@ export class CheckSubgraphSchemaRequest extends Message<CheckSubgraphSchemaReque
     { no: 3, name: "gitInfo", kind: "message", T: GitInfo },
     { no: 4, name: "delete", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 5, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "skip_traffic_check", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckSubgraphSchemaRequest {
@@ -1895,6 +1901,11 @@ export class CheckSubgraphSchemaResponse extends Message<CheckSubgraphSchemaResp
    */
   graphPruneErrors: GraphPruningIssue[] = [];
 
+  /**
+   * @generated from field: optional bool client_traffic_check_skipped = 12;
+   */
+  clientTrafficCheckSkipped?: boolean;
+
   constructor(data?: PartialMessage<CheckSubgraphSchemaResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1914,6 +1925,7 @@ export class CheckSubgraphSchemaResponse extends Message<CheckSubgraphSchemaResp
     { no: 9, name: "lintErrors", kind: "message", T: LintIssue, repeated: true },
     { no: 10, name: "graphPruneWarnings", kind: "message", T: GraphPruningIssue, repeated: true },
     { no: 11, name: "graphPruneErrors", kind: "message", T: GraphPruningIssue, repeated: true },
+    { no: 12, name: "client_traffic_check_skipped", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckSubgraphSchemaResponse {
@@ -3399,6 +3411,21 @@ export class SchemaCheck extends Message<SchemaCheck> {
    */
   hasGraphPruningErrors = false;
 
+  /**
+   * @generated from field: bool client_traffic_check_skipped = 13;
+   */
+  clientTrafficCheckSkipped = false;
+
+  /**
+   * @generated from field: bool lint_skipped = 14;
+   */
+  lintSkipped = false;
+
+  /**
+   * @generated from field: bool graph_pruning_skipped = 15;
+   */
+  graphPruningSkipped = false;
+
   constructor(data?: PartialMessage<SchemaCheck>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3419,6 +3446,9 @@ export class SchemaCheck extends Message<SchemaCheck> {
     { no: 10, name: "ghDetails", kind: "message", T: SchemaCheck_GhDetails, opt: true },
     { no: 11, name: "hasLintErrors", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 12, name: "hasGraphPruningErrors", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 13, name: "client_traffic_check_skipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 14, name: "lint_skipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 15, name: "graph_pruning_skipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SchemaCheck {
@@ -3683,16 +3713,6 @@ export class GetCheckSummaryResponse extends Message<GetCheckSummaryResponse> {
    */
   graphPruningIssues: GraphPruningIssue[] = [];
 
-  /**
-   * @generated from field: bool isLintingEnabled = 11;
-   */
-  isLintingEnabled = false;
-
-  /**
-   * @generated from field: bool isGraphPruningEnabled = 12;
-   */
-  isGraphPruningEnabled = false;
-
   constructor(data?: PartialMessage<GetCheckSummaryResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3710,8 +3730,6 @@ export class GetCheckSummaryResponse extends Message<GetCheckSummaryResponse> {
     { no: 8, name: "traffic_check_days", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 9, name: "lintIssues", kind: "message", T: LintIssue, repeated: true },
     { no: 10, name: "graphPruningIssues", kind: "message", T: GraphPruningIssue, repeated: true },
-    { no: 11, name: "isLintingEnabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 12, name: "isGraphPruningEnabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckSummaryResponse {
@@ -3847,6 +3865,11 @@ export class GetCheckOperationsResponse extends Message<GetCheckOperationsRespon
    */
   createdAt = "";
 
+  /**
+   * @generated from field: bool client_traffic_check_skipped = 5;
+   */
+  clientTrafficCheckSkipped = false;
+
   constructor(data?: PartialMessage<GetCheckOperationsResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3859,6 +3882,7 @@ export class GetCheckOperationsResponse extends Message<GetCheckOperationsRespon
     { no: 2, name: "operations", kind: "message", T: GetCheckOperationsResponse_CheckOperation, repeated: true },
     { no: 3, name: "traffic_check_days", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 4, name: "created_at", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "client_traffic_check_skipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckOperationsResponse {
@@ -11656,6 +11680,11 @@ export class GetOIDCProviderResponse extends Message<GetOIDCProviderResponse> {
    */
   signOutRedirectURL = "";
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.GroupMapper mappers = 7;
+   */
+  mappers: GroupMapper[] = [];
+
   constructor(data?: PartialMessage<GetOIDCProviderResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -11670,6 +11699,7 @@ export class GetOIDCProviderResponse extends Message<GetOIDCProviderResponse> {
     { no: 4, name: "loginURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "signInRedirectURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "signOutRedirectURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "mappers", kind: "message", T: GroupMapper, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOIDCProviderResponse {
@@ -11754,6 +11784,80 @@ export class DeleteOIDCProviderResponse extends Message<DeleteOIDCProviderRespon
 
   static equals(a: DeleteOIDCProviderResponse | PlainMessage<DeleteOIDCProviderResponse> | undefined, b: DeleteOIDCProviderResponse | PlainMessage<DeleteOIDCProviderResponse> | undefined): boolean {
     return proto3.util.equals(DeleteOIDCProviderResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.UpdateIDPMappersRequest
+ */
+export class UpdateIDPMappersRequest extends Message<UpdateIDPMappersRequest> {
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.GroupMapper mappers = 1;
+   */
+  mappers: GroupMapper[] = [];
+
+  constructor(data?: PartialMessage<UpdateIDPMappersRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.UpdateIDPMappersRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "mappers", kind: "message", T: GroupMapper, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateIDPMappersRequest {
+    return new UpdateIDPMappersRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateIDPMappersRequest {
+    return new UpdateIDPMappersRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateIDPMappersRequest {
+    return new UpdateIDPMappersRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateIDPMappersRequest | PlainMessage<UpdateIDPMappersRequest> | undefined, b: UpdateIDPMappersRequest | PlainMessage<UpdateIDPMappersRequest> | undefined): boolean {
+    return proto3.util.equals(UpdateIDPMappersRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.UpdateIDPMappersResponse
+ */
+export class UpdateIDPMappersResponse extends Message<UpdateIDPMappersResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<UpdateIDPMappersResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.UpdateIDPMappersResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateIDPMappersResponse {
+    return new UpdateIDPMappersResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateIDPMappersResponse {
+    return new UpdateIDPMappersResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateIDPMappersResponse {
+    return new UpdateIDPMappersResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateIDPMappersResponse | PlainMessage<UpdateIDPMappersResponse> | undefined, b: UpdateIDPMappersResponse | PlainMessage<UpdateIDPMappersResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateIDPMappersResponse, a, b);
   }
 }
 

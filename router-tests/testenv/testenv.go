@@ -126,6 +126,8 @@ type Config struct {
 	PrometheusRegistry                 *prometheus.Registry
 	ShutdownDelay                      time.Duration
 	NoRetryClient                      bool
+	PropagationConfig                  config.PropagationConfig
+	CacheControlPolicy                 config.CacheControlPolicy
 	LogObservation                     LogObservationConfig
 	Logger                             *zap.Logger
 	AccessLogger                       *zap.Logger
@@ -584,6 +586,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			RewritePaths:           true,
 			AllowedExtensionFields: []string{"code"},
 		},
+		CacheControl: testConfig.CacheControlPolicy,
 	}
 
 	if testConfig.ModifyCDNConfig != nil {
@@ -659,6 +662,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithPlayground(true),
 		core.WithEngineExecutionConfig(engineExecutionConfig),
 		core.WithSecurityConfig(cfg.SecurityConfiguration),
+		core.WithCacheControlPolicy(cfg.CacheControl),
 		core.WithCDN(cfg.CDN),
 		core.WithListenerAddr(listenerAddr),
 		core.WithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation),
@@ -689,18 +693,18 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	}
 
 	if testConfig.TraceExporter != nil {
+		testConfig.PropagationConfig.TraceContext = true
+
 		c := core.TraceConfigFromTelemetry(&config.Telemetry{
 			ServiceName:        "cosmo-router",
 			Attributes:         testConfig.OtelAttributes,
 			ResourceAttributes: testConfig.OtelResourceAttributes,
 			Tracing: config.Tracing{
-				Enabled:            true,
-				SamplingRate:       1,
-				ParentBasedSampler: !testConfig.DisableParentBasedSampler,
-				Exporters:          []config.TracingExporter{},
-				Propagation: config.PropagationConfig{
-					TraceContext: true,
-				},
+				Enabled:               true,
+				SamplingRate:          1,
+				ParentBasedSampler:    !testConfig.DisableParentBasedSampler,
+				Exporters:             []config.TracingExporter{},
+				Propagation:           testConfig.PropagationConfig,
 				TracingGlobalFeatures: config.TracingGlobalFeatures{},
 			},
 		})

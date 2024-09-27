@@ -18,7 +18,8 @@
         "TraceContext": true,
         "Jaeger": false,
         "B3": false,
-        "Baggage": false
+        "Baggage": false,
+        "Datadog": false
       },
       "ExportGraphQLVariables": false,
       "WithNewRoot": false
@@ -79,6 +80,11 @@
         "Required": false
       }
     }
+  },
+  "CacheControl": {
+    "Enabled": false,
+    "Value": "",
+    "Subgraphs": null
   },
   "Modules": null,
   "Headers": {
@@ -279,6 +285,12 @@
     "Storage": {
       "ProviderID": "",
       "ObjectPrefix": ""
+    }
+  },
+  "ApolloCompatibilityFlags": {
+    "EnableAll": false,
+    "ValueCompletion": {
+      "Enabled": false
     }
   }
 }

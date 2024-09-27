@@ -70,6 +70,7 @@ telemetry:
       jaeger: false
       # https://github.com/openzipkin/b3-propagation (zipkin)
       b3: false
+      datadog: true
     exporters:
       # If no exporters are defined, the default one is used
       - exporter: http # or grpc
@@ -102,6 +103,13 @@ telemetry:
       listen_addr: "127.0.0.1:8088"
       exclude_metrics: []
       exclude_metric_labels: []
+
+cache_control_policy:
+  enabled: true
+  value: "max-age=180, public"
+  subgraphs:
+    - name: "products"
+      value: "max-age=60, public"
 
 # Config for custom modules
 # See "https://cosmo-docs.wundergraph.com/router/custom-modules" for more information
@@ -165,8 +173,6 @@ headers:
           named: Subgraph-Secret
           default: "some-secret"
       response:
-        - op: "propagate"
-          algorithm: "most_restrictive_cache_control"
         - op: "set"
           name: "X-Subgraph-Key"
           value: "some-subgraph-secret"

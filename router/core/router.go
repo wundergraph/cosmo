@@ -165,10 +165,12 @@ type (
 		healthCheckPath           string
 		readinessCheckPath        string
 		livenessCheckPath         string
+		cacheControlPolicy        config.CacheControlPolicy
 		routerConfigPollerConfig  *RouterConfigPollerConfig
 		cdnConfig                 config.CDNConfiguration
 		persistedOperationClient  persistedoperation.Client
 		persistedOperationsConfig config.PersistedOperationsConfig
+		apolloCompatibilityFlags  config.ApolloCompatibilityFlags
 		storageProviders          config.StorageProviders
 		eventsConfig              config.EventsConfiguration
 		prometheusServer          *http.Server
@@ -315,6 +317,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.livenessCheckPath = "/health/live"
 	}
 
+	r.headerRules = AddCacheControlPolicyToRules(r.headerRules, r.cacheControlPolicy)
 	hr, err := NewHeaderPropagation(r.headerRules)
 	if err != nil {
 		return nil, err
@@ -1461,6 +1464,12 @@ func WithHeaderRules(headers config.HeaderRules) Option {
 	}
 }
 
+func WithCacheControlPolicy(cfg config.CacheControlPolicy) Option {
+	return func(r *Router) {
+		r.cacheControlPolicy = cfg
+	}
+}
+
 func WithOverrideRoutingURL(overrideRoutingURL config.OverrideRoutingURLConfiguration) Option {
 	return func(r *Router) {
 		r.overrideRoutingURLConfiguration = overrideRoutingURL
@@ -1651,6 +1660,15 @@ func WithPersistedOperationsConfig(cfg config.PersistedOperationsConfig) Option 
 	}
 }
 
+func WithApolloCompatibilityFlagsConfig(cfg config.ApolloCompatibilityFlags) Option {
+	return func(r *Router) {
+		if cfg.EnableAll {
+			cfg.ValueCompletion.Enabled = true
+		}
+		r.apolloCompatibilityFlags = cfg
+	}
+}
+
 func WithStorageProviders(cfg config.StorageProviders) Option {
 	return func(r *Router) {
 		r.storageProviders = cfg
@@ -1715,6 +1733,9 @@ func TraceConfigFromTelemetry(cfg *config.Telemetry) *rtrace.Config {
 	}
 	if cfg.Tracing.Propagation.Jaeger {
 		propagators = append(propagators, rtrace.PropagatorJaeger)
+	}
+	if cfg.Tracing.Propagation.Datadog {
+		propagators = append(propagators, rtrace.PropagatorDatadog)
 	}
 	if cfg.Tracing.Propagation.Baggage {
 		propagators = append(propagators, rtrace.PropagatorBaggage)
