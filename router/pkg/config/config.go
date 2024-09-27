@@ -3,13 +3,13 @@ package config
 import (
 	"fmt"
 	"os"
-	"slices"
 	"time"
 
 	"github.com/caarlos0/env/v11"
 	"github.com/goccy/go-yaml"
 	"github.com/joho/godotenv"
 
+	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 )
 
@@ -772,7 +772,7 @@ func LoadConfig(configFilePath string, envOverride string) (*LoadResult, error) 
 		cfg.Config.SubgraphErrorPropagation.Enabled = true
 		cfg.Config.SubgraphErrorPropagation.PropagateStatusCodes = true
 		cfg.Config.SubgraphErrorPropagation.OmitLocations = false
-		cfg.Config.SubgraphErrorPropagation.AllowedExtensionFields = slices.Compact(append(cfg.Config.SubgraphErrorPropagation.AllowedExtensionFields, "code", "stacktrace"))
+		cfg.Config.SubgraphErrorPropagation.AllowedExtensionFields = unique.SliceElements(append(cfg.Config.SubgraphErrorPropagation.AllowedExtensionFields, "code", "stacktrace"))
 	}
 
 	return cfg, nil

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/unique"
 	"slices"
 	"strings"
 
@@ -142,7 +143,7 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 			}
 		}
 
-		errorCodesAttr = slices.Compact(errorCodesAttr)
+		errorCodesAttr = unique.SliceElements(errorCodesAttr)
 		// Reduce cardinality of error codes
 		slices.Sort(errorCodesAttr)
 
