@@ -289,6 +289,9 @@ const (
 	// PlatformServiceDeleteOIDCProviderProcedure is the fully-qualified name of the PlatformService's
 	// DeleteOIDCProvider RPC.
 	PlatformServiceDeleteOIDCProviderProcedure = "/wg.cosmo.platform.v1.PlatformService/DeleteOIDCProvider"
+	// PlatformServiceUpdateIDPMappersProcedure is the fully-qualified name of the PlatformService's
+	// UpdateIDPMappers RPC.
+	PlatformServiceUpdateIDPMappersProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateIDPMappers"
 	// PlatformServiceGetClientsProcedure is the fully-qualified name of the PlatformService's
 	// GetClients RPC.
 	PlatformServiceGetClientsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetClients"
@@ -535,6 +538,7 @@ var (
 	platformServiceCreateOIDCProviderMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("CreateOIDCProvider")
 	platformServiceGetOIDCProviderMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetOIDCProvider")
 	platformServiceDeleteOIDCProviderMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("DeleteOIDCProvider")
+	platformServiceUpdateIDPMappersMethodDescriptor                      = platformServiceServiceDescriptor.Methods().ByName("UpdateIDPMappers")
 	platformServiceGetClientsMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("GetClients")
 	platformServiceGetRoutersMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("GetRouters")
 	platformServiceGetInvitationsMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("GetInvitations")
@@ -753,6 +757,8 @@ type PlatformServiceClient interface {
 	GetOIDCProvider(context.Context, *connect.Request[v1.GetOIDCProviderRequest]) (*connect.Response[v1.GetOIDCProviderResponse], error)
 	// DeleteOIDCProvider deletes the oidc provider connected the organization
 	DeleteOIDCProvider(context.Context, *connect.Request[v1.DeleteOIDCProviderRequest]) (*connect.Response[v1.DeleteOIDCProviderResponse], error)
+	// UpdateIDPMappers updates the mappings of the oidc provider
+	UpdateIDPMappers(context.Context, *connect.Request[v1.UpdateIDPMappersRequest]) (*connect.Response[v1.UpdateIDPMappersResponse], error)
 	// GetClients returns all the clients of the federated graph
 	GetClients(context.Context, *connect.Request[v1.GetClientsRequest]) (*connect.Response[v1.GetClientsResponse], error)
 	// GetRouters returns all active routers of the federated graph
@@ -1372,6 +1378,12 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceDeleteOIDCProviderMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		updateIDPMappers: connect.NewClient[v1.UpdateIDPMappersRequest, v1.UpdateIDPMappersResponse](
+			httpClient,
+			baseURL+PlatformServiceUpdateIDPMappersProcedure,
+			connect.WithSchema(platformServiceUpdateIDPMappersMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		getClients: connect.NewClient[v1.GetClientsRequest, v1.GetClientsResponse](
 			httpClient,
 			baseURL+PlatformServiceGetClientsProcedure,
@@ -1781,6 +1793,7 @@ type platformServiceClient struct {
 	createOIDCProvider                    *connect.Client[v1.CreateOIDCProviderRequest, v1.CreateOIDCProviderResponse]
 	getOIDCProvider                       *connect.Client[v1.GetOIDCProviderRequest, v1.GetOIDCProviderResponse]
 	deleteOIDCProvider                    *connect.Client[v1.DeleteOIDCProviderRequest, v1.DeleteOIDCProviderResponse]
+	updateIDPMappers                      *connect.Client[v1.UpdateIDPMappersRequest, v1.UpdateIDPMappersResponse]
 	getClients                            *connect.Client[v1.GetClientsRequest, v1.GetClientsResponse]
 	getRouters                            *connect.Client[v1.GetRoutersRequest, v1.GetRoutersResponse]
 	getInvitations                        *connect.Client[v1.GetInvitationsRequest, v1.GetInvitationsResponse]
@@ -2274,6 +2287,11 @@ func (c *platformServiceClient) DeleteOIDCProvider(ctx context.Context, req *con
 	return c.deleteOIDCProvider.CallUnary(ctx, req)
 }
 
+// UpdateIDPMappers calls wg.cosmo.platform.v1.PlatformService.UpdateIDPMappers.
+func (c *platformServiceClient) UpdateIDPMappers(ctx context.Context, req *connect.Request[v1.UpdateIDPMappersRequest]) (*connect.Response[v1.UpdateIDPMappersResponse], error) {
+	return c.updateIDPMappers.CallUnary(ctx, req)
+}
+
 // GetClients calls wg.cosmo.platform.v1.PlatformService.GetClients.
 func (c *platformServiceClient) GetClients(ctx context.Context, req *connect.Request[v1.GetClientsRequest]) (*connect.Response[v1.GetClientsResponse], error) {
 	return c.getClients.CallUnary(ctx, req)
@@ -2708,6 +2726,8 @@ type PlatformServiceHandler interface {
 	GetOIDCProvider(context.Context, *connect.Request[v1.GetOIDCProviderRequest]) (*connect.Response[v1.GetOIDCProviderResponse], error)
 	// DeleteOIDCProvider deletes the oidc provider connected the organization
 	DeleteOIDCProvider(context.Context, *connect.Request[v1.DeleteOIDCProviderRequest]) (*connect.Response[v1.DeleteOIDCProviderResponse], error)
+	// UpdateIDPMappers updates the mappings of the oidc provider
+	UpdateIDPMappers(context.Context, *connect.Request[v1.UpdateIDPMappersRequest]) (*connect.Response[v1.UpdateIDPMappersResponse], error)
 	// GetClients returns all the clients of the federated graph
 	GetClients(context.Context, *connect.Request[v1.GetClientsRequest]) (*connect.Response[v1.GetClientsResponse], error)
 	// GetRouters returns all active routers of the federated graph
@@ -3323,6 +3343,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceDeleteOIDCProviderMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceUpdateIDPMappersHandler := connect.NewUnaryHandler(
+		PlatformServiceUpdateIDPMappersProcedure,
+		svc.UpdateIDPMappers,
+		connect.WithSchema(platformServiceUpdateIDPMappersMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	platformServiceGetClientsHandler := connect.NewUnaryHandler(
 		PlatformServiceGetClientsProcedure,
 		svc.GetClients,
@@ -3814,6 +3840,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceGetOIDCProviderHandler.ServeHTTP(w, r)
 		case PlatformServiceDeleteOIDCProviderProcedure:
 			platformServiceDeleteOIDCProviderHandler.ServeHTTP(w, r)
+		case PlatformServiceUpdateIDPMappersProcedure:
+			platformServiceUpdateIDPMappersHandler.ServeHTTP(w, r)
 		case PlatformServiceGetClientsProcedure:
 			platformServiceGetClientsHandler.ServeHTTP(w, r)
 		case PlatformServiceGetRoutersProcedure:
@@ -4265,6 +4293,10 @@ func (UnimplementedPlatformServiceHandler) GetOIDCProvider(context.Context, *con
 
 func (UnimplementedPlatformServiceHandler) DeleteOIDCProvider(context.Context, *connect.Request[v1.DeleteOIDCProviderRequest]) (*connect.Response[v1.DeleteOIDCProviderResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.DeleteOIDCProvider is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) UpdateIDPMappers(context.Context, *connect.Request[v1.UpdateIDPMappersRequest]) (*connect.Response[v1.UpdateIDPMappersResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateIDPMappers is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) GetClients(context.Context, *connect.Request[v1.GetClientsRequest]) (*connect.Response[v1.GetClientsResponse], error) {
