@@ -191,6 +191,7 @@
       "PrintOperationEnableASTRefs": false,
       "PrintPlanningPaths": false,
       "PrintQueryPlans": false,
+      "PrintIntermediateQueryPlans": false,
       "PrintNodeSuggestions": false,
       "ConfigurationVisitor": false,
       "PlanningVisitor": false,
