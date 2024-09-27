@@ -313,19 +313,21 @@ func (o *OperationKit) unmarshalOperation() error {
 }
 
 func (o *OperationKit) ComputeOperationSha256() error {
-	// Calculate the hash of the operation query to use a cache to
-	// avoid computing the more expensive sha256 hash
-	defer o.kit.keyGen.Reset()
+	// Calculate a fast hash of the operation query to save the
+	// expensive compute on the same request. We can't use the operation id at this point
+	// because the id is generated after normalization. We want to have the has as soon as possible for
+	// observability reasons
 	_, _ = o.kit.keyGen.WriteString(o.parsedOperation.Request.Query)
 	id := o.kit.keyGen.Sum64()
+	o.kit.keyGen.Reset()
 
 	if v, ok := o.cache.operationHashCache.Get(id); ok {
 		o.parsedOperation.Sha256Hash = v
 		return nil
 	}
 
-	defer o.kit.sha256Hash.Reset()
 	_, err := o.kit.sha256Hash.Write(unsafebytes.StringToBytes(o.parsedOperation.Request.Query))
+	defer o.kit.sha256Hash.Reset()
 	if err != nil {
 		return err
 	}
