@@ -250,10 +250,10 @@ github.com/vektah/gqlparser/v2 v2.5.16 h1:1gcmLTvs3JLKXckwCwlUagVn/IlV2bwqle0vJ0
 github.com/vektah/gqlparser/v2 v2.5.16/go.mod h1:1lz1OeCqgQbQepsGxPVywrjdBHW2T08PUS3pJqepRww=
 github.com/wundergraph/astjson v0.0.0-20240910140849-bb15f94bd362 h1:MxNSJqQFJyhKwU4xPj6diIRLm+oY1wNbAZW0jJpikBE=
 github.com/wundergraph/astjson v0.0.0-20240910140849-bb15f94bd362/go.mod h1:eOTL6acwctsN4F3b7YE+eE2t8zcJ/doLm9sZzsxxxrE=
-github.com/wundergraph/cosmo/router v0.0.0-20240926091419-7c3781f4f507 h1:uojstbUpR4s6uO3+PJCU/nJ8CT5rq1L7Q94jdf+OiG4=
-github.com/wundergraph/cosmo/router v0.0.0-20240926091419-7c3781f4f507/go.mod h1:44kgNdnRaJVugapwUGRCbO27ziXNQTITJusRMmbl08c=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.87 h1:YImj5ke1rmFk/d68jv2PRjCerTpHZgX2Y2qcUvZY4Uw=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.87/go.mod h1:zkPVYJu1iQd0y1fBNj+oXe9uMI/33TSoiXEsKSAESZY=
+github.com/wundergraph/cosmo/router v0.0.0-20240927102242-7376259573a9 h1:CW4K4hciQfz5g9sN+N8Jl8kUNV7leHyIRCOGR9wMhoE=
+github.com/wundergraph/cosmo/router v0.0.0-20240927102242-7376259573a9/go.mod h1:44kgNdnRaJVugapwUGRCbO27ziXNQTITJusRMmbl08c=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.88 h1:M18Q4yP7vx91NeZU7jF7qgVcdiCK2jLFz6UnBkYqfnY=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.88/go.mod h1:zkPVYJu1iQd0y1fBNj+oXe9uMI/33TSoiXEsKSAESZY=
 github.com/yusufpapurcu/wmi v1.2.4 h1:zFUKzehAFReQwLys1b/iSMl+JQGSCSjtVqQn9bBrPo0=
 github.com/yusufpapurcu/wmi v1.2.4/go.mod h1:SBZ9tNy3G9/m5Oi98Zks0QjeHVDvuK0qfxQmPyzfmi0=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1 h1:aFJWCqJMNjENlcleuuOkGAPH82y0yULBScfXcIEdS24=
