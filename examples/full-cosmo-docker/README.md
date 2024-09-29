@@ -3,7 +3,7 @@
 This example demonstrates how to run the entire Cosmo platform locally with Docker Compose.
 
 ### Prerequisites
-
+- make
 - [Docker](https://docs.docker.com/get-docker/)
 - [Docker Compose](https://docs.docker.com/compose/install/) (version 2+ only)
 - [NPM](https://nodejs.org/en/download/) (for the Cosmo CLI)
