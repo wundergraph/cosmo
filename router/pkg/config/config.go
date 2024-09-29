@@ -5,12 +5,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/wundergraph/cosmo/router/internal/unique"
-
-	"github.com/goccy/go-yaml"
-
 	"github.com/caarlos0/env/v11"
+	"github.com/goccy/go-yaml"
 	"github.com/joho/godotenv"
+
+	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 )
 
@@ -164,6 +163,17 @@ type BackoffJitterRetry struct {
 	Interval    time.Duration `yaml:"interval" envDefault:"3s"`
 }
 
+type SubgraphCacheControlRule struct {
+	Name  string `yaml:"name"`
+	Value string `yaml:"value"`
+}
+
+type CacheControlPolicy struct {
+	Enabled   bool                       `yaml:"enabled" envDefault:"false" env:"CACHE_CONTROL_POLICY_ENABLED"`
+	Value     string                     `yaml:"value" env:"CACHE_CONTROL_POLICY_VALUE"`
+	Subgraphs []SubgraphCacheControlRule `yaml:"subgraphs,omitempty"`
+}
+
 type HeaderRules struct {
 	// All is a set of rules that apply to all requests
 	All       *GlobalHeaderRule            `yaml:"all,omitempty"`
@@ -263,6 +273,7 @@ type EngineDebugConfiguration struct {
 	PrintOperationEnableASTRefs                  bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_OPERATION_ENABLE_AST_REFS" yaml:"print_operation_enable_ast_refs"`
 	PrintPlanningPaths                           bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_PLANNING_PATHS" yaml:"print_planning_paths"`
 	PrintQueryPlans                              bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_QUERY_PLANS" yaml:"print_query_plans"`
+	PrintIntermediateQueryPlans                  bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_INTERMEDIATE_QUERY_PLANS" yaml:"print_intermediate_query_plans"`
 	PrintNodeSuggestions                         bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_NODE_SUGGESTIONS" yaml:"print_node_suggestions"`
 	ConfigurationVisitor                         bool `envDefault:"false" env:"ENGINE_DEBUG_CONFIGURATION_VISITOR" yaml:"configuration_visitor"`
 	PlanningVisitor                              bool `envDefault:"false" env:"ENGINE_DEBUG_PLANNING_VISITOR" yaml:"planning_visitor"`
@@ -593,14 +604,15 @@ type ApolloCompatibilityValueCompletion struct {
 type Config struct {
 	Version string `yaml:"version,omitempty" ignored:"true"`
 
-	InstanceID     string           `yaml:"instance_id,omitempty" env:"INSTANCE_ID"`
-	Graph          Graph            `yaml:"graph,omitempty"`
-	Telemetry      Telemetry        `yaml:"telemetry,omitempty"`
-	GraphqlMetrics GraphqlMetrics   `yaml:"graphql_metrics,omitempty"`
-	CORS           CORS             `yaml:"cors,omitempty"`
-	Cluster        Cluster          `yaml:"cluster,omitempty"`
-	Compliance     ComplianceConfig `yaml:"compliance,omitempty"`
-	TLS            TLSConfiguration `yaml:"tls,omitempty"`
+	InstanceID     string             `yaml:"instance_id,omitempty" env:"INSTANCE_ID"`
+	Graph          Graph              `yaml:"graph,omitempty"`
+	Telemetry      Telemetry          `yaml:"telemetry,omitempty"`
+	GraphqlMetrics GraphqlMetrics     `yaml:"graphql_metrics,omitempty"`
+	CORS           CORS               `yaml:"cors,omitempty"`
+	Cluster        Cluster            `yaml:"cluster,omitempty"`
+	Compliance     ComplianceConfig   `yaml:"compliance,omitempty"`
+	TLS            TLSConfiguration   `yaml:"tls,omitempty"`
+	CacheControl   CacheControlPolicy `yaml:"cache_control_policy"`
 
 	Modules        map[string]interface{} `yaml:"modules,omitempty"`
 	Headers        HeaderRules            `yaml:"headers,omitempty"`

@@ -256,7 +256,7 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 		PrintOperationTransformations: debug.PrintOperationTransformations,
 		PrintOperationEnableASTRefs:   debug.PrintOperationEnableASTRefs,
 		PrintPlanningPaths:            debug.PrintPlanningPaths,
-		PrintQueryPlans:               debug.PrintQueryPlans,
+		PrintQueryPlans:               debug.PrintIntermediateQueryPlans,
 		PrintNodeSuggestions:          debug.PrintNodeSuggestions,
 		ConfigurationVisitor:          debug.ConfigurationVisitor,
 		PlanningVisitor:               debug.PlanningVisitor,

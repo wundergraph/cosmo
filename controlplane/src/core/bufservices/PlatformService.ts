@@ -138,6 +138,7 @@ import { inviteUser } from './user/inviteUser.js';
 import { removeInvitation } from './user/removeInvitation.js';
 import { removeOrganizationMember } from './user/removeOrganizationMember.js';
 import { updateOrgMemberRole } from './user/updateOrgMemberRole.js';
+import { updateIDPMappers } from './sso/updateIDPMappers.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -696,6 +697,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     redeliverWebhook: (req, ctx) => {
       return redeliverWebhook(opts, req, ctx);
+    },
+
+    updateIDPMappers: (req, ctx) => {
+      return updateIDPMappers(opts, req, ctx);
     },
   };
 }

@@ -11680,6 +11680,11 @@ export class GetOIDCProviderResponse extends Message<GetOIDCProviderResponse> {
    */
   signOutRedirectURL = "";
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.GroupMapper mappers = 7;
+   */
+  mappers: GroupMapper[] = [];
+
   constructor(data?: PartialMessage<GetOIDCProviderResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -11694,6 +11699,7 @@ export class GetOIDCProviderResponse extends Message<GetOIDCProviderResponse> {
     { no: 4, name: "loginURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "signInRedirectURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "signOutRedirectURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "mappers", kind: "message", T: GroupMapper, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOIDCProviderResponse {
@@ -11778,6 +11784,80 @@ export class DeleteOIDCProviderResponse extends Message<DeleteOIDCProviderRespon
 
   static equals(a: DeleteOIDCProviderResponse | PlainMessage<DeleteOIDCProviderResponse> | undefined, b: DeleteOIDCProviderResponse | PlainMessage<DeleteOIDCProviderResponse> | undefined): boolean {
     return proto3.util.equals(DeleteOIDCProviderResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.UpdateIDPMappersRequest
+ */
+export class UpdateIDPMappersRequest extends Message<UpdateIDPMappersRequest> {
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.GroupMapper mappers = 1;
+   */
+  mappers: GroupMapper[] = [];
+
+  constructor(data?: PartialMessage<UpdateIDPMappersRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.UpdateIDPMappersRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "mappers", kind: "message", T: GroupMapper, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateIDPMappersRequest {
+    return new UpdateIDPMappersRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateIDPMappersRequest {
+    return new UpdateIDPMappersRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateIDPMappersRequest {
+    return new UpdateIDPMappersRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateIDPMappersRequest | PlainMessage<UpdateIDPMappersRequest> | undefined, b: UpdateIDPMappersRequest | PlainMessage<UpdateIDPMappersRequest> | undefined): boolean {
+    return proto3.util.equals(UpdateIDPMappersRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.UpdateIDPMappersResponse
+ */
+export class UpdateIDPMappersResponse extends Message<UpdateIDPMappersResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<UpdateIDPMappersResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.UpdateIDPMappersResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateIDPMappersResponse {
+    return new UpdateIDPMappersResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateIDPMappersResponse {
+    return new UpdateIDPMappersResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateIDPMappersResponse {
+    return new UpdateIDPMappersResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateIDPMappersResponse | PlainMessage<UpdateIDPMappersResponse> | undefined, b: UpdateIDPMappersResponse | PlainMessage<UpdateIDPMappersResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateIDPMappersResponse, a, b);
   }
 }
 
