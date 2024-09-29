@@ -6,6 +6,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/buger/jsonparser"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"net"
 	"net/http"
 	"regexp"
@@ -19,7 +21,6 @@ import (
 	"github.com/gorilla/websocket"
 
 	"github.com/alitto/pond"
-	"github.com/buger/jsonparser"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
@@ -29,7 +30,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
@@ -289,6 +289,24 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// We can parse the request options before creating the handler
+	// this avoids touching the client request across goroutines
+
+	executionOptions, traceOptions, err := h.preHandler.parseRequestOptions(r, clientInfo, h.logger)
+	if err != nil {
+		requestLogger.Error("Parse request options", zap.Error(err))
+		_ = c.Close()
+		return
+	}
+
+	planOptions := PlanOptions{
+		Protocol:             OperationProtocolWS,
+		ClientInfo:           clientInfo,
+		TraceOptions:         traceOptions,
+		ExecutionOptions:     executionOptions,
+		TrackSchemaUsageInfo: h.preHandler.trackSchemaUsageInfo,
+	}
+
 	handler := NewWebsocketConnectionHandler(h.ctx, WebSocketConnectionHandlerOptions{
 		OperationProcessor:    h.operationProcessor,
 		OperationBlocker:      h.operationBlocker,
@@ -296,6 +314,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		GraphQLHandler:        h.graphqlHandler,
 		PreHandler:            h.preHandler,
 		Metrics:               h.metrics,
+		PlanOptions:           planOptions,
 		ResponseWriter:        w,
 		Request:               r,
 		Connection:            conn,
@@ -323,7 +342,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		r = r.WithContext(authentication.WithWebsocketInitialPayloadContextKey(r.Context(), handler.initialPayload))
 
 		// Later check access control after initial payload is read and set into the context
-		validatedReq, err := h.accessController.Access(w, r)
+		handler.request, err = h.accessController.Access(w, r)
 		if err != nil {
 			statusCode := http.StatusForbidden
 			if errors.Is(err, ErrUnauthorized) {
@@ -334,7 +353,6 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 			handler.Close()
 			return
 		}
-		handler.r = validatedReq
 
 		// Export the token from the initial payload to the request header
 		if fromInitialPayloadConfig.ExportToken.Enabled {
@@ -354,7 +372,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 				handler.Close()
 				return
 			}
-			handler.r.Header.Set(fromInitialPayloadConfig.ExportToken.HeaderKey, jwtToken)
+			handler.request.Header.Set(fromInitialPayloadConfig.ExportToken.HeaderKey, jwtToken)
 		}
 	}
 
@@ -620,8 +638,8 @@ type WebSocketConnectionHandlerOptions struct {
 	Protocol              wsproto.Proto
 	Logger                *zap.Logger
 	Stats                 WebSocketsStatistics
+	PlanOptions           PlanOptions
 	ConnectionID          int64
-	RequestContext        context.Context
 	ClientInfo            *ClientInfo
 	InitRequestID         string
 	ForwardUpgradeHeaders forwardConfig
@@ -634,14 +652,17 @@ type WebSocketConnectionHandler struct {
 	operationBlocker   *OperationBlocker
 	planner            *OperationPlanner
 	graphqlHandler     *GraphQLHandler
+	plannerOptions     PlanOptions
 	preHandler         *PreHandler
 	metrics            RouterMetrics
 	w                  http.ResponseWriter
-	r                  *http.Request
-	conn               *wsConnectionWrapper
-	protocol           wsproto.Proto
-	clientInfo         *ClientInfo
-	logger             *zap.Logger
+	// request is the original client request. It is not safe for concurrent use.
+	// You have to clone it before using it in a goroutine.
+	request    *http.Request
+	conn       *wsConnectionWrapper
+	protocol   wsproto.Proto
+	clientInfo *ClientInfo
+	logger     *zap.Logger
 
 	initialPayload            json.RawMessage
 	upgradeRequestHeaders     json.RawMessage
@@ -682,7 +703,7 @@ func NewWebsocketConnectionHandler(ctx context.Context, opts WebSocketConnection
 		preHandler:            opts.PreHandler,
 		metrics:               opts.Metrics,
 		w:                     opts.ResponseWriter,
-		r:                     opts.Request,
+		request:               opts.Request,
 		conn:                  opts.Connection,
 		protocol:              opts.Protocol,
 		logger:                opts.Logger,
@@ -693,6 +714,7 @@ func NewWebsocketConnectionHandler(ctx context.Context, opts WebSocketConnection
 		forwardUpgradeHeaders: &opts.ForwardUpgradeHeaders,
 		forwardQueryParams:    &opts.ForwardQueryParams,
 		forwardInitialPayload: opts.Config != nil && opts.Config.ForwardInitialPayload,
+		plannerOptions:        opts.PlanOptions,
 	}
 }
 
@@ -717,11 +739,6 @@ func (h *WebSocketConnectionHandler) writeErrorMessage(operationID string, err e
 }
 
 func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperation, *operationContext, error) {
-
-	executionOptions, traceOptions, err := h.preHandler.parseRequestOptions(h.r, h.clientInfo, h.logger)
-	if err != nil {
-		return nil, nil, err
-	}
 
 	operationKit, err := h.operationProcessor.NewKit()
 	if err != nil {
@@ -763,19 +780,11 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 		return nil, nil, err
 	}
 
-	if _, err := operationKit.Validate(executionOptions.SkipLoader); err != nil {
+	if _, err := operationKit.Validate(h.plannerOptions.ExecutionOptions.SkipLoader); err != nil {
 		return nil, nil, err
 	}
 
-	planOptions := PlanOptions{
-		Protocol:             OperationProtocolWS,
-		ClientInfo:           h.clientInfo,
-		TraceOptions:         traceOptions,
-		ExecutionOptions:     executionOptions,
-		TrackSchemaUsageInfo: h.preHandler.trackSchemaUsageInfo,
-	}
-
-	opContext, err := h.planner.plan(operationKit.parsedOperation, planOptions)
+	opContext, err := h.planner.plan(operationKit.parsedOperation, h.plannerOptions)
 	if err != nil {
 		return operationKit.parsedOperation, nil, err
 	}
@@ -783,13 +792,13 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 	return operationKit.parsedOperation, opContext, nil
 }
 
-func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, id resolve.SubscriptionIdentifier) {
+func (h *WebSocketConnectionHandler) executeSubscription(registration *SubscriptionRegistration) {
 
-	rw := newWebsocketResponseWriter(msg.ID, h.protocol, h.graphqlHandler.subgraphErrorPropagation.Enabled, h.logger, h.stats)
+	rw := newWebsocketResponseWriter(registration.msg.ID, h.protocol, h.graphqlHandler.subgraphErrorPropagation.Enabled, h.logger, h.stats)
 
-	_, operationCtx, err := h.parseAndPlan(msg.Payload)
+	_, operationCtx, err := h.parseAndPlan(registration.msg.Payload)
 	if err != nil {
-		wErr := h.writeErrorMessage(msg.ID, err)
+		wErr := h.writeErrorMessage(registration.msg.ID, err)
 		if wErr != nil {
 			h.logger.Warn("writing error message", zap.Error(wErr))
 		}
@@ -803,7 +812,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 		operationCtx.extensions, err = jsonparser.Set(operationCtx.extensions, h.upgradeRequestHeaders, "upgradeHeaders")
 		if err != nil {
 			h.logger.Warn("Setting upgrade request data", zap.Error(err))
-			_ = h.writeErrorMessage(msg.ID, err)
+			_ = h.writeErrorMessage(registration.msg.ID, err)
 			return
 		}
 	}
@@ -814,7 +823,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 		operationCtx.extensions, err = jsonparser.Set(operationCtx.extensions, h.upgradeRequestQueryParams, "upgradeQueryParams")
 		if err != nil {
 			h.logger.Warn("Setting upgrade request data", zap.Error(err))
-			_ = h.writeErrorMessage(msg.ID, err)
+			_ = h.writeErrorMessage(registration.msg.ID, err)
 			return
 		}
 
@@ -826,14 +835,14 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 		operationCtx.extensions, err = jsonparser.Set(operationCtx.extensions, operationCtx.initialPayload, "initialPayload")
 		if err != nil {
 			h.logger.Warn("Setting initial payload", zap.Error(err))
-			_ = h.writeErrorMessage(msg.ID, err)
+			_ = h.writeErrorMessage(registration.msg.ID, err)
 			return
 		}
 	}
 	resolveCtx := &resolve.Context{
 		Variables: operationCtx.Variables(),
 		Request: resolve.Request{
-			Header: h.r.Header.Clone(),
+			Header: registration.clientRequest.Header,
 			ID:     h.initRequestID,
 		},
 		RenameTypeNames: h.graphqlHandler.executor.RenameTypeNames,
@@ -866,7 +875,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 		_ = rw.Flush()
 		rw.Complete()
 	case *plan.SubscriptionResponsePlan:
-		err = h.graphqlHandler.executor.Resolver.AsyncResolveGraphQLSubscription(resolveCtx, p.Response, rw.SubscriptionResponseWriter(), id)
+		err = h.graphqlHandler.executor.Resolver.AsyncResolveGraphQLSubscription(resolveCtx, p.Response, rw.SubscriptionResponseWriter(), registration.id)
 		if err != nil {
 			h.logger.Warn("Resolving GraphQL subscription", zap.Error(err))
 			h.graphqlHandler.WriteError(resolveCtx, err, p.Response.Response, rw)
@@ -875,22 +884,38 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 	}
 }
 
-func (h *WebSocketConnectionHandler) handleSubscribe(msg *wsproto.Message) error {
+type SubscriptionRegistration struct {
+	id            resolve.SubscriptionIdentifier
+	msg           *wsproto.Message
+	clientRequest *http.Request
+}
+
+// registerSubscription registers a new subscription with the given message. This method is not safe for concurrent use.
+func (h *WebSocketConnectionHandler) registerSubscription(msg *wsproto.Message) (*SubscriptionRegistration, error) {
 	if msg.ID == "" {
-		return fmt.Errorf("missing id in subscribe")
+		return nil, fmt.Errorf("missing id in subscribe")
 	}
 	_, exists := h.subscriptions.Load(msg.ID)
 	if exists {
-		return fmt.Errorf("subscription with id %q already exists", msg.ID)
+		return nil, fmt.Errorf("subscription with id %q already exists", msg.ID)
 	}
+
 	subscriptionID := h.subscriptionIDs.Inc()
 	h.subscriptions.Store(msg.ID, subscriptionID)
-	id := resolve.SubscriptionIdentifier{
-		ConnectionID:   h.connectionID,
-		SubscriptionID: subscriptionID,
+
+	registration := &SubscriptionRegistration{
+		id: resolve.SubscriptionIdentifier{
+			ConnectionID:   h.connectionID,
+			SubscriptionID: subscriptionID,
+		},
+		msg: msg,
+		// executeSubscription is running on a worker pool, so we have to clone the request
+		// before passing it to the worker pool. The original request is not safe for concurrent use and
+		// is needed later to construct the operation context and to clone the resolver context.
+		clientRequest: h.request.Clone(h.request.Context()),
 	}
-	h.executeSubscription(msg, id)
-	return nil
+
+	return registration, nil
 }
 
 func (h *WebSocketConnectionHandler) handleComplete(msg *wsproto.Message) error {
@@ -921,11 +946,13 @@ func (h *WebsocketHandler) HandleMessage(handler *WebSocketConnectionHandler, ms
 		// "Furthermore, the Pong message may even be sent unsolicited as a unidirectional heartbeat"
 		return nil
 	case wsproto.MessageTypeSubscribe:
+		registration, err := handler.registerSubscription(msg)
+		if err != nil {
+			h.logger.Warn("Handling subscription registration", zap.Error(err))
+			return handler.requestError(fmt.Errorf("error registering subscription id: %s", msg.ID))
+		}
 		h.handlerPool.Submit(func() {
-			err := handler.handleSubscribe(msg)
-			if err != nil {
-				h.logger.Warn("Handling subscribe", zap.Error(err))
-			}
+			handler.executeSubscription(registration)
 		})
 	case wsproto.MessageTypeComplete:
 		err = handler.handleComplete(msg)
@@ -947,7 +974,7 @@ func (h *WebSocketConnectionHandler) Initialize() (err error) {
 		return err
 	}
 	if h.forwardQueryParams.enabled {
-		query := h.r.URL.Query()
+		query := h.request.URL.Query()
 		params := make(map[string]string, len(query))
 		for k := range query {
 			if !h.ignoreQueryParameter(k) {
@@ -962,12 +989,12 @@ func (h *WebSocketConnectionHandler) Initialize() (err error) {
 		}
 	}
 	if h.forwardUpgradeHeaders.enabled {
-		header := make(map[string]string, len(h.r.Header))
-		for k := range h.r.Header {
+		header := make(map[string]string, len(h.request.Header))
+		for k := range h.request.Header {
 			if h.ignoreHeader(k) {
 				continue
 			}
-			header[k] = h.r.Header.Get(k)
+			header[k] = h.request.Header.Get(k)
 		}
 		if len(header) > 0 {
 			h.upgradeRequestHeaders, err = json.Marshal(header)
