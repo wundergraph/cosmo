@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -12,6 +13,13 @@ const (
 	WgPrefix             = "wg_"
 	WgSseParam           = WgPrefix + "sse"
 	WgSubscribeOnceParam = WgPrefix + "subscribe_once"
+	WgMultipartParam     = WgPrefix + "multipart"
+	multipartBoundary    = "graphql"
+	jsonContent          = "application/json"
+)
+
+var (
+	multipartContentType = fmt.Sprintf("multipart/mixed; boundary=%s;subscriptionSpec=\"1.0\"", multipartBoundary)
 )
 
 type HttpFlushWriter struct {
@@ -21,6 +29,7 @@ type HttpFlushWriter struct {
 	flusher       http.Flusher
 	subscribeOnce bool
 	sse           bool
+	multipart     bool
 	buf           *bytes.Buffer
 	variables     []byte
 }
@@ -31,6 +40,9 @@ func (f *HttpFlushWriter) Complete() {
 	}
 	if f.sse {
 		_, _ = f.writer.Write([]byte("event: complete"))
+	} else if f.multipart {
+		// Write the final boundary in the multipart response
+		_, _ = f.writer.Write([]byte("--" + multipartBoundary + "--\n"))
 	}
 	f.Close()
 }
@@ -39,6 +51,7 @@ func (f *HttpFlushWriter) Write(p []byte) (n int, err error) {
 	if err = f.ctx.Err(); err != nil {
 		return
 	}
+
 	return f.buf.Write(p)
 }
 
@@ -57,11 +70,25 @@ func (f *HttpFlushWriter) Flush() (err error) {
 	resp := f.buf.Bytes()
 	f.buf.Reset()
 
+	flushBreak := ""
 	if f.sse {
-		_, err = f.writer.Write([]byte("event: next\ndata: "))
+		flushBreak = "event: next\ndata: "
+	} else if f.multipart {
+		flushBreak = "--" + multipartBoundary + "\nContent-Type: " + jsonContent + "\n\n"
+		// For multipart, we need to write the boundary and part headers
+	}
+
+	if flushBreak != "" {
+		_, err = f.writer.Write([]byte(flushBreak))
 		if err != nil {
 			return err
 		}
+	}
+
+	if f.multipart && len(resp) > 0 {
+		// Per the Apollo docs, multipart messages are supposed to be json, wrapped in ` "payload"`
+		resp = append([]byte(`{"payload":`), resp...)
+		resp = append(resp, '}')
 	}
 	_, err = f.writer.Write(resp)
 	if err != nil {
@@ -73,7 +100,11 @@ func (f *HttpFlushWriter) Flush() (err error) {
 		f.cancel()
 		return
 	}
-	_, err = f.writer.Write([]byte("\n\n"))
+	separation := "\n\n"
+	if f.multipart {
+		separation = "\n"
+	}
+	_, err = f.writer.Write([]byte(separation))
 	if err != nil {
 		return err
 	}
@@ -95,29 +126,36 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, variables []byte, r *ht
 		return ctx, nil, false
 	}
 
-	if !wgParams.SubscribeOnce {
-		setSubscriptionHeaders(w)
-	}
+	setSubscriptionHeaders(wgParams, w)
 
 	flushWriter := &HttpFlushWriter{
-		writer:    w,
-		flusher:   flusher,
-		sse:       wgParams.UseSse,
-		buf:       &bytes.Buffer{},
-		ctx:       ctx.Context(),
-		variables: variables,
+		writer:        w,
+		flusher:       flusher,
+		sse:           wgParams.UseSse,
+		multipart:     wgParams.UseMultipart,
+		subscribeOnce: wgParams.SubscribeOnce,
+		buf:           &bytes.Buffer{},
+		ctx:           ctx.Context(),
+		variables:     variables,
 	}
-	if wgParams.SubscribeOnce {
-		flushWriter.subscribeOnce = true
-	}
+
 	flushWriter.ctx, flushWriter.cancel = context.WithCancel(ctx.Context())
 	ctx = ctx.WithContext(flushWriter.ctx)
 
 	return ctx, flushWriter, true
 }
 
-func setSubscriptionHeaders(w http.ResponseWriter) {
-	w.Header().Set("Content-Type", "text/event-stream")
+func setSubscriptionHeaders(wgParams WgRequestParams, w http.ResponseWriter) {
+	if wgParams.SubscribeOnce {
+		return
+	}
+
+	if wgParams.UseMultipart {
+		w.Header().Set("Content-Type", multipartContentType)
+	} else {
+		w.Header().Set("Content-Type", "text/event-stream")
+	}
+
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 	// allow unbuffered responses, it's used when it's necessary just to pass response through
@@ -130,10 +168,12 @@ func NewWgRequestParams(r *http.Request) WgRequestParams {
 	return WgRequestParams{
 		UseSse:        q.Has(WgSseParam),
 		SubscribeOnce: q.Has(WgSubscribeOnceParam),
+		UseMultipart:  q.Has(WgMultipartParam),
 	}
 }
 
 type WgRequestParams struct {
 	UseSse        bool
 	SubscribeOnce bool
+	UseMultipart  bool
 }

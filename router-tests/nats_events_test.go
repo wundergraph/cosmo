@@ -256,6 +256,77 @@ func TestNatsEvents(t *testing.T) {
 		})
 	})
 
+	t.Run("subscribe with multipart responses", func(t *testing.T) {
+		t.Parallel()
+
+		assertLineEquals := func(reader *bufio.Reader, expected string) {
+			line, _, err := reader.ReadLine()
+			require.NoError(t, err)
+			require.Equal(t, expected, string(line))
+		}
+
+		assertMultipartPrefix := func(reader *bufio.Reader) {
+			assertLineEquals(reader, "--graphql")
+			assertLineEquals(reader, "Content-Type: application/json")
+			assertLineEquals(reader, "")
+		}
+
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`)
+
+			wg := &sync.WaitGroup{}
+			wg.Add(1)
+
+			var client http.Client
+			go func() {
+				client = http.Client{
+					Timeout: time.Second * 100,
+				}
+				req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLMultipartResponsesURL(), bytes.NewReader(subscribePayload))
+				require.NoError(t, err)
+
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Accept", "multipart/mixed;boundary=graphql;subscriptionSpec=\"1.0\"")
+				req.Header.Set("Connection", "keep-alive")
+
+				resp, err := client.Do(req)
+				require.NoError(t, err)
+				require.Equal(t, http.StatusOK, resp.StatusCode)
+				defer resp.Body.Close()
+
+				reader := bufio.NewReader(resp.Body)
+
+				// Read the first part
+				assertMultipartPrefix(reader)
+				assertLineEquals(reader, "{\"payload\":{\"data\":{\"employeeUpdated\":{\"id\":3,\"details\":{\"forename\":\"Stefan\",\"surname\":\"Avram\"}}}}}")
+				assertMultipartPrefix(reader)
+				assertLineEquals(reader, "{\"payload\":{\"data\":{\"employeeUpdated\":{\"id\":3,\"details\":{\"forename\":\"Stefan\",\"surname\":\"Avram\"}}}}}")
+				wg.Done()
+
+			}()
+
+			xEnv.WaitForSubscriptionCount(1, time.Second*5)
+
+			// Send a mutation to trigger the subscription
+
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation { updateAvailability(employeeID: 3, isAvailable: true) { id } }`,
+			})
+			require.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, res.Body)
+
+			// Trigger the subscription via NATS
+			err := xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
+			require.NoError(t, err)
+
+			err = xEnv.NatsConnectionDefault.Flush()
+			require.NoError(t, err)
+
+			xEnv.NatsConnectionDefault.Close()
+			wg.Wait()
+		})
+	})
+
 	t.Run("subscribe sync sse", func(t *testing.T) {
 		t.Parallel()
 

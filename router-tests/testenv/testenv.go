@@ -1217,6 +1217,13 @@ func (e *Environment) GraphQLServeSentEventsURL() string {
 	return u.String()
 }
 
+func (e *Environment) GraphQLMultipartResponsesURL() string {
+	u, err := url.Parse(e.GraphQLRequestURL())
+	require.NoError(e.t, err)
+	u.RawQuery = core.WgMultipartParam
+	return u.String()
+}
+
 type WebSocketMessage struct {
 	ID      string          `json:"id,omitempty"`
 	Type    string          `json:"type"`

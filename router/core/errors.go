@@ -165,9 +165,9 @@ func propagateSubgraphErrors(ctx *resolve.Context) {
 func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, requestErrors graphqlerrors.RequestErrors, requestLogger *zap.Logger) {
 	if requestErrors != nil {
 
-		if r.URL.Query().Has("wg_sse") {
-
-			setSubscriptionHeaders(w)
+		wgRequestParams := NewWgRequestParams(r)
+		if wgRequestParams.UseSse {
+			setSubscriptionHeaders(wgRequestParams, w)
 
 			if statusCode != 0 {
 				w.WriteHeader(statusCode)
