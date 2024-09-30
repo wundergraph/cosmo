@@ -7,7 +7,6 @@ toolchain go1.22.0
 require (
 	connectrpc.com/connect v1.16.2
 	github.com/MicahParks/keyfunc/v2 v2.1.0
-	github.com/alitto/pond v1.9.2
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/buger/jsonparser v1.1.1
 	github.com/cespare/xxhash/v2 v2.3.0
