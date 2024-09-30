@@ -118,7 +118,7 @@ func (e *Epoll) Remove(conn net.Conn) error {
 
 	delete(e.conns, fd)
 
-	return syscall.Close(fd)
+	return nil
 }
 
 // Wait waits for events and returns the connections.
