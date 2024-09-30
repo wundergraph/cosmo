@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.116.2](https://github.com/wundergraph/cosmo/compare/router@0.116.1...router@0.116.2) (2024-09-30)
+
+### Bug Fixes
+
+* value completion reset, preserve __typename field location ([#1228](https://github.com/wundergraph/cosmo/issues/1228)) ([9d671f0](https://github.com/wundergraph/cosmo/commit/9d671f071af6d6b5789968682b98a9c5b7f9a7ec)) (@devsergiy)
+* **websocket:** avoid data race on client request ([#1226](https://github.com/wundergraph/cosmo/issues/1226)) ([dd3ef36](https://github.com/wundergraph/cosmo/commit/dd3ef360447afae8c95149ac71f4f9e1c15f66dd)) (@StarpTech)
+
 ## [0.116.1](https://github.com/wundergraph/cosmo/compare/router@0.116.0...router@0.116.1) (2024-09-30)
 
 ### Bug Fixes
