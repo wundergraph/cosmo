@@ -323,11 +323,11 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	err = handler.Initialize()
 	if err != nil {
 		if errors.Is(err, io.EOF) {
-			h.logger.Warn("No more data to read", zap.Error(err))
+			requestLogger.Warn("No more data to read", zap.Error(err))
 		} else if errors.As(err, &wsutil.ClosedError{}) {
-			h.logger.Warn("Client closed connection", zap.Error(err))
+			requestLogger.Warn("Client closed connection", zap.Error(err))
 		} else {
-			h.logger.Error("Initializing websocket connection", zap.Error(err))
+			requestLogger.Error("Initializing websocket connection", zap.Error(err))
 		}
 		handler.Close()
 		return
