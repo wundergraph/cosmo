@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.116.3](https://github.com/wundergraph/cosmo/compare/router@0.116.2...router@0.116.3) (2024-09-30)
+
+### Bug Fixes
+
+* upgrade engine for ws deadlock, remove pont pool ([#1230](https://github.com/wundergraph/cosmo/issues/1230)) ([3ac50f8](https://github.com/wundergraph/cosmo/commit/3ac50f8b878fb6a5e2460c22aa94412a28c49600)) (@StarpTech)
+
 ## [0.116.2](https://github.com/wundergraph/cosmo/compare/router@0.116.1...router@0.116.2) (2024-09-30)
 
 ### Bug Fixes
