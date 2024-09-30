@@ -293,5 +293,9 @@
     "ValueCompletion": {
       "Enabled": false
     }
+  },
+  "ClientHeader": {
+    "Name": "",
+    "Version": ""
   }
 }

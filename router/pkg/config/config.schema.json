@@ -1047,7 +1047,7 @@
       "required": ["enabled"],
       "additionalProperties": false
     },
-  "modules": {
+    "modules": {
       "type": "object",
       "description": "The configuration for the modules. The modules are used to extend the functionality of the router. The modules are specified as a map of module names to module configurations. It needs to match with the name of the module and the configuration of the module. See https://cosmo-docs.wundergraph.com/router/custom-modules for more information.",
       "additionalProperties": {
@@ -1706,6 +1706,20 @@
               "default": false
             }
           }
+        }
+      }
+    },
+    "client_header": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The custom client name header."
+        },
+        "version": {
+          "type": "string",
+          "description": "The custom client version header."
         }
       }
     }
