@@ -1,4 +1,5 @@
 export * from './ast/utils';
+export * from './buildASTSchema/buildASTSchema';
 export * from './errors/errors';
 export * from './errors/utils';
 export * from './federation/federation-factory';

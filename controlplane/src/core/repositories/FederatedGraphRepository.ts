@@ -1133,7 +1133,6 @@ export class FederatedGraphRepository {
       token: key.token,
       createdAt: key.createdAt.toISOString(),
       creatorEmail: user.email,
-      lastUsedAt: '',
     };
   }
 
@@ -1160,7 +1159,6 @@ export class FederatedGraphRepository {
         id: graphApiTokens.id,
         name: graphApiTokens.name,
         createdAt: graphApiTokens.createdAt,
-        lastUsedAt: graphApiTokens.lastUsedAt,
         creatorEmail: users.email,
         token: graphApiTokens.token,
       })
@@ -1185,7 +1183,6 @@ export class FederatedGraphRepository {
       createdAt: tokens[0].createdAt.toISOString(),
       token: tokens[0].token,
       creatorEmail: tokens[0].creatorEmail,
-      lastUsedAt: tokens[0].lastUsedAt?.toISOString(),
     };
   }
 
@@ -1198,7 +1195,6 @@ export class FederatedGraphRepository {
       .select({
         id: graphApiTokens.id,
         name: graphApiTokens.name,
-        lastUsedAt: graphApiTokens.lastUsedAt,
         createdAt: graphApiTokens.createdAt,
         creatorEmail: users.email,
         token: graphApiTokens.token,
@@ -1219,7 +1215,6 @@ export class FederatedGraphRepository {
       id: token.id,
       name: token.name,
       createdAt: token.createdAt.toISOString(),
-      lastUsedAt: token.lastUsedAt?.toISOString(),
       creatorEmail: token.creatorEmail,
       token: token.token,
     }));

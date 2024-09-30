@@ -163,3 +163,17 @@ check-buf:
 
 buf-lint:
 	buf lint
+
+new-cp-data-migration:
+	@if [ -z "$(name)" ]; then \
+		echo "Usage: make new-data-migration name=<migration_name>"; \
+		exit 1; \
+	fi
+	mkdir -p data_migrations/controlplane/$(shell date +%s)_$(name)
+
+new-gm-data-migration:
+	@if [ -z "$(name)" ]; then \
+		echo "Usage: make new-data-migration name=<migration_name>"; \
+		exit 1; \
+	fi
+	mkdir -p data_migrations/graphqlmetrics/$(shell date +%s)_$(name)

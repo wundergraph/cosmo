@@ -28,7 +28,8 @@
         "TraceContext": true,
         "Jaeger": false,
         "B3": false,
-        "Baggage": false
+        "Baggage": false,
+        "Datadog": true
       },
       "ExportGraphQLVariables": true,
       "WithNewRoot": false
@@ -98,6 +99,16 @@
       }
     }
   },
+  "CacheControl": {
+    "Enabled": true,
+    "Value": "max-age=180, public",
+    "Subgraphs": [
+      {
+        "Name": "products",
+        "Value": "max-age=60, public"
+      }
+    ]
+  },
   "Modules": {
     "myModule": {
       "value": 1
@@ -111,21 +122,48 @@
           "Matching": "",
           "Named": "X-Test-Header",
           "Rename": "",
-          "Default": ""
+          "Default": "",
+          "Name": "",
+          "Value": ""
         },
         {
           "Operation": "propagate",
           "Matching": "(?i)^X-Custom-.*",
           "Named": "",
           "Rename": "",
-          "Default": ""
+          "Default": "",
+          "Name": "",
+          "Value": ""
         },
         {
           "Operation": "propagate",
           "Matching": "",
           "Named": "X-User-Id",
           "Rename": "",
-          "Default": "123"
+          "Default": "123",
+          "Name": "",
+          "Value": ""
+        },
+        {
+          "Operation": "set",
+          "Matching": "",
+          "Named": "",
+          "Rename": "",
+          "Default": "",
+          "Name": "X-API-Key",
+          "Value": "some-secret"
+        }
+      ],
+      "Response": [
+        {
+          "Operation": "propagate",
+          "Matching": "",
+          "Named": "X-Custom-Header",
+          "Rename": "",
+          "Default": "",
+          "Algorithm": "append",
+          "Name": "",
+          "Value": ""
         }
       ]
     },
@@ -137,7 +175,21 @@
             "Matching": "",
             "Named": "Subgraph-Secret",
             "Rename": "",
-            "Default": "some-secret"
+            "Default": "some-secret",
+            "Name": "",
+            "Value": ""
+          }
+        ],
+        "Response": [
+          {
+            "Operation": "set",
+            "Matching": "",
+            "Named": "",
+            "Rename": "",
+            "Default": "",
+            "Algorithm": "",
+            "Name": "X-Subgraph-Key",
+            "Value": "some-subgraph-secret"
           }
         ]
       }
@@ -299,6 +351,7 @@
       "PrintOperationEnableASTRefs": false,
       "PrintPlanningPaths": false,
       "PrintQueryPlans": false,
+      "PrintIntermediateQueryPlans": false,
       "PrintNodeSuggestions": false,
       "ConfigurationVisitor": false,
       "PlanningVisitor": false,
@@ -403,6 +456,12 @@
     "Storage": {
       "ProviderID": "s3",
       "ObjectPrefix": "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/operations/foo"
+    }
+  },
+  "ApolloCompatibilityFlags": {
+    "EnableAll": false,
+    "ValueCompletion": {
+      "Enabled": false
     }
   }
 }

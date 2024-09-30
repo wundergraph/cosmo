@@ -2,14 +2,14 @@ package config
 
 import (
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/unique"
 	"os"
 	"time"
 
-	"github.com/goccy/go-yaml"
-
 	"github.com/caarlos0/env/v11"
+	"github.com/goccy/go-yaml"
 	"github.com/joho/godotenv"
+
+	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 )
 
@@ -58,6 +58,7 @@ type PropagationConfig struct {
 	Jaeger       bool `yaml:"jaeger"`
 	B3           bool `yaml:"b3"`
 	Baggage      bool `yaml:"baggage"`
+	Datadog      bool `yaml:"datadog"`
 }
 
 type Prometheus struct {
@@ -162,24 +163,83 @@ type BackoffJitterRetry struct {
 	Interval    time.Duration `yaml:"interval" envDefault:"3s"`
 }
 
+type SubgraphCacheControlRule struct {
+	Name  string `yaml:"name"`
+	Value string `yaml:"value"`
+}
+
+type CacheControlPolicy struct {
+	Enabled   bool                       `yaml:"enabled" envDefault:"false" env:"CACHE_CONTROL_POLICY_ENABLED"`
+	Value     string                     `yaml:"value" env:"CACHE_CONTROL_POLICY_VALUE"`
+	Subgraphs []SubgraphCacheControlRule `yaml:"subgraphs,omitempty"`
+}
+
 type HeaderRules struct {
 	// All is a set of rules that apply to all requests
-	All       GlobalHeaderRule            `yaml:"all,omitempty"`
-	Subgraphs map[string]GlobalHeaderRule `yaml:"subgraphs,omitempty"`
+	All       *GlobalHeaderRule            `yaml:"all,omitempty"`
+	Subgraphs map[string]*GlobalHeaderRule `yaml:"subgraphs,omitempty"`
 }
 
 type GlobalHeaderRule struct {
 	// Request is a set of rules that apply to requests
-	Request []RequestHeaderRule `yaml:"request,omitempty"`
+	Request  []*RequestHeaderRule  `yaml:"request,omitempty"`
+	Response []*ResponseHeaderRule `yaml:"response,omitempty"`
 }
 
 type HeaderRuleOperation string
 
 const (
 	HeaderRuleOperationPropagate HeaderRuleOperation = "propagate"
+	HeaderRuleOperationSet       HeaderRuleOperation = "set"
 )
 
+type HeaderRule interface {
+	GetOperation() HeaderRuleOperation
+	GetMatching() string
+}
+
 type RequestHeaderRule struct {
+	// Operation describes the header operation to perform e.g. "propagate"
+	Operation HeaderRuleOperation `yaml:"op"`
+	// Propagate options
+	// Matching is the regex to match the header name against
+	Matching string `yaml:"matching"`
+	// Named is the exact header name to match
+	Named string `yaml:"named"`
+	// Rename renames the header's key to the provided value
+	Rename string `yaml:"rename,omitempty"`
+	// Default is the default value to set if the header is not present
+	Default string `yaml:"default"`
+
+	// Set header options
+	// Name is the name of the header to set
+	Name string `yaml:"name"`
+	// Value is the value of the header to set
+	Value string `yaml:"value"`
+}
+
+func (r *RequestHeaderRule) GetOperation() HeaderRuleOperation {
+	return r.Operation
+}
+
+func (r *RequestHeaderRule) GetMatching() string {
+	return r.Matching
+}
+
+type ResponseHeaderRuleAlgorithm string
+
+const (
+	// ResponseHeaderRuleAlgorithmFirstWrite propagates the first response header from a subgraph to the client
+	ResponseHeaderRuleAlgorithmFirstWrite ResponseHeaderRuleAlgorithm = "first_write"
+	// ResponseHeaderRuleAlgorithmLastWrite propagates the last response header from a subgraph to the client
+	ResponseHeaderRuleAlgorithmLastWrite ResponseHeaderRuleAlgorithm = "last_write"
+	// ResponseHeaderRuleAlgorithmAppend appends all response headers from all subgraphs to a comma separated list of values in the client response
+	ResponseHeaderRuleAlgorithmAppend ResponseHeaderRuleAlgorithm = "append"
+	// ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl propagates the most restrictive cache control header from all subgraph responses to the client
+	ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl ResponseHeaderRuleAlgorithm = "most_restrictive_cache_control"
+)
+
+type ResponseHeaderRule struct {
 	// Operation describes the header operation to perform e.g. "propagate"
 	Operation HeaderRuleOperation `yaml:"op"`
 	// Matching is the regex to match the header name against
@@ -190,6 +250,22 @@ type RequestHeaderRule struct {
 	Rename string `yaml:"rename,omitempty"`
 	// Default is the default value to set if the header is not present
 	Default string `yaml:"default"`
+	// Algorithm is the algorithm to use when multiple headers are present
+	Algorithm ResponseHeaderRuleAlgorithm `yaml:"algorithm,omitempty"`
+
+	// Set header options
+	// Name is the name of the header to set
+	Name string `yaml:"name"`
+	// Value is the value of the header to set
+	Value string `yaml:"value"`
+}
+
+func (r *ResponseHeaderRule) GetOperation() HeaderRuleOperation {
+	return r.Operation
+}
+
+func (r *ResponseHeaderRule) GetMatching() string {
+	return r.Matching
 }
 
 type EngineDebugConfiguration struct {
@@ -197,6 +273,7 @@ type EngineDebugConfiguration struct {
 	PrintOperationEnableASTRefs                  bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_OPERATION_ENABLE_AST_REFS" yaml:"print_operation_enable_ast_refs"`
 	PrintPlanningPaths                           bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_PLANNING_PATHS" yaml:"print_planning_paths"`
 	PrintQueryPlans                              bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_QUERY_PLANS" yaml:"print_query_plans"`
+	PrintIntermediateQueryPlans                  bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_INTERMEDIATE_QUERY_PLANS" yaml:"print_intermediate_query_plans"`
 	PrintNodeSuggestions                         bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_NODE_SUGGESTIONS" yaml:"print_node_suggestions"`
 	ConfigurationVisitor                         bool `envDefault:"false" env:"ENGINE_DEBUG_CONFIGURATION_VISITOR" yaml:"configuration_visitor"`
 	PlanningVisitor                              bool `envDefault:"false" env:"ENGINE_DEBUG_PLANNING_VISITOR" yaml:"planning_visitor"`
@@ -515,17 +592,27 @@ type PersistedOperationsConfig struct {
 	Storage PersistedOperationsStorageConfig `yaml:"storage"`
 }
 
+type ApolloCompatibilityFlags struct {
+	EnableAll       bool                               `yaml:"enable_all" envDefault:"false" env:"APOLLO_COMPATIBILITY_ENABLE_ALL"`
+	ValueCompletion ApolloCompatibilityValueCompletion `yaml:"value_completion"`
+}
+
+type ApolloCompatibilityValueCompletion struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_VALUE_COMPLETION_ENABLED"`
+}
+
 type Config struct {
 	Version string `yaml:"version,omitempty" ignored:"true"`
 
-	InstanceID     string           `yaml:"instance_id,omitempty" env:"INSTANCE_ID"`
-	Graph          Graph            `yaml:"graph,omitempty"`
-	Telemetry      Telemetry        `yaml:"telemetry,omitempty"`
-	GraphqlMetrics GraphqlMetrics   `yaml:"graphql_metrics,omitempty"`
-	CORS           CORS             `yaml:"cors,omitempty"`
-	Cluster        Cluster          `yaml:"cluster,omitempty"`
-	Compliance     ComplianceConfig `yaml:"compliance,omitempty"`
-	TLS            TLSConfiguration `yaml:"tls,omitempty"`
+	InstanceID     string             `yaml:"instance_id,omitempty" env:"INSTANCE_ID"`
+	Graph          Graph              `yaml:"graph,omitempty"`
+	Telemetry      Telemetry          `yaml:"telemetry,omitempty"`
+	GraphqlMetrics GraphqlMetrics     `yaml:"graphql_metrics,omitempty"`
+	CORS           CORS               `yaml:"cors,omitempty"`
+	Cluster        Cluster            `yaml:"cluster,omitempty"`
+	Compliance     ComplianceConfig   `yaml:"compliance,omitempty"`
+	TLS            TLSConfiguration   `yaml:"tls,omitempty"`
+	CacheControl   CacheControlPolicy `yaml:"cache_control_policy"`
 
 	Modules        map[string]interface{} `yaml:"modules,omitempty"`
 	Headers        HeaderRules            `yaml:"headers,omitempty"`
@@ -573,6 +660,7 @@ type Config struct {
 	StorageProviders          StorageProviders          `yaml:"storage_providers"`
 	ExecutionConfig           ExecutionConfig           `yaml:"execution_config"`
 	PersistedOperationsConfig PersistedOperationsConfig `yaml:"persisted_operations"`
+	ApolloCompatibilityFlags  ApolloCompatibilityFlags  `yaml:"apollo_compatibility_flags"`
 }
 
 type LoadResult struct {

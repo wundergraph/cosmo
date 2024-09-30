@@ -98,6 +98,10 @@ export class AnalyticsRequestViewRepository {
       unit: Unit.TraceID,
       title: 'Trace ID',
     },
+    spanId: {
+      title: 'Span ID',
+      unit: Unit.SpanID,
+    },
     totalRequests: {
       type: 'number',
       title: 'Total Requests',
@@ -249,6 +253,7 @@ export class AnalyticsRequestViewRepository {
         query = `
           SELECT
             TraceId as traceId,
+            SpanId as spanId,
             -- DateTime64 is returned as a string
             toString(toUnixTimestamp(Timestamp)) as unixTimestamp,
             OperationName as operationName,

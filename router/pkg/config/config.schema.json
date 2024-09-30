@@ -549,6 +549,10 @@
                   "type": "boolean",
                   "description": "Enable the B3 propagation. See https://github.com/openzipkin/b3-propagation (zipkin) for more information."
                 },
+                "datadog": {
+                  "type": "boolean",
+                  "description": "Enable the Datadog propagation."
+                },
                 "baggage": {
                   "type": "boolean",
                   "description": "Enable the baggage propagation. See https://www.w3.org/TR/baggage/ for more information."
@@ -699,6 +703,7 @@
             "Apollo-Graphql-Client-Name",
             "Apollo-Graphql-Client-Version",
             "x-wg-trace",
+            "x-wg-disable-tracing",
             "x-wg-token",
             "x-wg-include-query-plan",
             "x-wg-skip-loader",
@@ -958,7 +963,19 @@
             "request": {
               "type": "array",
               "items": {
-                "$ref": "#/definitions/traffic_shaping_header_rule"
+                "oneOf": [
+                  { "$ref": "#/definitions/traffic_shaping_header_rule" },
+                  { "$ref": "#/definitions/set_header_rule" }
+                ]
+              }
+            },
+            "response": {
+              "type": "array",
+              "items": {
+                "oneOf": [
+                  { "$ref": "#/definitions/traffic_shaping_header_response_rule" },
+                  { "$ref": "#/definitions/set_header_rule" }
+                ]
               }
             }
           }
@@ -972,7 +989,19 @@
               "request": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/definitions/traffic_shaping_header_rule"
+                  "oneOf": [
+                    { "$ref": "#/definitions/traffic_shaping_header_rule" },
+                    { "$ref": "#/definitions/set_header_rule" }
+                  ]
+                }
+              },
+              "response": {
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    { "$ref": "#/definitions/traffic_shaping_header_response_rule" },
+                    { "$ref": "#/definitions/set_header_rule" }
+                  ]
                 }
               }
             }
@@ -980,7 +1009,45 @@
         }
       }
     },
-    "modules": {
+    "cache_control_policy": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Determines whether cache control policy is enabled.",
+          "examples": [true]
+        },
+        "value": {
+          "type": "string",
+          "description": "Global cache control value.",
+          "examples": ["max-age=180, public"]
+        },
+        "subgraphs": {
+          "type": "array",
+          "description": "Subgraph-specific cache control settings.",
+          "required": ["name"],
+          "additionalProperties": false,
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Name of the subgraph.",
+                "examples": ["products"]
+              },
+              "value": {
+                "type": "string",
+                "description": "Cache control value for the subgraph.",
+                "examples": ["max-age=60, public"]
+              }
+            }
+          }
+        }
+      },
+      "required": ["enabled"],
+      "additionalProperties": false
+    },
+  "modules": {
       "type": "object",
       "description": "The configuration for the modules. The modules are used to extend the functionality of the router. The modules are specified as a map of module names to module configurations. It needs to match with the name of the module and the configuration of the module. See https://cosmo-docs.wundergraph.com/router/custom-modules for more information.",
       "additionalProperties": {
@@ -1618,6 +1685,29 @@
           "description": "Propagate Subgraph HTTP status codes. If the value is true (default: false), Subgraph HTTP response status codes will be propagated to the client in the extensions statusCode field."
         }
       }
+    },
+    "apollo_compatibility_flags": {
+      "type": "object",
+      "description": "To enable full compatibility with Apollo Federation, Apollo Gateway and Apollo Router, you can enable certain compatibility flags, allowing you to use Cosmo Router as a drop-in replacement for Apollo.",
+      "additionalProperties": false,
+      "properties": {
+        "enable_all": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable all Apollo compatibility flags. If the value is true, all Apollo compatibility flags are enabled."
+        },
+        "value_completion": {
+          "type": "object",
+          "description": "Invalid __typename values will be returned in extensions.valueCompletion instead of errors.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -1654,6 +1744,69 @@
         }
       },
       "required": ["op"]
+    },
+    "traffic_shaping_header_response_rule": {
+      "type": "object",
+      "description": "The configuration for all subgraphs. The configuration is used to configure the traffic shaping for all subgraphs.",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "type": "string",
+          "enum": ["propagate"],
+          "examples": ["propagate"],
+          "description": "The operation to perform on the header. The supported operations are 'propagate'. The 'propagate' operation is used to propagate the header to the subgraphs."
+        },
+        "matching": {
+          "type": "string",
+          "examples": ["(?i)^X-Custom-.*"],
+          "description": "The matching rule for the header. The matching rule is a regular expression that is used to match the header. Can't be used with 'named'."
+        },
+        "named": {
+          "type": "string",
+          "examples": ["X-Test-Header"],
+          "description": "The name of the header to match. Use the canonical version e.g. X-Test-Header. Can't be used with 'matching'."
+        },
+        "rename": {
+          "type": "string",
+          "examples": ["X-Rename-Test-Header"],
+          "description": "Rename is used to  rename the named or the matching headers. It can be used with either the named or the matching."
+        },
+        "default": {
+          "type": "string",
+          "examples": ["default-value"],
+          "description": "The default value of the header in case it is not present in the request."
+        },
+        "algorithm": {
+          "type": "string",
+          "enum": ["first_write", "last_write", "append"],
+          "examples": ["first_write"],
+          "description": "The algorith, to use when multiple headers are present. The supported operations are '\"first_write\", \"last_write\", and \"append\". The 'first_write' retains the first value of a given header. The 'last_write' retains the last value of a given header. The 'append' appends all values of a given header."
+        }
+      },
+      "required": ["op", "algorithm"]
+    },
+    "set_header_rule": {
+      "type": "object",
+      "description": "The configuration for setting headers. This is used to set specific headers in requests or responses.",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "type": "string",
+          "const": "set",
+          "description": "The 'set' operation is used to set a specific header value."
+        },
+        "name": {
+          "type": "string",
+          "examples": ["X-API-Key"],
+          "description": "The name of the header to set."
+        },
+        "value": {
+          "type": "string",
+          "examples": ["My-Secret-Value"],
+          "description": "The value to set for the header. This can include environment variables."
+        }
+      },
+      "required": ["op", "name", "value"]
     }
   }
 }

@@ -4,6 +4,34 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.24.2](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.24.1...aws-lambda-router@0.24.2) (2024-09-30)
+
+### Bug Fixes
+
+* planning of consecutive fragments and fragments on union ([#1223](https://github.com/wundergraph/cosmo/issues/1223)) ([3e390cd](https://github.com/wundergraph/cosmo/commit/3e390cd5cf6ca87694c6a25794aecd84d4f0c31e)) (@devsergiy)
+
+## [0.24.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.24.0...aws-lambda-router@0.24.1) (2024-09-23)
+
+**Note:** Version bump only for package aws-lambda-router
+
+# [0.24.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.23.0...aws-lambda-router@0.24.0) (2024-09-23)
+
+### Features
+
+* add apollo compatibility mode with support for valueCompletion ([#1205](https://github.com/wundergraph/cosmo/issues/1205)) ([18b1ef0](https://github.com/wundergraph/cosmo/commit/18b1ef01b12945d2f3acc80ea9548a17f9effa21)) (@jensneuse)
+
+# [0.23.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.22.2...aws-lambda-router@0.23.0) (2024-09-19)
+
+### Features
+
+* return error from Router when Subgraph returns invalid value for __typename field ([#1194](https://github.com/wundergraph/cosmo/issues/1194)) ([b99d2fd](https://github.com/wundergraph/cosmo/commit/b99d2fdcd8b311028d11b501addb9d69e61c7df8)) (@jensneuse)
+
+## [0.22.2](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.22.1...aws-lambda-router@0.22.2) (2024-09-17)
+
+### Bug Fixes
+
+* ignore empty errors array ([#1181](https://github.com/wundergraph/cosmo/issues/1181)) ([bc5dda3](https://github.com/wundergraph/cosmo/commit/bc5dda393f727d8ee3483ea7e53c89377a0d2722)) (@devsergiy)
+
 ## [0.22.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.22.0...aws-lambda-router@0.22.1) (2024-09-13)
 
 **Note:** Version bump only for package aws-lambda-router

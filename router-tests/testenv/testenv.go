@@ -10,7 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"go.uber.org/zap/zaptest/observer"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"io"
 	"log"
 	"math/rand"
@@ -24,6 +24,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"go.uber.org/zap/zaptest/observer"
 
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 
@@ -124,6 +126,8 @@ type Config struct {
 	PrometheusRegistry                 *prometheus.Registry
 	ShutdownDelay                      time.Duration
 	NoRetryClient                      bool
+	PropagationConfig                  config.PropagationConfig
+	CacheControlPolicy                 config.CacheControlPolicy
 	LogObservation                     LogObservationConfig
 }
 
@@ -418,19 +422,14 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	if oc := cfg.LogObservation; oc.Enabled {
 		var zCore zapcore.Core
 		zCore, logObserver = observer.New(oc.LogLevel)
-		zapLogger = zap.New(zCore)
+		zapLogger = logging.NewZapLoggerWithCore(zCore, true)
 	} else {
 		ec := zap.NewProductionEncoderConfig()
 		ec.EncodeDuration = zapcore.SecondsDurationEncoder
 		ec.TimeKey = "time"
 
 		syncer := zapcore.AddSync(os.Stderr)
-
-		zapLogger = zap.New(zapcore.NewCore(
-			zapcore.NewConsoleEncoder(ec),
-			syncer,
-			zapcore.ErrorLevel,
-		))
+		zapLogger = logging.NewZapLoggerWithSyncer(syncer, false, true, zapcore.ErrorLevel)
 	}
 
 	rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdn, natsData.Server, zapLogger)
@@ -581,6 +580,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			RewritePaths:           true,
 			AllowedExtensionFields: []string{"code"},
 		},
+		CacheControl: testConfig.CacheControlPolicy,
 	}
 
 	if testConfig.ModifyCDNConfig != nil {
@@ -652,6 +652,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithPlayground(true),
 		core.WithEngineExecutionConfig(engineExecutionConfig),
 		core.WithSecurityConfig(cfg.SecurityConfiguration),
+		core.WithCacheControlPolicy(cfg.CacheControl),
 		core.WithCDN(cfg.CDN),
 		core.WithListenerAddr(listenerAddr),
 		core.WithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation),
@@ -682,18 +683,18 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	}
 
 	if testConfig.TraceExporter != nil {
+		testConfig.PropagationConfig.TraceContext = true
+
 		c := core.TraceConfigFromTelemetry(&config.Telemetry{
 			ServiceName:        "cosmo-router",
 			Attributes:         testConfig.OtelAttributes,
 			ResourceAttributes: testConfig.OtelResourceAttributes,
 			Tracing: config.Tracing{
-				Enabled:            true,
-				SamplingRate:       1,
-				ParentBasedSampler: !testConfig.DisableParentBasedSampler,
-				Exporters:          []config.TracingExporter{},
-				Propagation: config.PropagationConfig{
-					TraceContext: true,
-				},
+				Enabled:               true,
+				SamplingRate:          1,
+				ParentBasedSampler:    !testConfig.DisableParentBasedSampler,
+				Exporters:             []config.TracingExporter{},
+				Propagation:           testConfig.PropagationConfig,
 				TracingGlobalFeatures: config.TracingGlobalFeatures{},
 			},
 		})

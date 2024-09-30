@@ -22,6 +22,9 @@ export class SchemaCheckRepository {
     isComposable?: boolean;
     isDeleted?: boolean;
     proposedSubgraphSchemaSDL: string;
+    trafficCheckSkipped?: boolean;
+    lintSkipped?: boolean;
+    graphPruningSkipped?: boolean;
   }): Promise<string> {
     const insertedSchemaCheck = await this.db
       .insert(schemaChecks)
@@ -30,6 +33,9 @@ export class SchemaCheckRepository {
         isComposable: data.isComposable,
         isDeleted: data.isDeleted,
         proposedSubgraphSchemaSDL: data.proposedSubgraphSchemaSDL,
+        clientTrafficCheckSkipped: data.trafficCheckSkipped || false,
+        lintSkipped: data.lintSkipped || false,
+        graphPruningSkipped: data.graphPruningSkipped || false,
       })
       .returning()
       .execute();
@@ -42,6 +48,7 @@ export class SchemaCheckRepository {
     hasClientTraffic?: boolean;
     hasBreakingChanges?: boolean;
     hasLintErrors?: boolean;
+    hasGraphPruningErrors?: boolean;
   }): Promise<string | undefined> {
     const updatedSchemaCheck = await this.db
       .update(schemaChecks)
@@ -50,6 +57,7 @@ export class SchemaCheckRepository {
         hasBreakingChanges: data.hasBreakingChanges,
         hasClientTraffic: data.hasClientTraffic,
         hasLintErrors: data.hasLintErrors,
+        hasGraphPruningErrors: data.hasGraphPruningErrors,
       })
       .where(eq(schemaChecks.id, data.schemaCheckID))
       .returning()

@@ -41,6 +41,7 @@ import {
 import { Tooltip } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
+import { useLocalStorage } from "@/hooks/use-local-storage";
 import { NextPageWithLayout } from "@/lib/page";
 import { parseSchema } from "@/lib/schema-helpers";
 import { cn } from "@/lib/utils";
@@ -603,6 +604,35 @@ const PlaygroundPage: NextPageWithLayout = () => {
   const [query, setQuery] = useState<string | undefined>(
     operation ? decodeURIComponent(operation) : undefined,
   );
+
+  const [storedHeaders, setStoredHeaders] = useLocalStorage(
+    "graphiql:headers",
+    "",
+    {
+      deserializer(value) {
+        return value;
+      },
+      serializer(value) {
+        return value;
+      },
+    },
+  );
+  const [tempHeaders, setTempHeaders] = useState<any>();
+
+  useEffect(() => {
+    if (!storedHeaders || tempHeaders) {
+      return;
+    }
+    setTempHeaders(storedHeaders);
+  }, [storedHeaders, tempHeaders]);
+
+  useEffect(() => {
+    if (!tempHeaders) {
+      return;
+    }
+    setStoredHeaders(tempHeaders);
+  }, [setStoredHeaders, tempHeaders]);
+
   const [headers, setHeaders] = useState(`{
   "X-WG-TRACE" : "true"
 }`);
@@ -787,6 +817,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
   ]);
 
   const [debouncedQuery] = useDebounce(query, 300);
+  const [debouncedHeaders] = useDebounce(headers, 300);
 
   useEffect(() => {
     const getPlan = async () => {
@@ -806,11 +837,14 @@ const PlaygroundPage: NextPageWithLayout = () => {
           return;
         }
 
+        const existingHeaders = JSON.parse(debouncedHeaders || "{}");
+        delete existingHeaders["X-WG-TRACE"];
         const requestHeaders: Record<string, string> = {
-          ...JSON.parse(headers),
+          ...existingHeaders,
           "X-WG-Token": graphContext.graphRequestToken,
           "X-WG-Include-Query-Plan": "true",
           "X-WG-Skip-Loader": "true",
+          "X-WG-DISABLE-TRACING": "true",
         };
 
         validateHeaders(requestHeaders);
@@ -849,9 +883,9 @@ const PlaygroundPage: NextPageWithLayout = () => {
     getPlan();
   }, [
     debouncedQuery,
+    debouncedHeaders,
     graphContext?.featureFlagsInLatestValidComposition,
     graphContext?.graphRequestToken,
-    headers,
     loadSchemaGraphId,
     routingUrl,
     schema,
@@ -898,7 +932,9 @@ const PlaygroundPage: NextPageWithLayout = () => {
           query={query}
           variables={variables ? decodeURIComponent(variables) : undefined}
           onEditQuery={setQuery}
-          headers={headers}
+          defaultHeaders={`{
+  "X-WG-TRACE" : "true"
+}`}
           onEditHeaders={setHeaders}
           plugins={[
             explorerPlugin({

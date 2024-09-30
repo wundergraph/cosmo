@@ -1,6 +1,6 @@
 import { LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { JWTPayload } from 'jose';
-import { LintRuleEnum } from '../db/models.js';
+import { GraphPruningRuleEnum, LintRuleEnum } from '../db/models.js';
 
 export type FeatureIds =
   | 'users'
@@ -19,7 +19,8 @@ export type FeatureIds =
   | 'support'
   | 'ai'
   | 'oidc'
-  | 'scim';
+  | 'scim'
+  | 'field-pruning-grace-period';
 
 export type Features = {
   [key in FeatureIds]: Feature;
@@ -158,6 +159,10 @@ export interface SchemaCheckDTO {
     checkRunId: number;
   };
   hasLintErrors: boolean;
+  hasGraphPruningErrors: boolean;
+  clientTrafficCheckSkipped: boolean;
+  lintSkipped: boolean;
+  graphPruningSkipped: boolean;
 }
 
 export interface SchemaCheckSummaryDTO extends SchemaCheckDTO {
@@ -376,7 +381,6 @@ export interface GraphApiKeyDTO {
   id: string;
   name: string;
   token: string;
-  lastUsedAt?: string;
   createdAt: string;
   creatorEmail: string | null;
 }
@@ -577,6 +581,53 @@ export interface SchemaLintIssues {
   errors: LintIssueResult[];
 }
 
+type GraphPruningRuleType = Record<GraphPruningRuleEnum, GraphPruningRuleEnum>;
+
+export const GraphPruningRules: GraphPruningRuleType = {
+  UNUSED_FIELDS: 'UNUSED_FIELDS',
+  DEPRECATED_FIELDS: 'DEPRECATED_FIELDS',
+  REQUIRE_DEPRECATION_BEFORE_DELETION: 'REQUIRE_DEPRECATION_BEFORE_DELETION',
+};
+
+export interface SchemaGraphPruningDTO {
+  severity: LintSeverityLevel;
+  ruleName: GraphPruningRuleEnum;
+  gracePeriodInDays: number;
+  schemaUsageCheckPeriodInDays?: number;
+}
+
+export interface GraphPruningIssueResult {
+  graphPruningRuleType: GraphPruningRuleEnum;
+  severity: LintSeverity;
+  fieldPath: string;
+  message: string;
+  issueLocation: {
+    line: number;
+    column: number;
+    endLine?: number;
+    endColumn?: number;
+  };
+  federatedGraphId: string;
+  federatedGraphName: string;
+}
+
+export interface SchemaGraphPruningIssues {
+  warnings: GraphPruningIssueResult[];
+  errors: GraphPruningIssueResult[];
+}
+
+export interface Field {
+  name: string;
+  typeName: string;
+  path: string;
+  location: {
+    line?: number;
+    column?: number;
+    endLine?: number;
+    endColumn?: number;
+  };
+  isDeprecated: boolean;
+}
 export interface S3StorageOptions {
   url: string;
   region?: string;

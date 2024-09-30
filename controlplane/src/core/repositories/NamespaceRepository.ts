@@ -77,4 +77,13 @@ export class NamespaceRepository {
       })
       .where(and(eq(schema.namespaces.name, data.name), eq(schema.namespaces.organizationId, this.organizationId)));
   }
+
+  public async toggleEnableGraphPruning(data: { id: string; enableGraphPruning: boolean }) {
+    await this.db
+      .update(schema.namespaces)
+      .set({
+        enableGraphPruning: data.enableGraphPruning,
+      })
+      .where(and(eq(schema.namespaces.id, data.id), eq(schema.namespaces.organizationId, this.organizationId)));
+  }
 }

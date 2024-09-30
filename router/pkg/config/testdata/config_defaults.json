@@ -18,7 +18,8 @@
         "TraceContext": true,
         "Jaeger": false,
         "B3": false,
-        "Baggage": false
+        "Baggage": false,
+        "Datadog": false
       },
       "ExportGraphQLVariables": false,
       "WithNewRoot": false
@@ -80,11 +81,14 @@
       }
     }
   },
+  "CacheControl": {
+    "Enabled": false,
+    "Value": "",
+    "Subgraphs": null
+  },
   "Modules": null,
   "Headers": {
-    "All": {
-      "Request": null
-    },
+    "All": null,
     "Subgraphs": null
   },
   "TrafficShaping": {
@@ -187,6 +191,7 @@
       "PrintOperationEnableASTRefs": false,
       "PrintPlanningPaths": false,
       "PrintQueryPlans": false,
+      "PrintIntermediateQueryPlans": false,
       "PrintNodeSuggestions": false,
       "ConfigurationVisitor": false,
       "PlanningVisitor": false,
@@ -281,6 +286,12 @@
     "Storage": {
       "ProviderID": "",
       "ObjectPrefix": ""
+    }
+  },
+  "ApolloCompatibilityFlags": {
+    "EnableAll": false,
+    "ValueCompletion": {
+      "Enabled": false
     }
   }
 }
