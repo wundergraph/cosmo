@@ -322,7 +322,13 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	})
 	err = handler.Initialize()
 	if err != nil {
-		requestLogger.Error("Initializing websocket connection", zap.Error(err))
+		if errors.Is(err, io.EOF) {
+			h.logger.Warn("No more data to read", zap.Error(err))
+		} else if errors.As(err, &wsutil.ClosedError{}) {
+			h.logger.Warn("Client closed connection", zap.Error(err))
+		} else {
+			h.logger.Error("Initializing websocket connection", zap.Error(err))
+		}
 		handler.Close()
 		return
 	}
@@ -964,9 +970,6 @@ func (h *WebSocketConnectionHandler) Initialize() (err error) {
 	h.logger.Debug("Websocket connection", zap.String("protocol", h.protocol.Subprotocol()))
 	h.initialPayload, err = h.protocol.Initialize()
 	if err != nil {
-		if !errors.Is(err, io.EOF) {
-			h.logger.Error("Initializing websocket connection", zap.Error(err))
-		}
 		_ = h.requestError(fmt.Errorf("error initializing session"))
 		return err
 	}
