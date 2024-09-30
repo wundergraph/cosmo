@@ -284,7 +284,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	// We can parse the request options before creating the handler
 	// this avoids touching the client request across goroutines
 
-	executionOptions, traceOptions, err := h.preHandler.parseRequestOptions(r, clientInfo, h.logger)
+	executionOptions, traceOptions, err := h.preHandler.parseRequestOptions(r, clientInfo, requestLogger)
 	if err != nil {
 		requestLogger.Error("Parse request options", zap.Error(err))
 		_ = c.Close()
@@ -322,7 +322,13 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	})
 	err = handler.Initialize()
 	if err != nil {
-		requestLogger.Error("Initializing websocket connection", zap.Error(err))
+		if errors.Is(err, io.EOF) {
+			requestLogger.Warn("No more data to read during initialization", zap.Error(err))
+		} else if errors.As(err, &wsutil.ClosedError{}) {
+			requestLogger.Warn("Client closed connection during initialization", zap.Error(err))
+		} else {
+			requestLogger.Error("Initializing websocket connection", zap.Error(err))
+		}
 		handler.Close()
 		return
 	}
@@ -964,9 +970,6 @@ func (h *WebSocketConnectionHandler) Initialize() (err error) {
 	h.logger.Debug("Websocket connection", zap.String("protocol", h.protocol.Subprotocol()))
 	h.initialPayload, err = h.protocol.Initialize()
 	if err != nil {
-		if !errors.Is(err, io.EOF) {
-			h.logger.Error("Initializing websocket connection", zap.Error(err))
-		}
 		_ = h.requestError(fmt.Errorf("error initializing session"))
 		return err
 	}
