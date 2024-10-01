@@ -164,14 +164,13 @@ func propagateSubgraphErrors(ctx *resolve.Context) {
 // It accepts a graphqlerrors.RequestErrors object and writes it to the response based on the GraphQL spec.
 func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, requestErrors graphqlerrors.RequestErrors, requestLogger *zap.Logger) {
 	if requestErrors != nil {
-		if statusCode != 0 {
-			w.WriteHeader(statusCode)
-		}
-
 		wgRequestParams := NewWgRequestParams(r)
 		if wgRequestParams.UseSse {
 			setSubscriptionHeaders(wgRequestParams, w)
 
+			if statusCode != 0 {
+				w.WriteHeader(statusCode)
+			}
 			_, err := w.Write([]byte("event: next\ndata: "))
 			if err != nil {
 				if requestLogger != nil {
@@ -189,12 +188,15 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 				if requestLogger != nil {
 					requestLogger.Error("error writing multipart response", zap.Error(err))
 				}
-				return
 			}
+			return
 		}
 
 		// Set header before writing status code
 		w.Header().Set("Content-Type", "application/json")
+		if statusCode != 0 {
+			w.WriteHeader(statusCode)
+		}
 		if _, err := requestErrors.WriteResponse(w); err != nil {
 			if requestLogger != nil {
 				if rErrors.IsBrokenPipe(err) {

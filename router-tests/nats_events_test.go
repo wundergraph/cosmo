@@ -269,6 +269,8 @@ func TestNatsEvents(t *testing.T) {
 			assertLineEquals(reader, "")
 		}
 
+		heartbeatInterval := 5 * time.Second
+
 		t.Run("subscribe with multipart responses", func(t *testing.T) {
 			t.Parallel()
 
@@ -302,6 +304,8 @@ func TestNatsEvents(t *testing.T) {
 					assertMultipartPrefix(reader)
 					assertLineEquals(reader, "{\"payload\":{\"data\":{\"employeeUpdated\":{\"id\":3,\"details\":{\"forename\":\"Stefan\",\"surname\":\"Avram\"}}}}}")
 					assertMultipartPrefix(reader)
+					assertLineEquals(reader, "{}")
+					assertMultipartPrefix(reader)
 					assertLineEquals(reader, "{\"payload\":{\"data\":{\"employeeUpdated\":{\"id\":3,\"details\":{\"forename\":\"Stefan\",\"surname\":\"Avram\"}}}}}")
 					wg.Done()
 
@@ -316,6 +320,7 @@ func TestNatsEvents(t *testing.T) {
 				})
 				require.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, res.Body)
 
+				time.Sleep(heartbeatInterval)
 				// Trigger the subscription via NATS
 				err := xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
 				require.NoError(t, err)

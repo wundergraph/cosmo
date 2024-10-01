@@ -5,17 +5,19 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 const (
-	WgPrefix             = "wg_"
-	WgSseParam           = WgPrefix + "sse"
-	WgSubscribeOnceParam = WgPrefix + "subscribe_once"
-	WgMultipartParam     = WgPrefix + "multipart"
-	multipartBoundary    = "graphql"
-	jsonContent          = "application/json"
+	WgPrefix                   = "wg_"
+	WgSseParam                 = WgPrefix + "sse"
+	WgSubscribeOnceParam       = WgPrefix + "subscribe_once"
+	WgMultipartParam           = WgPrefix + "multipart"
+	multipartBoundary          = "graphql"
+	jsonContent                = "application/json"
+	multipartHeartbeatInterval = 5
 )
 
 var (
@@ -32,6 +34,7 @@ type HttpFlushWriter struct {
 	multipart     bool
 	buf           *bytes.Buffer
 	variables     []byte
+	ticker        *time.Ticker // Ticker used for multipart heartbeats
 }
 
 func (f *HttpFlushWriter) Complete() {
@@ -56,6 +59,10 @@ func (f *HttpFlushWriter) Write(p []byte) (n int, err error) {
 }
 
 func (f *HttpFlushWriter) Close() {
+	if f.ticker != nil {
+		f.ticker.Stop()
+	}
+
 	if f.ctx.Err() != nil {
 		return
 	}
@@ -105,6 +112,36 @@ func (f *HttpFlushWriter) Flush() (err error) {
 	return nil
 }
 
+func (f *HttpFlushWriter) StartHeartbeat() {
+	if f.multipart {
+		f.ticker = time.NewTicker(multipartHeartbeatInterval * time.Second)
+		go func() {
+			for {
+				select {
+				// Stop sending heartbeats when context is canceled
+				case <-f.ctx.Done():
+					return
+				case <-f.ticker.C:
+					f.sendHeartbeat()
+				}
+			}
+		}()
+	}
+}
+
+func (f *HttpFlushWriter) sendHeartbeat() {
+	if f.ctx.Err() != nil {
+		return
+	}
+	heartbeat := GetWriterPrefix(f.sse, f.multipart) + "{}\n"
+	_, err := f.writer.Write([]byte(heartbeat))
+	if err != nil {
+		return
+	}
+
+	f.flusher.Flush()
+}
+
 func GetSubscriptionResponseWriter(ctx *resolve.Context, variables []byte, r *http.Request, w http.ResponseWriter) (*resolve.Context, resolve.SubscriptionResponseWriter, bool) {
 	type withFlushWriter interface {
 		SubscriptionResponseWriter() resolve.SubscriptionResponseWriter
@@ -134,6 +171,10 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, variables []byte, r *ht
 
 	flushWriter.ctx, flushWriter.cancel = context.WithCancel(ctx.Context())
 	ctx = ctx.WithContext(flushWriter.ctx)
+
+	if wgParams.UseMultipart {
+		flushWriter.StartHeartbeat()
+	}
 
 	return ctx, flushWriter, true
 }
@@ -177,7 +218,6 @@ func GetWriterPrefix(sse bool, multipart bool) string {
 		flushBreak = "event: next\ndata: "
 	} else if multipart {
 		flushBreak = "--" + multipartBoundary + "\nContent-Type: " + jsonContent + "\n\n"
-		// For multipart, we need to write the boundary and part headers
 	}
 
 	return flushBreak
