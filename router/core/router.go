@@ -1743,6 +1743,7 @@ func TraceConfigFromTelemetry(cfg *config.Telemetry) *rtrace.Config {
 		ResourceAttributes:   buildResourceAttributes(cfg.ResourceAttributes),
 		Exporters:            exporters,
 		Propagators:          propagators,
+		ResponseTraceHeader:  cfg.Tracing.ResponseTraceHeader,
 	}
 }
 

@@ -558,6 +558,22 @@
                   "description": "Enable the baggage propagation. See https://www.w3.org/TR/baggage/ for more information."
                 }
               }
+            },
+            "response_trace_id": {
+              "type": "object",
+              "description": "The configuration to expose the trace_id through a response header.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enables the addition of trace_id to the response header."
+                },
+                "header_name": {
+                  "type": "string",
+                  "default": "x-wg-trace-id",
+                  "description": "The name of the header which the holds the trace_id. The default value is x-wg-trace-id."
+                }
+              }
             }
           }
         },
