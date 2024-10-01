@@ -358,7 +358,7 @@ type operationContext struct {
 	content    string
 	variables  []byte
 	files      []httpclient.File
-	clientInfo ClientInfo
+	clientInfo *ClientInfo
 	// preparedPlan is the prepared plan of the operation
 	preparedPlan     *planWithMetaData
 	traceOptions     resolve.TraceOptions
@@ -440,7 +440,7 @@ func (o *operationContext) Protocol() OperationProtocol {
 }
 
 func (o *operationContext) ClientInfo() ClientInfo {
-	return o.clientInfo
+	return *o.clientInfo
 }
 
 // isMutationRequest returns true if the current request is a mutation request

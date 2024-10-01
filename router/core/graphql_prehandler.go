@@ -89,16 +89,14 @@ type PreHandler struct {
 }
 
 type httpOperation struct {
+	requestContext   *requestContext
 	body             []byte
 	files            []httpclient.File
 	requestLogger    *zap.Logger
 	attributes       []attribute.KeyValue
-	clientInfo       *ClientInfo
 	routerSpan       trace.Span
 	operationMetrics *OperationMetrics
-	traceOptions     resolve.TraceOptions
 	traceTimings     *art.TraceTimings
-	executionOptions resolve.ExecutionOptions
 }
 
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
@@ -132,7 +130,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		queryPlansEnabled:        opts.QueryPlansEnabled,
 		queryPlansLoggingEnabled: opts.QueryPlansLoggingEnabled,
 		trackSchemaUsageInfo:     opts.TrackSchemaUsageInfo,
-		computeOperationSha256: opts.ComputeOperationSha256,
+		computeOperationSha256:   opts.ComputeOperationSha256,
 	}
 }
 
@@ -189,7 +187,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 
 		requestContext.operation = &operationContext{
-			clientInfo: *clientInfo,
+			clientInfo: clientInfo,
 		}
 
 		executionOptions, traceOptions, err := h.parseRequestOptions(r, clientInfo, requestLogger)
@@ -299,14 +297,12 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 
 		opContext, err := h.handleOperation(r, buf, &httpOperation{
+			requestContext:   requestContext,
 			requestLogger:    requestLogger,
 			attributes:       commonAttributes,
-			clientInfo:       clientInfo,
 			routerSpan:       routerSpan,
 			operationMetrics: metrics,
-			traceOptions:     traceOptions,
 			traceTimings:     traceTimings,
-			executionOptions: executionOptions,
 			files:            files,
 			body:             body,
 		})
@@ -355,7 +351,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 
-		// The request needs to be updated to get the latest context
+		// The request context needs to be updated with the latest request to ensure that the context is up to date
 		requestContext.request = r
 
 		// Call the final handler that resolves the operation
@@ -392,7 +388,7 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 
 	}()
 
-	requestContext := getRequestContext(req.Context())
+	requestContext := httpOperation.requestContext
 
 	// Handle the case when operation information are provided as GET parameters
 	if req.Method == http.MethodGet {
@@ -434,7 +430,7 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 
 	if operationKit.parsedOperation.IsPersistedOperation {
 		requestContext.operation.persistedID = operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
-		skipParse, err = operationKit.FetchPersistedOperation(req.Context(), httpOperation.clientInfo, httpOperation.attributes)
+		skipParse, err = operationKit.FetchPersistedOperation(req.Context(), requestContext.operation.clientInfo, httpOperation.attributes)
 		if err != nil {
 			return nil, err
 		}
@@ -456,15 +452,22 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 		err = operationKit.Parse()
 		if err != nil {
 			rtrace.AttachErrToSpan(engineParseSpan, err)
+
 			requestContext.operation.parsingTime = time.Since(startParsing)
+			if !requestContext.operation.traceOptions.ExcludeParseStats {
+				httpOperation.traceTimings.EndParse()
+			}
+
 			engineParseSpan.End()
 
 			return nil, err
 		}
 
 		requestContext.operation.parsingTime = time.Since(startParsing)
+		if !requestContext.operation.traceOptions.ExcludeParseStats {
+			httpOperation.traceTimings.EndParse()
+		}
 
-		httpOperation.traceTimings.EndParse()
 		engineParseSpan.End()
 	}
 
@@ -513,7 +516,10 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 	* Normalize the operation
 	 */
 
-	httpOperation.traceTimings.StartNormalize()
+	if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
+		httpOperation.traceTimings.StartNormalize()
+	}
+
 	startNormalization := time.Now()
 
 	_, engineNormalizeSpan := h.tracer.Start(req.Context(), "Operation - Normalize",
@@ -524,7 +530,12 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 	cached, err := operationKit.NormalizeOperation()
 	if err != nil {
 		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
+
 		requestContext.operation.normalizationTime = time.Since(startNormalization)
+		if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
+			httpOperation.traceTimings.EndNormalize()
+		}
+
 		engineNormalizeSpan.End()
 
 		return nil, err
@@ -548,7 +559,12 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 	err = operationKit.NormalizeVariables()
 	if err != nil {
 		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
+
 		requestContext.operation.normalizationTime = time.Since(startNormalization)
+		if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
+			httpOperation.traceTimings.EndNormalize()
+		}
+
 		engineNormalizeSpan.End()
 
 		return nil, err
@@ -558,14 +574,14 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 	requestContext.operation.variables = operationKit.parsedOperation.Request.Variables
 	requestContext.operation.normalizationTime = time.Since(startNormalization)
 
-	if operationKit.parsedOperation.IsPersistedOperation {
-		engineNormalizeSpan.SetAttributes(otel.WgEnginePersistedOperationCacheHit.Bool(operationKit.parsedOperation.PersistedOperationCacheHit))
+	if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
+		httpOperation.traceTimings.EndNormalize()
 	}
 
 	engineNormalizeSpan.End()
 
-	if !httpOperation.traceOptions.ExcludeNormalizeStats {
-		httpOperation.traceTimings.EndNormalize()
+	if operationKit.parsedOperation.IsPersistedOperation {
+		engineNormalizeSpan.SetAttributes(otel.WgEnginePersistedOperationCacheHit.Bool(operationKit.parsedOperation.PersistedOperationCacheHit))
 	}
 
 	if h.traceExportVariables {
@@ -581,7 +597,7 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 	* Validate the operation
 	 */
 
-	if !httpOperation.traceOptions.ExcludeValidateStats {
+	if !requestContext.operation.traceOptions.ExcludeValidateStats {
 		httpOperation.traceTimings.StartValidate()
 	}
 
@@ -591,19 +607,23 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 		trace.WithSpanKind(trace.SpanKindInternal),
 		trace.WithAttributes(attributes...),
 	)
-	validationCached, err := operationKit.Validate(httpOperation.executionOptions.SkipLoader)
+	validationCached, err := operationKit.Validate(requestContext.operation.executionOptions.SkipLoader)
 	if err != nil {
 		rtrace.AttachErrToSpan(engineValidateSpan, err)
+
 		requestContext.operation.validationTime = time.Since(startValidation)
+
+		if !requestContext.operation.traceOptions.ExcludeValidateStats {
+			httpOperation.traceTimings.EndValidate()
+		}
+
 		engineValidateSpan.End()
 
 		return nil, err
 	}
 
-	requestContext.operation.validationTime = time.Since(startValidation)
-
 	engineValidateSpan.SetAttributes(otel.WgValidationCacheHit.Bool(validationCached))
-	if httpOperation.executionOptions.SkipLoader {
+	if requestContext.operation.executionOptions.SkipLoader {
 		// In case we're skipping the loader, which means that we won't execute the operation
 		// we skip the validation of variables as we're not using them
 		// this allows us to generate query plans without having to provide variables
@@ -618,14 +638,20 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 		engineValidateSpan.SetAttributes(otel.WgQueryDepthCacheHit.Bool(cacheHit))
 		if queryDepthErr != nil {
 			rtrace.AttachErrToSpan(engineValidateSpan, err)
+
+			requestContext.operation.validationTime = time.Since(startValidation)
+			httpOperation.traceTimings.EndValidate()
+
 			engineValidateSpan.End()
 
 			return nil, queryDepthErr
 		}
 	}
-	engineValidateSpan.End()
 
+	requestContext.operation.validationTime = time.Since(startValidation)
 	httpOperation.traceTimings.EndValidate()
+
+	engineValidateSpan.End()
 
 	/**
 	* Plan the operation
@@ -634,20 +660,22 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 	// If the request has a query parameter wg_trace=true we skip the cache
 	// and always plan the operation
 	// this allows us to "write" to the plan
-	httpOperation.traceTimings.StartPlanning()
+	if !requestContext.operation.traceOptions.ExcludePlannerStats {
+		httpOperation.traceTimings.StartPlanning()
+	}
 	startPlanning := time.Now()
 
 	_, enginePlanSpan := h.tracer.Start(req.Context(), "Operation - Plan",
 		trace.WithSpanKind(trace.SpanKindInternal),
-		trace.WithAttributes(otel.WgEngineRequestTracingEnabled.Bool(httpOperation.traceOptions.Enable)),
+		trace.WithAttributes(otel.WgEngineRequestTracingEnabled.Bool(requestContext.operation.traceOptions.Enable)),
 		trace.WithAttributes(attributes...),
 	)
 
 	planOptions := PlanOptions{
 		Protocol:             OperationProtocolHTTP,
-		ClientInfo:           httpOperation.clientInfo,
-		TraceOptions:         httpOperation.traceOptions,
-		ExecutionOptions:     httpOperation.executionOptions,
+		ClientInfo:           requestContext.operation.clientInfo,
+		TraceOptions:         requestContext.operation.traceOptions,
+		ExecutionOptions:     requestContext.operation.executionOptions,
 		TrackSchemaUsageInfo: h.trackSchemaUsageInfo,
 	}
 
@@ -656,33 +684,32 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 	err = h.planner.plan(requestContext.operation, planOptions)
 	if err != nil {
 
+		httpOperation.requestLogger.Error("failed to plan operation", zap.Error(err))
 		rtrace.AttachErrToSpan(enginePlanSpan, err)
 
-		enginePlanSpan.End()
 		requestContext.operation.planningTime = time.Since(startPlanning)
-		httpOperation.traceTimings.EndPlanning()
+		if !requestContext.operation.traceOptions.ExcludePlannerStats {
+			httpOperation.traceTimings.EndPlanning()
+		}
 
-		httpOperation.requestLogger.Error("failed to plan operation", zap.Error(err))
+		enginePlanSpan.End()
 
 		return nil, err
 	}
 
-	requestContext.operation.planningTime = time.Since(startPlanning)
-
 	enginePlanSpan.SetAttributes(otel.WgEnginePlanCacheHit.Bool(requestContext.operation.planCacheHit))
 
-	enginePlanSpan.SetAttributes(otel.WgEnginePlanCacheHit.Bool(opContext.planCacheHit))
+	requestContext.operation.planningTime = time.Since(startPlanning)
+	httpOperation.traceTimings.EndPlanning()
 
 	enginePlanSpan.End()
 
-	httpOperation.traceTimings.EndPlanning()
-
 	// we could log the query plan only if query plans are calculated
-	if (h.queryPlansEnabled && httpOperation.executionOptions.IncludeQueryPlanInResponse) ||
+	if (h.queryPlansEnabled && requestContext.operation.executionOptions.IncludeQueryPlanInResponse) ||
 		h.alwaysIncludeQueryPlan {
 
 		if h.queryPlansLoggingEnabled {
-			switch p := opContext.preparedPlan.preparedPlan.(type) {
+			switch p := requestContext.operation.preparedPlan.preparedPlan.(type) {
 			case *plan.SynchronousResponsePlan:
 				printedPlan := p.Response.Fetches.QueryPlan().PrettyPrint()
 
