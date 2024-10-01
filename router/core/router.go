@@ -286,15 +286,25 @@ func NewRouter(opts ...Option) (*Router, error) {
 	if r.graphqlMetricsConfig == nil {
 		r.graphqlMetricsConfig = DefaultGraphQLMetricsConfig()
 	}
+
 	if r.routerTrafficConfig == nil {
 		r.routerTrafficConfig = DefaultRouterTrafficConfig()
 	}
+
 	if r.fileUploadConfig == nil {
 		r.fileUploadConfig = DefaultFileUploadConfig()
 	}
+
 	if r.accessController != nil {
 		if len(r.accessController.authenticators) == 0 && r.accessController.authenticationRequired {
 			r.logger.Warn("authentication is required but no authenticators are configured")
+		}
+	}
+
+	if r.accessLogsConfig == nil {
+		r.accessLogsConfig = &AccessLogsConfig{
+			Logger:     r.logger,
+			Attributes: []config.CustomAttribute{},
 		}
 	}
 
