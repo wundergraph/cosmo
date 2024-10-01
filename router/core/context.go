@@ -44,8 +44,8 @@ type ClientInfo struct {
 }
 
 func NewClientInfoFromRequest(r *http.Request, clientHeader config.ClientHeader) *ClientInfo {
-	clientName := ctrace.GetClientInfo(r.Header, clientHeader.Name, "graphql-client-name", "apollographql-client-name", "unknown")
-	clientVersion := ctrace.GetClientInfo(r.Header, clientHeader.Version, "graphql-client-version", "apollographql-client-version", "missing")
+	clientName := ctrace.GetClientHeader(r.Header, []string{clientHeader.Name, "graphql-client-name", "apollographql-client-name"}, "unknown")
+	clientVersion := ctrace.GetClientHeader(r.Header, []string{clientHeader.Version, "graphql-client-version", "apollographql-client-version"}, "missing")
 	requestToken := r.Header.Get("X-WG-Token")
 	return &ClientInfo{
 		Name:           clientName,
