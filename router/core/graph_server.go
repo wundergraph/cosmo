@@ -779,7 +779,7 @@ func (s *graphServer) accessLogsFieldHandler(request *http.Request) []zapcore.Fi
 			continue
 		}
 
-		if field.ValueFrom.ContextField != "" {
+		if field.ValueFrom.ContextField != "" && requestContext != nil && requestContext.operation != nil {
 			switch field.ValueFrom.ContextField {
 			case ContextFieldOperationName:
 				if v := NewStringLogField(requestContext.operation.name, field); v != zap.Skip() {
@@ -787,6 +787,35 @@ func (s *graphServer) accessLogsFieldHandler(request *http.Request) []zapcore.Fi
 				}
 			case ContextFieldOperationType:
 				if v := NewStringLogField(requestContext.operation.opType, field); v != zap.Skip() {
+					resFields = append(resFields, v)
+				}
+			case ContextFieldOperationPlanningTime:
+				if v := NewDurationLogField(requestContext.operation.planningTime, field); v != zap.Skip() {
+					resFields = append(resFields, v)
+				}
+			case ContextFieldOperationNormalizationTime:
+				if v := NewDurationLogField(requestContext.operation.normalizationTime, field); v != zap.Skip() {
+					resFields = append(resFields, v)
+				}
+			case ContextFieldOperationParsingTime:
+				if v := NewDurationLogField(requestContext.operation.parsingTime, field); v != zap.Skip() {
+					resFields = append(resFields, v)
+				}
+			case ContextFieldOperationValidationTime:
+				if v := NewDurationLogField(requestContext.operation.validationTime, field); v != zap.Skip() {
+					resFields = append(resFields, v)
+				}
+			case ContextFieldOperationSha256:
+				if v := NewStringLogField(requestContext.operation.sha256Hash, field); v != zap.Skip() {
+					resFields = append(resFields, v)
+				}
+			case ContextFieldOperationHash:
+				if requestContext.operation.hash == 0 {
+					break
+				}
+				resFields = append(resFields, NewStringLogField(strconv.FormatUint(requestContext.operation.hash, 10), field))
+			case ContextFieldPersistedOperationSha256:
+				if v := NewStringLogField(requestContext.operation.persistedID, field); v != zap.Skip() {
 					resFields = append(resFields, v)
 				}
 			case ContextFieldResponseErrorMessage:
@@ -817,37 +846,6 @@ func (s *graphServer) accessLogsFieldHandler(request *http.Request) []zapcore.Fi
 						resFields = append(resFields, v)
 					}
 				}
-			case ContextFieldPersistedOperationSha256:
-				if v := NewStringLogField(requestContext.operation.persistedID, field); v != zap.Skip() {
-					resFields = append(resFields, v)
-				}
-			case ContextFieldOperationPlanningTime:
-				if v := NewDurationLogField(requestContext.operation.planningTime, field); v != zap.Skip() {
-					resFields = append(resFields, v)
-				}
-			case ContextFieldOperationNormalizationTime:
-				if v := NewDurationLogField(requestContext.operation.normalizationTime, field); v != zap.Skip() {
-					resFields = append(resFields, v)
-				}
-			case ContextFieldOperationParsingTime:
-				if v := NewDurationLogField(requestContext.operation.parsingTime, field); v != zap.Skip() {
-					resFields = append(resFields, v)
-				}
-			case ContextFieldOperationValidationTime:
-				if v := NewDurationLogField(requestContext.operation.validationTime, field); v != zap.Skip() {
-					resFields = append(resFields, v)
-				}
-			case ContextFieldOperationSha256:
-				if v := NewStringLogField(requestContext.operation.sha256Hash, field); v != zap.Skip() {
-					resFields = append(resFields, v)
-				}
-			case ContextFieldOperationHash:
-				if requestContext.operation.hash == 0 {
-					break
-				}
-				resFields = append(resFields, NewStringLogField(strconv.FormatUint(requestContext.operation.hash, 10), field))
-			default:
-				s.logger.Error("Unknown context field for access logs", zap.String("field", field.ValueFrom.ContextField))
 			}
 		}
 	}

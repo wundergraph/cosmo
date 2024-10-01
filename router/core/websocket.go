@@ -745,9 +745,10 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 	defer operationKit.Free()
 
 	opContext := &operationContext{
-		name:    operationKit.parsedOperation.Request.OperationName,
-		opType:  operationKit.parsedOperation.Type,
-		content: operationKit.parsedOperation.NormalizedRepresentation,
+		name:       operationKit.parsedOperation.Request.OperationName,
+		opType:     operationKit.parsedOperation.Type,
+		content:    operationKit.parsedOperation.NormalizedRepresentation,
+		clientInfo: h.plannerOptions.ClientInfo,
 	}
 
 	if err := operationKit.UnmarshalOperationFromBody(payload); err != nil {

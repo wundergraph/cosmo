@@ -172,18 +172,18 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				zap.Duration("latency", latency),
 			)
 
-			// This is only called on panic so it is safe to call it here again
-			// to gather all the fields that are needed for logging
-			if h.context != nil {
-				fields = append(fields, h.context(r)...)
-			}
-
 			if e, ok := err.(error); ok {
 				fields = append(fields, zap.Error(e))
 			} else {
 				fields = append(fields,
 					zap.Any("error", err),
 				)
+			}
+
+			// This is only called on panic so it is safe to call it here again
+			// to gather all the fields that are needed for logging
+			if h.context != nil {
+				fields = append(fields, h.context(r)...)
 			}
 
 			if brokenPipe {
