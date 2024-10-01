@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"io"
 	"net/http"
 	"strconv"
@@ -56,6 +57,7 @@ type PreHandlerOptions struct {
 	QueryPlansEnabled           bool
 	QueryPlansLoggingEnabled    bool
 	TrackSchemaUsageInfo        bool
+	ClientHeader                config.ClientHeader
 }
 
 type PreHandler struct {
@@ -85,6 +87,7 @@ type PreHandler struct {
 	queryIgnorePersistent       bool
 	bodyReadBuffers             *sync.Pool
 	trackSchemaUsageInfo        bool
+	clientHeader                config.ClientHeader
 }
 
 type httpOperation struct {
@@ -131,6 +134,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		queryPlansEnabled:        opts.QueryPlansEnabled,
 		queryPlansLoggingEnabled: opts.QueryPlansLoggingEnabled,
 		trackSchemaUsageInfo:     opts.TrackSchemaUsageInfo,
+		clientHeader:             opts.ClientHeader,
 	}
 }
 
@@ -177,7 +181,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		routerSpan := trace.SpanFromContext(r.Context())
 
-		clientInfo := NewClientInfoFromRequest(r)
+		clientInfo := NewClientInfoFromRequest(r, h.clientHeader)
 		commonAttributes := []attribute.KeyValue{
 			otel.WgClientName.String(clientInfo.Name),
 			otel.WgClientVersion.String(clientInfo.Version),

@@ -53,12 +53,15 @@ func CommonRequestFilter(r *http.Request) bool {
 	return true
 }
 
-func GetClientInfo(h http.Header, primaryHeader, fallbackHeader, defaultValue string) string {
-	value := h.Get(primaryHeader)
+func GetClientInfo(h http.Header, customHeader, primaryHeader, fallbackHeader, defaultValue string) string {
+	value := h.Get(customHeader)
 	if value == "" {
-		value = h.Get(fallbackHeader)
+		value = h.Get(primaryHeader)
 		if value == "" {
-			value = defaultValue
+			value = h.Get(fallbackHeader)
+			if value == "" {
+				value = defaultValue
+			}
 		}
 	}
 	return value

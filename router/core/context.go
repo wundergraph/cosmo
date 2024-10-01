@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -42,9 +43,9 @@ type ClientInfo struct {
 	WGRequestToken string
 }
 
-func NewClientInfoFromRequest(r *http.Request) *ClientInfo {
-	clientName := ctrace.GetClientInfo(r.Header, "graphql-client-name", "apollographql-client-name", "unknown")
-	clientVersion := ctrace.GetClientInfo(r.Header, "graphql-client-version", "apollographql-client-version", "missing")
+func NewClientInfoFromRequest(r *http.Request, clientHeader config.ClientHeader) *ClientInfo {
+	clientName := ctrace.GetClientInfo(r.Header, clientHeader.Name, "graphql-client-name", "apollographql-client-name", "unknown")
+	clientVersion := ctrace.GetClientInfo(r.Header, clientHeader.Version, "graphql-client-version", "apollographql-client-version", "missing")
 	requestToken := r.Header.Get("X-WG-Token")
 	return &ClientInfo{
 		Name:           clientName,

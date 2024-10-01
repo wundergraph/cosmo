@@ -660,6 +660,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		QueryPlansEnabled:           s.Config.queryPlansEnabled,
 		QueryPlansLoggingEnabled:    s.engineExecutionConfiguration.Debug.PrintQueryPlans,
 		TrackSchemaUsageInfo:        s.graphqlMetricsConfig.Enabled,
+		ClientHeader:                s.clientHeader,
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
@@ -678,6 +679,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			EpollKqueuePollTimeout:     s.engineExecutionConfiguration.EpollKqueuePollTimeout,
 			EpollKqueueConnBufferSize:  s.engineExecutionConfiguration.EpollKqueueConnBufferSize,
 			WebSocketConfiguration:     s.webSocketConfiguration,
+			ClientHeader:               s.clientHeader,
 		})
 
 		// When the playground path is equal to the graphql path, we need to handle

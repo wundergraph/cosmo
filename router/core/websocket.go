@@ -56,6 +56,7 @@ type WebsocketMiddlewareOptions struct {
 	EpollKqueueConnBufferSize  int
 
 	WebSocketConfiguration *config.WebSocketConfiguration
+	ClientHeader           config.ClientHeader
 }
 
 func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions) func(http.Handler) http.Handler {
@@ -83,6 +84,7 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 		readTimeout:        opts.ReadTimeout,
 		config:             opts.WebSocketConfiguration,
 		handlerPool:        handlerPool,
+		clientHeader:       opts.ClientHeader,
 	}
 	if opts.WebSocketConfiguration != nil && opts.WebSocketConfiguration.AbsintheProtocol.Enabled {
 		handler.absintheHandlerEnabled = true
@@ -230,6 +232,7 @@ type WebsocketHandler struct {
 
 	forwardUpgradeHeadersConfig forwardConfig
 	forwardQueryParamsConfig    forwardConfig
+	clientHeader                config.ClientHeader
 }
 
 func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.Request) {
@@ -239,7 +242,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 
 	requestID := middleware.GetReqID(r.Context())
 	requestLogger := h.logger.With(logging.WithRequestID(requestID))
-	clientInfo := NewClientInfoFromRequest(r)
+	clientInfo := NewClientInfoFromRequest(r, h.clientHeader)
 
 	if h.accessController != nil && !h.config.Authentication.FromInitialPayload.Enabled {
 		// Check access control before upgrading the connection
