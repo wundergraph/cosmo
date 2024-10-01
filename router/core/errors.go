@@ -164,14 +164,14 @@ func propagateSubgraphErrors(ctx *resolve.Context) {
 // It accepts a graphqlerrors.RequestErrors object and writes it to the response based on the GraphQL spec.
 func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, requestErrors graphqlerrors.RequestErrors, requestLogger *zap.Logger) {
 	if requestErrors != nil {
+		if statusCode != 0 {
+			w.WriteHeader(statusCode)
+		}
 
 		wgRequestParams := NewWgRequestParams(r)
 		if wgRequestParams.UseSse {
 			setSubscriptionHeaders(wgRequestParams, w)
 
-			if statusCode != 0 {
-				w.WriteHeader(statusCode)
-			}
 			_, err := w.Write([]byte("event: next\ndata: "))
 			if err != nil {
 				if requestLogger != nil {
@@ -183,14 +183,18 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 				}
 				return
 			}
+		} else if wgRequestParams.UseMultipart {
+			// Handle multipart error response
+			if err := writeMultipartError(w, requestErrors, requestLogger); err != nil {
+				if requestLogger != nil {
+					requestLogger.Error("error writing multipart response", zap.Error(err))
+				}
+				return
+			}
 		}
 
 		// Set header before writing status code
 		w.Header().Set("Content-Type", "application/json")
-		if statusCode != 0 {
-			w.WriteHeader(statusCode)
-		}
-
 		if _, err := requestErrors.WriteResponse(w); err != nil {
 			if requestLogger != nil {
 				if rErrors.IsBrokenPipe(err) {
@@ -201,6 +205,34 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 			}
 		}
 	}
+}
+
+// writeMultipartError writes the error response in a multipart format with proper boundaries and headers.
+func writeMultipartError(w http.ResponseWriter, requestErrors graphqlerrors.RequestErrors, requestLogger *zap.Logger) error {
+	// Start with the multipart boundary
+	prefix := GetWriterPrefix(false, true)
+	if _, err := w.Write([]byte(prefix)); err != nil {
+		return err
+	}
+
+	if _, err := w.Write([]byte("{\"payload\":")); err != nil {
+		return err
+	}
+	// Write the actual error payload
+	if _, err := requestErrors.WriteResponse(w); err != nil {
+		return err
+	}
+
+	// End the multipart section with the closing boundary
+	if _, err := w.Write([]byte("}\n")); err != nil {
+		return err
+	}
+
+	// Flush the response
+	if flusher, ok := w.(http.Flusher); ok {
+		flusher.Flush()
+	}
+	return nil
 }
 
 // writeOperationError writes the given error to the http.ResponseWriter but evaluates the error type first.

@@ -70,14 +70,7 @@ func (f *HttpFlushWriter) Flush() (err error) {
 	resp := f.buf.Bytes()
 	f.buf.Reset()
 
-	flushBreak := ""
-	if f.sse {
-		flushBreak = "event: next\ndata: "
-	} else if f.multipart {
-		flushBreak = "--" + multipartBoundary + "\nContent-Type: " + jsonContent + "\n\n"
-		// For multipart, we need to write the boundary and part headers
-	}
-
+	flushBreak := GetWriterPrefix(f.sse, f.multipart)
 	if flushBreak != "" {
 		_, err = f.writer.Write([]byte(flushBreak))
 		if err != nil {
@@ -176,4 +169,16 @@ type WgRequestParams struct {
 	UseSse        bool
 	SubscribeOnce bool
 	UseMultipart  bool
+}
+
+func GetWriterPrefix(sse bool, multipart bool) string {
+	flushBreak := ""
+	if sse {
+		flushBreak = "event: next\ndata: "
+	} else if multipart {
+		flushBreak = "--" + multipartBoundary + "\nContent-Type: " + jsonContent + "\n\n"
+		// For multipart, we need to write the boundary and part headers
+	}
+
+	return flushBreak
 }

@@ -256,9 +256,7 @@ func TestNatsEvents(t *testing.T) {
 		})
 	})
 
-	t.Run("subscribe with multipart responses", func(t *testing.T) {
-		t.Parallel()
-
+	t.Run("multipart", func(t *testing.T) {
 		assertLineEquals := func(reader *bufio.Reader, expected string) {
 			line, _, err := reader.ReadLine()
 			require.NoError(t, err)
@@ -271,59 +269,100 @@ func TestNatsEvents(t *testing.T) {
 			assertLineEquals(reader, "")
 		}
 
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		t.Run("subscribe with multipart responses", func(t *testing.T) {
+			t.Parallel()
 
-			subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`)
+			testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 
-			wg := &sync.WaitGroup{}
-			wg.Add(1)
+				subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`)
 
-			var client http.Client
-			go func() {
-				client = http.Client{
-					Timeout: time.Second * 100,
-				}
-				req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLMultipartResponsesURL(), bytes.NewReader(subscribePayload))
+				wg := &sync.WaitGroup{}
+				wg.Add(1)
+
+				var client http.Client
+				go func() {
+					client = http.Client{
+						Timeout: time.Second * 100,
+					}
+					req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLMultipartResponsesURL(), bytes.NewReader(subscribePayload))
+					require.NoError(t, err)
+
+					req.Header.Set("Content-Type", "application/json")
+					req.Header.Set("Accept", "multipart/mixed;boundary=graphql;subscriptionSpec=\"1.0\"")
+					req.Header.Set("Connection", "keep-alive")
+
+					resp, err := client.Do(req)
+					require.NoError(t, err)
+					require.Equal(t, http.StatusOK, resp.StatusCode)
+					defer resp.Body.Close()
+
+					reader := bufio.NewReader(resp.Body)
+
+					// Read the first part
+					assertMultipartPrefix(reader)
+					assertLineEquals(reader, "{\"payload\":{\"data\":{\"employeeUpdated\":{\"id\":3,\"details\":{\"forename\":\"Stefan\",\"surname\":\"Avram\"}}}}}")
+					assertMultipartPrefix(reader)
+					assertLineEquals(reader, "{\"payload\":{\"data\":{\"employeeUpdated\":{\"id\":3,\"details\":{\"forename\":\"Stefan\",\"surname\":\"Avram\"}}}}}")
+					wg.Done()
+
+				}()
+
+				xEnv.WaitForSubscriptionCount(1, time.Second*5)
+
+				// Send a mutation to trigger the subscription
+
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `mutation { updateAvailability(employeeID: 3, isAvailable: true) { id } }`,
+				})
+				require.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, res.Body)
+
+				// Trigger the subscription via NATS
+				err := xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
 				require.NoError(t, err)
 
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Accept", "multipart/mixed;boundary=graphql;subscriptionSpec=\"1.0\"")
-				req.Header.Set("Connection", "keep-alive")
-
-				resp, err := client.Do(req)
+				err = xEnv.NatsConnectionDefault.Flush()
 				require.NoError(t, err)
-				require.Equal(t, http.StatusOK, resp.StatusCode)
-				defer resp.Body.Close()
 
-				reader := bufio.NewReader(resp.Body)
-
-				// Read the first part
-				assertMultipartPrefix(reader)
-				assertLineEquals(reader, "{\"payload\":{\"data\":{\"employeeUpdated\":{\"id\":3,\"details\":{\"forename\":\"Stefan\",\"surname\":\"Avram\"}}}}}")
-				assertMultipartPrefix(reader)
-				assertLineEquals(reader, "{\"payload\":{\"data\":{\"employeeUpdated\":{\"id\":3,\"details\":{\"forename\":\"Stefan\",\"surname\":\"Avram\"}}}}}")
-				wg.Done()
-
-			}()
-
-			xEnv.WaitForSubscriptionCount(1, time.Second*5)
-
-			// Send a mutation to trigger the subscription
-
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `mutation { updateAvailability(employeeID: 3, isAvailable: true) { id } }`,
+				xEnv.NatsConnectionDefault.Close()
+				wg.Wait()
 			})
-			require.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, res.Body)
+		})
 
-			// Trigger the subscription via NATS
-			err := xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
-			require.NoError(t, err)
+		t.Run("subscribe sync multipart with block", func(t *testing.T) {
+			t.Parallel()
 
-			err = xEnv.NatsConnectionDefault.Flush()
-			require.NoError(t, err)
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.BlockSubscriptions = true
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				queries := []string{
+					`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } }}"}`,
+					`{"query":"subscription { employeeUpdatedMyNats(id: 12) { id details { forename surname } }}"}`,
+				}
 
-			xEnv.NatsConnectionDefault.Close()
-			wg.Wait()
+				for _, subscribePayload := range queries {
+					client := http.Client{
+						Timeout: time.Second * 1000,
+					}
+					req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLMultipartResponsesURL(), bytes.NewReader([]byte(subscribePayload)))
+					require.NoError(t, err)
+
+					req.Header.Set("Content-Type", "application/json")
+					req.Header.Set("Accept", "multipart/mixed;boundary=graphql;subscriptionSpec=\"1.0\"")
+					req.Header.Set("Connection", "keep-alive")
+					req.Header.Set("Cache-Control", "no-cache")
+
+					resp, err := client.Do(req)
+					require.NoError(t, err)
+					require.Equal(t, http.StatusOK, resp.StatusCode)
+					defer resp.Body.Close()
+					reader := bufio.NewReader(resp.Body)
+
+					assertMultipartPrefix(reader)
+					assertLineEquals(reader, "{\"payload\":{\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}}")
+				}
+			})
 		})
 	})
 
@@ -396,6 +435,64 @@ func TestNatsEvents(t *testing.T) {
 			require.NoError(t, err)
 
 			wg.Wait()
+		})
+	})
+
+	t.Run("subscribe sync sse with block", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+				securityConfiguration.BlockSubscriptions = true
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			subscribePayloadOne := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } }}"}`)
+			subscribePayloadTwo := []byte(`{"query":"subscription { employeeUpdatedMyNats(id: 12) { id details { forename surname } }}"}`)
+
+			client := http.Client{
+				Timeout: time.Second * 10,
+			}
+			reqOne, err := http.NewRequest(http.MethodPost, xEnv.GraphQLServeSentEventsURL(), bytes.NewReader(subscribePayloadOne))
+			require.NoError(t, err)
+
+			reqOne.Header.Set("Content-Type", "application/json")
+			reqOne.Header.Set("Accept", "text/event-stream")
+			reqOne.Header.Set("Connection", "keep-alive")
+			reqOne.Header.Set("Cache-Control", "no-cache")
+
+			respOne, err := client.Do(reqOne)
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, respOne.StatusCode)
+			defer respOne.Body.Close()
+			readerOne := bufio.NewReader(respOne.Body)
+
+			eventNextOne, _, err := readerOne.ReadLine()
+			require.NoError(t, err)
+			require.Equal(t, "event: next", string(eventNextOne))
+			dataOne, _, err := readerOne.ReadLine()
+			require.NoError(t, err)
+			require.Equal(t, "data: {\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}", string(dataOne))
+
+			reqTwo, err := http.NewRequest(http.MethodPost, xEnv.GraphQLServeSentEventsURL(), bytes.NewReader(subscribePayloadTwo))
+			require.NoError(t, err)
+
+			reqTwo.Header.Set("Content-Type", "application/json")
+			reqTwo.Header.Set("Accept", "text/event-stream")
+			reqTwo.Header.Set("Connection", "keep-alive")
+			reqTwo.Header.Set("Cache-Control", "no-cache")
+
+			respTwo, err := client.Do(reqTwo)
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, respTwo.StatusCode)
+			defer respTwo.Body.Close()
+			readerTwo := bufio.NewReader(respTwo.Body)
+
+			eventNextTwo, _, err := readerTwo.ReadLine()
+			require.NoError(t, err)
+			require.Equal(t, "event: next", string(eventNextTwo))
+			dataTwo, _, err := readerTwo.ReadLine()
+			require.NoError(t, err)
+			require.Equal(t, "data: {\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}", string(dataTwo))
 		})
 	})
 
