@@ -427,22 +427,23 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	}
 
 	computeSha256 := false
-	for _, aa := range s.accessLogsConfig.Attributes {
-		if aa.ValueFrom != nil && aa.ValueFrom.ContextField == ContextFieldOperationSha256 {
-			computeSha256 = true
-			break
+	if s.accessLogsConfig != nil {
+		for _, aa := range s.accessLogsConfig.Attributes {
+			if aa.ValueFrom != nil && aa.ValueFrom.ContextField == ContextFieldOperationSha256 {
+				computeSha256 = true
+				break
+			}
 		}
-	}
-
-	if computeSha256 {
-		operationHashCacheConfig := &ristretto.Config[uint64, string]{
-			MaxCost:     s.engineExecutionConfiguration.NormalizationCacheSize,
-			NumCounters: s.engineExecutionConfiguration.NormalizationCacheSize * 10,
-			BufferItems: 64,
-		}
-		gm.operationHashCache, err = ristretto.NewCache[uint64, string](operationHashCacheConfig)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create operation hash cache: %w", err)
+		if computeSha256 {
+			operationHashCacheConfig := &ristretto.Config[uint64, string]{
+				MaxCost:     s.engineExecutionConfiguration.NormalizationCacheSize,
+				NumCounters: s.engineExecutionConfiguration.NormalizationCacheSize * 10,
+				BufferItems: 64,
+			}
+			gm.operationHashCache, err = ristretto.NewCache[uint64, string](operationHashCacheConfig)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create operation hash cache: %w", err)
+			}
 		}
 	}
 

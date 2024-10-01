@@ -301,13 +301,6 @@ func NewRouter(opts ...Option) (*Router, error) {
 		}
 	}
 
-	if r.accessLogsConfig == nil {
-		r.accessLogsConfig = &AccessLogsConfig{
-			Logger:     r.logger,
-			Attributes: []config.CustomAttribute{},
-		}
-	}
-
 	if r.ipAnonymization == nil {
 		r.ipAnonymization = &IPAnonymizationConfig{
 			Enabled: true,

@@ -17,8 +17,8 @@ const (
 
 type RequestIDKey struct{}
 
-func New(prettyLogging bool, debug bool, level zapcore.Level) *zap.Logger {
-	return NewZapLoggerWithSyncer(zapcore.AddSync(os.Stdout), prettyLogging, debug, level)
+func New(pretty bool, debug bool, level zapcore.Level) *zap.Logger {
+	return NewZapLogger(zapcore.AddSync(os.Stdout), pretty, debug, level)
 }
 
 func zapBaseEncoderConfig() zapcore.EncoderConfig {
@@ -80,10 +80,10 @@ func NewZapLoggerWithCore(core zapcore.Core, debug bool) *zap.Logger {
 	return zapLogger
 }
 
-func NewZapLoggerWithSyncer(syncer zapcore.WriteSyncer, prettyLogging bool, debug bool, level zapcore.Level) *zap.Logger {
+func NewZapLogger(syncer zapcore.WriteSyncer, pretty bool, debug bool, level zapcore.Level) *zap.Logger {
 	var encoder zapcore.Encoder
 
-	if prettyLogging {
+	if pretty {
 		encoder = zapConsoleEncoder()
 	} else {
 		encoder = ZapJsonEncoder()
@@ -100,9 +100,17 @@ func NewZapLoggerWithSyncer(syncer zapcore.WriteSyncer, prettyLogging bool, debu
 	return zapLogger
 }
 
-func NewZapAccessLoggerWithSyncer(syncer zapcore.WriteSyncer) *zap.Logger {
+func NewZapAccessLogger(syncer zapcore.WriteSyncer, pretty bool) *zap.Logger {
+	var encoder zapcore.Encoder
+
+	if pretty {
+		encoder = zapConsoleEncoder()
+	} else {
+		encoder = ZapJsonEncoder()
+	}
+
 	zapLogger := zap.New(zapcore.NewCore(
-		ZapJsonEncoder(),
+		encoder,
 		syncer,
 		zapcore.InfoLevel,
 	))
@@ -123,6 +131,7 @@ type BufferedLoggerOptions struct {
 	FlushInterval time.Duration
 	Debug         bool
 	Level         zapcore.Level
+	Pretty        bool
 }
 
 func NewJSONZapBufferedLogger(options BufferedLoggerOptions) (*BufferedLogger, error) {
@@ -134,7 +143,7 @@ func NewJSONZapBufferedLogger(options BufferedLoggerOptions) (*BufferedLogger, e
 		FlushInterval: options.FlushInterval,
 	}
 
-	fl.Logger = NewZapAccessLoggerWithSyncer(fl.bufferedWriteSyncer)
+	fl.Logger = NewZapAccessLogger(fl.bufferedWriteSyncer, options.Pretty)
 
 	return fl, nil
 }

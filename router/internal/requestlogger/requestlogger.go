@@ -16,7 +16,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type BaseFn func(r *http.Request) []zapcore.Field
+type ContextFunc func(r *http.Request) []zapcore.Field
 
 // Option provides a functional approach to define
 // configuration for a handler; such as setting the logging
@@ -43,7 +43,7 @@ type handler struct {
 	skipPaths             []string
 	ipAnonymizationConfig *IPAnonymizationConfig
 	traceID               bool // optionally log Open Telemetry TraceID
-	context               BaseFn
+	context               ContextFunc
 	handler               http.Handler
 	logger                *zap.Logger
 	baseFields            []zapcore.Field
@@ -63,7 +63,7 @@ func WithAnonymization(ipConfig *IPAnonymizationConfig) Option {
 	}
 }
 
-func WithRequestFields(fn BaseFn) Option {
+func WithRequestFields(fn ContextFunc) Option {
 	return func(r *handler) {
 		r.context = fn
 	}
@@ -170,15 +170,8 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				// Internal Server Error. Although the status code is not set, it will be in the recover middleware
 				zap.Int("status", 500),
 				zap.Duration("latency", latency),
+				zap.Any("error", err),
 			)
-
-			if e, ok := err.(error); ok {
-				fields = append(fields, zap.Error(e))
-			} else {
-				fields = append(fields,
-					zap.Any("error", err),
-				)
-			}
 
 			// This is only called on panic so it is safe to call it here again
 			// to gather all the fields that are needed for logging

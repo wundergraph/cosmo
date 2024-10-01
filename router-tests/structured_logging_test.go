@@ -88,7 +88,7 @@ func TestAccessLogsFileOutput(t *testing.T) {
 			require.NoError(t, os.RemoveAll(fp))
 		})
 
-		logger := logging.NewZapAccessLoggerWithSyncer(f)
+		logger := logging.NewZapAccessLogger(f, false)
 		require.NoError(t, err)
 
 		testenv.Run(t, &testenv.Config{

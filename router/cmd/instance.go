@@ -199,13 +199,14 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 					FlushInterval: cfg.AccessLogs.Buffer.FlushInterval,
 					Debug:         false,
 					Level:         zap.InfoLevel,
+					Pretty:        cfg.DevelopmentMode,
 				})
 				if err != nil {
 					return nil, fmt.Errorf("could not create buffered logger: %w", err)
 				}
 				c.Logger = bl.Logger
 			} else {
-				c.Logger = logging.NewZapAccessLoggerWithSyncer(f)
+				c.Logger = logging.NewZapAccessLogger(f, cfg.DevelopmentMode)
 			}
 		} else if cfg.AccessLogs.Output.Stdout.Enabled {
 
@@ -216,13 +217,14 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 					FlushInterval: cfg.AccessLogs.Buffer.FlushInterval,
 					Debug:         false,
 					Level:         zap.InfoLevel,
+					Pretty:        cfg.DevelopmentMode,
 				})
 				if err != nil {
 					return nil, fmt.Errorf("could not create buffered logger: %w", err)
 				}
 				c.Logger = bl.Logger
 			} else {
-				c.Logger = logging.NewZapAccessLoggerWithSyncer(os.Stdout)
+				c.Logger = logging.NewZapAccessLogger(os.Stdout, cfg.DevelopmentMode)
 			}
 		}
 
