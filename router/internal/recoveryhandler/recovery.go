@@ -1,7 +1,6 @@
 package recoveryhandler
 
 import (
-	"go.uber.org/zap"
 	"net/http"
 )
 
@@ -9,7 +8,6 @@ import (
 // that recovers from any panics and returns a 500 Internal Server Error.
 type handler struct {
 	handler http.Handler
-	logger  *zap.Logger
 }
 
 // Option provides a functional approach to define
