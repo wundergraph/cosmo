@@ -436,8 +436,8 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		}
 		if computeSha256 {
 			operationHashCacheConfig := &ristretto.Config[uint64, string]{
-				MaxCost:     s.engineExecutionConfiguration.NormalizationCacheSize,
-				NumCounters: s.engineExecutionConfiguration.NormalizationCacheSize * 10,
+				MaxCost:     s.engineExecutionConfiguration.OperationHashCacheSize,
+				NumCounters: s.engineExecutionConfiguration.OperationHashCacheSize * 10,
 				BufferItems: 64,
 			}
 			gm.operationHashCache, err = ristretto.NewCache[uint64, string](operationHashCacheConfig)

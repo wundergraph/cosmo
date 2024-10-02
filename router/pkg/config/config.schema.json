@@ -1720,6 +1720,11 @@
           "default": 1024,
           "description": "The size of the execution plan cache."
         },
+        "operation_hash_cache_size": {
+          "type": "integer",
+          "default": 2048,
+          "description": "The size of the Operation Hash Cache."
+        },
         "minify_subgraph_operations": {
           "type": "boolean",
           "default": true,
