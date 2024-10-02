@@ -619,6 +619,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		MaxConcurrentResolvers:         32,
 		ExecutionPlanCacheSize:         1024,
 		EnablePersistedOperationsCache: true,
+		OperationHashCacheSize:         2048,
 		ParseKitPoolSize:               8,
 		EnableValidationCache:          true,
 		ValidationCacheSize:            1024,
