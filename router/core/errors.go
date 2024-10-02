@@ -110,11 +110,11 @@ func trackResponseError(ctx context.Context, err error) {
 
 func getAggregatedSubgraphErrorCodes(err error) []string {
 
-	if unwrapped, ok := err.(interface{ Unwrap() []error }); ok {
+	if unwrapped, ok := err.(MultiError); ok {
 
 		errs := unwrapped.Unwrap()
 
-		errorCodes := make([]string, 0)
+		errorCodes := make([]string, 0, len(errs))
 
 		for _, e := range errs {
 			var subgraphError *resolve.SubgraphError
@@ -131,7 +131,7 @@ func getAggregatedSubgraphErrorCodes(err error) []string {
 
 func getAggregatedSubgraphServiceNames(err error) []string {
 
-	if unwrapped, ok := err.(interface{ Unwrap() []error }); ok {
+	if unwrapped, ok := err.(MultiError); ok {
 
 		errs := unwrapped.Unwrap()
 

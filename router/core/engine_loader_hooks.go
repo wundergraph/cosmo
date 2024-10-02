@@ -22,6 +22,8 @@ var (
 	_ resolve.LoaderHooks = (*EngineLoaderHooks)(nil)
 )
 
+type MultiError = interface{ Unwrap() []error }
+
 const EngineLoaderHooksScopeName = "wundergraph/cosmo/router/engine/loader"
 const EngineLoaderHooksScopeVersion = "0.0.1"
 
@@ -114,7 +116,7 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 
 		var errorCodesAttr []string
 
-		if unwrapped, ok := err.(interface{ Unwrap() []error }); ok {
+		if unwrapped, ok := err.(MultiError); ok {
 			errs := unwrapped.Unwrap()
 			for _, e := range errs {
 				var subgraphError *resolve.SubgraphError
