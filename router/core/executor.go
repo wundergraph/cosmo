@@ -80,6 +80,9 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 	if opts.ApolloCompatibilityFlags.ValueCompletion.Enabled {
 		options.ResolvableOptions.ApolloCompatibilityValueCompletionInExtensions = true
 	}
+	if opts.ApolloCompatibilityFlags.TruncateFloats.Enabled {
+		options.ResolvableOptions.ApolloCompatibilityTruncateFloatValues = true
+	}
 
 	switch opts.RouterEngineConfig.SubgraphErrorPropagation.Mode {
 	case config.SubgraphErrorPropagationModePassthrough:

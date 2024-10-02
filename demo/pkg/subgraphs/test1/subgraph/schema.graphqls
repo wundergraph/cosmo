@@ -24,6 +24,8 @@ type Query {
     rootFieldWithListOfInputArg(arg: [InputType!]!): [InputResponse!]!
     rootFieldWithListOfEnumArg(arg: [EnumType!]!): [EnumType!]!
     rootFieldWithInput(arg: InputArg!): String!
+
+    floatField(arg: Float): Float
 }
 
 input InputArg {

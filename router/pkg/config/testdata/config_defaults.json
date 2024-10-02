@@ -292,6 +292,9 @@
     "EnableAll": false,
     "ValueCompletion": {
       "Enabled": false
+    },
+    "TruncateFloats": {
+      "Enabled": false
     }
   }
 }
