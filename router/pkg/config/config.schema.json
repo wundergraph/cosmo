@@ -406,7 +406,7 @@
           "properties": {
             "enabled": {
               "type": "boolean",
-              "description": "Enable the buffer. The buffer is used to buffer the logs before writing them to the output. The default value is true."
+              "description": "Enable the buffer. The buffer is used to buffer the logs before writing them to the output. The default value is false."
             },
             "flush_interval": {
               "type": "string",
