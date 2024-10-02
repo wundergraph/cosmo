@@ -1723,7 +1723,7 @@
         "operation_hash_cache_size": {
           "type": "integer",
           "default": 2048,
-          "description": "The size of the Operation Hash Cache."
+          "description": "The size of the Operation Hash Cache. This should be larger than the plan cache because the hash is computed on the original query."
         },
         "minify_subgraph_operations": {
           "type": "boolean",
