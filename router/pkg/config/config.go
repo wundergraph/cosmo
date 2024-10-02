@@ -626,10 +626,15 @@ type AccessLogsFileOutputConfig struct {
 type ApolloCompatibilityFlags struct {
 	EnableAll       bool                               `yaml:"enable_all" envDefault:"false" env:"APOLLO_COMPATIBILITY_ENABLE_ALL"`
 	ValueCompletion ApolloCompatibilityValueCompletion `yaml:"value_completion"`
+	TruncateFloats  ApolloCompatibilityTruncateFloats  `yaml:"truncate_floats"`
 }
 
 type ApolloCompatibilityValueCompletion struct {
 	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_VALUE_COMPLETION_ENABLED"`
+}
+
+type ApolloCompatibilityTruncateFloats struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_TRUNCATE_FLOATS_ENABLED"`
 }
 
 type Config struct {
