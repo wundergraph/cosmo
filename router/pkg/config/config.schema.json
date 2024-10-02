@@ -1706,6 +1706,17 @@
               "default": false
             }
           }
+        },
+        "truncate_floats":{
+          "type": "object",
+          "description": "Truncate floats like 1.0 to 1, 2.0 to 2, etc.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
         }
       }
     }

@@ -68,4 +68,79 @@ func TestApolloCompatibility(t *testing.T) {
 			require.Equal(t, `{"data":null,"extensions":{"valueCompletion":[{"message":"Invalid __typename found for object at array element of type wrongTypeName at index 0.","path":["findEmployees",0,"__typename"],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
 		})
 	})
+	t.Run("float compaction off", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				Test1: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							_, _ = w.Write([]byte(`{"data":{"floatField":1.0}}`))
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query FloatQuery($arg: Float) { floatField(arg: $arg) }`,
+				Variables: json.RawMessage(`{"arg":1.0}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, `{"data":{"floatField":1.0}}`, res.Body)
+		})
+	})
+	t.Run("float compaction on", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
+					TruncateFloats: config.ApolloCompatibilityTruncateFloats{
+						Enabled: true,
+					},
+				}),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Test1: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							_, _ = w.Write([]byte(`{"data":{"floatField":1.0}}`))
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query FloatQuery($arg: Float) { floatField(arg: $arg) }`,
+				Variables: json.RawMessage(`{"arg":1}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, `{"data":{"floatField":1}}`, res.Body)
+		})
+	})
+	t.Run("float compaction global", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
+					EnableAll: true,
+				}),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Test1: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							_, _ = w.Write([]byte(`{"data":{"floatField":1.0}}`))
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query FloatQuery($arg: Float) { floatField(arg: $arg) }`,
+				Variables: json.RawMessage(`{"arg":1}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, `{"data":{"floatField":1}}`, res.Body)
+		})
+	})
 }

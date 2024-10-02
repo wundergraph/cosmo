@@ -1652,6 +1652,7 @@ func WithApolloCompatibilityFlagsConfig(cfg config.ApolloCompatibilityFlags) Opt
 	return func(r *Router) {
 		if cfg.EnableAll {
 			cfg.ValueCompletion.Enabled = true
+			cfg.TruncateFloats.Enabled = true
 		}
 		r.apolloCompatibilityFlags = cfg
 	}
