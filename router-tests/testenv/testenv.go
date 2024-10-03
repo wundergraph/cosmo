@@ -129,6 +129,7 @@ type Config struct {
 	PropagationConfig                  config.PropagationConfig
 	CacheControlPolicy                 config.CacheControlPolicy
 	LogObservation                     LogObservationConfig
+	ClientHeader                       config.ClientHeader
 }
 
 type SubgraphsConfig struct {
@@ -783,6 +784,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			testConfig.ModifyWebsocketConfiguration(wsConfig)
 		}
 		routerOpts = append(routerOpts, core.WithWebSocketConfiguration(wsConfig))
+		routerOpts = append(routerOpts, core.WithClientHeader(testConfig.ClientHeader))
 	}
 	return core.NewRouter(routerOpts...)
 }
