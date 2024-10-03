@@ -41,7 +41,7 @@ jobs:
           msg: "${{ github.event.release.tag_name }}"
 
       - name: Set BUILD_TIME env
-        run: echo BUILD_TIME=$(date) >> ${GITHUB_ENV}
+        run: echo BUILD_TIME=$(date -u +'%Y-%m-%dT%H:%M:%SZ') >> ${GITHUB_ENV}
 
       - uses: wangyoucao577/go-release-action@v1
         name: Build and attach binaries to GitHub Release
