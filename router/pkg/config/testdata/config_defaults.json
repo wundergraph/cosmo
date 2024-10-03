@@ -300,6 +300,10 @@
     "Storage": {
       "ProviderID": "",
       "ObjectPath": ""
+    },
+    "FallbackStorage": {
+      "ProviderID": "",
+      "ObjectPath": ""
     }
   },
   "PersistedOperationsConfig": {
