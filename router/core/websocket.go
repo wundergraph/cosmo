@@ -6,9 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/buger/jsonparser"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
-	"golang.org/x/sync/semaphore"
 	"io"
 	"net"
 	"net/http"
@@ -17,6 +14,10 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/buger/jsonparser"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
+	"golang.org/x/sync/semaphore"
 
 	"github.com/goccy/go-json"
 
@@ -340,16 +341,18 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		r = r.WithContext(authentication.WithWebsocketInitialPayloadContextKey(r.Context(), handler.initialPayload))
 
 		// Later check access control after initial payload is read and set into the context
-		handler.request, err = h.accessController.Access(w, r)
-		if err != nil {
-			statusCode := http.StatusForbidden
-			if errors.Is(err, ErrUnauthorized) {
-				statusCode = http.StatusUnauthorized
+		if h.accessController != nil {
+			handler.request, err = h.accessController.Access(w, r)
+			if err != nil {
+				statusCode := http.StatusForbidden
+				if errors.Is(err, ErrUnauthorized) {
+					statusCode = http.StatusUnauthorized
+				}
+				http.Error(handler.w, http.StatusText(statusCode), statusCode)
+				handler.writeErrorMessage(requestID, err)
+				handler.Close()
+				return
 			}
-			http.Error(handler.w, http.StatusText(statusCode), statusCode)
-			handler.writeErrorMessage(requestID, err)
-			handler.Close()
-			return
 		}
 
 		// Export the token from the initial payload to the request header
