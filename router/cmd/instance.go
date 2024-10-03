@@ -172,6 +172,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		core.WithCDN(cfg.CDN),
 		core.WithEvents(cfg.Events),
 		core.WithRateLimitConfig(&cfg.RateLimit),
+		core.WithClientHeader(cfg.ClientHeader),
 	}
 
 	// HTTP_PROXY, HTTPS_PROXY and NO_PROXY

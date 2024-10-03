@@ -97,3 +97,46 @@ func TestCommonRequestFilter(t *testing.T) {
 	require.NoError(t, err)
 	require.Truef(t, CommonRequestFilter(r), "allow POST requests")
 }
+
+func TestGetClientHeader(t *testing.T) {
+	// no headers
+	r, err := http.NewRequest("POST", "http://localhost:8080", nil)
+	require.NoError(t, err)
+	require.Equal(t, "unknown", GetClientHeader(r.Header, []string{"", "graphql-client-name", "apollographql-client-name"}, "unknown"))
+	require.Equal(t, "missing", GetClientHeader(r.Header, []string{"", "graphql-client-version", "apollographql-client-version"}, "missing"))
+
+	clientName := "name"
+	clientVersion := "version"
+
+	// pass values in default headers, but have configured the custom header names
+	r, err = http.NewRequest("POST", "http://localhost:8080", nil)
+	require.NoError(t, err)
+	r.Header.Set("graphql-client-name", clientName)
+	r.Header.Set("graphql-client-version", clientVersion)
+	require.Equal(t, clientName, GetClientHeader(r.Header, []string{"client-name", "graphql-client-name", "apollographql-client-name"}, "unknown"))
+	require.Equal(t, clientVersion, GetClientHeader(r.Header, []string{"client-version", "graphql-client-version", "apollographql-client-version"}, "missing"))
+
+	// pass values in default headers, but have configured the custom header names
+	r, err = http.NewRequest("POST", "http://localhost:8080", nil)
+	require.NoError(t, err)
+	r.Header.Set("apollographql-client-name", clientName)
+	r.Header.Set("apollographql-client-version", clientVersion)
+	require.Equal(t, clientName, GetClientHeader(r.Header, []string{"client-name", "graphql-client-name", "apollographql-client-name"}, "unknown"))
+	require.Equal(t, clientVersion, GetClientHeader(r.Header, []string{"client-version", "graphql-client-version", "apollographql-client-version"}, "missing"))
+
+	// pass values in custom headers, but the custom headers are not configured
+	r, err = http.NewRequest("POST", "http://localhost:8080", nil)
+	require.NoError(t, err)
+	r.Header.Set("client-name", clientName)
+	r.Header.Set("client-version", clientVersion)
+	require.Equal(t, "unknown", GetClientHeader(r.Header, []string{"", "graphql-client-name", "apollographql-client-name"}, "unknown"))
+	require.Equal(t, "missing", GetClientHeader(r.Header, []string{"", "graphql-client-version", "apollographql-client-version"}, "missing"))
+
+	// pass values in custom headers
+	r, err = http.NewRequest("POST", "http://localhost:8080", nil)
+	require.NoError(t, err)
+	r.Header.Set("client-name", clientName)
+	r.Header.Set("client-version", clientVersion)
+	require.Equal(t, clientName, GetClientHeader(r.Header, []string{"client-name", "graphql-client-name", "apollographql-client-name"}, "unknown"))
+	require.Equal(t, clientVersion, GetClientHeader(r.Header, []string{"client-version", "graphql-client-version", "apollographql-client-version"}, "missing"))
+}
