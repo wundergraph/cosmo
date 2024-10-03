@@ -1,5 +1,17 @@
 FROM golang:1.21 as builder
 
+ARG TARGETOS
+ARG TARGETARCH
+ARG COMMIT
+ARG DATE
+
+ARG VERSION=dev
+ENV VERSION=$VERSION
+
+ENV COMMIT=$COMMIT
+
+ENV DATE=$DATE
+
 WORKDIR /app/
 
 # Copy only the files required for go mod download
