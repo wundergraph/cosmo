@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.119.0](https://github.com/wundergraph/cosmo/compare/router@0.118.0...router@0.119.0) (2024-10-03)
+
+### Bug Fixes
+
+* fix panic when accessController is nil in handleUpgradeRequest ([#1239](https://github.com/wundergraph/cosmo/issues/1239)) ([5699c03](https://github.com/wundergraph/cosmo/commit/5699c03db4d0b13b39643787700e49a389cf038d)) (@ElliottZeroFlucs)
+
+### Features
+
+* add option to add response header with trace id ([#1234](https://github.com/wundergraph/cosmo/issues/1234)) ([f8f5078](https://github.com/wundergraph/cosmo/commit/f8f50781917ee4bb0c24ac0c8aa9db71f87e9a05)) (@JivusAyrus)
+* add option to have custom names client name and version headers ([#1233](https://github.com/wundergraph/cosmo/issues/1233)) ([e09348d](https://github.com/wundergraph/cosmo/commit/e09348d2925469e259b526c231a14c6abcc80916)) (@JivusAyrus)
+* router version command ([#1240](https://github.com/wundergraph/cosmo/issues/1240)) ([39970e5](https://github.com/wundergraph/cosmo/commit/39970e5b1c6d8e2a2958f5ea55bb0d8aa7206d92)) (@StarpTech)
+
 # [0.118.0](https://github.com/wundergraph/cosmo/compare/router@0.117.0...router@0.118.0) (2024-10-03)
 
 ### Features
