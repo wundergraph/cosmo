@@ -140,8 +140,7 @@ type GraphQLHandler struct {
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	requestLogger := h.log.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
-	operationCtx := getOperationContext(r.Context())
+	requestContext := getRequestContext(r.Context())
 
 	var baseAttributes []attribute.KeyValue
 
@@ -156,16 +155,16 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer graphqlExecutionSpan.End()
 
 	ctx := &resolve.Context{
-		Variables: operationCtx.Variables(),
-		Files:     operationCtx.Files(),
+		Variables: requestContext.operation.variables,
+		Files:     requestContext.operation.files,
 		Request: resolve.Request{
 			Header: r.Header,
 		},
 		RenameTypeNames:  h.executor.RenameTypeNames,
-		TracingOptions:   operationCtx.traceOptions,
-		InitialPayload:   operationCtx.initialPayload,
-		Extensions:       operationCtx.extensions,
-		ExecutionOptions: operationCtx.executionOptions,
+		TracingOptions:   requestContext.operation.traceOptions,
+		InitialPayload:   requestContext.operation.initialPayload,
+		Extensions:       requestContext.operation.extensions,
+		ExecutionOptions: requestContext.operation.executionOptions,
 	}
 
 	ctx = ctx.WithContext(executionContext)
@@ -178,60 +177,68 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx = h.configureRateLimiting(ctx)
 
-	defer propagateSubgraphErrors(ctx, requestLogger)
-
-	switch p := operationCtx.preparedPlan.preparedPlan.(type) {
+	switch p := requestContext.operation.preparedPlan.preparedPlan.(type) {
 	case *plan.SynchronousResponsePlan:
 		w.Header().Set("Content-Type", "application/json")
-		h.setDebugCacheHeaders(w, operationCtx)
+		h.setDebugCacheHeaders(w, requestContext.operation)
+
 		if h.enableResponseHeaderPropagation {
 			ctx = WithResponseHeaderPropagation(ctx)
 		}
+
+		defer propagateSubgraphErrors(ctx)
+
 		resp, err := h.executor.Resolver.ResolveGraphQLResponse(ctx, p.Response, nil, HeaderPropagationWriter(w, ctx.Context()))
+		requestContext.dataSources = p.Response.DataSources
+
 		if err != nil {
-			requestLogger.Error("unable to resolve response", zap.Error(err))
+			requestContext.logger.Error("unable to resolve response", zap.Error(err))
 			trackResponseError(ctx.Context(), err)
 			h.WriteError(ctx, err, p.Response, w)
 			return
 		}
+
 		graphqlExecutionSpan.SetAttributes(rotel.WgAcquireResolverWaitTimeMs.Int64(resp.ResolveAcquireWaitTime.Milliseconds()))
 	case *plan.SubscriptionResponsePlan:
 		var (
 			writer resolve.SubscriptionResponseWriter
 			ok     bool
 		)
-		h.setDebugCacheHeaders(w, operationCtx)
+		h.setDebugCacheHeaders(w, requestContext.operation)
+
+		defer propagateSubgraphErrors(ctx)
 		ctx, writer, ok = GetSubscriptionResponseWriter(ctx, ctx.Variables, r, w)
 		if !ok {
-			requestLogger.Error("unable to get subscription response writer", zap.Error(errCouldNotFlushResponse))
+			requestContext.logger.Error("unable to get subscription response writer", zap.Error(errCouldNotFlushResponse))
 			trackResponseError(r.Context(), errCouldNotFlushResponse)
-			writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errCouldNotFlushResponse), requestLogger)
+			writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errCouldNotFlushResponse), requestContext.logger)
 			return
 		}
+
 		h.websocketStats.ConnectionsInc()
 		defer h.websocketStats.ConnectionsDec()
 
 		err := h.executor.Resolver.ResolveGraphQLSubscription(ctx, p.Response, writer)
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
-				requestLogger.Debug("context canceled: unable to resolve subscription response", zap.Error(err))
+				requestContext.logger.Debug("context canceled: unable to resolve subscription response", zap.Error(err))
 				trackResponseError(r.Context(), err)
 				return
 			} else if errors.Is(err, ErrUnauthorized) {
 				trackResponseError(ctx.Context(), err)
-				writeRequestErrors(r, w, http.StatusUnauthorized, graphqlerrors.RequestErrorsFromError(err), requestLogger)
+				writeRequestErrors(r, w, http.StatusUnauthorized, graphqlerrors.RequestErrorsFromError(err), requestContext.logger)
 				return
 			}
 
-			requestLogger.Error("unable to resolve subscription response", zap.Error(err))
+			requestContext.logger.Error("unable to resolve subscription response", zap.Error(err))
 			trackResponseError(ctx.Context(), err)
-			writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errCouldNotResolveResponse), requestLogger)
+			writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errCouldNotResolveResponse), requestContext.logger)
 			return
 		}
 	default:
-		requestLogger.Error("unsupported plan kind")
+		requestContext.logger.Error("unsupported plan kind")
 		trackResponseError(ctx.Context(), errOperationPlanUnsupported)
-		writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errOperationPlanUnsupported), requestLogger)
+		writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errOperationPlanUnsupported), requestContext.logger)
 	}
 }
 

@@ -729,17 +729,17 @@ func TestTelemetry(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			TraceExporter: exporter,
 			MetricReader:  metricReader,
-			OtelResourceAttributes: []config.OtelResourceAttribute{
+			OtelResourceAttributes: []config.CustomStaticAttribute{
 				{
 					Key:   "custom.resource",
 					Value: "value",
 				},
 			},
-			OtelAttributes: []config.OtelAttribute{
+			OtelAttributes: []config.CustomAttribute{
 				{
 					Key:     "custom",
 					Default: "value",
-					ValueFrom: &config.OtelAttributeFromValue{
+					ValueFrom: &config.CustomDynamicAttribute{
 						RequestHeader: "x-custom-header",
 					},
 				},
@@ -1101,13 +1101,13 @@ func TestTelemetry(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			TraceExporter: exporter,
 			MetricReader:  metricReader,
-			OtelResourceAttributes: []config.OtelResourceAttribute{
+			OtelResourceAttributes: []config.CustomStaticAttribute{
 				{
 					Key:   "custom.resource",
 					Value: "value",
 				},
 			},
-			OtelAttributes: []config.OtelAttribute{
+			OtelAttributes: []config.CustomAttribute{
 				{
 					Key:     "custom",
 					Default: "value",

@@ -1,3 +1,4 @@
 **/.env
 **/.env.local
 CHANGELOG.md
+access.log

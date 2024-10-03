@@ -87,7 +87,7 @@ func (p *OperationPlanner) preparePlan(ctx *operationContext) (*planWithMetaData
 	if report.HasErrors() {
 		return nil, &reportError{report: &report}
 	}
-	post := postprocess.NewProcessor()
+	post := postprocess.NewProcessor(postprocess.CollectDataSourceInfo())
 	post.Process(preparedPlan)
 
 	out := &planWithMetaData{
@@ -115,27 +115,7 @@ type PlanOptions struct {
 	TrackSchemaUsageInfo bool
 }
 
-func (p *OperationPlanner) plan(operation *ParsedOperation, options PlanOptions) (opContext *operationContext, err error) {
-	opContext = &operationContext{
-		name:                       operation.Request.OperationName,
-		opType:                     operation.Type,
-		content:                    operation.NormalizedRepresentation,
-		hash:                       operation.ID,
-		clientInfo:                 *options.ClientInfo,
-		variables:                  operation.Request.Variables,
-		files:                      operation.Files,
-		traceOptions:               options.TraceOptions,
-		extensions:                 operation.Request.Extensions,
-		protocol:                   options.Protocol,
-		persistedOperationCacheHit: operation.PersistedOperationCacheHit,
-		normalizationCacheHit:      operation.NormalizationCacheHit,
-		executionOptions:           options.ExecutionOptions,
-	}
-	if operation.IsPersistedOperation {
-		opContext.persistedID = operation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
-	}
-	opContext.setAttributes()
-
+func (p *OperationPlanner) plan(opContext *operationContext, options PlanOptions) (err error) {
 	// if we have tracing enabled or want to include a query plan in the response we always prepare a new plan
 	// this is because in case of tracing, we're writing trace data to the plan
 	// in case of including the query plan, we don't want to cache this additional overhead
@@ -144,7 +124,7 @@ func (p *OperationPlanner) plan(operation *ParsedOperation, options PlanOptions)
 	if skipCache {
 		prepared, err := p.preparePlan(opContext)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		opContext.preparedPlan = prepared
 		if options.TrackSchemaUsageInfo {
@@ -152,10 +132,10 @@ func (p *OperationPlanner) plan(operation *ParsedOperation, options PlanOptions)
 			opContext.argumentUsageInfo = prepared.argumentUsageInfo
 			opContext.inputUsageInfo, err = graphqlschemausage.GetInputUsageInfo(prepared.operationDocument, p.executor.RouterSchema, opContext.variables)
 			if err != nil {
-				return nil, err
+				return err
 			}
 		}
-		return opContext, nil
+		return nil
 	}
 
 	operationID := opContext.Hash()
@@ -178,11 +158,11 @@ func (p *OperationPlanner) plan(operation *ParsedOperation, options PlanOptions)
 			return prepared, nil
 		})
 		if err != nil {
-			return nil, err
+			return err
 		}
 		opContext.preparedPlan, ok = sharedPreparedPlan.(*planWithMetaData)
 		if !ok {
-			return nil, errors.New("unexpected prepared plan type")
+			return errors.New("unexpected prepared plan type")
 		}
 	}
 	if options.TrackSchemaUsageInfo {
@@ -190,8 +170,8 @@ func (p *OperationPlanner) plan(operation *ParsedOperation, options PlanOptions)
 		opContext.argumentUsageInfo = opContext.preparedPlan.argumentUsageInfo
 		opContext.inputUsageInfo, err = graphqlschemausage.GetInputUsageInfo(opContext.preparedPlan.operationDocument, p.executor.RouterSchema, opContext.variables)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
-	return opContext, nil
+	return nil
 }
