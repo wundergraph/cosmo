@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"github.com/buger/jsonparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
+	"golang.org/x/sync/semaphore"
+	"io"
 	"net"
 	"net/http"
 	"regexp"
@@ -20,7 +22,6 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"github.com/alitto/pond"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
@@ -61,15 +62,6 @@ type WebsocketMiddlewareOptions struct {
 
 func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions) func(http.Handler) http.Handler {
 
-	handlerPool := pond.New(
-		64,
-		0,
-		pond.Context(ctx),
-		pond.IdleTimeout(time.Second*30),
-		pond.Strategy(pond.Lazy()),
-		pond.MinWorkers(8),
-	)
-
 	handler := &WebsocketHandler{
 		ctx:                ctx,
 		operationProcessor: opts.OperationProcessor,
@@ -85,6 +77,7 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 		config:             opts.WebSocketConfiguration,
 		handlerPool:        handlerPool,
 		clientHeader:       opts.ClientHeader,
+		handlerSem:         semaphore.NewWeighted(128),
 	}
 	if opts.WebSocketConfiguration != nil && opts.WebSocketConfiguration.AbsintheProtocol.Enabled {
 		handler.absintheHandlerEnabled = true
@@ -220,7 +213,7 @@ type WebsocketHandler struct {
 	connections   map[int]*WebSocketConnectionHandler
 	connectionsMu sync.RWMutex
 
-	handlerPool   *pond.WorkerPool
+	handlerSem    *semaphore.Weighted
 	connectionIDs atomic.Int64
 
 	stats WebSocketsStatistics
@@ -295,7 +288,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	// We can parse the request options before creating the handler
 	// this avoids touching the client request across goroutines
 
-	executionOptions, traceOptions, err := h.preHandler.parseRequestOptions(r, clientInfo, h.logger)
+	executionOptions, traceOptions, err := h.preHandler.parseRequestOptions(r, clientInfo, requestLogger)
 	if err != nil {
 		requestLogger.Error("Parse request options", zap.Error(err))
 		_ = c.Close()
@@ -333,7 +326,13 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	})
 	err = handler.Initialize()
 	if err != nil {
-		requestLogger.Error("Initializing websocket connection", zap.Error(err))
+		if errors.Is(err, io.EOF) {
+			requestLogger.Warn("No more data to read during initialization", zap.Error(err))
+		} else if errors.As(err, &wsutil.ClosedError{}) {
+			requestLogger.Warn("Client closed connection during initialization", zap.Error(err))
+		} else {
+			requestLogger.Error("Initializing websocket connection", zap.Error(err))
+		}
 		handler.Close()
 		return
 	}
@@ -955,9 +954,11 @@ func (h *WebsocketHandler) HandleMessage(handler *WebSocketConnectionHandler, ms
 			h.logger.Warn("Handling subscription registration", zap.Error(err))
 			return handler.requestError(fmt.Errorf("error registering subscription id: %s", msg.ID))
 		}
-		h.handlerPool.Submit(func() {
-			handler.executeSubscription(registration)
-		})
+		if err := h.handlerSem.Acquire(handler.ctx, 1); err != nil {
+			return err
+		}
+		defer h.handlerSem.Release(1)
+		handler.executeSubscription(registration)
 	case wsproto.MessageTypeComplete:
 		err = handler.handleComplete(msg)
 		if err != nil {
@@ -973,7 +974,6 @@ func (h *WebSocketConnectionHandler) Initialize() (err error) {
 	h.logger.Debug("Websocket connection", zap.String("protocol", h.protocol.Subprotocol()))
 	h.initialPayload, err = h.protocol.Initialize()
 	if err != nil {
-		h.logger.Error("Initializing websocket connection", zap.Error(err))
 		_ = h.requestError(fmt.Errorf("error initializing session"))
 		return err
 	}

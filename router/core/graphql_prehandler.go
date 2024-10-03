@@ -620,15 +620,20 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 		return nil, err
 	}
 
-	if h.queryPlansLoggingEnabled {
-		switch p := opContext.preparedPlan.preparedPlan.(type) {
-		case *plan.SynchronousResponsePlan:
-			printedPlan := p.Response.Fetches.QueryPlan().PrettyPrint()
+	// we could log the query plan only if query plans are calculated
+	if (h.queryPlansEnabled && httpOperation.executionOptions.IncludeQueryPlanInResponse) ||
+		h.alwaysIncludeQueryPlan {
 
-			if h.developmentMode {
-				h.log.Sugar().Debugf("Query Plan:\n%s", printedPlan)
-			} else {
-				h.log.Debug("Query Plan", zap.String("query_plan", printedPlan))
+		if h.queryPlansLoggingEnabled {
+			switch p := opContext.preparedPlan.preparedPlan.(type) {
+			case *plan.SynchronousResponsePlan:
+				printedPlan := p.Response.Fetches.QueryPlan().PrettyPrint()
+
+				if h.developmentMode {
+					h.log.Sugar().Debugf("Query Plan:\n%s", printedPlan)
+				} else {
+					h.log.Debug("Query Plan", zap.String("query_plan", printedPlan))
+				}
 			}
 		}
 	}

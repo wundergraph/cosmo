@@ -595,6 +595,7 @@ type PersistedOperationsConfig struct {
 type ApolloCompatibilityFlags struct {
 	EnableAll       bool                               `yaml:"enable_all" envDefault:"false" env:"APOLLO_COMPATIBILITY_ENABLE_ALL"`
 	ValueCompletion ApolloCompatibilityValueCompletion `yaml:"value_completion"`
+	TruncateFloats  ApolloCompatibilityTruncateFloats  `yaml:"truncate_floats"`
 }
 
 type ApolloCompatibilityValueCompletion struct {
@@ -604,6 +605,10 @@ type ApolloCompatibilityValueCompletion struct {
 type ClientHeader struct {
 	Name string `yaml:"name,omitempty"`
 	Version string `yaml:"version,omitempty"`
+}
+
+type ApolloCompatibilityTruncateFloats struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_TRUNCATE_FLOATS_ENABLED"`
 }
 
 type Config struct {

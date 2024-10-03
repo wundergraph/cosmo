@@ -7,7 +7,6 @@ toolchain go1.22.0
 require (
 	connectrpc.com/connect v1.16.2
 	github.com/MicahParks/keyfunc/v2 v2.1.0
-	github.com/alitto/pond v1.9.2
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/buger/jsonparser v1.1.1
 	github.com/cespare/xxhash/v2 v2.3.0
@@ -36,10 +35,10 @@ require (
 	github.com/sebdah/goldie/v2 v2.5.3
 	github.com/shirou/gopsutil/v3 v3.24.3
 	github.com/stretchr/testify v1.9.0
-	github.com/tidwall/gjson v1.17.3
+	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/twmb/franz-go v1.16.1
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.89
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.94
 	// Do not upgrade, it renames attributes we rely on
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/contrib/propagators/b3 v1.23.0

@@ -95,7 +95,7 @@ func (e *Epoll) Remove(conn net.Conn) error {
 	defer e.lock.Unlock()
 	delete(e.conns, fd)
 
-	return unix.Close(fd)
+	return nil
 }
 
 // Wait waits for at most count events and returns the connections.

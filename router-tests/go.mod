@@ -23,12 +23,12 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/testcontainers/testcontainers-go v0.29.1
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.29.1
-	github.com/tidwall/gjson v1.17.3
+	github.com/tidwall/gjson v1.18.0
 	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
-	github.com/wundergraph/cosmo/demo v0.0.0-20240927113618-9f0fbacfd691
-	github.com/wundergraph/cosmo/router v0.0.0-20240927113618-9f0fbacfd691
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.89
+	github.com/wundergraph/cosmo/demo v0.0.0-20241002093810-051ae67a638a
+	github.com/wundergraph/cosmo/router v0.0.0-20241002093810-051ae67a638a
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.94
 	go.opentelemetry.io/otel v1.28.0
 	go.opentelemetry.io/otel/sdk v1.28.0
 	go.opentelemetry.io/otel/sdk/metric v1.28.0
@@ -48,7 +48,6 @@ require (
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/Microsoft/hcsshim v0.11.4 // indirect
 	github.com/agnivade/levenshtein v1.1.1 // indirect
-	github.com/alitto/pond v1.9.2 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bep/debounce v1.2.1 // indirect
