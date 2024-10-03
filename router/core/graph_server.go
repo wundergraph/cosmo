@@ -471,28 +471,29 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		}
 
 		traceHandler = rtrace.NewMiddleware(
-			func(r *http.Request) {
-				span := oteltrace.SpanFromContext(r.Context())
-				if attributes := baseAttributesFromContext(r.Context()); attributes != nil {
-					span.SetAttributes(attributes...)
-				}
-			},
-			func(w http.ResponseWriter, graphqlExecutionSpan oteltrace.Span) {
-				if s.traceConfig.ResponseTraceHeader.Enabled {
-					spanContext := graphqlExecutionSpan.SpanContext()
-					traceID := spanContext.TraceID().String()
-					w.Header().Set(s.traceConfig.ResponseTraceHeader.HeaderName, traceID)
-				}
-			},
-			otelhttp.WithSpanOptions(spanStartOptions...),
-			otelhttp.WithFilter(rtrace.CommonRequestFilter),
-			otelhttp.WithFilter(rtrace.PrefixRequestFilter(
-				[]string{s.healthCheckPath, s.readinessCheckPath, s.livenessCheckPath}),
+			rtrace.WithTracePreHandler(
+				func(r *http.Request, w http.ResponseWriter, graphqlExecutionSpan oteltrace.Span) {
+					span := oteltrace.SpanFromContext(r.Context())
+					if attributes := baseAttributesFromContext(r.Context()); attributes != nil {
+						span.SetAttributes(attributes...)
+					}
+					if s.traceConfig.ResponseTraceHeader.Enabled {
+						spanContext := graphqlExecutionSpan.SpanContext()
+						traceID := spanContext.TraceID().String()
+						w.Header().Set(s.traceConfig.ResponseTraceHeader.HeaderName, traceID)
+					}
+				}),
+			rtrace.WithOtelHttp(
+				otelhttp.WithSpanOptions(spanStartOptions...),
+				otelhttp.WithFilter(rtrace.CommonRequestFilter),
+				otelhttp.WithFilter(rtrace.PrefixRequestFilter(
+					[]string{s.healthCheckPath, s.readinessCheckPath, s.livenessCheckPath}),
+				),
+				// Disable built-in metricStore through NoopMeterProvider
+				otelhttp.WithMeterProvider(sdkmetric.NewMeterProvider()),
+				otelhttp.WithSpanNameFormatter(SpanNameFormatter),
+				otelhttp.WithTracerProvider(s.tracerProvider),
 			),
-			// Disable built-in metricStore through NoopMeterProvider
-			otelhttp.WithMeterProvider(sdkmetric.NewMeterProvider()),
-			otelhttp.WithSpanNameFormatter(SpanNameFormatter),
-			otelhttp.WithTracerProvider(s.tracerProvider),
 		)
 
 		if s.traceConfig.SpanAttributesMapper != nil {
