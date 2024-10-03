@@ -748,9 +748,18 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 	}
 	defer operationKit.Free()
 
+	opContext := &operationContext{
+		name:       operationKit.parsedOperation.Request.OperationName,
+		opType:     operationKit.parsedOperation.Type,
+		content:    operationKit.parsedOperation.NormalizedRepresentation,
+		clientInfo: h.plannerOptions.ClientInfo,
+	}
+
 	if err := operationKit.UnmarshalOperationFromBody(payload); err != nil {
 		return nil, nil, err
 	}
+
+	opContext.extensions = operationKit.parsedOperation.Request.Extensions
 
 	var skipParse bool
 
@@ -765,32 +774,60 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 	// because the operation was already parsed. This is a performance optimization, and we
 	// can do it because we know that the persisted operation is immutable (identified by the hash)
 	if !skipParse {
+		startParsing := time.Now()
 		if err := operationKit.Parse(); err != nil {
+			opContext.parsingTime = time.Since(startParsing)
 			return nil, nil, err
 		}
+		opContext.parsingTime = time.Since(startParsing)
 	}
 
 	if blocked := h.operationBlocker.OperationIsBlocked(operationKit.parsedOperation); blocked != nil {
 		return nil, nil, blocked
 	}
 
+	startNormalization := time.Now()
+
 	if _, err := operationKit.NormalizeOperation(); err != nil {
+		opContext.normalizationTime = time.Since(startNormalization)
 		return nil, nil, err
 	}
+
+	opContext.hash = operationKit.parsedOperation.ID
+	opContext.normalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
 
 	if err := operationKit.NormalizeVariables(); err != nil {
+		opContext.normalizationTime = time.Since(startNormalization)
 		return nil, nil, err
 	}
+
+	opContext.normalizationTime = time.Since(startNormalization)
+	opContext.content = operationKit.parsedOperation.NormalizedRepresentation
+	opContext.variables = operationKit.parsedOperation.Request.Variables
+
+	startValidation := time.Now()
 
 	if _, err := operationKit.Validate(h.plannerOptions.ExecutionOptions.SkipLoader); err != nil {
+		opContext.validationTime = time.Since(startValidation)
 		return nil, nil, err
 	}
 
-	opContext, err := h.planner.plan(operationKit.parsedOperation, h.plannerOptions)
+	opContext.validationTime = time.Since(startValidation)
+
+	startPlanning := time.Now()
+
+	err = h.planner.plan(opContext, h.plannerOptions)
 	if err != nil {
+		opContext.planningTime = time.Since(startPlanning)
 		return operationKit.parsedOperation, nil, err
 	}
+
+	opContext.planningTime = time.Since(startPlanning)
+
 	opContext.initialPayload = h.initialPayload
+
+	opContext.setAttributes()
+
 	return operationKit.parsedOperation, opContext, nil
 }
 
