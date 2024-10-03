@@ -40,6 +40,9 @@ jobs:
           separator: "@"
           msg: "${{ github.event.release.tag_name }}"
 
+      - name: Set BUILD_TIME env
+        run: echo BUILD_TIME=$(date -u +'%Y-%m-%dT%H:%M:%SZ') >> ${GITHUB_ENV}
+
       - uses: wangyoucao577/go-release-action@v1
         name: Build and attach binaries to GitHub Release
         with:
@@ -51,7 +54,7 @@ jobs:
           binary_name: "router"
           pre_command: export CGO_ENABLED=0
           build_flags: -trimpath
-          ldflags: -extldflags -static -X github.com/wundergraph/cosmo/router/core.Version=${{ steps.split.outputs._1 }}
+          ldflags: -extldflags -static -X "github.com/wundergraph/cosmo/router/core.Version=${{ steps.split.outputs._1 }}" -X "github.com/wundergraph/cosmo/router/core.Date=${{ env.BUILD_TIME }}" -X "github.com/wundergraph/cosmo/router/core.Commit=${{ github.sha }}"
           overwrite: true
           extra_files: LICENSE
           #release_tag: router@0.14.0
