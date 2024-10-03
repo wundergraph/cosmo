@@ -129,6 +129,7 @@ type Config struct {
 	PropagationConfig                  config.PropagationConfig
 	CacheControlPolicy                 config.CacheControlPolicy
 	LogObservation                     LogObservationConfig
+	ResponseTraceHeader                config.ResponseTraceHeader
 	Logger                             *zap.Logger
 	AccessLogger                       *zap.Logger
 	AccessLogFields                    []config.CustomAttribute
@@ -707,6 +708,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 				Exporters:             []config.TracingExporter{},
 				Propagation:           testConfig.PropagationConfig,
 				TracingGlobalFeatures: config.TracingGlobalFeatures{},
+				ResponseTraceHeader:   testConfig.ResponseTraceHeader,
 			},
 		})
 

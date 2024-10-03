@@ -21,6 +21,10 @@
         "Baggage": false,
         "Datadog": false
       },
+      "ResponseTraceHeader": {
+        "Enabled": false,
+        "HeaderName": "x-wg-trace-id"
+      },
       "ExportGraphQLVariables": false,
       "WithNewRoot": false
     },

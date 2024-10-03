@@ -59,12 +59,18 @@ type TracingExporter struct {
 	TracingExporterConfig `yaml:",inline"`
 }
 
+type ResponseTraceHeader struct {
+	Enabled    bool   `yaml:"enabled"`
+	HeaderName string `yaml:"header_name" envDefault:"x-wg-trace-id"`
+}
+
 type Tracing struct {
-	Enabled            bool              `yaml:"enabled" envDefault:"true" env:"TRACING_ENABLED"`
-	SamplingRate       float64           `yaml:"sampling_rate" envDefault:"1" env:"TRACING_SAMPLING_RATE"`
-	ParentBasedSampler bool              `yaml:"parent_based_sampler" envDefault:"true" env:"TRACING_PARENT_BASED_SAMPLER"`
-	Exporters          []TracingExporter `yaml:"exporters"`
-	Propagation        PropagationConfig `yaml:"propagation"`
+	Enabled             bool                `yaml:"enabled" envDefault:"true" env:"TRACING_ENABLED"`
+	SamplingRate        float64             `yaml:"sampling_rate" envDefault:"1" env:"TRACING_SAMPLING_RATE"`
+	ParentBasedSampler  bool                `yaml:"parent_based_sampler" envDefault:"true" env:"TRACING_PARENT_BASED_SAMPLER"`
+	Exporters           []TracingExporter   `yaml:"exporters"`
+	Propagation         PropagationConfig   `yaml:"propagation"`
+	ResponseTraceHeader ResponseTraceHeader `yaml:"response_trace_id"`
 
 	TracingGlobalFeatures `yaml:",inline"`
 }
