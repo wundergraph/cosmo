@@ -20,7 +20,7 @@ func TestWrapHttpHandler(t *testing.T) {
 
 	t.Run("create a span for every request", func(t *testing.T) {
 		exporter := tracetest.NewInMemoryExporter(t)
-		h := NewMiddleware(nil,
+		h := NewMiddleware(nil, nil,
 			otelhttp.WithTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))),
 		)
 
@@ -70,7 +70,7 @@ func TestWrapHttpHandler(t *testing.T) {
 
 		for _, test := range statusCodeTests {
 			router := chi.NewRouter()
-			h := NewMiddleware(nil,
+			h := NewMiddleware(nil, nil,
 				otelhttp.WithTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))),
 			)
 
