@@ -304,3 +304,7 @@ execution_config:
     object_path: "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/routerconfigs/latest.json"
 
 router_config_path: "latest.json"
+
+client_header:
+  name: "Client-Name"
+  version: "Client_Version"

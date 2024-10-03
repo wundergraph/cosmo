@@ -220,6 +220,7 @@ type (
 		webSocketConfiguration *config.WebSocketConfiguration
 
 		subgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
+		clientHeader             config.ClientHeader
 	}
 	// Option defines the method to customize server.
 	Option func(svr *Router)
@@ -356,6 +357,13 @@ func NewRouter(opts ...Option) (*Router, error) {
 		"tracestate",
 		// Required for feature flags
 		"x-feature-flag",
+	}
+
+	if r.clientHeader.Name != "" {
+		defaultHeaders = append(defaultHeaders, r.clientHeader.Name)
+	}
+	if r.clientHeader.Version != "" {
+		defaultHeaders = append(defaultHeaders, r.clientHeader.Version)
 	}
 
 	defaultMethods := []string{
@@ -1676,6 +1684,12 @@ func WithApolloCompatibilityFlagsConfig(cfg config.ApolloCompatibilityFlags) Opt
 func WithStorageProviders(cfg config.StorageProviders) Option {
 	return func(r *Router) {
 		r.storageProviders = cfg
+	}
+}
+
+func WithClientHeader(cfg config.ClientHeader) Option {
+	return func(r *Router) {
+		r.clientHeader = cfg
 	}
 }
 

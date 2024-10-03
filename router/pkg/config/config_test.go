@@ -461,3 +461,15 @@ execution_config:
 	require.Equal(t, js.Causes[0].Error(), "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config': additional properties 'file' not allowed")
 
 }
+
+func TestClientHeaderConfig(t *testing.T) {
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+client_header: 
+  name: "Client_Name"
+  version: "Client_Version"
+`)
+	_, err := LoadConfig(f, "")
+	require.NoError(t, err)
+}

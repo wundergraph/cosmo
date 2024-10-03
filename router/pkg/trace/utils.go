@@ -53,15 +53,14 @@ func CommonRequestFilter(r *http.Request) bool {
 	return true
 }
 
-func GetClientInfo(h http.Header, primaryHeader, fallbackHeader, defaultValue string) string {
-	value := h.Get(primaryHeader)
-	if value == "" {
-		value = h.Get(fallbackHeader)
-		if value == "" {
-			value = defaultValue
+func GetClientHeader(h http.Header, headerNames []string, defaultValue string) string {
+	for _, headerName := range headerNames {
+		value := h.Get(headerName)
+		if value != "" {
+			return value
 		}
 	}
-	return value
+	return defaultValue
 }
 
 // AttachErrToSpan attaches an error to a span if it is not nil.
