@@ -439,6 +439,52 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, conn.Close())
 		})
 	})
+	t.Run("subscription without authorization with initial payload token export to request header", func(t *testing.T) {
+		t.Parallel()
+
+		authServer, err := jwks.NewServer(t)
+		require.NoError(t, err)
+
+		testenv.Run(t, &testenv.Config{
+			ModifyWebsocketConfiguration: func(cfg *config.WebSocketConfiguration) {
+				cfg.Authentication.FromInitialPayload.Enabled = true
+				cfg.Authentication.FromInitialPayload.ExportToken.Enabled = true
+				cfg.Enabled = true
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := authServer.Token(nil)
+			require.NoError(t, err)
+			initialPayload := []byte(`{"Authorization":"` + token + `"}`)
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, initialPayload)
+			err = conn.WriteJSON(testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id }}"}`),
+			})
+			require.NoError(t, err)
+
+			go func() {
+				xEnv.WaitForSubscriptionCount(1, time.Second*5)
+				// Trigger the subscription via NATS
+				subject := "employeeUpdated.3"
+				message := []byte(`{"id":3,"__typename": "Employee"}`)
+				err := xEnv.NatsConnectionDefault.Publish(subject, message)
+				require.NoError(t, err)
+				err = xEnv.NatsConnectionDefault.Flush()
+				require.NoError(t, err)
+			}()
+
+			var res testenv.WebSocketMessage
+			err = conn.ReadJSON(&res)
+			require.NoError(t, err)
+			require.Equal(t, "next", res.Type)
+			require.Equal(t, "1", res.ID)
+			require.JSONEq(t, `{"data":{"employeeUpdated":{"id":3}}}`, string(res.Payload))
+
+			require.NoError(t, conn.Close())
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+		})
+	})
 	t.Run("subscription", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
