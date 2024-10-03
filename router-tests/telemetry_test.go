@@ -2401,6 +2401,53 @@ func TestTelemetry(t *testing.T) {
 		})
 	})
 
+	t.Run("Trace ID Response header", func(t *testing.T) {
+		t.Parallel()
+
+		exporter := tracetest.NewInMemoryExporter(t)
+		customTraceHeader := "trace-id"
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+			ResponseTraceHeader: config.ResponseTraceHeader{
+				Enabled:    true,
+				HeaderName: customTraceHeader,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			sn := exporter.GetSpans().Snapshots()
+			require.Equal(t, sn[0].SpanContext().TraceID().String(), res.Response.Header.Get("trace-id"))
+		})
+	})
+
+	t.Run("Trace ID Response header with default header name", func(t *testing.T) {
+		t.Parallel()
+
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+			ResponseTraceHeader: config.ResponseTraceHeader{
+				Enabled:    true,
+				HeaderName: "x-wg-trace-id",
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			sn := exporter.GetSpans().Snapshots()
+			require.Equal(t, sn[0].SpanContext().TraceID().String(), res.Response.Header.Get("x-wg-trace-id"))
+		})
+	})
+
 	t.Run("Custom client name and client version headers", func(t *testing.T) {
 		t.Parallel()
 

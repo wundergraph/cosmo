@@ -86,6 +86,9 @@ jobs:
       - name: Generate Summary
         run: echo -e "# ${{ inputs.name }}\n## Tags\n\`\`\`${{ steps.meta.outputs.tags }}\n\`\`\`\n## Labels\n\`\`\`${{ steps.meta.outputs.labels }}\n\`\`\`" >> $GITHUB_STEP_SUMMARY
 
+      - name: Set BUILD_TIME env
+        run: echo BUILD_TIME=$(date -u +'%Y-%m-%dT%H:%M:%SZ') >> ${GITHUB_ENV}
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -103,3 +106,5 @@ jobs:
             type=image,name=target,annotation-index.org.opencontainers.image.licenses=Apache-2.0
           build-args: |
             VERSION=${{ inputs.tag }}
+            DATE=${{ env.BUILD_TIME }}
+            COMMIT=${{ github.sha }}

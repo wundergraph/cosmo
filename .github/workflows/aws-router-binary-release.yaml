@@ -38,6 +38,9 @@ jobs:
           separator: "@"
           msg: "${{ github.event.release.tag_name }}"
 
+      - name: Set BUILD_TIME env
+        run: echo BUILD_TIME=$(date -u +'%Y-%m-%dT%H:%M:%SZ') >> ${GITHUB_ENV}
+
       - uses: wangyoucao577/go-release-action@v1
         name: Build and attach binaries to GitHub Release
         with:
@@ -51,7 +54,7 @@ jobs:
           pre_command: export CGO_ENABLED=0
           build_flags: -trimpath
           # -w = omits the DWARF symbol table, effectively removing debugging information. Reduces binary size by ~30%.
-          ldflags: -w -extldflags -static -X github.com/wundergraph/cosmo/aws-lambda-router/internal.Version=${{ steps.split.outputs._1 }}
+          ldflags: -w -extldflags -static -X "github.com/wundergraph/cosmo/aws-lambda-router/internal.Version=${{ steps.split.outputs._1 }}" -X "github.com/wundergraph/cosmo/aws-lambda-router/internal.Date=${{ env.BUILD_TIME }}" -X "github.com/wundergraph/cosmo/aws-lambda-router/internal.Commit=${{ github.sha }}"
           overwrite: true
           extra_files: LICENSE
           #release_tag: aws-lambda-router@0.1.0
