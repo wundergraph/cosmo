@@ -640,6 +640,11 @@ type ApolloCompatibilityValueCompletion struct {
 	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_VALUE_COMPLETION_ENABLED"`
 }
 
+type ClientHeader struct {
+	Name string `yaml:"name,omitempty"`
+	Version string `yaml:"version,omitempty"`
+}
+
 type ApolloCompatibilityTruncateFloats struct {
 	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_TRUNCATE_FLOATS_ENABLED"`
 }
@@ -705,6 +710,7 @@ type Config struct {
 	ExecutionConfig           ExecutionConfig           `yaml:"execution_config"`
 	PersistedOperationsConfig PersistedOperationsConfig `yaml:"persisted_operations"`
 	ApolloCompatibilityFlags  ApolloCompatibilityFlags  `yaml:"apollo_compatibility_flags"`
+	ClientHeader  ClientHeader  `yaml:"client_header"`
 }
 
 type LoadResult struct {

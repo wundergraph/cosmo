@@ -493,5 +493,9 @@
     "TruncateFloats": {
       "Enabled": false
     }
+  },
+  "ClientHeader": {
+    "Name": "Client-Name",
+    "Version": "Client_Version"
   }
 }
