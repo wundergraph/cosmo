@@ -87,7 +87,6 @@ type HandlerOptions struct {
 	RateLimitConfig                             *config.RateLimitConfiguration
 	SubgraphErrorPropagation                    config.SubgraphErrorPropagationConfiguration
 	EngineLoaderHooks                           resolve.LoaderHooks
-	ResponseTraceHeader                         config.ResponseTraceHeader
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -108,7 +107,6 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		rateLimitConfig:          opts.RateLimitConfig,
 		subgraphErrorPropagation: opts.SubgraphErrorPropagation,
 		engineLoaderHooks:        opts.EngineLoaderHooks,
-		responseTraceHeader:      opts.ResponseTraceHeader,
 	}
 	return graphQLHandler
 }
@@ -139,7 +137,6 @@ type GraphQLHandler struct {
 	enablePersistedOperationCacheResponseHeader bool
 	enableNormalizationCacheResponseHeader      bool
 	enableResponseHeaderPropagation             bool
-	responseTraceHeader                         config.ResponseTraceHeader
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -186,7 +183,6 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch p := operationCtx.preparedPlan.preparedPlan.(type) {
 	case *plan.SynchronousResponsePlan:
 		w.Header().Set("Content-Type", "application/json")
-		h.setTraceResponseHeader(w, graphqlExecutionSpan)
 		h.setDebugCacheHeaders(w, operationCtx)
 		if h.enableResponseHeaderPropagation {
 			ctx = WithResponseHeaderPropagation(ctx)
@@ -204,7 +200,6 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			writer resolve.SubscriptionResponseWriter
 			ok     bool
 		)
-		h.setTraceResponseHeader(w, graphqlExecutionSpan)
 		h.setDebugCacheHeaders(w, operationCtx)
 		ctx, writer, ok = GetSubscriptionResponseWriter(ctx, ctx.Variables, r, w)
 		if !ok {
@@ -393,13 +388,5 @@ func (h *GraphQLHandler) setDebugCacheHeaders(w http.ResponseWriter, opCtx *oper
 		} else {
 			w.Header().Set(ExecutionPlanCacheHeader, "MISS")
 		}
-	}
-}
-
-func (h *GraphQLHandler) setTraceResponseHeader(w http.ResponseWriter, graphqlExecutionSpan trace.Span) {
-	if h.responseTraceHeader.Enabled {
-		spanContext := graphqlExecutionSpan.SpanContext()
-		traceID := spanContext.TraceID().String()
-		w.Header().Set(h.responseTraceHeader.HeaderName, traceID)
 	}
 }

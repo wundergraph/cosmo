@@ -437,6 +437,13 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 					span.SetAttributes(attributes...)
 				}
 			},
+			func(w http.ResponseWriter, graphqlExecutionSpan oteltrace.Span) {
+				if s.traceConfig.ResponseTraceHeader.Enabled {
+					spanContext := graphqlExecutionSpan.SpanContext()
+					traceID := spanContext.TraceID().String()
+					w.Header().Set(s.traceConfig.ResponseTraceHeader.HeaderName, traceID)
+				}
+			},
 			otelhttp.WithSpanOptions(spanStartOptions...),
 			otelhttp.WithFilter(rtrace.CommonRequestFilter),
 			otelhttp.WithFilter(rtrace.PrefixRequestFilter(
@@ -616,7 +623,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		Authorizer:                                  NewCosmoAuthorizer(authorizerOptions),
 		SubgraphErrorPropagation:                    s.subgraphErrorPropagation,
 		EngineLoaderHooks:                           NewEngineRequestHooks(s.metricStore),
-		ResponseTraceHeader:                         s.traceConfig.ResponseTraceHeader,
 	}
 
 	if s.redisClient != nil {

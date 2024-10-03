@@ -10,8 +10,9 @@ import (
 )
 
 type Middleware struct {
-	otelOpts   []otelhttp.Option
-	preHandler func(r *http.Request)
+	otelOpts               []otelhttp.Option
+	preHandler             func(r *http.Request)
+	setTraceResponseHeader func(w http.ResponseWriter, graphqlExecutionSpan trace.Span)
 }
 
 // SensitiveAttributes that should be redacted by the OTEL http instrumentation package.
@@ -22,10 +23,11 @@ var SensitiveAttributes = []attribute.Key{
 	semconv17.NetSockPeerAddrKey,
 }
 
-func NewMiddleware(preHandler func(r *http.Request), opts ...otelhttp.Option) *Middleware {
+func NewMiddleware(preHandler func(r *http.Request), setTraceResponseHeader func(w http.ResponseWriter, graphqlExecutionSpan trace.Span), opts ...otelhttp.Option) *Middleware {
 	h := &Middleware{
-		preHandler: preHandler,
-		otelOpts:   opts,
+		preHandler:             preHandler,
+		setTraceResponseHeader: setTraceResponseHeader,
+		otelOpts:               opts,
 	}
 
 	return h
@@ -40,6 +42,10 @@ func (h *Middleware) Handler(next http.Handler) http.Handler {
 		// Add custom attributes to the span
 		if h.preHandler != nil {
 			h.preHandler(r)
+		}
+
+		if h.setTraceResponseHeader != nil {
+			h.setTraceResponseHeader(w, span)
 		}
 
 		// Add request target as attribute, so we can filter by path and query
