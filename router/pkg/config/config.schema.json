@@ -1707,7 +1707,7 @@
             }
           }
         },
-        "truncate_floats":{
+        "truncate_floats": {
           "type": "object",
           "description": "Truncate floats like 1.0 to 1, 2.0 to 2, etc.. Values like 1.1 or 2.2 will not be truncated.",
           "additionalProperties": false,
@@ -1722,6 +1722,7 @@
     },
     "client_header": {
       "type": "object",
+      "description": "The configuration to set custom client name and version header.",
       "additionalProperties": false,
       "properties": {
         "name": {
