@@ -70,7 +70,7 @@ func TestOperationProcessorPersistentOperations(t *testing.T) {
 	}
 }
 
-func TestOperationProcessor(t *testing.T) {
+func TestParseOperationProcessor(t *testing.T) {
 	executor := &Executor{
 		PlanConfig:      plan.Configuration{},
 		RouterSchema:    nil,

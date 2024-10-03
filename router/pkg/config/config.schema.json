@@ -391,6 +391,129 @@
         }
       }
     },
+    "access_logs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable the access logs. The access logs are used to log the incoming requests. By default, the access logs are enabled and logged to the standard output.",
+          "default": true
+        },
+        "buffer": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable the buffer. The buffer is used to buffer the logs before writing them to the output. The default value is false."
+            },
+            "flush_interval": {
+              "type": "string",
+              "description": "The interval at which the buffer is flushed. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+              "default": "10s",
+              "duration": {
+                "minimum": "100ms",
+                "maximum": "1m"
+              }
+            },
+            "size": {
+              "type": "string",
+              "default": "256KB",
+              "bytes": {
+                "minimum": "1KB"
+              },
+              "format": "bytes-string",
+              "description": "The size of the buffer. The default value is 256KB."
+            }
+          }
+        },
+        "output": {
+          "type": "object",
+          "description": "The log destination. The supported destinations are stdout and file. Only one option can be enabled. The destination is stdout.",
+          "additionalProperties": false,
+          "properties": {
+            "stdout": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "file": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "path": {
+                  "type": "string",
+                  "description": "The path to the log file. The path is used to specify the path to the log file."
+                }
+              }
+            }
+          }
+        },
+        "level": {
+          "type": "string",
+          "enum": ["debug", "info", "warning", "error", "fatal", "panic"],
+          "description": "The log level. The log level is used to control the verbosity of the logs. The default value is 'info'.",
+          "default": "info"
+        },
+        "fields": {
+          "type": "array",
+          "description": "The fields to add to the logs. The fields are added to the logs as key-value pairs.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["key"],
+            "properties": {
+              "key": {
+                "type": "string",
+                "description": "The key of the field."
+              },
+              "default": {
+                "type": "string",
+                "description": "The default value of the field. If the value is not set, value_from is used. If both value and value_from are set, value_from has precedence and in case of a missing value_from, the default value is used."
+              },
+              "value_from": {
+                "type": "object",
+                "description": "Defines a source for the field value e.g. from a request header. If both default and value_from are set, value_from has precedence.",
+                "additionalProperties": false,
+                "properties": {
+                  "request_header": {
+                    "type": "string",
+                    "description": "The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used."
+                  },
+                  "context_field": {
+                    "type": "string",
+                    "description": "The field name of the context from which to extract the value. The value is only extracted when a context is available otherwise the default value is used.",
+                    "enum": [
+                      "operation_name",
+                      "operation_type",
+                      "operation_service_names",
+                      "operation_hash",
+                      "persisted_operation_sha256",
+                      "operation_sha256",
+                      "response_error_message",
+                      "graphql_error_codes",
+                      "graphql_error_service_names",
+                      "operation_parsing_time",
+                      "operation_validation_time",
+                      "operation_planning_time",
+                      "operation_normalization_time"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "telemetry": {
       "type": "object",
       "description": "The configuration for the telemetry. The telemetry is used to collect and export the traces and metrics.",
@@ -444,6 +567,17 @@
                   "request_header": {
                     "type": "string",
                     "description": "The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used."
+                  },
+                  "context": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "description": "The context value from which to extract the value. The value is only extracted when a context is available otherwise the default value is used.",
+                    "properties": {
+                      "path": {
+                        "type": "string",
+                        "description": "The path to the context value. The path is used to extract the value from the context. The path is a dot-separated string e.g. 'request.operation.hash', 'request.operation.name' or 'response.error.errorCodes'."
+                      }
+                    }
                   }
                 }
               }
@@ -1601,6 +1735,11 @@
           "type": "integer",
           "default": 1024,
           "description": "The size of the execution plan cache."
+        },
+        "operation_hash_cache_size": {
+          "type": "integer",
+          "default": 2048,
+          "description": "The size of the Operation Hash Cache. This should be larger than the plan cache because the hash is computed on the original query."
         },
         "minify_subgraph_operations": {
           "type": "boolean",
