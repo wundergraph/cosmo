@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -37,7 +38,7 @@ func TestApolloCompatibility(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, res.Response.StatusCode)
-			require.Equal(t, `{"data":null,"extensions":{"valueCompletion":[{"message":"Invalid __typename found for object at array element of type wrongTypeName at index 0.","path":["findEmployees",0,"__typename"],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
+			require.Equal(t, `{"data":null,"extensions":{"valueCompletion":[{"message":"Invalid __typename found for object at array element of type Employee at index 0.","path":["findEmployees",0],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
 		})
 	})
 	t.Run("enable value completion", func(t *testing.T) {
@@ -65,7 +66,7 @@ func TestApolloCompatibility(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, res.Response.StatusCode)
-			require.Equal(t, `{"data":null,"extensions":{"valueCompletion":[{"message":"Invalid __typename found for object at array element of type wrongTypeName at index 0.","path":["findEmployees",0,"__typename"],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
+			require.Equal(t, `{"data":null,"extensions":{"valueCompletion":[{"message":"Invalid __typename found for object at array element of type Employee at index 0.","path":["findEmployees",0],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
 		})
 	})
 	t.Run("float compaction off", func(t *testing.T) {

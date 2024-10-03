@@ -19,11 +19,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/wundergraph/cosmo/router/pkg/otel"
-	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/trace"
 	tracetest2 "go.opentelemetry.io/otel/sdk/trace/tracetest"
+
+	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 
 	"github.com/buger/jsonparser"
 	"github.com/sebdah/goldie/v2"
@@ -196,7 +197,7 @@ func TestTypenameValidation(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, res.Response.StatusCode)
-		require.Equal(t, `{"errors":[{"message":"Subgraph 'family' returned invalid value 'wrongTypeName' for __typename field.","path":["findEmployees",0,"__typename"],"extensions":{"code":"INVALID_GRAPHQL"}}],"data":null}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"Subgraph 'family' returned invalid value 'wrongTypeName' for __typename field.","path":["findEmployees",0],"extensions":{"code":"INVALID_GRAPHQL"}}],"data":null}`, res.Body)
 	})
 }
 
