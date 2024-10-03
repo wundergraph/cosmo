@@ -75,7 +75,6 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 		stats:              opts.Stats,
 		readTimeout:        opts.ReadTimeout,
 		config:             opts.WebSocketConfiguration,
-		handlerPool:        handlerPool,
 		clientHeader:       opts.ClientHeader,
 		handlerSem:         semaphore.NewWeighted(128),
 	}
