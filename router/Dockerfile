@@ -20,8 +20,13 @@ COPY . .
 # Run tests
 RUN make test
 
-# Build router
-RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -trimpath -ldflags "-extldflags -static -X github.com/wundergraph/cosmo/router/core.Version=${VERSION}" -a -o router cmd/router/main.go
+# Build the binary with manual build info injection
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
+    go build -trimpath -ldflags "-extldflags=-static \
+    -X 'github.com/wundergraph/cosmo/router/core.Version=${VERSION}' \
+    -X 'github.com/wundergraph/cosmo/router/core.Commit=${COMMIT}' \
+    -X 'github.com/wundergraph/cosmo/router/core.Date=${DATE}'" \
+    -a -o router cmd/router/main.go
 
 FROM --platform=${BUILDPLATFORM} gcr.io/distroless/base-debian12
 

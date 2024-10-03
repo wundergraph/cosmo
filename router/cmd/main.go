@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
 	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router/internal/versioninfo"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"log"
@@ -20,11 +22,18 @@ import (
 var (
 	overrideEnvFlag = flag.String("override-env", os.Getenv("OVERRIDE_ENV"), "env file name to override env variables")
 	configPathFlag  = flag.String("config", os.Getenv("CONFIG_PATH"), "path to config file")
+	routerVersion   = flag.Bool("version", false, "Prints the version of the router")
 )
 
 func Main() {
 	// Parse flags before calling profile.Start(), since it may add flags
 	flag.Parse()
+
+	if *routerVersion {
+		bi := versioninfo.New(core.Version, core.Commit, core.Date)
+		fmt.Println(bi.String())
+		os.Exit(0)
+	}
 
 	profiler := profile.Start()
 
