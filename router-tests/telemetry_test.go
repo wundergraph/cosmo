@@ -2436,8 +2436,8 @@ func TestTelemetry(t *testing.T) {
 					clientVersion = v.Value.AsString()
 				}
 			}
-			require.Equal(t, customClientHeaderName, clientName)
-			require.Equal(t, customClientHeaderVersion, clientVersion)
+			require.Equal(t, "name", clientName)
+			require.Equal(t, "version", clientVersion)
 		})
 	})
 }
