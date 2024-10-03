@@ -581,15 +581,21 @@ type ExecutionConfigStorage struct {
 	ObjectPath string `yaml:"object_path,omitempty" env:"OBJECT_PATH"`
 }
 
+type FallbackExecutionConfigStorage struct {
+	Enabled    bool   `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	ProviderID string `yaml:"provider_id,omitempty" env:"PROVIDER_ID"`
+	ObjectPath string `yaml:"object_path,omitempty" env:"OBJECT_PATH"`
+}
+
 type ExecutionConfigFile struct {
 	Path  string `yaml:"path,omitempty" env:"EXECUTION_CONFIG_FILE_PATH"`
 	Watch bool   `yaml:"watch,omitempty" envDefault:"false" env:"EXECUTION_CONFIG_FILE_WATCH"`
 }
 
 type ExecutionConfig struct {
-	File            ExecutionConfigFile    `yaml:"file,omitempty"`
-	Storage         ExecutionConfigStorage `yaml:"storage,omitempty" envPrefix:"EXECUTION_CONFIG_STORAGE_"`
-	FallbackStorage ExecutionConfigStorage `yaml:"fallback,omitempty" envPrefix:"EXECUTION_CONFIG_FALLBACK_STORAGE_"`
+	File            ExecutionConfigFile            `yaml:"file,omitempty"`
+	Storage         ExecutionConfigStorage         `yaml:"storage,omitempty" envPrefix:"EXECUTION_CONFIG_STORAGE_"`
+	FallbackStorage FallbackExecutionConfigStorage `yaml:"fallback_storage,omitempty" envPrefix:"EXECUTION_CONFIG_FALLBACK_STORAGE_"`
 }
 
 type PersistedOperationsCacheConfig struct {

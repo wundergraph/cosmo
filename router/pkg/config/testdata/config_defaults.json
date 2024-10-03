@@ -302,6 +302,7 @@
       "ObjectPath": ""
     },
     "FallbackStorage": {
+      "Enabled": false,
       "ProviderID": "",
       "ObjectPath": ""
     }

@@ -127,9 +127,15 @@ func (c *configPoller) getRouterConfig(ctx context.Context) (*routerconfig.Respo
 		return config, nil
 	}
 
+	if errors.Is(err, ErrConfigNotModified) {
+		return nil, err
+	}
+
 	if c.fallbackConfigClient == nil {
 		return nil, err
 	}
+
+	c.logger.Warn("Failed to retrieve execution config. Attempting with fallback storage")
 
 	config, err = (*c.fallbackConfigClient).RouterConfig(ctx, c.latestRouterConfigVersion, c.latestRouterConfigDate)
 	if err != nil {

@@ -176,6 +176,32 @@
               }
             }
           }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "fallback_storage": {
+              "description": "The fallback storage provider for the execution config in case the primary one fails.",
+              "required": [
+                "enabled"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable fallback storage provider. The default value is false."
+                },
+                "provider_id": {
+                  "description": "The ID of the storage provider. The ID must match the ID of the storage provider in the storage_providers section.",
+                  "type": "string"
+                },
+                "object_path": {
+                  "type": "string",
+                  "description": "The path to the execution config in the storage provider. The path is used to download the execution config from the storage provider."
+                }
+              }
+            }
+          }
         }
       ]
     },

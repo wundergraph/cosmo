@@ -11,18 +11,11 @@ import (
 	"go.uber.org/zap"
 )
 
-func getConfigClient(
-	r *Router,
-	cdnProviders map[string]config.CDNStorageProvider,
-	s3Providers map[string]config.S3StorageProvider,
-	providerID string,
-	primaryClientUsesCosmoCDN bool,
-	isFallbackClient bool,
-) (client *routerconfig.Client, usedCosmoCDN bool, err error) {
+func getConfigClient(r *Router, cdnProviders map[string]config.CDNStorageProvider, s3Providers map[string]config.S3StorageProvider, providerID string, isFallbackClient bool) (client *routerconfig.Client, err error) {
 	// CDN Providers
 	if provider, ok := cdnProviders[providerID]; ok {
 		if r.graphApiToken == "" {
-			return nil, false, errors.New(
+			return nil, errors.New(
 				"graph token is required to fetch execution config from CDN. " +
 					"Alternatively, configure a custom storage provider or specify a static execution config",
 			)
@@ -36,7 +29,7 @@ func getConfigClient(
 				SignatureKey: r.routerConfigPollerConfig.GraphSignKey,
 			})
 		if err != nil {
-			return nil, false, err
+			return nil, err
 		}
 
 		if isFallbackClient {
@@ -50,21 +43,27 @@ func getConfigClient(
 			)
 		}
 
-		return &c, false, nil
+		return &c, nil
 	}
 
 	// S3 Providers
 	if provider, ok := s3Providers[providerID]; ok {
-		c, err := configs3Provider.NewClient(provider.Endpoint, &configs3Provider.ClientOptions{
+		clientOptions := &configs3Provider.ClientOptions{
 			AccessKeyID:     provider.AccessKey,
 			SecretAccessKey: provider.SecretKey,
 			BucketName:      provider.Bucket,
 			Region:          provider.Region,
 			ObjectPath:      r.routerConfigPollerConfig.Storage.ObjectPath,
 			Secure:          provider.Secure,
-		})
+		}
+
+		if isFallbackClient {
+			clientOptions.ObjectPath = r.routerConfigPollerConfig.FallbackStorage.ObjectPath
+		}
+
+		c, err := configs3Provider.NewClient(provider.Endpoint, clientOptions)
 		if err != nil {
-			return nil, false, err
+			return nil, err
 		}
 
 		if isFallbackClient {
@@ -78,20 +77,15 @@ func getConfigClient(
 			)
 		}
 
-		return &c, false, nil
+		return &c, nil
 	}
 
 	if providerID != "" {
-		return nil, false, fmt.Errorf("unknown storage provider id '%s' for execution config", providerID)
-	}
-
-	// Avoid using Cosmo CDN as both primary and backup provider
-	if primaryClientUsesCosmoCDN {
-		return nil, false, nil
+		return nil, fmt.Errorf("unknown storage provider id '%s' for execution config", providerID)
 	}
 
 	if r.graphApiToken == "" {
-		return nil, false, errors.New(
+		return nil, errors.New(
 			"graph token is required to fetch execution config from CDN. " +
 				"Alternatively, configure a custom storage provider or specify a static execution config",
 		)
@@ -102,7 +96,7 @@ func getConfigClient(
 		SignatureKey: r.routerConfigPollerConfig.GraphSignKey,
 	})
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
 	if isFallbackClient {
@@ -113,7 +107,7 @@ func getConfigClient(
 		)
 	}
 
-	return &c, true, nil
+	return &c, nil
 }
 
 // InitializeConfigPoller creates a poller to fetch execution config. It is only initialized when a config poller is configured and the router is not started with a static config
@@ -122,7 +116,7 @@ func InitializeConfigPoller(r *Router, cdnProviders map[string]config.CDNStorage
 		return nil, nil
 	}
 
-	primaryClient, primaryClientUsesCosmoCDN, err := getConfigClient(r, cdnProviders, s3Providers, r.routerConfigPollerConfig.Storage.ProviderID, false, false)
+	primaryClient, err := getConfigClient(r, cdnProviders, s3Providers, r.routerConfigPollerConfig.Storage.ProviderID, false)
 	if err != nil {
 		return nil, err
 	}
@@ -132,8 +126,12 @@ func InitializeConfigPoller(r *Router, cdnProviders map[string]config.CDNStorage
 	}
 
 	var fallbackClient *routerconfig.Client
-	if r.routerConfigPollerConfig.FallbackStorage.ProviderID != "" {
-		fallbackClient, _, err = getConfigClient(r, cdnProviders, s3Providers, r.routerConfigPollerConfig.Storage.ProviderID, primaryClientUsesCosmoCDN, true)
+	if r.routerConfigPollerConfig.FallbackStorage.Enabled {
+		if r.routerConfigPollerConfig.Storage.ProviderID == r.routerConfigPollerConfig.FallbackStorage.ProviderID {
+			return nil, errors.New("cannot use the same storage as both primary and fallback provider for execution config")
+		}
+
+		fallbackClient, err = getConfigClient(r, cdnProviders, s3Providers, r.routerConfigPollerConfig.FallbackStorage.ProviderID, true)
 		if err != nil {
 			return nil, err
 		}
