@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.119.1](https://github.com/wundergraph/cosmo/compare/router@0.119.0...router@0.119.1) (2024-10-03)
+
+### Bug Fixes
+
+* apollo compatibility for truncating floats, invalid __typenames ([#1242](https://github.com/wundergraph/cosmo/issues/1242)) ([a773ea5](https://github.com/wundergraph/cosmo/commit/a773ea53d7f9abe48033dad822f4424a31e28af2)) (@devsergiy)
+
 # [0.119.0](https://github.com/wundergraph/cosmo/compare/router@0.118.0...router@0.119.0) (2024-10-03)
 
 ### Bug Fixes
