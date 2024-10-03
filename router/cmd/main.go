@@ -20,16 +20,20 @@ import (
 )
 
 var (
-	overrideEnvFlag = flag.String("override-env", os.Getenv("OVERRIDE_ENV"), "env file name to override env variables")
-	configPathFlag  = flag.String("config", os.Getenv("CONFIG_PATH"), "path to config file")
+	overrideEnvFlag = flag.String("override-env", os.Getenv("OVERRIDE_ENV"), "Path to .env file to override environment variables")
+	configPathFlag  = flag.String("config", os.Getenv("CONFIG_PATH"), "Path to the router config file e.g. config.yaml")
 	routerVersion   = flag.Bool("version", false, "Prints the version of the router")
+	help            = flag.Bool("help", false, "Prints the help message")
 )
 
 func Main() {
 	// Parse flags before calling profile.Start(), since it may add flags
 	flag.Parse()
 
-	if *routerVersion {
+	if *help {
+		flag.PrintDefaults()
+		os.Exit(0)
+	} else if *routerVersion {
 		bi := versioninfo.New(core.Version, core.Commit, core.Date)
 		fmt.Println(bi.String())
 		os.Exit(0)
