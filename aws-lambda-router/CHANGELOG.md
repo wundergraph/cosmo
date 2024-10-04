@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.26.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.26.0...aws-lambda-router@0.26.1) (2024-10-03)
+
+### Bug Fixes
+
+* apollo compatibility for truncating floats, invalid __typenames ([#1242](https://github.com/wundergraph/cosmo/issues/1242)) ([a773ea5](https://github.com/wundergraph/cosmo/commit/a773ea53d7f9abe48033dad822f4424a31e28af2)) (@devsergiy)
+
+# [0.26.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.25.0...aws-lambda-router@0.26.0) (2024-10-03)
+
+### Features
+
+* router version command ([#1240](https://github.com/wundergraph/cosmo/issues/1240)) ([39970e5](https://github.com/wundergraph/cosmo/commit/39970e5b1c6d8e2a2958f5ea55bb0d8aa7206d92)) (@StarpTech)
+
 # [0.25.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.24.4...aws-lambda-router@0.25.0) (2024-10-02)
 
 ### Features
