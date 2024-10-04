@@ -36,6 +36,7 @@ type configPoller struct {
 	poller                    controlplane.Poller
 	pollInterval              time.Duration
 	configClient              routerconfig.Client
+	fallbackConfigClient      *routerconfig.Client
 }
 
 func New(token string, opts ...Option) ConfigPoller {
@@ -122,10 +123,26 @@ func (c *configPoller) Subscribe(ctx context.Context, handler func(newConfig *no
 
 func (c *configPoller) getRouterConfig(ctx context.Context) (*routerconfig.Response, error) {
 	config, err := c.configClient.RouterConfig(ctx, c.latestRouterConfigVersion, c.latestRouterConfigDate)
+	if err == nil {
+		return config, nil
+	}
+
+	if errors.Is(err, ErrConfigNotModified) {
+		return nil, err
+	}
+
+	if c.fallbackConfigClient == nil {
+		return nil, err
+	}
+
+	c.logger.Warn("Failed to retrieve execution config. Attempting with fallback storage")
+
+	config, err = (*c.fallbackConfigClient).RouterConfig(ctx, c.latestRouterConfigVersion, c.latestRouterConfigDate)
 	if err != nil {
 		return nil, err
 	}
-	return config, nil
+
+	return config, err
 }
 
 // GetRouterConfig fetches the latest router config from the provider. Not safe for concurrent use.
@@ -150,8 +167,14 @@ func WithPollInterval(interval time.Duration) Option {
 	}
 }
 
-func WithClient(cdnConfigClient routerconfig.Client) Option {
+func WithClient(client routerconfig.Client) Option {
 	return func(s *configPoller) {
-		s.configClient = cdnConfigClient
+		s.configClient = client
+	}
+}
+
+func WithFallbackClient(client *routerconfig.Client) Option {
+	return func(s *configPoller) {
+		s.fallbackConfigClient = client
 	}
 }
