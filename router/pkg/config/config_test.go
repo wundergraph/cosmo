@@ -420,7 +420,7 @@ execution_config:
 	_, err := LoadConfig(f, "")
 	var js *jsonschema.ValidationError
 	require.ErrorAs(t, err, &js)
-	require.Equal(t, js.Causes[0].Error(), "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config/storage': missing property 'object_path'")
+	require.Equal(t, js.Causes[0].Error(), "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config/storage': missing property 'object_path'\n- at '/execution_config': additional properties 'storage' not allowed")
 }
 
 func TestValidLocalExecutionConfig(t *testing.T) {
@@ -458,7 +458,7 @@ execution_config:
 	_, err := LoadConfig(f, "")
 	var js *jsonschema.ValidationError
 	require.ErrorAs(t, err, &js)
-	require.Equal(t, js.Causes[0].Error(), "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config': additional properties 'file' not allowed")
+	require.Equal(t, js.Causes[0].Error(), "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file', 'storage' not allowed")
 
 }
 

@@ -577,8 +577,14 @@ type PersistedOperationsCDNProvider struct {
 }
 
 type ExecutionConfigStorage struct {
-	ProviderID string `yaml:"provider_id,omitempty" env:"EXECUTION_CONFIG_STORAGE_PROVIDER_ID"`
-	ObjectPath string `yaml:"object_path,omitempty" env:"EXECUTION_CONFIG_STORAGE_OBJECT_PATH"`
+	ProviderID string `yaml:"provider_id,omitempty" env:"PROVIDER_ID"`
+	ObjectPath string `yaml:"object_path,omitempty" env:"OBJECT_PATH"`
+}
+
+type FallbackExecutionConfigStorage struct {
+	Enabled    bool   `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	ProviderID string `yaml:"provider_id,omitempty" env:"PROVIDER_ID"`
+	ObjectPath string `yaml:"object_path,omitempty" env:"OBJECT_PATH"`
 }
 
 type ExecutionConfigFile struct {
@@ -587,8 +593,9 @@ type ExecutionConfigFile struct {
 }
 
 type ExecutionConfig struct {
-	File    ExecutionConfigFile    `yaml:"file,omitempty"`
-	Storage ExecutionConfigStorage `yaml:"storage,omitempty"`
+	File            ExecutionConfigFile            `yaml:"file,omitempty"`
+	Storage         ExecutionConfigStorage         `yaml:"storage,omitempty" envPrefix:"EXECUTION_CONFIG_STORAGE_"`
+	FallbackStorage FallbackExecutionConfigStorage `yaml:"fallback_storage,omitempty" envPrefix:"EXECUTION_CONFIG_FALLBACK_STORAGE_"`
 }
 
 type PersistedOperationsCacheConfig struct {
