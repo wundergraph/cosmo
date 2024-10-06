@@ -457,12 +457,6 @@
             }
           }
         },
-        "level": {
-          "type": "string",
-          "enum": ["debug", "info", "warning", "error", "fatal", "panic"],
-          "description": "The log level. The log level is used to control the verbosity of the logs. The default value is 'info'.",
-          "default": "info"
-        },
         "fields": {
           "type": "array",
           "description": "The fields to add to the logs. The fields are added to the logs as key-value pairs.",
