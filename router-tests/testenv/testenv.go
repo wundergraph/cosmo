@@ -1194,6 +1194,17 @@ func (e *Environment) GraphQLRequestURL() string {
 	return urlStr
 }
 
+func (e *Environment) MakeGraphQLMultipartRequest(method string, body io.Reader) *http.Request {
+	req, err := http.NewRequest(method, e.GraphQLRequestURL(), body)
+	require.NoError(e.t, err)
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "multipart/mixed;subscriptionSpec=\"1.0\", application/json")
+	req.Header.Set("Connection", "keep-alive")
+
+	return req
+}
+
 func (e *Environment) GraphQLSubscriptionURL() string {
 	u, err := url.Parse(e.GraphQLRequestURL())
 	require.NoError(e.t, err)
@@ -1214,13 +1225,6 @@ func (e *Environment) GraphQLServeSentEventsURL() string {
 	u, err := url.Parse(e.GraphQLRequestURL())
 	require.NoError(e.t, err)
 	u.RawQuery = "wg_sse"
-	return u.String()
-}
-
-func (e *Environment) GraphQLMultipartResponsesURL() string {
-	u, err := url.Parse(e.GraphQLRequestURL())
-	require.NoError(e.t, err)
-	u.RawQuery = core.WgMultipartParam
 	return u.String()
 }
 

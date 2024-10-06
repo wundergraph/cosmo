@@ -166,7 +166,7 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 	if requestErrors != nil {
 		wgRequestParams := NewWgRequestParams(r)
 		if wgRequestParams.UseSse {
-			setSubscriptionHeaders(wgRequestParams, w)
+			setSubscriptionHeaders(wgRequestParams, r, w)
 
 			if statusCode != 0 {
 				w.WriteHeader(statusCode)

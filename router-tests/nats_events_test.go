@@ -286,13 +286,8 @@ func TestNatsEvents(t *testing.T) {
 					client = http.Client{
 						Timeout: time.Second * 100,
 					}
-					req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLMultipartResponsesURL(), bytes.NewReader(subscribePayload))
-					require.NoError(t, err)
 
-					req.Header.Set("Content-Type", "application/json")
-					req.Header.Set("Accept", "multipart/mixed;boundary=graphql;subscriptionSpec=\"1.0\"")
-					req.Header.Set("Connection", "keep-alive")
-
+					req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
 					resp, err := client.Do(req)
 					require.NoError(t, err)
 					require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -341,21 +336,17 @@ func TestNatsEvents(t *testing.T) {
 					securityConfiguration.BlockSubscriptions = true
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-				queries := []string{
-					`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } }}"}`,
-					`{"query":"subscription { employeeUpdatedMyNats(id: 12) { id details { forename surname } }}"}`,
+				queries := [][]byte{
+					[]byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } }}"}`),
+					[]byte(`{"query":"subscription { employeeUpdatedMyNats(id: 12) { id details { forename surname } }}"}`),
 				}
 
 				for _, subscribePayload := range queries {
 					client := http.Client{
 						Timeout: time.Second * 1000,
 					}
-					req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLMultipartResponsesURL(), bytes.NewReader([]byte(subscribePayload)))
-					require.NoError(t, err)
 
-					req.Header.Set("Content-Type", "application/json")
-					req.Header.Set("Accept", "multipart/mixed;boundary=graphql;subscriptionSpec=\"1.0\"")
-					req.Header.Set("Connection", "keep-alive")
+					req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
 					req.Header.Set("Cache-Control", "no-cache")
 
 					resp, err := client.Do(req)

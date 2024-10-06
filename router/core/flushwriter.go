@@ -3,7 +3,8 @@ package core
 import (
 	"bytes"
 	"context"
-	"fmt"
+	"github.com/wundergraph/astjson"
+	"mime"
 	"net/http"
 	"time"
 
@@ -14,14 +15,11 @@ const (
 	WgPrefix                   = "wg_"
 	WgSseParam                 = WgPrefix + "sse"
 	WgSubscribeOnceParam       = WgPrefix + "subscribe_once"
-	WgMultipartParam           = WgPrefix + "multipart"
 	multipartBoundary          = "graphql"
-	jsonContent                = "application/json"
 	multipartHeartbeatInterval = 5
-)
-
-var (
-	multipartContentType = fmt.Sprintf("multipart/mixed; boundary=%s;subscriptionSpec=\"1.0\"", multipartBoundary)
+	multipartAcceptHeader      = "multipart/mixed;subscriptionSpec=\"1.0\", application/json"
+	jsonContent                = "application/json"
+	sseMimeType                = "text/event-stream"
 )
 
 type HttpFlushWriter struct {
@@ -87,8 +85,19 @@ func (f *HttpFlushWriter) Flush() (err error) {
 
 	if f.multipart && len(resp) > 0 {
 		// Per the Apollo docs, multipart messages are supposed to be json, wrapped in ` "payload"`
-		resp = append([]byte(`{"payload":`), resp...)
-		resp = append(resp, '}')
+		payloadString := `{"payload": {}}`
+		a, err := astjson.Parse(payloadString)
+		if err != nil {
+			return err
+		}
+
+		b, err := astjson.ParseBytes(resp)
+		if err != nil {
+			return err
+		}
+
+		respValue, _ := astjson.MergeValuesWithPath(a, b, "payload")
+		resp = respValue.MarshalTo(nil)
 	}
 	_, err = f.writer.Write(resp)
 	if err != nil {
@@ -116,6 +125,7 @@ func (f *HttpFlushWriter) StartHeartbeat() {
 	if f.multipart {
 		f.ticker = time.NewTicker(multipartHeartbeatInterval * time.Second)
 		go func() {
+			defer f.ticker.Stop()
 			for {
 				select {
 				// Stop sending heartbeats when context is canceled
@@ -156,7 +166,7 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, variables []byte, r *ht
 		return ctx, nil, false
 	}
 
-	setSubscriptionHeaders(wgParams, w)
+	setSubscriptionHeaders(wgParams, r, w)
 
 	flushWriter := &HttpFlushWriter{
 		writer:        w,
@@ -179,15 +189,18 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, variables []byte, r *ht
 	return ctx, flushWriter, true
 }
 
-func setSubscriptionHeaders(wgParams WgRequestParams, w http.ResponseWriter) {
+func setSubscriptionHeaders(wgParams WgRequestParams, r *http.Request, w http.ResponseWriter) {
 	if wgParams.SubscribeOnce {
 		return
 	}
 
 	if wgParams.UseMultipart {
-		w.Header().Set("Content-Type", multipartContentType)
-	} else {
-		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Content-Type", jsonContent)
+		if r.ProtoMajor == 1 {
+			w.Header().Set("Transfer-Encoding", "chunked")
+		}
+	} else if wgParams.UseSse {
+		w.Header().Set("Content-Type", sseMimeType)
 	}
 
 	w.Header().Set("Cache-Control", "no-cache")
@@ -199,10 +212,15 @@ func setSubscriptionHeaders(wgParams WgRequestParams, w http.ResponseWriter) {
 
 func NewWgRequestParams(r *http.Request) WgRequestParams {
 	q := r.URL.Query()
+	acceptHeader := r.Header.Get("Accept")
+
+	contentType := r.Header.Get("Content-Type")
+	d, _, _ := mime.ParseMediaType(contentType)
+
 	return WgRequestParams{
-		UseSse:        q.Has(WgSseParam),
+		UseSse:        q.Has(WgSseParam) || d == sseMimeType,
 		SubscribeOnce: q.Has(WgSubscribeOnceParam),
-		UseMultipart:  q.Has(WgMultipartParam),
+		UseMultipart:  acceptHeader == multipartAcceptHeader,
 	}
 }
 
