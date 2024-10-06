@@ -59,7 +59,7 @@
     "axios": "^1.7.2",
     "axios-retry": "^4.4.1",
     "bullmq": "^5.10.0",
-    "cookie": "^0.6.0",
+    "cookie": "^0.7.0",
     "date-fns": "^3.6.0",
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.32.0",
