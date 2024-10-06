@@ -6,7 +6,6 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"github.com/wundergraph/cosmo/router/pkg/config"
-	"io"
 	"net/http"
 	"strconv"
 	"strings"
