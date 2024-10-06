@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/hashicorp/go-multierror"
+	rErrors "github.com/wundergraph/cosmo/router/internal/errors"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
@@ -174,7 +175,11 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 			_, err := w.Write([]byte("event: next\ndata: "))
 			if err != nil {
 				if requestLogger != nil {
-					requestLogger.Error("error writing response", zap.Error(err))
+					if rErrors.IsBrokenPipe(err) {
+						requestLogger.Warn("Broken pipe, error writing response", zap.Error(err))
+						return
+					}
+					requestLogger.Error("Error writing response", zap.Error(err))
 				}
 				return
 			}
@@ -188,7 +193,11 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 
 		if _, err := requestErrors.WriteResponse(w); err != nil {
 			if requestLogger != nil {
-				requestLogger.Error("error writing response", zap.Error(err))
+				if rErrors.IsBrokenPipe(err) {
+					requestLogger.Warn("Broken pipe, error writing response", zap.Error(err))
+					return
+				}
+				requestLogger.Error("Error writing response", zap.Error(err))
 			}
 		}
 	}
