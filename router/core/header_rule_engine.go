@@ -452,9 +452,12 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 		return
 	}
 
-	reqDir, _ := cachedirective.ParseRequestCacheControl(res.Request.Header.Get(cacheControlKey))
-	resDir, _ := cachedirective.ParseResponseCacheControl(res.Header.Get(cacheControlKey))
-	expiresHeader, _ := http.ParseTime(res.Header.Get("Expires"))
+	reqCacheHeader := res.Request.Header.Get(cacheControlKey)
+	reqDir, _ := cachedirective.ParseRequestCacheControl(reqCacheHeader)
+	resCacheHeader := res.Header.Get(cacheControlKey)
+	resDir, _ := cachedirective.ParseResponseCacheControl(resCacheHeader)
+	expiresHeaderVal := res.Header.Get("Expires")
+	expiresHeader, _ := http.ParseTime(expiresHeaderVal)
 	dateHeader, _ := http.ParseTime(res.Header.Get("Date"))
 	lastModifiedHeader, _ := http.ParseTime(res.Header.Get("Last-Modified"))
 
@@ -495,6 +498,9 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 		if rule.Default != "" {
 			propagation.previousCacheControl = defaultCacheControlObj
 			propagation.header.Set(cacheControlKey, rule.Default)
+		} else if reqCacheHeader == "" && resCacheHeader == "" && expiresHeaderVal == "" {
+			// There is no default/previous value to set, and since no cache control headers have been set, exit early
+			return
 		} else {
 			propagation.previousCacheControl = obj
 			propagation.header.Set(cacheControlKey, res.Header.Get(cacheControlKey))
