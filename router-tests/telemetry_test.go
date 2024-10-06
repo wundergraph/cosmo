@@ -2447,4 +2447,44 @@ func TestTelemetry(t *testing.T) {
 			require.Equal(t, sn[0].SpanContext().TraceID().String(), res.Response.Header.Get("x-wg-trace-id"))
 		})
 	})
+
+	t.Run("Custom client name and client version headers", func(t *testing.T) {
+		t.Parallel()
+
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		customClientHeaderName := "client-name"
+		customClientHeaderVersion := "client-version"
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+			ClientHeader: config.ClientHeader{
+				Name:    customClientHeaderName,
+				Version: customClientHeaderVersion,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := make(http.Header)
+			header.Add("client-name", "name")
+			header.Add("client-version", "version")
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:  `query { employees { id } }`,
+				Header: header,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			sn := exporter.GetSpans().Snapshots()
+
+			var clientName, clientVersion string
+			for _, v := range sn[0].Attributes() {
+				if v.Key == "wg.client.name" {
+					clientName = v.Value.AsString()
+				}
+				if v.Key == "wg.client.version" {
+					clientVersion = v.Value.AsString()
+				}
+			}
+			require.Equal(t, "name", clientName)
+			require.Equal(t, "version", clientVersion)
+		})
+	})
 }

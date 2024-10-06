@@ -300,6 +300,11 @@
     "Storage": {
       "ProviderID": "",
       "ObjectPath": ""
+    },
+    "FallbackStorage": {
+      "Enabled": false,
+      "ProviderID": "",
+      "ObjectPath": ""
     }
   },
   "PersistedOperationsConfig": {
@@ -319,5 +324,9 @@
     "TruncateFloats": {
       "Enabled": false
     }
+  },
+  "ClientHeader": {
+    "Name": "",
+    "Version": ""
   }
 }

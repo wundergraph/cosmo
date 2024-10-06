@@ -556,8 +556,9 @@ func TestHeaderPropagation(t *testing.T) {
 					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 						Query: queryEmployeeWithNoHobby,
 					})
-					cc := res.Response.Header.Get("Cache-Control")
-					require.Equal(t, "", cc)
+					val, present := res.Response.Header["Cache-Control"]
+					require.False(t, present)
+					require.Equal(t, []string(nil), val)
 					require.Equal(t, `{"data":{"employee":{"id":1}}}`, res.Body)
 				})
 			})
@@ -582,6 +583,26 @@ func TestHeaderPropagation(t *testing.T) {
 			})
 		})
 
+		t.Run("doesn't set cache control on unrelated requests", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				CacheControlPolicy: config.CacheControlPolicy{
+					Subgraphs: []config.SubgraphCacheControlRule{
+						{Name: "employees"},
+						{Name: "hobbies"},
+					},
+				},
+				Subgraphs: cacheOptions("", ""),
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				val, present := res.Response.Header["Cache-Control"]
+				require.False(t, present)
+				require.Equal(t, []string(nil), val)
+				require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
+			})
+		})
 		t.Run("set operation can override cache control policies", func(t *testing.T) {
 			t.Run("global set operation", func(t *testing.T) {
 				t.Parallel()
