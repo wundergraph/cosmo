@@ -1860,7 +1860,7 @@
             "type": "string"
           },
           "default": [],
-          "description": "The allowed fields in passthrough mode. It is used to control which fields of the Subgraph errors are allowed to be propagated to the client. If left empty all fields are propagated."
+          "description": "The allowed fields in passthrough mode. It is used to control which fields of the Subgraph errors are allowed to be propagated to the client. If left empty only message is propagated. If left empty and omit_extensions or omit_locations are set to false, they will automatically be included."
         },
         "propagate_status_codes": {
           "type": "boolean",
