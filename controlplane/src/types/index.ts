@@ -163,6 +163,11 @@ export interface SchemaCheckDTO {
   clientTrafficCheckSkipped: boolean;
   lintSkipped: boolean;
   graphPruningSkipped: boolean;
+  customContext?: {
+    author: string;
+    commitSha: string;
+    branch: string;
+  };
 }
 
 export interface SchemaCheckSummaryDTO extends SchemaCheckDTO {

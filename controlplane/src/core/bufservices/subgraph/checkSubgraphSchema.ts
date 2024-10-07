@@ -205,6 +205,7 @@ export function checkSubgraphSchema(
       trafficCheckSkipped: req.skipTrafficCheck,
       lintSkipped: !namespace.enableLinting,
       graphPruningSkipped: !namespace.enableGraphPruning,
+      customContext: req.customContext,
     });
 
     const schemaChanges = await getDiffBetweenGraphs(subgraph.schemaSDL, newSchemaSDL);

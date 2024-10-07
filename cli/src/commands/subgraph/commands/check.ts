@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { Command, program } from 'commander';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
-import { getBaseHeaders } from '../../../core/config.js';
+import { config, getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { verifyGitHubIntegration } from '../../../github.js';
 import { handleCheckResult } from '../../../handle-check-result.js';
@@ -51,6 +51,11 @@ export default (opts: BaseCommandOptions) => {
         gitInfo,
         delete: options.delete,
         skipTrafficCheck: options.skipTrafficCheck,
+        customContext: {
+          author: config.checkAuthor,
+          commitSha: config.checkCommitSha,
+          branch: config.checkBranch,
+        },
       },
       {
         headers: getBaseHeaders(),

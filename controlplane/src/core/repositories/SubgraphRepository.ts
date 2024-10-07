@@ -950,6 +950,13 @@ export class SubgraphRepository {
       clientTrafficCheckSkipped: check.clientTrafficCheckSkipped ?? false,
       lintSkipped: check.lintSkipped ?? false,
       graphPruningSkipped: check.graphPruningSkipped ?? false,
+      customContext: check.customContext
+        ? {
+            author: check.customContext.author,
+            branch: check.customContext.branch,
+            commitSha: check.customContext.commitSha,
+          }
+        : undefined,
     };
   }
 

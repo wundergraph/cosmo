@@ -775,6 +775,55 @@ export class GitInfo extends Message<GitInfo> {
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.CustomCheckContext
+ */
+export class CustomCheckContext extends Message<CustomCheckContext> {
+  /**
+   * @generated from field: string author = 1;
+   */
+  author = "";
+
+  /**
+   * @generated from field: string commit_sha = 2;
+   */
+  commitSha = "";
+
+  /**
+   * @generated from field: string branch = 3;
+   */
+  branch = "";
+
+  constructor(data?: PartialMessage<CustomCheckContext>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.CustomCheckContext";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "author", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "commit_sha", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "branch", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CustomCheckContext {
+    return new CustomCheckContext().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CustomCheckContext {
+    return new CustomCheckContext().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CustomCheckContext {
+    return new CustomCheckContext().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CustomCheckContext | PlainMessage<CustomCheckContext> | undefined, b: CustomCheckContext | PlainMessage<CustomCheckContext> | undefined): boolean {
+    return proto3.util.equals(CustomCheckContext, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.CheckSubgraphSchemaRequest
  */
 export class CheckSubgraphSchemaRequest extends Message<CheckSubgraphSchemaRequest> {
@@ -814,6 +863,11 @@ export class CheckSubgraphSchemaRequest extends Message<CheckSubgraphSchemaReque
    */
   skipTrafficCheck?: boolean;
 
+  /**
+   * @generated from field: optional wg.cosmo.platform.v1.CustomCheckContext customContext = 7;
+   */
+  customContext?: CustomCheckContext;
+
   constructor(data?: PartialMessage<CheckSubgraphSchemaRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -828,6 +882,7 @@ export class CheckSubgraphSchemaRequest extends Message<CheckSubgraphSchemaReque
     { no: 4, name: "delete", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 5, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "skip_traffic_check", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 7, name: "customContext", kind: "message", T: CustomCheckContext, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckSubgraphSchemaRequest {
@@ -3426,6 +3481,11 @@ export class SchemaCheck extends Message<SchemaCheck> {
    */
   graphPruningSkipped = false;
 
+  /**
+   * @generated from field: optional wg.cosmo.platform.v1.CustomCheckContext customContext = 16;
+   */
+  customContext?: CustomCheckContext;
+
   constructor(data?: PartialMessage<SchemaCheck>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3449,6 +3509,7 @@ export class SchemaCheck extends Message<SchemaCheck> {
     { no: 13, name: "client_traffic_check_skipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 14, name: "lint_skipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 15, name: "graph_pruning_skipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 16, name: "customContext", kind: "message", T: CustomCheckContext, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SchemaCheck {
