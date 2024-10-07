@@ -601,7 +601,6 @@ func TestErrorPropagation(t *testing.T) {
 				cfg.Mode = config.SubgraphErrorPropagationModePassthrough
 				cfg.PropagateStatusCodes = false
 				cfg.DefaultExtensionCode = ""
-				cfg.AllowedFields = []string{"path"}
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -616,7 +615,6 @@ func TestErrorPropagation(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
 				cfg.Mode = config.SubgraphErrorPropagationModePassthrough
-				cfg.AllowedFields = []string{"path"}
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -663,7 +661,6 @@ func TestErrorPropagation(t *testing.T) {
 			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
 				cfg.Enabled = true
 				cfg.Mode = config.SubgraphErrorPropagationModePassthrough
-				cfg.AllowedFields = []string{"path"}
 				cfg.AttachServiceName = true
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -697,7 +694,6 @@ func TestErrorPropagation(t *testing.T) {
 				cfg.Enabled = true
 				cfg.Mode = config.SubgraphErrorPropagationModePassthrough
 				cfg.DefaultExtensionCode = "DEFAULT_CODE"
-				cfg.AllowedFields = []string{"path"}
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
