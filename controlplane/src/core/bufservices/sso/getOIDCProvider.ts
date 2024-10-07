@@ -54,11 +54,11 @@ export function getOIDCProvider(
       endpoint: provider.endpoint,
       loginURL: `${opts.webBaseUrl}/login?sso=${provider.alias}`,
       signInRedirectURL: new URL(
-        `/realms/${opts.keycloakRealm}/broker/${provider.alias}/endpoint`,
+        `/auth/realms/${opts.keycloakRealm}/broker/${provider.alias}/endpoint`,
         opts.keycloakApiUrl,
       ).toString(),
       signOutRedirectURL: new URL(
-        `/realms/${opts.keycloakRealm}/broker/${provider.alias}/endpoint/logout_response`,
+        `/auth/realms/${opts.keycloakRealm}/broker/${provider.alias}/endpoint/logout_response`,
         opts.keycloakApiUrl,
       ).toString(),
       mappers,
