@@ -545,6 +545,7 @@ type SubgraphErrorPropagationConfiguration struct {
 	AttachServiceName      bool                         `yaml:"attach_service_name" envDefault:"true" env:"SUBGRAPH_ERROR_PROPAGATION_ATTACH_SERVICE_NAME"`
 	DefaultExtensionCode   string                       `yaml:"default_extension_code" envDefault:"DOWNSTREAM_SERVICE_ERROR" env:"SUBGRAPH_ERROR_PROPAGATION_DEFAULT_EXTENSION_CODE"`
 	AllowedExtensionFields []string                     `yaml:"allowed_extension_fields" envDefault:"code" env:"SUBGRAPH_ERROR_PROPAGATION_ALLOWED_EXTENSION_FIELDS"`
+	AllowedFields          []string                     `yaml:"allowed_fields" env:"SUBGRAPH_ERROR_PROPAGATION_ALLOWED_FIELDS"`
 }
 
 type StorageProviders struct {
@@ -647,7 +648,7 @@ type ApolloCompatibilityValueCompletion struct {
 }
 
 type ClientHeader struct {
-	Name string `yaml:"name,omitempty"`
+	Name    string `yaml:"name,omitempty"`
 	Version string `yaml:"version,omitempty"`
 }
 
@@ -716,7 +717,7 @@ type Config struct {
 	ExecutionConfig           ExecutionConfig           `yaml:"execution_config"`
 	PersistedOperationsConfig PersistedOperationsConfig `yaml:"persisted_operations"`
 	ApolloCompatibilityFlags  ApolloCompatibilityFlags  `yaml:"apollo_compatibility_flags"`
-	ClientHeader  ClientHeader  `yaml:"client_header"`
+	ClientHeader              ClientHeader              `yaml:"client_header"`
 }
 
 type LoadResult struct {
