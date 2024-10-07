@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/hashicorp/go-multierror"
+	rErrors "github.com/wundergraph/cosmo/router/internal/errors"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
@@ -174,7 +175,11 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 			_, err := w.Write([]byte("event: next\ndata: "))
 			if err != nil {
 				if requestLogger != nil {
-					requestLogger.Error("error writing response", zap.Error(err))
+					if rErrors.IsBrokenPipe(err) {
+						requestLogger.Warn("Broken pipe, error writing response", zap.Error(err))
+						return
+					}
+					requestLogger.Error("Error writing response", zap.Error(err))
 				}
 				return
 			}
@@ -188,7 +193,11 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 
 		if _, err := requestErrors.WriteResponse(w); err != nil {
 			if requestLogger != nil {
-				requestLogger.Error("error writing response", zap.Error(err))
+				if rErrors.IsBrokenPipe(err) {
+					requestLogger.Warn("Broken pipe, error writing response", zap.Error(err))
+					return
+				}
+				requestLogger.Error("Error writing response", zap.Error(err))
 			}
 		}
 	}
@@ -197,17 +206,15 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 // writeOperationError writes the given error to the http.ResponseWriter but evaluates the error type first.
 // It also logs additional information about the error.
 func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *zap.Logger, err error) {
+	requestLogger.Debug("operation error", zap.Error(err))
+
 	var reportErr ReportError
 	var httpErr HttpError
 	var poNotFoundErr *persistedoperation.PersistentOperationNotFoundError
 	switch {
 	case errors.As(err, &httpErr):
-		requestLogger.Debug(httpErr.Error())
 		writeRequestErrors(r, w, httpErr.StatusCode(), graphqlerrors.RequestErrorsFromError(err), requestLogger)
 	case errors.As(err, &poNotFoundErr):
-		requestLogger.Debug("persisted operation not found",
-			zap.String("sha256_hash", poNotFoundErr.Sha256Hash),
-			zap.String("client_name", poNotFoundErr.ClientName))
 		writeRequestErrors(r, w, http.StatusBadRequest, graphqlerrors.RequestErrorsFromError(errors.New("persisted Query not found")), requestLogger)
 	case errors.As(err, &reportErr):
 		report := reportErr.Report()
@@ -222,8 +229,7 @@ func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *
 			// so we return an internal server error
 			writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errInternalServer), requestLogger)
 		}
-	default: // If we have an unknown error, we log it and return an internal server error
-		requestLogger.Error("unknown operation error", zap.Error(err))
+	default:
 		writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errInternalServer), requestLogger)
 	}
 }

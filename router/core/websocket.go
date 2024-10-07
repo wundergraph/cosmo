@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"regexp"
@@ -315,7 +314,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		Request:               r,
 		Connection:            conn,
 		Protocol:              protocol,
-		Logger:                h.logger,
+		Logger:                requestLogger,
 		Stats:                 h.stats,
 		ConnectionID:          h.connectionIDs.Inc(),
 		ClientInfo:            clientInfo,
@@ -326,13 +325,13 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	})
 	err = handler.Initialize()
 	if err != nil {
-		if errors.Is(err, io.EOF) {
-			requestLogger.Warn("No more data to read during initialization", zap.Error(err))
-		} else if errors.As(err, &wsutil.ClosedError{}) {
-			requestLogger.Warn("Client closed connection during initialization", zap.Error(err))
-		} else {
-			requestLogger.Error("Initializing websocket connection", zap.Error(err))
-		}
+
+		// Don't produce errors logs here because it can only be client side errors
+		// e.g. slow client, aborted connection, invalid JSON, etc.
+		// We log it as debug because it's not a server side error
+
+		requestLogger.Debug("Initializing websocket connection", zap.Error(err))
+
 		handler.Close()
 		return
 	}
@@ -352,7 +351,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 					statusCode = http.StatusUnauthorized
 				}
 				http.Error(handler.w, http.StatusText(statusCode), statusCode)
-				handler.writeErrorMessage(requestID, err)
+				_ = handler.writeErrorMessage(requestID, err)
 				handler.Close()
 				return
 			}
@@ -364,7 +363,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 			err := json.Unmarshal(handler.initialPayload, &initialPayloadMap)
 			if err != nil {
 				requestLogger.Error("Error parsing initial payload: %v", zap.Error(err))
-				handler.writeErrorMessage(requestID, err)
+				_ = handler.writeErrorMessage(requestID, err)
 				handler.Close()
 				return
 			}
@@ -372,7 +371,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 			if !ok {
 				err := fmt.Errorf("invalid JWT token in initial payload: JWT token is not a string")
 				requestLogger.Error(err.Error())
-				handler.writeErrorMessage(requestID, err)
+				_ = handler.writeErrorMessage(requestID, err)
 				handler.Close()
 				return
 			}
