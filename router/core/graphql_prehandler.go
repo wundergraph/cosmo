@@ -6,7 +6,6 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"github.com/wundergraph/cosmo/router/pkg/config"
-	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -15,7 +14,6 @@ import (
 
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/pkg/errors"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -269,7 +267,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			// defer is called after the response is written
 			defer func() {
 				if err := multipartParser.RemoveAll(); err != nil {
-					requestLogger.Error("failed to remove files after multipart request", zap.Error(err))
+					requestLogger.Error("Failed to remove files after multipart request", zap.Error(err))
 				}
 			}()
 		} else if r.Method == http.MethodPost {
@@ -283,13 +281,9 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			if err != nil {
 				finalErr = err
 
-				// This error is expected e.g. when the client defines (Content-Length) and aborts the request before
-				// It means that EOF was encountered in the middle of reading the body. This is not a server error.
-				if errors.Is(err, io.ErrUnexpectedEOF) {
-					requestLogger.Debug("unexpected EOF while reading request body", zap.Error(err))
-				} else {
-					requestLogger.Error("failed to read request body", zap.Error(err))
-				}
+				// Don't produce errors logs here because it can only be client side errors
+				// e.g. too large body, slow client, aborted connection etc.
+				// The error is logged as debug log in the writeOperationError function
 
 				writeOperationError(r, w, requestLogger, err)
 				h.releaseBodyReadBuffer(buf)
@@ -330,7 +324,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			validatedReq, err := h.accessController.Access(w, r)
 			if err != nil {
 				finalErr = err
-				requestLogger.Error("failed to authenticate request", zap.Error(err))
+				requestLogger.Error("Failed to authenticate request", zap.Error(err))
 
 				// Mark the root span of the router as failed, so we can easily identify failed requests
 				rtrace.AttachErrToSpan(routerSpan, err)
