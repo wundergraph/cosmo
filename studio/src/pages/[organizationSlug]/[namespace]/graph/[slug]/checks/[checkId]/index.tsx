@@ -647,7 +647,7 @@ const CheckDetails = ({
           )}
           {customContext && (
             <>
-              {customContext.commitSha && (
+              {customContext.author && (
                 <div className="flex flex-col">
                   <dt className="mb-2 text-sm text-muted-foreground">
                     Author
