@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/core"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"net/http"
@@ -274,24 +275,27 @@ func TestNatsEvents(t *testing.T) {
 		t.Run("subscribe with multipart responses", func(t *testing.T) {
 			t.Parallel()
 
-			testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			testenv.Run(t, &testenv.Config{
+				TLSConfig: &core.TlsConfig{
+					Enabled:  true,
+					CertFile: "testdata/tls/cert.pem",
+					KeyFile:  "testdata/tls/key.pem",
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
 
 				subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`)
 
 				wg := &sync.WaitGroup{}
 				wg.Add(1)
 
-				var client http.Client
 				go func() {
-					client = http.Client{
-						Timeout: time.Second * 100,
-					}
-
 					req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
-					resp, err := client.Do(req)
+					resp, err := xEnv.RouterClient.Do(req)
 					require.NoError(t, err)
 					require.Equal(t, http.StatusOK, resp.StatusCode)
 					defer resp.Body.Close()
+
+					require.Equal(t, []string(nil), resp.TransferEncoding)
 
 					reader := bufio.NewReader(resp.Body)
 
@@ -323,6 +327,47 @@ func TestNatsEvents(t *testing.T) {
 				err = xEnv.NatsConnectionDefault.Flush()
 				require.NoError(t, err)
 
+				xEnv.NatsConnectionDefault.Close()
+				wg.Wait()
+			})
+		})
+
+		t.Run("subscribe with multipart responses http/1", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				TLSConfig: nil, // Force Http/1
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+
+				subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`)
+
+				wg := &sync.WaitGroup{}
+				wg.Add(1)
+
+				var client *http.Client
+				go func() {
+					client = &http.Client{
+						Timeout: time.Second * 100,
+					}
+
+					req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
+					resp, err := client.Do(req)
+					require.NoError(t, err)
+					require.Equal(t, http.StatusOK, resp.StatusCode)
+					defer resp.Body.Close()
+
+					require.Equal(t, []string{"chunked"}, resp.TransferEncoding)
+
+					reader := bufio.NewReader(resp.Body)
+
+					// Read the first part
+					assertMultipartPrefix(reader)
+					assertLineEquals(reader, "{}")
+					wg.Done()
+
+				}()
+
+				xEnv.WaitForSubscriptionCount(1, time.Second*5)
 				xEnv.NatsConnectionDefault.Close()
 				wg.Wait()
 			})

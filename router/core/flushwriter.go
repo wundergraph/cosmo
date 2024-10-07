@@ -20,6 +20,7 @@ const (
 	multipartAcceptHeader      = "multipart/mixed;subscriptionSpec=\"1.0\", application/json"
 	jsonContent                = "application/json"
 	sseMimeType                = "text/event-stream"
+	PayloadString              = `{"payload": {}}`
 )
 
 type HttpFlushWriter struct {
@@ -84,20 +85,11 @@ func (f *HttpFlushWriter) Flush() (err error) {
 	}
 
 	if f.multipart && len(resp) > 0 {
-		// Per the Apollo docs, multipart messages are supposed to be json, wrapped in ` "payload"`
-		payloadString := `{"payload": {}}`
-		a, err := astjson.Parse(payloadString)
+		var err error
+		resp, err = wrapMultipartMessage(resp)
 		if err != nil {
 			return err
 		}
-
-		b, err := astjson.ParseBytes(resp)
-		if err != nil {
-			return err
-		}
-
-		respValue, _ := astjson.MergeValuesWithPath(a, b, "payload")
-		resp = respValue.MarshalTo(nil)
 	}
 	_, err = f.writer.Write(resp)
 	if err != nil {
@@ -187,6 +179,22 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, variables []byte, r *ht
 	}
 
 	return ctx, flushWriter, true
+}
+
+func wrapMultipartMessage(resp []byte) ([]byte, error) {
+	// Per the Apollo docs, multipart messages are supposed to be json, wrapped in ` "payload"`
+	a, err := astjson.Parse(`{"payload": {}}`)
+	if err != nil {
+		return nil, err
+	}
+
+	b, err := astjson.ParseBytes(resp)
+	if err != nil {
+		return nil, err
+	}
+
+	respValue, _ := astjson.MergeValuesWithPath(a, b, "payload")
+	return respValue.MarshalTo(nil), nil
 }
 
 func setSubscriptionHeaders(wgParams WgRequestParams, r *http.Request, w http.ResponseWriter) {

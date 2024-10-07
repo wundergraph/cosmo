@@ -217,16 +217,23 @@ func writeMultipartError(w http.ResponseWriter, requestErrors graphqlerrors.Requ
 		return err
 	}
 
-	if _, err := w.Write([]byte("{\"payload\":")); err != nil {
-		return err
-	}
 	// Write the actual error payload
-	if _, err := requestErrors.WriteResponse(w); err != nil {
+	response := graphqlerrors.Response{
+		Errors: requestErrors,
+	}
+
+	responseBytes, err := response.Marshal()
+	if err != nil {
 		return err
 	}
 
-	// End the multipart section with the closing boundary
-	if _, err := w.Write([]byte("}\n")); err != nil {
+	resp, err := wrapMultipartMessage(responseBytes)
+	if err != nil {
+		return err
+	}
+
+	resp = append(resp, '\n')
+	if _, err := w.Write([]byte(resp)); err != nil {
 		return err
 	}
 
