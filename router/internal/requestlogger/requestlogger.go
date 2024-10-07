@@ -3,11 +3,10 @@ package requestlogger
 import (
 	"crypto/sha256"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/errors"
 	"go.opentelemetry.io/otel/trace"
 	"net"
 	"net/http"
-	"os"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
@@ -159,11 +158,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			// condition that warrants a panic stack trace.
 			var brokenPipe bool
 			if ne, ok := err.(*net.OpError); ok {
-				if se, ok := ne.Err.(*os.SyscallError); ok {
-					if strings.Contains(strings.ToLower(se.Error()), "broken pipe") || strings.Contains(strings.ToLower(se.Error()), "connection reset by peer") {
-						brokenPipe = true
-					}
-				}
+				brokenPipe = errors.IsBrokenPipe(ne.Err)
 			}
 
 			fields = append(fields,
