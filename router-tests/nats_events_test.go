@@ -373,6 +373,52 @@ func TestNatsEvents(t *testing.T) {
 			})
 		})
 
+		t.Run("subscribe with closing channel", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+
+				subscribePayload := []byte(`{"query":"subscription { countFor(count: 3) }"}`)
+
+				wg := &sync.WaitGroup{}
+				wg.Add(1)
+
+				var client http.Client
+				go func() {
+					client = http.Client{
+						Timeout: time.Second * 100,
+					}
+					req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
+					resp, err := client.Do(req)
+					require.NoError(t, err)
+					require.Equal(t, http.StatusOK, resp.StatusCode)
+					defer resp.Body.Close()
+
+					reader := bufio.NewReader(resp.Body)
+
+					// Read the first part
+					assertMultipartPrefix(reader)
+					assertLineEquals(reader, "{\"payload\":{\"data\":{\"countFor\":0}}}")
+					assertMultipartPrefix(reader)
+					assertLineEquals(reader, "{\"payload\":{\"data\":{\"countFor\":1}}}")
+					assertMultipartPrefix(reader)
+					assertLineEquals(reader, "{\"payload\":{\"data\":{\"countFor\":2}}}")
+					assertMultipartPrefix(reader)
+					assertLineEquals(reader, "{\"payload\":{\"data\":{\"countFor\":3}}}")
+					assertLineEquals(reader, "--graphql--")
+					wg.Done()
+				}()
+
+				xEnv.WaitForSubscriptionCount(1, time.Second*5)
+
+				// Sleep to ensure get heartbeat
+				time.Sleep(heartbeatInterval)
+
+				xEnv.NatsConnectionDefault.Close()
+				wg.Wait()
+			})
+		})
+
 		t.Run("subscribe sync multipart with block", func(t *testing.T) {
 			t.Parallel()
 
