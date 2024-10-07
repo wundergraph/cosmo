@@ -6,6 +6,7 @@ import (
 	"github.com/wundergraph/astjson"
 	"mime"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -34,6 +35,7 @@ type HttpFlushWriter struct {
 	buf           *bytes.Buffer
 	variables     []byte
 	ticker        *time.Ticker // Ticker used for multipart heartbeats
+	mu            *sync.Mutex
 }
 
 func (f *HttpFlushWriter) Complete() {
@@ -109,6 +111,9 @@ func (f *HttpFlushWriter) Flush() (err error) {
 	if err != nil {
 		return err
 	}
+
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	f.flusher.Flush()
 	return nil
 }
@@ -169,6 +174,7 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, variables []byte, r *ht
 		buf:           &bytes.Buffer{},
 		ctx:           ctx.Context(),
 		variables:     variables,
+		mu:            &sync.Mutex{},
 	}
 
 	flushWriter.ctx, flushWriter.cancel = context.WithCancel(ctx.Context())
