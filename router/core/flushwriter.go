@@ -17,11 +17,11 @@ const (
 	WgSseParam                 = WgPrefix + "sse"
 	WgSubscribeOnceParam       = WgPrefix + "subscribe_once"
 	multipartBoundary          = "graphql"
-	multipartHeartbeatInterval = 5
+	multipartHeartbeatInterval = 5 * time.Second
 	multipartAcceptHeader      = "multipart/mixed;subscriptionSpec=\"1.0\", application/json"
 	jsonContent                = "application/json"
 	sseMimeType                = "text/event-stream"
-	PayloadString              = `{"payload": {}}`
+	heartbeat                  = "{}"
 )
 
 type HttpFlushWriter struct {
@@ -67,6 +67,7 @@ func (f *HttpFlushWriter) Close() {
 	if f.ctx.Err() != nil {
 		return
 	}
+
 	f.cancel()
 }
 
@@ -75,17 +76,14 @@ func (f *HttpFlushWriter) Flush() (err error) {
 		return err
 	}
 
+	if f.ticker != nil {
+		f.ticker.Reset(multipartHeartbeatInterval)
+	}
+
 	resp := f.buf.Bytes()
 	f.buf.Reset()
 
 	flushBreak := GetWriterPrefix(f.sse, f.multipart)
-	if flushBreak != "" {
-		_, err = f.writer.Write([]byte(flushBreak))
-		if err != nil {
-			return err
-		}
-	}
-
 	if f.multipart && len(resp) > 0 {
 		var err error
 		resp, err = wrapMultipartMessage(resp)
@@ -93,21 +91,16 @@ func (f *HttpFlushWriter) Flush() (err error) {
 			return err
 		}
 	}
-	_, err = f.writer.Write(resp)
-	if err != nil {
-		return err
-	}
 
-	if f.subscribeOnce {
-		f.flusher.Flush()
-		f.cancel()
-		return
-	}
 	separation := "\n\n"
 	if f.multipart {
 		separation = "\n"
+	} else if f.subscribeOnce {
+		separation = ""
 	}
-	_, err = f.writer.Write([]byte(separation))
+
+	full := flushBreak + string(resp) + separation
+	_, err = f.writer.Write([]byte(full))
 	if err != nil {
 		return err
 	}
@@ -115,12 +108,15 @@ func (f *HttpFlushWriter) Flush() (err error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.flusher.Flush()
+	if f.subscribeOnce {
+		defer f.Close()
+	}
 	return nil
 }
 
 func (f *HttpFlushWriter) StartHeartbeat() {
 	if f.multipart {
-		f.ticker = time.NewTicker(multipartHeartbeatInterval * time.Second)
+		f.ticker = time.NewTicker(multipartHeartbeatInterval)
 		go func() {
 			defer f.ticker.Stop()
 			for {
@@ -140,13 +136,8 @@ func (f *HttpFlushWriter) sendHeartbeat() {
 	if f.ctx.Err() != nil {
 		return
 	}
-	heartbeat := GetWriterPrefix(f.sse, f.multipart) + "{}\n"
-	_, err := f.writer.Write([]byte(heartbeat))
-	if err != nil {
-		return
-	}
-
-	f.flusher.Flush()
+	_, _ = f.Write([]byte("{}"))
+	_ = f.Flush()
 }
 
 func GetSubscriptionResponseWriter(ctx *resolve.Context, variables []byte, r *http.Request, w http.ResponseWriter) (*resolve.Context, resolve.SubscriptionResponseWriter, bool) {
@@ -188,6 +179,10 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, variables []byte, r *ht
 }
 
 func wrapMultipartMessage(resp []byte) ([]byte, error) {
+	if string(resp) == heartbeat {
+		return resp, nil
+	}
+
 	// Per the Apollo docs, multipart messages are supposed to be json, wrapped in ` "payload"`
 	a, err := astjson.Parse(`{"payload": {}}`)
 	if err != nil {

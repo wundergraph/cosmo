@@ -349,7 +349,7 @@ func TestNatsEvents(t *testing.T) {
 				var client *http.Client
 				go func() {
 					client = &http.Client{
-						Timeout: time.Second * 100,
+						Timeout: time.Second * 10000,
 					}
 
 					req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
@@ -366,7 +366,6 @@ func TestNatsEvents(t *testing.T) {
 					assertMultipartPrefix(reader)
 					assertLineEquals(reader, "{}")
 					wg.Done()
-
 				}()
 
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
@@ -450,6 +449,7 @@ func TestNatsEvents(t *testing.T) {
 
 					assertMultipartPrefix(reader)
 					assertLineEquals(reader, "{\"payload\":{\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}}")
+					xEnv.NatsConnectionDefault.Close()
 				}
 			})
 		})
