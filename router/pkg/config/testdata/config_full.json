@@ -447,7 +447,7 @@
     "AllowedExtensionFields": [
       "code"
     ],
-    "AllowedCustomErrorFields": null
+    "AllowedFields": null
   },
   "StorageProviders": {
     "S3": [

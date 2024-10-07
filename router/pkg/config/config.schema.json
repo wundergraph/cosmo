@@ -1860,13 +1860,13 @@
           "default": false,
           "description": "Omit the extensions field of Subgraph errors. If the value is true (default: false), the extensions field of Subgraph errors will be omitted. This is useful in case you want to avoid leaking internal information to the client. Some users of GraphQL leverage the errors.extensions.code field to implement error handling logic in the client, in which case you might want to set this to false."
         },
-        "allowed_custom_error_fields": {
+        "allowed_fields": {
           "type": "array",
           "items": {
             "type": "string"
           },
           "default": [],
-          "description": "The allowed error fields in passthrough mode. It is used to control which fields of the Subgraph errors are allowed to be propagated to the client. If left empty all fields are propagated."
+          "description": "The allowed fields in passthrough mode. It is used to control which fields of the Subgraph errors are allowed to be propagated to the client. If left empty all fields are propagated."
         },
         "propagate_status_codes": {
           "type": "boolean",
