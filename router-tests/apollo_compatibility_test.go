@@ -271,7 +271,7 @@ func TestApolloCompatibility(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, res.Response.StatusCode)
-			require.Equal(t, `{"data":null,"extensions":{"valueCompletion":[{"message":"Cannot return null for non-nullable field 'Products.upc'.","path":["employees",0,"upc"],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
+			require.Equal(t, `{"data":null,"extensions":{"valueCompletion":[{"message":"Cannot return null for non-nullable field 'Products.upc'.","path":["products",0,"upc"],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
 		})
 	})
 }
