@@ -702,4 +702,57 @@ func TestErrorPropagation(t *testing.T) {
 			require.Equal(t, `{"errors":[{"message":"error resolving RootFieldThrowsError for Employee 1","path":["employee","rootFieldThrowsError"],"extensions":{"code":"ERROR_CODE","statusCode":200}},{"message":"error resolving ErrorField","path":["employee","rootFieldErrorWrapper","errorField"],"extensions":{"code":"DEFAULT_CODE","statusCode":200}},{"message":"resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1","path":["employee"],"extensions":{"code":"DEFAULT_CODE","statusCode":200}}],"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"rootFieldThrowsError":null,"fieldThrowsError":null,"rootFieldErrorWrapper":{"okField":"ok","errorField":null}}}}`, res.Body)
 		})
 	})
+
+	t.Run("Only specified fields are propagated in passthrough mode", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+				cfg.Mode = config.SubgraphErrorPropagationModePassthrough
+				cfg.AllowedExtensionFields = []string{"code"}
+				cfg.PropagateStatusCodes = false
+				cfg.AllowedFields = []string{"user"}
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							w.WriteHeader(http.StatusOK)
+							_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","longMessage":"This is a long message","user":"1","extensions":{"code":"UNAUTHORIZED","foo":"bar"}}]}`))
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employees { id details { forename surname } notes } }`,
+			})
+			require.Equal(t, `{"errors":[{"message":"Unauthorized","user":"1","extensions":{"code":"UNAUTHORIZED"}}],"data":{"employees":null}}`, res.Body)
+		})
+	})
+
+	t.Run("Location is propagated if set to not be omitted in passthrough mode and not specified in allowed fields", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+				cfg.Mode = config.SubgraphErrorPropagationModePassthrough
+				cfg.OmitLocations = false
+				cfg.PropagateStatusCodes = false
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							w.WriteHeader(http.StatusOK)
+							_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","locations":[{"line":1,"column":1}],"extensions":{"code":"UNAUTHORIZED"}}]}`))
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employees { id details { forename surname } notes } }`,
+			})
+			require.Equal(t, `{"errors":[{"message":"Unauthorized","locations":[{"line":1,"column":1}],"extensions":{"code":"UNAUTHORIZED"}}],"data":{"employees":null}}`, res.Body)
+		})
+	})
 }
