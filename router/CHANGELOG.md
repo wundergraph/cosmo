@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.120.0](https://github.com/wundergraph/cosmo/compare/router@0.119.1...router@0.120.0) (2024-10-07)
+
+### Bug Fixes
+
+* don't set empty cache control headers ([#1246](https://github.com/wundergraph/cosmo/issues/1246)) ([eb1ef06](https://github.com/wundergraph/cosmo/commit/eb1ef068a911eb36a813b9bc718f1a01db62785f)) (@df-wg)
+* improve error logs ([#1247](https://github.com/wundergraph/cosmo/issues/1247)) ([19e5ba6](https://github.com/wundergraph/cosmo/commit/19e5ba62fd1dfe6167b66afc1123477ebdd83381)) (@StarpTech)
+
+### Features
+
+* fallback storage for execution config ([#1241](https://github.com/wundergraph/cosmo/issues/1241)) ([9704342](https://github.com/wundergraph/cosmo/commit/97043429bfadd69a86a560e2105dc8f641d6ad65)) (@thisisnithin)
+
 ## [0.119.1](https://github.com/wundergraph/cosmo/compare/router@0.119.0...router@0.119.1) (2024-10-03)
 
 ### Bug Fixes
