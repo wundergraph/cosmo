@@ -74,7 +74,7 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 		AllowedErrorExtensionFields:        opts.RouterEngineConfig.SubgraphErrorPropagation.AllowedExtensionFields,
 		AttachServiceNameToErrorExtensions: opts.RouterEngineConfig.SubgraphErrorPropagation.AttachServiceName,
 		DefaultErrorExtensionCode:          opts.RouterEngineConfig.SubgraphErrorPropagation.DefaultExtensionCode,
-		OmitCustomSubgraphErrorFields:      opts.RouterEngineConfig.SubgraphErrorPropagation.OmitCustomFields,
+		AllowedCustomSubgraphErrorFields:   opts.RouterEngineConfig.SubgraphErrorPropagation.AllowedCustomErrorFields,
 		MaxRecyclableParserSize:            opts.RouterEngineConfig.Execution.ResolverMaxRecyclableParserSize,
 	}
 
