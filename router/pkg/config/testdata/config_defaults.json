@@ -286,7 +286,8 @@
     "DefaultExtensionCode": "DOWNSTREAM_SERVICE_ERROR",
     "AllowedExtensionFields": [
       "code"
-    ]
+    ],
+    "OmitCustomFields": false
   },
   "StorageProviders": {
     "S3": null,
