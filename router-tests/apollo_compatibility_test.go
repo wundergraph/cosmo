@@ -193,4 +193,85 @@ func TestApolloCompatibility(t *testing.T) {
 			require.Equal(t, `{"data":{"floatField":1}}`, res.Body)
 		})
 	})
+	t.Run("nullable array item with non-nullable array item field", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
+					ValueCompletion: config.ApolloCompatibilityValueCompletion{
+						Enabled: true,
+					},
+				}),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalMiddleware: func(handler http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						w.Header().Set("Content-Type", "application/json")
+						w.WriteHeader(http.StatusOK)
+						_, _ = w.Write([]byte(`{"data":{"employees":[{"id":null}]}}`))
+					})
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `query {employees{id}}`,
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, `{"data":{"employees":[null]},"extensions":{"valueCompletion":[{"message":"Cannot return null for non-nullable field 'Employee.id'.","path":["employees",0,"id"],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
+		})
+	})
+	t.Run("non-nullable array item", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
+					ValueCompletion: config.ApolloCompatibilityValueCompletion{
+						Enabled: true,
+					},
+				}),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalMiddleware: func(handler http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						w.Header().Set("Content-Type", "application/json")
+						w.WriteHeader(http.StatusOK)
+						_, _ = w.Write([]byte(`{"data":{"products":[null]}}`))
+					})
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `query {products{... on Consultancy{upc}}}`,
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, `{"data":null,"extensions":{"valueCompletion":[{"message":"Cannot return null for non-nullable array element of type Products at index 0.","path":["products",0],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
+		})
+	})
+	t.Run("non-nullable array item with non-nullable array item field", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
+					ValueCompletion: config.ApolloCompatibilityValueCompletion{
+						Enabled: true,
+					},
+				}),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalMiddleware: func(handler http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						w.Header().Set("Content-Type", "application/json")
+						w.WriteHeader(http.StatusOK)
+						_, _ = w.Write([]byte(`{"data":{"products":[{"__typename":"Consultancy","upc":null}]}}`))
+					})
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `query {products{... on Consultancy{upc}}}`,
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, `{"data":null,"extensions":{"valueCompletion":[{"message":"Cannot return null for non-nullable field 'Products.upc'.","path":["employees",0,"upc"],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
+		})
+	})
 }
