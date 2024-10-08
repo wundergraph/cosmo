@@ -1,5 +1,5 @@
 {
-  "id": "48f19623-e482-4abd-8561-971033d6ad2c",
+  "id": "84b2107a-6c0e-4026-ad17-6a65946364d6",
   "prevId": "191a198b-e505-42c1-83ba-eedebc5b5d6b",
   "version": "7",
   "dialect": "postgresql",
@@ -3758,8 +3758,8 @@
           "notNull": false,
           "default": false
         },
-        "custom_context": {
-          "name": "custom_context",
+        "vcs_context": {
+          "name": "vcs_context",
           "type": "json",
           "primaryKey": false,
           "notNull": false

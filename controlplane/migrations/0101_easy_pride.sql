@@ -1,1 +1,0 @@
-ALTER TABLE "schema_checks" ADD COLUMN "custom_context" json;

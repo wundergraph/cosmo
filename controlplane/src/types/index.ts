@@ -163,7 +163,7 @@ export interface SchemaCheckDTO {
   clientTrafficCheckSkipped: boolean;
   lintSkipped: boolean;
   graphPruningSkipped: boolean;
-  customContext?: {
+  vcsContext?: {
     author: string;
     commitSha: string;
     branch: string;

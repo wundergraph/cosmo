@@ -669,7 +669,7 @@ export const schemaChecks = pgTable('schema_checks', {
     commitSha: string;
   }>(),
   forcedSuccess: boolean('forced_success').default(false),
-  customContext: customJson('custom_context').$type<{
+  vcsContext: customJson('vcs_context').$type<{
     author: string;
     commitSha: string;
     branch: string;

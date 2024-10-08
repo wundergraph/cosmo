@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { Command, program } from 'commander';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
-import { CustomCheckContext } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { VCSContext } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { config, getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { verifyGitHubIntegration } from '../../../github.js';
@@ -40,10 +40,10 @@ export default (opts: BaseCommandOptions) => {
     }
 
     const { gitInfo, ignoreErrorsDueToGitHubIntegration } = await verifyGitHubIntegration(opts.client);
-    let customContext: CustomCheckContext | undefined;
+    let vcsContext: VCSContext | undefined;
 
     if (config.checkAuthor || config.checkCommitSha || config.checkBranch) {
-      customContext = new CustomCheckContext({
+      vcsContext = new VCSContext({
         author: config.checkAuthor,
         commitSha: config.checkCommitSha,
         branch: config.checkBranch,
@@ -61,7 +61,7 @@ export default (opts: BaseCommandOptions) => {
         gitInfo,
         delete: options.delete,
         skipTrafficCheck: options.skipTrafficCheck,
-        customContext,
+        vcsContext,
       },
       {
         headers: getBaseHeaders(),

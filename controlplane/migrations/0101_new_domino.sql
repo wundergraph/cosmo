@@ -1,0 +1,1 @@
+ALTER TABLE "schema_checks" ADD COLUMN "vcs_context" json;

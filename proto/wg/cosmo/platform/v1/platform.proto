@@ -71,7 +71,7 @@ message GitInfo {
   string repository_slug = 4;
 }
 
-message CustomCheckContext {
+message VCSContext {
   string author = 1;
   string commit_sha = 2;
   string branch = 3;
@@ -87,7 +87,7 @@ message CheckSubgraphSchemaRequest {
   optional bool delete = 4;
   string namespace = 5;
   optional bool skip_traffic_check = 6;
-  optional CustomCheckContext customContext = 7;
+  optional VCSContext vcsContext = 7;
 }
 
 message FixSubgraphSchemaRequest {
@@ -452,7 +452,7 @@ message SchemaCheck {
   bool client_traffic_check_skipped = 13;
   bool lint_skipped = 14;
   bool graph_pruning_skipped = 15;
-  optional CustomCheckContext customContext = 16;
+  optional VCSContext vcsContext = 16;
 }
 
 message GetChecksByFederatedGraphNameResponse {

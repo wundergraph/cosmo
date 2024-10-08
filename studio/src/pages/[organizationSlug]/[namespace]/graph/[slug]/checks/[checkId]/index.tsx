@@ -330,7 +330,7 @@ const CheckDetails = ({
   );
 
   const ghDetails = data.check.ghDetails;
-  const customContext = data.check.customContext;
+  const vcsContext = data.check.vcsContext;
 
   const reason = !data.check.isComposable
     ? "Composition errors were found"
@@ -645,33 +645,31 @@ const CheckDetails = ({
               </dd>
             </div>
           )}
-          {customContext && (
+          {vcsContext && (
             <>
-              {customContext.author && (
+              {vcsContext.author && (
                 <div className="flex flex-col">
-                  <dt className="mb-2 text-sm text-muted-foreground">
-                    Author
-                  </dt>
+                  <dt className="mb-2 text-sm text-muted-foreground">Author</dt>
                   <dd className="flex items-center gap-x-2 text-sm">
-                    {customContext.author}
+                    {vcsContext.author}
                   </dd>
                 </div>
               )}
-              {customContext.commitSha && (
+              {vcsContext.commitSha && (
                 <div className="flex flex-col">
                   <dt className="mb-2 text-sm text-muted-foreground">
                     Commit sha
                   </dt>
                   <dd className="flex items-center gap-x-2 text-sm">
-                    {customContext.commitSha}
+                    {vcsContext.commitSha}
                   </dd>
                 </div>
               )}
-              {customContext.branch && (
+              {vcsContext.branch && (
                 <div className="flex flex-col">
                   <dt className="mb-2 text-sm text-muted-foreground">Branch</dt>
                   <dd className="flex items-center gap-x-2 text-sm">
-                    {customContext.branch}
+                    {vcsContext.branch}
                   </dd>
                 </div>
               )}
