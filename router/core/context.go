@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -42,9 +43,9 @@ type ClientInfo struct {
 	WGRequestToken string
 }
 
-func NewClientInfoFromRequest(r *http.Request) *ClientInfo {
-	clientName := ctrace.GetClientInfo(r.Header, "graphql-client-name", "apollographql-client-name", "unknown")
-	clientVersion := ctrace.GetClientInfo(r.Header, "graphql-client-version", "apollographql-client-version", "missing")
+func NewClientInfoFromRequest(r *http.Request, clientHeader config.ClientHeader) *ClientInfo {
+	clientName := ctrace.GetClientHeader(r.Header, []string{clientHeader.Name, "graphql-client-name", "apollographql-client-name"}, "unknown")
+	clientVersion := ctrace.GetClientHeader(r.Header, []string{clientHeader.Version, "graphql-client-version", "apollographql-client-version"}, "missing")
 	requestToken := r.Header.Get("X-WG-Token")
 	return &ClientInfo{
 		Name:           clientName,
@@ -143,6 +144,8 @@ type requestContext struct {
 	operation *operationContext
 	// subgraphResolver can be used to resolve Subgraph by ID or by request
 	subgraphResolver *SubgraphResolver
+	// dataSources the list of datasources involved in resolving the operation
+	dataSources []resolve.DataSourceInfo
 }
 
 func (c *requestContext) Operation() OperationContext {
@@ -321,8 +324,6 @@ func (c *requestContext) Authentication() authentication.Authentication {
 	return authentication.FromContext(c.request.Context())
 }
 
-type operationContextKey struct{}
-
 type OperationContext interface {
 	// Name is the name of the operation
 	Name() string
@@ -358,7 +359,7 @@ type operationContext struct {
 	content    string
 	variables  []byte
 	files      []httpclient.File
-	clientInfo ClientInfo
+	clientInfo *ClientInfo
 	// preparedPlan is the prepared plan of the operation
 	preparedPlan     *planWithMetaData
 	traceOptions     resolve.TraceOptions
@@ -367,7 +368,9 @@ type operationContext struct {
 	initialPayload   []byte
 	extensions       []byte
 	persistedID      string
-	protocol         OperationProtocol
+	// Hash on the original operation
+	sha256Hash string
+	protocol   OperationProtocol
 
 	persistedOperationCacheHit bool
 	normalizationCacheHit      bool
@@ -377,6 +380,11 @@ type operationContext struct {
 	inputUsageInfo     []*graphqlmetrics.InputUsageInfo
 
 	attributes []attribute.KeyValue
+
+	parsingTime       time.Duration
+	validationTime    time.Duration
+	planningTime      time.Duration
+	normalizationTime time.Duration
 }
 
 func (o *operationContext) setAttributes() {
@@ -433,25 +441,7 @@ func (o *operationContext) Protocol() OperationProtocol {
 }
 
 func (o *operationContext) ClientInfo() ClientInfo {
-	return o.clientInfo
-}
-
-func withOperationContext(ctx context.Context, operation *operationContext) context.Context {
-	return context.WithValue(ctx, operationContextKey{}, operation)
-}
-
-// getOperationContext returns the request context.
-// It provides information about the current operation like the name, type, hash and content.
-// If no operation context is found, nil is returned.
-func getOperationContext(ctx context.Context) *operationContext {
-	if ctx == nil {
-		return nil
-	}
-	op := ctx.Value(operationContextKey{})
-	if op == nil {
-		return nil
-	}
-	return op.(*operationContext)
+	return *o.clientInfo
 }
 
 // isMutationRequest returns true if the current request is a mutation request

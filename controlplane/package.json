@@ -1,6 +1,6 @@
 {
   "name": "controlplane",
-  "version": "0.107.3",
+  "version": "0.110.0",
   "private": true,
   "description": "WunderGraph Cosmo Controlplane",
   "type": "module",
@@ -78,6 +78,7 @@
     "nuid": "^1.1.6",
     "octokit": "^3.2.0",
     "openai": "^4.54.0",
+    "p-limit": "^6.1.0",
     "p-retry": "^6.2.0",
     "pino": "^8.19.0",
     "postgres": "^3.4.4",

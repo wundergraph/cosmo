@@ -349,15 +349,15 @@ keycloak:
     repository: wundergraph/cosmo/keycloak
     registry: ghcr.io
     pullPolicy: IfNotPresent
-    tag: 'latest'
+    tag: '0.10.4'
   service:
     ports:
       http: 8080
   replicaCount: 1
   podAnnotations:
-    # Support for k14s.io. This annotation will form a group to coordinate deployments with kapp.
+    # -- Support for k14s.io. This annotation will form a group to coordinate deployments with kapp.
     kapp.k14s.io/change-group: 'cosmo.apps.keycloak.wundergraph.com/deployment'
-    # Support for k14s.io. This annotation will wait for the postgresql deployments to be ready before deploying.
+    # -- Support for k14s.io. This annotation will wait for the postgresql deployments to be ready before deploying.
     kapp.k14s.io/change-rule.postgresql: 'upsert after upserting cosmo.apps.postgresql.wundergraph.com/deployment'
   auth:
     adminUser: 'admin'
@@ -366,11 +366,17 @@ keycloak:
     enabled: true
   cache:
     enabled: false
+  # -- Is set to 'small' by default which is too small and runs in OOMKilled
+  resourcesPreset: none
+  metrics:
+    enabled: true
   postgresql:
     enabled: false
   extraEnvVars:
     - name: KEYCLOAK_EXTRA_ARGS
-      value: '--import-realm --health-enabled=true'
+      value: '--import-realm --optimized'
+    - name: KEYCLOAK_ENABLE_HEALTH_ENDPOINTS
+      value: 'true'
     - name: KEYCLOAK_DATABASE_PASSWORD
       value: 'changeme'
   extraVolumeMounts:
@@ -397,6 +403,9 @@ clickhouse:
   # 1 replica for development
   zookeeper:
     enabled: false
+  resources:
+    memory: 2Gi
+    cpu: 1
   persistence:
     # 2Gi for development
     size: 2Gi

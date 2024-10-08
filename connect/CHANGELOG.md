@@ -4,6 +4,42 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.84.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.83.1...@wundergraph/cosmo-connect@0.84.0) (2024-09-27)
+
+### Features
+
+* add option to update the mappers of an IDP ([#1222](https://github.com/wundergraph/cosmo/issues/1222)) ([00c7b2e](https://github.com/wundergraph/cosmo/commit/00c7b2e159790c99ec62d3c7d6f99c0ef7c8bb70)) (@JivusAyrus)
+
+## [0.83.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.83.0...@wundergraph/cosmo-connect@0.83.1) (2024-09-25)
+
+### Bug Fixes
+
+* record if linters were skipped for a check run ([#1217](https://github.com/wundergraph/cosmo/issues/1217)) ([9cdee41](https://github.com/wundergraph/cosmo/commit/9cdee416b288a08120ea5d8a09e054cf5f3fb5bd)) (@thisisnithin)
+
+# [0.83.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.82.1...@wundergraph/cosmo-connect@0.83.0) (2024-09-23)
+
+### Features
+
+* option to skip traffic check in schema check ([#1211](https://github.com/wundergraph/cosmo/issues/1211)) ([d9fd83a](https://github.com/wundergraph/cosmo/commit/d9fd83ab99d2f2fc8e5f99a4cdb3abb8a1a7837c)) (@thisisnithin)
+
+## [0.82.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.82.0...@wundergraph/cosmo-connect@0.82.1) (2024-09-20)
+
+### Bug Fixes
+
+* handle duplicate traces with same traceId ([#1190](https://github.com/wundergraph/cosmo/issues/1190)) ([b562816](https://github.com/wundergraph/cosmo/commit/b562816cc5b0dd9477590966fb9dcf7f10de3444)) (@thisisnithin)
+
+# [0.82.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.81.1...@wundergraph/cosmo-connect@0.82.0) (2024-09-19)
+
+### Features
+
+* add graph pruning ([#1133](https://github.com/wundergraph/cosmo/issues/1133)) ([b5718cd](https://github.com/wundergraph/cosmo/commit/b5718cd66bc7f0d14cb16b3d0a6d395e846968e4)) (@JivusAyrus)
+
+## [0.81.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.81.0...@wundergraph/cosmo-connect@0.81.1) (2024-09-17)
+
+### Bug Fixes
+
+* remove lastUsedAt for graph tokens ([#1180](https://github.com/wundergraph/cosmo/issues/1180)) ([9ac1590](https://github.com/wundergraph/cosmo/commit/9ac159070f122b45aaa37661143575cfa8fa5b27)) (@thisisnithin)
+
 # [0.81.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.80.0...@wundergraph/cosmo-connect@0.81.0) (2024-09-05)
 
 ### Features

@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { CheckCircleIcon } from "@heroicons/react/24/outline";
+import { CheckCircleIcon, NoSymbolIcon } from "@heroicons/react/24/outline";
 import { Cross1Icon, EyeOpenIcon } from "@radix-ui/react-icons";
 import {
   LintIssue,
@@ -25,11 +25,34 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 export const LintIssuesTable = ({
   lintIssues,
   caption,
+  isLintingEnabled,
 }: {
   lintIssues: LintIssue[];
   caption?: React.ReactNode;
+  isLintingEnabled: boolean;
 }) => {
   const router = useRouter();
+
+  if (lintIssues.length === 0 && !isLintingEnabled) {
+    return (
+      <EmptyState
+        icon={<NoSymbolIcon className="text-gray-400" />}
+        title="Schema Linting Skipped"
+        description="Linting was skipped for this run. Configure it to catch linting issues in your schema."
+        actions={
+          <Button
+            onClick={() => {
+              router.push(
+                `/${router.query.organizationSlug}/lint-policy?namespace=${router.query.namespace}`,
+              );
+            }}
+          >
+            Configure Lint Policy
+          </Button>
+        }
+      />
+    );
+  }
 
   if (lintIssues.length === 0) {
     return (

@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.12.1](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.12.0...helm-cosmo@0.12.1) (2024-10-04)
+
+
+### Bug Fixes
+
+* make probes use the container/service port ([#1243](https://github.com/wundergraph/cosmo/issues/1243)) ([6fe4aef](https://github.com/wundergraph/cosmo/commit/6fe4aeff7b2c30a220c5b7e0c95a78ac39e330bd))
+
+## [0.12.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.11.2...helm-cosmo@0.12.0) (2024-09-24)
+
+
+### Features
+
+* update clickhouse and keycloak charts ([#1214](https://github.com/wundergraph/cosmo/issues/1214)) ([dea6595](https://github.com/wundergraph/cosmo/commit/dea65954c8180d562527f425157ddfeaee83ad44))
+
+## [0.11.2](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.11.1...helm-cosmo@0.11.2) (2024-09-16)
+
+
+### Bug Fixes
+
+* use appVersion by default, optimize keycloak startup time ([#1170](https://github.com/wundergraph/cosmo/issues/1170)) ([82c2bb9](https://github.com/wundergraph/cosmo/commit/82c2bb98d568fd7973fa700a84bec7ce4c0c51cf))
+
 ## [0.11.1](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.11.0...helm-cosmo@0.11.1) (2024-09-05)
 
 

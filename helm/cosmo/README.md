@@ -2,7 +2,7 @@
 
 For a detailed deployment guide of the chart, including the full documentation, see the [DEV.md](DEV.md) file.
 
-![Version: 0.11.1](https://img.shields.io/badge/Version-0.11.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
+![Version: 0.12.1](https://img.shields.io/badge/Version-0.12.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
 
 This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle GraphQL API Management Solution.
 
@@ -24,7 +24,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 |  | otelcollector | ^0 |
 |  | router | ^0 |
 |  | studio | ^0 |
-| https://charts.bitnami.com/bitnami | clickhouse | 5.3.1 |
+| https://charts.bitnami.com/bitnami | clickhouse | 6.2.14 |
 | https://charts.bitnami.com/bitnami | keycloak | 22.0.0 |
 | https://charts.bitnami.com/bitnami | minio | 14.6.25 |
 | https://charts.bitnami.com/bitnami | postgresql | 12.12.10 |
@@ -48,6 +48,8 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | clickhouse.persistence.annotations."kapp.k14s.io/owned-for-deletion" | string | `""` |  |
 | clickhouse.persistence.size | string | `"2Gi"` |  |
 | clickhouse.replicaCount | int | `1` |  |
+| clickhouse.resources.cpu | int | `1` |  |
+| clickhouse.resources.memory | string | `"2Gi"` |  |
 | clickhouse.shards | int | `1` |  |
 | clickhouse.zookeeper.enabled | bool | `false` |  |
 | controlplane.additionalJobLabels | object | `{}` | Pass additional labels to all jobs |
@@ -171,9 +173,11 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | keycloak.externalDatabase.port | int | `5432` |  |
 | keycloak.externalDatabase.user | string | `"postgres"` |  |
 | keycloak.extraEnvVars[0].name | string | `"KEYCLOAK_EXTRA_ARGS"` |  |
-| keycloak.extraEnvVars[0].value | string | `"--import-realm --health-enabled=true"` |  |
-| keycloak.extraEnvVars[1].name | string | `"KEYCLOAK_DATABASE_PASSWORD"` |  |
-| keycloak.extraEnvVars[1].value | string | `"changeme"` |  |
+| keycloak.extraEnvVars[0].value | string | `"--import-realm --optimized"` |  |
+| keycloak.extraEnvVars[1].name | string | `"KEYCLOAK_ENABLE_HEALTH_ENDPOINTS"` |  |
+| keycloak.extraEnvVars[1].value | string | `"true"` |  |
+| keycloak.extraEnvVars[2].name | string | `"KEYCLOAK_DATABASE_PASSWORD"` |  |
+| keycloak.extraEnvVars[2].value | string | `"changeme"` |  |
 | keycloak.extraVolumeMounts[0].mountPath | string | `"/opt/bitnami/keycloak/data/import/realm.json"` |  |
 | keycloak.extraVolumeMounts[0].name | string | `"realm-config-volume"` |  |
 | keycloak.extraVolumeMounts[0].readOnly | bool | `true` |  |
@@ -183,12 +187,14 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | keycloak.image.pullPolicy | string | `"IfNotPresent"` |  |
 | keycloak.image.registry | string | `"ghcr.io"` |  |
 | keycloak.image.repository | string | `"wundergraph/cosmo/keycloak"` |  |
-| keycloak.image.tag | string | `"latest"` |  |
-| keycloak.podAnnotations."kapp.k14s.io/change-group" | string | `"cosmo.apps.keycloak.wundergraph.com/deployment"` |  |
-| keycloak.podAnnotations."kapp.k14s.io/change-rule.postgresql" | string | `"upsert after upserting cosmo.apps.postgresql.wundergraph.com/deployment"` |  |
+| keycloak.image.tag | string | `"0.10.4"` |  |
+| keycloak.metrics.enabled | bool | `true` |  |
+| keycloak.podAnnotations."kapp.k14s.io/change-group" | string | `"cosmo.apps.keycloak.wundergraph.com/deployment"` | Support for k14s.io. This annotation will form a group to coordinate deployments with kapp. |
+| keycloak.podAnnotations."kapp.k14s.io/change-rule.postgresql" | string | `"upsert after upserting cosmo.apps.postgresql.wundergraph.com/deployment"` | Support for k14s.io. This annotation will wait for the postgresql deployments to be ready before deploying. |
 | keycloak.postgresql.enabled | bool | `false` |  |
 | keycloak.production | bool | `false` |  |
 | keycloak.replicaCount | int | `1` |  |
+| keycloak.resourcesPreset | string | `"none"` | Is set to 'small' by default which is too small and runs in OOMKilled |
 | keycloak.service.ports.http | int | `8080` |  |
 | keycloak.startupProbe.enabled | bool | `true` |  |
 | minio.auth.rootPassword | string | `"changeme"` |  |

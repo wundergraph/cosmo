@@ -4,6 +4,145 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.121.1](https://github.com/wundergraph/cosmo/compare/router@0.121.0...router@0.121.1) (2024-10-07)
+
+**Note:** Version bump only for package router
+
+# [0.121.0](https://github.com/wundergraph/cosmo/compare/router@0.120.0...router@0.121.0) (2024-10-07)
+
+### Features
+
+* allow specified fields in subgraph errors ([#1248](https://github.com/wundergraph/cosmo/issues/1248)) ([72c770d](https://github.com/wundergraph/cosmo/commit/72c770d1d4d795f70586dfaa1a0ffab2943638a4)) (@thisisnithin)
+
+# [0.120.0](https://github.com/wundergraph/cosmo/compare/router@0.119.1...router@0.120.0) (2024-10-07)
+
+### Bug Fixes
+
+* don't set empty cache control headers ([#1246](https://github.com/wundergraph/cosmo/issues/1246)) ([eb1ef06](https://github.com/wundergraph/cosmo/commit/eb1ef068a911eb36a813b9bc718f1a01db62785f)) (@df-wg)
+* improve error logs ([#1247](https://github.com/wundergraph/cosmo/issues/1247)) ([19e5ba6](https://github.com/wundergraph/cosmo/commit/19e5ba62fd1dfe6167b66afc1123477ebdd83381)) (@StarpTech)
+
+### Features
+
+* fallback storage for execution config ([#1241](https://github.com/wundergraph/cosmo/issues/1241)) ([9704342](https://github.com/wundergraph/cosmo/commit/97043429bfadd69a86a560e2105dc8f641d6ad65)) (@thisisnithin)
+
+## [0.119.1](https://github.com/wundergraph/cosmo/compare/router@0.119.0...router@0.119.1) (2024-10-03)
+
+### Bug Fixes
+
+* apollo compatibility for truncating floats, invalid __typenames ([#1242](https://github.com/wundergraph/cosmo/issues/1242)) ([a773ea5](https://github.com/wundergraph/cosmo/commit/a773ea53d7f9abe48033dad822f4424a31e28af2)) (@devsergiy)
+
+# [0.119.0](https://github.com/wundergraph/cosmo/compare/router@0.118.0...router@0.119.0) (2024-10-03)
+
+### Bug Fixes
+
+* fix panic when accessController is nil in handleUpgradeRequest ([#1239](https://github.com/wundergraph/cosmo/issues/1239)) ([5699c03](https://github.com/wundergraph/cosmo/commit/5699c03db4d0b13b39643787700e49a389cf038d)) (@ElliottZeroFlucs)
+
+### Features
+
+* add option to add response header with trace id ([#1234](https://github.com/wundergraph/cosmo/issues/1234)) ([f8f5078](https://github.com/wundergraph/cosmo/commit/f8f50781917ee4bb0c24ac0c8aa9db71f87e9a05)) (@JivusAyrus)
+* add option to have custom names client name and version headers ([#1233](https://github.com/wundergraph/cosmo/issues/1233)) ([e09348d](https://github.com/wundergraph/cosmo/commit/e09348d2925469e259b526c231a14c6abcc80916)) (@JivusAyrus)
+* router version command ([#1240](https://github.com/wundergraph/cosmo/issues/1240)) ([39970e5](https://github.com/wundergraph/cosmo/commit/39970e5b1c6d8e2a2958f5ea55bb0d8aa7206d92)) (@StarpTech)
+
+# [0.118.0](https://github.com/wundergraph/cosmo/compare/router@0.117.0...router@0.118.0) (2024-10-03)
+
+### Features
+
+* advanced access logs ([#1203](https://github.com/wundergraph/cosmo/issues/1203)) ([b4dc9ac](https://github.com/wundergraph/cosmo/commit/b4dc9acd964b2982fa9e27ec066e91583991ee17)) (@StarpTech)
+
+# [0.117.0](https://github.com/wundergraph/cosmo/compare/router@0.116.3...router@0.117.0) (2024-10-02)
+
+### Features
+
+* add apollo compatibility flag to truncate floats ([#1236](https://github.com/wundergraph/cosmo/issues/1236)) ([17c80c9](https://github.com/wundergraph/cosmo/commit/17c80c91f4e594cf48dae887840517b588bbe0f8)) (@jensneuse)
+
+## [0.116.3](https://github.com/wundergraph/cosmo/compare/router@0.116.2...router@0.116.3) (2024-09-30)
+
+### Bug Fixes
+
+* upgrade engine for ws deadlock, remove pont pool ([#1230](https://github.com/wundergraph/cosmo/issues/1230)) ([3ac50f8](https://github.com/wundergraph/cosmo/commit/3ac50f8b878fb6a5e2460c22aa94412a28c49600)) (@StarpTech)
+
+## [0.116.2](https://github.com/wundergraph/cosmo/compare/router@0.116.1...router@0.116.2) (2024-09-30)
+
+### Bug Fixes
+
+* value completion reset, preserve __typename field location ([#1228](https://github.com/wundergraph/cosmo/issues/1228)) ([9d671f0](https://github.com/wundergraph/cosmo/commit/9d671f071af6d6b5789968682b98a9c5b7f9a7ec)) (@devsergiy)
+* **websocket:** avoid data race on client request ([#1226](https://github.com/wundergraph/cosmo/issues/1226)) ([dd3ef36](https://github.com/wundergraph/cosmo/commit/dd3ef360447afae8c95149ac71f4f9e1c15f66dd)) (@StarpTech)
+
+## [0.116.1](https://github.com/wundergraph/cosmo/compare/router@0.116.0...router@0.116.1) (2024-09-30)
+
+### Bug Fixes
+
+* planning of consecutive fragments and fragments on union ([#1223](https://github.com/wundergraph/cosmo/issues/1223)) ([3e390cd](https://github.com/wundergraph/cosmo/commit/3e390cd5cf6ca87694c6a25794aecd84d4f0c31e)) (@devsergiy)
+
+# [0.116.0](https://github.com/wundergraph/cosmo/compare/router@0.115.1...router@0.116.0) (2024-09-27)
+
+### Features
+
+* move cache control policy to standalone config section ([#1218](https://github.com/wundergraph/cosmo/issues/1218)) ([7c3781f](https://github.com/wundergraph/cosmo/commit/7c3781f4f5073260d9a82dfb3fa7ab3d53cf4589)) (@df-wg)
+
+## [0.115.1](https://github.com/wundergraph/cosmo/compare/router@0.115.0...router@0.115.1) (2024-09-25)
+
+### Bug Fixes
+
+* handle empty query in plan ([#1219](https://github.com/wundergraph/cosmo/issues/1219)) ([37af012](https://github.com/wundergraph/cosmo/commit/37af0123d8185897a5842616377be320b696037c)) (@thisisnithin)
+
+# [0.115.0](https://github.com/wundergraph/cosmo/compare/router@0.114.1...router@0.115.0) (2024-09-24)
+
+### Features
+
+* enable datadog trace propagation ([#1204](https://github.com/wundergraph/cosmo/issues/1204)) ([1747bf5](https://github.com/wundergraph/cosmo/commit/1747bf53e5ccbd92e323cead8dfb2adccbfe3b7b)) (@df-wg)
+
+## [0.114.1](https://github.com/wundergraph/cosmo/compare/router@0.114.0...router@0.114.1) (2024-09-23)
+
+**Note:** Version bump only for package router
+
+# [0.114.0](https://github.com/wundergraph/cosmo/compare/router@0.113.0...router@0.114.0) (2024-09-23)
+
+### Features
+
+* add apollo compatibility mode with support for valueCompletion ([#1205](https://github.com/wundergraph/cosmo/issues/1205)) ([18b1ef0](https://github.com/wundergraph/cosmo/commit/18b1ef01b12945d2f3acc80ea9548a17f9effa21)) (@jensneuse)
+
+# [0.113.0](https://github.com/wundergraph/cosmo/compare/router@0.112.0...router@0.113.0) (2024-09-20)
+
+### Bug Fixes
+
+* remove printlns ([#1198](https://github.com/wundergraph/cosmo/issues/1198)) ([8b8fc88](https://github.com/wundergraph/cosmo/commit/8b8fc880eace135d957e5b572e6c5ba810ee51cf)) (@df-wg)
+
+### Features
+
+* implement set header ([#1196](https://github.com/wundergraph/cosmo/issues/1196)) ([c3cc9ec](https://github.com/wundergraph/cosmo/commit/c3cc9ec7dd17a8ee56422eb5d52361d4f781eb3f)) (@df-wg)
+
+# [0.112.0](https://github.com/wundergraph/cosmo/compare/router@0.111.1...router@0.112.0) (2024-09-19)
+
+### Features
+
+* disable tracing through headers ([#1189](https://github.com/wundergraph/cosmo/issues/1189)) ([c23fd77](https://github.com/wundergraph/cosmo/commit/c23fd77871db68f7dc33b04ee1ac742476475817)) (@thisisnithin)
+* return error from Router when Subgraph returns invalid value for __typename field ([#1194](https://github.com/wundergraph/cosmo/issues/1194)) ([b99d2fd](https://github.com/wundergraph/cosmo/commit/b99d2fdcd8b311028d11b501addb9d69e61c7df8)) (@jensneuse)
+
+## [0.111.1](https://github.com/wundergraph/cosmo/compare/router@0.111.0...router@0.111.1) (2024-09-19)
+
+### Bug Fixes
+
+* **router:** ensure consistent request logs in error conditions ([#1192](https://github.com/wundergraph/cosmo/issues/1192)) ([e16ca1a](https://github.com/wundergraph/cosmo/commit/e16ca1a4034cd70bd99c72a9eeddd10b4c43d106)) (@StarpTech)
+
+# [0.111.0](https://github.com/wundergraph/cosmo/compare/router@0.110.2...router@0.111.0) (2024-09-18)
+
+### Bug Fixes
+
+* propagate schema usage info for cached query plans as well ([#1186](https://github.com/wundergraph/cosmo/issues/1186)) ([dd00099](https://github.com/wundergraph/cosmo/commit/dd00099efb682f02ceb81f086980abc0851d4e21)) (@jensneuse)
+
+### Features
+
+* add response header propagation ([#1155](https://github.com/wundergraph/cosmo/issues/1155)) ([67f7545](https://github.com/wundergraph/cosmo/commit/67f7545b6073ea2abbda8f4f974f88deb38e668a)) (@jensneuse)
+* allow playground consumers to customize headers ([#1183](https://github.com/wundergraph/cosmo/issues/1183)) ([80a7755](https://github.com/wundergraph/cosmo/commit/80a77550b0e8188602bf508e54224725c04e1ef8)) (@clayne11)
+
+## [0.110.2](https://github.com/wundergraph/cosmo/compare/router@0.110.1...router@0.110.2) (2024-09-17)
+
+### Bug Fixes
+
+* ignore empty errors array ([#1181](https://github.com/wundergraph/cosmo/issues/1181)) ([bc5dda3](https://github.com/wundergraph/cosmo/commit/bc5dda393f727d8ee3483ea7e53c89377a0d2722)) (@devsergiy)
+* persisting headers in playground and styling ([#1177](https://github.com/wundergraph/cosmo/issues/1177)) ([223a4d7](https://github.com/wundergraph/cosmo/commit/223a4d7f5a14406e0010df2e953c868466a9ace4)) (@thisisnithin)
+
 ## [0.110.1](https://github.com/wundergraph/cosmo/compare/router@0.110.0...router@0.110.1) (2024-09-13)
 
 **Note:** Version bump only for package router

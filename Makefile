@@ -81,6 +81,7 @@ generate:
 generate-go:
 	rm -rf router/gen && buf generate --path proto/wg/cosmo/node --path proto/wg/cosmo/common --path proto/wg/cosmo/graphqlmetrics --template buf.router.go.gen.yaml
 	rm -rf graphqlmetrics/gen && buf generate --path proto/wg/cosmo/graphqlmetrics --path proto/wg/cosmo/common --template buf.graphqlmetrics.go.gen.yaml
+	rm -rf connect-go/wg && buf generate --path proto/wg/cosmo/platform --path proto/wg/cosmo/notifications --path proto/wg/cosmo/common --path proto/wg/cosmo/node --template buf.connect-go.go.gen.yaml
 
 start-cp:
 	pnpm -r run --filter './controlplane' dev
@@ -162,3 +163,17 @@ check-buf:
 
 buf-lint:
 	buf lint
+
+new-cp-data-migration:
+	@if [ -z "$(name)" ]; then \
+		echo "Usage: make new-data-migration name=<migration_name>"; \
+		exit 1; \
+	fi
+	mkdir -p data_migrations/controlplane/$(shell date +%s)_$(name)
+
+new-gm-data-migration:
+	@if [ -z "$(name)" ]; then \
+		echo "Usage: make new-data-migration name=<migration_name>"; \
+		exit 1; \
+	fi
+	mkdir -p data_migrations/graphqlmetrics/$(shell date +%s)_$(name)

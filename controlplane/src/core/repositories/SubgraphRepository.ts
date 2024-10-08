@@ -1,6 +1,7 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import { CompositionError, DeploymentError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
+import { addDays } from 'date-fns';
 import { SQL, and, asc, count, desc, eq, getTableName, gt, inArray, like, lt, notInArray, or, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
@@ -8,6 +9,7 @@ import { WebsocketSubprotocol } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
   featureSubgraphsToBaseSubgraphs,
+  fieldGracePeriod,
   graphCompositionSubgraphs,
   graphCompositions,
   schemaChecks,
@@ -24,15 +26,17 @@ import {
   Label,
   SchemaCheckDetailsDTO,
   SchemaCheckSummaryDTO,
+  SchemaGraphPruningDTO,
   SubgraphDTO,
   SubgraphListFilterOptions,
   SubgraphMemberDTO,
 } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
+import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
 import { hasLabelsChanged, normalizeLabels } from '../util.js';
+import { FeatureFlagRepository } from './FeatureFlagRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
-import { FeatureFlagRepository } from './FeatureFlagRepository.js';
 
 type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
 
@@ -803,16 +807,7 @@ export class SubgraphRepository {
 
     const checkList = await this.db.query.schemaChecks.findMany({
       columns: {
-        id: true,
-        targetId: true,
-        createdAt: true,
-        isComposable: true,
-        isDeleted: true,
-        hasBreakingChanges: true,
-        hasClientTraffic: true,
-        forcedSuccess: true,
-        ghDetails: true,
-        hasLintErrors: true,
+        proposedSubgraphSchemaSDL: false,
       },
       limit,
       offset,
@@ -849,6 +844,10 @@ export class SubgraphRepository {
             }
           : undefined,
         hasLintErrors: c.hasLintErrors ?? false,
+        hasGraphPruningErrors: c.hasGraphPruningErrors ?? false,
+        clientTrafficCheckSkipped: c.clientTrafficCheckSkipped ?? false,
+        lintSkipped: c.lintSkipped ?? false,
+        graphPruningSkipped: c.graphPruningSkipped ?? false,
       })),
       checksCount,
     };
@@ -947,6 +946,10 @@ export class SubgraphRepository {
           }
         : undefined,
       hasLintErrors: check.hasLintErrors ?? false,
+      hasGraphPruningErrors: check.hasGraphPruningErrors ?? false,
+      clientTrafficCheckSkipped: check.clientTrafficCheckSkipped ?? false,
+      lintSkipped: check.lintSkipped ?? false,
+      graphPruningSkipped: check.graphPruningSkipped ?? false,
     };
   }
 
@@ -1191,5 +1194,209 @@ export class SubgraphRepository {
       .delete(subgraphMembers)
       .where(and(eq(subgraphMembers.subgraphId, subgraphId), eq(subgraphMembers.id, subgraphMemberId)))
       .execute();
+  }
+
+  public async addFieldGracePeriod({
+    subgraphId,
+    namespaceId,
+    path,
+    expiresAt,
+    isDeprecated,
+  }: {
+    subgraphId: string;
+    namespaceId: string;
+    path: string;
+    expiresAt: Date;
+    isDeprecated: boolean;
+  }) {
+    await this.db
+      .insert(fieldGracePeriod)
+      .values({
+        subgraphId,
+        namespaceId,
+        organizationId: this.organizationId,
+        path,
+        expiresAt,
+        isDeprecated,
+      })
+      .onConflictDoUpdate({
+        target: [
+          fieldGracePeriod.subgraphId,
+          fieldGracePeriod.namespaceId,
+          fieldGracePeriod.organizationId,
+          fieldGracePeriod.path,
+          fieldGracePeriod.isDeprecated,
+        ],
+        set: {
+          isDeprecated,
+          expiresAt,
+        },
+      });
+  }
+
+  public getSubgraphFieldsInGracePeriod({
+    subgraphId,
+    namespaceId,
+    onlyDeprecated,
+  }: {
+    subgraphId: string;
+    namespaceId: string;
+    onlyDeprecated?: boolean;
+  }) {
+    const conditions: SQL<unknown>[] = [
+      eq(fieldGracePeriod.subgraphId, subgraphId),
+      eq(fieldGracePeriod.namespaceId, namespaceId),
+      eq(fieldGracePeriod.organizationId, this.organizationId),
+      gt(fieldGracePeriod.expiresAt, new Date()),
+    ];
+
+    if (onlyDeprecated) {
+      conditions.push(eq(fieldGracePeriod.isDeprecated, onlyDeprecated));
+    }
+
+    return this.db
+      .select({
+        subgraphId: fieldGracePeriod.subgraphId,
+        namespaceId: fieldGracePeriod.namespaceId,
+        path: fieldGracePeriod.path,
+        expiresAt: fieldGracePeriod.expiresAt,
+        isDeprecated: fieldGracePeriod.isDeprecated,
+      })
+      .from(fieldGracePeriod)
+      .where(and(...conditions));
+  }
+
+  public async deleteFieldGracePeriod({
+    subgraphId,
+    namespaceId,
+    path,
+    isDeprecated,
+  }: {
+    subgraphId: string;
+    namespaceId: string;
+    path: string;
+    isDeprecated: boolean;
+  }) {
+    const conditions: SQL<unknown>[] = [
+      eq(fieldGracePeriod.subgraphId, subgraphId),
+      eq(fieldGracePeriod.namespaceId, namespaceId),
+      eq(fieldGracePeriod.organizationId, this.organizationId),
+      eq(fieldGracePeriod.path, path),
+    ];
+
+    if (isDeprecated) {
+      conditions.push(eq(fieldGracePeriod.isDeprecated, isDeprecated));
+    }
+    await this.db
+      .delete(fieldGracePeriod)
+      .where(and(...conditions))
+      .execute();
+  }
+
+  public async deleteExpiredGracePeriodFields({
+    subgraphId,
+    namespaceId,
+  }: {
+    subgraphId: string;
+    namespaceId: string;
+  }) {
+    const conditions: SQL<unknown>[] = [
+      eq(fieldGracePeriod.subgraphId, subgraphId),
+      eq(fieldGracePeriod.namespaceId, namespaceId),
+      eq(fieldGracePeriod.organizationId, this.organizationId),
+      lt(fieldGracePeriod.expiresAt, new Date()),
+    ];
+
+    await this.db
+      .delete(fieldGracePeriod)
+      .where(and(...conditions))
+      .execute();
+  }
+
+  public async handleSubgraphFieldGracePeriods({
+    schemaSDL,
+    newSchemaSDL,
+    subgraphId,
+    namespaceId,
+    graphPruningConfigs,
+  }: {
+    schemaSDL: string;
+    newSchemaSDL: string;
+    subgraphId: string;
+    namespaceId: string;
+    graphPruningConfigs: SchemaGraphPruningDTO[];
+  }) {
+    const schemaChanges = await getDiffBetweenGraphs(schemaSDL, newSchemaSDL);
+    if (schemaChanges.kind === 'failure') {
+      this.logger.error(`Failed to get diff between schemas for subgraph ${subgraphId} while handling grace periods`);
+    } else {
+      const fieldsAdded = schemaChanges.changes.filter(
+        (change) =>
+          change.changeType === 'FIELD_ADDED' ||
+          change.changeType === 'FIELD_TYPE_CHANGED' ||
+          change.changeType === 'INPUT_FIELD_ADDED' ||
+          change.changeType === 'INPUT_FIELD_TYPE_CHANGED' ||
+          change.changeType === 'FIELD_ARGUMENT_ADDED' ||
+          change.changeType === 'FIELD_ARGUMENT_REMOVED',
+      );
+      const fieldsRemoved = schemaChanges.changes.filter(
+        (change) => change.changeType === 'FIELD_REMOVED' || change.changeType === 'INPUT_FIELD_REMOVED',
+      );
+      const deprecatedFieldsAdded = schemaChanges.changes.filter(
+        (change) => change.changeType === 'FIELD_DEPRECATION_ADDED',
+      );
+      const deprecatedFieldsRemoved = schemaChanges.changes.filter(
+        (change) => change.changeType === 'FIELD_DEPRECATION_REMOVED',
+      );
+
+      const now = new Date();
+      const gracePeriodForUnusedFields = addDays(
+        now,
+        graphPruningConfigs.find((c) => c.ruleName === 'UNUSED_FIELDS')?.gracePeriodInDays || 7,
+      );
+      const gracePeriodForDeprecatedFields = addDays(
+        now,
+        graphPruningConfigs.find((c) => c.ruleName === 'DEPRECATED_FIELDS')?.gracePeriodInDays || 7,
+      );
+      for (const field of fieldsAdded) {
+        await this.addFieldGracePeriod({
+          subgraphId,
+          path: field.path,
+          namespaceId,
+          expiresAt: gracePeriodForUnusedFields,
+          isDeprecated: false,
+        });
+      }
+
+      for (const field of deprecatedFieldsAdded) {
+        await this.addFieldGracePeriod({
+          subgraphId,
+          path: field.path,
+          namespaceId,
+          expiresAt: gracePeriodForDeprecatedFields,
+          isDeprecated: true,
+        });
+      }
+
+      for (const field of deprecatedFieldsRemoved) {
+        await this.deleteFieldGracePeriod({
+          subgraphId,
+          path: field.path,
+          namespaceId,
+          isDeprecated: true,
+        });
+      }
+
+      for (const field of fieldsRemoved) {
+        await this.deleteFieldGracePeriod({
+          subgraphId,
+          path: field.path,
+          namespaceId,
+          isDeprecated: false,
+        });
+      }
+    }
+
+    await this.deleteExpiredGracePeriodFields({ subgraphId, namespaceId });
   }
 }

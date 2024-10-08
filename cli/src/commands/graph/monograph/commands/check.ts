@@ -15,6 +15,10 @@ export default (opts: BaseCommandOptions) => {
   command.argument('<name>', 'The name of the monograph on which the check operation is to be performed.');
   command.option('-n, --namespace [string]', 'The namespace of the monograph.');
   command.option('--schema <path-to-schema>', 'The path of the new schema file.');
+  command.option(
+    '--skip-traffic-check',
+    'This will skip checking for client traffic and any breaking change will fail the run.',
+  );
 
   command.action(async (name, options) => {
     const schemaFile = resolve(options.schema);
@@ -58,6 +62,7 @@ export default (opts: BaseCommandOptions) => {
         schema: await readFile(schemaFile),
         gitInfo,
         delete: false,
+        skipTrafficCheck: options.skipTrafficCheck,
       },
       {
         headers: getBaseHeaders(),

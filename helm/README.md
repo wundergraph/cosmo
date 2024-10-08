@@ -58,6 +58,8 @@ make docker-build-minikube # If you're running k8s on the same CPU architecture 
                            # If your cluster runs on a linux/amd64 architecture please update the Makefile accordingly
 ```
 
+**Important**: You have to set `image.version` in `values.yaml` for each service to use the locally built images. By default, a chart always tries to pin to the latest compatible version of the image.
+
 #### 4. Install the Helm chart
 
 For development, we recommend installing the Helm chart with Kapp the following command:

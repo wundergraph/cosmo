@@ -44,6 +44,7 @@ import { NextPageWithLayout } from "@/lib/page";
 import {
   CommandLineIcon,
   ExclamationTriangleIcon,
+  NoSymbolIcon,
 } from "@heroicons/react/24/outline";
 import { GitHubLogoIcon } from "@radix-ui/react-icons";
 import { useQuery } from "@connectrpc/connect-query";
@@ -53,6 +54,7 @@ import { formatDistanceToNow, formatISO } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useContext } from "react";
+import { cn } from "@/lib/utils";
 
 const ChecksPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -163,12 +165,18 @@ const ChecksPage: NextPageWithLayout = () => {
                   timestamp,
                   ghDetails,
                   hasLintErrors,
+                  hasGraphPruningErrors,
+                  clientTrafficCheckSkipped,
+                  lintSkipped,
+                  graphPruningSkipped,
                 }) => {
                   const isSuccessful = isCheckSuccessful(
                     isComposable,
                     isBreaking,
                     hasClientTraffic,
                     hasLintErrors,
+                    hasGraphPruningErrors,
+                    clientTrafficCheckSkipped,
                   );
 
                   const path = `${router.asPath.split("?")[0]}/${id}`;
@@ -217,16 +225,53 @@ const ChecksPage: NextPageWithLayout = () => {
                           </Badge>
 
                           <Badge variant="outline" className="gap-2 py-1.5">
-                            {getCheckIcon(!isBreaking)}{" "}
+                            {getCheckIcon(!isBreaking)}
                             <span>Breaking changes</span>
                           </Badge>
-                          <Badge variant="outline" className="gap-2 py-1.5">
-                            {getCheckIcon(!hasClientTraffic)}{" "}
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "gap-2 py-1.5",
+                              clientTrafficCheckSkipped &&
+                                "text-muted-foreground",
+                            )}
+                          >
+                            {clientTrafficCheckSkipped ? (
+                              <NoSymbolIcon className="h-4 w-4" />
+                            ) : (
+                              getCheckIcon(!hasClientTraffic)
+                            )}
                             <span>Operations</span>
                           </Badge>
-                          <Badge variant="outline" className="gap-2 py-1.5">
-                            {getCheckIcon(!hasLintErrors)}{" "}
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "gap-2 py-1.5",
+                              lintSkipped && "text-muted-foreground",
+                            )}
+                          >
+                            {lintSkipped ? (
+                              <NoSymbolIcon className="h-4 w-4" />
+                            ) : (
+                              getCheckIcon(!hasLintErrors)
+                            )}
                             <span>Lint Errors</span>
+                          </Badge>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "gap-2 py-1.5",
+                              graphPruningSkipped && "text-muted-foreground",
+                            )}
+                          >
+                            {graphPruningSkipped ? (
+                              <NoSymbolIcon className="h-4 w-4" />
+                            ) : (
+                              getCheckIcon(!hasGraphPruningErrors)
+                            )}
+                            <span className="flex-1 truncate">
+                              Pruning Errors
+                            </span>
                           </Badge>
                         </div>
                       </TableCell>

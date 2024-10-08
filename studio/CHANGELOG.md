@@ -4,6 +4,57 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.91.0](https://github.com/wundergraph/cosmo/compare/studio@0.90.2...studio@0.91.0) (2024-09-27)
+
+### Features
+
+* add option to update the mappers of an IDP ([#1222](https://github.com/wundergraph/cosmo/issues/1222)) ([00c7b2e](https://github.com/wundergraph/cosmo/commit/00c7b2e159790c99ec62d3c7d6f99c0ef7c8bb70)) (@JivusAyrus)
+
+## [0.90.2](https://github.com/wundergraph/cosmo/compare/studio@0.90.1...studio@0.90.2) (2024-09-25)
+
+### Bug Fixes
+
+* handle empty query in plan ([#1219](https://github.com/wundergraph/cosmo/issues/1219)) ([37af012](https://github.com/wundergraph/cosmo/commit/37af0123d8185897a5842616377be320b696037c)) (@thisisnithin)
+* record if linters were skipped for a check run ([#1217](https://github.com/wundergraph/cosmo/issues/1217)) ([9cdee41](https://github.com/wundergraph/cosmo/commit/9cdee416b288a08120ea5d8a09e054cf5f3fb5bd)) (@thisisnithin)
+
+## [0.90.1](https://github.com/wundergraph/cosmo/compare/studio@0.90.0...studio@0.90.1) (2024-09-24)
+
+### Bug Fixes
+
+* reason for check status ([#1212](https://github.com/wundergraph/cosmo/issues/1212)) ([59702b6](https://github.com/wundergraph/cosmo/commit/59702b67a235b76a1f9bce5837f8c71f75274d24)) (@thisisnithin)
+
+# [0.90.0](https://github.com/wundergraph/cosmo/compare/studio@0.89.2...studio@0.90.0) (2024-09-23)
+
+### Features
+
+* option to skip traffic check in schema check ([#1211](https://github.com/wundergraph/cosmo/issues/1211)) ([d9fd83a](https://github.com/wundergraph/cosmo/commit/d9fd83ab99d2f2fc8e5f99a4cdb3abb8a1a7837c)) (@thisisnithin)
+
+## [0.89.2](https://github.com/wundergraph/cosmo/compare/studio@0.89.1...studio@0.89.2) (2024-09-23)
+
+### Bug Fixes
+
+* ui and default value of the graph pruning config ([#1208](https://github.com/wundergraph/cosmo/issues/1208)) ([912d80a](https://github.com/wundergraph/cosmo/commit/912d80ad1d9067bddd8e01488d3ac77e9cd03e08)) (@JivusAyrus)
+
+## [0.89.1](https://github.com/wundergraph/cosmo/compare/studio@0.89.0...studio@0.89.1) (2024-09-20)
+
+### Bug Fixes
+
+* graph pruning config ui for developer plan ([#1195](https://github.com/wundergraph/cosmo/issues/1195)) ([378ccc6](https://github.com/wundergraph/cosmo/commit/378ccc68a54c181b85acc87f760ff6cf7b5d5c75)) (@JivusAyrus)
+* handle duplicate traces with same traceId ([#1190](https://github.com/wundergraph/cosmo/issues/1190)) ([b562816](https://github.com/wundergraph/cosmo/commit/b562816cc5b0dd9477590966fb9dcf7f10de3444)) (@thisisnithin)
+
+# [0.89.0](https://github.com/wundergraph/cosmo/compare/studio@0.88.2...studio@0.89.0) (2024-09-19)
+
+### Features
+
+* add graph pruning ([#1133](https://github.com/wundergraph/cosmo/issues/1133)) ([b5718cd](https://github.com/wundergraph/cosmo/commit/b5718cd66bc7f0d14cb16b3d0a6d395e846968e4)) (@JivusAyrus)
+* disable tracing through headers ([#1189](https://github.com/wundergraph/cosmo/issues/1189)) ([c23fd77](https://github.com/wundergraph/cosmo/commit/c23fd77871db68f7dc33b04ee1ac742476475817)) (@thisisnithin)
+
+## [0.88.2](https://github.com/wundergraph/cosmo/compare/studio@0.88.1...studio@0.88.2) (2024-09-17)
+
+### Bug Fixes
+
+* persisting headers in playground and styling ([#1177](https://github.com/wundergraph/cosmo/issues/1177)) ([223a4d7](https://github.com/wundergraph/cosmo/commit/223a4d7f5a14406e0010df2e953c868466a9ace4)) (@thisisnithin)
+
 ## [0.88.1](https://github.com/wundergraph/cosmo/compare/studio@0.88.0...studio@0.88.1) (2024-09-09)
 
 ### Bug Fixes

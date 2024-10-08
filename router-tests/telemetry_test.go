@@ -6,11 +6,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/wundergraph/cosmo/router-tests/testenv"
-	"github.com/wundergraph/cosmo/router/core"
-	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/cosmo/router/pkg/otel"
-	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -20,6 +15,12 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.19.0"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 )
 
 func TestTelemetry(t *testing.T) {
@@ -728,17 +729,17 @@ func TestTelemetry(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			TraceExporter: exporter,
 			MetricReader:  metricReader,
-			OtelResourceAttributes: []config.OtelResourceAttribute{
+			OtelResourceAttributes: []config.CustomStaticAttribute{
 				{
 					Key:   "custom.resource",
 					Value: "value",
 				},
 			},
-			OtelAttributes: []config.OtelAttribute{
+			OtelAttributes: []config.CustomAttribute{
 				{
 					Key:     "custom",
 					Default: "value",
-					ValueFrom: &config.OtelAttributeFromValue{
+					ValueFrom: &config.CustomDynamicAttribute{
 						RequestHeader: "x-custom-header",
 					},
 				},
@@ -1100,13 +1101,13 @@ func TestTelemetry(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			TraceExporter: exporter,
 			MetricReader:  metricReader,
-			OtelResourceAttributes: []config.OtelResourceAttribute{
+			OtelResourceAttributes: []config.CustomStaticAttribute{
 				{
 					Key:   "custom.resource",
 					Value: "value",
 				},
 			},
-			OtelAttributes: []config.OtelAttribute{
+			OtelAttributes: []config.CustomAttribute{
 				{
 					Key:     "custom",
 					Default: "value",
@@ -2157,11 +2158,7 @@ func TestTelemetry(t *testing.T) {
 
 			require.True(t, given.Equals(&want))
 
-			require.Equal(t, sdktrace.Status{Code: codes.Error, Description: `Failed to fetch from Subgraph 'products' at Path: 'employees'.
-Downstream errors:
-1. Subgraph error at Path 'foo', Message: Unauthorized, Extension Code: UNAUTHORIZED.
-2. Subgraph error at Path 'bar', Message: MyErrorMessage, Extension Code: YOUR_ERROR_CODE.
-`}, sn[8].Status())
+			require.Equal(t, sdktrace.Status{Code: codes.Error, Description: `Failed to fetch from Subgraph 'products' at Path: 'employees'.`}, sn[8].Status())
 
 			events := sn[8].Events()
 			require.Len(t, events, 3, "expected 2 events, one for the fetch and one two downstream GraphQL errors")
@@ -2183,11 +2180,7 @@ Downstream errors:
 			require.Equal(t, "query myQuery", sn[10].Name())
 			require.Equal(t, trace.SpanKindServer, sn[10].SpanKind())
 			require.Equal(t, codes.Error, sn[10].Status().Code)
-			require.Contains(t, sn[10].Status().Description, `Failed to fetch from Subgraph 'products' at Path: 'employees'.
-Downstream errors:
-1. Subgraph error at Path 'foo', Message: Unauthorized, Extension Code: UNAUTHORIZED.
-2. Subgraph error at Path 'bar', Message: MyErrorMessage, Extension Code: YOUR_ERROR_CODE.
-`)
+			require.Contains(t, sn[10].Status().Description, `Failed to fetch from Subgraph 'products' at Path: 'employees'.`)
 		})
 	})
 
@@ -2265,6 +2258,233 @@ Downstream errors:
 			events = sn[3].Events()
 			require.Len(t, events, 1, "expected 1 event because the GraphQL request failed")
 			require.Equal(t, "exception", events[0].Name)
+		})
+	})
+
+	t.Run("Datadog Propagation", func(t *testing.T) {
+		var (
+			datadogTraceId = "9532127138774266268"
+			testPropConfig = config.PropagationConfig{
+				TraceContext: true,
+				Datadog:      true,
+			}
+		)
+
+		t.Run("Datadog headers are propagated if enabled", func(t *testing.T) {
+			t.Parallel()
+
+			exporter := tracetest.NewInMemoryExporter(t)
+
+			testenv.Run(t, &testenv.Config{
+				TraceExporter:     exporter,
+				PropagationConfig: testPropConfig,
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{
+						Middleware: func(handler http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								require.Equal(t, datadogTraceId, r.Header.Get("x-datadog-trace-id"))
+								require.NotEqual(t, "", r.Header.Get("x-datadog-parent-id"))
+								require.Equal(t, "1", r.Header.Get("x-datadog-sampling-priority"))
+								handler.ServeHTTP(w, r)
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id } }`,
+					Header: map[string][]string{
+						"traceparent": {"00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203332-01"}, // 01 = sampled
+					},
+				})
+				require.JSONEq(t, employeesIDData, res.Body)
+			})
+		})
+
+		t.Run("Datadog headers correctly recognize sampling bit", func(t *testing.T) {
+			t.Parallel()
+
+			exporter := tracetest.NewInMemoryExporter(t)
+
+			testenv.Run(t, &testenv.Config{
+				TraceExporter:     exporter,
+				PropagationConfig: testPropConfig,
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{
+						Middleware: func(handler http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								require.Equal(t, datadogTraceId, r.Header.Get("x-datadog-trace-id"))
+								require.NotEqual(t, "", r.Header.Get("x-datadog-parent-id"))
+								require.Equal(t, "0", r.Header.Get("x-datadog-sampling-priority"))
+								handler.ServeHTTP(w, r)
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id } }`,
+					Header: map[string][]string{
+						"traceparent": {"00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203332-00"}, // 01 = sampled
+					},
+				})
+				require.JSONEq(t, employeesIDData, res.Body)
+			})
+		})
+
+		t.Run("Correctly pass along Datadog headers", func(t *testing.T) {
+			t.Parallel()
+
+			exporter := tracetest.NewInMemoryExporter(t)
+
+			testenv.Run(t, &testenv.Config{
+				TraceExporter:     exporter,
+				PropagationConfig: testPropConfig,
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{
+						Middleware: func(handler http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								require.Equal(t, datadogTraceId, r.Header.Get("x-datadog-trace-id"))
+								require.NotEqual(t, "6023947403358210776", r.Header.Get("x-datadog-parent-id"))
+								require.Equal(t, "1", r.Header.Get("x-datadog-sampling-priority"))
+								handler.ServeHTTP(w, r)
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id } }`,
+					Header: map[string][]string{
+						"x-datadog-trace-id":          {datadogTraceId},
+						"x-datadog-parent-id":         {"6023947403358210776"},
+						"x-datadog-sampling-priority": {"1"},
+					},
+				})
+				require.JSONEq(t, employeesIDData, res.Body)
+
+				sn := exporter.GetSpans().Snapshots()
+				require.GreaterOrEqual(t, len(sn), 1)
+				require.Equal(t, "00000000000000008448eb211c80319c", sn[0].SpanContext().TraceID().String())
+			})
+		})
+
+		t.Run("Doesn't propagate headers in datadog format if datadog config is not set", func(t *testing.T) {
+			t.Parallel()
+
+			exporter := tracetest.NewInMemoryExporter(t)
+
+			testenv.Run(t, &testenv.Config{
+				TraceExporter:     exporter,
+				PropagationConfig: config.PropagationConfig{Datadog: false},
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{
+						Middleware: func(handler http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								require.Equal(t, "", r.Header.Get("x-datadog-trace-id"))
+								require.Equal(t, "", r.Header.Get("x-datadog-parent-id"))
+								require.Equal(t, "", r.Header.Get("x-datadog-sampling-priority"))
+								handler.ServeHTTP(w, r)
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id } }`,
+					Header: map[string][]string{
+						"traceparent": {"00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203332-00"}, // 01 = sampled
+					},
+				})
+				require.JSONEq(t, employeesIDData, res.Body)
+			})
+		})
+	})
+
+	t.Run("Trace ID Response header", func(t *testing.T) {
+		t.Parallel()
+
+		exporter := tracetest.NewInMemoryExporter(t)
+		customTraceHeader := "trace-id"
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+			ResponseTraceHeader: config.ResponseTraceHeader{
+				Enabled:    true,
+				HeaderName: customTraceHeader,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			sn := exporter.GetSpans().Snapshots()
+			require.Equal(t, sn[0].SpanContext().TraceID().String(), res.Response.Header.Get("trace-id"))
+		})
+	})
+
+	t.Run("Trace ID Response header with default header name", func(t *testing.T) {
+		t.Parallel()
+
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+			ResponseTraceHeader: config.ResponseTraceHeader{
+				Enabled:    true,
+				HeaderName: "x-wg-trace-id",
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			sn := exporter.GetSpans().Snapshots()
+			require.Equal(t, sn[0].SpanContext().TraceID().String(), res.Response.Header.Get("x-wg-trace-id"))
+		})
+	})
+
+	t.Run("Custom client name and client version headers", func(t *testing.T) {
+		t.Parallel()
+
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		customClientHeaderName := "client-name"
+		customClientHeaderVersion := "client-version"
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+			ClientHeader: config.ClientHeader{
+				Name:    customClientHeaderName,
+				Version: customClientHeaderVersion,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := make(http.Header)
+			header.Add("client-name", "name")
+			header.Add("client-version", "version")
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:  `query { employees { id } }`,
+				Header: header,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			sn := exporter.GetSpans().Snapshots()
+
+			var clientName, clientVersion string
+			for _, v := range sn[0].Attributes() {
+				if v.Key == "wg.client.name" {
+					clientName = v.Value.AsString()
+				}
+				if v.Key == "wg.client.version" {
+					clientVersion = v.Value.AsString()
+				}
+			}
+			require.Equal(t, "name", clientName)
+			require.Equal(t, "version", clientVersion)
 		})
 	})
 }
