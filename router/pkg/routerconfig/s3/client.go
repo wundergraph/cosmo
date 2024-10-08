@@ -42,6 +42,7 @@ func NewClient(endpoint string, options *ClientOptions) (routerconfig.Client, er
 			Value: credentials.Value{
 				AccessKeyID:     options.AccessKeyID,
 				SecretAccessKey: options.SecretAccessKey,
+				SignerType:      credentials.SignatureV4,
 			},
 		},
 		// IAM credentials are retrieved from the EC2 nodes assumed role.
