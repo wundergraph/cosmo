@@ -74,11 +74,15 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 		AllowedErrorExtensionFields:        opts.RouterEngineConfig.SubgraphErrorPropagation.AllowedExtensionFields,
 		AttachServiceNameToErrorExtensions: opts.RouterEngineConfig.SubgraphErrorPropagation.AttachServiceName,
 		DefaultErrorExtensionCode:          opts.RouterEngineConfig.SubgraphErrorPropagation.DefaultExtensionCode,
+		AllowedSubgraphErrorFields:         opts.RouterEngineConfig.SubgraphErrorPropagation.AllowedFields,
 		MaxRecyclableParserSize:            opts.RouterEngineConfig.Execution.ResolverMaxRecyclableParserSize,
 	}
 
 	if opts.ApolloCompatibilityFlags.ValueCompletion.Enabled {
 		options.ResolvableOptions.ApolloCompatibilityValueCompletionInExtensions = true
+	}
+	if opts.ApolloCompatibilityFlags.TruncateFloats.Enabled {
+		options.ResolvableOptions.ApolloCompatibilityTruncateFloatValues = true
 	}
 
 	switch opts.RouterEngineConfig.SubgraphErrorPropagation.Mode {

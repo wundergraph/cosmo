@@ -16,18 +16,14 @@ import (
 	"connectrpc.com/connect"
 	"github.com/wundergraph/cosmo/router/pkg/watcher"
 
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/cdn"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/s3"
-	"github.com/wundergraph/cosmo/router/pkg/execution_config"
-	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
-	configCDNProvider "github.com/wundergraph/cosmo/router/pkg/routerconfig/cdn"
-	configs3Provider "github.com/wundergraph/cosmo/router/pkg/routerconfig/s3"
-
 	"github.com/nats-io/nuid"
 	"github.com/redis/go-redis/v9"
 	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/graphiql"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/cdn"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/s3"
+	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"go.uber.org/atomic"
 
 	"github.com/mitchellh/mapstructure"
@@ -129,6 +125,11 @@ type (
 		Path  string
 	}
 
+	AccessLogsConfig struct {
+		Attributes []config.CustomAttribute
+		Logger     *zap.Logger
+	}
+
 	// Config defines the configuration options for the Router.
 	Config struct {
 		clusterName               string
@@ -185,6 +186,7 @@ type (
 		processStartTime          time.Time
 		developmentMode           bool
 		healthcheck               health.Checker
+		accessLogsConfig          *AccessLogsConfig
 		// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
 		localhostFallbackInsideDocker bool
 
@@ -214,6 +216,7 @@ type (
 		webSocketConfiguration *config.WebSocketConfiguration
 
 		subgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
+		clientHeader             config.ClientHeader
 	}
 	// Option defines the method to customize server.
 	Option func(svr *Router)
@@ -280,12 +283,15 @@ func NewRouter(opts ...Option) (*Router, error) {
 	if r.graphqlMetricsConfig == nil {
 		r.graphqlMetricsConfig = DefaultGraphQLMetricsConfig()
 	}
+
 	if r.routerTrafficConfig == nil {
 		r.routerTrafficConfig = DefaultRouterTrafficConfig()
 	}
+
 	if r.fileUploadConfig == nil {
 		r.fileUploadConfig = DefaultFileUploadConfig()
 	}
+
 	if r.accessController != nil {
 		if len(r.accessController.authenticators) == 0 && r.accessController.authenticationRequired {
 			r.logger.Warn("authentication is required but no authenticators are configured")
@@ -347,6 +353,13 @@ func NewRouter(opts ...Option) (*Router, error) {
 		"tracestate",
 		// Required for feature flags
 		"x-feature-flag",
+	}
+
+	if r.clientHeader.Name != "" {
+		defaultHeaders = append(defaultHeaders, r.clientHeader.Name)
+	}
+	if r.clientHeader.Version != "" {
+		defaultHeaders = append(defaultHeaders, r.clientHeader.Version)
 	}
 
 	defaultMethods := []string{
@@ -889,87 +902,12 @@ func (r *Router) buildClients() error {
 		r.persistedOperationClient = c
 	}
 
-	var rClient routerconfig.Client
-
-	// Poller is only initialized when a config poller is configured and the router is not started with a static config
-	if r.staticExecutionConfig == nil && r.routerConfigPollerConfig != nil && r.configPoller == nil {
-
-		if provider, ok := cdnProviders[r.routerConfigPollerConfig.Storage.ProviderID]; ok {
-
-			if r.graphApiToken == "" {
-				return errors.New(
-					"graph token is required to fetch execution config from CDN. " +
-						"Alternatively, configure a custom storage provider or specify a static execution config",
-				)
-			}
-
-			c, err := configCDNProvider.NewClient(
-				provider.URL,
-				r.graphApiToken,
-				&configCDNProvider.Options{
-					Logger:       r.logger,
-					SignatureKey: r.routerConfigPollerConfig.GraphSignKey,
-				})
-			if err != nil {
-				return err
-			}
-			rClient = c
-
-			r.logger.Info("Polling for execution config updates from CDN in the background",
-				zap.String("provider_id", provider.ID),
-				zap.String("interval", r.routerConfigPollerConfig.PollInterval.String()),
-			)
-		} else if provider, ok := s3Providers[r.routerConfigPollerConfig.Storage.ProviderID]; ok {
-
-			c, err := configs3Provider.NewClient(provider.Endpoint, &configs3Provider.ClientOptions{
-				AccessKeyID:     provider.AccessKey,
-				SecretAccessKey: provider.SecretKey,
-				BucketName:      provider.Bucket,
-				Region:          provider.Region,
-				ObjectPath:      r.routerConfigPollerConfig.Storage.ObjectPath,
-				Secure:          provider.Secure,
-			})
-			if err != nil {
-				return err
-			}
-			rClient = c
-
-			r.logger.Info("Polling for execution config updates from S3 storage in the background",
-				zap.String("provider_id", provider.ID),
-				zap.String("interval", r.routerConfigPollerConfig.PollInterval.String()),
-			)
-		} else {
-			if r.routerConfigPollerConfig.Storage.ProviderID != "" {
-				return fmt.Errorf("unknown storage provider id '%s' for execution config", r.routerConfigPollerConfig.Storage.ProviderID)
-			}
-
-			if r.graphApiToken == "" {
-				return errors.New(
-					"graph token is required to fetch execution config from CDN. " +
-						"Alternatively, configure a custom storage provider or specify a static execution config",
-				)
-			}
-
-			c, err := configCDNProvider.NewClient(r.cdnConfig.URL, r.graphApiToken, &configCDNProvider.Options{
-				Logger:       r.logger,
-				SignatureKey: r.routerConfigPollerConfig.GraphSignKey,
-			})
-			if err != nil {
-				return err
-			}
-			rClient = c
-
-			r.logger.Info("Polling for execution config updates from Cosmo CDN in the background",
-				zap.String("interval", r.routerConfigPollerConfig.PollInterval.String()),
-			)
-		}
-
-		r.configPoller = configpoller.New(r.graphApiToken,
-			configpoller.WithLogger(r.logger),
-			configpoller.WithPollInterval(r.routerConfigPollerConfig.PollInterval),
-			configpoller.WithClient(rClient),
-		)
-
+	configPoller, err := InitializeConfigPoller(r, cdnProviders, s3Providers)
+	if err != nil {
+		return err
+	}
+	if configPoller != nil {
+		r.configPoller = *configPoller
 	}
 
 	return nil
@@ -1630,6 +1568,12 @@ func WithSubgraphErrorPropagation(cfg config.SubgraphErrorPropagationConfigurati
 	}
 }
 
+func WithAccessLogs(cfg *AccessLogsConfig) Option {
+	return func(r *Router) {
+		r.accessLogsConfig = cfg
+	}
+}
+
 func WithTLSConfig(cfg *TlsConfig) Option {
 	return func(r *Router) {
 		r.tlsConfig = cfg
@@ -1652,6 +1596,7 @@ func WithApolloCompatibilityFlagsConfig(cfg config.ApolloCompatibilityFlags) Opt
 	return func(r *Router) {
 		if cfg.EnableAll {
 			cfg.ValueCompletion.Enabled = true
+			cfg.TruncateFloats.Enabled = true
 		}
 		r.apolloCompatibilityFlags = cfg
 	}
@@ -1660,6 +1605,12 @@ func WithApolloCompatibilityFlagsConfig(cfg config.ApolloCompatibilityFlags) Opt
 func WithStorageProviders(cfg config.StorageProviders) Option {
 	return func(r *Router) {
 		r.storageProviders = cfg
+	}
+}
+
+func WithClientHeader(cfg config.ClientHeader) Option {
+	return func(r *Router) {
+		r.clientHeader = cfg
 	}
 }
 
@@ -1743,10 +1694,11 @@ func TraceConfigFromTelemetry(cfg *config.Telemetry) *rtrace.Config {
 		ResourceAttributes:   buildResourceAttributes(cfg.ResourceAttributes),
 		Exporters:            exporters,
 		Propagators:          propagators,
+		ResponseTraceHeader:  cfg.Tracing.ResponseTraceHeader,
 	}
 }
 
-func buildAttributesMapper(attributes []config.OtelAttribute) func(req *http.Request) []attribute.KeyValue {
+func buildAttributesMapper(attributes []config.CustomAttribute) func(req *http.Request) []attribute.KeyValue {
 	return func(req *http.Request) []attribute.KeyValue {
 		var result []attribute.KeyValue
 
@@ -1771,7 +1723,7 @@ func buildAttributesMapper(attributes []config.OtelAttribute) func(req *http.Req
 	}
 }
 
-func buildResourceAttributes(attributes []config.OtelResourceAttribute) []attribute.KeyValue {
+func buildResourceAttributes(attributes []config.CustomStaticAttribute) []attribute.KeyValue {
 	var result []attribute.KeyValue
 	for _, attr := range attributes {
 		result = append(result, attribute.String(attr.Key, attr.Value))

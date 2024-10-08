@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"net/http"
 	"os"
 
@@ -171,6 +172,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		core.WithCDN(cfg.CDN),
 		core.WithEvents(cfg.Events),
 		core.WithRateLimitConfig(&cfg.RateLimit),
+		core.WithClientHeader(cfg.ClientHeader),
 	}
 
 	// HTTP_PROXY, HTTPS_PROXY and NO_PROXY
@@ -179,6 +181,56 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 	}
 
 	options = append(options, additionalOptions...)
+
+	if cfg.AccessLogs.Enabled {
+
+		c := &core.AccessLogsConfig{
+			Attributes: cfg.AccessLogs.Fields,
+		}
+
+		if cfg.AccessLogs.Output.File.Enabled {
+			f, err := logging.NewLogFile(cfg.AccessLogs.Output.File.Path)
+			if err != nil {
+				return nil, fmt.Errorf("could not create log file: %w", err)
+			}
+			if cfg.AccessLogs.Buffer.Enabled {
+				bl, err := logging.NewJSONZapBufferedLogger(logging.BufferedLoggerOptions{
+					WS:            f,
+					BufferSize:    int(cfg.AccessLogs.Buffer.Size.Uint64()),
+					FlushInterval: cfg.AccessLogs.Buffer.FlushInterval,
+					Debug:         false,
+					Level:         zap.InfoLevel,
+					Pretty:        cfg.DevelopmentMode,
+				})
+				if err != nil {
+					return nil, fmt.Errorf("could not create buffered logger: %w", err)
+				}
+				c.Logger = bl.Logger
+			} else {
+				c.Logger = logging.NewZapAccessLogger(f, cfg.DevelopmentMode)
+			}
+		} else if cfg.AccessLogs.Output.Stdout.Enabled {
+
+			if cfg.AccessLogs.Buffer.Enabled {
+				bl, err := logging.NewJSONZapBufferedLogger(logging.BufferedLoggerOptions{
+					WS:            os.Stdout,
+					BufferSize:    int(cfg.AccessLogs.Buffer.Size.Uint64()),
+					FlushInterval: cfg.AccessLogs.Buffer.FlushInterval,
+					Debug:         false,
+					Level:         zap.InfoLevel,
+					Pretty:        cfg.DevelopmentMode,
+				})
+				if err != nil {
+					return nil, fmt.Errorf("could not create buffered logger: %w", err)
+				}
+				c.Logger = bl.Logger
+			} else {
+				c.Logger = logging.NewZapAccessLogger(os.Stdout, cfg.DevelopmentMode)
+			}
+		}
+
+		options = append(options, core.WithAccessLogs(c))
+	}
 
 	if cfg.RouterRegistration && cfg.Graph.Token != "" {
 		selfRegister, err := selfregister.New(cfg.ControlplaneURL, cfg.Graph.Token,

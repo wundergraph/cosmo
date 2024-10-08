@@ -23,12 +23,12 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/testcontainers/testcontainers-go v0.29.1
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.29.1
-	github.com/tidwall/gjson v1.17.3
+	github.com/tidwall/gjson v1.18.0
 	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
-	github.com/wundergraph/cosmo/demo v0.0.0-20241001143346-9e2a85d5d868
-	github.com/wundergraph/cosmo/router v0.0.0-20241001143346-9e2a85d5d868
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.93
+	github.com/wundergraph/cosmo/demo v0.0.0-20241007123147-208912c19a89
+	github.com/wundergraph/cosmo/router v0.0.0-20241007123147-208912c19a89
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.100
 	go.opentelemetry.io/otel v1.28.0
 	go.opentelemetry.io/otel/sdk v1.28.0
 	go.opentelemetry.io/otel/sdk/metric v1.28.0

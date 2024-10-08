@@ -6,10 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/buger/jsonparser"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
-	"golang.org/x/sync/semaphore"
-	"io"
 	"net"
 	"net/http"
 	"regexp"
@@ -17,6 +13,10 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/buger/jsonparser"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
+	"golang.org/x/sync/semaphore"
 
 	"github.com/goccy/go-json"
 
@@ -57,6 +57,7 @@ type WebsocketMiddlewareOptions struct {
 	EpollKqueueConnBufferSize  int
 
 	WebSocketConfiguration *config.WebSocketConfiguration
+	ClientHeader           config.ClientHeader
 }
 
 func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions) func(http.Handler) http.Handler {
@@ -74,6 +75,7 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 		stats:              opts.Stats,
 		readTimeout:        opts.ReadTimeout,
 		config:             opts.WebSocketConfiguration,
+		clientHeader:       opts.ClientHeader,
 		handlerSem:         semaphore.NewWeighted(128),
 	}
 	if opts.WebSocketConfiguration != nil && opts.WebSocketConfiguration.AbsintheProtocol.Enabled {
@@ -222,6 +224,7 @@ type WebsocketHandler struct {
 
 	forwardUpgradeHeadersConfig forwardConfig
 	forwardQueryParamsConfig    forwardConfig
+	clientHeader                config.ClientHeader
 }
 
 func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.Request) {
@@ -231,7 +234,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 
 	requestID := middleware.GetReqID(r.Context())
 	requestLogger := h.logger.With(logging.WithRequestID(requestID))
-	clientInfo := NewClientInfoFromRequest(r)
+	clientInfo := NewClientInfoFromRequest(r, h.clientHeader)
 
 	if h.accessController != nil && !h.config.Authentication.FromInitialPayload.Enabled {
 		// Check access control before upgrading the connection
@@ -311,7 +314,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		Request:               r,
 		Connection:            conn,
 		Protocol:              protocol,
-		Logger:                h.logger,
+		Logger:                requestLogger,
 		Stats:                 h.stats,
 		ConnectionID:          h.connectionIDs.Inc(),
 		ClientInfo:            clientInfo,
@@ -322,13 +325,13 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	})
 	err = handler.Initialize()
 	if err != nil {
-		if errors.Is(err, io.EOF) {
-			requestLogger.Warn("No more data to read during initialization", zap.Error(err))
-		} else if errors.As(err, &wsutil.ClosedError{}) {
-			requestLogger.Warn("Client closed connection during initialization", zap.Error(err))
-		} else {
-			requestLogger.Error("Initializing websocket connection", zap.Error(err))
-		}
+
+		// Don't produce errors logs here because it can only be client side errors
+		// e.g. slow client, aborted connection, invalid JSON, etc.
+		// We log it as debug because it's not a server side error
+
+		requestLogger.Debug("Initializing websocket connection", zap.Error(err))
+
 		handler.Close()
 		return
 	}
@@ -340,16 +343,18 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		r = r.WithContext(authentication.WithWebsocketInitialPayloadContextKey(r.Context(), handler.initialPayload))
 
 		// Later check access control after initial payload is read and set into the context
-		handler.request, err = h.accessController.Access(w, r)
-		if err != nil {
-			statusCode := http.StatusForbidden
-			if errors.Is(err, ErrUnauthorized) {
-				statusCode = http.StatusUnauthorized
+		if h.accessController != nil {
+			handler.request, err = h.accessController.Access(w, r)
+			if err != nil {
+				statusCode := http.StatusForbidden
+				if errors.Is(err, ErrUnauthorized) {
+					statusCode = http.StatusUnauthorized
+				}
+				http.Error(handler.w, http.StatusText(statusCode), statusCode)
+				_ = handler.writeErrorMessage(requestID, err)
+				handler.Close()
+				return
 			}
-			http.Error(handler.w, http.StatusText(statusCode), statusCode)
-			handler.writeErrorMessage(requestID, err)
-			handler.Close()
-			return
 		}
 
 		// Export the token from the initial payload to the request header
@@ -358,7 +363,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 			err := json.Unmarshal(handler.initialPayload, &initialPayloadMap)
 			if err != nil {
 				requestLogger.Error("Error parsing initial payload: %v", zap.Error(err))
-				handler.writeErrorMessage(requestID, err)
+				_ = handler.writeErrorMessage(requestID, err)
 				handler.Close()
 				return
 			}
@@ -366,7 +371,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 			if !ok {
 				err := fmt.Errorf("invalid JWT token in initial payload: JWT token is not a string")
 				requestLogger.Error(err.Error())
-				handler.writeErrorMessage(requestID, err)
+				_ = handler.writeErrorMessage(requestID, err)
 				handler.Close()
 				return
 			}
@@ -744,9 +749,18 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 	}
 	defer operationKit.Free()
 
+	opContext := &operationContext{
+		name:       operationKit.parsedOperation.Request.OperationName,
+		opType:     operationKit.parsedOperation.Type,
+		content:    operationKit.parsedOperation.NormalizedRepresentation,
+		clientInfo: h.plannerOptions.ClientInfo,
+	}
+
 	if err := operationKit.UnmarshalOperationFromBody(payload); err != nil {
 		return nil, nil, err
 	}
+
+	opContext.extensions = operationKit.parsedOperation.Request.Extensions
 
 	var skipParse bool
 
@@ -761,32 +775,60 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 	// because the operation was already parsed. This is a performance optimization, and we
 	// can do it because we know that the persisted operation is immutable (identified by the hash)
 	if !skipParse {
+		startParsing := time.Now()
 		if err := operationKit.Parse(); err != nil {
+			opContext.parsingTime = time.Since(startParsing)
 			return nil, nil, err
 		}
+		opContext.parsingTime = time.Since(startParsing)
 	}
 
 	if blocked := h.operationBlocker.OperationIsBlocked(operationKit.parsedOperation); blocked != nil {
 		return nil, nil, blocked
 	}
 
+	startNormalization := time.Now()
+
 	if _, err := operationKit.NormalizeOperation(); err != nil {
+		opContext.normalizationTime = time.Since(startNormalization)
 		return nil, nil, err
 	}
+
+	opContext.hash = operationKit.parsedOperation.ID
+	opContext.normalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
 
 	if err := operationKit.NormalizeVariables(); err != nil {
+		opContext.normalizationTime = time.Since(startNormalization)
 		return nil, nil, err
 	}
+
+	opContext.normalizationTime = time.Since(startNormalization)
+	opContext.content = operationKit.parsedOperation.NormalizedRepresentation
+	opContext.variables = operationKit.parsedOperation.Request.Variables
+
+	startValidation := time.Now()
 
 	if _, err := operationKit.Validate(h.plannerOptions.ExecutionOptions.SkipLoader); err != nil {
+		opContext.validationTime = time.Since(startValidation)
 		return nil, nil, err
 	}
 
-	opContext, err := h.planner.plan(operationKit.parsedOperation, h.plannerOptions)
+	opContext.validationTime = time.Since(startValidation)
+
+	startPlanning := time.Now()
+
+	err = h.planner.plan(opContext, h.plannerOptions)
 	if err != nil {
+		opContext.planningTime = time.Since(startPlanning)
 		return operationKit.parsedOperation, nil, err
 	}
+
+	opContext.planningTime = time.Since(startPlanning)
+
 	opContext.initialPayload = h.initialPayload
+
+	opContext.setAttributes()
+
 	return operationKit.parsedOperation, opContext, nil
 }
 

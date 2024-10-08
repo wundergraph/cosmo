@@ -176,6 +176,32 @@
               }
             }
           }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "fallback_storage": {
+              "description": "The fallback storage provider for the execution config in case the primary one fails.",
+              "required": [
+                "enabled"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable fallback storage provider. The default value is false."
+                },
+                "provider_id": {
+                  "description": "The ID of the storage provider. The ID must match the ID of the storage provider in the storage_providers section.",
+                  "type": "string"
+                },
+                "object_path": {
+                  "type": "string",
+                  "description": "The path to the execution config in the storage provider. The path is used to download the execution config from the storage provider."
+                }
+              }
+            }
+          }
         }
       ]
     },
@@ -391,6 +417,123 @@
         }
       }
     },
+    "access_logs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable the access logs. The access logs are used to log the incoming requests. By default, the access logs are enabled and logged to the standard output.",
+          "default": true
+        },
+        "buffer": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable the buffer. The buffer is used to buffer the logs before writing them to the output. The default value is false."
+            },
+            "flush_interval": {
+              "type": "string",
+              "description": "The interval at which the buffer is flushed. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+              "default": "10s",
+              "duration": {
+                "minimum": "100ms",
+                "maximum": "1m"
+              }
+            },
+            "size": {
+              "type": "string",
+              "default": "256KB",
+              "bytes": {
+                "minimum": "1KB"
+              },
+              "format": "bytes-string",
+              "description": "The size of the buffer. The default value is 256KB."
+            }
+          }
+        },
+        "output": {
+          "type": "object",
+          "description": "The log destination. The supported destinations are stdout and file. Only one option can be enabled. The destination is stdout.",
+          "additionalProperties": false,
+          "properties": {
+            "stdout": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "file": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "path": {
+                  "type": "string",
+                  "description": "The path to the log file. The path is used to specify the path to the log file."
+                }
+              }
+            }
+          }
+        },
+        "fields": {
+          "type": "array",
+          "description": "The fields to add to the logs. The fields are added to the logs as key-value pairs.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["key"],
+            "properties": {
+              "key": {
+                "type": "string",
+                "description": "The key of the field."
+              },
+              "default": {
+                "type": "string",
+                "description": "The default value of the field. If the value is not set, value_from is used. If both value and value_from are set, value_from has precedence and in case of a missing value_from, the default value is used."
+              },
+              "value_from": {
+                "type": "object",
+                "description": "Defines a source for the field value e.g. from a request header. If both default and value_from are set, value_from has precedence.",
+                "additionalProperties": false,
+                "properties": {
+                  "request_header": {
+                    "type": "string",
+                    "description": "The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used."
+                  },
+                  "context_field": {
+                    "type": "string",
+                    "description": "The field name of the context from which to extract the value. The value is only extracted when a context is available otherwise the default value is used.",
+                    "enum": [
+                      "operation_name",
+                      "operation_type",
+                      "operation_service_names",
+                      "operation_hash",
+                      "persisted_operation_sha256",
+                      "operation_sha256",
+                      "response_error_message",
+                      "graphql_error_codes",
+                      "graphql_error_service_names",
+                      "operation_parsing_time",
+                      "operation_validation_time",
+                      "operation_planning_time",
+                      "operation_normalization_time"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "telemetry": {
       "type": "object",
       "description": "The configuration for the telemetry. The telemetry is used to collect and export the traces and metrics.",
@@ -444,6 +587,17 @@
                   "request_header": {
                     "type": "string",
                     "description": "The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used."
+                  },
+                  "context": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "description": "The context value from which to extract the value. The value is only extracted when a context is available otherwise the default value is used.",
+                    "properties": {
+                      "path": {
+                        "type": "string",
+                        "description": "The path to the context value. The path is used to extract the value from the context. The path is a dot-separated string e.g. 'request.operation.hash', 'request.operation.name' or 'response.error.errorCodes'."
+                      }
+                    }
                   }
                 }
               }
@@ -556,6 +710,22 @@
                 "baggage": {
                   "type": "boolean",
                   "description": "Enable the baggage propagation. See https://www.w3.org/TR/baggage/ for more information."
+                }
+              }
+            },
+            "response_trace_id": {
+              "type": "object",
+              "description": "The configuration to expose the trace_id through a response header.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enables the addition of trace_id to the response header."
+                },
+                "header_name": {
+                  "type": "string",
+                  "default": "x-wg-trace-id",
+                  "description": "The name of the header which the holds the trace_id. The default value is x-wg-trace-id."
                 }
               }
             }
@@ -1047,7 +1217,7 @@
       "required": ["enabled"],
       "additionalProperties": false
     },
-  "modules": {
+    "modules": {
       "type": "object",
       "description": "The configuration for the modules. The modules are used to extend the functionality of the router. The modules are specified as a map of module names to module configurations. It needs to match with the name of the module and the configuration of the module. See https://cosmo-docs.wundergraph.com/router/custom-modules for more information.",
       "additionalProperties": {
@@ -1586,6 +1756,11 @@
           "default": 1024,
           "description": "The size of the execution plan cache."
         },
+        "operation_hash_cache_size": {
+          "type": "integer",
+          "default": 2048,
+          "description": "The size of the Operation Hash Cache. This should be larger than the plan cache because the hash is computed on the original query."
+        },
         "minify_subgraph_operations": {
           "type": "boolean",
           "default": true,
@@ -1679,6 +1854,14 @@
           "default": false,
           "description": "Omit the extensions field of Subgraph errors. If the value is true (default: false), the extensions field of Subgraph errors will be omitted. This is useful in case you want to avoid leaking internal information to the client. Some users of GraphQL leverage the errors.extensions.code field to implement error handling logic in the client, in which case you might want to set this to false."
         },
+        "allowed_fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "The allowed fields in passthrough mode. It is used to control which fields of the Subgraph errors are allowed to be propagated to the client. If left empty only message is propagated. If left empty and omit_extensions or omit_locations are set to false, they will automatically be included."
+        },
         "propagate_status_codes": {
           "type": "boolean",
           "default": false,
@@ -1706,6 +1889,32 @@
               "default": false
             }
           }
+        },
+        "truncate_floats": {
+          "type": "object",
+          "description": "Truncate floats like 1.0 to 1, 2.0 to 2, etc.. Values like 1.1 or 2.2 will not be truncated.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        }
+      }
+    },
+    "client_header": {
+      "type": "object",
+      "description": "The configuration to set custom client name and version header.",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The custom client name header."
+        },
+        "version": {
+          "type": "string",
+          "description": "The custom client version header."
         }
       }
     }
