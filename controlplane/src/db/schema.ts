@@ -669,6 +669,11 @@ export const schemaChecks = pgTable('schema_checks', {
     commitSha: string;
   }>(),
   forcedSuccess: boolean('forced_success').default(false),
+  vcsContext: customJson('vcs_context').$type<{
+    author: string;
+    commitSha: string;
+    branch: string;
+  }>(),
 });
 
 export const schemaCheckChangeActionOperationUsage = pgTable('schema_check_change_operation_usage', {
