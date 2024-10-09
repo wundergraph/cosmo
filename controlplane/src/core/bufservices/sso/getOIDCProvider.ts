@@ -54,7 +54,7 @@ export function getOIDCProvider(
       endpoint: provider.endpoint,
       loginURL: `${opts.webBaseUrl}/login?sso=${provider.alias}`,
       signInRedirectURL: mergeUrls(
-        opts.keycloakApiUrl + '/auth',
+        opts.keycloakApiUrl,
         `realms/${opts.keycloakRealm}/broker/${provider.alias}/endpoint`,
       ),
       signOutRedirectURL: mergeUrls(
