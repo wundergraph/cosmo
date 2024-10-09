@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.111.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.110.0...controlplane@0.111.0) (2024-10-09)
+
+### Bug Fixes
+
+* sso redirect urls ([#1253](https://github.com/wundergraph/cosmo/issues/1253)) ([64a0fd2](https://github.com/wundergraph/cosmo/commit/64a0fd2103c30995651bdae1fb3f4e32e03b7d8e)) (@JivusAyrus)
+
+### Features
+
+* add custom context to subgraph checks ([#1252](https://github.com/wundergraph/cosmo/issues/1252)) ([c510628](https://github.com/wundergraph/cosmo/commit/c510628bc8ca80a88b681d87051940361605ff5b)) (@JivusAyrus)
+* add indirect interface fields to schema usage reporting ([#1235](https://github.com/wundergraph/cosmo/issues/1235)) ([1c62c14](https://github.com/wundergraph/cosmo/commit/1c62c14f9a9f11a6fbbebf5a3fbc4d85f304285e)) (@jensneuse)
+
 # [0.110.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.109.1...controlplane@0.110.0) (2024-09-27)
 
 ### Features
