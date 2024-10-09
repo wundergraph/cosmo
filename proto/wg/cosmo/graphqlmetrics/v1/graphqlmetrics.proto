@@ -76,6 +76,8 @@ message TypeFieldUsageInfo {
   uint64 Count = 4;
   // NamedType is the underlying type of the field
   string NamedType = 5;
+  // IndirectInterfaceField is true if the field is an interface field that is used through an implementing type
+  bool IndirectInterfaceField = 6;
 }
 
 message ArgumentUsageInfo {

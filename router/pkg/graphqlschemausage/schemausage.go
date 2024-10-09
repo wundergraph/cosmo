@@ -40,6 +40,15 @@ func (p *typeFieldUsageInfoVisitor) visitNode(node resolve.Node, path []string) 
 				SubgraphIDs: field.Info.Source.IDs,
 				NamedType:   field.Info.NamedType,
 			})
+			if len(field.Info.IndirectInterfaceNames) > 0 {
+				p.typeFieldUsageInfo = append(p.typeFieldUsageInfo, &graphqlmetrics.TypeFieldUsageInfo{
+					Path:                   pathCopy,
+					TypeNames:              field.Info.IndirectInterfaceNames,
+					SubgraphIDs:            field.Info.Source.IDs,
+					NamedType:              field.Info.NamedType,
+					IndirectInterfaceField: true,
+				})
+			}
 			p.visitNode(field.Value, pathCopy)
 		}
 	case *resolve.Array:

@@ -147,6 +147,7 @@ func (s *MetricsService) saveUsageMetrics(ctx context.Context, insertTime time.T
 				false,
 				false,
 				schemaUsage.Attributes,
+				fieldUsage.IndirectInterfaceField,
 			)
 			if err != nil {
 				return 0, fmt.Errorf("failed to append field metric to batch: %w", err)
@@ -177,6 +178,7 @@ func (s *MetricsService) saveUsageMetrics(ctx context.Context, insertTime time.T
 				true,
 				false,
 				schemaUsage.Attributes,
+				false,
 			)
 			if err != nil {
 				return 0, fmt.Errorf("failed to append argument metric to batch: %w", err)
@@ -207,6 +209,7 @@ func (s *MetricsService) saveUsageMetrics(ctx context.Context, insertTime time.T
 				false,
 				true,
 				schemaUsage.Attributes,
+				false,
 			)
 			if err != nil {
 				return 0, fmt.Errorf("failed to append input metric to batch: %w", err)

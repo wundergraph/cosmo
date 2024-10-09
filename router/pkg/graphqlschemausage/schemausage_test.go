@@ -40,7 +40,7 @@ schema {
 }
 
 type Query {
-    hero: Character
+	hero: Character
     droid(id: ID!): Droid
     search(name: String!): SearchResult
 	searchResults(name: String!, filter: SearchFilter, filter2: SearchFilter, enumValue: Episode enumList: [Episode] enumList2: [Episode] filterList: [SearchFilter]): [SearchResult]
@@ -77,12 +77,16 @@ enum Episode {
     JEDI
 }
 
+interface Creature {
+	name: String!
+}
+
 interface Character {
     name: String!
     friends: [Character]
 }
 
-type Human implements Character {
+type Human implements Character & Creature {
     name: String!
     height: String!
     friends: [Character]
@@ -271,7 +275,7 @@ func TestGetSchemaUsageInfo(t *testing.T) {
 			SubgraphIDs: []string{"https://swapi.dev/api"},
 		},
 		{
-			TypeNames:   []string{"Character"},
+			TypeNames:   []string{"Character", "Droid", "Human"},
 			Path:        []string{"hero", "name"},
 			NamedType:   "String",
 			SubgraphIDs: []string{"https://swapi.dev/api"},
@@ -370,6 +374,140 @@ func TestGetSchemaUsageInfo(t *testing.T) {
 	}
 	for i := range expectedInputUsageInfo {
 		assert.Equal(t, prettyJSON(t, &expectedInputUsageInfo[i]), prettyJSON(t, inputUsageInfo[i]), "inputUsageInfo[%d]", i)
+	}
+}
+
+func TestGetSchemaUsageInfoInterfaces(t *testing.T) {
+	operation := `
+		query Search {
+			hero {
+				... on Human {
+					name
+					height
+				}
+			}
+		}
+`
+
+	def, rep := astparser.ParseGraphqlDocumentString(schemaUsageInfoTestSchema)
+	require.False(t, rep.HasErrors())
+	op, rep := astparser.ParseGraphqlDocumentString(operation)
+	require.False(t, rep.HasErrors())
+	err := asttransform.MergeDefinitionWithBaseSchema(&def)
+	if err != nil {
+		t.Fatal(err)
+	}
+	report := &operationreport.Report{}
+	norm := astnormalization.NewNormalizer(true, true)
+	norm.NormalizeOperation(&op, &def, report)
+	valid := astvalidation.DefaultOperationValidator()
+	valid.Validate(&op, &def, report)
+
+	dsCfg, err := plan.NewDataSourceConfiguration[any](
+		"https://swapi.dev/api",
+		&FakeFactory[any]{
+			upstreamSchema: &def,
+		},
+		&plan.DataSourceMetadata{
+			RootNodes: []plan.TypeField{
+				{
+					TypeName:   "Query",
+					FieldNames: []string{"searchResults", "hero"},
+				},
+			},
+			ChildNodes: []plan.TypeField{
+				{
+					TypeName:   "Human",
+					FieldNames: []string{"name", "inlineName", "height"},
+				},
+				{
+					TypeName:   "Droid",
+					FieldNames: []string{"name"},
+				},
+				{
+					TypeName:   "Starship",
+					FieldNames: []string{"length"},
+				},
+				{
+					TypeName:   "SearchResult",
+					FieldNames: []string{"__typename"},
+				},
+				{
+					TypeName:   "Character",
+					FieldNames: []string{"name", "friends"},
+				},
+			},
+		},
+		nil,
+	)
+	require.NoError(t, err)
+
+	p, err := plan.NewPlanner(plan.Configuration{
+		DisableResolveFieldPositions: true,
+		DataSources: []plan.DataSource{
+			dsCfg,
+		},
+	})
+	require.NoError(t, err)
+
+	generatedPlan := p.Plan(&op, &def, "Search", report)
+	if report.HasErrors() {
+		t.Fatal(report.Error())
+	}
+
+	fieldUsageInfo := GetTypeFieldUsageInfo(generatedPlan)
+	argumentUsageInfo, err := GetArgumentUsageInfo(&op, &def)
+	assert.NoError(t, err)
+	inputUsageInfo, err := GetInputUsageInfo(&op, &def, []byte(`{}`))
+	assert.NoError(t, err)
+
+	subscription := &plan.SubscriptionResponsePlan{
+		Response: &resolve.GraphQLSubscription{
+			Response: generatedPlan.(*plan.SynchronousResponsePlan).Response,
+		},
+	}
+
+	subscriptionFieldUsageInfo := GetTypeFieldUsageInfo(subscription)
+	subscriptionArgumentUsageInfo, err := GetArgumentUsageInfo(&op, &def)
+	assert.NoError(t, err)
+	subscriptionInputUsageInfo, err := GetInputUsageInfo(&op, &def, []byte(`{}`))
+	assert.NoError(t, err)
+
+	assert.Equal(t, fieldUsageInfo, subscriptionFieldUsageInfo)
+	assert.Equal(t, argumentUsageInfo, subscriptionArgumentUsageInfo)
+	assert.Equal(t, inputUsageInfo, subscriptionInputUsageInfo)
+
+	expectedFieldUsageInfo := []*graphqlmetricsv1.TypeFieldUsageInfo{
+		{
+			TypeNames:   []string{"Query"},
+			Path:        []string{"hero"},
+			NamedType:   "Character",
+			SubgraphIDs: []string{"https://swapi.dev/api"},
+		},
+		{
+			TypeNames:   []string{"Human"},
+			Path:        []string{"hero", "name"},
+			NamedType:   "String",
+			SubgraphIDs: []string{"https://swapi.dev/api"},
+		},
+		{
+			TypeNames:              []string{"Character"},
+			Path:                   []string{"hero", "name"},
+			NamedType:              "String",
+			SubgraphIDs:            []string{"https://swapi.dev/api"},
+			IndirectInterfaceField: true,
+		},
+		{
+			TypeNames:   []string{"Human"},
+			Path:        []string{"hero", "height"},
+			NamedType:   "String",
+			SubgraphIDs: []string{"https://swapi.dev/api"},
+		},
+	}
+
+	assert.Len(t, fieldUsageInfo, len(expectedFieldUsageInfo))
+	for i := range expectedFieldUsageInfo {
+		assert.Equal(t, prettyJSON(t, expectedFieldUsageInfo[i]), prettyJSON(t, fieldUsageInfo[i]), "fieldUsageInfo[%d]", i)
 	}
 }
 

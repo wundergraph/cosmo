@@ -67,6 +67,7 @@ export class SchemaUsageTrafficInspector {
       } else if (change.isArgument) {
         where.push(`IsArgument = true`);
       }
+      where.push(`IsIndirectFieldUsage = false`);
 
       const query = `
         SELECT OperationHash as operationHash,
