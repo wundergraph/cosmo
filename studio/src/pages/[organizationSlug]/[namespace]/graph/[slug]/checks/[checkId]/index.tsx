@@ -330,6 +330,7 @@ const CheckDetails = ({
   );
 
   const ghDetails = data.check.ghDetails;
+  const vcsContext = data.check.vcsContext;
 
   const reason = !data.check.isComposable
     ? "Composition errors were found"
@@ -413,7 +414,7 @@ const CheckDetails = ({
         </dl>
       </div>
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        <dl className="flex flex-shrink-0 flex-col space-y-6 overflow-hidden border-b px-4 py-4 lg:block lg:min-h-full lg:w-[240px] lg:space-y-8 lg:overflow-auto lg:border-b-0 lg:border-r lg:px-6 xl:w-[260px] xl:px-8">
+        <dl className="flex flex-shrink-0 flex-col space-y-6 overflow-hidden border-b px-4 py-4 lg:block lg:min-h-full lg:w-[240px] lg:overflow-auto lg:border-b-0 lg:border-r lg:px-6 xl:w-[260px] xl:px-8">
           <div className="col-span-3 flex flex-col">
             <dt className="mb-2 text-sm text-muted-foreground">Tasks</dt>
             <dd className="flex flex-row flex-wrap gap-2 lg:flex lg:flex-col">
@@ -643,6 +644,36 @@ const CheckDetails = ({
                 </Link>
               </dd>
             </div>
+          )}
+          {vcsContext && (
+            <>
+              {vcsContext.author && (
+                <div className="flex flex-col">
+                  <dt className="mb-2 text-sm text-muted-foreground">Author</dt>
+                  <dd className="flex items-center gap-x-2 text-sm">
+                    {vcsContext.author}
+                  </dd>
+                </div>
+              )}
+              {vcsContext.commitSha && (
+                <div className="flex flex-col">
+                  <dt className="mb-2 text-sm text-muted-foreground">
+                    Commit sha
+                  </dt>
+                  <dd className="flex items-center gap-x-2 text-sm">
+                    {vcsContext.commitSha}
+                  </dd>
+                </div>
+              )}
+              {vcsContext.branch && (
+                <div className="flex flex-col">
+                  <dt className="mb-2 text-sm text-muted-foreground">Branch</dt>
+                  <dd className="flex items-center gap-x-2 text-sm">
+                    {vcsContext.branch}
+                  </dd>
+                </div>
+              )}
+            </>
           )}
         </dl>
         <div className="h-full flex-1">

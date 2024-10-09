@@ -3,7 +3,8 @@ import { readFile } from 'node:fs/promises';
 import { Command, program } from 'commander';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
-import { getBaseHeaders } from '../../../core/config.js';
+import { VCSContext } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { config, getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { verifyGitHubIntegration } from '../../../github.js';
 import { handleCheckResult } from '../../../handle-check-result.js';
@@ -39,6 +40,15 @@ export default (opts: BaseCommandOptions) => {
     }
 
     const { gitInfo, ignoreErrorsDueToGitHubIntegration } = await verifyGitHubIntegration(opts.client);
+    let vcsContext: VCSContext | undefined;
+
+    if (config.checkAuthor || config.checkCommitSha || config.checkBranch) {
+      vcsContext = new VCSContext({
+        author: config.checkAuthor,
+        commitSha: config.checkCommitSha,
+        branch: config.checkBranch,
+      });
+    }
 
     // submit an empty schema in case of a delete check
     const schema = schemaFile ? await readFile(schemaFile) : Buffer.from('');
@@ -51,6 +61,7 @@ export default (opts: BaseCommandOptions) => {
         gitInfo,
         delete: options.delete,
         skipTrafficCheck: options.skipTrafficCheck,
+        vcsContext,
       },
       {
         headers: getBaseHeaders(),

@@ -1,6 +1,7 @@
 import { and, eq, inArray, or, sql } from 'drizzle-orm';
 import _ from 'lodash';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { VCSContext } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { NewSchemaChangeOperationUsage } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
@@ -25,6 +26,7 @@ export class SchemaCheckRepository {
     trafficCheckSkipped?: boolean;
     lintSkipped?: boolean;
     graphPruningSkipped?: boolean;
+    vcsContext?: VCSContext;
   }): Promise<string> {
     const insertedSchemaCheck = await this.db
       .insert(schemaChecks)
@@ -36,6 +38,13 @@ export class SchemaCheckRepository {
         clientTrafficCheckSkipped: data.trafficCheckSkipped || false,
         lintSkipped: data.lintSkipped || false,
         graphPruningSkipped: data.graphPruningSkipped || false,
+        vcsContext: data.vcsContext
+          ? {
+              author: data.vcsContext.author,
+              commitSha: data.vcsContext.commitSha,
+              branch: data.vcsContext.branch,
+            }
+          : null,
       })
       .returning()
       .execute();
