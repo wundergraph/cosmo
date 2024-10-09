@@ -275,7 +275,7 @@ func TestGetSchemaUsageInfo(t *testing.T) {
 			SubgraphIDs: []string{"https://swapi.dev/api"},
 		},
 		{
-			TypeNames:   []string{"Character"},
+			TypeNames:   []string{"Character", "Droid", "Human"},
 			Path:        []string{"hero", "name"},
 			NamedType:   "String",
 			SubgraphIDs: []string{"https://swapi.dev/api"},
