@@ -31,10 +31,18 @@ func TestPublishGraphQLMetrics(t *testing.T) {
 				RequestDocument: "query Hello { hello }",
 				TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
 					{
-						Path:        []string{"hello"},
-						TypeNames:   []string{"Query"},
-						SubgraphIDs: []string{"sub123"},
-						Count:       1,
+						Path:                   []string{"hello"},
+						TypeNames:              []string{"Query"},
+						SubgraphIDs:            []string{"sub123"},
+						Count:                  1,
+						IndirectInterfaceField: false,
+					},
+					{
+						Path:                   []string{"hi"},
+						TypeNames:              []string{"Query"},
+						SubgraphIDs:            []string{"sub123"},
+						Count:                  1,
+						IndirectInterfaceField: true,
 					},
 				},
 				OperationInfo: &graphqlmetricsv1.OperationInfo{
@@ -108,6 +116,27 @@ func TestPublishGraphQLMetrics(t *testing.T) {
 		startsWith(Path, ['hello'])
 	`).Scan(&fieldUsageCount))
 
+	assert.Greater(t, fieldUsageCount, uint64(0))
+
+	var indirectFieldUsageCount uint64
+	require.NoError(t, db.QueryRow(ctx, `
+		SELECT COUNT(*) FROM gql_metrics_schema_usage
+		WHERE OperationHash = 'hash123' AND
+		OrganizationID = 'org123' AND
+		FederatedGraphID = 'fed123' AND
+		RouterConfigVersion = 'v1' AND
+		Attributes['test'] = 'test123' AND
+		HttpStatusCode = '200' AND
+		HasError = true AND
+		ClientName = 'wundergraph' AND
+		ClientVersion = '1.0.0' AND
+		hasAny(TypeNames, ['Query']) AND
+		startsWith(Path, ['hello']) AND
+		IsIndirectFieldUsage = true
+	`).Scan(&indirectFieldUsageCount))
+
+	assert.Greater(t, fieldUsageCount, uint64(0))
+
 	// Validate materialized view
 
 	var fieldUsageCountMv uint64
@@ -145,9 +174,16 @@ func TestPublishAggregatedGraphQLMetrics(t *testing.T) {
 					RequestDocument: "query Hello { hello }",
 					TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
 						{
-							Path:        []string{"hello"},
-							TypeNames:   []string{"Query"},
-							SubgraphIDs: []string{"sub123"},
+							Path:                   []string{"hello"},
+							TypeNames:              []string{"Query"},
+							SubgraphIDs:            []string{"sub123"},
+							IndirectInterfaceField: false,
+						},
+						{
+							Path:                   []string{"hi"},
+							TypeNames:              []string{"Query"},
+							SubgraphIDs:            []string{"sub123"},
+							IndirectInterfaceField: true,
 						},
 					},
 					OperationInfo: &graphqlmetricsv1.OperationInfo{
@@ -222,6 +258,27 @@ func TestPublishAggregatedGraphQLMetrics(t *testing.T) {
 		hasAny(TypeNames, ['Query']) AND
 		startsWith(Path, ['hello'])
 	`).Scan(&fieldUsageCount))
+
+	assert.Greater(t, fieldUsageCount, uint64(0))
+
+	var indirectFieldUsageCount uint64
+	require.NoError(t, db.QueryRow(ctx, `
+		SELECT COUNT(*) FROM gql_metrics_schema_usage
+		WHERE OperationHash = 'hash123' AND
+		OrganizationID = 'org123' AND
+		FederatedGraphID = 'fed123' AND
+		RouterConfigVersion = 'v1' AND
+		Attributes['test'] = 'test123' AND
+		HttpStatusCode = '200' AND
+		HasError = true AND
+		ClientName = 'wundergraph' AND
+		ClientVersion = '1.0.0' AND
+		hasAny(TypeNames, ['Query']) AND
+		startsWith(Path, ['hello']) AND
+		IsIndirectFieldUsage = true
+	`).Scan(&indirectFieldUsageCount))
+
+	assert.Greater(t, fieldUsageCount, uint64(0))
 
 	// Validate materialized view
 
