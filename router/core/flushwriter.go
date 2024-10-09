@@ -6,7 +6,6 @@ import (
 	"github.com/wundergraph/astjson"
 	"mime"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -34,8 +33,6 @@ type HttpFlushWriter struct {
 	multipart     bool
 	buf           *bytes.Buffer
 	variables     []byte
-	ticker        *time.Ticker // Ticker used for multipart heartbeats
-	mu            *sync.Mutex
 }
 
 func (f *HttpFlushWriter) Complete() {
@@ -60,10 +57,6 @@ func (f *HttpFlushWriter) Write(p []byte) (n int, err error) {
 }
 
 func (f *HttpFlushWriter) Close() {
-	if f.ticker != nil {
-		f.ticker.Stop()
-	}
-
 	if f.ctx.Err() != nil {
 		return
 	}
@@ -74,10 +67,6 @@ func (f *HttpFlushWriter) Close() {
 func (f *HttpFlushWriter) Flush() (err error) {
 	if err = f.ctx.Err(); err != nil {
 		return err
-	}
-
-	if f.ticker != nil {
-		f.ticker.Reset(multipartHeartbeatInterval)
 	}
 
 	resp := f.buf.Bytes()
@@ -105,39 +94,11 @@ func (f *HttpFlushWriter) Flush() (err error) {
 		return err
 	}
 
-	f.mu.Lock()
-	defer f.mu.Unlock()
 	f.flusher.Flush()
 	if f.subscribeOnce {
 		defer f.Close()
 	}
 	return nil
-}
-
-func (f *HttpFlushWriter) StartHeartbeat() {
-	if f.multipart {
-		f.ticker = time.NewTicker(multipartHeartbeatInterval)
-		go func() {
-			defer f.ticker.Stop()
-			for {
-				select {
-				// Stop sending heartbeats when context is canceled
-				case <-f.ctx.Done():
-					return
-				case <-f.ticker.C:
-					f.sendHeartbeat()
-				}
-			}
-		}()
-	}
-}
-
-func (f *HttpFlushWriter) sendHeartbeat() {
-	if f.ctx.Err() != nil {
-		return
-	}
-	_, _ = f.Write([]byte("{}"))
-	_ = f.Flush()
 }
 
 func GetSubscriptionResponseWriter(ctx *resolve.Context, variables []byte, r *http.Request, w http.ResponseWriter) (*resolve.Context, resolve.SubscriptionResponseWriter, bool) {
@@ -165,14 +126,13 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, variables []byte, r *ht
 		buf:           &bytes.Buffer{},
 		ctx:           ctx.Context(),
 		variables:     variables,
-		mu:            &sync.Mutex{},
 	}
 
 	flushWriter.ctx, flushWriter.cancel = context.WithCancel(ctx.Context())
 	ctx = ctx.WithContext(flushWriter.ctx)
 
 	if wgParams.UseMultipart {
-		flushWriter.StartHeartbeat()
+		ctx.ExecutionOptions.SendHeartbeat = true
 	}
 
 	return ctx, flushWriter, true
