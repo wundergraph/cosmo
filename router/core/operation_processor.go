@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/middleware/operation_complexity"
 	"hash"
 	"io"
 	"net/http"
@@ -26,6 +25,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/middleware/operation_complexity"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/variablesvalidation"
 	"go.opentelemetry.io/otel/attribute"
@@ -93,6 +93,7 @@ type OperationProcessorOptions struct {
 	QueryDepthCache                *ristretto.Cache[uint64, int]
 	OperationHashCache             *ristretto.Cache[uint64, string]
 	ParseKitPoolSize               int
+	IntrospectionEnabled           bool
 }
 
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
@@ -104,6 +105,7 @@ type OperationProcessor struct {
 	operationCache           *OperationCache
 	parseKits                map[int]*parseKit
 	parseKitSemaphore        chan int
+	introspectionEnabled     bool
 }
 
 // parseKit is a helper struct to parse, normalize and validate operations
@@ -144,6 +146,7 @@ type OperationKit struct {
 	operationProcessor       *OperationProcessor
 	kit                      *parseKit
 	parsedOperation          *ParsedOperation
+	introspectionEnabled     bool
 }
 
 type GraphQLRequest struct {
@@ -171,6 +174,7 @@ func NewOperationKit(processor *OperationProcessor) *OperationKit {
 		operationDefinitionRef: -1,
 		cache:                  processor.operationCache,
 		parsedOperation:        &ParsedOperation{},
+		introspectionEnabled:   processor.introspectionEnabled,
 	}
 }
 
@@ -370,6 +374,72 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 	return false, nil
 }
 
+const (
+	schemaIntrospectionFieldName = "__schema"
+	typeIntrospectionFieldName   = "__type"
+)
+
+func (o *OperationKit) isIntrospectionQuery() (result bool, err error) {
+	var operationDefinitionRef = ast.InvalidRef
+	var possibleOperationDefinitionRefs = make([]int, 0)
+
+	for i := 0; i < len(o.kit.doc.RootNodes); i++ {
+		if o.kit.doc.RootNodes[i].Kind == ast.NodeKindOperationDefinition {
+			possibleOperationDefinitionRefs = append(possibleOperationDefinitionRefs, o.kit.doc.RootNodes[i].Ref)
+		}
+	}
+
+	if len(possibleOperationDefinitionRefs) == 0 {
+		return
+	} else if len(possibleOperationDefinitionRefs) == 1 {
+		operationDefinitionRef = possibleOperationDefinitionRefs[0]
+	} else {
+		for i := 0; i < len(possibleOperationDefinitionRefs); i++ {
+			ref := possibleOperationDefinitionRefs[i]
+			name := o.kit.doc.OperationDefinitionNameString(ref)
+
+			if o.parsedOperation.Request.OperationName == name {
+				operationDefinitionRef = ref
+				break
+			}
+		}
+	}
+
+	if operationDefinitionRef == ast.InvalidRef {
+		return
+	}
+
+	operationDef := o.kit.doc.OperationDefinitions[operationDefinitionRef]
+	if operationDef.OperationType != ast.OperationTypeQuery {
+		return
+	}
+	if !operationDef.HasSelections {
+		return
+	}
+
+	selectionSet := o.kit.doc.SelectionSets[operationDef.SelectionSet]
+	if len(selectionSet.SelectionRefs) == 0 {
+		return
+	}
+
+	for i := 0; i < len(selectionSet.SelectionRefs); i++ {
+		selection := o.kit.doc.Selections[selectionSet.SelectionRefs[i]]
+		if selection.Kind != ast.SelectionKindField {
+			continue
+		}
+
+		fieldName := o.kit.doc.FieldNameUnsafeString(selection.Ref)
+		switch fieldName {
+		case schemaIntrospectionFieldName, typeIntrospectionFieldName:
+			continue
+		default:
+			return
+		}
+	}
+
+	return true, nil
+}
+
 // Parse parses the operation, populate the document and set the operation type.
 // UnmarshalOperationFromBody must be called before calling this method.
 func (o *OperationKit) Parse() error {
@@ -392,6 +462,24 @@ func (o *OperationKit) Parse() error {
 	if report.HasErrors() {
 		return &reportError{
 			report: report,
+		}
+	}
+
+	if !o.introspectionEnabled {
+		isIntrospection, err := o.isIntrospectionQuery()
+
+		if err != nil {
+			return &httpGraphqlError{
+				message:    "could not determine if operation was an introspection query",
+				statusCode: http.StatusOK,
+			}
+		}
+
+		if isIntrospection {
+			return &httpGraphqlError{
+				message:    "GraphQL introspection is disabled by Cosmo Router, but the query contained __schema or __type. To enable introspection, set introspection_enabled: true in the Router configuration",
+				statusCode: http.StatusOK,
+			}
 		}
 	}
 
@@ -874,6 +962,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		persistedOperationClient: opts.PersistedOperationClient,
 		parseKits:                make(map[int]*parseKit, opts.ParseKitPoolSize),
 		parseKitSemaphore:        make(chan int, opts.ParseKitPoolSize),
+		introspectionEnabled:     opts.IntrospectionEnabled,
 	}
 	for i := 0; i < opts.ParseKitPoolSize; i++ {
 		processor.parseKitSemaphore <- i
