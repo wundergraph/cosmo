@@ -1903,7 +1903,7 @@
         },
         "suppress_fetch_errors": {
           "type": "object",
-          "description": "Suppresses fetch errors",
+          "description": "Suppresses fetch errors. When enabled, only the ‘data’ object is returned, suppressing errors. If disabled, fetch errors are included in the ‘errors’ array.",
           "additionalProperties": false,
           "properties": {
             "enabled": {
