@@ -426,6 +426,8 @@ func TestOperationProcessorIntrospectionQuery(t *testing.T) {
 			defer kit.Free()
 
 			err = kit.UnmarshalOperationFromBody([]byte(tc.Input))
+			assert.NoError(t, err)
+
 			err = kit.Parse()
 
 			if tc.Valid {
