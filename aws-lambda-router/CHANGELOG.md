@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.29.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.28.0...aws-lambda-router@0.29.0) (2024-10-10)
+
+### Features
+
+* create subsciption over multipart ([#1227](https://github.com/wundergraph/cosmo/issues/1227)) ([3bbc8d9](https://github.com/wundergraph/cosmo/commit/3bbc8d9c9e48cd3f37214214ca55954a1e97b00a)) (@df-wg)
+
 # [0.28.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.27.1...aws-lambda-router@0.28.0) (2024-10-09)
 
 ### Features
