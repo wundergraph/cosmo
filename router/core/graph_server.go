@@ -641,6 +641,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		QueryDepthCache:                gm.queryDepthCache,
 		OperationHashCache:             gm.operationHashCache,
 		ParseKitPoolSize:               s.engineExecutionConfiguration.ParseKitPoolSize,
+		IntrospectionEnabled:           s.Config.introspection,
 	})
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
 
