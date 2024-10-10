@@ -5,11 +5,29 @@ import { stringToNameNode } from '../ast/utils';
 import { FieldData } from './type-definition-data';
 import { MAXIMUM_TYPE_NESTING } from '../utils/integer-constants';
 
-enum DivergentType {
+export enum DivergentType {
   NONE,
   CURRENT,
   OTHER,
 }
+
+export type FederateTypeSuccess = {
+  success: true;
+  typeNode: TypeNode;
+};
+
+export type FederateTypeFailure = {
+  success: false;
+};
+
+export type FederateTypeResult = FederateTypeSuccess | FederateTypeFailure;
+
+export type FederateTypeOptions = {
+  current: TypeNode;
+  other: TypeNode;
+  hostPath: string;
+  mostRestrictive: boolean;
+};
 
 export type MergedTypeResult = {
   typeErrors?: string[];

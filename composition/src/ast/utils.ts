@@ -4,6 +4,7 @@ import {
   EnumTypeDefinitionNode,
   EnumTypeExtensionNode,
   FieldNode,
+  InlineFragmentNode,
   InputObjectTypeDefinitionNode,
   InputObjectTypeExtensionNode,
   InterfaceTypeDefinitionNode,
@@ -19,6 +20,7 @@ import {
   ScalarTypeExtensionNode,
   SchemaDefinitionNode,
   SchemaExtensionNode,
+  SelectionNode,
   SelectionSetNode,
   StringValueNode,
   TypeDefinitionNode,
@@ -42,6 +44,7 @@ import {
   INTERFACE_UPPER,
   KEY,
   MUTATION,
+  NAME,
   OBJECT_UPPER,
   QUERY,
   SCALAR_UPPER,
@@ -231,27 +234,54 @@ export function formatDescription(description?: StringValueNode): StringValueNod
   return { ...description, value: value, block: true };
 }
 
-export function lexicographicallySortArgumentNodes(fieldNode: FieldNode): ArgumentNode[] | undefined {
+export function lexicographicallySortArgumentNodes(fieldNode: FieldNode): Array<ArgumentNode> | undefined {
   if (!fieldNode.arguments) {
     return fieldNode.arguments;
   }
-  const argumentNodes = fieldNode.arguments as ArgumentNode[];
+  const argumentNodes = fieldNode.arguments as Array<ArgumentNode>;
   return argumentNodes.sort((a, b) => a.name.value.localeCompare(b.name.value));
 }
 
 export function lexicographicallySortSelectionSetNode(selectionSetNode: SelectionSetNode): SelectionSetNode {
-  const selections = selectionSetNode.selections as FieldNode[];
+  const selections = selectionSetNode.selections as Array<SelectionNode>;
   return {
     ...selectionSetNode,
     selections: selections
-      .sort((a, b) => a.name.value.localeCompare(b.name.value))
-      .map((selection) => ({
-        ...selection,
-        arguments: lexicographicallySortArgumentNodes(selection),
-        selectionSet: selection.selectionSet
-          ? lexicographicallySortSelectionSetNode(selection.selectionSet)
-          : selection.selectionSet,
-      })),
+      .sort((a, b) => {
+        if (NAME in a) {
+          if (!(NAME in b)) {
+            return -1;
+          }
+          return a.name.value.localeCompare(b.name.value);
+        }
+        if (NAME in b) {
+          return 1;
+        }
+        const aName = a.typeCondition?.name.value ?? '';
+        return aName.localeCompare(b.typeCondition?.name.value ?? '');
+      })
+      .map((selection) => {
+        switch (selection.kind) {
+          case Kind.FIELD: {
+            return {
+              ...selection,
+              arguments: lexicographicallySortArgumentNodes(selection),
+              selectionSet: selection.selectionSet
+                ? lexicographicallySortSelectionSetNode(selection.selectionSet)
+                : selection.selectionSet,
+            };
+          }
+          case Kind.FRAGMENT_SPREAD: {
+            return selection;
+          }
+          case Kind.INLINE_FRAGMENT: {
+            return {
+              ...selection,
+              selectionSet: lexicographicallySortSelectionSetNode(selection.selectionSet),
+            };
+          }
+        }
+      }),
   };
 }
 

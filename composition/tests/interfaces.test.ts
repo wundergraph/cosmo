@@ -914,6 +914,132 @@ describe('Interface tests', () => {
         ),
       );
     });
+
+    test('that Field named types can coerce implementing types into Interfaces #1.1', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphAG, subgraphAH]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoRouterDefinitions +
+            `
+              interface AnotherInterface {
+                name: String!
+              }
+
+              type AnotherObject implements AnotherInterface {
+                name: String!
+              }
+
+              interface Interface {
+                name: String!
+              }
+
+              type Object implements Interface {
+                name: String!
+                nested: [AnotherInterface]!
+              }
+
+              type Query {
+                interface: Interface!
+              }
+
+              scalar openfed__Scope
+        `,
+        ),
+      );
+    });
+
+    test('that Field named types can coerce implementing types into Interfaces #1.2', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphAH, subgraphAG]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoRouterDefinitions +
+            `
+          interface AnotherInterface {
+            name: String!
+          }
+          
+          type AnotherObject implements AnotherInterface {
+            name: String!
+          }
+          
+          interface Interface {
+            name: String!
+          }
+          
+          type Object implements Interface {
+            name: String!
+            nested: [AnotherInterface]!
+          }
+          
+          type Query {
+            interface: Interface!
+          }
+          
+          scalar openfed__Scope
+        `,
+        ),
+      );
+    });
+
+    test('that Field named types can coerce implementing types into Interfaces #2.1', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphAI, subgraphAJ, subgraphAK, subgraphAL]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoRouterDefinitions +
+            `
+          type AnotherObject implements Interface {
+            name: String!
+          }
+          
+          interface Interface {
+            name: String!
+          }
+          
+          type Object implements Interface {
+            name: String!
+          }
+          
+          type Query {
+            interface: [Interface]
+          }
+          
+          scalar openfed__Scope
+        `,
+        ),
+      );
+    });
+
+    test('that Field named types can coerce implementing types into Interfaces #2.2', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphAL, subgraphAK, subgraphAJ, subgraphAI]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoRouterDefinitions +
+            `
+          type AnotherObject implements Interface {
+            name: String!
+          }
+          
+          interface Interface {
+            name: String!
+          }
+          
+          type Object implements Interface {
+            name: String!
+          }
+          
+          type Query {
+            interface: [Interface]
+          }
+          
+          scalar openfed__Scope
+        `,
+        ),
+      );
+    });
   });
 });
 
@@ -1350,6 +1476,112 @@ const subgraphAF: Subgraph = {
     
     interface Interface {
       age: Int!
+    }
+  `),
+};
+
+const subgraphAG: Subgraph = {
+  name: 'subgraph-ag',
+  url: '',
+  definitions: parse(`
+    interface AnotherInterface {
+      name: String!
+    }
+    
+    interface Interface {
+      name: String!
+    }
+    
+    type AnotherObject implements AnotherInterface @shareable {
+      name: String!
+    }
+    
+    type Object implements Interface @shareable {
+      name: String!
+      nested: [AnotherInterface]!
+    }
+    
+    type Query {
+      interface: Interface! @shareable
+    }
+  `),
+};
+
+const subgraphAH: Subgraph = {
+  name: 'subgraph-ah',
+  url: '',
+  definitions: parse(`
+    type AnotherObject @shareable {
+      name: String!
+    }
+    
+    type Object @shareable {
+      name: String!
+      nested: [AnotherObject!]!
+    }
+    
+    type Query {
+      interface: Object! @shareable
+    }
+  `),
+};
+
+const subgraphAI: Subgraph = {
+  name: 'subgraph-ai',
+  url: '',
+  definitions: parse(`
+    type Object {
+      name: String! @shareable
+    }
+    
+    type Query {
+      interface: [Object!]! @shareable
+    }
+  `),
+};
+
+const subgraphAJ: Subgraph = {
+  name: 'subgraph-aj',
+  url: '',
+  definitions: parse(`
+    type AnotherObject {
+      name: String! @shareable
+    }
+    
+    type Query {
+      interface: [AnotherObject!]! @shareable
+    }
+  `),
+};
+
+const subgraphAK: Subgraph = {
+  name: 'subgraph-ak',
+  url: '',
+  definitions: parse(`
+    type AnotherObject implements Interface {
+      name: String! @shareable
+    }
+    
+    type Object implements Interface {
+      name: String! @shareable
+    }
+    
+    interface Interface {
+      name: String!
+    }
+  `),
+};
+
+const subgraphAL: Subgraph = {
+  name: 'subgraph-al',
+  url: '',
+  definitions: parse(`
+    interface Interface {
+      name: String!
+    }
+    
+    type Query {
+      interface: [Interface] @shareable
     }
   `),
 };

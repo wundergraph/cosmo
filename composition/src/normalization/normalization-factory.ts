@@ -1720,25 +1720,6 @@ export class NormalizationFactory {
     }
   }
 
-  addConcreteTypesForImplementedInterfaces(node: ObjectTypeDefinitionNode | ObjectTypeExtensionNode) {
-    if (!node.interfaces || node.interfaces.length < 1) {
-      return;
-    }
-    const concreteTypeName = node.name.value;
-    for (const iFace of node.interfaces) {
-      const interfaceName = iFace.name.value;
-      getValueOrDefault(this.concreteTypeNamesByAbstractTypeName, interfaceName, () => new Set<string>()).add(
-        concreteTypeName,
-      );
-      this.internalGraph.addEdge(
-        this.internalGraph.addOrUpdateNode(interfaceName, { isAbstract: true }),
-        this.internalGraph.addOrUpdateNode(concreteTypeName),
-        concreteTypeName,
-        true,
-      );
-    }
-  }
-
   addConcreteTypeNamesForUnion(node: UnionTypeDefinitionNode | UnionTypeExtensionNode) {
     if (!node.types || node.types.length < 1) {
       return;
