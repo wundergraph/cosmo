@@ -285,9 +285,6 @@ const singleNamedIntrospectionQueryWithoutOperationName = `{"operationName":"","
 const silentIntrospectionQuery = `{"operationName":null,"variables":{},"query":"{\n  __schema {\n    queryType {\n      name\n    }\n    mutationType {\n      name\n    }\n    subscriptionType {\n      name\n    }\n    types {\n      ...FullType\n    }\n    directives {\n      name\n      description\n      locations\n      args {\n        ...InputValue\n      }\n    }\n  }\n}\n\nfragment FullType on __Type {\n  kind\n  name\n  description\n  fields(includeDeprecated: true) {\n    name\n    description\n    args {\n      ...InputValue\n    }\n    type {\n      ...TypeRef\n    }\n    isDeprecated\n    deprecationReason\n  }\n  inputFields {\n    ...InputValue\n  }\n  interfaces {\n    ...TypeRef\n  }\n  enumValues(includeDeprecated: true) {\n    name\n    description\n    isDeprecated\n    deprecationReason\n  }\n  possibleTypes {\n    ...TypeRef\n  }\n}\n\nfragment InputValue on __InputValue {\n  name\n  description\n  type {\n    ...TypeRef\n  }\n  defaultValue\n}\n\nfragment TypeRef on __Type {\n  kind\n  name\n  ofType {\n    kind\n    name\n    ofType {\n      kind\n      name\n      ofType {\n        kind\n        name\n        ofType {\n          kind\n          name\n          ofType {\n            kind\n            name\n            ofType {\n              kind\n              name\n              ofType {\n                kind\n                name\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}\n"}`
 const silentIntrospectionQueryWithOperationName = `{"operationName":"IntrospectionQuery","variables":{},"query":"{\n  __schema {\n    queryType {\n      name\n    }\n    mutationType {\n      name\n    }\n    subscriptionType {\n      name\n    }\n    types {\n      ...FullType\n    }\n    directives {\n      name\n      description\n      locations\n      args {\n        ...InputValue\n      }\n    }\n  }\n}\n\nfragment FullType on __Type {\n  kind\n  name\n  description\n  fields(includeDeprecated: true) {\n    name\n    description\n    args {\n      ...InputValue\n    }\n    type {\n      ...TypeRef\n    }\n    isDeprecated\n    deprecationReason\n  }\n  inputFields {\n    ...InputValue\n  }\n  interfaces {\n    ...TypeRef\n  }\n  enumValues(includeDeprecated: true) {\n    name\n    description\n    isDeprecated\n    deprecationReason\n  }\n  possibleTypes {\n    ...TypeRef\n  }\n}\n\nfragment InputValue on __InputValue {\n  name\n  description\n  type {\n    ...TypeRef\n  }\n  defaultValue\n}\n\nfragment TypeRef on __Type {\n  kind\n  name\n  ofType {\n    kind\n    name\n    ofType {\n      kind\n      name\n      ofType {\n        kind\n        name\n        ofType {\n          kind\n          name\n          ofType {\n            kind\n            name\n            ofType {\n              kind\n              name\n              ofType {\n                kind\n                name\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}\n"}`
 const schemaIntrospectionQueryWithMultipleQueries = `{"operationName":"IntrospectionQuery","query":"query Hello { world } query IntrospectionQuery { __schema { types { name } } }"}`
-const inlineFragmentedIntrospectionQueryType = `{"operationName":"IntrospectionQuery","variables":{},"query":"query IntrospectionQuery { ... IntrospectionFragment } fragment IntrospectionFragment on Query { __schema { queryType { name } mutationType { name } subscriptionType { name } types { ...FullType } directives { name description args { ...InputValue } onOperation onFragment onField } } } fragment FullType on __Type { kind name description fields(includeDeprecated: true) { name description args { ...InputValue } type { ...TypeRef } isDeprecated deprecationReason } inputFields { ...InputValue } interfaces { ...TypeRef } enumValues(includeDeprecated: true) { name description isDeprecated deprecationReason } possibleTypes { ...TypeRef } } fragment InputValue on __InputValue { name description type { ...TypeRef } defaultValue } fragment TypeRef on __Type { kind name ofType { kind name ofType { kind name ofType { kind name } } } }"}`
-const inlineFragmentedIntrospectionQueryWithFragmentOnQuery = `{"operationName":"IntrospectionQuery","variables":{},"query":"query IntrospectionQuery { ... on Query { __schema { queryType { name } mutationType { name } subscriptionType { name } types { ...FullType } directives { name description args { ...InputValue } onOperation onFragment onField } } } } fragment FullType on __Type { kind name description fields(includeDeprecated: true) { name description args { ...InputValue } type { ...TypeRef } isDeprecated deprecationReason } inputFields { ...InputValue } interfaces { ...TypeRef } enumValues(includeDeprecated: true) { name description isDeprecated deprecationReason } possibleTypes { ...TypeRef } } fragment InputValue on __InputValue { name description type { ...TypeRef } defaultValue } fragment TypeRef on __Type { kind name ofType { kind name ofType { kind name ofType { kind name } } } }"}`
-const fragmentedIntrospectionQuery = `{"operationName":"IntrospectionQuery","variables":{},"query":"query IntrospectionQuery { ... IntrospectionFragment } fragment IntrospectionFragment on Query { __schema { queryType { name } mutationType { name } subscriptionType { name } types { ...FullType } directives { name description args { ...InputValue } onOperation onFragment onField } } } fragment FullType on __Type { kind name description fields(includeDeprecated: true) { name description args { ...InputValue } type { ...TypeRef } isDeprecated deprecationReason } inputFields { ...InputValue } interfaces { ...TypeRef } enumValues(includeDeprecated: true) { name description isDeprecated deprecationReason } possibleTypes { ...TypeRef } } fragment InputValue on __InputValue { name description type { ...TypeRef } defaultValue } fragment TypeRef on __Type { kind name ofType { kind name ofType { kind name ofType { kind name } } } }"}`
 const typeIntrospectionQueryWithMultipleQueries = `{"operationName":"IntrospectionQuery","query":"query Hello { world } query IntrospectionQuery { __type(name: \"Droid\") { name } }"}`
 const typeIntrospectionQuery = `{"operationName":null,"variables":{},"query":"{__type(name:\"Foo\"){kind}}"}`
 const nonIntrospectionQuery = `{"operationName":"Foo","query":"query Foo {bar}"}`
@@ -298,6 +295,7 @@ const nonSchemaIntrospectionQueryWithAdditionalFields = `{"operationName":"Intro
 const nonTypeIntrospectionQueryWithAdditionalFields = `{"operationName":"IntrospectionQuery","query":"query IntrospectionQuery { __type(name: \"Droid\") { name } user { name account { balance } } }"}`
 const nonSchemaIntrospectionQueryWithMultipleQueries = `{"operationName":"Hello","query":"query Hello { world } query IntrospectionQuery { __schema { types { name } } }"}`
 const nonTypeIntrospectionQueryWithMultipleQueries = `{"operationName":"Hello","query":"query Hello { world } query IntrospectionQuery { __type(name: \"Droid\") { name } }"}`
+const typeIntrospectionWithAdditionalFields = `{"operationName":null,"variables":{},"query":"query Intro { __typename __type(name: \"Query\"){ name } }"}`
 const mutationQuery = `{"operationName":null,"query":"mutation Foo {bar}"}`
 
 func TestOperationProcessorIntrospectionQuery(t *testing.T) {
@@ -345,21 +343,6 @@ func TestOperationProcessorIntrospectionQuery(t *testing.T) {
 			HttpError: true,
 		},
 		{
-			Name:      "inlineFragmentedIntrospectionQueryType",
-			Input:     inlineFragmentedIntrospectionQueryType,
-			HttpError: true,
-		},
-		{
-			Name:      "inlineFragmentedIntrospectionQueryWithFragmentOnQuery",
-			Input:     inlineFragmentedIntrospectionQueryWithFragmentOnQuery,
-			HttpError: true,
-		},
-		{
-			Name:      "fragmentedIntrospectionQuery",
-			Input:     fragmentedIntrospectionQuery,
-			HttpError: true,
-		},
-		{
 			Name:      "typeIntrospectionQueryWithMultipleQueries",
 			Input:     typeIntrospectionQueryWithMultipleQueries,
 			HttpError: true,
@@ -390,14 +373,19 @@ func TestOperationProcessorIntrospectionQuery(t *testing.T) {
 			Valid: true,
 		},
 		{
-			Name:  "nonSchemaIntrospectionQueryWithAdditionalFields",
-			Input: nonSchemaIntrospectionQueryWithAdditionalFields,
-			Valid: true,
+			Name:      "nonSchemaIntrospectionQueryWithAdditionalFields",
+			Input:     nonSchemaIntrospectionQueryWithAdditionalFields,
+			HttpError: true,
 		},
 		{
-			Name:  "nonTypeIntrospectionQueryWithAdditionalFields",
-			Input: nonTypeIntrospectionQueryWithAdditionalFields,
-			Valid: true,
+			Name:      "nonTypeIntrospectionQueryWithAdditionalFields",
+			Input:     nonTypeIntrospectionQueryWithAdditionalFields,
+			HttpError: true,
+		},
+		{
+			Name:      "typeIntrospectionWithAdditionalFields",
+			Input:     typeIntrospectionWithAdditionalFields,
+			HttpError: true,
 		},
 		{
 			Name:  "nonSchemaIntrospectionQueryWithMultipleQueries",

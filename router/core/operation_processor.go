@@ -431,13 +431,11 @@ func (o *OperationKit) isIntrospectionQuery() (result bool, err error) {
 		fieldName := o.kit.doc.FieldNameUnsafeString(selection.Ref)
 		switch fieldName {
 		case schemaIntrospectionFieldName, typeIntrospectionFieldName:
-			continue
-		default:
-			return
+			return true, nil
 		}
 	}
 
-	return true, nil
+	return false, nil
 }
 
 // Parse parses the operation, populate the document and set the operation type.
