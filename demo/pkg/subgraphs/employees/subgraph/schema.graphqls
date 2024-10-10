@@ -49,6 +49,7 @@ type Subscription {
   currentTime: Time!
   countEmp(max: Int!, intervalMilliseconds: Int!): Int!
   countEmp2(max: Int!, intervalMilliseconds: Int!): Int!
+  countFor(count: Int!): Int!
 }
 
 enum Department {

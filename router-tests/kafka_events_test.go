@@ -426,6 +426,99 @@ func TestKafkaEvents(t *testing.T) {
 		})
 	})
 
+	t.Run("multipart", func(t *testing.T) {
+		assertLineEquals := func(reader *bufio.Reader, expected string) {
+			line, _, err := reader.ReadLine()
+			require.NoError(t, err)
+			require.Equal(t, expected, string(line))
+		}
+
+		assertMultipartPrefix := func(reader *bufio.Reader) {
+			assertLineEquals(reader, "--graphql")
+			assertLineEquals(reader, "Content-Type: application/json")
+			assertLineEquals(reader, "")
+		}
+
+		heartbeatInterval := 7 * time.Second
+
+		t.Run("subscribe sync", func(t *testing.T) {
+			topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
+
+			testenv.Run(t, &testenv.Config{
+				KafkaSeeds: seeds,
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+
+				ensureTopicExists(t, xEnv, topics...)
+
+				subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
+
+				wg := &sync.WaitGroup{}
+				wg.Add(1)
+
+				go func() {
+					client := http.Client{
+						Timeout: time.Second * 100,
+					}
+					req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
+					resp, gErr := client.Do(req)
+					require.NoError(t, gErr)
+					require.Equal(t, http.StatusOK, resp.StatusCode)
+					defer resp.Body.Close()
+					reader := bufio.NewReader(resp.Body)
+
+					assertMultipartPrefix(reader)
+					assertLineEquals(reader, "{\"payload\":{\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
+					assertMultipartPrefix(reader)
+					assertLineEquals(reader, "{}")
+					assertMultipartPrefix(reader)
+					assertLineEquals(reader, "{\"payload\":{\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
+					wg.Done()
+				}()
+
+				xEnv.WaitForSubscriptionCount(1, time.Second*5)
+
+				produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+				time.Sleep(heartbeatInterval)
+				produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+
+				wg.Wait()
+
+				xEnv.WaitForSubscriptionCount(0, time.Second*10)
+				xEnv.WaitForConnectionCount(0, time.Second*10)
+			})
+		})
+
+		t.Run("subscribe sync with block", func(t *testing.T) {
+			t.Parallel()
+
+			subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
+
+			testenv.Run(t, &testenv.Config{
+				KafkaSeeds: seeds,
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.BlockSubscriptions = true
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				client := http.Client{
+					Timeout: time.Second * 100,
+				}
+				req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
+				resp, err := client.Do(req)
+				require.NoError(t, err)
+				require.Equal(t, http.StatusOK, resp.StatusCode)
+
+				defer resp.Body.Close()
+				reader := bufio.NewReader(resp.Body)
+
+				assertMultipartPrefix(reader)
+				assertLineEquals(reader, "{\"payload\":{\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}}")
+
+				xEnv.WaitForSubscriptionCount(0, time.Second*10)
+				xEnv.WaitForConnectionCount(0, time.Second*10)
+			})
+		})
+	})
+
 	t.Run("subscribe sync sse", func(t *testing.T) {
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
