@@ -4,23 +4,20 @@ import (
 	"bytes"
 	"context"
 	"github.com/wundergraph/astjson"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"mime"
 	"net/http"
-	"time"
-
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 const (
-	WgPrefix                   = "wg_"
-	WgSseParam                 = WgPrefix + "sse"
-	WgSubscribeOnceParam       = WgPrefix + "subscribe_once"
-	multipartBoundary          = "graphql"
-	multipartHeartbeatInterval = 5 * time.Second
-	multipartAcceptHeader      = "multipart/mixed;subscriptionSpec=\"1.0\", application/json"
-	jsonContent                = "application/json"
-	sseMimeType                = "text/event-stream"
-	heartbeat                  = "{}"
+	WgPrefix             = "wg_"
+	WgSseParam           = WgPrefix + "sse"
+	WgSubscribeOnceParam = WgPrefix + "subscribe_once"
+	multipartBoundary    = "graphql"
+	multipartMime        = "multipart/mixed"
+	jsonContent          = "application/json"
+	sseMimeType          = "text/event-stream"
+	heartbeat            = "{}"
 )
 
 type HttpFlushWriter struct {
@@ -186,10 +183,12 @@ func NewWgRequestParams(r *http.Request) WgRequestParams {
 	contentType := r.Header.Get("Content-Type")
 	d, _, _ := mime.ParseMediaType(contentType)
 
+	mediaType, _, _ := mime.ParseMediaType(acceptHeader)
+
 	return WgRequestParams{
 		UseSse:        q.Has(WgSseParam) || d == sseMimeType,
 		SubscribeOnce: q.Has(WgSubscribeOnceParam),
-		UseMultipart:  acceptHeader == multipartAcceptHeader,
+		UseMultipart:  mediaType == multipartMime,
 	}
 }
 
