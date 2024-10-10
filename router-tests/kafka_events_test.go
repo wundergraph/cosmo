@@ -519,7 +519,7 @@ func TestKafkaEvents(t *testing.T) {
 		})
 	})
 
-	t.Run("subscribe sync sse", func(t *testing.T) {
+	t.Run("subscribe sync sse legacy method works", func(t *testing.T) {
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
@@ -577,6 +577,64 @@ func TestKafkaEvents(t *testing.T) {
 		})
 	})
 
+	t.Run("subscribe sync sse", func(t *testing.T) {
+
+		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
+
+		testenv.Run(t, &testenv.Config{
+			KafkaSeeds: seeds,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			ensureTopicExists(t, xEnv, topics...)
+
+			subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
+
+			wg := &sync.WaitGroup{}
+			wg.Add(1)
+
+			go func() {
+				client := http.Client{
+					Timeout: time.Second * 10,
+				}
+				req, gErr := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
+				require.NoError(t, gErr)
+
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Accept", "text/event-stream")
+				req.Header.Set("Connection", "keep-alive")
+				req.Header.Set("Cache-Control", "no-cache")
+
+				resp, gErr := client.Do(req)
+				require.NoError(t, gErr)
+				require.Equal(t, http.StatusOK, resp.StatusCode)
+				defer resp.Body.Close()
+				reader := bufio.NewReader(resp.Body)
+
+				eventNext, _, gErr := reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "event: next", string(eventNext))
+				data, _, gErr := reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "data: {\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}", string(data))
+				line, _, gErr := reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "", string(line))
+
+				wg.Done()
+
+			}()
+
+			xEnv.WaitForSubscriptionCount(1, time.Second*5)
+
+			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+
+			wg.Wait()
+
+			xEnv.WaitForSubscriptionCount(0, time.Second*10)
+			xEnv.WaitForConnectionCount(0, time.Second*10)
+		})
+	})
+
 	t.Run("subscribe sync sse with block", func(t *testing.T) {
 		t.Parallel()
 
@@ -591,7 +649,7 @@ func TestKafkaEvents(t *testing.T) {
 			client := http.Client{
 				Timeout: time.Second * 10,
 			}
-			req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLServeSentEventsURL(), bytes.NewReader(subscribePayload))
+			req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
 			require.NoError(t, err)
 
 			req.Header.Set("Content-Type", "application/json")
