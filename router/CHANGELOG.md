@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.123.0](https://github.com/wundergraph/cosmo/compare/router@0.122.0...router@0.123.0) (2024-10-10)
+
+### Bug Fixes
+
+* return error when introspection query is made when disabled ([#1257](https://github.com/wundergraph/cosmo/issues/1257)) ([7d7a854](https://github.com/wundergraph/cosmo/commit/7d7a8545ab6dadf7826123793bd2ce4bc2a42eb5)) (@thisisnithin)
+
+### Features
+
+* create subsciption over multipart ([#1227](https://github.com/wundergraph/cosmo/issues/1227)) ([3bbc8d9](https://github.com/wundergraph/cosmo/commit/3bbc8d9c9e48cd3f37214214ca55954a1e97b00a)) (@df-wg)
+
 # [0.122.0](https://github.com/wundergraph/cosmo/compare/router@0.121.1...router@0.122.0) (2024-10-09)
 
 ### Features
