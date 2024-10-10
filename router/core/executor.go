@@ -84,6 +84,9 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 	if opts.ApolloCompatibilityFlags.TruncateFloats.Enabled {
 		options.ResolvableOptions.ApolloCompatibilityTruncateFloatValues = true
 	}
+	if opts.ApolloCompatibilityFlags.SuppressFetchErrors.Enabled {
+		options.ResolvableOptions.ApolloCompatibilitySuppressFetchErrors = true
+	}
 
 	switch opts.RouterEngineConfig.SubgraphErrorPropagation.Mode {
 	case config.SubgraphErrorPropagationModePassthrough:
