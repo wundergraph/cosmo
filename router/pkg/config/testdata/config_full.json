@@ -494,6 +494,9 @@
     },
     "TruncateFloats": {
       "Enabled": false
+    },
+    "SuppressFetchErrors": {
+      "Enabled": false
     }
   },
   "ClientHeader": {
