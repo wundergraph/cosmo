@@ -67,6 +67,10 @@ spec:
             - name: ROUTER_CONFIG_PATH
               value: /execution-config.json
             {{- end }}
+            {{ if .Values.configuration.configPath }}
+            - name: CONFIG_PATH
+              value: {{ .Values.configuration.configPath }}
+            {{- end }}
             - name: LISTEN_ADDR
               valueFrom:
                 configMapKeyRef:
