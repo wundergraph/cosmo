@@ -47,10 +47,10 @@ Create chart name and version as used by the chart label.
 Common labels
 */}}
 {{- define "otelcollector.labels" -}}
-{{ $version := .Values.image.version | default .Chart.AppVersion | quote -}}
+{{ $version := .Values.image.version | default .Chart.AppVersion -}}
 helm.sh/chart: {{ include "otelcollector.chart" . }}
 {{ include "otelcollector.selectorLabels" . }}
-app.kubernetes.io/version: {{ $version }}
+app.kubernetes.io/version: {{ $version | quote }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
