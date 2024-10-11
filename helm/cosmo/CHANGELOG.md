@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.12.2](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.12.1...helm-cosmo@0.12.2) (2024-10-11)
+
+
+### Bug Fixes
+
+* not respecting image.version in labels ([#1265](https://github.com/wundergraph/cosmo/issues/1265)) ([7c92c55](https://github.com/wundergraph/cosmo/commit/7c92c5576c3d713cc9c1349cf6f725f79ed75310))
+* use volume name instead of config map name ([#1261](https://github.com/wundergraph/cosmo/issues/1261)) ([1a3a527](https://github.com/wundergraph/cosmo/commit/1a3a5273b2dda03e7cb1a5ee429aa14efcb058cc))
+
 ## [0.12.1](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.12.0...helm-cosmo@0.12.1) (2024-10-04)
 
 
