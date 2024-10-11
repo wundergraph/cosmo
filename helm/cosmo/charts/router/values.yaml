@@ -218,6 +218,9 @@ configuration:
   # A possible to solution could be to use an init container to download the file from a CDN. If set, polling of the config is disabled.
   routerConfigPath: ""
 
+  # -- The path to the router config file. This does not refer to the execution config.
+  # See: https://cosmo-docs.wundergraph.com/router/configuration#config-file
+  configPath: ''
   # Use this section to disable/enable and configure prometheus metrics.
   prometheus:
     # -- Enables prometheus metrics support. Default is true.

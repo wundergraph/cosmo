@@ -950,6 +950,13 @@ export class SubgraphRepository {
       clientTrafficCheckSkipped: check.clientTrafficCheckSkipped ?? false,
       lintSkipped: check.lintSkipped ?? false,
       graphPruningSkipped: check.graphPruningSkipped ?? false,
+      vcsContext: check.vcsContext
+        ? {
+            author: check.vcsContext.author,
+            branch: check.vcsContext.branch,
+            commitSha: check.vcsContext.commitSha,
+          }
+        : undefined,
     };
   }
 

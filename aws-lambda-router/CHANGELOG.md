@@ -4,6 +4,30 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.30.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.30.0...aws-lambda-router@0.30.1) (2024-10-11)
+
+### Bug Fixes
+
+* handling external fields ([#1266](https://github.com/wundergraph/cosmo/issues/1266)) ([fff7225](https://github.com/wundergraph/cosmo/commit/fff72258dbb453bcc94558b3440fe72d797e6d0a)) (@devsergiy)
+
+# [0.30.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.29.0...aws-lambda-router@0.30.0) (2024-10-11)
+
+### Features
+
+* add suppress fetch errors option to apollo compatibility flags ([#1258](https://github.com/wundergraph/cosmo/issues/1258)) ([a4d1adb](https://github.com/wundergraph/cosmo/commit/a4d1adba01e587b72cb5180eb3241f8943d34014)) (@JivusAyrus)
+
+# [0.29.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.28.0...aws-lambda-router@0.29.0) (2024-10-10)
+
+### Features
+
+* create subsciption over multipart ([#1227](https://github.com/wundergraph/cosmo/issues/1227)) ([3bbc8d9](https://github.com/wundergraph/cosmo/commit/3bbc8d9c9e48cd3f37214214ca55954a1e97b00a)) (@df-wg)
+
+# [0.28.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.27.1...aws-lambda-router@0.28.0) (2024-10-09)
+
+### Features
+
+* add indirect interface fields to schema usage reporting ([#1235](https://github.com/wundergraph/cosmo/issues/1235)) ([1c62c14](https://github.com/wundergraph/cosmo/commit/1c62c14f9a9f11a6fbbebf5a3fbc4d85f304285e)) (@jensneuse)
+
 ## [0.27.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.27.0...aws-lambda-router@0.27.1) (2024-10-07)
 
 **Note:** Version bump only for package aws-lambda-router

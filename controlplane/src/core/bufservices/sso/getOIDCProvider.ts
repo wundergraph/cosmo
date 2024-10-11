@@ -7,7 +7,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { OidcRepository } from '../../repositories/OidcRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { enrichLogger, getLogger, handleError, mergeUrls } from '../../util.js';
 import OidcProvider from '../../services/OidcProvider.js';
 
 export function getOIDCProvider(
@@ -53,14 +53,14 @@ export function getOIDCProvider(
       name: provider.name,
       endpoint: provider.endpoint,
       loginURL: `${opts.webBaseUrl}/login?sso=${provider.alias}`,
-      signInRedirectURL: new URL(
-        `/realms/${opts.keycloakRealm}/broker/${provider.alias}/endpoint`,
+      signInRedirectURL: mergeUrls(
         opts.keycloakApiUrl,
-      ).toString(),
-      signOutRedirectURL: new URL(
-        `/realms/${opts.keycloakRealm}/broker/${provider.alias}/endpoint/logout_response`,
+        `realms/${opts.keycloakRealm}/broker/${provider.alias}/endpoint`,
+      ),
+      signOutRedirectURL: mergeUrls(
         opts.keycloakApiUrl,
-      ).toString(),
+        `realms/${opts.keycloakRealm}/broker/${provider.alias}/endpoint/logout_response`,
+      ),
       mappers,
     };
   });
