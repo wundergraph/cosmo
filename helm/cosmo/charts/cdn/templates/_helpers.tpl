@@ -47,11 +47,10 @@ Create chart name and version as used by the chart label.
 Common labels
 */}}
 {{- define "cdn.labels" -}}
+{{ $version := .Values.image.version | default .Chart.AppVersion -}}
 helm.sh/chart: {{ include "cdn.chart" . }}
 {{ include "cdn.selectorLabels" . }}
-{{- if .Chart.AppVersion }}
-app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
-{{- end }}
+app.kubernetes.io/version: {{ $version | quote }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
