@@ -135,12 +135,6 @@ type requestTelemetryAttributes struct {
 	metricSetAttributes map[string]string
 }
 
-func (r *requestTelemetryAttributes) AddCustomMetricStringAttr(key string, value string) {
-	if remapKey, ok := r.metricSetAttributes[key]; ok && value != "" {
-		r.metricAttributes = append(r.metricAttributes, attribute.String(remapKey, value))
-	}
-}
-
 func (r *requestTelemetryAttributes) AddCustomMetricStringSliceAttr(key string, values []string) {
 	if remapKey, ok := r.metricSetAttributes[key]; ok && len(values) > 0 {
 		r.metricAttributes = append(r.metricAttributes, attribute.StringSlice(remapKey, values))

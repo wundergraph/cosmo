@@ -425,15 +425,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	computeSha256 := false
 
-	// Currently, we only support custom attributes from the context for OTLP metrics
-	if len(s.metricConfig.Attributes) > 0 {
-		for _, customAttribute := range s.metricConfig.Attributes {
-			if customAttribute.ValueFrom != nil && customAttribute.ValueFrom.ContextField == ContextFieldOperationSha256 {
-				computeSha256 = true
-				break
-			}
-		}
-	} else if s.accessLogsConfig != nil {
+	if s.accessLogsConfig != nil {
 		for _, customAttribute := range s.accessLogsConfig.Attributes {
 			if customAttribute.ValueFrom != nil && customAttribute.ValueFrom.ContextField == ContextFieldOperationSha256 {
 				computeSha256 = true

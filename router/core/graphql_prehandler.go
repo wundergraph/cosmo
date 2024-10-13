@@ -432,7 +432,6 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 			}
 		}
 		requestContext.operation.sha256Hash = operationKit.parsedOperation.Sha256Hash
-		requestContext.telemetry.AddCustomMetricStringAttr(ContextFieldOperationSha256, operationKit.parsedOperation.Sha256Hash)
 	}
 
 	requestContext.operation.extensions = operationKit.parsedOperation.Request.Extensions
