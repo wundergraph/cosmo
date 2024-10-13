@@ -54,6 +54,7 @@
         },
         "s3": {
           "type": "array",
+          "description": "The configuration for the S3 storage provider. If no access key and secret key are provided, the provider will attempt to retreieve IAM credentials from the EC2 service.",
           "items": {
             "type": "object",
             "required": ["bucket", "id"],
