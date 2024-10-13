@@ -326,7 +326,7 @@ func TestAccessLogs(t *testing.T) {
 		})
 	})
 
-	t.Run("Log when operation parsing fails", func(t *testing.T) {
+	t.Run("Log as much information possible when operation parsing fails", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
@@ -429,7 +429,7 @@ func TestAccessLogs(t *testing.T) {
 		})
 	})
 
-	t.Run("Log when operation normalization fails", func(t *testing.T) {
+	t.Run("Log as much information possible when operation normalization fails", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
@@ -535,7 +535,7 @@ func TestAccessLogs(t *testing.T) {
 		})
 	})
 
-	t.Run("Log when panic occurs on execution / error panic", func(t *testing.T) {
+	t.Run("Log as much information possible on execution / error panic", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
@@ -655,7 +655,7 @@ func TestAccessLogs(t *testing.T) {
 		})
 	})
 
-	t.Run("Log when panic occurs on execution / string panic", func(t *testing.T) {
+	t.Run("Log as much information possible pn execution / string panic", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{

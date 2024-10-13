@@ -120,8 +120,9 @@ type Config struct {
 	DisableParentBasedSampler          bool
 	TLSConfig                          *core.TlsConfig
 	TraceExporter                      trace.SpanExporter
-	OtelAttributes                     []config.CustomAttribute
-	OtelResourceAttributes             []config.CustomStaticAttribute
+	CustomMetricAttributes             []config.CustomAttribute
+	CustomTelemetryAttributes          []config.CustomAttribute
+	CustomResourceAttributes           []config.CustomStaticAttribute
 	MetricReader                       metric.Reader
 	PrometheusRegistry                 *prometheus.Registry
 	ShutdownDelay                      time.Duration
@@ -700,8 +701,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 
 		c := core.TraceConfigFromTelemetry(&config.Telemetry{
 			ServiceName:        "cosmo-router",
-			Attributes:         testConfig.OtelAttributes,
-			ResourceAttributes: testConfig.OtelResourceAttributes,
+			ResourceAttributes: testConfig.CustomResourceAttributes,
 			Tracing: config.Tracing{
 				Enabled:               true,
 				SamplingRate:          1,
@@ -715,7 +715,13 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 
 		c.TestMemoryExporter = testConfig.TraceExporter
 
-		routerOpts = append(routerOpts, core.WithTracing(c))
+		routerOpts = append(routerOpts,
+			core.WithTracing(c),
+		)
+	}
+
+	if testConfig.CustomTelemetryAttributes != nil {
+		routerOpts = append(routerOpts, core.WithTelemetryAttributes(testConfig.CustomTelemetryAttributes))
 	}
 
 	var prometheusConfig rmetric.PrometheusConfig
@@ -736,10 +742,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	if testConfig.MetricReader != nil {
 		c := core.MetricConfigFromTelemetry(&config.Telemetry{
 			ServiceName:        "cosmo-router",
-			Attributes:         testConfig.OtelAttributes,
-			ResourceAttributes: testConfig.OtelResourceAttributes,
+			ResourceAttributes: testConfig.CustomResourceAttributes,
 			Tracing:            config.Tracing{},
 			Metrics: config.Metrics{
+				Attributes: testConfig.CustomMetricAttributes,
 				Prometheus: config.Prometheus{
 					Enabled: true,
 				},

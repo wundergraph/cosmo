@@ -79,18 +79,12 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 	reqContext := getRequestContext(req.Context())
 	activeSubgraph := reqContext.ActiveSubgraph(req)
 
-	var baseFields []attribute.KeyValue
+	baseFields := reqContext.telemetry.MetricAttrs(true)
 
 	if activeSubgraph != nil {
 		baseFields = append(baseFields, otel.WgSubgraphName.String(activeSubgraph.Name))
 		baseFields = append(baseFields, otel.WgSubgraphID.String(activeSubgraph.Id))
 	}
-
-	if attributes := baseAttributesFromContext(req.Context()); attributes != nil {
-		baseFields = append(baseFields, attributes...)
-	}
-
-	baseFields = append(baseFields, reqContext.operation.Attributes()...)
 
 	inFlightDone := ct.metricStore.MeasureInFlight(req.Context(), baseFields...)
 	ct.metricStore.MeasureRequestSize(req.Context(), req.ContentLength, baseFields...)
@@ -373,21 +367,17 @@ func (t TransportFactory) RoundTripper(enableSingleFlight bool, transport http.R
 			span := otrace.SpanFromContext(r.Context())
 			reqContext := getRequestContext(r.Context())
 
-			var commonAttributeValues []attribute.KeyValue
+			var attributes []attribute.KeyValue
 
 			subgraph := reqContext.ActiveSubgraph(r)
 			if subgraph != nil {
-				commonAttributeValues = append(commonAttributeValues, otel.WgSubgraphID.String(subgraph.Id))
-				commonAttributeValues = append(commonAttributeValues, otel.WgSubgraphName.String(subgraph.Name))
+				attributes = append(attributes, otel.WgSubgraphID.String(subgraph.Id))
+				attributes = append(attributes, otel.WgSubgraphName.String(subgraph.Name))
 			}
 
-			if attributes := baseAttributesFromContext(r.Context()); attributes != nil {
-				commonAttributeValues = append(commonAttributeValues, attributes...)
-			}
+			attributes = append(attributes, reqContext.telemetry.CommonAttrs()...)
 
-			commonAttributeValues = append(commonAttributeValues, reqContext.operation.Attributes()...)
-
-			span.SetAttributes(commonAttributeValues...)
+			span.SetAttributes(attributes...)
 
 		}),
 	)

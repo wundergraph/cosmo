@@ -91,22 +91,25 @@ func logInternalErrorsFromReport(report *operationreport.Report, requestLogger *
 	}
 }
 
-// trackResponseError sets the final response error on the request context and
+// trackFinalResponseError sets the final response error on the request context and
 // attaches it to the span. This is used to process the error in the outer middleware
 // and therefore only intended to be used in the GraphQL handler.
-func trackResponseError(ctx context.Context, err error) {
+func trackFinalResponseError(ctx context.Context, err error) {
 	if err == nil {
 		return
 	}
 
-	reqCtx := getRequestContext(ctx)
-	if reqCtx == nil {
+	span := trace.SpanFromContext(ctx)
+	requestContext := getRequestContext(ctx)
+	if requestContext == nil {
 		return
 	}
 
-	reqCtx.error = err
+	requestContext.error = err
+	requestContext.graphQLErrorServices = getAggregatedSubgraphServiceNames(requestContext.error)
+	requestContext.graphQLErrorCodes = getAggregatedSubgraphErrorCodes(requestContext.error)
 
-	rtrace.AttachErrToSpan(trace.SpanFromContext(ctx), err)
+	rtrace.AttachErrToSpan(span, err)
 }
 
 func getAggregatedSubgraphErrorCodes(err error) []string {
@@ -128,6 +131,14 @@ func getAggregatedSubgraphErrorCodes(err error) []string {
 	}
 
 	return nil
+}
+
+func getSubgraphNames(ds []resolve.DataSourceInfo) []string {
+	operationServiceNames := make([]string, 0, len(ds))
+	for _, ds := range ds {
+		operationServiceNames = append(operationServiceNames, ds.Name)
+	}
+	return operationServiceNames
 }
 
 func getAggregatedSubgraphServiceNames(err error) []string {
@@ -156,7 +167,7 @@ func propagateSubgraphErrors(ctx *resolve.Context) {
 	err := ctx.SubgraphErrors()
 
 	if err != nil {
-		trackResponseError(ctx.Context(), err)
+		trackFinalResponseError(ctx.Context(), err)
 	}
 }
 

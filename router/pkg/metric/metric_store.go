@@ -21,6 +21,8 @@ const (
 	InFlightRequestsUpDownCounter = "router.http.requests.in_flight"            // Number of requests in flight
 	RequestError                  = "router.http.requests.error"                // Total request error count
 
+	OperationPlanningTime = "router.graphql.operation.planning_time" // Time taken to plan the operation
+
 	unitBytes        = "bytes"
 	unitMilliseconds = "ms"
 )
@@ -32,7 +34,7 @@ var (
 	RequestCounterOptions     = []otelmetric.Int64CounterOption{
 		otelmetric.WithDescription(RequestCounterDescription),
 	}
-	RequestErrorCounterDescription = "Total number of failed request"
+	RequestErrorCounterDescription = "Total number of failed requests"
 	RequestErrorCounterOptions     = []otelmetric.Int64CounterOption{
 		otelmetric.WithDescription(RequestErrorCounterDescription),
 	}
@@ -55,6 +57,14 @@ var (
 	InFlightRequestsUpDownCounterOptions     = []otelmetric.Int64UpDownCounterOption{
 		otelmetric.WithDescription(InFlightRequestsUpDownCounterDescription),
 	}
+
+	// GraphQL operation metrics
+
+	OperationPlanningTimeHistogramDescription = "Operation planning time in milliseconds"
+	OperationPlanningTimeHistogramOptions     = []otelmetric.Float64HistogramOption{
+		otelmetric.WithUnit("ms"),
+		otelmetric.WithDescription(OperationPlanningTimeHistogramDescription),
+	}
 )
 
 type (
@@ -69,8 +79,7 @@ type (
 		otlpRequestMetrics Provider
 		promRequestMetrics Provider
 
-		baseAttributes []attribute.KeyValue
-		logger         *zap.Logger
+		logger *zap.Logger
 	}
 
 	Provider interface {
@@ -80,6 +89,9 @@ type (
 		MeasureResponseSize(ctx context.Context, size int64, attr ...attribute.KeyValue)
 		MeasureLatency(ctx context.Context, requestStartTime time.Time, attr ...attribute.KeyValue)
 		MeasureRequestError(ctx context.Context, attr ...attribute.KeyValue)
+
+		MeasureOperationPlanningTime(ctx context.Context, planningTime time.Duration, attr ...attribute.KeyValue)
+
 		Flush(ctx context.Context) error
 	}
 
@@ -99,7 +111,7 @@ func NewStore(opts ...Option) (Store, error) {
 	}
 
 	// Create OTLP metrics exported to OTEL
-	oltpMetrics, err := NewOtlpMetricStore(h.logger, h.otelMeterProvider, h.baseAttributes)
+	oltpMetrics, err := NewOtlpMetricStore(h.logger, h.otelMeterProvider)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +119,7 @@ func NewStore(opts ...Option) (Store, error) {
 	h.otlpRequestMetrics = oltpMetrics
 
 	// Create prometheus metrics exported to Prometheus scrape endpoint
-	promMetrics, err := NewPromMetricStore(h.logger, h.promMeterProvider, h.baseAttributes)
+	promMetrics, err := NewPromMetricStore(h.logger, h.promMeterProvider)
 	if err != nil {
 		return nil, err
 	}
@@ -152,6 +164,11 @@ func (h *Metrics) MeasureRequestError(ctx context.Context, attr ...attribute.Key
 	h.promRequestMetrics.MeasureRequestError(ctx, attr...)
 }
 
+func (h *Metrics) MeasureOperationPlanningTime(ctx context.Context, planningTime time.Duration, attr ...attribute.KeyValue) {
+	h.otlpRequestMetrics.MeasureOperationPlanningTime(ctx, planningTime, attr...)
+	h.promRequestMetrics.MeasureOperationPlanningTime(ctx, planningTime, attr...)
+}
+
 // Flush flushes the metrics to the backend synchronously.
 func (h *Metrics) Flush(ctx context.Context) error {
 
@@ -177,13 +194,6 @@ func (h *Metrics) Shutdown(ctx context.Context) error {
 	}
 
 	return err
-}
-
-// WithAttributes adds attributes to the base attributes
-func WithAttributes(attrs ...attribute.KeyValue) Option {
-	return func(h *Metrics) {
-		h.baseAttributes = append(h.baseAttributes, attrs...)
-	}
 }
 
 func WithLogger(logger *zap.Logger) Option {
