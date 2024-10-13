@@ -12,6 +12,7 @@ import (
 	"go.uber.org/zap"
 	"io"
 	"sync"
+	"time"
 )
 
 var (
@@ -75,6 +76,9 @@ func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Nats
 
 			defer p.closeWg.Done()
 
+			ticker := time.NewTicker(resolve.HearbeatInterval)
+			defer ticker.Stop()
+
 			for {
 				select {
 				case <-p.ctx.Done():
@@ -84,7 +88,11 @@ func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Nats
 				case <-ctx.Done():
 					// When the subscription context is done, we stop the subscription
 					return
+				case <-ticker.C:
+					updater.Heartbeat()
 				default:
+					ticker.Reset(resolve.HearbeatInterval)
+
 					msgBatch, consumerFetchErr := consumer.FetchNoWait(300)
 					if consumerFetchErr != nil {
 						log.Error("error fetching messages", zap.Error(consumerFetchErr))
@@ -127,11 +135,16 @@ func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Nats
 	go func() {
 		defer p.closeWg.Done()
 
+		ticker := time.NewTicker(resolve.HearbeatInterval)
+		defer ticker.Stop()
+
 		for {
 			select {
+			case <-ticker.C:
+				updater.Heartbeat()
 			case msg := <-msgChan:
 				log.Debug("subscription update", zap.String("message_subject", msg.Subject), zap.ByteString("data", msg.Data))
-
+				ticker.Reset(resolve.HearbeatInterval)
 				updater.Update(msg.Data)
 			case <-p.ctx.Done():
 				// When the application context is done, we stop the subscriptions

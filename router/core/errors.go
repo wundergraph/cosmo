@@ -175,10 +175,9 @@ func propagateSubgraphErrors(ctx *resolve.Context) {
 // It accepts a graphqlerrors.RequestErrors object and writes it to the response based on the GraphQL spec.
 func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, requestErrors graphqlerrors.RequestErrors, requestLogger *zap.Logger) {
 	if requestErrors != nil {
-
-		if r.URL.Query().Has("wg_sse") {
-
-			setSubscriptionHeaders(w)
+		wgRequestParams := NewWgRequestParams(r)
+		if wgRequestParams.UseSse {
+			setSubscriptionHeaders(wgRequestParams, r, w)
 
 			if statusCode != 0 {
 				w.WriteHeader(statusCode)
@@ -194,6 +193,14 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 				}
 				return
 			}
+		} else if wgRequestParams.UseMultipart {
+			// Handle multipart error response
+			if err := writeMultipartError(w, requestErrors, requestLogger); err != nil {
+				if requestLogger != nil {
+					requestLogger.Error("error writing multipart response", zap.Error(err))
+				}
+			}
+			return
 		}
 
 		// Set header before writing status code
@@ -201,7 +208,6 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 		if statusCode != 0 {
 			w.WriteHeader(statusCode)
 		}
-
 		if _, err := requestErrors.WriteResponse(w); err != nil {
 			if requestLogger != nil {
 				if rErrors.IsBrokenPipe(err) {
@@ -212,6 +218,41 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 			}
 		}
 	}
+}
+
+// writeMultipartError writes the error response in a multipart format with proper boundaries and headers.
+func writeMultipartError(w http.ResponseWriter, requestErrors graphqlerrors.RequestErrors, requestLogger *zap.Logger) error {
+	// Start with the multipart boundary
+	prefix := GetWriterPrefix(false, true)
+	if _, err := w.Write([]byte(prefix)); err != nil {
+		return err
+	}
+
+	// Write the actual error payload
+	response := graphqlerrors.Response{
+		Errors: requestErrors,
+	}
+
+	responseBytes, err := response.Marshal()
+	if err != nil {
+		return err
+	}
+
+	resp, err := wrapMultipartMessage(responseBytes)
+	if err != nil {
+		return err
+	}
+
+	resp = append(resp, '\n')
+	if _, err := w.Write([]byte(resp)); err != nil {
+		return err
+	}
+
+	// Flush the response
+	if flusher, ok := w.(http.Flusher); ok {
+		flusher.Flush()
+	}
+	return nil
 }
 
 // writeOperationError writes the given error to the http.ResponseWriter but evaluates the error type first.

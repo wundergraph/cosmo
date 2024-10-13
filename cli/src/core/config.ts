@@ -35,6 +35,9 @@ export const config = {
   cdnURL: process.env.CDN_URL || 'https://cosmo-cdn.wundergraph.com',
   version: info.version,
   disableUpdateCheck: process.env.DISABLE_UPDATE_CHECK || 'false',
+  checkAuthor: process.env.COSMO_VCS_AUTHOR || '',
+  checkCommitSha: process.env.COSMO_VCS_COMMIT || '',
+  checkBranch: process.env.COSMO_VCS_BRANCH || '',
 };
 
 export const getBaseHeaders = (): HeadersInit => {

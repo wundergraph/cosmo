@@ -415,3 +415,15 @@ export function extractS3BucketName(opts: S3StorageOptions) {
 export function isVirtualHostStyleUrl(url: URL) {
   return url.hostname.split('.').length > 2;
 }
+
+export function mergeUrls(baseUrl: string, relativeUrl: string) {
+  // Remove the leading slash beacuse if the relative URL starts with a slash,
+  // the relative part will merge with only the hostname ignoring the rest of the base url if any.
+  relativeUrl = relativeUrl.startsWith('/') ? relativeUrl.slice(1) : relativeUrl;
+
+  // Same as the above case, if the base URL doesnt end with a slash,
+  // the computed url will only have the host and the relative URL and will ignore the rest of the base URL if any.
+  baseUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
+
+  return new URL(relativeUrl, baseUrl).toString();
+}

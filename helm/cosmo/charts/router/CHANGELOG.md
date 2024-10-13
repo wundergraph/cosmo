@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.9.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.8.1...helm-cosmo-router@0.9.0) (2024-10-11)
+
+
+### Features
+
+* make router config an explicit property update AppVersion ([#1263](https://github.com/wundergraph/cosmo/issues/1263)) ([0f89a1a](https://github.com/wundergraph/cosmo/commit/0f89a1ae6d74acf72400acc6bd5ead7a7895d0ce))
+
+
+### Bug Fixes
+
+* not respecting image.version in labels ([#1265](https://github.com/wundergraph/cosmo/issues/1265)) ([7c92c55](https://github.com/wundergraph/cosmo/commit/7c92c5576c3d713cc9c1349cf6f725f79ed75310))
+
 ## [0.8.1](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.8.0...helm-cosmo-router@0.8.1) (2024-09-16)
 
 

@@ -4,6 +4,38 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.124.1](https://github.com/wundergraph/cosmo/compare/router@0.124.0...router@0.124.1) (2024-10-11)
+
+### Bug Fixes
+
+* handling external fields ([#1266](https://github.com/wundergraph/cosmo/issues/1266)) ([fff7225](https://github.com/wundergraph/cosmo/commit/fff72258dbb453bcc94558b3440fe72d797e6d0a)) (@devsergiy)
+
+# [0.124.0](https://github.com/wundergraph/cosmo/compare/router@0.123.0...router@0.124.0) (2024-10-11)
+
+### Bug Fixes
+
+* introspection query detection ([#1259](https://github.com/wundergraph/cosmo/issues/1259)) ([84af086](https://github.com/wundergraph/cosmo/commit/84af086baa4846faeebfd84c4629263e2c9454c1)) (@thisisnithin)
+
+### Features
+
+* add suppress fetch errors option to apollo compatibility flags ([#1258](https://github.com/wundergraph/cosmo/issues/1258)) ([a4d1adb](https://github.com/wundergraph/cosmo/commit/a4d1adba01e587b72cb5180eb3241f8943d34014)) (@JivusAyrus)
+
+# [0.123.0](https://github.com/wundergraph/cosmo/compare/router@0.122.0...router@0.123.0) (2024-10-10)
+
+### Bug Fixes
+
+* return error when introspection query is made when disabled ([#1257](https://github.com/wundergraph/cosmo/issues/1257)) ([7d7a854](https://github.com/wundergraph/cosmo/commit/7d7a8545ab6dadf7826123793bd2ce4bc2a42eb5)) (@thisisnithin)
+
+### Features
+
+* create subsciption over multipart ([#1227](https://github.com/wundergraph/cosmo/issues/1227)) ([3bbc8d9](https://github.com/wundergraph/cosmo/commit/3bbc8d9c9e48cd3f37214214ca55954a1e97b00a)) (@df-wg)
+
+# [0.122.0](https://github.com/wundergraph/cosmo/compare/router@0.121.1...router@0.122.0) (2024-10-09)
+
+### Features
+
+* add indirect interface fields to schema usage reporting ([#1235](https://github.com/wundergraph/cosmo/issues/1235)) ([1c62c14](https://github.com/wundergraph/cosmo/commit/1c62c14f9a9f11a6fbbebf5a3fbc4d85f304285e)) (@jensneuse)
+
 ## [0.121.1](https://github.com/wundergraph/cosmo/compare/router@0.121.0...router@0.121.1) (2024-10-07)
 
 **Note:** Version bump only for package router

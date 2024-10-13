@@ -639,9 +639,10 @@ type AccessLogsFileOutputConfig struct {
 }
 
 type ApolloCompatibilityFlags struct {
-	EnableAll       bool                               `yaml:"enable_all" envDefault:"false" env:"APOLLO_COMPATIBILITY_ENABLE_ALL"`
-	ValueCompletion ApolloCompatibilityValueCompletion `yaml:"value_completion"`
-	TruncateFloats  ApolloCompatibilityTruncateFloats  `yaml:"truncate_floats"`
+	EnableAll           bool                                   `yaml:"enable_all" envDefault:"false" env:"APOLLO_COMPATIBILITY_ENABLE_ALL"`
+	ValueCompletion     ApolloCompatibilityValueCompletion     `yaml:"value_completion"`
+	TruncateFloats      ApolloCompatibilityTruncateFloats      `yaml:"truncate_floats"`
+	SuppressFetchErrors ApolloCompatibilitySuppressFetchErrors `yaml:"suppress_fetch_errors"`
 }
 
 type ApolloCompatibilityValueCompletion struct {
@@ -655,6 +656,10 @@ type ClientHeader struct {
 
 type ApolloCompatibilityTruncateFloats struct {
 	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_TRUNCATE_FLOATS_ENABLED"`
+}
+
+type ApolloCompatibilitySuppressFetchErrors struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_SUPPRESS_FETCH_ERRORS_ENABLED"`
 }
 
 type Config struct {

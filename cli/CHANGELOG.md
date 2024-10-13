@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.68.0](https://github.com/wundergraph/cosmo/compare/wgc@0.67.0...wgc@0.68.0) (2024-10-09)
+
+### Features
+
+* add custom context to subgraph checks ([#1252](https://github.com/wundergraph/cosmo/issues/1252)) ([c510628](https://github.com/wundergraph/cosmo/commit/c510628bc8ca80a88b681d87051940361605ff5b)) (@JivusAyrus)
+
+# [0.67.0](https://github.com/wundergraph/cosmo/compare/wgc@0.66.2...wgc@0.67.0) (2024-10-08)
+
+### Features
+
+* use commit sha from env when not running in github ([#1254](https://github.com/wundergraph/cosmo/issues/1254)) ([7e597b6](https://github.com/wundergraph/cosmo/commit/7e597b6222c0a4acb31595c7994b96a71f13e48c)) (@thisisnithin)
+
 ## [0.66.2](https://github.com/wundergraph/cosmo/compare/wgc@0.66.1...wgc@0.66.2) (2024-09-27)
 
 **Note:** Version bump only for package wgc
