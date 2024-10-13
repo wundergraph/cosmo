@@ -483,6 +483,63 @@ func TestPrometheus(t *testing.T) {
 				},
 			}, responseContentLengthMetrics[1].Label)
 
+			planningTime := findMetricFamilyByName(mf, "router_graphql_operation_planning_time")
+			planningTimeMetrics := planningTime.GetMetric()
+
+			require.Len(t, planningTimeMetrics, 1)
+			require.Len(t, planningTimeMetrics[0].Label, 12)
+
+			require.Equal(t, []*io_prometheus_client.LabelPair{
+				{
+					Name:  PointerOf("otel_scope_name"),
+					Value: PointerOf("cosmo.router.prometheus"),
+				},
+				{
+					Name:  PointerOf("otel_scope_version"),
+					Value: PointerOf("0.0.1"),
+				},
+				{
+					Name:  PointerOf("wg_client_name"),
+					Value: PointerOf("unknown"),
+				},
+				{
+					Name:  PointerOf("wg_client_version"),
+					Value: PointerOf("missing"),
+				},
+				{
+					Name:  PointerOf("wg_engine_plan_cache_hit"),
+					Value: PointerOf("false"),
+				},
+				{
+					Name:  PointerOf("wg_federated_graph_id"),
+					Value: PointerOf("graph"),
+				},
+				{
+					Name:  PointerOf("wg_operation_name"),
+					Value: PointerOf("myQuery"),
+				},
+				{
+					Name:  PointerOf("wg_operation_protocol"),
+					Value: PointerOf("http"),
+				},
+				{
+					Name:  PointerOf("wg_operation_type"),
+					Value: PointerOf("query"),
+				},
+				{
+					Name:  PointerOf("wg_router_cluster_name"),
+					Value: PointerOf(""),
+				},
+				{
+					Name:  PointerOf("wg_router_config_version"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+				},
+				{
+					Name:  PointerOf("wg_router_version"),
+					Value: PointerOf("dev"),
+				},
+			}, planningTimeMetrics[0].Label)
+
 		})
 	})
 

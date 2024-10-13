@@ -731,7 +731,10 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 	httpOperation.operationMetrics.routerMetrics.MetricStore().MeasureOperationPlanningTime(
 		req.Context(),
 		requestContext.operation.planningTime,
-		requestContext.telemetry.MetricAttrs(true)...,
+		append(
+			requestContext.telemetry.MetricAttrs(true),
+			otel.WgEnginePlanCacheHit.Bool(requestContext.operation.planCacheHit),
+		)...,
 	)
 
 	// we could log the query plan only if query plans are calculated

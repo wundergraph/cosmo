@@ -629,6 +629,7 @@ func TestTelemetry(t *testing.T) {
 					DataPoints: []metricdata.HistogramDataPoint[float64]{
 						{
 							Attributes: attribute.NewSet(
+								otel.WgEnginePlanCacheHit.Bool(false),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -1101,6 +1102,7 @@ func TestTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(
 								attribute.String("custom", "value"),
+								otel.WgEnginePlanCacheHit.Bool(false),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -1499,6 +1501,7 @@ func TestTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(
 								attribute.String("custom", "value"),
+								otel.WgEnginePlanCacheHit.Bool(false),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -1874,6 +1877,7 @@ func TestTelemetry(t *testing.T) {
 					DataPoints: []metricdata.HistogramDataPoint[float64]{
 						{
 							Attributes: attribute.NewSet(
+								otel.WgEnginePlanCacheHit.Bool(false),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -3056,6 +3060,7 @@ func TestTelemetry(t *testing.T) {
 							{
 								Attributes: attribute.NewSet(
 									attribute.String("from_header", "custom-value"),
+									otel.WgEnginePlanCacheHit.Bool(false),
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
