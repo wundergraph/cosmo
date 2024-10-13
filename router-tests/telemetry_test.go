@@ -3056,9 +3056,6 @@ func TestTelemetry(t *testing.T) {
 							{
 								Attributes: attribute.NewSet(
 									attribute.String("from_header", "custom-value"),
-									attribute.StringSlice("error_codes", []string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
-									attribute.StringSlice("services", []string{"employees", "products"}),
-									attribute.StringSlice("error_services", []string{"products"}),
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),

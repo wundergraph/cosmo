@@ -201,14 +201,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			requestContext.telemetry.AddCustomMetricStringSliceAttr(ContextFieldOperationServices, requestContext.dataSourceNames)
 			requestContext.telemetry.AddCustomMetricStringSliceAttr(ContextFieldGraphQLErrorCodes, requestContext.graphQLErrorCodes)
 
-			metricStore := metrics.routerMetrics.MetricStore()
 			metricAttrs := requestContext.telemetry.MetricAttrs(true)
-
-			metricStore.MeasureOperationPlanningTime(
-				r.Context(),
-				requestContext.operation.planningTime,
-				metricAttrs...,
-			)
 
 			metrics.Finish(
 				r.Context(),
@@ -734,6 +727,12 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 	httpOperation.traceTimings.EndPlanning()
 
 	enginePlanSpan.End()
+
+	httpOperation.operationMetrics.routerMetrics.MetricStore().MeasureOperationPlanningTime(
+		req.Context(),
+		requestContext.operation.planningTime,
+		requestContext.telemetry.MetricAttrs(true)...,
+	)
 
 	// we could log the query plan only if query plans are calculated
 	if (h.queryPlansEnabled && requestContext.operation.executionOptions.IncludeQueryPlanInResponse) ||
