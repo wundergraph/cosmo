@@ -87,7 +87,7 @@ type (
 		MeasureRequestCount(ctx context.Context, attr ...attribute.KeyValue)
 		MeasureRequestSize(ctx context.Context, contentLength int64, attr ...attribute.KeyValue)
 		MeasureResponseSize(ctx context.Context, size int64, attr ...attribute.KeyValue)
-		MeasureLatency(ctx context.Context, requestStartTime time.Time, attr ...attribute.KeyValue)
+		MeasureLatency(ctx context.Context, latency time.Duration, attr ...attribute.KeyValue)
 		MeasureRequestError(ctx context.Context, attr ...attribute.KeyValue)
 
 		MeasureOperationPlanningTime(ctx context.Context, planningTime time.Duration, attr ...attribute.KeyValue)
@@ -154,9 +154,9 @@ func (h *Metrics) MeasureResponseSize(ctx context.Context, size int64, attr ...a
 	h.promRequestMetrics.MeasureResponseSize(ctx, size, attr...)
 }
 
-func (h *Metrics) MeasureLatency(ctx context.Context, requestStartTime time.Time, attr ...attribute.KeyValue) {
-	h.otlpRequestMetrics.MeasureLatency(ctx, requestStartTime, attr...)
-	h.promRequestMetrics.MeasureLatency(ctx, requestStartTime, attr...)
+func (h *Metrics) MeasureLatency(ctx context.Context, latency time.Duration, attr ...attribute.KeyValue) {
+	h.otlpRequestMetrics.MeasureLatency(ctx, latency, attr...)
+	h.promRequestMetrics.MeasureLatency(ctx, latency, attr...)
 }
 
 func (h *Metrics) MeasureRequestError(ctx context.Context, attr ...attribute.KeyValue) {

@@ -79,7 +79,9 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 	reqContext := getRequestContext(req.Context())
 	activeSubgraph := reqContext.ActiveSubgraph(req)
 
-	baseFields := reqContext.telemetry.MetricAttrs(true)
+	var baseFields []attribute.KeyValue
+
+	baseFields = append(baseFields, reqContext.telemetry.MetricAttrs(true)...)
 
 	if activeSubgraph != nil {
 		baseFields = append(baseFields, otel.WgSubgraphName.String(activeSubgraph.Name))
@@ -94,12 +96,14 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 	return func(err error, resp *http.Response) {
 		defer inFlightDone()
 
+		latency := time.Since(operationStartTime)
+
 		if err != nil {
 			baseFields = append(baseFields, otel.WgRequestError.Bool(true))
 		}
 
 		ct.metricStore.MeasureRequestCount(req.Context(), baseFields...)
-		ct.metricStore.MeasureLatency(req.Context(), operationStartTime, baseFields...)
+		ct.metricStore.MeasureLatency(req.Context(), latency, baseFields...)
 
 		if resp != nil {
 			baseFields = append(baseFields, semconv.HTTPStatusCode(resp.StatusCode))

@@ -31,7 +31,7 @@ func (n NoopMetrics) MeasureRequestSize(ctx context.Context, contentLength int64
 func (n NoopMetrics) MeasureResponseSize(ctx context.Context, size int64, attr ...attribute.KeyValue) {
 }
 
-func (n NoopMetrics) MeasureLatency(ctx context.Context, requestStartTime time.Time, attr ...attribute.KeyValue) {
+func (n NoopMetrics) MeasureLatency(ctx context.Context, latency time.Duration, attr ...attribute.KeyValue) {
 }
 
 func (n NoopMetrics) MeasureOperationPlanningTime(ctx context.Context, planningTime time.Duration, attr ...attribute.KeyValue) {

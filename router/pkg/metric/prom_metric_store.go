@@ -146,13 +146,13 @@ func (h *PromMetricStore) MeasureResponseSize(ctx context.Context, size int64, a
 	}
 }
 
-func (h *PromMetricStore) MeasureLatency(ctx context.Context, requestStartTime time.Time, attr ...attribute.KeyValue) {
+func (h *PromMetricStore) MeasureLatency(ctx context.Context, latency time.Duration, attr ...attribute.KeyValue) {
 	if c, ok := h.measurements.histograms[ServerLatencyHistogram]; ok {
 		dimensionsSet, otherAttributes := filterStringSliceAttr(attr)
 		otherAttributes = append(otherAttributes, otherAttributes...)
 
 		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedTime := float64(time.Since(requestStartTime)) / float64(time.Millisecond)
+		elapsedTime := float64(latency) / float64(time.Millisecond)
 
 		if len(dimensionsSet) == 0 {
 			c.Record(ctx, elapsedTime, otelmetric.WithAttributes(otherAttributes...))
@@ -221,10 +221,7 @@ func (h *PromMetricStore) Shutdown(ctx context.Context) error {
 }
 
 func isStringSliceAttr(kv attribute.KeyValue) bool {
-	if kv.Value.Type() == attribute.STRINGSLICE {
-		return true
-	}
-	return false
+	return kv.Value.Type() == attribute.STRINGSLICE
 }
 
 func filterStringSliceAttr(kv []attribute.KeyValue) (stringSliceAttr []attribute.KeyValue, excludeAttr []attribute.KeyValue) {

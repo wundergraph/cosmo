@@ -3090,7 +3090,6 @@ func TestTelemetry(t *testing.T) {
 									semconv.HTTPStatusCode(403),
 									otel.WgComponentName.String("engine-loader"),
 									otel.WgClientName.String("unknown"),
-									otel.WgSubgraphErrorExtendedCode.StringSlice([]string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
 									otel.WgOperationHash.String("16884868987896027258"),

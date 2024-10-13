@@ -84,13 +84,13 @@ func (h *OtlpMetricStore) MeasureResponseSize(ctx context.Context, size int64, a
 	}
 }
 
-func (h *OtlpMetricStore) MeasureLatency(ctx context.Context, requestStartTime time.Time, attr ...attribute.KeyValue) {
+func (h *OtlpMetricStore) MeasureLatency(ctx context.Context, latency time.Duration, attr ...attribute.KeyValue) {
 	if c, ok := h.measurements.histograms[ServerLatencyHistogram]; ok {
 		attributes := make([]attribute.KeyValue, 0, len(attr))
 		attributes = append(attributes, attr...)
 
 		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedTime := float64(time.Since(requestStartTime)) / float64(time.Millisecond)
+		elapsedTime := float64(latency) / float64(time.Millisecond)
 
 		c.Record(ctx, elapsedTime, otelmetric.WithAttributes(attributes...))
 	}

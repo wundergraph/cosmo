@@ -37,6 +37,8 @@ type OperationMetrics struct {
 }
 
 func (m *OperationMetrics) Finish(ctx context.Context, err error, statusCode int, responseSize int, exportSynchronous bool, opContext *operationContext, attr []attribute.KeyValue) {
+	latency := time.Since(m.operationStartTime)
+
 	m.inflightMetric()
 
 	rm := m.routerMetrics.MetricStore()
@@ -50,10 +52,7 @@ func (m *OperationMetrics) Finish(ctx context.Context, err error, statusCode int
 	attr = append(attr, semconv.HTTPStatusCode(statusCode))
 	rm.MeasureRequestCount(ctx, attr...)
 	rm.MeasureRequestSize(ctx, m.requestContentLength, attr...)
-	rm.MeasureLatency(ctx,
-		m.operationStartTime,
-		attr...,
-	)
+	rm.MeasureLatency(ctx, latency, attr...)
 	rm.MeasureResponseSize(ctx, int64(responseSize), attr...)
 
 	if m.trackUsageInfo && opContext != nil {

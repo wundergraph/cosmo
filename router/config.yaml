@@ -4,13 +4,3 @@
 # This file is used to debugging purposes only.
 
 version: "1"
-
-telemetry:
-  metrics:
-    attributes:
-      - key: "X-New-Attribute"
-        value_from:
-          request_header: "X-Request-ID"
-      - key: "error_codes"
-        value_from:
-          context_field: graphql_error_codes

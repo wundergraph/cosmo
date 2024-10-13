@@ -19,8 +19,12 @@ import (
 	"go.uber.org/zap"
 )
 
-type requestContextKey = struct{}
-type subgraphResolverContextKey struct{}
+type contextKey int
+
+const (
+	requestContextKey contextKey = iota
+	subgraphResolverContextKey
+)
 
 var _ RequestContext = (*requestContext)(nil)
 
@@ -187,7 +191,7 @@ type requestContext struct {
 	graphQLErrorServices []string
 	// graphQLErrorCodes are the error codes of the GraphQL errors
 	graphQLErrorCodes []string
-	// telemetry are the base telemetry for the request
+	// telemetry are the base telemetry information of the request
 	telemetry *requestTelemetryAttributes
 }
 
@@ -200,14 +204,14 @@ func (c *requestContext) Request() *http.Request {
 }
 
 func withRequestContext(ctx context.Context, operation *requestContext) context.Context {
-	return context.WithValue(ctx, requestContextKey{}, operation)
+	return context.WithValue(ctx, requestContextKey, operation)
 }
 
 func getRequestContext(ctx context.Context) *requestContext {
 	if ctx == nil {
 		return nil
 	}
-	op := ctx.Value(requestContextKey{})
+	op := ctx.Value(requestContextKey)
 	if op == nil {
 		return nil
 	}
@@ -504,11 +508,11 @@ func (s *SubgraphResolver) BySubgraphRequest(subgraphRequest *http.Request) *Sub
 }
 
 func withSubgraphResolver(ctx context.Context, resolver *SubgraphResolver) context.Context {
-	return context.WithValue(ctx, subgraphResolverContextKey{}, resolver)
+	return context.WithValue(ctx, subgraphResolverContextKey, resolver)
 }
 
 func subgraphResolverFromContext(ctx context.Context) *SubgraphResolver {
-	resolver, _ := ctx.Value(subgraphResolverContextKey{}).(*SubgraphResolver)
+	resolver, _ := ctx.Value(subgraphResolverContextKey).(*SubgraphResolver)
 	return resolver
 }
 
