@@ -59,7 +59,8 @@ import {
   unexpectedArgumentErrorMessage,
   unexpectedDirectiveLocationError,
   unknownInlineFragmentTypeConditionErrorMessage,
-  unknownProvidedObjectErrorMessage,
+  unknownNamedTypeErrorMessage,
+  incompatibleTypeWithProvidesErrorMessage,
   unknownTypeInFieldSetErrorMessage,
   unparsableFieldSetErrorMessage,
   unparsableFieldSetSelectionErrorMessage,
@@ -70,7 +71,12 @@ import {
   newFieldSetConditionData,
   RequiredFieldConfiguration,
 } from '../router-configuration/router-configuration';
-import { FieldData, ParentWithFieldsData, UnionDefinitionData } from '../schema-building/type-definition-data';
+import {
+  FieldData,
+  ParentDefinitionData,
+  ParentWithFieldsData,
+  UnionDefinitionData,
+} from '../schema-building/type-definition-data';
 import { getTypeNodeNamedTypeName } from '../schema-building/ast';
 import { FieldSetDirective, getParentTypeName, newConditionalFieldData } from '../schema-building/utils';
 import { nonExternalConditionalFieldWarning } from '../warnings/warnings';
@@ -487,36 +493,46 @@ function validateNonRepeatableFieldSet(
           );
           return BREAK;
         }
-        if (
-          fragmentNamedTypeData.kind !== Kind.INTERFACE_TYPE_DEFINITION &&
-          fragmentNamedTypeData.kind !== Kind.OBJECT_TYPE_DEFINITION &&
-          fragmentNamedTypeData.kind !== Kind.UNION_TYPE_DEFINITION
-        ) {
-          errorMessage = invalidInlineFragmentTypeConditionTypeErrorMessage(
-            fieldSet,
-            fieldCoordinatesPath,
-            parentTypeName,
-            typeConditionName,
-            kindToTypeString(fragmentNamedTypeData.kind),
-          );
-          return BREAK;
-        }
-        const concreteTypeNames = nf.concreteTypeNamesByAbstractTypeName.get(parentTypeName);
-        if (!concreteTypeNames || !concreteTypeNames.has(typeConditionName)) {
-          errorMessage = invalidInlineFragmentTypeConditionErrorMessage(
-            fieldSet,
-            fieldCoordinatesPath,
-            typeConditionName,
-            kindToTypeString(parentData.kind),
-            parentTypeName,
-          );
-          return BREAK;
-        }
         shouldDefineSelectionSet = true;
-        parentDatas.push(fragmentNamedTypeData);
-      },
-      leave() {
-        parentDatas.pop();
+        switch (fragmentNamedTypeData.kind) {
+          case Kind.INTERFACE_TYPE_DEFINITION: {
+            if (!fragmentNamedTypeData.implementedInterfaceTypeNames.has(parentTypeName)) {
+              break;
+            }
+            parentDatas.push(fragmentNamedTypeData);
+            return;
+          }
+          case Kind.OBJECT_TYPE_DEFINITION: {
+            const concreteTypeNames = nf.concreteTypeNamesByAbstractTypeName.get(parentTypeName);
+            if (!concreteTypeNames || !concreteTypeNames.has(typeConditionName)) {
+              break;
+            }
+            parentDatas.push(fragmentNamedTypeData);
+            return;
+          }
+          case Kind.UNION_TYPE_DEFINITION: {
+            parentDatas.push(fragmentNamedTypeData);
+            return;
+          }
+          default: {
+            errorMessage = invalidInlineFragmentTypeConditionTypeErrorMessage(
+              fieldSet,
+              fieldCoordinatesPath,
+              parentTypeName,
+              typeConditionName,
+              kindToTypeString(fragmentNamedTypeData.kind),
+            );
+            return BREAK;
+          }
+        }
+        errorMessage = invalidInlineFragmentTypeConditionErrorMessage(
+          fieldSet,
+          fieldCoordinatesPath,
+          typeConditionName,
+          kindToTypeString(parentData.kind),
+          parentTypeName,
+        );
+        return BREAK;
       },
     },
     SelectionSet: {
@@ -823,9 +839,15 @@ function getFieldSetParent(
   const fieldNamedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
 
   const namedTypeData = factory.parentDefinitionDataByTypeName.get(fieldNamedTypeName);
-  if (!namedTypeData || namedTypeData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
+  // This error should never happen
+  if (!namedTypeData) {
     return {
-      errorString: unknownProvidedObjectErrorMessage(`${parentTypeName}.${fieldName}`, fieldNamedTypeName),
+      errorString: unknownNamedTypeErrorMessage(`${parentTypeName}.${fieldName}`, fieldNamedTypeName),
+    };
+  }
+  if (namedTypeData.kind !== Kind.INTERFACE_TYPE_DEFINITION && namedTypeData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
+    return {
+      errorString: incompatibleTypeWithProvidesErrorMessage(`${parentTypeName}.${fieldName}`, fieldNamedTypeName),
     };
   }
   return { fieldSetParentData: namedTypeData };
