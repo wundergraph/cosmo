@@ -416,9 +416,10 @@ func (t TransportFactory) DefaultHTTPProxyURL() *url.URL {
 
 // SpanNameFormatter formats the span name based on the http request
 func SpanNameFormatter(_ string, r *http.Request) string {
-	opCtx := getOperationContext(r.Context())
-	if opCtx != nil {
-		return GetSpanName(opCtx.Name(), opCtx.Type())
+	requestContext := getRequestContext(r.Context())
+
+	if requestContext != nil && requestContext.operation != nil {
+		return GetSpanName(requestContext.operation.Name(), requestContext.operation.Type())
 	}
 
 	return fmt.Sprintf("%s %s", r.Method, r.URL.Path)

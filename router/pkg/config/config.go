@@ -24,6 +24,22 @@ type Graph struct {
 	SignKey string `yaml:"sign_key,omitempty" env:"GRAPH_CONFIG_SIGN_KEY"`
 }
 
+type CustomStaticAttribute struct {
+	Key   string `yaml:"key"`
+	Value string `yaml:"value"`
+}
+
+type CustomDynamicAttribute struct {
+	RequestHeader string `yaml:"request_header"`
+	ContextField  string `yaml:"context_field"`
+}
+
+type CustomAttribute struct {
+	Key       string                  `yaml:"key"`
+	Default   string                  `yaml:"default"`
+	ValueFrom *CustomDynamicAttribute `yaml:"value_from,omitempty"`
+}
+
 type TracingExporterConfig struct {
 	BatchTimeout  time.Duration `yaml:"batch_timeout,omitempty" envDefault:"10s"`
 	ExportTimeout time.Duration `yaml:"export_timeout,omitempty" envDefault:"30s"`
@@ -43,12 +59,18 @@ type TracingExporter struct {
 	TracingExporterConfig `yaml:",inline"`
 }
 
+type ResponseTraceHeader struct {
+	Enabled    bool   `yaml:"enabled"`
+	HeaderName string `yaml:"header_name" envDefault:"x-wg-trace-id"`
+}
+
 type Tracing struct {
-	Enabled            bool              `yaml:"enabled" envDefault:"true" env:"TRACING_ENABLED"`
-	SamplingRate       float64           `yaml:"sampling_rate" envDefault:"1" env:"TRACING_SAMPLING_RATE"`
-	ParentBasedSampler bool              `yaml:"parent_based_sampler" envDefault:"true" env:"TRACING_PARENT_BASED_SAMPLER"`
-	Exporters          []TracingExporter `yaml:"exporters"`
-	Propagation        PropagationConfig `yaml:"propagation"`
+	Enabled             bool                `yaml:"enabled" envDefault:"true" env:"TRACING_ENABLED"`
+	SamplingRate        float64             `yaml:"sampling_rate" envDefault:"1" env:"TRACING_SAMPLING_RATE"`
+	ParentBasedSampler  bool                `yaml:"parent_based_sampler" envDefault:"true" env:"TRACING_PARENT_BASED_SAMPLER"`
+	Exporters           []TracingExporter   `yaml:"exporters"`
+	Propagation         PropagationConfig   `yaml:"propagation"`
+	ResponseTraceHeader ResponseTraceHeader `yaml:"response_trace_id"`
 
 	TracingGlobalFeatures `yaml:",inline"`
 }
@@ -88,25 +110,10 @@ type MetricsOTLP struct {
 	Exporters     []MetricsOTLPExporter `yaml:"exporters"`
 }
 
-type OtelResourceAttribute struct {
-	Key   string `yaml:"key"`
-	Value string `yaml:"value"`
-}
-
-type OtelAttributeFromValue struct {
-	RequestHeader string `yaml:"request_header"`
-}
-
-type OtelAttribute struct {
-	Key       string                  `yaml:"key"`
-	Default   string                  `yaml:"default"`
-	ValueFrom *OtelAttributeFromValue `yaml:"value_from,omitempty"`
-}
-
 type Telemetry struct {
 	ServiceName        string                  `yaml:"service_name" envDefault:"cosmo-router" env:"TELEMETRY_SERVICE_NAME"`
-	Attributes         []OtelAttribute         `yaml:"attributes"`
-	ResourceAttributes []OtelResourceAttribute `yaml:"resource_attributes"`
+	Attributes         []CustomAttribute       `yaml:"attributes"`
+	ResourceAttributes []CustomStaticAttribute `yaml:"resource_attributes"`
 	Tracing            Tracing                 `yaml:"tracing"`
 	Metrics            Metrics                 `yaml:"metrics"`
 }
@@ -302,6 +309,7 @@ type EngineExecutionConfiguration struct {
 	EnablePersistedOperationsCache         bool                     `envDefault:"true" env:"ENGINE_ENABLE_PERSISTED_OPERATIONS_CACHE" yaml:"enable_persisted_operations_cache"`
 	EnableNormalizationCache               bool                     `envDefault:"true" env:"ENGINE_ENABLE_NORMALIZATION_CACHE" yaml:"enable_normalization_cache"`
 	NormalizationCacheSize                 int64                    `envDefault:"1024" env:"ENGINE_NORMALIZATION_CACHE_SIZE" yaml:"normalization_cache_size,omitempty"`
+	OperationHashCacheSize                 int64                    `envDefault:"2048" env:"ENGINE_OPERATION_HASH_CACHE_SIZE" yaml:"operation_hash_cache_size,omitempty"`
 	ParseKitPoolSize                       int                      `envDefault:"16" env:"ENGINE_PARSEKIT_POOL_SIZE" yaml:"parsekit_pool_size,omitempty"`
 	EnableValidationCache                  bool                     `envDefault:"true" env:"ENGINE_ENABLE_VALIDATION_CACHE" yaml:"enable_validation_cache"`
 	ValidationCacheSize                    int64                    `envDefault:"1024" env:"ENGINE_VALIDATION_CACHE_SIZE" yaml:"validation_cache_size,omitempty"`
@@ -537,6 +545,7 @@ type SubgraphErrorPropagationConfiguration struct {
 	AttachServiceName      bool                         `yaml:"attach_service_name" envDefault:"true" env:"SUBGRAPH_ERROR_PROPAGATION_ATTACH_SERVICE_NAME"`
 	DefaultExtensionCode   string                       `yaml:"default_extension_code" envDefault:"DOWNSTREAM_SERVICE_ERROR" env:"SUBGRAPH_ERROR_PROPAGATION_DEFAULT_EXTENSION_CODE"`
 	AllowedExtensionFields []string                     `yaml:"allowed_extension_fields" envDefault:"code" env:"SUBGRAPH_ERROR_PROPAGATION_ALLOWED_EXTENSION_FIELDS"`
+	AllowedFields          []string                     `yaml:"allowed_fields" env:"SUBGRAPH_ERROR_PROPAGATION_ALLOWED_FIELDS"`
 }
 
 type StorageProviders struct {
@@ -569,8 +578,14 @@ type PersistedOperationsCDNProvider struct {
 }
 
 type ExecutionConfigStorage struct {
-	ProviderID string `yaml:"provider_id,omitempty" env:"EXECUTION_CONFIG_STORAGE_PROVIDER_ID"`
-	ObjectPath string `yaml:"object_path,omitempty" env:"EXECUTION_CONFIG_STORAGE_OBJECT_PATH"`
+	ProviderID string `yaml:"provider_id,omitempty" env:"PROVIDER_ID"`
+	ObjectPath string `yaml:"object_path,omitempty" env:"OBJECT_PATH"`
+}
+
+type FallbackExecutionConfigStorage struct {
+	Enabled    bool   `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	ProviderID string `yaml:"provider_id,omitempty" env:"PROVIDER_ID"`
+	ObjectPath string `yaml:"object_path,omitempty" env:"OBJECT_PATH"`
 }
 
 type ExecutionConfigFile struct {
@@ -579,8 +594,9 @@ type ExecutionConfigFile struct {
 }
 
 type ExecutionConfig struct {
-	File    ExecutionConfigFile    `yaml:"file,omitempty"`
-	Storage ExecutionConfigStorage `yaml:"storage,omitempty"`
+	File            ExecutionConfigFile            `yaml:"file,omitempty"`
+	Storage         ExecutionConfigStorage         `yaml:"storage,omitempty" envPrefix:"EXECUTION_CONFIG_STORAGE_"`
+	FallbackStorage FallbackExecutionConfigStorage `yaml:"fallback_storage,omitempty" envPrefix:"EXECUTION_CONFIG_FALLBACK_STORAGE_"`
 }
 
 type PersistedOperationsCacheConfig struct {
@@ -592,13 +608,57 @@ type PersistedOperationsConfig struct {
 	Storage PersistedOperationsStorageConfig `yaml:"storage"`
 }
 
+type AccessLogsConfig struct {
+	Enabled bool                   `yaml:"enabled" env:"ACCESS_LOGS_ENABLED" envDefault:"true"`
+	Buffer  AccessLogsBufferConfig `yaml:"buffer,omitempty" env:"ACCESS_LOGS_BUFFER"`
+	Output  AccessLogsOutputConfig `yaml:"output,omitempty" env:"ACCESS_LOGS_OUTPUT"`
+	Fields  []CustomAttribute      `yaml:"fields,omitempty" env:"ACCESS_LOGS_FIELDS"`
+}
+
+type AccessLogsBufferConfig struct {
+	Enabled bool `yaml:"enabled" env:"ACCESS_LOGS_BUFFER_ENABLED" envDefault:"false"`
+	// Size is the maximum number of log entries to buffer before flushing
+	Size BytesString `yaml:"size" envDefault:"256KB" env:"ACCESS_LOGS_BUFFER_SIZE"`
+	// FlushInterval is the maximum time to wait before flushing the buffer
+	FlushInterval time.Duration `yaml:"flush_interval" envDefault:"10s" env:"ACCESS_LOGS_FLUSH_INTERVAL"`
+}
+
+type AccessLogsOutputConfig struct {
+	Stdout AccessLogsStdOutOutputConfig `yaml:"stdout" env:"ACCESS_LOGS_OUTPUT_STDOUT"`
+	File   AccessLogsFileOutputConfig   `yaml:"file,omitempty" env:"ACCESS_LOGS_FILE_OUTPUT"`
+}
+
+type AccessLogsStdOutOutputConfig struct {
+	Enabled bool `yaml:"enabled" envDefault:"true" env:"ACCESS_LOGS_OUTPUT_STDOUT_ENABLED"`
+}
+
+type AccessLogsFileOutputConfig struct {
+	Enabled bool   `yaml:"enabled" env:"ACCESS_LOGS_OUTPUT_FILE_ENABLED" envDefault:"false"`
+	Path    string `yaml:"path" env:"ACCESS_LOGS_FILE_OUTPUT_PATH" envDefault:"access.log"`
+}
+
 type ApolloCompatibilityFlags struct {
-	EnableAll       bool                               `yaml:"enable_all" envDefault:"false" env:"APOLLO_COMPATIBILITY_ENABLE_ALL"`
-	ValueCompletion ApolloCompatibilityValueCompletion `yaml:"value_completion"`
+	EnableAll           bool                                   `yaml:"enable_all" envDefault:"false" env:"APOLLO_COMPATIBILITY_ENABLE_ALL"`
+	ValueCompletion     ApolloCompatibilityValueCompletion     `yaml:"value_completion"`
+	TruncateFloats      ApolloCompatibilityTruncateFloats      `yaml:"truncate_floats"`
+	SuppressFetchErrors ApolloCompatibilitySuppressFetchErrors `yaml:"suppress_fetch_errors"`
 }
 
 type ApolloCompatibilityValueCompletion struct {
 	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_VALUE_COMPLETION_ENABLED"`
+}
+
+type ClientHeader struct {
+	Name    string `yaml:"name,omitempty"`
+	Version string `yaml:"version,omitempty"`
+}
+
+type ApolloCompatibilityTruncateFloats struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_TRUNCATE_FLOATS_ENABLED"`
+}
+
+type ApolloCompatibilitySuppressFetchErrors struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_SUPPRESS_FETCH_ERRORS_ENABLED"`
 }
 
 type Config struct {
@@ -618,6 +678,7 @@ type Config struct {
 	Headers        HeaderRules            `yaml:"headers,omitempty"`
 	TrafficShaping TrafficShapingRules    `yaml:"traffic_shaping,omitempty"`
 	FileUpload     FileUpload             `yaml:"file_upload,omitempty"`
+	AccessLogs     AccessLogsConfig       `yaml:"access_logs,omitempty"`
 
 	ListenAddr                    string                      `yaml:"listen_addr" envDefault:"localhost:3002" env:"LISTEN_ADDR"`
 	ControlplaneURL               string                      `yaml:"controlplane_url" envDefault:"https://cosmo-cp.wundergraph.com" env:"CONTROLPLANE_URL"`
@@ -661,6 +722,7 @@ type Config struct {
 	ExecutionConfig           ExecutionConfig           `yaml:"execution_config"`
 	PersistedOperationsConfig PersistedOperationsConfig `yaml:"persisted_operations"`
 	ApolloCompatibilityFlags  ApolloCompatibilityFlags  `yaml:"apollo_compatibility_flags"`
+	ClientHeader              ClientHeader              `yaml:"client_header"`
 }
 
 type LoadResult struct {
@@ -741,6 +803,7 @@ func LoadConfig(configFilePath string, envOverride string) (*LoadResult, error) 
 		cfg.Config.JSONLog = false
 		cfg.Config.SubgraphErrorPropagation.Enabled = true
 		cfg.Config.SubgraphErrorPropagation.PropagateStatusCodes = true
+		cfg.Config.SubgraphErrorPropagation.OmitLocations = false
 		cfg.Config.SubgraphErrorPropagation.AllowedExtensionFields = unique.SliceElements(append(cfg.Config.SubgraphErrorPropagation.AllowedExtensionFields, "code", "stacktrace"))
 	}
 

@@ -496,17 +496,17 @@ func TestPrometheus(t *testing.T) {
 			TraceExporter:      exporter,
 			MetricReader:       metricReader,
 			PrometheusRegistry: promRegistry,
-			OtelResourceAttributes: []config.OtelResourceAttribute{
+			OtelResourceAttributes: []config.CustomStaticAttribute{
 				{
 					Key:   "custom.resource",
 					Value: "value",
 				},
 			},
-			OtelAttributes: []config.OtelAttribute{
+			OtelAttributes: []config.CustomAttribute{
 				{
 					Key:     "custom",
 					Default: "value_different",
-					ValueFrom: &config.OtelAttributeFromValue{
+					ValueFrom: &config.CustomDynamicAttribute{
 						RequestHeader: "x-custom-header",
 					},
 				},
@@ -1020,13 +1020,13 @@ func TestPrometheus(t *testing.T) {
 			TraceExporter:      exporter,
 			MetricReader:       metricReader,
 			PrometheusRegistry: promRegistry,
-			OtelResourceAttributes: []config.OtelResourceAttribute{
+			OtelResourceAttributes: []config.CustomStaticAttribute{
 				{
 					Key:   "custom.resource",
 					Value: "value",
 				},
 			},
-			OtelAttributes: []config.OtelAttribute{
+			OtelAttributes: []config.CustomAttribute{
 				{
 					Key:     "custom",
 					Default: "value",

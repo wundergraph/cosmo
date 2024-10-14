@@ -3,8 +3,9 @@ package core
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"fmt"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/middleware/operation_complexity"
+	"hash"
 	"io"
 	"net/http"
 	"net/url"
@@ -24,6 +25,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/middleware/operation_complexity"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/variablesvalidation"
 	"go.opentelemetry.io/otel/attribute"
@@ -42,6 +44,8 @@ type ParsedOperation struct {
 	// ID represents a unique-ish ID for the operation calculated by hashing
 	// its normalized representation and its variables
 	ID uint64
+	// Sha256Hash is the sha256 hash of the original operation query sent by the client
+	Sha256Hash string
 	// Type is a string representing the operation type. One of
 	// "query", "mutation", "subscription"
 	Type      string
@@ -87,7 +91,9 @@ type OperationProcessorOptions struct {
 	NormalizationCache             *ristretto.Cache[uint64, NormalizationCacheEntry]
 	ValidationCache                *ristretto.Cache[uint64, bool]
 	QueryDepthCache                *ristretto.Cache[uint64, int]
+	OperationHashCache             *ristretto.Cache[uint64, string]
 	ParseKitPoolSize               int
+	IntrospectionEnabled           bool
 }
 
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
@@ -99,6 +105,7 @@ type OperationProcessor struct {
 	operationCache           *OperationCache
 	parseKits                map[int]*parseKit
 	parseKitSemaphore        chan int
+	introspectionEnabled     bool
 }
 
 // parseKit is a helper struct to parse, normalize and validate operations
@@ -107,6 +114,7 @@ type parseKit struct {
 	parser              *astparser.Parser
 	doc                 *ast.Document
 	keyGen              *xxhash.Digest
+	sha256Hash          hash.Hash
 	staticNormalizer    *astnormalization.OperationNormalizer
 	variablesNormalizer *astnormalization.VariablesNormalizer
 	printer             *astprinter.Printer
@@ -125,6 +133,7 @@ type OperationCache struct {
 	normalizationCache *ristretto.Cache[uint64, NormalizationCacheEntry]
 	validationCache    *ristretto.Cache[uint64, bool]
 	queryDepthCache    *ristretto.Cache[uint64, int]
+	operationHashCache *ristretto.Cache[uint64, string]
 }
 
 // OperationKit provides methods to parse, normalize and validate operations.
@@ -137,6 +146,7 @@ type OperationKit struct {
 	operationProcessor       *OperationProcessor
 	kit                      *parseKit
 	parsedOperation          *ParsedOperation
+	introspectionEnabled     bool
 }
 
 type GraphQLRequest struct {
@@ -164,6 +174,7 @@ func NewOperationKit(processor *OperationProcessor) *OperationKit {
 		operationDefinitionRef: -1,
 		cache:                  processor.operationCache,
 		parsedOperation:        &ParsedOperation{},
+		introspectionEnabled:   processor.introspectionEnabled,
 	}
 }
 
@@ -305,6 +316,34 @@ func (o *OperationKit) unmarshalOperation() error {
 	return nil
 }
 
+func (o *OperationKit) ComputeOperationSha256() error {
+	// Calculate a fast hash of the operation query to save the
+	// expensive compute on the same request. We can't use the operation id at this point
+	// because the id is generated after normalization. We want to have the hash as soon as possible for
+	// observability reasons
+	_, _ = o.kit.keyGen.WriteString(o.parsedOperation.Request.Query)
+	id := o.kit.keyGen.Sum64()
+	o.kit.keyGen.Reset()
+
+	if v, ok := o.cache.operationHashCache.Get(id); ok {
+		o.parsedOperation.Sha256Hash = v
+		return nil
+	}
+
+	_, err := o.kit.sha256Hash.Write(unsafebytes.StringToBytes(o.parsedOperation.Request.Query))
+	defer o.kit.sha256Hash.Reset()
+	if err != nil {
+		return err
+	}
+
+	// we're using the hex representation of the sha256 hash
+	sha256Hash := fmt.Sprintf("%x", o.kit.sha256Hash.Sum(nil))
+	o.cache.operationHashCache.Set(id, sha256Hash, 1)
+	o.parsedOperation.Sha256Hash = sha256Hash
+
+	return nil
+}
+
 // FetchPersistedOperation fetches the persisted operation from the cache or the client. If the operation is fetched from the cache it returns true.
 // UnmarshalOperationFromBody or UnmarshalOperationFromURL must be called before calling this method.
 func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *ClientInfo, commonTraceAttributes []attribute.KeyValue) (bool, error) {
@@ -335,6 +374,70 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 	return false, nil
 }
 
+const (
+	schemaIntrospectionFieldName = "__schema"
+	typeIntrospectionFieldName   = "__type"
+)
+
+func (o *OperationKit) isIntrospectionQuery() (result bool, err error) {
+	var operationDefinitionRef = ast.InvalidRef
+	var possibleOperationDefinitionRefs = make([]int, 0)
+
+	for i := 0; i < len(o.kit.doc.RootNodes); i++ {
+		if o.kit.doc.RootNodes[i].Kind == ast.NodeKindOperationDefinition {
+			possibleOperationDefinitionRefs = append(possibleOperationDefinitionRefs, o.kit.doc.RootNodes[i].Ref)
+		}
+	}
+
+	if len(possibleOperationDefinitionRefs) == 0 {
+		return
+	} else if len(possibleOperationDefinitionRefs) == 1 {
+		operationDefinitionRef = possibleOperationDefinitionRefs[0]
+	} else {
+		for i := 0; i < len(possibleOperationDefinitionRefs); i++ {
+			ref := possibleOperationDefinitionRefs[i]
+			name := o.kit.doc.OperationDefinitionNameString(ref)
+
+			if o.parsedOperation.Request.OperationName == name {
+				operationDefinitionRef = ref
+				break
+			}
+		}
+	}
+
+	if operationDefinitionRef == ast.InvalidRef {
+		return
+	}
+
+	operationDef := o.kit.doc.OperationDefinitions[operationDefinitionRef]
+	if operationDef.OperationType != ast.OperationTypeQuery {
+		return
+	}
+	if !operationDef.HasSelections {
+		return
+	}
+
+	selectionSet := o.kit.doc.SelectionSets[operationDef.SelectionSet]
+	if len(selectionSet.SelectionRefs) == 0 {
+		return
+	}
+
+	for i := 0; i < len(selectionSet.SelectionRefs); i++ {
+		selection := o.kit.doc.Selections[selectionSet.SelectionRefs[i]]
+		if selection.Kind != ast.SelectionKindField {
+			continue
+		}
+
+		fieldName := o.kit.doc.FieldNameUnsafeString(selection.Ref)
+		switch fieldName {
+		case schemaIntrospectionFieldName, typeIntrospectionFieldName:
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
 // Parse parses the operation, populate the document and set the operation type.
 // UnmarshalOperationFromBody must be called before calling this method.
 func (o *OperationKit) Parse() error {
@@ -357,6 +460,24 @@ func (o *OperationKit) Parse() error {
 	if report.HasErrors() {
 		return &reportError{
 			report: report,
+		}
+	}
+
+	if !o.introspectionEnabled {
+		isIntrospection, err := o.isIntrospectionQuery()
+
+		if err != nil {
+			return &httpGraphqlError{
+				message:    "could not determine if operation was an introspection query",
+				statusCode: http.StatusOK,
+			}
+		}
+
+		if isIntrospection {
+			return &httpGraphqlError{
+				message:    "GraphQL introspection is disabled by Cosmo Router, but the query contained __schema or __type. To enable introspection, set introspection_enabled: true in the Router configuration",
+				statusCode: http.StatusOK,
+			}
 		}
 	}
 
@@ -810,10 +931,11 @@ func (o *OperationKit) skipIncludeVariableNames() []string {
 
 func createParseKit(i int) *parseKit {
 	return &parseKit{
-		i:      i,
-		parser: astparser.NewParser(),
-		doc:    ast.NewSmallDocument(),
-		keyGen: xxhash.New(),
+		i:          i,
+		parser:     astparser.NewParser(),
+		doc:        ast.NewSmallDocument(),
+		keyGen:     xxhash.New(),
+		sha256Hash: sha256.New(),
 		staticNormalizer: astnormalization.NewWithOpts(
 			astnormalization.WithInlineFragmentSpreads(),
 			astnormalization.WithRemoveFragmentDefinitions(),
@@ -838,6 +960,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		persistedOperationClient: opts.PersistedOperationClient,
 		parseKits:                make(map[int]*parseKit, opts.ParseKitPoolSize),
 		parseKitSemaphore:        make(chan int, opts.ParseKitPoolSize),
+		introspectionEnabled:     opts.IntrospectionEnabled,
 	}
 	for i := 0; i < opts.ParseKitPoolSize; i++ {
 		processor.parseKitSemaphore <- i
@@ -869,6 +992,12 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		}
 		processor.operationCache.queryDepthCache = opts.QueryDepthCache
 	}
+	if opts.OperationHashCache != nil {
+		if processor.operationCache == nil {
+			processor.operationCache = &OperationCache{}
+		}
+		processor.operationCache.operationHashCache = opts.OperationHashCache
+	}
 	return processor
 }
 
@@ -880,6 +1009,7 @@ func (p *OperationProcessor) getKit() *parseKit {
 func (p *OperationProcessor) freeKit(kit *parseKit) {
 	kit.keyGen.Reset()
 	kit.doc.Reset()
+	kit.sha256Hash.Reset()
 	kit.normalizedOperation.Reset()
 	// because we're re-using the kit, and we're having a static number of kits based on the number of CPUs
 	// we're resetting the doc, parser, and buffer for the normalized operation if they grow too large (>1MB of query size)

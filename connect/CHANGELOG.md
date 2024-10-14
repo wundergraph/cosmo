@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.85.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.84.0...@wundergraph/cosmo-connect@0.85.0) (2024-10-09)
+
+### Features
+
+* add custom context to subgraph checks ([#1252](https://github.com/wundergraph/cosmo/issues/1252)) ([c510628](https://github.com/wundergraph/cosmo/commit/c510628bc8ca80a88b681d87051940361605ff5b)) (@JivusAyrus)
+
 # [0.84.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.83.1...@wundergraph/cosmo-connect@0.84.0) (2024-09-27)
 
 ### Features

@@ -21,6 +21,10 @@
         "Baggage": false,
         "Datadog": false
       },
+      "ResponseTraceHeader": {
+        "Enabled": false,
+        "HeaderName": "x-wg-trace-id"
+      },
       "ExportGraphQLVariables": false,
       "WithNewRoot": false
     },
@@ -116,6 +120,24 @@
     "Enabled": true,
     "MaxFileSizeBytes": 50000000,
     "MaxFiles": 10
+  },
+  "AccessLogs": {
+    "Enabled": true,
+    "Buffer": {
+      "Enabled": false,
+      "Size": 256000,
+      "FlushInterval": 10000000000
+    },
+    "Output": {
+      "Stdout": {
+        "Enabled": true
+      },
+      "File": {
+        "Enabled": false,
+        "Path": "access.log"
+      }
+    },
+    "Fields": null
   },
   "ListenAddr": "localhost:3002",
   "ControlplaneURL": "https://cosmo-cp.wundergraph.com",
@@ -217,6 +239,7 @@
     "EnablePersistedOperationsCache": true,
     "EnableNormalizationCache": true,
     "NormalizationCacheSize": 1024,
+    "OperationHashCacheSize": 2048,
     "ParseKitPoolSize": 16,
     "EnableValidationCache": true,
     "ValidationCacheSize": 1024,
@@ -263,7 +286,8 @@
     "DefaultExtensionCode": "DOWNSTREAM_SERVICE_ERROR",
     "AllowedExtensionFields": [
       "code"
-    ]
+    ],
+    "AllowedFields": null
   },
   "StorageProviders": {
     "S3": null,
@@ -275,6 +299,11 @@
       "Watch": false
     },
     "Storage": {
+      "ProviderID": "",
+      "ObjectPath": ""
+    },
+    "FallbackStorage": {
+      "Enabled": false,
       "ProviderID": "",
       "ObjectPath": ""
     }
@@ -292,6 +321,16 @@
     "EnableAll": false,
     "ValueCompletion": {
       "Enabled": false
+    },
+    "TruncateFloats": {
+      "Enabled": false
+    },
+    "SuppressFetchErrors": {
+      "Enabled": false
     }
+  },
+  "ClientHeader": {
+    "Name": "",
+    "Version": ""
   }
 }

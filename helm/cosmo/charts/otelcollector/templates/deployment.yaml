@@ -86,7 +86,7 @@ spec:
           {{- if .Values.existingConfigmap }}
           volumeMounts:
             - mountPath: /etc/otel-config.yaml
-              name: {{ .Values.existingConfigmap }}
+              name: otelcollector-config-volume
               subPath: otel-config.yaml
               readOnly: true
           {{ end }}

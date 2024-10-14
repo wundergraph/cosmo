@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/unique"
 	"slices"
 	"strings"
 
@@ -20,6 +21,8 @@ import (
 var (
 	_ resolve.LoaderHooks = (*EngineLoaderHooks)(nil)
 )
+
+type MultiError = interface{ Unwrap() []error }
 
 const EngineLoaderHooksScopeName = "wundergraph/cosmo/router/engine/loader"
 const EngineLoaderHooksScopeVersion = "0.0.1"
@@ -113,41 +116,40 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 
 		var errorCodesAttr []string
 
-		var subgraphError *resolve.SubgraphError
-
-		if errors.As(err, &subgraphError) {
-
-			// Extract downstream errors
-			if len(subgraphError.DownstreamErrors) > 0 {
-				for i, downstreamError := range subgraphError.DownstreamErrors {
-					var errorCode string
-					if downstreamError.Extensions != nil {
-						if ok := downstreamError.Extensions["code"]; ok != nil {
-							if code, ok := downstreamError.Extensions["code"].(string); ok {
-								errorCode = code
+		if unwrapped, ok := err.(MultiError); ok {
+			errs := unwrapped.Unwrap()
+			for _, e := range errs {
+				var subgraphError *resolve.SubgraphError
+				if errors.As(e, &subgraphError) {
+					for i, downstreamError := range subgraphError.DownstreamErrors {
+						var errorCode string
+						if downstreamError.Extensions != nil {
+							if ok := downstreamError.Extensions["code"]; ok != nil {
+								if code, ok := downstreamError.Extensions["code"].(string); ok {
+									errorCode = code
+								}
 							}
 						}
 
-					}
-
-					if errorCode != "" {
-						errorCodesAttr = append(errorCodesAttr, errorCode)
-						span.AddEvent(fmt.Sprintf("Downstream error %d", i+1),
-							trace.WithAttributes(
-								rotel.WgSubgraphErrorExtendedCode.String(errorCode),
-								rotel.WgSubgraphErrorMessage.String(downstreamError.Message),
-							),
-						)
+						if errorCode != "" {
+							errorCodesAttr = append(errorCodesAttr, errorCode)
+							span.AddEvent(fmt.Sprintf("Downstream error %d", i+1),
+								trace.WithAttributes(
+									rotel.WgSubgraphErrorExtendedCode.String(errorCode),
+									rotel.WgSubgraphErrorMessage.String(downstreamError.Message),
+								),
+							)
+						}
 					}
 				}
 			}
 		}
 
+		errorCodesAttr = unique.SliceElements(errorCodesAttr)
 		// Reduce cardinality of error codes
 		slices.Sort(errorCodesAttr)
 
 		if len(errorCodesAttr) > 0 {
-
 			// Create individual metrics for each error code
 			for _, code := range errorCodesAttr {
 				f.metricStore.MeasureRequestError(ctx,

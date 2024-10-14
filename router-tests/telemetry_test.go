@@ -729,17 +729,17 @@ func TestTelemetry(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			TraceExporter: exporter,
 			MetricReader:  metricReader,
-			OtelResourceAttributes: []config.OtelResourceAttribute{
+			OtelResourceAttributes: []config.CustomStaticAttribute{
 				{
 					Key:   "custom.resource",
 					Value: "value",
 				},
 			},
-			OtelAttributes: []config.OtelAttribute{
+			OtelAttributes: []config.CustomAttribute{
 				{
 					Key:     "custom",
 					Default: "value",
-					ValueFrom: &config.OtelAttributeFromValue{
+					ValueFrom: &config.CustomDynamicAttribute{
 						RequestHeader: "x-custom-header",
 					},
 				},
@@ -1101,13 +1101,13 @@ func TestTelemetry(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			TraceExporter: exporter,
 			MetricReader:  metricReader,
-			OtelResourceAttributes: []config.OtelResourceAttribute{
+			OtelResourceAttributes: []config.CustomStaticAttribute{
 				{
 					Key:   "custom.resource",
 					Value: "value",
 				},
 			},
-			OtelAttributes: []config.OtelAttribute{
+			OtelAttributes: []config.CustomAttribute{
 				{
 					Key:     "custom",
 					Default: "value",
@@ -2398,6 +2398,93 @@ func TestTelemetry(t *testing.T) {
 				})
 				require.JSONEq(t, employeesIDData, res.Body)
 			})
+		})
+	})
+
+	t.Run("Trace ID Response header", func(t *testing.T) {
+		t.Parallel()
+
+		exporter := tracetest.NewInMemoryExporter(t)
+		customTraceHeader := "trace-id"
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+			ResponseTraceHeader: config.ResponseTraceHeader{
+				Enabled:    true,
+				HeaderName: customTraceHeader,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			sn := exporter.GetSpans().Snapshots()
+			require.Equal(t, sn[0].SpanContext().TraceID().String(), res.Response.Header.Get("trace-id"))
+		})
+	})
+
+	t.Run("Trace ID Response header with default header name", func(t *testing.T) {
+		t.Parallel()
+
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+			ResponseTraceHeader: config.ResponseTraceHeader{
+				Enabled:    true,
+				HeaderName: "x-wg-trace-id",
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			sn := exporter.GetSpans().Snapshots()
+			require.Equal(t, sn[0].SpanContext().TraceID().String(), res.Response.Header.Get("x-wg-trace-id"))
+		})
+	})
+
+	t.Run("Custom client name and client version headers", func(t *testing.T) {
+		t.Parallel()
+
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		customClientHeaderName := "client-name"
+		customClientHeaderVersion := "client-version"
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+			ClientHeader: config.ClientHeader{
+				Name:    customClientHeaderName,
+				Version: customClientHeaderVersion,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := make(http.Header)
+			header.Add("client-name", "name")
+			header.Add("client-version", "version")
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:  `query { employees { id } }`,
+				Header: header,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			sn := exporter.GetSpans().Snapshots()
+
+			var clientName, clientVersion string
+			for _, v := range sn[0].Attributes() {
+				if v.Key == "wg.client.name" {
+					clientName = v.Value.AsString()
+				}
+				if v.Key == "wg.client.version" {
+					clientVersion = v.Value.AsString()
+				}
+			}
+			require.Equal(t, "name", clientName)
+			require.Equal(t, "version", clientVersion)
 		})
 	})
 }

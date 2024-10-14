@@ -3,11 +3,10 @@ package requestlogger
 import (
 	"crypto/sha256"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/errors"
 	"go.opentelemetry.io/otel/trace"
 	"net"
 	"net/http"
-	"os"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
@@ -16,7 +15,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type Fn func(r *http.Request) []zapcore.Field
+type ContextFunc func(r *http.Request) []zapcore.Field
 
 // Option provides a functional approach to define
 // configuration for a handler; such as setting the logging
@@ -43,10 +42,10 @@ type handler struct {
 	skipPaths             []string
 	ipAnonymizationConfig *IPAnonymizationConfig
 	traceID               bool // optionally log Open Telemetry TraceID
-	context               Fn
+	context               ContextFunc
 	handler               http.Handler
 	logger                *zap.Logger
-	fields                []zapcore.Field
+	baseFields            []zapcore.Field
 }
 
 func parseOptions(r *handler, opts ...Option) http.Handler {
@@ -63,7 +62,7 @@ func WithAnonymization(ipConfig *IPAnonymizationConfig) Option {
 	}
 }
 
-func WithRequestFields(fn Fn) Option {
+func WithRequestFields(fn ContextFunc) Option {
 	return func(r *handler) {
 		r.context = fn
 	}
@@ -78,7 +77,7 @@ func WithNoTimeField() Option {
 
 func WithFields(fields ...zapcore.Field) Option {
 	return func(r *handler) {
-		r.fields = fields
+		r.baseFields = fields
 	}
 }
 
@@ -94,7 +93,10 @@ func WithDefaultOptions() Option {
 
 func New(logger *zap.Logger, opts ...Option) func(h http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
-		r := &handler{handler: h, logger: logger}
+		r := &handler{
+			handler: h,
+			logger:  logger.With(zap.String("log_type", "request")),
+		}
 		return parseOptions(r, opts...)
 	}
 }
@@ -126,12 +128,8 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		zap.String("user_agent", r.UserAgent()),
 	}
 
-	if len(h.fields) > 0 {
-		fields = append(fields, h.fields...)
-	}
-
-	if h.context != nil {
-		fields = append(fields, h.context(r)...)
+	if len(h.baseFields) > 0 {
+		fields = append(fields, h.baseFields...)
 	}
 
 	if h.utc {
@@ -160,25 +158,20 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			// condition that warrants a panic stack trace.
 			var brokenPipe bool
 			if ne, ok := err.(*net.OpError); ok {
-				if se, ok := ne.Err.(*os.SyscallError); ok {
-					if strings.Contains(strings.ToLower(se.Error()), "broken pipe") || strings.Contains(strings.ToLower(se.Error()), "connection reset by peer") {
-						brokenPipe = true
-					}
-				}
+				brokenPipe = errors.IsBrokenPipe(ne.Err)
 			}
 
 			fields = append(fields,
 				// Internal Server Error. Although the status code is not set, it will be in the recover middleware
 				zap.Int("status", 500),
 				zap.Duration("latency", latency),
+				zap.Any("error", err),
 			)
 
-			if e, ok := err.(error); ok {
-				fields = append(fields, zap.Error(e))
-			} else {
-				fields = append(fields,
-					zap.Any("error", err),
-				)
+			// This is only called on panic so it is safe to call it here again
+			// to gather all the fields that are needed for logging
+			if h.context != nil {
+				fields = append(fields, h.context(r)...)
 			}
 
 			if brokenPipe {
@@ -203,6 +196,10 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	resFields := []zapcore.Field{
 		zap.Duration("latency", latency),
 		zap.Int("status", ww.Status()),
+	}
+
+	if h.context != nil {
+		resFields = append(resFields, h.context(r)...)
 	}
 
 	h.logger.Info(path, append(fields, resFields...)...)
