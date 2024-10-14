@@ -54,6 +54,7 @@
         },
         "s3": {
           "type": "array",
+          "description": "The configuration for the S3 storage provider. If no access key and secret key are provided, the provider will attempt to retreieve IAM credentials from the EC2 service.",
           "items": {
             "type": "object",
             "required": ["bucket", "id"],
@@ -1893,6 +1894,17 @@
         "truncate_floats": {
           "type": "object",
           "description": "Truncate floats like 1.0 to 1, 2.0 to 2, etc.. Values like 1.1 or 2.2 will not be truncated.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "suppress_fetch_errors": {
+          "type": "object",
+          "description": "Suppresses fetch errors. When enabled, only the ‘data’ object is returned, suppressing errors. If disabled, fetch errors are included in the ‘errors’ array.",
           "additionalProperties": false,
           "properties": {
             "enabled": {

@@ -274,4 +274,89 @@ func TestApolloCompatibility(t *testing.T) {
 			require.Equal(t, `{"data":null,"extensions":{"valueCompletion":[{"message":"Cannot return null for non-nullable field 'Products.upc'.","path":["products",0,"upc"],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
 		})
 	})
+	t.Run("simple fetch with suppress fetch errors enabled", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
+					ValueCompletion: config.ApolloCompatibilityValueCompletion{
+						Enabled: true,
+					},
+					SuppressFetchErrors: config.ApolloCompatibilitySuppressFetchErrors{
+						Enabled: true,
+					},
+				}),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalMiddleware: func(handler http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						w.Header().Set("Content-Type", "application/json")
+						w.WriteHeader(http.StatusOK)
+						_, _ = w.Write([]byte(`{}`))
+					})
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `query {products{... on Consultancy{upc}}}`,
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, `{"data":null,"extensions":{"valueCompletion":[{"message":"Cannot return null for non-nullable field 'Query.products'.","path":["products"],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
+		})
+	})
+	t.Run("simple fetch with suppress fetch errors disabled", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
+					ValueCompletion: config.ApolloCompatibilityValueCompletion{
+						Enabled: true,
+					},
+					SuppressFetchErrors: config.ApolloCompatibilitySuppressFetchErrors{
+						Enabled: false,
+					},
+				}),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalMiddleware: func(handler http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						w.Header().Set("Content-Type", "application/json")
+						w.WriteHeader(http.StatusOK)
+						_, _ = w.Write([]byte(`{}`))
+					})
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `query {products{... on Consultancy{upc}}}`,
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees', Reason: no data or errors in response.","extensions":{"statusCode":200}}],"data":null}`, res.Body)
+		})
+	})
+	t.Run("should suppress errors when enable all is true", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
+					EnableAll: true,
+				}),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalMiddleware: func(handler http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						w.Header().Set("Content-Type", "application/json")
+						w.WriteHeader(http.StatusOK)
+						_, _ = w.Write([]byte(`{}`))
+					})
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `query {products{... on Consultancy{upc}}}`,
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, `{"data":null,"extensions":{"valueCompletion":[{"message":"Cannot return null for non-nullable field 'Query.products'.","path":["products"],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
+		})
+	})
 }
