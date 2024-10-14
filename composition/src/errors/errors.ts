@@ -145,7 +145,7 @@ export function duplicateEnumValueDefinitionError(enumTypeName: string, valueNam
 }
 
 export function duplicateFieldDefinitionError(typeString: string, typeName: string, fieldName: string): Error {
-  return new Error(`The ${typeString} "${typeName}" must only define Field definition "${fieldName}" once.`);
+  return new Error(`The ${typeString} "${typeName}" must only define the Field definition "${fieldName}" once.`);
 }
 
 export function duplicateInputFieldDefinitionError(inputObjectTypeName: string, fieldName: string): Error {
@@ -172,20 +172,22 @@ export function duplicateOperationTypeDefinitionError(
   oldTypeName: string,
 ): Error {
   return new Error(
-    `The operation type "${operationTypeName}" cannot be defined as "${newTypeName}" because it has already been defined as "${oldTypeName}".`,
+    `The operation type "${operationTypeName}" cannot be defined as "${newTypeName}"` +
+      ` because it has already been defined as "${oldTypeName}".`,
   );
 }
 
 export function noBaseDefinitionForExtensionError(typeString: string, typeName: string): Error {
   return new Error(
     `The ${typeString} "${typeName}" is an extension,` +
-      ` but there is no base ${typeString} definition of "${typeName}" in any subgraph.`,
+      ` but no base ${typeString} definition of "${typeName}" is defined in any subgraph.`,
   );
 }
 
 export function noBaseScalarDefinitionError(typeName: string): Error {
   return new Error(
-    `The scalar extension "${typeName}" is invalid because no base definition is defined in the subgraph.`,
+    `The Scalar extension "${typeName}" is invalid because no base Scalar definition` +
+      ` of "${typeName} is defined in the subgraph.`,
   );
 }
 
@@ -769,10 +771,10 @@ export function invalidConfigurationDataErrorMessage(typeName: string, fieldName
   );
 }
 
-export function unknownProvidedObjectErrorMessage(fieldPath: string, responseType: string): string {
+export function incompatibleTypeWithProvidesErrorMessage(fieldCoordinates: string, responseType: string): string {
   return (
-    ` A @provides directive is declared on "${fieldPath}".\n` +
-    ` However, the response type "${responseType}" object or object extension definition was not found.`
+    ` A "@provides" directive is declared on Field "${fieldCoordinates}".\n` +
+    ` However, the response type "${responseType}" is not an Object not Interface.`
   );
 }
 
@@ -1566,10 +1568,63 @@ export function nonExternalConditionalFieldError(
   fieldSetDirective: FieldSetDirective,
 ): Error {
   return new Error(
-    `The field "${originCoords}" in subgraph "${subgraphName}" defines a "@${fieldSetDirective}" directive with the following` +
-      ` field set:\n "${fieldSet}".` +
+    `The Field "${originCoords}" in subgraph "${subgraphName}" defines a "@${fieldSetDirective}" directive` +
+      ` with the following field set:\n "${fieldSet}".` +
       `\nHowever, neither the field "${targetCoords}" nor any of its field set ancestors are declared @external.` +
       `\nConsequently, "${targetCoords}" is already provided by subgraph "${subgraphName}" and should not form part of` +
       ` a "@${fieldSetDirective}" directive field set.`,
+  );
+}
+
+export function incompatibleFederatedFieldNamedTypeError(
+  fieldCoordinates: string,
+  subgraphNamesByNamedTypeName: Map<string, Set<string>>,
+): Error {
+  const instances: Array<string> = [];
+  for (const [namedTypeName, subgraphNames] of subgraphNamesByNamedTypeName) {
+    const names = [...subgraphNames];
+    instances.push(
+      ` The Named Type "${namedTypeName}" is returned by the following subgraph` +
+        (names.length > 1 ? `s` : ``) +
+        `: "` +
+        names.join(QUOTATION_JOIN) +
+        `".`,
+    );
+  }
+  return new Error(
+    `Each instance of a shared Field must resolve identically across subgraphs.\n` +
+      `The Field "${fieldCoordinates}" could not be federated due to incompatible types across subgraphs.\n` +
+      `The discrepancies are as follows:\n` +
+      instances.join(`\n`),
+  );
+}
+
+export function unknownNamedTypeErrorMessage(fieldCoordinates: string, namedTypeName: string): string {
+  return `The Field "${fieldCoordinates}" returns the unknown named type "${namedTypeName}".`;
+}
+
+export function unknownNamedTypeError(fieldCoordinates: string, namedTypeName: string): Error {
+  return new Error(unknownNamedTypeErrorMessage(fieldCoordinates, namedTypeName));
+}
+
+export function unknownFieldDataError(fieldCoordinates: string): Error {
+  return new Error(
+    `Could not find FieldData for Field "${fieldCoordinates}"\n.` +
+      `This should never happen. Please report this issue on GitHub.`,
+  );
+}
+
+export function unexpectedNonCompositeOutputTypeError(namedTypeName: string, actualTypeString: string): Error {
+  return new Error(
+    `Expected named type "${namedTypeName}" to be a composite output type (Object or Interface)` +
+      ` but received "${actualTypeString}".\nThis should never happen. Please report this issue on GitHub.`,
+  );
+}
+
+// TODO Temporarily only used as a warning
+export function unimplementedInterfaceOutputTypeError(interfaceTypeName: string): Error {
+  return new Error(
+    `The Interface "${interfaceTypeName}" is used as an output type` +
+      ` without at least one Object type implementation defined in the schema.`,
   );
 }
