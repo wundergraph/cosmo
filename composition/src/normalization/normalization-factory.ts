@@ -142,6 +142,7 @@ import {
   undefinedRequiredArgumentsErrorMessage,
   undefinedTypeError,
   unexpectedKindFatalError,
+  unimplementedInterfaceOutputTypeError,
 } from '../errors/errors';
 import {
   AUTHENTICATED,
@@ -2019,10 +2020,20 @@ export class NormalizationFactory {
       }
     }
     for (const referencedTypeName of this.referencedTypeNames) {
-      if (
-        !this.parentDefinitionDataByTypeName.has(referencedTypeName) &&
-        !this.entityDataByTypeName.has(referencedTypeName)
-      ) {
+      const parentData = this.parentDefinitionDataByTypeName.get(referencedTypeName);
+      if (parentData) {
+        if (parentData.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
+          continue;
+        }
+        // There will be a run time error if a Field can return an interface without any Object implementations.
+        const implementationTypeNames = this.concreteTypeNamesByAbstractTypeName.get(referencedTypeName);
+        if (!implementationTypeNames || implementationTypeNames.size < 0) {
+          // Temporarily propagate as a warning until @inaccessible, entity interfaces and other such considerations are handled
+          this.warnings.push(unimplementedInterfaceOutputTypeError(referencedTypeName));
+        }
+        continue;
+      }
+      if (!this.entityDataByTypeName.has(referencedTypeName)) {
         this.errors.push(undefinedTypeError(referencedTypeName));
       }
     }

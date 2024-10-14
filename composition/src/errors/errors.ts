@@ -1592,7 +1592,8 @@ export function incompatibleFederatedFieldNamedTypeError(
     );
   }
   return new Error(
-    `The Field "${fieldCoordinates}" could not be federated due to incompatible types across subgraphs.\n` +
+    `Each instance of a shared Field must resolve identically across subgraphs.\n` +
+      `The Field "${fieldCoordinates}" could not be federated due to incompatible types across subgraphs.\n` +
       `The discrepancies are as follows:\n` +
       instances.join(`\n`),
   );
@@ -1617,5 +1618,13 @@ export function unexpectedNonCompositeOutputTypeError(namedTypeName: string, act
   return new Error(
     `Expected named type "${namedTypeName}" to be a composite output type (Object or Interface)` +
       ` but received "${actualTypeString}".\nThis should never happen. Please report this issue on GitHub.`,
+  );
+}
+
+// TODO Temporarily only used as a warning
+export function unimplementedInterfaceOutputTypeError(interfaceTypeName: string): Error {
+  return new Error(
+    `The Interface "${interfaceTypeName}" is used as an output type` +
+      ` without at least one Object type implementation defined in the schema.`,
   );
 }

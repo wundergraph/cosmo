@@ -144,15 +144,7 @@ describe('openfed_FieldSet tests', () => {
     });
 
     test('that including an interface in the FieldSet returns an error', () => {
-      const { errors } = normalizeSubgraphFromString(`
-      type Entity @key(fields: "id") {
-        id: Interface!
-      }
-      
-      interface Interface {
-        name: String!
-      }
-    `);
+      const { errors } = normalizeSubgraph(subgraphL.definitions, subgraphL.name);
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
@@ -438,20 +430,7 @@ describe('openfed_FieldSet tests', () => {
     });
 
     test('that a @provides FieldSet supports multiple inline fragments', () => {
-      const { errors, normalizationResult } = normalizeSubgraphFromString(`
-        type Object {
-          entity: Entity! @provides(fields: "interface { ... on I { ... on I { name } } }")
-        }
-        
-        type Entity @key(fields: "id") {
-          id: ID!
-          interface: I! @external
-        }
-        
-        interface I {
-          name: String!
-        }
-      `);
+      const { errors, normalizationResult } = normalizeSubgraph(subgraphM.definitions, subgraphM.name);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
       expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
@@ -481,6 +460,14 @@ describe('openfed_FieldSet tests', () => {
               fieldNames: new Set<string>(['name']),
               isRootNode: false,
               typeName: 'I',
+            },
+          ],
+          [
+            'Implementation',
+            {
+              fieldNames: new Set<string>(['name']),
+              isRootNode: false,
+              typeName: 'Implementation',
             },
           ],
         ]),
@@ -550,24 +537,7 @@ describe('openfed_FieldSet tests', () => {
     });
 
     test('that a @provides FieldSet returns an error for an inline fragment with an invalid type condition on an interface', () => {
-      const { errors } = normalizeSubgraphFromString(`
-        type Object {
-          entity: Entity! @provides(fields: "interface { ... on AnotherObject { name } }")
-        }
-
-        type Entity @key(fields: "id") {
-          id: ID!
-          interface: I! @external
-        }
-        
-        interface I {
-          name: String!
-        }
-        
-        type AnotherObject {
-          name: String!
-        }
-      `);
+      const { errors } = normalizeSubgraph(subgraphN.definitions, subgraphN.name);
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
@@ -984,17 +954,7 @@ describe('openfed_FieldSet tests', () => {
     });
 
     test('that a @requires FieldSet returns an error for an invalid inline fragment', () => {
-      const { errors, normalizationResult } = normalizeSubgraphFromString(`
-        type Entity @key(fields: "id") {
-          id: ID!
-          name: I! @external
-          age: Int! @requires(fields: "... on I { name }")
-        }
-
-        interface I {
-          name: String!
-        }
-      `);
+      const { errors, normalizationResult } = normalizeSubgraph(subgraphO.definitions, subgraphO.name);
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
@@ -1005,17 +965,7 @@ describe('openfed_FieldSet tests', () => {
     });
 
     test('that a @requires FieldSet supports multiple inline fragments', () => {
-      const { errors, normalizationResult } = normalizeSubgraphFromString(`
-        type Entity @key(fields: "id") {
-          id: ID!
-          name: I! @external
-          age: Int! @requires(fields: "name { ... on I { ... on I { name } } }")
-        }
-        
-        interface I {
-          name: String!
-        }
-      `);
+      const { errors, normalizationResult } = normalizeSubgraph(subgraphP.definitions, subgraphP.name);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
       expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
@@ -1037,6 +987,14 @@ describe('openfed_FieldSet tests', () => {
               fieldNames: new Set<string>(['name']),
               isRootNode: false,
               typeName: 'I',
+            },
+          ],
+          [
+            'Object',
+            {
+              fieldNames: new Set<string>(['name']),
+              isRootNode: false,
+              typeName: 'Object',
             },
           ],
         ]),
@@ -1096,22 +1054,7 @@ describe('openfed_FieldSet tests', () => {
     });
 
     test('that a @requires FieldSet returns an error for an inline fragment with an invalid type condition on an interface', () => {
-      const { errors } = normalizeSubgraphFromString(`
-        type Entity @key(fields: "id") {
-          id: ID!
-          interface: I! @external
-          age: Int! @requires(fields: "interface { ... on Object { age } }")
-        }
-        
-        interface I {
-          name: String!
-        }
-        
-        type Object {
-          name: String!
-          age: Int!
-        }  
-      `);
+      const { errors } = normalizeSubgraph(subgraphQ.definitions, subgraphQ.name);
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
@@ -2162,6 +2105,131 @@ const subgraphL: Subgraph = {
   name: 'subgraph-l',
   url: '',
   definitions: parse(`
-    scalar Dummy
+    type Entity @key(fields: "id") {
+      id: Interface!
+    }
+
+    interface Interface {
+      name: String!
+    }
+    
+    type Object implements Interface {
+      name: String!
+    }
+  `),
+};
+
+const subgraphM: Subgraph = {
+  name: 'subgraph-m',
+  url: '',
+  definitions: parse(`
+    type Object {
+      entity: Entity! @provides(fields: "interface { ... on I { ... on I { name } } }")
+    }
+
+    type Entity @key(fields: "id") {
+      id: ID!
+      interface: I! @external
+    }
+
+    interface I {
+      name: String!
+    }
+    
+    type Implementation implements I {
+      name: String!
+    }
+  `),
+};
+
+const subgraphN: Subgraph = {
+  name: 'subgraph-n',
+  url: '',
+  definitions: parse(`
+    type Object {
+      entity: Entity! @provides(fields: "interface { ... on AnotherObject { name } }")
+    }
+
+    type Entity @key(fields: "id") {
+      id: ID!
+      interface: I! @external
+    }
+
+    interface I {
+      name: String!
+    }
+
+    type AnotherObject {
+      name: String!
+    }
+    
+    type Implementation implements I {
+      name: String!
+    }
+  `),
+};
+
+const subgraphO: Subgraph = {
+  name: 'subgraph-o',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID!
+      name: I! @external
+      age: Int! @requires(fields: "... on I { name }")
+    }
+
+    interface I {
+      name: String!
+    }
+    
+    type Object implements I {
+      name: String!
+    }
+  `),
+};
+
+const subgraphP: Subgraph = {
+  name: 'subgraph-p',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID!
+      name: I! @external
+      age: Int! @requires(fields: "name { ... on I { ... on I { name } } }")
+    }
+
+    interface I {
+      name: String!
+    }
+    
+    type Object implements I {
+      name: String!
+    }
+  `),
+};
+
+const subgraphQ: Subgraph = {
+  name: 'subgraph-q',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID!
+      interface: I! @external
+      age: Int! @requires(fields: "interface { ... on Object { age } }")
+    }
+
+    interface I {
+      name: String!
+    }
+
+    type Object {
+      name: String!
+      age: Int!
+    }
+    
+    type Implementation implements I {
+      name: String!
+    }
   `),
 };

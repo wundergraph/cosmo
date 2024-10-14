@@ -726,6 +726,19 @@ export class FederationFactory {
     return { success: false };
   }
 
+  addSubgraphNameToExistingFieldNamedTypeDisparity(incomingData: FieldData) {
+    const subgraphNamesByNamedTypeName = this.subgraphNamesByNamedTypeNameByFieldCoordinates.get(
+      `${incomingData.renamedParentTypeName}.${incomingData.name}`,
+    );
+    if (!subgraphNamesByNamedTypeName) {
+      return;
+    }
+    addIterableValuesToSet(
+      incomingData.subgraphNames,
+      getValueOrDefault(subgraphNamesByNamedTypeName, incomingData.namedTypeName, () => new Set<String>()),
+    );
+  }
+
   upsertFieldData(
     fieldDataByFieldName: Map<string, FieldData>,
     incomingData: FieldData,
@@ -800,14 +813,31 @@ export class FederationFactory {
           `${existingData.renamedParentTypeName}.${existingData.name}`,
           () => new Map<string, Set<string>>(),
         );
-        addIterableValuesToSet(
-          existingData.subgraphNames,
-          getValueOrDefault(subgraphNamesByNamedTypeName, existingData.namedTypeName, () => new Set<String>()),
+        /* Only propagate the subgraph names of the existing data if it has never been propagated before.
+         * This is to prevent the propagation of subgraph names where that named type is not returned.
+         */
+        const existingSubgraphNames = getValueOrDefault(
+          subgraphNamesByNamedTypeName,
+          existingData.namedTypeName,
+          () => new Set<String>(),
         );
+        if (existingSubgraphNames.size < 1) {
+          // Add all subgraph names that are not the subgraph name in the incoming data
+          for (const subgraphName of existingData.subgraphNames) {
+            if (!incomingData.subgraphNames.has(subgraphName)) {
+              existingSubgraphNames.add(subgraphName);
+            }
+          }
+        }
         addIterableValuesToSet(
           incomingData.subgraphNames,
           getValueOrDefault(subgraphNamesByNamedTypeName, incomingData.namedTypeName, () => new Set<String>()),
         );
+      } else {
+        /* If the named types match but there has already been a disparity in the named type names returned by the
+         * field, add the incoming subgraph name to the existing subgraph name set for that named type name.
+         */
+        this.addSubgraphNameToExistingFieldNamedTypeDisparity(incomingData);
       }
     }
     for (const [argumentName, inputValueData] of incomingData.argumentDataByArgumentName) {
@@ -1184,7 +1214,7 @@ export class FederationFactory {
       const fieldData = compositeOutputData.fieldDataByFieldName.get(coordinates[1]);
       // This error should never happen
       if (!fieldData) {
-        this.errors.push(unknownFieldDataError(`${coordinates[0]}.${coordinates[1]}`));
+        this.errors.push(unknownFieldDataError(fieldCoordinates));
         continue;
       }
       const interfaceDataByTypeName = new Map<string, InterfaceDefinitionData>();
@@ -1198,7 +1228,7 @@ export class FederationFactory {
         const namedTypeData = this.parentDefinitionDataByTypeName.get(namedTypeName);
         // This error should never happen
         if (!namedTypeData) {
-          this.errors.push(unknownNamedTypeError(`${coordinates[0]}.${coordinates[1]}`, namedTypeName));
+          this.errors.push(unknownNamedTypeError(fieldCoordinates, namedTypeName));
           break;
         }
         switch (namedTypeData.kind) {
@@ -1208,6 +1238,18 @@ export class FederationFactory {
           }
           case Kind.OBJECT_TYPE_DEFINITION: {
             objectTypeNames.add(namedTypeData.name);
+            /* Multiple shared Field instances can explicitly return the same Object named type across subgraphs.
+             * However, the Field is invalid if *any* of the other shared Field instances return a different Object named
+             * type, even if each of those Objects named types could be coerced into the same mutual abstract type.
+             * This is because it would be impossible to return identical data from each subgraph if one shared Field
+             * instance explicitly returns a different Object named type to another shared Field instance.
+             */
+            if (objectTypeNames.size > 1) {
+              this.errors.push(
+                incompatibleFederatedFieldNamedTypeError(fieldCoordinates, subgraphNamesByNamedTypeName),
+              );
+              continue;
+            }
             break;
           }
           case Kind.UNION_TYPE_DEFINITION: {
@@ -1252,6 +1294,9 @@ export class FederationFactory {
               abstractTypeName = '';
               break;
             }
+          }
+          if (abstractTypeName) {
+            break;
           }
         }
       }

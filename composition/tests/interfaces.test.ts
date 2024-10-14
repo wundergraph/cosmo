@@ -2,6 +2,7 @@ import {
   duplicateFieldDefinitionError,
   federateSubgraphs,
   ImplementationErrors,
+  incompatibleFederatedFieldNamedTypeError,
   INTERFACE,
   InvalidFieldImplementation,
   invalidImplementedTypeError,
@@ -15,11 +16,13 @@ import {
   SCALAR,
   selfImplementationError,
   Subgraph,
+  unimplementedInterfaceOutputTypeError,
 } from '../src';
 import { describe, expect, test } from 'vitest';
 import {
   baseDirectiveDefinitions,
   normalizeString,
+  schemaQueryDefinition,
   schemaToSortedNormalizedString,
   versionOneRouterDefinitions,
   versionTwoRouterDefinitions,
@@ -512,6 +515,35 @@ describe('Interface tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(selfImplementationError('Interface'));
     });
+
+    // TODO currently a warning until @inaccessible and entity interfaces are handled
+    test.skip('that an error is returned if a Field returns an Interface without any implementations', () => {
+      const { errors } = normalizeSubgraph(subgraphAM.definitions, subgraphAM.name);
+      expect(errors).toBeDefined();
+      expect(errors![0]).toStrictEqual(unimplementedInterfaceOutputTypeError('Interface'));
+    });
+
+    test('that an Interface without implementations is valid if it not used as an output type', () => {
+      const { errors, normalizationResult } = normalizeSubgraph(subgraphAN.definitions, subgraphAN.name);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(normalizationResult!.schema)).toBe(
+        normalizeString(
+          schemaQueryDefinition +
+            baseDirectiveDefinitions +
+            `
+          interface Interface {
+            name: String!
+          }
+          
+          type Query {
+            dummy: String!
+          }
+
+          scalar openfed__FieldSet
+        `,
+        ),
+      );
+    });
   });
 
   describe('Federation tests', () => {
@@ -983,26 +1015,31 @@ describe('Interface tests', () => {
       );
     });
 
-    test('that Field named types can coerce implementing types into Interfaces #2.1', () => {
-      const { errors, federationResult } = federateSubgraphs([subgraphAI, subgraphAJ, subgraphAK, subgraphAL]);
+    test('that Field named types can coerce a single implementing type into Interfaces #2.1', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphAI, subgraphAK, subgraphAL]);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
           versionTwoRouterDefinitions +
             `
-          type AnotherObject implements Interface {
+          interface AnotherInterface {
             name: String!
           }
           
-          interface Interface {
+          type AnotherObject implements AnotherInterface & Interface {
             name: String!
           }
           
-          type Object implements Interface {
+          interface Interface implements AnotherInterface {
+            name: String!
+          }
+          
+          type Object implements AnotherInterface & Interface {
             name: String!
           }
           
           type Query {
+            anotherInterface: AnotherInterface!
             interface: [Interface]
           }
           
@@ -1012,31 +1049,90 @@ describe('Interface tests', () => {
       );
     });
 
-    test('that Field named types can coerce implementing types into Interfaces #2.2', () => {
-      const { errors, federationResult } = federateSubgraphs([subgraphAL, subgraphAK, subgraphAJ, subgraphAI]);
+    test('that Field named types can coerce a single implementing types into Interfaces #2.2', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphAL, subgraphAK, subgraphAI]);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
           versionTwoRouterDefinitions +
             `
-          type AnotherObject implements Interface {
-            name: String!
-          }
-          
-          interface Interface {
-            name: String!
-          }
-          
-          type Object implements Interface {
-            name: String!
-          }
-          
-          type Query {
-            interface: [Interface]
-          }
-          
-          scalar openfed__Scope
+              interface AnotherInterface {
+                name: String!
+              }
+
+              type AnotherObject implements AnotherInterface & Interface {
+                name: String!
+              }
+
+              interface Interface implements AnotherInterface {
+                name: String!
+              }
+
+              type Object implements AnotherInterface & Interface {
+                name: String!
+              }
+
+              type Query {
+                anotherInterface: AnotherInterface!
+                interface: [Interface]
+              }
+
+              scalar openfed__Scope
         `,
+        ),
+      );
+    });
+
+    test('that Field named types cannot coerce more than one implementing type into Interfaces #3.1', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphAI, subgraphAJ, subgraphAK, subgraphAL]);
+      expect(errors).toBeDefined();
+      expect(errors).toHaveLength(2);
+      expect(errors![0]).toStrictEqual(
+        incompatibleFederatedFieldNamedTypeError(
+          'Query.anotherInterface',
+          new Map<string, Set<string>>([
+            ['Object', new Set<string>(['subgraph-ai'])],
+            ['AnotherObject', new Set<string>(['subgraph-aj'])],
+            ['Interface', new Set<string>(['subgraph-ak'])],
+            ['AnotherInterface', new Set<string>(['subgraph-al'])],
+          ]),
+        ),
+      );
+      expect(errors![1]).toStrictEqual(
+        incompatibleFederatedFieldNamedTypeError(
+          'Query.interface',
+          new Map<string, Set<string>>([
+            ['Object', new Set<string>(['subgraph-ai'])],
+            ['AnotherObject', new Set<string>(['subgraph-aj'])],
+            ['Interface', new Set<string>(['subgraph-al'])],
+          ]),
+        ),
+      );
+    });
+
+    test('that Field named types cannot coerce more than one implementing type into Interfaces #3.2', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphAL, subgraphAK, subgraphAJ, subgraphAI]);
+      expect(errors).toBeDefined();
+      expect(errors).toHaveLength(2);
+      expect(errors![0]).toStrictEqual(
+        incompatibleFederatedFieldNamedTypeError(
+          'Query.anotherInterface',
+          new Map<string, Set<string>>([
+            ['AnotherInterface', new Set<string>(['subgraph-al'])],
+            ['Interface', new Set<string>(['subgraph-ak'])],
+            ['AnotherObject', new Set<string>(['subgraph-aj'])],
+            ['Object', new Set<string>(['subgraph-ai'])],
+          ]),
+        ),
+      );
+      expect(errors![1]).toStrictEqual(
+        incompatibleFederatedFieldNamedTypeError(
+          'Query.interface',
+          new Map<string, Set<string>>([
+            ['Interface', new Set<string>(['subgraph-al'])],
+            ['AnotherObject', new Set<string>(['subgraph-aj'])],
+            ['Object', new Set<string>(['subgraph-ai'])],
+          ]),
         ),
       );
     });
@@ -1530,12 +1626,13 @@ const subgraphAI: Subgraph = {
   name: 'subgraph-ai',
   url: '',
   definitions: parse(`
-    type Object {
-      name: String! @shareable
+    type Object @shareable {
+      name: String!
     }
     
-    type Query {
-      interface: [Object!]! @shareable
+    type Query @shareable {
+      anotherInterface: Object!
+      interface: [Object!]!
     }
   `),
 };
@@ -1544,12 +1641,13 @@ const subgraphAJ: Subgraph = {
   name: 'subgraph-aj',
   url: '',
   definitions: parse(`
-    type AnotherObject {
-      name: String! @shareable
+    type AnotherObject @shareable {
+      name: String!
     }
     
-    type Query {
-      interface: [AnotherObject!]! @shareable
+    type Query @shareable {
+      anotherInterface: AnotherObject!
+      interface: [AnotherObject!]!
     }
   `),
 };
@@ -1558,16 +1656,20 @@ const subgraphAK: Subgraph = {
   name: 'subgraph-ak',
   url: '',
   definitions: parse(`
-    type AnotherObject implements Interface {
-      name: String! @shareable
-    }
-    
-    type Object implements Interface {
-      name: String! @shareable
-    }
-    
     interface Interface {
       name: String!
+    }
+    
+    type AnotherObject implements Interface @shareable {
+      name: String!
+    }
+    
+    type Object implements Interface @shareable {
+      name: String!
+    }
+    
+    type Query @shareable {
+      anotherInterface: Interface!
     }
   `),
 };
@@ -1576,12 +1678,53 @@ const subgraphAL: Subgraph = {
   name: 'subgraph-al',
   url: '',
   definitions: parse(`
+    interface AnotherInterface {
+      name: String!
+    }
+
+    interface Interface implements AnotherInterface {
+      name: String!
+    }
+
+    type AnotherObject implements Interface & AnotherInterface @shareable {
+      name: String!
+    }
+
+    type Object implements Interface & AnotherInterface @shareable {
+      name: String!
+    }
+    
+    type Query @shareable {
+      interface: [Interface]
+      anotherInterface: AnotherInterface!
+    }
+  `),
+};
+
+const subgraphAM: Subgraph = {
+  name: 'subgraph-am',
+  url: '',
+  definitions: parse(`
     interface Interface {
       name: String!
     }
     
     type Query {
-      interface: [Interface] @shareable
+      interface: Interface!
+    }
+  `),
+};
+
+const subgraphAN: Subgraph = {
+  name: 'subgraph-an',
+  url: '',
+  definitions: parse(`
+    interface Interface {
+      name: String!
+    }
+    
+    type Query{
+      dummy: String!
     }
   `),
 };
