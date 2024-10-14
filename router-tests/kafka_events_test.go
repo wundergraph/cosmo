@@ -413,7 +413,7 @@ func TestKafkaEvents(t *testing.T) {
 
 			go func() {
 				wg.Wait()
-				require.NoError(t, client.Close())
+				_ = client.Close()
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)

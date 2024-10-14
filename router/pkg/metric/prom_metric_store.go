@@ -53,35 +53,21 @@ func (h *PromMetricStore) MeasureInFlight(ctx context.Context, attr ...attribute
 		if len(dimensionsSet) == 0 {
 			c.Add(ctx, 1, attributeAddOpt)
 		} else {
-			// String Slice attributes have to be exploded into multiple metrics with different label values in Prometheus.
-			// This is because Prometheus does not support multi-value labels.
-			for _, attr := range dimensionsSet {
-				for _, v := range attr.Value.AsStringSlice() {
-					c.Add(ctx, 1, otelmetric.WithAttributes(append(otherAttributes, attribute.KeyValue{
-						Key:   attr.Key,
-						Value: attribute.StringValue(v),
-					})...))
-				}
-			}
+			explodeMetric(ctx, dimensionsSet, otherAttributes, func(ctx context.Context, attrs []attribute.KeyValue) {
+				c.Add(ctx, 1, otelmetric.WithAttributes(attrs...))
+			})
 		}
 	}
 
 	return func() {
 		if c, ok := h.measurements.upDownCounters[InFlightRequestsUpDownCounter]; ok {
 			if len(dimensionsSet) == 0 {
-				c.Add(ctx, 1, attributeAddOpt)
+				c.Add(ctx, -1, attributeAddOpt)
 				return
 			}
-			// String Slice attributes have to be exploded into multiple metrics with different label values in Prometheus.
-			// This is because Prometheus does not support multi-value labels.
-			for _, attr := range dimensionsSet {
-				for _, v := range attr.Value.AsStringSlice() {
-					c.Add(ctx, 1, otelmetric.WithAttributes(append(otherAttributes, attribute.KeyValue{
-						Key:   attr.Key,
-						Value: attribute.StringValue(v),
-					})...))
-				}
-			}
+			explodeMetric(ctx, dimensionsSet, otherAttributes, func(ctx context.Context, attrs []attribute.KeyValue) {
+				c.Add(ctx, -1, otelmetric.WithAttributes(attrs...))
+			})
 		}
 	}
 }
@@ -95,14 +81,9 @@ func (h *PromMetricStore) MeasureRequestCount(ctx context.Context, attr ...attri
 			c.Add(ctx, 1, otelmetric.WithAttributes(otherAttributes...))
 			return
 		}
-		for _, attr := range dimensionsSet {
-			for _, v := range attr.Value.AsStringSlice() {
-				c.Add(ctx, 1, otelmetric.WithAttributes(append(otherAttributes, attribute.KeyValue{
-					Key:   attr.Key,
-					Value: attribute.StringValue(v),
-				})...))
-			}
-		}
+		explodeMetric(ctx, dimensionsSet, otherAttributes, func(ctx context.Context, attrs []attribute.KeyValue) {
+			c.Add(ctx, 1, otelmetric.WithAttributes(attrs...))
+		})
 	}
 }
 
@@ -115,14 +96,9 @@ func (h *PromMetricStore) MeasureRequestSize(ctx context.Context, contentLength 
 			c.Add(ctx, contentLength, otelmetric.WithAttributes(otherAttributes...))
 			return
 		}
-		for _, attr := range dimensionsSet {
-			for _, v := range attr.Value.AsStringSlice() {
-				c.Add(ctx, contentLength, otelmetric.WithAttributes(append(otherAttributes, attribute.KeyValue{
-					Key:   attr.Key,
-					Value: attribute.StringValue(v),
-				})...))
-			}
-		}
+		explodeMetric(ctx, dimensionsSet, otherAttributes, func(ctx context.Context, attrs []attribute.KeyValue) {
+			c.Add(ctx, contentLength, otelmetric.WithAttributes(attrs...))
+		})
 	}
 }
 
@@ -135,14 +111,9 @@ func (h *PromMetricStore) MeasureResponseSize(ctx context.Context, size int64, a
 			c.Add(ctx, size, otelmetric.WithAttributes(otherAttributes...))
 			return
 		}
-		for _, attr := range dimensionsSet {
-			for _, v := range attr.Value.AsStringSlice() {
-				c.Add(ctx, size, otelmetric.WithAttributes(append(otherAttributes, attribute.KeyValue{
-					Key:   attr.Key,
-					Value: attribute.StringValue(v),
-				})...))
-			}
-		}
+		explodeMetric(ctx, dimensionsSet, otherAttributes, func(ctx context.Context, attrs []attribute.KeyValue) {
+			c.Add(ctx, size, otelmetric.WithAttributes(attrs...))
+		})
 	}
 }
 
@@ -158,14 +129,9 @@ func (h *PromMetricStore) MeasureLatency(ctx context.Context, latency time.Durat
 			c.Record(ctx, elapsedTime, otelmetric.WithAttributes(otherAttributes...))
 			return
 		}
-		for _, attr := range dimensionsSet {
-			for _, v := range attr.Value.AsStringSlice() {
-				c.Record(ctx, elapsedTime, otelmetric.WithAttributes(append(otherAttributes, attribute.KeyValue{
-					Key:   attr.Key,
-					Value: attribute.StringValue(v),
-				})...))
-			}
-		}
+		explodeMetric(ctx, dimensionsSet, otherAttributes, func(ctx context.Context, attrs []attribute.KeyValue) {
+			c.Record(ctx, elapsedTime, otelmetric.WithAttributes(attrs...))
+		})
 	}
 }
 
@@ -178,14 +144,9 @@ func (h *PromMetricStore) MeasureRequestError(ctx context.Context, attr ...attri
 			c.Add(ctx, 1, otelmetric.WithAttributes(otherAttributes...))
 			return
 		}
-		for _, attr := range dimensionsSet {
-			for _, v := range attr.Value.AsStringSlice() {
-				c.Add(ctx, 1, otelmetric.WithAttributes(append(otherAttributes, attribute.KeyValue{
-					Key:   attr.Key,
-					Value: attribute.StringValue(v),
-				})...))
-			}
-		}
+		explodeMetric(ctx, dimensionsSet, otherAttributes, func(ctx context.Context, attrs []attribute.KeyValue) {
+			c.Add(ctx, 1, otelmetric.WithAttributes(attrs...))
+		})
 	}
 }
 
@@ -201,14 +162,9 @@ func (h *PromMetricStore) MeasureOperationPlanningTime(ctx context.Context, plan
 			c.Record(ctx, elapsedTime, otelmetric.WithAttributes(otherAttributes...))
 			return
 		}
-		for _, attr := range dimensionsSet {
-			for _, v := range attr.Value.AsStringSlice() {
-				c.Record(ctx, elapsedTime, otelmetric.WithAttributes(append(otherAttributes, attribute.KeyValue{
-					Key:   attr.Key,
-					Value: attribute.StringValue(v),
-				})...))
-			}
-		}
+		explodeMetric(ctx, dimensionsSet, otherAttributes, func(ctx context.Context, attrs []attribute.KeyValue) {
+			c.Record(ctx, elapsedTime, otelmetric.WithAttributes(attrs...))
+		})
 	}
 }
 
@@ -220,10 +176,25 @@ func (h *PromMetricStore) Shutdown(ctx context.Context) error {
 	return h.meterProvider.Shutdown(ctx)
 }
 
+// explodeMetric explodes the metric into multiple metrics with different label values in Prometheus.
+func explodeMetric(ctx context.Context, sliceAttrs []attribute.KeyValue, extraAttrs []attribute.KeyValue, applyFunc func(ctx context.Context, attrs []attribute.KeyValue)) {
+	for _, attr := range sliceAttrs {
+		for _, v := range attr.Value.AsStringSlice() {
+			attrs := append(extraAttrs, attribute.KeyValue{
+				Key:   attr.Key,
+				Value: attribute.StringValue(v),
+			})
+			applyFunc(ctx, attrs)
+		}
+	}
+}
+
+// filterStringSliceAttr filters out the string slice attributes from the given attributes.
 func isStringSliceAttr(kv attribute.KeyValue) bool {
 	return kv.Value.Type() == attribute.STRINGSLICE
 }
 
+// filterStringSliceAttr filters out the string slice attributes from the given attributes.
 func filterStringSliceAttr(kv []attribute.KeyValue) (stringSliceAttr []attribute.KeyValue, excludeAttr []attribute.KeyValue) {
 	for _, a := range kv {
 		if isStringSliceAttr(a) {

@@ -89,9 +89,7 @@ type (
 		MeasureResponseSize(ctx context.Context, size int64, attr ...attribute.KeyValue)
 		MeasureLatency(ctx context.Context, latency time.Duration, attr ...attribute.KeyValue)
 		MeasureRequestError(ctx context.Context, attr ...attribute.KeyValue)
-
 		MeasureOperationPlanningTime(ctx context.Context, planningTime time.Duration, attr ...attribute.KeyValue)
-
 		Flush(ctx context.Context) error
 	}
 
