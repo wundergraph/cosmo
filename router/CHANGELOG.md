@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.125.0](https://github.com/wundergraph/cosmo/compare/router@0.124.1...router@0.125.0) (2024-10-14)
+
+### Bug Fixes
+
+* ensure sse is spec compliant ([#1260](https://github.com/wundergraph/cosmo/issues/1260)) ([d64d383](https://github.com/wundergraph/cosmo/commit/d64d38329ab3963f54aff3819b532272ff7cd6a2)) (@df-wg)
+
+### Features
+
+* support AWS chain credentials for s3 storage providers ([#1250](https://github.com/wundergraph/cosmo/issues/1250)) ([5d67c4b](https://github.com/wundergraph/cosmo/commit/5d67c4b6aceb0a9fbf2bb99e57a75f5b163d93f9)) (@lachlan-smith)
+
 ## [0.124.1](https://github.com/wundergraph/cosmo/compare/router@0.124.0...router@0.124.1) (2024-10-11)
 
 ### Bug Fixes
