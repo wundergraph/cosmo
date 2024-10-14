@@ -180,13 +180,10 @@ func NewWgRequestParams(r *http.Request) WgRequestParams {
 	q := r.URL.Query()
 	acceptHeader := r.Header.Get("Accept")
 
-	contentType := r.Header.Get("Content-Type")
-	d, _, _ := mime.ParseMediaType(contentType)
-
 	mediaType, _, _ := mime.ParseMediaType(acceptHeader)
 
 	return WgRequestParams{
-		UseSse:        q.Has(WgSseParam) || d == sseMimeType,
+		UseSse:        q.Has(WgSseParam) || mediaType == sseMimeType,
 		SubscribeOnce: q.Has(WgSubscribeOnceParam),
 		UseMultipart:  mediaType == multipartMime,
 	}

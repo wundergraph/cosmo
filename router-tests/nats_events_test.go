@@ -520,7 +520,7 @@ func TestNatsEvents(t *testing.T) {
 		})
 	})
 
-	t.Run("subscribe sync sse", func(t *testing.T) {
+	t.Run("subscribe sync sse works without query param", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -534,7 +534,7 @@ func TestNatsEvents(t *testing.T) {
 				client := http.Client{
 					Timeout: time.Second * 10,
 				}
-				req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLServeSentEventsURL(), bytes.NewReader(subscribePayload))
+				req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
 				require.NoError(t, err)
 
 				req.Header.Set("Content-Type", "application/json")
