@@ -1836,6 +1836,21 @@ export class FederationFactory {
     ];
   }
 
+  validatePathSegmentInaccessibility(path: string): boolean {
+    const segments = path.split(PERIOD);
+    if (segments.length < 1) {
+      return false;
+    }
+    let segment = segments[0];
+    for (let i = 1; i < segments.length; i++) {
+      if (this.inaccessiblePaths.has(segment)) {
+        return true;
+      }
+      segment += `.${segments[i]}`;
+    }
+    return false;
+  }
+
   validateReferencesOfInaccessibleType(data: ParentDefinitionData) {
     const paths = this.pathsByNamedTypeName.get(data.name);
     if (!paths || paths.size < 1) {
@@ -1843,7 +1858,10 @@ export class FederationFactory {
     }
     const invalidPaths: string[] = [];
     for (const path of paths) {
-      if (!this.inaccessiblePaths.has(path)) {
+      if (this.inaccessiblePaths.has(path)) {
+        continue;
+      }
+      if (!this.validatePathSegmentInaccessibility(path)) {
         invalidPaths.push(path);
       }
     }
