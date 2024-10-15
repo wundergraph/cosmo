@@ -1842,8 +1842,7 @@ export class FederationFactory {
       return false;
     }
     let segment = segments[0];
-    // Use length - 1 to ensure original path is not checked again
-    for (let i = 1; i < segments.length - 1; i++) {
+    for (let i = 1; i < segments.length; i++) {
       if (this.inaccessiblePaths.has(segment)) {
         return true;
       }
