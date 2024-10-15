@@ -141,6 +141,12 @@ func (r *requestTelemetryAttributes) AddCustomMetricStringSliceAttr(key string, 
 	}
 }
 
+func (r *requestTelemetryAttributes) AddCustomMetricStringAttr(key string, value string) {
+	if remapKey, ok := r.metricSetAttributes[key]; ok && value != "" {
+		r.metricAttributes = append(r.metricAttributes, attribute.String(remapKey, value))
+	}
+}
+
 func (r *requestTelemetryAttributes) AddCommonAttribute(vals ...attribute.KeyValue) {
 	r.attributes = append(r.attributes, vals...)
 }
@@ -151,7 +157,10 @@ func (r *requestTelemetryAttributes) CommonAttrs() []attribute.KeyValue {
 
 func (r *requestTelemetryAttributes) MetricAttrs(includeCommon bool) []attribute.KeyValue {
 	if includeCommon {
-		return append(r.attributes, r.metricAttributes...)
+		attrs := make([]attribute.KeyValue, 0, len(r.attributes)+len(r.metricAttributes))
+		attrs = append(attrs, r.attributes...)
+		attrs = append(attrs, r.metricAttributes...)
+		return attrs
 	}
 	return r.metricAttributes
 }

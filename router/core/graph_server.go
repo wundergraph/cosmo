@@ -425,7 +425,15 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	computeSha256 := false
 
-	if s.accessLogsConfig != nil {
+	// Currently, we only support custom attributes from the context for OTLP metrics
+	if len(s.metricConfig.Attributes) > 0 {
+		for _, customAttribute := range s.metricConfig.Attributes {
+			if customAttribute.ValueFrom != nil && customAttribute.ValueFrom.ContextField == ContextFieldOperationSha256 {
+				computeSha256 = true
+				break
+			}
+		}
+	} else if s.accessLogsConfig != nil {
 		for _, customAttribute := range s.accessLogsConfig.Attributes {
 			if customAttribute.ValueFrom != nil && customAttribute.ValueFrom.ContextField == ContextFieldOperationSha256 {
 				computeSha256 = true
@@ -580,7 +588,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			requestlogger.WithDefaultOptions(),
 			requestlogger.WithNoTimeField(),
 			requestlogger.WithFields(baseLogFields...),
-			requestlogger.WithRequestFields(s.accessLogsFieldHandler),
+			requestlogger.WithFieldsHandler(s.accessLogsFieldHandler),
 		}
 
 		if s.ipAnonymization.Enabled {
@@ -801,7 +809,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	return gm, nil
 }
 
-func (s *graphServer) accessLogsFieldHandler(request *http.Request) []zapcore.Field {
+func (s *graphServer) accessLogsFieldHandler(panicError any, request *http.Request) []zapcore.Field {
 	reqContext := getRequestContext(request.Context())
 	if reqContext == nil {
 		return nil
@@ -856,7 +864,13 @@ func (s *graphServer) accessLogsFieldHandler(request *http.Request) []zapcore.Fi
 					resFields = append(resFields, v)
 				}
 			case ContextFieldResponseErrorMessage:
-				if v := NewStringLogField(reqContext.error.Error(), field); v != zap.Skip() {
+				var errMessage string
+				if panicError != nil {
+					errMessage = fmt.Sprintf("%v", panicError)
+				} else if reqContext.error != nil {
+					errMessage = reqContext.error.Error()
+				}
+				if v := NewStringLogField(errMessage, field); v != zap.Skip() {
 					resFields = append(resFields, v)
 				}
 
