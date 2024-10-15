@@ -785,6 +785,7 @@ func TestAccessLogs(t *testing.T) {
 				"operation_hash": "14226210703439426856", // From context
 				"operation_name": "employees",            // From context
 				"operation_type": "query",                // From context
+				"error_message":  "implement me",
 			}
 			additionalExpectedKeys := []string{
 				"latency",
