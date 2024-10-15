@@ -2,7 +2,6 @@ package integration
 
 import (
 	"context"
-	"github.com/kr/pretty"
 	"net/http"
 	"testing"
 
@@ -3170,8 +3169,6 @@ func TestTelemetry(t *testing.T) {
 						failedRequestsMetric,
 					},
 				}
-				pretty.Log(rm.ScopeMetrics[0])
-
 				metricdatatest.AssertEqual(t, want, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 			})
 		})
