@@ -83,6 +83,7 @@ import {
   IN_UPPER,
   INACCESSIBLE,
   INPUT_OBJECT,
+  LEFT_PARENTHESIS,
   LIST,
   NOT_UPPER,
   OBJECT,
@@ -1837,16 +1838,17 @@ export class FederationFactory {
   }
 
   validatePathSegmentInaccessibility(path: string): boolean {
-    const segments = path.split(PERIOD);
-    if (segments.length < 1) {
+    if (!path) {
       return false;
     }
+    const coordinates = path.split(LEFT_PARENTHESIS)[0];
+    const segments = coordinates.split(PERIOD);
     let segment = segments[0];
-    for (let i = 1; i < segments.length; i++) {
+    for (let i = 0; i < segments.length; i++) {
       if (this.inaccessiblePaths.has(segment)) {
         return true;
       }
-      segment += `.${segments[i]}`;
+      segment += `.${segments[i + 1]}`;
     }
     return false;
   }
