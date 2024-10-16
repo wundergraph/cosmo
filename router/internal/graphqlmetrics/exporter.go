@@ -145,11 +145,7 @@ func (e *Exporter) acceptTraffic() bool {
 	}
 }
 
-func (e *Exporter) RecordUsage(usageInfo *graphqlmetrics.SchemaUsageInfo, synchronous bool) (ok bool) {
-	if synchronous {
-		_ = e.sendItems([]*graphqlmetrics.SchemaUsageInfo{usageInfo})
-		return true
-	}
+func (e *Exporter) RecordUsage(usageInfo *graphqlmetrics.SchemaUsageInfo) (ok bool) {
 	if !e.acceptTraffic() {
 		return false
 	}
@@ -160,32 +156,6 @@ func (e *Exporter) RecordUsage(usageInfo *graphqlmetrics.SchemaUsageInfo, synchr
 		e.logger.Warn("RecordAsync: Queue is full, dropping item")
 		return false
 	}
-}
-
-func (e *Exporter) sendItems(items []*graphqlmetrics.SchemaUsageInfo) error {
-	e.logger.Debug("sending batch", zap.Int("size", len(items)))
-	ctx := e.exportRequestContext
-	if e.settings.ExportTimeout > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(e.exportRequestContext, e.settings.ExportTimeout)
-		defer cancel()
-	}
-
-	req := connect.NewRequest(&graphqlmetrics.PublishGraphQLRequestMetricsRequest{
-		SchemaUsage: items,
-	})
-
-	req.Header().Set("Authorization", fmt.Sprintf("Bearer %s", e.apiToken))
-
-	_, err := e.client.PublishGraphQLMetrics(ctx, req)
-	if err != nil {
-		e.logger.Debug("Failed to export batch", zap.Error(err), zap.Int("batch_size", len(items)))
-		return err
-	}
-
-	e.logger.Debug("Successfully exported batch", zap.Int("batch_size", len(items)))
-
-	return nil
 }
 
 func (e *Exporter) sendAggregation(ctx context.Context, request *graphqlmetrics.PublishAggregatedGraphQLRequestMetricsRequest) error {
@@ -351,7 +321,7 @@ func (e *Exporter) drainQueue(buffer []*graphqlmetrics.SchemaUsageInfo) {
 // Shutdown the exporter but waits until all export jobs has been finished or timeout.
 // If the context is canceled, the exporter will be shutdown immediately.
 func (e *Exporter) Shutdown(ctx context.Context) error {
-	ticker := time.NewTicker(time.Millisecond * 100)
+	ticker := time.NewTicker(time.Millisecond * 10)
 	defer func() {
 		ticker.Stop()
 		// cancel all requests

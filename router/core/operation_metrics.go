@@ -42,7 +42,7 @@ func (m *OperationMetrics) AddOperationContext(opContext *operationContext) {
 	m.opContext = opContext
 }
 
-func (m *OperationMetrics) Finish(err error, statusCode int, responseSize int, exportSynchronous bool) {
+func (m *OperationMetrics) Finish(err error, statusCode int, responseSize int) {
 	m.inflightMetric()
 
 	ctx := context.Background()
@@ -65,7 +65,7 @@ func (m *OperationMetrics) Finish(err error, statusCode int, responseSize int, e
 	rm.MeasureResponseSize(ctx, int64(responseSize), m.metricBaseFields...)
 
 	if m.trackUsageInfo && m.opContext != nil {
-		m.routerMetrics.ExportSchemaUsageInfo(m.opContext, statusCode, err != nil, exportSynchronous)
+		m.routerMetrics.ExportSchemaUsageInfo(m.opContext, statusCode, err != nil)
 	}
 }
 

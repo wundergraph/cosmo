@@ -14,7 +14,7 @@ import (
 
 type RouterMetrics interface {
 	StartOperation(clientInfo *ClientInfo, logger *zap.Logger, requestContentLength int64, metricAttributes []attribute.KeyValue) *OperationMetrics
-	ExportSchemaUsageInfo(operationContext *operationContext, statusCode int, hasError bool, exportSynchronous bool)
+	ExportSchemaUsageInfo(operationContext *operationContext, statusCode int, hasError bool)
 	GqlMetricsExporter() *graphqlmetrics.Exporter
 	MetricStore() metric.Provider
 }
@@ -71,7 +71,7 @@ func (m *routerMetrics) GqlMetricsExporter() *graphqlmetrics.Exporter {
 	return m.gqlMetricsExporter
 }
 
-func (m *routerMetrics) ExportSchemaUsageInfo(operationContext *operationContext, statusCode int, hasError bool, exportSynchronous bool) {
+func (m *routerMetrics) ExportSchemaUsageInfo(operationContext *operationContext, statusCode int, hasError bool) {
 	if !m.exportEnabled {
 		return
 	}
@@ -120,7 +120,7 @@ func (m *routerMetrics) ExportSchemaUsageInfo(operationContext *operationContext
 		},
 	}
 
-	m.gqlMetricsExporter.RecordUsage(item, exportSynchronous)
+	m.gqlMetricsExporter.RecordUsage(item)
 }
 
 func (m *routerMetrics) strCopy(s string) string {

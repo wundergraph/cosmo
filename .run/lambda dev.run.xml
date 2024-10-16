@@ -1,0 +1,15 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="lambda dev" type="GoApplicationRunConfiguration" factoryName="Go Application">
+    <module name="cosmo" />
+    <working_directory value="$PROJECT_DIR$/aws-lambda-router" />
+    <go_parameters value="-race" />
+    <envs>
+      <env name="HTTP_PORT" value="3003" />
+    </envs>
+    <kind value="PACKAGE" />
+    <package value="github.com/wundergraph/cosmo/aws-lambda-router/cmd" />
+    <directory value="$PROJECT_DIR$" />
+    <filePath value="$PROJECT_DIR$/aws-lambda-router/cmd/main.go" />
+    <method v="2" />
+  </configuration>
+</component>

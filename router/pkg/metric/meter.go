@@ -44,8 +44,8 @@ var (
 )
 
 const (
-	defaultExportTimeout  = 30 * time.Second
-	defaultExportInterval = 15 * time.Second
+	DefaultExportTimeout  = 30 * time.Second
+	DefaultExportInterval = 15 * time.Second
 )
 
 var (
@@ -203,10 +203,20 @@ func NewOtlpMeterProvider(ctx context.Context, log *zap.Logger, c *Config, servi
 			return nil, err
 		}
 
+		exportTimeout := exp.ExportTimeout
+		if exportTimeout == 0 {
+			exportTimeout = DefaultExportTimeout
+		}
+
+		exportInterval := exp.ExportInterval
+		if exportInterval == 0 {
+			exportInterval = DefaultExportInterval
+		}
+
 		opts = append(opts, sdkmetric.WithReader(
 			sdkmetric.NewPeriodicReader(exporter,
-				sdkmetric.WithTimeout(defaultExportTimeout),
-				sdkmetric.WithInterval(defaultExportInterval),
+				sdkmetric.WithTimeout(exportTimeout),
+				sdkmetric.WithInterval(exportInterval),
 			),
 		))
 	}

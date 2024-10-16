@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"time"
 )
 
 // DefaultServerName Default resource name.
@@ -26,9 +27,11 @@ type PrometheusConfig struct {
 }
 
 type OpenTelemetryExporter struct {
-	Disabled bool
-	Exporter otelconfig.Exporter
-	Endpoint string
+	Disabled       bool
+	Exporter       otelconfig.Exporter
+	ExportTimeout  time.Duration
+	ExportInterval time.Duration
+	Endpoint       string
 	// Headers represents the headers for HTTP transport.
 	// For example:
 	//  Authorization: 'Bearer <token>'
@@ -105,10 +108,12 @@ func DefaultConfig(serviceVersion string) *Config {
 			RouterRuntime: true,
 			Exporters: []*OpenTelemetryExporter{
 				{
-					Disabled: false,
-					Endpoint: "http://localhost:4318",
-					Exporter: otelconfig.ExporterOLTPHTTP,
-					HTTPPath: otelconfig.DefaultMetricsPath,
+					Disabled:       false,
+					Endpoint:       "http://localhost:4318",
+					ExportInterval: DefaultExportInterval,
+					ExportTimeout:  DefaultExportTimeout,
+					Exporter:       otelconfig.ExporterOLTPHTTP,
+					HTTPPath:       otelconfig.DefaultMetricsPath,
 				},
 			},
 		},

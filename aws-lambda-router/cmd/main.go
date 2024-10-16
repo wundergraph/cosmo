@@ -14,7 +14,6 @@ import (
 	"go.uber.org/zap/zapcore"
 	"net/http"
 	"os"
-	"time"
 )
 
 const (
@@ -59,7 +58,7 @@ func main() {
 				EnableSingleFlight:                     true,
 				EnableRequestTracing:                   devMode,
 				EnableExecutionPlanCacheResponseHeader: devMode,
-				MaxConcurrentResolvers:                 1024,
+				MaxConcurrentResolvers:                 32,
 			}),
 		),
 	)
@@ -84,16 +83,15 @@ func main() {
 	lambda.StartWithOptions(lambdaHandler,
 		lambda.WithContext(ctx),
 		// Registered an internal extensions which gives us 500ms to shutdown
-		// This mechanism does not replace telemetry flushing after a request
+		// This mechanism does not replace telemetry flushing at short intervals
 		// https://docs.aws.amazon.com/lambda/latest/dg/runtimes-extensions-api.html#runtimes-lifecycle-extensions-shutdown
 		lambda.WithEnableSIGTERM(func() {
-			logger.Debug("Server shutting down")
-			sCtx, cancel := context.WithTimeout(context.Background(), 400*time.Millisecond)
-			defer cancel()
-			if err := r.Shutdown(sCtx); err != nil {
+			logger.Info("Server shutting down")
+			if err := r.Shutdown(context.Background()); err != nil {
 				panic(err)
 			}
-			logger.Debug("Server shutdown")
+			logger.Info("Server shutdown")
 		}),
 	)
+
 }

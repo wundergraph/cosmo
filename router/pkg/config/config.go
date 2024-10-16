@@ -40,23 +40,19 @@ type CustomAttribute struct {
 	ValueFrom *CustomDynamicAttribute `yaml:"value_from,omitempty"`
 }
 
-type TracingExporterConfig struct {
-	BatchTimeout  time.Duration `yaml:"batch_timeout,omitempty" envDefault:"10s"`
-	ExportTimeout time.Duration `yaml:"export_timeout,omitempty" envDefault:"30s"`
-}
-
 type TracingGlobalFeatures struct {
 	ExportGraphQLVariables bool `yaml:"export_graphql_variables" envDefault:"false" env:"TRACING_EXPORT_GRAPHQL_VARIABLES"`
 	WithNewRoot            bool `yaml:"with_new_root" envDefault:"false" env:"TRACING_WITH_NEW_ROOT"`
 }
 
 type TracingExporter struct {
-	Disabled              bool                `yaml:"disabled"`
-	Exporter              otelconfig.Exporter `yaml:"exporter,omitempty"`
-	Endpoint              string              `yaml:"endpoint,omitempty"`
-	HTTPPath              string              `yaml:"path,omitempty" envDefault:"/v1/traces"`
-	Headers               map[string]string   `yaml:"headers,omitempty"`
-	TracingExporterConfig `yaml:",inline"`
+	Disabled      bool                `yaml:"disabled"`
+	Exporter      otelconfig.Exporter `yaml:"exporter,omitempty"`
+	Endpoint      string              `yaml:"endpoint,omitempty"`
+	HTTPPath      string              `yaml:"path,omitempty" envDefault:"/v1/traces"`
+	Headers       map[string]string   `yaml:"headers,omitempty"`
+	BatchTimeout  time.Duration       `yaml:"batch_timeout,omitempty" envDefault:"10s"`
+	ExportTimeout time.Duration       `yaml:"export_timeout,omitempty" envDefault:"30s"`
 }
 
 type ResponseTraceHeader struct {
@@ -92,11 +88,13 @@ type Prometheus struct {
 }
 
 type MetricsOTLPExporter struct {
-	Disabled bool                `yaml:"disabled"`
-	Exporter otelconfig.Exporter `yaml:"exporter" envDefault:"http"`
-	Endpoint string              `yaml:"endpoint"`
-	HTTPPath string              `yaml:"path" envDefault:"/v1/metrics"`
-	Headers  map[string]string   `yaml:"headers"`
+	Disabled       bool                `yaml:"disabled"`
+	ExportInterval time.Duration       `yaml:"export_interval,omitempty" envDefault:"15s"`
+	ExportTimeout  time.Duration       `yaml:"export_timeout,omitempty" envDefault:"30s"`
+	Exporter       otelconfig.Exporter `yaml:"exporter" envDefault:"http"`
+	Endpoint       string              `yaml:"endpoint"`
+	HTTPPath       string              `yaml:"path" envDefault:"/v1/metrics"`
+	Headers        map[string]string   `yaml:"headers"`
 }
 
 type Metrics struct {

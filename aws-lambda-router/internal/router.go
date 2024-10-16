@@ -2,6 +2,8 @@ package internal
 
 import (
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
+	"time"
 
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
@@ -49,7 +51,7 @@ func NewRouter(opts ...Option) *core.Router {
 		core.WithIntrospection(true),
 		core.WithQueryPlans(true),
 		core.WithStaticExecutionConfig(routerConfig),
-		core.WithAwsLambdaRuntime(),
+		core.WithDisableCompression(true),
 		core.WithGraphApiToken(rc.GraphApiToken),
 	}
 
@@ -61,6 +63,8 @@ func NewRouter(opts ...Option) *core.Router {
 		routerOpts = append(routerOpts,
 			core.WithGraphQLMetrics(&core.GraphQLMetricsConfig{
 				Enabled:           true,
+				ExportInterval:    2 * time.Second,
+				ExportTimeout:     4 * time.Second,
 				CollectorEndpoint: "https://cosmo-metrics.wundergraph.com",
 			}),
 			core.WithMetrics(&metric.Config{
@@ -68,6 +72,19 @@ func NewRouter(opts ...Option) *core.Router {
 				Version: Version,
 				OpenTelemetry: metric.OpenTelemetry{
 					Enabled: true,
+					Exporters: []*metric.OpenTelemetryExporter{
+						{
+							Endpoint:       "https://cosmo-otel.wundergraph.com",
+							ExportInterval: 2 * time.Second,
+							ExportTimeout:  4 * time.Second,
+							HTTPPath:       otelconfig.DefaultMetricsPath,
+							Exporter:       otelconfig.ExporterOLTPHTTP,
+							Headers: map[string]string{
+								"Authorization": "Bearer " + rc.GraphApiToken,
+							},
+						},
+					},
+					RouterRuntime: false,
 				},
 			}),
 			core.WithTracing(&trace.Config{
@@ -75,6 +92,18 @@ func NewRouter(opts ...Option) *core.Router {
 				Name:    rc.TelemetryServiceName,
 				Version: Version,
 				Sampler: rc.TraceSampleRate,
+				Exporters: []*trace.ExporterConfig{
+					{
+						Endpoint:      "https://cosmo-otel.wundergraph.com",
+						BatchTimeout:  2 * time.Second,
+						ExportTimeout: 4 * time.Second,
+						HTTPPath:      otelconfig.DefaultTracesPath,
+						Exporter:      otelconfig.ExporterOLTPHTTP,
+						Headers: map[string]string{
+							"Authorization": "Bearer " + rc.GraphApiToken,
+						},
+					},
+				},
 				Propagators: []trace.Propagator{
 					trace.PropagatorTraceContext,
 				},

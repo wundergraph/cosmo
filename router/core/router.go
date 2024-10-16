@@ -94,6 +94,8 @@ type (
 	GraphQLMetricsConfig struct {
 		Enabled           bool
 		CollectorEndpoint string
+		ExportInterval    time.Duration
+		ExportTimeout     time.Duration
 	}
 
 	IPAnonymizationConfig struct {
@@ -145,7 +147,6 @@ type (
 		setConfigVersionHeader    bool
 		routerGracePeriod         time.Duration
 		staticExecutionConfig     *nodev1.RouterConfig
-		awsLambda                 bool
 		shutdown                  atomic.Bool
 		bootstrapped              bool
 		ipAnonymization           *IPAnonymizationConfig
@@ -153,6 +154,7 @@ type (
 		baseURL                   string
 		graphqlWebURL             string
 		playgroundPath            string
+		disableCompression        bool
 		graphqlPath               string
 		playground                bool
 		introspection             bool
@@ -426,10 +428,12 @@ func NewRouter(opts ...Option) (*Router, error) {
 		if endpoint := otelconfig.DefaultEndpoint(); endpoint != "" {
 			r.logger.Debug("Using default trace exporter", zap.String("endpoint", endpoint))
 			r.traceConfig.Exporters = append(r.traceConfig.Exporters, &rtrace.ExporterConfig{
-				Endpoint: endpoint,
-				Exporter: otelconfig.ExporterOLTPHTTP,
-				HTTPPath: "/v1/traces",
-				Headers:  otelconfig.DefaultEndpointHeaders(r.graphApiToken),
+				Endpoint:      endpoint,
+				Exporter:      otelconfig.ExporterOLTPHTTP,
+				ExportTimeout: rtrace.DefaultExportTimeout,
+				BatchTimeout:  rmetric.DefaultExportInterval,
+				HTTPPath:      "/v1/traces",
+				Headers:       otelconfig.DefaultEndpointHeaders(r.graphApiToken),
 			})
 		}
 	}
@@ -439,10 +443,12 @@ func NewRouter(opts ...Option) (*Router, error) {
 		if endpoint := otelconfig.DefaultEndpoint(); endpoint != "" {
 			r.logger.Debug("Using default metrics exporter", zap.String("endpoint", endpoint))
 			r.metricConfig.OpenTelemetry.Exporters = append(r.metricConfig.OpenTelemetry.Exporters, &rmetric.OpenTelemetryExporter{
-				Endpoint: endpoint,
-				Exporter: otelconfig.ExporterOLTPHTTP,
-				HTTPPath: "/v1/metrics",
-				Headers:  otelconfig.DefaultEndpointHeaders(r.graphApiToken),
+				Endpoint:       endpoint,
+				ExportInterval: rmetric.DefaultExportInterval,
+				ExportTimeout:  rmetric.DefaultExportTimeout,
+				Exporter:       otelconfig.ExporterOLTPHTTP,
+				HTTPPath:       "/v1/metrics",
+				Headers:        otelconfig.DefaultEndpointHeaders(r.graphApiToken),
 			})
 		}
 	}
@@ -743,11 +749,20 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			r.graphqlMetricsConfig.CollectorEndpoint,
 			connect.WithSendGzip(),
 		)
+		settings := graphqlmetrics.NewDefaultExporterSettings()
+
+		if r.graphqlMetricsConfig.ExportInterval > 0 {
+			settings.Interval = r.graphqlMetricsConfig.ExportInterval
+		}
+		if r.graphqlMetricsConfig.ExportTimeout > 0 {
+			settings.ExportTimeout = r.graphqlMetricsConfig.ExportTimeout
+		}
+
 		ge, err := graphqlmetrics.NewExporter(
 			r.logger,
 			client,
 			r.graphApiToken,
-			graphqlmetrics.NewDefaultExporterSettings(),
+			settings,
 		)
 		if err != nil {
 			return fmt.Errorf("failed to validate graphql metrics exporter: %w", err)
@@ -1270,6 +1285,12 @@ func WithPlaygroundPath(p string) Option {
 	}
 }
 
+func WithDisableCompression(disable bool) Option {
+	return func(r *Router) {
+		r.disableCompression = disable
+	}
+}
+
 // WithConfigPoller sets the poller client to fetch the router config. If not set, WithConfigPollerConfig should be set.
 func WithConfigPoller(cf configpoller.ConfigPoller) Option {
 	return func(r *Router) {
@@ -1335,14 +1356,6 @@ func WithExecutionConfig(cfg *ExecutionConfig) Option {
 func WithStaticExecutionConfig(cfg *nodev1.RouterConfig) Option {
 	return func(r *Router) {
 		r.staticExecutionConfig = cfg
-	}
-}
-
-// WithAwsLambdaRuntime enables the AWS Lambda behaviour.
-// This flushes all telemetry data synchronously after the request is handled.
-func WithAwsLambdaRuntime() Option {
-	return func(r *Router) {
-		r.awsLambda = true
 	}
 }
 
@@ -1737,11 +1750,13 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 	var openTelemetryExporters []*rmetric.OpenTelemetryExporter
 	for _, exp := range cfg.Metrics.OTLP.Exporters {
 		openTelemetryExporters = append(openTelemetryExporters, &rmetric.OpenTelemetryExporter{
-			Disabled: exp.Disabled,
-			Endpoint: exp.Endpoint,
-			Exporter: exp.Exporter,
-			Headers:  exp.Headers,
-			HTTPPath: exp.HTTPPath,
+			Disabled:       exp.Disabled,
+			ExportInterval: exp.ExportInterval,
+			ExportTimeout:  exp.ExportTimeout,
+			Endpoint:       exp.Endpoint,
+			Exporter:       exp.Exporter,
+			Headers:        exp.Headers,
+			HTTPPath:       exp.HTTPPath,
 		})
 	}
 

@@ -2,7 +2,6 @@ package core
 
 import (
 	"bytes"
-	"context"
 	"crypto/ecdsa"
 	"fmt"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -44,49 +43,47 @@ type PreHandlerOptions struct {
 	QueryDepthLimit       int
 	QueryIgnorePersistent bool
 
-	FlushTelemetryAfterResponse bool
-	FileUploadEnabled           bool
-	TraceExportVariables        bool
-	DevelopmentMode             bool
-	EnableRequestTracing        bool
-	AlwaysIncludeQueryPlan      bool
-	AlwaysSkipLoader            bool
-	QueryPlansEnabled           bool
-	QueryPlansLoggingEnabled    bool
-	TrackSchemaUsageInfo        bool
-	ClientHeader                config.ClientHeader
-	ComputeOperationSha256      bool
+	FileUploadEnabled        bool
+	TraceExportVariables     bool
+	DevelopmentMode          bool
+	EnableRequestTracing     bool
+	AlwaysIncludeQueryPlan   bool
+	AlwaysSkipLoader         bool
+	QueryPlansEnabled        bool
+	QueryPlansLoggingEnabled bool
+	TrackSchemaUsageInfo     bool
+	ClientHeader             config.ClientHeader
+	ComputeOperationSha256   bool
 }
 
 type PreHandler struct {
-	log                         *zap.Logger
-	executor                    *Executor
-	metrics                     RouterMetrics
-	operationProcessor          *OperationProcessor
-	planner                     *OperationPlanner
-	accessController            *AccessController
-	operationBlocker            *OperationBlocker
-	developmentMode             bool
-	alwaysIncludeQueryPlan      bool
-	alwaysSkipLoader            bool
-	queryPlansEnabled           bool // queryPlansEnabled is a flag to enable query plans output in the extensions
-	queryPlansLoggingEnabled    bool // queryPlansLoggingEnabled is a flag to enable logging of query plans
-	routerPublicKey             *ecdsa.PublicKey
-	enableRequestTracing        bool
-	tracerProvider              *sdktrace.TracerProvider
-	flushTelemetryAfterResponse bool
-	tracer                      trace.Tracer
-	traceExportVariables        bool
-	fileUploadEnabled           bool
-	maxUploadFiles              int
-	maxUploadFileSize           int
-	queryDepthEnabled           bool
-	queryDepthLimit             int
-	queryIgnorePersistent       bool
-	bodyReadBuffers             *sync.Pool
-	trackSchemaUsageInfo        bool
-	clientHeader                config.ClientHeader
-	computeOperationSha256      bool
+	log                      *zap.Logger
+	executor                 *Executor
+	metrics                  RouterMetrics
+	operationProcessor       *OperationProcessor
+	planner                  *OperationPlanner
+	accessController         *AccessController
+	operationBlocker         *OperationBlocker
+	developmentMode          bool
+	alwaysIncludeQueryPlan   bool
+	alwaysSkipLoader         bool
+	queryPlansEnabled        bool // queryPlansEnabled is a flag to enable query plans output in the extensions
+	queryPlansLoggingEnabled bool // queryPlansLoggingEnabled is a flag to enable logging of query plans
+	routerPublicKey          *ecdsa.PublicKey
+	enableRequestTracing     bool
+	tracerProvider           *sdktrace.TracerProvider
+	tracer                   trace.Tracer
+	traceExportVariables     bool
+	fileUploadEnabled        bool
+	maxUploadFiles           int
+	maxUploadFileSize        int
+	queryDepthEnabled        bool
+	queryDepthLimit          int
+	queryIgnorePersistent    bool
+	bodyReadBuffers          *sync.Pool
+	trackSchemaUsageInfo     bool
+	clientHeader             config.ClientHeader
+	computeOperationSha256   bool
 }
 
 type httpOperation struct {
@@ -102,19 +99,18 @@ type httpOperation struct {
 
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 	return &PreHandler{
-		log:                         opts.Logger,
-		executor:                    opts.Executor,
-		metrics:                     opts.Metrics,
-		operationProcessor:          opts.OperationProcessor,
-		planner:                     opts.Planner,
-		accessController:            opts.AccessController,
-		operationBlocker:            opts.OperationBlocker,
-		routerPublicKey:             opts.RouterPublicKey,
-		developmentMode:             opts.DevelopmentMode,
-		enableRequestTracing:        opts.EnableRequestTracing,
-		flushTelemetryAfterResponse: opts.FlushTelemetryAfterResponse,
-		tracerProvider:              opts.TracerProvider,
-		traceExportVariables:        opts.TraceExportVariables,
+		log:                  opts.Logger,
+		executor:             opts.Executor,
+		metrics:              opts.Metrics,
+		operationProcessor:   opts.OperationProcessor,
+		planner:              opts.Planner,
+		accessController:     opts.AccessController,
+		operationBlocker:     opts.OperationBlocker,
+		routerPublicKey:      opts.RouterPublicKey,
+		developmentMode:      opts.DevelopmentMode,
+		enableRequestTracing: opts.EnableRequestTracing,
+		tracerProvider:       opts.TracerProvider,
+		traceExportVariables: opts.TraceExportVariables,
 		tracer: opts.TracerProvider.Tracer(
 			"wundergraph/cosmo/router/pre_handler",
 			trace.WithInstrumentationVersion("0.0.1"),
@@ -217,10 +213,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		routerSpan.SetAttributes(commonAttributes...)
 
 		defer func() {
-			metrics.Finish(finalErr, statusCode, writtenBytes, h.flushTelemetryAfterResponse)
-			if h.flushTelemetryAfterResponse {
-				h.flushMetrics(r.Context(), requestLogger)
-			}
+			metrics.Finish(finalErr, statusCode, writtenBytes)
 		}()
 
 		var body []byte
@@ -721,35 +714,6 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 	}
 
 	return requestContext.operation, nil
-}
-
-// flushMetrics flushes all metrics to the respective exporters
-// only used for serverless router build
-func (h *PreHandler) flushMetrics(ctx context.Context, requestLogger *zap.Logger) {
-	requestLogger.Debug("Flushing metrics ...")
-
-	now := time.Now()
-
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if err := h.metrics.MetricStore().Flush(ctx); err != nil {
-			requestLogger.Error("Failed to flush OTEL metrics", zap.Error(err))
-		}
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if err := h.tracerProvider.ForceFlush(ctx); err != nil {
-			requestLogger.Error("Failed to flush OTEL tracer", zap.Error(err))
-		}
-	}()
-
-	wg.Wait()
-
-	requestLogger.Debug("Metrics flushed", zap.Duration("duration", time.Since(now)))
 }
 
 func (h *PreHandler) parseRequestOptions(r *http.Request, clientInfo *ClientInfo, requestLogger *zap.Logger) (resolve.ExecutionOptions, resolve.TraceOptions, error) {

@@ -7,7 +7,7 @@
 This is the [AWS Lambda](https://aws.amazon.com/lambda/) version of the WunderGraph Cosmo [Router](https://wundergraph.com/cosmo/features/router). Please [contact](https://wundergraph.com/contact/sales) us if you have any questions or production use case.
 Why AWS lambda? Because it's cheap and scales automatically. You only pay for what you use. No need to manage servers or containers. It also integrates well with the rest of the AWS ecosystem.
 
-Status: **Beta**
+Status: **Beta** (Only works with Cosmo Cloud)
 
 Demo: [https://zqadzbqwsi.execute-api.us-west-1.amazonaws.com/Prod/](https://zqadzbqwsi.execute-api.us-west-1.amazonaws.com/Prod/) (Playground)
 
@@ -15,7 +15,7 @@ Demo: [https://zqadzbqwsi.execute-api.us-west-1.amazonaws.com/Prod/](https://zqa
 
 - [X] GraphQL Queries
 - [X] GraphQL Mutations
-- [X] Telemetry Flushing after each request
+- [X] Telemetry Flushing on shutdown and in regular intervals (best-effort)
 - [X] Schema Usage Tracking after each request
 - [ ] Subscription: Not implemented. Please [talk to us](https://wundergraph.com/contact/sales) if you need this.
 

@@ -903,7 +903,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 	// Put in a closure to evaluate err after the defer
 	defer func() {
 		// StatusCode has no meaning here. We set it to 0 but set the error.
-		h.metrics.ExportSchemaUsageInfo(operationCtx, 0, err != nil, false)
+		h.metrics.ExportSchemaUsageInfo(operationCtx, 0, err != nil)
 	}()
 
 	switch p := operationCtx.preparedPlan.preparedPlan.(type) {

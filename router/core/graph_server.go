@@ -203,13 +203,17 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		return nil, fmt.Errorf("failed to build feature flag handler: %w", err)
 	}
 
-	wrapper, err := gzhttp.NewWrapper(
-		gzhttp.MinSize(1024), // 1KB
-		gzhttp.CompressionLevel(gzip.DefaultCompression),
-		gzhttp.ContentTypes(CompressibleContentTypes),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create gzip wrapper: %w", err)
+	var compressionHandler func(http.Handler) http.HandlerFunc
+
+	if !s.disableCompression {
+		compressionHandler, err = gzhttp.NewWrapper(
+			gzhttp.MinSize(1024), // 1KB
+			gzhttp.CompressionLevel(gzip.DefaultCompression),
+			gzhttp.ContentTypes(CompressibleContentTypes),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create gzip wrapper: %w", err)
+		}
 	}
 
 	/**
@@ -217,10 +221,12 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	 */
 	httpRouter.Group(func(cr chi.Router) {
 
-		// We are applying it conditionally because compressing 3MB playground is still slow even with stdlib gzip
-		cr.Use(func(h http.Handler) http.Handler {
-			return wrapper(h)
-		})
+		if compressionHandler != nil {
+			// We are applying it conditionally because compressing 3MB playground is still slow even with stdlib gzip
+			cr.Use(func(h http.Handler) http.Handler {
+				return compressionHandler(h)
+			})
+		}
 
 		// Mount the feature flag handler. It calls the base mux if no feature flag is set.
 		cr.Mount(r.graphqlPath, multiGraphHandler)
@@ -686,32 +692,31 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	})
 
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
-		Logger:                      s.logger,
-		Executor:                    executor,
-		Metrics:                     metrics,
-		OperationProcessor:          operationProcessor,
-		Planner:                     operationPlanner,
-		AccessController:            s.accessController,
-		OperationBlocker:            operationBlocker,
-		RouterPublicKey:             s.publicKey,
-		EnableRequestTracing:        s.engineExecutionConfiguration.EnableRequestTracing,
-		DevelopmentMode:             s.developmentMode,
-		TracerProvider:              s.tracerProvider,
-		FlushTelemetryAfterResponse: s.awsLambda,
-		TraceExportVariables:        s.traceConfig.ExportGraphQLVariables.Enabled,
-		FileUploadEnabled:           s.fileUploadConfig.Enabled,
-		MaxUploadFiles:              s.fileUploadConfig.MaxFiles,
-		MaxUploadFileSize:           int(s.fileUploadConfig.MaxFileSizeBytes),
-		QueryDepthEnabled:           s.securityConfiguration.DepthLimit.Enabled,
-		QueryDepthLimit:             s.securityConfiguration.DepthLimit.Limit,
-		QueryIgnorePersistent:       s.securityConfiguration.DepthLimit.IgnorePersistedOperations,
-		AlwaysIncludeQueryPlan:      s.engineExecutionConfiguration.Debug.AlwaysIncludeQueryPlan,
-		AlwaysSkipLoader:            s.engineExecutionConfiguration.Debug.AlwaysSkipLoader,
-		QueryPlansEnabled:           s.Config.queryPlansEnabled,
-		QueryPlansLoggingEnabled:    s.engineExecutionConfiguration.Debug.PrintQueryPlans,
-		TrackSchemaUsageInfo:        s.graphqlMetricsConfig.Enabled,
-		ClientHeader:                s.clientHeader,
-		ComputeOperationSha256:      computeSha256,
+		Logger:                   s.logger,
+		Executor:                 executor,
+		Metrics:                  metrics,
+		OperationProcessor:       operationProcessor,
+		Planner:                  operationPlanner,
+		AccessController:         s.accessController,
+		OperationBlocker:         operationBlocker,
+		RouterPublicKey:          s.publicKey,
+		EnableRequestTracing:     s.engineExecutionConfiguration.EnableRequestTracing,
+		DevelopmentMode:          s.developmentMode,
+		TracerProvider:           s.tracerProvider,
+		TraceExportVariables:     s.traceConfig.ExportGraphQLVariables.Enabled,
+		FileUploadEnabled:        s.fileUploadConfig.Enabled,
+		MaxUploadFiles:           s.fileUploadConfig.MaxFiles,
+		MaxUploadFileSize:        int(s.fileUploadConfig.MaxFileSizeBytes),
+		QueryDepthEnabled:        s.securityConfiguration.DepthLimit.Enabled,
+		QueryDepthLimit:          s.securityConfiguration.DepthLimit.Limit,
+		QueryIgnorePersistent:    s.securityConfiguration.DepthLimit.IgnorePersistedOperations,
+		AlwaysIncludeQueryPlan:   s.engineExecutionConfiguration.Debug.AlwaysIncludeQueryPlan,
+		AlwaysSkipLoader:         s.engineExecutionConfiguration.Debug.AlwaysSkipLoader,
+		QueryPlansEnabled:        s.Config.queryPlansEnabled,
+		QueryPlansLoggingEnabled: s.engineExecutionConfiguration.Debug.PrintQueryPlans,
+		TrackSchemaUsageInfo:     s.graphqlMetricsConfig.Enabled,
+		ClientHeader:             s.clientHeader,
+		ComputeOperationSha256:   computeSha256,
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
