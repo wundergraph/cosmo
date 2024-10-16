@@ -1,11 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
-  "additionalProperties": true,
+  "additionalProperties": false,
   "properties": {
     "version": {
       "type": "string",
-      "description": "The version of the configuration file. This is used to ensure that the configuration file is compatible."
+      "description": "The version of the configuration file. This is used to ensure that the configuration file is compatible.",
+      "enum": ["1"]
     },
     "instance_id": {
       "type": "string",
