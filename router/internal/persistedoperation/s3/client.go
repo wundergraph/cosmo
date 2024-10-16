@@ -14,6 +14,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
+	"github.com/wundergraph/cosmo/router/pkg/clientinfo"
 )
 
 type Option func(*Client)
@@ -76,14 +77,14 @@ func NewClient(endpoint string, options *Options) (persistedoperation.Client, er
 	return client, nil
 }
 
-func (c Client) PersistedOperation(ctx context.Context, clientName, sha256Hash string, attributes []attribute.KeyValue) ([]byte, error) {
+func (c Client) PersistedOperation(ctx context.Context, clientInfo clientinfo.DetailedClientInfo, sha256Hash string, attributes []attribute.KeyValue) ([]byte, error) {
 	ctx, span := c.tracer.Start(ctx, "Load Persisted Operation",
 		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(attributes...),
 	)
 	defer span.End()
 
-	content, err := c.persistedOperation(ctx, clientName, sha256Hash, attributes)
+	content, err := c.persistedOperation(ctx, clientInfo, sha256Hash, attributes)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -93,7 +94,7 @@ func (c Client) PersistedOperation(ctx context.Context, clientName, sha256Hash s
 	return content, nil
 }
 
-func (c Client) persistedOperation(ctx context.Context, clientName, sha256Hash string, attributes []attribute.KeyValue) ([]byte, error) {
+func (c Client) persistedOperation(ctx context.Context, clientInfo clientinfo.DetailedClientInfo, sha256Hash string, attributes []attribute.KeyValue) ([]byte, error) {
 	objectPath := fmt.Sprintf("%s/%s.json", c.options.ObjectPathPrefix, sha256Hash)
 	reader, err := c.client.GetObject(ctx, c.options.BucketName, objectPath, minio.GetObjectOptions{})
 	if err != nil {

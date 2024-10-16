@@ -25,6 +25,7 @@ import (
 
 	"github.com/wundergraph/cosmo/router/pkg/art"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"github.com/wundergraph/cosmo/router/pkg/clientinfo"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 )
 
@@ -181,18 +182,20 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		routerSpan := trace.SpanFromContext(r.Context())
 
-		clientInfo := NewClientInfoFromRequest(r, h.clientHeader)
+		detailedClientInfo, err := clientinfo.NewDetailedClientInfoFromRequest(r, h.clientHeader, h.operationProcessor.detailedClientInfoBuilder)
+		if err!=nil {
+			writeRequestErrors(r, w, http.StatusBadRequest, graphqlerrors.RequestErrorsFromError(err), requestLogger)
+			return
+		}
 		commonAttributes := []attribute.KeyValue{
-			otel.WgClientName.String(clientInfo.Name),
-			otel.WgClientVersion.String(clientInfo.Version),
+			otel.WgClientName.String(detailedClientInfo.Name()),
+			otel.WgClientVersion.String(detailedClientInfo.Version()),
 			otel.WgOperationProtocol.String(OperationProtocolHTTP.String()),
 		}
 
-		requestContext.operation = &operationContext{
-			clientInfo: clientInfo,
-		}
+		requestContext.operation.detailedClientInfo = detailedClientInfo
 
-		executionOptions, traceOptions, err := h.parseRequestOptions(r, clientInfo, requestLogger)
+		executionOptions, traceOptions, err := h.parseRequestOptions(r, detailedClientInfo, requestLogger)
 		if err != nil {
 			finalErr = err
 			writeRequestErrors(r, w, http.StatusBadRequest, graphqlerrors.RequestErrorsFromError(err), requestLogger)
@@ -212,7 +215,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			commonAttributes = append(commonAttributes, baseAttributes...)
 		}
 
-		metrics := h.metrics.StartOperation(clientInfo, requestLogger, r.ContentLength, commonAttributes)
+		metrics := h.metrics.StartOperation(detailedClientInfo, requestLogger, r.ContentLength, commonAttributes)
 
 		routerSpan.SetAttributes(commonAttributes...)
 
@@ -428,7 +431,13 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 
 	if operationKit.parsedOperation.IsPersistedOperation {
 		requestContext.operation.persistedID = operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
-		skipParse, err = operationKit.FetchPersistedOperation(req.Context(), requestContext.operation.clientInfo, httpOperation.attributes)
+		builder := h.operationProcessor.detailedClientInfoBuilder
+		detailedClientInfo, err := clientinfo.NewDetailedClientInfoFromRequest(req, h.clientHeader, builder)
+		if err!=nil {
+			return nil, err
+		}
+
+		skipParse, err = operationKit.FetchPersistedOperation(req.Context(), detailedClientInfo, httpOperation.attributes)
 		if err != nil {
 			return nil, err
 		}
@@ -671,7 +680,7 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 
 	planOptions := PlanOptions{
 		Protocol:             OperationProtocolHTTP,
-		ClientInfo:           requestContext.operation.clientInfo,
+		DetailedClientInfo:   requestContext.operation.detailedClientInfo,
 		TraceOptions:         requestContext.operation.traceOptions,
 		ExecutionOptions:     requestContext.operation.executionOptions,
 		TrackSchemaUsageInfo: h.trackSchemaUsageInfo,
@@ -752,7 +761,7 @@ func (h *PreHandler) flushMetrics(ctx context.Context, requestLogger *zap.Logger
 	requestLogger.Debug("Metrics flushed", zap.Duration("duration", time.Since(now)))
 }
 
-func (h *PreHandler) parseRequestOptions(r *http.Request, clientInfo *ClientInfo, requestLogger *zap.Logger) (resolve.ExecutionOptions, resolve.TraceOptions, error) {
+func (h *PreHandler) parseRequestOptions(r *http.Request, clientInfo clientinfo.DetailedClientInfo, requestLogger *zap.Logger) (resolve.ExecutionOptions, resolve.TraceOptions, error) {
 	ex, tr, err := h.internalParseRequestOptions(r, clientInfo, requestLogger)
 	if err != nil {
 		return ex, tr, err
@@ -769,7 +778,7 @@ func (h *PreHandler) parseRequestOptions(r *http.Request, clientInfo *ClientInfo
 	return ex, tr, nil
 }
 
-func (h *PreHandler) internalParseRequestOptions(r *http.Request, clientInfo *ClientInfo, requestLogger *zap.Logger) (resolve.ExecutionOptions, resolve.TraceOptions, error) {
+func (h *PreHandler) internalParseRequestOptions(r *http.Request, clientInfo clientinfo.DetailedClientInfo, requestLogger *zap.Logger) (resolve.ExecutionOptions, resolve.TraceOptions, error) {
 	// Determine if we should enable request tracing / query plans at all
 	if h.enableRequestTracing {
 		// In dev mode we always allow to enable tracing / query plans
@@ -777,15 +786,18 @@ func (h *PreHandler) internalParseRequestOptions(r *http.Request, clientInfo *Cl
 			return h.parseRequestExecutionOptions(r), h.parseRequestTraceOptions(r), nil
 		}
 		// If the client has a valid request token, and we have a public key from the controlplane
-		if clientInfo.WGRequestToken != "" && h.routerPublicKey != nil {
-			_, err := jwt.Parse(clientInfo.WGRequestToken, func(token *jwt.Token) (interface{}, error) {
-				return h.routerPublicKey, nil
-			}, jwt.WithValidMethods([]string{jwt.SigningMethodES256.Name}))
-			if err != nil {
-				requestLogger.Error(fmt.Sprintf("failed to parse request token: %s", err.Error()))
-				return resolve.ExecutionOptions{}, resolve.TraceOptions{}, err
+		token, ok := clientInfo.(clientinfo.Token)
+		if ok {
+			if token.WGRequestToken() != "" && h.routerPublicKey != nil {
+				_, err := jwt.Parse(token.WGRequestToken(), func(token *jwt.Token) (interface{}, error) {
+					return h.routerPublicKey, nil
+				}, jwt.WithValidMethods([]string{jwt.SigningMethodES256.Name}))
+				if err != nil {
+					requestLogger.Error(fmt.Sprintf("failed to parse request token: %s", err.Error()))
+					return resolve.ExecutionOptions{}, resolve.TraceOptions{}, err
+				}
+				return h.parseRequestExecutionOptions(r), h.parseRequestTraceOptions(r), nil
 			}
-			return h.parseRequestExecutionOptions(r), h.parseRequestTraceOptions(r), nil
 		}
 	}
 

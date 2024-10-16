@@ -13,6 +13,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/postprocess"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"github.com/wundergraph/cosmo/router/pkg/clientinfo"
 )
 
 type planWithMetaData struct {
@@ -109,7 +110,7 @@ func (p *OperationPlanner) preparePlan(ctx *operationContext) (*planWithMetaData
 
 type PlanOptions struct {
 	Protocol             OperationProtocol
-	ClientInfo           *ClientInfo
+	DetailedClientInfo   clientinfo.DetailedClientInfo
 	TraceOptions         resolve.TraceOptions
 	ExecutionOptions     resolve.ExecutionOptions
 	TrackSchemaUsageInfo bool

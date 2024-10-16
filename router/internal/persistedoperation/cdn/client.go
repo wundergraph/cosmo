@@ -9,6 +9,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/httpclient"
 	"github.com/wundergraph/cosmo/router/internal/jwt"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
+	"github.com/wundergraph/cosmo/router/pkg/clientinfo"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -40,7 +41,7 @@ type client struct {
 	tracer         trace.Tracer
 }
 
-func (cdn *client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string, attributes []attribute.KeyValue) ([]byte, error) {
+func (cdn *client) PersistedOperation(ctx context.Context, clientInfo clientinfo.DetailedClientInfo, sha256Hash string, attributes []attribute.KeyValue) ([]byte, error) {
 
 	ctx, span := cdn.tracer.Start(ctx, "Load Persisted Operation",
 		trace.WithSpanKind(trace.SpanKindClient),
@@ -48,7 +49,7 @@ func (cdn *client) PersistedOperation(ctx context.Context, clientName string, sh
 	)
 	defer span.End()
 
-	content, err := cdn.persistedOperation(ctx, clientName, sha256Hash, attributes)
+	content, err := cdn.persistedOperation(ctx, clientInfo, sha256Hash, attributes)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -58,14 +59,14 @@ func (cdn *client) PersistedOperation(ctx context.Context, clientName string, sh
 	return content, nil
 }
 
-func (cdn *client) persistedOperation(ctx context.Context, clientName string, sha256Hash string, attributes []attribute.KeyValue) ([]byte, error) {
+func (cdn *client) persistedOperation(ctx context.Context, clientInfo clientinfo.DetailedClientInfo, sha256Hash string, attributes []attribute.KeyValue) ([]byte, error) {
 
 	span := trace.SpanFromContext(ctx)
 
 	operationPath := fmt.Sprintf("/%s/%s/operations/%s/%s.json",
 		cdn.organizationID,
 		cdn.federatedGraphID,
-		url.PathEscape(clientName),
+		url.PathEscape(clientInfo.Name()),
 		url.PathEscape(sha256Hash))
 	operationURL := cdn.cdnURL.ResolveReference(&url.URL{Path: operationPath})
 
@@ -97,7 +98,7 @@ func (cdn *client) persistedOperation(ctx context.Context, clientName string, sh
 
 		if resp.StatusCode == http.StatusNotFound {
 			return nil, &persistedoperation.PersistentOperationNotFoundError{
-				ClientName: clientName,
+				ClientName: clientInfo.Name(),
 				Sha256Hash: sha256Hash,
 			}
 		}

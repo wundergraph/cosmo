@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"github.com/wundergraph/cosmo/router/pkg/clientinfo"
 
 	"go.uber.org/zap"
 
@@ -75,13 +76,13 @@ func (m *OperationMetrics) AddAttributes(kv ...attribute.KeyValue) {
 
 // AddClientInfo adds the client info to the operation metrics. If OperationMetrics
 // is nil, it's a no-op.
-func (m *OperationMetrics) AddClientInfo(info *ClientInfo) {
+func (m *OperationMetrics) AddClientInfo(info clientinfo.DetailedClientInfo) {
 	if info == nil {
 		return
 	}
 	// Add client info to metrics base fields
-	m.metricBaseFields = append(m.metricBaseFields, otel.WgClientName.String(info.Name))
-	m.metricBaseFields = append(m.metricBaseFields, otel.WgClientVersion.String(info.Version))
+	m.metricBaseFields = append(m.metricBaseFields, otel.WgClientName.String(info.Name()))
+	m.metricBaseFields = append(m.metricBaseFields, otel.WgClientVersion.String(info.Version()))
 }
 
 type OperationMetricsOptions struct {

@@ -31,6 +31,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
+	"github.com/wundergraph/cosmo/router/pkg/clientinfo"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
@@ -234,7 +235,12 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 
 	requestID := middleware.GetReqID(r.Context())
 	requestLogger := h.logger.With(logging.WithRequestID(requestID))
-	clientInfo := NewClientInfoFromRequest(r, h.clientHeader)
+	detailedClientInfo, err := clientinfo.NewDetailedClientInfoFromRequest(r, h.clientHeader, h.operationProcessor.detailedClientInfoBuilder)
+	if err != nil {
+		statusCode := http.StatusForbidden
+		http.Error(w, err.Error(), statusCode)
+		return
+	}
 
 	if h.accessController != nil && !h.config.Authentication.FromInitialPayload.Enabled {
 		// Check access control before upgrading the connection
@@ -287,7 +293,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	// We can parse the request options before creating the handler
 	// this avoids touching the client request across goroutines
 
-	executionOptions, traceOptions, err := h.preHandler.parseRequestOptions(r, clientInfo, requestLogger)
+	executionOptions, traceOptions, err := h.preHandler.parseRequestOptions(r, detailedClientInfo, requestLogger)
 	if err != nil {
 		requestLogger.Error("Parse request options", zap.Error(err))
 		_ = c.Close()
@@ -296,7 +302,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 
 	planOptions := PlanOptions{
 		Protocol:             OperationProtocolWS,
-		ClientInfo:           clientInfo,
+		DetailedClientInfo:    detailedClientInfo,
 		TraceOptions:         traceOptions,
 		ExecutionOptions:     executionOptions,
 		TrackSchemaUsageInfo: h.preHandler.trackSchemaUsageInfo,
@@ -317,7 +323,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		Logger:                requestLogger,
 		Stats:                 h.stats,
 		ConnectionID:          h.connectionIDs.Inc(),
-		ClientInfo:            clientInfo,
+		DetailedClientInfo:    detailedClientInfo,
 		InitRequestID:         requestID,
 		Config:                h.config,
 		ForwardUpgradeHeaders: h.forwardUpgradeHeadersConfig,
@@ -643,7 +649,7 @@ type WebSocketConnectionHandlerOptions struct {
 	Stats                 WebSocketsStatistics
 	PlanOptions           PlanOptions
 	ConnectionID          int64
-	ClientInfo            *ClientInfo
+	DetailedClientInfo    clientinfo.DetailedClientInfo
 	InitRequestID         string
 	ForwardUpgradeHeaders forwardConfig
 	ForwardQueryParams    forwardConfig
@@ -664,7 +670,7 @@ type WebSocketConnectionHandler struct {
 	request    *http.Request
 	conn       *wsConnectionWrapper
 	protocol   wsproto.Proto
-	clientInfo *ClientInfo
+	detailedClientInfo clientinfo.DetailedClientInfo
 	logger     *zap.Logger
 
 	initialPayload            json.RawMessage
@@ -712,7 +718,7 @@ func NewWebsocketConnectionHandler(ctx context.Context, opts WebSocketConnection
 		logger:                opts.Logger,
 		connectionID:          opts.ConnectionID,
 		stats:                 opts.Stats,
-		clientInfo:            opts.ClientInfo,
+		detailedClientInfo:    opts.DetailedClientInfo,
 		initRequestID:         opts.InitRequestID,
 		forwardUpgradeHeaders: &opts.ForwardUpgradeHeaders,
 		forwardQueryParams:    &opts.ForwardQueryParams,
@@ -753,7 +759,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 		name:       operationKit.parsedOperation.Request.OperationName,
 		opType:     operationKit.parsedOperation.Type,
 		content:    operationKit.parsedOperation.NormalizedRepresentation,
-		clientInfo: h.plannerOptions.ClientInfo,
+		detailedClientInfo: h.plannerOptions.DetailedClientInfo,
 	}
 
 	if err := operationKit.UnmarshalOperationFromBody(payload); err != nil {
@@ -765,7 +771,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 	var skipParse bool
 
 	if operationKit.parsedOperation.IsPersistedOperation {
-		skipParse, err = operationKit.FetchPersistedOperation(h.ctx, h.clientInfo, baseAttributesFromContext(h.ctx))
+		skipParse, err = operationKit.FetchPersistedOperation(h.ctx, h.detailedClientInfo, baseAttributesFromContext(h.ctx))
 		if err != nil {
 			return nil, nil, err
 		}

@@ -11,6 +11,19 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 )
 
+type testBuildDetailedClientInfo struct {
+    name string
+    version string
+}
+
+func (d *testBuildDetailedClientInfo) Name() string {
+    return d.name
+}
+
+func (d *testBuildDetailedClientInfo) Version() string {
+    return d.version
+}
+
 func TestOperationProcessorPersistentOperations(t *testing.T) {
 	executor := &Executor{
 		PlanConfig:      plan.Configuration{},
@@ -23,10 +36,10 @@ func TestOperationProcessorPersistentOperations(t *testing.T) {
 		MaxOperationSizeInBytes: 10 << 20,
 		ParseKitPoolSize:        4,
 	})
-	clientInfo := &ClientInfo{
-		Name:    "test",
-		Version: "1.0.0",
-	}
+	detailedClientInfo := &testBuildDetailedClientInfo{
+        name: "test",
+        version: "1.0.0",
+    }
 	testCases := []struct {
 		ExpectedType  string
 		ExpectedError error
@@ -56,7 +69,7 @@ func TestOperationProcessorPersistentOperations(t *testing.T) {
 
 			require.NoError(t, err)
 
-			_, err = kit.FetchPersistedOperation(context.Background(), clientInfo, nil)
+			_, err = kit.FetchPersistedOperation(context.Background(), detailedClientInfo, nil)
 
 			if err != nil {
 				require.EqualError(t, tc.ExpectedError, err.Error())
