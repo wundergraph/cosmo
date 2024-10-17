@@ -5,9 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/wundergraph/cosmo/router/internal/unique"
-	"slices"
-	"strings"
-
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -16,6 +13,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
+	"slices"
 )
 
 var (
@@ -55,13 +53,9 @@ func (f *EngineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInf
 		return ctx
 	}
 
-	var baseAttributes []attribute.KeyValue
-
-	if attributes := baseAttributesFromContext(reqContext.Request().Context()); attributes != nil {
-		baseAttributes = append(baseAttributes, attributes...)
-	}
-
-	ctx, span := f.tracer.Start(ctx, "Engine - Fetch", trace.WithAttributes(baseAttributes...))
+	ctx, span := f.tracer.Start(ctx, "Engine - Fetch",
+		trace.WithAttributes(reqContext.telemetry.CommonAttrs()...),
+	)
 
 	subgraph := reqContext.SubgraphByID(ds.ID)
 	if subgraph != nil {
@@ -88,11 +82,12 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 	}
 
 	span := trace.SpanFromContext(ctx)
+
 	defer span.End()
 
 	activeSubgraph := reqContext.SubgraphByID(ds.ID)
 
-	baseAttributes := []attribute.KeyValue{
+	attributes := []attribute.KeyValue{
 		// Subgraph response status code
 		semconv.HTTPStatusCode(statusCode),
 		rotel.WgComponentName.String("engine-loader"),
@@ -101,11 +96,7 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 	}
 
 	// Ensure common attributes are set
-	baseAttributes = append(baseAttributes, reqContext.operation.Attributes()...)
-
-	if attributes := baseAttributesFromContext(reqContext.Request().Context()); attributes != nil {
-		baseAttributes = append(baseAttributes, attributes...)
-	}
+	attributes = append(attributes, reqContext.telemetry.CommonAttrs()...)
 
 	if err != nil {
 
@@ -150,19 +141,10 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 		slices.Sort(errorCodesAttr)
 
 		if len(errorCodesAttr) > 0 {
-			// Create individual metrics for each error code
-			for _, code := range errorCodesAttr {
-				f.metricStore.MeasureRequestError(ctx,
-					// Add only the error code as an attribute
-					append(baseAttributes, rotel.WgSubgraphErrorExtendedCode.String(code))...,
-				)
-			}
-
-			// Add this after the metrics have been created
-			// The list might be used for post-processing
-			baseAttributes = append(baseAttributes, rotel.WgSubgraphErrorExtendedCode.String(strings.Join(errorCodesAttr, ",")))
+			mAttr := append(attributes, reqContext.telemetry.MetricAttrs(false)...)
+			f.metricStore.MeasureRequestError(ctx, mAttr...)
 		}
 	}
 
-	span.SetAttributes(baseAttributes...)
+	span.SetAttributes(attributes...)
 }
