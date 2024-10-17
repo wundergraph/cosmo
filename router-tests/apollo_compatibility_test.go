@@ -217,7 +217,7 @@ func TestApolloCompatibility(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, res.Response.StatusCode)
-			require.Equal(t, `{"data":{"employees":[null]},"extensions":{"valueCompletion":[{"message":"Cannot return null for non-nullable field 'Employee.id'.","path":["employees",0,"id"],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
+			require.Equal(t, `{"data":{"employees":[null]},"extensions":{"valueCompletion":[{"message":"Cannot return null for non-nullable field Employee.id.","path":["employees",0,"id"],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
 		})
 	})
 	t.Run("non-nullable array item", func(t *testing.T) {
@@ -271,7 +271,7 @@ func TestApolloCompatibility(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, res.Response.StatusCode)
-			require.Equal(t, `{"data":null,"extensions":{"valueCompletion":[{"message":"Cannot return null for non-nullable field 'Products.upc'.","path":["products",0,"upc"],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
+			require.Equal(t, `{"data":null,"extensions":{"valueCompletion":[{"message":"Cannot return null for non-nullable field Products.upc.","path":["products",0,"upc"],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
 		})
 	})
 	t.Run("simple fetch with suppress fetch errors enabled", func(t *testing.T) {
@@ -301,7 +301,7 @@ func TestApolloCompatibility(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, res.Response.StatusCode)
-			require.Equal(t, `{"data":null,"extensions":{"valueCompletion":[{"message":"Cannot return null for non-nullable field 'Query.products'.","path":["products"],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
+			require.Equal(t, `{"data":null,"extensions":{"valueCompletion":[{"message":"Cannot return null for non-nullable field Query.products.","path":["products"],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
 		})
 	})
 	t.Run("simple fetch with suppress fetch errors disabled", func(t *testing.T) {
@@ -356,7 +356,7 @@ func TestApolloCompatibility(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, res.Response.StatusCode)
-			require.Equal(t, `{"data":null,"extensions":{"valueCompletion":[{"message":"Cannot return null for non-nullable field 'Query.products'.","path":["products"],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
+			require.Equal(t, `{"data":null,"extensions":{"valueCompletion":[{"message":"Cannot return null for non-nullable field Query.products.","path":["products"],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
 		})
 	})
 }
