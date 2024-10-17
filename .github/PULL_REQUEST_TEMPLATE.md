@@ -1,5 +1,5 @@
 <!--
-**Important:** Before developing new features, please open an issue to discuss your ideas with the maintainers. This ensures project alignment and helps avoid unnecessary work for you.
+Important: Before developing new features, please open an issue to discuss your ideas with the maintainers. This ensures project alignment and helps avoid unnecessary work for you.
 
 Thank you for your contribution! Please provide a detailed description below and ensure you've met all the requirements.
 
