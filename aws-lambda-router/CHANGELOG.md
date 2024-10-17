@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.31.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.30.2...aws-lambda-router@0.31.0) (2024-10-17)
+
+### Features
+
+* **tests:** add service and code when extensions is null or empty ([#1283](https://github.com/wundergraph/cosmo/issues/1283)) ([b220e81](https://github.com/wundergraph/cosmo/commit/b220e81148829c50dd7f710a2098dffe0260dc61)) (@StarpTech)
+
 ## [0.30.2](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.30.1...aws-lambda-router@0.30.2) (2024-10-16)
 
 ### Bug Fixes
