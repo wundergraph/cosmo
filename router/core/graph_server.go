@@ -472,13 +472,13 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 		traceHandler = rtrace.NewMiddleware(
 			rtrace.WithTracePreHandler(
-				func(r *http.Request, w http.ResponseWriter, graphqlExecutionSpan oteltrace.Span) {
+				func(r *http.Request, w http.ResponseWriter) {
 					span := oteltrace.SpanFromContext(r.Context())
 					if attributes := baseAttributesFromContext(r.Context()); attributes != nil {
 						span.SetAttributes(attributes...)
 					}
 					if s.traceConfig.ResponseTraceHeader.Enabled {
-						spanContext := graphqlExecutionSpan.SpanContext()
+						spanContext := span.SpanContext()
 						traceID := spanContext.TraceID().String()
 						w.Header().Set(s.traceConfig.ResponseTraceHeader.HeaderName, traceID)
 					}
