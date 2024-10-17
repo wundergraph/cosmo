@@ -13,9 +13,10 @@ import {
  */
 export function composeSubgraphsWithContracts(
   subgraphs: Subgraph[],
-  tagExclusionsByContractName: Map<string, Set<string>>,
+  tagNamesByContractName: Map<string, Set<string>>,
+  areTagsExcluded: boolean,
 ) {
-  return federateSubgraphsWithContracts(subgraphs, tagExclusionsByContractName);
+  return federateSubgraphsWithContracts(subgraphs, tagNamesByContractName, areTagsExcluded);
 }
 
 /**
