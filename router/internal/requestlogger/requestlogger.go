@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/wundergraph/cosmo/router/internal/errors"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
-	"go.opentelemetry.io/otel/trace"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"net"
 	"net/http"
 	"time"
@@ -142,10 +142,9 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if h.traceID {
-		span := trace.SpanFromContext(r.Context())
-		spanContext := span.SpanContext()
-		if spanContext.HasTraceID() {
-			fields = append(fields, logging.WithTraceID(spanContext.TraceID().String()))
+		traceID := rtrace.GetTraceID(r.Context())
+		if traceID != "" {
+			fields = append(fields, logging.WithTraceID(traceID))
 		}
 	}
 
