@@ -57,6 +57,7 @@ export const INTERFACE = `Interface`;
 export const INTERFACE_UPPER = 'INTERFACE';
 export const INTERFACE_OBJECT = 'interfaceObject';
 export const KEY = 'key';
+export const LEFT_PARENTHESIS = '(';
 export const LINK = 'link';
 export const LIST = 'list';
 export const LITERAL_SPACE = ' ';

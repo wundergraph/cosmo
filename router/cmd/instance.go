@@ -34,26 +34,22 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		return nil, fmt.Errorf("could not set max GOMAXPROCS: %w", err)
 	}
 
-	// Automatically set GOMEMLIMIT to 90% of the available memory.
-	// This is an effort to prevent the router from being killed by OOM (Out Of Memory)
-	// when the system is under memory pressure e.g. when GC is not able to free memory fast enough.
-	// More details: https://tip.golang.org/doc/gc-guide#Memory_limit
-	mLimit, err := memlimit.SetGoMemLimitWithOpts(
-		memlimit.WithRatio(0.9),
-		memlimit.WithProvider(
-			memlimit.ApplyFallback(
-				memlimit.FromCgroupHybrid,
-				memlimit.FromSystem,
-			),
-		),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("could not set memory limit: %w", err)
-	}
-	if mLimit > 0 {
-		params.Logger.Info("GOMEMLIMIT set automatically", zap.String("limit", humanize.Bytes(uint64(mLimit))))
-	} else if os.Getenv("GOMEMLIMIT") != "" {
+	if os.Getenv("GOMEMLIMIT") != "" {
 		params.Logger.Info("GOMEMLIMIT set by user", zap.String("limit", os.Getenv("GOMEMLIMIT")))
+	} else {
+		// Automatically set GOMEMLIMIT to 90% of the available memory.
+		// This is an effort to prevent the router from being killed by OOM (Out Of Memory)
+		// when the system is under memory pressure e.g. when GC is not able to free memory fast enough.
+		// More details: https://tip.golang.org/doc/gc-guide#Memory_limit
+		mLimit, err := memlimit.SetGoMemLimitWithOpts(
+			memlimit.WithRatio(0.9),
+			memlimit.WithProvider(memlimit.FromCgroupHybrid),
+		)
+		if err == nil {
+			params.Logger.Info("GOMEMLIMIT set automatically", zap.String("limit", humanize.Bytes(uint64(mLimit))))
+		} else if !params.Config.DevelopmentMode {
+			params.Logger.Warn("GOMEMLIMIT was not set. Please set it manually to around 90% of the available memory to prevent OOM kills", zap.Error(err))
+		}
 	}
 
 	cfg := params.Config
