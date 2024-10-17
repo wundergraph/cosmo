@@ -326,7 +326,7 @@ func TestAccessLogs(t *testing.T) {
 		})
 	})
 
-	t.Run("Log when operation parsing fails", func(t *testing.T) {
+	t.Run("Log as much information possible when operation parsing fails", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
@@ -336,6 +336,12 @@ func TestAccessLogs(t *testing.T) {
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
 						RequestHeader: "service-name",
+					},
+				},
+				{
+					Key: "error_message",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.ContextFieldResponseErrorMessage,
 					},
 				},
 				{
@@ -407,14 +413,15 @@ func TestAccessLogs(t *testing.T) {
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
 			expectedValues := map[string]interface{}{
-				"log_type":     "request",
-				"status":       int64(200),
-				"method":       "POST",
-				"path":         "/graphql",
-				"query":        "", // http query is empty
-				"ip":           "[REDACTED]",
-				"user_agent":   "Go-http-client/1.1",
-				"service_name": "service-name", // From header
+				"log_type":      "request",
+				"status":        int64(200),
+				"method":        "POST",
+				"path":          "/graphql",
+				"query":         "", // http query is empty
+				"ip":            "[REDACTED]",
+				"user_agent":    "Go-http-client/1.1",
+				"service_name":  "service-name", // From header
+				"error_message": "unexpected token - got: EOF want one of: [RBRACE IDENT SPREAD]",
 			}
 			additionalExpectedKeys := []string{
 				"latency",
@@ -429,7 +436,7 @@ func TestAccessLogs(t *testing.T) {
 		})
 	})
 
-	t.Run("Log when operation normalization fails", func(t *testing.T) {
+	t.Run("Log as much information possible when operation normalization fails", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
@@ -439,6 +446,12 @@ func TestAccessLogs(t *testing.T) {
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
 						RequestHeader: "service-name",
+					},
+				},
+				{
+					Key: "error_message",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.ContextFieldResponseErrorMessage,
 					},
 				},
 				{
@@ -520,6 +533,7 @@ func TestAccessLogs(t *testing.T) {
 				"service_name":   "service-name", // From header
 				"operation_type": "query",        // From context
 				"operation_name": "employees",    // From context
+				"error_message":  "field: notExists not defined on type: Query",
 			}
 			additionalExpectedKeys := []string{
 				"latency",
@@ -535,7 +549,7 @@ func TestAccessLogs(t *testing.T) {
 		})
 	})
 
-	t.Run("Log when panic occurs on execution / error panic", func(t *testing.T) {
+	t.Run("Log as much information possible on execution / error panic", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
@@ -545,6 +559,12 @@ func TestAccessLogs(t *testing.T) {
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
 						RequestHeader: "service-name",
+					},
+				},
+				{
+					Key: "error_message",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.ContextFieldResponseErrorMessage,
 					},
 				},
 				{
@@ -637,6 +657,7 @@ func TestAccessLogs(t *testing.T) {
 				"operation_hash": "14226210703439426856", // From context
 				"operation_name": "employees",            // From context
 				"operation_type": "query",                // From context
+				"error_message":  "implement me",
 			}
 			additionalExpectedKeys := []string{
 				"latency",
@@ -655,7 +676,7 @@ func TestAccessLogs(t *testing.T) {
 		})
 	})
 
-	t.Run("Log when panic occurs on execution / string panic", func(t *testing.T) {
+	t.Run("Log as much information possible on execution / string panic", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
@@ -665,6 +686,12 @@ func TestAccessLogs(t *testing.T) {
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
 						RequestHeader: "service-name",
+					},
+				},
+				{
+					Key: "error_message",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.ContextFieldResponseErrorMessage,
 					},
 				},
 				{
@@ -758,6 +785,7 @@ func TestAccessLogs(t *testing.T) {
 				"operation_hash": "14226210703439426856", // From context
 				"operation_name": "employees",            // From context
 				"operation_type": "query",                // From context
+				"error_message":  "implement me",
 			}
 			additionalExpectedKeys := []string{
 				"latency",
