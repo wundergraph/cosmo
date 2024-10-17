@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"io"
 	"log"
 	"math/rand"
@@ -24,6 +23,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/pkg/logging"
 
 	"go.uber.org/zap/zaptest/observer"
 
@@ -1571,7 +1572,7 @@ func (s *Subgraph) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if s.globalMiddleware != nil {
 		s.globalMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if s.middleware != nil {
+			if s.middleware != nil && r.Header.Get("SkipRoundTrip") == "" {
 				s.middleware(s.handler).ServeHTTP(w, r)
 				return
 			}
@@ -1579,7 +1580,7 @@ func (s *Subgraph) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		})).ServeHTTP(w, r)
 		return
 	}
-	if s.middleware != nil {
+	if s.middleware != nil && r.Header.Get("SkipRoundTrip") == "" {
 		s.middleware(s.handler).ServeHTTP(w, r)
 		return
 	}

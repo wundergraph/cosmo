@@ -101,6 +101,7 @@ func (d *DefaultFactoryResolver) ResolveGraphqlFactory() (plan.PlannerFactory[gr
 		d.streamingClient,
 		d.engineCtx,
 		graphql_datasource.WithLogger(d.factoryLogger),
+		graphql_datasource.UseHttpClientWithSkipRoundTrip(),
 	)
 
 	factory, err := graphql_datasource.NewFactory(d.engineCtx, d.httpClient, subscriptionClient)
