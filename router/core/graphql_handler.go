@@ -8,7 +8,6 @@ import (
 	"fmt"
 	rErrors "github.com/wundergraph/cosmo/router/internal/errors"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"io"
 	"net/http"
 	"strings"
@@ -139,15 +138,9 @@ type GraphQLHandler struct {
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	requestContext := getRequestContext(r.Context())
 
-	var baseAttributes []attribute.KeyValue
-
-	if attributes := baseAttributesFromContext(r.Context()); attributes != nil {
-		baseAttributes = append(baseAttributes, attributes...)
-	}
-
 	executionContext, graphqlExecutionSpan := h.tracer.Start(r.Context(), "Operation - Execute",
 		trace.WithSpanKind(trace.SpanKindInternal),
-		trace.WithAttributes(baseAttributes...),
+		trace.WithAttributes(requestContext.telemetry.CommonAttrs()...),
 	)
 	defer graphqlExecutionSpan.End()
 
@@ -186,10 +179,11 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		defer propagateSubgraphErrors(ctx)
 
 		resp, err := h.executor.Resolver.ResolveGraphQLResponse(ctx, p.Response, nil, HeaderPropagationWriter(w, ctx.Context()))
-		requestContext.dataSources = p.Response.DataSources
+		requestContext.dataSourceNames = getSubgraphNames(p.Response.DataSources)
+		requestContext.telemetry.AddCustomMetricStringSliceAttr(ContextFieldOperationServices, requestContext.dataSourceNames)
 
 		if err != nil {
-			trackResponseError(ctx.Context(), err)
+			trackFinalResponseError(ctx.Context(), err)
 			h.WriteError(ctx, err, p.Response, w)
 			return
 		}
@@ -206,7 +200,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ctx, writer, ok = GetSubscriptionResponseWriter(ctx, ctx.Variables, r, w)
 		if !ok {
 			requestContext.logger.Error("unable to get subscription response writer", zap.Error(errCouldNotFlushResponse))
-			trackResponseError(r.Context(), errCouldNotFlushResponse)
+			trackFinalResponseError(r.Context(), errCouldNotFlushResponse)
 			writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errCouldNotFlushResponse), requestContext.logger)
 			return
 		}
@@ -215,25 +209,28 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		defer h.websocketStats.ConnectionsDec()
 
 		err := h.executor.Resolver.ResolveGraphQLSubscription(ctx, p.Response, writer)
+		requestContext.dataSourceNames = getSubgraphNames(p.Response.Response.DataSources)
+		requestContext.telemetry.AddCustomMetricStringSliceAttr(ContextFieldOperationServices, requestContext.dataSourceNames)
+
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
 				requestContext.logger.Debug("context canceled: unable to resolve subscription response", zap.Error(err))
-				trackResponseError(r.Context(), err)
+				trackFinalResponseError(r.Context(), err)
 				return
 			} else if errors.Is(err, ErrUnauthorized) {
-				trackResponseError(ctx.Context(), err)
+				trackFinalResponseError(ctx.Context(), err)
 				writeRequestErrors(r, w, http.StatusUnauthorized, graphqlerrors.RequestErrorsFromError(err), requestContext.logger)
 				return
 			}
 
 			requestContext.logger.Error("unable to resolve subscription response", zap.Error(err))
-			trackResponseError(ctx.Context(), err)
+			trackFinalResponseError(ctx.Context(), err)
 			writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errCouldNotResolveResponse), requestContext.logger)
 			return
 		}
 	default:
 		requestContext.logger.Error("unsupported plan kind")
-		trackResponseError(ctx.Context(), errOperationPlanUnsupported)
+		trackFinalResponseError(ctx.Context(), errOperationPlanUnsupported)
 		writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errOperationPlanUnsupported), requestContext.logger)
 	}
 }

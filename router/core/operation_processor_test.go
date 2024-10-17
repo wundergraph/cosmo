@@ -56,7 +56,7 @@ func TestOperationProcessorPersistentOperations(t *testing.T) {
 
 			require.NoError(t, err)
 
-			_, err = kit.FetchPersistedOperation(context.Background(), clientInfo, nil)
+			_, err = kit.FetchPersistedOperation(context.Background(), clientInfo)
 
 			if err != nil {
 				require.EqualError(t, tc.ExpectedError, err.Error())

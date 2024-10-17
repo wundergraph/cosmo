@@ -100,8 +100,9 @@ type MetricsOTLPExporter struct {
 }
 
 type Metrics struct {
-	OTLP       MetricsOTLP `yaml:"otlp"`
-	Prometheus Prometheus  `yaml:"prometheus"`
+	Attributes []CustomAttribute `yaml:"attributes"`
+	OTLP       MetricsOTLP       `yaml:"otlp"`
+	Prometheus Prometheus        `yaml:"prometheus"`
 }
 
 type MetricsOTLP struct {

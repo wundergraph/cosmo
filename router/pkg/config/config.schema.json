@@ -184,9 +184,7 @@
           "properties": {
             "fallback_storage": {
               "description": "The fallback storage provider for the execution config in case the primary one fails.",
-              "required": [
-                "enabled"
-              ],
+              "required": ["enabled"],
               "properties": {
                 "enabled": {
                   "type": "boolean",
@@ -489,6 +487,7 @@
           "description": "The fields to add to the logs. The fields are added to the logs as key-value pairs.",
           "items": {
             "type": "object",
+            "description": "The configuration for custom fields. Custom attributes can be created from request headers or context fields. Not every context fields are available at all request life-cycle stages. If a value is a list, the value is JSON encoded for OTLP. For Prometheus, the values are exploded into multiple metrics with unique labels. Keep in mind, that every new custom attribute increases the cardinality.",
             "additionalProperties": false,
             "required": ["key"],
             "properties": {
@@ -566,39 +565,29 @@
         },
         "attributes": {
           "type": "array",
-          "description": "The attributes to add to OTEL metrics and traces. Because Prometheus metrics rely on the OpenTelemetry metrics, the attributes are also added to the Prometheus metrics.",
+          "description": "The default attributes to add to OTEL and Prometheus metrics. Because Prometheus metrics rely on the OpenTelemetry metrics, the attributes are also added to the Prometheus metrics.",
           "items": {
             "type": "object",
+            "description": "The configuration for custom attributes. Custom attributes can be created from request headers or static values. Keep in mind, that every new custom attribute increases the cardinality of the pipeline.",
             "additionalProperties": false,
             "required": ["key"],
             "properties": {
               "key": {
                 "type": "string",
-                "description": "The key of the attribute."
+                "description": "The key of the field."
               },
               "default": {
                 "type": "string",
-                "description": "The default value of the attribute. If the value is not set, value_from is used. If both value and value_from are set, value_from has precedence and in case of a missing value_from, the default value is used."
+                "description": "The default value of the field. If the value is not set, value_from is used. If both value and value_from are set, value_from has precedence and in case of a missing value_from, the default value is used."
               },
               "value_from": {
                 "type": "object",
-                "description": "Defines a source for the attribute value e.g. from a request header. If both default and value_from are set, value_from has precedence.",
+                "description": "Defines a source for the field value e.g. from a request header. If both default and value_from are set, value_from has precedence.",
                 "additionalProperties": false,
                 "properties": {
                   "request_header": {
                     "type": "string",
                     "description": "The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used."
-                  },
-                  "context": {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "description": "The context value from which to extract the value. The value is only extracted when a context is available otherwise the default value is used.",
-                    "properties": {
-                      "path": {
-                        "type": "string",
-                        "description": "The path to the context value. The path is used to extract the value from the context. The path is a dot-separated string e.g. 'request.operation.hash', 'request.operation.name' or 'response.error.errorCodes'."
-                      }
-                    }
                   }
                 }
               }
@@ -737,6 +726,42 @@
           "description": "The configuration for the collection and export of metrics. The metrics are collected and exported using the OpenTelemetry protocol (OTLP) and Prometheus.",
           "additionalProperties": false,
           "properties": {
+            "attributes": {
+              "type": "array",
+              "description": "The attributes to add to OTLP Metrics and Prometheus.",
+              "items": {
+                "type": "object",
+                "description": "The configuration for custom attributes. Custom attributes can be created from request headers, static values or context fields. Not every context fields are available at all request life-cycle stages. If a value is a list, the value is JSON encoded for OTLP. For Prometheus, the values are exploded into multiple metrics with unique labels. Keep in mind, that every new custom attribute increases the cardinality.",
+                "additionalProperties": false,
+                "required": ["key"],
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "description": "The key of the field."
+                  },
+                  "default": {
+                    "type": "string",
+                    "description": "The default value of the field. If the value is not set, value_from is used. If both value and value_from are set, value_from has precedence and in case of a missing value_from, the default value is used."
+                  },
+                  "value_from": {
+                    "type": "object",
+                    "description": "Defines a source for the field value e.g. from a request header or request context. If both default and value_from are set, value_from has precedence.",
+                    "additionalProperties": false,
+                    "properties": {
+                      "request_header": {
+                        "type": "string",
+                        "description": "The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used."
+                      },
+                      "context_field": {
+                        "type": "string",
+                        "description": "The field name of the context from which to extract the value. The value is only extracted when a context is available otherwise the default value is used.",
+                        "enum": ["operation_service_names", "graphql_error_codes", "graphql_error_service_names", "operation_sha256"]
+                      }
+                    }
+                  }
+                }
+              }
+            },
             "otlp": {
               "type": "object",
               "description": "The configuration for the OpenTelemetry protocol (OTLP). The OTLP is used to collect and export the metrics.",

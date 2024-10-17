@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/dgraph-io/ristretto"
-	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 )
 
@@ -23,7 +22,7 @@ func (e *PersistentOperationNotFoundError) Error() string {
 }
 
 type Client interface {
-	PersistedOperation(ctx context.Context, clientName string, sha256Hash string, attributes []attribute.KeyValue) ([]byte, error)
+	PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error)
 	Close()
 }
 
@@ -69,12 +68,12 @@ func NewClient(opts *Options) (Client, error) {
 	}, nil
 }
 
-func (c client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string, attributes []attribute.KeyValue) ([]byte, error) {
+func (c client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error) {
 	if data := c.cache.Get(clientName, sha256Hash); data != nil {
 		return data, nil
 	}
 
-	content, err := c.providerClient.PersistedOperation(ctx, clientName, sha256Hash, attributes)
+	content, err := c.providerClient.PersistedOperation(ctx, clientName, sha256Hash)
 	if err != nil {
 		return nil, err
 	}

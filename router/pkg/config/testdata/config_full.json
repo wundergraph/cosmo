@@ -39,6 +39,7 @@
       "WithNewRoot": false
     },
     "Metrics": {
+      "Attributes": null,
       "OTLP": {
         "Enabled": true,
         "RouterRuntime": true,

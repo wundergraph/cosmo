@@ -5,7 +5,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"net/http"
 	"net/url"
 	"time"
 )
@@ -64,11 +63,11 @@ type Config struct {
 	ExportGraphQLVariables ExportGraphQLVariables
 	Exporters              []*ExporterConfig
 	Propagators            []Propagator
-	SpanAttributesMapper   func(req *http.Request) []attribute.KeyValue
 	ResourceAttributes     []attribute.KeyValue
 	// TestMemoryExporter is used for testing purposes. If set, the exporter will be used instead of the configured exporters.
 	TestMemoryExporter  sdktrace.SpanExporter
 	ResponseTraceHeader config.ResponseTraceHeader
+	Attributes          []config.CustomAttribute
 }
 
 func DefaultExporter(cfg *Config) *ExporterConfig {
@@ -100,11 +99,11 @@ func DefaultConfig(serviceVersion string) *Config {
 		Sampler:            1,
 		WithNewRoot:        false,
 		ParentBasedSampler: true,
+		Attributes:         make([]config.CustomAttribute, 0),
 		ExportGraphQLVariables: ExportGraphQLVariables{
 			Enabled: true,
 		},
-		SpanAttributesMapper: nil,
-		ResourceAttributes:   make([]attribute.KeyValue, 0),
+		ResourceAttributes: make([]attribute.KeyValue, 0),
 		Exporters: []*ExporterConfig{
 			{
 				Disabled:      false,

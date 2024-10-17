@@ -1,19 +1,18 @@
 package core
 
 import (
-	"strconv"
-
-	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
-	"github.com/wundergraph/cosmo/router/pkg/metric"
 	"go.opentelemetry.io/otel/attribute"
+	"strconv"
 
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
+	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
+	"github.com/wundergraph/cosmo/router/pkg/metric"
 	"go.uber.org/zap"
 )
 
 type RouterMetrics interface {
-	StartOperation(clientInfo *ClientInfo, logger *zap.Logger, requestContentLength int64, metricAttributes []attribute.KeyValue) *OperationMetrics
+	StartOperation(logger *zap.Logger, requestContentLength int64, attributes []attribute.KeyValue) *OperationMetrics
 	ExportSchemaUsageInfo(operationContext *operationContext, statusCode int, hasError bool, exportSynchronous bool)
 	GqlMetricsExporter() *graphqlmetrics.Exporter
 	MetricStore() metric.Provider
@@ -50,16 +49,15 @@ func NewRouterMetrics(cfg *routerMetricsConfig) RouterMetrics {
 // StartOperation starts the metrics for a new GraphQL operation. The returned value is a OperationMetrics
 // where the caller must always call Finish() (usually via defer()). If the metrics are disabled, this
 // returns nil, but OperationMetrics is safe to call with a nil receiver.
-func (m *routerMetrics) StartOperation(clientInfo *ClientInfo, logger *zap.Logger, requestContentLength int64, metricAttributes []attribute.KeyValue) *OperationMetrics {
+func (m *routerMetrics) StartOperation(logger *zap.Logger, requestContentLength int64, attributes []attribute.KeyValue) *OperationMetrics {
 	metrics := newOperationMetrics(OperationMetricsOptions{
 		RouterMetrics:        m,
-		Attributes:           metricAttributes,
 		Logger:               logger,
 		RequestContentLength: requestContentLength,
 		RouterConfigVersion:  m.routerConfigVersion,
 		TrackUsageInfo:       m.exportEnabled,
+		Attributes:           attributes,
 	})
-	metrics.AddClientInfo(clientInfo)
 	return metrics
 }
 
