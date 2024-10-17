@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	requestIDField = "reqId"
-	traceIDField   = "traceId"
+	requestIDField = "request_id"
+	traceIDField   = "trace_id"
 )
 
 type RequestIDKey struct{}

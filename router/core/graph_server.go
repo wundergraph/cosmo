@@ -786,7 +786,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 func (s *graphServer) accessLogsFieldHandler(request *http.Request) []zapcore.Field {
 	requestContext := getRequestContext(request.Context())
 	resFields := make([]zapcore.Field, 0, len(s.accessLogsConfig.Attributes))
-	resFields = append(resFields, zap.String("request_id", middleware.GetReqID(request.Context())))
+	resFields = append(resFields, logging.WithRequestID(middleware.GetReqID(request.Context())))
 
 	for _, field := range s.accessLogsConfig.Attributes {
 		if field.ValueFrom.RequestHeader != "" {

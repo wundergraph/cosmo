@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"github.com/wundergraph/cosmo/router/internal/errors"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"go.opentelemetry.io/otel/trace"
 	"net"
 	"net/http"
@@ -144,7 +145,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		span := trace.SpanFromContext(r.Context())
 		spanContext := span.SpanContext()
 		if spanContext.HasTraceID() {
-			fields = append(fields, zap.String("trace_id", spanContext.TraceID().String()))
+			fields = append(fields, logging.WithTraceID(spanContext.TraceID().String()))
 		}
 	}
 
