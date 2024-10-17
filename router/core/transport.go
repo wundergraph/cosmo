@@ -121,11 +121,6 @@ func (ct *CustomTransport) RoundTrip(req *http.Request) (resp *http.Response, er
 		sendError:      nil,
 	}
 
-	done := ct.measureSubgraphMetrics(req)
-	defer func() {
-		done(err, resp)
-	}()
-
 	if ct.preHandlers != nil {
 		for _, preHandler := range ct.preHandlers {
 			r, resp := preHandler(req, moduleContext)
@@ -137,15 +132,17 @@ func (ct *CustomTransport) RoundTrip(req *http.Request) (resp *http.Response, er
 		}
 	}
 
+	if req.Header.Get("SkipRoundTrip") != "" {
+		return nil, nil
+	}
+
+	done := ct.measureSubgraphMetrics(req)
+	defer func() {
+		done(err, resp)
+	}()
+
 	if !ct.allowSingleFlight(req) {
 		resp, err = ct.roundTripper.RoundTrip(req)
-		if err == nil && ct.isUpgradeError(req, resp) {
-			err := &ErrUpgradeFailed{StatusCode: resp.StatusCode}
-			if subgraph := moduleContext.ActiveSubgraph(req); subgraph != nil {
-				err.SubgraphID = subgraph.Id
-			}
-			return nil, err
-		}
 	} else {
 		resp, err = ct.roundTripSingleFlight(req)
 	}
