@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"go.opentelemetry.io/otel/trace"
 	"net"
 	"net/http"
 	"regexp"
@@ -233,7 +234,10 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	)
 
 	requestID := middleware.GetReqID(r.Context())
-	requestLogger := h.logger.With(logging.WithRequestID(requestID))
+	span := trace.SpanFromContext(r.Context())
+	spanContext := span.SpanContext()
+	traceID := spanContext.TraceID().String()
+	requestLogger := h.logger.With(logging.WithRequestID(requestID), logging.WithTraceID(traceID))
 	clientInfo := NewClientInfoFromRequest(r, h.clientHeader)
 
 	if h.accessController != nil && !h.config.Authentication.FromInitialPayload.Enabled {

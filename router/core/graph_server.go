@@ -517,7 +517,10 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	subgraphResolver := NewSubgraphResolver(subgraphs)
 	httpRouter.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			requestLogger := s.logger.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
+			span := oteltrace.SpanFromContext(r.Context())
+			spanContext := span.SpanContext()
+			traceID := spanContext.TraceID().String()
+			requestLogger := s.logger.With(logging.WithRequestID(middleware.GetReqID(r.Context())), logging.WithTraceID(traceID))
 			r = r.WithContext(withSubgraphResolver(r.Context(), subgraphResolver))
 			r = r.WithContext(withRequestContext(r.Context(), buildRequestContext(w, r, nil, requestLogger)))
 
