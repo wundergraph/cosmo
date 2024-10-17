@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/attribute"
 	"net"
 	"net/http"
 	"regexp"
@@ -59,6 +60,7 @@ type WebsocketMiddlewareOptions struct {
 
 	WebSocketConfiguration *config.WebSocketConfiguration
 	ClientHeader           config.ClientHeader
+	Attributes             []attribute.KeyValue
 }
 
 func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions) func(http.Handler) http.Handler {
@@ -78,6 +80,7 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 		config:             opts.WebSocketConfiguration,
 		clientHeader:       opts.ClientHeader,
 		handlerSem:         semaphore.NewWeighted(128),
+		attributes:         opts.Attributes,
 	}
 	if opts.WebSocketConfiguration != nil && opts.WebSocketConfiguration.AbsintheProtocol.Enabled {
 		handler.absintheHandlerEnabled = true
@@ -216,7 +219,8 @@ type WebsocketHandler struct {
 	handlerSem    *semaphore.Weighted
 	connectionIDs atomic.Int64
 
-	stats WebSocketsStatistics
+	stats      WebSocketsStatistics
+	attributes []attribute.KeyValue
 
 	readTimeout time.Duration
 
@@ -326,6 +330,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		Config:                h.config,
 		ForwardUpgradeHeaders: h.forwardUpgradeHeadersConfig,
 		ForwardQueryParams:    h.forwardQueryParamsConfig,
+		Attributes:            h.attributes,
 	})
 	err = handler.Initialize()
 	if err != nil {
@@ -651,6 +656,7 @@ type WebSocketConnectionHandlerOptions struct {
 	InitRequestID         string
 	ForwardUpgradeHeaders forwardConfig
 	ForwardQueryParams    forwardConfig
+	Attributes            []attribute.KeyValue
 }
 
 type WebSocketConnectionHandler struct {
@@ -680,6 +686,8 @@ type WebSocketConnectionHandler struct {
 	subscriptionIDs atomic.Int64
 	subscriptions   sync.Map
 	stats           WebSocketsStatistics
+
+	attributes []attribute.KeyValue
 
 	forwardInitialPayload bool
 
@@ -722,6 +730,7 @@ func NewWebsocketConnectionHandler(ctx context.Context, opts WebSocketConnection
 		forwardQueryParams:    &opts.ForwardQueryParams,
 		forwardInitialPayload: opts.Config != nil && opts.Config.ForwardInitialPayload,
 		plannerOptions:        opts.PlanOptions,
+		attributes:            opts.Attributes,
 	}
 }
 
@@ -769,7 +778,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 	var skipParse bool
 
 	if operationKit.parsedOperation.IsPersistedOperation {
-		skipParse, err = operationKit.FetchPersistedOperation(h.ctx, h.clientInfo, baseAttributesFromContext(h.ctx))
+		skipParse, err = operationKit.FetchPersistedOperation(h.ctx, h.clientInfo)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -830,8 +839,6 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 	opContext.planningTime = time.Since(startPlanning)
 
 	opContext.initialPayload = h.initialPayload
-
-	opContext.setAttributes()
 
 	return operationKit.parsedOperation, opContext, nil
 }
@@ -897,7 +904,14 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 		resolveCtx.InitialPayload = operationCtx.initialPayload
 	}
 
-	resolveCtx = resolveCtx.WithContext(withRequestContext(h.ctx, buildRequestContext(nil, registration.clientRequest, operationCtx, h.logger)))
+	reqContext := buildRequestContext(requestContextOptions{
+		operationContext:    operationCtx,
+		requestLogger:       h.logger,
+		metricSetAttributes: nil,
+		w:                   nil,
+		r:                   registration.clientRequest,
+	})
+	resolveCtx = resolveCtx.WithContext(withRequestContext(h.ctx, reqContext))
 	if h.graphqlHandler.authorizer != nil {
 		resolveCtx = WithAuthorizationExtension(resolveCtx)
 		resolveCtx.SetAuthorizer(h.graphqlHandler.authorizer)
