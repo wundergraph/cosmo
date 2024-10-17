@@ -324,14 +324,35 @@ input InputUser{
     const rulesConfig = schemaLinter.createRulesConfig(rules);
 
     expect(rulesConfig).toStrictEqual({
-      TYPE_NAMES_SHOULD_BE_PASCAL_CASE: ['warn', { ObjectTypeDefinition: { style: 'PascalCase' } }],
-      SHOULD_NOT_HAVE_INPUT_PREFIX: ['warn', { InputObjectTypeDefinition: { forbiddenPrefixes: ['Input', 'input'] } }],
+      TYPE_NAMES_SHOULD_BE_PASCAL_CASE: [
+        'warn',
+        { ObjectTypeDefinition: { style: 'PascalCase' }, allowLeadingUnderscore: true },
+      ],
+      SHOULD_NOT_HAVE_INPUT_PREFIX: [
+        'warn',
+        { InputObjectTypeDefinition: { forbiddenPrefixes: ['Input', 'input'] }, allowLeadingUnderscore: true },
+      ],
       DISALLOW_CASE_INSENSITIVE_ENUM_VALUES: ['warn'],
-      ENUM_VALUES_SHOULD_BE_UPPER_CASE: ['warn', { EnumValueDefinition: { style: 'UPPER_CASE' } }],
-      FIELD_NAMES_SHOULD_BE_CAMEL_CASE: ['error', { FieldDefinition: { style: 'camelCase' } }],
-      SHOULD_NOT_HAVE_TYPE_PREFIX: ['error', { ObjectTypeDefinition: { forbiddenPrefixes: ['Type', 'type'] } }],
-      SHOULD_NOT_HAVE_TYPE_SUFFIX: ['error', { ObjectTypeDefinition: { forbiddenSuffixes: ['Type', 'type'] } }],
-      SHOULD_HAVE_INPUT_SUFFIX: ['error', { InputObjectTypeDefinition: { requiredSuffixes: ['Input'] } }],
+      ENUM_VALUES_SHOULD_BE_UPPER_CASE: [
+        'warn',
+        { EnumValueDefinition: { style: 'UPPER_CASE' }, allowLeadingUnderscore: true },
+      ],
+      FIELD_NAMES_SHOULD_BE_CAMEL_CASE: [
+        'error',
+        { FieldDefinition: { style: 'camelCase' }, allowLeadingUnderscore: true },
+      ],
+      SHOULD_NOT_HAVE_TYPE_PREFIX: [
+        'error',
+        { ObjectTypeDefinition: { forbiddenPrefixes: ['Type', 'type'] }, allowLeadingUnderscore: true },
+      ],
+      SHOULD_NOT_HAVE_TYPE_SUFFIX: [
+        'error',
+        { ObjectTypeDefinition: { forbiddenSuffixes: ['Type', 'type'] }, allowLeadingUnderscore: true },
+      ],
+      SHOULD_HAVE_INPUT_SUFFIX: [
+        'error',
+        { InputObjectTypeDefinition: { requiredSuffixes: ['Input'] }, allowLeadingUnderscore: true },
+      ],
     });
   });
 });
