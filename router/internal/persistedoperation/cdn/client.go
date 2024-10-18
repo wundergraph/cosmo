@@ -9,6 +9,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/httpclient"
 	"github.com/wundergraph/cosmo/router/internal/jwt"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
+	cclient "github.com/wundergraph/cosmo/router/pkg/client"
 	"go.opentelemetry.io/otel/codes"
 	semconv12 "go.opentelemetry.io/otel/semconv/v1.12.0"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
@@ -36,8 +37,8 @@ type client struct {
 	logger         *zap.Logger
 }
 
-func (cdn *client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error) {
-	content, err := cdn.persistedOperation(ctx, clientName, sha256Hash)
+func (cdn *client) PersistedOperation(ctx context.Context, clientInfo cclient.Info, sha256Hash string) ([]byte, error) {
+	content, err := cdn.persistedOperation(ctx, clientInfo, sha256Hash)
 	if err != nil {
 		return nil, err
 	}
@@ -45,14 +46,14 @@ func (cdn *client) PersistedOperation(ctx context.Context, clientName string, sh
 	return content, nil
 }
 
-func (cdn *client) persistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error) {
+func (cdn *client) persistedOperation(ctx context.Context, clientInfo cclient.Info, sha256Hash string) ([]byte, error) {
 
 	span := trace.SpanFromContext(ctx)
 
 	operationPath := fmt.Sprintf("/%s/%s/operations/%s/%s.json",
 		cdn.organizationID,
 		cdn.federatedGraphID,
-		url.PathEscape(clientName),
+		url.PathEscape(clientInfo.Name()),
 		url.PathEscape(sha256Hash))
 	operationURL := cdn.cdnURL.ResolveReference(&url.URL{Path: operationPath})
 
@@ -84,7 +85,7 @@ func (cdn *client) persistedOperation(ctx context.Context, clientName string, sh
 
 		if resp.StatusCode == http.StatusNotFound {
 			return nil, &persistedoperation.PersistentOperationNotFoundError{
-				ClientName: clientName,
+				ClientName: clientInfo.Name(),
 				Sha256Hash: sha256Hash,
 			}
 		}

@@ -32,6 +32,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
+	"github.com/wundergraph/cosmo/router/pkg/client"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
@@ -238,7 +239,12 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 
 	requestID := middleware.GetReqID(r.Context())
 	requestLogger := h.logger.With(logging.WithRequestID(requestID))
-	clientInfo := NewClientInfoFromRequest(r, h.clientHeader)
+	clientInfo, err := client.NewClientInfoFromRequest(r, h.clientHeader, h.operationProcessor.clientInfoBuilder)
+	if err != nil {
+		statusCode := http.StatusForbidden
+		http.Error(w, err.Error(), statusCode)
+		return
+	}
 
 	if h.accessController != nil && !h.config.Authentication.FromInitialPayload.Enabled {
 		// Check access control before upgrading the connection
@@ -648,7 +654,7 @@ type WebSocketConnectionHandlerOptions struct {
 	Stats                 WebSocketsStatistics
 	PlanOptions           PlanOptions
 	ConnectionID          int64
-	ClientInfo            *ClientInfo
+	ClientInfo            client.Info
 	InitRequestID         string
 	ForwardUpgradeHeaders forwardConfig
 	ForwardQueryParams    forwardConfig
@@ -670,7 +676,7 @@ type WebSocketConnectionHandler struct {
 	request    *http.Request
 	conn       *wsConnectionWrapper
 	protocol   wsproto.Proto
-	clientInfo *ClientInfo
+	clientInfo client.Info
 	logger     *zap.Logger
 
 	initialPayload            json.RawMessage
