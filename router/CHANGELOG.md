@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.128.0](https://github.com/wundergraph/cosmo/compare/router@0.127.0...router@0.128.0) (2024-10-18)
+
+### Features
+
+* improve planning time ([#1287](https://github.com/wundergraph/cosmo/issues/1287)) ([c4ff4dd](https://github.com/wundergraph/cosmo/commit/c4ff4dda5bce0cf12429554d458304b92525e800)) (@devsergiy)
+
+# [0.127.0](https://github.com/wundergraph/cosmo/compare/router@0.126.0...router@0.127.0) (2024-10-17)
+
+### Features
+
+* **tests:** add service and code when extensions is null or empty ([#1283](https://github.com/wundergraph/cosmo/issues/1283)) ([b220e81](https://github.com/wundergraph/cosmo/commit/b220e81148829c50dd7f710a2098dffe0260dc61)) (@StarpTech)
+
+# [0.126.0](https://github.com/wundergraph/cosmo/compare/router@0.125.3...router@0.126.0) (2024-10-17)
+
+### Features
+
+* custom metric attributes ([#1267](https://github.com/wundergraph/cosmo/issues/1267)) ([f6a4224](https://github.com/wundergraph/cosmo/commit/f6a4224a2370e8eb6e36598a22f60a3eee83f055)) (@StarpTech)
+
 ## [0.125.3](https://github.com/wundergraph/cosmo/compare/router@0.125.2...router@0.125.3) (2024-10-16)
 
 ### Bug Fixes

@@ -9,7 +9,7 @@ Terraform module for deploying the [Cosmo Router](https://cosmo-docs.wundergraph
 
 ## Prerequisites
 
-The only requirement is that you have to create one secret manually via the [AWS Secret Manager](https://aws.amazon.com/secrets-manager). This secret should contain one key named `GRAPH_API_TOKEN` which holds the token required for communicating with the WunderGraph Cloud. You can find more information on how to create such a token in [our docs](https://cosmo-docs.wundergraph.com/tutorial/cosmo-cloud-onboarding#create-a-router-token).
+The only requirement is that you have to create one secret manually via the [AWS Secret Manager](https://aws.amazon.com/secrets-manager). This secret should contain one key named `GRAPH_API_TOKEN` which holds the token required for communicating with the WunderGraph Cloud. You can find more information on how to create such a token in [our docs](https://cosmo-docs.wundergraph.com/getting-started/cosmo-cloud-onboarding#create-a-router-token).
 
 ## Usage
 
