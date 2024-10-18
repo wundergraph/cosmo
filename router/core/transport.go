@@ -169,10 +169,6 @@ func (ct *CustomTransport) RoundTrip(req *http.Request) (resp *http.Response, er
 	return resp, err
 }
 
-func (ct *CustomTransport) isUpgradeError(req *http.Request, res *http.Response) bool {
-	return req.Header.Get("Upgrade") != "" && res.StatusCode != http.StatusSwitchingProtocols
-}
-
 func (ct *CustomTransport) allowSingleFlight(req *http.Request) bool {
 	if ct.sf == nil {
 		// Single flight is disabled
