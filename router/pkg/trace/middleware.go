@@ -13,7 +13,7 @@ type MiddlewareOption func(h *Middleware)
 
 type Middleware struct {
 	otelOpts   []otelhttp.Option
-	preHandler func(r *http.Request, w http.ResponseWriter, graphqlExecutionSpan trace.Span)
+	preHandler func(r *http.Request, w http.ResponseWriter)
 }
 
 // SensitiveAttributes that should be redacted by the OTEL http instrumentation package.
@@ -41,7 +41,7 @@ func (h *Middleware) Handler(next http.Handler) http.Handler {
 
 		// Add custom attributes to the span
 		if h.preHandler != nil {
-			h.preHandler(r, w, span)
+			h.preHandler(r, w)
 		}
 
 		// Add request target as attribute, so we can filter by path and query
@@ -63,7 +63,7 @@ func (h *Middleware) Handler(next http.Handler) http.Handler {
 	return mh
 }
 
-func WithTracePreHandler(preHandler func(r *http.Request, w http.ResponseWriter, graphqlExecutionSpan trace.Span)) MiddlewareOption {
+func WithTracePreHandler(preHandler func(r *http.Request, w http.ResponseWriter)) MiddlewareOption {
 	return func(h *Middleware) {
 		h.preHandler = preHandler
 	}
