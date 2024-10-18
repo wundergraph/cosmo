@@ -351,16 +351,6 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 			statusCode: http.StatusOK,
 		}
 	}
-	fromCache, err := o.loadPersistedOperationFromCache()
-	if err != nil {
-		return false, &httpGraphqlError{
-			statusCode: http.StatusInternalServerError,
-			message:    "error loading persisted operation from cache",
-		}
-	}
-	if fromCache {
-		return true, nil
-	}
 
 	persistedOperationData, err := o.operationProcessor.persistedOperationClient.PersistedOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
 	if err != nil {
