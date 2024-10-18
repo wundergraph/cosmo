@@ -21,6 +21,7 @@ import (
 	fastjson "github.com/wundergraph/astjson"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
+	"github.com/wundergraph/cosmo/router/pkg/client"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
@@ -84,6 +85,7 @@ type OperationProcessorOptions struct {
 	Executor                 *Executor
 	MaxOperationSizeInBytes  int64
 	PersistedOperationClient persistedoperation.Client
+	ClientInfoBuilder *client.BuildClientInfo
 
 	EnablePersistedOperationsCache bool
 	NormalizationCache             *ristretto.Cache[uint64, NormalizationCacheEntry]
@@ -100,6 +102,7 @@ type OperationProcessor struct {
 	executor                 *Executor
 	maxOperationSizeInBytes  int64
 	persistedOperationClient persistedoperation.Client
+	clientInfoBuilder *client.BuildClientInfo
 	operationCache           *OperationCache
 	parseKits                map[int]*parseKit
 	parseKitSemaphore        chan int
@@ -344,7 +347,7 @@ func (o *OperationKit) ComputeOperationSha256() error {
 
 // FetchPersistedOperation fetches the persisted operation from the cache or the client. If the operation is fetched from the cache it returns true.
 // UnmarshalOperationFromBody or UnmarshalOperationFromURL must be called before calling this method.
-func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *ClientInfo) (bool, error) {
+func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo client.Info) (bool, error) {
 	if o.operationProcessor.persistedOperationClient == nil {
 		return false, &httpGraphqlError{
 			message:    "could not resolve persisted query, feature is not configured",
@@ -362,7 +365,7 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 		return true, nil
 	}
 
-	persistedOperationData, err := o.operationProcessor.persistedOperationClient.PersistedOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
+	persistedOperationData, err := o.operationProcessor.persistedOperationClient.PersistedOperation(ctx, clientInfo, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
 	if err != nil {
 		return false, err
 	}
@@ -957,6 +960,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		executor:                 opts.Executor,
 		maxOperationSizeInBytes:  opts.MaxOperationSizeInBytes,
 		persistedOperationClient: opts.PersistedOperationClient,
+		clientInfoBuilder: opts.ClientInfoBuilder,
 		parseKits:                make(map[int]*parseKit, opts.ParseKitPoolSize),
 		parseKitSemaphore:        make(chan int, opts.ParseKitPoolSize),
 		introspectionEnabled:     opts.IntrospectionEnabled,

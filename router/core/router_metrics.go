@@ -109,8 +109,8 @@ func (m *routerMetrics) ExportSchemaUsageInfo(operationContext *operationContext
 			Version: m.routerConfigVersion,
 		},
 		ClientInfo: &graphqlmetricsv1.ClientInfo{
-			Name:    operationContext.clientInfo.Name,
-			Version: operationContext.clientInfo.Version,
+			Name:    operationContext.clientInfo.Name(),
+			Version: operationContext.clientInfo.Version(),
 		},
 		RequestInfo: &graphqlmetricsv1.RequestInfo{
 			Error:      hasError,

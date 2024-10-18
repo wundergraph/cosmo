@@ -2,7 +2,6 @@ package core
 
 import (
 	"context"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 	"net/http"
 	"net/url"
 	"sync"
@@ -13,7 +12,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
-	ctrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"github.com/wundergraph/cosmo/router/pkg/client"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
@@ -33,26 +32,6 @@ type Subgraph struct {
 	Name      string
 	Url       *url.URL
 	UrlString string
-}
-
-type ClientInfo struct {
-	// Name contains the client name, derived from the request headers
-	Name string
-	// Version contains the client version, derived from the request headers
-	Version string
-	// WGRequestToken contains the token to authenticate the request from the platform
-	WGRequestToken string
-}
-
-func NewClientInfoFromRequest(r *http.Request, clientHeader config.ClientHeader) *ClientInfo {
-	clientName := ctrace.GetClientHeader(r.Header, []string{clientHeader.Name, "graphql-client-name", "apollographql-client-name"}, "unknown")
-	clientVersion := ctrace.GetClientHeader(r.Header, []string{clientHeader.Version, "graphql-client-version", "apollographql-client-version"}, "missing")
-	requestToken := r.Header.Get("X-WG-Token")
-	return &ClientInfo{
-		Name:           clientName,
-		Version:        clientVersion,
-		WGRequestToken: requestToken,
-	}
 }
 
 type RequestContext interface {
@@ -384,7 +363,7 @@ type OperationContext interface {
 	// Content is the content of the operation
 	Content() string
 	// ClientInfo returns information about the client that initiated this operation
-	ClientInfo() ClientInfo
+	ClientInfo() client.Info
 }
 
 var _ OperationContext = (*operationContext)(nil)
@@ -409,7 +388,7 @@ type operationContext struct {
 	content    string
 	variables  []byte
 	files      []httpclient.File
-	clientInfo *ClientInfo
+	clientInfo client.Info
 	// preparedPlan is the prepared plan of the operation
 	preparedPlan     *planWithMetaData
 	traceOptions     resolve.TraceOptions
@@ -467,8 +446,8 @@ func (o *operationContext) Protocol() OperationProtocol {
 	return o.protocol
 }
 
-func (o *operationContext) ClientInfo() ClientInfo {
-	return *o.clientInfo
+func (o *operationContext) ClientInfo() client.Info {
+	return o.clientInfo
 }
 
 // isMutationRequest returns true if the current request is a mutation request

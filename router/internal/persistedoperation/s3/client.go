@@ -10,6 +10,7 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
+	cclient "github.com/wundergraph/cosmo/router/pkg/client"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -74,8 +75,8 @@ func NewClient(endpoint string, options *Options) (persistedoperation.Client, er
 	return client, nil
 }
 
-func (c Client) PersistedOperation(ctx context.Context, clientName, sha256Hash string) ([]byte, error) {
-	content, err := c.persistedOperation(ctx, clientName, sha256Hash)
+func (c Client) PersistedOperation(ctx context.Context, clientInfo cclient.Info, sha256Hash string) ([]byte, error) {
+	content, err := c.persistedOperation(ctx, clientInfo, sha256Hash)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +84,7 @@ func (c Client) PersistedOperation(ctx context.Context, clientName, sha256Hash s
 	return content, nil
 }
 
-func (c Client) persistedOperation(ctx context.Context, clientName, sha256Hash string) ([]byte, error) {
+func (c Client) persistedOperation(ctx context.Context, cclientInfo cclient.Info, sha256Hash string) ([]byte, error) {
 	objectPath := fmt.Sprintf("%s/%s.json", c.options.ObjectPathPrefix, sha256Hash)
 	reader, err := c.client.GetObject(ctx, c.options.BucketName, objectPath, minio.GetObjectOptions{})
 	if err != nil {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/dgraph-io/ristretto"
+	cclient "github.com/wundergraph/cosmo/router/pkg/client"
 	"go.uber.org/zap"
 )
 
@@ -22,7 +23,7 @@ func (e *PersistentOperationNotFoundError) Error() string {
 }
 
 type Client interface {
-	PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error)
+	PersistedOperation(ctx context.Context, clientInfo cclient.Info, sha256Hash string) ([]byte, error)
 	Close()
 }
 
@@ -68,17 +69,17 @@ func NewClient(opts *Options) (Client, error) {
 	}, nil
 }
 
-func (c client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error) {
-	if data := c.cache.Get(clientName, sha256Hash); data != nil {
+func (c client) PersistedOperation(ctx context.Context, clientInfo cclient.Info, sha256Hash string) ([]byte, error) {
+	if data := c.cache.Get(clientInfo.Name(), sha256Hash); data != nil {
 		return data, nil
 	}
 
-	content, err := c.providerClient.PersistedOperation(ctx, clientName, sha256Hash)
+	content, err := c.providerClient.PersistedOperation(ctx, clientInfo, sha256Hash)
 	if err != nil {
 		return nil, err
 	}
 
-	c.cache.Set(clientName, sha256Hash, content)
+	c.cache.Set(clientInfo.Name(), sha256Hash, content)
 
 	return content, nil
 }
