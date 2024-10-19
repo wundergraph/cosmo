@@ -39,6 +39,9 @@ func (m MyCustomWebsocketModule) OnOriginResponse(resp *http.Response, ctx core.
 	*m.postHandlerCalled = true
 
 	require.Equal(m.t, resp.StatusCode, http.StatusSwitchingProtocols)
+	require.Equal(m.t, resp.Header.Get("Connection"), "Upgrade")
+	require.Equal(m.t, resp.Header.Get("Sec-WebSocket-Protocol"), "graphql-ws")
+	require.NotEmpty(m.t, resp.Header.Get("Sec-WebSocket-Accept"))
 
 	return resp
 }
