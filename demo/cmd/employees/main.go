@@ -8,7 +8,6 @@ import (
 	"os"
 
 	"github.com/99designs/gqlgen/graphql"
-	"github.com/99designs/gqlgen/graphql/handler/debug"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/ravilushqa/otelgqlgen"
 	"github.com/rs/cors"
@@ -32,7 +31,7 @@ func main() {
 	}
 
 	srv := subgraphs.NewDemoServer(employees.NewSchema(nil))
-	srv.Use(&debug.Tracer{})
+	//srv.Use(&debug.Tracer{})
 	srv.Use(otelgqlgen.Middleware(otelgqlgen.WithCreateSpanFromFields(func(ctx *graphql.FieldContext) bool {
 		return true
 	})))
