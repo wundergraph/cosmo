@@ -63,7 +63,7 @@ func (m MyCustomWebsocketModule) OnOriginRequest(req *http.Request, ctx core.Req
 
 func TestWebsocketCustomModule(t *testing.T) {
 
-	t.Run("Should be able to intercept upgrade requests and access to all operation information / async subscription", func(t *testing.T) {
+	t.Run("Should be able to intercept upgrade requests and access all operation information / async subscription", func(t *testing.T) {
 
 		postHandlerCalled := new(bool)
 
