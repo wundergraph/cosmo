@@ -1975,4 +1975,37 @@ func TestWebSockets(t *testing.T) {
 			}
 		})
 	})
+
+	t.Run("websocket negotiation headers should not leak down", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{core.WithHeaderRules(config.HeaderRules{
+				All: &config.GlobalHeaderRule{
+					Request: []*config.RequestHeaderRule{
+						{
+							Operation: config.HeaderRuleOperationPropagate,
+							Matching:  ".*",
+						},
+					},
+				},
+			})},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+			err := conn.WriteJSON(testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { currentTime { unixTime } }"}`),
+			})
+			require.NoError(t, err)
+
+			var res testenv.WebSocketMessage
+			err = conn.ReadJSON(&res)
+			require.NoError(t, err)
+			require.Equal(t, "next", res.Type)
+			require.Equal(t, "1", res.ID)
+
+			require.NoError(t, conn.Close())
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+		})
+	})
 }
