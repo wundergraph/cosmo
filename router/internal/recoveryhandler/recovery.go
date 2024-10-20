@@ -1,15 +1,14 @@
 package recoveryhandler
 
 import (
-	"go.uber.org/zap"
 	"net/http"
 )
 
 // handler returns a http.Handler with a custom recovery handler
 // that recovers from any panics and returns a 500 Internal Server Error.
 type handler struct {
-	handler http.Handler
-	logger  *zap.Logger
+	handler    http.Handler
+	logHandler func(w http.ResponseWriter, r *http.Request, err any)
 }
 
 // Option provides a functional approach to define
@@ -17,9 +16,9 @@ type handler struct {
 // whether to print stack traces on panic.
 type Option func(handler *handler)
 
-func WithLogger(logger *zap.Logger) Option {
-	return func(h *handler) {
-		h.logger = logger
+func WithLogHandler(fn func(w http.ResponseWriter, r *http.Request, err any)) Option {
+	return func(r *handler) {
+		r.logHandler = fn
 	}
 }
 
@@ -41,11 +40,8 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if err := recover(); err != nil {
 
-			if h.logger != nil {
-				h.logger.Error("[Recovery from panic]",
-					zap.Any("panic", err),
-					zap.Stack("stacktrace"),
-				)
+			if h.logHandler != nil {
+				h.logHandler(w, r, err)
 			}
 
 			if err == http.ErrAbortHandler {

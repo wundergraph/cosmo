@@ -169,22 +169,21 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		s.publicKey = publicKey
 	}
 
-	var recoverOpts []recoveryhandler.Option
-
-	// If we have no access logger configured, we log the panic in the recovery handler to avoid losing the panic information
-	if s.accessLogsConfig == nil {
-		recoverOpts = append(recoverOpts, recoveryhandler.WithLogger(s.logger))
-	}
-
-	recoveryHandler := recoveryhandler.New(recoverOpts...)
-
 	httpRouter := chi.NewRouter()
 
 	/**
 	* Middlewares
 	 */
 
-	httpRouter.Use(recoveryHandler)
+	// This recovery handler is used for everything before the graph mux to ensure that
+	// we can recover from panics and log them properly.
+	httpRouter.Use(recoveryhandler.New(recoveryhandler.WithLogHandler(func(w http.ResponseWriter, r *http.Request, err any) {
+		s.logger.Error("[Recovery from panic]",
+			zap.Any("panic", err),
+			zap.Stack("stacktrace"),
+		)
+	})))
+
 	httpRouter.Use(rmiddleware.RequestSize(int64(s.routerTrafficConfig.MaxRequestBodyBytes)))
 	httpRouter.Use(middleware.RequestID)
 	httpRouter.Use(middleware.RealIP)
@@ -546,6 +545,25 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			h.ServeHTTP(w, r)
 		})
 	})
+
+	var recoverOpts []recoveryhandler.Option
+
+	// If we have no access logger configured, we log the panic in the recovery handler to avoid losing the panic information
+	if s.accessLogsConfig == nil {
+		recoverOpts = append(recoverOpts, recoveryhandler.WithLogHandler(func(w http.ResponseWriter, r *http.Request, err any) {
+			reqContext := getRequestContext(r.Context())
+			if reqContext != nil {
+				reqContext.logger.Error("[Recovery from panic]",
+					zap.Any("panic", err),
+					zap.Stack("stacktrace"),
+				)
+			}
+		}))
+	}
+
+	recoveryHandler := recoveryhandler.New(recoverOpts...)
+
+	httpRouter.Use(recoveryHandler)
 
 	/**
 	* Initialize base attributes from headers and other sources
