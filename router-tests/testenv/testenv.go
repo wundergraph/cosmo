@@ -1572,7 +1572,7 @@ func (s *Subgraph) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if s.globalMiddleware != nil {
 		s.globalMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if s.middleware != nil && r.Header.Get("SkipRoundTrip") == "" {
+			if s.middleware != nil {
 				s.middleware(s.handler).ServeHTTP(w, r)
 				return
 			}
@@ -1580,7 +1580,7 @@ func (s *Subgraph) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		})).ServeHTTP(w, r)
 		return
 	}
-	if s.middleware != nil && r.Header.Get("SkipRoundTrip") == "" {
+	if s.middleware != nil {
 		s.middleware(s.handler).ServeHTTP(w, r)
 		return
 	}
