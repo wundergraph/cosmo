@@ -759,9 +759,6 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 	defer operationKit.Free()
 
 	opContext := &operationContext{
-		name:       operationKit.parsedOperation.Request.OperationName,
-		opType:     operationKit.parsedOperation.Type,
-		content:    operationKit.parsedOperation.NormalizedRepresentation,
 		clientInfo: h.plannerOptions.ClientInfo,
 	}
 
@@ -791,6 +788,9 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 		}
 		opContext.parsingTime = time.Since(startParsing)
 	}
+
+	opContext.name = operationKit.parsedOperation.Request.OperationName
+	opContext.opType = operationKit.parsedOperation.Type
 
 	if blocked := h.operationBlocker.OperationIsBlocked(operationKit.parsedOperation); blocked != nil {
 		return nil, nil, blocked
