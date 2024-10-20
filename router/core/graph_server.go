@@ -169,7 +169,14 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		s.publicKey = publicKey
 	}
 
-	recoveryHandler := recoveryhandler.New()
+	var recoverOpts []recoveryhandler.Option
+
+	// If we have no access logger configured, we log the panic in the recovery handler to avoid losing the panic information
+	if s.accessLogsConfig == nil {
+		recoverOpts = append(recoverOpts, recoveryhandler.WithLogger(s.logger))
+	}
+
+	recoveryHandler := recoveryhandler.New(recoverOpts...)
 
 	httpRouter := chi.NewRouter()
 
