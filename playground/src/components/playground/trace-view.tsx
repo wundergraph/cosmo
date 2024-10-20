@@ -234,12 +234,12 @@ const Trace = ({
       let sourceName = fetch.source_name;
 
       if (!sourceName) {
-        // For cloud where subgraphs is set on the context
+        // Fallback when subgraphs is set on the context. Only need as a fallback for old routers
         const source = subgraphs?.find((s) => s.id === fetch.source_id);
         if (source) {
           sourceName = source.name;
         } else {
-          // For old routers that didn't send the subgraph name
+          // For old routers that didn't send the subgraph name and when subgraphs is not set on the context
           sourceName = 'subgraph';
         }
       }
