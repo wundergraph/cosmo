@@ -231,12 +231,25 @@ const Trace = ({
     const parseFetchNew = (fetch: any, parentId?: string): ARTFetchNode | undefined => {
       if (!fetch) return;
 
+      let sourceName = fetch.source_name;
+
+      if (!sourceName) {
+        // For cloud where subgraphs is set on the context
+        const source = subgraphs?.find((s) => s.id === fetch.source_id);
+        if (source) {
+          sourceName = source.name;
+        } else {
+          // For old routers that didn't send the subgraph name
+          sourceName = 'subgraph';
+        }
+      }
+
       const fetchNode: ARTFetchNode = {
         id: crypto.randomUUID(),
         parentId,
         type: fetch.kind,
         dataSourceId: fetch.source_id,
-        dataSourceName: subgraphs?.find((s) => s.id === fetch.source_id)?.name ?? 'subgraph',
+        dataSourceName: sourceName,
         input: fetch.trace?.input,
         rawInput: fetch.trace?.raw_input_data,
         output: fetch.trace?.output,
