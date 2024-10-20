@@ -65,12 +65,12 @@ func defaultZapCoreOptions(development bool) []zap.Option {
 
 	if development {
 		zapOpts = append(zapOpts, zap.AddCaller(), zap.Development())
-		zapOpts = append(zapOpts, zap.AddStacktrace(zap.ErrorLevel))
-	} else {
-		// Add stacktrace for dpanic level and above
-		// Avoid expensive logs for regular errors
-		zapOpts = append(zapOpts, zap.AddStacktrace(zap.DPanicLevel))
 	}
+
+	// Stacktrace is included on logs of ErrorLevel and above.
+	zapOpts = append(zapOpts,
+		zap.AddStacktrace(zap.ErrorLevel),
+	)
 
 	return zapOpts
 }
@@ -92,12 +92,12 @@ func NewZapLogger(syncer zapcore.WriteSyncer, pretty, development bool, level za
 		encoder = ZapJsonEncoder()
 	}
 
-	zapLogger := zap.New(zapcore.NewCore(
+	c := zapcore.NewCore(
 		encoder,
 		syncer,
 		level,
-	), defaultZapCoreOptions(development)...)
-
+	)
+	zapLogger := zap.New(c, defaultZapCoreOptions(development)...)
 	zapLogger = attachBaseFields(zapLogger)
 
 	return zapLogger
@@ -112,12 +112,12 @@ func NewZapAccessLogger(syncer zapcore.WriteSyncer, development, pretty bool) *z
 		encoder = ZapJsonEncoder()
 	}
 
-	zapLogger := zap.New(zapcore.NewCore(
+	c := zapcore.NewCore(
 		encoder,
 		syncer,
 		zapcore.InfoLevel,
-	), defaultZapCoreOptions(development)...)
-
+	)
+	zapLogger := zap.New(c, defaultZapCoreOptions(development)...)
 	zapLogger = attachBaseFields(zapLogger)
 
 	return zapLogger

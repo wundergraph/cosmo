@@ -180,7 +180,6 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	httpRouter.Use(recoveryhandler.New(recoveryhandler.WithLogHandler(func(w http.ResponseWriter, r *http.Request, err any) {
 		s.logger.Error("[Recovery from panic]",
 			zap.Any("panic", err),
-			zap.Stack("stacktrace"),
 		)
 	})))
 
@@ -555,7 +554,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			if reqContext != nil {
 				reqContext.logger.Error("[Recovery from panic]",
 					zap.Any("panic", err),
-					zap.Stack("stacktrace"),
 				)
 			}
 		}))

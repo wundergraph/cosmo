@@ -179,7 +179,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				// Avoid logging the stack trace for broken pipe errors
 				h.logger.Error(path, fields...)
 			} else {
-				h.logger.DPanic("[Recovery from panic]", fields...)
+				h.logger.Error("[Recovery from panic]", fields...)
 			}
 
 			// Dpanic will panic already in development but in production it will log the error and continue
