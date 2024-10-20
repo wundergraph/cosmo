@@ -93,6 +93,11 @@ func TestWebsocketCustomModule(t *testing.T) {
 				"GraphQL-Client-Name":    []string{"my-client"},
 				"GraphQL-Client-Version": []string{"1.0.0"},
 			}, nil, nil)
+
+			t.Cleanup(func() {
+				_ = conn.Close()
+			})
+
 			err := conn.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
@@ -116,8 +121,6 @@ func TestWebsocketCustomModule(t *testing.T) {
 				Type: "complete",
 			})
 			require.NoError(t, err)
-
-			_ = conn.Close()
 
 			require.Truef(t, *postHandlerCalled, "post handler was not called")
 		})
