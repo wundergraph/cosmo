@@ -16,18 +16,14 @@ import (
 	"connectrpc.com/connect"
 	"github.com/wundergraph/cosmo/router/pkg/watcher"
 
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/cdn"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/s3"
-	"github.com/wundergraph/cosmo/router/pkg/execution_config"
-	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
-	configCDNProvider "github.com/wundergraph/cosmo/router/pkg/routerconfig/cdn"
-	configs3Provider "github.com/wundergraph/cosmo/router/pkg/routerconfig/s3"
-
 	"github.com/nats-io/nuid"
 	"github.com/redis/go-redis/v9"
 	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/graphiql"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/cdn"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/s3"
+	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"go.uber.org/atomic"
 
 	"github.com/mitchellh/mapstructure"
@@ -129,6 +125,11 @@ type (
 		Path  string
 	}
 
+	AccessLogsConfig struct {
+		Attributes []config.CustomAttribute
+		Logger     *zap.Logger
+	}
+
 	// Config defines the configuration options for the Router.
 	Config struct {
 		clusterName               string
@@ -160,10 +161,12 @@ type (
 		healthCheckPath           string
 		readinessCheckPath        string
 		livenessCheckPath         string
+		cacheControlPolicy        config.CacheControlPolicy
 		routerConfigPollerConfig  *RouterConfigPollerConfig
 		cdnConfig                 config.CDNConfiguration
 		persistedOperationClient  persistedoperation.Client
 		persistedOperationsConfig config.PersistedOperationsConfig
+		apolloCompatibilityFlags  config.ApolloCompatibilityFlags
 		storageProviders          config.StorageProviders
 		eventsConfig              config.EventsConfiguration
 		prometheusServer          *http.Server
@@ -172,8 +175,7 @@ type (
 		routerMiddlewares         []func(http.Handler) http.Handler
 		preOriginHandlers         []TransportPreHandler
 		postOriginHandlers        []TransportPostHandler
-		headerRuleEngine          *HeaderRuleEngine
-		headerRules               config.HeaderRules
+		headerRules               *config.HeaderRules
 		subgraphTransportOptions  *SubgraphTransportOptions
 		graphqlMetricsConfig      *GraphQLMetricsConfig
 		routerTrafficConfig       *config.RouterTrafficConfiguration
@@ -184,35 +186,28 @@ type (
 		processStartTime          time.Time
 		developmentMode           bool
 		healthcheck               health.Checker
+		accessLogsConfig          *AccessLogsConfig
 		// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
 		localhostFallbackInsideDocker bool
-
-		tlsServerConfig *tls.Config
-		tlsConfig       *TlsConfig
-
+		tlsServerConfig               *tls.Config
+		tlsConfig                     *TlsConfig
+		telemetryAttributes           []config.CustomAttribute
 		// Poller
-		configPoller configpoller.ConfigPoller
-		selfRegister selfregister.SelfRegister
-
-		registrationInfo *nodev1.RegistrationInfo
-
-		securityConfiguration config.SecurityConfiguration
-
-		customModules []Module
-
+		configPoller                 configpoller.ConfigPoller
+		selfRegister                 selfregister.SelfRegister
+		registrationInfo             *nodev1.RegistrationInfo
+		securityConfiguration        config.SecurityConfiguration
+		customModules                []Module
 		engineExecutionConfiguration config.EngineExecutionConfiguration
 		// should be removed once the users have migrated to the new overrides config
 		overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration
 		// the new overrides config
-		overrides config.OverridesConfiguration
-
-		authorization *config.AuthorizationConfiguration
-
-		rateLimit *config.RateLimitConfiguration
-
-		webSocketConfiguration *config.WebSocketConfiguration
-
+		overrides                config.OverridesConfiguration
+		authorization            *config.AuthorizationConfiguration
+		rateLimit                *config.RateLimitConfiguration
+		webSocketConfiguration   *config.WebSocketConfiguration
 		subgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
+		clientHeader             config.ClientHeader
 	}
 	// Option defines the method to customize server.
 	Option func(svr *Router)
@@ -279,12 +274,15 @@ func NewRouter(opts ...Option) (*Router, error) {
 	if r.graphqlMetricsConfig == nil {
 		r.graphqlMetricsConfig = DefaultGraphQLMetricsConfig()
 	}
+
 	if r.routerTrafficConfig == nil {
 		r.routerTrafficConfig = DefaultRouterTrafficConfig()
 	}
+
 	if r.fileUploadConfig == nil {
 		r.fileUploadConfig = DefaultFileUploadConfig()
 	}
+
 	if r.accessController != nil {
 		if len(r.accessController.authenticators) == 0 && r.accessController.authenticationRequired {
 			r.logger.Warn("authentication is required but no authenticators are configured")
@@ -310,14 +308,18 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.livenessCheckPath = "/health/live"
 	}
 
-	hr, err := NewHeaderTransformer(r.headerRules)
+	r.headerRules = AddCacheControlPolicyToRules(r.headerRules, r.cacheControlPolicy)
+	hr, err := NewHeaderPropagation(r.headerRules)
 	if err != nil {
 		return nil, err
 	}
 
-	r.headerRuleEngine = hr
-
-	r.preOriginHandlers = append(r.preOriginHandlers, r.headerRuleEngine.OnOriginRequest)
+	if hr.HasRequestRules() {
+		r.preOriginHandlers = append(r.preOriginHandlers, hr.OnOriginRequest)
+	}
+	if hr.HasResponseRules() {
+		r.postOriginHandlers = append(r.postOriginHandlers, hr.OnOriginResponse)
+	}
 
 	defaultHeaders := []string{
 		// Common headers
@@ -333,6 +335,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 		"apollographql-client-version",
 		// Required for WunderGraph ART
 		"x-wg-trace",
+		"x-wg-disable-tracing",
 		"x-wg-token",
 		"x-wg-skip-loader",
 		"x-wg-include-query-plan",
@@ -341,6 +344,13 @@ func NewRouter(opts ...Option) (*Router, error) {
 		"tracestate",
 		// Required for feature flags
 		"x-feature-flag",
+	}
+
+	if r.clientHeader.Name != "" {
+		defaultHeaders = append(defaultHeaders, r.clientHeader.Name)
+	}
+	if r.clientHeader.Version != "" {
+		defaultHeaders = append(defaultHeaders, r.clientHeader.Version)
 	}
 
 	defaultMethods := []string{
@@ -815,8 +825,7 @@ func (r *Router) buildClients() error {
 		}
 
 		c, err := cdn.NewClient(provider.URL, r.graphApiToken, cdn.Options{
-			Logger:        r.logger,
-			TraceProvider: r.tracerProvider,
+			Logger: r.logger,
 		})
 		if err != nil {
 			return err
@@ -851,8 +860,7 @@ func (r *Router) buildClients() error {
 		}
 
 		c, err := cdn.NewClient(r.cdnConfig.URL, r.graphApiToken, cdn.Options{
-			Logger:        r.logger,
-			TraceProvider: r.tracerProvider,
+			Logger: r.logger,
 		})
 		if err != nil {
 			return err
@@ -883,87 +891,12 @@ func (r *Router) buildClients() error {
 		r.persistedOperationClient = c
 	}
 
-	var rClient routerconfig.Client
-
-	// Poller is only initialized when a config poller is configured and the router is not started with a static config
-	if r.staticExecutionConfig == nil && r.routerConfigPollerConfig != nil && r.configPoller == nil {
-
-		if provider, ok := cdnProviders[r.routerConfigPollerConfig.Storage.ProviderID]; ok {
-
-			if r.graphApiToken == "" {
-				return errors.New(
-					"graph token is required to fetch execution config from CDN. " +
-						"Alternatively, configure a custom storage provider or specify a static execution config",
-				)
-			}
-
-			c, err := configCDNProvider.NewClient(
-				provider.URL,
-				r.graphApiToken,
-				&configCDNProvider.Options{
-					Logger:       r.logger,
-					SignatureKey: r.routerConfigPollerConfig.GraphSignKey,
-				})
-			if err != nil {
-				return err
-			}
-			rClient = c
-
-			r.logger.Info("Polling for execution config updates from CDN in the background",
-				zap.String("provider_id", provider.ID),
-				zap.String("interval", r.routerConfigPollerConfig.PollInterval.String()),
-			)
-		} else if provider, ok := s3Providers[r.routerConfigPollerConfig.Storage.ProviderID]; ok {
-
-			c, err := configs3Provider.NewClient(provider.Endpoint, &configs3Provider.ClientOptions{
-				AccessKeyID:     provider.AccessKey,
-				SecretAccessKey: provider.SecretKey,
-				BucketName:      provider.Bucket,
-				Region:          provider.Region,
-				ObjectPath:      r.routerConfigPollerConfig.Storage.ObjectPath,
-				Secure:          provider.Secure,
-			})
-			if err != nil {
-				return err
-			}
-			rClient = c
-
-			r.logger.Info("Polling for execution config updates from S3 storage in the background",
-				zap.String("provider_id", provider.ID),
-				zap.String("interval", r.routerConfigPollerConfig.PollInterval.String()),
-			)
-		} else {
-			if r.routerConfigPollerConfig.Storage.ProviderID != "" {
-				return fmt.Errorf("unknown storage provider id '%s' for execution config", r.routerConfigPollerConfig.Storage.ProviderID)
-			}
-
-			if r.graphApiToken == "" {
-				return errors.New(
-					"graph token is required to fetch execution config from CDN. " +
-						"Alternatively, configure a custom storage provider or specify a static execution config",
-				)
-			}
-
-			c, err := configCDNProvider.NewClient(r.cdnConfig.URL, r.graphApiToken, &configCDNProvider.Options{
-				Logger:       r.logger,
-				SignatureKey: r.routerConfigPollerConfig.GraphSignKey,
-			})
-			if err != nil {
-				return err
-			}
-			rClient = c
-
-			r.logger.Info("Polling for execution config updates from Cosmo CDN in the background",
-				zap.String("interval", r.routerConfigPollerConfig.PollInterval.String()),
-			)
-		}
-
-		r.configPoller = configpoller.New(r.graphApiToken,
-			configpoller.WithLogger(r.logger),
-			configpoller.WithPollInterval(r.routerConfigPollerConfig.PollInterval),
-			configpoller.WithClient(rClient),
-		)
-
+	configPoller, err := InitializeConfigPoller(r, cdnProviders, s3Providers)
+	if err != nil {
+		return err
+	}
+	if configPoller != nil {
+		r.configPoller = *configPoller
 	}
 
 	return nil
@@ -1448,7 +1381,13 @@ func WithEvents(cfg config.EventsConfiguration) Option {
 
 func WithHeaderRules(headers config.HeaderRules) Option {
 	return func(r *Router) {
-		r.headerRules = headers
+		r.headerRules = &headers
+	}
+}
+
+func WithCacheControlPolicy(cfg config.CacheControlPolicy) Option {
+	return func(r *Router) {
+		r.cacheControlPolicy = cfg
 	}
 }
 
@@ -1618,9 +1557,21 @@ func WithSubgraphErrorPropagation(cfg config.SubgraphErrorPropagationConfigurati
 	}
 }
 
+func WithAccessLogs(cfg *AccessLogsConfig) Option {
+	return func(r *Router) {
+		r.accessLogsConfig = cfg
+	}
+}
+
 func WithTLSConfig(cfg *TlsConfig) Option {
 	return func(r *Router) {
 		r.tlsConfig = cfg
+	}
+}
+
+func WithTelemetryAttributes(attributes []config.CustomAttribute) Option {
+	return func(r *Router) {
+		r.telemetryAttributes = attributes
 	}
 }
 
@@ -1636,9 +1587,26 @@ func WithPersistedOperationsConfig(cfg config.PersistedOperationsConfig) Option 
 	}
 }
 
+func WithApolloCompatibilityFlagsConfig(cfg config.ApolloCompatibilityFlags) Option {
+	return func(r *Router) {
+		if cfg.EnableAll {
+			cfg.ValueCompletion.Enabled = true
+			cfg.TruncateFloats.Enabled = true
+			cfg.SuppressFetchErrors.Enabled = true
+		}
+		r.apolloCompatibilityFlags = cfg
+	}
+}
+
 func WithStorageProviders(cfg config.StorageProviders) Option {
 	return func(r *Router) {
 		r.storageProviders = cfg
+	}
+}
+
+func WithClientHeader(cfg config.ClientHeader) Option {
+	return func(r *Router) {
+		r.clientHeader = cfg
 	}
 }
 
@@ -1701,6 +1669,9 @@ func TraceConfigFromTelemetry(cfg *config.Telemetry) *rtrace.Config {
 	if cfg.Tracing.Propagation.Jaeger {
 		propagators = append(propagators, rtrace.PropagatorJaeger)
 	}
+	if cfg.Tracing.Propagation.Datadog {
+		propagators = append(propagators, rtrace.PropagatorDatadog)
+	}
 	if cfg.Tracing.Propagation.Baggage {
 		propagators = append(propagators, rtrace.PropagatorBaggage)
 	}
@@ -1712,17 +1683,35 @@ func TraceConfigFromTelemetry(cfg *config.Telemetry) *rtrace.Config {
 		Sampler:            cfg.Tracing.SamplingRate,
 		ParentBasedSampler: cfg.Tracing.ParentBasedSampler,
 		WithNewRoot:        cfg.Tracing.WithNewRoot,
+		Attributes:         nil,
 		ExportGraphQLVariables: rtrace.ExportGraphQLVariables{
 			Enabled: cfg.Tracing.ExportGraphQLVariables,
 		},
-		SpanAttributesMapper: buildAttributesMapper(cfg.Attributes),
-		ResourceAttributes:   buildResourceAttributes(cfg.ResourceAttributes),
-		Exporters:            exporters,
-		Propagators:          propagators,
+		ResourceAttributes:  buildResourceAttributes(cfg.ResourceAttributes),
+		Exporters:           exporters,
+		Propagators:         propagators,
+		ResponseTraceHeader: cfg.Tracing.ResponseTraceHeader,
 	}
 }
 
-func buildAttributesMapper(attributes []config.OtelAttribute) func(req *http.Request) []attribute.KeyValue {
+// buildAttributesMap returns a map of custom attributes to quickly check if a field is used in the custom attributes.
+func buildAttributesMap(attributes []config.CustomAttribute) map[string]string {
+	result := make(map[string]string)
+	for _, attr := range attributes {
+		if attr.ValueFrom != nil && attr.ValueFrom.ContextField != "" {
+			result[attr.ValueFrom.ContextField] = attr.Key
+		}
+	}
+	return result
+}
+
+// buildHeaderAttributesMapper returns a function that maps custom attributes to the request headers.
+func buildHeaderAttributesMapper(attributes []config.CustomAttribute) func(req *http.Request) []attribute.KeyValue {
+
+	if len(attributes) == 0 {
+		return nil
+	}
+
 	return func(req *http.Request) []attribute.KeyValue {
 		var result []attribute.KeyValue
 
@@ -1747,7 +1736,7 @@ func buildAttributesMapper(attributes []config.OtelAttribute) func(req *http.Req
 	}
 }
 
-func buildResourceAttributes(attributes []config.OtelResourceAttribute) []attribute.KeyValue {
+func buildResourceAttributes(attributes []config.CustomStaticAttribute) []attribute.KeyValue {
 	var result []attribute.KeyValue
 	for _, attr := range attributes {
 		result = append(result, attribute.String(attr.Key, attr.Value))
@@ -1771,7 +1760,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 	return &rmetric.Config{
 		Name:               cfg.ServiceName,
 		Version:            Version,
-		AttributesMapper:   buildAttributesMapper(cfg.Attributes),
+		Attributes:         cfg.Metrics.Attributes,
 		ResourceAttributes: buildResourceAttributes(cfg.ResourceAttributes),
 		OpenTelemetry: rmetric.OpenTelemetry{
 			Enabled:       cfg.Metrics.OTLP.Enabled,

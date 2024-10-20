@@ -4,6 +4,104 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.111.5](https://github.com/wundergraph/cosmo/compare/controlplane@0.111.4...controlplane@0.111.5) (2024-10-18)
+
+### Bug Fixes
+
+* allow leading underscores in lint rules ([#1281](https://github.com/wundergraph/cosmo/issues/1281)) ([bda997a](https://github.com/wundergraph/cosmo/commit/bda997a38da98fa84eb8751abbab385983a73ea3)) (@JivusAyrus)
+
+## [0.111.4](https://github.com/wundergraph/cosmo/compare/controlplane@0.111.3...controlplane@0.111.4) (2024-10-17)
+
+**Note:** Version bump only for package controlplane
+
+## [0.111.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.111.2...controlplane@0.111.3) (2024-10-16)
+
+**Note:** Version bump only for package controlplane
+
+## [0.111.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.111.1...controlplane@0.111.2) (2024-10-15)
+
+**Note:** Version bump only for package controlplane
+
+## [0.111.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.111.0...controlplane@0.111.1) (2024-10-14)
+
+**Note:** Version bump only for package controlplane
+
+# [0.111.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.110.0...controlplane@0.111.0) (2024-10-09)
+
+### Bug Fixes
+
+* sso redirect urls ([#1253](https://github.com/wundergraph/cosmo/issues/1253)) ([64a0fd2](https://github.com/wundergraph/cosmo/commit/64a0fd2103c30995651bdae1fb3f4e32e03b7d8e)) (@JivusAyrus)
+
+### Features
+
+* add custom context to subgraph checks ([#1252](https://github.com/wundergraph/cosmo/issues/1252)) ([c510628](https://github.com/wundergraph/cosmo/commit/c510628bc8ca80a88b681d87051940361605ff5b)) (@JivusAyrus)
+* add indirect interface fields to schema usage reporting ([#1235](https://github.com/wundergraph/cosmo/issues/1235)) ([1c62c14](https://github.com/wundergraph/cosmo/commit/1c62c14f9a9f11a6fbbebf5a3fbc4d85f304285e)) (@jensneuse)
+
+# [0.110.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.109.1...controlplane@0.110.0) (2024-09-27)
+
+### Features
+
+* add option to update the mappers of an IDP ([#1222](https://github.com/wundergraph/cosmo/issues/1222)) ([00c7b2e](https://github.com/wundergraph/cosmo/commit/00c7b2e159790c99ec62d3c7d6f99c0ef7c8bb70)) (@JivusAyrus)
+
+## [0.109.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.109.0...controlplane@0.109.1) (2024-09-25)
+
+### Bug Fixes
+
+* record if linters were skipped for a check run ([#1217](https://github.com/wundergraph/cosmo/issues/1217)) ([9cdee41](https://github.com/wundergraph/cosmo/commit/9cdee416b288a08120ea5d8a09e054cf5f3fb5bd)) (@thisisnithin)
+* return error if the namespace doesnt exist while listing graphs ([#1216](https://github.com/wundergraph/cosmo/issues/1216)) ([3bc8035](https://github.com/wundergraph/cosmo/commit/3bc80350c3fd0c26f0cbb9b54dfdedf8edc59a70)) (@JivusAyrus)
+
+# [0.109.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.108.4...controlplane@0.109.0) (2024-09-23)
+
+### Features
+
+* option to skip traffic check in schema check ([#1211](https://github.com/wundergraph/cosmo/issues/1211)) ([d9fd83a](https://github.com/wundergraph/cosmo/commit/d9fd83ab99d2f2fc8e5f99a4cdb3abb8a1a7837c)) (@thisisnithin)
+
+## [0.108.4](https://github.com/wundergraph/cosmo/compare/controlplane@0.108.3...controlplane@0.108.4) (2024-09-20)
+
+### Bug Fixes
+
+* apply filters to recursive part ([#1202](https://github.com/wundergraph/cosmo/issues/1202)) ([3b96e20](https://github.com/wundergraph/cosmo/commit/3b96e2094fcd23e313f7811e2aae33f200f9f52d)) (@thisisnithin)
+
+## [0.108.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.108.2...controlplane@0.108.3) (2024-09-20)
+
+### Bug Fixes
+
+* set allow_experimental_analyzer = 1 for recursive query ([#1201](https://github.com/wundergraph/cosmo/issues/1201)) ([eb7c74d](https://github.com/wundergraph/cosmo/commit/eb7c74d3c385e4dc2d9587999ef37af5f40cf5ac)) (@thisisnithin)
+
+## [0.108.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.108.1...controlplane@0.108.2) (2024-09-20)
+
+### Bug Fixes
+
+* recursive query syntax ([#1199](https://github.com/wundergraph/cosmo/issues/1199)) ([5f42eeb](https://github.com/wundergraph/cosmo/commit/5f42eeb159bbd4b61b6d4535775dc200fee1ac76)) (@thisisnithin)
+
+## [0.108.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.108.0...controlplane@0.108.1) (2024-09-20)
+
+### Bug Fixes
+
+* handle duplicate traces with same traceId ([#1190](https://github.com/wundergraph/cosmo/issues/1190)) ([b562816](https://github.com/wundergraph/cosmo/commit/b562816cc5b0dd9477590966fb9dcf7f10de3444)) (@thisisnithin)
+
+# [0.108.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.107.5...controlplane@0.108.0) (2024-09-19)
+
+### Bug Fixes
+
+* construct urls using URL class ([#1173](https://github.com/wundergraph/cosmo/issues/1173)) ([211dbbd](https://github.com/wundergraph/cosmo/commit/211dbbd6bcfe7b414c665240c7f56944cf1e861e)) (@JivusAyrus)
+
+### Features
+
+* add graph pruning ([#1133](https://github.com/wundergraph/cosmo/issues/1133)) ([b5718cd](https://github.com/wundergraph/cosmo/commit/b5718cd66bc7f0d14cb16b3d0a6d395e846968e4)) (@JivusAyrus)
+
+## [0.107.5](https://github.com/wundergraph/cosmo/compare/controlplane@0.107.4...controlplane@0.107.5) (2024-09-18)
+
+### Bug Fixes
+
+* delete federated graph audit in deleteNamespace ([#1187](https://github.com/wundergraph/cosmo/issues/1187)) ([db59706](https://github.com/wundergraph/cosmo/commit/db5970658e276c30277efe116984fa3ae7939ca8)) (@JivusAyrus)
+
+## [0.107.4](https://github.com/wundergraph/cosmo/compare/controlplane@0.107.3...controlplane@0.107.4) (2024-09-17)
+
+### Bug Fixes
+
+* remove lastUsedAt for graph tokens ([#1180](https://github.com/wundergraph/cosmo/issues/1180)) ([9ac1590](https://github.com/wundergraph/cosmo/commit/9ac159070f122b45aaa37661143575cfa8fa5b27)) (@thisisnithin)
+
 ## [0.107.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.107.2...controlplane@0.107.3) (2024-09-13)
 
 ### Bug Fixes

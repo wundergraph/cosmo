@@ -17,6 +17,7 @@ import {
   normalizeString,
   schemaToSortedNormalizedString,
   versionOneRouterDefinitions,
+  versionTwoRouterDefinitions,
 } from './utils/utils';
 
 describe('Union tests', () => {
@@ -563,7 +564,7 @@ describe('Union tests', () => {
       );
     });
 
-    test('that union extensions federate correctly #1.2', () => {
+    test('that Union extensions federate correctly #1.2', () => {
       const { errors, federationResult } = federateSubgraphs([subgraphE, subgraphD]);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
@@ -639,6 +640,185 @@ describe('Union tests', () => {
           name: String!
         }
         `,
+        ),
+      );
+    });
+
+    test('that Field named types can coerce Union Members into Unions #1.1', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphAF, subgraphAG]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoRouterDefinitions +
+            `
+          type MemberOne {
+            name: String!
+          }
+          
+          type MemberTwo {
+            name: String!
+          }
+          
+          type Object {
+            memberOne: Union!
+            union: Union!
+          }
+          
+          type Query {
+            memberOne: Union!
+            object: Object!
+            union: Union!
+          }
+          
+          union Union = MemberOne | MemberTwo
+          
+          scalar openfed__Scope
+          `,
+        ),
+      );
+    });
+
+    test('that Field named types can coerce Union Members into Unions #1.2', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphAG, subgraphAF]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoRouterDefinitions +
+            `
+          type MemberOne {
+            name: String!
+          }
+          
+          type MemberTwo {
+            name: String!
+          }
+          
+          type Object {
+            memberOne: Union!
+            union: Union!
+          }
+          
+          type Query {
+            memberOne: Union!
+            object: Object!
+            union: Union!
+          }
+          
+          union Union = MemberOne | MemberTwo
+          
+          scalar openfed__Scope
+          `,
+        ),
+      );
+    });
+
+    test('that Field named types can coerce Union Members into Unions #2.1', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphAH, subgraphAI, subgraphAJ]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoRouterDefinitions +
+            `
+          type MemberOne {
+            name: String!
+          }
+          
+          type MemberTwo {
+            name: String!
+          }
+
+          type Query {
+            union: Union!
+          }
+          
+          union Union = MemberOne | MemberTwo
+          
+          scalar openfed__Scope
+          `,
+        ),
+      );
+    });
+
+    test('that Field named types can coerce Union Members into Unions #3.1', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphAK, subgraphAL]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoRouterDefinitions +
+            `
+          type Book {
+            title: String!
+          }
+
+          union Media = Book | Movie | Song
+
+          type Movie {
+            title: String!
+          }
+
+          type Query {
+            book: Media
+            media: Media
+            song: Media
+            viewer: Viewer
+          }
+
+          type Song {
+            title: String!
+          }
+
+          type Viewer {
+            book: ViewerMedia
+            media: ViewerMedia
+            song: ViewerMedia
+          }
+
+          union ViewerMedia = Book | Movie | Song
+          
+          scalar openfed__Scope
+          `,
+        ),
+      );
+    });
+
+    test('that Field named types can coerce Union Members into Unions #3.2', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphAK, subgraphAL]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoRouterDefinitions +
+            `
+          type Book {
+            title: String!
+          }
+
+          union Media = Book | Movie | Song
+
+          type Movie {
+            title: String!
+          }
+
+          type Query {
+            book: Media
+            media: Media
+            song: Media
+            viewer: Viewer
+          }
+
+          type Song {
+            title: String!
+          }
+
+          type Viewer {
+            book: ViewerMedia
+            media: ViewerMedia
+            song: ViewerMedia
+          }
+
+          union ViewerMedia = Book | Movie | Song
+          
+          scalar openfed__Scope
+          `,
         ),
       );
     });
@@ -1179,6 +1359,159 @@ const subgraphAE: Subgraph = {
     
     type AnotherObject {
       name: String!
+    }
+  `),
+};
+
+const subgraphAF: Subgraph = {
+  name: 'subgraph-af',
+  url: '',
+  definitions: parse(`
+    type Query @shareable {
+      union: Union!
+      memberOne: MemberOne!
+      object: Object!
+    }
+    
+    type MemberOne @shareable {
+      name: String!
+    }
+    
+    type MemberTwo @shareable {
+      name: String!
+    }
+    
+    type Object @shareable {
+      union: Union!
+      memberOne: MemberOne!
+    }
+    
+    union Union  = MemberOne | MemberTwo
+  `),
+};
+
+const subgraphAG: Subgraph = {
+  name: 'subgraph-ag',
+  url: '',
+  definitions: parse(`
+    type Query @shareable {
+      union: Union!
+      memberOne: Union!
+      object: Object!
+    }
+
+    type MemberOne @shareable {
+      name: String!
+    }
+
+    type MemberTwo @shareable {
+      name: String!
+    }
+
+    type Object @shareable {
+      union: Union!
+      memberOne: Union!
+    }
+
+    union Union  = MemberOne | MemberTwo
+  `),
+};
+
+const subgraphAH: Subgraph = {
+  name: 'subgraph-ah',
+  url: '',
+  definitions: parse(`
+    type Query @shareable {
+      union: Union!
+    }
+    
+    type MemberTwo @shareable {
+      name: String!
+    }
+
+    union Union  =  MemberTwo
+  `),
+};
+
+const subgraphAI: Subgraph = {
+  name: 'subgraph-ai',
+  url: '',
+  definitions: parse(`
+    type Query @shareable {
+      union: MemberOne!
+    }
+
+    type MemberOne @shareable {
+      name: String!
+    }
+  `),
+};
+
+const subgraphAJ: Subgraph = {
+  name: 'subgraph-aj',
+  url: '',
+  definitions: parse(`
+    type MemberOne @shareable {
+      name: String!
+    }
+    union Union = MemberOne
+  `),
+};
+
+const subgraphAK: Subgraph = {
+  name: 'subgraph-ak',
+  url: '',
+  definitions: parse(`
+    union Media = Book | Song
+    union ViewerMedia = Book | Song
+    
+    type Book {
+      title: String! @shareable
+    }
+    
+    type Song {
+      title: String! @shareable
+    }
+    
+    type Query {
+      media: Media @shareable
+      book: Book @shareable
+      song: Media @shareable
+      viewer: Viewer @shareable
+    }
+    
+    type Viewer {
+      media: ViewerMedia @shareable
+      book: Book @shareable
+      song: ViewerMedia @shareable
+    }
+  `),
+};
+
+const subgraphAL: Subgraph = {
+  name: 'subgraph-al',
+  url: '',
+  definitions: parse(`
+    type Query {
+      media: Media @shareable
+      book: Media @shareable
+      viewer: Viewer @shareable
+    }
+
+    union Media = Book | Movie
+    union ViewerMedia = Book | Movie
+
+    type Movie {
+      title: String! @shareable
+    }
+
+    type Book {
+      title: String! @shareable
+    }
+
+    type Viewer {
+      media: ViewerMedia @shareable
+      book: ViewerMedia @shareable
     }
   `),
 };

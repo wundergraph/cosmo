@@ -9,9 +9,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/httpclient"
 	"github.com/wundergraph/cosmo/router/internal/jwt"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv12 "go.opentelemetry.io/otel/semconv/v1.12.0"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
@@ -22,8 +20,7 @@ import (
 )
 
 type Options struct {
-	Logger        *zap.Logger
-	TraceProvider *sdktrace.TracerProvider
+	Logger *zap.Logger
 }
 
 type client struct {
@@ -37,28 +34,18 @@ type client struct {
 	organizationID string
 	httpClient     *http.Client
 	logger         *zap.Logger
-	tracer         trace.Tracer
 }
 
-func (cdn *client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string, attributes []attribute.KeyValue) ([]byte, error) {
-
-	ctx, span := cdn.tracer.Start(ctx, "Load Persisted Operation",
-		trace.WithSpanKind(trace.SpanKindClient),
-		trace.WithAttributes(attributes...),
-	)
-	defer span.End()
-
-	content, err := cdn.persistedOperation(ctx, clientName, sha256Hash, attributes)
+func (cdn *client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error) {
+	content, err := cdn.persistedOperation(ctx, clientName, sha256Hash)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
 		return nil, err
 	}
 
 	return content, nil
 }
 
-func (cdn *client) persistedOperation(ctx context.Context, clientName string, sha256Hash string, attributes []attribute.KeyValue) ([]byte, error) {
+func (cdn *client) persistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error) {
 
 	span := trace.SpanFromContext(ctx)
 
@@ -161,10 +148,6 @@ func NewClient(endpoint string, token string, opts Options) (persistedoperation.
 		organizationID:      url.PathEscape(claims.OrganizationID),
 		httpClient:          httpclient.NewRetryableHTTPClient(logger),
 		logger:              logger,
-		tracer: opts.TraceProvider.Tracer(
-			"wundergraph/cosmo/router/cdn_persisted_operations_client",
-			trace.WithInstrumentationVersion("0.0.1"),
-		),
 	}, nil
 }
 

@@ -5,9 +5,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/core"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"io"
 	"net/http"
+	"net/url"
 	"sync"
 	"testing"
 	"time"
@@ -256,7 +259,203 @@ func TestNatsEvents(t *testing.T) {
 		})
 	})
 
-	t.Run("subscribe sync sse", func(t *testing.T) {
+	t.Run("multipart", func(t *testing.T) {
+		assertLineEquals := func(reader *bufio.Reader, expected string) {
+			line, _, err := reader.ReadLine()
+			require.NoError(t, err)
+			require.Equal(t, expected, string(line))
+		}
+
+		assertMultipartPrefix := func(reader *bufio.Reader) {
+			assertLineEquals(reader, "--graphql")
+			assertLineEquals(reader, "Content-Type: application/json")
+			assertLineEquals(reader, "")
+		}
+
+		heartbeatInterval := 5 * time.Second
+
+		t.Run("subscribe with multipart responses", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				TLSConfig: &core.TlsConfig{
+					Enabled:  true,
+					CertFile: "testdata/tls/cert.pem",
+					KeyFile:  "testdata/tls/key.pem",
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+
+				subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`)
+
+				wg := &sync.WaitGroup{}
+				wg.Add(1)
+
+				go func() {
+					req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
+					resp, err := xEnv.RouterClient.Do(req)
+					require.NoError(t, err)
+					require.Equal(t, http.StatusOK, resp.StatusCode)
+					defer resp.Body.Close()
+
+					require.Equal(t, []string(nil), resp.TransferEncoding)
+
+					reader := bufio.NewReader(resp.Body)
+
+					// Read the first part
+					assertMultipartPrefix(reader)
+					assertLineEquals(reader, "{\"payload\":{\"data\":{\"employeeUpdated\":{\"id\":3,\"details\":{\"forename\":\"Stefan\",\"surname\":\"Avram\"}}}}}")
+					assertMultipartPrefix(reader)
+					assertLineEquals(reader, "{}")
+					assertMultipartPrefix(reader)
+					assertLineEquals(reader, "{\"payload\":{\"data\":{\"employeeUpdated\":{\"id\":3,\"details\":{\"forename\":\"Stefan\",\"surname\":\"Avram\"}}}}}")
+					wg.Done()
+
+				}()
+
+				xEnv.WaitForSubscriptionCount(1, time.Second*5)
+
+				// Send a mutation to trigger the subscription
+
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `mutation { updateAvailability(employeeID: 3, isAvailable: true) { id } }`,
+				})
+				require.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, res.Body)
+
+				time.Sleep(heartbeatInterval)
+				// Trigger the subscription via NATS
+				err := xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
+				require.NoError(t, err)
+
+				err = xEnv.NatsConnectionDefault.Flush()
+				require.NoError(t, err)
+
+				xEnv.NatsConnectionDefault.Close()
+				wg.Wait()
+			})
+		})
+
+		t.Run("subscribe with multipart responses http/1", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				TLSConfig: nil, // Force Http/1
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+
+				subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`)
+
+				wg := &sync.WaitGroup{}
+				wg.Add(1)
+
+				var client *http.Client
+				go func() {
+					client = &http.Client{
+						Timeout: time.Second * 10000,
+					}
+
+					req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
+					resp, err := client.Do(req)
+					require.NoError(t, err)
+					require.Equal(t, http.StatusOK, resp.StatusCode)
+					defer resp.Body.Close()
+
+					require.Equal(t, []string{"chunked"}, resp.TransferEncoding)
+
+					reader := bufio.NewReader(resp.Body)
+
+					// Read the first part
+					assertMultipartPrefix(reader)
+					assertLineEquals(reader, "{}")
+					wg.Done()
+				}()
+
+				xEnv.WaitForSubscriptionCount(1, time.Second*5)
+				xEnv.NatsConnectionDefault.Close()
+				wg.Wait()
+			})
+		})
+
+		t.Run("subscribe with closing channel", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+
+				subscribePayload := []byte(`{"query":"subscription { countFor(count: 3) }"}`)
+
+				wg := &sync.WaitGroup{}
+				wg.Add(1)
+
+				var client http.Client
+				go func() {
+					client = http.Client{
+						Timeout: time.Second * 100,
+					}
+					req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
+					resp, err := client.Do(req)
+					require.NoError(t, err)
+					require.Equal(t, http.StatusOK, resp.StatusCode)
+					defer resp.Body.Close()
+
+					reader := bufio.NewReader(resp.Body)
+
+					// Read the first part
+					assertMultipartPrefix(reader)
+					assertLineEquals(reader, "{\"payload\":{\"data\":{\"countFor\":0}}}")
+					assertMultipartPrefix(reader)
+					assertLineEquals(reader, "{\"payload\":{\"data\":{\"countFor\":1}}}")
+					assertMultipartPrefix(reader)
+					assertLineEquals(reader, "{\"payload\":{\"data\":{\"countFor\":2}}}")
+					assertMultipartPrefix(reader)
+					assertLineEquals(reader, "{\"payload\":{\"data\":{\"countFor\":3}}}")
+					assertLineEquals(reader, "--graphql--")
+					wg.Done()
+				}()
+
+				xEnv.WaitForSubscriptionCount(1, time.Second*5)
+
+				// Sleep to ensure get heartbeat
+				time.Sleep(heartbeatInterval)
+
+				xEnv.NatsConnectionDefault.Close()
+				wg.Wait()
+			})
+		})
+
+		t.Run("subscribe sync multipart with block", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.BlockSubscriptions = true
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				queries := [][]byte{
+					[]byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } }}"}`),
+					[]byte(`{"query":"subscription { employeeUpdatedMyNats(id: 12) { id details { forename surname } }}"}`),
+				}
+
+				for _, subscribePayload := range queries {
+					client := http.Client{
+						Timeout: time.Second * 1000,
+					}
+
+					req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
+					req.Header.Set("Cache-Control", "no-cache")
+
+					resp, err := client.Do(req)
+					require.NoError(t, err)
+					require.Equal(t, http.StatusOK, resp.StatusCode)
+					defer resp.Body.Close()
+					reader := bufio.NewReader(resp.Body)
+
+					assertMultipartPrefix(reader)
+					assertLineEquals(reader, "{\"payload\":{\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}}")
+					xEnv.NatsConnectionDefault.Close()
+				}
+			})
+		})
+	})
+
+	t.Run("subscribe once", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -270,7 +469,72 @@ func TestNatsEvents(t *testing.T) {
 				client := http.Client{
 					Timeout: time.Second * 10,
 				}
-				req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLServeSentEventsURL(), bytes.NewReader(subscribePayload))
+				xUrl, err := url.Parse(xEnv.GraphQLRequestURL())
+				require.NoError(t, err)
+				xUrl.RawQuery = core.WgSubscribeOnceParam
+
+				req, err := http.NewRequest(http.MethodPost, xUrl.String(), bytes.NewReader(subscribePayload))
+				require.NoError(t, err)
+
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Connection", "keep-alive")
+				req.Header.Set("Cache-Control", "no-cache")
+
+				resp, err := client.Do(req)
+				require.NoError(t, err)
+				require.Equal(t, http.StatusOK, resp.StatusCode)
+				defer resp.Body.Close()
+				reader := bufio.NewReader(resp.Body)
+
+				require.Equal(t, "text/plain; charset=utf-8", resp.Header.Get("Content-Type"))
+				emptyHeaders := []string{"Cache-Control", "Connection", "X-Accel-Buffering"}
+				for _, header := range emptyHeaders {
+					_, exists := resp.Header[header]
+					require.False(t, exists)
+				}
+				data, _, err := reader.ReadLine()
+				require.NoError(t, err)
+				require.Equal(t, "{\"data\":{\"employeeUpdated\":{\"id\":3,\"details\":{\"forename\":\"Stefan\",\"surname\":\"Avram\"}}}}", string(data))
+				_, _, err = reader.ReadLine()
+				require.Error(t, err, io.EOF) // Subscription closed after one time
+				wg.Done()
+			}()
+
+			xEnv.WaitForSubscriptionCount(1, time.Second*5)
+
+			// Send a mutation to trigger the subscription
+
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation { updateAvailability(employeeID: 3, isAvailable: true) { id } }`,
+			})
+			require.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, res.Body)
+
+			// Trigger the subscription via NATS
+			err := xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
+			require.NoError(t, err)
+
+			err = xEnv.NatsConnectionDefault.Flush()
+			require.NoError(t, err)
+
+			wg.Wait()
+		})
+	})
+
+	t.Run("subscribe sync sse works without query param", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`)
+
+			wg := &sync.WaitGroup{}
+			wg.Add(1)
+
+			go func() {
+				client := http.Client{
+					Timeout: time.Second * 10,
+				}
+				req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
 				require.NoError(t, err)
 
 				req.Header.Set("Content-Type", "application/json")

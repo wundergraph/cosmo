@@ -5,8 +5,10 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -19,6 +21,16 @@ import (
 	"github.com/klauspost/compress/gzip"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/attribute"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	oteltrace "go.opentelemetry.io/otel/trace"
+	"go.uber.org/atomic"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"golang.org/x/exp/maps"
+
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	rjwt "github.com/wundergraph/cosmo/router/internal/jwt"
@@ -35,15 +47,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
 	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"go.opentelemetry.io/otel/attribute"
-	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
-	oteltrace "go.opentelemetry.io/otel/trace"
-	"go.uber.org/atomic"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-	"golang.org/x/exp/maps"
 )
 
 const (
@@ -90,6 +93,7 @@ type (
 
 // newGraphServer creates a new server instance.
 func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterConfig, proxy ProxyFunc) (*graphServer, error) {
+
 	ctx, cancel := context.WithCancel(ctx)
 	s := &graphServer{
 		context:                 ctx,
@@ -149,9 +153,6 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 			rmetric.WithOtlpMeterProvider(s.otlpMeterProvider),
 			rmetric.WithLogger(s.logger),
 			rmetric.WithProcessStartTime(s.processStartTime),
-			// Don't pass the router config version or feature flags here
-			// We scope the metrics to the feature flags and config version in the handler
-			rmetric.WithAttributes(baseOtelAttributes...),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create metric handler: %w", err)
@@ -168,10 +169,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		s.publicKey = publicKey
 	}
 
-	recoveryHandler := recoveryhandler.New(
-		recoveryhandler.WithLogger(s.logger),
-		recoveryhandler.WithPrintStack(),
-	)
+	recoveryHandler := recoveryhandler.New()
 
 	httpRouter := chi.NewRouter()
 
@@ -297,24 +295,40 @@ func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.M
 }
 
 type graphMux struct {
-	mux                *chi.Mux
-	planCache          ExecutionPlanCache[uint64, *planWithMetaData]
-	normalizationCache *ristretto.Cache[uint64, NormalizationCacheEntry]
-	validationCache    *ristretto.Cache[uint64, bool]
-	queryDepthCache    *ristretto.Cache[uint64, int]
+	mux                  *chi.Mux
+	planCache            ExecutionPlanCache[uint64, *planWithMetaData]
+	normalizationCache   *ristretto.Cache[uint64, NormalizationCacheEntry]
+	validationCache      *ristretto.Cache[uint64, bool]
+	queryDepthCache      *ristretto.Cache[uint64, int]
+	operationHashCache   *ristretto.Cache[uint64, string]
+	accessLogsFileLogger *logging.BufferedLogger
 }
 
-func (s *graphMux) Shutdown(_ context.Context) {
+func (s *graphMux) Shutdown(_ context.Context) error {
+
+	var err error
+
 	s.planCache.Close()
+
 	if s.normalizationCache != nil {
 		s.normalizationCache.Close()
 	}
+
 	if s.validationCache != nil {
 		s.validationCache.Close()
 	}
+
 	if s.queryDepthCache != nil {
 		s.queryDepthCache.Close()
 	}
+
+	if s.accessLogsFileLogger != nil {
+		if aErr := s.accessLogsFileLogger.Close(); aErr != nil {
+			err = errors.Join(err, aErr)
+		}
+	}
+
+	return err
 }
 
 // buildGraphMux creates a new graph mux with the given feature flags and engine configuration.
@@ -409,6 +423,37 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		}
 	}
 
+	computeSha256 := false
+
+	// Currently, we only support custom attributes from the context for OTLP metrics
+	if len(s.metricConfig.Attributes) > 0 {
+		for _, customAttribute := range s.metricConfig.Attributes {
+			if customAttribute.ValueFrom != nil && customAttribute.ValueFrom.ContextField == ContextFieldOperationSha256 {
+				computeSha256 = true
+				break
+			}
+		}
+	} else if s.accessLogsConfig != nil {
+		for _, customAttribute := range s.accessLogsConfig.Attributes {
+			if customAttribute.ValueFrom != nil && customAttribute.ValueFrom.ContextField == ContextFieldOperationSha256 {
+				computeSha256 = true
+				break
+			}
+		}
+	}
+
+	if computeSha256 {
+		operationHashCacheConfig := &ristretto.Config[uint64, string]{
+			MaxCost:     s.engineExecutionConfiguration.OperationHashCacheSize,
+			NumCounters: s.engineExecutionConfiguration.OperationHashCacheSize * 10,
+			BufferItems: 64,
+		}
+		gm.operationHashCache, err = ristretto.NewCache[uint64, string](operationHashCacheConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create operation hash cache: %w", err)
+		}
+	}
+
 	metrics := NewRouterMetrics(&routerMetricsConfig{
 		metrics:             s.metricStore,
 		gqlMetricsExporter:  s.gqlMetricsExporter,
@@ -418,7 +463,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	})
 
 	var traceHandler *rtrace.Middleware
-	var otelAttributesMappers []func(req *http.Request) []attribute.KeyValue
 
 	if s.traceConfig.Enabled {
 		spanStartOptions := []oteltrace.SpanStartOption{
@@ -433,30 +477,31 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		}
 
 		traceHandler = rtrace.NewMiddleware(
-			func(r *http.Request) {
-				span := oteltrace.SpanFromContext(r.Context())
-				if attributes := baseAttributesFromContext(r.Context()); attributes != nil {
-					span.SetAttributes(attributes...)
-				}
-			},
-			otelhttp.WithSpanOptions(spanStartOptions...),
-			otelhttp.WithFilter(rtrace.CommonRequestFilter),
-			otelhttp.WithFilter(rtrace.PrefixRequestFilter(
-				[]string{s.healthCheckPath, s.readinessCheckPath, s.livenessCheckPath}),
+			rtrace.WithTracePreHandler(
+				func(r *http.Request, w http.ResponseWriter, graphqlExecutionSpan oteltrace.Span) {
+					reqContext := getRequestContext(r.Context())
+					span := oteltrace.SpanFromContext(r.Context())
+					span.SetAttributes(reqContext.telemetry.CommonAttrs()...)
+
+					// Set the trace ID in the response header
+					if s.traceConfig.ResponseTraceHeader.Enabled {
+						spanContext := graphqlExecutionSpan.SpanContext()
+						traceID := spanContext.TraceID().String()
+						w.Header().Set(s.traceConfig.ResponseTraceHeader.HeaderName, traceID)
+					}
+				}),
+			rtrace.WithOtelHttp(
+				otelhttp.WithSpanOptions(spanStartOptions...),
+				otelhttp.WithFilter(rtrace.CommonRequestFilter),
+				otelhttp.WithFilter(rtrace.PrefixRequestFilter(
+					[]string{s.healthCheckPath, s.readinessCheckPath, s.livenessCheckPath}),
+				),
+				// Disable built-in metricStore through NoopMeterProvider
+				otelhttp.WithMeterProvider(sdkmetric.NewMeterProvider()),
+				otelhttp.WithSpanNameFormatter(SpanNameFormatter),
+				otelhttp.WithTracerProvider(s.tracerProvider),
 			),
-			// Disable built-in metricStore through NoopMeterProvider
-			otelhttp.WithMeterProvider(sdkmetric.NewMeterProvider()),
-			otelhttp.WithSpanNameFormatter(SpanNameFormatter),
-			otelhttp.WithTracerProvider(s.tracerProvider),
 		)
-
-		if s.traceConfig.SpanAttributesMapper != nil {
-			otelAttributesMappers = append(otelAttributesMappers, s.traceConfig.SpanAttributesMapper)
-		}
-
-		otelAttributesMappers = append(otelAttributesMappers, func(req *http.Request) []attribute.KeyValue {
-			return baseOtelAttributes
-		})
 	}
 
 	baseLogFields := []zapcore.Field{
@@ -467,35 +512,24 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		baseLogFields = append(baseLogFields, zap.String("feature_flag", featureFlagName))
 	}
 
-	// Request logger
-	requestLoggerOpts := []requestlogger.Option{
-		requestlogger.WithDefaultOptions(),
-		requestlogger.WithNoTimeField(),
-		requestlogger.WithFields(baseLogFields...),
-		requestlogger.WithRequestFields(func(request *http.Request) []zapcore.Field {
-			return []zapcore.Field{
-				zap.String("request_id", middleware.GetReqID(request.Context())),
-			}
-		}),
-	}
-
-	if s.ipAnonymization.Enabled {
-		requestLoggerOpts = append(requestLoggerOpts, requestlogger.WithAnonymization(&requestlogger.IPAnonymizationConfig{
-			Enabled: s.ipAnonymization.Enabled,
-			Method:  requestlogger.IPAnonymizationMethod(s.ipAnonymization.Method),
-		}))
-	}
-
-	requestLogger := requestlogger.New(
-		s.logger,
-		requestLoggerOpts...,
-	)
+	// Currently, we only support custom attributes from the context for OTLP metrics
+	b := buildAttributesMap(s.metricConfig.Attributes)
 
 	// Enrich the request context with the subgraph information which is required for custom modules and tracing
 	subgraphResolver := NewSubgraphResolver(subgraphs)
 	httpRouter.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			requestLogger := s.logger.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 			r = r.WithContext(withSubgraphResolver(r.Context(), subgraphResolver))
+
+			reqContext := buildRequestContext(requestContextOptions{
+				operationContext:    nil,
+				requestLogger:       requestLogger,
+				metricSetAttributes: b,
+				w:                   w,
+				r:                   r,
+			})
+			r = r.WithContext(withRequestContext(r.Context(), reqContext))
 
 			// For debugging purposes, we can validate from what version of the config the request is coming from
 			if s.setConfigVersionHeader {
@@ -506,31 +540,71 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		})
 	})
 
-	if s.traceConfig.Enabled {
-		httpRouter.Use(func(h http.Handler) http.Handler {
-			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	/**
+	* Initialize base attributes from headers and other sources
+	 */
 
-				var attributes []attribute.KeyValue
-				for _, mapper := range otelAttributesMappers {
-					attributes = append(attributes, mapper(r)...)
-				}
+	var commonAttrRequestMapper func(r *http.Request) []attribute.KeyValue
 
-				attributes = append(attributes, baseOtelAttributes...)
-
-				r = r.WithContext(
-					withBaseAttributes(r.Context(), attributes),
-				)
-
-				h.ServeHTTP(w, r)
-			})
-		})
+	if len(s.telemetryAttributes) > 0 {
+		// Common attributes across traces and metrics
+		commonAttrRequestMapper = buildHeaderAttributesMapper(s.telemetryAttributes)
 	}
+
+	var metricAttrRequestMapper func(r *http.Request) []attribute.KeyValue
+
+	// Metric attributes are only used for OTLP metrics and Prometheus metrics
+	if s.metricConfig.IsEnabled() {
+		metricAttrRequestMapper = buildHeaderAttributesMapper(s.metricConfig.Attributes)
+	}
+
+	httpRouter.Use(func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+			reqContext := getRequestContext(r.Context())
+			attributes := make([]attribute.KeyValue, 0, len(baseOtelAttributes))
+			attributes = append(attributes, baseOtelAttributes...)
+
+			if commonAttrRequestMapper != nil {
+				attributes = append(attributes, commonAttrRequestMapper(r)...)
+			}
+			if metricAttrRequestMapper != nil {
+				reqContext.telemetry.AddMetricAttribute(metricAttrRequestMapper(r)...)
+			}
+
+			reqContext.telemetry.AddCommonAttribute(attributes...)
+
+			h.ServeHTTP(w, r)
+		})
+	})
 
 	// Register the trace middleware before the request logger, so we can log the trace ID
 	if traceHandler != nil {
 		httpRouter.Use(traceHandler.Handler)
 	}
-	httpRouter.Use(requestLogger)
+
+	if s.accessLogsConfig != nil && s.accessLogsConfig.Logger != nil {
+		requestLoggerOpts := []requestlogger.Option{
+			requestlogger.WithDefaultOptions(),
+			requestlogger.WithNoTimeField(),
+			requestlogger.WithFields(baseLogFields...),
+			requestlogger.WithFieldsHandler(s.accessLogsFieldHandler),
+		}
+
+		if s.ipAnonymization.Enabled {
+			requestLoggerOpts = append(requestLoggerOpts, requestlogger.WithAnonymization(&requestlogger.IPAnonymizationConfig{
+				Enabled: s.ipAnonymization.Enabled,
+				Method:  requestlogger.IPAnonymizationMethod(s.ipAnonymization.Method),
+			}))
+		}
+
+		requestLogger := requestlogger.New(
+			s.accessLogsConfig.Logger,
+			requestLoggerOpts...,
+		)
+
+		httpRouter.Use(requestLogger)
+	}
 
 	routerEngineConfig := &RouterEngineConfiguration{
 		Execution:                s.engineExecutionConfiguration,
@@ -573,11 +647,12 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	executor, err := ecb.Build(
 		ctx,
 		&ExecutorBuildOptions{
-			EngineConfig:       engineConfig,
-			Subgraphs:          configSubgraphs,
-			RouterEngineConfig: routerEngineConfig,
-			PubSubProviders:    s.pubSubProviders,
-			Reporter:           s.websocketStats,
+			EngineConfig:             engineConfig,
+			Subgraphs:                configSubgraphs,
+			RouterEngineConfig:       routerEngineConfig,
+			PubSubProviders:          s.pubSubProviders,
+			Reporter:                 s.websocketStats,
+			ApolloCompatibilityFlags: s.apolloCompatibilityFlags,
 		},
 	)
 	if err != nil {
@@ -592,7 +667,9 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		NormalizationCache:             gm.normalizationCache,
 		ValidationCache:                gm.validationCache,
 		QueryDepthCache:                gm.queryDepthCache,
+		OperationHashCache:             gm.operationHashCache,
 		ParseKitPoolSize:               s.engineExecutionConfiguration.ParseKitPoolSize,
+		IntrospectionEnabled:           s.Config.introspection,
 	})
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
 
@@ -611,6 +688,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		EnableExecutionPlanCacheResponseHeader: s.engineExecutionConfiguration.EnableExecutionPlanCacheResponseHeader,
 		EnablePersistedOperationCacheResponseHeader: s.engineExecutionConfiguration.Debug.EnablePersistedOperationsCacheResponseHeader,
 		EnableNormalizationCacheResponseHeader:      s.engineExecutionConfiguration.Debug.EnableNormalizationCacheResponseHeader,
+		EnableResponseHeaderPropagation:             s.headerRules != nil,
 		WebSocketStats:                              s.websocketStats,
 		TracerProvider:                              s.tracerProvider,
 		Authorizer:                                  NewCosmoAuthorizer(authorizerOptions),
@@ -658,7 +736,10 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		AlwaysIncludeQueryPlan:      s.engineExecutionConfiguration.Debug.AlwaysIncludeQueryPlan,
 		AlwaysSkipLoader:            s.engineExecutionConfiguration.Debug.AlwaysSkipLoader,
 		QueryPlansEnabled:           s.Config.queryPlansEnabled,
+		QueryPlansLoggingEnabled:    s.engineExecutionConfiguration.Debug.PrintQueryPlans,
 		TrackSchemaUsageInfo:        s.graphqlMetricsConfig.Enabled,
+		ClientHeader:                s.clientHeader,
+		ComputeOperationSha256:      computeSha256,
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
@@ -677,6 +758,8 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			EpollKqueuePollTimeout:     s.engineExecutionConfiguration.EpollKqueuePollTimeout,
 			EpollKqueueConnBufferSize:  s.engineExecutionConfiguration.EpollKqueueConnBufferSize,
 			WebSocketConfiguration:     s.webSocketConfiguration,
+			ClientHeader:               s.clientHeader,
+			Attributes:                 baseOtelAttributes,
 		})
 
 		// When the playground path is equal to the graphql path, we need to handle
@@ -695,10 +778,10 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		func(handler http.Handler) http.Handler {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-				opCtx := getOperationContext(r.Context())
+				requestContext := getRequestContext(r.Context())
 
 				// We don't want to count any type of subscriptions e.g. SSE as in-flight requests because they are long-lived
-				if opCtx != nil && opCtx.opType != OperationTypeSubscription {
+				if requestContext != nil && requestContext.operation != nil && requestContext.operation.opType != OperationTypeSubscription {
 					s.inFlightRequests.Add(1)
 
 					// Counting like this is safe because according to the go http.ServeHTTP documentation
@@ -724,6 +807,90 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	s.graphMuxes = append(s.graphMuxes, gm)
 
 	return gm, nil
+}
+
+func (s *graphServer) accessLogsFieldHandler(panicError any, request *http.Request) []zapcore.Field {
+	reqContext := getRequestContext(request.Context())
+	if reqContext == nil {
+		return nil
+	}
+	resFields := make([]zapcore.Field, 0, len(s.accessLogsConfig.Attributes))
+	resFields = append(resFields, zap.String("request_id", middleware.GetReqID(request.Context())))
+
+	for _, field := range s.accessLogsConfig.Attributes {
+		if field.ValueFrom.RequestHeader != "" {
+			resFields = append(resFields, NewStringLogField(request.Header.Get(field.ValueFrom.RequestHeader), field))
+			continue
+		}
+
+		if field.ValueFrom.ContextField != "" && reqContext.operation != nil {
+			switch field.ValueFrom.ContextField {
+			case ContextFieldOperationName:
+				if v := NewStringLogField(reqContext.operation.name, field); v != zap.Skip() {
+					resFields = append(resFields, v)
+				}
+			case ContextFieldOperationType:
+				if v := NewStringLogField(reqContext.operation.opType, field); v != zap.Skip() {
+					resFields = append(resFields, v)
+				}
+			case ContextFieldOperationPlanningTime:
+				if v := NewDurationLogField(reqContext.operation.planningTime, field); v != zap.Skip() {
+					resFields = append(resFields, v)
+				}
+			case ContextFieldOperationNormalizationTime:
+				if v := NewDurationLogField(reqContext.operation.normalizationTime, field); v != zap.Skip() {
+					resFields = append(resFields, v)
+				}
+			case ContextFieldOperationParsingTime:
+				if v := NewDurationLogField(reqContext.operation.parsingTime, field); v != zap.Skip() {
+					resFields = append(resFields, v)
+				}
+			case ContextFieldOperationValidationTime:
+				if v := NewDurationLogField(reqContext.operation.validationTime, field); v != zap.Skip() {
+					resFields = append(resFields, v)
+				}
+			case ContextFieldOperationSha256:
+				if v := NewStringLogField(reqContext.operation.sha256Hash, field); v != zap.Skip() {
+					resFields = append(resFields, v)
+				}
+			case ContextFieldOperationHash:
+				if reqContext.operation.hash != 0 {
+					if v := NewStringLogField(strconv.FormatUint(reqContext.operation.hash, 10), field); v != zap.Skip() {
+						resFields = append(resFields, v)
+					}
+				}
+			case ContextFieldPersistedOperationSha256:
+				if v := NewStringLogField(reqContext.operation.persistedID, field); v != zap.Skip() {
+					resFields = append(resFields, v)
+				}
+			case ContextFieldResponseErrorMessage:
+				var errMessage string
+				if panicError != nil {
+					errMessage = fmt.Sprintf("%v", panicError)
+				} else if reqContext.error != nil {
+					errMessage = reqContext.error.Error()
+				}
+				if v := NewStringLogField(errMessage, field); v != zap.Skip() {
+					resFields = append(resFields, v)
+				}
+
+			case ContextFieldOperationServices:
+				if v := NewStringSliceLogField(reqContext.dataSourceNames, field); v != zap.Skip() {
+					resFields = append(resFields, v)
+				}
+			case ContextFieldGraphQLErrorServices:
+				if v := NewStringSliceLogField(reqContext.graphQLErrorServices, field); v != zap.Skip() {
+					resFields = append(resFields, v)
+				}
+			case ContextFieldGraphQLErrorCodes:
+				if v := NewStringSliceLogField(reqContext.graphQLErrorCodes, field); v != zap.Skip() {
+					resFields = append(resFields, v)
+				}
+			}
+		}
+	}
+
+	return resFields
 }
 
 func (s *graphServer) buildPubSubConfiguration(ctx context.Context, engineConfig *nodev1.EngineConfiguration, routerEngineCfg *RouterEngineConfiguration) error {
@@ -894,7 +1061,10 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 	// Shutdown all graphs muxes to release resources
 	// e.g. planner cache
 	for _, mux := range s.graphMuxes {
-		mux.Shutdown(ctx)
+		if err := mux.Shutdown(ctx); err != nil {
+			s.logger.Error("Failed to shutdown graph mux", zap.Error(err))
+			finalErr = errors.Join(finalErr, err)
+		}
 	}
 
 	return finalErr

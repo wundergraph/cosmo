@@ -198,8 +198,8 @@ func TestSingleFlightDifferentHeaders(t *testing.T) {
 		},
 		RouterOptions: []core.Option{
 			core.WithHeaderRules(config.HeaderRules{
-				All: config.GlobalHeaderRule{
-					Request: []config.RequestHeaderRule{
+				All: &config.GlobalHeaderRule{
+					Request: []*config.RequestHeaderRule{
 						{
 							Named:     "Authorization",
 							Operation: config.HeaderRuleOperationPropagate,
@@ -245,8 +245,8 @@ func TestSingleFlightSameHeaders(t *testing.T) {
 		},
 		RouterOptions: []core.Option{
 			core.WithHeaderRules(config.HeaderRules{
-				All: config.GlobalHeaderRule{
-					Request: []config.RequestHeaderRule{
+				All: &config.GlobalHeaderRule{
+					Request: []*config.RequestHeaderRule{
 						{
 							Named:     "Authorization",
 							Operation: config.HeaderRuleOperationPropagate,

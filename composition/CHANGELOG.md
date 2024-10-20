@@ -4,6 +4,28 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.29.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.29.2...@wundergraph/composition@0.29.3) (2024-10-16)
+
+### Bug Fixes
+
+* another case for ancestor tag propagation ([#1273](https://github.com/wundergraph/cosmo/issues/1273)) ([2ad85b0](https://github.com/wundergraph/cosmo/commit/2ad85b0d042acbbbfd3b92983ce68053a5e3945d)) (@Aenimus)
+
+## [0.29.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.29.1...@wundergraph/composition@0.29.2) (2024-10-15)
+
+### Bug Fixes
+
+* propagate ancestor exclude tags ([#1272](https://github.com/wundergraph/cosmo/issues/1272)) ([b008d45](https://github.com/wundergraph/cosmo/commit/b008d4510ca004839c2d746d05f4e3173b01d748)) (@Aenimus)
+
+## [0.29.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.29.0...@wundergraph/composition@0.29.1) (2024-10-14)
+
+**Note:** Version bump only for package @wundergraph/composition
+
+# [0.29.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.28.5...@wundergraph/composition@0.29.0) (2024-09-19)
+
+### Features
+
+* add graph pruning ([#1133](https://github.com/wundergraph/cosmo/issues/1133)) ([b5718cd](https://github.com/wundergraph/cosmo/commit/b5718cd66bc7f0d14cb16b3d0a6d395e846968e4)) (@JivusAyrus)
+
 ## [0.28.5](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.28.4...@wundergraph/composition@0.28.5) (2024-09-12)
 
 **Note:** Version bump only for package @wundergraph/composition

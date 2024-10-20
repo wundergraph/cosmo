@@ -116,7 +116,7 @@ func TestKafkaEvents(t *testing.T) {
 
 			go func() {
 				wg.Wait()
-				require.NoError(t, client.Close())
+				_ = client.Close()
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
@@ -413,7 +413,7 @@ func TestKafkaEvents(t *testing.T) {
 
 			go func() {
 				wg.Wait()
-				require.NoError(t, client.Close())
+				_ = client.Close()
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
@@ -426,7 +426,100 @@ func TestKafkaEvents(t *testing.T) {
 		})
 	})
 
-	t.Run("subscribe sync sse", func(t *testing.T) {
+	t.Run("multipart", func(t *testing.T) {
+		assertLineEquals := func(reader *bufio.Reader, expected string) {
+			line, _, err := reader.ReadLine()
+			require.NoError(t, err)
+			require.Equal(t, expected, string(line))
+		}
+
+		assertMultipartPrefix := func(reader *bufio.Reader) {
+			assertLineEquals(reader, "--graphql")
+			assertLineEquals(reader, "Content-Type: application/json")
+			assertLineEquals(reader, "")
+		}
+
+		heartbeatInterval := 7 * time.Second
+
+		t.Run("subscribe sync", func(t *testing.T) {
+			topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
+
+			testenv.Run(t, &testenv.Config{
+				KafkaSeeds: seeds,
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+
+				ensureTopicExists(t, xEnv, topics...)
+
+				subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
+
+				wg := &sync.WaitGroup{}
+				wg.Add(1)
+
+				go func() {
+					client := http.Client{
+						Timeout: time.Second * 100,
+					}
+					req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
+					resp, gErr := client.Do(req)
+					require.NoError(t, gErr)
+					require.Equal(t, http.StatusOK, resp.StatusCode)
+					defer resp.Body.Close()
+					reader := bufio.NewReader(resp.Body)
+
+					assertMultipartPrefix(reader)
+					assertLineEquals(reader, "{\"payload\":{\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
+					assertMultipartPrefix(reader)
+					assertLineEquals(reader, "{}")
+					assertMultipartPrefix(reader)
+					assertLineEquals(reader, "{\"payload\":{\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
+					wg.Done()
+				}()
+
+				xEnv.WaitForSubscriptionCount(1, time.Second*5)
+
+				produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+				time.Sleep(heartbeatInterval)
+				produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+
+				wg.Wait()
+
+				xEnv.WaitForSubscriptionCount(0, time.Second*10)
+				xEnv.WaitForConnectionCount(0, time.Second*10)
+			})
+		})
+
+		t.Run("subscribe sync with block", func(t *testing.T) {
+			t.Parallel()
+
+			subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
+
+			testenv.Run(t, &testenv.Config{
+				KafkaSeeds: seeds,
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.BlockSubscriptions = true
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				client := http.Client{
+					Timeout: time.Second * 100,
+				}
+				req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
+				resp, err := client.Do(req)
+				require.NoError(t, err)
+				require.Equal(t, http.StatusOK, resp.StatusCode)
+
+				defer resp.Body.Close()
+				reader := bufio.NewReader(resp.Body)
+
+				assertMultipartPrefix(reader)
+				assertLineEquals(reader, "{\"payload\":{\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}}")
+
+				xEnv.WaitForSubscriptionCount(0, time.Second*10)
+				xEnv.WaitForConnectionCount(0, time.Second*10)
+			})
+		})
+	})
+
+	t.Run("subscribe sync sse legacy method works", func(t *testing.T) {
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
@@ -484,6 +577,64 @@ func TestKafkaEvents(t *testing.T) {
 		})
 	})
 
+	t.Run("subscribe sync sse", func(t *testing.T) {
+
+		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
+
+		testenv.Run(t, &testenv.Config{
+			KafkaSeeds: seeds,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			ensureTopicExists(t, xEnv, topics...)
+
+			subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
+
+			wg := &sync.WaitGroup{}
+			wg.Add(1)
+
+			go func() {
+				client := http.Client{
+					Timeout: time.Second * 10,
+				}
+				req, gErr := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
+				require.NoError(t, gErr)
+
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Accept", "text/event-stream")
+				req.Header.Set("Connection", "keep-alive")
+				req.Header.Set("Cache-Control", "no-cache")
+
+				resp, gErr := client.Do(req)
+				require.NoError(t, gErr)
+				require.Equal(t, http.StatusOK, resp.StatusCode)
+				defer resp.Body.Close()
+				reader := bufio.NewReader(resp.Body)
+
+				eventNext, _, gErr := reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "event: next", string(eventNext))
+				data, _, gErr := reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "data: {\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}", string(data))
+				line, _, gErr := reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "", string(line))
+
+				wg.Done()
+
+			}()
+
+			xEnv.WaitForSubscriptionCount(1, time.Second*5)
+
+			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+
+			wg.Wait()
+
+			xEnv.WaitForSubscriptionCount(0, time.Second*10)
+			xEnv.WaitForConnectionCount(0, time.Second*10)
+		})
+	})
+
 	t.Run("subscribe sync sse with block", func(t *testing.T) {
 		t.Parallel()
 
@@ -498,7 +649,7 @@ func TestKafkaEvents(t *testing.T) {
 			client := http.Client{
 				Timeout: time.Second * 10,
 			}
-			req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLServeSentEventsURL(), bytes.NewReader(subscribePayload))
+			req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
 			require.NoError(t, err)
 
 			req.Header.Set("Content-Type", "application/json")

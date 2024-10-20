@@ -4,9 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
-	"strings"
-
+	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -15,11 +13,14 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
+	"slices"
 )
 
 var (
 	_ resolve.LoaderHooks = (*EngineLoaderHooks)(nil)
 )
+
+type MultiError = interface{ Unwrap() []error }
 
 const EngineLoaderHooksScopeName = "wundergraph/cosmo/router/engine/loader"
 const EngineLoaderHooksScopeVersion = "0.0.1"
@@ -52,13 +53,9 @@ func (f *EngineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInf
 		return ctx
 	}
 
-	var baseAttributes []attribute.KeyValue
-
-	if attributes := baseAttributesFromContext(reqContext.Request().Context()); attributes != nil {
-		baseAttributes = append(baseAttributes, attributes...)
-	}
-
-	ctx, span := f.tracer.Start(ctx, "Engine - Fetch", trace.WithAttributes(baseAttributes...))
+	ctx, span := f.tracer.Start(ctx, "Engine - Fetch",
+		trace.WithAttributes(reqContext.telemetry.CommonAttrs()...),
+	)
 
 	subgraph := reqContext.SubgraphByID(ds.ID)
 	if subgraph != nil {
@@ -85,11 +82,12 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 	}
 
 	span := trace.SpanFromContext(ctx)
+
 	defer span.End()
 
 	activeSubgraph := reqContext.SubgraphByID(ds.ID)
 
-	baseAttributes := []attribute.KeyValue{
+	attributes := []attribute.KeyValue{
 		// Subgraph response status code
 		semconv.HTTPStatusCode(statusCode),
 		rotel.WgComponentName.String("engine-loader"),
@@ -98,11 +96,7 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 	}
 
 	// Ensure common attributes are set
-	baseAttributes = append(baseAttributes, reqContext.operation.Attributes()...)
-
-	if attributes := baseAttributesFromContext(reqContext.Request().Context()); attributes != nil {
-		baseAttributes = append(baseAttributes, attributes...)
-	}
+	attributes = append(attributes, reqContext.telemetry.CommonAttrs()...)
 
 	if err != nil {
 
@@ -113,54 +107,44 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 
 		var errorCodesAttr []string
 
-		var subgraphError *resolve.SubgraphError
-
-		if errors.As(err, &subgraphError) {
-
-			// Extract downstream errors
-			if len(subgraphError.DownstreamErrors) > 0 {
-				for i, downstreamError := range subgraphError.DownstreamErrors {
-					var errorCode string
-					if downstreamError.Extensions != nil {
-						if ok := downstreamError.Extensions["code"]; ok != nil {
-							if code, ok := downstreamError.Extensions["code"].(string); ok {
-								errorCode = code
+		if unwrapped, ok := err.(MultiError); ok {
+			errs := unwrapped.Unwrap()
+			for _, e := range errs {
+				var subgraphError *resolve.SubgraphError
+				if errors.As(e, &subgraphError) {
+					for i, downstreamError := range subgraphError.DownstreamErrors {
+						var errorCode string
+						if downstreamError.Extensions != nil {
+							if ok := downstreamError.Extensions["code"]; ok != nil {
+								if code, ok := downstreamError.Extensions["code"].(string); ok {
+									errorCode = code
+								}
 							}
 						}
 
-					}
-
-					if errorCode != "" {
-						errorCodesAttr = append(errorCodesAttr, errorCode)
-						span.AddEvent(fmt.Sprintf("Downstream error %d", i+1),
-							trace.WithAttributes(
-								rotel.WgSubgraphErrorExtendedCode.String(errorCode),
-								rotel.WgSubgraphErrorMessage.String(downstreamError.Message),
-							),
-						)
+						if errorCode != "" {
+							errorCodesAttr = append(errorCodesAttr, errorCode)
+							span.AddEvent(fmt.Sprintf("Downstream error %d", i+1),
+								trace.WithAttributes(
+									rotel.WgSubgraphErrorExtendedCode.String(errorCode),
+									rotel.WgSubgraphErrorMessage.String(downstreamError.Message),
+								),
+							)
+						}
 					}
 				}
 			}
 		}
 
+		errorCodesAttr = unique.SliceElements(errorCodesAttr)
 		// Reduce cardinality of error codes
 		slices.Sort(errorCodesAttr)
 
 		if len(errorCodesAttr) > 0 {
-
-			// Create individual metrics for each error code
-			for _, code := range errorCodesAttr {
-				f.metricStore.MeasureRequestError(ctx,
-					// Add only the error code as an attribute
-					append(baseAttributes, rotel.WgSubgraphErrorExtendedCode.String(code))...,
-				)
-			}
-
-			// Add this after the metrics have been created
-			// The list might be used for post-processing
-			baseAttributes = append(baseAttributes, rotel.WgSubgraphErrorExtendedCode.String(strings.Join(errorCodesAttr, ",")))
+			mAttr := append(attributes, reqContext.telemetry.MetricAttrs(false)...)
+			f.metricStore.MeasureRequestError(ctx, mAttr...)
 		}
 	}
 
-	span.SetAttributes(baseAttributes...)
+	span.SetAttributes(attributes...)
 }

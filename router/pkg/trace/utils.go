@@ -46,18 +46,21 @@ func CommonRequestFilter(r *http.Request) bool {
 	if r.Method == "GET" && r.Header.Get("Upgrade") != "" {
 		return false
 	}
+	// Ignore if client disables tracing through header
+	if r.Header.Get("X-WG-DISABLE-TRACING") == "true" {
+		return false
+	}
 	return true
 }
 
-func GetClientInfo(h http.Header, primaryHeader, fallbackHeader, defaultValue string) string {
-	value := h.Get(primaryHeader)
-	if value == "" {
-		value = h.Get(fallbackHeader)
-		if value == "" {
-			value = defaultValue
+func GetClientHeader(h http.Header, headerNames []string, defaultValue string) string {
+	for _, headerName := range headerNames {
+		value := h.Get(headerName)
+		if value != "" {
+			return value
 		}
 	}
-	return value
+	return defaultValue
 }
 
 // AttachErrToSpan attaches an error to a span if it is not nil.

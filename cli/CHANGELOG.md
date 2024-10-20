@@ -4,6 +4,60 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.68.3](https://github.com/wundergraph/cosmo/compare/wgc@0.68.2...wgc@0.68.3) (2024-10-16)
+
+**Note:** Version bump only for package wgc
+
+## [0.68.2](https://github.com/wundergraph/cosmo/compare/wgc@0.68.1...wgc@0.68.2) (2024-10-15)
+
+**Note:** Version bump only for package wgc
+
+## [0.68.1](https://github.com/wundergraph/cosmo/compare/wgc@0.68.0...wgc@0.68.1) (2024-10-14)
+
+**Note:** Version bump only for package wgc
+
+# [0.68.0](https://github.com/wundergraph/cosmo/compare/wgc@0.67.0...wgc@0.68.0) (2024-10-09)
+
+### Features
+
+* add custom context to subgraph checks ([#1252](https://github.com/wundergraph/cosmo/issues/1252)) ([c510628](https://github.com/wundergraph/cosmo/commit/c510628bc8ca80a88b681d87051940361605ff5b)) (@JivusAyrus)
+
+# [0.67.0](https://github.com/wundergraph/cosmo/compare/wgc@0.66.2...wgc@0.67.0) (2024-10-08)
+
+### Features
+
+* use commit sha from env when not running in github ([#1254](https://github.com/wundergraph/cosmo/issues/1254)) ([7e597b6](https://github.com/wundergraph/cosmo/commit/7e597b6222c0a4acb31595c7994b96a71f13e48c)) (@thisisnithin)
+
+## [0.66.2](https://github.com/wundergraph/cosmo/compare/wgc@0.66.1...wgc@0.66.2) (2024-09-27)
+
+**Note:** Version bump only for package wgc
+
+## [0.66.1](https://github.com/wundergraph/cosmo/compare/wgc@0.66.0...wgc@0.66.1) (2024-09-25)
+
+**Note:** Version bump only for package wgc
+
+# [0.66.0](https://github.com/wundergraph/cosmo/compare/wgc@0.65.1...wgc@0.66.0) (2024-09-23)
+
+### Features
+
+* option to skip traffic check in schema check ([#1211](https://github.com/wundergraph/cosmo/issues/1211)) ([d9fd83a](https://github.com/wundergraph/cosmo/commit/d9fd83ab99d2f2fc8e5f99a4cdb3abb8a1a7837c)) (@thisisnithin)
+
+## [0.65.1](https://github.com/wundergraph/cosmo/compare/wgc@0.65.0...wgc@0.65.1) (2024-09-20)
+
+**Note:** Version bump only for package wgc
+
+# [0.65.0](https://github.com/wundergraph/cosmo/compare/wgc@0.64.2...wgc@0.65.0) (2024-09-19)
+
+### Features
+
+* add graph pruning ([#1133](https://github.com/wundergraph/cosmo/issues/1133)) ([b5718cd](https://github.com/wundergraph/cosmo/commit/b5718cd66bc7f0d14cb16b3d0a6d395e846968e4)) (@JivusAyrus)
+
+## [0.64.2](https://github.com/wundergraph/cosmo/compare/wgc@0.64.1...wgc@0.64.2) (2024-09-17)
+
+### Bug Fixes
+
+* remove lastUsedAt for graph tokens ([#1180](https://github.com/wundergraph/cosmo/issues/1180)) ([9ac1590](https://github.com/wundergraph/cosmo/commit/9ac159070f122b45aaa37661143575cfa8fa5b27)) (@thisisnithin)
+
 ## [0.64.1](https://github.com/wundergraph/cosmo/compare/wgc@0.64.0...wgc@0.64.1) (2024-09-12)
 
 **Note:** Version bump only for package wgc

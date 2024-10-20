@@ -58,15 +58,16 @@ func (s *MetricsService) saveOperations(ctx context.Context, insertTime time.Tim
 		return 0, fmt.Errorf("failed to prepare batch for operations: %w", err)
 	}
 
-	abort := true
+	hasItems := false
 
 	for _, schemaUsage := range schemaUsage {
+		// Skip if there are no request document
+		if schemaUsage.RequestDocument == "" {
+			continue
+		}
 		// If the operation is already in the cache, we can skip it and don't write it again
 		if _, exists := s.opGuardCache.Get(schemaUsage.OperationInfo.Hash); exists {
 			continue
-		}
-		if abort {
-			abort = false
 		}
 		err := opBatch.Append(
 			insertTime,
@@ -78,11 +79,13 @@ func (s *MetricsService) saveOperations(ctx context.Context, insertTime time.Tim
 		if err != nil {
 			return 0, fmt.Errorf("failed to append operation to batch: %w", err)
 		}
+
+		hasItems = true
 	}
 
 	// if we skipped saving all operations, in case they were already stored (known from the cache),
 	// we can abort the batch as there is nothing to write
-	if abort {
+	if !hasItems {
 		return 0, opBatch.Abort()
 	}
 
@@ -105,6 +108,8 @@ func (s *MetricsService) saveUsageMetrics(ctx context.Context, insertTime time.T
 	if err != nil {
 		return 0, fmt.Errorf("failed to prepare batch for metrics: %w", err)
 	}
+
+	hasItems := false
 
 	for _, schemaUsage := range schemaUsage {
 
@@ -142,10 +147,13 @@ func (s *MetricsService) saveUsageMetrics(ctx context.Context, insertTime time.T
 				false,
 				false,
 				schemaUsage.Attributes,
+				fieldUsage.IndirectInterfaceField,
 			)
 			if err != nil {
 				return 0, fmt.Errorf("failed to append field metric to batch: %w", err)
 			}
+
+			hasItems = true
 		}
 
 		for _, argumentUsage := range schemaUsage.ArgumentMetrics {
@@ -170,10 +178,13 @@ func (s *MetricsService) saveUsageMetrics(ctx context.Context, insertTime time.T
 				true,
 				false,
 				schemaUsage.Attributes,
+				false,
 			)
 			if err != nil {
 				return 0, fmt.Errorf("failed to append argument metric to batch: %w", err)
 			}
+
+			hasItems = true
 		}
 
 		for _, inputUsage := range schemaUsage.InputMetrics {
@@ -198,11 +209,18 @@ func (s *MetricsService) saveUsageMetrics(ctx context.Context, insertTime time.T
 				false,
 				true,
 				schemaUsage.Attributes,
+				false,
 			)
 			if err != nil {
 				return 0, fmt.Errorf("failed to append input metric to batch: %w", err)
 			}
+
+			hasItems = true
 		}
+	}
+
+	if !hasItems {
+		return 0, metricBatch.Abort()
 	}
 
 	if err := metricBatch.Send(); err != nil {
@@ -223,6 +241,10 @@ func (s *MetricsService) PublishGraphQLMetrics(
 	claims, err := utils.GetClaims(ctx)
 	if err != nil {
 		return nil, errNotAuthenticated
+	}
+
+	if len(req.Msg.SchemaUsage) == 0 {
+		return res, nil
 	}
 
 	dispatched := s.pool.TrySubmit(func() {
@@ -285,6 +307,10 @@ func (s *MetricsService) PublishAggregatedGraphQLMetrics(ctx context.Context, re
 	claims, err := utils.GetClaims(ctx)
 	if err != nil {
 		return nil, errNotAuthenticated
+	}
+
+	if len(req.Msg.Aggregation) == 0 {
+		return res, nil
 	}
 
 	schemaUsage := make([]*graphqlmetricsv1.SchemaUsageInfo, len(req.Msg.Aggregation))

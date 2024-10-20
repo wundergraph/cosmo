@@ -1,6 +1,7 @@
 import { and, eq, inArray, or, sql } from 'drizzle-orm';
 import _ from 'lodash';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { VCSContext } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { NewSchemaChangeOperationUsage } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
@@ -22,6 +23,10 @@ export class SchemaCheckRepository {
     isComposable?: boolean;
     isDeleted?: boolean;
     proposedSubgraphSchemaSDL: string;
+    trafficCheckSkipped?: boolean;
+    lintSkipped?: boolean;
+    graphPruningSkipped?: boolean;
+    vcsContext?: VCSContext;
   }): Promise<string> {
     const insertedSchemaCheck = await this.db
       .insert(schemaChecks)
@@ -30,6 +35,16 @@ export class SchemaCheckRepository {
         isComposable: data.isComposable,
         isDeleted: data.isDeleted,
         proposedSubgraphSchemaSDL: data.proposedSubgraphSchemaSDL,
+        clientTrafficCheckSkipped: data.trafficCheckSkipped || false,
+        lintSkipped: data.lintSkipped || false,
+        graphPruningSkipped: data.graphPruningSkipped || false,
+        vcsContext: data.vcsContext
+          ? {
+              author: data.vcsContext.author,
+              commitSha: data.vcsContext.commitSha,
+              branch: data.vcsContext.branch,
+            }
+          : null,
       })
       .returning()
       .execute();
@@ -42,6 +57,7 @@ export class SchemaCheckRepository {
     hasClientTraffic?: boolean;
     hasBreakingChanges?: boolean;
     hasLintErrors?: boolean;
+    hasGraphPruningErrors?: boolean;
   }): Promise<string | undefined> {
     const updatedSchemaCheck = await this.db
       .update(schemaChecks)
@@ -50,6 +66,7 @@ export class SchemaCheckRepository {
         hasBreakingChanges: data.hasBreakingChanges,
         hasClientTraffic: data.hasClientTraffic,
         hasLintErrors: data.hasLintErrors,
+        hasGraphPruningErrors: data.hasGraphPruningErrors,
       })
       .where(eq(schemaChecks.id, data.schemaCheckID))
       .returning()

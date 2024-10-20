@@ -71,6 +71,12 @@ message GitInfo {
   string repository_slug = 4;
 }
 
+message VCSContext {
+  string author = 1;
+  string commit_sha = 2;
+  string branch = 3;
+}
+
 message CheckSubgraphSchemaRequest {
   // The FQDN of the subgraph to be checked e.g. "wg.team1.orders"
   string subgraph_name = 1;
@@ -80,6 +86,8 @@ message CheckSubgraphSchemaRequest {
   // Check breaking changes and composition when this subgraph is deleted
   optional bool delete = 4;
   string namespace = 5;
+  optional bool skip_traffic_check = 6;
+  optional VCSContext vcsContext = 7;
 }
 
 message FixSubgraphSchemaRequest {
@@ -216,6 +224,15 @@ message LintIssue{
   LintLocation issueLocation = 4;
 }
 
+message GraphPruningIssue{
+  string graphPruningRuleType = 1;
+  LintSeverity severity = 2;
+  string fieldPath = 3;
+  string message = 4;
+  LintLocation issueLocation = 5;
+  string federatedGraphName = 6;
+}
+
 message CheckSubgraphSchemaResponse {
   Response response = 1;
   repeated SchemaChange breakingChanges = 2;
@@ -227,6 +244,9 @@ message CheckSubgraphSchemaResponse {
   repeated CheckedFederatedGraphs checked_federated_graphs = 7;
   repeated LintIssue lintWarnings = 8;
   repeated LintIssue lintErrors = 9;
+  repeated GraphPruningIssue graphPruneWarnings = 10;
+  repeated GraphPruningIssue graphPruneErrors = 11;
+  optional bool client_traffic_check_skipped = 12;
 }
 
 message FixSubgraphSchemaResponse {
@@ -428,6 +448,11 @@ message SchemaCheck {
   bool isDeleted = 9;
   optional GhDetails ghDetails = 10;
   bool hasLintErrors = 11;
+  bool hasGraphPruningErrors = 12;
+  bool client_traffic_check_skipped = 13;
+  bool lint_skipped = 14;
+  bool graph_pruning_skipped = 15;
+  optional VCSContext vcsContext = 16;
 }
 
 message GetChecksByFederatedGraphNameResponse {
@@ -462,6 +487,7 @@ message GetCheckSummaryResponse {
   repeated string compositionErrors = 7;
   int32 traffic_check_days = 8;
   repeated LintIssue lintIssues = 9;
+  repeated GraphPruningIssue graphPruningIssues = 10;
 }
 
 message GetCheckOperationsRequest {
@@ -486,6 +512,7 @@ message GetCheckOperationsResponse {
   repeated CheckOperation operations = 2;
   int32 traffic_check_days = 3;
   string created_at = 4;
+  bool client_traffic_check_skipped = 5;
 }
 
 message GetOperationContentRequest {
@@ -688,6 +715,7 @@ enum Unit {
   CodeBlock = 4;
   StatusCode = 5;
   TraceID = 6;
+  SpanID = 7;
 }
 
 enum AnalyticsViewFilterOperator {
@@ -914,6 +942,8 @@ message Span {
 
 message GetTraceRequest {
   string id = 1;
+  string span_id = 2;
+  string federated_graph_id = 3;
 }
 
 message GetTraceResponse {
@@ -934,7 +964,6 @@ message RouterToken {
   string id = 1;
   string name = 2;
   string createdAt = 3;
-  string lastUsedAt = 4;
   string creatorEmail = 5;
 }
 
@@ -1493,11 +1522,20 @@ message GetOIDCProviderResponse {
   string loginURL = 4;
   string signInRedirectURL = 5;
   string signOutRedirectURL = 6;
+  repeated GroupMapper mappers = 7;
 }
 
 message DeleteOIDCProviderRequest {}
 
 message DeleteOIDCProviderResponse {
+  Response response = 1;
+}
+
+message UpdateIDPMappersRequest {
+  repeated GroupMapper mappers = 1;
+}
+
+message UpdateIDPMappersResponse {
   Response response = 1;
 }
 
@@ -1988,6 +2026,41 @@ message ConfigureNamespaceLintConfigResponse {
   Response response = 1;
 }
 
+message EnableGraphPruningRequest {
+  string namespace = 1;
+  bool enableGraphPruning = 2;
+}
+
+message EnableGraphPruningResponse {
+  Response response = 1;
+}
+
+message GraphPruningConfig {
+  string ruleName = 1;
+  LintSeverity severityLevel = 2;
+  int32 gracePeriodInDays = 3;
+  optional int32 schemaUsageCheckPeriodInDays = 4;
+}
+
+message ConfigureNamespaceGraphPruningConfigRequest {
+  string namespace = 1;
+  repeated GraphPruningConfig configs = 2;
+}
+
+message ConfigureNamespaceGraphPruningConfigResponse {
+  Response response = 1;
+}
+
+message GetNamespaceGraphPruningConfigRequest {
+  string namespace = 1;
+}
+
+message GetNamespaceGraphPruningConfigResponse {
+  Response response = 1;
+  bool graphPrunerEnabled = 2;
+  repeated GraphPruningConfig configs = 3;
+}
+
 message MigrateMonographRequest {
   string name = 1;
   string namespace = 2;
@@ -2409,6 +2482,8 @@ service PlatformService {
   rpc GetOIDCProvider(GetOIDCProviderRequest) returns (GetOIDCProviderResponse) {}
   // DeleteOIDCProvider deletes the oidc provider connected the organization
   rpc DeleteOIDCProvider(DeleteOIDCProviderRequest) returns (DeleteOIDCProviderResponse) {}
+  // UpdateIDPMappers updates the mappings of the oidc provider
+  rpc UpdateIDPMappers(UpdateIDPMappersRequest) returns (UpdateIDPMappersResponse) {}
   // GetClients returns all the clients of the federated graph
   rpc GetClients(GetClientsRequest) returns (GetClientsResponse) {}
   // GetRouters returns all active routers of the federated graph
@@ -2506,6 +2581,12 @@ service PlatformService {
   rpc ConfigureNamespaceLintConfig(ConfigureNamespaceLintConfigRequest) returns (ConfigureNamespaceLintConfigResponse) {}
   // GetNamespaceLintConfig returns the lint config of the namespace.
   rpc GetNamespaceLintConfig(GetNamespaceLintConfigRequest) returns (GetNamespaceLintConfigResponse) {}
+  // EnablePruningForTheNamespace enables the graph pruning check for the namespace passed.
+  rpc EnableGraphPruning(EnableGraphPruningRequest) returns (EnableGraphPruningResponse) {}
+  // ConfigureNamespaceGraphPruningConfig configures the graph pruning config of the organization.
+  rpc ConfigureNamespaceGraphPruningConfig(ConfigureNamespaceGraphPruningConfigRequest) returns (ConfigureNamespaceGraphPruningConfigResponse) {}
+  // GetNamespaceGraphPruningConfig returns the graph pruning config of the namespace.
+  rpc GetNamespaceGraphPruningConfig(GetNamespaceGraphPruningConfigRequest) returns (GetNamespaceGraphPruningConfigResponse) {}
   // GetFeatureFlags returns the feature flags of the namespace
   rpc GetFeatureFlags(GetFeatureFlagsRequest) returns (GetFeatureFlagsResponse) {}
   // GetFeatureFlagByName returns the feature flag of the namespace

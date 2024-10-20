@@ -302,6 +302,7 @@ export function AnalyticsDataTable<T>({
 
         applyNewParams({
           traceID: row.getValue("traceId"),
+          spanID: row.getValue("spanId"),
         });
         return;
       }
@@ -439,7 +440,8 @@ export function AnalyticsDataTable<T>({
                       "group cursor-pointer hover:bg-secondary/30",
                       {
                         "bg-secondary/50":
-                          row.original.traceId === router.query.traceID,
+                          row.original.traceId === router.query.traceID &&
+                          row.original.spanId === router.query.spanID,
                         "bg-destructive/10":
                           row.original.statusCode === "STATUS_CODE_ERROR",
                       },

@@ -1,9 +1,28 @@
 import { and, asc, eq, not } from 'drizzle-orm';
+import { z } from 'zod';
 import type { DB } from '../../db/index.js';
 import { billingPlans, billingSubscriptions, organizationBilling } from '../../db/schema.js';
 import { BillingPlanDTO } from '../../types/index.js';
 import { BillingService } from '../services/BillingService.js';
 
+export const billingSchema = z.object({
+  plans: z.record(
+    z.object({
+      name: z.string(),
+      price: z.number(),
+      active: z.boolean(),
+      weight: z.number(),
+      stripePriceId: z.string().optional(),
+      features: z.array(
+        z.object({
+          id: z.string(),
+          description: z.string().optional(),
+          limit: z.number().optional(),
+        }),
+      ),
+    }),
+  ),
+});
 /**
  * BillingRepository for billing related operations.
  */
@@ -39,6 +58,21 @@ export class BillingRepository {
     return this.db.query.billingPlans.findFirst({
       where: eq(billingPlans.id, id),
     });
+  }
+
+  public insertPlan(planId: string | null, organizationId: string) {
+    return this.db
+      .insert(organizationBilling)
+      .values({
+        plan: planId,
+        organizationId,
+      })
+      .onConflictDoUpdate({
+        target: organizationBilling.organizationId,
+        set: {
+          plan: planId,
+        },
+      });
   }
 
   public async setPlan(planId: string | null, organizationId: string) {

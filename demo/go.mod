@@ -13,19 +13,18 @@ require (
 	github.com/rs/cors v1.11.0
 	github.com/vektah/gqlparser/v2 v2.5.16
 	github.com/wundergraph/cosmo/composition-go v0.0.0-20240124120900-5effe48a4a1d
-	github.com/wundergraph/cosmo/router v0.0.0-20240913074702-2ed3533dc18e
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.81
+	github.com/wundergraph/cosmo/router v0.0.0-20241017200920-c8eea0ce73e6
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.107
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/otel v1.28.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.23.1
 	go.opentelemetry.io/otel/sdk v1.28.0
-	go.uber.org/zap v1.26.0
-	golang.org/x/sync v0.7.0
+	go.uber.org/zap v1.27.0
+	golang.org/x/sync v0.8.0
 )
 
 require (
 	github.com/agnivade/levenshtein v1.1.1 // indirect
-	github.com/alitto/pond v1.8.3 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
@@ -42,7 +41,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.0 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/jensneuse/abstractlogger v0.0.4 // indirect
-	github.com/jensneuse/byte-template v0.0.0-20200214152254-4f3cf06e5c68 // indirect
+	github.com/jensneuse/byte-template v0.0.0-20231025215717-69252eb3ed56 // indirect
 	github.com/kingledion/go-tools v0.6.0 // indirect
 	github.com/klauspost/compress v1.17.9 // indirect
 	github.com/logrusorgru/aurora/v3 v3.0.0 // indirect
@@ -56,7 +55,7 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/sosodev/duration v1.3.1 // indirect
-	github.com/tidwall/gjson v1.17.0 // indirect
+	github.com/tidwall/gjson v1.18.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
@@ -73,7 +72,7 @@ require (
 	golang.org/x/crypto v0.24.0 // indirect
 	golang.org/x/mod v0.18.0 // indirect
 	golang.org/x/net v0.26.0 // indirect
-	golang.org/x/sys v0.21.0 // indirect
+	golang.org/x/sys v0.25.0 // indirect
 	golang.org/x/text v0.16.0 // indirect
 	golang.org/x/tools v0.22.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240102182953-50ed04b92917 // indirect

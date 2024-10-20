@@ -1,6 +1,7 @@
 import KeycloakAdminClient from '@keycloak/keycloak-admin-client';
 import { RequiredActionAlias } from '@keycloak/keycloak-admin-client/lib/defs/requiredActionProviderRepresentation.js';
 import { uid } from 'uid';
+import { GroupMapper } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { MemberRole } from '../../db/models.js';
 
 export default class Keycloak {

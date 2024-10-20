@@ -26,6 +26,7 @@ import { useMutation, useQuery } from "@connectrpc/connect-query";
 import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
+  NoSymbolIcon,
 } from "@heroicons/react/24/outline";
 import {
   ChevronDownIcon,
@@ -270,6 +271,16 @@ export const CheckOperations = () => {
         actions={<Button onClick={() => refetch()}>Retry</Button>}
       />
     );
+
+  if (data && data.clientTrafficCheckSkipped) {
+    return (
+      <EmptyState
+        icon={<NoSymbolIcon className="text-gray-400" />}
+        title="Operations Check Skipped"
+        description="You skipped checking against client traffic for this run"
+      />
+    );
+  }
 
   if (data && data.operations.length === 0) {
     return (

@@ -1,10 +1,13 @@
 import { buildASTSchema, DirectiveDefinitionNode, DocumentNode, GraphQLSchema, Kind, NamedTypeNode } from 'graphql';
 import {
+  getMutableTypeNode,
   getTypeNodeNamedTypeName,
   MutableEnumValueNode,
   MutableFieldNode,
   MutableInputValueNode,
+  MutableIntermediateTypeNode,
   MutableTypeDefinitionNode,
+  MutableTypeNode,
 } from '../schema-building/ast';
 import { stringToNamedTypeNode, stringToNameNode } from '../ast/utils';
 import {
@@ -17,6 +20,7 @@ import {
   inaccessibleSubscriptionFieldConditionFieldPathFieldErrorMessage,
   incompatibleArgumentTypesError,
   incompatibleChildTypesError,
+  incompatibleFederatedFieldNamedTypeError,
   incompatibleParentKindFatalError,
   incompatibleParentKindMergeError,
   incompatibleSharedEnumError,
@@ -30,6 +34,7 @@ import {
   invalidSubscriptionFieldConditionFieldPathFieldErrorMessage,
   invalidSubscriptionFieldConditionFieldPathParentErrorMessage,
   invalidSubscriptionFilterDirectiveError,
+  maximumTypeNestingExceededError,
   minimumSubgraphRequirementError,
   noBaseDefinitionForExtensionError,
   nonLeafSubscriptionFieldConditionFieldPathFinalFieldErrorMessage,
@@ -47,7 +52,11 @@ import {
   subscriptionFilterNamedTypeErrorMessage,
   undefinedEntityInterfaceImplementationsError,
   undefinedSubscriptionFieldConditionFieldPathFieldErrorMessage,
+  undefinedTypeError,
+  unexpectedNonCompositeOutputTypeError,
+  unknownFieldDataError,
   unknownFieldSubgraphNameError,
+  unknownNamedTypeError,
 } from '../errors/errors';
 import {
   ChildTagData,
@@ -74,6 +83,7 @@ import {
   IN_UPPER,
   INACCESSIBLE,
   INPUT_OBJECT,
+  LEFT_PARENTHESIS,
   LIST,
   NOT_UPPER,
   OBJECT,
@@ -182,10 +192,15 @@ import {
 import { ObjectExtensionData } from '../schema-building/type-extension-data';
 
 import { renameRootTypes } from './walkers';
-import { cloneDeep } from 'lodash';
-import { getLeastRestrictiveMergedTypeNode, getMostRestrictiveMergedTypeNode } from '../schema-building/type-merging';
-import { ConstDirectiveNode, ConstObjectValueNode } from 'graphql/index';
-import { MAX_SUBSCRIPTION_FILTER_DEPTH } from '../utils/integer-constants';
+import { cloneDeep, union } from 'lodash';
+import {
+  DivergentType,
+  FederateTypeOptions,
+  FederateTypeResult,
+  getMostRestrictiveMergedTypeNode,
+} from '../schema-building/type-merging';
+import { ConstDirectiveNode, ConstObjectValueNode, ListTypeNode, NonNullTypeNode, TypeNode } from 'graphql/index';
+import { MAX_SUBSCRIPTION_FILTER_DEPTH, MAXIMUM_TYPE_NESTING } from '../utils/integer-constants';
 import { Graph } from '../resolvability-graph/graph';
 import { GraphNode } from '../resolvability-graph/graph-nodes';
 import { Warning } from '../warnings/warnings';
@@ -195,13 +210,13 @@ export class FederationFactory {
   concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>;
   clientDefinitions: MutableTypeDefinitionNode[] = [DEPRECATED_DEFINITION];
   currentSubgraphName = '';
+  subgraphNamesByNamedTypeNameByFieldCoordinates = new Map<string, Map<string, Set<string>>>();
   entityDataByTypeName: Map<string, EntityData>;
   entityInterfaceFederationDataByTypeName: Map<string, EntityInterfaceFederationData>;
   errors: Error[] = [];
   fieldConfigurationByFieldPath = new Map<string, FieldConfiguration>();
-  graphEdges = new Set<string>();
-  graphPaths = new Map<string, boolean>();
   inaccessiblePaths = new Set<string>();
+  isMaxDepth = false;
   internalGraph: Graph;
   internalSubgraphBySubgraphName: Map<string, InternalSubgraph>;
   invalidOrScopesHostPaths = new Set<string>();
@@ -223,7 +238,6 @@ export class FederationFactory {
   routerDefinitions: MutableTypeDefinitionNode[] = [DEPRECATED_DEFINITION, TAG_DEFINITION];
   shareableErrorTypeNames = new Map<string, Set<string>>();
   subscriptionFilterDataByFieldPath = new Map<string, SubscriptionFilterData>();
-  isMaxDepth = false;
   tagNamesByPath = new Map<string, Set<string>>();
   warnings: Warning[];
 
@@ -644,6 +658,88 @@ export class FederationFactory {
     }
   }
 
+  federateOutputType({ current, other, hostPath, mostRestrictive }: FederateTypeOptions): FederateTypeResult {
+    other = getMutableTypeNode(other, hostPath, this.errors); // current is already a deep copy
+    // The first type of the pair to diverge in restriction takes precedence in all future differences.
+    // If the other type of the pair also diverges, it's a src error.
+    // To keep the output link intact, it is not possible to spread assign "lastTypeNode".
+    const federatedTypeNode: MutableIntermediateTypeNode = { kind: current.kind };
+    let divergentType = DivergentType.NONE;
+    let lastTypeNode: MutableIntermediateTypeNode = federatedTypeNode;
+    for (let i = 0; i < MAXIMUM_TYPE_NESTING; i++) {
+      if (current.kind === other.kind) {
+        switch (current.kind) {
+          case Kind.NAMED_TYPE:
+            lastTypeNode.kind = current.kind;
+            lastTypeNode.name = current.name;
+            return { success: true, typeNode: federatedTypeNode as TypeNode };
+          case Kind.LIST_TYPE:
+            lastTypeNode.kind = current.kind;
+            lastTypeNode.type = { kind: current.type.kind };
+            lastTypeNode = lastTypeNode.type;
+            current = current.type;
+            other = (other as ListTypeNode).type;
+            continue;
+          case Kind.NON_NULL_TYPE:
+            lastTypeNode.kind = current.kind;
+            lastTypeNode.type = { kind: current.type.kind };
+            lastTypeNode = lastTypeNode.type;
+            current = current.type;
+            other = (other as NonNullTypeNode).type;
+            continue;
+        }
+      }
+      if (current.kind === Kind.NON_NULL_TYPE) {
+        if (divergentType === DivergentType.OTHER) {
+          this.errors.push(incompatibleChildTypesError(hostPath, current.kind, other.kind));
+          return { success: false };
+        } else {
+          divergentType = DivergentType.CURRENT;
+        }
+        if (mostRestrictive) {
+          lastTypeNode.kind = current.kind;
+          lastTypeNode.type = { kind: current.type.kind };
+          lastTypeNode = lastTypeNode.type;
+        }
+        current = current.type;
+        continue;
+      }
+      if (other.kind === Kind.NON_NULL_TYPE) {
+        if (divergentType === DivergentType.CURRENT) {
+          this.errors.push(incompatibleChildTypesError(hostPath, current.kind, other.kind));
+          return { success: false };
+        } else {
+          divergentType = DivergentType.OTHER;
+        }
+        if (mostRestrictive) {
+          lastTypeNode.kind = other.kind;
+          lastTypeNode.type = { kind: other.type.kind };
+          lastTypeNode = lastTypeNode.type;
+        }
+        other = other.type;
+        continue;
+      }
+      // At least one of the types must be a non-null wrapper, or the types are inconsistent
+      this.errors.push(incompatibleChildTypesError(hostPath, current.kind, other.kind));
+      return { success: false };
+    }
+    this.errors.push(maximumTypeNestingExceededError(hostPath));
+    return { success: false };
+  }
+
+  addSubgraphNameToExistingFieldNamedTypeDisparity(incomingData: FieldData) {
+    const subgraphNamesByNamedTypeName = this.subgraphNamesByNamedTypeNameByFieldCoordinates.get(
+      `${incomingData.renamedParentTypeName}.${incomingData.name}`,
+    );
+    if (!subgraphNamesByNamedTypeName) {
+      return;
+    }
+    addIterableValuesToSet(
+      incomingData.subgraphNames,
+      getValueOrDefault(subgraphNamesByNamedTypeName, incomingData.namedTypeName, () => new Set<String>()),
+    );
+  }
+
   upsertFieldData(
     fieldDataByFieldName: Map<string, FieldData>,
     incomingData: FieldData,
@@ -704,19 +800,46 @@ export class FederationFactory {
       }
       return;
     }
-    const { typeErrors, typeNode } = getLeastRestrictiveMergedTypeNode(
-      existingData.type,
-      incomingData.type,
-      fieldPath,
-      this.errors,
-    );
-    if (typeNode) {
-      existingData.type = typeNode;
-    } else {
-      if (!typeErrors || typeErrors.length < 2) {
-        throw fieldTypeMergeFatalError(existingData.name);
+    const result = this.federateOutputType({
+      current: existingData.type,
+      other: incomingData.type,
+      hostPath: fieldPath,
+      mostRestrictive: false,
+    });
+    if (result.success) {
+      existingData.type = result.typeNode;
+      if (existingData.namedTypeName !== incomingData.namedTypeName) {
+        const subgraphNamesByNamedTypeName = getValueOrDefault(
+          this.subgraphNamesByNamedTypeNameByFieldCoordinates,
+          `${existingData.renamedParentTypeName}.${existingData.name}`,
+          () => new Map<string, Set<string>>(),
+        );
+        /* Only propagate the subgraph names of the existing data if it has never been propagated before.
+         * This is to prevent the propagation of subgraph names where that named type is not returned.
+         */
+        const existingSubgraphNames = getValueOrDefault(
+          subgraphNamesByNamedTypeName,
+          existingData.namedTypeName,
+          () => new Set<String>(),
+        );
+        if (existingSubgraphNames.size < 1) {
+          // Add all subgraph names that are not the subgraph name in the incoming data
+          for (const subgraphName of existingData.subgraphNames) {
+            if (!incomingData.subgraphNames.has(subgraphName)) {
+              existingSubgraphNames.add(subgraphName);
+            }
+          }
+        }
+        addIterableValuesToSet(
+          incomingData.subgraphNames,
+          getValueOrDefault(subgraphNamesByNamedTypeName, incomingData.namedTypeName, () => new Set<String>()),
+        );
+      } else {
+        /* If the named types match but there has already been a disparity in the named type names returned by the
+         * field, add the incoming subgraph name to the existing subgraph name set for that named type name.
+         */
+        this.addSubgraphNameToExistingFieldNamedTypeDisparity(incomingData);
       }
-      this.errors.push(incompatibleChildTypesError(fieldPath, typeErrors[0], typeErrors[1]));
     }
     for (const [argumentName, inputValueData] of incomingData.argumentDataByArgumentName) {
       const namedArgumentTypeName = getTypeNodeNamedTypeName(inputValueData.type);
@@ -1040,9 +1163,162 @@ export class FederationFactory {
     addIterableValuesToSet(incomingData.subgraphNames, existingData.subgraphNames);
   }
 
+  shouldUpdateFederatedFieldAbstractNamedType(abstractTypeName: string, objectTypeNames: Set<string>): boolean {
+    if (!abstractTypeName) {
+      return false;
+    }
+    const concreteTypeNames = this.concreteTypeNamesByAbstractTypeName.get(abstractTypeName);
+    if (!concreteTypeNames || concreteTypeNames.size < 1) {
+      return false;
+    }
+    for (const objectTypeName of objectTypeNames) {
+      if (!concreteTypeNames.has(objectTypeName)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  updateTypeNodeNamedType(typeNode: MutableTypeNode, namedTypeName: string) {
+    let lastTypeNode = typeNode;
+    for (let i = 0; i < MAXIMUM_TYPE_NESTING; i++) {
+      if (lastTypeNode.kind === Kind.NAMED_TYPE) {
+        lastTypeNode.name = stringToNameNode(namedTypeName);
+        return;
+      }
+      lastTypeNode = lastTypeNode.type;
+    }
+  }
+
+  handleDisparateFieldNamedTypes() {
+    for (const [fieldCoordinates, subgraphNamesByNamedTypeName] of this
+      .subgraphNamesByNamedTypeNameByFieldCoordinates) {
+      const coordinates = fieldCoordinates.split(PERIOD);
+      if (coordinates.length !== 2) {
+        continue;
+      }
+      const compositeOutputData = this.parentDefinitionDataByTypeName.get(coordinates[0]);
+      if (!compositeOutputData) {
+        this.errors.push(undefinedTypeError(coordinates[0]));
+        continue;
+      }
+      // This error should never happen
+      if (
+        compositeOutputData.kind !== Kind.INTERFACE_TYPE_DEFINITION &&
+        compositeOutputData.kind !== Kind.OBJECT_TYPE_DEFINITION
+      ) {
+        this.errors.push(
+          unexpectedNonCompositeOutputTypeError(coordinates[0], kindToTypeString(compositeOutputData.kind)),
+        );
+        continue;
+      }
+      const fieldData = compositeOutputData.fieldDataByFieldName.get(coordinates[1]);
+      // This error should never happen
+      if (!fieldData) {
+        this.errors.push(unknownFieldDataError(fieldCoordinates));
+        continue;
+      }
+      const interfaceDataByTypeName = new Map<string, InterfaceDefinitionData>();
+      const objectTypeNames = new Set<string>();
+      let unionTypeName = '';
+      for (const namedTypeName of subgraphNamesByNamedTypeName.keys()) {
+        if (BASE_SCALARS.has(namedTypeName)) {
+          this.errors.push(incompatibleFederatedFieldNamedTypeError(fieldCoordinates, subgraphNamesByNamedTypeName));
+          break;
+        }
+        const namedTypeData = this.parentDefinitionDataByTypeName.get(namedTypeName);
+        // This error should never happen
+        if (!namedTypeData) {
+          this.errors.push(unknownNamedTypeError(fieldCoordinates, namedTypeName));
+          break;
+        }
+        switch (namedTypeData.kind) {
+          case Kind.INTERFACE_TYPE_DEFINITION: {
+            interfaceDataByTypeName.set(namedTypeData.name, namedTypeData);
+            break;
+          }
+          case Kind.OBJECT_TYPE_DEFINITION: {
+            objectTypeNames.add(namedTypeData.name);
+            /* Multiple shared Field instances can explicitly return the same Object named type across subgraphs.
+             * However, the Field is invalid if *any* of the other shared Field instances return a different Object named
+             * type, even if each of those Objects named types could be coerced into the same mutual abstract type.
+             * This is because it would be impossible to return identical data from each subgraph if one shared Field
+             * instance explicitly returns a different Object named type to another shared Field instance.
+             */
+            if (objectTypeNames.size > 1) {
+              this.errors.push(
+                incompatibleFederatedFieldNamedTypeError(fieldCoordinates, subgraphNamesByNamedTypeName),
+              );
+              continue;
+            }
+            break;
+          }
+          case Kind.UNION_TYPE_DEFINITION: {
+            if (unionTypeName) {
+              this.errors.push(
+                incompatibleFederatedFieldNamedTypeError(fieldCoordinates, subgraphNamesByNamedTypeName),
+              );
+              continue;
+            }
+            unionTypeName = namedTypeName;
+            break;
+          }
+          default: {
+            this.errors.push(incompatibleFederatedFieldNamedTypeError(fieldCoordinates, subgraphNamesByNamedTypeName));
+            break;
+          }
+        }
+      }
+      if (interfaceDataByTypeName.size < 0 && !unionTypeName) {
+        this.errors.push(incompatibleFederatedFieldNamedTypeError(fieldCoordinates, subgraphNamesByNamedTypeName));
+        continue;
+      }
+      /* Default to the Union type name.
+       * If more than one type of abstract type is returned, an error will be propagated.
+       */
+      let abstractTypeName = unionTypeName;
+      if (interfaceDataByTypeName.size > 0) {
+        if (unionTypeName) {
+          this.errors.push(incompatibleFederatedFieldNamedTypeError(fieldCoordinates, subgraphNamesByNamedTypeName));
+          continue;
+        }
+        /* If there is more than one Interface, there must be an origin Interface.
+         * This is the "mutual Interface" that all the other Interfaces implement.
+         */
+        for (const interfaceTypeName of interfaceDataByTypeName.keys()) {
+          abstractTypeName = interfaceTypeName;
+          for (const [comparisonTypeName, comparisonData] of interfaceDataByTypeName) {
+            if (interfaceTypeName === comparisonTypeName) {
+              continue;
+            }
+            if (!comparisonData.implementedInterfaceTypeNames.has(interfaceTypeName)) {
+              abstractTypeName = '';
+              break;
+            }
+          }
+          if (abstractTypeName) {
+            break;
+          }
+        }
+      }
+      /* If the abstract type is:
+       * 1. An Interface: each returned Object types must implement that origin Interface.
+       * 2. A Union: all returned Object types must be Member of that Union.
+       * 3. Invalid (empty string): return an error
+       */
+      if (!this.shouldUpdateFederatedFieldAbstractNamedType(abstractTypeName, objectTypeNames)) {
+        this.errors.push(incompatibleFederatedFieldNamedTypeError(fieldCoordinates, subgraphNamesByNamedTypeName));
+        continue;
+      }
+      fieldData.namedTypeName = abstractTypeName;
+      this.updateTypeNodeNamedType(fieldData.type, abstractTypeName);
+    }
+  }
+
   /* federateInternalSubgraphData is responsible for merging each subgraph TypeScript representation of a GraphQL type
-   ** into a single representation.
-   ** This method is always necessary, regardless of whether federating a source graph or contract graph. */
+   * into a single representation.
+   * This method is always necessary, regardless of whether federating a source graph or contract graph.
+   * */
   federateInternalSubgraphData() {
     let subgraphNumber = 0;
     let shouldSkipPersistedExecutableDirectives = false;
@@ -1072,6 +1348,7 @@ export class FederationFactory {
         shouldSkipPersistedExecutableDirectives = true;
       }
     }
+    this.handleDisparateFieldNamedTypes();
   }
 
   handleInterfaceObjectForInternalGraph({
@@ -1560,6 +1837,22 @@ export class FederationFactory {
     ];
   }
 
+  validatePathSegmentInaccessibility(path: string): boolean {
+    if (!path) {
+      return false;
+    }
+    const coordinates = path.split(LEFT_PARENTHESIS)[0];
+    const segments = coordinates.split(PERIOD);
+    let segment = segments[0];
+    for (let i = 0; i < segments.length; i++) {
+      if (this.inaccessiblePaths.has(segment)) {
+        return true;
+      }
+      segment += `.${segments[i + 1]}`;
+    }
+    return false;
+  }
+
   validateReferencesOfInaccessibleType(data: ParentDefinitionData) {
     const paths = this.pathsByNamedTypeName.get(data.name);
     if (!paths || paths.size < 1) {
@@ -1567,7 +1860,10 @@ export class FederationFactory {
     }
     const invalidPaths: string[] = [];
     for (const path of paths) {
-      if (!this.inaccessiblePaths.has(path)) {
+      if (this.inaccessiblePaths.has(path)) {
+        continue;
+      }
+      if (!this.validatePathSegmentInaccessibility(path)) {
         invalidPaths.push(path);
       }
     }

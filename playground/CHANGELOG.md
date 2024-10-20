@@ -4,6 +4,34 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.5.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.5.1...@wundergraph/playground@0.5.2) (2024-10-17)
+
+**Note:** Version bump only for package @wundergraph/playground
+
+## [0.5.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.5.0...@wundergraph/playground@0.5.1) (2024-09-25)
+
+### Bug Fixes
+
+* handle empty query in plan ([#1219](https://github.com/wundergraph/cosmo/issues/1219)) ([37af012](https://github.com/wundergraph/cosmo/commit/37af0123d8185897a5842616377be320b696037c)) (@thisisnithin)
+
+# [0.5.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.4.0...@wundergraph/playground@0.5.0) (2024-09-19)
+
+### Features
+
+* disable tracing through headers ([#1189](https://github.com/wundergraph/cosmo/issues/1189)) ([c23fd77](https://github.com/wundergraph/cosmo/commit/c23fd77871db68f7dc33b04ee1ac742476475817)) (@thisisnithin)
+
+# [0.4.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.3.1...@wundergraph/playground@0.4.0) (2024-09-18)
+
+### Features
+
+* allow playground consumers to customize headers ([#1183](https://github.com/wundergraph/cosmo/issues/1183)) ([80a7755](https://github.com/wundergraph/cosmo/commit/80a77550b0e8188602bf508e54224725c04e1ef8)) (@clayne11)
+
+## [0.3.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.3.0...@wundergraph/playground@0.3.1) (2024-09-17)
+
+### Bug Fixes
+
+* persisting headers in playground and styling ([#1177](https://github.com/wundergraph/cosmo/issues/1177)) ([223a4d7](https://github.com/wundergraph/cosmo/commit/223a4d7f5a14406e0010df2e953c868466a9ace4)) (@thisisnithin)
+
 # [0.3.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.2.2...@wundergraph/playground@0.3.0) (2024-09-05)
 
 ### Features

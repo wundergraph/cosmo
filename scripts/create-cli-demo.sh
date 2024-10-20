@@ -16,8 +16,9 @@ wgc subgraph create hobbies --namespace default --label team=B --routing-url htt
 wgc subgraph create products --namespace default --label team=B --routing-url http://products:4004/graphql
 wgc subgraph create availability --namespace default --label team=A --routing-url http://availability:4007/graphql
 wgc subgraph create mood --namespace default --label team=B --routing-url http://mood:4008/graphql
+wgc subgraph create employeeupdated --event-driven-graph --namespace default --label team=B
 
-SUBGRAPHS="employees family hobbies products availability mood"
+SUBGRAPHS="employees family hobbies products availability mood employeeupdated"
 
 for subgraph in $SUBGRAPHS; do
   wgc subgraph publish $subgraph --namespace default --schema ./demo/pkg/subgraphs/$subgraph/subgraph/schema.graphqls

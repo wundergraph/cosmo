@@ -4,6 +4,42 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.26.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.25.0...graphqlmetrics@0.26.0) (2024-10-17)
+
+### Features
+
+* custom metric attributes ([#1267](https://github.com/wundergraph/cosmo/issues/1267)) ([f6a4224](https://github.com/wundergraph/cosmo/commit/f6a4224a2370e8eb6e36598a22f60a3eee83f055)) (@StarpTech)
+
+# [0.25.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.24.0...graphqlmetrics@0.25.0) (2024-10-09)
+
+### Features
+
+* add indirect interface fields to schema usage reporting ([#1235](https://github.com/wundergraph/cosmo/issues/1235)) ([1c62c14](https://github.com/wundergraph/cosmo/commit/1c62c14f9a9f11a6fbbebf5a3fbc4d85f304285e)) (@jensneuse)
+
+# [0.24.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.23.1...graphqlmetrics@0.24.0) (2024-09-23)
+
+### Features
+
+* add apollo compatibility mode with support for valueCompletion ([#1205](https://github.com/wundergraph/cosmo/issues/1205)) ([18b1ef0](https://github.com/wundergraph/cosmo/commit/18b1ef01b12945d2f3acc80ea9548a17f9effa21)) (@jensneuse)
+
+## [0.23.1](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.23.0...graphqlmetrics@0.23.1) (2024-09-20)
+
+### Bug Fixes
+
+* handle empty batch of metrics ([#1200](https://github.com/wundergraph/cosmo/issues/1200)) ([4af9beb](https://github.com/wundergraph/cosmo/commit/4af9beb65cfb2f16b24d199fc6f603d083719001)) (@StarpTech)
+
+# [0.23.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.22.1...graphqlmetrics@0.23.0) (2024-09-19)
+
+### Features
+
+* add graph pruning ([#1133](https://github.com/wundergraph/cosmo/issues/1133)) ([b5718cd](https://github.com/wundergraph/cosmo/commit/b5718cd66bc7f0d14cb16b3d0a6d395e846968e4)) (@JivusAyrus)
+
+## [0.22.1](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.22.0...graphqlmetrics@0.22.1) (2024-09-18)
+
+### Bug Fixes
+
+* **collector:** dont process empty schema usage metrics ([#1191](https://github.com/wundergraph/cosmo/issues/1191)) ([73b5d67](https://github.com/wundergraph/cosmo/commit/73b5d67769875bc77303f0e5a96293b72013138e)) (@StarpTech)
+
 # [0.22.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.21.1...graphqlmetrics@0.22.0) (2024-08-19)
 
 ### Features

@@ -349,7 +349,7 @@ keycloak:
     repository: wundergraph/cosmo/keycloak
     registry: ghcr.io
     pullPolicy: IfNotPresent
-    tag: 'latest'
+    tag: '0.10.4'
   service:
     ports:
       http: 8080
@@ -403,6 +403,9 @@ clickhouse:
   # 1 replica for development
   zookeeper:
     enabled: false
+  resources:
+    memory: 2Gi
+    cpu: 1
   persistence:
     # 2Gi for development
     size: 2Gi

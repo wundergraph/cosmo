@@ -70,6 +70,7 @@ telemetry:
       jaeger: false
       # https://github.com/openzipkin/b3-propagation (zipkin)
       b3: false
+      datadog: true
     exporters:
       # If no exporters are defined, the default one is used
       - exporter: http # or grpc
@@ -102,6 +103,13 @@ telemetry:
       listen_addr: "127.0.0.1:8088"
       exclude_metrics: []
       exclude_metric_labels: []
+
+cache_control_policy:
+  enabled: true
+  value: "max-age=180, public"
+  subgraphs:
+    - name: "products"
+      value: "max-age=60, public"
 
 # Config for custom modules
 # See "https://cosmo-docs.wundergraph.com/router/custom-modules" for more information
@@ -151,13 +159,23 @@ headers:
       - op: "propagate"
         named: "X-User-Id"
         default: "123"             # Set the value when the header was not set
-
+      - op: "set"
+        name: "X-API-Key"
+        value: "some-secret"
+    response:
+      - op: "propagate"
+        algorithm: "append"
+        named: "X-Custom-Header"
   subgraphs:
     specific-subgraph: # Will only affect this subgraph
       request:
         - op: "propagate"
           named: Subgraph-Secret
           default: "some-secret"
+      response:
+        - op: "set"
+          name: "X-Subgraph-Key"
+          value: "some-subgraph-secret"
 
 # Authentication and Authorization
 # See https://cosmo-docs.wundergraph.com/router/authentication-and-authorization for more information
@@ -286,3 +304,7 @@ execution_config:
     object_path: "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/routerconfigs/latest.json"
 
 router_config_path: "latest.json"
+
+client_header:
+  name: "Client-Name"
+  version: "Client_Version"

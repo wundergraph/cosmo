@@ -28,12 +28,18 @@
         "TraceContext": true,
         "Jaeger": false,
         "B3": false,
-        "Baggage": false
+        "Baggage": false,
+        "Datadog": true
+      },
+      "ResponseTraceHeader": {
+        "Enabled": false,
+        "HeaderName": "x-wg-trace-id"
       },
       "ExportGraphQLVariables": true,
       "WithNewRoot": false
     },
     "Metrics": {
+      "Attributes": null,
       "OTLP": {
         "Enabled": true,
         "RouterRuntime": true,
@@ -98,6 +104,16 @@
       }
     }
   },
+  "CacheControl": {
+    "Enabled": true,
+    "Value": "max-age=180, public",
+    "Subgraphs": [
+      {
+        "Name": "products",
+        "Value": "max-age=60, public"
+      }
+    ]
+  },
   "Modules": {
     "myModule": {
       "value": 1
@@ -111,21 +127,48 @@
           "Matching": "",
           "Named": "X-Test-Header",
           "Rename": "",
-          "Default": ""
+          "Default": "",
+          "Name": "",
+          "Value": ""
         },
         {
           "Operation": "propagate",
           "Matching": "(?i)^X-Custom-.*",
           "Named": "",
           "Rename": "",
-          "Default": ""
+          "Default": "",
+          "Name": "",
+          "Value": ""
         },
         {
           "Operation": "propagate",
           "Matching": "",
           "Named": "X-User-Id",
           "Rename": "",
-          "Default": "123"
+          "Default": "123",
+          "Name": "",
+          "Value": ""
+        },
+        {
+          "Operation": "set",
+          "Matching": "",
+          "Named": "",
+          "Rename": "",
+          "Default": "",
+          "Name": "X-API-Key",
+          "Value": "some-secret"
+        }
+      ],
+      "Response": [
+        {
+          "Operation": "propagate",
+          "Matching": "",
+          "Named": "X-Custom-Header",
+          "Rename": "",
+          "Default": "",
+          "Algorithm": "append",
+          "Name": "",
+          "Value": ""
         }
       ]
     },
@@ -137,7 +180,21 @@
             "Matching": "",
             "Named": "Subgraph-Secret",
             "Rename": "",
-            "Default": "some-secret"
+            "Default": "some-secret",
+            "Name": "",
+            "Value": ""
+          }
+        ],
+        "Response": [
+          {
+            "Operation": "set",
+            "Matching": "",
+            "Named": "",
+            "Rename": "",
+            "Default": "",
+            "Algorithm": "",
+            "Name": "X-Subgraph-Key",
+            "Value": "some-subgraph-secret"
           }
         ]
       }
@@ -168,6 +225,24 @@
     "Enabled": true,
     "MaxFileSizeBytes": 50000000,
     "MaxFiles": 10
+  },
+  "AccessLogs": {
+    "Enabled": true,
+    "Buffer": {
+      "Enabled": false,
+      "Size": 256000,
+      "FlushInterval": 10000000000
+    },
+    "Output": {
+      "Stdout": {
+        "Enabled": true
+      },
+      "File": {
+        "Enabled": false,
+        "Path": "access.log"
+      }
+    },
+    "Fields": null
   },
   "ListenAddr": "localhost:3002",
   "ControlplaneURL": "https://cosmo-cp.wundergraph.com",
@@ -299,6 +374,7 @@
       "PrintOperationEnableASTRefs": false,
       "PrintPlanningPaths": false,
       "PrintQueryPlans": false,
+      "PrintIntermediateQueryPlans": false,
       "PrintNodeSuggestions": false,
       "ConfigurationVisitor": false,
       "PlanningVisitor": false,
@@ -324,6 +400,7 @@
     "EnablePersistedOperationsCache": true,
     "EnableNormalizationCache": true,
     "NormalizationCacheSize": 1024,
+    "OperationHashCacheSize": 2048,
     "ParseKitPoolSize": 16,
     "EnableValidationCache": true,
     "ValidationCacheSize": 1024,
@@ -370,7 +447,8 @@
     "DefaultExtensionCode": "DOWNSTREAM_SERVICE_ERROR",
     "AllowedExtensionFields": [
       "code"
-    ]
+    ],
+    "AllowedFields": null
   },
   "StorageProviders": {
     "S3": [
@@ -394,6 +472,11 @@
     "Storage": {
       "ProviderID": "s3",
       "ObjectPath": "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/routerconfigs/latest.json"
+    },
+    "FallbackStorage": {
+      "Enabled": false,
+      "ProviderID": "",
+      "ObjectPath": ""
     }
   },
   "PersistedOperationsConfig": {
@@ -404,5 +487,21 @@
       "ProviderID": "s3",
       "ObjectPrefix": "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/operations/foo"
     }
+  },
+  "ApolloCompatibilityFlags": {
+    "EnableAll": false,
+    "ValueCompletion": {
+      "Enabled": false
+    },
+    "TruncateFloats": {
+      "Enabled": false
+    },
+    "SuppressFetchErrors": {
+      "Enabled": false
+    }
+  },
+  "ClientHeader": {
+    "Name": "Client-Name",
+    "Version": "Client_Version"
   }
 }
