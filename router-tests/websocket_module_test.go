@@ -77,7 +77,6 @@ func TestWebsocketCustomModule(t *testing.T) {
 					t:                 t,
 					postHandlerCalled: postHandlerCalled,
 				}),
-				core.WithSubgraphRetryOptions(false, 0, 0, 0),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			type currentTimePayload struct {
