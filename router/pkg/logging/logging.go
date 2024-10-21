@@ -17,8 +17,8 @@ const (
 
 type RequestIDKey struct{}
 
-func New(pretty bool, debug bool, level zapcore.Level) *zap.Logger {
-	return NewZapLogger(zapcore.AddSync(os.Stdout), pretty, debug, level)
+func New(pretty bool, development bool, level zapcore.Level) *zap.Logger {
+	return NewZapLogger(zapcore.AddSync(os.Stdout), pretty, development, level)
 }
 
 func zapBaseEncoderConfig() zapcore.EncoderConfig {
@@ -60,27 +60,30 @@ func attachBaseFields(logger *zap.Logger) *zap.Logger {
 	return logger
 }
 
-func defaultZapCoreOptions(debug bool) []zap.Option {
+func defaultZapCoreOptions(development bool) []zap.Option {
 	var zapOpts []zap.Option
 
-	if debug {
-		zapOpts = append(zapOpts, zap.AddCaller())
+	if development {
+		zapOpts = append(zapOpts, zap.AddCaller(), zap.Development())
 	}
 
-	zapOpts = append(zapOpts, zap.AddStacktrace(zap.ErrorLevel))
+	// Stacktrace is included on logs of ErrorLevel and above.
+	zapOpts = append(zapOpts,
+		zap.AddStacktrace(zap.ErrorLevel),
+	)
 
 	return zapOpts
 }
 
-func NewZapLoggerWithCore(core zapcore.Core, debug bool) *zap.Logger {
-	zapLogger := zap.New(core, defaultZapCoreOptions(debug)...)
+func NewZapLoggerWithCore(core zapcore.Core, development bool) *zap.Logger {
+	zapLogger := zap.New(core, defaultZapCoreOptions(development)...)
 
 	zapLogger = attachBaseFields(zapLogger)
 
 	return zapLogger
 }
 
-func NewZapLogger(syncer zapcore.WriteSyncer, pretty bool, debug bool, level zapcore.Level) *zap.Logger {
+func NewZapLogger(syncer zapcore.WriteSyncer, pretty, development bool, level zapcore.Level) *zap.Logger {
 	var encoder zapcore.Encoder
 
 	if pretty {
@@ -89,18 +92,18 @@ func NewZapLogger(syncer zapcore.WriteSyncer, pretty bool, debug bool, level zap
 		encoder = ZapJsonEncoder()
 	}
 
-	zapLogger := zap.New(zapcore.NewCore(
+	c := zapcore.NewCore(
 		encoder,
 		syncer,
 		level,
-	), defaultZapCoreOptions(debug)...)
-
+	)
+	zapLogger := zap.New(c, defaultZapCoreOptions(development)...)
 	zapLogger = attachBaseFields(zapLogger)
 
 	return zapLogger
 }
 
-func NewZapAccessLogger(syncer zapcore.WriteSyncer, pretty bool) *zap.Logger {
+func NewZapAccessLogger(syncer zapcore.WriteSyncer, development, pretty bool) *zap.Logger {
 	var encoder zapcore.Encoder
 
 	if pretty {
@@ -109,12 +112,12 @@ func NewZapAccessLogger(syncer zapcore.WriteSyncer, pretty bool) *zap.Logger {
 		encoder = ZapJsonEncoder()
 	}
 
-	zapLogger := zap.New(zapcore.NewCore(
+	c := zapcore.NewCore(
 		encoder,
 		syncer,
 		zapcore.InfoLevel,
-	))
-
+	)
+	zapLogger := zap.New(c, defaultZapCoreOptions(development)...)
 	zapLogger = attachBaseFields(zapLogger)
 
 	return zapLogger
@@ -129,7 +132,7 @@ type BufferedLoggerOptions struct {
 	WS            *os.File
 	BufferSize    int
 	FlushInterval time.Duration
-	Debug         bool
+	Development   bool
 	Level         zapcore.Level
 	Pretty        bool
 }
@@ -143,7 +146,7 @@ func NewJSONZapBufferedLogger(options BufferedLoggerOptions) (*BufferedLogger, e
 		FlushInterval: options.FlushInterval,
 	}
 
-	fl.Logger = NewZapAccessLogger(fl.bufferedWriteSyncer, options.Pretty)
+	fl.Logger = NewZapAccessLogger(fl.bufferedWriteSyncer, options.Development, options.Pretty)
 
 	return fl, nil
 }

@@ -194,16 +194,16 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 					WS:            f,
 					BufferSize:    int(cfg.AccessLogs.Buffer.Size.Uint64()),
 					FlushInterval: cfg.AccessLogs.Buffer.FlushInterval,
-					Debug:         false,
+					Development:   cfg.DevelopmentMode,
 					Level:         zap.InfoLevel,
-					Pretty:        cfg.DevelopmentMode,
+					Pretty:        !cfg.JSONLog,
 				})
 				if err != nil {
 					return nil, fmt.Errorf("could not create buffered logger: %w", err)
 				}
 				c.Logger = bl.Logger
 			} else {
-				c.Logger = logging.NewZapAccessLogger(f, cfg.DevelopmentMode)
+				c.Logger = logging.NewZapAccessLogger(f, cfg.DevelopmentMode, !cfg.JSONLog)
 			}
 		} else if cfg.AccessLogs.Output.Stdout.Enabled {
 
@@ -212,16 +212,16 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 					WS:            os.Stdout,
 					BufferSize:    int(cfg.AccessLogs.Buffer.Size.Uint64()),
 					FlushInterval: cfg.AccessLogs.Buffer.FlushInterval,
-					Debug:         false,
+					Development:   cfg.DevelopmentMode,
 					Level:         zap.InfoLevel,
-					Pretty:        cfg.DevelopmentMode,
+					Pretty:        !cfg.JSONLog,
 				})
 				if err != nil {
 					return nil, fmt.Errorf("could not create buffered logger: %w", err)
 				}
 				c.Logger = bl.Logger
 			} else {
-				c.Logger = logging.NewZapAccessLogger(os.Stdout, cfg.DevelopmentMode)
+				c.Logger = logging.NewZapAccessLogger(os.Stdout, cfg.DevelopmentMode, !cfg.JSONLog)
 			}
 		}
 

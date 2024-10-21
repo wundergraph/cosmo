@@ -61,7 +61,7 @@ func Main() {
 		log.Fatal("Could not parse log level", zap.Error(err))
 	}
 
-	logger := logging.New(!result.Config.JSONLog, result.Config.LogLevel == "debug", logLevel).
+	logger := logging.New(!result.Config.JSONLog, result.Config.DevelopmentMode, logLevel).
 		With(
 			zap.String("component", "@wundergraph/router"),
 			zap.String("service_version", core.Version),
