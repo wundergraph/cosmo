@@ -155,8 +155,10 @@ export const ReactFlowARTFetchNode = ({ data }: Node<ARTFetchNode>) => {
       >
         <div className="absolute inset-0 -z-10 bg-secondary/30 backdrop-blur-lg" />
         <div className="flex items-start justify-between gap-x-4 border-b px-4 pb-4">
-          <p className="flex flex-col gap-y-2 text-base font-medium subpixel-antialiased">
-            <span>Fetch from {data.dataSourceName}</span>
+          <p className="flex flex-col gap-y-2 text-base subpixel-antialiased">
+            <span>
+              Fetch from <span className="font-medium">{data.dataSourceName}</span>
+            </span>
             <span className="text-xs font-normal text-muted-foreground">{data.dataSourceId}</span>
           </p>
           {data.outputTrace && (
