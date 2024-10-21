@@ -27,12 +27,12 @@ import (
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
 	"github.com/tidwall/gjson"
-	"github.com/wundergraph/cosmo/router/internal/epoller"
 	"github.com/wundergraph/cosmo/router/internal/wsproto"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/epoller"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 )
