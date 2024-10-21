@@ -732,7 +732,6 @@ export class AnalyticsRequestViewRepository {
     whereSql += scopedSql;
 
     this.escapeStrings(coercedQueryParams);
-    console.log({ coercedQueryParams });
 
     const [result, totalCount] = await Promise.all([
       this.getViewData(name, whereSql, havingSql, paginationSql, coercedQueryParams, orderSql),
