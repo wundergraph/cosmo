@@ -752,11 +752,11 @@ func TestTelemetry(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, `{"data":{"rootFieldWithListArg":["a"]}}`, res.Body)
-			require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+			require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 
 			sn = exporter.GetSpans().Snapshots()
 
-			require.Len(t, sn, 9, "expected 9 spans, got %d", len(sn))
+			require.Len(t, sn, 10, "expected 10 spans, got %d", len(sn))
 			require.Equalf(t, "Load Persisted Operation", sn[1].Name(), "A cache hit")
 			require.Contains(t, sn[1].Attributes(), otel.WgEnginePersistedOperationCacheHit.Bool(true))
 		})

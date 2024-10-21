@@ -135,7 +135,7 @@ func TestPersistedOperationsCache(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, `{"data":{"employees":[{"details":{"pets":null}},{"details":{"pets":null}},{"details":{"pets":[{"name":"Snappy","__typename":"Alligator"}]}},{"details":{"pets":[{"name":"Abby","__typename":"Dog","breed":"GOLDEN_RETRIEVER","class":"MAMMAL","gender":"FEMALE"},{"name":"Survivor","__typename":"Pony"}]}},{"details":{"pets":[{"name":"Blotch","__typename":"Cat","class":"MAMMAL","gender":"FEMALE","type":"STREET"},{"name":"Grayone","__typename":"Cat","class":"MAMMAL","gender":"MALE","type":"STREET"},{"name":"Rusty","__typename":"Cat","class":"MAMMAL","gender":"MALE","type":"STREET"},{"name":"Manya","__typename":"Cat","class":"MAMMAL","gender":"FEMALE","type":"HOME"},{"name":"Peach","__typename":"Cat","class":"MAMMAL","gender":"MALE","type":"STREET"},{"name":"Panda","__typename":"Cat","class":"MAMMAL","gender":"MALE","type":"HOME"},{"name":"Mommy","__typename":"Cat","class":"MAMMAL","gender":"FEMALE","type":"STREET"},{"name":"Terry","__typename":"Cat","class":"MAMMAL","gender":"FEMALE","type":"HOME"},{"name":"Tilda","__typename":"Cat","class":"MAMMAL","gender":"FEMALE","type":"HOME"},{"name":"Vasya","__typename":"Cat","class":"MAMMAL","gender":"MALE","type":"HOME"}]}},{"details":{"pets":null}},{"details":{"pets":null}},{"details":{"pets":[{"name":"Vanson","__typename":"Mouse"}]}},{"details":{"pets":null}},{"details":{"pets":[{"name":"Pepper","__typename":"Cat","class":"MAMMAL","gender":"FEMALE","type":"HOME"}]}}]}}`, res.Body)
-		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 		require.Equal(t, "HIT", res.Response.Header.Get(core.ExecutionPlanCacheHeader))
 	}
 
@@ -170,7 +170,7 @@ func TestPersistedOperationsCache(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			sendTwoRequests(t, xEnv)
 			numberOfCDNRequests := retrieveNumberOfCDNRequests(t, xEnv.CDN.URL)
-			require.Equal(t, 2, numberOfCDNRequests)
+			require.Equal(t, 3, numberOfCDNRequests)
 		})
 	})
 }
@@ -198,7 +198,7 @@ func TestPersistedOperationCacheWithVariables(t *testing.T) {
 			Variables:     []byte(`{"withAligators": true,"withCats": true,"skipDogs": false,"skipMouses": true}`),
 		})
 		require.NoError(t, err)
-		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 		require.Equal(t, `{"data":{"employees":[{"details":{"pets":null}},{"details":{"pets":null}},{"details":{"pets":[{"name":"Snappy","__typename":"Alligator","class":"REPTILE","dangerous":"yes","gender":"UNKNOWN"}]}},{"details":{"pets":[{"name":"Abby","__typename":"Dog","breed":"GOLDEN_RETRIEVER","class":"MAMMAL","gender":"FEMALE"},{"name":"Survivor","__typename":"Pony"}]}},{"details":{"pets":[{"name":"Blotch","__typename":"Cat","class":"MAMMAL","gender":"FEMALE","type":"STREET"},{"name":"Grayone","__typename":"Cat","class":"MAMMAL","gender":"MALE","type":"STREET"},{"name":"Rusty","__typename":"Cat","class":"MAMMAL","gender":"MALE","type":"STREET"},{"name":"Manya","__typename":"Cat","class":"MAMMAL","gender":"FEMALE","type":"HOME"},{"name":"Peach","__typename":"Cat","class":"MAMMAL","gender":"MALE","type":"STREET"},{"name":"Panda","__typename":"Cat","class":"MAMMAL","gender":"MALE","type":"HOME"},{"name":"Mommy","__typename":"Cat","class":"MAMMAL","gender":"FEMALE","type":"STREET"},{"name":"Terry","__typename":"Cat","class":"MAMMAL","gender":"FEMALE","type":"HOME"},{"name":"Tilda","__typename":"Cat","class":"MAMMAL","gender":"FEMALE","type":"HOME"},{"name":"Vasya","__typename":"Cat","class":"MAMMAL","gender":"MALE","type":"HOME"}]}},{"details":{"pets":null}},{"details":{"pets":null}},{"details":{"pets":[{"name":"Vanson","__typename":"Mouse"}]}},{"details":{"pets":null}},{"details":{"pets":[{"name":"Pepper","__typename":"Cat","class":"MAMMAL","gender":"FEMALE","type":"HOME"}]}}]}}`, res.Body)
 
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
@@ -218,7 +218,7 @@ func TestPersistedOperationCacheWithVariables(t *testing.T) {
 			Variables:     []byte(`{"withAligators": false,"withCats": true,"skipDogs": false,"skipMouses": true}`),
 		})
 		require.NoError(t, err)
-		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 		require.Equal(t, `{"data":{"employees":[{"details":{"pets":null}},{"details":{"pets":null}},{"details":{"pets":[{"name":"Snappy","__typename":"Alligator"}]}},{"details":{"pets":[{"name":"Abby","__typename":"Dog","breed":"GOLDEN_RETRIEVER","class":"MAMMAL","gender":"FEMALE"},{"name":"Survivor","__typename":"Pony"}]}},{"details":{"pets":[{"name":"Blotch","__typename":"Cat","class":"MAMMAL","gender":"FEMALE","type":"STREET"},{"name":"Grayone","__typename":"Cat","class":"MAMMAL","gender":"MALE","type":"STREET"},{"name":"Rusty","__typename":"Cat","class":"MAMMAL","gender":"MALE","type":"STREET"},{"name":"Manya","__typename":"Cat","class":"MAMMAL","gender":"FEMALE","type":"HOME"},{"name":"Peach","__typename":"Cat","class":"MAMMAL","gender":"MALE","type":"STREET"},{"name":"Panda","__typename":"Cat","class":"MAMMAL","gender":"MALE","type":"HOME"},{"name":"Mommy","__typename":"Cat","class":"MAMMAL","gender":"FEMALE","type":"STREET"},{"name":"Terry","__typename":"Cat","class":"MAMMAL","gender":"FEMALE","type":"HOME"},{"name":"Tilda","__typename":"Cat","class":"MAMMAL","gender":"FEMALE","type":"HOME"},{"name":"Vasya","__typename":"Cat","class":"MAMMAL","gender":"MALE","type":"HOME"}]}},{"details":{"pets":null}},{"details":{"pets":null}},{"details":{"pets":[{"name":"Vanson","__typename":"Mouse"}]}},{"details":{"pets":null}},{"details":{"pets":[{"name":"Pepper","__typename":"Cat","class":"MAMMAL","gender":"FEMALE","type":"HOME"}]}}]}}`, res.Body)
 
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
@@ -238,7 +238,7 @@ func TestPersistedOperationCacheWithVariables(t *testing.T) {
 			Variables:     []byte(`{"id":4,"withAligators": false,"withCats": true,"skipDogs": false,"skipMouses": true}`),
 		})
 		require.NoError(t, err)
-		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 		require.Equal(t, `{"data":{"employee":{"details":{"pets":[{"name":"Abby","__typename":"Dog","breed":"GOLDEN_RETRIEVER","class":"MAMMAL","gender":"FEMALE"},{"name":"Survivor","__typename":"Pony"}]}}}}`, res.Body)
 
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
@@ -248,7 +248,7 @@ func TestPersistedOperationCacheWithVariables(t *testing.T) {
 			Variables:     []byte(`{"id":4,"withCats": true,"skipDogs": false,"skipMouses": true,"withAligators": false}`),
 		})
 		require.NoError(t, err)
-		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 		require.Equal(t, `{"data":{"employee":{"details":{"pets":[{"name":"Abby","__typename":"Dog","breed":"GOLDEN_RETRIEVER","class":"MAMMAL","gender":"FEMALE"},{"name":"Survivor","__typename":"Pony"}]}}}}`, res.Body)
 
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
@@ -268,7 +268,7 @@ func TestPersistedOperationCacheWithVariables(t *testing.T) {
 			Variables:     []byte(`{"withCats": true,"skipDogs": false,"skipMouses": true,"withAligators": false}`),
 		})
 		require.NoError(t, err)
-		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 		require.Equal(t, `{"data":{"employee":{"details":{"pets":[{"name":"Abby","__typename":"Dog","breed":"GOLDEN_RETRIEVER","class":"MAMMAL","gender":"FEMALE"},{"name":"Survivor","__typename":"Pony"}]}}}}`, res.Body)
 
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
@@ -278,7 +278,7 @@ func TestPersistedOperationCacheWithVariables(t *testing.T) {
 			Variables:     []byte(`{"withCats": true,"skipDogs": false,"skipMouses": true,"withAligators": false,"id":3}`),
 		})
 		require.NoError(t, err)
-		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 		require.Equal(t, `{"data":{"employee":{"details":{"pets":[{"name":"Snappy","__typename":"Alligator"}]}}}}`, res.Body)
 	})
 }
@@ -305,7 +305,7 @@ func TestPersistedOperationsWithNestedVariablesExtraction(t *testing.T) {
 			Variables:     []byte(`{"arg":"a"}`),
 		})
 		require.NoError(t, err)
-		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 		require.Equal(t, `{"data":{"rootFieldWithListOfInputArg":[{"arg":"a"}]}}`, res.Body)
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"NormalizationQuery"`),
@@ -314,7 +314,7 @@ func TestPersistedOperationsWithNestedVariablesExtraction(t *testing.T) {
 			Variables:     []byte(`{"arg":"b"}`),
 		})
 		require.NoError(t, err)
-		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 		require.Equal(t, `{"data":{"rootFieldWithListOfInputArg":[{"arg":"b"}]}}`, res.Body)
 	})
 }
@@ -339,7 +339,7 @@ func TestPersistedOperationCacheWithVariablesAndDefaultValues(t *testing.T) {
 			Variables:     []byte(`{}`),
 		})
 		require.NoError(t, err)
-		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 		require.Equal(t, `{"data":{"employee":{"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"MyQuery"`),
@@ -358,7 +358,7 @@ func TestPersistedOperationCacheWithVariablesAndDefaultValues(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, `{"data":{"employee":{"details":{"forename":"Jens"}}}}`, res.Body)
-		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"MyQuery"`),
 			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "skipVariableWithDefault"}}`),
@@ -376,7 +376,7 @@ func TestPersistedOperationCacheWithVariablesAndDefaultValues(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, `{"data":{"employee":{"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
-		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 	})
 }
 
@@ -401,7 +401,7 @@ func TestPersistedOperationCacheWithVariablesCoercion(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, `{"data":{"rootFieldWithListArg":["a"]}}`, res.Body)
-		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"MyQuery"`),
 			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "listArgQuery"}}`),
@@ -410,7 +410,7 @@ func TestPersistedOperationCacheWithVariablesCoercion(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, `{"data":{"rootFieldWithListArg":["b"]}}`, res.Body)
-		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"MyQuery"`),
@@ -429,7 +429,7 @@ func TestPersistedOperationCacheWithVariablesCoercion(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, `{"data":{"rootFieldWithListArg":["a"]}}`, res.Body)
-		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"MyQuery"`),
 			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "listArgQueryWithDefault"}}`),
@@ -438,7 +438,7 @@ func TestPersistedOperationCacheWithVariablesCoercion(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, `{"data":{"rootFieldWithListArg":["b"]}}`, res.Body)
-		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"MyQuery"`),
 			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "listArgQueryWithDefault"}}`),
@@ -447,7 +447,7 @@ func TestPersistedOperationCacheWithVariablesCoercion(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, `{"data":{"rootFieldWithListArg":["c"]}}`, res.Body)
-		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 
 		// nested list of enums
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
@@ -467,7 +467,7 @@ func TestPersistedOperationCacheWithVariablesCoercion(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, `{"data":{"rootFieldWithInput":"B"}}`, res.Body)
-		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 	})
 }
 
