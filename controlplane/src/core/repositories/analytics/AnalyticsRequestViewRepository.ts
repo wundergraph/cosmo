@@ -685,6 +685,16 @@ export class AnalyticsRequestViewRepository {
     }
   };
 
+  private escapeStrings(obj: { [key: string]: any }): void {
+    for (const key in obj) {
+      if (typeof obj[key] === 'string') {
+        obj[key] = obj[key]
+          .replace(/\n/g, '\\n') // new lines
+          .replace(/\t/g, '\\t'); // tabs
+      }
+    }
+  }
+
   public async getView(
     organizationId: string,
     federatedGraphId: string,
@@ -720,6 +730,9 @@ export class AnalyticsRequestViewRepository {
     const scopedSql = ` AND FederatedGraphID = '${federatedGraphId}' AND OrganizationID = '${organizationId}'`;
 
     whereSql += scopedSql;
+
+    this.escapeStrings(coercedQueryParams);
+    console.log({ coercedQueryParams });
 
     const [result, totalCount] = await Promise.all([
       this.getViewData(name, whereSql, havingSql, paginationSql, coercedQueryParams, orderSql),
