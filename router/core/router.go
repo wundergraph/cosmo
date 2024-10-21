@@ -34,6 +34,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/client"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/selfregister"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
@@ -166,6 +167,7 @@ type (
 		cdnConfig                 config.CDNConfiguration
 		persistedOperationClient  persistedoperation.Client
 		persistedOperationsConfig config.PersistedOperationsConfig
+		clientInfoBuilder        *client.BuildClientInfo
 		apolloCompatibilityFlags  config.ApolloCompatibilityFlags
 		storageProviders          config.StorageProviders
 		eventsConfig              config.EventsConfiguration
@@ -1584,6 +1586,18 @@ func WithConfigPollerConfig(cfg *RouterConfigPollerConfig) Option {
 func WithPersistedOperationsConfig(cfg config.PersistedOperationsConfig) Option {
 	return func(r *Router) {
 		r.persistedOperationsConfig = cfg
+	}
+}
+
+func WithPersistedOperationClient(client persistedoperation.Client) Option {
+	return func(r *Router) {
+		r.persistedOperationClient = client
+	}
+}
+
+func WithDetailedClientInfoBuilder(client *client.BuildClientInfo) Option {
+	return func(r *Router) {
+		r.clientInfoBuilder = client
 	}
 }
 

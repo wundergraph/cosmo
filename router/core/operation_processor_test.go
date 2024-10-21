@@ -11,6 +11,19 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 )
 
+type testBuildClientInfo struct {
+    name string
+    version string
+}
+
+func (d *testBuildClientInfo) Name() string {
+    return d.name
+}
+
+func (d *testBuildClientInfo) Version() string {
+    return d.version
+}
+
 func TestOperationProcessorPersistentOperations(t *testing.T) {
 	executor := &Executor{
 		PlanConfig:      plan.Configuration{},
@@ -23,9 +36,9 @@ func TestOperationProcessorPersistentOperations(t *testing.T) {
 		MaxOperationSizeInBytes: 10 << 20,
 		ParseKitPoolSize:        4,
 	})
-	clientInfo := &ClientInfo{
-		Name:    "test",
-		Version: "1.0.0",
+	clientInfo := &testBuildClientInfo{
+		name:    "test",
+		version: "1.0.0",
 	}
 	testCases := []struct {
 		ExpectedType  string
