@@ -36,7 +36,7 @@ type OperationMetrics struct {
 	trackUsageInfo       bool
 }
 
-func (m *OperationMetrics) Finish(ctx context.Context, err error, statusCode int, responseSize int, exportSynchronous bool, opContext *operationContext, attr []attribute.KeyValue) {
+func (m *OperationMetrics) Finish(ctx context.Context, err error, statusCode int, responseSize int, opContext *operationContext, attr []attribute.KeyValue) {
 	latency := time.Since(m.operationStartTime)
 
 	m.inflightMetric()
@@ -55,10 +55,8 @@ func (m *OperationMetrics) Finish(ctx context.Context, err error, statusCode int
 	rm.MeasureLatency(ctx, latency, attr...)
 	rm.MeasureResponseSize(ctx, int64(responseSize), attr...)
 
-	if m.trackUsageInfo && m.opContext != nil {
-		m.routerMetrics.ExportSchemaUsageInfo(m.opContext, statusCode, err != nil)
 	if m.trackUsageInfo && opContext != nil {
-		m.routerMetrics.ExportSchemaUsageInfo(opContext, statusCode, err != nil, exportSynchronous)
+		m.routerMetrics.ExportSchemaUsageInfo(opContext, statusCode, err != nil)
 	}
 }
 
