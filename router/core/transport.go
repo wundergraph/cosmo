@@ -226,6 +226,12 @@ func (ct *CustomTransport) roundTripSingleFlight(req *http.Request) (*http.Respo
 			return nil, req.Context().Err()
 		}
 
+		// If the single flight item has an error, return it immediately
+		// This happens e.g. on network errors
+		if item.err != nil {
+			return nil, item.err
+		}
+
 		res := &http.Response{}
 		res.Status = item.response.Status
 		res.StatusCode = item.response.StatusCode

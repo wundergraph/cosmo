@@ -26,9 +26,9 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
-	github.com/wundergraph/cosmo/demo v0.0.0-20241018070127-7931dfd9ac52
-	github.com/wundergraph/cosmo/router v0.0.0-20241018070127-7931dfd9ac52
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.108.0.20241021135417-90bf1ec06e6f
+	github.com/wundergraph/cosmo/demo v0.0.0-20241021080628-b4565b09ca44
+	github.com/wundergraph/cosmo/router v0.0.0-20241021080628-b4565b09ca44
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.108
 	go.opentelemetry.io/otel v1.28.0
 	go.opentelemetry.io/otel/sdk v1.28.0
 	go.opentelemetry.io/otel/sdk/metric v1.28.0
@@ -55,7 +55,6 @@ require (
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudflare/backoff v0.0.0-20161212185259-647f3cdfc87a // indirect
-	github.com/coder/websocket v1.8.12 // indirect
 	github.com/containerd/containerd v1.7.12 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/cpuguy83/dockercfg v0.3.1 // indirect
@@ -163,7 +162,7 @@ require (
 	golang.org/x/mod v0.18.0 // indirect
 	golang.org/x/net v0.26.0 // indirect
 	golang.org/x/sync v0.8.0 // indirect
-	golang.org/x/sys v0.26.0 // indirect
+	golang.org/x/sys v0.25.0 // indirect
 	golang.org/x/text v0.16.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/tools v0.22.0 // indirect
