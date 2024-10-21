@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -516,6 +517,14 @@ func (s *SubgraphResolver) ByID(subgraphID string) *Subgraph {
 }
 
 func (s *SubgraphResolver) BySubgraphURL(u string) *Subgraph {
+	if len(u) >= 4 && u[:4] == "http" {
+		return s.subgraphsByURL[u]
+	}
+	if strings.HasPrefix(u, "wss") {
+		u = "https" + u[3:]
+	} else if strings.HasPrefix(u, "ws") {
+		u = "http" + u[2:]
+	}
 	return s.subgraphsByURL[u]
 }
 
