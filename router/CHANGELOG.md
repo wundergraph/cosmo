@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.128.2](https://github.com/wundergraph/cosmo/compare/router@0.128.1...router@0.128.2) (2024-10-20)
+
+### Bug Fixes
+
+* **websocket:** prevent ws headers leaking to the subgraph ws connection ([#1149](https://github.com/wundergraph/cosmo/issues/1149)) ([#1293](https://github.com/wundergraph/cosmo/issues/1293)) ([c27558f](https://github.com/wundergraph/cosmo/commit/c27558f40f2da3076a44eadd550ed55e9dfa9c28)) (@alepane21)
+
+## [0.128.1](https://github.com/wundergraph/cosmo/compare/router@0.128.0...router@0.128.1) (2024-10-20)
+
+### Bug Fixes
+
+* **websocket:** set op name and operation ([#1289](https://github.com/wundergraph/cosmo/issues/1289)) ([b094898](https://github.com/wundergraph/cosmo/commit/b0948983049d6ed3b0f65b27e414a5c4413c032a)) (@StarpTech)
+
+# [0.128.0](https://github.com/wundergraph/cosmo/compare/router@0.127.0...router@0.128.0) (2024-10-18)
+
+### Features
+
+* improve planning time ([#1287](https://github.com/wundergraph/cosmo/issues/1287)) ([c4ff4dd](https://github.com/wundergraph/cosmo/commit/c4ff4dda5bce0cf12429554d458304b92525e800)) (@devsergiy)
+
 # [0.127.0](https://github.com/wundergraph/cosmo/compare/router@0.126.0...router@0.127.0) (2024-10-17)
 
 ### Features
