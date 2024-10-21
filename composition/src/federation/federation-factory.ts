@@ -83,6 +83,7 @@ import {
   IN_UPPER,
   INACCESSIBLE,
   INPUT_OBJECT,
+  LEFT_PARENTHESIS,
   LIST,
   NOT_UPPER,
   OBJECT,
@@ -1836,6 +1837,22 @@ export class FederationFactory {
     ];
   }
 
+  validatePathSegmentInaccessibility(path: string): boolean {
+    if (!path) {
+      return false;
+    }
+    const coordinates = path.split(LEFT_PARENTHESIS)[0];
+    const segments = coordinates.split(PERIOD);
+    let segment = segments[0];
+    for (let i = 0; i < segments.length; i++) {
+      if (this.inaccessiblePaths.has(segment)) {
+        return true;
+      }
+      segment += `.${segments[i + 1]}`;
+    }
+    return false;
+  }
+
   validateReferencesOfInaccessibleType(data: ParentDefinitionData) {
     const paths = this.pathsByNamedTypeName.get(data.name);
     if (!paths || paths.size < 1) {
@@ -1843,7 +1860,10 @@ export class FederationFactory {
     }
     const invalidPaths: string[] = [];
     for (const path of paths) {
-      if (!this.inaccessiblePaths.has(path)) {
+      if (this.inaccessiblePaths.has(path)) {
+        continue;
+      }
+      if (!this.validatePathSegmentInaccessibility(path)) {
         invalidPaths.push(path);
       }
     }

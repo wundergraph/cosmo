@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.6.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.5.2...@wundergraph/playground@0.6.0) (2024-10-21)
+
+### Features
+
+* include subgraph name in ART ([#1290](https://github.com/wundergraph/cosmo/issues/1290)) ([2acfc30](https://github.com/wundergraph/cosmo/commit/2acfc300a618b4fe8392df0633c6dd6c5bbe393a)) (@StarpTech)
+
+## [0.5.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.5.1...@wundergraph/playground@0.5.2) (2024-10-17)
+
+**Note:** Version bump only for package @wundergraph/playground
+
 ## [0.5.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.5.0...@wundergraph/playground@0.5.1) (2024-09-25)
 
 ### Bug Fixes

@@ -15,25 +15,23 @@ const (
 )
 
 type OtlpMetricStore struct {
-	meter          otelmetric.Meter
-	baseAttributes []attribute.KeyValue
-	meterProvider  *metric.MeterProvider
-	logger         *zap.Logger
+	meter         otelmetric.Meter
+	meterProvider *metric.MeterProvider
+	logger        *zap.Logger
 
 	measurements *Measurements
 }
 
-func NewOtlpMetricStore(logger *zap.Logger, meterProvider *metric.MeterProvider, baseAttributes []attribute.KeyValue) (Provider, error) {
+func NewOtlpMetricStore(logger *zap.Logger, meterProvider *metric.MeterProvider) (Provider, error) {
 
 	meter := meterProvider.Meter(cosmoRouterMeterName,
 		otelmetric.WithInstrumentationVersion(cosmoRouterMeterVersion),
 	)
 
 	m := &OtlpMetricStore{
-		meter:          meter,
-		baseAttributes: baseAttributes,
-		logger:         logger,
-		meterProvider:  meterProvider,
+		meter:         meter,
+		logger:        logger,
+		meterProvider: meterProvider,
 	}
 
 	measures, err := createMeasures(meter)
@@ -47,89 +45,75 @@ func NewOtlpMetricStore(logger *zap.Logger, meterProvider *metric.MeterProvider,
 }
 
 func (h *OtlpMetricStore) MeasureInFlight(ctx context.Context, attr ...attribute.KeyValue) func() {
-	var baseKeys []attribute.KeyValue
-
-	baseKeys = append(baseKeys, h.baseAttributes...)
-	baseKeys = append(baseKeys, attr...)
-
-	baseAttributes := otelmetric.WithAttributes(baseKeys...)
+	attributes := make([]attribute.KeyValue, 0, len(attr))
+	attributes = append(attributes, attr...)
+	attributeAddOpt := otelmetric.WithAttributes(attributes...)
 
 	if c, ok := h.measurements.upDownCounters[InFlightRequestsUpDownCounter]; ok {
-		c.Add(ctx, 1, baseAttributes)
+		c.Add(ctx, 1, attributeAddOpt)
 	}
 
 	return func() {
 		if c, ok := h.measurements.upDownCounters[InFlightRequestsUpDownCounter]; ok {
-			c.Add(ctx, -1, baseAttributes)
+			c.Add(ctx, -1, attributeAddOpt)
 		}
 	}
 }
 
 func (h *OtlpMetricStore) MeasureRequestCount(ctx context.Context, attr ...attribute.KeyValue) {
-	var baseKeys []attribute.KeyValue
-
-	baseKeys = append(baseKeys, h.baseAttributes...)
-	baseKeys = append(baseKeys, attr...)
-
-	baseAttributes := otelmetric.WithAttributes(baseKeys...)
-
 	if c, ok := h.measurements.counters[RequestCounter]; ok {
-		c.Add(ctx, 1, baseAttributes)
+		attributes := make([]attribute.KeyValue, 0, len(attr))
+		attributes = append(attributes, attr...)
+		c.Add(ctx, 1, otelmetric.WithAttributes(attributes...))
 	}
 }
 
 func (h *OtlpMetricStore) MeasureRequestSize(ctx context.Context, contentLength int64, attr ...attribute.KeyValue) {
-	var baseKeys []attribute.KeyValue
-
-	baseKeys = append(baseKeys, h.baseAttributes...)
-	baseKeys = append(baseKeys, attr...)
-
-	baseAttributes := otelmetric.WithAttributes(baseKeys...)
-
 	if c, ok := h.measurements.counters[RequestContentLengthCounter]; ok {
-		c.Add(ctx, contentLength, baseAttributes)
+		attributes := make([]attribute.KeyValue, 0, len(attr))
+		attributes = append(attributes, attr...)
+		c.Add(ctx, contentLength, otelmetric.WithAttributes(attributes...))
 	}
 }
 
 func (h *OtlpMetricStore) MeasureResponseSize(ctx context.Context, size int64, attr ...attribute.KeyValue) {
-	var baseKeys []attribute.KeyValue
-
-	baseKeys = append(baseKeys, h.baseAttributes...)
-	baseKeys = append(baseKeys, attr...)
-
-	baseAttributes := otelmetric.WithAttributes(baseKeys...)
-
 	if c, ok := h.measurements.counters[ResponseContentLengthCounter]; ok {
-		c.Add(ctx, size, baseAttributes)
+		attributes := make([]attribute.KeyValue, 0, len(attr))
+		attributes = append(attributes, attr...)
+		c.Add(ctx, size, otelmetric.WithAttributes(attributes...))
 	}
 }
 
-func (h *OtlpMetricStore) MeasureLatency(ctx context.Context, requestStartTime time.Time, attr ...attribute.KeyValue) {
-	var baseKeys []attribute.KeyValue
-
-	baseKeys = append(baseKeys, h.baseAttributes...)
-	baseKeys = append(baseKeys, attr...)
-
-	baseAttributes := otelmetric.WithAttributes(baseKeys...)
-
-	// Use floating point division here for higher precision (instead of Millisecond method).
-	elapsedTime := float64(time.Since(requestStartTime)) / float64(time.Millisecond)
-
+func (h *OtlpMetricStore) MeasureLatency(ctx context.Context, latency time.Duration, attr ...attribute.KeyValue) {
 	if c, ok := h.measurements.histograms[ServerLatencyHistogram]; ok {
-		c.Record(ctx, elapsedTime, baseAttributes)
+		attributes := make([]attribute.KeyValue, 0, len(attr))
+		attributes = append(attributes, attr...)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedTime := float64(latency) / float64(time.Millisecond)
+
+		c.Record(ctx, elapsedTime, otelmetric.WithAttributes(attributes...))
 	}
 }
 
 func (h *OtlpMetricStore) MeasureRequestError(ctx context.Context, attr ...attribute.KeyValue) {
-	var baseKeys []attribute.KeyValue
-
-	baseKeys = append(baseKeys, h.baseAttributes...)
-	baseKeys = append(baseKeys, attr...)
-
-	baseAttributes := otelmetric.WithAttributes(baseKeys...)
-
 	if c, ok := h.measurements.counters[RequestError]; ok {
-		c.Add(ctx, 1, baseAttributes)
+		attributes := make([]attribute.KeyValue, 0, len(attr))
+		attributes = append(attributes, attr...)
+
+		c.Add(ctx, 1, otelmetric.WithAttributes(attributes...))
+	}
+}
+
+func (h *OtlpMetricStore) MeasureOperationPlanningTime(ctx context.Context, planningTime time.Duration, attr ...attribute.KeyValue) {
+	if c, ok := h.measurements.histograms[OperationPlanningTime]; ok {
+		attributes := make([]attribute.KeyValue, 0, len(attr))
+		attributes = append(attributes, attr...)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedTime := float64(planningTime) / float64(time.Millisecond)
+
+		c.Record(ctx, elapsedTime, otelmetric.WithAttributes(attributes...))
 	}
 }
 

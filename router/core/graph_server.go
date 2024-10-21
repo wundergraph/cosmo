@@ -153,9 +153,6 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 			rmetric.WithOtlpMeterProvider(s.otlpMeterProvider),
 			rmetric.WithLogger(s.logger),
 			rmetric.WithProcessStartTime(s.processStartTime),
-			// Don't pass the router config version or feature flags here
-			// We scope the metrics to the feature flags and config version in the handler
-			rmetric.WithAttributes(baseOtelAttributes...),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create metric handler: %w", err)
@@ -172,15 +169,20 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		s.publicKey = publicKey
 	}
 
-	recoveryHandler := recoveryhandler.New()
-
 	httpRouter := chi.NewRouter()
 
 	/**
 	* Middlewares
 	 */
 
-	httpRouter.Use(recoveryHandler)
+	// This recovery handler is used for everything before the graph mux to ensure that
+	// we can recover from panics and log them properly.
+	httpRouter.Use(recoveryhandler.New(recoveryhandler.WithLogHandler(func(w http.ResponseWriter, r *http.Request, err any) {
+		s.logger.Error("[Recovery from panic]",
+			zap.Any("error", err),
+		)
+	})))
+
 	httpRouter.Use(rmiddleware.RequestSize(int64(s.routerTrafficConfig.MaxRequestBodyBytes)))
 	httpRouter.Use(middleware.RequestID)
 	httpRouter.Use(middleware.RealIP)
@@ -427,23 +429,33 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	}
 
 	computeSha256 := false
-	if s.accessLogsConfig != nil {
-		for _, aa := range s.accessLogsConfig.Attributes {
-			if aa.ValueFrom != nil && aa.ValueFrom.ContextField == ContextFieldOperationSha256 {
+
+	// Currently, we only support custom attributes from the context for OTLP metrics
+	if len(s.metricConfig.Attributes) > 0 {
+		for _, customAttribute := range s.metricConfig.Attributes {
+			if customAttribute.ValueFrom != nil && customAttribute.ValueFrom.ContextField == ContextFieldOperationSha256 {
 				computeSha256 = true
 				break
 			}
 		}
-		if computeSha256 {
-			operationHashCacheConfig := &ristretto.Config[uint64, string]{
-				MaxCost:     s.engineExecutionConfiguration.OperationHashCacheSize,
-				NumCounters: s.engineExecutionConfiguration.OperationHashCacheSize * 10,
-				BufferItems: 64,
+	} else if s.accessLogsConfig != nil {
+		for _, customAttribute := range s.accessLogsConfig.Attributes {
+			if customAttribute.ValueFrom != nil && customAttribute.ValueFrom.ContextField == ContextFieldOperationSha256 {
+				computeSha256 = true
+				break
 			}
-			gm.operationHashCache, err = ristretto.NewCache[uint64, string](operationHashCacheConfig)
-			if err != nil {
-				return nil, fmt.Errorf("failed to create operation hash cache: %w", err)
-			}
+		}
+	}
+
+	if computeSha256 {
+		operationHashCacheConfig := &ristretto.Config[uint64, string]{
+			MaxCost:     s.engineExecutionConfiguration.OperationHashCacheSize,
+			NumCounters: s.engineExecutionConfiguration.OperationHashCacheSize * 10,
+			BufferItems: 64,
+		}
+		gm.operationHashCache, err = ristretto.NewCache[uint64, string](operationHashCacheConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create operation hash cache: %w", err)
 		}
 	}
 
@@ -456,7 +468,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	})
 
 	var traceHandler *rtrace.Middleware
-	var otelAttributesMappers []func(req *http.Request) []attribute.KeyValue
 
 	if s.traceConfig.Enabled {
 		spanStartOptions := []oteltrace.SpanStartOption{
@@ -473,10 +484,11 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		traceHandler = rtrace.NewMiddleware(
 			rtrace.WithTracePreHandler(
 				func(r *http.Request, w http.ResponseWriter, graphqlExecutionSpan oteltrace.Span) {
+					reqContext := getRequestContext(r.Context())
 					span := oteltrace.SpanFromContext(r.Context())
-					if attributes := baseAttributesFromContext(r.Context()); attributes != nil {
-						span.SetAttributes(attributes...)
-					}
+					span.SetAttributes(reqContext.telemetry.CommonAttrs()...)
+
+					// Set the trace ID in the response header
 					if s.traceConfig.ResponseTraceHeader.Enabled {
 						spanContext := graphqlExecutionSpan.SpanContext()
 						traceID := spanContext.TraceID().String()
@@ -495,14 +507,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 				otelhttp.WithTracerProvider(s.tracerProvider),
 			),
 		)
-
-		if s.traceConfig.SpanAttributesMapper != nil {
-			otelAttributesMappers = append(otelAttributesMappers, s.traceConfig.SpanAttributesMapper)
-		}
-
-		otelAttributesMappers = append(otelAttributesMappers, func(req *http.Request) []attribute.KeyValue {
-			return baseOtelAttributes
-		})
 	}
 
 	baseLogFields := []zapcore.Field{
@@ -513,13 +517,24 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		baseLogFields = append(baseLogFields, zap.String("feature_flag", featureFlagName))
 	}
 
+	// Currently, we only support custom attributes from the context for OTLP metrics
+	b := buildAttributesMap(s.metricConfig.Attributes)
+
 	// Enrich the request context with the subgraph information which is required for custom modules and tracing
 	subgraphResolver := NewSubgraphResolver(subgraphs)
 	httpRouter.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			requestLogger := s.logger.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 			r = r.WithContext(withSubgraphResolver(r.Context(), subgraphResolver))
-			r = r.WithContext(withRequestContext(r.Context(), buildRequestContext(w, r, nil, requestLogger)))
+
+			reqContext := buildRequestContext(requestContextOptions{
+				operationContext:    nil,
+				requestLogger:       requestLogger,
+				metricSetAttributes: b,
+				w:                   w,
+				r:                   r,
+			})
+			r = r.WithContext(withRequestContext(r.Context(), reqContext))
 
 			// For debugging purposes, we can validate from what version of the config the request is coming from
 			if s.setConfigVersionHeader {
@@ -530,25 +545,61 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		})
 	})
 
-	if s.traceConfig.Enabled {
-		httpRouter.Use(func(h http.Handler) http.Handler {
-			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	var recoverOpts []recoveryhandler.Option
 
-				var attributes []attribute.KeyValue
-				for _, mapper := range otelAttributesMappers {
-					attributes = append(attributes, mapper(r)...)
-				}
-
-				attributes = append(attributes, baseOtelAttributes...)
-
-				r = r.WithContext(
-					withBaseAttributes(r.Context(), attributes),
+	// If we have no access logger configured, we log the panic in the recovery handler to avoid losing the panic information
+	if s.accessLogsConfig == nil {
+		recoverOpts = append(recoverOpts, recoveryhandler.WithLogHandler(func(w http.ResponseWriter, r *http.Request, err any) {
+			reqContext := getRequestContext(r.Context())
+			if reqContext != nil {
+				reqContext.logger.Error("[Recovery from panic]",
+					zap.Any("error", err),
 				)
-
-				h.ServeHTTP(w, r)
-			})
-		})
+			}
+		}))
 	}
+
+	recoveryHandler := recoveryhandler.New(recoverOpts...)
+
+	httpRouter.Use(recoveryHandler)
+
+	/**
+	* Initialize base attributes from headers and other sources
+	 */
+
+	var commonAttrRequestMapper func(r *http.Request) []attribute.KeyValue
+
+	if len(s.telemetryAttributes) > 0 {
+		// Common attributes across traces and metrics
+		commonAttrRequestMapper = buildHeaderAttributesMapper(s.telemetryAttributes)
+	}
+
+	var metricAttrRequestMapper func(r *http.Request) []attribute.KeyValue
+
+	// Metric attributes are only used for OTLP metrics and Prometheus metrics
+	if s.metricConfig.IsEnabled() {
+		metricAttrRequestMapper = buildHeaderAttributesMapper(s.metricConfig.Attributes)
+	}
+
+	httpRouter.Use(func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+			reqContext := getRequestContext(r.Context())
+			attributes := make([]attribute.KeyValue, 0, len(baseOtelAttributes))
+			attributes = append(attributes, baseOtelAttributes...)
+
+			if commonAttrRequestMapper != nil {
+				attributes = append(attributes, commonAttrRequestMapper(r)...)
+			}
+			if metricAttrRequestMapper != nil {
+				reqContext.telemetry.AddMetricAttribute(metricAttrRequestMapper(r)...)
+			}
+
+			reqContext.telemetry.AddCommonAttribute(attributes...)
+
+			h.ServeHTTP(w, r)
+		})
+	})
 
 	// Register the trace middleware before the request logger, so we can log the trace ID
 	if traceHandler != nil {
@@ -560,7 +611,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			requestlogger.WithDefaultOptions(),
 			requestlogger.WithNoTimeField(),
 			requestlogger.WithFields(baseLogFields...),
-			requestlogger.WithRequestFields(s.accessLogsFieldHandler),
+			requestlogger.WithFieldsHandler(s.accessLogsFieldHandler),
 		}
 
 		if s.ipAnonymization.Enabled {
@@ -731,6 +782,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			EpollKqueueConnBufferSize:  s.engineExecutionConfiguration.EpollKqueueConnBufferSize,
 			WebSocketConfiguration:     s.webSocketConfiguration,
 			ClientHeader:               s.clientHeader,
+			Attributes:                 baseOtelAttributes,
 		})
 
 		// When the playground path is equal to the graphql path, we need to handle
@@ -780,8 +832,11 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	return gm, nil
 }
 
-func (s *graphServer) accessLogsFieldHandler(request *http.Request) []zapcore.Field {
-	requestContext := getRequestContext(request.Context())
+func (s *graphServer) accessLogsFieldHandler(panicError any, request *http.Request) []zapcore.Field {
+	reqContext := getRequestContext(request.Context())
+	if reqContext == nil {
+		return nil
+	}
 	resFields := make([]zapcore.Field, 0, len(s.accessLogsConfig.Attributes))
 	resFields = append(resFields, zap.String("request_id", middleware.GetReqID(request.Context())))
 
@@ -791,72 +846,68 @@ func (s *graphServer) accessLogsFieldHandler(request *http.Request) []zapcore.Fi
 			continue
 		}
 
-		if field.ValueFrom.ContextField != "" && requestContext != nil && requestContext.operation != nil {
+		if field.ValueFrom.ContextField != "" && reqContext.operation != nil {
 			switch field.ValueFrom.ContextField {
 			case ContextFieldOperationName:
-				if v := NewStringLogField(requestContext.operation.name, field); v != zap.Skip() {
+				if v := NewStringLogField(reqContext.operation.name, field); v != zap.Skip() {
 					resFields = append(resFields, v)
 				}
 			case ContextFieldOperationType:
-				if v := NewStringLogField(requestContext.operation.opType, field); v != zap.Skip() {
+				if v := NewStringLogField(reqContext.operation.opType, field); v != zap.Skip() {
 					resFields = append(resFields, v)
 				}
 			case ContextFieldOperationPlanningTime:
-				if v := NewDurationLogField(requestContext.operation.planningTime, field); v != zap.Skip() {
+				if v := NewDurationLogField(reqContext.operation.planningTime, field); v != zap.Skip() {
 					resFields = append(resFields, v)
 				}
 			case ContextFieldOperationNormalizationTime:
-				if v := NewDurationLogField(requestContext.operation.normalizationTime, field); v != zap.Skip() {
+				if v := NewDurationLogField(reqContext.operation.normalizationTime, field); v != zap.Skip() {
 					resFields = append(resFields, v)
 				}
 			case ContextFieldOperationParsingTime:
-				if v := NewDurationLogField(requestContext.operation.parsingTime, field); v != zap.Skip() {
+				if v := NewDurationLogField(reqContext.operation.parsingTime, field); v != zap.Skip() {
 					resFields = append(resFields, v)
 				}
 			case ContextFieldOperationValidationTime:
-				if v := NewDurationLogField(requestContext.operation.validationTime, field); v != zap.Skip() {
+				if v := NewDurationLogField(reqContext.operation.validationTime, field); v != zap.Skip() {
 					resFields = append(resFields, v)
 				}
 			case ContextFieldOperationSha256:
-				if v := NewStringLogField(requestContext.operation.sha256Hash, field); v != zap.Skip() {
+				if v := NewStringLogField(reqContext.operation.sha256Hash, field); v != zap.Skip() {
 					resFields = append(resFields, v)
 				}
 			case ContextFieldOperationHash:
-				if requestContext.operation.hash == 0 {
-					break
+				if reqContext.operation.hash != 0 {
+					if v := NewStringLogField(strconv.FormatUint(reqContext.operation.hash, 10), field); v != zap.Skip() {
+						resFields = append(resFields, v)
+					}
 				}
-				resFields = append(resFields, NewStringLogField(strconv.FormatUint(requestContext.operation.hash, 10), field))
 			case ContextFieldPersistedOperationSha256:
-				if v := NewStringLogField(requestContext.operation.persistedID, field); v != zap.Skip() {
+				if v := NewStringLogField(reqContext.operation.persistedID, field); v != zap.Skip() {
 					resFields = append(resFields, v)
 				}
 			case ContextFieldResponseErrorMessage:
-				if requestContext.error != nil {
-					if v := NewStringLogField(requestContext.error.Error(), field); v != zap.Skip() {
-						resFields = append(resFields, v)
-					}
+				var errMessage string
+				if panicError != nil {
+					errMessage = fmt.Sprintf("%v", panicError)
+				} else if reqContext.error != nil {
+					errMessage = reqContext.error.Error()
 				}
+				if v := NewStringLogField(errMessage, field); v != zap.Skip() {
+					resFields = append(resFields, v)
+				}
+
 			case ContextFieldOperationServices:
-				var operationServiceNames []string
-				for _, ds := range requestContext.dataSources {
-					operationServiceNames = append(operationServiceNames, ds.Name)
-				}
-				if v := NewStringSliceLogField(operationServiceNames, field); v != zap.Skip() {
+				if v := NewStringSliceLogField(reqContext.dataSourceNames, field); v != zap.Skip() {
 					resFields = append(resFields, v)
 				}
 			case ContextFieldGraphQLErrorServices:
-				if requestContext.error != nil {
-					errorServiceNames := getAggregatedSubgraphServiceNames(requestContext.error)
-					if v := NewStringSliceLogField(errorServiceNames, field); v != zap.Skip() {
-						resFields = append(resFields, v)
-					}
+				if v := NewStringSliceLogField(reqContext.graphQLErrorServices, field); v != zap.Skip() {
+					resFields = append(resFields, v)
 				}
 			case ContextFieldGraphQLErrorCodes:
-				if requestContext.error != nil {
-					errorCodes := getAggregatedSubgraphErrorCodes(requestContext.error)
-					if v := NewStringSliceLogField(errorCodes, field); v != zap.Skip() {
-						resFields = append(resFields, v)
-					}
+				if v := NewStringSliceLogField(reqContext.graphQLErrorCodes, field); v != zap.Skip() {
+					resFields = append(resFields, v)
 				}
 			}
 		}

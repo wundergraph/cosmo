@@ -245,6 +245,74 @@ describe('Contract tests', () => {
     );
   });
 
+  test('that an Argument can be removed by tag #1.1', () => {
+    const { errors, federationResult } = federateSubgraphsContract([subgraphA, subgraphAF], new Set<string>(['one']));
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
+      normalizeString(
+        schemaQueryDefinition +
+          `
+            type Object {
+              field: String!
+            }
+            
+            type Query {
+              dummy: String!
+            }
+          `,
+      ),
+    );
+  });
+
+  test('that an Argument can be removed by tag #1.2', () => {
+    const { errors, federationResult } = federateSubgraphsContract([subgraphA, subgraphAG], new Set<string>(['one']));
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
+      normalizeString(
+        schemaQueryDefinition +
+          `
+            type Object {
+              field: String!
+            }
+            
+            type Query {
+              dummy: String!
+            }
+          `,
+      ),
+    );
+  });
+
+  test('that an Argument can be removed by tag #1.3', () => {
+    const { errors, federationResult } = federateSubgraphsContract([subgraphA, subgraphAH], new Set<string>(['one']));
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
+      normalizeString(
+        schemaQueryDefinition +
+          `
+            type Query {
+              dummy: String!
+            }
+          `,
+      ),
+    );
+  });
+
+  test('that an Argument can be removed by tag #1.4', () => {
+    const { errors, federationResult } = federateSubgraphsContract([subgraphA, subgraphAJ], new Set<string>(['one']));
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
+      normalizeString(
+        schemaQueryDefinition +
+          `
+            type Query {
+              dummy: String!
+            }
+          `,
+      ),
+    );
+  });
+
   test('that a scalar is removed by tag', () => {
     const { errors, federationResult } = federateSubgraphsContract([subgraphQ, subgraphR], new Set<string>(['one']));
     expect(errors).toBeUndefined();
@@ -342,6 +410,21 @@ describe('Contract tests', () => {
         dummy: String!
       }
       `,
+      ),
+    );
+  });
+
+  test('that a nested Field can be removed by tag', () => {
+    const { errors, federationResult } = federateSubgraphsContract([subgraphA, subgraphAI], new Set<string>(['one']));
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
+      normalizeString(
+        schemaQueryDefinition +
+          `
+            type Query {
+              dummy: String!
+            }
+          `,
       ),
     );
   });
@@ -2156,6 +2239,83 @@ const subgraphAE: Subgraph = {
     
     type Object implements Interface {
       name: String!
+    }
+  `),
+};
+
+const subgraphAF: Subgraph = {
+  name: 'subgraph-af',
+  url: '',
+  definitions: parse(`
+    type Object {
+      field(input: Input @tag(name: "one")): String!
+    }
+    
+    input Input {
+      name: String @tag(name: "one")
+    }
+  `),
+};
+
+const subgraphAG: Subgraph = {
+  name: 'subgraph-ag',
+  url: '',
+  definitions: parse(`
+    type Object {
+      field(input: [Input] @tag(name: "one")): String!
+    }
+    
+    input Input {
+      name: String @tag(name: "one")
+    }
+  `),
+};
+
+const subgraphAH: Subgraph = {
+  name: 'subgraph-ah',
+  url: '',
+  definitions: parse(`
+    type Object {
+      field(input: [Input] = [] @tag(name: "one")): String! @tag(name: "one")
+    }
+    
+    input Input {
+      name: String @tag(name: "one")
+    }
+  `),
+};
+
+const subgraphAI: Subgraph = {
+  name: 'subgraph-ai',
+  url: '',
+  definitions: parse(`
+    type Object @tag(name: "one") {
+      edges: [NestedObjectOne!]!
+      nodes: [NestedObjectTwo!]!
+    }
+    type NestedObjectOne @tag(name: "one") {
+      nested: NestedObjectTwo!
+    }
+    type NestedObjectTwo @tag(name: "one") {
+      enum: Enum!
+    }
+
+    enum Enum @tag(name: "one") {
+      A
+    }
+  `),
+};
+
+const subgraphAJ: Subgraph = {
+  name: 'subgraph-aj',
+  url: '',
+  definitions: parse(`
+    input Input {
+      name: String @tag(name: "one")
+    }
+    
+    type Query {
+      field(input: [Input] = [] @tag(name: "one")): String! @tag(name: "one")
     }
   `),
 };

@@ -30,58 +30,34 @@ type OperationMetrics struct {
 	requestContentLength int64
 	routerMetrics        RouterMetrics
 	operationStartTime   time.Time
-	metricBaseFields     []attribute.KeyValue
 	inflightMetric       func()
 	routerConfigVersion  string
-	opContext            *operationContext
 	logger               *zap.Logger
 	trackUsageInfo       bool
 }
 
-func (m *OperationMetrics) AddOperationContext(opContext *operationContext) {
-	m.opContext = opContext
-}
+func (m *OperationMetrics) Finish(ctx context.Context, err error, statusCode int, responseSize int, exportSynchronous bool, opContext *operationContext, attr []attribute.KeyValue) {
+	latency := time.Since(m.operationStartTime)
 
-func (m *OperationMetrics) Finish(err error, statusCode int, responseSize int, exportSynchronous bool) {
 	m.inflightMetric()
-
-	ctx := context.Background()
 
 	rm := m.routerMetrics.MetricStore()
 
 	if err != nil {
 		// We don't store false values in the metrics, so only add the error attribute if it's true
-		m.metricBaseFields = append(m.metricBaseFields, otel.WgRequestError.Bool(true))
-		rm.MeasureRequestError(ctx, m.metricBaseFields...)
+		attr = append(attr, otel.WgRequestError.Bool(true))
+		rm.MeasureRequestError(ctx, attr...)
 	}
 
-	m.metricBaseFields = append(m.metricBaseFields, semconv.HTTPStatusCode(statusCode))
-	rm.MeasureRequestCount(ctx, m.metricBaseFields...)
-	rm.MeasureRequestSize(ctx, m.requestContentLength, m.metricBaseFields...)
-	rm.MeasureLatency(ctx,
-		m.operationStartTime,
-		m.metricBaseFields...,
-	)
-	rm.MeasureResponseSize(ctx, int64(responseSize), m.metricBaseFields...)
+	attr = append(attr, semconv.HTTPStatusCode(statusCode))
+	rm.MeasureRequestCount(ctx, attr...)
+	rm.MeasureRequestSize(ctx, m.requestContentLength, attr...)
+	rm.MeasureLatency(ctx, latency, attr...)
+	rm.MeasureResponseSize(ctx, int64(responseSize), attr...)
 
-	if m.trackUsageInfo && m.opContext != nil {
-		m.routerMetrics.ExportSchemaUsageInfo(m.opContext, statusCode, err != nil, exportSynchronous)
+	if m.trackUsageInfo && opContext != nil {
+		m.routerMetrics.ExportSchemaUsageInfo(opContext, statusCode, err != nil, exportSynchronous)
 	}
-}
-
-func (m *OperationMetrics) AddAttributes(kv ...attribute.KeyValue) {
-	m.metricBaseFields = append(m.metricBaseFields, kv...)
-}
-
-// AddClientInfo adds the client info to the operation metrics. If OperationMetrics
-// is nil, it's a no-op.
-func (m *OperationMetrics) AddClientInfo(info *ClientInfo) {
-	if info == nil {
-		return
-	}
-	// Add client info to metrics base fields
-	m.metricBaseFields = append(m.metricBaseFields, otel.WgClientName.String(info.Name))
-	m.metricBaseFields = append(m.metricBaseFields, otel.WgClientVersion.String(info.Version))
 }
 
 type OperationMetricsOptions struct {
@@ -100,7 +76,6 @@ func newOperationMetrics(opts OperationMetricsOptions) *OperationMetrics {
 
 	inflightMetric := opts.RouterMetrics.MetricStore().MeasureInFlight(context.Background(), opts.Attributes...)
 	return &OperationMetrics{
-		metricBaseFields:     opts.Attributes,
 		requestContentLength: opts.RequestContentLength,
 		operationStartTime:   operationStartTime,
 		inflightMetric:       inflightMetric,

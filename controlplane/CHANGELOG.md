@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.111.5](https://github.com/wundergraph/cosmo/compare/controlplane@0.111.4...controlplane@0.111.5) (2024-10-18)
+
+### Bug Fixes
+
+* allow leading underscores in lint rules ([#1281](https://github.com/wundergraph/cosmo/issues/1281)) ([bda997a](https://github.com/wundergraph/cosmo/commit/bda997a38da98fa84eb8751abbab385983a73ea3)) (@JivusAyrus)
+
+## [0.111.4](https://github.com/wundergraph/cosmo/compare/controlplane@0.111.3...controlplane@0.111.4) (2024-10-17)
+
+**Note:** Version bump only for package controlplane
+
+## [0.111.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.111.2...controlplane@0.111.3) (2024-10-16)
+
+**Note:** Version bump only for package controlplane
+
+## [0.111.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.111.1...controlplane@0.111.2) (2024-10-15)
+
+**Note:** Version bump only for package controlplane
+
 ## [0.111.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.111.0...controlplane@0.111.1) (2024-10-14)
 
 **Note:** Version bump only for package controlplane
