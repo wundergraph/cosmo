@@ -268,8 +268,6 @@ github.com/vektah/gqlparser/v2 v2.5.16 h1:1gcmLTvs3JLKXckwCwlUagVn/IlV2bwqle0vJ0
 github.com/vektah/gqlparser/v2 v2.5.16/go.mod h1:1lz1OeCqgQbQepsGxPVywrjdBHW2T08PUS3pJqepRww=
 github.com/wundergraph/astjson v0.0.0-20240910140849-bb15f94bd362 h1:MxNSJqQFJyhKwU4xPj6diIRLm+oY1wNbAZW0jJpikBE=
 github.com/wundergraph/astjson v0.0.0-20240910140849-bb15f94bd362/go.mod h1:eOTL6acwctsN4F3b7YE+eE2t8zcJ/doLm9sZzsxxxrE=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.106.0.20241020105212-7b40eb8fc881 h1:bvEHVBEqhzw5S1wuh5IKCzwjAGtYhuC5+nrhQ8u2jDM=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.106.0.20241020105212-7b40eb8fc881/go.mod h1:2FThDhi9IFpRv/l/L4BQJM2+Az8TYdq7tFycTPGOuFY=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.108.0.20241021135417-90bf1ec06e6f h1:8y2d/gOllQfdaql66o9sUFj0VnTK93nVoN20bHJS2uk=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.108.0.20241021135417-90bf1ec06e6f/go.mod h1:2FThDhi9IFpRv/l/L4BQJM2+Az8TYdq7tFycTPGOuFY=
 github.com/yusufpapurcu/wmi v1.2.4 h1:zFUKzehAFReQwLys1b/iSMl+JQGSCSjtVqQn9bBrPo0=
