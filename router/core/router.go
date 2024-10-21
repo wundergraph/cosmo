@@ -191,32 +191,23 @@ type (
 		accessLogsConfig          *AccessLogsConfig
 		// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
 		localhostFallbackInsideDocker bool
-
-		tlsServerConfig *tls.Config
-		tlsConfig       *TlsConfig
-
+		tlsServerConfig               *tls.Config
+		tlsConfig                     *TlsConfig
+		telemetryAttributes           []config.CustomAttribute
 		// Poller
-		configPoller configpoller.ConfigPoller
-		selfRegister selfregister.SelfRegister
-
-		registrationInfo *nodev1.RegistrationInfo
-
-		securityConfiguration config.SecurityConfiguration
-
-		customModules []Module
-
+		configPoller                 configpoller.ConfigPoller
+		selfRegister                 selfregister.SelfRegister
+		registrationInfo             *nodev1.RegistrationInfo
+		securityConfiguration        config.SecurityConfiguration
+		customModules                []Module
 		engineExecutionConfiguration config.EngineExecutionConfiguration
 		// should be removed once the users have migrated to the new overrides config
 		overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration
 		// the new overrides config
-		overrides config.OverridesConfiguration
-
-		authorization *config.AuthorizationConfiguration
-
-		rateLimit *config.RateLimitConfiguration
-
-		webSocketConfiguration *config.WebSocketConfiguration
-
+		overrides                config.OverridesConfiguration
+		authorization            *config.AuthorizationConfiguration
+		rateLimit                *config.RateLimitConfiguration
+		webSocketConfiguration   *config.WebSocketConfiguration
 		subgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
 		clientHeader             config.ClientHeader
 	}
@@ -849,8 +840,7 @@ func (r *Router) buildClients() error {
 		}
 
 		c, err := cdn.NewClient(provider.URL, r.graphApiToken, cdn.Options{
-			Logger:        r.logger,
-			TraceProvider: r.tracerProvider,
+			Logger: r.logger,
 		})
 		if err != nil {
 			return err
@@ -885,8 +875,7 @@ func (r *Router) buildClients() error {
 		}
 
 		c, err := cdn.NewClient(r.cdnConfig.URL, r.graphApiToken, cdn.Options{
-			Logger:        r.logger,
-			TraceProvider: r.tracerProvider,
+			Logger: r.logger,
 		})
 		if err != nil {
 			return err
@@ -1593,6 +1582,12 @@ func WithTLSConfig(cfg *TlsConfig) Option {
 	}
 }
 
+func WithTelemetryAttributes(attributes []config.CustomAttribute) Option {
+	return func(r *Router) {
+		r.telemetryAttributes = attributes
+	}
+}
+
 func WithConfigPollerConfig(cfg *RouterConfigPollerConfig) Option {
 	return func(r *Router) {
 		r.routerConfigPollerConfig = cfg
@@ -1701,18 +1696,35 @@ func TraceConfigFromTelemetry(cfg *config.Telemetry) *rtrace.Config {
 		Sampler:            cfg.Tracing.SamplingRate,
 		ParentBasedSampler: cfg.Tracing.ParentBasedSampler,
 		WithNewRoot:        cfg.Tracing.WithNewRoot,
+		Attributes:         nil,
 		ExportGraphQLVariables: rtrace.ExportGraphQLVariables{
 			Enabled: cfg.Tracing.ExportGraphQLVariables,
 		},
-		SpanAttributesMapper: buildAttributesMapper(cfg.Attributes),
-		ResourceAttributes:   buildResourceAttributes(cfg.ResourceAttributes),
-		Exporters:            exporters,
-		Propagators:          propagators,
-		ResponseTraceHeader:  cfg.Tracing.ResponseTraceHeader,
+		ResourceAttributes:  buildResourceAttributes(cfg.ResourceAttributes),
+		Exporters:           exporters,
+		Propagators:         propagators,
+		ResponseTraceHeader: cfg.Tracing.ResponseTraceHeader,
 	}
 }
 
-func buildAttributesMapper(attributes []config.CustomAttribute) func(req *http.Request) []attribute.KeyValue {
+// buildAttributesMap returns a map of custom attributes to quickly check if a field is used in the custom attributes.
+func buildAttributesMap(attributes []config.CustomAttribute) map[string]string {
+	result := make(map[string]string)
+	for _, attr := range attributes {
+		if attr.ValueFrom != nil && attr.ValueFrom.ContextField != "" {
+			result[attr.ValueFrom.ContextField] = attr.Key
+		}
+	}
+	return result
+}
+
+// buildHeaderAttributesMapper returns a function that maps custom attributes to the request headers.
+func buildHeaderAttributesMapper(attributes []config.CustomAttribute) func(req *http.Request) []attribute.KeyValue {
+
+	if len(attributes) == 0 {
+		return nil
+	}
+
 	return func(req *http.Request) []attribute.KeyValue {
 		var result []attribute.KeyValue
 
@@ -1763,7 +1775,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 	return &rmetric.Config{
 		Name:               cfg.ServiceName,
 		Version:            Version,
-		AttributesMapper:   buildAttributesMapper(cfg.Attributes),
+		Attributes:         cfg.Metrics.Attributes,
 		ResourceAttributes: buildResourceAttributes(cfg.ResourceAttributes),
 		OpenTelemetry: rmetric.OpenTelemetry{
 			Enabled:       cfg.Metrics.OTLP.Enabled,
