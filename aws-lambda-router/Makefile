@@ -9,8 +9,13 @@ VERSION?=dev
 # RFC3339 format
 DATE?=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
 COMMIT?=$(shell git rev-parse HEAD)
+
 build:
 	CGO_ENABLED=0 go build -trimpath -ldflags "-extldflags -static -X github.com/wundergraph/cosmo/aws-lambda-router/internal.Version=$(VERSION) -X github.com/wundergraph/cosmo/aws-lambda-router/internal.Date=$(DATE) -X github.com/wundergraph/cosmo/aws-lambda-router/internal.Commit=$(COMMIT)" -a -o bootstrap cmd/main.go
+
+build-all:
+	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -ldflags "-extldflags -static -X github.com/wundergraph/cosmo/aws-lambda-router/internal.Version=$(VERSION) -X github.com/wundergraph/cosmo/aws-lambda-router/internal.Date=$(DATE) -X github.com/wundergraph/cosmo/aws-lambda-router/internal.Commit=$(COMMIT)" -a -o bootstrap_darwin_arm64 cmd/main.go
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags "-extldflags -static -X github.com/wundergraph/cosmo/aws-lambda-router/internal.Version=$(VERSION) -X github.com/wundergraph/cosmo/aws-lambda-router/internal.Date=$(DATE) -X github.com/wundergraph/cosmo/aws-lambda-router/internal.Commit=$(COMMIT)" -a -o bootstrap_linux_amd64 cmd/main.go
 
 build-sam:
 	rm -rf .aws-sam && sam build --parallel && cp router.json .aws-sam/build/Api/router.json
