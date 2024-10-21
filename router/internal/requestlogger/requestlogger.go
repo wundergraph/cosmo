@@ -177,7 +177,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if brokenPipe {
 				fields = append(fields, zap.Bool("broken_pipe", brokenPipe))
 				// Avoid logging the stack trace for broken pipe errors
-				h.logger.Error(path, fields...)
+				h.logger.WithOptions(zap.AddStacktrace(zapcore.PanicLevel)).Error(path, fields...)
 			} else {
 				h.logger.Error("[Recovery from panic]", fields...)
 			}

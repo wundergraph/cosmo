@@ -179,7 +179,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	// we can recover from panics and log them properly.
 	httpRouter.Use(recoveryhandler.New(recoveryhandler.WithLogHandler(func(w http.ResponseWriter, r *http.Request, err any) {
 		s.logger.Error("[Recovery from panic]",
-			zap.Any("panic", err),
+			zap.Any("error", err),
 		)
 	})))
 
@@ -553,7 +553,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			reqContext := getRequestContext(r.Context())
 			if reqContext != nil {
 				reqContext.logger.Error("[Recovery from panic]",
-					zap.Any("panic", err),
+					zap.Any("error", err),
 				)
 			}
 		}))
