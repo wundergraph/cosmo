@@ -22,6 +22,7 @@ import {
   coerceFilterValues,
   fillColumnMetaData,
   CoercedFilterValues,
+  escapeStringsFromParams,
 } from './util.js';
 
 /**
@@ -720,6 +721,8 @@ export class AnalyticsRequestViewRepository {
     const scopedSql = ` AND FederatedGraphID = '${federatedGraphId}' AND OrganizationID = '${organizationId}'`;
 
     whereSql += scopedSql;
+
+    escapeStringsFromParams(coercedQueryParams);
 
     const [result, totalCount] = await Promise.all([
       this.getViewData(name, whereSql, havingSql, paginationSql, coercedQueryParams, orderSql),

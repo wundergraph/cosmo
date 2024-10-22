@@ -11,6 +11,7 @@ import {
   buildCoercedFilterSqlStatement,
   CoercedFilterValues,
   coerceFilterValues,
+  escapeStringsFromParams,
   getDateRange,
   getGranularity,
   isoDateRangeToTimestamps,
@@ -525,6 +526,8 @@ export class MetricsRepository {
     const coercedFilters = coerceFilterValues({}, selectedFilters, this.baseFilters);
 
     const { whereSql } = buildCoercedFilterSqlStatement({}, coercedFilters.result, coercedFilters.filterMapper, false);
+
+    escapeStringsFromParams(coercedFilters.result);
 
     return {
       granule,
