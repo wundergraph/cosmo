@@ -6,6 +6,7 @@ import (
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
+	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"math"
@@ -162,6 +163,42 @@ func TestAccessLogs(t *testing.T) {
 			}
 			additionalExpectedKeys := []string{
 				"user_agent", "latency", "config_version", "request_id", "pid", "hostname",
+			}
+			checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
+		})
+	})
+
+	t.Run("Simple with tracing enabled", func(t *testing.T) {
+		t.Parallel()
+
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		testenv.Run(t, &testenv.Config{
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+			TraceExporter: exporter,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+			logEntries := xEnv.Observer().All()
+			require.Len(t, logEntries, 12)
+			requestLog := xEnv.Observer().FilterMessage("/graphql")
+			require.Equal(t, requestLog.Len(), 1)
+			requestContext := requestLog.All()[0].ContextMap()
+			expectedValues := map[string]interface{}{
+				"log_type": "request",
+				"status":   int64(200),
+				"method":   "POST",
+				"path":     "/graphql",
+				"query":    "", // http query is empty
+				"ip":       "[REDACTED]",
+			}
+			additionalExpectedKeys := []string{
+				"user_agent", "latency", "config_version", "request_id", "pid", "hostname", "trace_id",
 			}
 			checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 		})

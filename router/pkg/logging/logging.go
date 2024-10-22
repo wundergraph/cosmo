@@ -12,7 +12,8 @@ import (
 )
 
 const (
-	requestIDField = "reqId"
+	requestIDField = "request_id"
+	traceIDField   = "trace_id"
 )
 
 type RequestIDKey struct{}
@@ -180,4 +181,8 @@ func ZapLogLevelFromString(logLevel string) (zapcore.Level, error) {
 
 func WithRequestID(reqID string) zap.Field {
 	return zap.String(requestIDField, reqID)
+}
+
+func WithTraceID(traceId string) zap.Field {
+	return zap.String(traceIDField, traceId)
 }

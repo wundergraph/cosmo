@@ -72,3 +72,16 @@ func AttachErrToSpan(span trace.Span, err error) {
 		span.RecordError(err)
 	}
 }
+
+func GetTraceID(ctx context.Context) string {
+	if ctx == nil {
+		return ""
+	}
+	span := trace.SpanFromContext(ctx)
+	spanContext := span.SpanContext()
+	if !spanContext.HasTraceID() {
+		return ""
+	}
+	traceID := spanContext.TraceID().String()
+	return traceID
+}

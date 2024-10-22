@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"go.opentelemetry.io/otel/attribute"
 	"net"
 	"net/http"
@@ -237,7 +238,8 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	)
 
 	requestID := middleware.GetReqID(r.Context())
-	requestLogger := h.logger.With(logging.WithRequestID(requestID))
+
+	requestLogger := h.logger.With(logging.WithRequestID(requestID), logging.WithTraceID(rtrace.GetTraceID(r.Context())))
 	clientInfo := NewClientInfoFromRequest(r, h.clientHeader)
 
 	if h.accessController != nil && !h.config.Authentication.FromInitialPayload.Enabled {
