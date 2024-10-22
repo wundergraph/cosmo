@@ -465,3 +465,13 @@ export const parseValue = (value?: string | number | null) => {
   }
   return value || '0';
 };
+
+export const escapeStringsFromParams = (obj: { [key: string]: any }) => {
+  for (const key in obj) {
+    if (typeof obj[key] === 'string') {
+      obj[key] = obj[key]
+        .replace(/\n/g, '\\n') // new lines
+        .replace(/\t/g, '\\t'); // tabs
+    }
+  }
+};
