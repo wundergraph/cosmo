@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.129.2](https://github.com/wundergraph/cosmo/compare/router@0.129.1...router@0.129.2) (2024-10-22)
+
+### Bug Fixes
+
+* **websocket:** check for valid fd ([#1296](https://github.com/wundergraph/cosmo/issues/1296)) ([a7da8bc](https://github.com/wundergraph/cosmo/commit/a7da8bc678afecbfd600ffc3b672ac4aaa64da14)) (@StarpTech)
+
 ## [0.129.1](https://github.com/wundergraph/cosmo/compare/router@0.129.0...router@0.129.1) (2024-10-21)
 
 ### Bug Fixes
