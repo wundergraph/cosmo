@@ -96,7 +96,7 @@ func (p *OperationPlanner) preparePlan(ctx *operationContext) (*planWithMetaData
 		schemaDocument:    p.executor.RouterSchema,
 	}
 
-	if p.trackUsageInfo && !ctx.executionOptions.SkipLoader {
+	if p.trackUsageInfo {
 		out.typeFieldUsageInfo = graphqlschemausage.GetTypeFieldUsageInfo(preparedPlan)
 		out.argumentUsageInfo, err = graphqlschemausage.GetArgumentUsageInfo(&doc, p.executor.RouterSchema)
 		if err != nil {
