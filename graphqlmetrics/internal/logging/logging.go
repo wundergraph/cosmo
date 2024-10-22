@@ -11,10 +11,6 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-const (
-	requestIDField = "reqId"
-)
-
 type RequestIDKey struct{}
 
 func New(prettyLogging bool, debug bool, level zapcore.Level) *zap.Logger {
@@ -109,8 +105,4 @@ func ZapLogLevelFromString(logLevel string) (zapcore.Level, error) {
 	default:
 		return -1, fmt.Errorf("unknown log level: %s", logLevel)
 	}
-}
-
-func WithRequestID(reqID string) zap.Field {
-	return zap.String(requestIDField, reqID)
 }
