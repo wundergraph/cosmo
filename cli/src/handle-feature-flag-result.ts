@@ -3,13 +3,18 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { Ora } from 'ora';
 import Table from 'cli-table3';
 import pc from 'picocolors';
-import { CompositionError, DeploymentError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  CompositionError,
+  CompositionWarning,
+  DeploymentError,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { SubgraphCommandJsonOutput } from './core/types/types.js';
 
 export const handleFeatureFlagResult = ({
   responseCode,
   responseDetails,
   compositionErrors,
+  compositionWarnings,
   deploymentErrors,
   spinner,
   successMessage,
@@ -22,6 +27,7 @@ export const handleFeatureFlagResult = ({
   responseCode: EnumStatusCode | undefined;
   responseDetails: string | undefined;
   compositionErrors: CompositionError[];
+  compositionWarnings: CompositionWarning[];
   deploymentErrors: DeploymentError[];
   spinner: Ora;
   successMessage: string;
@@ -31,6 +37,16 @@ export const handleFeatureFlagResult = ({
   defaultErrorMessage: string;
   shouldOutputJson?: boolean;
 }) => {
+  const compositionWarningsTable = new Table({
+    head: [
+      pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+      pc.bold(pc.white('NAMESPACE')),
+      pc.bold(pc.white('FEATURE_FLAG')),
+      pc.bold(pc.white('WARNING_MESSAGE')),
+    ],
+    colWidths: [30, 30, 30, 120],
+    wordWrap: true,
+  });
   switch (responseCode) {
     case EnumStatusCode.OK: {
       if (shouldOutputJson) {
@@ -135,5 +151,18 @@ export const handleFeatureFlagResult = ({
       }
       throw new Error(defaultErrorMessage);
     }
+  }
+
+  if (compositionWarnings.length > 0) {
+    console.log(pc.yellow(`We found composition warnings.\n${pc.bold('Please check the warnings below:')}`));
+    for (const compositionWarning of compositionWarnings) {
+      compositionWarningsTable.push([
+        compositionWarning.federatedGraphName,
+        compositionWarning.namespace,
+        compositionWarning.featureFlag || '-',
+        compositionWarning.message,
+      ]);
+    }
+    console.log(compositionWarningsTable.toString());
   }
 };

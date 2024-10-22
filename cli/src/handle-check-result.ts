@@ -18,6 +18,12 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
     wordWrap: true,
   });
 
+  const compositionWarningsTable = new Table({
+    head: [pc.bold(pc.white('GRAPH_NAME')), pc.bold(pc.white('NAMESPACE')), pc.bold(pc.white('WARNING_MESSAGE'))],
+    colWidths: [30, 30, 120],
+    wordWrap: true,
+  });
+
   const lintIssuesTable = new Table({
     head: [pc.bold(pc.white('LINT_RULE')), pc.bold(pc.white('ERROR_MESSAGE')), pc.bold(pc.white('LINE NUMBER'))],
     colAligns: ['left', 'left', 'center'],
@@ -161,6 +167,19 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
           ]);
         }
         console.log(compositionErrorsTable.toString());
+      }
+
+      if (resp.compositionWarnings.length > 0) {
+        console.log(pc.yellow(`\nDetected composition warnings:`));
+        for (const compositionWarning of resp.compositionWarnings) {
+          compositionWarningsTable.push([
+            compositionWarning.federatedGraphName,
+            compositionWarning.namespace,
+            compositionWarning.featureFlag || '-',
+            compositionWarning.message,
+          ]);
+        }
+        console.log(compositionWarningsTable.toString());
       }
 
       if (resp.lintErrors.length > 0 || resp.lintWarnings.length > 0) {

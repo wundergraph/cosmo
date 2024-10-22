@@ -39,6 +39,12 @@ export default (opts: BaseCommandOptions) => {
       wordWrap: true,
     });
 
+    const compositionWarningsTable = new Table({
+      head: [pc.bold(pc.white('WARNING_MESSAGE'))],
+      colWidths: [120],
+      wordWrap: true,
+    });
+
     const matchedSubgraphsTable = new Table({
       head: [
         pc.bold(pc.white('NAME')),
@@ -92,6 +98,14 @@ export default (opts: BaseCommandOptions) => {
         }
         console.log(logSymbols.error + pc.red(' Schema check failed.'));
       }
+    }
+
+    if (resp.compositionWarnings.length > 0) {
+      console.log(pc.yellow(`We found composition warnings.\n${pc.bold('Please check the warnings below:')}`));
+      for (const compositionWarning of resp.compositionWarnings) {
+        compositionWarningsTable.push([compositionWarning.message]);
+      }
+      console.log(compositionWarningsTable.toString());
     }
 
     if (!success) {

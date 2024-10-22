@@ -4,6 +4,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import {
   CompositionError,
+  CompositionWarning,
   DeploymentError,
   UpdateFederatedGraphRequest,
   UpdateFederatedGraphResponse,
@@ -46,6 +47,7 @@ export function updateFederatedGraph(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -60,6 +62,7 @@ export function updateFederatedGraph(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -83,6 +86,7 @@ export function updateFederatedGraph(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -94,6 +98,7 @@ export function updateFederatedGraph(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -105,11 +110,13 @@ export function updateFederatedGraph(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
     const deploymentErrors: PlainMessage<DeploymentError>[] = [];
     let compositionErrors: PlainMessage<CompositionError>[] = [];
+    const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
 
     const result = await fedGraphRepo.update({
       targetId: federatedGraph.targetId,
@@ -134,6 +141,10 @@ export function updateFederatedGraph(
 
     if (result?.compositionErrors) {
       compositionErrors = result.compositionErrors;
+    }
+
+    if (result?.compositionWarnings) {
+      compositionWarnings.push(...result.compositionWarnings);
     }
 
     await auditLogRepo.addAuditLog({
@@ -176,6 +187,7 @@ export function updateFederatedGraph(
         },
         deploymentErrors: [],
         compositionErrors,
+        compositionWarnings,
       };
     }
 
@@ -186,6 +198,7 @@ export function updateFederatedGraph(
         },
         deploymentErrors,
         compositionErrors: [],
+        compositionWarnings,
       };
     }
 
@@ -195,6 +208,7 @@ export function updateFederatedGraph(
       },
       compositionErrors: [],
       deploymentErrors: [],
+      compositionWarnings,
     };
   });
 }

@@ -805,6 +805,7 @@ export const schemaCheckComposition = pgTable('schema_check_composition', {
       onDelete: 'cascade',
     }),
   compositionErrors: text('composition_errors'),
+  compositionWarnings: text('composition_warnings'),
   composedSchemaSDL: text('composed_schema_sdl'),
   clientSchema: text('client_schema'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -1362,6 +1363,7 @@ export const graphCompositions = pgTable('graph_compositions', {
   isComposable: boolean('is_composable').default(false),
   // The errors that occurred during the composition of the schema. This is only set when isComposable is false.
   compositionErrors: text('composition_errors'),
+  compositionWarnings: text('composition_warnings'),
   // Signature of the schema. Provided by the user when the admission hook is called.
   routerConfigSignature: text('router_config_signature'),
   // The errors that occurred during the deployment of the schema. Only set when the schema was composable and no admission errors occurred.

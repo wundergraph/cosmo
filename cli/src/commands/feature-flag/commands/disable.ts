@@ -31,6 +31,7 @@ export default (opts: BaseCommandOptions) => {
         responseCode: resp.response?.code,
         responseDetails: resp.response?.details,
         compositionErrors: resp.compositionErrors,
+        compositionWarnings: resp.compositionWarnings,
         deploymentErrors: resp.deploymentErrors,
         spinner,
         successMessage:

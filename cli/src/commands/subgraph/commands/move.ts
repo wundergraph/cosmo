@@ -1,5 +1,5 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import CliTable3 from 'cli-table3';
+import Table from 'cli-table3';
 import { Command } from 'commander';
 import pc from 'picocolors';
 import ora from 'ora';
@@ -25,6 +25,17 @@ export default (opts: BaseCommandOptions) => {
       },
     );
 
+    const compositionWarningsTable = new Table({
+      head: [
+        pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+        pc.bold(pc.white('NAMESPACE')),
+        pc.bold(pc.white('FEATURE_FLAG')),
+        pc.bold(pc.white('WARNING_MESSAGE')),
+      ],
+      colWidths: [30, 30, 30, 120],
+      wordWrap: true,
+    });
+
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {
         spinner.succeed('Subgraph has been moved successfully.');
@@ -34,13 +45,14 @@ export default (opts: BaseCommandOptions) => {
       case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {
         spinner.warn('Subgraph has been moved but with composition errors.');
 
-        const compositionErrorsTable = new CliTable3({
+        const compositionErrorsTable = new Table({
           head: [
             pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
             pc.bold(pc.white('NAMESPACE')),
+            pc.bold(pc.white('FEATURE_FLAG')),
             pc.bold(pc.white('ERROR_MESSAGE')),
           ],
-          colWidths: [30, 120],
+          colWidths: [30, 30, 30, 120],
           wordWrap: true,
         });
 
@@ -53,6 +65,7 @@ export default (opts: BaseCommandOptions) => {
           compositionErrorsTable.push([
             compositionError.federatedGraphName,
             compositionError.namespace,
+            compositionError.featureFlag || '-',
             compositionError.message,
           ]);
         }
@@ -66,7 +79,7 @@ export default (opts: BaseCommandOptions) => {
           "The Subgraph was moved, but the updated composition hasn't been deployed, so it's not accessible to the router. Check the errors listed below for details.",
         );
 
-        const deploymentErrorsTable = new CliTable3({
+        const deploymentErrorsTable = new Table({
           head: [
             pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
             pc.bold(pc.white('NAMESPACE')),
@@ -95,6 +108,19 @@ export default (opts: BaseCommandOptions) => {
         }
         process.exit(1);
       }
+    }
+
+    if (resp.compositionWarnings.length > 0) {
+      console.log(pc.yellow(`We found composition warnings.\n${pc.bold('Please check the warnings below:')}`));
+      for (const compositionWarning of resp.compositionWarnings) {
+        compositionWarningsTable.push([
+          compositionWarning.federatedGraphName,
+          compositionWarning.namespace,
+          compositionWarning.featureFlag || '-',
+          compositionWarning.message,
+        ]);
+      }
+      console.log(compositionWarningsTable.toString());
     }
   });
 

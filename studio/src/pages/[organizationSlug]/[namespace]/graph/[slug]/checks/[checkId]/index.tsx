@@ -787,6 +787,20 @@ const CheckDetails = ({
                     </AlertDescription>
                   </Alert>
                 ) : null}
+
+                {data.compositionWarnings?.length ? (
+                  <Alert variant="default">
+                    <AlertTitle>Composition Warnings</AlertTitle>
+                    <AlertDescription>
+                      <pre className="">
+                        {data.compositionWarnings.length > 0
+                          ? data.compositionWarnings.join("\n")
+                          : "No composition wanings"}
+                      </pre>
+                    </AlertDescription>
+                  </Alert>
+                ) : null}
+
                 {data.check.isBreaking &&
                 data.check.isComposable &&
                 data.check.hasClientTraffic ? (

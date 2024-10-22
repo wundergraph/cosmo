@@ -59,6 +59,12 @@ export default (opts: BaseCommandOptions) => {
       },
     );
 
+    const compositionWarningsTable = new Table({
+      head: [pc.bold(pc.white('MESSAGE'))],
+      colWidths: [120],
+      wordWrap: true,
+    });
+
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {
         spinner.succeed(`Monograph '${name}' was updated successfully.`);
@@ -130,6 +136,14 @@ export default (opts: BaseCommandOptions) => {
         }
         process.exit(1);
       }
+    }
+
+    if (resp.compositionWarnings.length > 0) {
+      console.log(pc.yellow(`We found composition warnings.\n${pc.bold('Please check the warnings below:')}`));
+      for (const compositionWarning of resp.compositionWarnings) {
+        compositionWarningsTable.push([compositionWarning.message]);
+      }
+      console.log(compositionWarningsTable.toString());
     }
   });
 
