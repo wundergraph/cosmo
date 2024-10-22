@@ -27,6 +27,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/art"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"github.com/wundergraph/cosmo/router/pkg/client"
 )
 
 type PreHandlerOptions struct {
@@ -180,11 +181,15 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		routerSpan := trace.SpanFromContext(r.Context())
 
-		clientInfo := NewClientInfoFromRequest(r, h.clientHeader)
+        clientInfo, err := client.NewClientInfoFromRequest(r, h.clientHeader, h.operationProcessor.clientInfoBuilder)
+		if err!=nil {
+			writeRequestErrors(r, w, http.StatusBadRequest, graphqlerrors.RequestErrorsFromError(err), requestLogger)
+			return
+		}
 
 		requestContext.telemetry.AddCommonAttribute(
-			otel.WgClientName.String(clientInfo.Name),
-			otel.WgClientVersion.String(clientInfo.Version),
+			otel.WgClientName.String(clientInfo.Name()),
+			otel.WgClientVersion.String(clientInfo.Version()),
 			otel.WgOperationProtocol.String(OperationProtocolHTTP.String()),
 		)
 
@@ -788,7 +793,7 @@ func (h *PreHandler) flushMetrics(ctx context.Context, requestLogger *zap.Logger
 	requestLogger.Debug("Metrics flushed", zap.Duration("duration", time.Since(now)))
 }
 
-func (h *PreHandler) parseRequestOptions(r *http.Request, clientInfo *ClientInfo, requestLogger *zap.Logger) (resolve.ExecutionOptions, resolve.TraceOptions, error) {
+func (h *PreHandler) parseRequestOptions(r *http.Request, clientInfo client.Info, requestLogger *zap.Logger) (resolve.ExecutionOptions, resolve.TraceOptions, error) {
 	ex, tr, err := h.internalParseRequestOptions(r, clientInfo, requestLogger)
 	if err != nil {
 		return ex, tr, err
@@ -805,21 +810,26 @@ func (h *PreHandler) parseRequestOptions(r *http.Request, clientInfo *ClientInfo
 	return ex, tr, nil
 }
 
-func (h *PreHandler) internalParseRequestOptions(r *http.Request, clientInfo *ClientInfo, requestLogger *zap.Logger) (resolve.ExecutionOptions, resolve.TraceOptions, error) {
+func (h *PreHandler) internalParseRequestOptions(r *http.Request, clientInfo client.Info, requestLogger *zap.Logger) (resolve.ExecutionOptions, resolve.TraceOptions, error) {
 	// Determine if we should enable request tracing / query plans at all
 	if h.enableRequestTracing {
 		// In dev mode we always allow to enable tracing / query plans
 		if h.developmentMode {
 			return h.parseRequestExecutionOptions(r), h.parseRequestTraceOptions(r), nil
 		}
+
 		// If the client has a valid request token, and we have a public key from the controlplane
-		if clientInfo.WGRequestToken != "" && h.routerPublicKey != nil {
-			_, err := jwt.Parse(clientInfo.WGRequestToken, func(token *jwt.Token) (interface{}, error) {
-				return h.routerPublicKey, nil
-			}, jwt.WithValidMethods([]string{jwt.SigningMethodES256.Name}))
-			if err != nil {
-				requestLogger.Error(fmt.Sprintf("failed to parse request token: %s", err.Error()))
-				return resolve.ExecutionOptions{}, resolve.TraceOptions{}, err
+		token, ok := clientInfo.(client.Token)
+		if ok {
+			if token.WGRequestToken() != "" && h.routerPublicKey != nil {
+				_, err := jwt.Parse(token.WGRequestToken(), func(token *jwt.Token) (interface{}, error) {
+					return h.routerPublicKey, nil
+				}, jwt.WithValidMethods([]string{jwt.SigningMethodES256.Name}))
+				if err != nil {
+					requestLogger.Error(fmt.Sprintf("failed to parse request token: %s", err.Error()))
+					return resolve.ExecutionOptions{}, resolve.TraceOptions{}, err
+				}
+				return h.parseRequestExecutionOptions(r), h.parseRequestTraceOptions(r), nil
 			}
 			return h.parseRequestExecutionOptions(r), h.parseRequestTraceOptions(r), nil
 		}
