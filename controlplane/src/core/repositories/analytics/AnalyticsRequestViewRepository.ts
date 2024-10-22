@@ -22,6 +22,7 @@ import {
   coerceFilterValues,
   fillColumnMetaData,
   CoercedFilterValues,
+  escapeStringsFromParams,
 } from './util.js';
 
 /**
@@ -685,16 +686,6 @@ export class AnalyticsRequestViewRepository {
     }
   };
 
-  private escapeStrings(obj: { [key: string]: any }): void {
-    for (const key in obj) {
-      if (typeof obj[key] === 'string') {
-        obj[key] = obj[key]
-          .replace(/\n/g, '\\n') // new lines
-          .replace(/\t/g, '\\t'); // tabs
-      }
-    }
-  }
-
   public async getView(
     organizationId: string,
     federatedGraphId: string,
@@ -731,7 +722,7 @@ export class AnalyticsRequestViewRepository {
 
     whereSql += scopedSql;
 
-    this.escapeStrings(coercedQueryParams);
+    escapeStringsFromParams(coercedQueryParams);
 
     const [result, totalCount] = await Promise.all([
       this.getViewData(name, whereSql, havingSql, paginationSql, coercedQueryParams, orderSql),
