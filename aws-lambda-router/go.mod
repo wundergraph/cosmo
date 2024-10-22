@@ -19,7 +19,6 @@ require (
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudflare/backoff v0.0.0-20161212185259-647f3cdfc87a // indirect
-	github.com/coder/websocket v1.8.12 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgraph-io/ristretto v0.1.2-0.20240723054643-f5997484152c // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
@@ -94,7 +93,7 @@ require (
 	github.com/twmb/franz-go v1.16.1 // indirect
 	github.com/twmb/franz-go/pkg/kmsg v1.7.0 // indirect
 	github.com/wundergraph/astjson v0.0.0-20240910140849-bb15f94bd362 // indirect
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.108.0.20241021141520-90498eb01754 // indirect
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.108.0.20241022083840-b7035aca1cea // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1 // indirect
 	go.opentelemetry.io/contrib/propagators/b3 v1.23.0 // indirect

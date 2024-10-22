@@ -38,7 +38,7 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/twmb/franz-go v1.16.1
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.108.0.20241021141520-90498eb01754
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.108.0.20241022083840-b7035aca1cea
 	// Do not upgrade, it renames attributes we rely on
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/contrib/propagators/b3 v1.23.0
@@ -83,7 +83,6 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/cilium/ebpf v0.9.1 // indirect
-	github.com/coder/websocket v1.8.12 // indirect
 	github.com/containerd/cgroups/v3 v3.0.2 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
