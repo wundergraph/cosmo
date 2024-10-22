@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.130.0](https://github.com/wundergraph/cosmo/compare/router@0.129.2...router@0.130.0) (2024-10-22)
+
+### Features
+
+* add traceId to logs ([#1279](https://github.com/wundergraph/cosmo/issues/1279)) ([025da28](https://github.com/wundergraph/cosmo/commit/025da2888ea95dbb2de581d6affda76fdc74332a)) (@JivusAyrus)
+
 ## [0.129.2](https://github.com/wundergraph/cosmo/compare/router@0.129.1...router@0.129.2) (2024-10-22)
 
 ### Bug Fixes
