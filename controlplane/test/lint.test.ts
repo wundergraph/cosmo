@@ -308,6 +308,45 @@ input InputUser{
     ]);
   });
 
+  test('Should test type names which start with "_"', (testContext) => {
+    const schema = `type _Service{
+  sdl: String
+}
+
+input UserInput{
+  id: String
+  firstName: _Service
+}
+
+type User{
+  service: _Service
+}
+
+interface A{
+  service: _Service
+}
+`;
+
+    const rules: { severity: LintSeverityLevel; ruleName: LintRuleEnum }[] = [
+      { severity: 'warn', ruleName: LintRules.FIELD_NAMES_SHOULD_BE_CAMEL_CASE },
+      { severity: 'warn', ruleName: LintRules.TYPE_NAMES_SHOULD_BE_PASCAL_CASE },
+      { severity: 'warn', ruleName: LintRules.SHOULD_NOT_HAVE_TYPE_PREFIX },
+      { severity: 'warn', ruleName: LintRules.SHOULD_NOT_HAVE_TYPE_SUFFIX },
+      { severity: 'warn', ruleName: LintRules.SHOULD_NOT_HAVE_INPUT_PREFIX },
+      { severity: 'warn', ruleName: LintRules.SHOULD_HAVE_INPUT_SUFFIX },
+      { severity: 'warn', ruleName: LintRules.SHOULD_NOT_HAVE_ENUM_PREFIX },
+      { severity: 'warn', ruleName: LintRules.SHOULD_NOT_HAVE_ENUM_SUFFIX },
+      { severity: 'warn', ruleName: LintRules.SHOULD_NOT_HAVE_INTERFACE_PREFIX },
+      { severity: 'warn', ruleName: LintRules.SHOULD_NOT_HAVE_INTERFACE_SUFFIX },
+      { severity: 'warn', ruleName: LintRules.ENUM_VALUES_SHOULD_BE_UPPER_CASE },
+    ];
+
+    const schemaLinter = new SchemaLinter();
+    const lintIssues = schemaLinter.schemaLintCheck({ schema, rulesInput: rules });
+    expect(lintIssues.warnings.length).toBe(0);
+    expect(lintIssues.warnings).toStrictEqual([]);
+  });
+
   test('Should test creating rules config', (testContext) => {
     const rules: { severity: LintSeverityLevel; ruleName: LintRuleEnum }[] = [
       { severity: 'warn', ruleName: LintRules.TYPE_NAMES_SHOULD_BE_PASCAL_CASE },
@@ -324,14 +363,35 @@ input InputUser{
     const rulesConfig = schemaLinter.createRulesConfig(rules);
 
     expect(rulesConfig).toStrictEqual({
-      TYPE_NAMES_SHOULD_BE_PASCAL_CASE: ['warn', { ObjectTypeDefinition: { style: 'PascalCase' } }],
-      SHOULD_NOT_HAVE_INPUT_PREFIX: ['warn', { InputObjectTypeDefinition: { forbiddenPrefixes: ['Input', 'input'] } }],
+      TYPE_NAMES_SHOULD_BE_PASCAL_CASE: [
+        'warn',
+        { ObjectTypeDefinition: { style: 'PascalCase' }, allowLeadingUnderscore: true },
+      ],
+      SHOULD_NOT_HAVE_INPUT_PREFIX: [
+        'warn',
+        { InputObjectTypeDefinition: { forbiddenPrefixes: ['Input', 'input'] }, allowLeadingUnderscore: true },
+      ],
       DISALLOW_CASE_INSENSITIVE_ENUM_VALUES: ['warn'],
-      ENUM_VALUES_SHOULD_BE_UPPER_CASE: ['warn', { EnumValueDefinition: { style: 'UPPER_CASE' } }],
-      FIELD_NAMES_SHOULD_BE_CAMEL_CASE: ['error', { FieldDefinition: { style: 'camelCase' } }],
-      SHOULD_NOT_HAVE_TYPE_PREFIX: ['error', { ObjectTypeDefinition: { forbiddenPrefixes: ['Type', 'type'] } }],
-      SHOULD_NOT_HAVE_TYPE_SUFFIX: ['error', { ObjectTypeDefinition: { forbiddenSuffixes: ['Type', 'type'] } }],
-      SHOULD_HAVE_INPUT_SUFFIX: ['error', { InputObjectTypeDefinition: { requiredSuffixes: ['Input'] } }],
+      ENUM_VALUES_SHOULD_BE_UPPER_CASE: [
+        'warn',
+        { EnumValueDefinition: { style: 'UPPER_CASE' }, allowLeadingUnderscore: true },
+      ],
+      FIELD_NAMES_SHOULD_BE_CAMEL_CASE: [
+        'error',
+        { FieldDefinition: { style: 'camelCase' }, allowLeadingUnderscore: true },
+      ],
+      SHOULD_NOT_HAVE_TYPE_PREFIX: [
+        'error',
+        { ObjectTypeDefinition: { forbiddenPrefixes: ['Type', 'type'] }, allowLeadingUnderscore: true },
+      ],
+      SHOULD_NOT_HAVE_TYPE_SUFFIX: [
+        'error',
+        { ObjectTypeDefinition: { forbiddenSuffixes: ['Type', 'type'] }, allowLeadingUnderscore: true },
+      ],
+      SHOULD_HAVE_INPUT_SUFFIX: [
+        'error',
+        { InputObjectTypeDefinition: { requiredSuffixes: ['Input'] }, allowLeadingUnderscore: true },
+      ],
     });
   });
 });
