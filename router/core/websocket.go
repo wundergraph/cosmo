@@ -441,6 +441,9 @@ func (h *WebsocketHandler) addConnection(conn net.Conn, handler *WebSocketConnec
 	h.connectionsMu.Lock()
 	defer h.connectionsMu.Unlock()
 	fd := socketFd(conn)
+	if fd == 0 {
+		return fmt.Errorf("unable to get socket fd for conn: %d", handler.connectionID)
+	}
 	h.connections[fd] = handler
 	return h.epoll.Add(conn)
 }
@@ -513,7 +516,14 @@ func (h *WebsocketHandler) runPoller() {
 				h.connectionsMu.RLock()
 				handler, exists := h.connections[fd]
 				h.connectionsMu.RUnlock()
+
 				if !exists {
+					continue
+				}
+
+				if fd == 0 {
+					h.logger.Debug("Invalid socket fd", zap.Int("fd", fd))
+					h.removeConnection(conn, handler, fd)
 					continue
 				}
 
