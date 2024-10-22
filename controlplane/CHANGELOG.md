@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.111.6](https://github.com/wundergraph/cosmo/compare/controlplane@0.111.5...controlplane@0.111.6) (2024-10-22)
+
+### Bug Fixes
+
+* escape characters in clickhouse query params ([#1294](https://github.com/wundergraph/cosmo/issues/1294)) ([836660c](https://github.com/wundergraph/cosmo/commit/836660c7a61b58dd8b6a31264fa60ea7040ff014)) (@thisisnithin)
+
 ## [0.111.5](https://github.com/wundergraph/cosmo/compare/controlplane@0.111.4...controlplane@0.111.5) (2024-10-18)
 
 ### Bug Fixes
