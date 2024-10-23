@@ -17,14 +17,14 @@ import {
 
 describe('Contract tests', () => {
   describe('Exclude tags', () => {
-    const excludedTagsOne = {
-      excludedTagNames: new Set<string>(['one', 'includeMe']),
-      includedTagNames: new Set<string>(),
+    const excludedTagsOne: ContractTagOptions = {
+      tagNamesToExclude: new Set<string>(['one', 'includeMe']),
+      tagNamesToInclude: new Set<string>(),
     };
 
-    const excludedTagsTwo = {
-      excludedTagNames: new Set<string>(['one']),
-      includedTagNames: new Set<string>(),
+    const excludedTagsTwo: ContractTagOptions = {
+      tagNamesToExclude: new Set<string>(['one']),
+      tagNamesToInclude: new Set<string>(),
     };
 
     test('that Objects are removed by tag', () => {
@@ -438,19 +438,19 @@ describe('Contract tests', () => {
   });
 
   describe('Include tags', () => {
-    const includedTagsOne = {
-      excludedTagNames: new Set<string>(),
-      includedTagNames: new Set<string>(['one', 'includeMe']),
+    const includedTagsOne: ContractTagOptions = {
+      tagNamesToExclude: new Set<string>(),
+      tagNamesToInclude: new Set<string>(['one', 'includeMe']),
     };
 
-    const includedTagsTwo = {
-      excludedTagNames: new Set<string>(),
-      includedTagNames: new Set<string>(['two', 'includeMe']),
+    const includedTagsTwo: ContractTagOptions = {
+      tagNamesToExclude: new Set<string>(),
+      tagNamesToInclude: new Set<string>(['two', 'includeMe']),
     };
 
-    const includedTagsThree = {
-      excludedTagNames: new Set<string>(),
-      includedTagNames: new Set<string>(['includeMe']),
+    const includedTagsThree: ContractTagOptions = {
+      tagNamesToExclude: new Set<string>(),
+      tagNamesToInclude: new Set<string>(['includeMe']),
     };
 
     test('that Objects are included by tag', () => {
