@@ -5,6 +5,7 @@ import {
   FederationResult,
   FederationResultContainerWithContracts,
   FieldConfiguration,
+  newContractTagOptionsFromArrays,
   Subgraph,
 } from '@wundergraph/composition';
 import { buildRouterConfig, ComposedSubgraph as IComposedSubgraph } from '@wundergraph/cosmo-shared';
@@ -510,10 +511,11 @@ export class Composer {
           const tagOptionsByContractName = new Map<string, ContractTagOptions>();
 
           for (const contract of contracts) {
-            tagOptionsByContractName.set(contract.downstreamFederatedGraph.target.name, {
-              excludedTagNames: new Set<string>(contract.excludeTags),
-              includedTagNames: new Set<string>(),
-            });
+            tagOptionsByContractName.set(
+              contract.downstreamFederatedGraph.target.name,
+              // @TODO the second array will be include
+              newContractTagOptionsFromArrays(contract.excludeTags, []),
+            );
           }
 
           federationResultContainer = composeSubgraphsWithContracts(subgraphsToBeComposed, tagOptionsByContractName);

@@ -26,7 +26,12 @@ import { FastifyBaseLogger } from 'fastify';
 import { parse } from 'graphql';
 import { generateKeyPair, importPKCS8, SignJWT } from 'jose';
 import { uid } from 'uid/secure';
-import { FederationResult, FederationResultContainer } from '@wundergraph/composition';
+import {
+  ContractTagOptions,
+  FederationResult,
+  FederationResultContainer,
+  newContractTagOptionsFromArrays,
+} from '@wundergraph/composition';
 import * as schema from '../../db/schema.js';
 import {
   federatedGraphs,
@@ -1447,9 +1452,13 @@ export class FederatedGraphRepository {
         });
 
         const contracts = await contractRepo.bySourceFederatedGraphId(federatedGraph.id);
-        const tagExclusionsByContractName: Map<string, Set<string>> = new Map();
+        const tagOptionsByContractName = new Map<string, ContractTagOptions>();
         for (const contract of contracts) {
-          tagExclusionsByContractName.set(contract.downstreamFederatedGraph.target.name, new Set(contract.excludeTags));
+          tagOptionsByContractName.set(
+            contract.downstreamFederatedGraph.target.name,
+            // @TODO second array will be include
+            newContractTagOptionsFromArrays(contract.excludeTags, []),
+          );
         }
 
         const baseCompositionSubgraphs = subgraphs.map((s) => ({
@@ -1485,7 +1494,8 @@ export class FederatedGraphRepository {
           if (federatedGraph.contract) {
             const { errors, federationResult } = composeSubgraphsForContract(
               subgraphsToCompose.compositionSubgraphs,
-              new Set(federatedGraph.contract.excludeTags),
+              // @TODO second array will be include
+              newContractTagOptionsFromArrays(federatedGraph.contract.excludeTags, []),
             );
             compositionErrors = errors;
             result = federationResult;
@@ -1494,7 +1504,7 @@ export class FederatedGraphRepository {
               errors,
               federationResult,
               federationResultContainerByContractName: contractFederationResult,
-            } = composeSubgraphsWithContracts(subgraphsToCompose.compositionSubgraphs, tagExclusionsByContractName);
+            } = composeSubgraphsWithContracts(subgraphsToCompose.compositionSubgraphs, tagOptionsByContractName);
             compositionErrors = errors;
             result = federationResult;
             federationResultContainerByContractName = contractFederationResult;

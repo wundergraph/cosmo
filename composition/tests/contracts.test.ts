@@ -35,8 +35,8 @@ describe('Contract tests', () => {
           [
             'two',
             {
-              excludedTagNames: new Set<string>(['two', 'includeMe']),
-              includedTagNames: new Set<string>(),
+              tagNamesToExclude: new Set<string>(['two', 'includeMe']),
+              tagNamesToInclude: new Set<string>(),
             },
           ],
         ]),

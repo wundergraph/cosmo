@@ -253,6 +253,16 @@ export function validateImplicitFieldSets({
 }
 
 export type ContractTagOptions = {
-  excludedTagNames: Set<string>;
-  includedTagNames: Set<string>;
+  tagNamesToExclude: Set<string>;
+  tagNamesToInclude: Set<string>;
 };
+
+export function newContractTagOptionsFromArrays(
+  tagNamesToExclude: Array<string>,
+  tagNamesToInclude: Array<string>,
+): ContractTagOptions {
+  return {
+    tagNamesToExclude: new Set<string>(tagNamesToExclude),
+    tagNamesToInclude: new Set<string>(tagNamesToInclude),
+  };
+}
