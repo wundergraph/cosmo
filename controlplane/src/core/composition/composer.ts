@@ -1,6 +1,7 @@
 import type { UUID } from 'node:crypto';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
 import {
+  ContractTagOptions,
   FederationResult,
   FederationResultContainerWithContracts,
   FieldConfiguration,
@@ -506,16 +507,16 @@ export class Composer {
         const contracts = await this.contractRepo.bySourceFederatedGraphId(graph.id);
 
         if (contracts.length > 0) {
-          const tagExclusionsByContractName: Map<string, Set<string>> = new Map();
+          const tagOptionsByContractName = new Map<string, ContractTagOptions>();
 
           for (const contract of contracts) {
-            tagExclusionsByContractName.set(
-              contract.downstreamFederatedGraph.target.name,
-              new Set(contract.excludeTags),
-            );
+            tagOptionsByContractName.set(contract.downstreamFederatedGraph.target.name, {
+              excludedTagNames: new Set<string>(contract.excludeTags),
+              includedTagNames: new Set<string>(),
+            });
           }
 
-          federationResultContainer = composeSubgraphsWithContracts(subgraphsToBeComposed, tagExclusionsByContractName);
+          federationResultContainer = composeSubgraphsWithContracts(subgraphsToBeComposed, tagOptionsByContractName);
         } else {
           federationResultContainer = composeSubgraphs(subgraphsToBeComposed);
         }

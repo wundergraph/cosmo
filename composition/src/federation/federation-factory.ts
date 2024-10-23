@@ -2790,7 +2790,7 @@ export function federateSubgraphs(subgraphs: Subgraph[]): FederationResultContai
 // the flow when publishing a subgraph that also has contracts
 export function federateSubgraphsWithContracts(
   subgraphs: Subgraph[],
-  contractTagOptionsByContractName: Map<string, ContractTagOptions>,
+  tagOptionsByContractName: Map<string, ContractTagOptions>,
 ): FederationResultContainerWithContracts {
   const {
     errors: normalizationErrors,
@@ -2810,13 +2810,13 @@ export function federateSubgraphsWithContracts(
   if (errors) {
     return { errors, warnings };
   }
-  const lastContractIndex = contractTagOptionsByContractName.size - 1;
+  const lastContractIndex = tagOptionsByContractName.size - 1;
   const federationResultContainerByContractName: Map<string, FederationResultContainer> = new Map<
     string,
     FederationResultContainer
   >();
   let i = 0;
-  for (const [contractName, tagOptions] of contractTagOptionsByContractName) {
+  for (const [contractName, tagOptions] of tagOptionsByContractName) {
     // deep copy the current FederationFactory before it is mutated if it is not the last one required
     if (i !== lastContractIndex) {
       federationFactories.push(cloneDeep(federationFactories[i]));
