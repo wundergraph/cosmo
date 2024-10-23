@@ -485,7 +485,8 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			rtrace.WithTracePreHandler(
 				func(r *http.Request, w http.ResponseWriter) {
 					reqContext := getRequestContext(r.Context())
-					requestLogger := reqContext.Logger().With(logging.WithTraceID(rtrace.GetTraceID(r.Context())))
+					traceID := rtrace.GetTraceID(r.Context())
+					requestLogger := reqContext.Logger().With(logging.WithTraceID(traceID))
 
 					reqContext.logger = requestLogger
 
@@ -494,7 +495,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 					// Set the trace ID in the response header
 					if s.traceConfig.ResponseTraceHeader.Enabled {
-						traceID := rtrace.GetTraceID(r.Context())
 						w.Header().Set(s.traceConfig.ResponseTraceHeader.HeaderName, traceID)
 					}
 				}),
