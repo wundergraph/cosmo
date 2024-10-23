@@ -15,7 +15,7 @@ import (
 )
 
 func TestSubscriptions(t *testing.T) {
-	subscribers := 10000
+	subscribers := 10_000
 
 	wg := &sync.WaitGroup{}
 	wg.Add(subscribers)
@@ -57,7 +57,7 @@ func subscribe(t *testing.T, iteration int, messageCount *atomic.Int64, wg *sync
 	dialer := websocket.Dialer{
 		Subprotocols: []string{"graphql-transport-ws"},
 	}
-	conn, resp, err := dialer.Dial("ws://localhost:3003/graphql", nil)
+	conn, resp, err := dialer.Dial("ws://localhost:3002/graphql", nil)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
@@ -83,7 +83,7 @@ func subscribe(t *testing.T, iteration int, messageCount *atomic.Int64, wg *sync
 		return
 	}
 	if ack.Type != "connection_ack" {
-		fmt.Printf("Unexpected message: %v\n", ack)
+		fmt.Printf("Unexpected message: %+v\n", ack)
 		return
 	}
 
@@ -105,7 +105,7 @@ func subscribe(t *testing.T, iteration int, messageCount *atomic.Int64, wg *sync
 			return
 		}
 		if message.Type != "next" {
-			fmt.Printf("Unexpected message: %v\n", message)
+			fmt.Printf("Unexpected message: %+v\n", message)
 			return
 		}
 		var res CountEmpResponse
@@ -115,7 +115,7 @@ func subscribe(t *testing.T, iteration int, messageCount *atomic.Int64, wg *sync
 			return
 		}
 		if res.Data.CountEmp != i {
-			fmt.Printf("Unexpected count: %d\n", res.Data.CountEmp)
+			fmt.Printf("Unexpected count: %d, expected %d\n", res.Data.CountEmp, i)
 			return
 		}
 		messageCount.Inc()
