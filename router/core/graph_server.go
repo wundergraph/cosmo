@@ -169,15 +169,20 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		s.publicKey = publicKey
 	}
 
-	recoveryHandler := recoveryhandler.New()
-
 	httpRouter := chi.NewRouter()
 
 	/**
 	* Middlewares
 	 */
 
-	httpRouter.Use(recoveryHandler)
+	// This recovery handler is used for everything before the graph mux to ensure that
+	// we can recover from panics and log them properly.
+	httpRouter.Use(recoveryhandler.New(recoveryhandler.WithLogHandler(func(w http.ResponseWriter, r *http.Request, err any) {
+		s.logger.Error("[Recovery from panic]",
+			zap.Any("error", err),
+		)
+	})))
+
 	httpRouter.Use(rmiddleware.RequestSize(int64(s.routerTrafficConfig.MaxRequestBodyBytes)))
 	httpRouter.Use(middleware.RequestID)
 	httpRouter.Use(middleware.RealIP)
@@ -478,15 +483,14 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 		traceHandler = rtrace.NewMiddleware(
 			rtrace.WithTracePreHandler(
-				func(r *http.Request, w http.ResponseWriter, graphqlExecutionSpan oteltrace.Span) {
+				func(r *http.Request, w http.ResponseWriter) {
 					reqContext := getRequestContext(r.Context())
 					span := oteltrace.SpanFromContext(r.Context())
 					span.SetAttributes(reqContext.telemetry.CommonAttrs()...)
 
 					// Set the trace ID in the response header
 					if s.traceConfig.ResponseTraceHeader.Enabled {
-						spanContext := graphqlExecutionSpan.SpanContext()
-						traceID := spanContext.TraceID().String()
+						traceID := rtrace.GetTraceID(r.Context())
 						w.Header().Set(s.traceConfig.ResponseTraceHeader.HeaderName, traceID)
 					}
 				}),
@@ -519,7 +523,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	subgraphResolver := NewSubgraphResolver(subgraphs)
 	httpRouter.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			requestLogger := s.logger.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
+			requestLogger := s.logger.With(logging.WithRequestID(middleware.GetReqID(r.Context())), logging.WithTraceID(rtrace.GetTraceID(r.Context())))
 			r = r.WithContext(withSubgraphResolver(r.Context(), subgraphResolver))
 
 			reqContext := buildRequestContext(requestContextOptions{
@@ -539,6 +543,24 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			h.ServeHTTP(w, r)
 		})
 	})
+
+	var recoverOpts []recoveryhandler.Option
+
+	// If we have no access logger configured, we log the panic in the recovery handler to avoid losing the panic information
+	if s.accessLogsConfig == nil {
+		recoverOpts = append(recoverOpts, recoveryhandler.WithLogHandler(func(w http.ResponseWriter, r *http.Request, err any) {
+			reqContext := getRequestContext(r.Context())
+			if reqContext != nil {
+				reqContext.logger.Error("[Recovery from panic]",
+					zap.Any("error", err),
+				)
+			}
+		}))
+	}
+
+	recoveryHandler := recoveryhandler.New(recoverOpts...)
+
+	httpRouter.Use(recoveryHandler)
 
 	/**
 	* Initialize base attributes from headers and other sources
@@ -815,7 +837,7 @@ func (s *graphServer) accessLogsFieldHandler(panicError any, request *http.Reque
 		return nil
 	}
 	resFields := make([]zapcore.Field, 0, len(s.accessLogsConfig.Attributes))
-	resFields = append(resFields, zap.String("request_id", middleware.GetReqID(request.Context())))
+	resFields = append(resFields, logging.WithRequestID(middleware.GetReqID(request.Context())))
 
 	for _, field := range s.accessLogsConfig.Attributes {
 		if field.ValueFrom.RequestHeader != "" {

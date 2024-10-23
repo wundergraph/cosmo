@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"go.opentelemetry.io/otel/attribute"
 	"net"
 	"net/http"
@@ -237,7 +238,8 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	)
 
 	requestID := middleware.GetReqID(r.Context())
-	requestLogger := h.logger.With(logging.WithRequestID(requestID))
+
+	requestLogger := h.logger.With(logging.WithRequestID(requestID), logging.WithTraceID(rtrace.GetTraceID(r.Context())))
 	clientInfo := NewClientInfoFromRequest(r, h.clientHeader)
 
 	if h.accessController != nil && !h.config.Authentication.FromInitialPayload.Enabled {
@@ -441,6 +443,9 @@ func (h *WebsocketHandler) addConnection(conn net.Conn, handler *WebSocketConnec
 	h.connectionsMu.Lock()
 	defer h.connectionsMu.Unlock()
 	fd := socketFd(conn)
+	if fd == 0 {
+		return fmt.Errorf("unable to get socket fd for conn: %d", handler.connectionID)
+	}
 	h.connections[fd] = handler
 	return h.epoll.Add(conn)
 }
@@ -513,7 +518,14 @@ func (h *WebsocketHandler) runPoller() {
 				h.connectionsMu.RLock()
 				handler, exists := h.connections[fd]
 				h.connectionsMu.RUnlock()
+
 				if !exists {
+					continue
+				}
+
+				if fd == 0 {
+					h.logger.Debug("Invalid socket fd", zap.Int("fd", fd))
+					h.removeConnection(conn, handler, fd)
 					continue
 				}
 
@@ -759,9 +771,6 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 	defer operationKit.Free()
 
 	opContext := &operationContext{
-		name:       operationKit.parsedOperation.Request.OperationName,
-		opType:     operationKit.parsedOperation.Type,
-		content:    operationKit.parsedOperation.NormalizedRepresentation,
 		clientInfo: h.plannerOptions.ClientInfo,
 	}
 
@@ -791,6 +800,9 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 		}
 		opContext.parsingTime = time.Since(startParsing)
 	}
+
+	opContext.name = operationKit.parsedOperation.Request.OperationName
+	opContext.opType = operationKit.parsedOperation.Type
 
 	if blocked := h.operationBlocker.OperationIsBlocked(operationKit.parsedOperation); blocked != nil {
 		return nil, nil, blocked

@@ -4,7 +4,8 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"github.com/wundergraph/cosmo/router/internal/errors"
-	"go.opentelemetry.io/otel/trace"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"net"
 	"net/http"
 	"time"
@@ -141,10 +142,9 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if h.traceID {
-		span := trace.SpanFromContext(r.Context())
-		spanContext := span.SpanContext()
-		if spanContext.HasTraceID() {
-			fields = append(fields, zap.String("trace_id", spanContext.TraceID().String()))
+		traceID := rtrace.GetTraceID(r.Context())
+		if traceID != "" {
+			fields = append(fields, logging.WithTraceID(traceID))
 		}
 	}
 
@@ -177,12 +177,13 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if brokenPipe {
 				fields = append(fields, zap.Bool("broken_pipe", brokenPipe))
 				// Avoid logging the stack trace for broken pipe errors
-				h.logger.WithOptions(zap.AddStacktrace(zapcore.DPanicLevel)).Error(path, fields...)
+				h.logger.WithOptions(zap.AddStacktrace(zapcore.PanicLevel)).Error(path, fields...)
 			} else {
 				h.logger.Error("[Recovery from panic]", fields...)
 			}
 
-			// re-panic the error to the recover middleware can handle it
+			// Dpanic will panic already in development but in production it will log the error and continue
+			// For those reasons we panic here to pass it to the recovery middleware in all cases
 			panic(err)
 		}
 
