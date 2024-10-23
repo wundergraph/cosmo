@@ -25,13 +25,18 @@ func TestSubscriptions(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	prevMessageCount := int64(0)
+
 	go func() {
 		tick := time.NewTicker(time.Second)
 		defer tick.Stop()
 		for {
 			select {
 			case <-tick.C:
-				fmt.Printf("Subscribers: %d Message count: %d\n", subscriberCount.Load(), messageCount.Load())
+				currentMessageCount := messageCount.Load()
+				msgsPerSecond := currentMessageCount - prevMessageCount
+				fmt.Printf("Subscribers: %d Message count: %d, Msgs per second: %d\n", subscriberCount.Load(), messageCount.Load(), msgsPerSecond)
+				prevMessageCount = currentMessageCount
 			case <-ctx.Done():
 				return
 			}
