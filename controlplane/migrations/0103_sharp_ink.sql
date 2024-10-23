@@ -1,0 +1,1 @@
+ALTER TABLE "playground_scripts" ADD COLUMN "created_at" timestamp with time zone DEFAULT now() NOT NULL;

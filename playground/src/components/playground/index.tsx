@@ -16,9 +16,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { LuLayoutDashboard } from 'react-icons/lu';
 import { sentenceCase } from 'change-case';
 import { PlanView } from './plan-view';
-import { QueryPlan } from './types';
+import { PlaygroundContext, QueryPlan } from './types';
 import { useDebounce } from 'use-debounce';
 import { useLocalStorage } from '@/lib/use-local-storage';
+import {
+  attachPlaygroundAPI,
+  CustomScripts,
+  detachPlaygroundAPI,
+  PreFlightScript,
+} from '@/components/playground/custom-scripts';
+import { Badge } from '@/components/ui/badge';
+import { TabsState } from '@graphiql/react';
+import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
 import 'graphiql/graphiql.css';
 import '@graphiql/plugin-explorer/dist/style.css';
 import '@/theme.css';
@@ -28,6 +37,94 @@ const validateHeaders = (headers: Record<string, string>) => {
     if (!/^[\^`\-\w!#$%&'*+.|~]+$/.test(headersKey)) {
       throw new TypeError(`Header name must be a valid HTTP token [${headersKey}]`);
     }
+  }
+};
+
+const substituteHeadersFromEnv = (headers: Record<string, string>) => {
+  const storedHeaders = JSON.parse(localStorage.getItem('headers') || '{}', (key, value) => {
+    if (value === 'true' || value === 'false') {
+      return value === 'true';
+    }
+    if (!isNaN(value) && value !== '') {
+      return Number(value);
+    }
+    return value;
+  });
+
+  for (const key in headers) {
+    let value = headers[key];
+    const placeholderRegex = /{\s*{\s*(\w+)\s*}\s*}/g;
+
+    if (typeof value !== 'string') {
+      continue;
+    }
+
+    value = value.replace(placeholderRegex, (match, p1) => {
+      if (storedHeaders[p1] !== undefined) {
+        return storedHeaders[p1];
+      } else {
+        console.warn(`No value found for placeholder: ${p1}`);
+        return match;
+      }
+    });
+
+    headers[key] = value;
+  }
+
+  return headers;
+};
+
+const executeScript = async (code: string | undefined, graphId: string) => {
+  if (!code) {
+    return;
+  }
+
+  try {
+    const asyncEval = new Function(`
+        return (async () => {
+          ${code}
+        })();
+      `);
+
+    await asyncEval();
+  } catch (error: any) {
+    console.error(error);
+  }
+};
+
+const retrieveScriptFromLocalStorage = (key: string) => {
+  const selectedScript = localStorage.getItem(key);
+  return JSON.parse(!selectedScript || selectedScript === 'undefined' ? '{}' : selectedScript);
+};
+
+const executePreScripts = async (graphId: string, requestBody: any) => {
+  attachPlaygroundAPI(graphId, requestBody);
+
+  const preflightScript = retrieveScriptFromLocalStorage('playground:pre-flight:selected');
+
+  const preflightScriptEnabled = localStorage.getItem('playground:pre-flight:enabled') === 'true';
+
+  const preOpScript = retrieveScriptFromLocalStorage('playground:pre-operation:selected');
+
+  if (preflightScriptEnabled) {
+    await executeScript(preflightScript.content, graphId);
+  }
+
+  if (preOpScript.enabled) {
+    await executeScript(preOpScript.content, graphId);
+  }
+
+  detachPlaygroundAPI();
+};
+
+const executePostScripts = async (graphId: string, requestBody: any, responseBody: any) => {
+  const selectedScript = localStorage.getItem('playground:post-operation:selected');
+  const script = JSON.parse(!selectedScript || selectedScript === 'undefined' ? '{}' : selectedScript);
+
+  if (script.enabled) {
+    attachPlaygroundAPI(graphId, requestBody, responseBody);
+    await executeScript(script.content, graphId);
+    detachPlaygroundAPI();
   }
 };
 
@@ -45,9 +142,11 @@ const graphiQLFetch = async (
 ) => {
   try {
     const initialHeaders = init.headers as Record<string, string>;
-    const headers: Record<string, string> = scripts?.transformHeaders
+    let headers: Record<string, string> = scripts?.transformHeaders
       ? scripts.transformHeaders(initialHeaders)
       : { ...initialHeaders };
+
+    headers = substituteHeadersFromEnv(headers);
 
     validateHeaders(headers);
 
@@ -77,41 +176,41 @@ const graphiQLFetch = async (
       }
     }
 
-    const axiosResponse = await axios({
-      method: init.method as 'get' | 'post' | 'put' | 'delete', // adjust method as per init
-      url: url.toString(),
+    const requestBody = JSON.parse(init.body as string);
+
+    await executePreScripts('0', requestBody);
+
+    const response = await fetch(url, {
+      ...init,
       headers,
-      data: init.body,
     });
 
-    const response = new Response(JSON.stringify(axiosResponse.data), {
-      status: axiosResponse.status,
-      statusText: axiosResponse.statusText,
-      headers: new Headers(Object.entries(axiosResponse.headers)),
-    });
+    const responseData = await response.clone().json();
 
-    onFetch(await response.clone().json());
+    await executePostScripts('0', requestBody, responseData);
+
+    onFetch(await response.clone().json(), response.status, response.statusText);
     return response;
-  } catch (error: any) {
-    if (error instanceof AxiosError) {
-      const errorInfo = {
-        message: error.message || 'Network Error',
-        responseErrorCode: error.code,
-        responseStatusCode: error.response?.status,
-        responseHeaders: error.response?.headers,
-        responseBody: JSON.stringify(error.response?.data),
-        errorMessage: error.message,
-      };
-      const response = new Response(JSON.stringify(errorInfo));
-      onFetch(await response.clone().json());
-      return response;
-    } else {
-      throw error;
-    }
+  } catch (e: any) {
+    const customMessage =
+      'Failed to fetch from router due to network errors. Please check network activity in browser dev tools for more details.';
+
+    const resp = new Response(
+      JSON.stringify(e.message ? (e.message == 'Failed to fetch' ? customMessage : e.message) : customMessage),
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      },
+    );
+
+    onFetch(await resp.clone().json(), undefined, 'Network Error');
+
+    return resp;
   }
 };
 
-const ResponseViewSelector = () => {
+const ResponseToolbar = () => {
   const [view, setView] = useState('response');
 
   const onValueChange = (val: string) => {
@@ -164,8 +263,18 @@ const ResponseViewSelector = () => {
     }
   };
 
+  const { status, statusText } = useContext(PlaygroundContext);
+
+  const isSuccess = !!status && status >= 200 && status < 300;
+
   return (
-    <div>
+    <div className="flex items-center gap-x-2">
+      {(status || statusText) && (
+        <Badge className="h-8" variant={isSuccess ? 'success' : 'destructive'}>
+          {!isSuccess && <ExclamationTriangleIcon className="mr-1 h-4 w-4" />}
+          {status || statusText}
+        </Badge>
+      )}
       <Select onValueChange={onValueChange}>
         <SelectTrigger className="w-[180px]">
           <SelectValue>
@@ -227,20 +336,34 @@ const ToggleClientValidation = () => {
 };
 
 const PlaygroundPortal = () => {
-  const tabDiv = document.getElementById('response-tabs');
+  const responseToolbar = document.getElementById('response-toolbar');
   const artDiv = document.getElementById('art-visualization');
   const plannerDiv = document.getElementById('planner-visualization');
   const toggleClientValidation = document.getElementById('toggle-client-validation');
   const logo = document.getElementById('graphiql-wg-logo');
+  const scriptsSection = document.getElementById('scripts-section');
+  const preFlightScriptSection = document.getElementById('pre-flight-script-section');
 
-  if (!tabDiv || !artDiv || !plannerDiv || !toggleClientValidation || !logo) return null;
+  if (
+    !responseToolbar ||
+    !artDiv ||
+    !plannerDiv ||
+    !toggleClientValidation ||
+    !logo ||
+    !scriptsSection ||
+    !preFlightScriptSection
+  ) {
+    return null;
+  }
 
   return (
     <>
-      {createPortal(<ResponseViewSelector />, tabDiv)}
+      {createPortal(<ResponseToolbar />, responseToolbar)}
       {createPortal(<PlanView />, plannerDiv)}
       {createPortal(<TraceView />, artDiv)}
       {createPortal(<ToggleClientValidation />, toggleClientValidation)}
+      {createPortal(<CustomScripts />, scriptsSection)}
+      {createPortal(<PreFlightScript />, preFlightScriptSection)}
       {createPortal(
         <a href="https://wundergraph.com">
           <svg
@@ -316,8 +439,8 @@ export const Playground = (input: {
   const [clientValidationEnabled, setClientValidationEnabled] = useState(true);
 
   useEffect(() => {
-    const responseTabs = document.getElementById('response-tabs');
-    if (responseTabs && isMounted) {
+    const responseToolbar = document.getElementById('response-toolbar');
+    if (responseToolbar && isMounted) {
       return;
     }
 
@@ -336,10 +459,62 @@ export const Playground = (input: {
       if (logo) {
         logo.classList.add('hidden');
         const div = document.createElement('div');
-        div.id = 'response-tabs';
+        div.id = 'response-toolbar';
         div.className = 'flex items-center justify-center mx-2';
         header.append(div);
       }
+    }
+
+    const editorToolsTabBar = document.getElementsByClassName('graphiql-editor-tools')[0] as any as HTMLDivElement;
+    const editorToolsSection = document.getElementsByClassName('graphiql-editor-tool')[0] as any as HTMLDivElement;
+
+    if (editorToolsTabBar && editorToolsSection && !document.getElementById('scripts-tab')) {
+      const tabs = [editorToolsTabBar.childNodes[0], editorToolsTabBar.childNodes[1]];
+      const sections = Array.from(editorToolsSection.childNodes);
+
+      const scriptsButton = document.createElement('button');
+      scriptsButton.id = 'scripts-tab';
+      scriptsButton.className = 'graphiql-un-styled';
+      scriptsButton.textContent = 'Operation Scripts';
+
+      const scriptsSection = document.createElement('div');
+      scriptsSection.id = 'scripts-section';
+      scriptsSection.className = 'graphiql-editor hidden';
+
+      tabs.forEach((e, index) =>
+        e.addEventListener('click', () => {
+          (e as HTMLButtonElement).className = 'graphiql-un-styled active';
+          (sections[index] as HTMLDivElement).className = 'graphiql-editor';
+          scriptsSection.className = 'graphiql-editor hidden';
+        }),
+      );
+
+      scriptsButton.onclick = (e) => {
+        (tabs[0] as HTMLButtonElement).className = 'graphiql-un-styled';
+        (tabs[1] as HTMLButtonElement).className = 'graphiql-un-styled';
+        (sections[0] as HTMLDivElement).className = 'graphiql-editor hidden';
+        (sections[1] as HTMLDivElement).className = 'graphiql-editor hidden';
+        scriptsSection.className = 'graphiql-editor';
+
+        scriptsButton.className = 'graphiql-un-styled active';
+      };
+
+      editorToolsTabBar.addEventListener('click', (e) => {
+        if (!(e.target as HTMLElement)?.closest(`#${scriptsButton.id}`)) {
+          scriptsButton.className = 'graphiql-un-styled';
+        }
+      });
+
+      editorToolsTabBar.insertBefore(scriptsButton, editorToolsTabBar.childNodes[2]);
+      editorToolsSection.appendChild(scriptsSection);
+    }
+
+    const editors = document.getElementsByClassName('graphiql-editors')[0] as any as HTMLDivElement;
+
+    if (editors) {
+      const preFlightScriptSection = document.createElement('div');
+      preFlightScriptSection.id = 'pre-flight-script-section';
+      editors.appendChild(preFlightScriptSection);
     }
 
     const responseSection = document.getElementsByClassName('graphiql-response')[0];
@@ -390,9 +565,14 @@ export const Playground = (input: {
     getSchema();
   }, [headers]);
 
+  const [status, setStatus] = useState<number>();
+  const [statusText, setStatusText] = useState<string>();
+
   const fetcher = useMemo(() => {
-    const onFetch = (response: any) => {
+    const onFetch = (response: any, status?: number, statusText?: string) => {
       setResponse(JSON.stringify(response));
+      setStatus(status);
+      setStatusText(statusText);
     };
 
     return createGraphiQLFetcher({
@@ -454,38 +634,53 @@ export const Playground = (input: {
     getPlan();
   }, [debouncedQuery, debouncedHeaders, url, schema]);
 
+  const [tabsState, setTabsState] = useState<TabsState>({
+    activeTabIndex: 0,
+    tabs: [],
+  });
+
   return (
     <TooltipProvider>
-      <TraceContext.Provider
+      <PlaygroundContext.Provider
         value={{
-          headers,
-          response,
-          subgraphs: [],
-          plan,
-          planError,
-          clientValidationEnabled,
-          setClientValidationEnabled,
-          forcedTheme: input.theme,
+          graphId: '0',
+          tabsState,
+          status,
+          statusText,
         }}
       >
-        <GraphiQL
-          shouldPersistHeaders
-          showPersistHeadersSettings={false}
-          fetcher={fetcher}
-          onEditQuery={setQuery}
-          defaultHeaders={`{
+        <TraceContext.Provider
+          value={{
+            headers,
+            response,
+            subgraphs: [],
+            plan,
+            planError,
+            clientValidationEnabled,
+            setClientValidationEnabled,
+            forcedTheme: input.theme,
+          }}
+        >
+          <GraphiQL
+            shouldPersistHeaders
+            showPersistHeadersSettings={false}
+            fetcher={fetcher}
+            onEditQuery={setQuery}
+            defaultHeaders={`{
   "X-WG-TRACE" : "true"
 }`}
-          onEditHeaders={setHeaders}
-          plugins={[
-            explorerPlugin({
-              showAttribution: false,
-            }),
-          ]}
-          forcedTheme={input.theme}
-        />
-        {isMounted && <PlaygroundPortal />}
-      </TraceContext.Provider>
+            onEditHeaders={setHeaders}
+            onTabChange={setTabsState}
+            plugins={[
+              explorerPlugin({
+                showAttribution: false,
+              }),
+            ]}
+            forcedTheme={input.theme}
+          />
+          {isMounted && <PlaygroundPortal />}
+        </TraceContext.Provider>
+      </PlaygroundContext.Provider>
     </TooltipProvider>
   );
 };

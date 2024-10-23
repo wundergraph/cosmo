@@ -1,3 +1,25 @@
+import { TabsState } from '@graphiql/react';
+import { createContext } from 'react';
+
+type PlaygroundContextType = {
+  graphId: string;
+  tabsState: TabsState;
+  status?: number;
+  statusText?: string;
+};
+
+export const PlaygroundContext = createContext<PlaygroundContextType>({
+  graphId: '',
+  tabsState: { tabs: [], activeTabIndex: 0 },
+});
+
+export type PlaygroundScript = {
+  id: string;
+  type: string;
+  title: string;
+  content: string;
+};
+
 export type LoadStatsEntry = {
   name: string;
   durationSinceStart: string;
