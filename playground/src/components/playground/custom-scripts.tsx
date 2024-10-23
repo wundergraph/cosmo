@@ -468,16 +468,23 @@ const ScriptsViewer = ({ type }: { type: ScriptType }) => {
       type,
     };
 
-    const scriptTabState = JSON.parse(localStorage.getItem(`playground:script:tabState`) || '{}');
-    const activeTabId = tabs[activeTabIndex]?.id;
+    if (type === 'pre-flight') {
+      const stored = localStorage.getItem(`playground:pre-flight:selected`);
+      const script = JSON.parse(!stored || stored === 'undefined' ? '{}' : stored);
 
-    if (!activeTabId) {
-      return;
+      setActiveScript(script?.id ? script : defaultScript);
+    } else {
+      const scriptTabState = JSON.parse(localStorage.getItem(`playground:script:tabState`) || '{}');
+      const activeTabId = tabs[activeTabIndex]?.id;
+
+      if (!activeTabId) {
+        return;
+      }
+
+      const script = scriptTabState[activeTabId]?.[type];
+
+      setActiveScript(script?.id ? script : defaultScript);
     }
-
-    const script = scriptTabState[activeTabId]?.[type];
-
-    setActiveScript(script?.id ? script : defaultScript);
   }, [isOpen, activeTabIndex, tabs]);
 
   return (
