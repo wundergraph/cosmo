@@ -1,4 +1,11 @@
-import { federateSubgraphs, federateSubgraphsContract, federateSubgraphsWithContracts, parse, Subgraph } from '../src';
+import {
+  ContractTagOptions,
+  federateSubgraphs,
+  federateSubgraphsContract,
+  federateSubgraphsWithContracts,
+  parse,
+  Subgraph,
+} from '../src';
 import { describe, expect, test } from 'vitest';
 import {
   normalizeString,
@@ -9,17 +16,30 @@ import {
 } from './utils/utils';
 
 describe('Contract tests', () => {
-  const tagNamesByContractName = new Map<string, Set<string>>([
-    ['one', new Set<string>(['tagOne', 'includeMe'])],
-    ['two', new Set<string>(['tagTwo', 'includeMe'])],
-  ]);
-
   describe('Exclude tags', () => {
+    const excludedTagsOne = {
+      excludedTagNames: new Set<string>(['one', 'includeMe']),
+      includedTagNames: new Set<string>(),
+    };
+
+    const excludedTagsTwo = {
+      excludedTagNames: new Set<string>(['one']),
+      includedTagNames: new Set<string>(),
+    };
+
     test('that Objects are removed by tag', () => {
       const { federationResultContainerByContractName } = federateSubgraphsWithContracts(
         [subgraphOne, subgraphA],
-        tagNamesByContractName,
-        true,
+        new Map<string, ContractTagOptions>([
+          ['one', excludedTagsOne],
+          [
+            'two',
+            {
+              excludedTagNames: new Set<string>(['two', 'includeMe']),
+              includedTagNames: new Set<string>(),
+            },
+          ],
+        ]),
       );
       expect(federationResultContainerByContractName).toBeDefined();
       const contractOne = federationResultContainerByContractName!.get('one');
@@ -34,11 +54,11 @@ describe('Contract tests', () => {
         normalizeString(
           versionOneRouterContractDefinitions +
             `
-            type Object @tag(name: "tagOne") @inaccessible {
+            type Object @tag(name: "one") @inaccessible {
               name: String!
             }
 
-            type ObjectTwo @tag(name: "tagTwo") {
+            type ObjectTwo @tag(name: "two") {
               name: String!
             }
 
@@ -66,11 +86,11 @@ describe('Contract tests', () => {
         normalizeString(
           versionOneRouterContractDefinitions +
             `
-            type Object @tag(name: "tagOne") {
+            type Object @tag(name: "one") {
               name: String!
             }
 
-            type ObjectTwo @tag(name: "tagTwo") @inaccessible {
+            type ObjectTwo @tag(name: "two") @inaccessible {
               name: String!
             }
 
@@ -97,11 +117,7 @@ describe('Contract tests', () => {
     });
 
     test('that Object Fields are removed by tag', () => {
-      const { errors, federationResult } = federateSubgraphsContract(
-        [subgraphB, subgraphD],
-        new Set<string>(['one', 'includeMe']),
-        true,
-      );
+      const { errors, federationResult } = federateSubgraphsContract([subgraphB, subgraphD], excludedTagsOne);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -120,11 +136,7 @@ describe('Contract tests', () => {
     });
 
     test('that an Object is removed if its only Field is removed by tag', () => {
-      const { errors, federationResult } = federateSubgraphsContract(
-        [subgraphA, subgraphD],
-        new Set<string>(['one', 'includeMe']),
-        true,
-      );
+      const { errors, federationResult } = federateSubgraphsContract([subgraphA, subgraphD], excludedTagsOne);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -139,11 +151,7 @@ describe('Contract tests', () => {
     });
 
     test('that Interfaces are removed by tag', () => {
-      const { errors, federationResult } = federateSubgraphsContract(
-        [subgraphJ, subgraphK],
-        new Set<string>(['one', 'includeMe']),
-        true,
-      );
+      const { errors, federationResult } = federateSubgraphsContract([subgraphJ, subgraphK], excludedTagsOne);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -158,11 +166,7 @@ describe('Contract tests', () => {
     });
 
     test('that Interface Fields are removed by tag', () => {
-      const { errors, federationResult } = federateSubgraphsContract(
-        [subgraphJ, subgraphL],
-        new Set<string>(['one', 'includeMe']),
-        true,
-      );
+      const { errors, federationResult } = federateSubgraphsContract([subgraphJ, subgraphL], excludedTagsOne);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -181,11 +185,7 @@ describe('Contract tests', () => {
     });
 
     test('that an Interface is removed if its only Field is removed by tag', () => {
-      const { errors, federationResult } = federateSubgraphsContract(
-        [subgraphA, subgraphL],
-        new Set<string>(['one', 'includeMe']),
-        true,
-      );
+      const { errors, federationResult } = federateSubgraphsContract([subgraphA, subgraphL], excludedTagsOne);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -200,11 +200,7 @@ describe('Contract tests', () => {
     });
 
     test('that if an Interface is removed by tag, it is removed from its implementations', () => {
-      const { errors, federationResult } = federateSubgraphsContract(
-        [subgraphA, subgraphAE],
-        new Set<string>(['one']),
-        true,
-      );
+      const { errors, federationResult } = federateSubgraphsContract([subgraphA, subgraphAE], excludedTagsTwo);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -223,11 +219,7 @@ describe('Contract tests', () => {
     });
 
     test('that Input Objects are removed by tag', () => {
-      const { errors, federationResult } = federateSubgraphsContract(
-        [subgraphN, subgraphO],
-        new Set<string>(['one']),
-        true,
-      );
+      const { errors, federationResult } = federateSubgraphsContract([subgraphN, subgraphO], excludedTagsOne);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -242,11 +234,7 @@ describe('Contract tests', () => {
     });
 
     test('that nullable Input Object fields are removed by tag', () => {
-      const { errors, federationResult } = federateSubgraphsContract(
-        [subgraphAA, subgraphAK],
-        new Set<string>(['one']),
-        true,
-      );
+      const { errors, federationResult } = federateSubgraphsContract([subgraphAA, subgraphAK], excludedTagsOne);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -265,11 +253,7 @@ describe('Contract tests', () => {
     });
 
     test('that an Input Object is removed if its only Field is removed by tag', () => {
-      const { errors, federationResult } = federateSubgraphsContract(
-        [subgraphA, subgraphP],
-        new Set<string>(['one', 'includeMe']),
-        true,
-      );
+      const { errors, federationResult } = federateSubgraphsContract([subgraphA, subgraphP], excludedTagsOne);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -284,11 +268,7 @@ describe('Contract tests', () => {
     });
 
     test('that an Argument can be removed by tag #1.1', () => {
-      const { errors, federationResult } = federateSubgraphsContract(
-        [subgraphA, subgraphAF],
-        new Set<string>(['one']),
-        true,
-      );
+      const { errors, federationResult } = federateSubgraphsContract([subgraphA, subgraphAF], excludedTagsTwo);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -307,11 +287,7 @@ describe('Contract tests', () => {
     });
 
     test('that an Argument can be removed by tag #1.2', () => {
-      const { errors, federationResult } = federateSubgraphsContract(
-        [subgraphA, subgraphAG],
-        new Set<string>(['one']),
-        true,
-      );
+      const { errors, federationResult } = federateSubgraphsContract([subgraphA, subgraphAG], excludedTagsTwo);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -330,11 +306,7 @@ describe('Contract tests', () => {
     });
 
     test('that an Argument can be removed by tag #1.3', () => {
-      const { errors, federationResult } = federateSubgraphsContract(
-        [subgraphA, subgraphAH],
-        new Set<string>(['one']),
-        true,
-      );
+      const { errors, federationResult } = federateSubgraphsContract([subgraphA, subgraphAH], excludedTagsTwo);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -349,11 +321,7 @@ describe('Contract tests', () => {
     });
 
     test('that a Scalar is removed by tag', () => {
-      const { errors, federationResult } = federateSubgraphsContract(
-        [subgraphQ, subgraphR],
-        new Set<string>(['one']),
-        true,
-      );
+      const { errors, federationResult } = federateSubgraphsContract([subgraphQ, subgraphR], excludedTagsTwo);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -368,11 +336,7 @@ describe('Contract tests', () => {
     });
 
     test('that a Union is removed by tag', () => {
-      const { errors, federationResult } = federateSubgraphsContract(
-        [subgraphS, subgraphT],
-        new Set<string>(['one']),
-        true,
-      );
+      const { errors, federationResult } = federateSubgraphsContract([subgraphS, subgraphT], excludedTagsTwo);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -394,11 +358,7 @@ describe('Contract tests', () => {
 
     // TODO
     test.skip('that a Union is removed if all its members are removed by tag', () => {
-      const { errors, federationResult } = federateSubgraphsContract(
-        [subgraphS, subgraphG],
-        new Set<string>(['one']),
-        true,
-      );
+      const { errors, federationResult } = federateSubgraphsContract([subgraphS, subgraphG], excludedTagsOne);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -413,11 +373,7 @@ describe('Contract tests', () => {
     });
 
     test('that an Enum is removed by tag', () => {
-      const { errors, federationResult } = federateSubgraphsContract(
-        [subgraphAB, subgraphAC],
-        new Set<string>(['one']),
-        true,
-      );
+      const { errors, federationResult } = federateSubgraphsContract([subgraphAB, subgraphAC], excludedTagsOne);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -432,11 +388,7 @@ describe('Contract tests', () => {
     });
 
     test('that an Enum value is removed by tag', () => {
-      const { errors, federationResult } = federateSubgraphsContract(
-        [subgraphAB, subgraphAD],
-        new Set<string>(['one']),
-        true,
-      );
+      const { errors, federationResult } = federateSubgraphsContract([subgraphAB, subgraphAD], excludedTagsOne);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -455,11 +407,7 @@ describe('Contract tests', () => {
     });
 
     test('that an Enum is removed if its only Value is removed by tag', () => {
-      const { errors, federationResult } = federateSubgraphsContract(
-        [subgraphA, subgraphAD],
-        new Set<string>(['one', 'includeMe']),
-        true,
-      );
+      const { errors, federationResult } = federateSubgraphsContract([subgraphA, subgraphAD], excludedTagsOne);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -474,11 +422,7 @@ describe('Contract tests', () => {
     });
 
     test('that a nested Field can be removed by tag', () => {
-      const { errors, federationResult } = federateSubgraphsContract(
-        [subgraphA, subgraphAI],
-        new Set<string>(['one']),
-        true,
-      );
+      const { errors, federationResult } = federateSubgraphsContract([subgraphA, subgraphAI], excludedTagsOne);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -494,11 +438,28 @@ describe('Contract tests', () => {
   });
 
   describe('Include tags', () => {
+    const includedTagsOne = {
+      excludedTagNames: new Set<string>(),
+      includedTagNames: new Set<string>(['one', 'includeMe']),
+    };
+
+    const includedTagsTwo = {
+      excludedTagNames: new Set<string>(),
+      includedTagNames: new Set<string>(['two', 'includeMe']),
+    };
+
+    const includedTagsThree = {
+      excludedTagNames: new Set<string>(),
+      includedTagNames: new Set<string>(['includeMe']),
+    };
+
     test('that Objects are included by tag', () => {
       const { federationResultContainerByContractName } = federateSubgraphsWithContracts(
         [subgraphOne, subgraphInclude],
-        tagNamesByContractName,
-        false,
+        new Map<string, ContractTagOptions>([
+          ['one', includedTagsOne],
+          ['two', includedTagsTwo],
+        ]),
       );
       expect(federationResultContainerByContractName).toBeDefined();
       const contractOne = federationResultContainerByContractName!.get('one');
@@ -513,11 +474,11 @@ describe('Contract tests', () => {
         normalizeString(
           versionOneRouterContractDefinitions +
             `
-            type Object @tag(name: "tagOne") {
+            type Object @tag(name: "one") {
               name: String!
             }
 
-            type ObjectTwo @tag(name: "tagTwo") @inaccessible {
+            type ObjectTwo @tag(name: "two") @inaccessible {
               name: String!
             }
 
@@ -546,11 +507,11 @@ describe('Contract tests', () => {
         normalizeString(
           versionOneRouterContractDefinitions +
             `
-            type Object @tag(name: "tagOne") @inaccessible {
+            type Object @tag(name: "one") @inaccessible {
               name: String!
             }
 
-            type ObjectTwo @tag(name: "tagTwo") {
+            type ObjectTwo @tag(name: "two") {
               name: String!
             }
 
@@ -580,8 +541,7 @@ describe('Contract tests', () => {
     test('that Object Fields are included by tag', () => {
       const { errors, federationResult } = federateSubgraphsContract(
         [subgraphB, subgraphD, subgraphInclude],
-        new Set<string>(['one', 'includeMe']),
-        false,
+        includedTagsOne,
       );
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
@@ -601,11 +561,7 @@ describe('Contract tests', () => {
     });
 
     test('that an Object is removed if its only Field is not included by tag', () => {
-      const { errors, federationResult } = federateSubgraphsContract(
-        [subgraphInclude, subgraphD],
-        new Set<string>(['two', 'includeMe']),
-        false,
-      );
+      const { errors, federationResult } = federateSubgraphsContract([subgraphInclude, subgraphD], includedTagsTwo);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -622,8 +578,7 @@ describe('Contract tests', () => {
     test('that Interfaces are included by tag', () => {
       const { errors, federationResult } = federateSubgraphsContract(
         [subgraphJ, subgraphK, subgraphInclude],
-        new Set<string>(['one', 'includeMe']),
-        false,
+        includedTagsOne,
       );
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
@@ -646,8 +601,7 @@ describe('Contract tests', () => {
     test('that Interface Fields are removed if not included by tag', () => {
       const { errors, federationResult } = federateSubgraphsContract(
         [subgraphJ, subgraphL, subgraphInclude],
-        new Set<string>(['one', 'includeMe']),
-        false,
+        includedTagsOne,
       );
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
@@ -667,11 +621,7 @@ describe('Contract tests', () => {
     });
 
     test('that an Interface is removed if its only Field is not included by tag', () => {
-      const { errors, federationResult } = federateSubgraphsContract(
-        [subgraphInclude, subgraphL],
-        new Set<string>(['two', 'includeMe']),
-        false,
-      );
+      const { errors, federationResult } = federateSubgraphsContract([subgraphInclude, subgraphL], includedTagsTwo);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -686,11 +636,7 @@ describe('Contract tests', () => {
     });
 
     test('that if an Interface is not included by tag, it is removed from its implementations', () => {
-      const { errors, federationResult } = federateSubgraphsContract(
-        [subgraphInclude, subgraphAE],
-        new Set<string>(['two', 'includeMe']),
-        false,
-      );
+      const { errors, federationResult } = federateSubgraphsContract([subgraphInclude, subgraphAE], includedTagsTwo);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -711,8 +657,7 @@ describe('Contract tests', () => {
     test('that Input Objects are included by tag', () => {
       const { errors, federationResult } = federateSubgraphsContract(
         [subgraphN, subgraphO, subgraphInclude],
-        new Set<string>(['one', 'includeMe']),
-        false,
+        includedTagsOne,
       );
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
@@ -734,8 +679,7 @@ describe('Contract tests', () => {
     test('that nullable Input Object Fields are removed if not included by tag', () => {
       const { errors, federationResult } = federateSubgraphsContract(
         [subgraphAA, subgraphAK, subgraphInclude],
-        new Set<string>(['one', 'includeMe']),
-        false,
+        includedTagsOne,
       );
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
@@ -755,11 +699,7 @@ describe('Contract tests', () => {
     });
 
     test('that an Input Object is removed if its only Field is not included by tag', () => {
-      const { errors, federationResult } = federateSubgraphsContract(
-        [subgraphInclude, subgraphP],
-        new Set<string>(['includeMe']),
-        false,
-      );
+      const { errors, federationResult } = federateSubgraphsContract([subgraphInclude, subgraphP], includedTagsThree);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -774,11 +714,7 @@ describe('Contract tests', () => {
     });
 
     test('that an Argument can be included by tag #1.1', () => {
-      const { errors, federationResult } = federateSubgraphsContract(
-        [subgraphInclude, subgraphAF],
-        new Set<string>(['one', 'includeMe']),
-        false,
-      );
+      const { errors, federationResult } = federateSubgraphsContract([subgraphInclude, subgraphAF], includedTagsOne);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -801,11 +737,7 @@ describe('Contract tests', () => {
     });
 
     test('that an Argument can be included by tag #1.2', () => {
-      const { errors, federationResult } = federateSubgraphsContract(
-        [subgraphInclude, subgraphAG],
-        new Set<string>(['one', 'includeMe']),
-        false,
-      );
+      const { errors, federationResult } = federateSubgraphsContract([subgraphInclude, subgraphAG], includedTagsOne);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -828,11 +760,7 @@ describe('Contract tests', () => {
     });
 
     test('that an Argument can be included by tag #1.3', () => {
-      const { errors, federationResult } = federateSubgraphsContract(
-        [subgraphInclude, subgraphAH],
-        new Set<string>(['one', 'includeMe']),
-        false,
-      );
+      const { errors, federationResult } = federateSubgraphsContract([subgraphInclude, subgraphAH], includedTagsOne);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -855,11 +783,7 @@ describe('Contract tests', () => {
     });
 
     test('that an Argument can be included by tag #1.4', () => {
-      const { errors, federationResult } = federateSubgraphsContract(
-        [subgraphInclude, subgraphAJ],
-        new Set<string>(['one', 'includeMe']),
-        false,
-      );
+      const { errors, federationResult } = federateSubgraphsContract([subgraphInclude, subgraphAJ], includedTagsOne);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -881,8 +805,7 @@ describe('Contract tests', () => {
     test('that a Scalar is included by tag', () => {
       const { errors, federationResult } = federateSubgraphsContract(
         [subgraphInclude, subgraphQ, subgraphR],
-        new Set<string>(['one', 'includeMe']),
-        false,
+        includedTagsOne,
       );
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
@@ -902,8 +825,7 @@ describe('Contract tests', () => {
     test('that a Union is included by tag', () => {
       const { errors, federationResult } = federateSubgraphsContract(
         [subgraphInclude, subgraphS, subgraphT],
-        new Set<string>(['one', 'includeMe']),
-        false,
+        includedTagsOne,
       );
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
@@ -930,8 +852,7 @@ describe('Contract tests', () => {
     test.skip('that a Union is removed if none of its members are included by tag', () => {
       const { errors, federationResult } = federateSubgraphsContract(
         [subgraphInclude, subgraphS, subgraphG],
-        new Set<string>(['one']),
-        false,
+        includedTagsOne,
       );
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
@@ -949,8 +870,7 @@ describe('Contract tests', () => {
     test('that an Enum is included by tag', () => {
       const { errors, federationResult } = federateSubgraphsContract(
         [subgraphInclude, subgraphAB, subgraphAC],
-        new Set<string>(['one', 'includeMe']),
-        false,
+        includedTagsOne,
       );
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
@@ -973,8 +893,7 @@ describe('Contract tests', () => {
     test('that an Enum Value is included by tag', () => {
       const { errors, federationResult } = federateSubgraphsContract(
         [subgraphInclude, subgraphAB, subgraphAD],
-        new Set<string>(['one', 'includeMe']),
-        false,
+        includedTagsOne,
       );
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
@@ -994,11 +913,7 @@ describe('Contract tests', () => {
     });
 
     test('that an Enum is removed if its only value is not included by tag', () => {
-      const { errors, federationResult } = federateSubgraphsContract(
-        [subgraphInclude, subgraphAD],
-        new Set<string>(['includeMe']),
-        false,
-      );
+      const { errors, federationResult } = federateSubgraphsContract([subgraphInclude, subgraphAD], includedTagsThree);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -1013,11 +928,7 @@ describe('Contract tests', () => {
     });
 
     test('that a nested Field can be included by tag', () => {
-      const { errors, federationResult } = federateSubgraphsContract(
-        [subgraphInclude, subgraphAI],
-        new Set<string>(['one', 'includeMe']),
-        false,
-      );
+      const { errors, federationResult } = federateSubgraphsContract([subgraphInclude, subgraphAI], includedTagsOne);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -2480,11 +2391,11 @@ const subgraphOne: Subgraph = {
   name: 'subgraph-one',
   url: '',
   definitions: parse(`
-    type Object @tag(name: "tagOne") {
+    type Object @tag(name: "one") {
       name: String!
     }
 
-    type ObjectTwo @tag(name: "tagTwo") {
+    type ObjectTwo @tag(name: "two") {
       name: String!
     }
   `),

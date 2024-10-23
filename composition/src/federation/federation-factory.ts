@@ -60,6 +60,7 @@ import {
 } from '../errors/errors';
 import {
   ChildTagData,
+  ContractTagOptions,
   FederationFactoryOptions,
   FederationResultContainer,
   FederationResultContainerWithContracts,
@@ -2461,13 +2462,13 @@ export class FederationFactory {
     }
   }
 
-  buildFederationContractResult(tagNames: Set<string>, areTagsExcluded: boolean): FederationResultContainer {
+  buildFederationContractResult(contractTagOptions: ContractTagOptions): FederationResultContainer {
     if (!this.isVersionTwo) {
       /* If all the subgraphs are version one, the @inaccessible directive won't be present.
        ** However, contracts require @inaccessible to exclude applicable tagged types. */
       this.routerDefinitions.push(INACCESSIBLE_DEFINITION);
     }
-    if (areTagsExcluded) {
+    if (contractTagOptions.excludedTagNames.size > 0) {
       for (const [parentTypeName, parentTagData] of this.parentTagDataByTypeName) {
         const parentDefinitionData = getOrThrowError(
           this.parentDefinitionDataByTypeName,
@@ -2477,7 +2478,7 @@ export class FederationFactory {
         if (isNodeDataInaccessible(parentDefinitionData)) {
           continue;
         }
-        if (doSetsIntersect(tagNames, parentTagData.tagNames)) {
+        if (doSetsIntersect(contractTagOptions.excludedTagNames, parentTagData.tagNames)) {
           parentDefinitionData.persistedDirectivesData.directives.set(INACCESSIBLE, [
             generateSimpleDirective(INACCESSIBLE),
           ]);
@@ -2498,7 +2499,7 @@ export class FederationFactory {
               parentDefinitionData,
               parentDefinitionData.enumValueDataByValueName,
               parentTagData.childTagDataByChildName,
-              tagNames,
+              contractTagOptions.excludedTagNames,
             );
             break;
           case Kind.INPUT_OBJECT_TYPE_DEFINITION:
@@ -2506,7 +2507,7 @@ export class FederationFactory {
               parentDefinitionData,
               parentDefinitionData.inputValueDataByValueName,
               parentTagData.childTagDataByChildName,
-              tagNames,
+              contractTagOptions.excludedTagNames,
             );
             break;
           default:
@@ -2521,7 +2522,7 @@ export class FederationFactory {
                 accessibleFields -= 1;
                 continue;
               }
-              if (doSetsIntersect(tagNames, childTagData.tagNames)) {
+              if (doSetsIntersect(contractTagOptions.excludedTagNames, childTagData.tagNames)) {
                 getValueOrDefault(fieldData.persistedDirectivesData.directives, INACCESSIBLE, () => [
                   generateSimpleDirective(INACCESSIBLE),
                 ]);
@@ -2554,7 +2555,7 @@ export class FederationFactory {
             }
         }
       }
-    } else {
+    } else if (contractTagOptions.includedTagNames.size > 0) {
       for (const [parentTypeName, parentDefinitionData] of this.parentDefinitionDataByTypeName) {
         if (isNodeDataInaccessible(parentDefinitionData)) {
           continue;
@@ -2568,7 +2569,7 @@ export class FederationFactory {
           // If the parent is inaccessible, there is no need to assess further
           continue;
         }
-        if (doSetsIntersect(tagNames, parentTagData.tagNames)) {
+        if (doSetsIntersect(contractTagOptions.includedTagNames, parentTagData.tagNames)) {
           continue;
         }
         if (parentTagData.childTagDataByChildName.size < 1) {
@@ -2589,7 +2590,7 @@ export class FederationFactory {
               parentDefinitionData,
               parentDefinitionData.enumValueDataByValueName,
               parentTagData.childTagDataByChildName,
-              tagNames,
+              contractTagOptions.includedTagNames,
             );
             break;
           case Kind.INPUT_OBJECT_TYPE_DEFINITION:
@@ -2597,7 +2598,7 @@ export class FederationFactory {
               parentDefinitionData,
               parentDefinitionData.inputValueDataByValueName,
               parentTagData.childTagDataByChildName,
-              tagNames,
+              contractTagOptions.includedTagNames,
             );
             break;
           default:
@@ -2608,7 +2609,7 @@ export class FederationFactory {
                 continue;
               }
               const childTagData = parentTagData.childTagDataByChildName.get(fieldName);
-              if (!childTagData || !doSetsIntersect(tagNames, childTagData.tagNames)) {
+              if (!childTagData || !doSetsIntersect(contractTagOptions.includedTagNames, childTagData.tagNames)) {
                 getValueOrDefault(fieldData.persistedDirectivesData.directives, INACCESSIBLE, () => [
                   generateSimpleDirective(INACCESSIBLE),
                 ]);
@@ -2789,8 +2790,7 @@ export function federateSubgraphs(subgraphs: Subgraph[]): FederationResultContai
 // the flow when publishing a subgraph that also has contracts
 export function federateSubgraphsWithContracts(
   subgraphs: Subgraph[],
-  tagNamesByContractName: Map<string, Set<string>>,
-  areTagsExcluded: boolean,
+  contractTagOptionsByContractName: Map<string, ContractTagOptions>,
 ): FederationResultContainerWithContracts {
   const {
     errors: normalizationErrors,
@@ -2810,19 +2810,19 @@ export function federateSubgraphsWithContracts(
   if (errors) {
     return { errors, warnings };
   }
-  const lastContractIndex = tagNamesByContractName.size - 1;
+  const lastContractIndex = contractTagOptionsByContractName.size - 1;
   const federationResultContainerByContractName: Map<string, FederationResultContainer> = new Map<
     string,
     FederationResultContainer
   >();
   let i = 0;
-  for (const [contractName, tagNames] of tagNamesByContractName) {
+  for (const [contractName, tagOptions] of contractTagOptionsByContractName) {
     // deep copy the current FederationFactory before it is mutated if it is not the last one required
     if (i !== lastContractIndex) {
       federationFactories.push(cloneDeep(federationFactories[i]));
     }
     // note that any one contract could have its own errors
-    const federationResultContainer = federationFactories[i].buildFederationContractResult(tagNames, areTagsExcluded);
+    const federationResultContainer = federationFactories[i].buildFederationContractResult(tagOptions);
     federationResultContainerByContractName.set(contractName, federationResultContainer);
     i++;
   }
@@ -2832,13 +2832,12 @@ export function federateSubgraphsWithContracts(
 // the flow when adding a completely new contract
 export function federateSubgraphsContract(
   subgraphs: Subgraph[],
-  tagNames: Set<string>,
-  areTagsExcluded: boolean,
+  contractTagOptions: ContractTagOptions,
 ): FederationResultContainer {
   const { errors, federationFactory, warnings } = initializeFederationFactory(subgraphs);
   if (errors || !federationFactory) {
     return { errors: errors || [federationFactoryInitializationFatalError], warnings };
   }
   federationFactory.federateSubgraphData();
-  return federationFactory.buildFederationContractResult(tagNames, areTagsExcluded);
+  return federationFactory.buildFederationContractResult(contractTagOptions);
 }
