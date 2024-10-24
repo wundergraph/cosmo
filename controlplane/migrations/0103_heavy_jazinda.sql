@@ -1,1 +1,0 @@
-ALTER TABLE "contracts" ADD COLUMN "include_tags" text[] NOT NULL;
