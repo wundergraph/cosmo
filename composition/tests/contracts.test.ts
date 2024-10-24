@@ -802,6 +802,26 @@ describe('Contract tests', () => {
       );
     });
 
+    test('that if a Field is included, its Arguments are included by default', () => {
+      const { errors, federationResult } = federateSubgraphsContract([subgraphInclude, subgraphAL], includedTagsOne);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
+        normalizeString(
+          schemaQueryDefinition +
+            `
+            type Object {
+              name: String!
+            }
+
+            type Query {
+              field(input: ID!): Object!
+              include: Int!
+            }
+          `,
+        ),
+      );
+    });
+
     test('that a Scalar is included by tag', () => {
       const { errors, federationResult } = federateSubgraphsContract(
         [subgraphInclude, subgraphQ, subgraphR],
@@ -2877,6 +2897,20 @@ const subgraphAK: Subgraph = {
 
     type Query {
       dummy: String!
+    }
+  `),
+};
+
+const subgraphAL: Subgraph = {
+  name: 'subgraph-al',
+  url: '',
+  definitions: parse(`
+    type Object @tag(name: "one") {
+      name: String!
+    }
+    
+    type Query {
+      field(input: ID!): Object! @tag(name: "one")
     }
   `),
 };

@@ -2615,19 +2615,6 @@ export class FederationFactory {
                 ]);
                 this.inaccessiblePaths.add(`${parentTypeName}.${fieldName}`);
                 accessibleFields -= 1;
-                continue;
-              }
-              for (const [argumentName, inputValueData] of fieldData.argumentDataByArgumentName) {
-                if (isNodeDataInaccessible(inputValueData)) {
-                  continue;
-                }
-                const argumentTagNames = childTagData.tagNamesByArgumentName.get(argumentName);
-                if (!argumentTagNames || !doSetsIntersect(argumentTagNames, argumentTagNames)) {
-                  getValueOrDefault(inputValueData.persistedDirectivesData.directives, INACCESSIBLE, () => [
-                    generateSimpleDirective(INACCESSIBLE),
-                  ]);
-                  this.inaccessiblePaths.add(inputValueData.renamedPath);
-                }
               }
             }
             if (accessibleFields < 1) {
