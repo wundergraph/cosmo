@@ -5,15 +5,16 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/core"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"io"
 	"net/http"
 	"net/url"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/core"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
@@ -321,7 +322,7 @@ func TestNatsEvents(t *testing.T) {
 				})
 				require.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, res.Body)
 
-				time.Sleep(heartbeatInterval)
+				time.Sleep(heartbeatInterval * 2)
 				// Trigger the subscription via NATS
 				err := xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
 				require.NoError(t, err)
