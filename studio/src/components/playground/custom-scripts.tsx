@@ -843,7 +843,7 @@ const ScriptSetting = ({ type }: { type: ScriptType }) => {
 
   const [preFlightEnabled, setPreFlightEnabled] = useLocalStorage(
     `playground:pre-flight:enabled`,
-    false,
+    true,
   );
 
   const [scriptsTabState, setScriptsTabState] = useLocalStorage<{

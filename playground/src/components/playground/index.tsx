@@ -102,11 +102,11 @@ const executePreScripts = async (graphId: string, requestBody: any) => {
 
   const preflightScript = retrieveScriptFromLocalStorage('playground:pre-flight:selected');
 
-  const preflightScriptEnabled = localStorage.getItem('playground:pre-flight:enabled') === 'true';
+  const preFlightScriptEnabled = localStorage.getItem('playground:pre-flight:enabled');
 
   const preOpScript = retrieveScriptFromLocalStorage('playground:pre-operation:selected');
 
-  if (preflightScriptEnabled) {
+  if (!preFlightScriptEnabled || preFlightScriptEnabled === 'true') {
     await executeScript(preflightScript.content, graphId);
   }
 

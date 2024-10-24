@@ -527,7 +527,7 @@ const ScriptsViewer = ({ type }: { type: ScriptType }) => {
 const ScriptSetting = ({ type }: { type: ScriptType }) => {
   const [selectedScript] = useLocalStorage<PlaygroundScript | null>(`playground:${type}:selected`, null);
 
-  const [preFlightEnabled, setPreFlightEnabled] = useLocalStorage(`playground:pre-flight:enabled`, false);
+  const [preFlightEnabled, setPreFlightEnabled] = useLocalStorage(`playground:pre-flight:enabled`, true);
 
   const [scriptsTabState, setScriptsTabState] = useLocalStorage<{
     [key: string]: Record<string, any>;
