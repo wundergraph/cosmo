@@ -13,13 +13,13 @@ export const CompositionErrorsBanner = ({
   return (
     <div
       className={cn(
-        "mb-3 flex items-center justify-between space-x-2.5 rounded-lg border border-red-600 p-2 px-4 text-red-600 dark:border-red-900",
+        "mb-3 flex items-center justify-between space-x-2.5 rounded-lg border border-destructive p-2 px-4 text-destructive dark:border-red-900",
         className,
       )}
     >
       <div className="flex items-center justify-between space-x-2.5">
         <div>
-          <BoltSlashIcon className="h-5 w-5 text-red-500" />
+          <BoltSlashIcon className="h-5 w-5 text-destructive" />
         </div>
         <div className="text-xs">
           This version of the API schema does not include the latest from some

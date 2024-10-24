@@ -24,11 +24,11 @@ function ReactFlowGraphNode({ data }: NodeProps) {
           </div>
         </div>
         <div className="flex items-center justify-center gap-x-1 p-0.5">
-          <div className="flex items-center justify-center gap-x-0.5 text-green-500">
+          <div className="flex items-center justify-center gap-x-0.5 text-success">
             <VscRecord className="h-2 w-2" />
             <span className="text-[9px]">{data.requestRate || 0}</span>
           </div>
-          <div className="flex items-center justify-center gap-x-0.5 text-red-500">
+          <div className="flex items-center justify-center gap-x-0.5 text-destructive">
             <VscError className="h-2 w-2" />
             <span className="text-[9px]">{data.errorRate || 0}</span>
           </div>

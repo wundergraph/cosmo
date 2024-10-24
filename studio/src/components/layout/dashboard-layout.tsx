@@ -32,7 +32,7 @@ import {
   PiReceipt,
   PiUserGear,
   PiUsers,
-  PiWebhooksLogo
+  PiWebhooksLogo,
 } from "react-icons/pi";
 import { PageHeader } from "./head";
 import { LayoutProps } from "./layout";
@@ -88,7 +88,7 @@ export const OrganizationBanner = () => {
   }
 
   return (
-    <div className="flex w-full bg-gradient-to-r from-red-500 to-pink-400 text-xs lg:justify-center xl:text-sm">
+    <div className="flex w-full bg-gradient-to-r from-destructive to-pink-400 text-xs lg:justify-center xl:text-sm">
       <p className="flex items-center gap-x-2 px-4 py-1.5">
         <ExclamationTriangleIcon className="flex-shrink-0" />
         <span className="flex gap-x-1 font-bold text-gray-950 dark:text-primary-foreground">
@@ -172,7 +172,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
       {
         title: "Webhook History",
         href: basePath + "/webhook-history",
-        icon: <PiWebhooksLogo className="h-4 w-4"/>,
+        icon: <PiWebhooksLogo className="h-4 w-4" />,
       },
       {
         title: "Usage",

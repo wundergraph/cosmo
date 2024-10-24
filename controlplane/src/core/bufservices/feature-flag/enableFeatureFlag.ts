@@ -4,6 +4,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import {
   CompositionError,
+  CompositionWarning,
   DeploymentError,
   EnableFeatureFlagRequest,
   EnableFeatureFlagResponse,
@@ -47,6 +48,7 @@ export function enableFeatureFlag(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -59,6 +61,7 @@ export function enableFeatureFlag(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -74,6 +77,7 @@ export function enableFeatureFlag(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -84,6 +88,7 @@ export function enableFeatureFlag(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
         hasChanged: false,
       };
     }
@@ -103,6 +108,7 @@ export function enableFeatureFlag(
 
     const compositionErrors: PlainMessage<CompositionError>[] = [];
     const deploymentErrors: PlainMessage<DeploymentError>[] = [];
+    const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
 
     await opts.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
@@ -119,6 +125,7 @@ export function enableFeatureFlag(
 
       compositionErrors.push(...composition.compositionErrors);
       deploymentErrors.push(...composition.deploymentErrors);
+      compositionWarnings.push(...composition.compositionWarnings);
     });
 
     for (const graph of federatedGraphs) {
@@ -163,6 +170,7 @@ export function enableFeatureFlag(
         },
         compositionErrors,
         deploymentErrors: [],
+        compositionWarnings,
       };
     }
 
@@ -173,6 +181,7 @@ export function enableFeatureFlag(
         },
         compositionErrors: [],
         deploymentErrors,
+        compositionWarnings,
       };
     }
 
@@ -182,6 +191,7 @@ export function enableFeatureFlag(
       },
       compositionErrors,
       deploymentErrors,
+      compositionWarnings,
       hasChanged: true,
     };
   });

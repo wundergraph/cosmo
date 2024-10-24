@@ -17,6 +17,7 @@ export class GraphCompositionRepository {
     fedGraphTargetId,
     fedGraphSchemaVersionId,
     compositionErrorString,
+    compositionWarningString,
     routerConfigSignature,
     composedSubgraphs,
     composedById,
@@ -27,6 +28,7 @@ export class GraphCompositionRepository {
     fedGraphTargetId: string;
     fedGraphSchemaVersionId: string;
     compositionErrorString: string;
+    compositionWarningString: string;
     routerConfigSignature?: string;
     composedSubgraphs: ComposedSubgraph[];
     composedById: string;
@@ -62,6 +64,7 @@ export class GraphCompositionRepository {
         .values({
           schemaVersionId: fedGraphSchemaVersionId,
           compositionErrors: compositionErrorString,
+          compositionWarnings: compositionWarningString,
           isComposable: compositionErrorString === '',
           routerConfigSignature,
           createdById: composedById,
@@ -188,6 +191,7 @@ export class GraphCompositionRepository {
         schemaVersionId: graphCompositions.schemaVersionId,
         isComposable: graphCompositions.isComposable,
         compositionErrors: graphCompositions.compositionErrors,
+        compositionWarnings: graphCompositions.compositionWarnings,
         createdAt: graphCompositions.createdAt,
         createdBy: users.email,
         createdByEmail: graphCompositions.createdByEmail,
@@ -220,6 +224,7 @@ export class GraphCompositionRepository {
       createdAt: composition.createdAt.toISOString(),
       isComposable: composition.isComposable || false,
       compositionErrors: composition.compositionErrors || undefined,
+      compositionWarnings: composition.compositionWarnings || undefined,
       createdBy: composition.createdBy || composition.createdByEmail || undefined,
       routerConfigSignature: composition.routerConfigSignature || undefined,
       isLatestValid: isCurrentDeployed,
@@ -329,6 +334,7 @@ export class GraphCompositionRepository {
         schemaVersionId: graphCompositions.schemaVersionId,
         isComposable: graphCompositions.isComposable,
         compositionErrors: graphCompositions.compositionErrors,
+        compositionWarnings: graphCompositions.compositionWarnings,
         createdAt: graphCompositions.createdAt,
         createdBy: users.email,
         createdByEmail: graphCompositions.createdByEmail,
@@ -361,6 +367,7 @@ export class GraphCompositionRepository {
         createdAt: r.createdAt.toISOString(),
         isComposable: r.isComposable || false,
         compositionErrors: r.compositionErrors || undefined,
+        compositionWarnings: r.compositionWarnings || undefined,
         createdBy: r.createdBy || r.createdByEmail || undefined,
         isLatestValid: isCurrentDeployed,
         routerConfigSignature: r.routerConfigSignature || undefined,

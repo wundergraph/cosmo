@@ -81,7 +81,7 @@ export const GraphPruningIssuesTable = ({
                 className={cn(
                   l.severity === LintSeverity.error
                     ? "text-destructive"
-                    : "text-yellow-600",
+                    : "text-warning",
                 )}
               >
                 <div className="flex items-center gap-x-2">

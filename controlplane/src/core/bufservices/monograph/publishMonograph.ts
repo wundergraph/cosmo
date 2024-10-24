@@ -51,6 +51,7 @@ export function publishMonograph(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -62,6 +63,7 @@ export function publishMonograph(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -80,6 +82,7 @@ export function publishMonograph(
           },
           compositionErrors: [],
           deploymentErrors: [],
+          compositionWarnings: [],
         };
       }
       isV2Graph = normalizationResult?.isVersionTwo;
@@ -91,6 +94,7 @@ export function publishMonograph(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -103,6 +107,7 @@ export function publishMonograph(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -118,6 +123,7 @@ export function publishMonograph(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -131,22 +137,23 @@ export function publishMonograph(
       authContext,
     });
 
-    const { compositionErrors, updatedFederatedGraphs, deploymentErrors } = await subgraphRepo.update(
-      {
-        targetId: subgraphs[0].targetId,
-        labels: [],
-        unsetLabels: false,
-        schemaSDL: subgraphSchemaSDL,
-        updatedBy: authContext.userId,
-        namespaceId: namespace.id,
-        isV2Graph,
-      },
-      opts.blobStorage,
-      {
-        cdnBaseUrl: opts.cdnBaseUrl,
-        webhookJWTSecret: opts.admissionWebhookJWTSecret,
-      },
-    );
+    const { compositionErrors, updatedFederatedGraphs, deploymentErrors, compositionWarnings } =
+      await subgraphRepo.update(
+        {
+          targetId: subgraphs[0].targetId,
+          labels: [],
+          unsetLabels: false,
+          schemaSDL: subgraphSchemaSDL,
+          updatedBy: authContext.userId,
+          namespaceId: namespace.id,
+          isV2Graph,
+        },
+        opts.blobStorage,
+        {
+          cdnBaseUrl: opts.cdnBaseUrl,
+          webhookJWTSecret: opts.admissionWebhookJWTSecret,
+        },
+      );
 
     for (const graph of updatedFederatedGraphs) {
       orgWebhooks.send(
@@ -202,6 +209,7 @@ export function publishMonograph(
         },
         compositionErrors,
         deploymentErrors: [],
+        compositionWarnings,
       };
     }
 
@@ -212,6 +220,7 @@ export function publishMonograph(
         },
         compositionErrors: [],
         deploymentErrors,
+        compositionWarnings,
       };
     }
 
@@ -221,6 +230,7 @@ export function publishMonograph(
       },
       compositionErrors: [],
       deploymentErrors: [],
+      compositionWarnings,
     };
   });
 }

@@ -2,7 +2,11 @@
 import { KeyObject, randomUUID } from 'node:crypto';
 import { PlainMessage } from '@bufbuild/protobuf';
 import { FeatureFlagRouterExecutionConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { CompositionError, DeploymentError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  CompositionError,
+  CompositionWarning,
+  DeploymentError,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, normalizeURL } from '@wundergraph/cosmo-shared';
 import {
   and,
@@ -26,7 +30,7 @@ import { FastifyBaseLogger } from 'fastify';
 import { parse } from 'graphql';
 import { generateKeyPair, importPKCS8, SignJWT } from 'jose';
 import { uid } from 'uid/secure';
-import { FederationResult, FederationResultContainer } from '@wundergraph/composition';
+import { FederationResult, FederationResultContainer, Warning } from '@wundergraph/composition';
 import * as schema from '../../db/schema.js';
 import {
   federatedGraphs,
@@ -191,7 +195,11 @@ export class FederatedGraphRepository {
       cdnBaseUrl: string;
     };
   }): Promise<
-    | { compositionErrors: PlainMessage<CompositionError>[]; deploymentErrors: PlainMessage<DeploymentError>[] }
+    | {
+        compositionErrors: PlainMessage<CompositionError>[];
+        deploymentErrors: PlainMessage<DeploymentError>[];
+        compositionWarnings: PlainMessage<CompositionWarning>[];
+      }
     | undefined
   > {
     const routingUrl = normalizeURL(data.routingUrl);
@@ -295,7 +303,7 @@ export class FederatedGraphRepository {
           }
         }
 
-        const { compositionErrors, deploymentErrors } = await fedGraphRepo.composeAndDeployGraphs({
+        const { compositionErrors, deploymentErrors, compositionWarnings } = await fedGraphRepo.composeAndDeployGraphs({
           federatedGraphs: [federatedGraph],
           blobStorage: data.blobStorage,
           admissionConfig: {
@@ -308,6 +316,7 @@ export class FederatedGraphRepository {
         return {
           compositionErrors,
           deploymentErrors,
+          compositionWarnings,
         };
       }
     });
@@ -336,6 +345,7 @@ export class FederatedGraphRepository {
   ): Promise<{
     compositionErrors: PlainMessage<CompositionError>[];
     deploymentErrors: PlainMessage<DeploymentError>[];
+    compositionWarnings: PlainMessage<CompositionWarning>[];
   }> {
     return this.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
@@ -371,6 +381,7 @@ export class FederatedGraphRepository {
         return {
           compositionErrors: [],
           deploymentErrors: [],
+          compositionWarnings: [],
         };
       }
 
@@ -394,6 +405,7 @@ export class FederatedGraphRepository {
         return {
           compositionErrors: composition.compositionErrors,
           deploymentErrors: composition.deploymentErrors,
+          compositionWarnings: composition.compositionWarnings,
         };
       }
 
@@ -410,6 +422,7 @@ export class FederatedGraphRepository {
       return {
         compositionErrors: composition.compositionErrors,
         deploymentErrors: composition.deploymentErrors,
+        compositionWarnings: composition.compositionWarnings,
       };
     });
   }
@@ -690,6 +703,7 @@ export class FederatedGraphRepository {
     composedSDL,
     clientSchema,
     compositionErrors,
+    compositionWarnings,
     composedSubgraphs,
     composedById,
     schemaVersionId,
@@ -701,6 +715,7 @@ export class FederatedGraphRepository {
     composedSDL?: string;
     clientSchema?: string;
     compositionErrors?: Error[];
+    compositionWarnings?: Warning[];
     composedSubgraphs: ComposedSubgraph[];
     composedById: string;
     isFeatureFlagComposition: boolean;
@@ -715,9 +730,14 @@ export class FederatedGraphRepository {
       }
 
       let compositionErrorString = '';
+      let compositionWarningString = '';
 
       if (compositionErrors && compositionErrors.length > 0) {
         compositionErrorString = compositionErrors.map((e) => e.toString()).join('\n');
+      }
+
+      if (compositionWarnings && compositionWarnings.length > 0) {
+        compositionWarningString = compositionWarnings.map((w) => w.toString()).join('\n');
       }
 
       const insertedVersion = await tx
@@ -758,6 +778,7 @@ export class FederatedGraphRepository {
         fedGraphSchemaVersionId: insertedVersion[0].insertedId,
         composedSubgraphs,
         compositionErrorString,
+        compositionWarningString,
         composedById,
         isFeatureFlagComposition,
       });
@@ -1438,6 +1459,7 @@ export class FederatedGraphRepository {
 
       const allDeploymentErrors: PlainMessage<DeploymentError>[] = [];
       const allCompositionErrors: PlainMessage<CompositionError>[] = [];
+      const allCompositionWarnings: PlainMessage<CompositionWarning>[] = [];
 
       parentLoop: for (const federatedGraph of federatedGraphs) {
         // Get published subgraphs for recomposition of the federated graph
@@ -1478,24 +1500,28 @@ export class FederatedGraphRepository {
 
         for (const subgraphsToCompose of allSubgraphsToCompose) {
           let compositionErrors: Error[] | undefined;
+          let compositionWarnings: Warning[] | undefined;
           let result: FederationResult | undefined;
           let federationResultContainerByContractName: Map<string, FederationResultContainer> | undefined;
 
           // This condition is only true when entering the method to specifically create/update a contract
           if (federatedGraph.contract) {
-            const { errors, federationResult } = composeSubgraphsForContract(
+            const { errors, federationResult, warnings } = composeSubgraphsForContract(
               subgraphsToCompose.compositionSubgraphs,
               new Set(federatedGraph.contract.excludeTags),
             );
             compositionErrors = errors;
+            compositionWarnings = warnings;
             result = federationResult;
           } else {
             const {
               errors,
               federationResult,
               federationResultContainerByContractName: contractFederationResult,
+              warnings,
             } = composeSubgraphsWithContracts(subgraphsToCompose.compositionSubgraphs, tagExclusionsByContractName);
             compositionErrors = errors;
+            compositionWarnings = warnings;
             result = federationResult;
             federationResultContainerByContractName = contractFederationResult;
           }
@@ -1510,6 +1536,16 @@ export class FederatedGraphRepository {
             })),
           );
 
+          // Collect all composition warnings
+          allCompositionWarnings.push(
+            ...(compositionWarnings || []).map((w) => ({
+              federatedGraphName: federatedGraph.name,
+              namespace: federatedGraph.namespace,
+              message: w.message,
+              featureFlag: subgraphsToCompose.featureFlagName || '',
+            })),
+          );
+
           if (!subgraphsToCompose.isFeatureFlagComposition && compositionErrors && !federatedGraph.contract) {
             allCompositionErrors.push(unsuccessfulBaseCompositionError(federatedGraph.name, federatedGraph.namespace));
           }
@@ -1519,6 +1555,7 @@ export class FederatedGraphRepository {
             subgraphsToCompose.subgraphs,
             compositionErrors,
             result,
+            compositionWarnings,
           );
 
           const federatedSchemaVersionId = randomUUID();
@@ -1559,7 +1596,10 @@ export class FederatedGraphRepository {
             continue;
           }
 
-          for (const [contractName, { errors, federationResult }] of federationResultContainerByContractName) {
+          for (const [
+            contractName,
+            { errors, federationResult, warnings },
+          ] of federationResultContainerByContractName) {
             const contractGraph = await fedGraphRepo.byName(contractName, federatedGraph.namespace);
             if (!contractGraph) {
               throw new Error(`The contract graph "${contractName}" was not found.`);
@@ -1574,11 +1614,21 @@ export class FederatedGraphRepository {
               })),
             );
 
+            allCompositionWarnings.push(
+              ...(warnings || []).map((w) => ({
+                federatedGraphName: contractGraph.name,
+                namespace: contractGraph.namespace,
+                message: w.message,
+                featureFlag: subgraphsToCompose.featureFlagName,
+              })),
+            );
+
             const composedContract = mapResultToComposedGraph(
               contractGraph,
               subgraphsToCompose.subgraphs,
               errors,
               federationResult,
+              warnings,
             );
 
             const contractSchemaVersionId = randomUUID();
@@ -1713,7 +1763,11 @@ export class FederatedGraphRepository {
         }
       }
 
-      return { compositionErrors: allCompositionErrors, deploymentErrors: allDeploymentErrors };
+      return {
+        compositionErrors: allCompositionErrors,
+        deploymentErrors: allDeploymentErrors,
+        compositionWarnings: allCompositionWarnings,
+      };
     });
   };
 }

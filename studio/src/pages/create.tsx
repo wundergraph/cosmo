@@ -265,7 +265,7 @@ const OrganizationForm = () => {
                                   key={feature.id}
                                   className="flex flex-row items-center gap-2"
                                 >
-                                  <PiCheck className="h-4 w-4 text-green-400" />
+                                  <PiCheck className="h-4 w-4 text-success" />
                                   <span className="text-sm text-muted-foreground">
                                     {feature.description}
                                   </span>

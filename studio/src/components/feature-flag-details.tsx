@@ -40,7 +40,7 @@ const FeatureFlagOverview = ({
   if (featureSubgraphs.length === 0) {
     content = (
       <EmptyState
-        icon={<ExclamationTriangleIcon className="text-red-500" />}
+        icon={<ExclamationTriangleIcon className="text-destructive" />}
         title="Feature flag is not used for composition."
         description={
           <>
@@ -69,7 +69,7 @@ const FeatureFlagOverview = ({
   } else if (!isEnabled) {
     content = (
       <EmptyState
-        icon={<ExclamationTriangleIcon className="text-red-500" />}
+        icon={<ExclamationTriangleIcon className="text-destructive" />}
         title="Feature flag is not used for composition."
         description={
           <>
@@ -112,7 +112,7 @@ const FeatureFlagOverview = ({
     } else {
       content = (
         <EmptyState
-          icon={<ExclamationTriangleIcon className="text-red-500" />}
+          icon={<ExclamationTriangleIcon className="text-destructive" />}
           title="Feature flag is not used for composition."
           description={
             <>
@@ -133,7 +133,7 @@ const FeatureFlagOverview = ({
   } else {
     content = (
       <EmptyState
-        icon={<ExclamationTriangleIcon className="text-red-500" />}
+        icon={<ExclamationTriangleIcon className="text-destructive" />}
         title="Feature flag is not used for composition."
         description={
           <>

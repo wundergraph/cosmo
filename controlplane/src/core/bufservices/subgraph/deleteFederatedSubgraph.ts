@@ -44,6 +44,7 @@ export function deleteFederatedSubgraph(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -56,6 +57,7 @@ export function deleteFederatedSubgraph(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -70,62 +72,63 @@ export function deleteFederatedSubgraph(
       authContext,
     });
 
-    const { affectedFederatedGraphs, compositionErrors, deploymentErrors } = await opts.db.transaction(async (tx) => {
-      const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
-      const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
-      const featureFlagRepo = new FeatureFlagRepository(logger, tx, authContext.organizationId);
-      const auditLogRepo = new AuditLogRepository(tx);
+    const { affectedFederatedGraphs, compositionErrors, deploymentErrors, compositionWarnings } =
+      await opts.db.transaction(async (tx) => {
+        const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
+        const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
+        const featureFlagRepo = new FeatureFlagRepository(logger, tx, authContext.organizationId);
+        const auditLogRepo = new AuditLogRepository(tx);
 
-      let labels = subgraph.labels;
-      if (subgraph.isFeatureSubgraph) {
-        const baseSubgraph = await featureFlagRepo.getBaseSubgraphByFeatureSubgraphId({ id: subgraph.id });
-        if (baseSubgraph) {
-          labels = baseSubgraph.labels;
+        let labels = subgraph.labels;
+        if (subgraph.isFeatureSubgraph) {
+          const baseSubgraph = await featureFlagRepo.getBaseSubgraphByFeatureSubgraphId({ id: subgraph.id });
+          if (baseSubgraph) {
+            labels = baseSubgraph.labels;
+          }
+        } else {
+          await featureFlagRepo.deleteFeatureSubgraphsByBaseSubgraphId({
+            subgraphId: subgraph.id,
+            namespaceId: subgraph.namespaceId,
+          });
         }
-      } else {
-        await featureFlagRepo.deleteFeatureSubgraphsByBaseSubgraphId({
-          subgraphId: subgraph.id,
+
+        // Collect all federated graphs that used this subgraph before deleting subgraph to include them in the composition
+        const affectedFederatedGraphs = await fedGraphRepo.bySubgraphLabels({
+          labels,
           namespaceId: subgraph.namespaceId,
+          excludeContracts: true,
         });
-      }
 
-      // Collect all federated graphs that used this subgraph before deleting subgraph to include them in the composition
-      const affectedFederatedGraphs = await fedGraphRepo.bySubgraphLabels({
-        labels,
-        namespaceId: subgraph.namespaceId,
-        excludeContracts: true,
+        // Delete the subgraph
+        await subgraphRepo.delete(subgraph.targetId);
+
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: subgraph.isFeatureSubgraph ? 'feature_subgraph.deleted' : 'subgraph.deleted',
+          action: 'deleted',
+          actorId: authContext.userId,
+          auditableType: subgraph.isFeatureSubgraph ? 'feature_subgraph' : 'subgraph',
+          auditableDisplayName: subgraph.name,
+          actorDisplayName: authContext.userDisplayName,
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+          targetNamespaceId: subgraph.namespaceId,
+          targetNamespaceDisplayName: subgraph.namespace,
+        });
+
+        // Recompose and deploy all affected federated graphs and their respective contracts.
+        // Collects all composition and deployment errors if any.
+        const { compositionErrors, deploymentErrors, compositionWarnings } = await fedGraphRepo.composeAndDeployGraphs({
+          federatedGraphs: affectedFederatedGraphs,
+          blobStorage: opts.blobStorage,
+          admissionConfig: {
+            webhookJWTSecret: opts.admissionWebhookJWTSecret,
+            cdnBaseUrl: opts.cdnBaseUrl,
+          },
+          actorId: authContext.userId,
+        });
+
+        return { affectedFederatedGraphs, compositionErrors, deploymentErrors, compositionWarnings };
       });
-
-      // Delete the subgraph
-      await subgraphRepo.delete(subgraph.targetId);
-
-      await auditLogRepo.addAuditLog({
-        organizationId: authContext.organizationId,
-        auditAction: subgraph.isFeatureSubgraph ? 'feature_subgraph.deleted' : 'subgraph.deleted',
-        action: 'deleted',
-        actorId: authContext.userId,
-        auditableType: subgraph.isFeatureSubgraph ? 'feature_subgraph' : 'subgraph',
-        auditableDisplayName: subgraph.name,
-        actorDisplayName: authContext.userDisplayName,
-        actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
-        targetNamespaceId: subgraph.namespaceId,
-        targetNamespaceDisplayName: subgraph.namespace,
-      });
-
-      // Recompose and deploy all affected federated graphs and their respective contracts.
-      // Collects all composition and deployment errors if any.
-      const { compositionErrors, deploymentErrors } = await fedGraphRepo.composeAndDeployGraphs({
-        federatedGraphs: affectedFederatedGraphs,
-        blobStorage: opts.blobStorage,
-        admissionConfig: {
-          webhookJWTSecret: opts.admissionWebhookJWTSecret,
-          cdnBaseUrl: opts.cdnBaseUrl,
-        },
-        actorId: authContext.userId,
-      });
-
-      return { affectedFederatedGraphs, compositionErrors, deploymentErrors };
-    });
 
     for (const affectedFederatedGraph of affectedFederatedGraphs) {
       const hasErrors =
@@ -159,6 +162,7 @@ export function deleteFederatedSubgraph(
         },
         deploymentErrors: [],
         compositionErrors,
+        compositionWarnings,
       };
     }
 
@@ -169,6 +173,7 @@ export function deleteFederatedSubgraph(
         },
         deploymentErrors,
         compositionErrors: [],
+        compositionWarnings,
       };
     }
 
@@ -178,6 +183,7 @@ export function deleteFederatedSubgraph(
       },
       deploymentErrors: [],
       compositionErrors: [],
+      compositionWarnings,
     };
   });
 }
