@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.68.6](https://github.com/wundergraph/cosmo/compare/wgc@0.68.5...wgc@0.68.6) (2024-10-24)
+
+### Bug Fixes
+
+* handle undefined tag arrays ([#1307](https://github.com/wundergraph/cosmo/issues/1307)) ([3b50fe3](https://github.com/wundergraph/cosmo/commit/3b50fe3f50e37cbdde698a96c3be59c3f94a3eac)) (@Aenimus)
+
 ## [0.68.5](https://github.com/wundergraph/cosmo/compare/wgc@0.68.4...wgc@0.68.5) (2024-10-24)
 
 **Note:** Version bump only for package wgc
