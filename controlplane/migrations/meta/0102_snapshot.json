@@ -1,5 +1,5 @@
 {
-  "id": "fad8efc9-d429-48d3-8507-3bb6ca946336",
+  "id": "b19d1040-e81a-4dd2-bd5a-82ad5a93b919",
   "prevId": "84b2107a-6c0e-4026-ad17-6a65946364d6",
   "version": "7",
   "dialect": "postgresql",
@@ -3199,6 +3199,13 @@
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
         },
         "created_by_id": {
           "name": "created_by_id",
