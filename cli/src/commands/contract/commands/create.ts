@@ -45,7 +45,7 @@ export default (opts: BaseCommandOptions) => {
 
     const spinner = ora('Contract is being created...').start();
 
-    if (options.exclude.length > 0 && options.include.length > 0) {
+    if (options.exclude?.length > 0 && options.include?.length > 0) {
       program.error(
         pc.red(
           pc.bold(
