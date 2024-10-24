@@ -1,6 +1,6 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import Table from 'cli-table3';
-import { Command } from 'commander';
+import { Command, program } from 'commander';
 import pc from 'picocolors';
 import ora from 'ora';
 import { getBaseHeaders } from '../../../core/config.js';
@@ -12,14 +12,27 @@ export default (opts: BaseCommandOptions) => {
   command.argument('<name>', 'The name of the contract graph to update.');
   command.option('-n, --namespace [string]', 'The namespace of the contract update.');
   command.option('--exclude [tags...]', 'Schema elements with these tags will be excluded from the contract schema.');
+  command.option('--include [tags...]', 'Schema elements with these tags will be included from the contract schema.');
   command.action(async (name, options) => {
     const spinner = ora('Contract is being updated...').start();
+
+    if (options.exclude.length > 0 && options.include.length > 0) {
+      program.error(
+        pc.red(
+          pc.bold(
+            `The "exclude" and "include" options for tags are currently mutually exclusive.` +
+              ` Both options have been provided, but one of the options must be empty or unset.`,
+          ),
+        ),
+      );
+    }
 
     const resp = await opts.client.platform.updateContract(
       {
         name,
         namespace: options.namespace,
         excludeTags: options.exclude,
+        includeTags: options.include,
       },
       {
         headers: getBaseHeaders(),
