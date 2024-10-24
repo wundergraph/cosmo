@@ -57,7 +57,7 @@ export function updateContract(
       return {
         response: {
           code: EnumStatusCode.ERR,
-          details: 'You cannot provide both include and exclude tags. Please only pass one or the other',
+          details: 'The "excludeTags" and "includeTags" options are currently mutually exclusive. Both options have been provided, but one of the options must be empty or unset.',
         },
         compositionErrors: [],
         deploymentErrors: [],

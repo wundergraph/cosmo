@@ -248,6 +248,57 @@ describe('Contract tests', (ctx) => {
     await server.close();
   });
 
+  test('that an error is returned if a contract is updated with both excludes and includes', async () => {
+    const { client, server } = await SetupTest({ dbname });
+
+    const subgraphName = genID('subgraph');
+    const fedGraphName = genID('fedGraph');
+    const contractGraphName = genID('contract');
+    const label = genUniqueLabel('label');
+
+    const subgraphSchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
+
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      subgraphSchemaSDL,
+      [label],
+      'http://localhost:8082',
+    );
+
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:8080');
+
+    await client.createContract({
+      name: contractGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      sourceGraphName: fedGraphName,
+      includeTags: ['test'],
+      routingUrl: 'http://localhost:8081',
+      readme: 'test',
+    });
+
+    const contractGraphRes = await client.getFederatedGraphByName({
+      name: contractGraphName,
+      namespace: DEFAULT_NAMESPACE,
+    });
+    expect(contractGraphRes.graph?.contract?.excludeTags).toEqual([]);
+    expect(contractGraphRes.graph?.contract?.includeTags).toEqual(['test']);
+
+    const updateContractResponse = await client.updateContract({
+      name: contractGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      excludeTags: ['test'],
+      includeTags: ['new'],
+    });
+
+    expect(updateContractResponse.response?.code).toBe(1);
+    expect(updateContractResponse.response?.details)
+      .toBe('The "excludeTags" and "includeTags" options are currently mutually exclusive. Both options have been provided, but one of the options must be empty or unset.');
+
+    await server.close();
+  });
+
   test('that contract tags are updated from exclude to include', async () => {
     const { client, server } = await SetupTest({ dbname });
 
