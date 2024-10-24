@@ -1,6 +1,6 @@
 {
-  "id": "135533f6-d4ab-493b-a404-8d066c0bb5b0",
-  "prevId": "84b2107a-6c0e-4026-ad17-6a65946364d6",
+  "id": "73af0296-d668-4ed9-8758-ca8fbce625b8",
+  "prevId": "135533f6-d4ab-493b-a404-8d066c0bb5b0",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3183,6 +3183,90 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
+    "public.playground_scripts": {
+      "name": "playground_scripts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by_id": {
+          "name": "created_by_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "type": {
+          "name": "type",
+          "type": "playground_script_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "content": {
+          "name": "content",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "playground_scripts_organization_id_organizations_id_fk": {
+          "name": "playground_scripts_organization_id_organizations_id_fk",
+          "tableFrom": "playground_scripts",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "playground_scripts_created_by_id_users_id_fk": {
+          "name": "playground_scripts_created_by_id_users_id_fk",
+          "tableFrom": "playground_scripts",
+          "tableTo": "users",
+          "columnsFrom": [
+            "created_by_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
     "public.schema_check_change_action": {
       "name": "schema_check_change_action",
       "schema": "",
@@ -4954,6 +5038,15 @@
         "admin",
         "developer",
         "viewer"
+      ]
+    },
+    "public.playground_script_type": {
+      "name": "playground_script_type",
+      "schema": "public",
+      "values": [
+        "pre-flight",
+        "pre-operation",
+        "post-operation"
       ]
     },
     "public.schema_change_type": {

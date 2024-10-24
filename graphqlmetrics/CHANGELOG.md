@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.26.0...graphqlmetrics@0.27.0) (2024-10-22)
+
+### Features
+
+* add traceId to logs ([#1279](https://github.com/wundergraph/cosmo/issues/1279)) ([025da28](https://github.com/wundergraph/cosmo/commit/025da2888ea95dbb2de581d6affda76fdc74332a)) (@JivusAyrus)
+
+# [0.26.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.25.0...graphqlmetrics@0.26.0) (2024-10-17)
+
+### Features
+
+* custom metric attributes ([#1267](https://github.com/wundergraph/cosmo/issues/1267)) ([f6a4224](https://github.com/wundergraph/cosmo/commit/f6a4224a2370e8eb6e36598a22f60a3eee83f055)) (@StarpTech)
+
 # [0.25.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.24.0...graphqlmetrics@0.25.0) (2024-10-09)
 
 ### Features

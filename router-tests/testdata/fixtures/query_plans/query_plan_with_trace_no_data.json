@@ -163,7 +163,8 @@
             "fetch": {
               "kind": "Single",
               "path": "",
-              "source_id": "0"
+              "source_id": "0",
+              "source_name": "employees"
             }
           },
           {
@@ -174,7 +175,8 @@
                 "fetch": {
                   "kind": "BatchEntity",
                   "path": "products.@.lead",
-                  "source_id": "6"
+                  "source_id": "6",
+                  "source_name": "mood"
                 }
               },
               {
@@ -182,7 +184,8 @@
                 "fetch": {
                   "kind": "BatchEntity",
                   "path": "products.@.lead",
-                  "source_id": "5"
+                  "source_id": "5",
+                  "source_name": "availability"
                 }
               }
             ]
@@ -195,7 +198,8 @@
                 "fetch": {
                   "kind": "BatchEntity",
                   "path": "products.@.lead",
-                  "source_id": "0"
+                  "source_id": "0",
+                  "source_name": "employees"
                 }
               },
               {
@@ -203,7 +207,8 @@
                 "fetch": {
                   "kind": "BatchEntity",
                   "path": "products",
-                  "source_id": "0"
+                  "source_id": "0",
+                  "source_name": "employees"
                 }
               }
             ]

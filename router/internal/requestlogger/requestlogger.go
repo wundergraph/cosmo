@@ -4,7 +4,8 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"github.com/wundergraph/cosmo/router/internal/errors"
-	"go.opentelemetry.io/otel/trace"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"net"
 	"net/http"
 	"time"
@@ -15,7 +16,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type ContextFunc func(r *http.Request) []zapcore.Field
+type ContextFunc func(panic any, r *http.Request) []zapcore.Field
 
 // Option provides a functional approach to define
 // configuration for a handler; such as setting the logging
@@ -42,7 +43,7 @@ type handler struct {
 	skipPaths             []string
 	ipAnonymizationConfig *IPAnonymizationConfig
 	traceID               bool // optionally log Open Telemetry TraceID
-	context               ContextFunc
+	fieldsHandler         ContextFunc
 	handler               http.Handler
 	logger                *zap.Logger
 	baseFields            []zapcore.Field
@@ -62,9 +63,9 @@ func WithAnonymization(ipConfig *IPAnonymizationConfig) Option {
 	}
 }
 
-func WithRequestFields(fn ContextFunc) Option {
+func WithFieldsHandler(fn ContextFunc) Option {
 	return func(r *handler) {
-		r.context = fn
+		r.fieldsHandler = fn
 	}
 }
 
@@ -87,7 +88,7 @@ func WithDefaultOptions() Option {
 		r.utc = true
 		r.skipPaths = []string{}
 		r.traceID = true
-		r.context = nil
+		r.fieldsHandler = nil
 	}
 }
 
@@ -141,10 +142,9 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if h.traceID {
-		span := trace.SpanFromContext(r.Context())
-		spanContext := span.SpanContext()
-		if spanContext.HasTraceID() {
-			fields = append(fields, zap.String("trace_id", spanContext.TraceID().String()))
+		traceID := rtrace.GetTraceID(r.Context())
+		if traceID != "" {
+			fields = append(fields, logging.WithTraceID(traceID))
 		}
 	}
 
@@ -170,19 +170,20 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 			// This is only called on panic so it is safe to call it here again
 			// to gather all the fields that are needed for logging
-			if h.context != nil {
-				fields = append(fields, h.context(r)...)
+			if h.fieldsHandler != nil {
+				fields = append(fields, h.fieldsHandler(err, r)...)
 			}
 
 			if brokenPipe {
 				fields = append(fields, zap.Bool("broken_pipe", brokenPipe))
 				// Avoid logging the stack trace for broken pipe errors
-				h.logger.WithOptions(zap.AddStacktrace(zapcore.DPanicLevel)).Error(path, fields...)
+				h.logger.WithOptions(zap.AddStacktrace(zapcore.PanicLevel)).Error(path, fields...)
 			} else {
 				h.logger.Error("[Recovery from panic]", fields...)
 			}
 
-			// rethrow the error to the recover middleware can handle it
+			// Dpanic will panic already in development but in production it will log the error and continue
+			// For those reasons we panic here to pass it to the recovery middleware in all cases
 			panic(err)
 		}
 
@@ -198,8 +199,8 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		zap.Int("status", ww.Status()),
 	}
 
-	if h.context != nil {
-		resFields = append(resFields, h.context(r)...)
+	if h.fieldsHandler != nil {
+		resFields = append(resFields, h.fieldsHandler(nil, r)...)
 	}
 
 	h.logger.Info(path, append(fields, resFields...)...)

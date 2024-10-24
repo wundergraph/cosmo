@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"github.com/wundergraph/cosmo/router/core"
 	"net/http"
 	"testing"
 
@@ -482,6 +483,63 @@ func TestPrometheus(t *testing.T) {
 				},
 			}, responseContentLengthMetrics[1].Label)
 
+			planningTime := findMetricFamilyByName(mf, "router_graphql_operation_planning_time")
+			planningTimeMetrics := planningTime.GetMetric()
+
+			require.Len(t, planningTimeMetrics, 1)
+			require.Len(t, planningTimeMetrics[0].Label, 12)
+
+			require.Equal(t, []*io_prometheus_client.LabelPair{
+				{
+					Name:  PointerOf("otel_scope_name"),
+					Value: PointerOf("cosmo.router.prometheus"),
+				},
+				{
+					Name:  PointerOf("otel_scope_version"),
+					Value: PointerOf("0.0.1"),
+				},
+				{
+					Name:  PointerOf("wg_client_name"),
+					Value: PointerOf("unknown"),
+				},
+				{
+					Name:  PointerOf("wg_client_version"),
+					Value: PointerOf("missing"),
+				},
+				{
+					Name:  PointerOf("wg_engine_plan_cache_hit"),
+					Value: PointerOf("false"),
+				},
+				{
+					Name:  PointerOf("wg_federated_graph_id"),
+					Value: PointerOf("graph"),
+				},
+				{
+					Name:  PointerOf("wg_operation_name"),
+					Value: PointerOf("myQuery"),
+				},
+				{
+					Name:  PointerOf("wg_operation_protocol"),
+					Value: PointerOf("http"),
+				},
+				{
+					Name:  PointerOf("wg_operation_type"),
+					Value: PointerOf("query"),
+				},
+				{
+					Name:  PointerOf("wg_router_cluster_name"),
+					Value: PointerOf(""),
+				},
+				{
+					Name:  PointerOf("wg_router_config_version"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+				},
+				{
+					Name:  PointerOf("wg_router_version"),
+					Value: PointerOf("dev"),
+				},
+			}, planningTimeMetrics[0].Label)
+
 		})
 	})
 
@@ -496,13 +554,13 @@ func TestPrometheus(t *testing.T) {
 			TraceExporter:      exporter,
 			MetricReader:       metricReader,
 			PrometheusRegistry: promRegistry,
-			OtelResourceAttributes: []config.CustomStaticAttribute{
+			CustomResourceAttributes: []config.CustomStaticAttribute{
 				{
 					Key:   "custom.resource",
 					Value: "value",
 				},
 			},
-			OtelAttributes: []config.CustomAttribute{
+			CustomMetricAttributes: []config.CustomAttribute{
 				{
 					Key:     "custom",
 					Default: "value_different",
@@ -1020,13 +1078,13 @@ func TestPrometheus(t *testing.T) {
 			TraceExporter:      exporter,
 			MetricReader:       metricReader,
 			PrometheusRegistry: promRegistry,
-			OtelResourceAttributes: []config.CustomStaticAttribute{
+			CustomResourceAttributes: []config.CustomStaticAttribute{
 				{
 					Key:   "custom.resource",
 					Value: "value",
 				},
 			},
-			OtelAttributes: []config.CustomAttribute{
+			CustomMetricAttributes: []config.CustomAttribute{
 				{
 					Key:     "custom",
 					Default: "value",
@@ -1559,13 +1617,64 @@ func TestPrometheus(t *testing.T) {
 			mf, err := promRegistry.Gather()
 			require.NoError(t, err)
 
-			responseContentLength := findMetricFamilyByName(mf, "router_http_requests_error_total")
-			responseContentLengthMetrics := responseContentLength.GetMetric()
+			totalRequestsErrors := findMetricFamilyByName(mf, "router_http_requests_error_total")
+			totalRequestErrorsMetric := totalRequestsErrors.GetMetric()
 
-			require.Len(t, responseContentLengthMetrics, 3)
-			require.Len(t, responseContentLengthMetrics[0].Label, 12)
-			require.Len(t, responseContentLengthMetrics[1].Label, 16)
-			require.Len(t, responseContentLengthMetrics[2].Label, 16)
+			require.Len(t, totalRequestErrorsMetric, 2)
+			require.Len(t, totalRequestErrorsMetric[0].Label, 12)
+			require.Len(t, totalRequestErrorsMetric[1].Label, 15)
+
+			// Error metric for the subgraph error
+			require.Equal(t, []*io_prometheus_client.LabelPair{
+				{
+					Name:  PointerOf("otel_scope_name"),
+					Value: PointerOf("cosmo.router.prometheus"),
+				},
+				{
+					Name:  PointerOf("otel_scope_version"),
+					Value: PointerOf("0.0.1"),
+				},
+				{
+					Name:  PointerOf("wg_client_name"),
+					Value: PointerOf("unknown"),
+				},
+				{
+					Name:  PointerOf("wg_client_version"),
+					Value: PointerOf("missing"),
+				},
+				{
+					Name:  PointerOf("wg_federated_graph_id"),
+					Value: PointerOf("graph"),
+				},
+				{
+					Name:  PointerOf("wg_operation_name"),
+					Value: PointerOf("myQuery"),
+				},
+				{
+					Name:  PointerOf("wg_operation_protocol"),
+					Value: PointerOf("http"),
+				},
+				{
+					Name:  PointerOf("wg_operation_type"),
+					Value: PointerOf("query"),
+				},
+				{
+					Name:  PointerOf("wg_request_error"),
+					Value: PointerOf("true"),
+				},
+				{
+					Name:  PointerOf("wg_router_cluster_name"),
+					Value: PointerOf(""),
+				},
+				{
+					Name:  PointerOf("wg_router_config_version"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+				},
+				{
+					Name:  PointerOf("wg_router_version"),
+					Value: PointerOf("dev"),
+				},
+			}, totalRequestErrorsMetric[0].Label)
 
 			// Error metric for the subgraph error
 			require.Equal(t, []*io_prometheus_client.LabelPair{
@@ -1622,18 +1731,172 @@ func TestPrometheus(t *testing.T) {
 					Value: PointerOf("dev"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_error_extended_code"),
+					Name:  PointerOf("wg_subgraph_id"),
+					Value: PointerOf("3"),
+				},
+				{
+					Name:  PointerOf("wg_subgraph_name"),
+					Value: PointerOf("products"),
+				},
+			}, totalRequestErrorsMetric[1].Label)
+		})
+	})
+
+	t.Run("Custom slice metric attributes produces multiple metric series", func(t *testing.T) {
+		exporter := tracetest.NewInMemoryExporter(t)
+		metricReader := metric.NewManualReader()
+		promRegistry := prometheus.NewRegistry()
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter:      exporter,
+			MetricReader:       metricReader,
+			PrometheusRegistry: promRegistry,
+			CustomMetricAttributes: []config.CustomAttribute{
+				{
+					Key: "error_codes",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.ContextFieldGraphQLErrorCodes,
+					},
+				},
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Products: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							w.Header().Set("Content-Type", "application/json")
+							w.WriteHeader(http.StatusForbidden)
+							_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}},{"message":"MyErrorMessage","extensions":{"code":"YOUR_ERROR_CODE"}}]}`))
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query myQuery { employees { id details { forename surname } notes } }`,
+			})
+			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'products' at Path 'employees'.","extensions":{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}},{"message":"MyErrorMessage","extensions":{"code":"YOUR_ERROR_CODE"}}],"statusCode":403}}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
+
+			mf, err := promRegistry.Gather()
+			require.NoError(t, err)
+
+			totalRequestsErrors := findMetricFamilyByName(mf, "router_http_requests_error_total")
+			totalRequestErrorsMetric := totalRequestsErrors.GetMetric()
+
+			require.Len(t, totalRequestErrorsMetric, 3)
+			require.Len(t, totalRequestErrorsMetric[0].Label, 13)
+			require.Len(t, totalRequestErrorsMetric[1].Label, 13)
+			require.Len(t, totalRequestErrorsMetric[2].Label, 15)
+
+			require.Equal(t, []*io_prometheus_client.LabelPair{
+				{
+					Name:  PointerOf("error_codes"),
 					Value: PointerOf("UNAUTHORIZED"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_id"),
-					Value: PointerOf("3"),
+					Name:  PointerOf("otel_scope_name"),
+					Value: PointerOf("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_name"),
-					Value: PointerOf("products"),
+					Name:  PointerOf("otel_scope_version"),
+					Value: PointerOf("0.0.1"),
 				},
-			}, responseContentLengthMetrics[1].Label)
+				{
+					Name:  PointerOf("wg_client_name"),
+					Value: PointerOf("unknown"),
+				},
+				{
+					Name:  PointerOf("wg_client_version"),
+					Value: PointerOf("missing"),
+				},
+				{
+					Name:  PointerOf("wg_federated_graph_id"),
+					Value: PointerOf("graph"),
+				},
+				{
+					Name:  PointerOf("wg_operation_name"),
+					Value: PointerOf("myQuery"),
+				},
+				{
+					Name:  PointerOf("wg_operation_protocol"),
+					Value: PointerOf("http"),
+				},
+				{
+					Name:  PointerOf("wg_operation_type"),
+					Value: PointerOf("query"),
+				},
+				{
+					Name:  PointerOf("wg_request_error"),
+					Value: PointerOf("true"),
+				},
+				{
+					Name:  PointerOf("wg_router_cluster_name"),
+					Value: PointerOf(""),
+				},
+				{
+					Name:  PointerOf("wg_router_config_version"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+				},
+				{
+					Name:  PointerOf("wg_router_version"),
+					Value: PointerOf("dev"),
+				},
+			}, totalRequestErrorsMetric[0].Label)
+
+			// Error metric for the subgraph error
+			require.Equal(t, []*io_prometheus_client.LabelPair{
+				{
+					Name:  PointerOf("error_codes"),
+					Value: PointerOf("YOUR_ERROR_CODE"),
+				},
+				{
+					Name:  PointerOf("otel_scope_name"),
+					Value: PointerOf("cosmo.router.prometheus"),
+				},
+				{
+					Name:  PointerOf("otel_scope_version"),
+					Value: PointerOf("0.0.1"),
+				},
+				{
+					Name:  PointerOf("wg_client_name"),
+					Value: PointerOf("unknown"),
+				},
+				{
+					Name:  PointerOf("wg_client_version"),
+					Value: PointerOf("missing"),
+				},
+				{
+					Name:  PointerOf("wg_federated_graph_id"),
+					Value: PointerOf("graph"),
+				},
+				{
+					Name:  PointerOf("wg_operation_name"),
+					Value: PointerOf("myQuery"),
+				},
+				{
+					Name:  PointerOf("wg_operation_protocol"),
+					Value: PointerOf("http"),
+				},
+				{
+					Name:  PointerOf("wg_operation_type"),
+					Value: PointerOf("query"),
+				},
+				{
+					Name:  PointerOf("wg_request_error"),
+					Value: PointerOf("true"),
+				},
+				{
+					Name:  PointerOf("wg_router_cluster_name"),
+					Value: PointerOf(""),
+				},
+				{
+					Name:  PointerOf("wg_router_config_version"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+				},
+				{
+					Name:  PointerOf("wg_router_version"),
+					Value: PointerOf("dev"),
+				},
+			}, totalRequestErrorsMetric[1].Label)
 
 			// Error metric for the subgraph error
 			require.Equal(t, []*io_prometheus_client.LabelPair{
@@ -1690,10 +1953,6 @@ func TestPrometheus(t *testing.T) {
 					Value: PointerOf("dev"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_error_extended_code"),
-					Value: PointerOf("YOUR_ERROR_CODE"),
-				},
-				{
 					Name:  PointerOf("wg_subgraph_id"),
 					Value: PointerOf("3"),
 				},
@@ -1701,7 +1960,7 @@ func TestPrometheus(t *testing.T) {
 					Name:  PointerOf("wg_subgraph_name"),
 					Value: PointerOf("products"),
 				},
-			}, responseContentLengthMetrics[2].Label)
+			}, totalRequestErrorsMetric[2].Label)
 		})
 	})
 
@@ -2207,6 +2466,8 @@ func TestPrometheus(t *testing.T) {
 		})
 	})
 }
+
+// Creates a separate prometheus metric when service error codes are used as custom attributes
 
 func findMetricFamilyByName(mf []*io_prometheus_client.MetricFamily, name string) *io_prometheus_client.MetricFamily {
 	for _, m := range mf {

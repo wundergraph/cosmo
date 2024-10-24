@@ -6,6 +6,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"go.opentelemetry.io/otel/attribute"
 	"net"
 	"net/http"
 	"regexp"
@@ -58,6 +60,7 @@ type WebsocketMiddlewareOptions struct {
 
 	WebSocketConfiguration *config.WebSocketConfiguration
 	ClientHeader           config.ClientHeader
+	Attributes             []attribute.KeyValue
 }
 
 func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions) func(http.Handler) http.Handler {
@@ -77,6 +80,7 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 		config:             opts.WebSocketConfiguration,
 		clientHeader:       opts.ClientHeader,
 		handlerSem:         semaphore.NewWeighted(128),
+		attributes:         opts.Attributes,
 	}
 	if opts.WebSocketConfiguration != nil && opts.WebSocketConfiguration.AbsintheProtocol.Enabled {
 		handler.absintheHandlerEnabled = true
@@ -215,7 +219,8 @@ type WebsocketHandler struct {
 	handlerSem    *semaphore.Weighted
 	connectionIDs atomic.Int64
 
-	stats WebSocketsStatistics
+	stats      WebSocketsStatistics
+	attributes []attribute.KeyValue
 
 	readTimeout time.Duration
 
@@ -233,7 +238,8 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	)
 
 	requestID := middleware.GetReqID(r.Context())
-	requestLogger := h.logger.With(logging.WithRequestID(requestID))
+
+	requestLogger := h.logger.With(logging.WithRequestID(requestID), logging.WithTraceID(rtrace.GetTraceID(r.Context())))
 	clientInfo := NewClientInfoFromRequest(r, h.clientHeader)
 
 	if h.accessController != nil && !h.config.Authentication.FromInitialPayload.Enabled {
@@ -322,6 +328,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		Config:                h.config,
 		ForwardUpgradeHeaders: h.forwardUpgradeHeadersConfig,
 		ForwardQueryParams:    h.forwardQueryParamsConfig,
+		Attributes:            h.attributes,
 	})
 	err = handler.Initialize()
 	if err != nil {
@@ -436,6 +443,9 @@ func (h *WebsocketHandler) addConnection(conn net.Conn, handler *WebSocketConnec
 	h.connectionsMu.Lock()
 	defer h.connectionsMu.Unlock()
 	fd := socketFd(conn)
+	if fd == 0 {
+		return fmt.Errorf("unable to get socket fd for conn: %d", handler.connectionID)
+	}
 	h.connections[fd] = handler
 	return h.epoll.Add(conn)
 }
@@ -508,7 +518,14 @@ func (h *WebsocketHandler) runPoller() {
 				h.connectionsMu.RLock()
 				handler, exists := h.connections[fd]
 				h.connectionsMu.RUnlock()
+
 				if !exists {
+					continue
+				}
+
+				if fd == 0 {
+					h.logger.Debug("Invalid socket fd", zap.Int("fd", fd))
+					h.removeConnection(conn, handler, fd)
 					continue
 				}
 
@@ -647,6 +664,7 @@ type WebSocketConnectionHandlerOptions struct {
 	InitRequestID         string
 	ForwardUpgradeHeaders forwardConfig
 	ForwardQueryParams    forwardConfig
+	Attributes            []attribute.KeyValue
 }
 
 type WebSocketConnectionHandler struct {
@@ -676,6 +694,8 @@ type WebSocketConnectionHandler struct {
 	subscriptionIDs atomic.Int64
 	subscriptions   sync.Map
 	stats           WebSocketsStatistics
+
+	attributes []attribute.KeyValue
 
 	forwardInitialPayload bool
 
@@ -718,6 +738,7 @@ func NewWebsocketConnectionHandler(ctx context.Context, opts WebSocketConnection
 		forwardQueryParams:    &opts.ForwardQueryParams,
 		forwardInitialPayload: opts.Config != nil && opts.Config.ForwardInitialPayload,
 		plannerOptions:        opts.PlanOptions,
+		attributes:            opts.Attributes,
 	}
 }
 
@@ -750,9 +771,6 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 	defer operationKit.Free()
 
 	opContext := &operationContext{
-		name:       operationKit.parsedOperation.Request.OperationName,
-		opType:     operationKit.parsedOperation.Type,
-		content:    operationKit.parsedOperation.NormalizedRepresentation,
 		clientInfo: h.plannerOptions.ClientInfo,
 	}
 
@@ -765,7 +783,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 	var skipParse bool
 
 	if operationKit.parsedOperation.IsPersistedOperation {
-		skipParse, err = operationKit.FetchPersistedOperation(h.ctx, h.clientInfo, baseAttributesFromContext(h.ctx))
+		skipParse, err = operationKit.FetchPersistedOperation(h.ctx, h.clientInfo)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -782,6 +800,9 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 		}
 		opContext.parsingTime = time.Since(startParsing)
 	}
+
+	opContext.name = operationKit.parsedOperation.Request.OperationName
+	opContext.opType = operationKit.parsedOperation.Type
 
 	if blocked := h.operationBlocker.OperationIsBlocked(operationKit.parsedOperation); blocked != nil {
 		return nil, nil, blocked
@@ -826,8 +847,6 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 	opContext.planningTime = time.Since(startPlanning)
 
 	opContext.initialPayload = h.initialPayload
-
-	opContext.setAttributes()
 
 	return operationKit.parsedOperation, opContext, nil
 }
@@ -893,7 +912,14 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 		resolveCtx.InitialPayload = operationCtx.initialPayload
 	}
 
-	resolveCtx = resolveCtx.WithContext(withRequestContext(h.ctx, buildRequestContext(nil, registration.clientRequest, operationCtx, h.logger)))
+	reqContext := buildRequestContext(requestContextOptions{
+		operationContext:    operationCtx,
+		requestLogger:       h.logger,
+		metricSetAttributes: nil,
+		w:                   nil,
+		r:                   registration.clientRequest,
+	})
+	resolveCtx = resolveCtx.WithContext(withRequestContext(h.ctx, reqContext))
 	if h.graphqlHandler.authorizer != nil {
 		resolveCtx = WithAuthorizationExtension(resolveCtx)
 		resolveCtx.SetAuthorizer(h.graphqlHandler.authorizer)

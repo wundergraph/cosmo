@@ -86,7 +86,7 @@ ORDER BY (
 TTL toDateTime(Timestamp) + toIntervalDay(30)
 SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1;
 
-CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.temp_traces_mv TO cosmo.traces AS
+CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.traces_mv TO cosmo.traces AS
 SELECT TraceId,
     SpanId,
     toDateTime(Timestamp, 'UTC') as Timestamp,
