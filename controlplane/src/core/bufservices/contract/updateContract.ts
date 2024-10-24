@@ -53,6 +53,17 @@ export function updateContract(
       };
     }
 
+    if (req.includeTags.length > 0 && req.excludeTags.length > 0) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: 'You cannot provide both include and exclude tags. Please only pass one or the other',
+        },
+        compositionErrors: [],
+        deploymentErrors: [],
+      };
+    }
+
     if (!isValidSchemaTags(req.excludeTags)) {
       return {
         response: {

@@ -61,6 +61,13 @@ export function createContract(
         throw new PublicError(EnumStatusCode.ERR, `Admission Webhook URL is not a valid URL`);
       }
 
+      if (req.includeTags.length > 0 && req.excludeTags.length > 0) {
+        throw new PublicError(
+          EnumStatusCode.ERR,
+          `You cannot provide both include and exclude tags. Please only pass one or the other.`,
+        );
+      }
+
       req.excludeTags = [...new Set(req.excludeTags)];
 
       if (!isValidSchemaTags(req.excludeTags)) {
