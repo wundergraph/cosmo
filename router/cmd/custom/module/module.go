@@ -80,6 +80,8 @@ func (m *MyModule) Middleware(ctx core.RequestContext, next http.Handler) {
 
 	operation := ctx.Operation()
 
+	logger := ctx.Logger()
+	logger.Info("Test custom module logs")
 	// Access the GraphQL operation context
 	fmt.Println(
 		operation.Name(),
