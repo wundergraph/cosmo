@@ -11,6 +11,10 @@ concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}
   cancel-in-progress: true
 
+env:
+  CI: true
+  DO_NOT_TRACK: '1'
+
 jobs:
   build_test:
     runs-on: ubuntu-latest

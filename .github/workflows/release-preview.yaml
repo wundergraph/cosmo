@@ -16,6 +16,7 @@ concurrency:
 
 env:
   CI: true
+  DO_NOT_TRACK: '1'
 
 jobs:
   version:

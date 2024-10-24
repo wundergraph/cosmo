@@ -20,6 +20,13 @@ npx wgc --help
 npm install -g wgc --help
 ```
 
+### Telemetry
+
+The CLI tool collects anonymous usage data to improve the tool. You can disable this by setting this variable in accordance to the [Console Do Not Track](https://consoledonottrack.com/) standard:
+```shell
+export DO_NOT_TRACK=1
+```
+
 ### Development
 
 Ensure that at least Node.js 20.6.0 is installed because we rely on the native .env file support.
