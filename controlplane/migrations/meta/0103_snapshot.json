@@ -1,6 +1,6 @@
 {
-  "id": "135533f6-d4ab-493b-a404-8d066c0bb5b0",
-  "prevId": "84b2107a-6c0e-4026-ad17-6a65946364d6",
+  "id": "194abfcd-d1e8-4b56-aead-ba6e015487ef",
+  "prevId": "135533f6-d4ab-493b-a404-8d066c0bb5b0",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -531,6 +531,12 @@
         },
         "exclude_tags": {
           "name": "exclude_tags",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "include_tags": {
+          "name": "include_tags",
           "type": "text[]",
           "primaryKey": false,
           "notNull": true

@@ -224,7 +224,7 @@ export const subgraphs = pgTable('subgraphs', {
   websocketSubprotocol: websocketSubprotocolEnum('websocket_subprotocol').notNull().default('auto'),
   // This is the latest valid schema of the subgraph.
   schemaVersionId: uuid('schema_version_id').references(() => schemaVersion.id, {
-    onDelete: 'no action',
+    onDelete: 'set null',
   }),
   targetId: uuid('target_id')
     .notNull()
