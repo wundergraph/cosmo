@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.130.1](https://github.com/wundergraph/cosmo/compare/router@0.130.0...router@0.130.1) (2024-10-24)
+
+### Bug Fixes
+
+* exclude query plan fetches from field usage count ([#1297](https://github.com/wundergraph/cosmo/issues/1297)) ([437bc76](https://github.com/wundergraph/cosmo/commit/437bc764fb83087d036f89243d0ef2365ed2a67f)) (@JivusAyrus)
+* trace id in logs from custom modules ([#1299](https://github.com/wundergraph/cosmo/issues/1299)) ([60021ee](https://github.com/wundergraph/cosmo/commit/60021ee54170de6d8298eb84279a0be6777ac1c0)) (@JivusAyrus)
+
 # [0.130.0](https://github.com/wundergraph/cosmo/compare/router@0.129.2...router@0.130.0) (2024-10-22)
 
 ### Features
