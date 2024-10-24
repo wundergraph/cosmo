@@ -1,5 +1,5 @@
 {
-  "id": "194abfcd-d1e8-4b56-aead-ba6e015487ef",
+  "id": "b3f20d99-13a7-4856-8634-cdf681f23c21",
   "prevId": "135533f6-d4ab-493b-a404-8d066c0bb5b0",
   "version": "7",
   "dialect": "postgresql",
@@ -539,7 +539,8 @@
           "name": "include_tags",
           "type": "text[]",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": "'{}'::text[]"
         },
         "created_at": {
           "name": "created_at",
