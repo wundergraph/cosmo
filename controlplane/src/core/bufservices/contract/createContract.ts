@@ -64,7 +64,8 @@ export function createContract(
       if (req.includeTags.length > 0 && req.excludeTags.length > 0) {
         throw new PublicError(
           EnumStatusCode.ERR,
-          `You cannot provide both include and exclude tags. Please only pass one or the other.`,
+          `The "exclude" and "include" options for tags are currently mutually exclusive.` +
+            ` Both options have been provided, but one of the options must be empty or unset.`,
         );
       }
 

@@ -58,7 +58,8 @@ export function updateContract(
         response: {
           code: EnumStatusCode.ERR,
           details:
-            'The "excludeTags" and "includeTags" options are currently mutually exclusive. Both options have been provided, but one of the options must be empty or unset.',
+            `The "exclude" and "include" options for tags are currently mutually exclusive.` +
+            ` Both options have been provided, but one of the options must be empty or unset.`,
         },
         compositionErrors: [],
         deploymentErrors: [],

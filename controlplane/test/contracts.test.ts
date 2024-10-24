@@ -142,6 +142,46 @@ describe('Contract tests', (ctx) => {
     await server.close();
   });
 
+  test('that an error is returned if a contract is created with both excluded and included tags', async () => {
+    const { client, server, blobStorage } = await SetupTest({ dbname });
+
+    const subgraphName = genID('subgraph');
+    const fedGraphName = genID('fedGraph');
+    const contractGraphName = genID('contract');
+    const label = genUniqueLabel('label');
+
+    const subgraphSchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
+
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      subgraphSchemaSDL,
+      [label],
+      'http://localhost:8082',
+    );
+
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:8080');
+
+    const createContractResponse = await client.createContract({
+      name: contractGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      sourceGraphName: fedGraphName,
+      excludeTags: ['exclude'],
+      includeTags: ['include'],
+      routingUrl: 'http://localhost:8081',
+      readme: 'test',
+    });
+
+    expect(createContractResponse.response?.code).toBe(1);
+    expect(createContractResponse.response?.details).toBe(
+      `The "exclude" and "include" options for tags are currently mutually exclusive.` +
+      ` Both options have been provided, but one of the options must be empty or unset.`,
+    );
+
+    await server.close();
+  });
+
   test('that the exclude tags of a contract are updated', async () => {
     const { client, server } = await SetupTest({ dbname });
 
@@ -293,8 +333,10 @@ describe('Contract tests', (ctx) => {
     });
 
     expect(updateContractResponse.response?.code).toBe(1);
-    expect(updateContractResponse.response?.details)
-      .toBe('The "excludeTags" and "includeTags" options are currently mutually exclusive. Both options have been provided, but one of the options must be empty or unset.');
+    expect(updateContractResponse.response?.details).toBe(
+      `The "exclude" and "include" options for tags are currently mutually exclusive.` +
+      ` Both options have been provided, but one of the options must be empty or unset.`,
+    );
 
     await server.close();
   });

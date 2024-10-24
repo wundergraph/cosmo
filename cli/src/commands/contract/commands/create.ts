@@ -45,6 +45,17 @@ export default (opts: BaseCommandOptions) => {
 
     const spinner = ora('Contract is being created...').start();
 
+    if (options.exclude.length > 0 && options.include.length > 0) {
+      program.error(
+        pc.red(
+          pc.bold(
+            `The "exclude" and "include" options for tags are currently mutually exclusive.` +
+              ` Both options have been provided, but one of the options must be empty or unset.`,
+          ),
+        ),
+      );
+    }
+
     const resp = await opts.client.platform.createContract(
       {
         name,
