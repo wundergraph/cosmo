@@ -2301,6 +2301,11 @@ export class Contract extends Message<Contract> {
    */
   excludeTags: string[] = [];
 
+  /**
+   * @generated from field: repeated string include_tags = 4;
+   */
+  includeTags: string[] = [];
+
   constructor(data?: PartialMessage<Contract>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2312,6 +2317,7 @@ export class Contract extends Message<Contract> {
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "source_federated_graph_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "exclude_tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 4, name: "include_tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Contract {
@@ -16453,6 +16459,11 @@ export class CreateContractRequest extends Message<CreateContractRequest> {
    */
   admissionWebhookSecret?: string;
 
+  /**
+   * @generated from field: repeated string include_tags = 9;
+   */
+  includeTags: string[] = [];
+
   constructor(data?: PartialMessage<CreateContractRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -16469,6 +16480,7 @@ export class CreateContractRequest extends Message<CreateContractRequest> {
     { no: 6, name: "exclude_tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 7, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 8, name: "admission_webhook_secret", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 9, name: "include_tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateContractRequest {
@@ -16556,6 +16568,11 @@ export class UpdateContractRequest extends Message<UpdateContractRequest> {
    */
   excludeTags: string[] = [];
 
+  /**
+   * @generated from field: repeated string include_tags = 4;
+   */
+  includeTags: string[] = [];
+
   constructor(data?: PartialMessage<UpdateContractRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -16567,6 +16584,7 @@ export class UpdateContractRequest extends Message<UpdateContractRequest> {
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "exclude_tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 4, name: "include_tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateContractRequest {

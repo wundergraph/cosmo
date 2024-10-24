@@ -1,9 +1,11 @@
 import type { UUID } from 'node:crypto';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
 import {
+  ContractTagOptions,
   FederationResult,
   FederationResultContainerWithContracts,
   FieldConfiguration,
+  newContractTagOptionsFromArrays,
   Subgraph,
 } from '@wundergraph/composition';
 import { buildRouterConfig, ComposedSubgraph as IComposedSubgraph } from '@wundergraph/cosmo-shared';
@@ -506,16 +508,16 @@ export class Composer {
         const contracts = await this.contractRepo.bySourceFederatedGraphId(graph.id);
 
         if (contracts.length > 0) {
-          const tagExclusionsByContractName: Map<string, Set<string>> = new Map();
+          const tagOptionsByContractName = new Map<string, ContractTagOptions>();
 
           for (const contract of contracts) {
-            tagExclusionsByContractName.set(
+            tagOptionsByContractName.set(
               contract.downstreamFederatedGraph.target.name,
-              new Set(contract.excludeTags),
+              newContractTagOptionsFromArrays(contract.excludeTags, contract.includeTags),
             );
           }
 
-          federationResultContainer = composeSubgraphsWithContracts(subgraphsToBeComposed, tagExclusionsByContractName);
+          federationResultContainer = composeSubgraphsWithContracts(subgraphsToBeComposed, tagOptionsByContractName);
         } else {
           federationResultContainer = composeSubgraphs(subgraphsToBeComposed);
         }

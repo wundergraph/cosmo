@@ -1,4 +1,4 @@
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 import {
   boolean,
   integer,
@@ -81,6 +81,10 @@ export const contracts = pgTable(
         onDelete: 'cascade',
       }),
     excludeTags: text('exclude_tags').array().notNull(),
+    includeTags: text('include_tags')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }),
     createdById: uuid('created_by_id').references(() => users.id, {
@@ -223,7 +227,7 @@ export const subgraphs = pgTable('subgraphs', {
   websocketSubprotocol: websocketSubprotocolEnum('websocket_subprotocol').notNull().default('auto'),
   // This is the latest valid schema of the subgraph.
   schemaVersionId: uuid('schema_version_id').references(() => schemaVersion.id, {
-    onDelete: 'no action',
+    onDelete: 'set null',
   }),
   targetId: uuid('target_id')
     .notNull()
