@@ -60,6 +60,7 @@ import {
 } from '../errors/errors';
 import {
   ChildTagData,
+  ContractTagOptions,
   FederationFactoryOptions,
   FederationResultContainer,
   FederationResultContainerWithContracts,
@@ -2403,11 +2404,11 @@ export class FederationFactory {
     return { shouldIncludeClientSchema: true };
   }
 
-  handleChildRemovalByTag(
+  handleChildTagExclusions(
     parentDefinitionData: ParentDefinitionData,
     children: Map<string, ChildData>,
     childTagDataByChildName: Map<string, ChildTagData>,
-    tagsToExclude: Set<string>,
+    tagNames: Set<string>,
   ) {
     let accessibleChildren = children.size;
     for (const [childName, childTagData] of childTagDataByChildName) {
@@ -2416,7 +2417,7 @@ export class FederationFactory {
         accessibleChildren -= 1;
         continue;
       }
-      if (doSetsIntersect(tagsToExclude, childTagData.tagNames)) {
+      if (doSetsIntersect(tagNames, childTagData.tagNames)) {
         getValueOrDefault(childData.persistedDirectivesData.directives, INACCESSIBLE, () => [
           generateSimpleDirective(INACCESSIBLE),
         ]);
@@ -2432,96 +2433,197 @@ export class FederationFactory {
     }
   }
 
-  buildFederationContractResult(tagsToExclude: Set<string>): FederationResultContainer {
+  handleChildTagInclusions(
+    parentDefinitionData: ParentDefinitionData,
+    children: Map<string, ChildData>,
+    childTagDataByChildName: Map<string, ChildTagData>,
+    tagNames: Set<string>,
+  ) {
+    let accessibleChildren = children.size;
+    for (const [childName, childData] of children) {
+      if (isNodeDataInaccessible(childData)) {
+        accessibleChildren -= 1;
+        continue;
+      }
+      const childTagData = childTagDataByChildName.get(childName);
+      if (!childTagData || !doSetsIntersect(tagNames, childTagData.tagNames)) {
+        getValueOrDefault(childData.persistedDirectivesData.directives, INACCESSIBLE, () => [
+          generateSimpleDirective(INACCESSIBLE),
+        ]);
+        this.inaccessiblePaths.add(`${parentDefinitionData.name}.${childName}`);
+        accessibleChildren -= 1;
+      }
+    }
+    if (accessibleChildren < 1) {
+      parentDefinitionData.persistedDirectivesData.directives.set(INACCESSIBLE, [
+        generateSimpleDirective(INACCESSIBLE),
+      ]);
+      this.inaccessiblePaths.add(parentDefinitionData.name);
+    }
+  }
+
+  buildFederationContractResult(contractTagOptions: ContractTagOptions): FederationResultContainer {
     if (!this.isVersionTwo) {
       /* If all the subgraphs are version one, the @inaccessible directive won't be present.
        ** However, contracts require @inaccessible to exclude applicable tagged types. */
       this.routerDefinitions.push(INACCESSIBLE_DEFINITION);
     }
-    for (const [parentTypeName, parentTagData] of this.parentTagDataByTypeName) {
-      const parentDefinitionData = getOrThrowError(
-        this.parentDefinitionDataByTypeName,
-        parentTypeName,
-        PARENT_DEFINITION_DATA,
-      );
-      if (isNodeDataInaccessible(parentDefinitionData)) {
-        continue;
-      }
-      if (doSetsIntersect(tagsToExclude, parentTagData.tagNames)) {
-        parentDefinitionData.persistedDirectivesData.directives.set(INACCESSIBLE, [
-          generateSimpleDirective(INACCESSIBLE),
-        ]);
-        this.inaccessiblePaths.add(parentTypeName);
-        // If the parent is inaccessible, there is no need to assess further
-        continue;
-      }
-      if (parentTagData.childTagDataByChildName.size < 1) {
-        continue;
-      }
-      switch (parentDefinitionData.kind) {
-        case Kind.SCALAR_TYPE_DEFINITION:
-        // intentional fallthrough
-        case Kind.UNION_TYPE_DEFINITION:
+    if (contractTagOptions.tagNamesToExclude.size > 0) {
+      for (const [parentTypeName, parentTagData] of this.parentTagDataByTypeName) {
+        const parentDefinitionData = getOrThrowError(
+          this.parentDefinitionDataByTypeName,
+          parentTypeName,
+          PARENT_DEFINITION_DATA,
+        );
+        if (isNodeDataInaccessible(parentDefinitionData)) {
           continue;
-        case Kind.ENUM_TYPE_DEFINITION:
-          this.handleChildRemovalByTag(
-            parentDefinitionData,
-            parentDefinitionData.enumValueDataByValueName,
-            parentTagData.childTagDataByChildName,
-            tagsToExclude,
-          );
-          break;
-        case Kind.INPUT_OBJECT_TYPE_DEFINITION:
-          this.handleChildRemovalByTag(
-            parentDefinitionData,
-            parentDefinitionData.inputValueDataByValueName,
-            parentTagData.childTagDataByChildName,
-            tagsToExclude,
-          );
-          break;
-        default:
-          let accessibleFields = parentDefinitionData.fieldDataByFieldName.size;
-          for (const [fieldName, childTagData] of parentTagData.childTagDataByChildName) {
-            const fieldData = getOrThrowError(
-              parentDefinitionData.fieldDataByFieldName,
-              fieldName,
-              `${parentTypeName}.fieldDataByFieldName`,
+        }
+        if (doSetsIntersect(contractTagOptions.tagNamesToExclude, parentTagData.tagNames)) {
+          parentDefinitionData.persistedDirectivesData.directives.set(INACCESSIBLE, [
+            generateSimpleDirective(INACCESSIBLE),
+          ]);
+          this.inaccessiblePaths.add(parentTypeName);
+          // If the parent is inaccessible, there is no need to assess further
+          continue;
+        }
+        if (parentTagData.childTagDataByChildName.size < 1) {
+          continue;
+        }
+        switch (parentDefinitionData.kind) {
+          case Kind.SCALAR_TYPE_DEFINITION:
+          // intentional fallthrough
+          case Kind.UNION_TYPE_DEFINITION:
+            continue;
+          case Kind.ENUM_TYPE_DEFINITION:
+            this.handleChildTagExclusions(
+              parentDefinitionData,
+              parentDefinitionData.enumValueDataByValueName,
+              parentTagData.childTagDataByChildName,
+              contractTagOptions.tagNamesToExclude,
             );
-            if (isNodeDataInaccessible(fieldData)) {
-              accessibleFields -= 1;
-              continue;
-            }
-            if (doSetsIntersect(tagsToExclude, childTagData.tagNames)) {
-              getValueOrDefault(fieldData.persistedDirectivesData.directives, INACCESSIBLE, () => [
-                generateSimpleDirective(INACCESSIBLE),
-              ]);
-              this.inaccessiblePaths.add(`${parentTypeName}.${fieldName}`);
-              accessibleFields -= 1;
-              continue;
-            }
-            for (const [argumentName, tagNames] of childTagData.tagNamesByArgumentName) {
-              const inputValueData = getOrThrowError(
-                fieldData.argumentDataByArgumentName,
-                argumentName,
-                `${fieldName}.argumentDataByArgumentName`,
+            break;
+          case Kind.INPUT_OBJECT_TYPE_DEFINITION:
+            this.handleChildTagExclusions(
+              parentDefinitionData,
+              parentDefinitionData.inputValueDataByValueName,
+              parentTagData.childTagDataByChildName,
+              contractTagOptions.tagNamesToExclude,
+            );
+            break;
+          default:
+            let accessibleFields = parentDefinitionData.fieldDataByFieldName.size;
+            for (const [fieldName, childTagData] of parentTagData.childTagDataByChildName) {
+              const fieldData = getOrThrowError(
+                parentDefinitionData.fieldDataByFieldName,
+                fieldName,
+                `${parentTypeName}.fieldDataByFieldName`,
               );
-              if (isNodeDataInaccessible(inputValueData)) {
+              if (isNodeDataInaccessible(fieldData)) {
+                accessibleFields -= 1;
                 continue;
               }
-              if (doSetsIntersect(tagsToExclude, tagNames)) {
-                getValueOrDefault(inputValueData.persistedDirectivesData.directives, INACCESSIBLE, () => [
+              if (doSetsIntersect(contractTagOptions.tagNamesToExclude, childTagData.tagNames)) {
+                getValueOrDefault(fieldData.persistedDirectivesData.directives, INACCESSIBLE, () => [
                   generateSimpleDirective(INACCESSIBLE),
                 ]);
-                this.inaccessiblePaths.add(inputValueData.renamedPath);
+                this.inaccessiblePaths.add(`${parentTypeName}.${fieldName}`);
+                accessibleFields -= 1;
+                continue;
+              }
+              for (const [argumentName, tagNames] of childTagData.tagNamesByArgumentName) {
+                const inputValueData = getOrThrowError(
+                  fieldData.argumentDataByArgumentName,
+                  argumentName,
+                  `${fieldName}.argumentDataByArgumentName`,
+                );
+                if (isNodeDataInaccessible(inputValueData)) {
+                  continue;
+                }
+                if (doSetsIntersect(tagNames, tagNames)) {
+                  getValueOrDefault(inputValueData.persistedDirectivesData.directives, INACCESSIBLE, () => [
+                    generateSimpleDirective(INACCESSIBLE),
+                  ]);
+                  this.inaccessiblePaths.add(inputValueData.renamedPath);
+                }
               }
             }
-          }
-          if (accessibleFields < 1) {
-            parentDefinitionData.persistedDirectivesData.directives.set(INACCESSIBLE, [
-              generateSimpleDirective(INACCESSIBLE),
-            ]);
-            this.inaccessiblePaths.add(parentTypeName);
-          }
+            if (accessibleFields < 1) {
+              parentDefinitionData.persistedDirectivesData.directives.set(INACCESSIBLE, [
+                generateSimpleDirective(INACCESSIBLE),
+              ]);
+              this.inaccessiblePaths.add(parentTypeName);
+            }
+        }
+      }
+    } else if (contractTagOptions.tagNamesToInclude.size > 0) {
+      for (const [parentTypeName, parentDefinitionData] of this.parentDefinitionDataByTypeName) {
+        if (isNodeDataInaccessible(parentDefinitionData)) {
+          continue;
+        }
+        const parentTagData = this.parentTagDataByTypeName.get(parentTypeName);
+        if (!parentTagData) {
+          parentDefinitionData.persistedDirectivesData.directives.set(INACCESSIBLE, [
+            generateSimpleDirective(INACCESSIBLE),
+          ]);
+          this.inaccessiblePaths.add(parentTypeName);
+          // If the parent is inaccessible, there is no need to assess further
+          continue;
+        }
+        if (doSetsIntersect(contractTagOptions.tagNamesToInclude, parentTagData.tagNames)) {
+          continue;
+        }
+        if (parentTagData.childTagDataByChildName.size < 1) {
+          parentDefinitionData.persistedDirectivesData.directives.set(INACCESSIBLE, [
+            generateSimpleDirective(INACCESSIBLE),
+          ]);
+          this.inaccessiblePaths.add(parentTypeName);
+          // If the parent is inaccessible, there is no need to assess further
+          continue;
+        }
+        switch (parentDefinitionData.kind) {
+          case Kind.SCALAR_TYPE_DEFINITION:
+          // intentional fallthrough
+          case Kind.UNION_TYPE_DEFINITION:
+            continue;
+          case Kind.ENUM_TYPE_DEFINITION:
+            this.handleChildTagInclusions(
+              parentDefinitionData,
+              parentDefinitionData.enumValueDataByValueName,
+              parentTagData.childTagDataByChildName,
+              contractTagOptions.tagNamesToInclude,
+            );
+            break;
+          case Kind.INPUT_OBJECT_TYPE_DEFINITION:
+            this.handleChildTagInclusions(
+              parentDefinitionData,
+              parentDefinitionData.inputValueDataByValueName,
+              parentTagData.childTagDataByChildName,
+              contractTagOptions.tagNamesToInclude,
+            );
+            break;
+          default:
+            let accessibleFields = parentDefinitionData.fieldDataByFieldName.size;
+            for (const [fieldName, fieldData] of parentDefinitionData.fieldDataByFieldName) {
+              if (isNodeDataInaccessible(fieldData)) {
+                accessibleFields -= 1;
+                continue;
+              }
+              const childTagData = parentTagData.childTagDataByChildName.get(fieldName);
+              if (!childTagData || !doSetsIntersect(contractTagOptions.tagNamesToInclude, childTagData.tagNames)) {
+                getValueOrDefault(fieldData.persistedDirectivesData.directives, INACCESSIBLE, () => [
+                  generateSimpleDirective(INACCESSIBLE),
+                ]);
+                this.inaccessiblePaths.add(`${parentTypeName}.${fieldName}`);
+                accessibleFields -= 1;
+              }
+            }
+            if (accessibleFields < 1) {
+              parentDefinitionData.persistedDirectivesData.directives.set(INACCESSIBLE, [
+                generateSimpleDirective(INACCESSIBLE),
+              ]);
+              this.inaccessiblePaths.add(parentTypeName);
+            }
+        }
       }
     }
     if (this.subscriptionFilterDataByFieldPath.size > 0) {
@@ -2675,7 +2777,7 @@ export function federateSubgraphs(subgraphs: Subgraph[]): FederationResultContai
 // the flow when publishing a subgraph that also has contracts
 export function federateSubgraphsWithContracts(
   subgraphs: Subgraph[],
-  tagExclusionsByContractName: Map<string, Set<string>>,
+  tagOptionsByContractName: Map<string, ContractTagOptions>,
 ): FederationResultContainerWithContracts {
   const {
     errors: normalizationErrors,
@@ -2695,19 +2797,19 @@ export function federateSubgraphsWithContracts(
   if (errors) {
     return { errors, warnings };
   }
-  const lastContractIndex = tagExclusionsByContractName.size - 1;
+  const lastContractIndex = tagOptionsByContractName.size - 1;
   const federationResultContainerByContractName: Map<string, FederationResultContainer> = new Map<
     string,
     FederationResultContainer
   >();
   let i = 0;
-  for (const [contractName, tagExclusions] of tagExclusionsByContractName) {
+  for (const [contractName, tagOptions] of tagOptionsByContractName) {
     // deep copy the current FederationFactory before it is mutated if it is not the last one required
     if (i !== lastContractIndex) {
       federationFactories.push(cloneDeep(federationFactories[i]));
     }
     // note that any one contract could have its own errors
-    const federationResultContainer = federationFactories[i].buildFederationContractResult(tagExclusions);
+    const federationResultContainer = federationFactories[i].buildFederationContractResult(tagOptions);
     federationResultContainerByContractName.set(contractName, federationResultContainer);
     i++;
   }
@@ -2717,12 +2819,12 @@ export function federateSubgraphsWithContracts(
 // the flow when adding a completely new contract
 export function federateSubgraphsContract(
   subgraphs: Subgraph[],
-  tagExclusions: Set<string>,
+  contractTagOptions: ContractTagOptions,
 ): FederationResultContainer {
   const { errors, federationFactory, warnings } = initializeFederationFactory(subgraphs);
   if (errors || !federationFactory) {
     return { errors: errors || [federationFactoryInitializationFatalError], warnings };
   }
   federationFactory.federateSubgraphData();
-  return federationFactory.buildFederationContractResult(tagExclusions);
+  return federationFactory.buildFederationContractResult(contractTagOptions);
 }

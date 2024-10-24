@@ -1,4 +1,5 @@
 import {
+  ContractTagOptions,
   federateSubgraphs,
   federateSubgraphsContract,
   federateSubgraphsWithContracts,
@@ -13,16 +14,16 @@ import {
  */
 export function composeSubgraphsWithContracts(
   subgraphs: Subgraph[],
-  tagExclusionsByContractName: Map<string, Set<string>>,
+  tagOptionsByContractName: Map<string, ContractTagOptions>,
 ) {
-  return federateSubgraphsWithContracts(subgraphs, tagExclusionsByContractName);
+  return federateSubgraphsWithContracts(subgraphs, tagOptionsByContractName);
 }
 
 /**
  * Composes a list of subgraphs for a contract using a set of exclusion tags
  */
-export function composeSubgraphsForContract(subgraphs: Subgraph[], tagExclusions: Set<string>) {
-  return federateSubgraphsContract(subgraphs, tagExclusions);
+export function composeSubgraphsForContract(subgraphs: Subgraph[], contractTagOptions: ContractTagOptions) {
+  return federateSubgraphsContract(subgraphs, contractTagOptions);
 }
 
 /**

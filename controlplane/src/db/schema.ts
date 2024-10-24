@@ -81,6 +81,7 @@ export const contracts = pgTable(
         onDelete: 'cascade',
       }),
     excludeTags: text('exclude_tags').array().notNull(),
+    includeTags: text('include_tags').array().notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }),
     createdById: uuid('created_by_id').references(() => users.id, {
