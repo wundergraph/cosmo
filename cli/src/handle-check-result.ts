@@ -175,7 +175,6 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
           compositionWarningsTable.push([
             compositionWarning.federatedGraphName,
             compositionWarning.namespace,
-            compositionWarning.featureFlag || '-',
             compositionWarning.message,
           ]);
         }

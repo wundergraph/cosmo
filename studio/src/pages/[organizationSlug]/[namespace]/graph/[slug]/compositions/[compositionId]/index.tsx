@@ -40,7 +40,10 @@ import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@connectrpc/connect-query";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import {
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+} from "@heroicons/react/24/outline";
 import {
   BoxIcon,
   Component2Icon,
@@ -281,6 +284,7 @@ export const CompositionDetails = ({
     createdBy,
     schemaVersionId,
     compositionErrors,
+    compositionWarnings,
     routerConfigSignature,
     admissionError,
   } = composition;
@@ -402,7 +406,7 @@ export const CompositionDetails = ({
                   {admissionError ? (
                     <>
                       <div>
-                        <MdNearbyError className="h-4 w-4 text-red-500" />
+                        <MdNearbyError className="h-4 w-4 text-destructive" />
                       </div>
                       <span className="text-sm">Failed</span>
                     </>
@@ -490,6 +494,11 @@ export const CompositionDetails = ({
                 <TabsTrigger value="input" asChild>
                   <Link href={{ query: { ...router.query, tab: "input" } }}>
                     Input Schemas
+                  </Link>
+                </TabsTrigger>
+                <TabsTrigger value="warnings" asChild>
+                  <Link href={{ query: { ...router.query, tab: "warnings" } }}>
+                    Composition Warnings
                   </Link>
                 </TabsTrigger>
                 {featureFlagCompositions && (
@@ -661,6 +670,23 @@ export const CompositionDetails = ({
                       <SDLViewerMonaco schema={sdlData.sdl} />
                     </div>
                   )
+                )}
+              </TabsContent>
+              <TabsContent value="warnings" className="relative w-full flex-1">
+                {compositionWarnings && compositionWarnings.length ? (
+                  <div className="px-6">
+                    <Alert variant="warn">
+                      <AlertTitle>Composition Warnings</AlertTitle>
+                      <AlertDescription>
+                        <pre className="">{compositionWarnings}</pre>
+                      </AlertDescription>
+                    </Alert>
+                  </div>
+                ) : (
+                  <EmptyState
+                    icon={<CheckCircleIcon className="text-success" />}
+                    title="No composition warnings found."
+                  />
                 )}
               </TabsContent>
               {featureFlagCompositions && (

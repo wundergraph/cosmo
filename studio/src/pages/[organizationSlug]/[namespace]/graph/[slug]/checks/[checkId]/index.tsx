@@ -216,7 +216,7 @@ const getDecorationCollection = (
           })`,
         },
         inlineClassName:
-          "underline decoration-red-500 decoration-wavy cursor-pointer z-50",
+          "underline decoration-destructive decoration-wavy cursor-pointer z-50",
         isWholeLine: l.issueLocation.endLine === undefined,
       },
     });
@@ -239,8 +239,8 @@ const getDecorationCollection = (
         },
         inlineClassName: `underline ${
           g.severity === LintSeverity.error
-            ? "decoration-red-500"
-            : "decoration-yellow-600"
+            ? "decoration-destructive"
+            : "decoration-warning"
         } decoration-wavy cursor-pointer z-50`,
         isWholeLine: g.issueLocation.endLine === undefined,
       },
@@ -789,7 +789,7 @@ const CheckDetails = ({
                 ) : null}
 
                 {data.compositionWarnings?.length ? (
-                  <Alert variant="default">
+                  <Alert variant="warn">
                     <AlertTitle>Composition Warnings</AlertTitle>
                     <AlertDescription>
                       <pre className="">

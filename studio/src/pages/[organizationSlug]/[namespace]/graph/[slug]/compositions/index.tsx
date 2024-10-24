@@ -182,7 +182,7 @@ const CompositionsPage: NextPageWithLayout = () => {
                                   variant="outline"
                                   className="gap-2 py-1.5"
                                 >
-                                  <MdNearbyError className="h-4 w-4 text-red-500" />
+                                  <MdNearbyError className="h-4 w-4 text-destructive" />
                                   <span>Error</span>
                                 </Badge>
                               ) : routerConfigSignature ? (

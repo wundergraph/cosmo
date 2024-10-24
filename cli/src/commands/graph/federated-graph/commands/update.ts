@@ -149,7 +149,7 @@ export default (opts: BaseCommandOptions) => {
     }
 
     if (resp.compositionWarnings.length > 0) {
-      console.log(pc.yellow(`We found composition warnings.\n${pc.bold('Please check the warnings below:')}`));
+      console.log(pc.yellow(`We found these composition warnings, while composing the federated graph.`));
       for (const compositionWarning of resp.compositionWarnings) {
         compositionWarningsTable.push([
           compositionWarning.federatedGraphName,
