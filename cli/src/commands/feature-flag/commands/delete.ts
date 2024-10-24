@@ -14,6 +14,7 @@ export default (opts: BaseCommandOptions) => {
   command.argument('<name>', 'The name of the feature flag to delete.');
   command.option('-n, --namespace [string]', 'The namespace of the feature flag.');
   command.option('-f --force', 'Flag to force the deletion (skip confirmation).');
+  command.option('--suppress-warnings', 'This flag suppresses the composition warnings.');
   command.action(async (name, options) => {
     if (!options.force) {
       const deletionConfirmed = await inquirer.prompt({
@@ -57,6 +58,7 @@ export default (opts: BaseCommandOptions) => {
           `\nThis means the updated composition is not accessible to the router.` +
           `\n${pc.bold('Please check the errors below:')}`,
         defaultErrorMessage: `Failed to delete the feature flag "${name}".`,
+        suppressWarnings: options.suppressWarnings,
       });
     } catch {
       process.exit(1);

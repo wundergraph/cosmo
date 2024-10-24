@@ -34,7 +34,7 @@ export default (opts: BaseCommandOptions) => {
     '--admission-webhook-secret [string]',
     'The admission webhook secret is used to sign requests to the webhook url.',
   );
-
+  command.option('--suppress-warnings', 'This flag suppresses the composition warnings.');
   command.option('--readme <path-to-readme>', 'The markdown file which describes the subgraph.');
   command.action(async (name, options) => {
     let readmeFile;
@@ -65,16 +65,6 @@ export default (opts: BaseCommandOptions) => {
         headers: getBaseHeaders(),
       },
     );
-
-    const compositionWarningsTable = new Table({
-      head: [
-        pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
-        pc.bold(pc.white('NAMESPACE')),
-        pc.bold(pc.white('WARNING_MESSAGE')),
-      ],
-      colWidths: [30, 30, 120],
-      wordWrap: true,
-    });
 
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {
@@ -148,7 +138,17 @@ export default (opts: BaseCommandOptions) => {
       }
     }
 
-    if (resp.compositionWarnings.length > 0) {
+    if (!options.suppressWarnings && resp.compositionWarnings.length > 0) {
+      const compositionWarningsTable = new Table({
+        head: [
+          pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+          pc.bold(pc.white('NAMESPACE')),
+          pc.bold(pc.white('WARNING_MESSAGE')),
+        ],
+        colWidths: [30, 30, 120],
+        wordWrap: true,
+      });
+
       console.log(pc.yellow(`We found these composition warnings, while composing the federated graph.`));
       for (const compositionWarning of resp.compositionWarnings) {
         compositionWarningsTable.push([

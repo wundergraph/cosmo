@@ -27,6 +27,7 @@ export default (opts: BaseCommandOptions) => {
     'If set, the command will fail if the admission webhook fails.',
     false,
   );
+  command.option('--suppress-warnings', 'This flag suppresses the composition warnings.');
 
   command.action(async (name, options) => {
     const schemaFile = resolve(options.schema);
@@ -58,12 +59,6 @@ export default (opts: BaseCommandOptions) => {
         headers: getBaseHeaders(),
       },
     );
-
-    const compositionWarningsTable = new Table({
-      head: [pc.bold(pc.white('MESSAGE'))],
-      colWidths: [120],
-      wordWrap: true,
-    });
 
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {
@@ -138,7 +133,13 @@ export default (opts: BaseCommandOptions) => {
       }
     }
 
-    if (resp.compositionWarnings.length > 0) {
+    if (!options.suppressWarnings && resp.compositionWarnings.length > 0) {
+      const compositionWarningsTable = new Table({
+        head: [pc.bold(pc.white('MESSAGE'))],
+        colWidths: [120],
+        wordWrap: true,
+      });
+
       console.log(pc.yellow(`We found these composition warnings, while composing the federated graph.`));
       for (const compositionWarning of resp.compositionWarnings) {
         compositionWarningsTable.push([compositionWarning.message]);

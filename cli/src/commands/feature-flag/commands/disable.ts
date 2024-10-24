@@ -12,6 +12,7 @@ export default (opts: BaseCommandOptions) => {
   command.description('Disables a feature flag on the control plane.');
   command.argument('<name>', 'The name of the feature flag to disable.');
   command.option('-n, --namespace [string]', 'The namespace of the feature flag.');
+  command.option('--suppress-warnings', 'This flag suppresses the composition warnings.');
 
   command.action(async (name, options) => {
     const spinner = ora(`The feature flag "${name}" is being disabled...`).start();
@@ -49,6 +50,7 @@ export default (opts: BaseCommandOptions) => {
           `\nThis means the updated composition is not accessible to the router.` +
           `\n${pc.bold('Please check the errors below:')}`,
         defaultErrorMessage: `Failed to disable the feature flag "${name}".`,
+        suppressWarnings: options.suppressWarnings,
       });
     } catch {
       process.exit(1);

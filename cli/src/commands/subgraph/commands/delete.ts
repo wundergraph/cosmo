@@ -13,6 +13,7 @@ export default (opts: BaseCommandOptions) => {
   command.argument('<name>', 'The name of the subgraph to delete.');
   command.option('-n, --namespace [string]', 'The namespace of the subgraph.');
   command.option('-f --force', 'Flag to force the deletion (skip confirmation).');
+  command.option('--suppress-warnings', 'This flag suppresses the composition warnings.');
   command.action(async (name, options) => {
     if (!options.force) {
       const deletionConfirmed = await inquirer.prompt({
@@ -36,17 +37,6 @@ export default (opts: BaseCommandOptions) => {
         headers: getBaseHeaders(),
       },
     );
-
-    const compositionWarningsTable = new Table({
-      head: [
-        pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
-        pc.bold(pc.white('NAMESPACE')),
-        pc.bold(pc.white('FEATURE_FLAG')),
-        pc.bold(pc.white('WARNING_MESSAGE')),
-      ],
-      colWidths: [30, 30, 30, 120],
-      wordWrap: true,
-    });
 
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {
@@ -126,7 +116,18 @@ export default (opts: BaseCommandOptions) => {
       }
     }
 
-    if (resp.compositionWarnings.length > 0) {
+    if (!options.suppressWarnings && resp.compositionWarnings.length > 0) {
+      const compositionWarningsTable = new Table({
+        head: [
+          pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+          pc.bold(pc.white('NAMESPACE')),
+          pc.bold(pc.white('FEATURE_FLAG')),
+          pc.bold(pc.white('WARNING_MESSAGE')),
+        ],
+        colWidths: [30, 30, 30, 120],
+        wordWrap: true,
+      });
+
       console.log(pc.yellow(`We found these composition warnings, while composing the federated graph.`));
       for (const compositionWarning of resp.compositionWarnings) {
         compositionWarningsTable.push([

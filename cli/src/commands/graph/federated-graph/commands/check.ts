@@ -19,6 +19,7 @@ export default (opts: BaseCommandOptions) => {
     '--label-matcher <labels...>',
     'The label matchers to the federated graph with which the check is to be performed',
   );
+  command.option('--suppress-warnings', 'This flag suppresses the composition warnings.');
 
   command.action(async (name, options) => {
     let success = false;
@@ -100,7 +101,7 @@ export default (opts: BaseCommandOptions) => {
       }
     }
 
-    if (resp.compositionWarnings.length > 0) {
+    if (!options.suppressWarnings && resp.compositionWarnings.length > 0) {
       console.log(pc.yellow(`We found these composition warnings, while composing the federated graph.`));
       for (const compositionWarning of resp.compositionWarnings) {
         compositionWarningsTable.push([compositionWarning.message]);

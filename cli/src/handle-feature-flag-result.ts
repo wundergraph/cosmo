@@ -23,6 +23,7 @@ export const handleFeatureFlagResult = ({
   deploymentErrorMessage,
   defaultErrorMessage,
   shouldOutputJson,
+  suppressWarnings,
 }: {
   responseCode: EnumStatusCode | undefined;
   responseDetails: string | undefined;
@@ -36,17 +37,8 @@ export const handleFeatureFlagResult = ({
   deploymentErrorMessage: string;
   defaultErrorMessage: string;
   shouldOutputJson?: boolean;
+  suppressWarnings?: boolean;
 }) => {
-  const compositionWarningsTable = new Table({
-    head: [
-      pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
-      pc.bold(pc.white('NAMESPACE')),
-      pc.bold(pc.white('FEATURE_FLAG')),
-      pc.bold(pc.white('WARNING_MESSAGE')),
-    ],
-    colWidths: [30, 30, 30, 120],
-    wordWrap: true,
-  });
   switch (responseCode) {
     case EnumStatusCode.OK: {
       if (shouldOutputJson) {
@@ -153,7 +145,18 @@ export const handleFeatureFlagResult = ({
     }
   }
 
-  if (compositionWarnings.length > 0) {
+  if (!suppressWarnings && compositionWarnings.length > 0) {
+    const compositionWarningsTable = new Table({
+      head: [
+        pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+        pc.bold(pc.white('NAMESPACE')),
+        pc.bold(pc.white('FEATURE_FLAG')),
+        pc.bold(pc.white('WARNING_MESSAGE')),
+      ],
+      colWidths: [30, 30, 30, 120],
+      wordWrap: true,
+    });
+
     console.log(pc.yellow(`We found these composition warnings, while composing the federated graph.`));
     for (const compositionWarning of compositionWarnings) {
       compositionWarningsTable.push([

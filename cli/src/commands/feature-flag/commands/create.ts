@@ -29,6 +29,7 @@ export default (opts: BaseCommandOptions) => {
       ' A new feature flag is disabled by default to prevent accidental compositions.',
   );
   command.option('-j, --json', 'Prints to the console in json format instead of table');
+  command.option('--suppress-warnings', 'This flag suppresses the composition warnings.');
   command.action(async (name, options) => {
     const spinner = ora('The feature flag is being created...');
     if (!options.json) {
@@ -72,6 +73,7 @@ export default (opts: BaseCommandOptions) => {
           `\n${pc.bold('Please check the errors below:')}`,
         defaultErrorMessage: `Failed to create the feature flag "${name}".`,
         shouldOutputJson: options.json,
+        suppressWarnings: options.suppressWarnings,
       });
     } catch {
       process.exit(1);
