@@ -16,7 +16,7 @@ export default (opts: BaseCommandOptions) => {
   command.action(async (name, options) => {
     const spinner = ora('Contract is being updated...').start();
 
-    if (options.exclude.length > 0 && options.include.length > 0) {
+    if (options.exclude?.length > 0 && options.include?.length > 0) {
       program.error(
         pc.red(
           pc.bold(
