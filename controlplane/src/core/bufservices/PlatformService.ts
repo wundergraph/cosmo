@@ -139,6 +139,10 @@ import { removeInvitation } from './user/removeInvitation.js';
 import { removeOrganizationMember } from './user/removeOrganizationMember.js';
 import { updateOrgMemberRole } from './user/updateOrgMemberRole.js';
 import { updateIDPMappers } from './sso/updateIDPMappers.js';
+import { createPlaygroundScript } from './playground/createPlaygroundScript.js';
+import { deletePlaygroundScript } from './playground/deletePlaygroundScript.js';
+import { getPlaygroundScripts } from './playground/getPlaygroundScripts.js';
+import { updatePlaygroundScript } from './playground/updatePlaygroundScript.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -701,6 +705,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     updateIDPMappers: (req, ctx) => {
       return updateIDPMappers(opts, req, ctx);
+    },
+
+    createPlaygroundScript: (req, ctx) => {
+      return createPlaygroundScript(opts, req, ctx);
+    },
+
+    getPlaygroundScripts: (req, ctx) => {
+      return getPlaygroundScripts(opts, req, ctx);
+    },
+
+    updatePlaygroundScript: (req, ctx) => {
+      return updatePlaygroundScript(opts, req, ctx);
+    },
+
+    deletePlaygroundScript: (req, ctx) => {
+      return deletePlaygroundScript(opts, req, ctx);
     },
   };
 }
