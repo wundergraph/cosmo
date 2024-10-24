@@ -485,12 +485,16 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			rtrace.WithTracePreHandler(
 				func(r *http.Request, w http.ResponseWriter) {
 					reqContext := getRequestContext(r.Context())
+					traceID := rtrace.GetTraceID(r.Context())
+					requestLogger := reqContext.Logger().With(logging.WithTraceID(traceID))
+
+					reqContext.logger = requestLogger
+
 					span := oteltrace.SpanFromContext(r.Context())
 					span.SetAttributes(reqContext.telemetry.CommonAttrs()...)
 
 					// Set the trace ID in the response header
 					if s.traceConfig.ResponseTraceHeader.Enabled {
-						traceID := rtrace.GetTraceID(r.Context())
 						w.Header().Set(s.traceConfig.ResponseTraceHeader.HeaderName, traceID)
 					}
 				}),
@@ -523,7 +527,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	subgraphResolver := NewSubgraphResolver(subgraphs)
 	httpRouter.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			requestLogger := s.logger.With(logging.WithRequestID(middleware.GetReqID(r.Context())), logging.WithTraceID(rtrace.GetTraceID(r.Context())))
+			requestLogger := s.logger.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 			r = r.WithContext(withSubgraphResolver(r.Context(), subgraphResolver))
 
 			reqContext := buildRequestContext(requestContextOptions{
