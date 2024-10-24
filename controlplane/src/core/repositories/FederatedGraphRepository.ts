@@ -1456,8 +1456,7 @@ export class FederatedGraphRepository {
         for (const contract of contracts) {
           tagOptionsByContractName.set(
             contract.downstreamFederatedGraph.target.name,
-            // @TODO second array will be include
-            newContractTagOptionsFromArrays(contract.excludeTags, []),
+            newContractTagOptionsFromArrays(contract.excludeTags, contract.includeTags),
           );
         }
 
@@ -1494,8 +1493,7 @@ export class FederatedGraphRepository {
           if (federatedGraph.contract) {
             const { errors, federationResult } = composeSubgraphsForContract(
               subgraphsToCompose.compositionSubgraphs,
-              // @TODO second array will be include
-              newContractTagOptionsFromArrays(federatedGraph.contract.excludeTags, []),
+              newContractTagOptionsFromArrays(federatedGraph.contract.excludeTags, federatedGraph.contract.includeTags),
             );
             compositionErrors = errors;
             result = federationResult;

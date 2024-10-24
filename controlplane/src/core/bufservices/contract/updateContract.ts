@@ -40,6 +40,7 @@ export function updateContract(
     );
 
     req.excludeTags = [...new Set(req.excludeTags)];
+    req.includeTags = [...new Set(req.includeTags)];
 
     if (!authContext.hasWriteAccess) {
       return {
@@ -56,7 +57,18 @@ export function updateContract(
       return {
         response: {
           code: EnumStatusCode.ERR,
-          details: `Provided tags are invalid`,
+          details: `Provided exclude tags are invalid`,
+        },
+        compositionErrors: [],
+        deploymentErrors: [],
+      };
+    }
+
+    if (!isValidSchemaTags(req.includeTags)) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `Provided include tags are invalid`,
         },
         compositionErrors: [],
         deploymentErrors: [],
@@ -89,6 +101,7 @@ export function updateContract(
     const updatedContractDetails = await contractRepo.update({
       id: graph.contract.id,
       excludeTags: req.excludeTags,
+      includeTags: req.includeTags,
       actorId: authContext.userId,
     });
 

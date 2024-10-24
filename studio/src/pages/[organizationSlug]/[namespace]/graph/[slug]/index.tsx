@@ -357,6 +357,26 @@ const GraphOverviewPage: NextPageWithLayout = () => {
                       </div>
                     </div>
                   )}
+                  {contract.includeTags.length > 0 && (
+                    <div className="flex items-start gap-x-3">
+                      <span className="w-28 flex-shrink-0 text-muted-foreground">
+                        Include Tags
+                      </span>
+                      <div className="flex flex-wrap gap-2 overflow-hidden">
+                        {contract.includeTags.map((tag) => {
+                          return (
+                            <Badge
+                              variant="secondary"
+                              key={tag}
+                              className="truncate"
+                            >
+                              <span className="truncate">{tag}</span>
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </CardContent>

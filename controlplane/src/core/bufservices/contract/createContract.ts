@@ -64,7 +64,12 @@ export function createContract(
       req.excludeTags = [...new Set(req.excludeTags)];
 
       if (!isValidSchemaTags(req.excludeTags)) {
-        throw new PublicError(EnumStatusCode.ERR, `Provided tags are invalid`);
+        throw new PublicError(EnumStatusCode.ERR, `Provided exclude tags are invalid`);
+      }
+
+      req.includeTags = [...new Set(req.includeTags)];
+      if (!isValidSchemaTags(req.includeTags)) {
+        throw new PublicError(EnumStatusCode.ERR, `Provided include tags are invalid`);
       }
 
       const count = await fedGraphRepo.count();
@@ -129,6 +134,7 @@ export function createContract(
         sourceFederatedGraphId: sourceGraph.id,
         downstreamFederatedGraphId: contractGraph.id,
         excludeTags: req.excludeTags,
+        includeTags: req.includeTags,
         actorId: authContext.userId,
       });
 

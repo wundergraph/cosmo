@@ -20,6 +20,7 @@ export default (opts: BaseCommandOptions) => {
     'The routing url of your router. This is the url that the router will be accessible at.',
   );
   command.option('--exclude [tags...]', 'Schema elements with these tags will be excluded from the contract schema.');
+  command.option('--include [tags...]', 'Schema elements with these tags will be included from the contract schema.');
   command.option(
     '--admission-webhook-url <url>',
     'The admission webhook url. This is the url that the controlplane will use to implement admission control for the contract graph.',
@@ -50,6 +51,7 @@ export default (opts: BaseCommandOptions) => {
         namespace: options.namespace,
         sourceGraphName: options.source,
         excludeTags: options.exclude,
+        includeTags: options.include,
         routingUrl: options.routingUrl,
         admissionWebhookUrl: options.admissionWebhookUrl,
         admissionWebhookSecret: options.admissionWebhookSecret,

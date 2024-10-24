@@ -513,8 +513,7 @@ export class Composer {
           for (const contract of contracts) {
             tagOptionsByContractName.set(
               contract.downstreamFederatedGraph.target.name,
-              // @TODO the second array will be include
-              newContractTagOptionsFromArrays(contract.excludeTags, []),
+              newContractTagOptionsFromArrays(contract.excludeTags, contract.includeTags),
             );
           }
 

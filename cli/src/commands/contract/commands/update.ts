@@ -12,6 +12,7 @@ export default (opts: BaseCommandOptions) => {
   command.argument('<name>', 'The name of the contract graph to update.');
   command.option('-n, --namespace [string]', 'The namespace of the contract update.');
   command.option('--exclude [tags...]', 'Schema elements with these tags will be excluded from the contract schema.');
+  command.option('--include [tags...]', 'Schema elements with these tags will be included from the contract schema.');
   command.action(async (name, options) => {
     const spinner = ora('Contract is being updated...').start();
 
@@ -20,6 +21,7 @@ export default (opts: BaseCommandOptions) => {
         name,
         namespace: options.namespace,
         excludeTags: options.exclude,
+        includeTags: options.include,
       },
       {
         headers: getBaseHeaders(),
