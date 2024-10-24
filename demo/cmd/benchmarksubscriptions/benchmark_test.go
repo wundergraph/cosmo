@@ -1,6 +1,8 @@
 package benchmarksubscriptions
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -15,7 +17,7 @@ import (
 )
 
 func TestSubscriptions(t *testing.T) {
-	subscribers := 10_000
+	subscribers := 1_000 * 5
 
 	wg := &sync.WaitGroup{}
 	wg.Add(subscribers)
@@ -47,7 +49,7 @@ func TestSubscriptions(t *testing.T) {
 		i := i
 		maxCount := 1000
 		intervalMilliseconds := 3000 + i
-		time.Sleep(time.Millisecond * 10)
+		time.Sleep(time.Millisecond)
 		subscriberCount.Inc()
 		go subscribe(t, i, messageCount, wg, maxCount, intervalMilliseconds)
 	}
@@ -175,4 +177,91 @@ type GraphQLResponse struct {
 
 type GraphQLError struct {
 	Message string `json:"message"`
+}
+
+func TestMultipartSubscription(t *testing.T) {
+	subscribers := 1_000 * 5
+
+	wg := &sync.WaitGroup{}
+	wg.Add(subscribers)
+
+	messageCount := &atomic.Int64{}
+	subscriberCount := &atomic.Int64{}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	prevMessageCount := int64(0)
+
+	go func() {
+		tick := time.NewTicker(time.Second)
+		defer tick.Stop()
+		for {
+			select {
+			case <-tick.C:
+				currentMessageCount := messageCount.Load()
+				msgsPerSecond := currentMessageCount - prevMessageCount
+				fmt.Printf("Subscribers: %d Message count: %d, Msgs per second: %d\n", subscriberCount.Load(), messageCount.Load(), msgsPerSecond)
+				prevMessageCount = currentMessageCount
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
+	for i := 0; i < subscribers; i++ {
+		i := i
+		maxCount := 1000
+		intervalMilliseconds := 3000 + i
+		time.Sleep(time.Millisecond)
+		subscriberCount.Inc()
+		go subscribeMultipart(t, i, messageCount, wg, maxCount, intervalMilliseconds)
+	}
+
+	wg.Wait()
+	fmt.Printf("All subscribers done\n")
+}
+
+func subscribeMultipart(t *testing.T, iteration int, messageCount *atomic.Int64, wg *sync.WaitGroup, maxCount, intervalMilliseconds int) {
+	defer wg.Done()
+	req, err := http.NewRequest("POST", "http://localhost:3011/", bytes.NewReader([]byte(fmt.Sprintf(`{"query":"subscription { countEmp(max: %d, intervalMilliseconds: %d) }"}`, maxCount, intervalMilliseconds))))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("accept", "multipart/mixed;subscriptionSpec=1.0, application/json")
+	req.Header.Set("content-type", "application/json")
+	client := &http.Client{
+		Timeout: time.Second * 60 * 5,
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	r := bufio.NewReader(resp.Body)
+	for {
+		line, isPrefix, err := r.ReadLine()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if isPrefix {
+			t.Fatal("isPrefix")
+		}
+		if string(line) == "--graphql" {
+			continue
+		}
+		if string(line) == "" {
+			continue
+		}
+		if string(line) == "content-type: application/json" {
+			continue
+		}
+		if string(line) == "--graphql--" {
+			break
+		}
+		if string(line) == "{}" {
+			continue
+		}
+		messageCount.Inc()
+	}
+	fmt.Printf("Subscriber %d done\n", iteration)
 }
