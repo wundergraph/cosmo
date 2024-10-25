@@ -794,7 +794,10 @@ const CheckDetails = ({
                     <AlertDescription>
                       <pre className="">
                         {data.compositionWarnings.length > 0
-                          ? data.compositionWarnings.join("\n")
+                          ? data.compositionWarnings
+                              .join("\n")
+                              .split("Warning: ")
+                              .join("\n")
                           : "No composition wanings"}
                       </pre>
                     </AlertDescription>

@@ -678,7 +678,9 @@ export const CompositionDetails = ({
                     <Alert variant="warn">
                       <AlertTitle>Composition Warnings</AlertTitle>
                       <AlertDescription>
-                        <pre className="">{compositionWarnings}</pre>
+                        <pre className="">
+                          {compositionWarnings.split("Warning: ").join("\n")}
+                        </pre>
                       </AlertDescription>
                     </Alert>
                   </div>
