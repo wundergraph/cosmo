@@ -102,7 +102,7 @@ export default (opts: BaseCommandOptions) => {
     }
 
     if (!options.suppressWarnings && resp.compositionWarnings.length > 0) {
-      console.log(pc.yellow(`We found these composition warnings, while composing the federated graph.`));
+      console.log(pc.yellow(`The following warnings were produced while composing the federated graph:`));
       for (const compositionWarning of resp.compositionWarnings) {
         compositionWarningsTable.push([compositionWarning.message]);
       }
