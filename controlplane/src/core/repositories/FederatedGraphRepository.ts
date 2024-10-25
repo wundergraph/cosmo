@@ -433,7 +433,7 @@ export class FederatedGraphRepository {
       conditions.push(eq(schema.federatedGraphs.supportsFederation, opts.supportsFederation));
     }
 
-    const targets = await this.db
+    const targetsQuery = this.db
       .select({
         id: schema.targets.id,
         name: schema.targets.name,
@@ -441,9 +441,17 @@ export class FederatedGraphRepository {
       .from(schema.targets)
       .innerJoin(schema.federatedGraphs, eq(schema.federatedGraphs.targetId, schema.targets.id))
       .where(and(...conditions))
-      .limit(opts.limit)
-      .offset(opts.offset)
       .orderBy(asc(schema.targets.namespaceId));
+
+    if (opts.limit) {
+      targetsQuery.limit(opts.limit);
+    }
+
+    if (opts.offset) {
+      targetsQuery.offset(opts.offset);
+    }
+
+    const targets = await targetsQuery.execute();
 
     const federatedGraphs: FederatedGraphDTO[] = [];
 

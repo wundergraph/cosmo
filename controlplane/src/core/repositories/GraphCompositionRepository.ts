@@ -323,7 +323,7 @@ export class GraphCompositionRepository {
       conditions.push(eq(graphCompositions.isFeatureFlagComposition, false));
     }
 
-    const resp = await this.db
+    const dbQuery = this.db
       .select({
         id: graphCompositions.id,
         schemaVersionId: graphCompositions.schemaVersionId,
@@ -340,10 +340,17 @@ export class GraphCompositionRepository {
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
       .leftJoin(users, eq(graphCompositions.createdById, users.id))
       .where(and(...conditions))
-      .orderBy(desc(schemaVersion.createdAt))
-      .limit(limit)
-      .offset(offset)
-      .execute();
+      .orderBy(desc(schemaVersion.createdAt));
+
+    if (limit) {
+      dbQuery.limit(limit);
+    }
+
+    if (offset) {
+      dbQuery.offset(offset);
+    }
+
+    const resp = await dbQuery.execute();
 
     const compositions: (GraphCompositionDTO & {
       hasMultipleChangedSubgraphs: boolean;
