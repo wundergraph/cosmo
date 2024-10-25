@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net"
+	"net/http"
+
 	"github.com/hashicorp/go-multierror"
 	rErrors "github.com/wundergraph/cosmo/router/internal/errors"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
@@ -16,8 +19,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
-	"net"
-	"net/http"
 )
 
 type errorType int
@@ -58,7 +59,7 @@ func getErrorType(err error) errorType {
 	if errors.Is(err, context.Canceled) {
 		return errorTypeContextCanceled
 	}
-	var upgradeErr *ErrUpgradeFailed
+	var upgradeErr *graphql_datasource.UpgradeRequestError
 	if errors.As(err, &upgradeErr) {
 		return errorTypeUpgradeFailed
 	}

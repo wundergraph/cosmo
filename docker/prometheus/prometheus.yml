@@ -4,7 +4,7 @@ global:
 
 scrape_configs:
   # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
-  - job_name: "router"
+  - job_name: "cosmo"
     scrape_interval: 2s
 
     # metrics_path defaults to '/metrics'
@@ -12,4 +12,13 @@ scrape_configs:
     static_configs:
       # Allows to scrape metrics from the host machine
       # https://docs.docker.com/desktop/networking/#i-cannot-ping-my-containers
-      - targets: ["host.docker.internal:8088"]
+      - targets: ["host.docker.internal:8041"]
+  - job_name: "apollo"
+    scrape_interval: 2s
+
+    # metrics_path defaults to '/metrics'
+    # scheme defaults to 'http'.
+    static_configs:
+      # Allows to scrape metrics from the host machine
+      # https://docs.docker.com/desktop/networking/#i-cannot-ping-my-containers
+      - targets: ["host.docker.internal:8051"]
