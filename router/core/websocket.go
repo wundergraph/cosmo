@@ -1,13 +1,10 @@
 package core
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
-	"go.opentelemetry.io/otel/attribute"
 	"net"
 	"net/http"
 	"regexp"
@@ -16,13 +13,15 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gorilla/websocket"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"go.opentelemetry.io/otel/attribute"
+
 	"github.com/buger/jsonparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"golang.org/x/sync/semaphore"
 
 	"github.com/goccy/go-json"
-
-	"github.com/gorilla/websocket"
 
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/gobwas/ws"
@@ -152,13 +151,11 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 type wsConnectionWrapper struct {
 	conn net.Conn
 	mu   sync.Mutex
-	rw   *bufio.ReadWriter
 }
 
-func newWSConnectionWrapper(conn net.Conn, rw *bufio.ReadWriter) *wsConnectionWrapper {
+func newWSConnectionWrapper(conn net.Conn) *wsConnectionWrapper {
 	return &wsConnectionWrapper{
 		conn: conn,
-		rw:   rw,
 	}
 }
 
@@ -173,11 +170,7 @@ func (c *wsConnectionWrapper) ReadJSON(v interface{}) error {
 func (c *wsConnectionWrapper) WriteText(text string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	err := wsutil.WriteServerText(c.rw, []byte(text))
-	if err != nil {
-		return err
-	}
-	return c.rw.Flush()
+	return wsutil.WriteServerText(c.conn, []byte(text))
 }
 
 func (c *wsConnectionWrapper) WriteJSON(v interface{}) error {
@@ -187,11 +180,7 @@ func (c *wsConnectionWrapper) WriteJSON(v interface{}) error {
 	if err != nil {
 		return err
 	}
-	err = wsutil.WriteServerText(c.rw, data)
-	if err != nil {
-		return err
-	}
-	return c.rw.Flush()
+	return wsutil.WriteServerText(c.conn, data)
 }
 
 func (c *wsConnectionWrapper) Close() error {
@@ -266,7 +255,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 			return false
 		},
 	}
-	c, rw, _, err := upgrader.Upgrade(r, w)
+	c, _, _, err := upgrader.Upgrade(r, w)
 	if err != nil {
 		requestLogger.Warn("Websocket upgrade", zap.Error(err))
 		_ = c.Close()
@@ -282,7 +271,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	// After successful upgrade, we can't write to the response writer anymore
 	// because it's hijacked by the websocket connection
 
-	conn := newWSConnectionWrapper(c, rw)
+	conn := newWSConnectionWrapper(c)
 	protocol, err := wsproto.NewProtocol(subProtocol, conn)
 	if err != nil {
 		requestLogger.Error("Create websocket protocol", zap.Error(err))
