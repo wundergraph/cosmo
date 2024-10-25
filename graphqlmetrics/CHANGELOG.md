@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.28.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.27.0...graphqlmetrics@0.28.0) (2024-10-25)
+
+### Features
+
+* add origin subgraph request epoll support ([#1284](https://github.com/wundergraph/cosmo/issues/1284)) ([4fe8146](https://github.com/wundergraph/cosmo/commit/4fe81461a43e45dbd3bae482976fec8127d3d982)) (@jensneuse)
+
 # [0.27.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.26.0...graphqlmetrics@0.27.0) (2024-10-22)
 
 ### Features
