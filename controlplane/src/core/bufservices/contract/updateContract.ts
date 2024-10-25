@@ -41,6 +41,7 @@ export function updateContract(
     );
 
     req.excludeTags = [...new Set(req.excludeTags)];
+    req.includeTags = [...new Set(req.includeTags)];
 
     if (!authContext.hasWriteAccess) {
       return {
@@ -54,11 +55,37 @@ export function updateContract(
       };
     }
 
+    if (req.includeTags.length > 0 && req.excludeTags.length > 0) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details:
+            `The "exclude" and "include" options for tags are currently mutually exclusive.` +
+            ` Both options have been provided, but one of the options must be empty or unset.`,
+        },
+        compositionErrors: [],
+        deploymentErrors: [],
+        compositionWarnings: [],
+      };
+    }
+
     if (!isValidSchemaTags(req.excludeTags)) {
       return {
         response: {
           code: EnumStatusCode.ERR,
-          details: `Provided tags are invalid`,
+          details: `Provided exclude tags are invalid`,
+        },
+        compositionErrors: [],
+        deploymentErrors: [],
+        compositionWarnings: [],
+      };
+    }
+
+    if (!isValidSchemaTags(req.includeTags)) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `Provided include tags are invalid`,
         },
         compositionErrors: [],
         deploymentErrors: [],
@@ -94,6 +121,7 @@ export function updateContract(
     const updatedContractDetails = await contractRepo.update({
       id: graph.contract.id,
       excludeTags: req.excludeTags,
+      includeTags: req.includeTags,
       actorId: authContext.userId,
     });
 

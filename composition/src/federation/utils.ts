@@ -20,7 +20,6 @@ import { getTypeNodeNamedTypeName, MutableFieldNode } from '../schema-building/a
 import { BREAK, Kind, visit } from 'graphql/index';
 import { BASE_SCALARS } from '../utils/constants';
 import { isKindAbstract, safeParse } from '../ast/utils';
-import { ObjectExtensionData, ParentExtensionData } from '../schema-building/type-extension-data';
 import { getNormalizedFieldSet } from '../normalization/utils';
 import { GraphNode } from '../resolvability-graph/graph-nodes';
 import { ConditionalFieldData } from '../schema-building/utils';
@@ -251,4 +250,19 @@ export function validateImplicitFieldSets({
       graphNode.satisfiedFieldSets.add(normalizedFieldSet);
     }
   }
+}
+
+export type ContractTagOptions = {
+  tagNamesToExclude: Set<string>;
+  tagNamesToInclude: Set<string>;
+};
+
+export function newContractTagOptionsFromArrays(
+  tagNamesToExclude: Array<string>,
+  tagNamesToInclude: Array<string>,
+): ContractTagOptions {
+  return {
+    tagNamesToExclude: new Set<string>(tagNamesToExclude),
+    tagNamesToInclude: new Set<string>(tagNamesToInclude),
+  };
 }

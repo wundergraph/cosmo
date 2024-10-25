@@ -30,7 +30,13 @@ import { FastifyBaseLogger } from 'fastify';
 import { parse } from 'graphql';
 import { generateKeyPair, importPKCS8, SignJWT } from 'jose';
 import { uid } from 'uid/secure';
-import { FederationResult, FederationResultContainer, Warning } from '@wundergraph/composition';
+import {
+  ContractTagOptions,
+  FederationResult,
+  FederationResultContainer,
+  newContractTagOptionsFromArrays,
+  Warning,
+} from '@wundergraph/composition';
 import * as schema from '../../db/schema.js';
 import {
   federatedGraphs,
@@ -1469,9 +1475,12 @@ export class FederatedGraphRepository {
         });
 
         const contracts = await contractRepo.bySourceFederatedGraphId(federatedGraph.id);
-        const tagExclusionsByContractName: Map<string, Set<string>> = new Map();
+        const tagOptionsByContractName = new Map<string, ContractTagOptions>();
         for (const contract of contracts) {
-          tagExclusionsByContractName.set(contract.downstreamFederatedGraph.target.name, new Set(contract.excludeTags));
+          tagOptionsByContractName.set(
+            contract.downstreamFederatedGraph.target.name,
+            newContractTagOptionsFromArrays(contract.excludeTags, contract.includeTags),
+          );
         }
 
         const baseCompositionSubgraphs = subgraphs.map((s) => ({
@@ -1508,7 +1517,7 @@ export class FederatedGraphRepository {
           if (federatedGraph.contract) {
             const { errors, federationResult, warnings } = composeSubgraphsForContract(
               subgraphsToCompose.compositionSubgraphs,
-              new Set(federatedGraph.contract.excludeTags),
+              newContractTagOptionsFromArrays(federatedGraph.contract.excludeTags, federatedGraph.contract.includeTags),
             );
             compositionErrors = errors;
             compositionWarnings = warnings;
@@ -1519,7 +1528,7 @@ export class FederatedGraphRepository {
               federationResult,
               federationResultContainerByContractName: contractFederationResult,
               warnings,
-            } = composeSubgraphsWithContracts(subgraphsToCompose.compositionSubgraphs, tagExclusionsByContractName);
+            } = composeSubgraphsWithContracts(subgraphsToCompose.compositionSubgraphs, tagOptionsByContractName);
             compositionErrors = errors;
             compositionWarnings = warnings;
             result = federationResult;

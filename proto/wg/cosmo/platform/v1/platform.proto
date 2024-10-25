@@ -299,6 +299,7 @@ message Contract {
   string id = 1;
   string source_federated_graph_id = 2;
   repeated string exclude_tags = 3;
+  repeated string include_tags = 4;
 }
 
 message FederatedGraph {
@@ -2110,6 +2111,7 @@ message CreateContractRequest {
   repeated string exclude_tags = 6;
   optional string readme = 7;
   optional string admission_webhook_secret = 8;
+  repeated string include_tags = 9;
 }
 
 message CreateContractResponse {
@@ -2123,6 +2125,7 @@ message UpdateContractRequest {
   string name = 1;
   string namespace = 2;
   repeated string exclude_tags = 3;
+  repeated string include_tags = 4;
 }
 
 message UpdateContractResponse {

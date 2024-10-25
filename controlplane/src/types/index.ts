@@ -57,6 +57,7 @@ export interface ContractDTO {
   sourceFederatedGraphId: string;
   downstreamFederatedGraphId: string;
   excludeTags: string[];
+  includeTags: string[];
 }
 
 export interface FederatedGraphDTO {

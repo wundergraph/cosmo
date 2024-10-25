@@ -478,7 +478,7 @@ func TestKafkaEvents(t *testing.T) {
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
 
 				produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
-				time.Sleep(heartbeatInterval)
+				time.Sleep(heartbeatInterval * 2)
 				produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
 				wg.Wait()

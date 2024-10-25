@@ -19,6 +19,7 @@ type OutputFile = {
   contract?: {
     sourceFederatedGraphId: string;
     excludeTags: string[];
+    includeTags: string[];
   };
 }[];
 
