@@ -139,13 +139,6 @@ func (ct *CustomTransport) RoundTrip(req *http.Request) (resp *http.Response, er
 
 	if !ct.allowSingleFlight(req) {
 		resp, err = ct.roundTripper.RoundTrip(req)
-		if err == nil && ct.isUpgradeError(req, resp) {
-			err := &ErrUpgradeFailed{StatusCode: resp.StatusCode}
-			if subgraph := moduleContext.ActiveSubgraph(req); subgraph != nil {
-				err.SubgraphID = subgraph.Id
-			}
-			return nil, err
-		}
 	} else {
 		resp, err = ct.roundTripSingleFlight(req)
 	}
@@ -170,10 +163,6 @@ func (ct *CustomTransport) RoundTrip(req *http.Request) (resp *http.Response, er
 	}
 
 	return resp, err
-}
-
-func (ct *CustomTransport) isUpgradeError(req *http.Request, res *http.Response) bool {
-	return req.Header.Get("Upgrade") != "" && res.StatusCode != http.StatusSwitchingProtocols
 }
 
 func (ct *CustomTransport) allowSingleFlight(req *http.Request) bool {

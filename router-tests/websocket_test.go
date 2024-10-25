@@ -1100,7 +1100,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "1", msg.ID)
 			require.Equal(t, "error", msg.Type)
-			require.Equal(t, `[{"message":"Upgrade request failed for Subgraph '0'.","extensions":{"statusCode":418}}]`, string(msg.Payload))
+			require.Equal(t, `[{"message":"Subscription Upgrade request failed for Subgraph 'employees'.","extensions":{"statusCode":418}}]`, string(msg.Payload))
 		})
 	})
 	t.Run("subscription with unexposed upgrade error", func(t *testing.T) {
@@ -1138,7 +1138,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "1", msg.ID)
 			require.Equal(t, "error", msg.Type)
-			require.Equal(t, `[{"message":"Upgrade failed"}]`, string(msg.Payload))
+			require.Equal(t, `[{"message":"Subscription Upgrade request failed"}]`, string(msg.Payload))
 		})
 	})
 	t.Run("subscription error in resolver", func(t *testing.T) {
@@ -1241,7 +1241,7 @@ func TestWebSockets(t *testing.T) {
 	t.Run("multiple subscriptions one connection", func(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
+				engineExecutionConfiguration.WebSocketReadTimeout = time.Second
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			client := graphql.NewSubscriptionClient(xEnv.GraphQLSubscriptionURL()).

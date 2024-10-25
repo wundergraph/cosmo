@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"io"
 	"log"
 	"math/rand"
@@ -24,6 +23,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/pkg/logging"
 
 	"go.uber.org/zap/zaptest/observer"
 

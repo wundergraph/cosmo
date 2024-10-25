@@ -4,15 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/twmb/franz-go/pkg/kerr"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
-	"strings"
-	"sync"
-	"time"
 )
 
 var (
@@ -78,22 +79,14 @@ type kafkaPubSub struct {
 
 // topicPoller polls the Kafka topic for new records and calls the updateTriggers function.
 func (p *kafkaPubSub) topicPoller(ctx context.Context, client *kgo.Client, updater resolve.SubscriptionUpdater) error {
-	ticker := time.NewTicker(resolve.HearbeatInterval)
-	defer ticker.Stop()
-
 	for {
 		select {
-		case <-ticker.C:
-			updater.Heartbeat()
-
 		case <-p.ctx.Done(): // Close the poller if the application context was canceled
 			return p.ctx.Err()
-
 		case <-ctx.Done(): // Close the poller if the subscription context was canceled
 			return ctx.Err()
 
 		default:
-			ticker.Reset(resolve.HearbeatInterval)
 			// Try to fetch max records from any subscribed topics
 			fetches := client.PollRecords(p.ctx, 10_000)
 			if fetches.IsClientClosed() {

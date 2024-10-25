@@ -2,11 +2,13 @@ package core
 
 import (
 	"context"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/pkg/config"
 
 	graphqlmetrics "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
@@ -363,7 +365,10 @@ func (c *requestContext) GetStringMapStringSlice(key string) (smss map[string][]
 }
 
 func (c *requestContext) ActiveSubgraph(subgraphRequest *http.Request) *Subgraph {
-	return c.subgraphResolver.BySubgraphRequest(subgraphRequest)
+	if subgraphRequest == nil || subgraphRequest.URL == nil {
+		return nil
+	}
+	return c.subgraphResolver.BySubgraphURL(subgraphRequest.URL.String())
 }
 
 func (c *requestContext) SubgraphByID(subgraphID string) *Subgraph {
@@ -481,33 +486,46 @@ func isMutationRequest(ctx context.Context) bool {
 }
 
 type SubgraphResolver struct {
-	subgraphs []Subgraph
+	subgraphsByURL map[string]*Subgraph
+	subgraphsByID  map[string]*Subgraph
 }
 
 func NewSubgraphResolver(subgraphs []Subgraph) *SubgraphResolver {
-	return &SubgraphResolver{subgraphs: subgraphs}
+	resolver := &SubgraphResolver{
+		subgraphsByURL: make(map[string]*Subgraph, len(subgraphs)),
+		subgraphsByID:  make(map[string]*Subgraph, len(subgraphs)),
+	}
+	for i := range subgraphs {
+		sg := Subgraph{
+			Id:        subgraphs[i].Id,
+			Name:      subgraphs[i].Name,
+			Url:       subgraphs[i].Url,
+			UrlString: subgraphs[i].UrlString,
+		}
+		if sg.UrlString != "" {
+			resolver.subgraphsByURL[sg.UrlString] = &sg
+		}
+		if sg.Id != "" {
+			resolver.subgraphsByID[sg.Id] = &sg
+		}
+	}
+	return resolver
 }
 
 func (s *SubgraphResolver) ByID(subgraphID string) *Subgraph {
-	for _, sg := range s.subgraphs {
-		if sg.Id == subgraphID {
-			return &sg
-		}
-	}
-	return nil
+	return s.subgraphsByID[subgraphID]
 }
 
-func (s *SubgraphResolver) BySubgraphRequest(subgraphRequest *http.Request) *Subgraph {
-	var want string
-	if subgraphRequest.URL != nil {
-		want = subgraphRequest.URL.String()
+func (s *SubgraphResolver) BySubgraphURL(u string) *Subgraph {
+	if len(u) >= 4 && u[:4] == "http" {
+		return s.subgraphsByURL[u]
 	}
-	for _, sg := range s.subgraphs {
-		if sg.UrlString == want {
-			return &sg
-		}
+	if strings.HasPrefix(u, "wss") {
+		u = "https" + u[3:]
+	} else if strings.HasPrefix(u, "ws") {
+		u = "http" + u[2:]
 	}
-	return nil
+	return s.subgraphsByURL[u]
 }
 
 func withSubgraphResolver(ctx context.Context, resolver *SubgraphResolver) context.Context {
