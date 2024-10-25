@@ -12,7 +12,7 @@ export default (opts: BaseCommandOptions) => {
   command.description('Enables a feature flag on the control plane.');
   command.argument('<name>', 'The name of the feature flag to enable.');
   command.option('-n, --namespace [string]', 'The namespace of the feature flag.');
-  command.option('--suppress-warnings', 'This flag suppresses the composition warnings.');
+  command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
 
   command.action(async (name, options) => {
     const spinner = ora(`The feature flag "${name}" is being enabled...`).start();

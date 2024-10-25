@@ -68,7 +68,7 @@ export default (opts: BaseCommandOptions) => {
     'If set, the command will fail if the admission webhook fails.',
     false,
   );
-  command.option('--suppress-warnings', 'This flag suppresses the composition warnings.');
+  command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
 
   command.action(async (name, options) => {
     const schemaFile = resolve(options.schema);

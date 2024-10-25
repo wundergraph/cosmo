@@ -19,7 +19,7 @@ export default (opts: BaseCommandOptions) => {
     '--label-matcher <labels...>',
     'The label matchers to the federated graph with which the check is to be performed',
   );
-  command.option('--suppress-warnings', 'This flag suppresses the composition warnings.');
+  command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
 
   command.action(async (name, options) => {
     let success = false;

@@ -12,7 +12,7 @@ export default (opts: BaseCommandOptions) => {
   command.argument('<name>', 'The name of the contract graph to update.');
   command.option('-n, --namespace [string]', 'The namespace of the contract update.');
   command.option('--exclude [tags...]', 'Schema elements with these tags will be excluded from the contract schema.');
-  command.option('--suppress-warnings', 'This flag suppresses the composition warnings.');
+  command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
   command.action(async (name, options) => {
     const spinner = ora('Contract is being updated...').start();
 

@@ -27,7 +27,7 @@ export default (opts: BaseCommandOptions) => {
       ' The feature flag must contain at least one feature subgraph.',
   );
   command.option('-j, --json', 'Prints to the console in json format instead of table');
-  command.option('--suppress-warnings', 'This flag suppresses the composition warnings.');
+  command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
 
   command.action(async (name, options) => {
     if (options.featureGraphs && options.featureSubgraphs.length === 0) {

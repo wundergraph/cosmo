@@ -29,7 +29,7 @@ export default (opts: BaseCommandOptions) => {
       ' A new feature flag is disabled by default to prevent accidental compositions.',
   );
   command.option('-j, --json', 'Prints to the console in json format instead of table');
-  command.option('--suppress-warnings', 'This flag suppresses the composition warnings.');
+  command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
   command.action(async (name, options) => {
     const spinner = ora('The feature flag is being created...');
     if (!options.json) {

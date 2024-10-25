@@ -34,7 +34,7 @@ export default (opts: BaseCommandOptions) => {
     'The admission webhook secret is used to sign requests to the webhook url.',
   );
   command.option('--readme <path-to-readme>', 'The markdown file which describes the federated graph.');
-  command.option('--suppress-warnings', 'This flag suppresses the composition warnings.');
+  command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
   command.action(async (name, options) => {
     let readmeFile;
     if (options.readme) {
