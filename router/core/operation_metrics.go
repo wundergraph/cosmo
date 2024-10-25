@@ -55,7 +55,7 @@ func (m *OperationMetrics) Finish(ctx context.Context, err error, statusCode int
 	rm.MeasureLatency(ctx, latency, attr...)
 	rm.MeasureResponseSize(ctx, int64(responseSize), attr...)
 
-	if m.trackUsageInfo && opContext != nil {
+	if m.trackUsageInfo && opContext != nil && !opContext.executionOptions.SkipLoader {
 		m.routerMetrics.ExportSchemaUsageInfo(opContext, statusCode, err != nil)
 	}
 }

@@ -53,10 +53,12 @@ type DefaultFactoryResolver struct {
 	pubsub *pubsub_datasource.Factory[pubsub_datasource.Configuration]
 	log    *zap.Logger
 
-	engineCtx       context.Context
-	httpClient      *http.Client
-	streamingClient *http.Client
-	factoryLogger   abstractlogger.Logger
+	engineCtx          context.Context
+	httpClient         *http.Client
+	streamingClient    *http.Client
+	subscriptionClient graphql_datasource.GraphQLSubscriptionClient
+
+	factoryLogger abstractlogger.Logger
 }
 
 func NewDefaultFactoryResolver(
@@ -82,28 +84,29 @@ func NewDefaultFactoryResolver(
 		factoryLogger = abstractlogger.NewZapLogger(log, abstractlogger.DebugLevel)
 	}
 
+	subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(
+		defaultHttpClient,
+		streamingClient,
+		ctx,
+		graphql_datasource.WithLogger(factoryLogger),
+	)
+
 	return &DefaultFactoryResolver{
-		baseTransport:    baseTransport,
-		transportFactory: transportFactory,
-		static:           &staticdatasource.Factory[staticdatasource.Configuration]{},
-		pubsub:           pubsub_datasource.NewFactory(ctx, natsPubSubBySourceID, kafkaPubSubBySourceID),
-		log:              log,
-		factoryLogger:    factoryLogger,
-		engineCtx:        ctx,
-		httpClient:       defaultHttpClient,
-		streamingClient:  streamingClient,
+		baseTransport:      baseTransport,
+		transportFactory:   transportFactory,
+		static:             &staticdatasource.Factory[staticdatasource.Configuration]{},
+		pubsub:             pubsub_datasource.NewFactory(ctx, natsPubSubBySourceID, kafkaPubSubBySourceID),
+		log:                log,
+		factoryLogger:      factoryLogger,
+		engineCtx:          ctx,
+		httpClient:         defaultHttpClient,
+		streamingClient:    streamingClient,
+		subscriptionClient: subscriptionClient,
 	}
 }
 
 func (d *DefaultFactoryResolver) ResolveGraphqlFactory() (plan.PlannerFactory[graphql_datasource.Configuration], error) {
-	subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(
-		d.httpClient,
-		d.streamingClient,
-		d.engineCtx,
-		graphql_datasource.WithLogger(d.factoryLogger),
-	)
-
-	factory, err := graphql_datasource.NewFactory(d.engineCtx, d.httpClient, subscriptionClient)
+	factory, err := graphql_datasource.NewFactory(d.engineCtx, d.httpClient, d.subscriptionClient)
 	return factory, err
 }
 

@@ -6,11 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	rErrors "github.com/wundergraph/cosmo/router/internal/errors"
-	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"io"
 	"net/http"
 	"strings"
+
+	rErrors "github.com/wundergraph/cosmo/router/internal/errors"
+	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
 
@@ -35,15 +37,6 @@ const (
 	PersistedOperationCacheHeader = "X-WG-Persisted-Operation-Cache"
 	NormalizationCacheHeader      = "X-WG-Normalization-Cache"
 )
-
-type ErrUpgradeFailed struct {
-	StatusCode int
-	SubgraphID string
-}
-
-func (e *ErrUpgradeFailed) Error() string {
-	return fmt.Sprintf("upgrade failed with status code %d", e.StatusCode)
-}
 
 type ReportError interface {
 	error
@@ -333,15 +326,18 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 			httpWriter.WriteHeader(http.StatusInternalServerError)
 		}
 	case errorTypeUpgradeFailed:
-		response.Errors[0].Message = "Upgrade failed"
-		var upgradeErr *ErrUpgradeFailed
+		var upgradeErr *graphql_datasource.UpgradeRequestError
 		if h.subgraphErrorPropagation.PropagateStatusCodes && errors.As(err, &upgradeErr) && upgradeErr.StatusCode != 0 {
 			response.Errors[0].Extensions = &Extensions{
 				StatusCode: upgradeErr.StatusCode,
 			}
-			if upgradeErr.SubgraphID != "" {
-				response.Errors[0].Message = fmt.Sprintf("Upgrade request failed for Subgraph '%s'.", upgradeErr.SubgraphID)
+			if subgraph := reqContext.subgraphResolver.BySubgraphURL(upgradeErr.URL); subgraph != nil {
+				response.Errors[0].Message = fmt.Sprintf("Subscription Upgrade request failed for Subgraph '%s'.", subgraph.Name)
+			} else {
+				response.Errors[0].Message = "Subscription Upgrade request failed"
 			}
+		} else {
+			response.Errors[0].Message = "Subscription Upgrade request failed"
 		}
 		if isHttpResponseWriter {
 			httpWriter.WriteHeader(http.StatusOK)

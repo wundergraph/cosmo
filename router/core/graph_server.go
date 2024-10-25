@@ -489,15 +489,18 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 		traceHandler = rtrace.NewMiddleware(
 			rtrace.WithTracePreHandler(
-				func(r *http.Request, w http.ResponseWriter, graphqlExecutionSpan oteltrace.Span) {
+				func(r *http.Request, w http.ResponseWriter) {
 					reqContext := getRequestContext(r.Context())
+					traceID := rtrace.GetTraceID(r.Context())
+					requestLogger := reqContext.Logger().With(logging.WithTraceID(traceID))
+
+					reqContext.logger = requestLogger
+
 					span := oteltrace.SpanFromContext(r.Context())
 					span.SetAttributes(reqContext.telemetry.CommonAttrs()...)
 
 					// Set the trace ID in the response header
 					if s.traceConfig.ResponseTraceHeader.Enabled {
-						spanContext := graphqlExecutionSpan.SpanContext()
-						traceID := spanContext.TraceID().String()
 						w.Header().Set(s.traceConfig.ResponseTraceHeader.HeaderName, traceID)
 					}
 				}),
@@ -843,7 +846,7 @@ func (s *graphServer) accessLogsFieldHandler(panicError any, request *http.Reque
 		return nil
 	}
 	resFields := make([]zapcore.Field, 0, len(s.accessLogsConfig.Attributes))
-	resFields = append(resFields, zap.String("request_id", middleware.GetReqID(request.Context())))
+	resFields = append(resFields, logging.WithRequestID(middleware.GetReqID(request.Context())))
 
 	for _, field := range s.accessLogsConfig.Attributes {
 		if field.ValueFrom.RequestHeader != "" {

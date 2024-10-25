@@ -4,6 +4,37 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.131.0](https://github.com/wundergraph/cosmo/compare/router@0.130.2...router@0.131.0) (2024-10-25)
+
+### Features
+
+* add origin subgraph request epoll support ([#1284](https://github.com/wundergraph/cosmo/issues/1284)) ([4fe8146](https://github.com/wundergraph/cosmo/commit/4fe81461a43e45dbd3bae482976fec8127d3d982)) (@jensneuse)
+
+## [0.130.2](https://github.com/wundergraph/cosmo/compare/router@0.130.1...router@0.130.2) (2024-10-24)
+
+### Bug Fixes
+
+* value completion typename, planner shared nodes selections ([#1306](https://github.com/wundergraph/cosmo/issues/1306)) ([b5929bf](https://github.com/wundergraph/cosmo/commit/b5929bfcd263e835efae617d3ca64691c44c7ff9)) (@devsergiy)
+
+## [0.130.1](https://github.com/wundergraph/cosmo/compare/router@0.130.0...router@0.130.1) (2024-10-24)
+
+### Bug Fixes
+
+* exclude query plan fetches from field usage count ([#1297](https://github.com/wundergraph/cosmo/issues/1297)) ([437bc76](https://github.com/wundergraph/cosmo/commit/437bc764fb83087d036f89243d0ef2365ed2a67f)) (@JivusAyrus)
+* trace id in logs from custom modules ([#1299](https://github.com/wundergraph/cosmo/issues/1299)) ([60021ee](https://github.com/wundergraph/cosmo/commit/60021ee54170de6d8298eb84279a0be6777ac1c0)) (@JivusAyrus)
+
+# [0.130.0](https://github.com/wundergraph/cosmo/compare/router@0.129.2...router@0.130.0) (2024-10-22)
+
+### Features
+
+* add traceId to logs ([#1279](https://github.com/wundergraph/cosmo/issues/1279)) ([025da28](https://github.com/wundergraph/cosmo/commit/025da2888ea95dbb2de581d6affda76fdc74332a)) (@JivusAyrus)
+
+## [0.129.2](https://github.com/wundergraph/cosmo/compare/router@0.129.1...router@0.129.2) (2024-10-22)
+
+### Bug Fixes
+
+* **websocket:** check for valid fd ([#1296](https://github.com/wundergraph/cosmo/issues/1296)) ([a7da8bc](https://github.com/wundergraph/cosmo/commit/a7da8bc678afecbfd600ffc3b672ac4aaa64da14)) (@StarpTech)
+
 ## [0.129.1](https://github.com/wundergraph/cosmo/compare/router@0.129.0...router@0.129.1) (2024-10-21)
 
 ### Bug Fixes
