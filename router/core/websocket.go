@@ -536,7 +536,7 @@ func (h *WebsocketHandler) runPoller() {
 					h.logger.Debug("Handling websocket message", zap.Error(err))
 					if errors.Is(err, errClientTerminatedConnection) {
 						h.removeConnection(conn, handler, fd)
-						return
+						continue
 					}
 				}
 			}
