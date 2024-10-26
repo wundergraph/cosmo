@@ -359,4 +359,74 @@ func TestApolloCompatibility(t *testing.T) {
 			require.Equal(t, `{"data":null,"extensions":{"valueCompletion":[{"message":"Cannot return null for non-nullable field Query.products.","path":["products"],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
 		})
 	})
+	t.Run("enable replace undefined operation field error", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
+					ReplaceUndefinedOperationFieldError: config.ApolloCompatibilityReplaceUndefinedOperationFieldError{
+						Enabled: true,
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `query {products{nonExistentField}}`,
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+			require.Equal(t, `{"errors":[{"message":"Cannot query \"nonExistentField\" on type \"Products\".","extensions":{"code":"GRAPHQL_VALIDATION_FAILED"}}]}`, res.Body)
+		})
+	})
+	t.Run("enable all: replace undefined operation field error", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
+					EnableAll: true,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `query {products{nonExistentField}}`,
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+			require.Equal(t, `{"errors":[{"message":"Cannot query \"nonExistentField\" on type \"Products\".","extensions":{"code":"GRAPHQL_VALIDATION_FAILED"}}]}`, res.Body)
+		})
+	})
+	t.Run("enable replace invalid variable error", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
+					ReplaceInvalidVariableError: config.ApolloCompatibilityReplaceInvalidVariableError{
+						Enabled: true,
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query FloatQuery($arg: Float) { floatField(arg: $arg) }`,
+				Variables: json.RawMessage(`{"arg":"INVALID"}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, `{"errors":[{"message":"Variable \"$arg\" got invalid value \"INVALID\"; Float cannot represent non numeric value: \"INVALID\"","extensions":{"code":"BAD_USER_INPUT"}}]}`, res.Body)
+		})
+	})
+	t.Run("enable all: replace invalid variable error", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
+					EnableAll: true,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query FloatQuery($arg: Float) { floatField(arg: $arg) }`,
+				Variables: json.RawMessage(`{"arg":"INVALID"}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, `{"errors":[{"message":"Variable \"$arg\" got invalid value \"INVALID\"; Float cannot represent non numeric value: \"INVALID\"","extensions":{"code":"BAD_USER_INPUT"}}]}`, res.Body)
+		})
+	})
 }

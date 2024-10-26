@@ -175,41 +175,18 @@ func propagateSubgraphErrors(ctx *resolve.Context) {
 // writeRequestErrors writes the given request errors to the http.ResponseWriter.
 // It accepts a graphqlerrors.RequestErrors object and writes it to the response based on the GraphQL spec.
 func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, requestErrors graphqlerrors.RequestErrors, requestLogger *zap.Logger) {
-	if requestErrors != nil {
-		wgRequestParams := NewWgRequestParams(r)
-		if wgRequestParams.UseSse {
-			setSubscriptionHeaders(wgRequestParams, r, w)
+	if requestErrors == nil {
+		return
+	}
+	wgRequestParams := NewWgRequestParams(r)
+	if wgRequestParams.UseSse {
+		setSubscriptionHeaders(wgRequestParams, r, w)
 
-			if statusCode != 0 {
-				w.WriteHeader(statusCode)
-			}
-			_, err := w.Write([]byte("event: next\ndata: "))
-			if err != nil {
-				if requestLogger != nil {
-					if rErrors.IsBrokenPipe(err) {
-						requestLogger.Warn("Broken pipe, error writing response", zap.Error(err))
-						return
-					}
-					requestLogger.Error("Error writing response", zap.Error(err))
-				}
-				return
-			}
-		} else if wgRequestParams.UseMultipart {
-			// Handle multipart error response
-			if err := writeMultipartError(w, requestErrors, requestLogger); err != nil {
-				if requestLogger != nil {
-					requestLogger.Error("error writing multipart response", zap.Error(err))
-				}
-			}
-			return
-		}
-
-		// Set header before writing status code
-		w.Header().Set("Content-Type", "application/json")
 		if statusCode != 0 {
 			w.WriteHeader(statusCode)
 		}
-		if _, err := requestErrors.WriteResponse(w); err != nil {
+		_, err := w.Write([]byte("event: next\ndata: "))
+		if err != nil {
 			if requestLogger != nil {
 				if rErrors.IsBrokenPipe(err) {
 					requestLogger.Warn("Broken pipe, error writing response", zap.Error(err))
@@ -217,6 +194,30 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 				}
 				requestLogger.Error("Error writing response", zap.Error(err))
 			}
+			return
+		}
+	} else if wgRequestParams.UseMultipart {
+		// Handle multipart error response
+		if err := writeMultipartError(w, requestErrors, requestLogger); err != nil {
+			if requestLogger != nil {
+				requestLogger.Error("error writing multipart response", zap.Error(err))
+			}
+		}
+		return
+	}
+
+	// Set header before writing status code
+	w.Header().Set("Content-Type", "application/json")
+	if statusCode != 0 {
+		w.WriteHeader(statusCode)
+	}
+	if _, err := requestErrors.WriteResponse(w); err != nil {
+		if requestLogger != nil {
+			if rErrors.IsBrokenPipe(err) {
+				requestLogger.Warn("Broken pipe, error writing response", zap.Error(err))
+				return
+			}
+			requestLogger.Error("Error writing response", zap.Error(err))
 		}
 	}
 }
@@ -264,6 +265,7 @@ func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *
 	var reportErr ReportError
 	var httpErr HttpError
 	var poNotFoundErr *persistedoperation.PersistentOperationNotFoundError
+	var apolloCompatibilityErr *operationreport.ApolloCompatibilityError
 	switch {
 	case errors.As(err, &httpErr):
 		writeRequestErrors(r, w, httpErr.StatusCode(), graphqlerrors.RequestErrorsFromError(err), requestLogger)
@@ -282,6 +284,8 @@ func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *
 			// so we return an internal server error
 			writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errInternalServer), requestLogger)
 		}
+	case errors.As(err, &apolloCompatibilityErr):
+		writeRequestErrors(r, w, apolloCompatibilityErr.StatusCode, graphqlerrors.RequestErrorsFromApolloCompatibilityError(apolloCompatibilityErr), requestLogger)
 	default:
 		writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errInternalServer), requestLogger)
 	}

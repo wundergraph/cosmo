@@ -836,6 +836,14 @@ func (o *OperationKit) Validate(skipLoader bool) (cacheHit bool, err error) {
 		// this is useful to return a query plan without having to provide variables
 		err = o.kit.variablesValidator.Validate(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.doc.Input.Variables)
 		if err != nil {
+			var invalidVarErr *variablesvalidation.InvalidVariableError
+			if errors.As(err, &invalidVarErr) {
+				return false, &httpGraphqlError{
+					extensionCode: invalidVarErr.ExtensionCode,
+					message:       invalidVarErr.Error(),
+					statusCode:    http.StatusOK,
+				}
+			}
 			return false, &httpGraphqlError{
 				message:    err.Error(),
 				statusCode: http.StatusOK,

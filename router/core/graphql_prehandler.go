@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
+	"errors"
 	"fmt"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"net/http"
@@ -315,11 +317,29 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			body:             body,
 		})
 		if err != nil {
-			requestContext.error = err
-			// Mark the root span of the router as failed, so we can easily identify failed requests
-			rtrace.AttachErrToSpan(routerSpan, err)
+			outputErr := err
+			var httpErr ApolloCompatibleHttpError
+			var reportErr ReportError
+			if h.executor.Resolver.Options().ApolloCompatibilityReplaceInvalidVariableError && errors.As(err, &httpErr) {
+				outputErr = &operationreport.ApolloCompatibilityError{
+					ExtensionCode: httpErr.ExtensionCode(),
+					Message:       httpErr.Error(),
+				}
+			} else if h.executor.Resolver.Options().ApolloCompatibilityReplaceUndefinedOperationFieldError && errors.As(err, &reportErr) {
+				report := reportErr.Report()
+				for _, externalErr := range report.ExternalErrors {
+					if externalErr.ApolloCompatibilityError != nil {
+						outputErr = externalErr.ApolloCompatibilityError
+						break
+					}
+				}
+			}
 
-			writeOperationError(r, w, requestLogger, err)
+			requestContext.error = outputErr
+			// Mark the root span of the router as failed, so we can easily identify failed requests
+			rtrace.AttachErrToSpan(routerSpan, outputErr)
+
+			writeOperationError(r, w, requestLogger, outputErr)
 			h.releaseBodyReadBuffer(buf)
 			return
 		}
