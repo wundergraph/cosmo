@@ -1,0 +1,44 @@
+name: Update Dependency from GraphQL Go Tools
+
+on:
+  repository_dispatch:
+    types: [new_graphql_go_tools_tag]
+
+jobs:
+  update-dependency:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+
+      - name: Get Latest Tag of graphql-go-tools
+        run: |
+          LATEST_TAG="${{ github.event.client_payload.tag }}"
+          echo "Latest tag from graphql-go-tools: $LATEST_TAG"
+
+      - name: Update dependency
+        run: |
+          cd router
+          go get github.com/wundergraph/graphql-go-tools@$LATEST_TAG
+          make sync-go-workspace
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git checkout -b update-graphql-go-tools-$LATEST_TAG
+          git commit -am "Update to graphql-go-tools $LATEST_TAG"
+          git push origin update-graphql-go-tools-$LATEST_TAG
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          branch: update-graphql-go-tools-$LATEST_TAG
+          title: "feat(router): Update to graphql-go-tools $LATEST_TAG"
+          body: "This auto-generated PR updates graphql-go-tools to the latest tag: $LATEST_TAG"
