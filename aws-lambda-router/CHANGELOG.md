@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.35.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.34.2...aws-lambda-router@0.35.0) (2024-10-28)
+
+### Features
+
+* upgrade go tools to support lock free epoll conn handling for ws origin requests ([#1316](https://github.com/wundergraph/cosmo/issues/1316)) ([f3f23d6](https://github.com/wundergraph/cosmo/commit/f3f23d6686a241a38700ff9b0ce8c5fe6a41582f)) (@jensneuse)
+
 ## [0.34.2](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.34.1...aws-lambda-router@0.34.2) (2024-10-27)
 
 **Note:** Version bump only for package aws-lambda-router
