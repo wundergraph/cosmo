@@ -594,6 +594,7 @@ export const schemaVersion = pgTable(
   (t) => {
     return {
       organizationIdIndex: index('sv_organization_id_idx').on(t.organizationId),
+      targetIdIndex: index('sv_target_id_idx').on(t.targetId),
     };
   },
 );
@@ -1573,6 +1574,10 @@ export const graphCompositions = pgTable(
     return {
       schemaVersionIdIndex: index('graphcomp_schema_version_id_idx').on(t.schemaVersionId),
       createdByIdIndex: index('graphcomp_created_by_id_idx').on(t.createdById),
+      isComposableIndex: index('graphcomp_is_composable_idx').on(t.isComposable),
+      deploymentErrorIndex: index('graphcomp_deployment_error_idx').on(t.deploymentError),
+      admissionErrorIndex: index('graphcomp_admission_error_idx').on(t.admissionError),
+      isFeatureFlagCompositionIndex: index('graphcomp_is_feature_flag_composition_idx').on(t.isFeatureFlagComposition),
     };
   },
 );
