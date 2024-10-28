@@ -179,7 +179,7 @@ export class FeatureFlagRepository {
       conditions.push(eq(featureFlags.namespaceId, namespaceId));
     }
 
-    const resp = await this.db
+    const dbQuery = this.db
       .select({
         id: featureFlags.id,
         name: featureFlags.name,
@@ -193,10 +193,17 @@ export class FeatureFlagRepository {
       .from(featureFlags)
       .innerJoin(namespaces, eq(namespaces.id, featureFlags.namespaceId))
       .leftJoin(users, eq(users.id, featureFlags.createdBy))
-      .where(and(...conditions))
-      .limit(limit)
-      .offset(offset)
-      .execute();
+      .where(and(...conditions));
+
+    if (limit) {
+      dbQuery.limit(limit);
+    }
+
+    if (offset) {
+      dbQuery.offset(offset);
+    }
+
+    const resp = await dbQuery.execute();
 
     return resp.map((r) => ({
       ...r,
@@ -254,7 +261,7 @@ export class FeatureFlagRepository {
       );
     }
 
-    const featureSubgraphTargets = await this.db
+    const dbQuery = this.db
       .select({
         id: targets.id,
         name: targets.name,
@@ -266,9 +273,17 @@ export class FeatureFlagRepository {
       // Left join because version is optional
       .leftJoin(schemaVersion, eq(subgraphs.schemaVersionId, schemaVersion.id))
       .orderBy(asc(targets.createdAt), asc(schemaVersion.createdAt))
-      .where(and(...conditions))
-      .limit(limit)
-      .offset(offset);
+      .where(and(...conditions));
+
+    if (limit) {
+      dbQuery.limit(limit);
+    }
+
+    if (offset) {
+      dbQuery.offset(offset);
+    }
+
+    const featureSubgraphTargets = await dbQuery.execute();
 
     const featureSubgraphs: FeatureSubgraphDTO[] = [];
 
