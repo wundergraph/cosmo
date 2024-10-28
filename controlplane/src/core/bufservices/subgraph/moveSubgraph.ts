@@ -41,6 +41,7 @@ export function moveSubgraph(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -52,6 +53,7 @@ export function moveSubgraph(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -66,6 +68,7 @@ export function moveSubgraph(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -79,55 +82,57 @@ export function moveSubgraph(
       authContext,
     });
 
-    const { compositionErrors, updatedFederatedGraphs, deploymentErrors } = await opts.db.transaction(async (tx) => {
-      const auditLogRepo = new AuditLogRepository(tx);
-      const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
-      const namespaceRepo = new NamespaceRepository(tx, authContext.organizationId);
+    const { compositionErrors, updatedFederatedGraphs, deploymentErrors, compositionWarnings } =
+      await opts.db.transaction(async (tx) => {
+        const auditLogRepo = new AuditLogRepository(tx);
+        const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
+        const namespaceRepo = new NamespaceRepository(tx, authContext.organizationId);
 
-      const exists = await subgraphRepo.exists(req.name, req.newNamespace);
-      if (exists) {
-        throw new PublicError(
-          EnumStatusCode.ERR_ALREADY_EXISTS,
-          `The subgraph "${req.name}" already exists in the namespace "${req.newNamespace}".`,
-        );
-      }
+        const exists = await subgraphRepo.exists(req.name, req.newNamespace);
+        if (exists) {
+          throw new PublicError(
+            EnumStatusCode.ERR_ALREADY_EXISTS,
+            `The subgraph "${req.name}" already exists in the namespace "${req.newNamespace}".`,
+          );
+        }
 
-      const newNamespace = await namespaceRepo.byName(req.newNamespace);
-      if (!newNamespace) {
-        throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Could not find namespace ${req.newNamespace}`);
-      }
+        const newNamespace = await namespaceRepo.byName(req.newNamespace);
+        if (!newNamespace) {
+          throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Could not find namespace ${req.newNamespace}`);
+        }
 
-      const { compositionErrors, updatedFederatedGraphs, deploymentErrors } = await subgraphRepo.move(
-        {
-          targetId: subgraph.targetId,
-          updatedBy: authContext.userId,
-          subgraphId: subgraph.id,
-          subgraphLabels: subgraph.labels,
-          currentNamespaceId: subgraph.namespaceId,
-          newNamespaceId: newNamespace.id,
-        },
-        opts.blobStorage,
-        {
-          cdnBaseUrl: opts.cdnBaseUrl,
-          jwtSecret: opts.admissionWebhookJWTSecret,
-        },
-      );
+        const { compositionErrors, updatedFederatedGraphs, deploymentErrors, compositionWarnings } =
+          await subgraphRepo.move(
+            {
+              targetId: subgraph.targetId,
+              updatedBy: authContext.userId,
+              subgraphId: subgraph.id,
+              subgraphLabels: subgraph.labels,
+              currentNamespaceId: subgraph.namespaceId,
+              newNamespaceId: newNamespace.id,
+            },
+            opts.blobStorage,
+            {
+              cdnBaseUrl: opts.cdnBaseUrl,
+              jwtSecret: opts.admissionWebhookJWTSecret,
+            },
+          );
 
-      await auditLogRepo.addAuditLog({
-        organizationId: authContext.organizationId,
-        auditAction: 'subgraph.moved',
-        action: 'moved',
-        actorId: authContext.userId,
-        auditableType: 'subgraph',
-        auditableDisplayName: subgraph.name,
-        actorDisplayName: authContext.userDisplayName,
-        actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
-        targetNamespaceId: newNamespace.id,
-        targetNamespaceDisplayName: newNamespace.name,
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'subgraph.moved',
+          action: 'moved',
+          actorId: authContext.userId,
+          auditableType: 'subgraph',
+          auditableDisplayName: subgraph.name,
+          actorDisplayName: authContext.userDisplayName,
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+          targetNamespaceId: newNamespace.id,
+          targetNamespaceDisplayName: newNamespace.name,
+        });
+
+        return { compositionErrors, updatedFederatedGraphs, deploymentErrors, compositionWarnings };
       });
-
-      return { compositionErrors, updatedFederatedGraphs, deploymentErrors };
-    });
 
     for (const graph of updatedFederatedGraphs) {
       orgWebhooks.send(
@@ -157,6 +162,7 @@ export function moveSubgraph(
           code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
         },
         compositionErrors,
+        compositionWarnings,
         deploymentErrors: [],
       };
     }
@@ -168,6 +174,7 @@ export function moveSubgraph(
         },
         compositionErrors: [],
         deploymentErrors,
+        compositionWarnings,
       };
     }
 
@@ -177,6 +184,7 @@ export function moveSubgraph(
       },
       compositionErrors: [],
       deploymentErrors: [],
+      compositionWarnings,
     };
   });
 }

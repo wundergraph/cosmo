@@ -137,7 +137,7 @@ const BillingPage: NextPageWithLayout = () => {
                   key={feature.id}
                   className="flex items-center gap-2 text-sm"
                 >
-                  <PiCheck className="h-4 w-4 text-green-400" />
+                  <PiCheck className="h-4 w-4 text-success" />
                   <span className="text-muted-foreground">
                     {feature.description}
                   </span>

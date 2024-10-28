@@ -125,7 +125,7 @@ export const SDLViewerMonaco = ({
         },
         options: {
           isWholeLine: true,
-          className: "bg-green-500 bg-opacity-40 w-full h-32 z-25",
+          className: "bg-success bg-opacity-40 w-full h-32 z-25",
         },
       });
 

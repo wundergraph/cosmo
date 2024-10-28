@@ -56,7 +56,7 @@ import {
 } from "./ui/tooltip";
 import { useToast } from "./ui/use-toast";
 import { useMutation } from "@connectrpc/connect-query";
-import { GraphContext } from '@/components/layout/graph-layout';
+import { GraphContext } from "@/components/layout/graph-layout";
 
 // this is required to render a blank line with LineChart
 const fallbackData = [
@@ -637,7 +637,7 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
               <Tooltip delayDuration={100}>
                 <TooltipTrigger>
                   <div className="flex items-center gap-x-2">
-                    <MdNearbyError className="h-4 w-4 text-red-500" />
+                    <MdNearbyError className="h-4 w-4 text-destructive" />
                     <p className="text-sm">{`${formatMetric(totalErrors)} ${
                       totalErrors === 1 ? "error" : "errors"
                     }`}</p>
