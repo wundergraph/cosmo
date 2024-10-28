@@ -594,6 +594,7 @@ export const schemaVersion = pgTable(
   (t) => {
     return {
       organizationIdIndex: index('sv_organization_id_idx').on(t.organizationId),
+      targetIdIndex: index('sv_target_id_idx').on(t.targetId),
     };
   },
 );
