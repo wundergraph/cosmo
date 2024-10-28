@@ -74,7 +74,6 @@ import {
   PersistedOperation,
   PublishedOperationStatus,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import axios from "axios";
 import { sentenceCase } from "change-case";
 import crypto from "crypto";
 import { GraphiQL } from "graphiql";
@@ -1182,21 +1181,22 @@ const PlaygroundPage: NextPageWithLayout = () => {
           }
         }
 
-        const response = await axios.post(
-          routingUrl,
-          {
+        const response = await fetch(routingUrl, {
+          method: "POST",
+          headers: requestHeaders,
+          body: JSON.stringify({
             query: debouncedQuery,
-          },
-          { headers: requestHeaders },
-        );
+          }),
+        });
 
-        if (!response.data?.extensions?.queryPlan) {
-          setPlan(undefined);
-          return;
+        const data = await response.json();
+
+        if (!data?.extensions?.queryPlan) {
+          throw new Error("No query plan found");
         }
 
         setPlanError("");
-        setPlan(response.data.extensions.queryPlan);
+        setPlan(data.extensions.queryPlan);
       } catch (error: any) {
         setPlan(undefined);
         setPlanError(error.message || "Network error");

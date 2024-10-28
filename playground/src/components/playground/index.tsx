@@ -11,7 +11,6 @@ import { TbDevicesCheck } from 'react-icons/tb';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import axios, { AxiosError } from 'axios';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LuLayoutDashboard } from 'react-icons/lu';
 import { sentenceCase } from 'change-case';
@@ -610,21 +609,22 @@ export const Playground = (input: {
 
         validateHeaders(requestHeaders);
 
-        const response = await axios.post(
-          url,
-          {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: requestHeaders,
+          body: JSON.stringify({
             query: debouncedQuery,
-          },
-          { headers: requestHeaders },
-        );
+          }),
+        });
 
-        if (!response.data?.extensions?.queryPlan) {
-          setPlan(undefined);
-          return;
+        const data = await response.json();
+
+        if (!data?.extensions?.queryPlan) {
+          throw new Error('No query plan found');
         }
 
         setPlanError('');
-        setPlan(response.data.extensions.queryPlan);
+        setPlan(data.extensions.queryPlan);
       } catch (error: any) {
         setPlan(undefined);
         setPlanError(error.message || 'Network error');
