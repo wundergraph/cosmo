@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.92.3](https://github.com/wundergraph/cosmo/compare/studio@0.92.2...studio@0.92.3) (2024-10-25)
+
+### Bug Fixes
+
+* improve contract tags ui in the graph overview ([#1308](https://github.com/wundergraph/cosmo/issues/1308)) ([f8e46b2](https://github.com/wundergraph/cosmo/commit/f8e46b204f14996e395be0903f20f01b99ba7ed9)) (@JivusAyrus)
+
 ## [0.92.2](https://github.com/wundergraph/cosmo/compare/studio@0.92.1...studio@0.92.2) (2024-10-24)
 
 **Note:** Version bump only for package studio

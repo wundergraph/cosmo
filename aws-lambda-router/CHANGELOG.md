@@ -4,6 +4,26 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.34.2](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.34.1...aws-lambda-router@0.34.2) (2024-10-27)
+
+**Note:** Version bump only for package aws-lambda-router
+
+## [0.34.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.34.0...aws-lambda-router@0.34.1) (2024-10-25)
+
+**Note:** Version bump only for package aws-lambda-router
+
+# [0.34.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.33.1...aws-lambda-router@0.34.0) (2024-10-25)
+
+### Features
+
+* add origin subgraph request epoll support ([#1284](https://github.com/wundergraph/cosmo/issues/1284)) ([4fe8146](https://github.com/wundergraph/cosmo/commit/4fe81461a43e45dbd3bae482976fec8127d3d982)) (@jensneuse)
+
+## [0.33.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.33.0...aws-lambda-router@0.33.1) (2024-10-24)
+
+### Bug Fixes
+
+* value completion typename, planner shared nodes selections ([#1306](https://github.com/wundergraph/cosmo/issues/1306)) ([b5929bf](https://github.com/wundergraph/cosmo/commit/b5929bfcd263e835efae617d3ca64691c44c7ff9)) (@devsergiy)
+
 # [0.33.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.32.0...aws-lambda-router@0.33.0) (2024-10-21)
 
 ### Features

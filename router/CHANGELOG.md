@@ -4,6 +4,28 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.131.2](https://github.com/wundergraph/cosmo/compare/router@0.131.1...router@0.131.2) (2024-10-27)
+
+### Bug Fixes
+
+* **epoll:** don't return when client conn was terminated ([#1312](https://github.com/wundergraph/cosmo/issues/1312)) ([63f17d6](https://github.com/wundergraph/cosmo/commit/63f17d63b2f2c578fbf79aef56e4bc7a3631116e)) (@StarpTech)
+
+## [0.131.1](https://github.com/wundergraph/cosmo/compare/router@0.131.0...router@0.131.1) (2024-10-25)
+
+**Note:** Version bump only for package router
+
+# [0.131.0](https://github.com/wundergraph/cosmo/compare/router@0.130.2...router@0.131.0) (2024-10-25)
+
+### Features
+
+* add origin subgraph request epoll support ([#1284](https://github.com/wundergraph/cosmo/issues/1284)) ([4fe8146](https://github.com/wundergraph/cosmo/commit/4fe81461a43e45dbd3bae482976fec8127d3d982)) (@jensneuse)
+
+## [0.130.2](https://github.com/wundergraph/cosmo/compare/router@0.130.1...router@0.130.2) (2024-10-24)
+
+### Bug Fixes
+
+* value completion typename, planner shared nodes selections ([#1306](https://github.com/wundergraph/cosmo/issues/1306)) ([b5929bf](https://github.com/wundergraph/cosmo/commit/b5929bfcd263e835efae617d3ca64691c44c7ff9)) (@devsergiy)
+
 ## [0.130.1](https://github.com/wundergraph/cosmo/compare/router@0.130.0...router@0.130.1) (2024-10-24)
 
 ### Bug Fixes
