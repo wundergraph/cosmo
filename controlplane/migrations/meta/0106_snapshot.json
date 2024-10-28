@@ -1,5 +1,5 @@
 {
-  "id": "9cebf0a8-4bf5-42dc-aa1d-e0ae957d3091",
+  "id": "ba10b6e3-7f29-4cbc-9e35-f7b2b3cbbe13",
   "prevId": "e6ac9a2e-4959-4e41-8177-242498d61424",
   "version": "7",
   "dialect": "postgresql",
@@ -2600,66 +2600,6 @@
           "columns": [
             {
               "expression": "created_by_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "graphcomp_is_composable_idx": {
-          "name": "graphcomp_is_composable_idx",
-          "columns": [
-            {
-              "expression": "is_composable",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "graphcomp_deployment_error_idx": {
-          "name": "graphcomp_deployment_error_idx",
-          "columns": [
-            {
-              "expression": "deployment_error",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "graphcomp_admission_error_idx": {
-          "name": "graphcomp_admission_error_idx",
-          "columns": [
-            {
-              "expression": "admission_error",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "graphcomp_is_feature_flag_composition_idx": {
-          "name": "graphcomp_is_feature_flag_composition_idx",
-          "columns": [
-            {
-              "expression": "is_feature_flag_composition",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
