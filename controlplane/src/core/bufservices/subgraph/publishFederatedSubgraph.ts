@@ -56,6 +56,7 @@ export function publishFederatedSubgraph(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -74,6 +75,7 @@ export function publishFederatedSubgraph(
           },
           compositionErrors: [],
           deploymentErrors: [],
+          compositionWarnings: [],
         };
       }
       isEventDrivenGraph = normalizationResult?.isEventDrivenGraph || false;
@@ -86,6 +88,7 @@ export function publishFederatedSubgraph(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -98,6 +101,7 @@ export function publishFederatedSubgraph(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -136,6 +140,7 @@ export function publishFederatedSubgraph(
           },
           compositionErrors: [],
           deploymentErrors: [],
+          compositionWarnings: [],
         };
       }
     } else {
@@ -150,6 +155,7 @@ export function publishFederatedSubgraph(
               },
               compositionErrors: [],
               deploymentErrors: [],
+              compositionWarnings: [],
             };
           }
           baseSubgraphID = baseSubgraph.id;
@@ -161,6 +167,7 @@ export function publishFederatedSubgraph(
             },
             compositionErrors: [],
             deploymentErrors: [],
+            compositionWarnings: [],
           };
         }
       }
@@ -174,6 +181,7 @@ export function publishFederatedSubgraph(
           },
           compositionErrors: [],
           deploymentErrors: [],
+          compositionWarnings: [],
         };
       }
 
@@ -186,6 +194,7 @@ export function publishFederatedSubgraph(
             },
             compositionErrors: [],
             deploymentErrors: [],
+            compositionWarnings: [],
           };
         }
         if (req.subscriptionUrl !== undefined) {
@@ -196,6 +205,7 @@ export function publishFederatedSubgraph(
             },
             compositionErrors: [],
             deploymentErrors: [],
+            compositionWarnings: [],
           };
         }
         if (req.subscriptionProtocol !== undefined) {
@@ -206,6 +216,7 @@ export function publishFederatedSubgraph(
             },
             compositionErrors: [],
             deploymentErrors: [],
+            compositionWarnings: [],
           };
         }
         if (req.websocketSubprotocol !== undefined) {
@@ -216,6 +227,7 @@ export function publishFederatedSubgraph(
             },
             compositionErrors: [],
             deploymentErrors: [],
+            compositionWarnings: [],
           };
         }
       } else {
@@ -231,6 +243,7 @@ export function publishFederatedSubgraph(
             },
             compositionErrors: [],
             deploymentErrors: [],
+            compositionWarnings: [],
           };
         }
 
@@ -242,6 +255,7 @@ export function publishFederatedSubgraph(
             },
             compositionErrors: [],
             deploymentErrors: [],
+            compositionWarnings: [],
           };
         }
       }
@@ -287,22 +301,23 @@ export function publishFederatedSubgraph(
       });
     }
 
-    const { compositionErrors, updatedFederatedGraphs, deploymentErrors, subgraphChanged } = await subgraphRepo.update(
-      {
-        targetId: subgraph.targetId,
-        labels: subgraph.labels,
-        unsetLabels: false,
-        schemaSDL: subgraphSchemaSDL,
-        updatedBy: authContext.userId,
-        namespaceId: namespace.id,
-        isV2Graph,
-      },
-      opts.blobStorage,
-      {
-        cdnBaseUrl: opts.cdnBaseUrl,
-        webhookJWTSecret: opts.admissionWebhookJWTSecret,
-      },
-    );
+    const { compositionErrors, updatedFederatedGraphs, deploymentErrors, subgraphChanged, compositionWarnings } =
+      await subgraphRepo.update(
+        {
+          targetId: subgraph.targetId,
+          labels: subgraph.labels,
+          unsetLabels: false,
+          schemaSDL: subgraphSchemaSDL,
+          updatedBy: authContext.userId,
+          namespaceId: namespace.id,
+          isV2Graph,
+        },
+        opts.blobStorage,
+        {
+          cdnBaseUrl: opts.cdnBaseUrl,
+          webhookJWTSecret: opts.admissionWebhookJWTSecret,
+        },
+      );
 
     for (const graph of updatedFederatedGraphs) {
       const hasErrors =
@@ -385,6 +400,7 @@ export function publishFederatedSubgraph(
           code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
         },
         compositionErrors,
+        compositionWarnings,
         deploymentErrors: [],
       };
     }
@@ -396,6 +412,7 @@ export function publishFederatedSubgraph(
         },
         compositionErrors: [],
         deploymentErrors,
+        compositionWarnings,
       };
     }
 
@@ -406,6 +423,7 @@ export function publishFederatedSubgraph(
       compositionErrors: [],
       deploymentErrors: [],
       hasChanged: subgraphChanged,
+      compositionWarnings,
     };
   });
 }

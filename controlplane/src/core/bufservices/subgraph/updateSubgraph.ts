@@ -48,6 +48,7 @@ export function updateSubgraph(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -60,6 +61,7 @@ export function updateSubgraph(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -73,6 +75,7 @@ export function updateSubgraph(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -84,6 +87,7 @@ export function updateSubgraph(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -97,6 +101,7 @@ export function updateSubgraph(
           },
           compositionErrors: [],
           deploymentErrors: [],
+          compositionWarnings: [],
         };
       }
       if (req.subscriptionUrl !== undefined) {
@@ -107,6 +112,7 @@ export function updateSubgraph(
           },
           compositionErrors: [],
           deploymentErrors: [],
+          compositionWarnings: [],
         };
       }
       if (req.subscriptionProtocol !== undefined) {
@@ -117,6 +123,7 @@ export function updateSubgraph(
           },
           compositionErrors: [],
           deploymentErrors: [],
+          compositionWarnings: [],
         };
       }
       if (req.websocketSubprotocol !== undefined) {
@@ -127,6 +134,7 @@ export function updateSubgraph(
           },
           compositionErrors: [],
           deploymentErrors: [],
+          compositionWarnings: [],
         };
       }
     } else {
@@ -139,6 +147,7 @@ export function updateSubgraph(
           },
           compositionErrors: [],
           deploymentErrors: [],
+          compositionWarnings: [],
         };
       }
       // When un-setting the url, the url can be an empty string
@@ -150,6 +159,7 @@ export function updateSubgraph(
           },
           compositionErrors: [],
           deploymentErrors: [],
+          compositionWarnings: [],
         };
       }
     }
@@ -165,27 +175,28 @@ export function updateSubgraph(
       authContext,
     });
 
-    const { compositionErrors, updatedFederatedGraphs, deploymentErrors } = await subgraphRepo.update(
-      {
-        targetId: subgraph.targetId,
-        labels: req.labels,
-        unsetLabels: req.unsetLabels ?? false,
-        subscriptionUrl: req.subscriptionUrl,
-        routingUrl: req.routingUrl,
-        subscriptionProtocol:
-          req.subscriptionProtocol === undefined ? undefined : formatSubscriptionProtocol(req.subscriptionProtocol),
-        websocketSubprotocol:
-          req.websocketSubprotocol === undefined ? undefined : formatWebsocketSubprotocol(req.websocketSubprotocol),
-        updatedBy: authContext.userId,
-        readme: req.readme,
-        namespaceId: subgraph.namespaceId,
-      },
-      opts.blobStorage,
-      {
-        cdnBaseUrl: opts.cdnBaseUrl,
-        webhookJWTSecret: opts.admissionWebhookJWTSecret,
-      },
-    );
+    const { compositionErrors, updatedFederatedGraphs, deploymentErrors, compositionWarnings } =
+      await subgraphRepo.update(
+        {
+          targetId: subgraph.targetId,
+          labels: req.labels,
+          unsetLabels: req.unsetLabels ?? false,
+          subscriptionUrl: req.subscriptionUrl,
+          routingUrl: req.routingUrl,
+          subscriptionProtocol:
+            req.subscriptionProtocol === undefined ? undefined : formatSubscriptionProtocol(req.subscriptionProtocol),
+          websocketSubprotocol:
+            req.websocketSubprotocol === undefined ? undefined : formatWebsocketSubprotocol(req.websocketSubprotocol),
+          updatedBy: authContext.userId,
+          readme: req.readme,
+          namespaceId: subgraph.namespaceId,
+        },
+        opts.blobStorage,
+        {
+          cdnBaseUrl: opts.cdnBaseUrl,
+          webhookJWTSecret: opts.admissionWebhookJWTSecret,
+        },
+      );
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
@@ -228,6 +239,7 @@ export function updateSubgraph(
           code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
         },
         compositionErrors,
+        compositionWarnings,
         deploymentErrors: [],
       };
     }
@@ -238,6 +250,7 @@ export function updateSubgraph(
           code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
         },
         compositionErrors: [],
+        compositionWarnings,
         deploymentErrors,
       };
     }
@@ -248,6 +261,7 @@ export function updateSubgraph(
       },
       compositionErrors: [],
       deploymentErrors: [],
+      compositionWarnings,
     };
   });
 }

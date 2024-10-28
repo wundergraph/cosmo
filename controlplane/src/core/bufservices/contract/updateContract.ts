@@ -4,6 +4,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import {
   CompositionError,
+  CompositionWarning,
   DeploymentError,
   UpdateContractRequest,
   UpdateContractResponse,
@@ -50,6 +51,7 @@ export function updateContract(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -63,6 +65,7 @@ export function updateContract(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -74,6 +77,7 @@ export function updateContract(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -85,6 +89,7 @@ export function updateContract(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -97,6 +102,7 @@ export function updateContract(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -108,6 +114,7 @@ export function updateContract(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -120,6 +127,7 @@ export function updateContract(
 
     const compositionErrors: PlainMessage<CompositionError>[] = [];
     const deploymentErrors: PlainMessage<DeploymentError>[] = [];
+    const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
 
     const composition = await fedGraphRepo.composeAndDeployGraphs({
       federatedGraphs: [
@@ -141,6 +149,7 @@ export function updateContract(
 
     compositionErrors.push(...composition.compositionErrors);
     deploymentErrors.push(...composition.deploymentErrors);
+    compositionWarnings.push(...composition.compositionWarnings);
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
@@ -182,6 +191,7 @@ export function updateContract(
         },
         compositionErrors,
         deploymentErrors: [],
+        compositionWarnings,
       };
     }
 
@@ -192,6 +202,7 @@ export function updateContract(
         },
         compositionErrors: [],
         deploymentErrors,
+        compositionWarnings,
       };
     }
 
@@ -201,6 +212,7 @@ export function updateContract(
       },
       deploymentErrors,
       compositionErrors,
+      compositionWarnings,
     };
   });
 }

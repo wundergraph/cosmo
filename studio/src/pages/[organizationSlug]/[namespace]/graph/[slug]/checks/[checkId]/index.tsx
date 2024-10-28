@@ -216,7 +216,7 @@ const getDecorationCollection = (
           })`,
         },
         inlineClassName:
-          "underline decoration-red-500 decoration-wavy cursor-pointer z-50",
+          "underline decoration-destructive decoration-wavy cursor-pointer z-50",
         isWholeLine: l.issueLocation.endLine === undefined,
       },
     });
@@ -239,8 +239,8 @@ const getDecorationCollection = (
         },
         inlineClassName: `underline ${
           g.severity === LintSeverity.error
-            ? "decoration-red-500"
-            : "decoration-yellow-600"
+            ? "decoration-destructive"
+            : "decoration-warning"
         } decoration-wavy cursor-pointer z-50`,
         isWholeLine: g.issueLocation.endLine === undefined,
       },
@@ -787,6 +787,23 @@ const CheckDetails = ({
                     </AlertDescription>
                   </Alert>
                 ) : null}
+
+                {data.compositionWarnings?.length ? (
+                  <Alert variant="warn">
+                    <AlertTitle>Composition Warnings</AlertTitle>
+                    <AlertDescription>
+                      <pre className="">
+                        {data.compositionWarnings.length > 0
+                          ? data.compositionWarnings
+                              .join("\n")
+                              .split("Warning: ")
+                              .join("\n")
+                          : "No composition wanings"}
+                      </pre>
+                    </AlertDescription>
+                  </Alert>
+                ) : null}
+
                 {data.check.isBreaking &&
                 data.check.isComposable &&
                 data.check.hasClientTraffic ? (

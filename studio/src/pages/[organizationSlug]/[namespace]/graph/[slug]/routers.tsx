@@ -670,7 +670,7 @@ const RoutersPage: NextPageWithLayout = () => {
                             customCell = cell.row.original.clusterName || "-";
                           } else if (cell.column.id === "status") {
                             customCell = (
-                              <MdCheckCircle className="h-5 w-5 text-green-600" />
+                              <MdCheckCircle className="h-5 w-5 text-success" />
                             );
                           } else if (cell.column.id === "onLatestComposition") {
                             customCell = (
@@ -739,7 +739,7 @@ const RoutersPage: NextPageWithLayout = () => {
                               cell.row.original.memoryUsageChangePercent < 0
                             ) {
                               memBadge = (
-                                <FiArrowDown className="h-4 w-4 text-green-500" />
+                                <FiArrowDown className="h-4 w-4 text-success" />
                               );
                             }
 
@@ -751,7 +751,7 @@ const RoutersPage: NextPageWithLayout = () => {
                               cell.row.original.cpuUsageChangePercent < 0
                             ) {
                               cpuBadge = (
-                                <FiArrowDown className="h-4 w-4 text-green-500" />
+                                <FiArrowDown className="h-4 w-4 text-success" />
                               );
                             }
                             customCell = (

@@ -4,6 +4,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import {
   CompositionError,
+  CompositionWarning,
   DeleteFeatureFlagRequest,
   DeleteFeatureFlagResponse,
   DeploymentError,
@@ -46,6 +47,7 @@ export function deleteFeatureFlag(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -58,6 +60,7 @@ export function deleteFeatureFlag(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -73,6 +76,7 @@ export function deleteFeatureFlag(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -102,6 +106,7 @@ export function deleteFeatureFlag(
 
     const compositionErrors: PlainMessage<CompositionError>[] = [];
     const deploymentErrors: PlainMessage<DeploymentError>[] = [];
+    const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
 
     await opts.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
@@ -134,6 +139,7 @@ export function deleteFeatureFlag(
 
       compositionErrors.push(...composition.compositionErrors);
       deploymentErrors.push(...composition.deploymentErrors);
+      compositionWarnings.push(...composition.compositionWarnings);
     });
 
     for (const graph of federatedGraphs) {
@@ -165,6 +171,7 @@ export function deleteFeatureFlag(
         },
         compositionErrors,
         deploymentErrors: [],
+        compositionWarnings,
       };
     }
 
@@ -175,6 +182,7 @@ export function deleteFeatureFlag(
         },
         compositionErrors: [],
         deploymentErrors,
+        compositionWarnings,
       };
     }
 
@@ -184,6 +192,7 @@ export function deleteFeatureFlag(
       },
       compositionErrors,
       deploymentErrors,
+      compositionWarnings,
     };
   });
 }

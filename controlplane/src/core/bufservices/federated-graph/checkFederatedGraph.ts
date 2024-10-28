@@ -5,6 +5,7 @@ import {
   CheckFederatedGraphRequest,
   CheckFederatedGraphResponse,
   CompositionError,
+  CompositionWarning,
   Subgraph,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { parse } from 'graphql';
@@ -39,6 +40,7 @@ export function checkFederatedGraph(
         },
         compositionErrors: [],
         subgraphs: [],
+        compositionWarnings: [],
       };
     }
 
@@ -53,6 +55,7 @@ export function checkFederatedGraph(
         },
         compositionErrors: [],
         subgraphs: [],
+        compositionWarnings: [],
       };
     }
 
@@ -64,6 +67,7 @@ export function checkFederatedGraph(
         },
         compositionErrors: [],
         subgraphs: [],
+        compositionWarnings: [],
       };
     }
 
@@ -96,6 +100,16 @@ export function checkFederatedGraph(
       })),
     );
 
+    const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
+    for (const warning of result.warnings) {
+      compositionWarnings.push({
+        message: warning.message,
+        federatedGraphName: req.name,
+        namespace: federatedGraph.namespace,
+        featureFlag: '',
+      });
+    }
+
     if (result.errors) {
       const compositionErrors: PlainMessage<CompositionError>[] = [];
       for (const error of result.errors) {
@@ -114,6 +128,7 @@ export function checkFederatedGraph(
           },
           compositionErrors,
           subgraphs: subgraphsDetails,
+          compositionWarnings,
         };
       }
     }
@@ -124,6 +139,7 @@ export function checkFederatedGraph(
       },
       compositionErrors: [],
       subgraphs: subgraphsDetails,
+      compositionWarnings,
     };
   });
 }

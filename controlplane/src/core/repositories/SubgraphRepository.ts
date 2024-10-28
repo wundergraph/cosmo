@@ -1,5 +1,9 @@
 import { PlainMessage } from '@bufbuild/protobuf';
-import { CompositionError, DeploymentError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  CompositionError,
+  CompositionWarning,
+  DeploymentError,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
 import { addDays } from 'date-fns';
 import { SQL, and, asc, count, desc, eq, getTableName, gt, inArray, like, lt, notInArray, or, sql } from 'drizzle-orm';
@@ -209,12 +213,14 @@ export class SubgraphRepository {
     },
   ): Promise<{
     compositionErrors: PlainMessage<CompositionError>[];
+    compositionWarnings: PlainMessage<CompositionWarning>[];
     deploymentErrors: PlainMessage<DeploymentError>[];
     updatedFederatedGraphs: FederatedGraphDTO[];
     subgraphChanged: boolean;
   }> {
     const deploymentErrors: PlainMessage<DeploymentError>[] = [];
     const compositionErrors: PlainMessage<CompositionError>[] = [];
+    const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
     // The collection of federated graphs that will be potentially re-composed
     const updatedFederatedGraphs: FederatedGraphDTO[] = [];
     let subgraphChanged = false;
@@ -228,7 +234,7 @@ export class SubgraphRepository {
 
       const subgraph = await subgraphRepo.byTargetId(data.targetId);
       if (!subgraph) {
-        return { compositionErrors, updatedFederatedGraphs };
+        return { compositionErrors, updatedFederatedGraphs, compositionWarnings };
       }
 
       // TODO: avoid downloading the schema use hash instead
@@ -408,7 +414,11 @@ export class SubgraphRepository {
         return;
       }
 
-      const { compositionErrors: cErrors, deploymentErrors: dErrors } = await fedGraphRepo.composeAndDeployGraphs({
+      const {
+        compositionErrors: cErrors,
+        deploymentErrors: dErrors,
+        compositionWarnings: cWarnings,
+      } = await fedGraphRepo.composeAndDeployGraphs({
         federatedGraphs: updatedFederatedGraphs.filter((g) => !g.contract),
         blobStorage,
         admissionConfig,
@@ -417,10 +427,12 @@ export class SubgraphRepository {
 
       compositionErrors.push(...cErrors);
       deploymentErrors.push(...dErrors);
+      compositionWarnings.push(...cWarnings);
     });
 
     return {
       compositionErrors,
+      compositionWarnings,
       updatedFederatedGraphs,
       deploymentErrors,
       subgraphChanged: subgraphChanged || labelChanged || data.unsetLabels,
@@ -445,6 +457,7 @@ export class SubgraphRepository {
     compositionErrors: PlainMessage<CompositionError>[];
     updatedFederatedGraphs: FederatedGraphDTO[];
     deploymentErrors: PlainMessage<DeploymentError>[];
+    compositionWarnings: PlainMessage<CompositionWarning>[];
   }> {
     return this.db.transaction(async (tx) => {
       const updatedFederatedGraphs: FederatedGraphDTO[] = [];
@@ -482,7 +495,7 @@ export class SubgraphRepository {
           .execute();
       }
 
-      const { compositionErrors, deploymentErrors } = await fedGraphRepo.composeAndDeployGraphs({
+      const { compositionErrors, deploymentErrors, compositionWarnings } = await fedGraphRepo.composeAndDeployGraphs({
         federatedGraphs: updatedFederatedGraphs.filter((g) => !g.contract),
         blobStorage,
         admissionConfig: {
@@ -492,7 +505,7 @@ export class SubgraphRepository {
         actorId: data.updatedBy,
       });
 
-      return { compositionErrors, updatedFederatedGraphs, deploymentErrors };
+      return { compositionErrors, updatedFederatedGraphs, deploymentErrors, compositionWarnings };
     });
   }
 
@@ -975,6 +988,7 @@ export class SubgraphRepository {
     const errorList = await this.db.query.schemaCheckComposition.findMany({
       columns: {
         compositionErrors: true,
+        compositionWarnings: true,
       },
       where: and(
         eq(schema.schemaCheckComposition.schemaCheckId, id),
@@ -989,6 +1003,13 @@ export class SubgraphRepository {
       .split('\n')
       .filter((m) => !!m);
 
+    const compositionWarnings = errorList
+      .filter((ce) => ce.compositionWarnings != null)
+      .map((ce) => ce.compositionWarnings)
+      .join('\n')
+      .split('\n')
+      .filter((m) => !!m);
+
     return {
       changes: changes.map((c) => ({
         id: c.id,
@@ -998,6 +1019,7 @@ export class SubgraphRepository {
         isBreaking: c.isBreaking ?? false,
       })),
       compositionErrors,
+      compositionWarnings,
     };
   }
 

@@ -193,6 +193,7 @@ export interface SchemaCheckDetailsDTO {
     isBreaking: boolean;
   }[];
   compositionErrors: string[];
+  compositionWarnings: string[];
 }
 
 export interface OrganizationDTO {
@@ -449,6 +450,7 @@ export interface GraphCompositionDTO {
   createdAt: string;
   createdBy?: string;
   compositionErrors?: string;
+  compositionWarnings?: string;
   routerConfigSignature?: string;
   isComposable: boolean;
   isLatestValid: boolean;
@@ -463,6 +465,7 @@ export interface FeatureFlagCompositionDTO {
   featureFlagName: string;
   createdBy?: string;
   compositionErrors?: string;
+  compositionWarnings?: string;
   routerConfigSignature?: string;
   isComposable: boolean;
   admissionError?: string;

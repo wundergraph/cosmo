@@ -294,6 +294,7 @@ export class SchemaCheckRepository {
             composedSchemaSDL: composition.composedSchema,
             clientSchema: composition.federatedClientSchema,
             compositionErrors: composition.errors?.map((e) => e.toString()).join('\n'),
+            compositionWarnings: composition.warnings?.map((w) => w.toString()).join('\n'),
           })),
         )
         .execute();

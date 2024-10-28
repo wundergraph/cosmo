@@ -41,6 +41,7 @@ export function moveMonograph(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -52,6 +53,7 @@ export function moveMonograph(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -64,6 +66,7 @@ export function moveMonograph(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -119,6 +122,7 @@ export function moveMonograph(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -148,6 +152,7 @@ export function moveMonograph(
       },
       compositionErrors: [],
       deploymentErrors: [],
+      compositionWarnings: [],
     };
   });
 }
