@@ -6,6 +6,7 @@ import {
   CheckSubgraphSchemaRequest,
   CheckSubgraphSchemaResponse,
   CompositionError,
+  CompositionWarning,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { GraphQLSchema, parse } from 'graphql';
 import { SchemaGraphPruningIssues, SchemaLintIssues } from '../../../types/index.js';
@@ -69,6 +70,7 @@ export function checkSubgraphSchema(
         lintErrors: [],
         graphPruneWarnings: [],
         graphPruneErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -88,6 +90,7 @@ export function checkSubgraphSchema(
         lintErrors: [],
         graphPruneWarnings: [],
         graphPruneErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -107,6 +110,7 @@ export function checkSubgraphSchema(
         lintErrors: [],
         graphPruneWarnings: [],
         graphPruneErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -127,6 +131,7 @@ export function checkSubgraphSchema(
         lintErrors: [],
         graphPruneWarnings: [],
         graphPruneErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -147,6 +152,7 @@ export function checkSubgraphSchema(
         lintErrors: [],
         graphPruneWarnings: [],
         graphPruneErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -172,6 +178,7 @@ export function checkSubgraphSchema(
             lintErrors: [],
             graphPruneWarnings: [],
             graphPruneErrors: [],
+            compositionWarnings: [],
           };
         }
         if (namespace.enableGraphPruning) {
@@ -194,6 +201,7 @@ export function checkSubgraphSchema(
           lintErrors: [],
           graphPruneWarnings: [],
           graphPruneErrors: [],
+          compositionWarnings: [],
         };
       }
     }
@@ -225,6 +233,7 @@ export function checkSubgraphSchema(
         lintErrors: [],
         graphPruneWarnings: [],
         graphPruneErrors: [],
+        compositionWarnings: [],
       };
     }
 
@@ -256,6 +265,7 @@ export function checkSubgraphSchema(
     const trafficInspector = new SchemaUsageTrafficInspector(opts.chClient!);
     const inspectedOperations: InspectorOperationResult[] = [];
     const compositionErrors: PlainMessage<CompositionError>[] = [];
+    const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
 
     let inspectorChanges: InspectorSchemaChange[] = [];
 
@@ -278,6 +288,15 @@ export function checkSubgraphSchema(
       for (const error of composition.errors) {
         compositionErrors.push({
           message: error.message,
+          federatedGraphName: composition.name,
+          namespace: composition.namespace,
+          featureFlag: '',
+        });
+      }
+
+      for (const warning of composition.warnings) {
+        compositionWarnings.push({
+          message: warning.message,
           federatedGraphName: composition.name,
           namespace: composition.namespace,
           featureFlag: '',
@@ -392,6 +411,7 @@ export function checkSubgraphSchema(
       graphPruneWarnings: graphPruningIssues.warnings,
       graphPruneErrors: graphPruningIssues.errors,
       clientTrafficCheckSkipped: req.skipTrafficCheck,
+      compositionWarnings,
     };
   });
 }

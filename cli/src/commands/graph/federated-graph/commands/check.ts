@@ -19,6 +19,7 @@ export default (opts: BaseCommandOptions) => {
     '--label-matcher <labels...>',
     'The label matchers to the federated graph with which the check is to be performed',
   );
+  command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
 
   command.action(async (name, options) => {
     let success = false;
@@ -35,6 +36,12 @@ export default (opts: BaseCommandOptions) => {
 
     const compositionErrorsTable = new Table({
       head: [pc.bold(pc.white('ERROR_MESSAGE'))],
+      colWidths: [120],
+      wordWrap: true,
+    });
+
+    const compositionWarningsTable = new Table({
+      head: [pc.bold(pc.white('WARNING_MESSAGE'))],
       colWidths: [120],
       wordWrap: true,
     });
@@ -92,6 +99,14 @@ export default (opts: BaseCommandOptions) => {
         }
         console.log(logSymbols.error + pc.red(' Schema check failed.'));
       }
+    }
+
+    if (!options.suppressWarnings && resp.compositionWarnings.length > 0) {
+      console.log(pc.yellow(`The following warnings were produced while composing the federated graph:`));
+      for (const compositionWarning of resp.compositionWarnings) {
+        compositionWarningsTable.push([compositionWarning.message]);
+      }
+      console.log(compositionWarningsTable.toString());
     }
 
     if (!success) {

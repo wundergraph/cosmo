@@ -168,7 +168,7 @@ export const TraceDetails = ({ ast }: { ast: GraphQLSchema | null }) => {
                     )}`}
                   >
                     <PlayIcon className="h-5" />
-                    <ExclamationTriangleIcon className="absolute -right-1 -top-1 h-3.5 text-red-500" />
+                    <ExclamationTriangleIcon className="absolute -right-1 -top-1 h-3.5 text-destructive" />
                   </Link>
                 </Button>
               </TooltipTrigger>
