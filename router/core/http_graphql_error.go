@@ -8,7 +8,7 @@ type HttpError interface {
 	StatusCode() int
 }
 
-type ApolloCompatibleHttpError interface {
+type ApolloCompatibilityHttpError interface {
 	error
 	// ExtensionCode is the ApolloCompatible extension error code
 	ExtensionCode() string

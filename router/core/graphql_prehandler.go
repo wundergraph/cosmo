@@ -4,10 +4,8 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
-	"errors"
 	"fmt"
 	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"net/http"
@@ -59,6 +57,7 @@ type PreHandlerOptions struct {
 	TrackSchemaUsageInfo        bool
 	ClientHeader                config.ClientHeader
 	ComputeOperationSha256      bool
+	ApolloCompatibilityFlags    *config.ApolloCompatibilityFlags
 }
 
 type PreHandler struct {
@@ -90,6 +89,7 @@ type PreHandler struct {
 	trackSchemaUsageInfo        bool
 	clientHeader                config.ClientHeader
 	computeOperationSha256      bool
+	apolloCompatibilityFlags    *config.ApolloCompatibilityFlags
 }
 
 type httpOperation struct {
@@ -135,6 +135,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		trackSchemaUsageInfo:     opts.TrackSchemaUsageInfo,
 		clientHeader:             opts.ClientHeader,
 		computeOperationSha256:   opts.ComputeOperationSha256,
+		apolloCompatibilityFlags: opts.ApolloCompatibilityFlags,
 	}
 }
 
@@ -248,7 +249,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 					message:    "file upload disabled",
 					statusCode: http.StatusOK,
 				}
-				writeOperationError(r, w, requestLogger, requestContext.error)
+				writeOperationError(r, w, requestLogger, requestContext.error, h.apolloCompatibilityFlags)
 				h.releaseBodyReadBuffer(buf)
 				return
 			}
@@ -264,7 +265,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			body, files, err = multipartParser.Parse(r, buf)
 			if err != nil {
 				requestContext.error = err
-				writeOperationError(r, w, requestLogger, requestContext.error)
+				writeOperationError(r, w, requestLogger, requestContext.error, h.apolloCompatibilityFlags)
 				h.releaseBodyReadBuffer(buf)
 				readMultiPartSpan.End()
 				return
@@ -298,7 +299,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				// e.g. too large body, slow client, aborted connection etc.
 				// The error is logged as debug log in the writeOperationError function
 
-				writeOperationError(r, w, requestLogger, err)
+				writeOperationError(r, w, requestLogger, err, h.apolloCompatibilityFlags)
 				h.releaseBodyReadBuffer(buf)
 				readOperationBodySpan.End()
 				return
@@ -317,29 +318,11 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			body:             body,
 		})
 		if err != nil {
-			outputErr := err
-			var httpErr ApolloCompatibleHttpError
-			var reportErr ReportError
-			if h.executor.Resolver.Options().ApolloCompatibilityReplaceInvalidVariableError && errors.As(err, &httpErr) {
-				outputErr = &operationreport.ApolloCompatibilityError{
-					ExtensionCode: httpErr.ExtensionCode(),
-					Message:       httpErr.Error(),
-				}
-			} else if h.executor.Resolver.Options().ApolloCompatibilityReplaceUndefinedOperationFieldError && errors.As(err, &reportErr) {
-				report := reportErr.Report()
-				for _, externalErr := range report.ExternalErrors {
-					if externalErr.ApolloCompatibilityError != nil {
-						outputErr = externalErr.ApolloCompatibilityError
-						break
-					}
-				}
-			}
-
-			requestContext.error = outputErr
+			requestContext.error = err
 			// Mark the root span of the router as failed, so we can easily identify failed requests
-			rtrace.AttachErrToSpan(routerSpan, outputErr)
+			rtrace.AttachErrToSpan(routerSpan, err)
 
-			writeOperationError(r, w, requestLogger, outputErr)
+			writeOperationError(r, w, requestLogger, err, h.apolloCompatibilityFlags)
 			h.releaseBodyReadBuffer(buf)
 			return
 		}
@@ -365,7 +348,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				writeOperationError(r, w, requestLogger, &httpGraphqlError{
 					message:    err.Error(),
 					statusCode: http.StatusUnauthorized,
-				})
+				}, h.apolloCompatibilityFlags)
 				return
 			}
 

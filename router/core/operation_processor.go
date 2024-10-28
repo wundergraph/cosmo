@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"hash"
 	"io"
 	"net/http"
@@ -92,6 +93,7 @@ type OperationProcessorOptions struct {
 	OperationHashCache             *ristretto.Cache[uint64, string]
 	ParseKitPoolSize               int
 	IntrospectionEnabled           bool
+	ApolloCompatibilityFlags       config.ApolloCompatibilityFlags
 }
 
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
@@ -936,7 +938,11 @@ func (o *OperationKit) skipIncludeVariableNames() []string {
 	return names
 }
 
-func createParseKit(i int) *parseKit {
+type parseKitOptions struct {
+	apolloCompatibilityFlags config.ApolloCompatibilityFlags
+}
+
+func createParseKit(i int, options *parseKitOptions) *parseKit {
 	return &parseKit{
 		i:          i,
 		parser:     astparser.NewParser(),
@@ -953,7 +959,11 @@ func createParseKit(i int) *parseKit {
 		printer:             &astprinter.Printer{},
 		normalizedOperation: &bytes.Buffer{},
 		variablesValidator:  variablesvalidation.NewVariablesValidator(),
-		operationValidator:  astvalidation.DefaultOperationValidator(),
+		operationValidator: astvalidation.DefaultOperationValidator(astvalidation.WithApolloCompatibilityFlags(
+			astvalidation.ApolloCompatibilityFlags{
+				ReplaceUndefinedOpFieldErrorEnabled: options.apolloCompatibilityFlags.ReplaceUndefinedOpFieldError.Enabled,
+			},
+		)),
 	}
 }
 
@@ -971,7 +981,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 	}
 	for i := 0; i < opts.ParseKitPoolSize; i++ {
 		processor.parseKitSemaphore <- i
-		processor.parseKits[i] = createParseKit(i)
+		processor.parseKits[i] = createParseKit(i, &parseKitOptions{apolloCompatibilityFlags: opts.ApolloCompatibilityFlags})
 	}
 	if opts.EnablePersistedOperationsCache {
 		processor.operationCache = &OperationCache{

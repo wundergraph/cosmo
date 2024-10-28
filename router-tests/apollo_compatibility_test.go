@@ -2,6 +2,7 @@ package integration
 
 import (
 	"encoding/json"
+	"github.com/stretchr/testify/assert"
 	"net/http"
 	"testing"
 
@@ -37,8 +38,8 @@ func TestApolloCompatibility(t *testing.T) {
 				Variables: json.RawMessage(`{"criteria":{"nationality":"GERMAN"}}`),
 			})
 			require.NoError(t, err)
-			require.Equal(t, http.StatusOK, res.Response.StatusCode)
-			require.Equal(t, `{"data":null,"extensions":{"valueCompletion":[{"message":"Invalid __typename found for object at array element of type Employee at index 0.","path":["findEmployees",0],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
+			assert.Equal(t, http.StatusOK, res.Response.StatusCode)
+			assert.Equal(t, `{"data":null,"extensions":{"valueCompletion":[{"message":"Invalid __typename found for object at array element of type Employee at index 0.","path":["findEmployees",0],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
 		})
 	})
 	t.Run("enable value completion", func(t *testing.T) {
@@ -65,8 +66,8 @@ func TestApolloCompatibility(t *testing.T) {
 				Variables: json.RawMessage(`{"criteria":{"nationality":"GERMAN"}}`),
 			})
 			require.NoError(t, err)
-			require.Equal(t, http.StatusOK, res.Response.StatusCode)
-			require.Equal(t, `{"data":null,"extensions":{"valueCompletion":[{"message":"Invalid __typename found for object at array element of type Employee at index 0.","path":["findEmployees",0],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
+			assert.Equal(t, http.StatusOK, res.Response.StatusCode)
+			assert.Equal(t, `{"data":null,"extensions":{"valueCompletion":[{"message":"Invalid __typename found for object at array element of type Employee at index 0.","path":["findEmployees",0],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
 		})
 	})
 	t.Run("float compaction off", func(t *testing.T) {
@@ -86,8 +87,8 @@ func TestApolloCompatibility(t *testing.T) {
 				Variables: json.RawMessage(`{"arg":1.0}`),
 			})
 			require.NoError(t, err)
-			require.Equal(t, http.StatusOK, res.Response.StatusCode)
-			require.Equal(t, `{"data":{"floatField":1.0}}`, res.Body)
+			assert.Equal(t, http.StatusOK, res.Response.StatusCode)
+			assert.Equal(t, `{"data":{"floatField":1.0}}`, res.Body)
 		})
 	})
 	t.Run("should not truncate - off", func(t *testing.T) {
@@ -107,8 +108,8 @@ func TestApolloCompatibility(t *testing.T) {
 				Variables: json.RawMessage(`{"arg":1.1}`),
 			})
 			require.NoError(t, err)
-			require.Equal(t, http.StatusOK, res.Response.StatusCode)
-			require.Equal(t, `{"data":{"floatField":1.1}}`, res.Body)
+			assert.Equal(t, http.StatusOK, res.Response.StatusCode)
+			assert.Equal(t, `{"data":{"floatField":1.1}}`, res.Body)
 		})
 	})
 	t.Run("should not truncate - on", func(t *testing.T) {
@@ -135,8 +136,8 @@ func TestApolloCompatibility(t *testing.T) {
 				Variables: json.RawMessage(`{"arg":1.1}`),
 			})
 			require.NoError(t, err)
-			require.Equal(t, http.StatusOK, res.Response.StatusCode)
-			require.Equal(t, `{"data":{"floatField":1.1}}`, res.Body)
+			assert.Equal(t, http.StatusOK, res.Response.StatusCode)
+			assert.Equal(t, `{"data":{"floatField":1.1}}`, res.Body)
 		})
 	})
 	t.Run("float compaction on", func(t *testing.T) {
@@ -163,8 +164,8 @@ func TestApolloCompatibility(t *testing.T) {
 				Variables: json.RawMessage(`{"arg":1}`),
 			})
 			require.NoError(t, err)
-			require.Equal(t, http.StatusOK, res.Response.StatusCode)
-			require.Equal(t, `{"data":{"floatField":1}}`, res.Body)
+			assert.Equal(t, http.StatusOK, res.Response.StatusCode)
+			assert.Equal(t, `{"data":{"floatField":1}}`, res.Body)
 		})
 	})
 	t.Run("float compaction global", func(t *testing.T) {
@@ -189,8 +190,8 @@ func TestApolloCompatibility(t *testing.T) {
 				Variables: json.RawMessage(`{"arg":1}`),
 			})
 			require.NoError(t, err)
-			require.Equal(t, http.StatusOK, res.Response.StatusCode)
-			require.Equal(t, `{"data":{"floatField":1}}`, res.Body)
+			assert.Equal(t, http.StatusOK, res.Response.StatusCode)
+			assert.Equal(t, `{"data":{"floatField":1}}`, res.Body)
 		})
 	})
 	t.Run("nullable array item with non-nullable array item field", func(t *testing.T) {
@@ -216,8 +217,8 @@ func TestApolloCompatibility(t *testing.T) {
 				Query: `query {employees{id}}`,
 			})
 			require.NoError(t, err)
-			require.Equal(t, http.StatusOK, res.Response.StatusCode)
-			require.Equal(t, `{"data":{"employees":[null]},"extensions":{"valueCompletion":[{"message":"Cannot return null for non-nullable field Employee.id.","path":["employees",0,"id"],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
+			assert.Equal(t, http.StatusOK, res.Response.StatusCode)
+			assert.Equal(t, `{"data":{"employees":[null]},"extensions":{"valueCompletion":[{"message":"Cannot return null for non-nullable field Employee.id.","path":["employees",0,"id"],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
 		})
 	})
 	t.Run("non-nullable array item", func(t *testing.T) {
@@ -243,8 +244,8 @@ func TestApolloCompatibility(t *testing.T) {
 				Query: `query {products{... on Consultancy{upc}}}`,
 			})
 			require.NoError(t, err)
-			require.Equal(t, http.StatusOK, res.Response.StatusCode)
-			require.Equal(t, `{"data":null,"extensions":{"valueCompletion":[{"message":"Cannot return null for non-nullable array element of type Products at index 0.","path":["products",0],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
+			assert.Equal(t, http.StatusOK, res.Response.StatusCode)
+			assert.Equal(t, `{"data":null,"extensions":{"valueCompletion":[{"message":"Cannot return null for non-nullable array element of type Products at index 0.","path":["products",0],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
 		})
 	})
 	t.Run("non-nullable array item with non-nullable array item field", func(t *testing.T) {
@@ -270,8 +271,8 @@ func TestApolloCompatibility(t *testing.T) {
 				Query: `query {products{... on Consultancy{upc}}}`,
 			})
 			require.NoError(t, err)
-			require.Equal(t, http.StatusOK, res.Response.StatusCode)
-			require.Equal(t, `{"data":null,"extensions":{"valueCompletion":[{"message":"Cannot return null for non-nullable field Products.upc.","path":["products",0,"upc"],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
+			assert.Equal(t, http.StatusOK, res.Response.StatusCode)
+			assert.Equal(t, `{"data":null,"extensions":{"valueCompletion":[{"message":"Cannot return null for non-nullable field Products.upc.","path":["products",0,"upc"],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
 		})
 	})
 	t.Run("simple fetch with suppress fetch errors enabled", func(t *testing.T) {
@@ -300,8 +301,8 @@ func TestApolloCompatibility(t *testing.T) {
 				Query: `query {products{... on Consultancy{upc}}}`,
 			})
 			require.NoError(t, err)
-			require.Equal(t, http.StatusOK, res.Response.StatusCode)
-			require.Equal(t, `{"data":null,"extensions":{"valueCompletion":[{"message":"Cannot return null for non-nullable field Query.products.","path":["products"],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
+			assert.Equal(t, http.StatusOK, res.Response.StatusCode)
+			assert.Equal(t, `{"data":null,"extensions":{"valueCompletion":[{"message":"Cannot return null for non-nullable field Query.products.","path":["products"],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
 		})
 	})
 	t.Run("simple fetch with suppress fetch errors disabled", func(t *testing.T) {
@@ -330,8 +331,8 @@ func TestApolloCompatibility(t *testing.T) {
 				Query: `query {products{... on Consultancy{upc}}}`,
 			})
 			require.NoError(t, err)
-			require.Equal(t, http.StatusOK, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees', Reason: no data or errors in response.","extensions":{"statusCode":200}}],"data":null}`, res.Body)
+			assert.Equal(t, http.StatusOK, res.Response.StatusCode)
+			assert.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees', Reason: no data or errors in response.","extensions":{"statusCode":200}}],"data":null}`, res.Body)
 		})
 	})
 	t.Run("should suppress errors when enable all is true", func(t *testing.T) {
@@ -355,26 +356,26 @@ func TestApolloCompatibility(t *testing.T) {
 				Query: `query {products{... on Consultancy{upc}}}`,
 			})
 			require.NoError(t, err)
-			require.Equal(t, http.StatusOK, res.Response.StatusCode)
-			require.Equal(t, `{"data":null,"extensions":{"valueCompletion":[{"message":"Cannot return null for non-nullable field Query.products.","path":["products"],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
+			assert.Equal(t, http.StatusOK, res.Response.StatusCode)
+			assert.Equal(t, `{"data":null,"extensions":{"valueCompletion":[{"message":"Cannot return null for non-nullable field Query.products.","path":["products"],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
 		})
 	})
 	t.Run("enable replace undefined operation field error", func(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					ReplaceUndefinedOperationFieldError: config.ApolloCompatibilityReplaceUndefinedOperationFieldError{
+					ReplaceUndefinedOpFieldError: config.ApolloCompatibilityReplaceUndefinedOpFieldError{
 						Enabled: true,
 					},
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-				Query: `query {products{nonExistentField}}`,
+				Query: `query {employees{nonExistentField {id}}}`,
 			})
 			require.NoError(t, err)
-			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"Cannot query \"nonExistentField\" on type \"Products\".","extensions":{"code":"GRAPHQL_VALIDATION_FAILED"}}]}`, res.Body)
+			assert.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+			assert.Equal(t, `{"errors":[{"message":"Cannot query \"nonExistentField\" on type \"Employee\".","extensions":{"code":"GRAPHQL_VALIDATION_FAILED"}}]}`, res.Body)
 		})
 	})
 	t.Run("enable all: replace undefined operation field error", func(t *testing.T) {
@@ -389,15 +390,15 @@ func TestApolloCompatibility(t *testing.T) {
 				Query: `query {products{nonExistentField}}`,
 			})
 			require.NoError(t, err)
-			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"Cannot query \"nonExistentField\" on type \"Products\".","extensions":{"code":"GRAPHQL_VALIDATION_FAILED"}}]}`, res.Body)
+			assert.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+			assert.Equal(t, `{"errors":[{"message":"Cannot query \"nonExistentField\" on type \"Products\".","extensions":{"code":"GRAPHQL_VALIDATION_FAILED"}}]}`, res.Body)
 		})
 	})
 	t.Run("enable replace invalid variable error", func(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					ReplaceInvalidVariableError: config.ApolloCompatibilityReplaceInvalidVariableError{
+					ReplaceInvalidVarError: config.ApolloCompatibilityReplaceInvalidVarError{
 						Enabled: true,
 					},
 				}),
@@ -408,8 +409,8 @@ func TestApolloCompatibility(t *testing.T) {
 				Variables: json.RawMessage(`{"arg":"INVALID"}`),
 			})
 			require.NoError(t, err)
-			require.Equal(t, http.StatusOK, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"Variable \"$arg\" got invalid value \"INVALID\"; Float cannot represent non numeric value: \"INVALID\"","extensions":{"code":"BAD_USER_INPUT"}}]}`, res.Body)
+			assert.Equal(t, http.StatusOK, res.Response.StatusCode)
+			assert.Equal(t, `{"errors":[{"message":"Variable \"$arg\" got invalid value \"INVALID\"; Float cannot represent non numeric value: \"INVALID\"","extensions":{"code":"BAD_USER_INPUT"}}]}`, res.Body)
 		})
 	})
 	t.Run("enable all: replace invalid variable error", func(t *testing.T) {
@@ -425,8 +426,8 @@ func TestApolloCompatibility(t *testing.T) {
 				Variables: json.RawMessage(`{"arg":"INVALID"}`),
 			})
 			require.NoError(t, err)
-			require.Equal(t, http.StatusOK, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"Variable \"$arg\" got invalid value \"INVALID\"; Float cannot represent non numeric value: \"INVALID\"","extensions":{"code":"BAD_USER_INPUT"}}]}`, res.Body)
+			assert.Equal(t, http.StatusOK, res.Response.StatusCode)
+			assert.Equal(t, `{"errors":[{"message":"Variable \"$arg\" got invalid value \"INVALID\"; Float cannot represent non numeric value: \"INVALID\"","extensions":{"code":"BAD_USER_INPUT"}}]}`, res.Body)
 		})
 	})
 }
