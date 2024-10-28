@@ -34,6 +34,7 @@ message PublishMonographResponse {
   Response response = 1;
   repeated CompositionError compositionErrors = 2;
   repeated DeploymentError deploymentErrors = 3;
+  repeated CompositionWarning compositionWarnings = 4;
 }
 
 message PublishFederatedSubgraphRequest {
@@ -62,6 +63,7 @@ message PublishFederatedSubgraphResponse {
   repeated CompositionError compositionErrors = 2;
   repeated DeploymentError deploymentErrors = 3;
   optional bool hasChanged = 4;
+  repeated CompositionWarning compositionWarnings = 5;
 }
 
 message GitInfo {
@@ -185,6 +187,13 @@ message CompositionError {
   string featureFlag = 4;
 }
 
+message CompositionWarning {
+  string message = 1;
+  string federatedGraphName = 2;
+  string namespace = 3;
+  string featureFlag = 4;
+}
+
 message DeploymentError {
   string message = 1;
   string federatedGraphName = 2;
@@ -247,6 +256,7 @@ message CheckSubgraphSchemaResponse {
   repeated GraphPruningIssue graphPruneWarnings = 10;
   repeated GraphPruningIssue graphPruneErrors = 11;
   optional bool client_traffic_check_skipped = 12;
+  repeated CompositionWarning compositionWarnings = 13;
 }
 
 message FixSubgraphSchemaResponse {
@@ -259,6 +269,7 @@ message CreateFederatedGraphResponse {
     Response response = 1;
     repeated CompositionError compositionErrors = 2;
     repeated DeploymentError deploymentErrors = 3;
+    repeated CompositionWarning compositionWarnings = 4;
 }
 
 message CreateFederatedSubgraphResponse {
@@ -269,6 +280,7 @@ message DeleteFederatedSubgraphResponse {
   Response response = 1;
   repeated CompositionError compositionErrors = 2;
   repeated DeploymentError deploymentErrors = 3;
+  repeated CompositionWarning compositionWarnings = 4;
 }
 
 message DeleteFederatedGraphResponse {
@@ -489,6 +501,7 @@ message GetCheckSummaryResponse {
   int32 traffic_check_days = 8;
   repeated LintIssue lintIssues = 9;
   repeated GraphPruningIssue graphPruningIssues = 10;
+  repeated string compositionWarnings = 11;
 }
 
 message GetCheckOperationsRequest {
@@ -577,6 +590,7 @@ message UpdateSubgraphResponse {
   Response response = 1;
   repeated CompositionError compositionErrors = 2;
   repeated DeploymentError deploymentErrors = 3;
+  repeated CompositionWarning compositionWarnings = 4;
 }
 
 message UpdateFederatedGraphRequest {
@@ -594,6 +608,7 @@ message UpdateFederatedGraphResponse {
   Response response = 1;
   repeated CompositionError compositionErrors = 2;
   repeated DeploymentError deploymentErrors = 3;
+  repeated CompositionWarning compositionWarnings = 4;
 }
 
 message UpdateMonographRequest {
@@ -623,6 +638,7 @@ message CheckFederatedGraphResponse {
   Response response = 1;
   repeated CompositionError compositionErrors = 2;
   repeated Subgraph subgraphs = 3;
+  repeated CompositionWarning compositionWarnings = 4;
 }
 
 
@@ -1612,6 +1628,7 @@ message GraphComposition {
   optional string deploymentError = 10;
   optional bool hasMultipleChangedSubgraphs = 11;
   optional string triggeredBySubgraphName = 12;
+  optional string compositionWarnings = 13;
 }
 
 message GraphCompositionSubgraph {
@@ -1655,6 +1672,7 @@ message FeatureFlagComposition {
   optional string admissionError = 8;
   optional string deploymentError = 9;
   string featureFlagName = 10;
+  optional string compositionWarnings = 11;
 }
 
 message GetCompositionDetailsResponse {
@@ -1992,6 +2010,7 @@ message MoveGraphResponse {
   Response response = 1;
   repeated CompositionError compositionErrors = 2;
   repeated DeploymentError deploymentErrors = 3;
+  repeated CompositionWarning compositionWarnings = 4;
 }
 
 message GetNamespaceLintConfigRequest {
@@ -2099,6 +2118,7 @@ message CreateContractResponse {
   Response response = 1;
   repeated CompositionError compositionErrors = 2;
   repeated DeploymentError deploymentErrors = 3;
+  repeated CompositionWarning compositionWarnings = 4;
 }
 
 message UpdateContractRequest {
@@ -2112,6 +2132,7 @@ message UpdateContractResponse {
   Response response = 1;
   repeated CompositionError compositionErrors = 2;
   repeated DeploymentError deploymentErrors = 3;
+  repeated CompositionWarning compositionWarnings = 4;
 }
 
 message IsMemberLimitReachedRequest {}
@@ -2140,6 +2161,7 @@ message CreateFeatureFlagResponse {
   Response response = 1;
   repeated CompositionError composition_errors = 2;
   repeated DeploymentError deployment_errors = 3;
+  repeated CompositionWarning compositionWarnings = 4;
 }
 
 message UpdateFeatureFlagRequest {
@@ -2154,6 +2176,7 @@ message UpdateFeatureFlagResponse {
   Response response = 1;
   repeated CompositionError composition_errors = 2;
   repeated DeploymentError deployment_errors = 3;
+  repeated CompositionWarning compositionWarnings = 4;
 }
 
 message EnableFeatureFlagRequest {
@@ -2167,6 +2190,7 @@ message EnableFeatureFlagResponse {
   repeated CompositionError composition_errors = 2;
   repeated DeploymentError deployment_errors = 3;
   optional bool has_changed = 4;
+  repeated CompositionWarning compositionWarnings = 5;
 }
 
 message DeleteFeatureFlagRequest {
@@ -2178,6 +2202,7 @@ message DeleteFeatureFlagResponse {
   Response response = 1;
   repeated CompositionError composition_errors = 2;
   repeated DeploymentError deployment_errors = 3;
+  repeated CompositionWarning compositionWarnings = 4;
 }
 
 message FeatureFlag {

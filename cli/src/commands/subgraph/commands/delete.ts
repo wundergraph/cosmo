@@ -13,6 +13,7 @@ export default (opts: BaseCommandOptions) => {
   command.argument('<name>', 'The name of the subgraph to delete.');
   command.option('-n, --namespace [string]', 'The namespace of the subgraph.');
   command.option('-f --force', 'Flag to force the deletion (skip confirmation).');
+  command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
   command.action(async (name, options) => {
     if (!options.force) {
       const deletionConfirmed = await inquirer.prompt({
@@ -50,9 +51,10 @@ export default (opts: BaseCommandOptions) => {
           head: [
             pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
             pc.bold(pc.white('NAMESPACE')),
+            pc.bold(pc.white('FEATURE_FLAG')),
             pc.bold(pc.white('ERROR_MESSAGE')),
           ],
-          colWidths: [30, 30, 120],
+          colWidths: [30, 30, 30, 120],
           wordWrap: true,
         });
 
@@ -67,6 +69,7 @@ export default (opts: BaseCommandOptions) => {
           compositionErrorsTable.push([
             compositionError.federatedGraphName,
             compositionError.namespace,
+            compositionError.featureFlag || '-',
             compositionError.message,
           ]);
         }
@@ -111,6 +114,30 @@ export default (opts: BaseCommandOptions) => {
         }
         process.exit(1);
       }
+    }
+
+    if (!options.suppressWarnings && resp.compositionWarnings.length > 0) {
+      const compositionWarningsTable = new Table({
+        head: [
+          pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+          pc.bold(pc.white('NAMESPACE')),
+          pc.bold(pc.white('FEATURE_FLAG')),
+          pc.bold(pc.white('WARNING_MESSAGE')),
+        ],
+        colWidths: [30, 30, 30, 120],
+        wordWrap: true,
+      });
+
+      console.log(pc.yellow(`The following warnings were produced while composing the federated graph:`));
+      for (const compositionWarning of resp.compositionWarnings) {
+        compositionWarningsTable.push([
+          compositionWarning.federatedGraphName,
+          compositionWarning.namespace,
+          compositionWarning.featureFlag || '-',
+          compositionWarning.message,
+        ]);
+      }
+      console.log(compositionWarningsTable.toString());
     }
   });
 

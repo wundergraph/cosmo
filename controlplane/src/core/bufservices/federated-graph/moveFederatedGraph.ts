@@ -4,6 +4,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import {
   CompositionError,
+  CompositionWarning,
   DeploymentError,
   MoveGraphRequest,
   MoveGraphResponse,
@@ -50,6 +51,7 @@ export function moveFederatedGraph(
           },
           compositionErrors: [],
           deploymentErrors: [],
+          compositionWarnings: [],
         };
       }
 
@@ -61,6 +63,7 @@ export function moveFederatedGraph(
           },
           compositionErrors: [],
           deploymentErrors: [],
+          compositionWarnings: [],
         };
       }
 
@@ -73,6 +76,7 @@ export function moveFederatedGraph(
           },
           compositionErrors: [],
           deploymentErrors: [],
+          compositionWarnings: [],
         };
       }
 
@@ -95,10 +99,11 @@ export function moveFederatedGraph(
           },
           compositionErrors: [],
           deploymentErrors: [],
+          compositionWarnings: [],
         };
       }
 
-      const { compositionErrors, deploymentErrors } = await fedGraphRepo.move(
+      const { compositionErrors, deploymentErrors, compositionWarnings } = await fedGraphRepo.move(
         {
           targetId: graph.targetId,
           newNamespaceId: newNamespace.id,
@@ -114,9 +119,11 @@ export function moveFederatedGraph(
 
       const allDeploymentErrors: PlainMessage<DeploymentError>[] = [];
       const allCompositionErrors: PlainMessage<CompositionError>[] = [];
+      const allCompositionWarnings: PlainMessage<CompositionWarning>[] = [];
 
       allCompositionErrors.push(...compositionErrors);
       allDeploymentErrors.push(...deploymentErrors);
+      allCompositionWarnings.push(...compositionWarnings);
 
       const movedGraphs = [graph];
 
@@ -128,24 +135,28 @@ export function moveFederatedGraph(
           continue;
         }
 
-        const { compositionErrors: contractErrors, deploymentErrors: contractDeploymentErrors } =
-          await fedGraphRepo.move(
-            {
-              targetId: contractGraph.targetId,
-              newNamespaceId: newNamespace.id,
-              updatedBy: authContext.userId,
-              federatedGraph: contractGraph,
-              skipDeployment: compositionErrors.length > 0,
-            },
-            opts.blobStorage,
-            {
-              cdnBaseUrl: opts.cdnBaseUrl,
-              jwtSecret: opts.admissionWebhookJWTSecret,
-            },
-          );
+        const {
+          compositionErrors: contractErrors,
+          deploymentErrors: contractDeploymentErrors,
+          compositionWarnings: contractWarnings,
+        } = await fedGraphRepo.move(
+          {
+            targetId: contractGraph.targetId,
+            newNamespaceId: newNamespace.id,
+            updatedBy: authContext.userId,
+            federatedGraph: contractGraph,
+            skipDeployment: compositionErrors.length > 0,
+          },
+          opts.blobStorage,
+          {
+            cdnBaseUrl: opts.cdnBaseUrl,
+            jwtSecret: opts.admissionWebhookJWTSecret,
+          },
+        );
 
         allCompositionErrors.push(...contractErrors);
         allDeploymentErrors.push(...contractDeploymentErrors);
+        allCompositionWarnings.push(...contractWarnings);
 
         movedGraphs.push(contractGraph);
       }
@@ -190,23 +201,25 @@ export function moveFederatedGraph(
         );
       }
 
-      if (compositionErrors.length > 0) {
+      if (allCompositionErrors.length > 0) {
         return {
           response: {
             code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
           },
           deploymentErrors: [],
           compositionErrors: allCompositionErrors,
+          compositionWarnings: allCompositionWarnings,
         };
       }
 
-      if (deploymentErrors?.length > 0) {
+      if (allDeploymentErrors.length > 0) {
         return {
           response: {
             code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
           },
           deploymentErrors: allDeploymentErrors,
           compositionErrors: [],
+          compositionWarnings: allCompositionWarnings,
         };
       }
 
@@ -216,6 +229,7 @@ export function moveFederatedGraph(
         },
         compositionErrors: [],
         deploymentErrors: [],
+        compositionWarnings: allCompositionWarnings,
       };
     });
   });
