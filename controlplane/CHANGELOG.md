@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.112.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.111.8...controlplane@0.112.0) (2024-10-28)
+
+### Features
+
+* add missing indexes, upgrade drizzle ([#1309](https://github.com/wundergraph/cosmo/issues/1309)) ([5b022e5](https://github.com/wundergraph/cosmo/commit/5b022e51ca6c9378377a7fb35fc4b2ddaad1ad06)) (@StarpTech)
+* propagate warnings from composition ([#1298](https://github.com/wundergraph/cosmo/issues/1298)) ([174c11b](https://github.com/wundergraph/cosmo/commit/174c11bca599e773faa2f53ff31efd8aba238ff3)) (@JivusAyrus)
+
 ## [0.111.8](https://github.com/wundergraph/cosmo/compare/controlplane@0.111.7...controlplane@0.111.8) (2024-10-24)
 
 ### Bug Fixes

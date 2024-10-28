@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.86.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.85.1...@wundergraph/cosmo-connect@0.86.0) (2024-10-28)
+
+### Features
+
+* propagate warnings from composition ([#1298](https://github.com/wundergraph/cosmo/issues/1298)) ([174c11b](https://github.com/wundergraph/cosmo/commit/174c11bca599e773faa2f53ff31efd8aba238ff3)) (@JivusAyrus)
+
 ## [0.85.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.85.0...@wundergraph/cosmo-connect@0.85.1) (2024-10-24)
 
 **Note:** Version bump only for package @wundergraph/cosmo-connect
