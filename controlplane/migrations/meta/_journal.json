@@ -736,6 +736,13 @@
       "when": 1729861214848,
       "tag": "0104_pale_giant_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 105,
+      "version": "7",
+      "when": 1730140555148,
+      "tag": "0105_flippant_grey_gargoyle",
+      "breakpoints": true
     }
   ]
 }
