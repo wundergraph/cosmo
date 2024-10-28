@@ -317,6 +317,11 @@ func TestHeaderPropagation(t *testing.T) {
 				cc := res.Response.Header.Get("Cache-Control")
 				require.Equal(t, "max-age=60", cc) // Most restrictive wins
 				require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
+
+				// Verify that it doesn't set Expires header
+				val, present := res.Response.Header["Expires"]
+				require.False(t, present)
+				require.Equal(t, []string(nil), val)
 			})
 		})
 
@@ -324,7 +329,7 @@ func TestHeaderPropagation(t *testing.T) {
 		t.Run("only enable cache control for subgraphs", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
-				Subgraphs: cacheOptions("max-age=120", "max-age=60"),
+				Subgraphs: cacheOptions("max-age=120", "max-age=60, private"),
 				CacheControlPolicy: config.CacheControlPolicy{
 					Subgraphs: []config.SubgraphCacheControlRule{
 						{Name: "employees"},
@@ -336,7 +341,7 @@ func TestHeaderPropagation(t *testing.T) {
 					Query: queryEmployeeWithHobby,
 				})
 				cc := res.Response.Header.Get("Cache-Control")
-				require.Equal(t, "max-age=60", cc) // Most restrictive wins
+				require.Equal(t, "max-age=60, private", cc) // Most restrictive wins
 				require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
 			})
 		})
@@ -350,13 +355,13 @@ func TestHeaderPropagation(t *testing.T) {
 						{Name: "employees"},
 					},
 				},
-				Subgraphs: cacheOptions("max-age=120", "max-age=60"),
+				Subgraphs: cacheOptions("max-age=120, public", "max-age=60"),
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: queryEmployeeWithHobby,
 				})
 				cc := res.Response.Header.Get("Cache-Control")
-				require.Equal(t, "max-age=120", cc) // Only employee subgraph is considered
+				require.Equal(t, "max-age=120, public", cc) // Only employee subgraph is considered
 				require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
 			})
 		})
@@ -420,6 +425,21 @@ func TestHeaderPropagation(t *testing.T) {
 				})
 				cc := res.Response.Header.Get("Cache-Control")
 				require.Equal(t, "max-age=300", cc) // Shorter max-age wins
+				require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
+			})
+		})
+
+		t.Run("selects shortest max-age and private vs private", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				CacheControlPolicy: config.CacheControlPolicy{Enabled: true},
+				Subgraphs:          cacheOptions("max-age=600, private", "max-age=300, public"),
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				cc := res.Response.Header.Get("Cache-Control")
+				require.Equal(t, "max-age=300, private", cc) // Shorter max-age wins
 				require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
 			})
 		})
