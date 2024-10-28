@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.132.0](https://github.com/wundergraph/cosmo/compare/router@0.131.2...router@0.132.0) (2024-10-28)
+
+### Features
+
+* upgrade go tools to support lock free epoll conn handling for ws origin requests ([#1316](https://github.com/wundergraph/cosmo/issues/1316)) ([f3f23d6](https://github.com/wundergraph/cosmo/commit/f3f23d6686a241a38700ff9b0ce8c5fe6a41582f)) (@jensneuse)
+
+## [0.131.2](https://github.com/wundergraph/cosmo/compare/router@0.131.1...router@0.131.2) (2024-10-27)
+
+### Bug Fixes
+
+* **epoll:** don't return when client conn was terminated ([#1312](https://github.com/wundergraph/cosmo/issues/1312)) ([63f17d6](https://github.com/wundergraph/cosmo/commit/63f17d63b2f2c578fbf79aef56e4bc7a3631116e)) (@StarpTech)
+
+## [0.131.1](https://github.com/wundergraph/cosmo/compare/router@0.131.0...router@0.131.1) (2024-10-25)
+
+**Note:** Version bump only for package router
+
 # [0.131.0](https://github.com/wundergraph/cosmo/compare/router@0.130.2...router@0.131.0) (2024-10-25)
 
 ### Features

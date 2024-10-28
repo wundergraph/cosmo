@@ -1,15 +1,20 @@
 package subgraphs
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/products_fg"
-	"go.uber.org/zap"
+	"io"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
+
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/products_fg"
+	"github.com/wundergraph/cosmo/router/core"
+	"go.uber.org/zap"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/handler/debug"
@@ -119,7 +124,28 @@ func newServer(name string, enableDebug bool, port int, schema graphql.Executabl
 	}
 	mux := http.NewServeMux()
 	mux.Handle("/", playground.Handler("GraphQL playground", "/graphql"))
-	mux.Handle("/graphql", srv)
+	mux.Handle("/graphql", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Accept") == "text/event-stream" && r.Method == "GET" {
+			r.Method = "POST"
+			query := r.URL.Query().Get("query")
+			variables := r.URL.Query().Get("variables")
+			operationName := r.URL.Query().Get("operationName")
+			gqlRequest := core.GraphQLRequest{
+				Query:         query,
+				OperationName: operationName,
+				Variables:     []byte(variables),
+			}
+			data, err := json.Marshal(gqlRequest)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			r.Body = io.NopCloser(bytes.NewReader(data))
+			r.ContentLength = int64(len(data))
+			r.Header.Set("Content-Type", "application/json")
+		}
+		srv.ServeHTTP(w, r)
+	}))
 	return &http.Server{
 		Addr:    ":" + strconv.Itoa(port),
 		Handler: injector.HTTP(mux),
