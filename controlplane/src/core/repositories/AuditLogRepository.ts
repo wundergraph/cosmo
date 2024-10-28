@@ -60,7 +60,7 @@ export class AuditLogRepository {
     startDate: string;
     endDate: string;
   }) {
-    return this.db
+    const query = this.db
       .select({
         id: schema.auditLogs.id,
         organizationId: schema.auditLogs.organizationId,
@@ -89,10 +89,17 @@ export class AuditLogRepository {
           lt(schema.auditLogs.createdAt, new Date(input.endDate)),
         ),
       )
-      .orderBy(desc(schema.auditLogs.createdAt))
-      .limit(input.limit)
-      .offset(input.offset)
-      .execute();
+      .orderBy(desc(schema.auditLogs.createdAt));
+
+    if (input.limit) {
+      query.limit(input.limit);
+    }
+
+    if (input.offset) {
+      query.offset(input.offset);
+    }
+
+    return query.execute();
   }
 
   public async getAuditLogsCount(input: {

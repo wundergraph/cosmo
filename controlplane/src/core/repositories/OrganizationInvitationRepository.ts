@@ -31,7 +31,7 @@ export class OrganizationInvitationRepository {
       conditions.push(like(users.email, `%${input.search}%`));
     }
 
-    return this.db
+    const dbQuery = this.db
       .select({
         userID: users.id,
         email: users.email,
@@ -39,10 +39,17 @@ export class OrganizationInvitationRepository {
       .from(organizationInvitations)
       .innerJoin(users, eq(users.id, organizationInvitations.userId))
       .where(and(...conditions))
-      .orderBy(asc(organizationInvitations.createdAt))
-      .offset(input.offset ?? 0)
-      .limit(input.limit ?? 0)
-      .execute();
+      .orderBy(asc(organizationInvitations.createdAt));
+
+    if (input.limit) {
+      dbQuery.limit(input.limit);
+    }
+
+    if (input.offset) {
+      dbQuery.offset(input.offset);
+    }
+
+    return dbQuery.execute();
   }
 
   public async pendingInvitationsCount(organizationId: string, search?: string): Promise<number> {
