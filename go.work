@@ -11,6 +11,10 @@ use (
 	./router-tests
 )
 
+// Two dirs up
 // replace github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
+
+// One dir up
+//replace github.com/wundergraph/graphql-go-tools/v2 => ../graphql-go-tools/v2
 
 //replace github.com/wundergraph/astjson => ../astjson
