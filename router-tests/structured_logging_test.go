@@ -517,7 +517,7 @@ func TestAccessLogs(t *testing.T) {
 		})
 	})
 
-	t.Run("Log as much information possible when operation normalization fails", func(t *testing.T) {
+	t.Run("Log as much information possible when operation validation fails", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
@@ -615,6 +615,7 @@ func TestAccessLogs(t *testing.T) {
 				"operation_type": "query",        // From context
 				"operation_name": "employees",    // From context
 				"error_message":  "field: notExists not defined on type: Query",
+				"operation_hash": "10501571900000980785",
 			}
 			additionalExpectedKeys := []string{
 				"latency",
@@ -624,6 +625,7 @@ func TestAccessLogs(t *testing.T) {
 				"hostname",
 				"parsed_time",
 				"normalized_time",
+				"validation_time",
 			}
 
 			checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
