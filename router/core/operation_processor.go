@@ -5,6 +5,8 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/apollocompatibility"
 	"hash"
 	"io"
 	"net/http"
@@ -76,6 +78,10 @@ func (e invalidExtensionsTypeError) StatusCode() int {
 	return http.StatusBadRequest
 }
 
+func (e invalidExtensionsTypeError) ExtensionCode() string {
+	return ""
+}
+
 var (
 	_ HttpError = invalidExtensionsTypeError(0)
 )
@@ -92,6 +98,7 @@ type OperationProcessorOptions struct {
 	OperationHashCache             *ristretto.Cache[uint64, string]
 	ParseKitPoolSize               int
 	IntrospectionEnabled           bool
+	ApolloCompatibilityFlags       config.ApolloCompatibilityFlags
 }
 
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
@@ -836,6 +843,14 @@ func (o *OperationKit) Validate(skipLoader bool) (cacheHit bool, err error) {
 		// this is useful to return a query plan without having to provide variables
 		err = o.kit.variablesValidator.Validate(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.doc.Input.Variables)
 		if err != nil {
+			var invalidVarErr *variablesvalidation.InvalidVariableError
+			if errors.As(err, &invalidVarErr) {
+				return false, &httpGraphqlError{
+					extensionCode: invalidVarErr.ExtensionCode,
+					message:       invalidVarErr.Error(),
+					statusCode:    http.StatusOK,
+				}
+			}
 			return false, &httpGraphqlError{
 				message:    err.Error(),
 				statusCode: http.StatusOK,
@@ -928,7 +943,11 @@ func (o *OperationKit) skipIncludeVariableNames() []string {
 	return names
 }
 
-func createParseKit(i int) *parseKit {
+type parseKitOptions struct {
+	apolloCompatibilityFlags config.ApolloCompatibilityFlags
+}
+
+func createParseKit(i int, options *parseKitOptions) *parseKit {
 	return &parseKit{
 		i:          i,
 		parser:     astparser.NewParser(),
@@ -944,8 +963,16 @@ func createParseKit(i int) *parseKit {
 		variablesNormalizer: astnormalization.NewVariablesNormalizer(),
 		printer:             &astprinter.Printer{},
 		normalizedOperation: &bytes.Buffer{},
-		variablesValidator:  variablesvalidation.NewVariablesValidator(),
-		operationValidator:  astvalidation.DefaultOperationValidator(),
+		variablesValidator: variablesvalidation.NewVariablesValidator(variablesvalidation.VariablesValidatorOptions{
+			ApolloCompatibilityFlags: apollocompatibility.Flags{
+				ReplaceInvalidVarError: options.apolloCompatibilityFlags.ReplaceInvalidVarErrors.Enabled,
+			},
+		}),
+		operationValidator: astvalidation.DefaultOperationValidator(astvalidation.WithApolloCompatibilityFlags(
+			apollocompatibility.Flags{
+				ReplaceUndefinedOpFieldError: options.apolloCompatibilityFlags.ReplaceUndefinedOpFieldErrors.Enabled,
+			},
+		)),
 	}
 }
 
@@ -963,7 +990,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 	}
 	for i := 0; i < opts.ParseKitPoolSize; i++ {
 		processor.parseKitSemaphore <- i
-		processor.parseKits[i] = createParseKit(i)
+		processor.parseKits[i] = createParseKit(i, &parseKitOptions{apolloCompatibilityFlags: opts.ApolloCompatibilityFlags})
 	}
 	if opts.EnablePersistedOperationsCache {
 		processor.operationCache = &OperationCache{

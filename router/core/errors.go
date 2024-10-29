@@ -175,41 +175,18 @@ func propagateSubgraphErrors(ctx *resolve.Context) {
 // writeRequestErrors writes the given request errors to the http.ResponseWriter.
 // It accepts a graphqlerrors.RequestErrors object and writes it to the response based on the GraphQL spec.
 func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, requestErrors graphqlerrors.RequestErrors, requestLogger *zap.Logger) {
-	if requestErrors != nil {
-		wgRequestParams := NewWgRequestParams(r)
-		if wgRequestParams.UseSse {
-			setSubscriptionHeaders(wgRequestParams, r, w)
+	if requestErrors == nil {
+		return
+	}
+	wgRequestParams := NewWgRequestParams(r)
+	if wgRequestParams.UseSse {
+		setSubscriptionHeaders(wgRequestParams, r, w)
 
-			if statusCode != 0 {
-				w.WriteHeader(statusCode)
-			}
-			_, err := w.Write([]byte("event: next\ndata: "))
-			if err != nil {
-				if requestLogger != nil {
-					if rErrors.IsBrokenPipe(err) {
-						requestLogger.Warn("Broken pipe, error writing response", zap.Error(err))
-						return
-					}
-					requestLogger.Error("Error writing response", zap.Error(err))
-				}
-				return
-			}
-		} else if wgRequestParams.UseMultipart {
-			// Handle multipart error response
-			if err := writeMultipartError(w, requestErrors, requestLogger); err != nil {
-				if requestLogger != nil {
-					requestLogger.Error("error writing multipart response", zap.Error(err))
-				}
-			}
-			return
-		}
-
-		// Set header before writing status code
-		w.Header().Set("Content-Type", "application/json")
 		if statusCode != 0 {
 			w.WriteHeader(statusCode)
 		}
-		if _, err := requestErrors.WriteResponse(w); err != nil {
+		_, err := w.Write([]byte("event: next\ndata: "))
+		if err != nil {
 			if requestLogger != nil {
 				if rErrors.IsBrokenPipe(err) {
 					requestLogger.Warn("Broken pipe, error writing response", zap.Error(err))
@@ -217,6 +194,30 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 				}
 				requestLogger.Error("Error writing response", zap.Error(err))
 			}
+			return
+		}
+	} else if wgRequestParams.UseMultipart {
+		// Handle multipart error response
+		if err := writeMultipartError(w, requestErrors, requestLogger); err != nil {
+			if requestLogger != nil {
+				requestLogger.Error("error writing multipart response", zap.Error(err))
+			}
+		}
+		return
+	}
+
+	// Set header before writing status code
+	w.Header().Set("Content-Type", "application/json")
+	if statusCode != 0 {
+		w.WriteHeader(statusCode)
+	}
+	if _, err := requestErrors.WriteResponse(w); err != nil {
+		if requestLogger != nil {
+			if rErrors.IsBrokenPipe(err) {
+				requestLogger.Warn("Broken pipe, error writing response", zap.Error(err))
+				return
+			}
+			requestLogger.Error("Error writing response", zap.Error(err))
 		}
 	}
 }
@@ -256,6 +257,18 @@ func writeMultipartError(w http.ResponseWriter, requestErrors graphqlerrors.Requ
 	return nil
 }
 
+func requestErrorsFromHttpError(httpErr HttpError) graphqlerrors.RequestErrors {
+	requestErr := graphqlerrors.RequestError{
+		Message: httpErr.Error(),
+	}
+	if httpErr.ExtensionCode() != "" {
+		requestErr.Extensions = &graphqlerrors.Extensions{
+			Code: httpErr.ExtensionCode(),
+		}
+	}
+	return graphqlerrors.RequestErrors{requestErr}
+}
+
 // writeOperationError writes the given error to the http.ResponseWriter but evaluates the error type first.
 // It also logs additional information about the error.
 func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *zap.Logger, err error) {
@@ -266,20 +279,19 @@ func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *
 	var poNotFoundErr *persistedoperation.PersistentOperationNotFoundError
 	switch {
 	case errors.As(err, &httpErr):
-		writeRequestErrors(r, w, httpErr.StatusCode(), graphqlerrors.RequestErrorsFromError(err), requestLogger)
+		writeRequestErrors(r, w, httpErr.StatusCode(), requestErrorsFromHttpError(httpErr), requestLogger)
 	case errors.As(err, &poNotFoundErr):
 		writeRequestErrors(r, w, http.StatusBadRequest, graphqlerrors.RequestErrorsFromError(errors.New("persisted Query not found")), requestLogger)
 	case errors.As(err, &reportErr):
 		report := reportErr.Report()
 		logInternalErrorsFromReport(reportErr.Report(), requestLogger)
 
-		requestErrors := graphqlerrors.RequestErrorsFromOperationReport(*report)
+		statusCode, requestErrors := graphqlerrors.RequestErrorsFromOperationReportWithStatusCode(*report)
 		if len(requestErrors) > 0 {
-			writeRequestErrors(r, w, http.StatusOK, requestErrors, requestLogger)
+			writeRequestErrors(r, w, statusCode, requestErrors, requestLogger)
 			return
 		} else {
-			// there was no external errors to return to user,
-			// so we return an internal server error
+			// there were no external errors to return to user, so we return an internal server error
 			writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errInternalServer), requestLogger)
 		}
 	default:

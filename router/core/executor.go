@@ -87,6 +87,12 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 	if opts.ApolloCompatibilityFlags.SuppressFetchErrors.Enabled {
 		options.ResolvableOptions.ApolloCompatibilitySuppressFetchErrors = true
 	}
+	if opts.ApolloCompatibilityFlags.ReplaceUndefinedOpFieldErrors.Enabled {
+		options.ResolvableOptions.ApolloCompatibilityReplaceUndefinedOpFieldError = true
+	}
+	if opts.ApolloCompatibilityFlags.ReplaceInvalidVarErrors.Enabled {
+		options.ResolvableOptions.ApolloCompatibilityReplaceInvalidVarError = true
+	}
 
 	switch opts.RouterEngineConfig.SubgraphErrorPropagation.Mode {
 	case config.SubgraphErrorPropagationModePassthrough:
