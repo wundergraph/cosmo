@@ -729,6 +729,27 @@
       "when": 1729791437121,
       "tag": "0103_sparkling_leper_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 104,
+      "version": "7",
+      "when": 1729861214848,
+      "tag": "0104_pale_giant_girl",
+      "breakpoints": true
+    },
+    {
+      "idx": 105,
+      "version": "7",
+      "when": 1730140555148,
+      "tag": "0105_flippant_grey_gargoyle",
+      "breakpoints": true
+    },
+    {
+      "idx": 106,
+      "version": "7",
+      "when": 1730150229320,
+      "tag": "0106_secret_bill_hollister",
+      "breakpoints": true
     }
   ]
 }

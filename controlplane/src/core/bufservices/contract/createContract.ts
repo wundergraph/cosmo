@@ -3,6 +3,7 @@ import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   CompositionError,
+  CompositionWarning,
   CreateContractRequest,
   CreateContractResponse,
   DeploymentError,
@@ -115,6 +116,7 @@ export function createContract(
           },
           compositionErrors: [],
           deploymentErrors: [],
+          compositionWarnings: [],
         };
       }
 
@@ -166,6 +168,7 @@ export function createContract(
 
       const compositionErrors: PlainMessage<CompositionError>[] = [];
       const deploymentErrors: PlainMessage<DeploymentError>[] = [];
+      const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
 
       const composition = await fedGraphRepo.composeAndDeployGraphs({
         federatedGraphs: [{ ...contractGraph, contract }],
@@ -179,6 +182,7 @@ export function createContract(
 
       compositionErrors.push(...composition.compositionErrors);
       deploymentErrors.push(...composition.deploymentErrors);
+      compositionWarnings.push(...composition.compositionWarnings);
 
       if (compositionErrors.length > 0) {
         return {
@@ -186,6 +190,7 @@ export function createContract(
             code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
           },
           compositionErrors,
+          compositionWarnings,
           deploymentErrors: [],
         };
       }
@@ -196,6 +201,7 @@ export function createContract(
             code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
           },
           compositionErrors: [],
+          compositionWarnings,
           deploymentErrors,
         };
       }
@@ -205,6 +211,7 @@ export function createContract(
           code: EnumStatusCode.OK,
         },
         compositionErrors,
+        compositionWarnings,
         deploymentErrors,
       };
     });

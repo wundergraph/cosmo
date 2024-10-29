@@ -527,6 +527,11 @@ export class PublishMonographResponse extends Message<PublishMonographResponse> 
    */
   deploymentErrors: DeploymentError[] = [];
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionWarning compositionWarnings = 4;
+   */
+  compositionWarnings: CompositionWarning[] = [];
+
   constructor(data?: PartialMessage<PublishMonographResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -538,6 +543,7 @@ export class PublishMonographResponse extends Message<PublishMonographResponse> 
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
     { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
+    { no: 4, name: "compositionWarnings", kind: "message", T: CompositionWarning, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PublishMonographResponse {
@@ -688,6 +694,11 @@ export class PublishFederatedSubgraphResponse extends Message<PublishFederatedSu
    */
   hasChanged?: boolean;
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionWarning compositionWarnings = 5;
+   */
+  compositionWarnings: CompositionWarning[] = [];
+
   constructor(data?: PartialMessage<PublishFederatedSubgraphResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -700,6 +711,7 @@ export class PublishFederatedSubgraphResponse extends Message<PublishFederatedSu
     { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
     { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
     { no: 4, name: "hasChanged", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 5, name: "compositionWarnings", kind: "message", T: CompositionWarning, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PublishFederatedSubgraphResponse {
@@ -1560,6 +1572,61 @@ export class CompositionError extends Message<CompositionError> {
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.CompositionWarning
+ */
+export class CompositionWarning extends Message<CompositionWarning> {
+  /**
+   * @generated from field: string message = 1;
+   */
+  message = "";
+
+  /**
+   * @generated from field: string federatedGraphName = 2;
+   */
+  federatedGraphName = "";
+
+  /**
+   * @generated from field: string namespace = 3;
+   */
+  namespace = "";
+
+  /**
+   * @generated from field: string featureFlag = 4;
+   */
+  featureFlag = "";
+
+  constructor(data?: PartialMessage<CompositionWarning>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.CompositionWarning";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "featureFlag", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CompositionWarning {
+    return new CompositionWarning().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CompositionWarning {
+    return new CompositionWarning().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CompositionWarning {
+    return new CompositionWarning().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CompositionWarning | PlainMessage<CompositionWarning> | undefined, b: CompositionWarning | PlainMessage<CompositionWarning> | undefined): boolean {
+    return proto3.util.equals(CompositionWarning, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.DeploymentError
  */
 export class DeploymentError extends Message<DeploymentError> {
@@ -1961,6 +2028,11 @@ export class CheckSubgraphSchemaResponse extends Message<CheckSubgraphSchemaResp
    */
   clientTrafficCheckSkipped?: boolean;
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionWarning compositionWarnings = 13;
+   */
+  compositionWarnings: CompositionWarning[] = [];
+
   constructor(data?: PartialMessage<CheckSubgraphSchemaResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1981,6 +2053,7 @@ export class CheckSubgraphSchemaResponse extends Message<CheckSubgraphSchemaResp
     { no: 10, name: "graphPruneWarnings", kind: "message", T: GraphPruningIssue, repeated: true },
     { no: 11, name: "graphPruneErrors", kind: "message", T: GraphPruningIssue, repeated: true },
     { no: 12, name: "client_traffic_check_skipped", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 13, name: "compositionWarnings", kind: "message", T: CompositionWarning, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckSubgraphSchemaResponse {
@@ -2068,6 +2141,11 @@ export class CreateFederatedGraphResponse extends Message<CreateFederatedGraphRe
    */
   deploymentErrors: DeploymentError[] = [];
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionWarning compositionWarnings = 4;
+   */
+  compositionWarnings: CompositionWarning[] = [];
+
   constructor(data?: PartialMessage<CreateFederatedGraphResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2079,6 +2157,7 @@ export class CreateFederatedGraphResponse extends Message<CreateFederatedGraphRe
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
     { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
+    { no: 4, name: "compositionWarnings", kind: "message", T: CompositionWarning, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateFederatedGraphResponse {
@@ -2154,6 +2233,11 @@ export class DeleteFederatedSubgraphResponse extends Message<DeleteFederatedSubg
    */
   deploymentErrors: DeploymentError[] = [];
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionWarning compositionWarnings = 4;
+   */
+  compositionWarnings: CompositionWarning[] = [];
+
   constructor(data?: PartialMessage<DeleteFederatedSubgraphResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2165,6 +2249,7 @@ export class DeleteFederatedSubgraphResponse extends Message<DeleteFederatedSubg
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
     { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
+    { no: 4, name: "compositionWarnings", kind: "message", T: CompositionWarning, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteFederatedSubgraphResponse {
@@ -3780,6 +3865,11 @@ export class GetCheckSummaryResponse extends Message<GetCheckSummaryResponse> {
    */
   graphPruningIssues: GraphPruningIssue[] = [];
 
+  /**
+   * @generated from field: repeated string compositionWarnings = 11;
+   */
+  compositionWarnings: string[] = [];
+
   constructor(data?: PartialMessage<GetCheckSummaryResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3797,6 +3887,7 @@ export class GetCheckSummaryResponse extends Message<GetCheckSummaryResponse> {
     { no: 8, name: "traffic_check_days", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 9, name: "lintIssues", kind: "message", T: LintIssue, repeated: true },
     { no: 10, name: "graphPruningIssues", kind: "message", T: GraphPruningIssue, repeated: true },
+    { no: 11, name: "compositionWarnings", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckSummaryResponse {
@@ -4505,6 +4596,11 @@ export class UpdateSubgraphResponse extends Message<UpdateSubgraphResponse> {
    */
   deploymentErrors: DeploymentError[] = [];
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionWarning compositionWarnings = 4;
+   */
+  compositionWarnings: CompositionWarning[] = [];
+
   constructor(data?: PartialMessage<UpdateSubgraphResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4516,6 +4612,7 @@ export class UpdateSubgraphResponse extends Message<UpdateSubgraphResponse> {
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
     { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
+    { no: 4, name: "compositionWarnings", kind: "message", T: CompositionWarning, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateSubgraphResponse {
@@ -4633,6 +4730,11 @@ export class UpdateFederatedGraphResponse extends Message<UpdateFederatedGraphRe
    */
   deploymentErrors: DeploymentError[] = [];
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionWarning compositionWarnings = 4;
+   */
+  compositionWarnings: CompositionWarning[] = [];
+
   constructor(data?: PartialMessage<UpdateFederatedGraphResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4644,6 +4746,7 @@ export class UpdateFederatedGraphResponse extends Message<UpdateFederatedGraphRe
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
     { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
+    { no: 4, name: "compositionWarnings", kind: "message", T: CompositionWarning, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateFederatedGraphResponse {
@@ -4859,6 +4962,11 @@ export class CheckFederatedGraphResponse extends Message<CheckFederatedGraphResp
    */
   subgraphs: Subgraph[] = [];
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionWarning compositionWarnings = 4;
+   */
+  compositionWarnings: CompositionWarning[] = [];
+
   constructor(data?: PartialMessage<CheckFederatedGraphResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4870,6 +4978,7 @@ export class CheckFederatedGraphResponse extends Message<CheckFederatedGraphResp
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
     { no: 3, name: "subgraphs", kind: "message", T: Subgraph, repeated: true },
+    { no: 4, name: "compositionWarnings", kind: "message", T: CompositionWarning, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckFederatedGraphResponse {
@@ -12488,6 +12597,11 @@ export class GraphComposition extends Message<GraphComposition> {
    */
   triggeredBySubgraphName?: string;
 
+  /**
+   * @generated from field: optional string compositionWarnings = 13;
+   */
+  compositionWarnings?: string;
+
   constructor(data?: PartialMessage<GraphComposition>) {
     super();
     proto3.util.initPartial(data, this);
@@ -12508,6 +12622,7 @@ export class GraphComposition extends Message<GraphComposition> {
     { no: 10, name: "deploymentError", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 11, name: "hasMultipleChangedSubgraphs", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 12, name: "triggeredBySubgraphName", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 13, name: "compositionWarnings", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GraphComposition {
@@ -12813,6 +12928,11 @@ export class FeatureFlagComposition extends Message<FeatureFlagComposition> {
    */
   featureFlagName = "";
 
+  /**
+   * @generated from field: optional string compositionWarnings = 11;
+   */
+  compositionWarnings?: string;
+
   constructor(data?: PartialMessage<FeatureFlagComposition>) {
     super();
     proto3.util.initPartial(data, this);
@@ -12831,6 +12951,7 @@ export class FeatureFlagComposition extends Message<FeatureFlagComposition> {
     { no: 8, name: "admissionError", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 9, name: "deploymentError", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 10, name: "featureFlagName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 11, name: "compositionWarnings", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FeatureFlagComposition {
@@ -15598,6 +15719,11 @@ export class MoveGraphResponse extends Message<MoveGraphResponse> {
    */
   deploymentErrors: DeploymentError[] = [];
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionWarning compositionWarnings = 4;
+   */
+  compositionWarnings: CompositionWarning[] = [];
+
   constructor(data?: PartialMessage<MoveGraphResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -15609,6 +15735,7 @@ export class MoveGraphResponse extends Message<MoveGraphResponse> {
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
     { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
+    { no: 4, name: "compositionWarnings", kind: "message", T: CompositionWarning, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MoveGraphResponse {
@@ -16519,6 +16646,11 @@ export class CreateContractResponse extends Message<CreateContractResponse> {
    */
   deploymentErrors: DeploymentError[] = [];
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionWarning compositionWarnings = 4;
+   */
+  compositionWarnings: CompositionWarning[] = [];
+
   constructor(data?: PartialMessage<CreateContractResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -16530,6 +16662,7 @@ export class CreateContractResponse extends Message<CreateContractResponse> {
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
     { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
+    { no: 4, name: "compositionWarnings", kind: "message", T: CompositionWarning, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateContractResponse {
@@ -16623,6 +16756,11 @@ export class UpdateContractResponse extends Message<UpdateContractResponse> {
    */
   deploymentErrors: DeploymentError[] = [];
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionWarning compositionWarnings = 4;
+   */
+  compositionWarnings: CompositionWarning[] = [];
+
   constructor(data?: PartialMessage<UpdateContractResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -16634,6 +16772,7 @@ export class UpdateContractResponse extends Message<UpdateContractResponse> {
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
     { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
+    { no: 4, name: "compositionWarnings", kind: "message", T: CompositionWarning, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateContractResponse {
@@ -16881,6 +17020,11 @@ export class CreateFeatureFlagResponse extends Message<CreateFeatureFlagResponse
    */
   deploymentErrors: DeploymentError[] = [];
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionWarning compositionWarnings = 4;
+   */
+  compositionWarnings: CompositionWarning[] = [];
+
   constructor(data?: PartialMessage<CreateFeatureFlagResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -16892,6 +17036,7 @@ export class CreateFeatureFlagResponse extends Message<CreateFeatureFlagResponse
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "composition_errors", kind: "message", T: CompositionError, repeated: true },
     { no: 3, name: "deployment_errors", kind: "message", T: DeploymentError, repeated: true },
+    { no: 4, name: "compositionWarnings", kind: "message", T: CompositionWarning, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateFeatureFlagResponse {
@@ -16991,6 +17136,11 @@ export class UpdateFeatureFlagResponse extends Message<UpdateFeatureFlagResponse
    */
   deploymentErrors: DeploymentError[] = [];
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionWarning compositionWarnings = 4;
+   */
+  compositionWarnings: CompositionWarning[] = [];
+
   constructor(data?: PartialMessage<UpdateFeatureFlagResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -17002,6 +17152,7 @@ export class UpdateFeatureFlagResponse extends Message<UpdateFeatureFlagResponse
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "composition_errors", kind: "message", T: CompositionError, repeated: true },
     { no: 3, name: "deployment_errors", kind: "message", T: DeploymentError, repeated: true },
+    { no: 4, name: "compositionWarnings", kind: "message", T: CompositionWarning, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateFeatureFlagResponse {
@@ -17094,6 +17245,11 @@ export class EnableFeatureFlagResponse extends Message<EnableFeatureFlagResponse
    */
   hasChanged?: boolean;
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionWarning compositionWarnings = 5;
+   */
+  compositionWarnings: CompositionWarning[] = [];
+
   constructor(data?: PartialMessage<EnableFeatureFlagResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -17106,6 +17262,7 @@ export class EnableFeatureFlagResponse extends Message<EnableFeatureFlagResponse
     { no: 2, name: "composition_errors", kind: "message", T: CompositionError, repeated: true },
     { no: 3, name: "deployment_errors", kind: "message", T: DeploymentError, repeated: true },
     { no: 4, name: "has_changed", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 5, name: "compositionWarnings", kind: "message", T: CompositionWarning, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EnableFeatureFlagResponse {
@@ -17187,6 +17344,11 @@ export class DeleteFeatureFlagResponse extends Message<DeleteFeatureFlagResponse
    */
   deploymentErrors: DeploymentError[] = [];
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionWarning compositionWarnings = 4;
+   */
+  compositionWarnings: CompositionWarning[] = [];
+
   constructor(data?: PartialMessage<DeleteFeatureFlagResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -17198,6 +17360,7 @@ export class DeleteFeatureFlagResponse extends Message<DeleteFeatureFlagResponse
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "composition_errors", kind: "message", T: CompositionError, repeated: true },
     { no: 3, name: "deployment_errors", kind: "message", T: DeploymentError, repeated: true },
+    { no: 4, name: "compositionWarnings", kind: "message", T: CompositionWarning, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteFeatureFlagResponse {

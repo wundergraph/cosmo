@@ -40,6 +40,7 @@ export function getCheckSummary(
           details: `Namespace '${req.namespace}' not found`,
         },
         compositionErrors: [],
+        compositionWarnings: [],
         changes: [],
         affectedGraphs: [],
         trafficCheckDays: 0,
@@ -59,6 +60,7 @@ export function getCheckSummary(
           details: 'Requested graph does not exist',
         },
         compositionErrors: [],
+        compositionWarnings: [],
         changes: [],
         affectedGraphs: [],
         trafficCheckDays: 0,
@@ -79,6 +81,7 @@ export function getCheckSummary(
           details: 'Requested check not found',
         },
         compositionErrors: [],
+        compositionWarnings: [],
         changes: [],
         affectedGraphs: [],
         trafficCheckDays: 0,
@@ -109,6 +112,7 @@ export function getCheckSummary(
       trafficCheckDays,
       lintIssues,
       graphPruningIssues,
+      compositionWarnings: checkDetails.compositionWarnings,
     };
   });
 }
