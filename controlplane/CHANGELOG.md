@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.113.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.112.0...controlplane@0.113.0) (2024-10-29)
+
+### Features
+
+* **perf:** improve graph composition queries ([#1319](https://github.com/wundergraph/cosmo/issues/1319)) ([646650d](https://github.com/wundergraph/cosmo/commit/646650d431c560071475452ff12eced14703f0d6)) (@StarpTech)
+
 # [0.112.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.111.8...controlplane@0.112.0) (2024-10-28)
 
 ### Features
