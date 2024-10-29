@@ -2380,7 +2380,7 @@ func TestTelemetry(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query foo { employeesTypeNotExist { id } }`,
 			})
-			require.Equal(t, `{"errors":[{"message":"field: employeesTypeNotExist not defined on type: Query","path":["query","employeesTypeNotExist"]}]}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"field: employeesTypeNotExist not defined on type: Query","path":["query"]}]}`, res.Body)
 			sn := exporter.GetSpans().Snapshots()
 
 			require.Len(t, sn, 4, "expected 4 spans, got %d", len(sn))

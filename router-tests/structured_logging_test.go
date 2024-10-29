@@ -597,7 +597,7 @@ func TestAccessLogs(t *testing.T) {
 				Query: `query employees { notExists { id } }`, // Missing closing bracket
 			})
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"field: notExists not defined on type: Query","path":["query","notExists"]}]}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"field: notExists not defined on type: Query","path":["query"]}]}`, res.Body)
 			logEntries := xEnv.Observer().All()
 			require.Len(t, logEntries, 12)
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
