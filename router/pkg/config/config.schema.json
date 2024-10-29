@@ -1937,6 +1937,28 @@
               "default": false
             }
           }
+        },
+        "replace_undefined_op_field_errors": {
+          "type": "object",
+          "description": "Produces the same error (message, extension code, status code) as Apollo when an invalid operation field is included in an operation selection set.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "replace_invalid_var_errors": {
+          "type": "object",
+          "description": "Produces the same error (message, extension code, status code) as Apollo when an invalid variable is supplied.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
         }
       }
     },
