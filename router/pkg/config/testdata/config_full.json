@@ -498,6 +498,12 @@
     },
     "SuppressFetchErrors": {
       "Enabled": false
+    },
+    "ReplaceUndefinedOpFieldError": {
+      "Enabled": false
+    },
+    "ReplaceInvalidVarError": {
+      "Enabled": false
     }
   },
   "ClientHeader": {
