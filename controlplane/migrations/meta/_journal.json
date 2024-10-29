@@ -729,13 +729,6 @@
       "when": 1729791437121,
       "tag": "0103_sparkling_leper_queen",
       "breakpoints": true
-    },
-    {
-      "idx": 104,
-      "version": "7",
-      "when": 1730078593347,
-      "tag": "0104_remarkable_leo",
-      "breakpoints": true
     }
   ]
 }
