@@ -10,7 +10,6 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
-	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -708,11 +707,11 @@ func TestTelemetry(t *testing.T) {
 	t.Run("Trace unnamed GraphQL operation and validate all metrics and spans with temporality preference as 'Delta'", func(t *testing.T) {
 		t.Parallel()
 
-		temporalitySelector := func(kind sdkmetric.InstrumentKind) metricdata.Temporality {
+		temporalitySelector := func(kind metric.InstrumentKind) metricdata.Temporality {
 			switch kind {
-			case sdkmetric.InstrumentKindCounter,
-				sdkmetric.InstrumentKindObservableCounter,
-				sdkmetric.InstrumentKindHistogram:
+			case metric.InstrumentKindCounter,
+				metric.InstrumentKindObservableCounter,
+				metric.InstrumentKindHistogram:
 				return metricdata.DeltaTemporality
 			default:
 				return metricdata.CumulativeTemporality
@@ -1002,16 +1001,16 @@ func TestTelemetry(t *testing.T) {
 	t.Run("Trace unnamed GraphQL operation and validate all metrics and spans with our custom temporality selector", func(t *testing.T) {
 		t.Parallel()
 
-		temporalitySelector := func(kind sdkmetric.InstrumentKind) metricdata.Temporality {
+		temporalitySelector := func(kind metric.InstrumentKind) metricdata.Temporality {
 			switch kind {
-			case sdkmetric.InstrumentKindCounter,
-				sdkmetric.InstrumentKindUpDownCounter,
-				sdkmetric.InstrumentKindHistogram:
+			case metric.InstrumentKindCounter,
+				metric.InstrumentKindUpDownCounter,
+				metric.InstrumentKindHistogram:
 				return metricdata.DeltaTemporality
 			case
-				sdkmetric.InstrumentKindObservableGauge,
-				sdkmetric.InstrumentKindObservableCounter,
-				sdkmetric.InstrumentKindObservableUpDownCounter:
+				metric.InstrumentKindObservableGauge,
+				metric.InstrumentKindObservableCounter,
+				metric.InstrumentKindObservableUpDownCounter:
 				return metricdata.CumulativeTemporality
 			}
 			panic("unknown instrument kind")
