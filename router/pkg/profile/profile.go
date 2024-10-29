@@ -51,7 +51,7 @@ func NewServer(port int, log *zap.Logger) Server {
 
 	return &server{
 		port:   port,
-		logger: log.With(zap.String("component", "pprof")),
+		logger: log.With(zap.String("component", "pprof-server")),
 		server: svr,
 	}
 }
