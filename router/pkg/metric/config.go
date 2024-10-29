@@ -36,7 +36,8 @@ type OpenTelemetryExporter struct {
 	// HTTPPath represents the path for OTLP HTTP transport.
 	// For example
 	// /v1/metrics
-	HTTPPath string
+	HTTPPath    string
+	Temporality otelconfig.ExporterTemporality
 }
 
 type OpenTelemetry struct {

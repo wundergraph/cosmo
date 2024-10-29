@@ -117,6 +117,30 @@ func NewPrometheusMeterProvider(ctx context.Context, c *Config, serviceInstanceI
 	return sdkmetric.NewMeterProvider(opts...), registry, nil
 }
 
+func getTemporalitySelector(temporality otelconfig.ExporterTemporality, log *zap.Logger) func(kind sdkmetric.InstrumentKind) metricdata.Temporality {
+	if temporality == otelconfig.DeltaTemporality {
+		deltaTemporalitySelector := func(kind sdkmetric.InstrumentKind) metricdata.Temporality {
+			switch kind {
+			case sdkmetric.InstrumentKindCounter,
+				sdkmetric.InstrumentKindObservableCounter,
+				sdkmetric.InstrumentKindHistogram:
+				return metricdata.DeltaTemporality
+			default:
+				return metricdata.CumulativeTemporality
+			}
+		}
+		return deltaTemporalitySelector
+	} else if temporality == otelconfig.CumulativeTemporality {
+		cumulativeTemporalitySelector := func(kind sdkmetric.InstrumentKind) metricdata.Temporality {
+			return metricdata.CumulativeTemporality
+		}
+		return cumulativeTemporalitySelector
+	} else {
+		log.Info("The temporality selector falls back to the default, as the temporality is either not configured or the configured one is not supported.", zap.String("configuredTemporality", string(temporality)))
+		return temporalitySelector
+	}
+}
+
 func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.Exporter, error) {
 	u, err := url.Parse(exp.Endpoint)
 	if err != nil {
@@ -130,7 +154,7 @@ func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.
 			// Includes host and port
 			otlpmetrichttp.WithEndpoint(u.Host),
 			otlpmetrichttp.WithCompression(otlpmetrichttp.GzipCompression),
-			otlpmetrichttp.WithTemporalitySelector(temporalitySelector),
+			otlpmetrichttp.WithTemporalitySelector(getTemporalitySelector(exp.Temporality, log)),
 		}
 
 		if u.Scheme != "https" {
@@ -153,7 +177,7 @@ func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.
 			// Includes host and port
 			otlpmetricgrpc.WithEndpoint(u.Host),
 			otlpmetricgrpc.WithCompressor("gzip"),
-			otlpmetricgrpc.WithTemporalitySelector(temporalitySelector),
+			otlpmetricgrpc.WithTemporalitySelector(getTemporalitySelector(exp.Temporality, log)),
 		}
 
 		if u.Scheme != "https" {

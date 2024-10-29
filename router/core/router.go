@@ -1749,11 +1749,12 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 	var openTelemetryExporters []*rmetric.OpenTelemetryExporter
 	for _, exp := range cfg.Metrics.OTLP.Exporters {
 		openTelemetryExporters = append(openTelemetryExporters, &rmetric.OpenTelemetryExporter{
-			Disabled: exp.Disabled,
-			Endpoint: exp.Endpoint,
-			Exporter: exp.Exporter,
-			Headers:  exp.Headers,
-			HTTPPath: exp.HTTPPath,
+			Disabled:    exp.Disabled,
+			Endpoint:    exp.Endpoint,
+			Exporter:    exp.Exporter,
+			Headers:     exp.Headers,
+			HTTPPath:    exp.HTTPPath,
+			Temporality: exp.Temporality,
 		})
 	}
 
