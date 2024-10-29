@@ -136,7 +136,7 @@ func TestAccessLogs(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("Simple", func(t *testing.T) {
+	t.Run("Simple without custom attributes", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
@@ -308,7 +308,7 @@ func TestAccessLogs(t *testing.T) {
 		})
 	})
 
-	t.Run("Fallback to default value", func(t *testing.T) {
+	t.Run("Fallback to default value when defining a header", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
@@ -350,6 +350,50 @@ func TestAccessLogs(t *testing.T) {
 				"ip":               "[REDACTED]",
 				"service_name":     "default-service-name", // From header
 				"operation_sha256": "default-sha256",       // From context
+			}
+			additionalExpectedKeys := []string{
+				"user_agent",
+				"latency",
+				"config_version",
+				"request_id",
+				"pid",
+				"hostname",
+			}
+			checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
+		})
+	})
+
+	t.Run("Fallback to default value when no value_from was provided", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			AccessLogFields: []config.CustomAttribute{
+				{
+					Key:     "env",
+					Default: "staging",
+				},
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			}}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query employees { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+			logEntries := xEnv.Observer().All()
+			require.Len(t, logEntries, 12)
+			requestLog := xEnv.Observer().FilterMessage("/graphql")
+			require.Equal(t, requestLog.Len(), 1)
+			requestContext := requestLog.All()[0].ContextMap()
+			expectedValues := map[string]interface{}{
+				"log_type": "request",
+				"status":   int64(200),
+				"method":   "POST",
+				"path":     "/graphql",
+				"query":    "",
+				"ip":       "[REDACTED]",
+				"env":      "staging", // From default
 			}
 			additionalExpectedKeys := []string{
 				"user_agent",
