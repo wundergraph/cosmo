@@ -10,7 +10,6 @@ import (
 	"net/http/pprof"
 	"os"
 	rPProf "runtime/pprof"
-	"strconv"
 )
 
 type Profiler interface {
@@ -23,7 +22,6 @@ type Server interface {
 }
 
 type server struct {
-	port   int
 	logger *zap.Logger
 	server *http.Server
 }
@@ -35,7 +33,7 @@ type profiler struct {
 }
 
 // NewServer creates a new pprof server
-func NewServer(port int, log *zap.Logger) Server {
+func NewServer(addr string, log *zap.Logger) Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/debug/pprof/", pprof.Index)
 	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
@@ -44,13 +42,12 @@ func NewServer(port int, log *zap.Logger) Server {
 	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 
 	svr := &http.Server{
-		Addr: ":" + strconv.Itoa(port),
+		Addr: addr,
 	}
 
 	log.Info("pprof server started", zap.String("address", svr.Addr))
 
 	return &server{
-		port:   port,
 		logger: log.With(zap.String("component", "pprof-server")),
 		server: svr,
 	}
