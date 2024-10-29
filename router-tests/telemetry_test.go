@@ -2383,7 +2383,7 @@ func TestTelemetry(t *testing.T) {
 			require.Equal(t, `{"errors":[{"message":"field: employeesTypeNotExist not defined on type: Query","path":["query"]}]}`, res.Body)
 			sn := exporter.GetSpans().Snapshots()
 
-			require.Len(t, sn, 4, "expected 4 spans, got %d", len(sn))
+			require.Len(t, sn, 5, "expected 4 spans, got %d", len(sn))
 
 			require.Equal(t, "Operation - Parse", sn[1].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[1].SpanKind())
@@ -2394,19 +2394,26 @@ func TestTelemetry(t *testing.T) {
 
 			require.Equal(t, "Operation - Normalize", sn[2].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[2].SpanKind())
-			require.Equal(t, codes.Error, sn[2].Status().Code)
-			require.Equal(t, sn[2].Status().Description, "field: employeesTypeNotExist not defined on type: Query")
+			require.Equal(t, codes.Unset, sn[2].Status().Code)
+			require.Empty(t, sn[2].Status().Description)
 
-			events := sn[2].Events()
-			require.Len(t, events, 1, "expected 1 event because the GraphQL normalization failed")
+			require.Empty(t, sn[2].Events())
+
+			require.Equal(t, "Operation - Validate", sn[3].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[3].SpanKind())
+			require.Equal(t, codes.Error, sn[3].Status().Code)
+			require.Equal(t, sn[3].Status().Description, "field: employeesTypeNotExist not defined on type: Query")
+
+			events := sn[3].Events()
+			require.Len(t, events, 1, "expected 1 event because GraphQL validation failed")
 			require.Equal(t, "exception", events[0].Name)
 
-			require.Equal(t, "query foo", sn[3].Name())
-			require.Equal(t, trace.SpanKindServer, sn[3].SpanKind())
-			require.Equal(t, codes.Error, sn[3].Status().Code)
-			require.Contains(t, sn[3].Status().Description, "field: employeesTypeNotExist not defined on type: Query")
+			require.Equal(t, "query foo", sn[4].Name())
+			require.Equal(t, trace.SpanKindServer, sn[4].SpanKind())
+			require.Equal(t, codes.Error, sn[4].Status().Code)
+			require.Contains(t, sn[4].Status().Description, "field: employeesTypeNotExist not defined on type: Query")
 
-			events = sn[3].Events()
+			events = sn[4].Events()
 			require.Len(t, events, 1, "expected 1 event because the GraphQL request failed")
 			require.Equal(t, "exception", events[0].Name)
 		})
