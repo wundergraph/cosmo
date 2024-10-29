@@ -585,7 +585,7 @@ export class SubgraphRepository {
       conditions.push(eq(schema.subgraphs.isFeatureSubgraph, false));
     }
 
-    const targets = await this.db
+    const targetsQuery = this.db
       .select({
         id: schema.targets.id,
         name: schema.targets.name,
@@ -596,9 +596,16 @@ export class SubgraphRepository {
       // Left join because version is optional
       .leftJoin(schema.schemaVersion, eq(schema.subgraphs.schemaVersionId, schema.schemaVersion.id))
       .orderBy(asc(schema.targets.createdAt), asc(schemaVersion.createdAt))
-      .where(and(...conditions))
-      .limit(opts.limit)
-      .offset(opts.offset);
+      .where(and(...conditions));
+
+    if (opts.limit) {
+      targetsQuery.limit(opts.limit);
+    }
+    if (opts.offset) {
+      targetsQuery.offset(opts.offset);
+    }
+
+    const targets = await targetsQuery;
 
     const subgraphs: SubgraphDTO[] = [];
 

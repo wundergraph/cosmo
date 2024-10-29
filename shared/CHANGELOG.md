@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.32.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.31.20...@wundergraph/cosmo-shared@0.32.0) (2024-10-28)
+
+### Features
+
+* add missing indexes, upgrade drizzle ([#1309](https://github.com/wundergraph/cosmo/issues/1309)) ([5b022e5](https://github.com/wundergraph/cosmo/commit/5b022e51ca6c9378377a7fb35fc4b2ddaad1ad06)) (@StarpTech)
+
 ## [0.31.20](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.31.19...@wundergraph/cosmo-shared@0.31.20) (2024-10-24)
 
 **Note:** Version bump only for package @wundergraph/cosmo-shared
