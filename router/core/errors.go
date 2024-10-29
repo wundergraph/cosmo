@@ -257,7 +257,7 @@ func writeMultipartError(w http.ResponseWriter, requestErrors graphqlerrors.Requ
 	return nil
 }
 
-func requestErrorsFromHttpErrorWithExtensions(httpErr ApolloCompatibleHttpError) graphqlerrors.RequestErrors {
+func requestErrorsFromHttpError(httpErr HttpError) graphqlerrors.RequestErrors {
 	requestErr := graphqlerrors.RequestError{
 		Message: httpErr.Error(),
 	}
@@ -275,11 +275,11 @@ func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *
 	requestLogger.Debug("operation error", zap.Error(err))
 
 	var reportErr ReportError
-	var httpErr ApolloCompatibleHttpError
+	var httpErr HttpError
 	var poNotFoundErr *persistedoperation.PersistentOperationNotFoundError
 	switch {
 	case errors.As(err, &httpErr):
-		writeRequestErrors(r, w, httpErr.StatusCode(), requestErrorsFromHttpErrorWithExtensions(httpErr), requestLogger)
+		writeRequestErrors(r, w, httpErr.StatusCode(), requestErrorsFromHttpError(httpErr), requestLogger)
 	case errors.As(err, &poNotFoundErr):
 		writeRequestErrors(r, w, http.StatusBadRequest, graphqlerrors.RequestErrorsFromError(errors.New("persisted Query not found")), requestLogger)
 	case errors.As(err, &reportErr):
