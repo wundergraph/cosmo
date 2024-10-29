@@ -78,6 +78,10 @@ func (e invalidExtensionsTypeError) StatusCode() int {
 	return http.StatusBadRequest
 }
 
+func (e invalidExtensionsTypeError) ExtensionCode() string {
+	return ""
+}
+
 var (
 	_ HttpError = invalidExtensionsTypeError(0)
 )
@@ -961,12 +965,12 @@ func createParseKit(i int, options *parseKitOptions) *parseKit {
 		normalizedOperation: &bytes.Buffer{},
 		variablesValidator: variablesvalidation.NewVariablesValidator(variablesvalidation.VariablesValidatorOptions{
 			ApolloCompatibilityFlags: apollocompatibility.Flags{
-				ReplaceInvalidVarError: options.apolloCompatibilityFlags.ReplaceInvalidVarError.Enabled,
+				ReplaceInvalidVarError: options.apolloCompatibilityFlags.ReplaceInvalidVarErrors.Enabled,
 			},
 		}),
 		operationValidator: astvalidation.DefaultOperationValidator(astvalidation.WithApolloCompatibilityFlags(
 			apollocompatibility.Flags{
-				ReplaceUndefinedOpFieldError: options.apolloCompatibilityFlags.ReplaceUndefinedOpFieldError.Enabled,
+				ReplaceUndefinedOpFieldError: options.apolloCompatibilityFlags.ReplaceUndefinedOpFieldErrors.Enabled,
 			},
 		)),
 	}

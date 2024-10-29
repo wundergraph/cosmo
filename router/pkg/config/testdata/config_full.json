@@ -499,10 +499,10 @@
     "SuppressFetchErrors": {
       "Enabled": false
     },
-    "ReplaceUndefinedOpFieldError": {
+    "ReplaceUndefinedOpFieldErrors": {
       "Enabled": false
     },
-    "ReplaceInvalidVarError": {
+    "ReplaceInvalidVarErrors": {
       "Enabled": false
     }
   },
