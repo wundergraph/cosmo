@@ -387,11 +387,11 @@ func TestApolloCompatibility(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-				Query: `query {products{nonExistentField}}`,
+				Query: `query {employees{nonExistentField}}`,
 			})
 			require.NoError(t, err)
 			assert.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			assert.Equal(t, `{"errors":[{"message":"Cannot query \"nonExistentField\" on type \"Products\".","extensions":{"code":"GRAPHQL_VALIDATION_FAILED"}}]}`, res.Body)
+			assert.Equal(t, `{"errors":[{"message":"Cannot query \"nonExistentField\" on type \"Employee\".","extensions":{"code":"GRAPHQL_VALIDATION_FAILED"}}]}`, res.Body)
 		})
 	})
 	t.Run("enable replace invalid variable error", func(t *testing.T) {

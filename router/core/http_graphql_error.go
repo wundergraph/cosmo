@@ -1,17 +1,17 @@
 package core
 
-type HttpError interface {
+type ApolloCompatibleHttpError interface {
 	error
+	// ExtensionCode is the code that should be included in the error extensions
+	ExtensionCode() string
 	// Message represents a human-readable error message to be sent to the client/user
 	Message() string
 	// StatusCode is the status code to be sent to the client
 	StatusCode() int
 }
 
-type ApolloCompatibilityHttpError interface {
+type HttpError interface {
 	error
-	// ExtensionCode is the ApolloCompatible extension error code
-	ExtensionCode() string
 	// Message represents a human-readable error message to be sent to the client/user
 	Message() string
 	// StatusCode is the status code to be sent to the client

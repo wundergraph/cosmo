@@ -249,7 +249,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 					message:    "file upload disabled",
 					statusCode: http.StatusOK,
 				}
-				writeOperationError(r, w, requestLogger, requestContext.error, h.apolloCompatibilityFlags)
+				writeOperationError(r, w, requestLogger, requestContext.error)
 				h.releaseBodyReadBuffer(buf)
 				return
 			}
@@ -265,7 +265,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			body, files, err = multipartParser.Parse(r, buf)
 			if err != nil {
 				requestContext.error = err
-				writeOperationError(r, w, requestLogger, requestContext.error, h.apolloCompatibilityFlags)
+				writeOperationError(r, w, requestLogger, requestContext.error)
 				h.releaseBodyReadBuffer(buf)
 				readMultiPartSpan.End()
 				return
@@ -299,7 +299,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				// e.g. too large body, slow client, aborted connection etc.
 				// The error is logged as debug log in the writeOperationError function
 
-				writeOperationError(r, w, requestLogger, err, h.apolloCompatibilityFlags)
+				writeOperationError(r, w, requestLogger, err)
 				h.releaseBodyReadBuffer(buf)
 				readOperationBodySpan.End()
 				return
@@ -322,7 +322,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			// Mark the root span of the router as failed, so we can easily identify failed requests
 			rtrace.AttachErrToSpan(routerSpan, err)
 
-			writeOperationError(r, w, requestLogger, err, h.apolloCompatibilityFlags)
+			writeOperationError(r, w, requestLogger, err)
 			h.releaseBodyReadBuffer(buf)
 			return
 		}
@@ -348,7 +348,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				writeOperationError(r, w, requestLogger, &httpGraphqlError{
 					message:    err.Error(),
 					statusCode: http.StatusUnauthorized,
-				}, h.apolloCompatibilityFlags)
+				})
 				return
 			}
 

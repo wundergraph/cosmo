@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 	"net"
 	"net/http"
 
@@ -258,33 +257,29 @@ func writeMultipartError(w http.ResponseWriter, requestErrors graphqlerrors.Requ
 	return nil
 }
 
-func requestErrorsFromApolloCompatibilityHttpError(err ApolloCompatibilityHttpError) graphqlerrors.RequestErrors {
-	return graphqlerrors.RequestErrors{
-		{
-			Extensions: &graphqlerrors.Extensions{
-				Code: err.ExtensionCode(),
-			},
-			Message: err.Error(),
-		},
+func requestErrorsFromHttpErrorWithExtensions(httpErr ApolloCompatibleHttpError) graphqlerrors.RequestErrors {
+	requestErr := graphqlerrors.RequestError{
+		Message: httpErr.Error(),
 	}
+	if httpErr.ExtensionCode() != "" {
+		requestErr.Extensions = &graphqlerrors.Extensions{
+			Code: httpErr.ExtensionCode(),
+		}
+	}
+	return graphqlerrors.RequestErrors{requestErr}
 }
 
 // writeOperationError writes the given error to the http.ResponseWriter but evaluates the error type first.
 // It also logs additional information about the error.
-func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *zap.Logger, err error, apolloCompatibilityFlags *config.ApolloCompatibilityFlags) {
+func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *zap.Logger, err error) {
 	requestLogger.Debug("operation error", zap.Error(err))
 
 	var reportErr ReportError
-	var httpErr HttpError
+	var httpErr ApolloCompatibleHttpError
 	var poNotFoundErr *persistedoperation.PersistentOperationNotFoundError
 	switch {
 	case errors.As(err, &httpErr):
-		var apolloHttpErr ApolloCompatibilityHttpError
-		if apolloCompatibilityFlags.ReplaceInvalidVarError.Enabled && errors.As(err, &apolloHttpErr) {
-			writeRequestErrors(r, w, apolloHttpErr.StatusCode(), requestErrorsFromApolloCompatibilityHttpError(apolloHttpErr), requestLogger)
-			return
-		}
-		writeRequestErrors(r, w, httpErr.StatusCode(), graphqlerrors.RequestErrorsFromError(err), requestLogger)
+		writeRequestErrors(r, w, httpErr.StatusCode(), requestErrorsFromHttpErrorWithExtensions(httpErr), requestLogger)
 	case errors.As(err, &poNotFoundErr):
 		writeRequestErrors(r, w, http.StatusBadRequest, graphqlerrors.RequestErrorsFromError(errors.New("persisted Query not found")), requestLogger)
 	case errors.As(err, &reportErr):

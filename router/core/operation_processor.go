@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/apollocompatibility"
 	"hash"
 	"io"
 	"net/http"
@@ -958,10 +959,14 @@ func createParseKit(i int, options *parseKitOptions) *parseKit {
 		variablesNormalizer: astnormalization.NewVariablesNormalizer(),
 		printer:             &astprinter.Printer{},
 		normalizedOperation: &bytes.Buffer{},
-		variablesValidator:  variablesvalidation.NewVariablesValidator(),
+		variablesValidator: variablesvalidation.NewVariablesValidator(variablesvalidation.VariablesValidatorOptions{
+			ApolloCompatibilityFlags: apollocompatibility.Flags{
+				ReplaceInvalidVarError: options.apolloCompatibilityFlags.ReplaceInvalidVarError.Enabled,
+			},
+		}),
 		operationValidator: astvalidation.DefaultOperationValidator(astvalidation.WithApolloCompatibilityFlags(
-			astvalidation.ApolloCompatibilityFlags{
-				ReplaceUndefinedOpFieldErrorEnabled: options.apolloCompatibilityFlags.ReplaceUndefinedOpFieldError.Enabled,
+			apollocompatibility.Flags{
+				ReplaceUndefinedOpFieldError: options.apolloCompatibilityFlags.ReplaceUndefinedOpFieldError.Enabled,
 			},
 		)),
 	}
