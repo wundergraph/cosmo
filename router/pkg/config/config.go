@@ -643,8 +643,8 @@ type ApolloCompatibilityFlags struct {
 	ValueCompletion              ApolloCompatibilityValueCompletion              `yaml:"value_completion"`
 	TruncateFloats               ApolloCompatibilityTruncateFloats               `yaml:"truncate_floats"`
 	SuppressFetchErrors          ApolloCompatibilitySuppressFetchErrors          `yaml:"suppress_fetch_errors"`
-	ReplaceUndefinedOpFieldError ApolloCompatibilityReplaceUndefinedOpFieldError `yaml:"replace_undefined_operation_field_error"`
-	ReplaceInvalidVarError       ApolloCompatibilityReplaceInvalidVarError       `yaml:"replace_invalid_variable_error"`
+	ReplaceUndefinedOpFieldError ApolloCompatibilityReplaceUndefinedOpFieldError `yaml:"replace_undefined_op_field_error"`
+	ReplaceInvalidVarError       ApolloCompatibilityReplaceInvalidVarError       `yaml:"replace_invalid_var_error"`
 }
 
 type ApolloCompatibilityValueCompletion struct {
