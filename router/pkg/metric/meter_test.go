@@ -12,12 +12,12 @@ import (
 func TestGetTemporalitySelector(t *testing.T) {
 	log := zap.NewNop()
 	selector := getTemporalitySelector("", log)
-	assert.Equal(t, selector(sdkmetric.InstrumentKindCounter), temporalitySelector(sdkmetric.InstrumentKindCounter))
-	assert.Equal(t, selector(sdkmetric.InstrumentKindUpDownCounter), temporalitySelector(sdkmetric.InstrumentKindUpDownCounter))
-	assert.Equal(t, selector(sdkmetric.InstrumentKindHistogram), temporalitySelector(sdkmetric.InstrumentKindHistogram))
-	assert.Equal(t, selector(sdkmetric.InstrumentKindObservableCounter), temporalitySelector(sdkmetric.InstrumentKindObservableCounter))
-	assert.Equal(t, selector(sdkmetric.InstrumentKindObservableUpDownCounter), temporalitySelector(sdkmetric.InstrumentKindObservableUpDownCounter))
-	assert.Equal(t, selector(sdkmetric.InstrumentKindObservableGauge), temporalitySelector(sdkmetric.InstrumentKindObservableGauge))
+	assert.Equal(t, selector(sdkmetric.InstrumentKindCounter), defaultCLoudTemporalitySelector(sdkmetric.InstrumentKindCounter))
+	assert.Equal(t, selector(sdkmetric.InstrumentKindUpDownCounter), defaultCLoudTemporalitySelector(sdkmetric.InstrumentKindUpDownCounter))
+	assert.Equal(t, selector(sdkmetric.InstrumentKindHistogram), defaultCLoudTemporalitySelector(sdkmetric.InstrumentKindHistogram))
+	assert.Equal(t, selector(sdkmetric.InstrumentKindObservableCounter), defaultCLoudTemporalitySelector(sdkmetric.InstrumentKindObservableCounter))
+	assert.Equal(t, selector(sdkmetric.InstrumentKindObservableUpDownCounter), defaultCLoudTemporalitySelector(sdkmetric.InstrumentKindObservableUpDownCounter))
+	assert.Equal(t, selector(sdkmetric.InstrumentKindObservableGauge), defaultCLoudTemporalitySelector(sdkmetric.InstrumentKindObservableGauge))
 
 	selector = getTemporalitySelector(otelconfig.DeltaTemporality, log)
 	assert.Equal(t, selector(sdkmetric.InstrumentKindCounter), metricdata.DeltaTemporality)

@@ -49,7 +49,7 @@ const (
 )
 
 var (
-	// temporalitySelector is a function that selects the temporality for a given instrument kind.
+	// defaultCLoudTemporalitySelector is a function that selects the temporality for a given instrument kind.
 	// Short story about when we choose delta and when we choose cumulative temporality:
 	//
 	// Delta temporalities are reported as completed intervals. They don't build upon each other.
@@ -65,7 +65,7 @@ var (
 	// We choose cumulative temporality for asynchronous instruments because we can query the last cumulative value without extra work.
 	// See https://opentelemetry.io/docs/specs/otel/metrics/supplementary-guidelines/#aggregation-temporality for more information.
 	//
-	temporalitySelector = func(kind sdkmetric.InstrumentKind) metricdata.Temporality {
+	defaultCLoudTemporalitySelector = func(kind sdkmetric.InstrumentKind) metricdata.Temporality {
 		switch kind {
 		case sdkmetric.InstrumentKindCounter,
 			sdkmetric.InstrumentKindUpDownCounter,
@@ -138,8 +138,8 @@ func getTemporalitySelector(temporality otelconfig.ExporterTemporality, log *zap
 		}
 		return cumulativeTemporalitySelector
 	} else {
-		log.Info("The temporality selector falls back to the default, as the temporality is either not configured or the configured one is not supported.", zap.String("configuredTemporality", string(temporality)))
-		return temporalitySelector
+		log.Debug("The temporality selector falls back to the default.")
+		return defaultCLoudTemporalitySelector
 	}
 }
 
