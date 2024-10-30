@@ -4,12 +4,11 @@ package profile
 
 import (
 	"errors"
-	"fmt"
 	"go.uber.org/zap"
 	"net/http"
 	"net/http/pprof"
 	"os"
-	rPProf "runtime/pprof"
+	runtimePprof "runtime/pprof"
 )
 
 type Profiler interface {
@@ -27,13 +26,16 @@ type server struct {
 }
 
 type profiler struct {
-	cpuProfileFile string
-	memProfileFile string
-	logger         *zap.Logger
+	cpuProfileFile     *os.File
+	memProfileFilePath string
+	logger             *zap.Logger
 }
 
 // NewServer creates a new pprof server
 func NewServer(addr string, log *zap.Logger) Server {
+
+	logger := log.With(zap.String("component", "pprof-server"))
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/debug/pprof/", pprof.Index)
 	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
@@ -42,13 +44,14 @@ func NewServer(addr string, log *zap.Logger) Server {
 	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 
 	svr := &http.Server{
-		Addr: addr,
+		Addr:     addr,
+		ErrorLog: zap.NewStdLog(logger),
 	}
 
-	log.Info("pprof server started", zap.String("address", svr.Addr))
+	logger.Info("pprof server started", zap.String("address", svr.Addr))
 
 	return &server{
-		logger: log.With(zap.String("component", "pprof-server")),
+		logger: logger,
 		server: svr,
 	}
 }
@@ -69,16 +72,29 @@ func (p *server) Close() {
 
 // Finish terminates profiling and writes the CPU and memory profiles if needed
 func (p *profiler) Finish() {
-	if p.cpuProfileFile != "" {
-		rPProf.StopCPUProfile()
-		p.logger.Info("Wrote CPU profile", zap.String("path", p.cpuProfileFile))
+	if p.cpuProfileFile != nil {
+		runtimePprof.StopCPUProfile()
+		if err := p.cpuProfileFile.Close(); err != nil {
+			p.logger.Error("Could not close CPU profile file", zap.Error(err))
+			return
+		}
+		p.logger.Info("Wrote CPU profile", zap.String("path", p.cpuProfileFile.Name()))
 	}
 
-	if p.memProfileFile != "" {
-		if err := writeMemProfile(p.memProfileFile); err != nil {
-			p.logger.Error("Could not write memory profile", zap.Error(err))
+	if p.memProfileFilePath != "" {
+		f, err := os.Create(p.memProfileFilePath)
+		if err != nil {
+			p.logger.Error("Could not create memory profile", zap.Error(err))
+			return
 		}
-		p.logger.Info("Wrote memory profile", zap.String("path", p.memProfileFile))
+		defer f.Close()
+
+		if err := runtimePprof.WriteHeapProfile(f); err != nil {
+			p.logger.Error("Could not write memory profile", zap.Error(err))
+			return
+		}
+
+		p.logger.Info("Wrote memory profile", zap.String("path", p.memProfileFilePath))
 	}
 }
 
@@ -86,41 +102,22 @@ func (p *profiler) Finish() {
 // Finish() (usually via defer) to write the profiles. If both paths are empty,
 // Start() and Finish() are no-ops.
 func Start(log *zap.Logger, cpuProfilePath, memProfilePath string) Profiler {
+	p := &profiler{
+		logger:             log.With(zap.String("component", "profiler")),
+		memProfileFilePath: memProfilePath,
+	}
+
 	if cpuProfilePath != "" {
 		log.Info("Starting CPU profile", zap.String("path", cpuProfilePath))
-		if err := startCpuProfile(cpuProfilePath); err != nil {
+		f, err := os.Create(cpuProfilePath)
+		if err != nil {
+			log.Fatal("Could not create CPU profile", zap.Error(err))
+		}
+		if err := runtimePprof.StartCPUProfile(f); err != nil {
 			log.Fatal("Could not start CPU profile", zap.Error(err))
 		}
+		p.cpuProfileFile = f
 	}
 
-	return &profiler{
-		cpuProfileFile: cpuProfilePath,
-		memProfileFile: memProfilePath,
-		logger:         log.With(zap.String("component", "profiler")),
-	}
-}
-
-func startCpuProfile(path string) error {
-	var err error
-	cpuProfileFile, err := os.Create(path)
-	if err != nil {
-		return fmt.Errorf("could not create CPU profile: %w", err)
-	}
-	if err := rPProf.StartCPUProfile(cpuProfileFile); err != nil {
-		return fmt.Errorf("could not start CPU profile: %w", err)
-	}
-	return nil
-}
-
-func writeMemProfile(path string) error {
-	f, err := os.Create(path)
-	if err != nil {
-		return fmt.Errorf("could not create memory profile: %w", err)
-	}
-	defer f.Close()
-
-	if err := rPProf.WriteHeapProfile(f); err != nil {
-		return fmt.Errorf("could not write memory profile: %w", err)
-	}
-	return nil
+	return p
 }

@@ -58,7 +58,7 @@ func Main() {
 			zap.String("service_version", core.Version),
 		)
 
-	// Start pprof server if port is set
+	// Start pprof server if address is provided
 	if *pprofListenAddr != "" {
 		pprofSvr := profile.NewServer(*pprofListenAddr, logger)
 		defer pprofSvr.Close()
