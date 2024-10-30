@@ -18383,3 +18383,384 @@ export class GetWebhookDeliveryDetailsResponse extends Message<GetWebhookDeliver
   }
 }
 
+/**
+ * @generated from message wg.cosmo.platform.v1.CreatePlaygroundScriptRequest
+ */
+export class CreatePlaygroundScriptRequest extends Message<CreatePlaygroundScriptRequest> {
+  /**
+   * @generated from field: string title = 1;
+   */
+  title = "";
+
+  /**
+   * @generated from field: string type = 2;
+   */
+  type = "";
+
+  /**
+   * @generated from field: string content = 3;
+   */
+  content = "";
+
+  constructor(data?: PartialMessage<CreatePlaygroundScriptRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.CreatePlaygroundScriptRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "title", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "content", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreatePlaygroundScriptRequest {
+    return new CreatePlaygroundScriptRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreatePlaygroundScriptRequest {
+    return new CreatePlaygroundScriptRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreatePlaygroundScriptRequest {
+    return new CreatePlaygroundScriptRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreatePlaygroundScriptRequest | PlainMessage<CreatePlaygroundScriptRequest> | undefined, b: CreatePlaygroundScriptRequest | PlainMessage<CreatePlaygroundScriptRequest> | undefined): boolean {
+    return proto3.util.equals(CreatePlaygroundScriptRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.CreatePlaygroundScriptResponse
+ */
+export class CreatePlaygroundScriptResponse extends Message<CreatePlaygroundScriptResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<CreatePlaygroundScriptResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.CreatePlaygroundScriptResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreatePlaygroundScriptResponse {
+    return new CreatePlaygroundScriptResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreatePlaygroundScriptResponse {
+    return new CreatePlaygroundScriptResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreatePlaygroundScriptResponse {
+    return new CreatePlaygroundScriptResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreatePlaygroundScriptResponse | PlainMessage<CreatePlaygroundScriptResponse> | undefined, b: CreatePlaygroundScriptResponse | PlainMessage<CreatePlaygroundScriptResponse> | undefined): boolean {
+    return proto3.util.equals(CreatePlaygroundScriptResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.DeletePlaygroundScriptRequest
+ */
+export class DeletePlaygroundScriptRequest extends Message<DeletePlaygroundScriptRequest> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  constructor(data?: PartialMessage<DeletePlaygroundScriptRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.DeletePlaygroundScriptRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeletePlaygroundScriptRequest {
+    return new DeletePlaygroundScriptRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeletePlaygroundScriptRequest {
+    return new DeletePlaygroundScriptRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeletePlaygroundScriptRequest {
+    return new DeletePlaygroundScriptRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeletePlaygroundScriptRequest | PlainMessage<DeletePlaygroundScriptRequest> | undefined, b: DeletePlaygroundScriptRequest | PlainMessage<DeletePlaygroundScriptRequest> | undefined): boolean {
+    return proto3.util.equals(DeletePlaygroundScriptRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.DeletePlaygroundScriptResponse
+ */
+export class DeletePlaygroundScriptResponse extends Message<DeletePlaygroundScriptResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<DeletePlaygroundScriptResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.DeletePlaygroundScriptResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeletePlaygroundScriptResponse {
+    return new DeletePlaygroundScriptResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeletePlaygroundScriptResponse {
+    return new DeletePlaygroundScriptResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeletePlaygroundScriptResponse {
+    return new DeletePlaygroundScriptResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeletePlaygroundScriptResponse | PlainMessage<DeletePlaygroundScriptResponse> | undefined, b: DeletePlaygroundScriptResponse | PlainMessage<DeletePlaygroundScriptResponse> | undefined): boolean {
+    return proto3.util.equals(DeletePlaygroundScriptResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.UpdatePlaygroundScriptRequest
+ */
+export class UpdatePlaygroundScriptRequest extends Message<UpdatePlaygroundScriptRequest> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string title = 2;
+   */
+  title = "";
+
+  /**
+   * @generated from field: string content = 3;
+   */
+  content = "";
+
+  constructor(data?: PartialMessage<UpdatePlaygroundScriptRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.UpdatePlaygroundScriptRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "title", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "content", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdatePlaygroundScriptRequest {
+    return new UpdatePlaygroundScriptRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdatePlaygroundScriptRequest {
+    return new UpdatePlaygroundScriptRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdatePlaygroundScriptRequest {
+    return new UpdatePlaygroundScriptRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdatePlaygroundScriptRequest | PlainMessage<UpdatePlaygroundScriptRequest> | undefined, b: UpdatePlaygroundScriptRequest | PlainMessage<UpdatePlaygroundScriptRequest> | undefined): boolean {
+    return proto3.util.equals(UpdatePlaygroundScriptRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.UpdatePlaygroundScriptResponse
+ */
+export class UpdatePlaygroundScriptResponse extends Message<UpdatePlaygroundScriptResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<UpdatePlaygroundScriptResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.UpdatePlaygroundScriptResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdatePlaygroundScriptResponse {
+    return new UpdatePlaygroundScriptResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdatePlaygroundScriptResponse {
+    return new UpdatePlaygroundScriptResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdatePlaygroundScriptResponse {
+    return new UpdatePlaygroundScriptResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdatePlaygroundScriptResponse | PlainMessage<UpdatePlaygroundScriptResponse> | undefined, b: UpdatePlaygroundScriptResponse | PlainMessage<UpdatePlaygroundScriptResponse> | undefined): boolean {
+    return proto3.util.equals(UpdatePlaygroundScriptResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetPlaygroundScriptsRequest
+ */
+export class GetPlaygroundScriptsRequest extends Message<GetPlaygroundScriptsRequest> {
+  /**
+   * @generated from field: string type = 1;
+   */
+  type = "";
+
+  constructor(data?: PartialMessage<GetPlaygroundScriptsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetPlaygroundScriptsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetPlaygroundScriptsRequest {
+    return new GetPlaygroundScriptsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetPlaygroundScriptsRequest {
+    return new GetPlaygroundScriptsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetPlaygroundScriptsRequest {
+    return new GetPlaygroundScriptsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetPlaygroundScriptsRequest | PlainMessage<GetPlaygroundScriptsRequest> | undefined, b: GetPlaygroundScriptsRequest | PlainMessage<GetPlaygroundScriptsRequest> | undefined): boolean {
+    return proto3.util.equals(GetPlaygroundScriptsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.PlaygroundScript
+ */
+export class PlaygroundScript extends Message<PlaygroundScript> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string type = 2;
+   */
+  type = "";
+
+  /**
+   * @generated from field: string title = 3;
+   */
+  title = "";
+
+  /**
+   * @generated from field: string content = 4;
+   */
+  content = "";
+
+  constructor(data?: PartialMessage<PlaygroundScript>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.PlaygroundScript";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "title", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "content", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PlaygroundScript {
+    return new PlaygroundScript().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PlaygroundScript {
+    return new PlaygroundScript().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PlaygroundScript {
+    return new PlaygroundScript().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PlaygroundScript | PlainMessage<PlaygroundScript> | undefined, b: PlaygroundScript | PlainMessage<PlaygroundScript> | undefined): boolean {
+    return proto3.util.equals(PlaygroundScript, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetPlaygroundScriptsResponse
+ */
+export class GetPlaygroundScriptsResponse extends Message<GetPlaygroundScriptsResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.PlaygroundScript scripts = 2;
+   */
+  scripts: PlaygroundScript[] = [];
+
+  constructor(data?: PartialMessage<GetPlaygroundScriptsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetPlaygroundScriptsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "scripts", kind: "message", T: PlaygroundScript, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetPlaygroundScriptsResponse {
+    return new GetPlaygroundScriptsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetPlaygroundScriptsResponse {
+    return new GetPlaygroundScriptsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetPlaygroundScriptsResponse {
+    return new GetPlaygroundScriptsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetPlaygroundScriptsResponse | PlainMessage<GetPlaygroundScriptsResponse> | undefined, b: GetPlaygroundScriptsResponse | PlainMessage<GetPlaygroundScriptsResponse> | undefined): boolean {
+    return proto3.util.equals(GetPlaygroundScriptsResponse, a, b);
+  }
+}
+

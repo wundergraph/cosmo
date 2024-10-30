@@ -35,6 +35,18 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
+	// PlatformServiceCreatePlaygroundScriptProcedure is the fully-qualified name of the
+	// PlatformService's CreatePlaygroundScript RPC.
+	PlatformServiceCreatePlaygroundScriptProcedure = "/wg.cosmo.platform.v1.PlatformService/CreatePlaygroundScript"
+	// PlatformServiceDeletePlaygroundScriptProcedure is the fully-qualified name of the
+	// PlatformService's DeletePlaygroundScript RPC.
+	PlatformServiceDeletePlaygroundScriptProcedure = "/wg.cosmo.platform.v1.PlatformService/DeletePlaygroundScript"
+	// PlatformServiceUpdatePlaygroundScriptProcedure is the fully-qualified name of the
+	// PlatformService's UpdatePlaygroundScript RPC.
+	PlatformServiceUpdatePlaygroundScriptProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdatePlaygroundScript"
+	// PlatformServiceGetPlaygroundScriptsProcedure is the fully-qualified name of the PlatformService's
+	// GetPlaygroundScripts RPC.
+	PlatformServiceGetPlaygroundScriptsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetPlaygroundScripts"
 	// PlatformServiceCreateNamespaceProcedure is the fully-qualified name of the PlatformService's
 	// CreateNamespace RPC.
 	PlatformServiceCreateNamespaceProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateNamespace"
@@ -453,6 +465,10 @@ const (
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
 var (
 	platformServiceServiceDescriptor                                     = v1.File_wg_cosmo_platform_v1_platform_proto.Services().ByName("PlatformService")
+	platformServiceCreatePlaygroundScriptMethodDescriptor                = platformServiceServiceDescriptor.Methods().ByName("CreatePlaygroundScript")
+	platformServiceDeletePlaygroundScriptMethodDescriptor                = platformServiceServiceDescriptor.Methods().ByName("DeletePlaygroundScript")
+	platformServiceUpdatePlaygroundScriptMethodDescriptor                = platformServiceServiceDescriptor.Methods().ByName("UpdatePlaygroundScript")
+	platformServiceGetPlaygroundScriptsMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("GetPlaygroundScripts")
 	platformServiceCreateNamespaceMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("CreateNamespace")
 	platformServiceDeleteNamespaceMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("DeleteNamespace")
 	platformServiceRenameNamespaceMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("RenameNamespace")
@@ -595,6 +611,11 @@ var (
 
 // PlatformServiceClient is a client for the wg.cosmo.platform.v1.PlatformService service.
 type PlatformServiceClient interface {
+	// PlaygroundScripts
+	CreatePlaygroundScript(context.Context, *connect.Request[v1.CreatePlaygroundScriptRequest]) (*connect.Response[v1.CreatePlaygroundScriptResponse], error)
+	DeletePlaygroundScript(context.Context, *connect.Request[v1.DeletePlaygroundScriptRequest]) (*connect.Response[v1.DeletePlaygroundScriptResponse], error)
+	UpdatePlaygroundScript(context.Context, *connect.Request[v1.UpdatePlaygroundScriptRequest]) (*connect.Response[v1.UpdatePlaygroundScriptResponse], error)
+	GetPlaygroundScripts(context.Context, *connect.Request[v1.GetPlaygroundScriptsRequest]) (*connect.Response[v1.GetPlaygroundScriptsResponse], error)
 	// Namespaces
 	CreateNamespace(context.Context, *connect.Request[v1.CreateNamespaceRequest]) (*connect.Response[v1.CreateNamespaceResponse], error)
 	DeleteNamespace(context.Context, *connect.Request[v1.DeleteNamespaceRequest]) (*connect.Response[v1.DeleteNamespaceResponse], error)
@@ -868,6 +889,30 @@ type PlatformServiceClient interface {
 func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) PlatformServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
 	return &platformServiceClient{
+		createPlaygroundScript: connect.NewClient[v1.CreatePlaygroundScriptRequest, v1.CreatePlaygroundScriptResponse](
+			httpClient,
+			baseURL+PlatformServiceCreatePlaygroundScriptProcedure,
+			connect.WithSchema(platformServiceCreatePlaygroundScriptMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		deletePlaygroundScript: connect.NewClient[v1.DeletePlaygroundScriptRequest, v1.DeletePlaygroundScriptResponse](
+			httpClient,
+			baseURL+PlatformServiceDeletePlaygroundScriptProcedure,
+			connect.WithSchema(platformServiceDeletePlaygroundScriptMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		updatePlaygroundScript: connect.NewClient[v1.UpdatePlaygroundScriptRequest, v1.UpdatePlaygroundScriptResponse](
+			httpClient,
+			baseURL+PlatformServiceUpdatePlaygroundScriptProcedure,
+			connect.WithSchema(platformServiceUpdatePlaygroundScriptMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getPlaygroundScripts: connect.NewClient[v1.GetPlaygroundScriptsRequest, v1.GetPlaygroundScriptsResponse](
+			httpClient,
+			baseURL+PlatformServiceGetPlaygroundScriptsProcedure,
+			connect.WithSchema(platformServiceGetPlaygroundScriptsMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		createNamespace: connect.NewClient[v1.CreateNamespaceRequest, v1.CreateNamespaceResponse](
 			httpClient,
 			baseURL+PlatformServiceCreateNamespaceProcedure,
@@ -1708,6 +1753,10 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 
 // platformServiceClient implements PlatformServiceClient.
 type platformServiceClient struct {
+	createPlaygroundScript                *connect.Client[v1.CreatePlaygroundScriptRequest, v1.CreatePlaygroundScriptResponse]
+	deletePlaygroundScript                *connect.Client[v1.DeletePlaygroundScriptRequest, v1.DeletePlaygroundScriptResponse]
+	updatePlaygroundScript                *connect.Client[v1.UpdatePlaygroundScriptRequest, v1.UpdatePlaygroundScriptResponse]
+	getPlaygroundScripts                  *connect.Client[v1.GetPlaygroundScriptsRequest, v1.GetPlaygroundScriptsResponse]
 	createNamespace                       *connect.Client[v1.CreateNamespaceRequest, v1.CreateNamespaceResponse]
 	deleteNamespace                       *connect.Client[v1.DeleteNamespaceRequest, v1.DeleteNamespaceResponse]
 	renameNamespace                       *connect.Client[v1.RenameNamespaceRequest, v1.RenameNamespaceResponse]
@@ -1846,6 +1895,26 @@ type platformServiceClient struct {
 	createCheckoutSession                 *connect.Client[v1.CreateCheckoutSessionRequest, v1.CreateCheckoutSessionResponse]
 	createBillingPortalSession            *connect.Client[v1.CreateBillingPortalSessionRequest, v1.CreateBillingPortalSessionResponse]
 	upgradePlan                           *connect.Client[v1.UpgradePlanRequest, v1.UpgradePlanResponse]
+}
+
+// CreatePlaygroundScript calls wg.cosmo.platform.v1.PlatformService.CreatePlaygroundScript.
+func (c *platformServiceClient) CreatePlaygroundScript(ctx context.Context, req *connect.Request[v1.CreatePlaygroundScriptRequest]) (*connect.Response[v1.CreatePlaygroundScriptResponse], error) {
+	return c.createPlaygroundScript.CallUnary(ctx, req)
+}
+
+// DeletePlaygroundScript calls wg.cosmo.platform.v1.PlatformService.DeletePlaygroundScript.
+func (c *platformServiceClient) DeletePlaygroundScript(ctx context.Context, req *connect.Request[v1.DeletePlaygroundScriptRequest]) (*connect.Response[v1.DeletePlaygroundScriptResponse], error) {
+	return c.deletePlaygroundScript.CallUnary(ctx, req)
+}
+
+// UpdatePlaygroundScript calls wg.cosmo.platform.v1.PlatformService.UpdatePlaygroundScript.
+func (c *platformServiceClient) UpdatePlaygroundScript(ctx context.Context, req *connect.Request[v1.UpdatePlaygroundScriptRequest]) (*connect.Response[v1.UpdatePlaygroundScriptResponse], error) {
+	return c.updatePlaygroundScript.CallUnary(ctx, req)
+}
+
+// GetPlaygroundScripts calls wg.cosmo.platform.v1.PlatformService.GetPlaygroundScripts.
+func (c *platformServiceClient) GetPlaygroundScripts(ctx context.Context, req *connect.Request[v1.GetPlaygroundScriptsRequest]) (*connect.Response[v1.GetPlaygroundScriptsResponse], error) {
+	return c.getPlaygroundScripts.CallUnary(ctx, req)
 }
 
 // CreateNamespace calls wg.cosmo.platform.v1.PlatformService.CreateNamespace.
@@ -2564,6 +2633,11 @@ func (c *platformServiceClient) UpgradePlan(ctx context.Context, req *connect.Re
 
 // PlatformServiceHandler is an implementation of the wg.cosmo.platform.v1.PlatformService service.
 type PlatformServiceHandler interface {
+	// PlaygroundScripts
+	CreatePlaygroundScript(context.Context, *connect.Request[v1.CreatePlaygroundScriptRequest]) (*connect.Response[v1.CreatePlaygroundScriptResponse], error)
+	DeletePlaygroundScript(context.Context, *connect.Request[v1.DeletePlaygroundScriptRequest]) (*connect.Response[v1.DeletePlaygroundScriptResponse], error)
+	UpdatePlaygroundScript(context.Context, *connect.Request[v1.UpdatePlaygroundScriptRequest]) (*connect.Response[v1.UpdatePlaygroundScriptResponse], error)
+	GetPlaygroundScripts(context.Context, *connect.Request[v1.GetPlaygroundScriptsRequest]) (*connect.Response[v1.GetPlaygroundScriptsResponse], error)
 	// Namespaces
 	CreateNamespace(context.Context, *connect.Request[v1.CreateNamespaceRequest]) (*connect.Response[v1.CreateNamespaceResponse], error)
 	DeleteNamespace(context.Context, *connect.Request[v1.DeleteNamespaceRequest]) (*connect.Response[v1.DeleteNamespaceResponse], error)
@@ -2833,6 +2907,30 @@ type PlatformServiceHandler interface {
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
 func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	platformServiceCreatePlaygroundScriptHandler := connect.NewUnaryHandler(
+		PlatformServiceCreatePlaygroundScriptProcedure,
+		svc.CreatePlaygroundScript,
+		connect.WithSchema(platformServiceCreatePlaygroundScriptMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceDeletePlaygroundScriptHandler := connect.NewUnaryHandler(
+		PlatformServiceDeletePlaygroundScriptProcedure,
+		svc.DeletePlaygroundScript,
+		connect.WithSchema(platformServiceDeletePlaygroundScriptMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceUpdatePlaygroundScriptHandler := connect.NewUnaryHandler(
+		PlatformServiceUpdatePlaygroundScriptProcedure,
+		svc.UpdatePlaygroundScript,
+		connect.WithSchema(platformServiceUpdatePlaygroundScriptMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetPlaygroundScriptsHandler := connect.NewUnaryHandler(
+		PlatformServiceGetPlaygroundScriptsProcedure,
+		svc.GetPlaygroundScripts,
+		connect.WithSchema(platformServiceGetPlaygroundScriptsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	platformServiceCreateNamespaceHandler := connect.NewUnaryHandler(
 		PlatformServiceCreateNamespaceProcedure,
 		svc.CreateNamespace,
@@ -3670,6 +3768,14 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 	)
 	return "/wg.cosmo.platform.v1.PlatformService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case PlatformServiceCreatePlaygroundScriptProcedure:
+			platformServiceCreatePlaygroundScriptHandler.ServeHTTP(w, r)
+		case PlatformServiceDeletePlaygroundScriptProcedure:
+			platformServiceDeletePlaygroundScriptHandler.ServeHTTP(w, r)
+		case PlatformServiceUpdatePlaygroundScriptProcedure:
+			platformServiceUpdatePlaygroundScriptHandler.ServeHTTP(w, r)
+		case PlatformServiceGetPlaygroundScriptsProcedure:
+			platformServiceGetPlaygroundScriptsHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateNamespaceProcedure:
 			platformServiceCreateNamespaceHandler.ServeHTTP(w, r)
 		case PlatformServiceDeleteNamespaceProcedure:
@@ -3954,6 +4060,22 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 
 // UnimplementedPlatformServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedPlatformServiceHandler struct{}
+
+func (UnimplementedPlatformServiceHandler) CreatePlaygroundScript(context.Context, *connect.Request[v1.CreatePlaygroundScriptRequest]) (*connect.Response[v1.CreatePlaygroundScriptResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CreatePlaygroundScript is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) DeletePlaygroundScript(context.Context, *connect.Request[v1.DeletePlaygroundScriptRequest]) (*connect.Response[v1.DeletePlaygroundScriptResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.DeletePlaygroundScript is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) UpdatePlaygroundScript(context.Context, *connect.Request[v1.UpdatePlaygroundScriptRequest]) (*connect.Response[v1.UpdatePlaygroundScriptResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdatePlaygroundScript is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetPlaygroundScripts(context.Context, *connect.Request[v1.GetPlaygroundScriptsRequest]) (*connect.Response[v1.GetPlaygroundScriptsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetPlaygroundScripts is not implemented"))
+}
 
 func (UnimplementedPlatformServiceHandler) CreateNamespace(context.Context, *connect.Request[v1.CreateNamespaceRequest]) (*connect.Response[v1.CreateNamespaceResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CreateNamespace is not implemented"))
