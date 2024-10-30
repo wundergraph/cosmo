@@ -1,6 +1,8 @@
 module github.com/wundergraph/cosmo/composition-go
 
-go 1.21.0
+go 1.22
+
+toolchain go1.22.8
 
 require (
 	github.com/dop251/goja v0.0.0-20230906160731-9410bcaa81d2

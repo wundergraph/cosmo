@@ -38,6 +38,10 @@ infra-restart:
 infra-down-v:
 	docker compose -f docker-compose.yml --profile dev down --remove-orphans -v
 
+# Shutdown the services and removes all images that does not have a custom tag. latest images are removed.
+infra-down-v-rmi:
+	docker compose -f docker-compose.yml --profile dev down --remove-orphans -v --rmi local
+
 seed:
 	pnpm -r run --filter './controlplane' seed
 

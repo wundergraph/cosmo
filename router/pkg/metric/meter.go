@@ -3,6 +3,7 @@ package metric
 import (
 	"context"
 	"fmt"
+	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"net/url"
 	"time"
 
@@ -293,7 +294,11 @@ func defaultPrometheusMetricOptions(ctx context.Context, serviceInstanceID strin
 		return s, true
 	}
 
-	opts = append(opts, sdkmetric.WithView(view))
+	opts = append(opts,
+		sdkmetric.WithView(view),
+		// https://github.com/open-telemetry/opentelemetry-go/issues/5936
+		sdkmetric.WithExemplarFilter(exemplar.AlwaysOffFilter),
+	)
 
 	opts = append(opts, // Record information about this application in a Resource.
 		sdkmetric.WithResource(r),
@@ -318,6 +323,8 @@ func defaultOtlpMetricOptions(ctx context.Context, serviceInstanceID string, c *
 	// Info: There can be only a single view per instrument. A view with less restriction might override a view.
 
 	return []sdkmetric.Option{
+		// https://github.com/open-telemetry/opentelemetry-go/issues/5936
+		sdkmetric.WithExemplarFilter(exemplar.AlwaysOffFilter),
 		// Record information about this application in a Resource.
 		sdkmetric.WithResource(r),
 		// Use different histogram buckets for PrometheusConfig and OTLP

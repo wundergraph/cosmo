@@ -27,7 +27,7 @@ func NewPrometheusServer(logger *zap.Logger, listenAddr string, path string, reg
 		EnableOpenMetrics: true,
 		ErrorLog:          zap.NewStdLog(logger),
 		Registry:          registry,
-		Timeout:           10 * time.Second,
+		Timeout:           60 * time.Second,
 	}))
 
 	svr := &http.Server{

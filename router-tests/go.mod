@@ -1,8 +1,8 @@
 module github.com/wundergraph/cosmo/router-tests
 
-go 1.21.5
+go 1.22
 
-toolchain go1.22.0
+toolchain go1.22.8
 
 require (
 	github.com/buger/jsonparser v1.1.1
@@ -29,10 +29,10 @@ require (
 	github.com/wundergraph/cosmo/demo v0.0.0-20241029112307-e101eaccac90
 	github.com/wundergraph/cosmo/router v0.0.0-20241029112307-e101eaccac90
 	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.115
-	go.opentelemetry.io/otel v1.28.0
-	go.opentelemetry.io/otel/sdk v1.28.0
-	go.opentelemetry.io/otel/sdk/metric v1.28.0
-	go.opentelemetry.io/otel/trace v1.28.0
+	go.opentelemetry.io/otel v1.31.1-0.20241030054014-4f94b1e661e7
+	go.opentelemetry.io/otel/sdk v1.31.1-0.20241030054014-4f94b1e661e7
+	go.opentelemetry.io/otel/sdk/metric v1.31.1-0.20241030054014-4f94b1e661e7
+	go.opentelemetry.io/otel/trace v1.31.1-0.20241030054014-4f94b1e661e7
 	go.uber.org/atomic v1.11.0
 	go.uber.org/zap v1.27.0
 	google.golang.org/protobuf v1.34.2
@@ -153,7 +153,7 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.23.1 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.23.1 // indirect
 	go.opentelemetry.io/otel/exporters/prometheus v0.50.0 // indirect
-	go.opentelemetry.io/otel/metric v1.28.0 // indirect
+	go.opentelemetry.io/otel/metric v1.31.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.1.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.withmatt.com/connect-brotli v0.4.0 // indirect
