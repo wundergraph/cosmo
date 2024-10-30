@@ -5,7 +5,6 @@ syntax = "proto3";
 package wg.cosmo.platform.v1;
 
 import "wg/cosmo/common/common.proto";
-import "wg/cosmo/node/v1/node.proto";
 import "wg/cosmo/notifications/events.proto";
 
 message Label {
@@ -2330,7 +2329,57 @@ message GetWebhookDeliveryDetailsResponse {
   WebhookDelivery delivery = 2;
 }
 
+message CreatePlaygroundScriptRequest { 
+  string title = 1;
+  string type = 2;
+  string content = 3;
+}
+
+message CreatePlaygroundScriptResponse {
+  Response response = 1;
+}
+
+message DeletePlaygroundScriptRequest {
+  string id = 1;
+}
+
+message DeletePlaygroundScriptResponse {
+  Response response = 1;
+}
+
+message UpdatePlaygroundScriptRequest {
+  string id = 1;
+  string title = 2;
+  string content = 3;
+}
+
+message UpdatePlaygroundScriptResponse {
+  Response response = 1;
+}
+
+message GetPlaygroundScriptsRequest {
+  string type = 1;
+}
+
+message PlaygroundScript {
+  string id = 1;
+  string type = 2;
+  string title = 3;
+  string content = 4;
+}
+
+message GetPlaygroundScriptsResponse {
+  Response response = 1;
+  repeated PlaygroundScript scripts = 2;
+}
+
 service PlatformService {
+  // PlaygroundScripts
+  rpc CreatePlaygroundScript(CreatePlaygroundScriptRequest) returns (CreatePlaygroundScriptResponse) {}
+  rpc DeletePlaygroundScript(DeletePlaygroundScriptRequest) returns (DeletePlaygroundScriptResponse) {}
+  rpc UpdatePlaygroundScript(UpdatePlaygroundScriptRequest) returns (UpdatePlaygroundScriptResponse) {}
+  rpc GetPlaygroundScripts(GetPlaygroundScriptsRequest) returns (GetPlaygroundScriptsResponse) {}
+
   // Namespaces
   rpc CreateNamespace(CreateNamespaceRequest) returns (CreateNamespaceResponse) {}
   rpc DeleteNamespace(DeleteNamespaceRequest) returns (DeleteNamespaceResponse) {}

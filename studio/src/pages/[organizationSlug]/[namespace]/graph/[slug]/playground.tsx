@@ -6,10 +6,17 @@ import {
   GraphPageLayout,
 } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
+import {
+  attachPlaygroundAPI,
+  CustomScripts,
+  detachPlaygroundAPI,
+  PreFlightScript,
+} from "@/components/playground/custom-scripts";
 import { PlanView } from "@/components/playground/plan-view";
 import { TraceContext, TraceView } from "@/components/playground/trace-view";
-import { QueryPlan } from "@/components/playground/types";
+import { PlaygroundContext, QueryPlan } from "@/components/playground/types";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -47,9 +54,14 @@ import { parseSchema } from "@/lib/schema-helpers";
 import { cn } from "@/lib/utils";
 import { useMutation, useQuery } from "@connectrpc/connect-query";
 import { explorerPlugin } from "@graphiql/plugin-explorer";
+import { TabsState } from "@graphiql/react";
 import { createGraphiQLFetcher } from "@graphiql/toolkit";
 import { SparklesIcon } from "@heroicons/react/24/outline";
-import { Component2Icon, MobileIcon } from "@radix-ui/react-icons";
+import {
+  Component2Icon,
+  ExclamationTriangleIcon,
+  MobileIcon,
+} from "@radix-ui/react-icons";
 import { TooltipContent, TooltipTrigger } from "@radix-ui/react-tooltip";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
@@ -62,7 +74,6 @@ import {
   PersistedOperation,
   PublishedOperationStatus,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import axios, { AxiosError } from "axios";
 import { sentenceCase } from "change-case";
 import crypto from "crypto";
 import { GraphiQL } from "graphiql";
@@ -90,6 +101,114 @@ const validateHeaders = (headers: Record<string, string>) => {
   }
 };
 
+const substituteHeadersFromEnv = (headers: Record<string, string>) => {
+  const storedHeaders = JSON.parse(
+    localStorage.getItem("headers") || "{}",
+    (key, value) => {
+      if (value === "true" || value === "false") {
+        return value === "true";
+      }
+      if (!isNaN(value) && value !== "") {
+        return Number(value);
+      }
+      return value;
+    },
+  );
+
+  for (const key in headers) {
+    let value = headers[key];
+    const placeholderRegex = /{\s*{\s*(\w+)\s*}\s*}/g;
+
+    if (typeof value !== "string") {
+      continue;
+    }
+
+    value = value.replace(placeholderRegex, (match, p1) => {
+      if (storedHeaders[p1] !== undefined) {
+        return storedHeaders[p1];
+      } else {
+        console.warn(`No value found for placeholder: ${p1}`);
+        return match;
+      }
+    });
+
+    headers[key] = value;
+  }
+
+  return headers;
+};
+
+const executeScript = async (code: string | undefined, graphId: string) => {
+  if (!code) {
+    return;
+  }
+
+  try {
+    const asyncEval = new Function(`
+        return (async () => {
+          ${code}
+        })();
+      `);
+
+    await asyncEval();
+  } catch (error: any) {
+    console.error(error);
+  }
+};
+
+const retrieveScriptFromLocalStorage = (key: string) => {
+  const selectedScript = localStorage.getItem(key);
+  return JSON.parse(
+    !selectedScript || selectedScript === "undefined" ? "{}" : selectedScript,
+  );
+};
+
+const executePreScripts = async (graphId: string, requestBody: any) => {
+  attachPlaygroundAPI(graphId, requestBody);
+
+  const preflightScript = retrieveScriptFromLocalStorage(
+    "playground:pre-flight:selected",
+  );
+
+  const preFlightScriptEnabled = localStorage.getItem(
+    "playground:pre-flight:enabled",
+  );
+
+  const preOpScript = retrieveScriptFromLocalStorage(
+    "playground:pre-operation:selected",
+  );
+
+  if (!preFlightScriptEnabled || preFlightScriptEnabled === "true") {
+    await executeScript(preflightScript.content, graphId);
+  }
+
+  if (preOpScript.enabled) {
+    await executeScript(preOpScript.content, graphId);
+  }
+
+  detachPlaygroundAPI();
+};
+
+const executePostScripts = async (
+  graphId: string,
+  requestBody: any,
+  responseBody: any,
+) => {
+  const selectedScript = localStorage.getItem(
+    "playground:post-operation:selected",
+  );
+
+  const script = JSON.parse(
+    !selectedScript || selectedScript === "undefined" ? "{}" : selectedScript,
+  );
+
+  if (script.enabled) {
+    attachPlaygroundAPI(graphId, requestBody, responseBody);
+    await executeScript(script.content, graphId);
+    detachPlaygroundAPI();
+  }
+};
+
 const graphiQLFetch = async (
   onFetch: any,
   graphRequestToken: string,
@@ -97,16 +216,19 @@ const graphiQLFetch = async (
   clientValidationEnabled: boolean,
   url: URL,
   init: RequestInit,
+  graphId: string,
   featureFlagName?: string,
 ) => {
   try {
-    const headers: Record<string, string> = {
+    let headers: Record<string, string> = {
       ...(init.headers as Record<string, string>),
     };
 
-    let hasTraceHeader = false;
+    headers = substituteHeadersFromEnv(headers);
 
     validateHeaders(headers);
+
+    let hasTraceHeader = false;
 
     for (const headersKey in headers) {
       if (headersKey.toLowerCase() === "x-wg-trace") {
@@ -150,37 +272,47 @@ const graphiQLFetch = async (
       }
     }
 
-    const axiosResponse = await axios({
-      method: init.method as "get" | "post" | "put" | "delete", // adjust method as per init
-      url: url.toString(),
+    const requestBody = JSON.parse(init.body as string);
+
+    await executePreScripts(graphId, requestBody);
+
+    const response = await fetch(url, {
+      ...init,
       headers,
-      data: init.body,
     });
 
-    const response = new Response(JSON.stringify(axiosResponse.data), {
-      status: axiosResponse.status,
-      statusText: axiosResponse.statusText,
-      headers: new Headers(Object.entries(axiosResponse.headers)),
-    });
+    const responseData = await response.clone().json();
 
-    onFetch(await response.clone().json());
+    await executePostScripts(graphId, requestBody, responseData);
+
+    onFetch(
+      await response.clone().json(),
+      response.status,
+      response.statusText,
+    );
     return response;
-  } catch (error: any) {
-    if (error instanceof AxiosError) {
-      const errorInfo = {
-        message: error.message || "Network Error",
-        responseErrorCode: error.code,
-        responseStatusCode: error.response?.status,
-        responseHeaders: error.response?.headers,
-        responseBody: JSON.stringify(error.response?.data),
-        errorMessage: error.message,
-      };
-      const response = new Response(JSON.stringify(errorInfo));
-      onFetch(await response.clone().json());
-      return response;
-    } else {
-      throw error;
-    }
+  } catch (e: any) {
+    const customMessage =
+      "Failed to fetch from router due to network errors. Please check network activity in browser dev tools for more details.";
+
+    const resp = new Response(
+      JSON.stringify(
+        e.message
+          ? e.message == "Failed to fetch"
+            ? customMessage
+            : e.message
+          : customMessage,
+      ),
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      },
+    );
+
+    onFetch(await resp.clone().json(), undefined, "Network Error");
+
+    return resp;
   }
 };
 
@@ -304,8 +436,7 @@ const PersistOperation = () => {
           Persist Operation
         </TooltipContent>
       </Tooltip>
-
-      <DialogContent className="grid  max-w-4xl grid-cols-5 items-start divide-x">
+      <DialogContent className="grid max-w-4xl grid-cols-5 items-start divide-x">
         <div className="scrollbar-custom col-span-3 h-full max-h-[450px] overflow-auto">
           <CodeViewer code={query} />
         </div>
@@ -409,7 +540,7 @@ const PersistOperation = () => {
   );
 };
 
-const ResponseViewSelector = () => {
+const ResponseToolbar = () => {
   const [view, setView] = useState("response");
 
   const onValueChange = (val: string) => {
@@ -466,8 +597,18 @@ const ResponseViewSelector = () => {
     }
   };
 
+  const { status, statusText } = useContext(PlaygroundContext);
+
+  const isSuccess = !!status && status >= 200 && status < 300;
+
   return (
-    <div>
+    <div className="flex items-center gap-x-2">
+      {(status || statusText) && (
+        <Badge className="h-8" variant={isSuccess ? "success" : "destructive"}>
+          {!isSuccess && <ExclamationTriangleIcon className="mr-1 h-4 w-4" />}
+          {status || statusText}
+        </Badge>
+      )}
       <Select onValueChange={onValueChange}>
         <SelectTrigger className="w-[180px]">
           <SelectValue>
@@ -531,25 +672,130 @@ const ToggleClientValidation = () => {
   );
 };
 
+const ConfigSelect = () => {
+  const router = useRouter();
+
+  const graphContext = useContext(GraphContext);
+  const subgraphs = graphContext?.subgraphs;
+  const featureFlags = graphContext?.featureFlagsInLatestValidComposition;
+
+  const selected =
+    (router.query.load as string) || graphContext?.graph?.id || "";
+  const type = (router.query.type as string) || "graph";
+
+  const applyParams = useApplyParams();
+
+  return (
+    <div className="ml-1 flex items-center gap-x-2 pl-3">
+      <span className="text-sm text-muted-foreground">
+        Querying{" "}
+        {type === "featureFlag"
+          ? "Feature flag"
+          : type === "subgraph"
+          ? "Subgraph"
+          : "Graph"}{" "}
+        :
+      </span>
+      <Select
+        value={`{ "load": "${selected}", "type": "${type}" }`}
+        onValueChange={(value) => {
+          applyParams(JSON.parse(value));
+        }}
+      >
+        <SelectTrigger className="ml-1 mr-4 flex h-8 w-auto gap-x-2 border-0 bg-transparent pl-3 pr-1 shadow-none data-[state=open]:bg-accent data-[state=open]:text-accent-foreground hover:bg-accent hover:text-accent-foreground focus:ring-0 md:ml-0">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
+              <PiGraphLight className="h-3 w-3" /> Graph
+            </SelectLabel>
+            <SelectItem
+              value={`{ "load": "${
+                graphContext?.graph?.id ?? ""
+              }", "type": "graph" }`}
+            >
+              {graphContext?.graph?.name}
+            </SelectItem>
+          </SelectGroup>
+
+          {featureFlags && featureFlags.length > 0 && (
+            <>
+              <SelectSeparator />
+              <SelectGroup>
+                <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
+                  <MdOutlineFeaturedPlayList className="h-3 w-3" /> Feature
+                  Flags
+                </SelectLabel>
+                {featureFlags.map(({ name, id }) => (
+                  <SelectItem
+                    key={id}
+                    value={`{ "load": "${id}", "type": "featureFlag" }`}
+                  >
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </>
+          )}
+          {subgraphs && subgraphs.length > 0 && (
+            <>
+              <SelectSeparator />
+              <SelectGroup>
+                <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
+                  <Component2Icon className="h-3 w-3" /> Subgraphs
+                </SelectLabel>
+                {subgraphs.map(({ name, id }) => (
+                  <SelectItem
+                    key={id}
+                    value={`{ "load": "${id}", "type": "subgraph" }`}
+                  >
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </>
+          )}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+};
+
 const PlaygroundPortal = () => {
-  const tabDiv = document.getElementById("response-tabs");
+  const responseToolbar = document.getElementById("response-toolbar");
   const artDiv = document.getElementById("art-visualization");
   const plannerDiv = document.getElementById("planner-visualization");
   const saveDiv = document.getElementById("save-button");
   const toggleClientValidation = document.getElementById(
     "toggle-client-validation",
   );
+  const scriptsSection = document.getElementById("scripts-section");
+  const preFlightScriptSection = document.getElementById(
+    "pre-flight-script-section",
+  );
 
-  if (!tabDiv || !artDiv || !plannerDiv || !saveDiv || !toggleClientValidation)
+  if (
+    !responseToolbar ||
+    !artDiv ||
+    !plannerDiv ||
+    !saveDiv ||
+    !toggleClientValidation ||
+    !scriptsSection ||
+    !preFlightScriptSection
+  ) {
     return null;
+  }
 
   return (
     <>
-      {createPortal(<ResponseViewSelector />, tabDiv)}
+      {createPortal(<ResponseToolbar />, responseToolbar)}
       {createPortal(<PlanView />, plannerDiv)}
       {createPortal(<TraceView />, artDiv)}
       {createPortal(<PersistOperation />, saveDiv)}
       {createPortal(<ToggleClientValidation />, toggleClientValidation)}
+      {createPortal(<CustomScripts />, scriptsSection)}
+      {createPortal(<PreFlightScript />, preFlightScriptSection)}
     </>
   );
 };
@@ -648,8 +894,8 @@ const PlaygroundPage: NextPageWithLayout = () => {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    const responseTabs = document.getElementById("response-tabs");
-    if (responseTabs && isMounted) {
+    const responseToolbar = document.getElementById("response-toolbar");
+    if (responseToolbar && isMounted) {
       return;
     }
 
@@ -662,10 +908,79 @@ const PlaygroundPage: NextPageWithLayout = () => {
       if (logo) {
         logo.classList.add("hidden");
         const div = document.createElement("div");
-        div.id = "response-tabs";
+        div.id = "response-toolbar";
         div.className = "flex items-center justify-center mx-2";
         header.append(div);
       }
+    }
+
+    const editorToolsTabBar = document.getElementsByClassName(
+      "graphiql-editor-tools",
+    )[0] as any as HTMLDivElement;
+
+    const editorToolsSection = document.getElementsByClassName(
+      "graphiql-editor-tool",
+    )[0] as any as HTMLDivElement;
+
+    if (
+      editorToolsTabBar &&
+      editorToolsSection &&
+      !document.getElementById("scripts-tab")
+    ) {
+      const tabs = [
+        editorToolsTabBar.childNodes[0],
+        editorToolsTabBar.childNodes[1],
+      ];
+      const sections = Array.from(editorToolsSection.childNodes);
+
+      const scriptsButton = document.createElement("button");
+      scriptsButton.id = "scripts-tab";
+      scriptsButton.className = "graphiql-un-styled";
+      scriptsButton.textContent = "Operation Scripts";
+
+      const scriptsSection = document.createElement("div");
+      scriptsSection.id = "scripts-section";
+      scriptsSection.className = "graphiql-editor hidden";
+
+      tabs.forEach((e, index) =>
+        e.addEventListener("click", () => {
+          (e as HTMLButtonElement).className = "graphiql-un-styled active";
+          (sections[index] as HTMLDivElement).className = "graphiql-editor";
+          scriptsSection.className = "graphiql-editor hidden";
+        }),
+      );
+
+      scriptsButton.onclick = (e) => {
+        (tabs[0] as HTMLButtonElement).className = "graphiql-un-styled";
+        (tabs[1] as HTMLButtonElement).className = "graphiql-un-styled";
+        (sections[0] as HTMLDivElement).className = "graphiql-editor hidden";
+        (sections[1] as HTMLDivElement).className = "graphiql-editor hidden";
+        scriptsSection.className = "graphiql-editor";
+
+        scriptsButton.className = "graphiql-un-styled active";
+      };
+
+      editorToolsTabBar.addEventListener("click", (e) => {
+        if (!(e.target as HTMLElement)?.closest(`#${scriptsButton.id}`)) {
+          scriptsButton.className = "graphiql-un-styled";
+        }
+      });
+
+      editorToolsTabBar.insertBefore(
+        scriptsButton,
+        editorToolsTabBar.childNodes[2],
+      );
+      editorToolsSection.appendChild(scriptsSection);
+    }
+
+    const editors = document.getElementsByClassName(
+      "graphiql-editors",
+    )[0] as any as HTMLDivElement;
+
+    if (editors) {
+      const preFlightScriptSection = document.createElement("div");
+      preFlightScriptSection.id = "pre-flight-script-section";
+      editors.appendChild(preFlightScriptSection);
     }
 
     const responseSection =
@@ -782,9 +1097,14 @@ const PlaygroundPage: NextPageWithLayout = () => {
     type,
   ]);
 
+  const [status, setStatus] = useState<number>();
+  const [statusText, setStatusText] = useState<string>();
+
   const fetcher = useMemo(() => {
-    const onFetch = (response: any) => {
+    const onFetch = (response: any, status?: number, statusText?: string) => {
       setResponse(JSON.stringify(response));
+      setStatus(status);
+      setStatusText(statusText);
     };
 
     return createGraphiQLFetcher({
@@ -798,6 +1118,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
           clientValidationEnabled,
           args[0] as URL,
           args[1] as RequestInit,
+          graphContext?.graph?.id || "",
           type === "featureFlag"
             ? graphContext?.featureFlagsInLatestValidComposition.find(
                 (f) => f.id === loadSchemaGraphId,
@@ -809,6 +1130,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
     routingUrl,
     subscriptionUrl,
     graphContext?.graphRequestToken,
+    graphContext?.graph?.id,
     graphContext?.featureFlagsInLatestValidComposition,
     schema,
     clientValidationEnabled,
@@ -859,21 +1181,22 @@ const PlaygroundPage: NextPageWithLayout = () => {
           }
         }
 
-        const response = await axios.post(
-          routingUrl,
-          {
+        const response = await fetch(routingUrl, {
+          method: "POST",
+          headers: requestHeaders,
+          body: JSON.stringify({
             query: debouncedQuery,
-          },
-          { headers: requestHeaders },
-        );
+          }),
+        });
 
-        if (!response.data?.extensions?.queryPlan) {
-          setPlan(undefined);
-          return;
+        const data = await response.json();
+
+        if (!data?.extensions?.queryPlan) {
+          throw new Error("No query plan found");
         }
 
         setPlanError("");
-        setPlan(response.data.extensions.queryPlan);
+        setPlan(data.extensions.queryPlan);
       } catch (error: any) {
         setPlan(undefined);
         setPlanError(error.message || "Network error");
@@ -909,144 +1232,69 @@ const PlaygroundPage: NextPageWithLayout = () => {
     };
   }, [theme]);
 
+  const [tabsState, setTabsState] = useState<TabsState>({
+    activeTabIndex: 0,
+    tabs: [],
+  });
+
   if (!graphContext?.graph) return null;
 
   return (
-    <TraceContext.Provider
+    <PlaygroundContext.Provider
       value={{
-        query,
-        headers,
-        response,
-        plan,
-        planError,
-        subgraphs: graphContext.subgraphs,
-        clientValidationEnabled,
-        setClientValidationEnabled,
+        graphId: graphContext.graph.id,
+        tabsState,
+        status,
+        statusText,
       }}
     >
-      <div className="hidden h-full flex-1 pl-2.5 md:flex">
-        <GraphiQL
-          shouldPersistHeaders
-          showPersistHeadersSettings={false}
-          fetcher={fetcher}
-          query={query}
-          variables={variables ? decodeURIComponent(variables) : undefined}
-          onEditQuery={setQuery}
-          defaultHeaders={`{
-  "X-WG-TRACE" : "true"
-}`}
-          onEditHeaders={setHeaders}
-          plugins={[
-            explorerPlugin({
-              showAttribution: false,
-            }),
-          ]}
-          // null stops introspection and undefined forces introspection if schema is null
-          schema={isLoading ? null : schema ?? undefined}
-        />
-        {isMounted && <PlaygroundPortal />}
-      </div>
-      <div className="flex flex-1 items-center justify-center md:hidden">
-        <Alert className="m-8">
-          <MobileIcon className="h-4 w-4" />
-          <AlertTitle>Heads up!</AlertTitle>
-          <AlertDescription>
-            Cosmo GraphQL Playground is not available on mobile devices. Please
-            open this page on your desktop.
-          </AlertDescription>
-        </Alert>
-      </div>
-    </TraceContext.Provider>
-  );
-};
-
-const ConfigSelect = () => {
-  const router = useRouter();
-
-  const graphContext = useContext(GraphContext);
-  const subgraphs = graphContext?.subgraphs;
-  const featureFlags = graphContext?.featureFlagsInLatestValidComposition;
-
-  const selected =
-    (router.query.load as string) || graphContext?.graph?.id || "";
-  const type = (router.query.type as string) || "graph";
-
-  const applyParams = useApplyParams();
-
-  return (
-    <div className="ml-1 flex items-center gap-x-2 pl-3">
-      <span className="text-sm text-muted-foreground">
-        Querying{" "}
-        {type === "featureFlag"
-          ? "Feature flag"
-          : type === "subgraph"
-          ? "Subgraph"
-          : "Graph"}{" "}
-        :
-      </span>
-      <Select
-        value={`{ "load": "${selected}", "type": "${type}" }`}
-        onValueChange={(value) => {
-          applyParams(JSON.parse(value));
+      <TraceContext.Provider
+        value={{
+          query,
+          headers,
+          response,
+          plan,
+          planError,
+          subgraphs: graphContext.subgraphs,
+          clientValidationEnabled,
+          setClientValidationEnabled,
         }}
       >
-        <SelectTrigger className="ml-1 mr-4 flex h-8 w-auto gap-x-2 border-0 bg-transparent pl-3 pr-1 shadow-none data-[state=open]:bg-accent data-[state=open]:text-accent-foreground hover:bg-accent hover:text-accent-foreground focus:ring-0 md:ml-0">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
-              <PiGraphLight className="h-3 w-3" /> Graph
-            </SelectLabel>
-            <SelectItem
-              value={`{ "load": "${
-                graphContext?.graph?.id ?? ""
-              }", "type": "graph" }`}
-            >
-              {graphContext?.graph?.name}
-            </SelectItem>
-          </SelectGroup>
-
-          {featureFlags && featureFlags.length > 0 && (
-            <>
-              <SelectSeparator />
-              <SelectGroup>
-                <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
-                  <MdOutlineFeaturedPlayList className="h-3 w-3" /> Feature
-                  Flags
-                </SelectLabel>
-                {featureFlags.map(({ name, id }) => (
-                  <SelectItem
-                    key={id}
-                    value={`{ "load": "${id}", "type": "featureFlag" }`}
-                  >
-                    {name}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </>
-          )}
-          {subgraphs && subgraphs.length > 0 && (
-            <>
-              <SelectSeparator />
-              <SelectGroup>
-                <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
-                  <Component2Icon className="h-3 w-3" /> Subgraphs
-                </SelectLabel>
-                {subgraphs.map(({ name, id }) => (
-                  <SelectItem
-                    key={id}
-                    value={`{ "load": "${id}", "type": "subgraph" }`}
-                  >
-                    {name}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </>
-          )}
-        </SelectContent>
-      </Select>
-    </div>
+        <div className="hidden h-full flex-1 pl-2.5 md:flex">
+          <GraphiQL
+            shouldPersistHeaders
+            showPersistHeadersSettings={false}
+            fetcher={fetcher}
+            query={query}
+            variables={variables ? decodeURIComponent(variables) : undefined}
+            onEditQuery={setQuery}
+            defaultHeaders={`{
+  "X-WG-TRACE" : "true"
+}`}
+            onEditHeaders={setHeaders}
+            plugins={[
+              explorerPlugin({
+                showAttribution: false,
+              }),
+            ]}
+            // null stops introspection and undefined forces introspection if schema is null
+            schema={isLoading ? null : schema ?? undefined}
+            onTabChange={setTabsState}
+          />
+          {isMounted && <PlaygroundPortal />}
+        </div>
+        <div className="flex flex-1 items-center justify-center md:hidden">
+          <Alert className="m-8">
+            <MobileIcon className="h-4 w-4" />
+            <AlertTitle>Heads up!</AlertTitle>
+            <AlertDescription>
+              Cosmo GraphQL Playground is not available on mobile devices.
+              Please open this page on your desktop.
+            </AlertDescription>
+          </Alert>
+        </div>
+      </TraceContext.Provider>
+    </PlaygroundContext.Provider>
   );
 };
 

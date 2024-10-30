@@ -1593,6 +1593,8 @@ func WithApolloCompatibilityFlagsConfig(cfg config.ApolloCompatibilityFlags) Opt
 			cfg.ValueCompletion.Enabled = true
 			cfg.TruncateFloats.Enabled = true
 			cfg.SuppressFetchErrors.Enabled = true
+			cfg.ReplaceUndefinedOpFieldErrors.Enabled = true
+			cfg.ReplaceInvalidVarErrors.Enabled = true
 		}
 		r.apolloCompatibilityFlags = cfg
 	}

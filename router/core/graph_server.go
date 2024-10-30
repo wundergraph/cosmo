@@ -696,6 +696,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		OperationHashCache:             gm.operationHashCache,
 		ParseKitPoolSize:               s.engineExecutionConfiguration.ParseKitPoolSize,
 		IntrospectionEnabled:           s.Config.introspection,
+		ApolloCompatibilityFlags:       s.apolloCompatibilityFlags,
 	})
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
 
@@ -766,6 +767,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		TrackSchemaUsageInfo:        s.graphqlMetricsConfig.Enabled,
 		ClientHeader:                s.clientHeader,
 		ComputeOperationSha256:      computeSha256,
+		ApolloCompatibilityFlags:    &s.apolloCompatibilityFlags,
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
@@ -844,12 +846,10 @@ func (s *graphServer) accessLogsFieldHandler(panicError any, request *http.Reque
 	resFields = append(resFields, logging.WithRequestID(middleware.GetReqID(request.Context())))
 
 	for _, field := range s.accessLogsConfig.Attributes {
-		if field.ValueFrom.RequestHeader != "" {
-			resFields = append(resFields, NewStringLogField(request.Header.Get(field.ValueFrom.RequestHeader), field))
-			continue
-		}
 
-		if field.ValueFrom.ContextField != "" && reqContext.operation != nil {
+		if field.ValueFrom != nil && field.ValueFrom.RequestHeader != "" {
+			resFields = append(resFields, NewStringLogField(request.Header.Get(field.ValueFrom.RequestHeader), field))
+		} else if field.ValueFrom != nil && field.ValueFrom.ContextField != "" && reqContext.operation != nil {
 			switch field.ValueFrom.ContextField {
 			case ContextFieldOperationName:
 				if v := NewStringLogField(reqContext.operation.name, field); v != zap.Skip() {
@@ -913,6 +913,8 @@ func (s *graphServer) accessLogsFieldHandler(panicError any, request *http.Reque
 					resFields = append(resFields, v)
 				}
 			}
+		} else if field.Default != "" {
+			resFields = append(resFields, NewStringLogField(field.Default, field))
 		}
 	}
 
