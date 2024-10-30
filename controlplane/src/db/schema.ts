@@ -1964,3 +1964,34 @@ export const fieldGracePeriodRelations = relations(fieldGracePeriod, ({ one }) =
     references: [organizations.id],
   }),
 }));
+
+export const playgroundScriptTypeEnum = pgEnum('playground_script_type', [
+  'pre-flight',
+  'pre-operation',
+  'post-operation',
+] as const);
+
+export const playgroundScripts = pgTable(
+  'playground_scripts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    organizationId: uuid('organization_id')
+      .notNull()
+      .references(() => organizations.id, {
+        onDelete: 'cascade',
+      }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    createdById: uuid('created_by_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    title: text('title').notNull().default(''),
+    type: playgroundScriptTypeEnum('type').notNull(),
+    content: text('content').notNull().default(''),
+  },
+  (t) => {
+    return {
+      organizationIdIndex: index('ps_organization_id_idx').on(t.organizationId),
+      createdByIdIndex: index('ps_created_by_id_idx').on(t.createdById),
+    };
+  },
+);

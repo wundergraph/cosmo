@@ -11,38 +11,7 @@ import { FetchFlow, ReactFlowQueryPlanFetchNode } from './fetch-flow';
 import { PlanPrinter } from './prettyPrint';
 import { TraceContext } from './trace-view';
 import { QueryPlan, QueryPlanFetchTypeNode } from './types';
-
-const useResolvedTheme = (forcedTheme?: string) => {
-  const [theme, setTheme] = useState('light');
-
-  useEffect(() => {
-    const updateTheme = () => {
-      const body = document.body;
-      if (body.classList.contains('graphiql-dark')) {
-        setTheme('dark');
-      } else if (body.classList.contains('graphiql-light')) {
-        setTheme('light');
-      } else {
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        setTheme(prefersDark ? 'dark' : 'light');
-      }
-
-      if (body.classList.contains('graphiql-light')) {
-        document.documentElement.classList.remove('!dark');
-      } else {
-        document.documentElement.classList.add('!dark');
-      }
-    };
-
-    updateTheme();
-    const observer = new MutationObserver(updateTheme);
-    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
-
-    return () => observer.disconnect();
-  }, []);
-
-  return forcedTheme || theme;
-};
+import { useResolvedTheme } from '@/lib/use-resolved-theme';
 
 const PlanTree = ({ queryPlan }: { queryPlan: QueryPlan }) => {
   const [initialNodes, setInitialNodes] = useState<Node[]>([]);
