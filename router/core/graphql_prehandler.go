@@ -57,6 +57,7 @@ type PreHandlerOptions struct {
 	TrackSchemaUsageInfo        bool
 	ClientHeader                config.ClientHeader
 	ComputeOperationSha256      bool
+	ApolloCompatibilityFlags    *config.ApolloCompatibilityFlags
 }
 
 type PreHandler struct {
@@ -88,6 +89,7 @@ type PreHandler struct {
 	trackSchemaUsageInfo        bool
 	clientHeader                config.ClientHeader
 	computeOperationSha256      bool
+	apolloCompatibilityFlags    *config.ApolloCompatibilityFlags
 }
 
 type httpOperation struct {
@@ -133,6 +135,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		trackSchemaUsageInfo:     opts.TrackSchemaUsageInfo,
 		clientHeader:             opts.ClientHeader,
 		computeOperationSha256:   opts.ComputeOperationSha256,
+		apolloCompatibilityFlags: opts.ApolloCompatibilityFlags,
 	}
 }
 

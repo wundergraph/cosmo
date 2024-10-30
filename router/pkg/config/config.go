@@ -640,10 +640,12 @@ type AccessLogsFileOutputConfig struct {
 }
 
 type ApolloCompatibilityFlags struct {
-	EnableAll           bool                                   `yaml:"enable_all" envDefault:"false" env:"APOLLO_COMPATIBILITY_ENABLE_ALL"`
-	ValueCompletion     ApolloCompatibilityValueCompletion     `yaml:"value_completion"`
-	TruncateFloats      ApolloCompatibilityTruncateFloats      `yaml:"truncate_floats"`
-	SuppressFetchErrors ApolloCompatibilitySuppressFetchErrors `yaml:"suppress_fetch_errors"`
+	EnableAll                     bool                                             `yaml:"enable_all" envDefault:"false" env:"APOLLO_COMPATIBILITY_ENABLE_ALL"`
+	ValueCompletion               ApolloCompatibilityValueCompletion               `yaml:"value_completion"`
+	TruncateFloats                ApolloCompatibilityTruncateFloats                `yaml:"truncate_floats"`
+	SuppressFetchErrors           ApolloCompatibilitySuppressFetchErrors           `yaml:"suppress_fetch_errors"`
+	ReplaceUndefinedOpFieldErrors ApolloCompatibilityReplaceUndefinedOpFieldErrors `yaml:"replace_undefined_op_field_errors"`
+	ReplaceInvalidVarErrors       ApolloCompatibilityReplaceInvalidVarErrors       `yaml:"replace_invalid_var_errors"`
 }
 
 type ApolloCompatibilityValueCompletion struct {
@@ -661,6 +663,14 @@ type ApolloCompatibilityTruncateFloats struct {
 
 type ApolloCompatibilitySuppressFetchErrors struct {
 	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_SUPPRESS_FETCH_ERRORS_ENABLED"`
+}
+
+type ApolloCompatibilityReplaceUndefinedOpFieldErrors struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_REPLACE_UNDEFINED_OP_FIELD_ERRORS_ENABLED"`
+}
+
+type ApolloCompatibilityReplaceInvalidVarErrors struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_ENABLED"`
 }
 
 type Config struct {
