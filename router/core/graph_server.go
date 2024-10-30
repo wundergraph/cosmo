@@ -696,6 +696,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		OperationHashCache:             gm.operationHashCache,
 		ParseKitPoolSize:               s.engineExecutionConfiguration.ParseKitPoolSize,
 		IntrospectionEnabled:           s.Config.introspection,
+		ApolloCompatibilityFlags:       s.apolloCompatibilityFlags,
 	})
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
 
@@ -766,6 +767,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		TrackSchemaUsageInfo:        s.graphqlMetricsConfig.Enabled,
 		ClientHeader:                s.clientHeader,
 		ComputeOperationSha256:      computeSha256,
+		ApolloCompatibilityFlags:    &s.apolloCompatibilityFlags,
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
