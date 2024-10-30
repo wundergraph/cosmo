@@ -118,6 +118,8 @@ func NewPrometheusMeterProvider(ctx context.Context, c *Config, serviceInstanceI
 }
 
 func getTemporalitySelector(temporality otelconfig.ExporterTemporality, log *zap.Logger) func(kind sdkmetric.InstrumentKind) metricdata.Temporality {
+	// https://github.com/open-telemetry/opentelemetry-go/blob/main/internal/shared/otlp/otlpmetric/oconf/envconfig.go.tmpl#L166-L177
+	// See the above link for selectors for different temporalities
 	if temporality == otelconfig.DeltaTemporality {
 		deltaTemporalitySelector := func(kind sdkmetric.InstrumentKind) metricdata.Temporality {
 			switch kind {
