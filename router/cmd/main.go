@@ -9,24 +9,27 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/versioninfo"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
+	"github.com/wundergraph/cosmo/router/pkg/profile"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"go.uber.org/zap"
-
-	"github.com/wundergraph/cosmo/router/internal/profile"
 )
 
 var (
 	overrideEnvFlag = flag.String("override-env", os.Getenv("OVERRIDE_ENV"), "Path to .env file to override environment variables")
 	configPathFlag  = flag.String("config", os.Getenv("CONFIG_PATH"), "Path to the router config file e.g. config.yaml")
-	routerVersion   = flag.Bool("version", false, "Prints the version of the router")
+	routerVersion   = flag.Bool("version", false, "Prints the version and dependency information")
+	pprofListenAddr = flag.String("pprof-addr", os.Getenv("PPROF_ADDR"), "Address to listen for pprof requests. e.g. :6060 for localhost:6060")
+	memProfilePath  = flag.String("memprofile", "", "Path to write memory profile. Memory is a snapshot taken at the time the program exits")
+	cpuProfilePath  = flag.String("cpuprofile", "", "Path to write cpu profile. CPU is measured from when the program starts until the program exits")
 	help            = flag.Bool("help", false, "Prints the help message")
 )
 
 func Main() {
+
 	// Parse flags before calling profile.Start(), since it may add flags
 	flag.Parse()
 
@@ -39,22 +42,10 @@ func Main() {
 		os.Exit(0)
 	}
 
-	profiler := profile.Start()
-
 	result, err := config.LoadConfig(*configPathFlag, *overrideEnvFlag)
 	if err != nil {
 		log.Fatal("Could not load config", zap.Error(err))
 	}
-
-	// Handling shutdown
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt,
-		syscall.SIGHUP,  // process is detached from terminal
-		syscall.SIGTERM, // default for kill
-		syscall.SIGKILL,
-		syscall.SIGQUIT, // ctrl + \
-		syscall.SIGINT,  // ctrl+c
-	)
-	defer stop()
 
 	logLevel, err := logging.ZapLogLevelFromString(result.Config.LogLevel)
 	if err != nil {
@@ -66,6 +57,27 @@ func Main() {
 			zap.String("component", "@wundergraph/router"),
 			zap.String("service_version", core.Version),
 		)
+
+	// Start pprof server if address is provided
+	if *pprofListenAddr != "" {
+		pprofSvr := profile.NewServer(*pprofListenAddr, logger)
+		defer pprofSvr.Close()
+		go pprofSvr.Listen()
+	}
+
+	// Start profiling if flags are set
+	profiler := profile.Start(logger, *cpuProfilePath, *memProfilePath)
+	defer profiler.Finish()
+
+	// Handling shutdown
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt,
+		syscall.SIGHUP,  // process is detached from terminal
+		syscall.SIGTERM, // default for kill
+		syscall.SIGKILL,
+		syscall.SIGQUIT, // ctrl + \
+		syscall.SIGINT,  // ctrl+c
+	)
+	defer stop()
 
 	if *configPathFlag != "" {
 		logger.Info(
@@ -116,8 +128,5 @@ func Main() {
 		logger.Info("Router shutdown successfully")
 	}
 
-	profiler.Finish()
-
 	logger.Debug("Router exiting")
-	os.Exit(0)
 }
