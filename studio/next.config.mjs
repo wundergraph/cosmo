@@ -1,6 +1,6 @@
 import withMarkdoc from "@markdoc/next.js";
 import { withSentryConfig } from "@sentry/nextjs";
-import pkg from "./package.json" assert { type: "json" };
+import pkg from "./package.json" with { type: "json" };
 
 const isPreview = process.env.VERCEL_ENV === "preview";
 // Allow it only for development once https://github.com/vercel/next.js/issues/23587 is fixed
@@ -63,10 +63,10 @@ const lightweightCspHeader = `
       : ""
   };
    script-src 'report-sample' 'self' 'unsafe-inline' ${
-    allowUnsafeEval ? "'unsafe-eval'" : ""
-  } https://*.wundergraph.com https://js.stripe.com https://maps.googleapis.com https://plausible.io https://wundergraph.com ${
-      isPreview ? "https://vercel.live https://vercel.com" : ""
-  };
+     allowUnsafeEval ? "'unsafe-eval'" : ""
+   } https://*.wundergraph.com https://js.stripe.com https://maps.googleapis.com https://plausible.io https://wundergraph.com ${
+     isPreview ? "https://vercel.live https://vercel.com" : ""
+   };
   manifest-src 'self';
   media-src 'self';
   worker-src 'self' ${isSentryFeatureReplayEnabled ? "blob:" : ""};
@@ -118,12 +118,12 @@ const config = {
         headers: [
           {
             key: debugCSP
-                ? "Content-Security-Policy-Report-Only"
-                : "Content-Security-Policy",
+              ? "Content-Security-Policy-Report-Only"
+              : "Content-Security-Policy",
             value: lightweightCspHeader.replace(/\n/g, ""),
           },
         ],
-      }
+      },
     ];
   },
 };
