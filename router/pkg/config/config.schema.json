@@ -809,6 +809,11 @@
                         "additionalProperties": {
                           "type": "string"
                         }
+                      },
+                      "temporality": {
+                        "type": "string",
+                        "description": "Temporality defines the window that an aggregation is calculated over.",
+                        "enum": ["delta", "cumulative"]
                       }
                     },
                     "required": ["exporter", "endpoint"]

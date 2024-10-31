@@ -49,7 +49,8 @@
             "Exporter": "http",
             "Endpoint": "https://my-otel-collector.example.com",
             "HTTPPath": "/v1/metrics",
-            "Headers": {}
+            "Headers": {},
+            "Temporality": ""
           }
         ]
       },

@@ -3,6 +3,7 @@ package otelconfig
 import "os"
 
 type Exporter string
+type ExporterTemporality string
 
 const (
 	ExporterOLTPHTTP Exporter = "http"
@@ -11,6 +12,9 @@ const (
 	CloudDefaultTelemetryEndpoint = "https://cosmo-otel.wundergraph.com"
 	DefaultMetricsPath            = "/v1/metrics"
 	DefaultTracesPath             = "/v1/traces"
+
+	DeltaTemporality      ExporterTemporality = "delta"
+	CumulativeTemporality ExporterTemporality = "cumulative"
 )
 
 // DefaultEndpoint is the default endpoint used by subsystems that

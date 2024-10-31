@@ -92,11 +92,12 @@ type Prometheus struct {
 }
 
 type MetricsOTLPExporter struct {
-	Disabled bool                `yaml:"disabled"`
-	Exporter otelconfig.Exporter `yaml:"exporter" envDefault:"http"`
-	Endpoint string              `yaml:"endpoint"`
-	HTTPPath string              `yaml:"path" envDefault:"/v1/metrics"`
-	Headers  map[string]string   `yaml:"headers"`
+	Disabled    bool                           `yaml:"disabled"`
+	Exporter    otelconfig.Exporter            `yaml:"exporter" envDefault:"http"`
+	Endpoint    string                         `yaml:"endpoint"`
+	HTTPPath    string                         `yaml:"path" envDefault:"/v1/metrics"`
+	Headers     map[string]string              `yaml:"headers"`
+	Temporality otelconfig.ExporterTemporality `yaml:"temporality"`
 }
 
 type Metrics struct {
