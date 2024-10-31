@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.136.0](https://github.com/wundergraph/cosmo/compare/router@0.135.0...router@0.136.0) (2024-10-31)
+
+### Features
+
+* allow to override metric temporarity per exporter ([#1321](https://github.com/wundergraph/cosmo/issues/1321)) ([b67fcba](https://github.com/wundergraph/cosmo/commit/b67fcba35671abd6d224e5fc5a5ce02608c0c250)) (@JivusAyrus)
+
 # [0.135.0](https://github.com/wundergraph/cosmo/compare/router@0.134.1...router@0.135.0) (2024-10-31)
 
 ### Features
