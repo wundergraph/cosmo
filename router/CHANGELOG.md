@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.135.0](https://github.com/wundergraph/cosmo/compare/router@0.134.1...router@0.135.0) (2024-10-31)
+
+### Features
+
+* custom scripts ([#1302](https://github.com/wundergraph/cosmo/issues/1302)) ([9f4457c](https://github.com/wundergraph/cosmo/commit/9f4457c7f7acdf2f56cc3ad7f0474653063f290c)) (@thisisnithin)
+* provide pprof support in default distribution ([#1323](https://github.com/wundergraph/cosmo/issues/1323)) ([2562b9b](https://github.com/wundergraph/cosmo/commit/2562b9bd7005b0858e3d01a2fc38f855309213d5)) (@StarpTech)
+
 ## [0.134.1](https://github.com/wundergraph/cosmo/compare/router@0.134.0...router@0.134.1) (2024-10-29)
 
 ### Bug Fixes
