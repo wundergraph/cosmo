@@ -1365,7 +1365,7 @@ export class FederatedGraphRepository {
     const federatedGraphs: FederatedGraphDTO[] = [];
 
     for (const target of graphTargets) {
-      const fg = await this.byTargetId(target.name);
+      const fg = await this.byTargetId(target.id);
       if (fg === undefined) {
         throw new Error(`FederatedGraph ${target.name} not found`);
       }
