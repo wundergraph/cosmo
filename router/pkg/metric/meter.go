@@ -49,7 +49,7 @@ const (
 )
 
 var (
-	// temporalitySelector is a function that selects the temporality for a given instrument kind.
+	// defaultCLoudTemporalitySelector is a function that selects the temporality for a given instrument kind.
 	// Short story about when we choose delta and when we choose cumulative temporality:
 	//
 	// Delta temporalities are reported as completed intervals. They don't build upon each other.
@@ -65,7 +65,7 @@ var (
 	// We choose cumulative temporality for asynchronous instruments because we can query the last cumulative value without extra work.
 	// See https://opentelemetry.io/docs/specs/otel/metrics/supplementary-guidelines/#aggregation-temporality for more information.
 	//
-	temporalitySelector = func(kind sdkmetric.InstrumentKind) metricdata.Temporality {
+	defaultCLoudTemporalitySelector = func(kind sdkmetric.InstrumentKind) metricdata.Temporality {
 		switch kind {
 		case sdkmetric.InstrumentKindCounter,
 			sdkmetric.InstrumentKindUpDownCounter,
@@ -117,6 +117,32 @@ func NewPrometheusMeterProvider(ctx context.Context, c *Config, serviceInstanceI
 	return sdkmetric.NewMeterProvider(opts...), registry, nil
 }
 
+func getTemporalitySelector(temporality otelconfig.ExporterTemporality, log *zap.Logger) func(kind sdkmetric.InstrumentKind) metricdata.Temporality {
+	// https://github.com/open-telemetry/opentelemetry-go/blob/main/internal/shared/otlp/otlpmetric/oconf/envconfig.go.tmpl#L166-L177
+	// See the above link for selectors for different temporalities
+	if temporality == otelconfig.DeltaTemporality {
+		deltaTemporalitySelector := func(kind sdkmetric.InstrumentKind) metricdata.Temporality {
+			switch kind {
+			case sdkmetric.InstrumentKindCounter,
+				sdkmetric.InstrumentKindObservableCounter,
+				sdkmetric.InstrumentKindHistogram:
+				return metricdata.DeltaTemporality
+			default:
+				return metricdata.CumulativeTemporality
+			}
+		}
+		return deltaTemporalitySelector
+	} else if temporality == otelconfig.CumulativeTemporality {
+		cumulativeTemporalitySelector := func(kind sdkmetric.InstrumentKind) metricdata.Temporality {
+			return metricdata.CumulativeTemporality
+		}
+		return cumulativeTemporalitySelector
+	} else {
+		log.Debug("The temporality selector falls back to the default.")
+		return defaultCLoudTemporalitySelector
+	}
+}
+
 func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.Exporter, error) {
 	u, err := url.Parse(exp.Endpoint)
 	if err != nil {
@@ -130,7 +156,7 @@ func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.
 			// Includes host and port
 			otlpmetrichttp.WithEndpoint(u.Host),
 			otlpmetrichttp.WithCompression(otlpmetrichttp.GzipCompression),
-			otlpmetrichttp.WithTemporalitySelector(temporalitySelector),
+			otlpmetrichttp.WithTemporalitySelector(getTemporalitySelector(exp.Temporality, log)),
 		}
 
 		if u.Scheme != "https" {
@@ -153,7 +179,7 @@ func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.
 			// Includes host and port
 			otlpmetricgrpc.WithEndpoint(u.Host),
 			otlpmetricgrpc.WithCompressor("gzip"),
-			otlpmetricgrpc.WithTemporalitySelector(temporalitySelector),
+			otlpmetricgrpc.WithTemporalitySelector(getTemporalitySelector(exp.Temporality, log)),
 		}
 
 		if u.Scheme != "https" {
