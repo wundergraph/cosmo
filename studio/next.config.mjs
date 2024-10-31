@@ -1,6 +1,6 @@
 import withMarkdoc from "@markdoc/next.js";
 import { withSentryConfig } from "@sentry/nextjs";
-import pkg from "./package.json";
+import pkg from "./package.json" with { type: "json" };
 
 const isPreview = process.env.VERCEL_ENV === "preview";
 // Allow it only for development once https://github.com/vercel/next.js/issues/23587 is fixed
