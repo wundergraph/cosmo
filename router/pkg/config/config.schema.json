@@ -52,6 +52,24 @@
             }
           }
         },
+        "kv": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["url", "id"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "The ID of the storage provider. The ID is used to identify the storage provider in the configuration."
+              },
+              "url": {
+                "type": "string",
+                "description": "The URL of the KV Storage. The URL is specified as a string with the format 'scheme://host:port'."
+              }
+            }
+          }
+        },
         "s3": {
           "type": "array",
           "description": "The configuration for the S3 storage provider. If no access key and secret key are provided, the provider will attempt to retreieve IAM credentials from the EC2 service.",
@@ -116,6 +134,53 @@
         },
         "storage": {
           "description": "The storage provider for persisted operation. Only one provider can be active. When no provider is specified, the router will fallback to the Cosmo CDN provider to download the persisted operations.",
+          "required": ["provider_id", "object_prefix"],
+          "properties": {
+            "provider_id": {
+              "description": "The ID of the storage provider. The ID must match the ID of the storage provider in the storage_providers section.",
+              "type": "string"
+            },
+            "object_prefix": {
+              "type": "string",
+              "description": "The prefix of the object in the storage provider location. The prefix is put in front of the operation SHA256 hash. /<prefix>/<sha256>.json"
+            }
+          }
+        }
+      }
+    },
+    "automatic_persisted_queries": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The configuration for the automatic persisted queries (APQ).",
+      "required": ["enabled"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable fallback storage provider. The default value is false."
+        },
+        "cache": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "size": {
+              "type": "string",
+              "default": "100MB",
+              "bytes": {
+                "minimum": "10MB"
+              },
+              "format": "bytes-string",
+              "description": "The size of the cache used. The default value is 100MB."
+            },
+            "ttl": {
+              "type": "integer",
+              "default": -1,
+              "minimum": -1,
+              "description": "The ttl of the cache. The ttl is used to specify the time-to-live of the cache. The default value is -1, which means that the cache never expires."
+            }
+          }
+        },
+        "storage": {
+          "description": "The storage provider for persisted operation. Only one provider can be active. When no provider is specified, the router will a local in-memory cache for retaining APQ queries",
           "required": ["provider_id", "object_prefix"],
           "properties": {
             "provider_id": {

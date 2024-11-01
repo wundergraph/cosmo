@@ -290,6 +290,9 @@ storage_providers:
       secret_key: "WNMg9X4fzMva18henO6XLX4qRHEArwYdT7Yt84w9"
       region: "us-east-1"
       secure: false
+  kv:
+    - id: "redis"
+      url: "redis://:test@localhost:6379"
 
 persisted_operations:
   cache:
@@ -297,6 +300,15 @@ persisted_operations:
   storage:
     provider_id: s3
     object_prefix: "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/operations/foo"
+
+automatic_persisted_queries:
+  enabled: true
+  cache:
+    size: 100MB
+    ttl: 900
+  storage:
+    provider_id: redis
+    object_prefix: "cosmo_apq"
 
 execution_config:
   storage:
