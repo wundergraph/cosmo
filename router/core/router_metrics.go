@@ -12,16 +12,16 @@ import (
 )
 
 type RouterMetrics interface {
-	StartOperation(logger *zap.Logger, requestContentLength int64, attributes []attribute.KeyValue) *OperationMetrics
+	StartOperation(logger *zap.Logger, requestContentLength int64, sliceAttr, inFlightAttrs []attribute.KeyValue) *OperationMetrics
 	ExportSchemaUsageInfo(operationContext *operationContext, statusCode int, hasError bool, exportSynchronous bool)
 	GqlMetricsExporter() *graphqlmetrics.Exporter
-	MetricStore() metric.Provider
+	MetricStore() metric.Store
 }
 
 // routerMetrics encapsulates all data and configuration that the router
 // uses to collect and its metrics
 type routerMetrics struct {
-	metrics             metric.Provider
+	metrics             metric.Store
 	gqlMetricsExporter  *graphqlmetrics.Exporter
 	routerConfigVersion string
 	logger              *zap.Logger
@@ -29,7 +29,7 @@ type routerMetrics struct {
 }
 
 type routerMetricsConfig struct {
-	metrics             metric.Provider
+	metrics             metric.Store
 	gqlMetricsExporter  *graphqlmetrics.Exporter
 	routerConfigVersion string
 	logger              *zap.Logger
@@ -49,19 +49,20 @@ func NewRouterMetrics(cfg *routerMetricsConfig) RouterMetrics {
 // StartOperation starts the metrics for a new GraphQL operation. The returned value is a OperationMetrics
 // where the caller must always call Finish() (usually via defer()). If the metrics are disabled, this
 // returns nil, but OperationMetrics is safe to call with a nil receiver.
-func (m *routerMetrics) StartOperation(logger *zap.Logger, requestContentLength int64, attributes []attribute.KeyValue) *OperationMetrics {
+func (m *routerMetrics) StartOperation(logger *zap.Logger, requestContentLength int64, sliceAttr, inFlightAttrs []attribute.KeyValue) *OperationMetrics {
 	metrics := newOperationMetrics(OperationMetricsOptions{
 		RouterMetrics:        m,
 		Logger:               logger,
 		RequestContentLength: requestContentLength,
 		RouterConfigVersion:  m.routerConfigVersion,
 		TrackUsageInfo:       m.exportEnabled,
-		Attributes:           attributes,
+		InFlightAttrs:        inFlightAttrs,
+		SliceAttributes:      sliceAttr,
 	})
 	return metrics
 }
 
-func (m *routerMetrics) MetricStore() metric.Provider {
+func (m *routerMetrics) MetricStore() metric.Store {
 	return m.metrics
 }
 

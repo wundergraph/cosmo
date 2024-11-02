@@ -191,9 +191,14 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			otel.WgOperationProtocol.String(OperationProtocolHTTP.String()),
 		)
 
-		metrics := h.metrics.StartOperation(requestLogger, r.ContentLength, requestContext.telemetry.MetricAttrs(true))
+		metrics := h.metrics.StartOperation(
+			requestLogger,
+			r.ContentLength,
+			requestContext.telemetry.MetricSliceAttributes(),
+			requestContext.telemetry.MetricAttributes(),
+		)
 
-		routerSpan.SetAttributes(requestContext.telemetry.CommonAttrs()...)
+		routerSpan.SetAttributes(requestContext.telemetry.TraceAttributes()...)
 
 		requestContext.operation = &operationContext{
 			clientInfo: clientInfo,
@@ -204,16 +209,11 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			requestContext.telemetry.AddCustomMetricStringSliceAttr(ContextFieldOperationServices, requestContext.dataSourceNames)
 			requestContext.telemetry.AddCustomMetricStringSliceAttr(ContextFieldGraphQLErrorCodes, requestContext.graphQLErrorCodes)
 
-			metricAttrs := requestContext.telemetry.MetricAttrs(true)
-
 			metrics.Finish(
-				r.Context(),
-				requestContext.error,
+				requestContext,
 				statusCode,
 				writtenBytes,
 				h.flushTelemetryAfterResponse,
-				requestContext.operation,
-				metricAttrs,
 			)
 
 			if h.flushTelemetryAfterResponse {
@@ -256,7 +256,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 			_, readMultiPartSpan := h.tracer.Start(r.Context(), "HTTP - Read Multipart",
 				trace.WithSpanKind(trace.SpanKindInternal),
-				trace.WithAttributes(requestContext.telemetry.CommonAttrs()...),
+				trace.WithAttributes(requestContext.telemetry.TraceAttributes()...),
 			)
 
 			multipartParser := NewMultipartParser(h.operationProcessor, h.maxUploadFiles, h.maxUploadFileSize)
@@ -287,7 +287,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		} else if r.Method == http.MethodPost {
 			_, readOperationBodySpan := h.tracer.Start(r.Context(), "HTTP - Read Body",
 				trace.WithSpanKind(trace.SpanKindInternal),
-				trace.WithAttributes(requestContext.telemetry.CommonAttrs()...),
+				trace.WithAttributes(requestContext.telemetry.TraceAttributes()...),
 			)
 
 			var err error
@@ -331,7 +331,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		if h.accessController != nil {
 			_, authenticateSpan := h.tracer.Start(r.Context(), "Authenticate",
 				trace.WithSpanKind(trace.SpanKindServer),
-				trace.WithAttributes(requestContext.telemetry.CommonAttrs()...),
+				trace.WithAttributes(requestContext.telemetry.TraceAttributes()...),
 			)
 
 			validatedReq, err := h.accessController.Access(w, r)
@@ -439,7 +439,7 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 	if operationKit.parsedOperation.IsPersistedOperation {
 		ctx, span := h.tracer.Start(req.Context(), "Load Persisted Operation",
 			trace.WithSpanKind(trace.SpanKindClient),
-			trace.WithAttributes(requestContext.telemetry.CommonAttrs()...),
+			trace.WithAttributes(requestContext.telemetry.TraceAttributes()...),
 		)
 
 		skipParse, err = operationKit.FetchPersistedOperation(ctx, requestContext.operation.clientInfo)
@@ -466,7 +466,7 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 	if !skipParse {
 		_, engineParseSpan := h.tracer.Start(req.Context(), "Operation - Parse",
 			trace.WithSpanKind(trace.SpanKindInternal),
-			trace.WithAttributes(requestContext.telemetry.CommonAttrs()...),
+			trace.WithAttributes(requestContext.telemetry.TraceAttributes()...),
 		)
 
 		httpOperation.traceTimings.StartParse()
@@ -551,7 +551,7 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 
 	_, engineNormalizeSpan := h.tracer.Start(req.Context(), "Operation - Normalize",
 		trace.WithSpanKind(trace.SpanKindInternal),
-		trace.WithAttributes(requestContext.telemetry.CommonAttrs()...),
+		trace.WithAttributes(requestContext.telemetry.TraceAttributes()...),
 	)
 
 	cached, err := operationKit.NormalizeOperation()
@@ -635,7 +635,7 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 
 	_, engineValidateSpan := h.tracer.Start(req.Context(), "Operation - Validate",
 		trace.WithSpanKind(trace.SpanKindInternal),
-		trace.WithAttributes(requestContext.telemetry.CommonAttrs()...),
+		trace.WithAttributes(requestContext.telemetry.TraceAttributes()...),
 	)
 	validationCached, err := operationKit.Validate(requestContext.operation.executionOptions.SkipLoader)
 	if err != nil {
@@ -698,7 +698,7 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 	_, enginePlanSpan := h.tracer.Start(req.Context(), "Operation - Plan",
 		trace.WithSpanKind(trace.SpanKindInternal),
 		trace.WithAttributes(otel.WgEngineRequestTracingEnabled.Bool(requestContext.operation.traceOptions.Enable)),
-		trace.WithAttributes(requestContext.telemetry.CommonAttrs()...),
+		trace.WithAttributes(requestContext.telemetry.TraceAttributes()...),
 	)
 
 	planOptions := PlanOptions{
@@ -732,13 +732,17 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 
 	enginePlanSpan.End()
 
+	planningAttrs := []attribute.KeyValue{
+		otel.WgEnginePlanCacheHit.Bool(requestContext.operation.planCacheHit),
+	}
+
+	planningAttrs = append(planningAttrs, requestContext.telemetry.MetricAttributes()...)
+
 	httpOperation.operationMetrics.routerMetrics.MetricStore().MeasureOperationPlanningTime(
 		req.Context(),
 		requestContext.operation.planningTime,
-		append(
-			requestContext.telemetry.MetricAttrs(true),
-			otel.WgEnginePlanCacheHit.Bool(requestContext.operation.planCacheHit),
-		)...,
+		requestContext.telemetry.MetricSliceAttributes(),
+		planningAttrs,
 	)
 
 	// we could log the query plan only if query plans are calculated

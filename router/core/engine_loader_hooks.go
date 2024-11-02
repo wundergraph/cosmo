@@ -29,10 +29,10 @@ const EngineLoaderHooksScopeVersion = "0.0.1"
 // It is used to trace and measure the performance of the engine loader
 type EngineLoaderHooks struct {
 	tracer      trace.Tracer
-	metricStore metric.Provider
+	metricStore metric.Store
 }
 
-func NewEngineRequestHooks(metricStore metric.Provider) resolve.LoaderHooks {
+func NewEngineRequestHooks(metricStore metric.Store) resolve.LoaderHooks {
 	return &EngineLoaderHooks{
 		tracer: otel.GetTracerProvider().Tracer(
 			EngineLoaderHooksScopeName,
@@ -54,7 +54,7 @@ func (f *EngineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInf
 	}
 
 	ctx, span := f.tracer.Start(ctx, "Engine - Fetch",
-		trace.WithAttributes(reqContext.telemetry.CommonAttrs()...),
+		trace.WithAttributes(reqContext.telemetry.TraceAttributes()...),
 	)
 
 	subgraph := reqContext.SubgraphByID(ds.ID)
@@ -94,9 +94,6 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 		rotel.WgSubgraphID.String(activeSubgraph.Id),
 		rotel.WgSubgraphName.String(activeSubgraph.Name),
 	}
-
-	// Ensure common attributes are set
-	attributes = append(attributes, reqContext.telemetry.CommonAttrs()...)
 
 	if err != nil {
 
@@ -141,10 +138,13 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 		slices.Sort(errorCodesAttr)
 
 		if len(errorCodesAttr) > 0 {
-			mAttr := append(attributes, reqContext.telemetry.MetricAttrs(false)...)
-			f.metricStore.MeasureRequestError(ctx, mAttr...)
+			f.metricStore.MeasureRequestError(
+				ctx,
+				reqContext.telemetry.MetricSliceAttributes(),
+				append(reqContext.telemetry.MetricAttributes(), attributes...),
+			)
 		}
 	}
 
-	span.SetAttributes(attributes...)
+	span.SetAttributes(append(attributes, reqContext.telemetry.TraceAttributes()...)...)
 }

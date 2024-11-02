@@ -36,32 +36,40 @@ type OperationMetrics struct {
 	trackUsageInfo       bool
 }
 
-func (m *OperationMetrics) Finish(ctx context.Context, err error, statusCode int, responseSize int, exportSynchronous bool, opContext *operationContext, attr []attribute.KeyValue) {
-	latency := time.Since(m.operationStartTime)
+func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, responseSize int, exportSynchronous bool) {
+	ctx := context.Background()
 
 	m.inflightMetric()
 
+	attrs := reqContext.telemetry.MetricAttributes()
+
+	attrs = append(attrs, semconv.HTTPStatusCode(statusCode))
+
 	rm := m.routerMetrics.MetricStore()
 
-	if err != nil {
+	latency := time.Since(m.operationStartTime)
+
+	sliceAttrs := reqContext.telemetry.MetricSliceAttributes()
+
+	if reqContext.error != nil {
 		// We don't store false values in the metrics, so only add the error attribute if it's true
-		attr = append(attr, otel.WgRequestError.Bool(true))
-		rm.MeasureRequestError(ctx, attr...)
+		attrs = append(attrs, otel.WgRequestError.Bool(true))
+		rm.MeasureRequestError(ctx, sliceAttrs, attrs)
 	}
 
-	attr = append(attr, semconv.HTTPStatusCode(statusCode))
-	rm.MeasureRequestCount(ctx, attr...)
-	rm.MeasureRequestSize(ctx, m.requestContentLength, attr...)
-	rm.MeasureLatency(ctx, latency, attr...)
-	rm.MeasureResponseSize(ctx, int64(responseSize), attr...)
+	rm.MeasureRequestCount(ctx, sliceAttrs, attrs)
+	rm.MeasureRequestSize(ctx, m.requestContentLength, sliceAttrs, attrs)
+	rm.MeasureLatency(ctx, latency, sliceAttrs, attrs)
+	rm.MeasureResponseSize(ctx, int64(responseSize), sliceAttrs, attrs)
 
-	if m.trackUsageInfo && opContext != nil && !opContext.executionOptions.SkipLoader {
-		m.routerMetrics.ExportSchemaUsageInfo(opContext, statusCode, err != nil, exportSynchronous)
+	if m.trackUsageInfo && reqContext.operation != nil && !reqContext.operation.executionOptions.SkipLoader {
+		m.routerMetrics.ExportSchemaUsageInfo(reqContext.operation, statusCode, reqContext.error != nil, exportSynchronous)
 	}
 }
 
 type OperationMetricsOptions struct {
-	Attributes           []attribute.KeyValue
+	InFlightAttrs        []attribute.KeyValue
+	SliceAttributes      []attribute.KeyValue
 	RouterConfigVersion  string
 	RequestContentLength int64
 	RouterMetrics        RouterMetrics
@@ -74,7 +82,7 @@ type OperationMetricsOptions struct {
 func newOperationMetrics(opts OperationMetricsOptions) *OperationMetrics {
 	operationStartTime := time.Now()
 
-	inflightMetric := opts.RouterMetrics.MetricStore().MeasureInFlight(context.Background(), opts.Attributes...)
+	inflightMetric := opts.RouterMetrics.MetricStore().MeasureInFlight(context.Background(), opts.SliceAttributes, opts.InFlightAttrs)
 	return &OperationMetrics{
 		requestContentLength: opts.RequestContentLength,
 		operationStartTime:   operationStartTime,

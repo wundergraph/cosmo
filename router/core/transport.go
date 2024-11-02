@@ -36,7 +36,7 @@ type CustomTransport struct {
 	roundTripper http.RoundTripper
 	preHandlers  []TransportPreHandler
 	postHandlers []TransportPostHandler
-	metricStore  metric.Provider
+	metricStore  metric.Store
 	logger       *zap.Logger
 
 	sf   map[uint64]*sfCacheItem
@@ -54,7 +54,7 @@ func NewCustomTransport(
 	logger *zap.Logger,
 	roundTripper http.RoundTripper,
 	retryOptions retrytransport.RetryOptions,
-	metricStore metric.Provider,
+	metricStore metric.Store,
 	enableSingleFlight bool,
 ) *CustomTransport {
 
@@ -79,17 +79,17 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 	reqContext := getRequestContext(req.Context())
 	activeSubgraph := reqContext.ActiveSubgraph(req)
 
-	var baseFields []attribute.KeyValue
-
-	baseFields = append(baseFields, reqContext.telemetry.MetricAttrs(true)...)
+	attributes := reqContext.telemetry.MetricAttributes()
 
 	if activeSubgraph != nil {
-		baseFields = append(baseFields, otel.WgSubgraphName.String(activeSubgraph.Name))
-		baseFields = append(baseFields, otel.WgSubgraphID.String(activeSubgraph.Id))
+		attributes = append(attributes,
+			otel.WgSubgraphName.String(activeSubgraph.Name),
+			otel.WgSubgraphID.String(activeSubgraph.Id),
+		)
 	}
 
-	inFlightDone := ct.metricStore.MeasureInFlight(req.Context(), baseFields...)
-	ct.metricStore.MeasureRequestSize(req.Context(), req.ContentLength, baseFields...)
+	inFlightDone := ct.metricStore.MeasureInFlight(req.Context(), reqContext.telemetry.metricSliceAttributes, attributes)
+	ct.metricStore.MeasureRequestSize(req.Context(), req.ContentLength, reqContext.telemetry.metricSliceAttributes, attributes)
 
 	operationStartTime := time.Now()
 
@@ -99,15 +99,16 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 		latency := time.Since(operationStartTime)
 
 		if err != nil {
-			baseFields = append(baseFields, otel.WgRequestError.Bool(true))
+			attributes = append(attributes, otel.WgRequestError.Bool(true))
+		} else if resp != nil {
+			attributes = append(attributes, semconv.HTTPStatusCode(resp.StatusCode))
 		}
 
-		ct.metricStore.MeasureRequestCount(req.Context(), baseFields...)
-		ct.metricStore.MeasureLatency(req.Context(), latency, baseFields...)
+		ct.metricStore.MeasureRequestCount(req.Context(), reqContext.telemetry.metricSliceAttributes, attributes)
+		ct.metricStore.MeasureLatency(req.Context(), latency, reqContext.telemetry.metricSliceAttributes, attributes)
 
 		if resp != nil {
-			baseFields = append(baseFields, semconv.HTTPStatusCode(resp.StatusCode))
-			ct.metricStore.MeasureResponseSize(req.Context(), resp.ContentLength, baseFields...)
+			ct.metricStore.MeasureResponseSize(req.Context(), resp.ContentLength, reqContext.telemetry.metricSliceAttributes, attributes)
 		}
 	}
 }
@@ -320,7 +321,7 @@ type TransportFactory struct {
 	retryOptions                  retrytransport.RetryOptions
 	requestTimeout                time.Duration
 	localhostFallbackInsideDocker bool
-	metricStore                   metric.Provider
+	metricStore                   metric.Store
 	logger                        *zap.Logger
 	tracerProvider                *sdktrace.TracerProvider
 }
@@ -333,7 +334,7 @@ type TransportOptions struct {
 	RetryOptions                  retrytransport.RetryOptions
 	RequestTimeout                time.Duration
 	LocalhostFallbackInsideDocker bool
-	MetricStore                   metric.Provider
+	MetricStore                   metric.Store
 	Logger                        *zap.Logger
 	TracerProvider                *sdktrace.TracerProvider
 }
@@ -374,7 +375,7 @@ func (t TransportFactory) RoundTripper(enableSingleFlight bool, transport http.R
 				attributes = append(attributes, otel.WgSubgraphName.String(subgraph.Name))
 			}
 
-			attributes = append(attributes, reqContext.telemetry.CommonAttrs()...)
+			attributes = append(attributes, reqContext.telemetry.TraceAttributes()...)
 
 			span.SetAttributes(attributes...)
 
