@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/apollocompatibility"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage"
 	"hash"
 	"io"
 	"net/http"
@@ -89,7 +90,7 @@ var (
 type OperationProcessorOptions struct {
 	Executor                 *Executor
 	MaxOperationSizeInBytes  int64
-	PersistedOperationClient persistedoperation.Client
+	PersistedOperationClient persistedoperation.SaveClient
 
 	EnablePersistedOperationsCache bool
 	NormalizationCache             *ristretto.Cache[uint64, NormalizationCacheEntry]
@@ -106,7 +107,7 @@ type OperationProcessorOptions struct {
 type OperationProcessor struct {
 	executor                 *Executor
 	maxOperationSizeInBytes  int64
-	persistedOperationClient persistedoperation.Client
+	persistedOperationClient persistedoperation.SaveClient
 	operationCache           *OperationCache
 	parseKits                map[int]*parseKit
 	parseKitSemaphore        chan int
@@ -372,10 +373,22 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 	persistedOperationData, err := o.operationProcessor.persistedOperationClient.PersistedOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
 	if err != nil {
 		return false, err
+	} else if persistedOperationData == nil && o.parsedOperation.Request.Query == "" {
+		// If the client has APQ enabled, throw an error if the operation wasn't attached to the request
+		return false, &operationstorage.PersistentOperationNotFoundError{
+			ClientName: clientInfo.Name,
+			Sha256Hash: o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash,
+		}
 	}
 	// it's important to make a copy of the persisted operation data, because it's used in the cache
 	// we might modify it later, so we don't want to modify the cached data
-	o.parsedOperation.Request.Query = string(persistedOperationData)
+	if persistedOperationData != nil {
+		o.parsedOperation.Request.Query = string(persistedOperationData)
+	} else {
+		if err = o.operationProcessor.persistedOperationClient.SaveOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.Request.Query); err != nil {
+			return false, err
+		}
+	}
 
 	return false, nil
 }
@@ -609,6 +622,10 @@ func (o *OperationKit) normalizePersistedOperation() (cached bool, err error) {
 	// Set the normalized representation
 	o.parsedOperation.NormalizedRepresentation = o.kit.normalizedOperation.String()
 	o.parsedOperation.Request.Variables = o.kit.doc.Input.Variables
+
+	if o.operationProcessor.persistedOperationClient != nil && o.operationProcessor.persistedOperationClient.ApqEnabled() {
+		return false, nil
+	}
 
 	if o.cache != nil && o.cache.persistedOperationCache != nil {
 		o.savePersistedOperationToCache(skipIncludeNames)

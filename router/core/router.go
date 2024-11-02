@@ -6,6 +6,9 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/cdn"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/s3"
 	"net"
 	"net/http"
 	"net/url"
@@ -21,8 +24,6 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/graphiql"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/cdn"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/s3"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"go.uber.org/atomic"
 
@@ -132,61 +133,62 @@ type (
 
 	// Config defines the configuration options for the Router.
 	Config struct {
-		clusterName               string
-		instanceID                string
-		logger                    *zap.Logger
-		traceConfig               *rtrace.Config
-		metricConfig              *rmetric.Config
-		tracerProvider            *sdktrace.TracerProvider
-		otlpMeterProvider         *sdkmetric.MeterProvider
-		promMeterProvider         *sdkmetric.MeterProvider
-		gqlMetricsExporter        *graphqlmetrics.Exporter
-		corsOptions               *cors.Config
-		setConfigVersionHeader    bool
-		routerGracePeriod         time.Duration
-		staticExecutionConfig     *nodev1.RouterConfig
-		awsLambda                 bool
-		shutdown                  atomic.Bool
-		bootstrapped              bool
-		ipAnonymization           *IPAnonymizationConfig
-		listenAddr                string
-		baseURL                   string
-		graphqlWebURL             string
-		playgroundPath            string
-		graphqlPath               string
-		playground                bool
-		introspection             bool
-		queryPlansEnabled         bool
-		graphApiToken             string
-		healthCheckPath           string
-		readinessCheckPath        string
-		livenessCheckPath         string
-		cacheControlPolicy        config.CacheControlPolicy
-		routerConfigPollerConfig  *RouterConfigPollerConfig
-		cdnConfig                 config.CDNConfiguration
-		persistedOperationClient  persistedoperation.Client
-		persistedOperationsConfig config.PersistedOperationsConfig
-		apolloCompatibilityFlags  config.ApolloCompatibilityFlags
-		storageProviders          config.StorageProviders
-		eventsConfig              config.EventsConfiguration
-		prometheusServer          *http.Server
-		modulesConfig             map[string]interface{}
-		executionConfig           *ExecutionConfig
-		routerMiddlewares         []func(http.Handler) http.Handler
-		preOriginHandlers         []TransportPreHandler
-		postOriginHandlers        []TransportPostHandler
-		headerRules               *config.HeaderRules
-		subgraphTransportOptions  *SubgraphTransportOptions
-		graphqlMetricsConfig      *GraphQLMetricsConfig
-		routerTrafficConfig       *config.RouterTrafficConfiguration
-		fileUploadConfig          *config.FileUpload
-		accessController          *AccessController
-		retryOptions              retrytransport.RetryOptions
-		redisClient               *redis.Client
-		processStartTime          time.Time
-		developmentMode           bool
-		healthcheck               health.Checker
-		accessLogsConfig          *AccessLogsConfig
+		clusterName                     string
+		instanceID                      string
+		logger                          *zap.Logger
+		traceConfig                     *rtrace.Config
+		metricConfig                    *rmetric.Config
+		tracerProvider                  *sdktrace.TracerProvider
+		otlpMeterProvider               *sdkmetric.MeterProvider
+		promMeterProvider               *sdkmetric.MeterProvider
+		gqlMetricsExporter              *graphqlmetrics.Exporter
+		corsOptions                     *cors.Config
+		setConfigVersionHeader          bool
+		routerGracePeriod               time.Duration
+		staticExecutionConfig           *nodev1.RouterConfig
+		awsLambda                       bool
+		shutdown                        atomic.Bool
+		bootstrapped                    bool
+		ipAnonymization                 *IPAnonymizationConfig
+		listenAddr                      string
+		baseURL                         string
+		graphqlWebURL                   string
+		playgroundPath                  string
+		graphqlPath                     string
+		playground                      bool
+		introspection                   bool
+		queryPlansEnabled               bool
+		graphApiToken                   string
+		healthCheckPath                 string
+		readinessCheckPath              string
+		livenessCheckPath               string
+		cacheControlPolicy              config.CacheControlPolicy
+		routerConfigPollerConfig        *RouterConfigPollerConfig
+		cdnConfig                       config.CDNConfiguration
+		persistedOperationClient        persistedoperation.SaveClient
+		persistedOperationsConfig       config.PersistedOperationsConfig
+		automaticPersistedQueriesConfig config.AutomaticPersistedQueriesConfig
+		apolloCompatibilityFlags        config.ApolloCompatibilityFlags
+		storageProviders                config.StorageProviders
+		eventsConfig                    config.EventsConfiguration
+		prometheusServer                *http.Server
+		modulesConfig                   map[string]interface{}
+		executionConfig                 *ExecutionConfig
+		routerMiddlewares               []func(http.Handler) http.Handler
+		preOriginHandlers               []TransportPreHandler
+		postOriginHandlers              []TransportPostHandler
+		headerRules                     *config.HeaderRules
+		subgraphTransportOptions        *SubgraphTransportOptions
+		graphqlMetricsConfig            *GraphQLMetricsConfig
+		routerTrafficConfig             *config.RouterTrafficConfiguration
+		fileUploadConfig                *config.FileUpload
+		accessController                *AccessController
+		retryOptions                    retrytransport.RetryOptions
+		redisClient                     *redis.Client
+		processStartTime                time.Time
+		developmentMode                 bool
+		healthcheck                     health.Checker
+		accessLogsConfig                *AccessLogsConfig
 		// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
 		localhostFallbackInsideDocker bool
 		tlsServerConfig               *tls.Config
@@ -872,7 +874,19 @@ func (r *Router) buildClients() error {
 		)
 	}
 
-	if pClient != nil {
+	var apqClient apq.Client
+	if r.automaticPersistedQueriesConfig.Enabled {
+		var err error
+		apqClient, err = apq.NewClient(&apq.Options{
+			Logger:    r.logger,
+			ApqConfig: &r.automaticPersistedQueriesConfig,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	if pClient != nil || apqClient != nil {
 		// For backwards compatibility with cdn config field
 		cacheSize := r.persistedOperationsConfig.Cache.Size.Uint64()
 		if cacheSize <= 0 {
@@ -883,6 +897,7 @@ func (r *Router) buildClients() error {
 			CacheSize:      cacheSize,
 			Logger:         r.logger,
 			ProviderClient: pClient,
+			ApqClient:      apqClient,
 		})
 		if err != nil {
 			return err
@@ -1584,6 +1599,12 @@ func WithConfigPollerConfig(cfg *RouterConfigPollerConfig) Option {
 func WithPersistedOperationsConfig(cfg config.PersistedOperationsConfig) Option {
 	return func(r *Router) {
 		r.persistedOperationsConfig = cfg
+	}
+}
+
+func WithAutomatedPersistedQueriesConfig(cfg config.AutomaticPersistedQueriesConfig) Option {
+	return func(r *Router) {
+		r.automaticPersistedQueriesConfig = cfg
 	}
 }
 

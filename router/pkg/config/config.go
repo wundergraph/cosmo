@@ -561,6 +561,11 @@ type PersistedOperationsStorageConfig struct {
 	ObjectPrefix string `yaml:"object_prefix,omitempty" env:"PERSISTED_OPERATIONS_STORAGE_OBJECT_PREFIX"`
 }
 
+type AutomaticPersistedQueriesStorageConfig struct {
+	ProviderID   string `yaml:"provider_id,omitempty" env:"APQ_STORAGE_PROVIDER_ID"`
+	ObjectPrefix string `yaml:"object_prefix,omitempty" env:"APQ_STORAGE_OBJECT_PREFIX"`
+}
+
 type S3StorageProvider struct {
 	ID        string `yaml:"id,omitempty"`
 	Endpoint  string `yaml:"endpoint,omitempty"`
@@ -606,7 +611,7 @@ type PersistedOperationsCacheConfig struct {
 	Size BytesString `yaml:"size,omitempty" env:"PERSISTED_OPERATIONS_CACHE_SIZE" envDefault:"100MB"`
 }
 
-type AutomaticPersistedOperationsCacheConfig struct {
+type AutomaticPersistedQueriesCacheConfig struct {
 	Size BytesString `yaml:"size,omitempty" env:"APQ_CACHE_SIZE" envDefault:"100MB"`
 	TTL  int         `yaml:"ttl" env:"APQ_CACHE_TTL" envDefault:"-1"`
 }
@@ -617,9 +622,9 @@ type PersistedOperationsConfig struct {
 }
 
 type AutomaticPersistedQueriesConfig struct {
-	Enabled bool                                    `yaml:"enabled" env:"APQ_ENABLED" envDefault:"false"`
-	Cache   AutomaticPersistedOperationsCacheConfig `yaml:"cache"`
-	Storage PersistedOperationsStorageConfig        `yaml:"storage"`
+	Enabled bool                                   `yaml:"enabled" env:"APQ_ENABLED" envDefault:"false"`
+	Cache   AutomaticPersistedQueriesCacheConfig   `yaml:"cache"`
+	Storage AutomaticPersistedQueriesStorageConfig `yaml:"storage"`
 }
 
 type AccessLogsConfig struct {

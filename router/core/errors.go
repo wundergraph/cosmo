@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage"
 	"net"
 	"net/http"
 
 	"github.com/hashicorp/go-multierror"
 	rErrors "github.com/wundergraph/cosmo/router/internal/errors"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
@@ -276,7 +276,7 @@ func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *
 
 	var reportErr ReportError
 	var httpErr HttpError
-	var poNotFoundErr *persistedoperation.PersistentOperationNotFoundError
+	var poNotFoundErr *operationstorage.PersistentOperationNotFoundError
 	switch {
 	case errors.As(err, &httpErr):
 		writeRequestErrors(r, w, httpErr.StatusCode(), requestErrorsFromHttpError(httpErr), requestLogger)
