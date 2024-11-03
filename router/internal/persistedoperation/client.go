@@ -14,6 +14,17 @@ type PersistedOperation struct {
 	Body    string `json:"body"`
 }
 
+var PoNotFoundErr *PersistentOperationNotFoundError
+
+type PersistentOperationNotFoundError struct {
+	ClientName string
+	Sha256Hash string
+}
+
+func (e PersistentOperationNotFoundError) Error() string {
+	return fmt.Sprintf("operation %s for client %s not found", e.Sha256Hash, e.ClientName)
+}
+
 type Client interface {
 	PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error)
 	Close()
@@ -62,7 +73,7 @@ func (c client) PersistedOperation(ctx context.Context, clientName string, sha25
 	}
 
 	content, err := c.providerClient.PersistedOperation(ctx, clientName, sha256Hash)
-	if errors.As(err, &operationstorage.PoNotFoundErr) && c.apqClient != nil {
+	if errors.As(err, &PoNotFoundErr) && c.apqClient != nil {
 		return c.apqClient.PersistedOperation(ctx, clientName, sha256Hash)
 	}
 	if err != nil {

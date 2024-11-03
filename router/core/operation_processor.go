@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/apollocompatibility"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage"
 	"hash"
 	"io"
 	"net/http"
@@ -375,7 +374,7 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 		return false, err
 	} else if persistedOperationData == nil && o.parsedOperation.Request.Query == "" {
 		// If the client has APQ enabled, throw an error if the operation wasn't attached to the request
-		return false, &operationstorage.PersistentOperationNotFoundError{
+		return false, &persistedoperation.PersistentOperationNotFoundError{
 			ClientName: clientInfo.Name,
 			Sha256Hash: o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash,
 		}

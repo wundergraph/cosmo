@@ -9,7 +9,6 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/httpclient"
 	"github.com/wundergraph/cosmo/router/internal/jwt"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage"
 	"go.opentelemetry.io/otel/codes"
 	semconv12 "go.opentelemetry.io/otel/semconv/v1.12.0"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
@@ -84,7 +83,7 @@ func (cdn *client) persistedOperation(ctx context.Context, clientName string, sh
 		span.SetStatus(codes.Error, fmt.Sprintf("unexpected status code when loading persisted operation, statusCode: %d", resp.StatusCode))
 
 		if resp.StatusCode == http.StatusNotFound {
-			return nil, &operationstorage.PersistentOperationNotFoundError{
+			return nil, &persistedoperation.PersistentOperationNotFoundError{
 				ClientName: clientName,
 				Sha256Hash: sha256Hash,
 			}

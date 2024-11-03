@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"net"
 	"net/http"
 
@@ -276,7 +276,7 @@ func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *
 
 	var reportErr ReportError
 	var httpErr HttpError
-	var poNotFoundErr *operationstorage.PersistentOperationNotFoundError
+	var poNotFoundErr *persistedoperation.PersistentOperationNotFoundError
 	switch {
 	case errors.As(err, &httpErr):
 		writeRequestErrors(r, w, httpErr.StatusCode(), requestErrorsFromHttpError(httpErr), requestLogger)
