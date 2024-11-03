@@ -28,8 +28,6 @@ type KVClient interface {
 }
 
 type Options struct {
-	// CacheSize indicates the in-memory cache size, in bytes. If 0, no in-memory
-	// cache is used.
 	Logger    *zap.Logger
 	ApqConfig *config.AutomaticPersistedQueriesConfig
 	KVClient  KVClient
