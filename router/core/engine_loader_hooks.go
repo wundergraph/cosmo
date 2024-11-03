@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	otelmetric "go.opentelemetry.io/otel/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
 	"slices"
@@ -54,7 +55,7 @@ func (f *EngineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInf
 	}
 
 	ctx, span := f.tracer.Start(ctx, "Engine - Fetch",
-		trace.WithAttributes(reqContext.telemetry.TraceAttributes()...),
+		trace.WithAttributes(reqContext.telemetry.traceAttrs...),
 	)
 
 	subgraph := reqContext.SubgraphByID(ds.ID)
@@ -87,13 +88,12 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 
 	activeSubgraph := reqContext.SubgraphByID(ds.ID)
 
-	attributes := []attribute.KeyValue{
-		// Subgraph response status code
-		semconv.HTTPStatusCode(statusCode),
-		rotel.WgComponentName.String("engine-loader"),
-		rotel.WgSubgraphID.String(activeSubgraph.Id),
-		rotel.WgSubgraphName.String(activeSubgraph.Name),
-	}
+	attributes := make([]attribute.KeyValue, 4, 4+len(reqContext.telemetry.traceAttrs))
+	// Subgraph response status code
+	attributes[0] = semconv.HTTPStatusCode(statusCode)
+	attributes[1] = rotel.WgComponentName.String("engine-loader")
+	attributes[2] = rotel.WgSubgraphID.String(activeSubgraph.Id)
+	attributes[3] = rotel.WgSubgraphName.String(activeSubgraph.Name)
 
 	if err != nil {
 
@@ -138,13 +138,17 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 		slices.Sort(errorCodesAttr)
 
 		if len(errorCodesAttr) > 0 {
+			attrs := make([]attribute.KeyValue, 0, len(attributes)+len(reqContext.telemetry.metricAttrs))
+			attrs = append(attrs, attributes...)
+			attrs = append(attrs, reqContext.telemetry.metricAttrs...)
+
 			f.metricStore.MeasureRequestError(
 				ctx,
-				reqContext.telemetry.MetricSliceAttributes(),
-				append(reqContext.telemetry.MetricAttributes(), attributes...),
+				reqContext.telemetry.metricSliceAttrs,
+				otelmetric.WithAttributes(attrs...),
 			)
 		}
 	}
 
-	span.SetAttributes(append(attributes, reqContext.telemetry.TraceAttributes()...)...)
+	span.SetAttributes(append(attributes, reqContext.telemetry.traceAttrs...)...)
 }

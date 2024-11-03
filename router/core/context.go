@@ -129,14 +129,14 @@ type RequestContext interface {
 }
 
 type requestTelemetryAttributes struct {
-	// traceAttributes are the base attributes for traces only
-	traceAttributes []attribute.KeyValue
-	// metricAttributes are the attributes for metrics only
-	metricAttributes []attribute.KeyValue
-	// metricSetAttributes is map to quickly check if a metric attribute is set and to what key it is remapped
-	metricSetAttributes map[string]string
-	// metricSliceAttributes are the attributes for metrics that are string slices and needs to be exploded for prometheus
-	metricSliceAttributes []attribute.KeyValue
+	// traceAttrs are the base attributes for traces only
+	traceAttrs []attribute.KeyValue
+	// metricAttrs are the attributes for metrics only
+	metricAttrs []attribute.KeyValue
+	// metricSetAttrs is map to quickly check if a metric attribute is set and to what key it is remapped
+	metricSetAttrs map[string]string
+	// metricSliceAttrs are the attributes for metrics that are string slices and needs to be exploded for prometheus
+	metricSliceAttrs []attribute.KeyValue
 
 	// metricsEnabled indicates if metrics are enabled. If false, no metrics attributes will be added
 	metricsEnabled bool
@@ -148,67 +148,35 @@ func (r *requestTelemetryAttributes) AddCustomMetricStringSliceAttr(key string, 
 	if !r.metricsEnabled {
 		return
 	}
-	if remapKey, ok := r.metricSetAttributes[key]; ok && len(values) > 0 {
+	if remapKey, ok := r.metricSetAttrs[key]; ok && len(values) > 0 {
 		v := attribute.StringSlice(remapKey, values)
-		r.metricSliceAttributes = append(r.metricSliceAttributes, v)
+		r.metricSliceAttrs = append(r.metricSliceAttrs, v)
 	}
 }
 
-func (r *requestTelemetryAttributes) AddCustomMetricStringAttr(key string, value string) {
+func (r *requestTelemetryAttributes) addCustomMetricStringAttr(key string, value string) {
 	if !r.metricsEnabled {
 		return
 	}
-	if remapKey, ok := r.metricSetAttributes[key]; ok && value != "" {
+	if remapKey, ok := r.metricSetAttrs[key]; ok && value != "" {
 		v := attribute.String(remapKey, value)
-		r.metricAttributes = append(r.metricAttributes, v)
+		r.metricAttrs = append(r.metricAttrs, v)
 	}
 }
 
-func (r *requestTelemetryAttributes) AddTraceAttribute(vals ...attribute.KeyValue) {
-	if !r.traceEnabled {
-		return
-	}
-	r.traceAttributes = append(r.traceAttributes, vals...)
-}
-
-func (r *requestTelemetryAttributes) AddCommonAttribute(vals ...attribute.KeyValue) {
+func (r *requestTelemetryAttributes) addCommonAttribute(vals ...attribute.KeyValue) {
 	if !r.metricsEnabled && !r.traceEnabled {
 		return
 	}
-	r.metricAttributes = append(r.metricAttributes, vals...)
-	r.traceAttributes = append(r.traceAttributes, vals...)
+	r.metricAttrs = append(r.metricAttrs, vals...)
+	r.traceAttrs = append(r.traceAttrs, vals...)
 }
 
-func (r *requestTelemetryAttributes) AddMetricAttribute(vals ...attribute.KeyValue) {
+func (r *requestTelemetryAttributes) addMetricAttribute(vals ...attribute.KeyValue) {
 	if !r.metricsEnabled {
 		return
 	}
-	r.metricAttributes = append(r.metricAttributes, vals...)
-}
-
-func (r *requestTelemetryAttributes) MetricAttributes() []attribute.KeyValue {
-	if !r.metricsEnabled {
-		return nil
-	}
-	attrs := make([]attribute.KeyValue, 0, len(r.metricAttributes))
-	attrs = append(attrs, r.metricAttributes...)
-	return attrs
-}
-
-func (r *requestTelemetryAttributes) MetricSliceAttributes() []attribute.KeyValue {
-	if !r.metricsEnabled {
-		return nil
-	}
-	return r.metricSliceAttributes
-}
-
-func (r *requestTelemetryAttributes) TraceAttributes() []attribute.KeyValue {
-	if !r.traceEnabled {
-		return nil
-	}
-	attrs := make([]attribute.KeyValue, 0, len(r.traceAttributes))
-	attrs = append(attrs, r.traceAttributes...)
-	return attrs
+	r.metricAttrs = append(r.metricAttrs, vals...)
 }
 
 // requestContext is the default implementation of RequestContext
@@ -595,12 +563,12 @@ func buildRequestContext(opts requestContextOptions) *requestContext {
 		request:        opts.r,
 		operation:      opts.operationContext,
 		telemetry: &requestTelemetryAttributes{
-			metricSetAttributes:   opts.metricSetAttributes,
-			traceAttributes:       make([]attribute.KeyValue, 0, 10),
-			metricAttributes:      make([]attribute.KeyValue, 0, 10),
-			metricSliceAttributes: make([]attribute.KeyValue, 0, 10),
-			metricsEnabled:        opts.metricsEnabled,
-			traceEnabled:          opts.traceEnabled,
+			metricSetAttrs:   opts.metricSetAttributes,
+			traceAttrs:       make([]attribute.KeyValue, 0, 10),
+			metricAttrs:      make([]attribute.KeyValue, 0, 10),
+			metricSliceAttrs: make([]attribute.KeyValue, 0, 10),
+			metricsEnabled:   opts.metricsEnabled,
+			traceEnabled:     opts.traceEnabled,
 		},
 		subgraphResolver: subgraphResolverFromContext(opts.r.Context()),
 	}

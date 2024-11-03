@@ -550,13 +550,13 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 			reqContext := getRequestContext(r.Context())
 
-			reqContext.telemetry.AddCommonAttribute(baseOtelAttributes...)
+			reqContext.telemetry.addCommonAttribute(baseOtelAttributes...)
 
 			if commonAttrRequestMapper != nil {
-				reqContext.telemetry.AddCommonAttribute(commonAttrRequestMapper(r)...)
+				reqContext.telemetry.addCommonAttribute(commonAttrRequestMapper(r)...)
 			}
 			if metricAttrRequestMapper != nil {
-				reqContext.telemetry.AddMetricAttribute(metricAttrRequestMapper(r)...)
+				reqContext.telemetry.addMetricAttribute(metricAttrRequestMapper(r)...)
 			}
 
 			h.ServeHTTP(w, r)
@@ -585,7 +585,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 					reqContext.logger = requestLogger
 
 					span := oteltrace.SpanFromContext(r.Context())
-					span.SetAttributes(reqContext.telemetry.TraceAttributes()...)
+					span.SetAttributes(reqContext.telemetry.traceAttrs...)
 
 					// Set the trace ID in the response header
 					if s.traceConfig.ResponseTraceHeader.Enabled {

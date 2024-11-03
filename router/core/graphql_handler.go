@@ -133,7 +133,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	executionContext, graphqlExecutionSpan := h.tracer.Start(r.Context(), "Operation - Execute",
 		trace.WithSpanKind(trace.SpanKindInternal),
-		trace.WithAttributes(requestContext.telemetry.TraceAttributes()...),
+		trace.WithAttributes(requestContext.telemetry.traceAttrs...),
 	)
 	defer graphqlExecutionSpan.End()
 

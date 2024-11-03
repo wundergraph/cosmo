@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"fmt"
+	otelmetric "go.opentelemetry.io/otel/metric"
 	"io"
 	"net/http"
 	"net/url"
@@ -79,7 +80,7 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 	reqContext := getRequestContext(req.Context())
 	activeSubgraph := reqContext.ActiveSubgraph(req)
 
-	attributes := reqContext.telemetry.MetricAttributes()
+	attributes := make([]attribute.KeyValue, 0, 2+len(reqContext.telemetry.metricAttrs))
 
 	if activeSubgraph != nil {
 		attributes = append(attributes,
@@ -88,13 +89,17 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 		)
 	}
 
-	inFlightDone := ct.metricStore.MeasureInFlight(req.Context(), reqContext.telemetry.metricSliceAttributes, attributes)
-	ct.metricStore.MeasureRequestSize(req.Context(), req.ContentLength, reqContext.telemetry.metricSliceAttributes, attributes)
+	attributes = append(attributes, reqContext.telemetry.metricAttrs...)
+
+	o := otelmetric.WithAttributes(attributes...)
+
+	inFlightDone := ct.metricStore.MeasureInFlight(req.Context(), reqContext.telemetry.metricSliceAttrs, o)
+	ct.metricStore.MeasureRequestSize(req.Context(), req.ContentLength, reqContext.telemetry.metricSliceAttrs, o)
 
 	operationStartTime := time.Now()
 
 	return func(err error, resp *http.Response) {
-		defer inFlightDone()
+		inFlightDone()
 
 		latency := time.Since(operationStartTime)
 
@@ -104,11 +109,13 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 			attributes = append(attributes, semconv.HTTPStatusCode(resp.StatusCode))
 		}
 
-		ct.metricStore.MeasureRequestCount(req.Context(), reqContext.telemetry.metricSliceAttributes, attributes)
-		ct.metricStore.MeasureLatency(req.Context(), latency, reqContext.telemetry.metricSliceAttributes, attributes)
+		o = otelmetric.WithAttributes(attributes...)
+
+		ct.metricStore.MeasureRequestCount(req.Context(), reqContext.telemetry.metricSliceAttrs, o)
+		ct.metricStore.MeasureLatency(req.Context(), latency, reqContext.telemetry.metricSliceAttrs, o)
 
 		if resp != nil {
-			ct.metricStore.MeasureResponseSize(req.Context(), resp.ContentLength, reqContext.telemetry.metricSliceAttributes, attributes)
+			ct.metricStore.MeasureResponseSize(req.Context(), resp.ContentLength, reqContext.telemetry.metricSliceAttrs, o)
 		}
 	}
 }
@@ -375,7 +382,7 @@ func (t TransportFactory) RoundTripper(enableSingleFlight bool, transport http.R
 				attributes = append(attributes, otel.WgSubgraphName.String(subgraph.Name))
 			}
 
-			attributes = append(attributes, reqContext.telemetry.TraceAttributes()...)
+			attributes = append(attributes, reqContext.telemetry.traceAttrs...)
 
 			span.SetAttributes(attributes...)
 
