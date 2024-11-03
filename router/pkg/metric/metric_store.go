@@ -81,6 +81,8 @@ type (
 		logger *zap.Logger
 	}
 
+	// Provider is the interface that wraps the basic metric methods.
+	// We maintain two providers, one for OTEL and one for Prometheus.
 	Provider interface {
 		MeasureInFlight(ctx context.Context, opts ...otelmetric.AddOption) func()
 		MeasureRequestCount(ctx context.Context, opts ...otelmetric.AddOption)
@@ -92,6 +94,8 @@ type (
 		Flush(ctx context.Context) error
 	}
 
+	// Store is the unified metric interface for OTEL and Prometheus metrics. The interface can vary depending on
+	// if additional information is required for the provider e.g. slice attributes.
 	Store interface {
 		MeasureInFlight(ctx context.Context, sliceAttr, attr []attribute.KeyValue) func()
 		MeasureRequestCount(ctx context.Context, sliceAttr, attr []attribute.KeyValue)
