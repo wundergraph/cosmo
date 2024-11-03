@@ -4,6 +4,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -38,28 +39,96 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			header := make(http.Header)
 			header.Add("graphql-client-name", "my-client")
-			res0, err0 := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
-				Header:     header,
-			})
-			require.NoError(t, err0)
-			require.Equal(t, http.StatusBadRequest, res0.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"persisted Query not found"}]}`, res0.Body)
-
-			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-				Query:      `{__typename}`,
+			res0, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
 				Header:     header,
 			})
 			require.NoError(t, err)
-			require.Equal(t, `{"data":{"__typename":"Query"}}`, res.Body)
+			require.Equal(t, http.StatusBadRequest, res0.Response.StatusCode)
+			require.Equal(t, `{"errors":[{"message":"persisted Query not found"}]}`, res0.Body)
 
-			res2, err2 := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:      `{__typename}`,
 				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
 				Header:     header,
 			})
-			require.NoError(t, err2)
+			require.Equal(t, `{"data":{"__typename":"Query"}}`, res.Body)
+
+			res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+				Header:     header,
+			})
 			require.Equal(t, `{"data":{"__typename":"Query"}}`, res2.Body)
+		})
+	})
+
+	t.Run("query is deleted after ttl expires", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			ApqConfig: config.AutomaticPersistedQueriesConfig{
+				Enabled: true,
+				Cache: config.AutomaticPersistedQueriesCacheConfig{
+					Size: 1024 * 1024,
+					TTL:  2, // 2 seconds
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := make(http.Header)
+			header.Add("graphql-client-name", "my-client")
+
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:      `{__typename}`,
+				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+				Header:     header,
+			})
+			require.Equal(t, `{"data":{"__typename":"Query"}}`, res.Body)
+
+			time.Sleep(3 * time.Second)
+
+			res0, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+				Header:     header,
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusBadRequest, res0.Response.StatusCode)
+			require.Equal(t, `{"errors":[{"message":"persisted Query not found"}]}`, res0.Body)
+		})
+	})
+
+	t.Run("query renews ttl time", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			ApqConfig: config.AutomaticPersistedQueriesConfig{
+				Enabled: true,
+				Cache: config.AutomaticPersistedQueriesCacheConfig{
+					Size: 1024 * 1024,
+					TTL:  5, // 5 seconds
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := make(http.Header)
+			header.Add("graphql-client-name", "my-client")
+
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:      `{__typename}`,
+				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+				Header:     header,
+			})
+			require.Equal(t, `{"data":{"__typename":"Query"}}`, res.Body)
+
+			time.Sleep(3 * time.Second)
+
+			res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+				Header:     header,
+			})
+			require.Equal(t, `{"data":{"__typename":"Query"}}`, res2.Body)
+
+			time.Sleep(3 * time.Second)
+
+			res3 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+				Header:     header,
+			})
+			require.Equal(t, `{"data":{"__typename":"Query"}}`, res3.Body)
 		})
 	})
 }

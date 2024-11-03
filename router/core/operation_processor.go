@@ -384,7 +384,10 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 	// we might modify it later, so we don't want to modify the cached data
 	if persistedOperationData != nil {
 		o.parsedOperation.Request.Query = string(persistedOperationData)
-	} else {
+	}
+
+	// If the operation was fetched with APQ, save it again to renew the TTL
+	if o.operationProcessor.persistedOperationClient.ApqEnabled() {
 		if err = o.operationProcessor.persistedOperationClient.SaveOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.Request.Query); err != nil {
 			return false, err
 		}

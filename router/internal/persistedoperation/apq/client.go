@@ -22,12 +22,8 @@ type Client interface {
 }
 
 type KVClient interface {
-	//	get(key: string): Promise<V | undefined>;
-	//set(key: string, value: V, options?: SO): Promise<void>;
-	//delete(key: string): Promise<boolean | void>;
 	Get(ctx context.Context, operationHash string) ([]byte, error)
 	Set(ctx context.Context, operationHash string, operationBody []byte, ttl int64) error
-	//Delete(ctx context.Context, operationHash string) error
 	Close()
 }
 
