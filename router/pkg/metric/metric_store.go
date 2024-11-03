@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/kr/pretty"
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 	"time"
@@ -228,7 +227,6 @@ func (h *Metrics) MeasureRequestError(ctx context.Context, sliceAttr, attr []att
 	} else {
 		explodeAddInstrument(ctx, sliceAttr, func(ctx context.Context, newOpts ...otelmetric.AddOption) {
 			newOpts = append(newOpts, o)
-			pretty.Log(newOpts)
 			h.promRequestMetrics.MeasureRequestError(ctx, newOpts...)
 		})
 	}
