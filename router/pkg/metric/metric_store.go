@@ -177,7 +177,7 @@ func (h *Metrics) MeasureRequestSize(ctx context.Context, contentLength int64, s
 	} else {
 		explodeAddInstrument(ctx, sliceAttr, func(ctx context.Context, newOpts ...otelmetric.AddOption) {
 			newOpts = append(newOpts, opt)
-			h.promRequestMetrics.MeasureRequestSize(ctx, contentLength, opt)
+			h.promRequestMetrics.MeasureRequestSize(ctx, contentLength, newOpts...)
 		})
 	}
 
