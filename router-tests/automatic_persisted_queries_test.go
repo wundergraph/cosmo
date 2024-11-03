@@ -1,6 +1,11 @@
 package integration_test
 
 import (
+	"context"
+	"fmt"
+	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
+	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"net/http"
 	"testing"
@@ -13,122 +18,325 @@ import (
 func TestAutomaticPersistedQueries(t *testing.T) {
 	t.Parallel()
 
-	t.Run("Sha without query fails", func(t *testing.T) {
-		testenv.Run(t, &testenv.Config{
-			ApqConfig: config.AutomaticPersistedQueriesConfig{
-				Enabled: true,
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "does-not-exist"}}`),
+	t.Run("local cache", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("Sha without query fails", func(t *testing.T) {
+			testenv.Run(t, &testenv.Config{
+				ApqConfig: config.AutomaticPersistedQueriesConfig{
+					Enabled: true,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "does-not-exist"}}`),
+				})
+				require.NoError(t, err)
+				require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+				require.Equal(t, `{"errors":[{"message":"persisted Query not found"}]}`, res.Body)
 			})
-			require.NoError(t, err)
-			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"persisted Query not found"}]}`, res.Body)
+		})
+
+		t.Run("Sha with query works", func(t *testing.T) {
+			testenv.Run(t, &testenv.Config{
+				ApqConfig: config.AutomaticPersistedQueriesConfig{
+					Enabled: true,
+					Cache: config.AutomaticPersistedQueriesCacheConfig{
+						Size: 1024 * 1024,
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				header := make(http.Header)
+				header.Add("graphql-client-name", "my-client")
+				res0, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+					Header:     header,
+				})
+				require.NoError(t, err)
+				require.Equal(t, http.StatusBadRequest, res0.Response.StatusCode)
+				require.Equal(t, `{"errors":[{"message":"persisted Query not found"}]}`, res0.Body)
+
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:      `{__typename}`,
+					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+					Header:     header,
+				})
+				require.Equal(t, `{"data":{"__typename":"Query"}}`, res.Body)
+
+				res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+					Header:     header,
+				})
+				require.Equal(t, `{"data":{"__typename":"Query"}}`, res2.Body)
+			})
+		})
+
+		t.Run("query is deleted after ttl expires", func(t *testing.T) {
+			testenv.Run(t, &testenv.Config{
+				ApqConfig: config.AutomaticPersistedQueriesConfig{
+					Enabled: true,
+					Cache: config.AutomaticPersistedQueriesCacheConfig{
+						Size: 1024 * 1024,
+						TTL:  2, // 2 seconds
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				header := make(http.Header)
+				header.Add("graphql-client-name", "my-client")
+
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:      `{__typename}`,
+					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+					Header:     header,
+				})
+				require.Equal(t, `{"data":{"__typename":"Query"}}`, res.Body)
+
+				time.Sleep(3 * time.Second)
+
+				res0, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+					Header:     header,
+				})
+				require.NoError(t, err)
+				require.Equal(t, http.StatusBadRequest, res0.Response.StatusCode)
+				require.Equal(t, `{"errors":[{"message":"persisted Query not found"}]}`, res0.Body)
+			})
+		})
+
+		t.Run("query renews ttl time", func(t *testing.T) {
+			testenv.Run(t, &testenv.Config{
+				ApqConfig: config.AutomaticPersistedQueriesConfig{
+					Enabled: true,
+					Cache: config.AutomaticPersistedQueriesCacheConfig{
+						Size: 1024 * 1024,
+						TTL:  5, // 5 seconds
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				header := make(http.Header)
+				header.Add("graphql-client-name", "my-client")
+
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:      `{__typename}`,
+					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+					Header:     header,
+				})
+				require.Equal(t, `{"data":{"__typename":"Query"}}`, res.Body)
+
+				time.Sleep(3 * time.Second)
+
+				res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+					Header:     header,
+				})
+				require.Equal(t, `{"data":{"__typename":"Query"}}`, res2.Body)
+
+				time.Sleep(3 * time.Second)
+
+				res3 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+					Header:     header,
+				})
+				require.Equal(t, `{"data":{"__typename":"Query"}}`, res3.Body)
+			})
 		})
 	})
 
-	t.Run("Sha with query works", func(t *testing.T) {
-		testenv.Run(t, &testenv.Config{
-			ApqConfig: config.AutomaticPersistedQueriesConfig{
-				Enabled: true,
-				Cache: config.AutomaticPersistedQueriesCacheConfig{
-					Size: 1024 * 1024,
+	t.Run("redis cache", func(t *testing.T) {
+		var (
+			redisLocalUrl = "localhost:6379"
+			redisUrl      = fmt.Sprintf("redis://%s", redisLocalUrl)
+			redisPassword = "test"
+		)
+		t.Parallel()
+
+		t.Run("sha without query fails", func(t *testing.T) {
+			key := uuid.New().String()
+			t.Cleanup(func() {
+				client := redis.NewClient(&redis.Options{Addr: redisLocalUrl, Password: redisPassword})
+				del := client.Del(context.Background(), key)
+				require.NoError(t, del.Err())
+			})
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithStorageProviders(config.StorageProviders{
+						KV: []config.BaseStorageProvider{
+							{
+								URL: redisUrl,
+								ID:  "redis",
+							},
+						}})},
+				ApqConfig: config.AutomaticPersistedQueriesConfig{
+					Enabled: true,
+					Storage: config.AutomaticPersistedQueriesStorageConfig{
+						ProviderID:   "redis",
+						ObjectPrefix: key,
+					},
 				},
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			header := make(http.Header)
-			header.Add("graphql-client-name", "my-client")
-			res0, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
-				Header:     header,
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "does-not-exist"}}`),
+				})
+				require.NoError(t, err)
+				require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+				require.Equal(t, `{"errors":[{"message":"persisted Query not found"}]}`, res.Body)
 			})
-			require.NoError(t, err)
-			require.Equal(t, http.StatusBadRequest, res0.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"persisted Query not found"}]}`, res0.Body)
-
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query:      `{__typename}`,
-				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
-				Header:     header,
-			})
-			require.Equal(t, `{"data":{"__typename":"Query"}}`, res.Body)
-
-			res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
-				Header:     header,
-			})
-			require.Equal(t, `{"data":{"__typename":"Query"}}`, res2.Body)
 		})
-	})
 
-	t.Run("query is deleted after ttl expires", func(t *testing.T) {
-		testenv.Run(t, &testenv.Config{
-			ApqConfig: config.AutomaticPersistedQueriesConfig{
-				Enabled: true,
-				Cache: config.AutomaticPersistedQueriesCacheConfig{
-					Size: 1024 * 1024,
-					TTL:  2, // 2 seconds
+		t.Run("sha with query works", func(t *testing.T) {
+			key := uuid.New().String()
+			t.Cleanup(func() {
+				client := redis.NewClient(&redis.Options{Addr: redisLocalUrl, Password: redisPassword})
+				del := client.Del(context.Background(), key)
+				require.NoError(t, del.Err())
+			})
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithStorageProviders(config.StorageProviders{
+						KV: []config.BaseStorageProvider{
+							{
+								URL: redisUrl,
+								ID:  "redis",
+							},
+						}})},
+				ApqConfig: config.AutomaticPersistedQueriesConfig{
+					Enabled: true,
+					Storage: config.AutomaticPersistedQueriesStorageConfig{
+						ProviderID:   "redis",
+						ObjectPrefix: key,
+					},
 				},
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			header := make(http.Header)
-			header.Add("graphql-client-name", "my-client")
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				header := make(http.Header)
+				header.Add("graphql-client-name", "my-client")
+				res0, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+					Header:     header,
+				})
+				require.NoError(t, err)
+				require.Equal(t, http.StatusBadRequest, res0.Response.StatusCode)
+				require.Equal(t, `{"errors":[{"message":"persisted Query not found"}]}`, res0.Body)
 
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query:      `{__typename}`,
-				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
-				Header:     header,
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:      `{__typename}`,
+					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+					Header:     header,
+				})
+				require.Equal(t, `{"data":{"__typename":"Query"}}`, res.Body)
+
+				res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+					Header:     header,
+				})
+				require.Equal(t, `{"data":{"__typename":"Query"}}`, res2.Body)
 			})
-			require.Equal(t, `{"data":{"__typename":"Query"}}`, res.Body)
-
-			time.Sleep(3 * time.Second)
-
-			res0, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
-				Header:     header,
-			})
-			require.NoError(t, err)
-			require.Equal(t, http.StatusBadRequest, res0.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"persisted Query not found"}]}`, res0.Body)
 		})
-	})
 
-	t.Run("query renews ttl time", func(t *testing.T) {
-		testenv.Run(t, &testenv.Config{
-			ApqConfig: config.AutomaticPersistedQueriesConfig{
-				Enabled: true,
-				Cache: config.AutomaticPersistedQueriesCacheConfig{
-					Size: 1024 * 1024,
-					TTL:  5, // 5 seconds
+		t.Run("query is deleted after ttl expires", func(t *testing.T) {
+			key := uuid.New().String()
+			t.Cleanup(func() {
+				client := redis.NewClient(&redis.Options{Addr: redisLocalUrl, Password: redisPassword})
+				del := client.Del(context.Background(), key)
+				require.NoError(t, del.Err())
+			})
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithStorageProviders(config.StorageProviders{
+						KV: []config.BaseStorageProvider{
+							{
+								URL: redisUrl,
+								ID:  "redis",
+							},
+						}})},
+				ApqConfig: config.AutomaticPersistedQueriesConfig{
+					Enabled: true,
+					Cache: config.AutomaticPersistedQueriesCacheConfig{
+						TTL: 2, // 2 seconds
+					},
+					Storage: config.AutomaticPersistedQueriesStorageConfig{
+						ProviderID:   "redis",
+						ObjectPrefix: key,
+					},
 				},
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			header := make(http.Header)
-			header.Add("graphql-client-name", "my-client")
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				header := make(http.Header)
+				header.Add("graphql-client-name", "my-client")
 
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query:      `{__typename}`,
-				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
-				Header:     header,
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:      `{__typename}`,
+					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+					Header:     header,
+				})
+				require.Equal(t, `{"data":{"__typename":"Query"}}`, res.Body)
+
+				time.Sleep(3 * time.Second)
+
+				res0, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+					Header:     header,
+				})
+				require.NoError(t, err)
+				require.Equal(t, http.StatusBadRequest, res0.Response.StatusCode)
+				require.Equal(t, `{"errors":[{"message":"persisted Query not found"}]}`, res0.Body)
 			})
-			require.Equal(t, `{"data":{"__typename":"Query"}}`, res.Body)
+		})
 
-			time.Sleep(3 * time.Second)
-
-			res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
-				Header:     header,
+		t.Run("query renews ttl time", func(t *testing.T) {
+			key := uuid.New().String()
+			t.Cleanup(func() {
+				client := redis.NewClient(&redis.Options{Addr: redisLocalUrl, Password: redisPassword})
+				del := client.Del(context.Background(), key)
+				require.NoError(t, del.Err())
 			})
-			require.Equal(t, `{"data":{"__typename":"Query"}}`, res2.Body)
 
-			time.Sleep(3 * time.Second)
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithStorageProviders(config.StorageProviders{
+						KV: []config.BaseStorageProvider{
+							{
+								URL: redisUrl,
+								ID:  "redis",
+							},
+						}})},
+				ApqConfig: config.AutomaticPersistedQueriesConfig{
+					Enabled: true,
+					Cache: config.AutomaticPersistedQueriesCacheConfig{
+						TTL: 5,
+					},
+					Storage: config.AutomaticPersistedQueriesStorageConfig{
+						ProviderID:   "redis",
+						ObjectPrefix: key,
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				header := make(http.Header)
+				header.Add("graphql-client-name", "my-client")
 
-			res3 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
-				Header:     header,
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:      `{__typename}`,
+					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+					Header:     header,
+				})
+				require.Equal(t, `{"data":{"__typename":"Query"}}`, res.Body)
+
+				time.Sleep(3 * time.Second)
+
+				res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+					Header:     header,
+				})
+				require.Equal(t, `{"data":{"__typename":"Query"}}`, res2.Body)
+
+				time.Sleep(3 * time.Second)
+
+				res3 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+					Header:     header,
+				})
+				require.Equal(t, `{"data":{"__typename":"Query"}}`, res3.Body)
 			})
-			require.Equal(t, `{"data":{"__typename":"Query"}}`, res3.Body)
 		})
 	})
 }

@@ -803,6 +803,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 func (r *Router) buildClients() error {
 	s3Providers := map[string]config.S3StorageProvider{}
 	cdnProviders := map[string]config.BaseStorageProvider{}
+	kvProviders := map[string]config.BaseStorageProvider{}
 
 	for _, provider := range r.storageProviders.S3 {
 		if _, ok := s3Providers[provider.ID]; ok {
@@ -818,10 +819,16 @@ func (r *Router) buildClients() error {
 		cdnProviders[provider.ID] = provider
 	}
 
+	for _, provider := range r.storageProviders.KV {
+		if _, ok := kvProviders[provider.ID]; ok {
+			return fmt.Errorf("duplicate KV storage provider with id '%s'", provider.ID)
+		}
+		kvProviders[provider.ID] = provider
+	}
+
 	var pClient persistedoperation.Client
 
 	if provider, ok := cdnProviders[r.persistedOperationsConfig.Storage.ProviderID]; ok {
-
 		if r.graphApiToken == "" {
 			return errors.New("graph token is required to fetch persisted operations from CDN")
 		}
@@ -874,12 +881,30 @@ func (r *Router) buildClients() error {
 		)
 	}
 
+	var kvClient apq.KVClient
+	if provider, ok := kvProviders[r.automaticPersistedQueriesConfig.Storage.ProviderID]; ok {
+		c, err := apq.NewRedisClient(&apq.RedisOptions{
+			Logger:        r.logger,
+			StorageConfig: &provider,
+			Prefix:        r.automaticPersistedQueriesConfig.Storage.ObjectPrefix,
+		})
+
+		if err != nil {
+			return err
+		}
+		kvClient = c
+		r.logger.Info("Use redis as storage provider for automatic persisted operations",
+			zap.String("provider_id", provider.ID),
+		)
+	}
+
 	var apqClient apq.Client
 	if r.automaticPersistedQueriesConfig.Enabled {
 		var err error
 		apqClient, err = apq.NewClient(&apq.Options{
 			Logger:    r.logger,
 			ApqConfig: &r.automaticPersistedQueriesConfig,
+			KVClient:  kvClient,
 		})
 		if err != nil {
 			return err
