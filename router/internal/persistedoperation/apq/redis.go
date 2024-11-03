@@ -25,7 +25,7 @@ type redisClient struct {
 
 func NewRedisClient(opts *RedisOptions) (KVClient, error) {
 	if opts.StorageConfig == nil {
-		return nil, errors.New("Storage config is nil")
+		return nil, errors.New("storage config is nil")
 	}
 
 	options, err := redis.ParseURL(opts.StorageConfig.URL)
