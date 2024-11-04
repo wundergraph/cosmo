@@ -80,7 +80,7 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 	reqContext := getRequestContext(req.Context())
 	activeSubgraph := reqContext.ActiveSubgraph(req)
 
-	attributes := make([]attribute.KeyValue, 0, 2+len(reqContext.telemetry.metricAttrs))
+	attributes := reqContext.telemetry.AcquireAttributes()
 
 	if activeSubgraph != nil {
 		attributes = append(attributes,
@@ -90,8 +90,7 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 	}
 
 	attributes = append(attributes, reqContext.telemetry.metricAttrs...)
-
-	o := otelmetric.WithAttributes(attributes...)
+	o := otelmetric.WithAttributeSet(attribute.NewSet(attributes...))
 
 	inFlightDone := ct.metricStore.MeasureInFlight(req.Context(), reqContext.telemetry.metricSliceAttrs, o)
 	ct.metricStore.MeasureRequestSize(req.Context(), req.ContentLength, reqContext.telemetry.metricSliceAttrs, o)
@@ -101,6 +100,8 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 	return func(err error, resp *http.Response) {
 		inFlightDone()
 
+		defer reqContext.telemetry.ReleaseAttributes(attributes)
+
 		latency := time.Since(operationStartTime)
 
 		if err != nil {
@@ -109,7 +110,7 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 			attributes = append(attributes, semconv.HTTPStatusCode(resp.StatusCode))
 		}
 
-		o = otelmetric.WithAttributes(attributes...)
+		o = otelmetric.WithAttributeSet(attribute.NewSet(attributes...))
 
 		ct.metricStore.MeasureRequestCount(req.Context(), reqContext.telemetry.metricSliceAttrs, o)
 		ct.metricStore.MeasureLatency(req.Context(), latency, reqContext.telemetry.metricSliceAttrs, o)

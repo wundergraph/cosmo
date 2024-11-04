@@ -192,12 +192,17 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			otel.WgOperationProtocol.String(OperationProtocolHTTP.String()),
 		)
 
+		startAttrs := requestContext.telemetry.AcquireAttributes()
+		startAttrs = append(startAttrs, requestContext.telemetry.metricAttrs...)
+
 		metrics := h.metrics.StartOperation(
 			requestLogger,
 			r.ContentLength,
 			requestContext.telemetry.metricSliceAttrs,
-			otelmetric.WithAttributes(requestContext.telemetry.metricAttrs...),
+			otelmetric.WithAttributeSet(attribute.NewSet(startAttrs...)),
 		)
+
+		requestContext.telemetry.ReleaseAttributes(startAttrs)
 
 		routerSpan.SetAttributes(requestContext.telemetry.traceAttrs...)
 
@@ -733,7 +738,7 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 
 	enginePlanSpan.End()
 
-	planningAttrs := make([]attribute.KeyValue, 0, len(requestContext.telemetry.metricAttrs))
+	planningAttrs := requestContext.telemetry.AcquireAttributes()
 	planningAttrs = append(planningAttrs, otel.WgEnginePlanCacheHit.Bool(requestContext.operation.planCacheHit))
 	planningAttrs = append(planningAttrs, requestContext.telemetry.metricAttrs...)
 
@@ -741,8 +746,10 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 		req.Context(),
 		requestContext.operation.planningTime,
 		requestContext.telemetry.metricSliceAttrs,
-		otelmetric.WithAttributes(planningAttrs...),
+		otelmetric.WithAttributeSet(attribute.NewSet(planningAttrs...)),
 	)
+
+	requestContext.telemetry.ReleaseAttributes(planningAttrs)
 
 	// we could log the query plan only if query plans are calculated
 	if (h.queryPlansEnabled && requestContext.operation.executionOptions.IncludeQueryPlanInResponse) ||

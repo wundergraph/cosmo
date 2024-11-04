@@ -9,7 +9,6 @@ import (
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
@@ -88,12 +87,16 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 
 	activeSubgraph := reqContext.SubgraphByID(ds.ID)
 
-	attributes := make([]attribute.KeyValue, 4, 4+len(reqContext.telemetry.traceAttrs))
+	attributes := reqContext.telemetry.AcquireAttributes()
+	defer reqContext.telemetry.ReleaseAttributes(attributes)
+
 	// Subgraph response status code
-	attributes[0] = semconv.HTTPStatusCode(statusCode)
-	attributes[1] = rotel.WgComponentName.String("engine-loader")
-	attributes[2] = rotel.WgSubgraphID.String(activeSubgraph.Id)
-	attributes[3] = rotel.WgSubgraphName.String(activeSubgraph.Name)
+	attributes = append(attributes,
+		semconv.HTTPStatusCode(statusCode),
+		rotel.WgComponentName.String("engine-loader"),
+		rotel.WgSubgraphID.String(activeSubgraph.Id),
+		rotel.WgSubgraphName.String(activeSubgraph.Name),
+	)
 
 	if err != nil {
 
@@ -138,7 +141,7 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 		slices.Sort(errorCodesAttr)
 
 		if len(errorCodesAttr) > 0 {
-			attrs := make([]attribute.KeyValue, 0, len(attributes)+len(reqContext.telemetry.metricAttrs))
+			attrs := reqContext.telemetry.AcquireAttributes()
 			attrs = append(attrs, attributes...)
 			attrs = append(attrs, reqContext.telemetry.metricAttrs...)
 
@@ -147,6 +150,8 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 				reqContext.telemetry.metricSliceAttrs,
 				otelmetric.WithAttributes(attrs...),
 			)
+
+			reqContext.telemetry.ReleaseAttributes(attrs)
 		}
 	}
 

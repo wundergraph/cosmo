@@ -128,6 +128,12 @@ type RequestContext interface {
 	Authentication() authentication.Authentication
 }
 
+var metricAttrsPool = sync.Pool{
+	New: func() any {
+		return make([]attribute.KeyValue, 0, 20)
+	},
+}
+
 type requestTelemetryAttributes struct {
 	// traceAttrs are the base attributes for traces only
 	traceAttrs []attribute.KeyValue
@@ -142,6 +148,27 @@ type requestTelemetryAttributes struct {
 	metricsEnabled bool
 	// traceEnabled indicates if traces are enabled, if false, no trace attributes will be added
 	traceEnabled bool
+}
+
+func (r *requestTelemetryAttributes) AcquireAttributes() []attribute.KeyValue {
+	if !r.metricsEnabled && !r.traceEnabled {
+		return nil
+	}
+	return metricAttrsPool.Get().([]attribute.KeyValue)
+}
+
+func (r *requestTelemetryAttributes) ReleaseAttributes(attrs []attribute.KeyValue) {
+	if !r.metricsEnabled && !r.traceEnabled {
+		return
+	}
+	attrs = attrs[:0] // reset slice
+
+	// If the slice is too big, we don't pool it to avoid holding on to too much memory
+	if cap(attrs) > 128 {
+		return
+	}
+
+	metricAttrsPool.Put(attrs)
 }
 
 func (r *requestTelemetryAttributes) AddCustomMetricStringSliceAttr(key string, values []string) {

@@ -44,7 +44,9 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 
 	sliceAttrs := reqContext.telemetry.metricSliceAttrs
 
-	attrs := make([]attribute.KeyValue, 0, 1+len(reqContext.telemetry.metricAttrs))
+	attrs := reqContext.telemetry.AcquireAttributes()
+	defer reqContext.telemetry.ReleaseAttributes(attrs)
+
 	attrs = append(attrs, semconv.HTTPStatusCode(statusCode))
 	attrs = append(attrs, reqContext.telemetry.metricAttrs...)
 
@@ -55,10 +57,10 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 	if reqContext.error != nil {
 		// We don't store false values in the metrics, so only add the error attribute if it's true
 		attrs = append(attrs, otel.WgRequestError.Bool(true))
-		rm.MeasureRequestError(ctx, sliceAttrs, otelmetric.WithAttributes(attrs...))
+		rm.MeasureRequestError(ctx, sliceAttrs, otelmetric.WithAttributeSet(attribute.NewSet(attrs...)))
 	}
 
-	o := otelmetric.WithAttributes(attrs...)
+	o := otelmetric.WithAttributeSet(attribute.NewSet(attrs...))
 
 	rm.MeasureRequestCount(ctx, sliceAttrs, o)
 	rm.MeasureRequestSize(ctx, m.requestContentLength, sliceAttrs, o)
