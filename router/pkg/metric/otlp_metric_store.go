@@ -2,11 +2,9 @@ package metric
 
 import (
 	"context"
-	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.uber.org/zap"
-	"time"
 )
 
 const (
@@ -44,76 +42,52 @@ func NewOtlpMetricStore(logger *zap.Logger, meterProvider *metric.MeterProvider)
 	return m, nil
 }
 
-func (h *OtlpMetricStore) MeasureInFlight(ctx context.Context, attr ...attribute.KeyValue) func() {
-	attributes := make([]attribute.KeyValue, 0, len(attr))
-	attributes = append(attributes, attr...)
-	attributeAddOpt := otelmetric.WithAttributes(attributes...)
+func (h *OtlpMetricStore) MeasureInFlight(ctx context.Context, opts ...otelmetric.AddOption) func() {
 
 	if c, ok := h.measurements.upDownCounters[InFlightRequestsUpDownCounter]; ok {
-		c.Add(ctx, 1, attributeAddOpt)
+		c.Add(ctx, 1, opts...)
 	}
 
 	return func() {
 		if c, ok := h.measurements.upDownCounters[InFlightRequestsUpDownCounter]; ok {
-			c.Add(ctx, -1, attributeAddOpt)
+			c.Add(ctx, -1, opts...)
 		}
 	}
 }
 
-func (h *OtlpMetricStore) MeasureRequestCount(ctx context.Context, attr ...attribute.KeyValue) {
+func (h *OtlpMetricStore) MeasureRequestCount(ctx context.Context, opts ...otelmetric.AddOption) {
 	if c, ok := h.measurements.counters[RequestCounter]; ok {
-		attributes := make([]attribute.KeyValue, 0, len(attr))
-		attributes = append(attributes, attr...)
-		c.Add(ctx, 1, otelmetric.WithAttributes(attributes...))
+		c.Add(ctx, 1, opts...)
 	}
 }
 
-func (h *OtlpMetricStore) MeasureRequestSize(ctx context.Context, contentLength int64, attr ...attribute.KeyValue) {
+func (h *OtlpMetricStore) MeasureRequestSize(ctx context.Context, contentLength int64, opts ...otelmetric.AddOption) {
 	if c, ok := h.measurements.counters[RequestContentLengthCounter]; ok {
-		attributes := make([]attribute.KeyValue, 0, len(attr))
-		attributes = append(attributes, attr...)
-		c.Add(ctx, contentLength, otelmetric.WithAttributes(attributes...))
+		c.Add(ctx, contentLength, opts...)
 	}
 }
 
-func (h *OtlpMetricStore) MeasureResponseSize(ctx context.Context, size int64, attr ...attribute.KeyValue) {
+func (h *OtlpMetricStore) MeasureResponseSize(ctx context.Context, size int64, opts ...otelmetric.AddOption) {
 	if c, ok := h.measurements.counters[ResponseContentLengthCounter]; ok {
-		attributes := make([]attribute.KeyValue, 0, len(attr))
-		attributes = append(attributes, attr...)
-		c.Add(ctx, size, otelmetric.WithAttributes(attributes...))
+		c.Add(ctx, size, opts...)
 	}
 }
 
-func (h *OtlpMetricStore) MeasureLatency(ctx context.Context, latency time.Duration, attr ...attribute.KeyValue) {
+func (h *OtlpMetricStore) MeasureLatency(ctx context.Context, latency float64, opts ...otelmetric.RecordOption) {
 	if c, ok := h.measurements.histograms[ServerLatencyHistogram]; ok {
-		attributes := make([]attribute.KeyValue, 0, len(attr))
-		attributes = append(attributes, attr...)
-
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedTime := float64(latency) / float64(time.Millisecond)
-
-		c.Record(ctx, elapsedTime, otelmetric.WithAttributes(attributes...))
+		c.Record(ctx, latency, opts...)
 	}
 }
 
-func (h *OtlpMetricStore) MeasureRequestError(ctx context.Context, attr ...attribute.KeyValue) {
+func (h *OtlpMetricStore) MeasureRequestError(ctx context.Context, opts ...otelmetric.AddOption) {
 	if c, ok := h.measurements.counters[RequestError]; ok {
-		attributes := make([]attribute.KeyValue, 0, len(attr))
-		attributes = append(attributes, attr...)
-
-		c.Add(ctx, 1, otelmetric.WithAttributes(attributes...))
+		c.Add(ctx, 1, opts...)
 	}
 }
 
-func (h *OtlpMetricStore) MeasureOperationPlanningTime(ctx context.Context, planningTime time.Duration, attr ...attribute.KeyValue) {
+func (h *OtlpMetricStore) MeasureOperationPlanningTime(ctx context.Context, planningTime float64, opts ...otelmetric.RecordOption) {
 	if c, ok := h.measurements.histograms[OperationPlanningTime]; ok {
-		attributes := make([]attribute.KeyValue, 0, len(attr))
-		attributes = append(attributes, attr...)
-
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedTime := float64(planningTime) / float64(time.Millisecond)
-
-		c.Record(ctx, elapsedTime, otelmetric.WithAttributes(attributes...))
+		c.Record(ctx, planningTime, opts...)
 	}
 }
 

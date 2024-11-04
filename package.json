@@ -32,8 +32,8 @@
     "dist"
   ],
   "engines": {
-    "node": ">=20.0.0",
-    "pnpm": "8"
+    "node": ">=22.11.0",
+    "pnpm": "9"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,md,mdx,yml,yaml,css,json,graphql,gql}": [

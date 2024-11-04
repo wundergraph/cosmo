@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	otelmetric "go.opentelemetry.io/otel/metric"
 	"time"
 
 	"github.com/wundergraph/cosmo/router/pkg/otel"
@@ -36,32 +37,44 @@ type OperationMetrics struct {
 	trackUsageInfo       bool
 }
 
-func (m *OperationMetrics) Finish(ctx context.Context, err error, statusCode int, responseSize int, exportSynchronous bool, opContext *operationContext, attr []attribute.KeyValue) {
-	latency := time.Since(m.operationStartTime)
+func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, responseSize int, exportSynchronous bool) {
+	ctx := context.Background()
 
 	m.inflightMetric()
 
+	sliceAttrs := reqContext.telemetry.metricSliceAttrs
+
+	attrs := *reqContext.telemetry.AcquireAttributes()
+	defer reqContext.telemetry.ReleaseAttributes(&attrs)
+
+	attrs = append(attrs, semconv.HTTPStatusCode(statusCode))
+	attrs = append(attrs, reqContext.telemetry.metricAttrs...)
+
 	rm := m.routerMetrics.MetricStore()
 
-	if err != nil {
+	latency := time.Since(m.operationStartTime)
+
+	if reqContext.error != nil {
 		// We don't store false values in the metrics, so only add the error attribute if it's true
-		attr = append(attr, otel.WgRequestError.Bool(true))
-		rm.MeasureRequestError(ctx, attr...)
+		attrs = append(attrs, otel.WgRequestError.Bool(true))
+		rm.MeasureRequestError(ctx, sliceAttrs, otelmetric.WithAttributeSet(attribute.NewSet(attrs...)))
 	}
 
-	attr = append(attr, semconv.HTTPStatusCode(statusCode))
-	rm.MeasureRequestCount(ctx, attr...)
-	rm.MeasureRequestSize(ctx, m.requestContentLength, attr...)
-	rm.MeasureLatency(ctx, latency, attr...)
-	rm.MeasureResponseSize(ctx, int64(responseSize), attr...)
+	o := otelmetric.WithAttributeSet(attribute.NewSet(attrs...))
 
-	if m.trackUsageInfo && opContext != nil && !opContext.executionOptions.SkipLoader {
-		m.routerMetrics.ExportSchemaUsageInfo(opContext, statusCode, err != nil, exportSynchronous)
+	rm.MeasureRequestCount(ctx, sliceAttrs, o)
+	rm.MeasureRequestSize(ctx, m.requestContentLength, sliceAttrs, o)
+	rm.MeasureLatency(ctx, latency, sliceAttrs, o)
+	rm.MeasureResponseSize(ctx, int64(responseSize), sliceAttrs, o)
+
+	if m.trackUsageInfo && reqContext.operation != nil && !reqContext.operation.executionOptions.SkipLoader {
+		m.routerMetrics.ExportSchemaUsageInfo(reqContext.operation, statusCode, reqContext.error != nil, exportSynchronous)
 	}
 }
 
 type OperationMetricsOptions struct {
-	Attributes           []attribute.KeyValue
+	InFlightAddOption    otelmetric.AddOption
+	SliceAttributes      []attribute.KeyValue
 	RouterConfigVersion  string
 	RequestContentLength int64
 	RouterMetrics        RouterMetrics
@@ -74,7 +87,7 @@ type OperationMetricsOptions struct {
 func newOperationMetrics(opts OperationMetricsOptions) *OperationMetrics {
 	operationStartTime := time.Now()
 
-	inflightMetric := opts.RouterMetrics.MetricStore().MeasureInFlight(context.Background(), opts.Attributes...)
+	inflightMetric := opts.RouterMetrics.MetricStore().MeasureInFlight(context.Background(), opts.SliceAttributes, opts.InFlightAddOption)
 	return &OperationMetrics{
 		requestContentLength: opts.RequestContentLength,
 		operationStartTime:   operationStartTime,

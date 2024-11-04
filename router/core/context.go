@@ -128,47 +128,85 @@ type RequestContext interface {
 	Authentication() authentication.Authentication
 }
 
+var metricAttrsPool = sync.Pool{
+	New: func() any {
+		v := make([]attribute.KeyValue, 0, 20)
+		return &v
+	},
+}
+
 type requestTelemetryAttributes struct {
-	// attributes are the base attributes for traces and metrics
-	attributes []attribute.KeyValue
-	// metricAttributes are the attributes for metrics only
-	metricAttributes []attribute.KeyValue
-	// metricSetAttributes is map to quickly check if a metric attribute is set and to what key it is remapped
-	metricSetAttributes map[string]string
+	// traceAttrs are the base attributes for traces only
+	traceAttrs []attribute.KeyValue
+	// metricAttrs are the attributes for metrics only
+	metricAttrs []attribute.KeyValue
+	// metricSetAttrs is map to quickly check if a metric attribute is set and to what key it is remapped
+	metricSetAttrs map[string]string
+	// metricSliceAttrs are the attributes for metrics that are string slices and needs to be exploded for prometheus
+	metricSliceAttrs []attribute.KeyValue
+
+	// metricsEnabled indicates if metrics are enabled. If false, no metrics attributes will be added
+	metricsEnabled bool
+	// traceEnabled indicates if traces are enabled, if false, no trace attributes will be added
+	traceEnabled bool
+}
+
+func (r *requestTelemetryAttributes) AcquireAttributes() *[]attribute.KeyValue {
+	if !r.metricsEnabled && !r.traceEnabled {
+		return &[]attribute.KeyValue{}
+	}
+	return metricAttrsPool.Get().(*[]attribute.KeyValue)
+}
+
+func (r *requestTelemetryAttributes) ReleaseAttributes(attrs *[]attribute.KeyValue) {
+	if !r.metricsEnabled && !r.traceEnabled {
+		return
+	}
+
+	// reset slice
+	*attrs = (*attrs)[:0]
+
+	// If the slice is too big, we don't pool it to avoid holding on to too much memory
+	if cap(*attrs) > 128 {
+		return
+	}
+
+	metricAttrsPool.Put(attrs)
 }
 
 func (r *requestTelemetryAttributes) AddCustomMetricStringSliceAttr(key string, values []string) {
-	if remapKey, ok := r.metricSetAttributes[key]; ok && len(values) > 0 {
-		r.metricAttributes = append(r.metricAttributes, attribute.StringSlice(remapKey, values))
+	if !r.metricsEnabled {
+		return
+	}
+	if remapKey, ok := r.metricSetAttrs[key]; ok && len(values) > 0 {
+		v := attribute.StringSlice(remapKey, values)
+		r.metricSliceAttrs = append(r.metricSliceAttrs, v)
 	}
 }
 
-func (r *requestTelemetryAttributes) AddCustomMetricStringAttr(key string, value string) {
-	if remapKey, ok := r.metricSetAttributes[key]; ok && value != "" {
-		r.metricAttributes = append(r.metricAttributes, attribute.String(remapKey, value))
+func (r *requestTelemetryAttributes) addCustomMetricStringAttr(key string, value string) {
+	if !r.metricsEnabled {
+		return
+	}
+	if remapKey, ok := r.metricSetAttrs[key]; ok && value != "" {
+		v := attribute.String(remapKey, value)
+		r.metricAttrs = append(r.metricAttrs, v)
 	}
 }
 
-func (r *requestTelemetryAttributes) AddCommonAttribute(vals ...attribute.KeyValue) {
-	r.attributes = append(r.attributes, vals...)
-}
-
-func (r *requestTelemetryAttributes) CommonAttrs() []attribute.KeyValue {
-	return r.attributes
-}
-
-func (r *requestTelemetryAttributes) MetricAttrs(includeCommon bool) []attribute.KeyValue {
-	if includeCommon {
-		attrs := make([]attribute.KeyValue, 0, len(r.attributes)+len(r.metricAttributes))
-		attrs = append(attrs, r.attributes...)
-		attrs = append(attrs, r.metricAttributes...)
-		return attrs
+func (r *requestTelemetryAttributes) addCommonAttribute(vals ...attribute.KeyValue) {
+	if !r.metricsEnabled && !r.traceEnabled {
+		return
 	}
-	return r.metricAttributes
+	r.metricAttrs = append(r.metricAttrs, vals...)
+	r.traceAttrs = append(r.traceAttrs, vals...)
 }
 
-func (r *requestTelemetryAttributes) AddMetricAttribute(vals ...attribute.KeyValue) {
-	r.metricAttributes = append(r.attributes, vals...)
+func (r *requestTelemetryAttributes) addMetricAttribute(vals ...attribute.KeyValue) {
+	if !r.metricsEnabled {
+		return
+	}
+	r.metricAttrs = append(r.metricAttrs, vals...)
 }
 
 // requestContext is the default implementation of RequestContext
@@ -541,6 +579,8 @@ type requestContextOptions struct {
 	operationContext    *operationContext
 	requestLogger       *zap.Logger
 	metricSetAttributes map[string]string
+	metricsEnabled      bool
+	traceEnabled        bool
 	w                   http.ResponseWriter
 	r                   *http.Request
 }
@@ -553,9 +593,12 @@ func buildRequestContext(opts requestContextOptions) *requestContext {
 		request:        opts.r,
 		operation:      opts.operationContext,
 		telemetry: &requestTelemetryAttributes{
-			metricSetAttributes: opts.metricSetAttributes,
-			attributes:          make([]attribute.KeyValue, 0),
-			metricAttributes:    make([]attribute.KeyValue, 0),
+			metricSetAttrs:   opts.metricSetAttributes,
+			traceAttrs:       make([]attribute.KeyValue, 0, 10),
+			metricAttrs:      make([]attribute.KeyValue, 0, 10),
+			metricSliceAttrs: make([]attribute.KeyValue, 0, 10),
+			metricsEnabled:   opts.metricsEnabled,
+			traceEnabled:     opts.traceEnabled,
 		},
 		subgraphResolver: subgraphResolverFromContext(opts.r.Context()),
 	}

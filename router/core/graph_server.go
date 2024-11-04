@@ -127,40 +127,6 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 
 	s.baseOtelAttributes = baseOtelAttributes
 
-	if s.metricConfig.OpenTelemetry.RouterRuntime {
-		// Create runtime metrics exported to OTEL
-		s.runtimeMetrics = rmetric.NewRuntimeMetrics(
-			s.logger,
-			r.otlpMeterProvider,
-			// We track runtime metrics with base router config version
-			// even when we have multiple feature flags
-			append([]attribute.KeyValue{
-				otel.WgRouterConfigVersion.String(s.baseRouterConfigVersion),
-			}, s.baseOtelAttributes...),
-			s.processStartTime,
-		)
-
-		// Start runtime metrics
-		if err := s.runtimeMetrics.Start(); err != nil {
-			return nil, err
-		}
-	}
-
-	// Prometheus metricStore rely on OTLP metricStore
-	if s.metricConfig.IsEnabled() {
-		m, err := rmetric.NewStore(
-			rmetric.WithPromMeterProvider(s.promMeterProvider),
-			rmetric.WithOtlpMeterProvider(s.otlpMeterProvider),
-			rmetric.WithLogger(s.logger),
-			rmetric.WithProcessStartTime(s.processStartTime),
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create metric handler: %w", err)
-		}
-
-		s.metricStore = m
-	}
-
 	if s.registrationInfo != nil {
 		publicKey, err := jwt.ParseECPublicKeyFromPEM([]byte(s.registrationInfo.GetGraphPublicKey()))
 		if err != nil {
@@ -358,6 +324,43 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		baseOtelAttributes = append(baseOtelAttributes, otel.WgFeatureFlag.String(featureFlagName))
 	}
 
+	if s.metricConfig.OpenTelemetry.RouterRuntime {
+		// Create runtime metrics exported to OTEL
+		s.runtimeMetrics = rmetric.NewRuntimeMetrics(
+			s.logger,
+			s.otlpMeterProvider,
+			// We track runtime metrics with base router config version
+			// even when we have multiple feature flags
+			append([]attribute.KeyValue{
+				otel.WgRouterConfigVersion.String(s.baseRouterConfigVersion),
+			}, s.baseOtelAttributes...),
+			s.processStartTime,
+		)
+
+		// Start runtime metrics
+		if err := s.runtimeMetrics.Start(); err != nil {
+			return nil, err
+		}
+	}
+
+	metricsEnabled := s.metricConfig.IsEnabled()
+	traceEnabled := s.traceConfig.Enabled
+
+	// Prometheus metricStore rely on OTLP metricStore
+	if metricsEnabled {
+		m, err := rmetric.NewStore(
+			rmetric.WithPromMeterProvider(s.promMeterProvider),
+			rmetric.WithOtlpMeterProvider(s.otlpMeterProvider),
+			rmetric.WithLogger(s.logger),
+			rmetric.WithProcessStartTime(s.processStartTime),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create metric handler: %w", err)
+		}
+
+		s.metricStore = m
+	}
+
 	subgraphs, err := configureSubgraphOverwrites(
 		engineConfig,
 		configSubgraphs,
@@ -467,51 +470,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		logger:              s.logger,
 	})
 
-	var traceHandler *rtrace.Middleware
-
-	if s.traceConfig.Enabled {
-		spanStartOptions := []oteltrace.SpanStartOption{
-			oteltrace.WithAttributes(
-				otel.RouterServerAttribute,
-				otel.WgRouterRootSpan.Bool(true),
-			),
-		}
-
-		if s.traceConfig.WithNewRoot {
-			spanStartOptions = append(spanStartOptions, oteltrace.WithNewRoot())
-		}
-
-		traceHandler = rtrace.NewMiddleware(
-			rtrace.WithTracePreHandler(
-				func(r *http.Request, w http.ResponseWriter) {
-					reqContext := getRequestContext(r.Context())
-					traceID := rtrace.GetTraceID(r.Context())
-					requestLogger := reqContext.Logger().With(logging.WithTraceID(traceID))
-
-					reqContext.logger = requestLogger
-
-					span := oteltrace.SpanFromContext(r.Context())
-					span.SetAttributes(reqContext.telemetry.CommonAttrs()...)
-
-					// Set the trace ID in the response header
-					if s.traceConfig.ResponseTraceHeader.Enabled {
-						w.Header().Set(s.traceConfig.ResponseTraceHeader.HeaderName, traceID)
-					}
-				}),
-			rtrace.WithOtelHttp(
-				otelhttp.WithSpanOptions(spanStartOptions...),
-				otelhttp.WithFilter(rtrace.CommonRequestFilter),
-				otelhttp.WithFilter(rtrace.PrefixRequestFilter(
-					[]string{s.healthCheckPath, s.readinessCheckPath, s.livenessCheckPath}),
-				),
-				// Disable built-in metricStore through NoopMeterProvider
-				otelhttp.WithMeterProvider(sdkmetric.NewMeterProvider()),
-				otelhttp.WithSpanNameFormatter(SpanNameFormatter),
-				otelhttp.WithTracerProvider(s.tracerProvider),
-			),
-		)
-	}
-
 	baseLogFields := []zapcore.Field{
 		zap.String("config_version", routerConfigVersion),
 	}
@@ -534,9 +492,12 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 				operationContext:    nil,
 				requestLogger:       requestLogger,
 				metricSetAttributes: b,
+				metricsEnabled:      metricsEnabled,
+				traceEnabled:        traceEnabled,
 				w:                   w,
 				r:                   r,
 			})
+
 			r = r.WithContext(withRequestContext(r.Context(), reqContext))
 
 			// For debugging purposes, we can validate from what version of the config the request is coming from
@@ -588,24 +549,62 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 			reqContext := getRequestContext(r.Context())
-			attributes := make([]attribute.KeyValue, 0, len(baseOtelAttributes))
-			attributes = append(attributes, baseOtelAttributes...)
+
+			reqContext.telemetry.addCommonAttribute(baseOtelAttributes...)
 
 			if commonAttrRequestMapper != nil {
-				attributes = append(attributes, commonAttrRequestMapper(r)...)
+				reqContext.telemetry.addCommonAttribute(commonAttrRequestMapper(r)...)
 			}
 			if metricAttrRequestMapper != nil {
-				reqContext.telemetry.AddMetricAttribute(metricAttrRequestMapper(r)...)
+				reqContext.telemetry.addMetricAttribute(metricAttrRequestMapper(r)...)
 			}
-
-			reqContext.telemetry.AddCommonAttribute(attributes...)
 
 			h.ServeHTTP(w, r)
 		})
 	})
 
-	// Register the trace middleware before the request logger, so we can log the trace ID
-	if traceHandler != nil {
+	if s.traceConfig.Enabled {
+		spanStartOptions := []oteltrace.SpanStartOption{
+			oteltrace.WithAttributes(
+				otel.RouterServerAttribute,
+				otel.WgRouterRootSpan.Bool(true),
+			),
+		}
+
+		if s.traceConfig.WithNewRoot {
+			spanStartOptions = append(spanStartOptions, oteltrace.WithNewRoot())
+		}
+
+		traceHandler := rtrace.NewMiddleware(
+			rtrace.WithTracePreHandler(
+				func(r *http.Request, w http.ResponseWriter) {
+					reqContext := getRequestContext(r.Context())
+					traceID := rtrace.GetTraceID(r.Context())
+					requestLogger := reqContext.Logger().With(logging.WithTraceID(traceID))
+
+					reqContext.logger = requestLogger
+
+					span := oteltrace.SpanFromContext(r.Context())
+					span.SetAttributes(reqContext.telemetry.traceAttrs...)
+
+					// Set the trace ID in the response header
+					if s.traceConfig.ResponseTraceHeader.Enabled {
+						w.Header().Set(s.traceConfig.ResponseTraceHeader.HeaderName, traceID)
+					}
+				}),
+			rtrace.WithOtelHttp(
+				otelhttp.WithSpanOptions(spanStartOptions...),
+				otelhttp.WithFilter(rtrace.CommonRequestFilter),
+				otelhttp.WithFilter(rtrace.PrefixRequestFilter(
+					[]string{s.healthCheckPath, s.readinessCheckPath, s.livenessCheckPath}),
+				),
+				// Disable built-in metricStore through NoopMeterProvider
+				otelhttp.WithMeterProvider(sdkmetric.NewMeterProvider()),
+				otelhttp.WithSpanNameFormatter(SpanNameFormatter),
+				otelhttp.WithTracerProvider(s.tracerProvider),
+			),
+		)
+
 		httpRouter.Use(traceHandler.Handler)
 	}
 

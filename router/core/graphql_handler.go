@@ -51,9 +51,9 @@ func (e *reportError) Error() string {
 	if len(e.report.InternalErrors) > 0 {
 		return errors.Join(e.report.InternalErrors...).Error()
 	}
-	var messages []string
-	for _, e := range e.report.ExternalErrors {
-		messages = append(messages, e.Message)
+	messages := make([]string, len(e.report.ExternalErrors))
+	for i, e := range e.report.ExternalErrors {
+		messages[i] = e.Message
 	}
 	return strings.Join(messages, ", ")
 }
@@ -133,7 +133,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	executionContext, graphqlExecutionSpan := h.tracer.Start(r.Context(), "Operation - Execute",
 		trace.WithSpanKind(trace.SpanKindInternal),
-		trace.WithAttributes(requestContext.telemetry.CommonAttrs()...),
+		trace.WithAttributes(requestContext.telemetry.traceAttrs...),
 	)
 	defer graphqlExecutionSpan.End()
 
