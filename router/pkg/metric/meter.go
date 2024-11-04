@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -92,6 +93,7 @@ var (
 	// We choose delta temporality for synchronous instruments because we can easily sum the values over a time range.
 	// We choose cumulative temporality for asynchronous instruments because we can query the last cumulative value without extra work.
 	// See https://opentelemetry.io/docs/specs/otel/metrics/supplementary-guidelines/#aggregation-temporality for more information.
+	// and https://grafana.com/blog/2023/09/26/opentelemetry-metrics-a-guide-to-delta-vs.-cumulative-temporality-trade-offs/
 	//
 	defaultCLoudTemporalitySelector = func(kind sdkmetric.InstrumentKind) metricdata.Temporality {
 		switch kind {
@@ -172,7 +174,9 @@ func getTemporalitySelector(temporality otelconfig.ExporterTemporality, log *zap
 }
 
 func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.Exporter, error) {
-	u, err := url.Parse(exp.Endpoint)
+	// Parse the URL to get the host and port
+	// The stdlib url.Parse does not parse localhost alone, so we need to add the scheme
+	u, err := parseURL(exp.Endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("invalid OpenTelemetry endpoint %q: %w", exp.Endpoint, err)
 	}
@@ -403,4 +407,11 @@ func isKeyInSlice(key attribute.Key, keys []attribute.Key) bool {
 		}
 	}
 	return false
+}
+
+func parseURL(input string) (*url.URL, error) {
+	if !strings.Contains(input, "://") {
+		input = "http://" + input
+	}
+	return url.Parse(input)
 }

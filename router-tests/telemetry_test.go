@@ -410,6 +410,7 @@ func TestTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(
+								semconv.HTTPStatusCode(200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -454,6 +455,7 @@ func TestTelemetry(t *testing.T) {
 					DataPoints: []metricdata.HistogramDataPoint[float64]{
 						{
 							Attributes: attribute.NewSet(
+								semconv.HTTPStatusCode(200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -873,6 +875,7 @@ func TestTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(
 								attribute.String("custom", "value"),
+								semconv.HTTPStatusCode(200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -919,6 +922,7 @@ func TestTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(
 								attribute.String("custom", "value"),
+								semconv.HTTPStatusCode(200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -1272,6 +1276,7 @@ func TestTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(
 								attribute.String("custom", "value"),
+								semconv.HTTPStatusCode(200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -1318,6 +1323,7 @@ func TestTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(
 								attribute.String("custom", "value"),
+								semconv.HTTPStatusCode(200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -1648,6 +1654,7 @@ func TestTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(
+								semconv.HTTPStatusCode(200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -1694,6 +1701,7 @@ func TestTelemetry(t *testing.T) {
 					DataPoints: []metricdata.HistogramDataPoint[float64]{
 						{
 							Attributes: attribute.NewSet(
+								semconv.HTTPStatusCode(200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -2738,6 +2746,7 @@ func TestTelemetry(t *testing.T) {
 								Attributes: attribute.NewSet(
 									attribute.String("from_header", "custom-value"),
 									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
+									semconv.HTTPStatusCode(403),
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
@@ -2779,6 +2788,7 @@ func TestTelemetry(t *testing.T) {
 								Attributes: attribute.NewSet(
 									attribute.String("from_header", "custom-value"),
 									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
+									semconv.HTTPStatusCode(200),
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
@@ -2809,6 +2819,7 @@ func TestTelemetry(t *testing.T) {
 								Attributes: attribute.NewSet(
 									attribute.String("from_header", "custom-value"),
 									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
+									semconv.HTTPStatusCode(403),
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
@@ -2826,13 +2837,13 @@ func TestTelemetry(t *testing.T) {
 							},
 							{
 								Attributes: attribute.NewSet(
-									attribute.String("from_header", "custom-value"),
-									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
-									semconv.HTTPStatusCode(200),
-									attribute.StringSlice("error_codes", []string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
-									attribute.StringSlice("services", []string{"employees", "products"}),
-									attribute.StringSlice("error_services", []string{"products"}),
 									otel.WgRequestError.Bool(true),
+									attribute.StringSlice("error_codes", []string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
+									attribute.StringSlice("error_services", []string{"products"}),
+									attribute.String("from_header", "custom-value"),
+									semconv.HTTPStatusCode(200),
+									attribute.StringSlice("services", []string{"employees", "products"}),
+									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
@@ -2850,6 +2861,7 @@ func TestTelemetry(t *testing.T) {
 								Attributes: attribute.NewSet(
 									attribute.String("from_header", "custom-value"),
 									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
+									semconv.HTTPStatusCode(200),
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
@@ -3139,6 +3151,7 @@ func TestTelemetry(t *testing.T) {
 								Attributes: attribute.NewSet(
 									attribute.String("from_header", "custom-value"),
 									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
+									semconv.HTTPStatusCode(200),
 									attribute.StringSlice("error_codes", []string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
 									attribute.StringSlice("services", []string{"employees", "products"}),
 									attribute.StringSlice("error_services", []string{"products"}),
