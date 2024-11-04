@@ -22,10 +22,11 @@ func NewOperationsCache(cacheSize int64) (*OperationsCache, error) {
 	}
 
 	cache, err := ristretto.NewCache(&ristretto.Config[string, []byte]{
-		// assume an average of persistentAverageCacheEntrySize per operation, then
-		// multiply by 10 to obtain the recommended number of counters
-		NumCounters: (cacheSize * 10) / persistentAverageCacheEntrySize,
+		NumCounters: cacheSize * 10,
 		MaxCost:     cacheSize,
+		Cost: func(value []byte) int64 {
+			return int64(len(value))
+		},
 		BufferItems: 64,
 	})
 	if err != nil {
