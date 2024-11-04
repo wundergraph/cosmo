@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.137.0](https://github.com/wundergraph/cosmo/compare/router@0.136.2...router@0.137.0) (2024-11-04)
+
+### Features
+
+* **telemetry:** improve memory consumption ([#1328](https://github.com/wundergraph/cosmo/issues/1328)) ([2b361ee](https://github.com/wundergraph/cosmo/commit/2b361eee737ff8904890146442bc402acf29e8ed)) (@StarpTech)
+
 ## [0.136.2](https://github.com/wundergraph/cosmo/compare/router@0.136.1...router@0.136.2) (2024-11-04)
 
 ### Bug Fixes
