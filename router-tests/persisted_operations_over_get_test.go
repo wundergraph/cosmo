@@ -175,6 +175,32 @@ func TestAutomatedPersistedQueriesOverGET(t *testing.T) {
 			require.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, res2.Body)
 		})
 	})
+
+	t.Run("Only queries are supported over GET", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			ApqConfig: config.AutomaticPersistedQueriesConfig{
+				Enabled: true,
+				Cache: config.AutomaticPersistedQueriesCacheConfig{
+					Size: 1024 * 1024,
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := make(http.Header)
+			header.Add("graphql-client-name", "my-client")
+			res, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
+				Query: `mutation updateEmployeeTag {
+  updateEmployeeTag(id: 10, tag: "dd") {
+    id
+  }
+}`,
+				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "51804ed57938b6104d812ca352741ff69d7a8a30d67f240fba2b5a1e97793f9e"}}`),
+				Header:     header,
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusMethodNotAllowed, res.Response.StatusCode)
+			require.Equal(t, `{"errors":[{"message":"Mutations can only be sent over HTTP POST"}]}`, res.Body)
+		})
+	})
 }
 
 func TestPersistedSubscriptionOverGET(t *testing.T) {

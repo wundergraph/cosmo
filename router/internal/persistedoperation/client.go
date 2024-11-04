@@ -68,14 +68,21 @@ func NewClient(opts *Options) (SaveClient, error) {
 }
 
 func (c client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, bool, error) {
+	if c.apqClient != nil && c.apqClient.Enabled() {
+		resp, apqErr := c.apqClient.PersistedOperation(ctx, clientName, sha256Hash)
+		if len(resp) > 0 || apqErr != nil {
+			return resp, true, apqErr
+		}
+	}
+
 	if data := c.cache.Get(clientName, sha256Hash); data != nil {
 		return data, false, nil
 	}
 
 	content, _, err := c.providerClient.PersistedOperation(ctx, clientName, sha256Hash)
 	if errors.As(err, &PoNotFoundErr) && c.apqClient != nil {
-		resp, apqErr := c.apqClient.PersistedOperation(ctx, clientName, sha256Hash)
-		return resp, true, apqErr
+		// This could well be the first time a client is requesting an APQ operation and the query is attached to the request. Return without error here, and we'll verify the operation later.
+		return content, true, nil
 	}
 	if err != nil {
 		return nil, false, err
@@ -100,4 +107,8 @@ func (c client) SaveOperation(ctx context.Context, clientName, sha256Hash, opera
 
 func (c client) Close() {
 	c.providerClient.Close()
+	c.cache.Cache.Close()
+	if c.apqClient != nil {
+		c.apqClient.Close()
+	}
 }

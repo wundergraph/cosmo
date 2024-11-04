@@ -90,5 +90,10 @@ func (c *client) SaveOperation(ctx context.Context, clientName, sha256Hash strin
 }
 
 func (c *client) Close() {
-	c.kvClient.Close()
+	if c.kvClient != nil {
+		c.kvClient.Close()
+	}
+	if c.cache != nil {
+		c.cache.Cache.Close()
+	}
 }
