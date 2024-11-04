@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.136.2](https://github.com/wundergraph/cosmo/compare/router@0.136.1...router@0.136.2) (2024-11-04)
+
+### Bug Fixes
+
+* playground undefined and callee error ([#1333](https://github.com/wundergraph/cosmo/issues/1333)) ([4b07060](https://github.com/wundergraph/cosmo/commit/4b0706080da881aadda1c8cd8577cbdccbf86494)) (@thisisnithin)
+
 ## [0.136.1](https://github.com/wundergraph/cosmo/compare/router@0.136.0...router@0.136.1) (2024-11-04)
 
 **Note:** Version bump only for package router
