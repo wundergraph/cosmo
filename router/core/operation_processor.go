@@ -369,10 +369,10 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 		return true, nil
 	}
 
-	persistedOperationData, err := o.operationProcessor.persistedOperationClient.PersistedOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
+	persistedOperationData, isApq, err := o.operationProcessor.persistedOperationClient.PersistedOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
 	if err != nil {
 		return false, err
-	} else if persistedOperationData == nil && o.parsedOperation.Request.Query == "" {
+	} else if isApq && persistedOperationData == nil && o.parsedOperation.Request.Query == "" {
 		// If the client has APQ enabled, throw an error if the operation wasn't attached to the request
 		return false, &persistedoperation.PersistentOperationNotFoundError{
 			ClientName: clientInfo.Name,
@@ -386,7 +386,7 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 	}
 
 	// If the operation was fetched with APQ, save it again to renew the TTL
-	if o.operationProcessor.persistedOperationClient.ApqEnabled() {
+	if isApq {
 		if err = o.operationProcessor.persistedOperationClient.SaveOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.Request.Query); err != nil {
 			return false, err
 		}

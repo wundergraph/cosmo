@@ -26,7 +26,7 @@ func (e PersistentOperationNotFoundError) Error() string {
 }
 
 type Client interface {
-	PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error)
+	PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, bool, error)
 	Close()
 }
 
@@ -67,22 +67,23 @@ func NewClient(opts *Options) (SaveClient, error) {
 	}, nil
 }
 
-func (c client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error) {
+func (c client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, bool, error) {
 	if data := c.cache.Get(clientName, sha256Hash); data != nil {
-		return data, nil
+		return data, false, nil
 	}
 
-	content, err := c.providerClient.PersistedOperation(ctx, clientName, sha256Hash)
+	content, _, err := c.providerClient.PersistedOperation(ctx, clientName, sha256Hash)
 	if errors.As(err, &PoNotFoundErr) && c.apqClient != nil {
-		return c.apqClient.PersistedOperation(ctx, clientName, sha256Hash)
+		resp, apqErr := c.apqClient.PersistedOperation(ctx, clientName, sha256Hash)
+		return resp, true, apqErr
 	}
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	c.cache.Set(clientName, sha256Hash, content, 0)
 
-	return content, nil
+	return content, false, nil
 }
 
 func (c client) ApqEnabled() bool {
