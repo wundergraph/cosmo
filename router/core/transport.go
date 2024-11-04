@@ -80,7 +80,7 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 	reqContext := getRequestContext(req.Context())
 	activeSubgraph := reqContext.ActiveSubgraph(req)
 
-	attributes := reqContext.telemetry.AcquireAttributes()
+	attributes := *reqContext.telemetry.AcquireAttributes()
 
 	if activeSubgraph != nil {
 		attributes = append(attributes,
@@ -98,9 +98,9 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 	operationStartTime := time.Now()
 
 	return func(err error, resp *http.Response) {
-		inFlightDone()
+		defer reqContext.telemetry.ReleaseAttributes(&attributes)
 
-		defer reqContext.telemetry.ReleaseAttributes(attributes)
+		inFlightDone()
 
 		latency := time.Since(operationStartTime)
 

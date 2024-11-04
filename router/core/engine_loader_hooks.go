@@ -87,8 +87,8 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 
 	activeSubgraph := reqContext.SubgraphByID(ds.ID)
 
-	attributes := reqContext.telemetry.AcquireAttributes()
-	defer reqContext.telemetry.ReleaseAttributes(attributes)
+	attributes := *reqContext.telemetry.AcquireAttributes()
+	defer reqContext.telemetry.ReleaseAttributes(&attributes)
 
 	// Subgraph response status code
 	attributes = append(attributes,
@@ -141,7 +141,7 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 		slices.Sort(errorCodesAttr)
 
 		if len(errorCodesAttr) > 0 {
-			attrs := reqContext.telemetry.AcquireAttributes()
+			attrs := *reqContext.telemetry.AcquireAttributes()
 			attrs = append(attrs, attributes...)
 			attrs = append(attrs, reqContext.telemetry.metricAttrs...)
 
@@ -151,7 +151,7 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 				otelmetric.WithAttributes(attrs...),
 			)
 
-			reqContext.telemetry.ReleaseAttributes(attrs)
+			reqContext.telemetry.ReleaseAttributes(&attrs)
 		}
 	}
 

@@ -130,7 +130,8 @@ type RequestContext interface {
 
 var metricAttrsPool = sync.Pool{
 	New: func() any {
-		return make([]attribute.KeyValue, 0, 20)
+		v := make([]attribute.KeyValue, 0, 20)
+		return &v
 	},
 }
 
@@ -150,21 +151,23 @@ type requestTelemetryAttributes struct {
 	traceEnabled bool
 }
 
-func (r *requestTelemetryAttributes) AcquireAttributes() []attribute.KeyValue {
+func (r *requestTelemetryAttributes) AcquireAttributes() *[]attribute.KeyValue {
 	if !r.metricsEnabled && !r.traceEnabled {
-		return nil
+		return &[]attribute.KeyValue{}
 	}
-	return metricAttrsPool.Get().([]attribute.KeyValue)
+	return metricAttrsPool.Get().(*[]attribute.KeyValue)
 }
 
-func (r *requestTelemetryAttributes) ReleaseAttributes(attrs []attribute.KeyValue) {
+func (r *requestTelemetryAttributes) ReleaseAttributes(attrs *[]attribute.KeyValue) {
 	if !r.metricsEnabled && !r.traceEnabled {
 		return
 	}
-	attrs = attrs[:0] // reset slice
+
+	// reset slice
+	*attrs = (*attrs)[:0]
 
 	// If the slice is too big, we don't pool it to avoid holding on to too much memory
-	if cap(attrs) > 128 {
+	if cap(*attrs) > 128 {
 		return
 	}
 

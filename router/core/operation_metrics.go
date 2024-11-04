@@ -44,8 +44,8 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 
 	sliceAttrs := reqContext.telemetry.metricSliceAttrs
 
-	attrs := reqContext.telemetry.AcquireAttributes()
-	defer reqContext.telemetry.ReleaseAttributes(attrs)
+	attrs := *reqContext.telemetry.AcquireAttributes()
+	defer reqContext.telemetry.ReleaseAttributes(&attrs)
 
 	attrs = append(attrs, semconv.HTTPStatusCode(statusCode))
 	attrs = append(attrs, reqContext.telemetry.metricAttrs...)
