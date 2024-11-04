@@ -156,7 +156,7 @@
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Enable fallback storage provider. The default value is false."
+          "description": "Enable automatic persisted queries."
         },
         "cache": {
           "type": "object",
@@ -169,18 +169,18 @@
                 "minimum": "10MB"
               },
               "format": "bytes-string",
-              "description": "The size of the cache used. The default value is 100MB."
+              "description": "The size of the in-place cache used (if no external cache is designated). The default value is 100MB."
             },
             "ttl": {
               "type": "integer",
-              "default": -1,
-              "minimum": -1,
-              "description": "The ttl of the cache. The ttl is used to specify the time-to-live of the cache. The default value is -1, which means that the cache never expires."
+              "default": 0,
+              "minimum": 0,
+              "description": "The ttl of the cache (in seconds). The ttl is used to specify the time-to-live of the cache. The default value is 0, which means that the cache never expires."
             }
           }
         },
         "storage": {
-          "description": "The storage provider for persisted operation. Only one provider can be active. When no provider is specified, the router will a local in-memory cache for retaining APQ queries",
+          "description": "The storage provider for automatic persisted operation. Only one provider can be active. When no provider is specified, the router will use a local in-memory cache for retaining APQ queries",
           "required": ["provider_id", "object_prefix"],
           "properties": {
             "provider_id": {
@@ -189,7 +189,7 @@
             },
             "object_prefix": {
               "type": "string",
-              "description": "The prefix of the object in the storage provider location. The prefix is put in front of the operation SHA256 hash. /<prefix>/<sha256>.json"
+              "description": "The prefix of the object in the storage provider location. The prefix is put in front of the operation SHA256 hash. /<prefix>/<sha256>"
             }
           }
         }

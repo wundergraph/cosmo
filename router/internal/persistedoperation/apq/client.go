@@ -64,11 +64,11 @@ func NewClient(opts *Options) (Client, error) {
 	return cl, err
 }
 
-func (c client) Enabled() bool {
+func (c *client) Enabled() bool {
 	return c.enabled
 }
 
-func (c client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error) {
+func (c *client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error) {
 	if c.kvClient != nil {
 		return c.kvClient.Get(ctx, clientName, sha256Hash)
 	}
@@ -78,7 +78,7 @@ func (c client) PersistedOperation(ctx context.Context, clientName string, sha25
 	return c.cache.Get(clientName, sha256Hash), nil
 }
 
-func (c client) SaveOperation(ctx context.Context, clientName, sha256Hash string, operationBody []byte) error {
+func (c *client) SaveOperation(ctx context.Context, clientName, sha256Hash string, operationBody []byte) error {
 	if c.kvClient != nil {
 		return c.kvClient.Set(ctx, sha256Hash, operationBody, c.ttl)
 	}
@@ -89,6 +89,6 @@ func (c client) SaveOperation(ctx context.Context, clientName, sha256Hash string
 	return nil
 }
 
-func (c client) Close() {
+func (c *client) Close() {
 	c.kvClient.Close()
 }

@@ -47,10 +47,6 @@ func NewRedisClient(opts *RedisOptions) (KVClient, error) {
 func (r *redisClient) Get(ctx context.Context, clientName, operationHash string) ([]byte, error) {
 	cmd := r.client.Get(ctx, r.prefix+operationHash)
 	if errors.Is(cmd.Err(), redis.Nil) {
-		//return nil, &operationstorage.PersistentOperationNotFoundError{
-		//	ClientName: clientName,
-		//	Sha256Hash: operationHash,
-		//}
 		return nil, nil
 	}
 	return cmd.Bytes()
