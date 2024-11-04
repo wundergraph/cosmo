@@ -140,7 +140,7 @@ func getTemporalitySelector(temporality otelconfig.ExporterTemporality, log *zap
 	} else if temporality == otelconfig.CustomCloudTemporality {
 		return defaultCloudTemporalitySelector
 	} else {
-		// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/sdk.md#metricreader:~:text=The%20output%20temporality%20(optional)%2C%20a%20function%20of%20instrument%20kind.%20This%20function%20SHOULD%20be%20obtained%20from%20the%20exporter.%20If%20not%20configured%2C%20the%20Cumulative%20temporality%20SHOULD%20be%20used.
+		// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/sdk.md#metricreader
 		// if the temporality is not configured, we fallback the to the default as per OTEL-SDK
 		log.Debug("The temporality selector falls back to the default.")
 		return cumulativeTemporalitySelector
