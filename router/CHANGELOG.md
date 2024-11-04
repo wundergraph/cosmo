@@ -4,6 +4,28 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.137.1](https://github.com/wundergraph/cosmo/compare/router@0.137.0...router@0.137.1) (2024-11-04)
+
+### Bug Fixes
+
+* **prometheus:** reduce buckets to prevent cardinality issues ([#1329](https://github.com/wundergraph/cosmo/issues/1329)) ([a3b80f0](https://github.com/wundergraph/cosmo/commit/a3b80f0a0a9606d26c1b5a9d9b5f50062cdc93bc)) (@StarpTech)
+
+# [0.137.0](https://github.com/wundergraph/cosmo/compare/router@0.136.2...router@0.137.0) (2024-11-04)
+
+### Features
+
+* **telemetry:** improve memory consumption ([#1328](https://github.com/wundergraph/cosmo/issues/1328)) ([2b361ee](https://github.com/wundergraph/cosmo/commit/2b361eee737ff8904890146442bc402acf29e8ed)) (@StarpTech)
+
+## [0.136.2](https://github.com/wundergraph/cosmo/compare/router@0.136.1...router@0.136.2) (2024-11-04)
+
+### Bug Fixes
+
+* playground undefined and callee error ([#1333](https://github.com/wundergraph/cosmo/issues/1333)) ([4b07060](https://github.com/wundergraph/cosmo/commit/4b0706080da881aadda1c8cd8577cbdccbf86494)) (@thisisnithin)
+
+## [0.136.1](https://github.com/wundergraph/cosmo/compare/router@0.136.0...router@0.136.1) (2024-11-04)
+
+**Note:** Version bump only for package router
+
 # [0.136.0](https://github.com/wundergraph/cosmo/compare/router@0.135.0...router@0.136.0) (2024-10-31)
 
 ### Features
