@@ -20,7 +20,7 @@ runs:
     - uses: pnpm/action-setup@v4.0.0
       id: pnpm-install
       with:
-        version: 8.7.0
+        version: 9.12.3
         run_install: false
 
     - name: Get pnpm store directory
