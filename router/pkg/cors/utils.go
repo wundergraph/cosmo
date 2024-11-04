@@ -77,9 +77,9 @@ func normalize(values []string) []string {
 }
 
 func convert(s []string, c converter) []string {
-	var out []string
-	for _, i := range s {
-		out = append(out, c(i))
+	out := make([]string, len(s))
+	for i, h := range s {
+		out[i] = c(h)
 	}
 	return out
 }

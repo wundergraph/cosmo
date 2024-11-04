@@ -9,8 +9,8 @@ import (
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	otelmetric "go.opentelemetry.io/otel/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
 	"slices"
@@ -29,10 +29,10 @@ const EngineLoaderHooksScopeVersion = "0.0.1"
 // It is used to trace and measure the performance of the engine loader
 type EngineLoaderHooks struct {
 	tracer      trace.Tracer
-	metricStore metric.Provider
+	metricStore metric.Store
 }
 
-func NewEngineRequestHooks(metricStore metric.Provider) resolve.LoaderHooks {
+func NewEngineRequestHooks(metricStore metric.Store) resolve.LoaderHooks {
 	return &EngineLoaderHooks{
 		tracer: otel.GetTracerProvider().Tracer(
 			EngineLoaderHooksScopeName,
@@ -54,7 +54,7 @@ func (f *EngineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInf
 	}
 
 	ctx, span := f.tracer.Start(ctx, "Engine - Fetch",
-		trace.WithAttributes(reqContext.telemetry.CommonAttrs()...),
+		trace.WithAttributes(reqContext.telemetry.traceAttrs...),
 	)
 
 	subgraph := reqContext.SubgraphByID(ds.ID)
@@ -87,16 +87,16 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 
 	activeSubgraph := reqContext.SubgraphByID(ds.ID)
 
-	attributes := []attribute.KeyValue{
-		// Subgraph response status code
+	attributes := *reqContext.telemetry.AcquireAttributes()
+	defer reqContext.telemetry.ReleaseAttributes(&attributes)
+
+	// Subgraph response status code
+	attributes = append(attributes,
 		semconv.HTTPStatusCode(statusCode),
 		rotel.WgComponentName.String("engine-loader"),
 		rotel.WgSubgraphID.String(activeSubgraph.Id),
 		rotel.WgSubgraphName.String(activeSubgraph.Name),
-	}
-
-	// Ensure common attributes are set
-	attributes = append(attributes, reqContext.telemetry.CommonAttrs()...)
+	)
 
 	if err != nil {
 
@@ -141,10 +141,19 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 		slices.Sort(errorCodesAttr)
 
 		if len(errorCodesAttr) > 0 {
-			mAttr := append(attributes, reqContext.telemetry.MetricAttrs(false)...)
-			f.metricStore.MeasureRequestError(ctx, mAttr...)
+			attrs := *reqContext.telemetry.AcquireAttributes()
+			attrs = append(attrs, attributes...)
+			attrs = append(attrs, reqContext.telemetry.metricAttrs...)
+
+			f.metricStore.MeasureRequestError(
+				ctx,
+				reqContext.telemetry.metricSliceAttrs,
+				otelmetric.WithAttributes(attrs...),
+			)
+
+			reqContext.telemetry.ReleaseAttributes(&attrs)
 		}
 	}
 
-	span.SetAttributes(attributes...)
+	span.SetAttributes(append(attributes, reqContext.telemetry.traceAttrs...)...)
 }

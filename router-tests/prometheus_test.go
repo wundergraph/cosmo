@@ -44,7 +44,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.Len(t, requestTotalMetrics, 2)
 			require.Len(t, requestTotalMetrics[0].Label, 12)
-			require.Len(t, requestTotalMetrics[1].Label, 13)
+			require.Len(t, requestTotalMetrics[1].Label, 14)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
@@ -98,6 +98,10 @@ func TestPrometheus(t *testing.T) {
 			}, requestTotalMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
+				{
+					Name:  PointerOf("http_status_code"),
+					Value: PointerOf("200"),
+				},
 				{
 					Name:  PointerOf("otel_scope_name"),
 					Value: PointerOf("cosmo.router.prometheus"),
@@ -258,7 +262,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.Len(t, requestDurationMetrics, 2)
 			require.Len(t, requestDurationMetrics[0].Label, 12)
-			require.Len(t, requestDurationMetrics[1].Label, 13)
+			require.Len(t, requestDurationMetrics[1].Label, 14)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
@@ -312,6 +316,10 @@ func TestPrometheus(t *testing.T) {
 			}, requestDurationMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
+				{
+					Name:  PointerOf("http_status_code"),
+					Value: PointerOf("200"),
+				},
 				{
 					Name:  PointerOf("otel_scope_name"),
 					Value: PointerOf("cosmo.router.prometheus"),
@@ -593,7 +601,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.Len(t, requestTotalMetrics, 2)
 			require.Len(t, requestTotalMetrics[0].Label, 13)
-			require.Len(t, requestTotalMetrics[1].Label, 14)
+			require.Len(t, requestTotalMetrics[1].Label, 15)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
@@ -654,6 +662,10 @@ func TestPrometheus(t *testing.T) {
 				{
 					Name:  PointerOf("custom"),
 					Value: PointerOf("value"),
+				},
+				{
+					Name:  PointerOf("http_status_code"),
+					Value: PointerOf("200"),
 				},
 				{
 					Name:  PointerOf("otel_scope_name"),
@@ -823,7 +835,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.Len(t, requestDurationMetrics, 2)
 			require.Len(t, requestDurationMetrics[0].Label, 13)
-			require.Len(t, requestDurationMetrics[1].Label, 14)
+			require.Len(t, requestDurationMetrics[1].Label, 15)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
@@ -884,6 +896,10 @@ func TestPrometheus(t *testing.T) {
 				{
 					Name:  PointerOf("custom"),
 					Value: PointerOf("value"),
+				},
+				{
+					Name:  PointerOf("http_status_code"),
+					Value: PointerOf("200"),
 				},
 				{
 					Name:  PointerOf("otel_scope_name"),
@@ -1114,7 +1130,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.Len(t, requestTotalMetrics, 2)
 			require.Len(t, requestTotalMetrics[0].Label, 13)
-			require.Len(t, requestTotalMetrics[1].Label, 14)
+			require.Len(t, requestTotalMetrics[1].Label, 15)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
@@ -1175,6 +1191,10 @@ func TestPrometheus(t *testing.T) {
 				{
 					Name:  PointerOf("custom"),
 					Value: PointerOf("value"),
+				},
+				{
+					Name:  PointerOf("http_status_code"),
+					Value: PointerOf("200"),
 				},
 				{
 					Name:  PointerOf("otel_scope_name"),
@@ -1344,7 +1364,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.Len(t, requestDurationMetrics, 2)
 			require.Len(t, requestDurationMetrics[0].Label, 13)
-			require.Len(t, requestDurationMetrics[1].Label, 14)
+			require.Len(t, requestDurationMetrics[1].Label, 15)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
@@ -1405,6 +1425,10 @@ func TestPrometheus(t *testing.T) {
 				{
 					Name:  PointerOf("custom"),
 					Value: PointerOf("value"),
+				},
+				{
+					Name:  PointerOf("http_status_code"),
+					Value: PointerOf("200"),
 				},
 				{
 					Name:  PointerOf("otel_scope_name"),
@@ -1621,11 +1645,15 @@ func TestPrometheus(t *testing.T) {
 			totalRequestErrorsMetric := totalRequestsErrors.GetMetric()
 
 			require.Len(t, totalRequestErrorsMetric, 2)
-			require.Len(t, totalRequestErrorsMetric[0].Label, 12)
+			require.Len(t, totalRequestErrorsMetric[0].Label, 13)
 			require.Len(t, totalRequestErrorsMetric[1].Label, 15)
 
 			// Error metric for the subgraph error
 			require.Equal(t, []*io_prometheus_client.LabelPair{
+				{
+					Name:  PointerOf("http_status_code"),
+					Value: PointerOf("200"),
+				},
 				{
 					Name:  PointerOf("otel_scope_name"),
 					Value: PointerOf("cosmo.router.prometheus"),
@@ -1783,14 +1811,18 @@ func TestPrometheus(t *testing.T) {
 			totalRequestErrorsMetric := totalRequestsErrors.GetMetric()
 
 			require.Len(t, totalRequestErrorsMetric, 3)
-			require.Len(t, totalRequestErrorsMetric[0].Label, 13)
-			require.Len(t, totalRequestErrorsMetric[1].Label, 13)
+			require.Len(t, totalRequestErrorsMetric[0].Label, 14)
+			require.Len(t, totalRequestErrorsMetric[1].Label, 14)
 			require.Len(t, totalRequestErrorsMetric[2].Label, 15)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
 					Name:  PointerOf("error_codes"),
 					Value: PointerOf("UNAUTHORIZED"),
+				},
+				{
+					Name:  PointerOf("http_status_code"),
+					Value: PointerOf("200"),
 				},
 				{
 					Name:  PointerOf("otel_scope_name"),
@@ -1847,6 +1879,10 @@ func TestPrometheus(t *testing.T) {
 				{
 					Name:  PointerOf("error_codes"),
 					Value: PointerOf("YOUR_ERROR_CODE"),
+				},
+				{
+					Name:  PointerOf("http_status_code"),
+					Value: PointerOf("200"),
 				},
 				{
 					Name:  PointerOf("otel_scope_name"),
@@ -1992,7 +2028,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.Len(t, requestTotalMetrics, 2)
 			require.Len(t, requestTotalMetrics[0].Label, 13)
-			require.Len(t, requestTotalMetrics[1].Label, 14)
+			require.Len(t, requestTotalMetrics[1].Label, 15)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
@@ -2050,6 +2086,10 @@ func TestPrometheus(t *testing.T) {
 			}, requestTotalMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
+				{
+					Name:  PointerOf("http_status_code"),
+					Value: PointerOf("200"),
+				},
 				{
 					Name:  PointerOf("otel_scope_name"),
 					Value: PointerOf("cosmo.router.prometheus"),
@@ -2222,7 +2262,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.Len(t, requestDurationMetrics, 2)
 			require.Len(t, requestDurationMetrics[0].Label, 13)
-			require.Len(t, requestDurationMetrics[1].Label, 14)
+			require.Len(t, requestDurationMetrics[1].Label, 15)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
@@ -2280,6 +2320,10 @@ func TestPrometheus(t *testing.T) {
 			}, requestDurationMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
+				{
+					Name:  PointerOf("http_status_code"),
+					Value: PointerOf("200"),
+				},
 				{
 					Name:  PointerOf("otel_scope_name"),
 					Value: PointerOf("cosmo.router.prometheus"),
