@@ -5,6 +5,7 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"net/http"
 	"sync"
 	"testing"
@@ -71,6 +72,107 @@ func TestPersistedOperationOverGET(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, http.StatusMethodNotAllowed, res.Response.StatusCode)
 			require.Equal(t, `{"errors":[{"message":"Mutations can only be sent over HTTP POST"}]}`, res.Body)
+		})
+	})
+}
+
+func TestAutomatedPersistedQueriesOverGET(t *testing.T) {
+	t.Parallel()
+
+	t.Run("Operation not found", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			ApqConfig: config.AutomaticPersistedQueriesConfig{
+				Enabled: true,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := make(http.Header)
+			header.Add("graphql-client-name", "my-client")
+			res, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
+				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "does-not-exist"}}`),
+				Header:     header,
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+			require.Equal(t, `{"errors":[{"message":"persisted Query not found"}]}`, res.Body)
+		})
+	})
+
+	t.Run("Operation executed successfully", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			ApqConfig: config.AutomaticPersistedQueriesConfig{
+				Enabled: true,
+				Cache: config.AutomaticPersistedQueriesCacheConfig{
+					Size: 1024 * 1024,
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := make(http.Header)
+			header.Add("graphql-client-name", "my-client")
+
+			res0, err0 := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
+				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+				Header:     header,
+			})
+			require.NoError(t, err0)
+			require.Equal(t, http.StatusBadRequest, res0.Response.StatusCode)
+			require.Equal(t, `{"errors":[{"message":"persisted Query not found"}]}`, res0.Body)
+
+			res1, err1 := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
+				Query:      `{__typename}`,
+				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+				Header:     header,
+			})
+			require.NoError(t, err1)
+			require.Equal(t, http.StatusOK, res1.Response.StatusCode)
+			require.Equal(t, `{"data":{"__typename":"Query"}}`, res1.Body)
+
+			res2, err2 := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
+				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+				Header:     header,
+			})
+			require.NoError(t, err2)
+			require.Equal(t, http.StatusOK, res2.Response.StatusCode)
+			require.Equal(t, `{"data":{"__typename":"Query"}}`, res2.Body)
+		})
+	})
+
+	t.Run("Operation with variables executed successfully", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			ApqConfig: config.AutomaticPersistedQueriesConfig{
+				Enabled: true,
+				Cache: config.AutomaticPersistedQueriesCacheConfig{
+					Size: 1024 * 1024,
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := make(http.Header)
+			header.Add("graphql-client-name", "my-client")
+			res, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
+				Query: `query Find($criteria: SearchInput!) {
+  findEmployees(criteria: $criteria) {
+    id
+    details {
+      forename
+      surname
+    }
+  }
+}`,
+				Variables:  []byte(`{"criteria":  {"nationality":  "GERMAN"   }}`),
+				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "f74d2ed949afd9f9567805c22e7f927745494cb1a469425cf65064283251cb42"}}`),
+				Header:     header,
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, res.Body)
+
+			res2, err2 := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
+				Variables:  []byte(`{"criteria":  {"nationality":  "GERMAN"   }}`),
+				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "f74d2ed949afd9f9567805c22e7f927745494cb1a469425cf65064283251cb42"}}`),
+				Header:     header,
+			})
+			require.NoError(t, err2)
+			require.Equal(t, http.StatusOK, res2.Response.StatusCode)
+			require.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, res2.Body)
 		})
 	})
 }
