@@ -28,7 +28,7 @@ var (
 	// Please version the used meters if you change the buckets.
 
 	// 0kb-20MB
-	bytesBucketBounds = []float64{
+	cloudOtelBytesBucketBounds = []float64{
 		0, 50, 100, 300, 500, 1000, 3000, 5000, 10000, 15000,
 		30000, 50000, 70000, 90000, 150000, 300000, 600000,
 		800000, 1000000, 5000000, 10000000, 20000000,
@@ -37,10 +37,38 @@ var (
 	// Please version the used meters if you change the buckets.
 
 	// 0ms-10s
-	msBucketsBounds = []float64{
+	cloudOtelMsBucketsBounds = []float64{
 		0, 5, 7, 10, 15, 25, 50, 75, 100, 125, 150, 175, 200, 225,
 		250, 275, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1250,
 		1500, 1750, 2000, 2250, 2500, 2750, 3000, 3500, 4000, 5000, 10000,
+	}
+
+	// Prometheus buckets with fewer buckets to reduce cardinality
+
+	promBytesBuckets = []float64{
+		512,     // 512 B
+		1024,    // 1 KB
+		4096,    // 4 KB
+		8192,    // 8 KB
+		16384,   // 16 KB
+		65536,   // 64 KB
+		262144,  // 256 KB
+		524288,  // 512 KB
+		1048576, // 1 MB
+		3145728, // 3 MB
+	}
+
+	prometheusMsBuckets = []float64{
+		10,    // 10 ms
+		25,    // 25 ms
+		50,    // 50 ms
+		100,   // 100 ms
+		250,   // 250 ms
+		500,   // 500 ms
+		1000,  // 1000 ms
+		2500,  // 2500ms
+		5000,  // 5 s
+		10000, // 10 s
 	}
 )
 
@@ -290,10 +318,10 @@ func defaultPrometheusMetricOptions(ctx context.Context, serviceInstanceID strin
 	}
 
 	msBucketHistogram := sdkmetric.AggregationExplicitBucketHistogram{
-		Boundaries: msBucketsBounds,
+		Boundaries: prometheusMsBuckets,
 	}
 	bytesBucketHistogram := sdkmetric.AggregationExplicitBucketHistogram{
-		Boundaries: bytesBucketBounds,
+		Boundaries: promBytesBuckets,
 	}
 
 	var view sdkmetric.View = func(i sdkmetric.Instrument) (sdkmetric.Stream, bool) {
@@ -339,10 +367,10 @@ func defaultOtlpMetricOptions(ctx context.Context, serviceInstanceID string, c *
 	}
 
 	msBucketHistogram := sdkmetric.AggregationExplicitBucketHistogram{
-		Boundaries: msBucketsBounds,
+		Boundaries: cloudOtelMsBucketsBounds,
 	}
 	bytesBucketHistogram := sdkmetric.AggregationExplicitBucketHistogram{
-		Boundaries: bytesBucketBounds,
+		Boundaries: cloudOtelBytesBucketBounds,
 	}
 
 	// Info: There can be only a single view per instrument. A view with less restriction might override a view.
