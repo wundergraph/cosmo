@@ -14,7 +14,11 @@ import {
 } from "@/components/playground/custom-scripts";
 import { PlanView } from "@/components/playground/plan-view";
 import { TraceContext, TraceView } from "@/components/playground/trace-view";
-import { PlaygroundContext, QueryPlan } from "@/components/playground/types";
+import {
+  PlaygroundContext,
+  QueryPlan,
+  TabsState,
+} from "@/components/playground/types";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -54,7 +58,6 @@ import { parseSchema } from "@/lib/schema-helpers";
 import { cn } from "@/lib/utils";
 import { useMutation, useQuery } from "@connectrpc/connect-query";
 import { explorerPlugin } from "@graphiql/plugin-explorer";
-import { TabsState } from "@graphiql/react";
 import { createGraphiQLFetcher } from "@graphiql/toolkit";
 import { SparklesIcon } from "@heroicons/react/24/outline";
 import {

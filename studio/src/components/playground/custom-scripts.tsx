@@ -314,7 +314,7 @@ const ScriptEditor = ({
 
       if (
         !upsert &&
-        tempScriptTabState[activeTabId][script.type].id !== script.id
+        tempScriptTabState[activeTabId][script.type]?.id !== script.id
       ) {
         return;
       }

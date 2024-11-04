@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { LuLayoutDashboard } from 'react-icons/lu';
 import { sentenceCase } from 'change-case';
 import { PlanView } from './plan-view';
-import { PlaygroundContext, QueryPlan } from './types';
+import { PlaygroundContext, QueryPlan, TabsState } from './types';
 import { useDebounce } from 'use-debounce';
 import { useLocalStorage } from '@/lib/use-local-storage';
 import {
@@ -25,7 +25,6 @@ import {
   PreFlightScript,
 } from '@/components/playground/custom-scripts';
 import { Badge } from '@/components/ui/badge';
-import { TabsState } from '@graphiql/react';
 import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
 import 'graphiql/graphiql.css';
 import '@graphiql/plugin-explorer/dist/style.css';

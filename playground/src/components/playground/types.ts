@@ -1,5 +1,20 @@
-import { TabsState } from '@graphiql/react';
 import { createContext } from 'react';
+
+type TabState = {
+  id: string;
+  hash: string;
+  title: string;
+  operationName: string | null;
+  response: string | null;
+  query: string | null;
+  variables?: string | null;
+  headers?: string | null;
+};
+
+export type TabsState = {
+  tabs: TabState[];
+  activeTabIndex: number;
+};
 
 type PlaygroundContextType = {
   graphId: string;
