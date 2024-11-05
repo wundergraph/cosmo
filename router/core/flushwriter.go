@@ -30,7 +30,6 @@ type HttpFlushWriter struct {
 	sse           bool
 	multipart     bool
 	buf           *bytes.Buffer
-	variables     []byte
 }
 
 func (f *HttpFlushWriter) Complete() {
