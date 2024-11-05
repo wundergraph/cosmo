@@ -26,7 +26,7 @@ require (
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
-	github.com/go-chi/chi/v5 v5.0.11 // indirect
+	github.com/go-chi/chi/v5 v5.1.0 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -89,7 +89,7 @@ require (
 	github.com/tonglil/opentelemetry-go-datadog-propagator v0.1.3 // indirect
 	github.com/twmb/franz-go v1.16.1 // indirect
 	github.com/twmb/franz-go/pkg/kmsg v1.7.0 // indirect
-	github.com/wundergraph/astjson v0.0.0-20241029194815-849566801950 // indirect
+	github.com/wundergraph/astjson v0.0.0-20241029200826-6c05ee12f1e0 // indirect
 	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.116.0.20241104232507-f80076f8c47d // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1 // indirect

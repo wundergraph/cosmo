@@ -266,8 +266,6 @@ github.com/twmb/franz-go/pkg/kmsg v1.7.0 h1:a457IbvezYfA5UkiBvyV3zj0Is3y1i8EJgqj
 github.com/twmb/franz-go/pkg/kmsg v1.7.0/go.mod h1:se9Mjdt0Nwzc9lnjJ0HyDtLyBnaBDAd7pCje47OhSyw=
 github.com/vektah/gqlparser/v2 v2.5.16 h1:1gcmLTvs3JLKXckwCwlUagVn/IlV2bwqle0vJ0vy5p8=
 github.com/vektah/gqlparser/v2 v2.5.16/go.mod h1:1lz1OeCqgQbQepsGxPVywrjdBHW2T08PUS3pJqepRww=
-github.com/wundergraph/astjson v0.0.0-20241029194815-849566801950 h1:NZOeWkezsy5F5OKFhvsrdNq1XzUke/WHhI/9elBjivI=
-github.com/wundergraph/astjson v0.0.0-20241029194815-849566801950/go.mod h1:eOTL6acwctsN4F3b7YE+eE2t8zcJ/doLm9sZzsxxxrE=
 github.com/wundergraph/astjson v0.0.0-20241029200826-6c05ee12f1e0 h1:kGck96R6OwmXDcCWpyqgz+OKPcZt5ap8DXNRpPpLpz4=
 github.com/wundergraph/astjson v0.0.0-20241029200826-6c05ee12f1e0/go.mod h1:eOTL6acwctsN4F3b7YE+eE2t8zcJ/doLm9sZzsxxxrE=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.116.0.20241104232507-f80076f8c47d h1:BAWd4K+Go5H3WzscVjbfWG2O5h2stHbdp2f5N15GOww=
