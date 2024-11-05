@@ -6,7 +6,6 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"go.uber.org/zap"
-	"sync"
 )
 
 type PersistedOperation struct {
@@ -37,11 +36,10 @@ type Options struct {
 }
 
 type client struct {
-	enabled   bool
-	ttl       int
-	cache     *operationstorage.OperationsCache
-	kvClient  KVClient
-	cacheLock *sync.RWMutex
+	enabled  bool
+	ttl      int
+	cache    *operationstorage.OperationsCache
+	kvClient KVClient
 }
 
 func NewClient(opts *Options) (Client, error) {
@@ -62,7 +60,6 @@ func NewClient(opts *Options) (Client, error) {
 
 	var err error
 	cl.cache, err = operationstorage.NewOperationsCache(int64(opts.ApqConfig.Cache.Size.Uint64()))
-	cl.cacheLock = &sync.RWMutex{}
 
 	return cl, err
 }
@@ -76,8 +73,6 @@ func (c *client) PersistedOperation(ctx context.Context, clientName string, sha2
 		return c.kvClient.Get(ctx, clientName, sha256Hash)
 	}
 
-	c.cacheLock.RLock()
-	defer c.cacheLock.RUnlock()
 	return c.cache.Get(clientName, sha256Hash), nil
 }
 
@@ -86,8 +81,6 @@ func (c *client) SaveOperation(ctx context.Context, clientName, sha256Hash strin
 		return c.kvClient.Set(ctx, sha256Hash, operationBody, c.ttl)
 	}
 
-	c.cacheLock.RLock()
-	defer c.cacheLock.RUnlock()
 	c.cache.Set(clientName, sha256Hash, operationBody, c.ttl)
 	return nil
 }

@@ -756,7 +756,7 @@ type normalizedOperationCacheEntry struct {
 	operationType            string
 }
 
-func (e normalizedOperationCacheEntry) GetLen() int {
+func (e normalizedOperationCacheEntry) Len() int {
 	return len(e.normalizedRepresentation) + len(e.operationType) + len(e.operationType)
 }
 
@@ -820,7 +820,7 @@ func (o *OperationKit) savePersistedOperationToCache(isApq bool, skipIncludeVari
 		normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
 		operationType:            o.parsedOperation.Type,
 	}
-	cost := int64(entry.GetLen())
+	cost := int64(entry.Len())
 
 	if isApq {
 		ttl := o.cache.automaticPersistedOperationCacheTtl
