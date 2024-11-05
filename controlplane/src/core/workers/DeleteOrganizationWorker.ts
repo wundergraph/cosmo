@@ -6,6 +6,7 @@ import { OrganizationRepository } from '../repositories/OrganizationRepository.j
 import Keycloak from '../services/Keycloak.js';
 import { OidcRepository } from '../repositories/OidcRepository.js';
 import OidcProvider from '../services/OidcProvider.js';
+import { BlobStorage } from '../blobstorage/index.js';
 
 const QueueName = 'organization.delete';
 const WorkerName = 'DeleteOrganizationWorker';
@@ -62,6 +63,7 @@ class DeleteOrganizationWorker {
       logger: pino.Logger;
       keycloakClient: Keycloak;
       keycloakRealm: string;
+      blobStorage: BlobStorage;
     },
   ) {
     this.input.logger = input.logger.child({ worker: WorkerName });
@@ -101,7 +103,7 @@ class DeleteOrganizationWorker {
 
         await oidcRepo.deleteOidcProvider({ organizationId: job.data.organizationId });
 
-        await orgRepo.deleteOrganization(job.data.organizationId);
+        await orgRepo.deleteOrganization(job.data.organizationId, this.input.blobStorage);
       });
     } catch (err) {
       this.input.logger.error(err, `Failed to delete organization with id ${job.data.organizationId}`);
@@ -116,6 +118,7 @@ export const createDeleteOrganizationWorker = (input: {
   logger: pino.Logger;
   keycloakClient: Keycloak;
   keycloakRealm: string;
+  blobStorage: BlobStorage;
 }) => {
   const log = input.logger.child({ worker: WorkerName });
   const worker = new Worker<DeleteOrganizationInput>(

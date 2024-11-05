@@ -29,9 +29,11 @@ import {
 import { Feature, FeatureIds, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
 import Keycloak from '../services/Keycloak.js';
 import { DeleteOrganizationQueue } from '../workers/DeleteOrganizationWorker.js';
+import { BlobStorage } from '../blobstorage/index.js';
 import { BillingRepository } from './BillingRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { OidcRepository } from './OidcRepository.js';
+import { SubgraphRepository } from './SubgraphRepository.js';
 
 /**
  * Repository for organization related operations.
@@ -849,9 +851,40 @@ export class OrganizationRepository {
     return result[0];
   }
 
-  public deleteOrganization(organizationId: string) {
+  public deleteOrganization(organizationId: string, blobStorage: BlobStorage) {
     return this.db.transaction(async (tx) => {
       const oidcRepo = new OidcRepository(tx);
+      const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, organizationId);
+      const subgraphRepo = new SubgraphRepository(this.logger, tx, organizationId);
+
+      const graphs = await fedGraphRepo.list({
+        limit: 0,
+        offset: 0,
+      });
+      const subgraphs = await subgraphRepo.list({
+        limit: 0,
+        offset: 0,
+        excludeFeatureSubgraphs: false,
+      });
+
+      // Delete graphs
+      const promises = [];
+      for (const graph of graphs) {
+        promises.push(fedGraphRepo.delete(graph.targetId));
+      }
+      for (const subgraph of subgraphs) {
+        promises.push(subgraphRepo.delete(subgraph.targetId));
+      }
+      await Promise.all(promises);
+
+      // Clean up blob storage
+      const blobPromises = [];
+      for (const graph of graphs) {
+        const blobStorageDirectory = `${organizationId}/${graph.id}`;
+        blobPromises.push(blobStorage.removeDirectory({ key: blobStorageDirectory }));
+      }
+      await Promise.allSettled(blobPromises);
+
       await oidcRepo.deleteOidcProvider({ organizationId });
 
       // Delete organization from db

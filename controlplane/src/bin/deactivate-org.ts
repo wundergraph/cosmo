@@ -2,6 +2,9 @@ import process from 'node:process';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { pino } from 'pino';
 import postgres from 'postgres';
+import { createS3ClientConfig, extractS3BucketName } from 'src/core/util.js';
+import { S3Client } from '@aws-sdk/client-s3';
+import { S3BlobStorage } from 'src/core/blobstorage/s3.js';
 import { buildDatabaseConnectionConfig } from '../core/plugins/database.js';
 import { OrganizationRepository } from '../core/repositories/OrganizationRepository.js';
 import * as schema from '../db/schema.js';
@@ -23,7 +26,15 @@ const {
   databaseTlsKey,
   organizationSlug,
   redis,
+  s3Storage,
 } = getConfig();
+
+const bucketName = extractS3BucketName(s3Storage);
+const s3Config = createS3ClientConfig(bucketName, s3Storage);
+
+const s3Client = new S3Client(s3Config);
+const blobStorage = new S3BlobStorage(s3Client, bucketName);
+
 const organizationId = process.env.ORGANIZATION_ID || '';
 const deactivationReason = process.env.ORGANIZATION_DEACTIVATION_REASON;
 
@@ -82,6 +93,7 @@ const worker = createDeleteOrganizationWorker({
   logger,
   keycloakClient,
   keycloakRealm: realm,
+  blobStorage,
 });
 
 await orgRepo.deactivateOrganization({

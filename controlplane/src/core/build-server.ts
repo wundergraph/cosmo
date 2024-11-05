@@ -287,6 +287,16 @@ export default async function build(opts: BuildConfig) {
     tls: opts.redis.tls,
   });
 
+  if (!opts.s3Storage || !opts.s3Storage.url) {
+    throw new Error('S3 storage URL is required');
+  }
+
+  const bucketName = extractS3BucketName(opts.s3Storage);
+  const s3Config = createS3ClientConfig(bucketName, opts.s3Storage);
+
+  const s3Client = new S3Client(s3Config);
+  const blobStorage = new S3BlobStorage(s3Client, bucketName);
+
   const readmeQueue = new AIGraphReadmeQueue(logger, fastify.redisForQueue);
 
   if (opts.openaiAPIKey) {
@@ -308,6 +318,7 @@ export default async function build(opts: BuildConfig) {
       logger,
       keycloakClient,
       keycloakRealm: opts.keycloak.realm,
+      blobStorage,
     }),
   );
 
@@ -349,16 +360,6 @@ export default async function build(opts: BuildConfig) {
       logger,
     });
   }
-
-  if (!opts.s3Storage || !opts.s3Storage.url) {
-    throw new Error('S3 storage URL is required');
-  }
-
-  const bucketName = extractS3BucketName(opts.s3Storage);
-  const s3Config = createS3ClientConfig(bucketName, opts.s3Storage);
-
-  const s3Client = new S3Client(s3Config);
-  const blobStorage = new S3BlobStorage(s3Client, bucketName);
 
   /**
    * Controllers registration

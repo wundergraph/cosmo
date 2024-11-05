@@ -6,6 +6,7 @@ import { users } from '../../db/schema.js';
 import { UserDTO } from '../../types/index.js';
 import Keycloak from '../services/Keycloak.js';
 import OidcProvider from '../services/OidcProvider.js';
+import { BlobStorage } from '../blobstorage/index.js';
 import { OrganizationRepository } from './OrganizationRepository.js';
 import { BillingRepository } from './BillingRepository.js';
 import { OidcRepository } from './OidcRepository.js';
@@ -65,7 +66,10 @@ export class UserRepository {
       .execute();
   }
 
-  public async deleteUser(input: { id: string; keycloakClient: Keycloak; keycloakRealm: string }) {
+  public async deleteUser(
+    input: { id: string; keycloakClient: Keycloak; keycloakRealm: string },
+    blobStorage: BlobStorage,
+  ) {
     const orgRepo = new OrganizationRepository(this.logger, this.db);
     const billingRepo = new BillingRepository(this.db);
 
@@ -114,7 +118,7 @@ export class UserRepository {
       // Delete all solo organizations of the user
       const deleteOrgs: Promise<void>[] = [];
       for (const org of soloAdminSoloMemberOrgs) {
-        deleteOrgs.push(orgRepo.deleteOrganization(org.id));
+        deleteOrgs.push(orgRepo.deleteOrganization(org.id, blobStorage));
       }
       await Promise.all(deleteOrgs);
 

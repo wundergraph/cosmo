@@ -2,6 +2,9 @@ import process from 'node:process';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { pino } from 'pino';
 import postgres from 'postgres';
+import { createS3ClientConfig, extractS3BucketName } from 'src/core/util.js';
+import { S3Client } from '@aws-sdk/client-s3';
+import { S3BlobStorage } from 'src/core/blobstorage/s3.js';
 import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { buildDatabaseConnectionConfig } from '../core/plugins/database.js';
 import { UserRepository } from '../core/repositories/UserRepository.js';
@@ -24,9 +27,16 @@ const {
   databaseTlsKey,
   webhookUrl,
   webhookSecret,
+  s3Storage,
 } = getConfig();
 
 const userId = process.env.USER_ID || '';
+
+const bucketName = extractS3BucketName(s3Storage);
+const s3Config = createS3ClientConfig(bucketName, s3Storage);
+
+const s3Client = new S3Client(s3Config);
+const blobStorage = new S3BlobStorage(s3Client, bucketName);
 
 // Establish database connection
 const connectionConfig = await buildDatabaseConnectionConfig({
@@ -80,11 +90,14 @@ if (!isSafe) {
 }
 
 // Delete the user
-await userRepo.deleteUser({
-  id: user.id,
-  keycloakClient,
-  keycloakRealm: realm,
-});
+await userRepo.deleteUser(
+  {
+    id: user.id,
+    keycloakClient,
+    keycloakRealm: realm,
+  },
+  blobStorage,
+);
 
 platformWebhooks.send(PlatformEventName.USER_DELETE_SUCCESS, {
   user_id: user.id,

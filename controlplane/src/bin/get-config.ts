@@ -40,6 +40,15 @@ const getConfig = () => {
 
     webhookUrl: process.env.WEBHOOK_URL,
     webhookSecret: process.env.WEBHOOK_SECRET,
+
+    s3Storage: {
+      url: process.env.S3_STORAGE_URL || 'http://minio:changeme@localhost:10000/cosmo',
+      endpoint: process.env.S3_ENDPOINT,
+      region: process.env.S3_REGION || 'auto',
+      username: process.env.S3_ACCESS_KEY_ID,
+      password: process.env.S3_SECRET_ACCESS_KEY,
+      forcePathStyle: process.env.S3_FORCE_PATH_STYLE === undefined ? true : process.env.S3_FORCE_PATH_STYLE === 'true',
+    },
   };
 };
 
