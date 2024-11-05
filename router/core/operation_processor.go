@@ -30,6 +30,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -757,7 +758,7 @@ type normalizedOperationCacheEntry struct {
 }
 
 func (e normalizedOperationCacheEntry) Len() int {
-	return len(e.normalizedRepresentation) + len(e.operationType) + len(e.operationType)
+	return len(e.normalizedRepresentation) + len(e.operationType) + len(strconv.FormatUint(e.operationID, 10))
 }
 
 func (o *OperationKit) loadPersistedOperationFromCache() (ok bool, err error) {
@@ -1049,7 +1050,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 
 		cacheSize := opts.PersistedOperationCacheSize
 		if cacheSize <= 0 {
-			cacheSize = 1024 * 1024
+			cacheSize = 1024 * 1024 * 100
 		}
 
 		processor.operationCache.persistedOperationCache, _ = ristretto.NewCache[uint64, normalizedOperationCacheEntry](
