@@ -190,7 +190,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.setDebugCacheHeaders(w, requestContext.operation)
 
 		defer propagateSubgraphErrors(ctx)
-		ctx, writer, ok = GetSubscriptionResponseWriter(ctx, ctx.Variables, r, w)
+		ctx, writer, ok = GetSubscriptionResponseWriter(ctx, r, w)
 		if !ok {
 			requestContext.logger.Error("unable to get subscription response writer", zap.Error(errCouldNotFlushResponse))
 			trackFinalResponseError(r.Context(), errCouldNotFlushResponse)

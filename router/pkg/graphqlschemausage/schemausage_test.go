@@ -9,8 +9,8 @@ import (
 	"github.com/jensneuse/abstractlogger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/astjson"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/astjson"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
@@ -199,20 +199,19 @@ func TestGetSchemaUsageInfo(t *testing.T) {
 	if report.HasErrors() {
 		t.Fatal(report.Error())
 	}
-	vars := &astjson.JSON{}
-	err = vars.ParseObject([]byte(variables))
+
+	vars, err := astjson.Parse(variables)
 	assert.NoError(t, err)
-	extracted, err := vars.AppendObject(op.Input.Variables)
+
+	inputVariables, err := astjson.ParseBytes(op.Input.Variables)
 	assert.NoError(t, err)
-	vars.MergeNodes(vars.RootNode, extracted)
-	mergedVariables := &bytes.Buffer{}
-	err = vars.PrintRoot(mergedVariables)
-	assert.NoError(t, err)
+
+	merged, _ := astjson.MergeValues(vars, inputVariables)
 
 	fieldUsageInfo := GetTypeFieldUsageInfo(generatedPlan)
 	argumentUsageInfo, err := GetArgumentUsageInfo(&op, &def)
 	assert.NoError(t, err)
-	inputUsageInfo, err := GetInputUsageInfo(&op, &def, mergedVariables.Bytes())
+	inputUsageInfo, err := GetInputUsageInfo(&op, &def, merged)
 	assert.NoError(t, err)
 
 	subscription := &plan.SubscriptionResponsePlan{
@@ -224,7 +223,7 @@ func TestGetSchemaUsageInfo(t *testing.T) {
 	subscriptionFieldUsageInfo := GetTypeFieldUsageInfo(subscription)
 	subscriptionArgumentUsageInfo, err := GetArgumentUsageInfo(&op, &def)
 	assert.NoError(t, err)
-	subscriptionInputUsageInfo, err := GetInputUsageInfo(&op, &def, mergedVariables.Bytes())
+	subscriptionInputUsageInfo, err := GetInputUsageInfo(&op, &def, merged)
 	assert.NoError(t, err)
 
 	assert.Equal(t, fieldUsageInfo, subscriptionFieldUsageInfo)
@@ -458,7 +457,7 @@ func TestGetSchemaUsageInfoInterfaces(t *testing.T) {
 	fieldUsageInfo := GetTypeFieldUsageInfo(generatedPlan)
 	argumentUsageInfo, err := GetArgumentUsageInfo(&op, &def)
 	assert.NoError(t, err)
-	inputUsageInfo, err := GetInputUsageInfo(&op, &def, []byte(`{}`))
+	inputUsageInfo, err := GetInputUsageInfo(&op, &def, astjson.MustParse(`{}`))
 	assert.NoError(t, err)
 
 	subscription := &plan.SubscriptionResponsePlan{
@@ -470,7 +469,7 @@ func TestGetSchemaUsageInfoInterfaces(t *testing.T) {
 	subscriptionFieldUsageInfo := GetTypeFieldUsageInfo(subscription)
 	subscriptionArgumentUsageInfo, err := GetArgumentUsageInfo(&op, &def)
 	assert.NoError(t, err)
-	subscriptionInputUsageInfo, err := GetInputUsageInfo(&op, &def, []byte(`{}`))
+	subscriptionInputUsageInfo, err := GetInputUsageInfo(&op, &def, astjson.MustParse(`{}`))
 	assert.NoError(t, err)
 
 	assert.Equal(t, fieldUsageInfo, subscriptionFieldUsageInfo)
