@@ -136,7 +136,7 @@ type OperationCache struct {
 	persistedOperationVariableNamesLock *sync.RWMutex
 
 	persistedOperationCache             *ristretto.Cache[uint64, normalizedOperationCacheEntry]
-	automaticPersistedOperationCacheTtl int
+	automaticPersistedOperationCacheTtl float64
 	persistedOperationCacheLock         *sync.RWMutex
 
 	normalizationCache *ristretto.Cache[uint64, NormalizationCacheEntry]
@@ -355,30 +355,30 @@ func (o *OperationKit) ComputeOperationSha256() error {
 
 // FetchPersistedOperation fetches the persisted operation from the cache or the client. If the operation is fetched from the cache it returns true.
 // UnmarshalOperationFromBody or UnmarshalOperationFromURL must be called before calling this method.
-func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *ClientInfo) (bool, error) {
+func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *ClientInfo) (bool, bool, error) {
 	if o.operationProcessor.persistedOperationClient == nil {
-		return false, &httpGraphqlError{
+		return false, false, &httpGraphqlError{
 			message:    "could not resolve persisted query, feature is not configured",
 			statusCode: http.StatusOK,
 		}
 	}
 	fromCache, err := o.loadPersistedOperationFromCache()
 	if err != nil {
-		return false, &httpGraphqlError{
+		return false, false, &httpGraphqlError{
 			statusCode: http.StatusInternalServerError,
 			message:    "error loading persisted operation from cache",
 		}
 	}
 	if fromCache {
-		return true, nil
+		return true, false, nil
 	}
 
 	persistedOperationData, isApq, err := o.operationProcessor.persistedOperationClient.PersistedOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
 	if err != nil {
-		return false, err
+		return false, isApq, err
 	} else if isApq && persistedOperationData == nil && o.parsedOperation.Request.Query == "" {
 		// If the client has APQ enabled, throw an error if the operation wasn't attached to the request
-		return false, &persistedoperation.PersistentOperationNotFoundError{
+		return false, isApq, &persistedoperation.PersistentOperationNotFoundError{
 			ClientName: clientInfo.Name,
 			Sha256Hash: o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash,
 		}
@@ -392,11 +392,11 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 	// If the operation was fetched with APQ, save it again to renew the TTL
 	if isApq {
 		if err = o.operationProcessor.persistedOperationClient.SaveOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.Request.Query); err != nil {
-			return false, err
+			return false, isApq, err
 		}
 	}
 
-	return false, nil
+	return false, isApq, nil
 }
 
 const (
@@ -585,14 +585,14 @@ func (o *OperationKit) Parse() error {
 
 // NormalizeOperation normalizes the operation. After normalization the normalized representation of the operation
 // and variables is available. Also, the final operation ID is generated.
-func (o *OperationKit) NormalizeOperation() (bool, error) {
+func (o *OperationKit) NormalizeOperation(isApq bool) (bool, error) {
 	if o.parsedOperation.IsPersistedOperation {
-		return o.normalizePersistedOperation()
+		return o.normalizePersistedOperation(isApq)
 	}
 	return o.normalizeNonPersistedOperation()
 }
 
-func (o *OperationKit) normalizePersistedOperation() (cached bool, err error) {
+func (o *OperationKit) normalizePersistedOperation(isApq bool) (cached bool, err error) {
 	if o.parsedOperation.NormalizedRepresentation != "" {
 		// normalized operation was loaded from cache
 		return true, nil
@@ -630,7 +630,7 @@ func (o *OperationKit) normalizePersistedOperation() (cached bool, err error) {
 	o.parsedOperation.Request.Variables = o.kit.doc.Input.Variables
 
 	if o.cache != nil && o.cache.persistedOperationCache != nil {
-		o.savePersistedOperationToCache(skipIncludeNames)
+		o.savePersistedOperationToCache(isApq, skipIncludeNames)
 	}
 
 	return false, nil
@@ -790,7 +790,7 @@ func (o *OperationKit) jsonIsNull(variables []byte) bool {
 	return value.Type() == fastjson.TypeNull
 }
 
-func (o *OperationKit) savePersistedOperationToCache(skipIncludeVariableNames []string) {
+func (o *OperationKit) savePersistedOperationToCache(isApq bool, skipIncludeVariableNames []string) {
 	cacheKey := o.generatePersistedOperationCacheKey(skipIncludeVariableNames)
 	entry := normalizedOperationCacheEntry{
 		operationID:              o.parsedOperation.ID,
@@ -798,7 +798,11 @@ func (o *OperationKit) savePersistedOperationToCache(skipIncludeVariableNames []
 		operationType:            o.parsedOperation.Type,
 	}
 
-	ttlD := time.Duration(float64(o.cache.automaticPersistedOperationCacheTtl) * float64(time.Second))
+	ttl := float64(0)
+	if isApq {
+		ttl = o.cache.automaticPersistedOperationCacheTtl
+	}
+	ttlD := time.Duration(ttl * float64(time.Second))
 	o.cache.persistedOperationCacheLock.Lock()
 	o.cache.persistedOperationCache.SetWithTTL(cacheKey, entry, 1, ttlD)
 	o.cache.persistedOperationCacheLock.Unlock()
@@ -1014,7 +1018,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 	}
 	if opts.EnablePersistedOperationsCache {
 		processor.operationCache = &OperationCache{
-			automaticPersistedOperationCacheTtl: opts.AutomaticPersistedOperationCacheTtl,
+			automaticPersistedOperationCacheTtl: float64(opts.AutomaticPersistedOperationCacheTtl),
 			persistedOperationVariableNames:     map[string][]string{},
 			persistedOperationVariableNamesLock: &sync.RWMutex{},
 			persistedOperationCacheLock:         &sync.RWMutex{},
