@@ -3,7 +3,7 @@ FROM --platform=${BUILDPLATFORM} node:lts AS builder
 WORKDIR /app
 
 # Ensure we have pnpm available to us
-RUN npm install --global pnpm@8
+RUN npm install --global pnpm@9
 
 # Files required by pnpm install
 COPY .npmrc package.json pnpm-lock.yaml pnpm-workspace.yaml ./
