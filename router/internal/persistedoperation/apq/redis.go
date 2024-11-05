@@ -53,7 +53,7 @@ func (r *redisClient) Get(ctx context.Context, clientName, operationHash string)
 }
 
 func (r *redisClient) Set(ctx context.Context, operationHash string, operationBody []byte, ttl int) error {
-	ttlD := time.Duration(float64(ttl) * float64(time.Second))
+	ttlD := time.Duration(float64(ttl)) * time.Second
 	status := r.client.Set(ctx, r.prefix+operationHash, operationBody, ttlD)
 	return status.Err()
 }

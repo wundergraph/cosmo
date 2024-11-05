@@ -22,8 +22,11 @@ type Client interface {
 }
 
 type KVClient interface {
+	// Get retrieves the operation body from the KV store with the given operation hash as the key
 	Get(ctx context.Context, clientName, operationHash string) ([]byte, error)
+	// Set saves the operation body in the KV store with the given operation hash as the key and the ttl in seconds
 	Set(ctx context.Context, operationHash string, operationBody []byte, ttl int) error
+	// Close closes the KV store connection
 	Close()
 }
 

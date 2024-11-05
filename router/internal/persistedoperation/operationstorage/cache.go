@@ -45,7 +45,7 @@ func (c *OperationsCache) Get(clientName string, operationHash string) []byte {
 
 func (c *OperationsCache) Set(clientName, operationHash string, operationBody []byte, ttl int) {
 	if ttl > 0 {
-		ttlD := time.Duration(float64(ttl) * float64(time.Second))
+		ttlD := time.Duration(float64(ttl)) * time.Second
 		c.Cache.SetWithTTL(c.key(clientName, operationHash), operationBody, int64(len(operationBody)), ttlD)
 		return
 	}
