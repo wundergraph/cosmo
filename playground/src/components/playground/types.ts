@@ -33,6 +33,7 @@ export type PlaygroundScript = {
   type: string;
   title: string;
   content: string;
+  updatedByTabId?: string;
 };
 
 export type LoadStatsEntry = {

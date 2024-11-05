@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.138.0](https://github.com/wundergraph/cosmo/compare/router@0.137.1...router@0.138.0) (2024-11-05)
+
+### Bug Fixes
+
+* playground scripts inconsistent states ([#1337](https://github.com/wundergraph/cosmo/issues/1337)) ([73309eb](https://github.com/wundergraph/cosmo/commit/73309eb1f492246f9488b192f5956da24d4ebe5f)) (@thisisnithin)
+
+### Features
+
+* context handling performance & memory improvements ([#1336](https://github.com/wundergraph/cosmo/issues/1336)) ([1aed39a](https://github.com/wundergraph/cosmo/commit/1aed39a99d604595ca4fef711a45ef0b059f77a5)) (@jensneuse)
+
 ## [0.137.1](https://github.com/wundergraph/cosmo/compare/router@0.137.0...router@0.137.1) (2024-11-04)
 
 ### Bug Fixes

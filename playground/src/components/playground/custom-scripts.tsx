@@ -144,6 +144,7 @@ const ScriptEditor = ({ script, close }: { script: PlaygroundScript; close: () =
   const {
     tabsState: { activeTabIndex, tabs },
   } = context;
+  const currentTabId = tabs[activeTabIndex].id;
 
   useEffect(() => {
     if (!monaco) return;
@@ -189,6 +190,7 @@ const ScriptEditor = ({ script, close }: { script: PlaygroundScript; close: () =
   const [selectedScript, setSelectedScript] = useLocalStorage<{
     id?: string;
     content?: string;
+    updatedByTabId?: string;
   }>(`playground:${script.type}:selected`, {});
 
   const [scriptTabState, setScriptTabState] = useLocalStorage<{
@@ -196,33 +198,37 @@ const ScriptEditor = ({ script, close }: { script: PlaygroundScript; close: () =
   }>('playground:script:tabState', {});
 
   const updateOpScripts = useCallback(
-    ({ upsert }: { upsert: boolean }) => {
-      const activeTabId = tabs[activeTabIndex].id;
+    ({ upsert, updatedTitle }: { upsert: boolean; updatedTitle?: string }) => {
       const tempScriptTabState = { ...scriptTabState };
 
-      if (!tempScriptTabState[activeTabId]) {
-        if (!upsert) {
-          return;
+      tabs.forEach((tab) => {
+        const tabId = tab.id;
+
+        if (tempScriptTabState[tabId] && tempScriptTabState[tabId][script.type]?.id === script.id) {
+          // Update existing script entry
+          tempScriptTabState[tabId][script.type] = {
+            ...tempScriptTabState[tabId][script.type],
+            id: script.id,
+            enabled: tempScriptTabState[tabId][script.type]?.enabled || false,
+            content: editorRef.current?.getValue(),
+          };
+        } else if (upsert && tabId === tabs[activeTabIndex].id) {
+          // For the active tab, if upsert is true, we add or update the script
+          if (!tempScriptTabState[tabId]) {
+            tempScriptTabState[tabId] = {};
+          }
+          tempScriptTabState[tabId][script.type] = {
+            id: script.id,
+            title: updatedTitle || script.title,
+            enabled: tempScriptTabState[tabId][script.type]?.enabled || false,
+            content: editorRef.current?.getValue(),
+          };
         }
-        tempScriptTabState[activeTabId] = {};
-      }
-
-      if (!upsert && tempScriptTabState[activeTabId][script.type].id !== script.id) {
-        return;
-      }
-
-      tempScriptTabState[activeTabId] = {
-        ...tempScriptTabState[activeTabId],
-        [script.type]: {
-          ...script,
-          enabled: tempScriptTabState[activeTabId][script.type]?.enabled || false,
-          content: editorRef.current?.getValue(),
-        },
-      };
+      });
 
       setScriptTabState(tempScriptTabState);
     },
-    [activeTabIndex, script, scriptTabState, setScriptTabState, tabs],
+    [tabs, activeTabIndex, script, scriptTabState, setScriptTabState],
   );
 
   const runCode = async (code: string) => {
@@ -432,6 +438,7 @@ const ScriptEditor = ({ script, close }: { script: PlaygroundScript; close: () =
             setSelectedScript({
               ...script,
               content: editorRef.current?.getValue(),
+              updatedByTabId: currentTabId,
             });
 
             if (script.type !== 'pre-flight') {
@@ -636,11 +643,15 @@ export const CustomScripts = () => {
     const activeTabScripts = scriptsTabState[activeTabId];
 
     if (!_.isEqual(selectedPreOp, activeTabScripts?.['pre-operation'])) {
-      setSelectedPreOp(activeTabScripts?.['pre-operation']);
+      if (selectedPreOp?.updatedByTabId && selectedPreOp?.updatedByTabId !== activeTabId) {
+        setSelectedPreOp(activeTabScripts?.['pre-operation']);
+      }
     }
 
     if (!_.isEqual(selectedPostOp, activeTabScripts?.['post-operation'])) {
-      setSelectedPostOp(activeTabScripts?.['post-operation']);
+      if (selectedPostOp?.updatedByTabId && selectedPostOp?.updatedByTabId !== activeTabId) {
+        setSelectedPostOp(activeTabScripts?.['post-operation']);
+      }
     }
   }, [tabs, activeTabIndex, scriptsTabState, selectedPreOp, selectedPostOp, setSelectedPreOp, setSelectedPostOp]);
 

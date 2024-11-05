@@ -218,9 +218,12 @@ const ScriptEditor = ({
   const envEditorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
 
   const [title, setTitle] = useState(script.title);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(title);
 
   useEffect(() => {
     setTitle(script.title);
+    setEditedTitle(script.title);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [script.id]);
 
@@ -228,6 +231,7 @@ const ScriptEditor = ({
   const {
     tabsState: { activeTabIndex, tabs },
   } = context;
+  const currentTabId = tabs[activeTabIndex].id;
 
   const client = useQueryClient();
   const { mutate: updateScript } = useMutation(updatePlaygroundScript, {
@@ -294,6 +298,8 @@ const ScriptEditor = ({
   const [selectedScript, setSelectedScript] = useLocalStorage<{
     id?: string;
     content?: string;
+    title?: string;
+    updatedByTabId?: string;
   }>(`playground:${script.type}:selected`, {});
 
   const [scriptTabState, setScriptTabState] = useLocalStorage<{
@@ -301,47 +307,53 @@ const ScriptEditor = ({
   }>("playground:script:tabState", {});
 
   const updateOpScripts = useCallback(
-    ({ upsert }: { upsert: boolean }) => {
-      const activeTabId = tabs[activeTabIndex].id;
+    ({ upsert, updatedTitle }: { upsert: boolean; updatedTitle?: string }) => {
       const tempScriptTabState = { ...scriptTabState };
 
-      if (!tempScriptTabState[activeTabId]) {
-        if (!upsert) {
-          return;
+      tabs.forEach((tab) => {
+        const tabId = tab.id;
+
+        if (
+          tempScriptTabState[tabId] &&
+          tempScriptTabState[tabId][script.type]?.id === script.id
+        ) {
+          // Update existing script entry
+          tempScriptTabState[tabId][script.type] = {
+            ...tempScriptTabState[tabId][script.type],
+            id: script.id,
+            title: updatedTitle || script.title,
+            enabled: tempScriptTabState[tabId][script.type]?.enabled || false,
+            content: editorRef.current?.getValue(),
+          };
+        } else if (upsert && tabId === tabs[activeTabIndex].id) {
+          // For the active tab, if upsert is true, we add or update the script
+          if (!tempScriptTabState[tabId]) {
+            tempScriptTabState[tabId] = {};
+          }
+          tempScriptTabState[tabId][script.type] = {
+            id: script.id,
+            title: updatedTitle || script.title,
+            enabled: tempScriptTabState[tabId][script.type]?.enabled || false,
+            content: editorRef.current?.getValue(),
+          };
         }
-        tempScriptTabState[activeTabId] = {};
-      }
-
-      if (
-        !upsert &&
-        tempScriptTabState[activeTabId][script.type]?.id !== script.id
-      ) {
-        return;
-      }
-
-      tempScriptTabState[activeTabId] = {
-        ...tempScriptTabState[activeTabId],
-        [script.type]: {
-          ...script,
-          enabled:
-            tempScriptTabState[activeTabId][script.type]?.enabled || false,
-          content: editorRef.current?.getValue(),
-        },
-      };
+      });
 
       setScriptTabState(tempScriptTabState);
     },
-    [activeTabIndex, script, scriptTabState, setScriptTabState, tabs],
+    [tabs, activeTabIndex, script, scriptTabState, setScriptTabState],
   );
 
   const updateSelectedScript = useCallback(() => {
     if (selectedScript && selectedScript.id === script.id) {
       setSelectedScript({
-        ...script,
+        ...selectedScript,
+        title,
         content: editorRef.current?.getValue(),
+        updatedByTabId: currentTabId,
       });
     }
-  }, [script, selectedScript, setSelectedScript]);
+  }, [script.id, selectedScript, setSelectedScript, title, currentTabId]);
 
   const runCode = async (code: string) => {
     const capturedLogs: string[] = [];
@@ -555,15 +567,63 @@ const ScriptEditor = ({
       <div className="flex items-center justify-between pt-2">
         <div className="flex items-center gap-x-2">
           <span className="text-sm">Title:</span>
-          <Input
-            value={title}
-            onChange={(e) => {
-              setTitle(e.currentTarget.value);
-              debouncedUpdate();
-            }}
-            placeholder="untitled script"
-            className="w-64"
-          />
+          {isEditingTitle ? (
+            <>
+              <Input
+                value={editedTitle}
+                onChange={(e) => setEditedTitle(e.currentTarget.value)}
+                placeholder="Enter script title"
+                className="w-64"
+              />
+              <Button
+                variant="secondary"
+                size="icon-sm"
+                onClick={() => setIsEditingTitle(false)}
+              >
+                <Cross1Icon />
+              </Button>
+              <Button
+                size="icon-sm"
+                onClick={() => {
+                  setTitle(editedTitle);
+                  setIsEditingTitle(false);
+                  updateScript({
+                    id: script.id,
+                    title: editedTitle,
+                    content: editorRef.current?.getValue(),
+                  });
+
+                  if (selectedScript && selectedScript.id === script.id) {
+                    setSelectedScript({
+                      ...selectedScript,
+                      title: editedTitle,
+                      updatedByTabId: currentTabId,
+                    });
+                  }
+
+                  if (script.type !== "pre-flight") {
+                    updateOpScripts({
+                      upsert: true,
+                      updatedTitle: editedTitle,
+                    });
+                  }
+                }}
+              >
+                <CheckIcon />
+              </Button>
+            </>
+          ) : (
+            <>
+              <span className="text-sm">{title || "untitled script"}</span>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => setIsEditingTitle(true)}
+              >
+                <Pencil1Icon />
+              </Button>
+            </>
+          )}
         </div>
         <div className="flex justify-end gap-2">
           <Button
@@ -578,7 +638,9 @@ const ScriptEditor = ({
             onClick={() => {
               setSelectedScript({
                 ...script,
+                title,
                 content: editorRef.current?.getValue(),
+                updatedByTabId: currentTabId,
               });
 
               if (script.type !== "pre-flight") {
@@ -603,52 +665,91 @@ const ScriptSelector = ({
 }: {
   type: ScriptType;
   activeScript?: PlaygroundScript;
-  setActiveScript: (val: PlaygroundScript) => void;
+  setActiveScript: (val: PlaygroundScript | undefined) => void;
 }) => {
   const { toast } = useToast();
 
-  const [selectedScript] = useLocalStorage<{
-    id?: string;
-  }>(`playground:${type}:selected`, {});
+  const [selectedScript, setSelectedScript] = useLocalStorage<
+    | {
+        id?: string;
+      }
+    | undefined
+  >(`playground:${type}:selected`, {});
+
+  const [, setScriptTabState] = useLocalStorage<{
+    [key: string]: Record<string, any>;
+  }>("playground:script:tabState", {});
 
   const { data, isLoading, error, refetch } = useQuery(getPlaygroundScripts, {
     type,
   });
 
   useEffect(() => {
-    if (data && data.scripts.length > 0) {
-      if (
-        !activeScript ||
-        !data.scripts.find((s) => s.id === activeScript.id)
-      ) {
-        const found = data.scripts.find((s) => s.id === selectedScript?.id);
-        setActiveScript(found || data.scripts[0]);
+    if (data) {
+      if (data.scripts.length > 0) {
+        // Find the updated active script
+        const updatedActiveScript = data.scripts.find(
+          (s) => s.id === activeScript?.id,
+        );
+
+        if (updatedActiveScript) {
+          // Update the active script with the latest data
+          setActiveScript(updatedActiveScript);
+        } else {
+          // If activeScript is not found, try to find the selected script
+          const found = data.scripts.find((s) => s.id === selectedScript?.id);
+          setActiveScript(found || data.scripts[0]);
+        }
+      } else {
+        // No scripts left, set activeScript to undefined
+        setActiveScript(undefined);
       }
     }
-  }, [data, activeScript, selectedScript, setActiveScript]);
+  }, [data, activeScript?.id, selectedScript?.id, setActiveScript]);
 
-  const { mutate: createScript } = useMutation(createPlaygroundScript, {
-    onSuccess: (data) => {
-      if (data.response?.code === EnumStatusCode.OK) {
-        refetch();
-      } else {
+  const { mutate: createScript, isPending: creatingScript } = useMutation(
+    createPlaygroundScript,
+    {
+      onSuccess: (data) => {
+        if (data.response?.code === EnumStatusCode.OK) {
+          refetch();
+        } else {
+          toast({
+            description: `Could not create script. ${data.response?.details}`,
+            duration: 3000,
+          });
+        }
+      },
+      onError: () => {
         toast({
-          description: `Could not create script. ${data.response?.details}`,
+          description: "Could not create script. Please try again",
           duration: 3000,
         });
-      }
+      },
     },
-    onError: () => {
-      toast({
-        description: "Could not create script. Please try again",
-        duration: 3000,
-      });
-    },
-  });
+  );
 
   const { mutate: deleteScript } = useMutation(deletePlaygroundScript, {
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       if (data.response?.code === EnumStatusCode.OK) {
+        // If the deleted script is the selected script in local storage, remove it
+        if (selectedScript?.id === variables.id) {
+          setSelectedScript(undefined);
+        }
+
+        // Update scriptTabState
+        setScriptTabState((prevState) => {
+          const newState = { ...prevState };
+          Object.keys(newState).forEach((tabId) => {
+            const tabScripts = newState[tabId];
+            if (tabScripts && tabScripts[type]?.id === variables.id) {
+              const prevEnabled = tabScripts[type]?.enabled || false;
+              newState[tabId][type] = { enabled: prevEnabled };
+            }
+          });
+          return newState;
+        });
+
         refetch();
       } else {
         toast({
@@ -699,6 +800,7 @@ const ScriptSelector = ({
                 type,
               })
             }
+            isLoading={creatingScript}
           >
             <PlusIcon className="mr-2" /> Create
           </Button>
@@ -776,6 +878,7 @@ const ScriptSelector = ({
             type,
           })
         }
+        isLoading={creatingScript}
         className="mt-4"
       >
         <PlusIcon />
@@ -787,7 +890,9 @@ const ScriptSelector = ({
 
 const ScriptsViewer = ({ type }: { type: ScriptType }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [activeScript, setActiveScript] = useState<PlaygroundScript>();
+  const [activeScript, setActiveScript] = useState<
+    PlaygroundScript | undefined
+  >();
 
   return (
     <Dialog
@@ -936,16 +1041,19 @@ export const CustomScripts = () => {
     });
   }, [tabs, setScriptsTabState]);
 
-  const [selectedPreOp, setSelectedPreOp] =
-    useLocalStorage<PlaygroundScript | null>(
-      `playground:pre-operation:selected`,
-      null,
-    );
-  const [selectedPostOp, setSelectedPostOp] =
-    useLocalStorage<PlaygroundScript | null>(
-      `playground:post-operation:selected`,
-      null,
-    );
+  const [selectedPreOp, setSelectedPreOp] = useLocalStorage<
+    | (PlaygroundScript & {
+        updatedByTabId?: string;
+      })
+    | null
+  >(`playground:pre-operation:selected`, null);
+
+  const [selectedPostOp, setSelectedPostOp] = useLocalStorage<
+    | (PlaygroundScript & {
+        updatedByTabId?: string;
+      })
+    | null
+  >(`playground:post-operation:selected`, null);
 
   useEffect(() => {
     const activeTabId = tabs[activeTabIndex]?.id;
@@ -957,11 +1065,21 @@ export const CustomScripts = () => {
     const activeTabScripts = scriptsTabState[activeTabId];
 
     if (!_.isEqual(selectedPreOp, activeTabScripts?.["pre-operation"])) {
-      setSelectedPreOp(activeTabScripts?.["pre-operation"]);
+      if (
+        selectedPreOp?.updatedByTabId &&
+        selectedPreOp?.updatedByTabId !== activeTabId
+      ) {
+        setSelectedPreOp(activeTabScripts?.["pre-operation"]);
+      }
     }
 
     if (!_.isEqual(selectedPostOp, activeTabScripts?.["post-operation"])) {
-      setSelectedPostOp(activeTabScripts?.["post-operation"]);
+      if (
+        selectedPostOp?.updatedByTabId &&
+        selectedPostOp?.updatedByTabId !== activeTabId
+      ) {
+        setSelectedPostOp(activeTabScripts?.["post-operation"]);
+      }
     }
   }, [
     tabs,
