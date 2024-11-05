@@ -3,10 +3,11 @@ package core
 import (
 	"bytes"
 	"context"
-	"github.com/wundergraph/astjson"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"mime"
 	"net/http"
+
+	"github.com/wundergraph/astjson"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 const (
@@ -98,7 +99,7 @@ func (f *HttpFlushWriter) Flush() (err error) {
 	return nil
 }
 
-func GetSubscriptionResponseWriter(ctx *resolve.Context, variables []byte, r *http.Request, w http.ResponseWriter) (*resolve.Context, resolve.SubscriptionResponseWriter, bool) {
+func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http.ResponseWriter) (*resolve.Context, resolve.SubscriptionResponseWriter, bool) {
 	type withFlushWriter interface {
 		SubscriptionResponseWriter() resolve.SubscriptionResponseWriter
 	}
@@ -122,7 +123,6 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, variables []byte, r *ht
 		subscribeOnce: wgParams.SubscribeOnce,
 		buf:           &bytes.Buffer{},
 		ctx:           ctx.Context(),
-		variables:     variables,
 	}
 
 	flushWriter.ctx, flushWriter.cancel = context.WithCancel(ctx.Context())
