@@ -52,7 +52,7 @@
             }
           }
         },
-        "kv": {
+        "redis": {
           "type": "array",
           "items": {
             "type": "object",
@@ -61,11 +61,11 @@
             "properties": {
               "id": {
                 "type": "string",
-                "description": "The ID of the storage provider. The ID is used to identify the storage provider in the configuration."
+                "description": "The ID of the redis provider. The ID is used to identify the storage provider in the configuration."
               },
               "url": {
                 "type": "string",
-                "description": "The URL of the KV Storage. The URL is specified as a string with the format 'scheme://host:port'."
+                "description": "The URL of the redis storage. The URL is specified as a string with the format 'scheme://host:port, with auth included if necessary'."
               }
             }
           }

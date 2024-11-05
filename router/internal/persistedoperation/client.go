@@ -33,7 +33,6 @@ type Client interface {
 type SaveClient interface {
 	Client
 	SaveOperation(ctx context.Context, clientName, sha256Hash, operationBody string) error
-	ApqEnabled() bool
 }
 
 type Options struct {
@@ -91,10 +90,6 @@ func (c client) PersistedOperation(ctx context.Context, clientName string, sha25
 	c.cache.Set(clientName, sha256Hash, content, 0)
 
 	return content, false, nil
-}
-
-func (c client) ApqEnabled() bool {
-	return c.apqClient != nil && c.apqClient.Enabled()
 }
 
 func (c client) SaveOperation(ctx context.Context, clientName, sha256Hash, operationBody string) error {

@@ -803,7 +803,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 func (r *Router) buildClients() error {
 	s3Providers := map[string]config.S3StorageProvider{}
 	cdnProviders := map[string]config.BaseStorageProvider{}
-	kvProviders := map[string]config.BaseStorageProvider{}
+	redisProviders := map[string]config.BaseStorageProvider{}
 
 	for _, provider := range r.storageProviders.S3 {
 		if _, ok := s3Providers[provider.ID]; ok {
@@ -819,11 +819,11 @@ func (r *Router) buildClients() error {
 		cdnProviders[provider.ID] = provider
 	}
 
-	for _, provider := range r.storageProviders.KV {
-		if _, ok := kvProviders[provider.ID]; ok {
-			return fmt.Errorf("duplicate KV storage provider with id '%s'", provider.ID)
+	for _, provider := range r.storageProviders.Redis {
+		if _, ok := redisProviders[provider.ID]; ok {
+			return fmt.Errorf("duplicate Redis storage provider with id '%s'", provider.ID)
 		}
-		kvProviders[provider.ID] = provider
+		redisProviders[provider.ID] = provider
 	}
 
 	var pClient persistedoperation.Client
@@ -882,7 +882,7 @@ func (r *Router) buildClients() error {
 	}
 
 	var kvClient apq.KVClient
-	if provider, ok := kvProviders[r.automaticPersistedQueriesConfig.Storage.ProviderID]; ok {
+	if provider, ok := redisProviders[r.automaticPersistedQueriesConfig.Storage.ProviderID]; ok {
 		c, err := apq.NewRedisClient(&apq.RedisOptions{
 			Logger:        r.logger,
 			StorageConfig: &provider,

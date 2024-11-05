@@ -551,9 +551,9 @@ type SubgraphErrorPropagationConfiguration struct {
 }
 
 type StorageProviders struct {
-	S3  []S3StorageProvider   `yaml:"s3,omitempty"`
-	CDN []BaseStorageProvider `yaml:"cdn,omitempty"`
-	KV  []BaseStorageProvider `yaml:"kv,omitempty"`
+	S3    []S3StorageProvider   `yaml:"s3,omitempty"`
+	CDN   []BaseStorageProvider `yaml:"cdn,omitempty"`
+	Redis []BaseStorageProvider `yaml:"redis,omitempty"`
 }
 
 type PersistedOperationsStorageConfig struct {

@@ -685,17 +685,19 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	}
 
 	operationProcessor := NewOperationProcessor(OperationProcessorOptions{
-		Executor:                       executor,
-		MaxOperationSizeInBytes:        int64(s.routerTrafficConfig.MaxRequestBodyBytes),
-		PersistedOperationClient:       s.persistedOperationClient,
-		EnablePersistedOperationsCache: s.engineExecutionConfiguration.EnablePersistedOperationsCache,
-		NormalizationCache:             gm.normalizationCache,
-		ValidationCache:                gm.validationCache,
-		QueryDepthCache:                gm.queryDepthCache,
-		OperationHashCache:             gm.operationHashCache,
-		ParseKitPoolSize:               s.engineExecutionConfiguration.ParseKitPoolSize,
-		IntrospectionEnabled:           s.Config.introspection,
-		ApolloCompatibilityFlags:       s.apolloCompatibilityFlags,
+		Executor:                            executor,
+		MaxOperationSizeInBytes:             int64(s.routerTrafficConfig.MaxRequestBodyBytes),
+		PersistedOperationClient:            s.persistedOperationClient,
+		PersistedOperationCacheSize:         int64(s.persistedOperationsConfig.Cache.Size.Uint64()),
+		AutomaticPersistedOperationCacheTtl: s.automaticPersistedQueriesConfig.Cache.TTL,
+		EnablePersistedOperationsCache:      s.engineExecutionConfiguration.EnablePersistedOperationsCache,
+		NormalizationCache:                  gm.normalizationCache,
+		ValidationCache:                     gm.validationCache,
+		QueryDepthCache:                     gm.queryDepthCache,
+		OperationHashCache:                  gm.operationHashCache,
+		ParseKitPoolSize:                    s.engineExecutionConfiguration.ParseKitPoolSize,
+		IntrospectionEnabled:                s.Config.introspection,
+		ApolloCompatibilityFlags:            s.apolloCompatibilityFlags,
 	})
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
 

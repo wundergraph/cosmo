@@ -293,7 +293,7 @@
   "StorageProviders": {
     "S3": null,
     "CDN": null,
-    "KV": null
+    "Redis": null
   },
   "ExecutionConfig": {
     "File": {

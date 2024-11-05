@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"slices"
 	"sync"
+	"time"
 
 	"github.com/buger/jsonparser"
 	"github.com/cespare/xxhash/v2"
@@ -87,9 +88,11 @@ var (
 )
 
 type OperationProcessorOptions struct {
-	Executor                 *Executor
-	MaxOperationSizeInBytes  int64
-	PersistedOperationClient persistedoperation.SaveClient
+	Executor                            *Executor
+	MaxOperationSizeInBytes             int64
+	PersistedOperationClient            persistedoperation.SaveClient
+	PersistedOperationCacheSize         int64
+	AutomaticPersistedOperationCacheTtl int
 
 	EnablePersistedOperationsCache bool
 	NormalizationCache             *ristretto.Cache[uint64, NormalizationCacheEntry]
@@ -132,8 +135,9 @@ type OperationCache struct {
 	persistedOperationVariableNames     map[string][]string
 	persistedOperationVariableNamesLock *sync.RWMutex
 
-	persistedOperationCache     map[uint64]normalizedOperationCacheEntry
-	persistedOperationCacheLock *sync.RWMutex
+	persistedOperationCache             *ristretto.Cache[uint64, normalizedOperationCacheEntry]
+	automaticPersistedOperationCacheTtl int
+	persistedOperationCacheLock         *sync.RWMutex
 
 	normalizationCache *ristretto.Cache[uint64, NormalizationCacheEntry]
 	validationCache    *ristretto.Cache[uint64, bool]
@@ -625,10 +629,6 @@ func (o *OperationKit) normalizePersistedOperation() (cached bool, err error) {
 	o.parsedOperation.NormalizedRepresentation = o.kit.normalizedOperation.String()
 	o.parsedOperation.Request.Variables = o.kit.doc.Input.Variables
 
-	if o.operationProcessor.persistedOperationClient != nil && o.operationProcessor.persistedOperationClient.ApqEnabled() {
-		return false, nil
-	}
-
 	if o.cache != nil && o.cache.persistedOperationCache != nil {
 		o.savePersistedOperationToCache(skipIncludeNames)
 	}
@@ -760,7 +760,7 @@ func (o *OperationKit) loadPersistedOperationFromCache() (ok bool, err error) {
 	}
 
 	o.cache.persistedOperationCacheLock.RLock()
-	entry, ok := o.cache.persistedOperationCache[cacheKey]
+	entry, ok := o.cache.persistedOperationCache.Get(cacheKey)
 	o.cache.persistedOperationCacheLock.RUnlock()
 	if !ok {
 		return false, nil
@@ -798,8 +798,9 @@ func (o *OperationKit) savePersistedOperationToCache(skipIncludeVariableNames []
 		operationType:            o.parsedOperation.Type,
 	}
 
+	ttlD := time.Duration(float64(o.cache.automaticPersistedOperationCacheTtl) * float64(time.Second))
 	o.cache.persistedOperationCacheLock.Lock()
-	o.cache.persistedOperationCache[cacheKey] = entry
+	o.cache.persistedOperationCache.SetWithTTL(cacheKey, entry, 1, ttlD)
 	o.cache.persistedOperationCacheLock.Unlock()
 
 	o.cache.persistedOperationVariableNamesLock.Lock()
@@ -1013,11 +1014,18 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 	}
 	if opts.EnablePersistedOperationsCache {
 		processor.operationCache = &OperationCache{
+			automaticPersistedOperationCacheTtl: opts.AutomaticPersistedOperationCacheTtl,
 			persistedOperationVariableNames:     map[string][]string{},
 			persistedOperationVariableNamesLock: &sync.RWMutex{},
-			persistedOperationCache:             map[uint64]normalizedOperationCacheEntry{},
 			persistedOperationCacheLock:         &sync.RWMutex{},
 		}
+
+		processor.operationCache.persistedOperationCache, _ = ristretto.NewCache[uint64, normalizedOperationCacheEntry](
+			&ristretto.Config[uint64, normalizedOperationCacheEntry]{
+				MaxCost:     opts.PersistedOperationCacheSize,
+				NumCounters: opts.PersistedOperationCacheSize * 10,
+			})
+
 	}
 	if opts.NormalizationCache != nil {
 		if processor.operationCache == nil {

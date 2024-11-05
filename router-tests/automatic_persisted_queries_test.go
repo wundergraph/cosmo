@@ -160,7 +160,7 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
 					core.WithStorageProviders(config.StorageProviders{
-						KV: []config.BaseStorageProvider{
+						Redis: []config.BaseStorageProvider{
 							{
 								URL: redisUrl,
 								ID:  "redis",
@@ -194,7 +194,7 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
 					core.WithStorageProviders(config.StorageProviders{
-						KV: []config.BaseStorageProvider{
+						Redis: []config.BaseStorageProvider{
 							{
 								URL: redisUrl,
 								ID:  "redis",
@@ -244,7 +244,7 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
 					core.WithStorageProviders(config.StorageProviders{
-						KV: []config.BaseStorageProvider{
+						Redis: []config.BaseStorageProvider{
 							{
 								URL: redisUrl,
 								ID:  "redis",
@@ -294,7 +294,7 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
 					core.WithStorageProviders(config.StorageProviders{
-						KV: []config.BaseStorageProvider{
+						Redis: []config.BaseStorageProvider{
 							{
 								URL: redisUrl,
 								ID:  "redis",

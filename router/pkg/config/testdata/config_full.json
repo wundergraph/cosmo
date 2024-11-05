@@ -464,9 +464,9 @@
       }
     ],
     "CDN": null,
-    "KV": [
+    "Redis": [
       {
-        "ID": "redis",
+        "ID": "my_redis",
         "URL": "redis://:test@localhost:6379"
       }
     ]
