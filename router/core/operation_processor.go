@@ -5,16 +5,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/apollocompatibility"
-	"hash"
-	"io"
-	"net/http"
-	"net/url"
-	"slices"
-	"sync"
-	"time"
-
 	"github.com/buger/jsonparser"
 	"github.com/cespare/xxhash/v2"
 	"github.com/dgraph-io/ristretto"
@@ -24,6 +14,8 @@ import (
 	fastjson "github.com/wundergraph/astjson"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
+	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/apollocompatibility"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
@@ -33,6 +25,13 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/middleware/operation_complexity"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/variablesvalidation"
+	"hash"
+	"io"
+	"net/http"
+	"net/url"
+	"slices"
+	"sync"
+	"time"
 )
 
 var (
@@ -369,6 +368,12 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 		}
 	}
 	if fromCache {
+		if isApq, _ := o.persistedOperationCacheKeyHasTtl(); isApq {
+			// if it is an APQ request, we need to save it again to renew the TTL expiration
+			if err = o.operationProcessor.persistedOperationClient.SaveOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.NormalizedRepresentation); err != nil {
+				return false, false, err
+			}
+		}
 		return true, false, nil
 	}
 
@@ -593,6 +598,10 @@ func (o *OperationKit) NormalizeOperation(isApq bool) (bool, error) {
 
 func (o *OperationKit) normalizePersistedOperation(isApq bool) (cached bool, err error) {
 	if o.parsedOperation.NormalizedRepresentation != "" {
+		// when dealing with APQ requests which have a TTL set, we need to renew the TTL
+		if shouldRenew, skipIncludeNames := o.persistedOperationCacheKeyHasTtl(); shouldRenew {
+			o.savePersistedOperationToCache(true, skipIncludeNames)
+		}
 		// normalized operation was loaded from cache
 		return true, nil
 	}
@@ -747,6 +756,10 @@ type normalizedOperationCacheEntry struct {
 	operationType            string
 }
 
+func (e normalizedOperationCacheEntry) GetLen() int {
+	return len(e.normalizedRepresentation) + len(e.operationType) + len(e.operationType)
+}
+
 func (o *OperationKit) loadPersistedOperationFromCache() (ok bool, err error) {
 
 	if o.cache == nil || o.cache.persistedOperationCache == nil {
@@ -787,6 +800,19 @@ func (o *OperationKit) jsonIsNull(variables []byte) bool {
 	return value.Type() == fastjson.TypeNull
 }
 
+func (o *OperationKit) persistedOperationCacheKeyHasTtl() (bool, []string) {
+	o.cache.persistedOperationVariableNamesLock.RLock()
+	variableNames, present := o.cache.persistedOperationVariableNames[o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash]
+	o.cache.persistedOperationVariableNamesLock.RUnlock()
+	if !present {
+		return false, variableNames
+	}
+	cacheKey := o.generatePersistedOperationCacheKey(variableNames)
+
+	ttl, ok := o.cache.persistedOperationCache.GetTTL(cacheKey)
+	return ok && ttl > 0, variableNames
+}
+
 func (o *OperationKit) savePersistedOperationToCache(isApq bool, skipIncludeVariableNames []string) {
 	cacheKey := o.generatePersistedOperationCacheKey(skipIncludeVariableNames)
 	entry := normalizedOperationCacheEntry{
@@ -794,13 +820,16 @@ func (o *OperationKit) savePersistedOperationToCache(isApq bool, skipIncludeVari
 		normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
 		operationType:            o.parsedOperation.Type,
 	}
+	cost := int64(entry.GetLen())
 
-	ttl := float64(0)
 	if isApq {
-		ttl = o.cache.automaticPersistedOperationCacheTtl
+		ttl := o.cache.automaticPersistedOperationCacheTtl
+		ttlD := time.Duration(ttl) * time.Second
+		o.cache.persistedOperationCache.SetWithTTL(cacheKey, entry, cost, ttlD)
+	} else {
+		o.cache.persistedOperationCache.Set(cacheKey, entry, cost)
 	}
-	ttlD := time.Duration(ttl) * time.Second
-	o.cache.persistedOperationCache.SetWithTTL(cacheKey, entry, 1, ttlD)
+	o.cache.persistedOperationCache.Wait()
 
 	o.cache.persistedOperationVariableNamesLock.Lock()
 	o.cache.persistedOperationVariableNames[o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash] = skipIncludeVariableNames
@@ -1018,12 +1047,17 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 			persistedOperationVariableNamesLock: &sync.RWMutex{},
 		}
 
+		cacheSize := opts.PersistedOperationCacheSize
+		if cacheSize <= 0 {
+			cacheSize = 1024 * 1024
+		}
+
 		processor.operationCache.persistedOperationCache, _ = ristretto.NewCache[uint64, normalizedOperationCacheEntry](
 			&ristretto.Config[uint64, normalizedOperationCacheEntry]{
-				MaxCost:     opts.PersistedOperationCacheSize,
-				NumCounters: opts.PersistedOperationCacheSize * 10,
+				MaxCost:     cacheSize,
+				NumCounters: cacheSize * 10,
+				BufferItems: 64,
 			})
-
 	}
 	if opts.NormalizationCache != nil {
 		if processor.operationCache == nil {

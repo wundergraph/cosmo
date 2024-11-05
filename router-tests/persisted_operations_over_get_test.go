@@ -25,7 +25,7 @@ func TestPersistedOperationOverGET(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"persisted Query not found"}]}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"persisted query not found","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res.Body)
 		})
 	})
 
@@ -93,7 +93,7 @@ func TestAutomatedPersistedQueriesOverGET(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"persisted Query not found"}]}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"persisted query not found","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res.Body)
 		})
 	})
 
@@ -115,7 +115,7 @@ func TestAutomatedPersistedQueriesOverGET(t *testing.T) {
 			})
 			require.NoError(t, err0)
 			require.Equal(t, http.StatusBadRequest, res0.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"persisted Query not found"}]}`, res0.Body)
+			require.Equal(t, `{"errors":[{"message":"persisted query not found","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res0.Body)
 
 			res1, err1 := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
 				Query:      `{__typename}`,
