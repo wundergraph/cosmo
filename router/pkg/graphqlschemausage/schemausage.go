@@ -1,7 +1,7 @@
 package graphqlschemausage
 
 import (
-	fastjson "github.com/wundergraph/astjson"
+	"github.com/wundergraph/astjson"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvisitor"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
@@ -105,15 +105,11 @@ func (a *argumentUsageInfoVisitor) EnterArgument(ref int) {
 	})
 }
 
-func GetInputUsageInfo(operation, definition *ast.Document, variables []byte) ([]*graphqlmetrics.InputUsageInfo, error) {
-	jsonValue, err := fastjson.ParseBytes(variables)
-	if err != nil {
-		return nil, err
-	}
+func GetInputUsageInfo(operation, definition *ast.Document, variables *astjson.Value) ([]*graphqlmetrics.InputUsageInfo, error) {
 	visitor := &inputUsageInfoVisitor{
 		operation:  operation,
 		definition: definition,
-		variables:  jsonValue,
+		variables:  variables,
 	}
 	for i := range operation.VariableDefinitions {
 		visitor.EnterVariableDefinition(i)
@@ -123,7 +119,7 @@ func GetInputUsageInfo(operation, definition *ast.Document, variables []byte) ([
 
 type inputUsageInfoVisitor struct {
 	definition, operation *ast.Document
-	variables             *fastjson.Value
+	variables             *astjson.Value
 	usage                 []*graphqlmetrics.InputUsageInfo
 }
 
@@ -138,7 +134,7 @@ func (v *inputUsageInfoVisitor) EnterVariableDefinition(ref int) {
 	v.traverseVariable(jsonField, varName, varTypeName, "")
 }
 
-func (v *inputUsageInfoVisitor) traverseVariable(jsonValue *fastjson.Value, fieldName, typeName, parentTypeName string) {
+func (v *inputUsageInfoVisitor) traverseVariable(jsonValue *astjson.Value, fieldName, typeName, parentTypeName string) {
 	defNode, ok := v.definition.NodeByNameStr(typeName)
 	if !ok {
 		return
@@ -154,13 +150,13 @@ func (v *inputUsageInfoVisitor) traverseVariable(jsonValue *fastjson.Value, fiel
 	switch defNode.Kind {
 	case ast.NodeKindInputObjectTypeDefinition:
 		switch jsonValue.Type() {
-		case fastjson.TypeArray:
+		case astjson.TypeArray:
 			for _, arrayValue := range jsonValue.GetArray() {
 				v.traverseVariable(arrayValue, fieldName, typeName, parentTypeName)
 			}
-		case fastjson.TypeObject:
+		case astjson.TypeObject:
 			o := jsonValue.GetObject()
-			o.Visit(func(key []byte, value *fastjson.Value) {
+			o.Visit(func(key []byte, value *astjson.Value) {
 				fieldRef := v.definition.InputObjectTypeDefinitionInputValueDefinitionByName(defNode.Ref, key)
 				if fieldRef == -1 {
 					return
@@ -178,9 +174,9 @@ func (v *inputUsageInfoVisitor) traverseVariable(jsonValue *fastjson.Value, fiel
 
 	case ast.NodeKindEnumTypeDefinition:
 		switch jsonValue.Type() {
-		case fastjson.TypeString:
+		case astjson.TypeString:
 			usageInfo.EnumValues = []string{string(jsonValue.GetStringBytes())}
-		case fastjson.TypeArray:
+		case astjson.TypeArray:
 			arr := jsonValue.GetArray()
 			usageInfo.EnumValues = make([]string, len(arr))
 			for i, arrayValue := range arr {

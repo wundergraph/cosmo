@@ -3,7 +3,6 @@ package core
 import (
 	"bytes"
 	"fmt"
-	otelmetric "go.opentelemetry.io/otel/metric"
 	"io"
 	"net/http"
 	"net/url"
@@ -11,6 +10,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	otelmetric "go.opentelemetry.io/otel/metric"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"go.opentelemetry.io/otel/attribute"
@@ -244,8 +245,8 @@ func (ct *CustomTransport) roundTripSingleFlight(req *http.Request) (*http.Respo
 		res := &http.Response{}
 		res.Status = item.response.Status
 		res.StatusCode = item.response.StatusCode
-		res.Header = item.response.Header.Clone()
-		res.Trailer = item.response.Trailer.Clone()
+		res.Header = item.response.Header
+		res.Trailer = item.response.Trailer
 		res.ContentLength = item.response.ContentLength
 		res.TransferEncoding = item.response.TransferEncoding
 		res.Close = item.response.Close

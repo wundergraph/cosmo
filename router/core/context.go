@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/wundergraph/astjson"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 
 	graphqlmetrics "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
@@ -450,7 +451,7 @@ type operationContext struct {
 	hash uint64
 	// Content is the content of the operation
 	content    string
-	variables  []byte
+	variables  *astjson.Value
 	files      []httpclient.File
 	clientInfo *ClientInfo
 	// preparedPlan is the prepared plan of the operation
@@ -478,7 +479,7 @@ type operationContext struct {
 	normalizationTime time.Duration
 }
 
-func (o *operationContext) Variables() []byte {
+func (o *operationContext) Variables() *astjson.Value {
 	return o.variables
 }
 
@@ -593,12 +594,9 @@ func buildRequestContext(opts requestContextOptions) *requestContext {
 		request:        opts.r,
 		operation:      opts.operationContext,
 		telemetry: &requestTelemetryAttributes{
-			metricSetAttrs:   opts.metricSetAttributes,
-			traceAttrs:       make([]attribute.KeyValue, 0, 10),
-			metricAttrs:      make([]attribute.KeyValue, 0, 10),
-			metricSliceAttrs: make([]attribute.KeyValue, 0, 10),
-			metricsEnabled:   opts.metricsEnabled,
-			traceEnabled:     opts.traceEnabled,
+			metricSetAttrs: opts.metricSetAttributes,
+			metricsEnabled: opts.metricsEnabled,
+			traceEnabled:   opts.traceEnabled,
 		},
 		subgraphResolver: subgraphResolverFromContext(opts.r.Context()),
 	}
