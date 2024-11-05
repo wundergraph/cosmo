@@ -38,15 +38,24 @@ const validateHeaders = (headers: Record<string, string>) => {
   }
 };
 
-const substituteHeadersFromEnv = (headers: Record<string, string>) => {
-  const storedHeaders = JSON.parse(localStorage.getItem('headers') || '{}', (key, value) => {
+const substituteHeadersFromEnv = (headers: Record<string, string>, graphId: string) => {
+  const env = JSON.parse(localStorage.getItem('playground:env') || '{}');
+  const graphEnv: Record<string, any> | undefined = env[graphId];
+
+  if (!graphEnv) {
+    return headers;
+  }
+
+  const storedHeaders: Record<string, any> = {};
+
+  Object.entries(graphEnv).forEach(([key, value]) => {
     if (value === 'true' || value === 'false') {
-      return value === 'true';
+      storedHeaders[key] = value === 'true';
+    } else if (!isNaN(value as any) && value !== '') {
+      storedHeaders[key] = Number(value);
+    } else {
+      storedHeaders[key] = value;
     }
-    if (!isNaN(value) && value !== '') {
-      return Number(value);
-    }
-    return value;
   });
 
   for (const key in headers) {
@@ -144,7 +153,7 @@ const graphiQLFetch = async (
       ? scripts.transformHeaders(initialHeaders)
       : { ...initialHeaders };
 
-    headers = substituteHeadersFromEnv(headers);
+    headers = substituteHeadersFromEnv(headers, '0');
 
     validateHeaders(headers);
 
@@ -599,13 +608,14 @@ export const Playground = (input: {
 
         const existingHeaders = JSON.parse(debouncedHeaders || '{}');
         delete existingHeaders['X-WG-TRACE'];
-        const requestHeaders: Record<string, string> = {
+        let requestHeaders: Record<string, string> = {
           ...existingHeaders,
           'X-WG-Include-Query-Plan': 'true',
           'X-WG-Skip-Loader': 'true',
           'X-WG-DISABLE-TRACING': 'true',
         };
 
+        requestHeaders = substituteHeadersFromEnv(requestHeaders, '0');
         validateHeaders(requestHeaders);
 
         const response = await fetch(url, {

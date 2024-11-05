@@ -104,19 +104,28 @@ const validateHeaders = (headers: Record<string, string>) => {
   }
 };
 
-const substituteHeadersFromEnv = (headers: Record<string, string>) => {
-  const storedHeaders = JSON.parse(
-    localStorage.getItem("headers") || "{}",
-    (key, value) => {
-      if (value === "true" || value === "false") {
-        return value === "true";
-      }
-      if (!isNaN(value) && value !== "") {
-        return Number(value);
-      }
-      return value;
-    },
-  );
+const substituteHeadersFromEnv = (
+  headers: Record<string, string>,
+  graphId: string,
+) => {
+  const env = JSON.parse(localStorage.getItem("playground:env") || "{}");
+  const graphEnv: Record<string, any> | undefined = env[graphId];
+
+  if (!graphEnv) {
+    return headers;
+  }
+
+  const storedHeaders: Record<string, any> = {};
+
+  Object.entries(graphEnv).forEach(([key, value]) => {
+    if (value === "true" || value === "false") {
+      storedHeaders[key] = value === "true";
+    } else if (!isNaN(value as any) && value !== "") {
+      storedHeaders[key] = Number(value);
+    } else {
+      storedHeaders[key] = value;
+    }
+  });
 
   for (const key in headers) {
     let value = headers[key];
@@ -227,7 +236,7 @@ const graphiQLFetch = async (
       ...(init.headers as Record<string, string>),
     };
 
-    headers = substituteHeadersFromEnv(headers);
+    headers = substituteHeadersFromEnv(headers, graphId);
 
     validateHeaders(headers);
 
@@ -1150,7 +1159,8 @@ const PlaygroundPage: NextPageWithLayout = () => {
         !schema ||
         !debouncedQuery ||
         !routingUrl ||
-        !graphContext?.graphRequestToken
+        !graphContext?.graphRequestToken ||
+        !graphContext?.graph?.id
       ) {
         return;
       }
@@ -1164,7 +1174,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
 
         const existingHeaders = JSON.parse(debouncedHeaders || "{}");
         delete existingHeaders["X-WG-TRACE"];
-        const requestHeaders: Record<string, string> = {
+        let requestHeaders: Record<string, string> = {
           ...existingHeaders,
           "X-WG-Token": graphContext.graphRequestToken,
           "X-WG-Include-Query-Plan": "true",
@@ -1172,6 +1182,10 @@ const PlaygroundPage: NextPageWithLayout = () => {
           "X-WG-DISABLE-TRACING": "true",
         };
 
+        requestHeaders = substituteHeadersFromEnv(
+          requestHeaders,
+          graphContext?.graph?.id,
+        );
         validateHeaders(requestHeaders);
 
         if (type === "featureFlag") {
@@ -1212,6 +1226,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
     debouncedHeaders,
     graphContext?.featureFlagsInLatestValidComposition,
     graphContext?.graphRequestToken,
+    graphContext?.graph?.id,
     loadSchemaGraphId,
     routingUrl,
     schema,
