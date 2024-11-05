@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.94.3](https://github.com/wundergraph/cosmo/compare/studio@0.94.2...studio@0.94.3) (2024-11-05)
+
+### Bug Fixes
+
+* playground scripts inconsistent states ([#1337](https://github.com/wundergraph/cosmo/issues/1337)) ([73309eb](https://github.com/wundergraph/cosmo/commit/73309eb1f492246f9488b192f5956da24d4ebe5f)) (@thisisnithin)
+
 ## [0.94.2](https://github.com/wundergraph/cosmo/compare/studio@0.94.1...studio@0.94.2) (2024-11-04)
 
 ### Bug Fixes
