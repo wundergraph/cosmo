@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/wundergraph/astjson"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"go.opentelemetry.io/otel/attribute"
 
@@ -817,7 +818,10 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 
 	opContext.normalizationTime = time.Since(startNormalization)
 	opContext.content = operationKit.parsedOperation.NormalizedRepresentation
-	opContext.variables = operationKit.parsedOperation.Request.Variables
+	opContext.variables, err = astjson.ParseBytes(operationKit.parsedOperation.Request.Variables)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	startValidation := time.Now()
 
