@@ -6,10 +6,6 @@ import (
 	"time"
 )
 
-const (
-	persistentAverageCacheEntrySize = 4 * 1024 // 4kb
-)
-
 type OperationsCache struct {
 	// cache is the backing store for the in-memory cache. Note
 	// that if the cache is disabled, this will be nil
