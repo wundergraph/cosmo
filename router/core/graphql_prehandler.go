@@ -421,7 +421,7 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, varia
 	} else if req.Method == http.MethodPost {
 		if err := operationKit.UnmarshalOperationFromBody(httpOperation.body); err != nil {
 			return &httpGraphqlError{
-				message:    fmt.Sprintf("error parsing request body: %s", err),
+				message:    "error parsing request body",
 				statusCode: http.StatusBadRequest,
 			}
 		}
