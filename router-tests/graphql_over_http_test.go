@@ -51,7 +51,7 @@ func TestGraphQLOverHTTPCompatibility(t *testing.T) {
 			require.Equal(t, http.StatusBadRequest, res.StatusCode)
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"error parsing request body: variables must be an object"}]}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"error parsing request body"}]}`, string(data))
 		})
 		t.Run("return 400 bad request when extensions is not a map", func(t *testing.T) {
 			header := http.Header{
@@ -64,7 +64,7 @@ func TestGraphQLOverHTTPCompatibility(t *testing.T) {
 			require.Equal(t, http.StatusBadRequest, res.StatusCode)
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"error parsing request body: error parsing extensions: expected { character for map value"}]}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"error parsing request body"}]}`, string(data))
 		})
 		t.Run("valid request with Operation Name should return 200 OK with valid response", func(t *testing.T) {
 			header := http.Header{
@@ -90,7 +90,7 @@ func TestGraphQLOverHTTPCompatibility(t *testing.T) {
 			require.Equal(t, http.StatusBadRequest, res.StatusCode)
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"error parsing request body: unexpected character 'q'"}]}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"error parsing request body"}]}`, string(data))
 		})
 		t.Run("malformed JSON variant should return 400", func(t *testing.T) {
 			header := http.Header{
@@ -103,7 +103,7 @@ func TestGraphQLOverHTTPCompatibility(t *testing.T) {
 			require.Equal(t, http.StatusBadRequest, res.StatusCode)
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"error parsing request body: json: invalid character { as string"}]}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"error parsing request body"}]}`, string(data))
 		})
 		t.Run("malformed JSON variant #2 should return 400", func(t *testing.T) {
 			header := http.Header{
@@ -129,7 +129,7 @@ func TestGraphQLOverHTTPCompatibility(t *testing.T) {
 			require.Equal(t, http.StatusBadRequest, res.StatusCode)
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"error parsing request body: unexpected character 'G'"}]}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"error parsing request body"}]}`, string(data))
 		})
 		t.Run("missing variables should return 200 OK with validation errors response", func(t *testing.T) {
 			header := http.Header{
