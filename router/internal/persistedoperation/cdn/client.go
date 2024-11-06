@@ -36,13 +36,13 @@ type client struct {
 	logger         *zap.Logger
 }
 
-func (cdn *client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, bool, error) {
+func (cdn *client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error) {
 	content, err := cdn.persistedOperation(ctx, clientName, sha256Hash)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
-	return content, false, nil
+	return content, nil
 }
 
 func (cdn *client) persistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error) {

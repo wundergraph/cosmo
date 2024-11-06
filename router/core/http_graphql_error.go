@@ -19,14 +19,6 @@ type httpGraphqlError struct {
 	statusCode    int
 }
 
-func NewHttpGraphqlError(message, extensionCode string, statusCode int) HttpError {
-	return &httpGraphqlError{
-		message:       message,
-		extensionCode: extensionCode,
-		statusCode:    statusCode,
-	}
-}
-
 func (e *httpGraphqlError) Error() string {
 	return e.message
 }
