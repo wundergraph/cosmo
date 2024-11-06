@@ -7,6 +7,10 @@ import (
 	"time"
 )
 
+var (
+	persistentAverageCacheEntrySize = int64(4 * 1024) // 4kb
+)
+
 type OperationsCache struct {
 	// cache is the backing store for the in-memory cache. Note
 	// that if the cache is disabled, this will be nil
@@ -25,7 +29,7 @@ func NewOperationsCache(cacheSize int64) (*OperationsCache, error) {
 
 	var err error
 	oc.Cache, err = ristretto.NewCache(&ristretto.Config[string, []byte]{
-		NumCounters: cacheSize * 10,
+		NumCounters: (cacheSize * 10) / persistentAverageCacheEntrySize,
 		MaxCost:     cacheSize,
 		BufferItems: 64,
 	})
