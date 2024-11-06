@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func getConfigClient(r *Router, cdnProviders map[string]config.CDNStorageProvider, s3Providers map[string]config.S3StorageProvider, providerID string, isFallbackClient bool) (client *routerconfig.Client, err error) {
+func getConfigClient(r *Router, cdnProviders map[string]config.BaseStorageProvider, s3Providers map[string]config.S3StorageProvider, providerID string, isFallbackClient bool) (client *routerconfig.Client, err error) {
 	// CDN Providers
 	if provider, ok := cdnProviders[providerID]; ok {
 		if r.graphApiToken == "" {
@@ -111,7 +111,7 @@ func getConfigClient(r *Router, cdnProviders map[string]config.CDNStorageProvide
 }
 
 // InitializeConfigPoller creates a poller to fetch execution config. It is only initialized when a config poller is configured and the router is not started with a static config
-func InitializeConfigPoller(r *Router, cdnProviders map[string]config.CDNStorageProvider, s3Providers map[string]config.S3StorageProvider) (*configpoller.ConfigPoller, error) {
+func InitializeConfigPoller(r *Router, cdnProviders map[string]config.BaseStorageProvider, s3Providers map[string]config.S3StorageProvider) (*configpoller.ConfigPoller, error) {
 	if r.staticExecutionConfig != nil || r.routerConfigPollerConfig == nil || r.configPoller != nil {
 		return nil, nil
 	}

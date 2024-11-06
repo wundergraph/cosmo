@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"net"
 	"net/http"
 
 	"github.com/hashicorp/go-multierror"
 	rErrors "github.com/wundergraph/cosmo/router/internal/errors"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
@@ -281,7 +281,8 @@ func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *
 	case errors.As(err, &httpErr):
 		writeRequestErrors(r, w, httpErr.StatusCode(), requestErrorsFromHttpError(httpErr), requestLogger)
 	case errors.As(err, &poNotFoundErr):
-		writeRequestErrors(r, w, http.StatusBadRequest, graphqlerrors.RequestErrorsFromError(errors.New("persisted Query not found")), requestLogger)
+		newErr := NewHttpGraphqlError("persisted query not found", "PERSISTED_QUERY_NOT_FOUND", http.StatusBadRequest)
+		writeRequestErrors(r, w, http.StatusBadRequest, requestErrorsFromHttpError(newErr), requestLogger)
 	case errors.As(err, &reportErr):
 		report := reportErr.Report()
 		logInternalErrorsFromReport(reportErr.Report(), requestLogger)

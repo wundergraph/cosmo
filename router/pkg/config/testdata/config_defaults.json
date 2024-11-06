@@ -292,7 +292,8 @@
   },
   "StorageProviders": {
     "S3": null,
-    "CDN": null
+    "CDN": null,
+    "Redis": null
   },
   "ExecutionConfig": {
     "File": {
@@ -312,6 +313,17 @@
   "PersistedOperationsConfig": {
     "Cache": {
       "Size": 100000000
+    },
+    "Storage": {
+      "ProviderID": "",
+      "ObjectPrefix": ""
+    }
+  },
+  "AutomaticPersistedQueries": {
+    "Enabled": false,
+    "Cache": {
+      "Size": 100000000,
+      "TTL": -1
     },
     "Storage": {
       "ProviderID": "",
