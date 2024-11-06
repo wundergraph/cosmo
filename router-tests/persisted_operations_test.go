@@ -23,7 +23,7 @@ func TestPersistedOperationNotFound(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-		require.Equal(t, `{"errors":[{"message":"persisted query not found","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"persisted Query not found"}]}`, res.Body)
 	})
 }
 

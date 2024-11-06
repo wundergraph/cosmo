@@ -130,7 +130,6 @@ type Config struct {
 	NoRetryClient                      bool
 	PropagationConfig                  config.PropagationConfig
 	CacheControlPolicy                 config.CacheControlPolicy
-	ApqConfig                          config.AutomaticPersistedQueriesConfig
 	LogObservation                     LogObservationConfig
 	ClientHeader                       config.ClientHeader
 	ResponseTraceHeader                config.ResponseTraceHeader
@@ -591,8 +590,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			RewritePaths:           true,
 			AllowedExtensionFields: []string{"code"},
 		},
-		CacheControl:              testConfig.CacheControlPolicy,
-		AutomaticPersistedQueries: testConfig.ApqConfig,
+		CacheControl: testConfig.CacheControlPolicy,
 	}
 
 	if testConfig.ModifyCDNConfig != nil {
@@ -670,7 +668,6 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithEngineExecutionConfig(engineExecutionConfig),
 		core.WithSecurityConfig(cfg.SecurityConfiguration),
 		core.WithCacheControlPolicy(cfg.CacheControl),
-		core.WithAutomatedPersistedQueriesConfig(cfg.AutomaticPersistedQueries),
 		core.WithCDN(cfg.CDN),
 		core.WithListenerAddr(listenerAddr),
 		core.WithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation),
