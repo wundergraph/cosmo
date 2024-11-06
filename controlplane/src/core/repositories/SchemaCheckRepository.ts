@@ -92,7 +92,7 @@ export class SchemaCheckRepository {
       .returning();
   }
 
-  public async createOperationUsage(
+  public createOperationUsage(
     schemaCheckActionOperations: Map<string, InspectorOperationResult[]>,
     federatedGraphId: string,
   ) {
@@ -120,7 +120,17 @@ export class SchemaCheckRepository {
       return;
     }
 
-    await this.db.insert(schemaCheckChangeActionOperationUsage).values(values).execute();
+    const arrayOfValues: NewSchemaChangeOperationUsage[][] = [];
+    for (let i = 0; i < values.length; i += 20) {
+      arrayOfValues.push(values.slice(i, i + 20));
+    }
+
+    return this.db.transaction(async (tx) => {
+      const promises = arrayOfValues.map((values) =>
+        tx.insert(schemaCheckChangeActionOperationUsage).values(values).execute(),
+      );
+      await Promise.all(promises);
+    });
   }
 
   private mapChangesFromDriverValue = (val: any) => {
