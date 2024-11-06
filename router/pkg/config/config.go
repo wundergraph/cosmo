@@ -551,19 +551,13 @@ type SubgraphErrorPropagationConfiguration struct {
 }
 
 type StorageProviders struct {
-	S3    []S3StorageProvider   `yaml:"s3,omitempty"`
-	CDN   []BaseStorageProvider `yaml:"cdn,omitempty"`
-	Redis []BaseStorageProvider `yaml:"redis,omitempty"`
+	S3  []S3StorageProvider  `yaml:"s3,omitempty"`
+	CDN []CDNStorageProvider `yaml:"cdn,omitempty"`
 }
 
 type PersistedOperationsStorageConfig struct {
 	ProviderID   string `yaml:"provider_id,omitempty" env:"PERSISTED_OPERATIONS_STORAGE_PROVIDER_ID"`
 	ObjectPrefix string `yaml:"object_prefix,omitempty" env:"PERSISTED_OPERATIONS_STORAGE_OBJECT_PREFIX"`
-}
-
-type AutomaticPersistedQueriesStorageConfig struct {
-	ProviderID   string `yaml:"provider_id,omitempty" env:"APQ_STORAGE_PROVIDER_ID"`
-	ObjectPrefix string `yaml:"object_prefix,omitempty" env:"APQ_STORAGE_OBJECT_PREFIX"`
 }
 
 type S3StorageProvider struct {
@@ -576,7 +570,7 @@ type S3StorageProvider struct {
 	Secure    bool   `yaml:"secure,omitempty"`
 }
 
-type BaseStorageProvider struct {
+type CDNStorageProvider struct {
 	ID  string `yaml:"id,omitempty"`
 	URL string `yaml:"url,omitempty" envDefault:"https://cosmo-cdn.wundergraph.com"`
 }
@@ -611,20 +605,9 @@ type PersistedOperationsCacheConfig struct {
 	Size BytesString `yaml:"size,omitempty" env:"PERSISTED_OPERATIONS_CACHE_SIZE" envDefault:"100MB"`
 }
 
-type AutomaticPersistedQueriesCacheConfig struct {
-	Size BytesString `yaml:"size,omitempty" env:"APQ_CACHE_SIZE" envDefault:"100MB"`
-	TTL  int         `yaml:"ttl" env:"APQ_CACHE_TTL" envDefault:"-1"`
-}
-
 type PersistedOperationsConfig struct {
 	Cache   PersistedOperationsCacheConfig   `yaml:"cache"`
 	Storage PersistedOperationsStorageConfig `yaml:"storage"`
-}
-
-type AutomaticPersistedQueriesConfig struct {
-	Enabled bool                                   `yaml:"enabled" env:"APQ_ENABLED" envDefault:"false"`
-	Cache   AutomaticPersistedQueriesCacheConfig   `yaml:"cache"`
-	Storage AutomaticPersistedQueriesStorageConfig `yaml:"storage"`
 }
 
 type AccessLogsConfig struct {
@@ -747,12 +730,11 @@ type Config struct {
 
 	SubgraphErrorPropagation SubgraphErrorPropagationConfiguration `yaml:"subgraph_error_propagation"`
 
-	StorageProviders          StorageProviders                `yaml:"storage_providers"`
-	ExecutionConfig           ExecutionConfig                 `yaml:"execution_config"`
-	PersistedOperationsConfig PersistedOperationsConfig       `yaml:"persisted_operations"`
-	AutomaticPersistedQueries AutomaticPersistedQueriesConfig `yaml:"automatic_persisted_queries"`
-	ApolloCompatibilityFlags  ApolloCompatibilityFlags        `yaml:"apollo_compatibility_flags"`
-	ClientHeader              ClientHeader                    `yaml:"client_header"`
+	StorageProviders          StorageProviders          `yaml:"storage_providers"`
+	ExecutionConfig           ExecutionConfig           `yaml:"execution_config"`
+	PersistedOperationsConfig PersistedOperationsConfig `yaml:"persisted_operations"`
+	ApolloCompatibilityFlags  ApolloCompatibilityFlags  `yaml:"apollo_compatibility_flags"`
+	ClientHeader              ClientHeader              `yaml:"client_header"`
 }
 
 type LoadResult struct {

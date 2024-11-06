@@ -56,10 +56,8 @@ func TestOperationProcessorPersistentOperations(t *testing.T) {
 
 			require.NoError(t, err)
 
-			var isApq bool
-			_, isApq, err = kit.FetchPersistedOperation(context.Background(), clientInfo)
+			_, err = kit.FetchPersistedOperation(context.Background(), clientInfo)
 
-			require.False(t, isApq)
 			if err != nil {
 				require.EqualError(t, tc.ExpectedError, err.Error())
 			} else if kit.parsedOperation != nil {
