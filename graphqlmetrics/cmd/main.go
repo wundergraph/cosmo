@@ -111,7 +111,7 @@ func main() {
 		logger.Info("Migration is up to date")
 	}
 
-	ms := core.NewMetricsService(logger, conn)
+	ms := core.NewMetricsService(ctx, logger, conn)
 
 	metricsConfig := telemetry.NewTelemetryConfig(
 		core.Version,
@@ -149,7 +149,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		ms.Shutdown(cfg.ShutdownDelay)
+		ms.Shutdown()
 	}()
 
 	// enforce a maximum shutdown delay

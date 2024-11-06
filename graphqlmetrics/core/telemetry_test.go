@@ -82,7 +82,7 @@ func TestExposingPrometheusMetrics(t *testing.T) {
 	}
 
 	db := test.GetTestDatabase(t)
-	msvc := NewMetricsService(zap.NewNop(), db)
+	msvc := NewMetricsService(context.Background(), zap.NewNop(), db)
 	ctx, stop := newServerCtx()
 	defer stop()
 
@@ -154,7 +154,7 @@ func TestValidateExposedMetrics(t *testing.T) {
 	defer stop()
 
 	db := test.GetTestDatabase(t)
-	msvc := NewMetricsService(zap.NewNop(), db)
+	msvc := NewMetricsService(context.Background(), zap.NewNop(), db)
 
 	svr := NewServer(ctx, msvc,
 		WithListenAddr(mainListenAddr),
@@ -344,7 +344,7 @@ func TestValidateExposedAttirbutesWithoutClaims(t *testing.T) {
 	defer stop()
 
 	db := test.GetTestDatabase(t)
-	msvc := NewMetricsService(zap.NewNop(), db)
+	msvc := NewMetricsService(context.Background(), zap.NewNop(), db)
 
 	svr := NewServer(ctx, msvc,
 		WithListenAddr(mainListenAddr),
