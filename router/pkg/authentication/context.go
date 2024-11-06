@@ -3,7 +3,7 @@ package authentication
 import (
 	"context"
 
-	"github.com/goccy/go-json"
+	"encoding/json"
 )
 
 type authenticationKey struct{}
