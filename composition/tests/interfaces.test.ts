@@ -517,7 +517,7 @@ describe('Interface tests', () => {
     });
 
     // TODO currently a warning until @inaccessible and entity interfaces are handled
-    test('that an error is returned if a Field returns an Interface without any implementations', () => {
+    test('that a warning is returned if a Field returns an Interface without any implementations', () => {
       const { errors, warnings } = normalizeSubgraph(subgraphAM.definitions, subgraphAM.name);
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(1);
