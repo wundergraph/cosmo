@@ -19,7 +19,9 @@ describe('Deactivate Organization', (ctx) => {
   });
 
   test('Should deactivate org and delete after scheduled', async (testContext) => {
-    const { client, server, keycloakClient, realm, queues, users, authenticator } = await SetupTest({ dbname });
+    const { client, server, keycloakClient, realm, queues, users, authenticator, blobStorage } = await SetupTest({
+      dbname,
+    });
     const mainUserContext = users[TestUser.adminAliceCompanyA];
 
     const orgName = genID();
@@ -63,6 +65,7 @@ describe('Deactivate Organization', (ctx) => {
       logger: server.log,
       keycloakClient,
       keycloakRealm: realm,
+      blobStorage,
     });
 
     const job = await orgRepo.deactivateOrganization({
@@ -92,7 +95,9 @@ describe('Deactivate Organization', (ctx) => {
   });
 
   test('Should reactivate org and remove the scheduled deletion', async (testContext) => {
-    const { client, server, keycloakClient, realm, queues, users, authenticator } = await SetupTest({ dbname });
+    const { client, server, keycloakClient, realm, queues, users, authenticator, blobStorage } = await SetupTest({
+      dbname,
+    });
     const mainUserContext = users[TestUser.adminAliceCompanyA];
 
     const orgName = genID();
@@ -118,6 +123,7 @@ describe('Deactivate Organization', (ctx) => {
       logger: server.log,
       keycloakClient,
       keycloakRealm: realm,
+      blobStorage,
     });
 
     await orgRepo.deactivateOrganization({
