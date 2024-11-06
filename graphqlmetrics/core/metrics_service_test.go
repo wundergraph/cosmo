@@ -2,8 +2,10 @@ package core
 
 import (
 	"context"
+
 	"os"
 	"testing"
+	"time"
 
 	"connectrpc.com/connect"
 	_ "github.com/amacneil/dbmate/v2/pkg/driver/clickhouse"
@@ -11,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1"
+	"github.com/wundergraph/cosmo/graphqlmetrics/pkg/batch"
 	utils "github.com/wundergraph/cosmo/graphqlmetrics/pkg/utils"
 	"github.com/wundergraph/cosmo/graphqlmetrics/test"
 	"go.uber.org/zap"
@@ -23,7 +26,7 @@ func TestPublishGraphQLMetrics(t *testing.T) {
 
 	db := test.GetTestDatabase(t)
 
-	msvc := NewMetricsService(context.Background(), zap.NewNop(), db)
+	msvc := NewMetricsService(context.Background(), zap.NewNop(), db, defaultConfig())
 
 	req := &graphqlmetricsv1.PublishGraphQLRequestMetricsRequest{
 		SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{
@@ -165,7 +168,7 @@ func TestPublishGraphQLMetricsSmallBatches(t *testing.T) {
 
 	db := test.GetTestDatabase(t)
 
-	msvc := NewMetricsService(context.Background(), zap.NewNop(), db)
+	msvc := NewMetricsService(context.Background(), zap.NewNop(), db, defaultConfig())
 
 	count := 1000
 
@@ -311,7 +314,7 @@ func TestPublishAggregatedGraphQLMetrics(t *testing.T) {
 
 	db := test.GetTestDatabase(t)
 
-	msvc := NewMetricsService(context.Background(), zap.NewNop(), db)
+	msvc := NewMetricsService(context.Background(), zap.NewNop(), db, defaultConfig())
 
 	req := &graphqlmetricsv1.PublishAggregatedGraphQLRequestMetricsRequest{
 		Aggregation: []*graphqlmetricsv1.SchemaUsageInfoAggregation{
@@ -454,7 +457,7 @@ func TestAuthentication(t *testing.T) {
 
 	db := test.GetTestDatabase(t)
 
-	msvc := NewMetricsService(context.Background(), zap.NewNop(), db)
+	msvc := NewMetricsService(context.Background(), zap.NewNop(), db, defaultConfig())
 
 	req := &graphqlmetricsv1.PublishGraphQLRequestMetricsRequest{
 		SchemaUsage: nil,
@@ -469,4 +472,13 @@ func TestAuthentication(t *testing.T) {
 	)
 	require.Error(t, err)
 	require.Error(t, err, errNotAuthenticated)
+}
+
+func defaultConfig() batch.ProcessorConfig {
+	return batch.ProcessorConfig{
+		MaxBatchSize: 1000,
+		MaxThreshold: 10000,
+		MaxQueueSize: 200,
+		Interval:     time.Second * 10,
+	}
 }

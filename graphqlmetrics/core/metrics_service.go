@@ -46,7 +46,7 @@ type MetricsService struct {
 }
 
 // NewMetricsService creates a new metrics service
-func NewMetricsService(ctx context.Context, logger *zap.Logger, chConn clickhouse.Conn) *MetricsService {
+func NewMetricsService(ctx context.Context, logger *zap.Logger, chConn clickhouse.Conn, config batch.ProcessorConfig) *MetricsService {
 	c, err := lru.New[string, struct{}](25000)
 	if err != nil {
 		panic(err)
@@ -58,23 +58,18 @@ func NewMetricsService(ctx context.Context, logger *zap.Logger, chConn clickhous
 		opGuardCache: c,
 	}
 
-	setupAndStartBatchProcessor(ctx, logger, ms)
+	setupAndStartBatchProcessor(ctx, logger, ms, config)
 	return ms
 }
 
-// TODO make this configurable
-func setupAndStartBatchProcessor(ctx context.Context, logger *zap.Logger, ms *MetricsService) {
-	processor := batch.NewProcessor[SchemaUsageRequestItem](
-		logger,
-		batch.ProcessorConfig{
-			MaxBatchSize: 1000,
-			MaxThreshold: 10000,
-			MaxQueueSize: 50,
-			Interval:     20 * time.Second,
-		}, ms.processBatch, calculateRequestCost)
+func setupAndStartBatchProcessor(ctx context.Context, logger *zap.Logger, ms *MetricsService, config batch.ProcessorConfig) {
+	processor := batch.NewProcessor(
+		logger, config,
+		ms.processBatch,
+		calculateRequestCost,
+	)
 
 	ms.processor = processor
-
 	go ms.processor.Start(ctx)
 }
 
