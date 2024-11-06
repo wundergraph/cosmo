@@ -105,15 +105,11 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 
 		latency := time.Since(operationStartTime)
 
-		if err != nil {
-			attributes = append(attributes, otel.WgRequestError.Bool(true))
-		} else if resp != nil {
+		if resp != nil {
 			attributes = append(attributes, semconv.HTTPStatusCode(resp.StatusCode))
+			o = otelmetric.WithAttributeSet(attribute.NewSet(attributes...))
 		}
 
-		o = otelmetric.WithAttributeSet(attribute.NewSet(attributes...))
-
-		ct.metricStore.MeasureRequestCount(req.Context(), reqContext.telemetry.metricSliceAttrs, o)
 		ct.metricStore.MeasureLatency(req.Context(), latency, reqContext.telemetry.metricSliceAttrs, o)
 
 		if resp != nil {

@@ -2,7 +2,6 @@ package trace
 
 import (
 	"context"
-	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"go.opentelemetry.io/otel/codes"
 	"net/http"
 	"strings"
@@ -68,7 +67,6 @@ func GetClientHeader(h http.Header, headerNames []string, defaultValue string) s
 func AttachErrToSpan(span trace.Span, err error) {
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		span.SetAttributes(rotel.WgRequestError.Bool(true))
 		span.RecordError(err)
 	}
 }

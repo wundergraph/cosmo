@@ -9,6 +9,7 @@ import (
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
@@ -53,17 +54,11 @@ func (f *EngineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInf
 		return ctx
 	}
 
-	ctx, span := f.tracer.Start(ctx, "Engine - Fetch",
-		trace.WithAttributes(reqContext.telemetry.traceAttrs...),
-	)
-
-	subgraph := reqContext.SubgraphByID(ds.ID)
-	if subgraph != nil {
-		span.SetAttributes(rotel.WgSubgraphName.String(subgraph.Name))
-	}
-
-	span.SetAttributes(
-		rotel.WgSubgraphID.String(ds.ID),
+	ctx, _ = f.tracer.Start(ctx, "Engine - Fetch",
+		trace.WithAttributes([]attribute.KeyValue{
+			rotel.WgSubgraphName.String(ds.Name),
+			rotel.WgSubgraphID.String(ds.ID),
+		}...),
 	)
 
 	return ctx
@@ -82,21 +77,22 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 	}
 
 	span := trace.SpanFromContext(ctx)
-
 	defer span.End()
 
 	activeSubgraph := reqContext.SubgraphByID(ds.ID)
 
-	attributes := *reqContext.telemetry.AcquireAttributes()
-	defer reqContext.telemetry.ReleaseAttributes(&attributes)
-
-	// Subgraph response status code
-	attributes = append(attributes,
+	commonAttrs := []attribute.KeyValue{
 		semconv.HTTPStatusCode(statusCode),
-		rotel.WgComponentName.String("engine-loader"),
 		rotel.WgSubgraphID.String(activeSubgraph.Id),
 		rotel.WgSubgraphName.String(activeSubgraph.Name),
-	)
+	}
+
+	metricAttrs := *reqContext.telemetry.AcquireAttributes()
+	defer reqContext.telemetry.ReleaseAttributes(&metricAttrs)
+	metricAttrs = append(metricAttrs, reqContext.telemetry.metricAttrs...)
+	metricAttrs = append(metricAttrs, commonAttrs...)
+
+	o := otelmetric.WithAttributeSet(attribute.NewSet(metricAttrs...))
 
 	if err != nil {
 
@@ -140,20 +136,33 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 		// Reduce cardinality of error codes
 		slices.Sort(errorCodesAttr)
 
-		if len(errorCodesAttr) > 0 {
-			attrs := *reqContext.telemetry.AcquireAttributes()
-			attrs = append(attrs, attributes...)
-			attrs = append(attrs, reqContext.telemetry.metricAttrs...)
+		metricSliceAttrs := *reqContext.telemetry.AcquireAttributes()
+		defer reqContext.telemetry.ReleaseAttributes(&metricSliceAttrs)
+		metricSliceAttrs = append(metricSliceAttrs, reqContext.telemetry.metricSliceAttrs...)
 
-			f.metricStore.MeasureRequestError(
-				ctx,
-				reqContext.telemetry.metricSliceAttrs,
-				otelmetric.WithAttributes(attrs...),
-			)
-
-			reqContext.telemetry.ReleaseAttributes(&attrs)
+		// We can't add this earlier because this is done per subgraph response
+		if v, ok := reqContext.telemetry.metricSetAttrs[ContextFieldGraphQLErrorCodes]; ok {
+			metricSliceAttrs = append(metricSliceAttrs, attribute.StringSlice(v, errorCodesAttr))
 		}
+
+		errorAttrs := *reqContext.telemetry.AcquireAttributes()
+		defer reqContext.telemetry.ReleaseAttributes(&errorAttrs)
+		errorAttrs = append(errorAttrs, commonAttrs...)
+		errorAttrs = append(errorAttrs, reqContext.telemetry.metricAttrs...)
+
+		f.metricStore.MeasureRequestError(
+			ctx,
+			metricSliceAttrs,
+			otelmetric.WithAttributeSet(attribute.NewSet(errorAttrs...)),
+		)
+
+		errorAttrs = append(errorAttrs, rotel.WgRequestError.Bool(true))
+
+		f.metricStore.MeasureRequestCount(ctx, reqContext.telemetry.metricSliceAttrs, otelmetric.WithAttributeSet(attribute.NewSet(errorAttrs...)))
+	} else {
+		f.metricStore.MeasureRequestCount(ctx, reqContext.telemetry.metricSliceAttrs, o)
 	}
 
-	span.SetAttributes(append(attributes, reqContext.telemetry.traceAttrs...)...)
+	span.SetAttributes(rotel.WgComponentName.String("engine-loader"))
+	span.SetAttributes(append(commonAttrs, reqContext.telemetry.traceAttrs...)...)
 }

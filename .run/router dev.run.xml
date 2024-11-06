@@ -2,9 +2,9 @@
   <configuration default="false" name="router dev" type="GoApplicationRunConfiguration" factoryName="Go Application">
     <module name="cosmo" />
     <working_directory value="$PROJECT_DIR$/router" />
-    <go_parameters value="-race" />
     <envs>
       <env name="CGO_ENABLED" value="0" />
+      <env name="PPROF_ADDR" value=":6060" />
     </envs>
     <EXTENSION ID="net.ashald.envfile">
       <option name="IS_ENABLED" value="false" />
