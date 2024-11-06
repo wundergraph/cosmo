@@ -101,8 +101,12 @@ func (c client) SaveOperation(ctx context.Context, clientName, sha256Hash, opera
 }
 
 func (c client) Close() {
-	c.providerClient.Close()
-	c.cache.Cache.Close()
+	if c.providerClient != nil {
+		c.providerClient.Close()
+	}
+	if c.cache != nil && c.cache.Cache != nil {
+		c.cache.Cache.Close()
+	}
 	if c.apqClient != nil {
 		c.apqClient.Close()
 	}

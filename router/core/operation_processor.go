@@ -136,11 +136,12 @@ type OperationCache struct {
 
 	automaticPersistedOperationCacheTtl float64
 
-	persistedOperationCache *ristretto.Cache[uint64, normalizedOperationCacheEntry]
-	normalizationCache      *ristretto.Cache[uint64, NormalizationCacheEntry]
-	validationCache         *ristretto.Cache[uint64, bool]
-	queryDepthCache         *ristretto.Cache[uint64, int]
-	operationHashCache      *ristretto.Cache[uint64, string]
+	persistedOperationCache     *ristretto.Cache[uint64, normalizedOperationCacheEntry]
+	persistedOperationCacheLock *sync.RWMutex
+	normalizationCache          *ristretto.Cache[uint64, NormalizationCacheEntry]
+	validationCache             *ristretto.Cache[uint64, bool]
+	queryDepthCache             *ristretto.Cache[uint64, int]
+	operationHashCache          *ristretto.Cache[uint64, string]
 }
 
 // OperationKit provides methods to parse, normalize and validate operations.
@@ -772,7 +773,9 @@ func (o *OperationKit) loadPersistedOperationFromCache() (ok bool, err error) {
 		return false, nil
 	}
 
+	o.cache.persistedOperationCacheLock.RLock()
 	entry, ok := o.cache.persistedOperationCache.Get(cacheKey)
+	o.cache.persistedOperationCacheLock.RUnlock()
 	if !ok {
 		return false, nil
 	}
@@ -802,6 +805,10 @@ func (o *OperationKit) jsonIsNull(variables []byte) bool {
 }
 
 func (o *OperationKit) persistedOperationCacheKeyHasTtl() (bool, []string) {
+	if o.cache == nil || o.cache.persistedOperationVariableNames == nil || o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash == "" {
+		return false, nil
+	}
+
 	o.cache.persistedOperationVariableNamesLock.RLock()
 	variableNames, present := o.cache.persistedOperationVariableNames[o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash]
 	o.cache.persistedOperationVariableNamesLock.RUnlock()
@@ -810,7 +817,9 @@ func (o *OperationKit) persistedOperationCacheKeyHasTtl() (bool, []string) {
 	}
 	cacheKey := o.generatePersistedOperationCacheKey(variableNames)
 
+	o.cache.persistedOperationCacheLock.RLock()
 	ttl, ok := o.cache.persistedOperationCache.GetTTL(cacheKey)
+	o.cache.persistedOperationCacheLock.RUnlock()
 	return ok && ttl > 0, variableNames
 }
 
@@ -823,6 +832,7 @@ func (o *OperationKit) savePersistedOperationToCache(isApq bool, skipIncludeVari
 	}
 	cost := int64(entry.Length())
 
+	o.cache.persistedOperationCacheLock.Lock()
 	if isApq {
 		ttl := o.cache.automaticPersistedOperationCacheTtl
 		ttlD := time.Duration(ttl) * time.Second
@@ -830,7 +840,7 @@ func (o *OperationKit) savePersistedOperationToCache(isApq bool, skipIncludeVari
 	} else {
 		o.cache.persistedOperationCache.Set(cacheKey, entry, cost)
 	}
-	o.cache.persistedOperationCache.Wait()
+	o.cache.persistedOperationCacheLock.Unlock()
 
 	o.cache.persistedOperationVariableNamesLock.Lock()
 	o.cache.persistedOperationVariableNames[o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash] = skipIncludeVariableNames
@@ -1046,6 +1056,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 			automaticPersistedOperationCacheTtl: float64(opts.AutomaticPersistedOperationCacheTtl),
 			persistedOperationVariableNames:     map[string][]string{},
 			persistedOperationVariableNamesLock: &sync.RWMutex{},
+			persistedOperationCacheLock:         &sync.RWMutex{},
 		}
 
 		cacheSize := opts.PersistedOperationCacheSize
