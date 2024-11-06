@@ -23,7 +23,7 @@ jobs:
   build_test_fork:
     if: github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 15
     services:
       redis:
         # Docker Hub image
@@ -99,7 +99,7 @@ jobs:
   build_test:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 15
     services:
       redis:
         # Docker Hub image
