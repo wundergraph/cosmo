@@ -8,8 +8,10 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/alitto/pond"
 	_ "github.com/amacneil/dbmate/v2/pkg/driver/clickhouse"
 	"github.com/google/uuid"
+	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1"
@@ -85,7 +87,7 @@ func TestPublishGraphQLMetrics(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for batch to be processed
-	msvc.Shutdown()
+	msvc.Shutdown(time.Second * 5)
 
 	// Validate insert
 
@@ -236,7 +238,7 @@ func TestPublishGraphQLMetricsSmallBatches(t *testing.T) {
 	}
 
 	// Wait for batch to be processed
-	msvc.Shutdown()
+	msvc.Shutdown(time.Second * 5)
 
 	// Validate insert
 
@@ -374,7 +376,7 @@ func TestPublishAggregatedGraphQLMetrics(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for batch to be processed
-	msvc.Shutdown()
+	msvc.Shutdown(time.Second * 5)
 
 	// Validate insert
 
@@ -472,6 +474,119 @@ func TestAuthentication(t *testing.T) {
 	)
 	require.Error(t, err)
 	require.Error(t, err, errNotAuthenticated)
+}
+
+func TestGracefulShutdown(t *testing.T) {
+	c, err := lru.New[string, struct{}](25000)
+	require.NoError(t, err)
+
+	cfg := defaultConfig()
+
+	proc := batch.NewProcessor(zap.NewNop(), cfg,
+		func(T []SchemaUsageRequestItem) error {
+			// Long-running operation
+			time.Sleep(time.Minute)
+			return nil
+		}, func(item SchemaUsageRequestItem) int { return cfg.MaxCostThreshold })
+
+	msvc := &MetricsService{
+		logger:       zap.NewNop(),
+		opGuardCache: c,
+		processor:    proc,
+		pool:         pond.New(10, 10, pond.MinWorkers(4)),
+	}
+
+	require.NoError(t, msvc.processor.Enqueue(context.Background(), SchemaUsageRequestItem{}))
+
+	go msvc.processor.Start(context.Background())
+
+	shutdownChan := make(chan struct{})
+
+	go func() {
+		msvc.Shutdown(time.Second * 1)
+		close(shutdownChan)
+	}()
+
+	select {
+	case <-time.After(time.Second * 5):
+		require.Fail(t, "Processor did not shutdown in time")
+	case <-shutdownChan:
+	}
+}
+
+func TestCalculateRequestCost(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    SchemaUsageRequestItem
+		expected int
+	}{
+		{
+			name: "single usage with 3 elements",
+			input: SchemaUsageRequestItem{
+				SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{
+					{
+						ArgumentMetrics:  make([]*graphqlmetricsv1.ArgumentUsageInfo, 1),
+						InputMetrics:     make([]*graphqlmetricsv1.InputUsageInfo, 1),
+						TypeFieldMetrics: make([]*graphqlmetricsv1.TypeFieldUsageInfo, 1),
+					},
+				},
+			},
+			expected: 3,
+		},
+		{
+			name: "single usage with 2 elements and 1 empty",
+			input: SchemaUsageRequestItem{
+				SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{
+					{
+						ArgumentMetrics: make([]*graphqlmetricsv1.ArgumentUsageInfo, 1),
+						InputMetrics:    make([]*graphqlmetricsv1.InputUsageInfo, 1),
+					},
+				},
+			},
+			expected: 2,
+		},
+		{
+			name: "empty slice",
+			input: SchemaUsageRequestItem{
+				SchemaUsage: nil,
+			},
+			expected: 0,
+		},
+		{
+			name: "single usage with multiple usage elements",
+			input: SchemaUsageRequestItem{
+				SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{
+					{
+						ArgumentMetrics:  make([]*graphqlmetricsv1.ArgumentUsageInfo, 1),
+						InputMetrics:     make([]*graphqlmetricsv1.InputUsageInfo, 1),
+						TypeFieldMetrics: make([]*graphqlmetricsv1.TypeFieldUsageInfo, 1),
+					},
+					{
+						ArgumentMetrics:  make([]*graphqlmetricsv1.ArgumentUsageInfo, 1),
+						InputMetrics:     make([]*graphqlmetricsv1.InputUsageInfo, 1),
+						TypeFieldMetrics: make([]*graphqlmetricsv1.TypeFieldUsageInfo, 1),
+					},
+					{
+						ArgumentMetrics:  make([]*graphqlmetricsv1.ArgumentUsageInfo, 1),
+						InputMetrics:     make([]*graphqlmetricsv1.InputUsageInfo, 1),
+						TypeFieldMetrics: make([]*graphqlmetricsv1.TypeFieldUsageInfo, 1),
+					},
+					{
+						ArgumentMetrics:  make([]*graphqlmetricsv1.ArgumentUsageInfo, 1),
+						InputMetrics:     make([]*graphqlmetricsv1.InputUsageInfo, 1),
+						TypeFieldMetrics: make([]*graphqlmetricsv1.TypeFieldUsageInfo, 1),
+					},
+				},
+			},
+			expected: 12,
+		},
+	}
+
+	for _, tt := range tests {
+		cost := calculateRequestCost(tt.input)
+
+		require.Equal(t, tt.expected, cost, tt.name)
+	}
 }
 
 func defaultConfig() batch.ProcessorConfig {

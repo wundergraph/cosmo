@@ -74,7 +74,7 @@ func NewProcessor[T any](
 // it will wait until the queue can accept more data or the context is cancelled.
 func (p *Processor[T]) Enqueue(ctx context.Context, element ...T) error {
 	for _, e := range element {
-		if !p.canAcceptBatch() {
+		if !p.canAcceptElement() {
 			return errors.New("processor is closed")
 		}
 
@@ -106,7 +106,9 @@ func (p *Processor[T]) Start(ctx context.Context) {
 				zap.Int("queue_size", len(p.queue)),
 			)
 
-			p.receiveElement(element)
+			if p.receiveElement(element) {
+				ticker.Reset(p.config.Interval)
+			}
 		case <-ctx.Done():
 			p.process()
 			p.Stop()
@@ -137,7 +139,7 @@ func (p *Processor[T]) Stop() {
 	}
 }
 
-func (p *Processor[T]) canAcceptBatch() bool {
+func (p *Processor[T]) canAcceptElement() bool {
 	select {
 	case <-p.closeChan:
 		return false
@@ -148,7 +150,11 @@ func (p *Processor[T]) canAcceptBatch() bool {
 
 func (p *Processor[T]) process() {
 	p.logger.Debug("Processing batch", zap.Int("buffer_size", len(p.buffer)))
-	if err := p.processBatch(p.buffer); err != nil {
+
+	cpyBuff := make([]T, len(p.buffer))
+	copy(cpyBuff, p.buffer)
+
+	if err := p.processBatch(cpyBuff); err != nil {
 		p.logger.Error("Failed to process batch", zap.Error(err))
 		return
 	}
@@ -161,20 +167,27 @@ func (p *Processor[T]) process() {
 
 // receiveElement receives a batch of buffer adds them to the buffer.
 // If the buffer is full, the batch processing will be invoked.
-func (p *Processor[T]) receiveElement(element T) {
+// It returns true if the batch processing was invoked.
+func (p *Processor[T]) receiveElement(element T) bool {
 	p.buffer = append(p.buffer, element)
 
 	if p.costFunc != nil {
 		p.currentBufferCost += p.costFunc(element)
 	}
 
+	processCalled := false
+
 	p.logger.Debug("current buffer cost", zap.Int("currentCost", p.currentBufferCost))
 	if p.currentBufferCost >= p.config.MaxCostThreshold || len(p.buffer) == defaultBufferSize {
 		p.logger.Debug("buffer threshold reached - processing batch",
 			zap.Int("buffer_size", len(p.buffer)),
-			zap.Int("currentCost", p.currentBufferCost),
-			zap.Int("maxCostThreshold", p.config.MaxCostThreshold))
+			zap.Int("current_cost", p.currentBufferCost),
+			zap.Int("max_cost_threshold", p.config.MaxCostThreshold))
 
 		p.process()
+
+		processCalled = true
 	}
+
+	return processCalled
 }

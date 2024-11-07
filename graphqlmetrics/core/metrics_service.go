@@ -143,9 +143,24 @@ func (s *MetricsService) PublishAggregatedGraphQLMetrics(ctx context.Context, re
 	return res, nil
 }
 
-func (s *MetricsService) Shutdown() {
-	s.processor.Stop()
-	s.pool.StopAndWait()
+func (s *MetricsService) Shutdown(timeout time.Duration) {
+	shutdownChan := make(chan struct{})
+
+	go func() {
+		s.processor.Stop()
+		s.pool.StopAndWait()
+
+		close(shutdownChan)
+	}()
+
+	select {
+	case <-shutdownChan:
+		return
+	case <-time.After(timeout):
+		s.logger.Error("Metrics service shutdown timed out")
+		return
+	}
+
 }
 
 // prepareClickhouseBatches prepares the operation and metric batches for the given schema usage.
@@ -355,7 +370,7 @@ func (s *MetricsService) processBatch(batch []SchemaUsageRequestItem) error {
 				return
 			}
 
-			err = retryOnError(insertCtx, s.logger.With(zap.String("component", "operations")), func(ctx context.Context) error {
+			err := retryOnError(insertCtx, s.logger.With(zap.String("component", "operations")), func(ctx context.Context) error {
 				if err := operationsBatch.Send(); err != nil {
 					return fmt.Errorf("failed to send operation batch: %w", err)
 				}
@@ -381,7 +396,7 @@ func (s *MetricsService) processBatch(batch []SchemaUsageRequestItem) error {
 				return
 			}
 
-			err = retryOnError(insertCtx, s.logger.With(zap.String("component", "metrics")), func(ctx context.Context) error {
+			err := retryOnError(insertCtx, s.logger.With(zap.String("component", "metrics")), func(ctx context.Context) error {
 				if err := metricsBatch.Send(); err != nil {
 					return fmt.Errorf("failed to send metrics batch: %w", err)
 				}
@@ -399,8 +414,8 @@ func (s *MetricsService) processBatch(batch []SchemaUsageRequestItem) error {
 
 		s.logger.Debug("operations write finished",
 			zap.Duration("duration", time.Since(insertTime)),
-			zap.Int("storedOperations", storedOperations),
-			zap.Int("storedMetrics", storedMetrics),
+			zap.Int("stored_operations", storedOperations),
+			zap.Int("stored_metrics", storedMetrics),
 		)
 	})
 

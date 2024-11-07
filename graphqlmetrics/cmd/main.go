@@ -113,8 +113,8 @@ func main() {
 	}
 
 	batchConf := batch.ProcessorConfig{
-		MaxCostThreshold: cfg.MaxCostThreshold,
-		MaxQueueSize:     cfg.MaxQueueSize,
+		MaxCostThreshold: cfg.BatchMaxCostThreshold,
+		MaxQueueSize:     cfg.BatchMaxQueueSize,
 		Interval:         cfg.BatchProcessingInterval,
 	}
 
@@ -156,7 +156,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		ms.Shutdown()
+		ms.Shutdown(cfg.ShutdownDelay)
 	}()
 
 	// enforce a maximum shutdown delay

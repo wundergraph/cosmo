@@ -239,7 +239,7 @@ func TestValidateExposedMetrics(t *testing.T) {
 		}
 
 		for _, m := range expectedMetrics {
-			require.True(t, strings.Contains(metrics, m))
+			require.True(t, strings.Contains(metrics, m), fmt.Sprintf("expected metric %s not found", m))
 		}
 	})
 
