@@ -2,8 +2,10 @@ package persistedoperation
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"github.com/dgraph-io/ristretto"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage"
 	"go.uber.org/zap"
 )
 
@@ -12,18 +14,25 @@ type PersistedOperation struct {
 	Body    string `json:"body"`
 }
 
+var PoNotFoundErr *PersistentOperationNotFoundError
+
 type PersistentOperationNotFoundError struct {
 	ClientName string
 	Sha256Hash string
 }
 
-func (e *PersistentOperationNotFoundError) Error() string {
+func (e PersistentOperationNotFoundError) Error() string {
 	return fmt.Sprintf("operation %s for client %s not found", e.Sha256Hash, e.ClientName)
 }
 
 type Client interface {
-	PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error)
+	PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, bool, error)
 	Close()
+}
+
+type SaveClient interface {
+	Client
+	SaveOperation(ctx context.Context, clientName, sha256Hash, operationBody string) error
 }
 
 type Options struct {
@@ -33,56 +42,72 @@ type Options struct {
 	Logger    *zap.Logger
 
 	ProviderClient Client
+	ApqClient      apq.Client
 }
 
 type client struct {
-	options *Options
-
-	cache          *OperationsCache
+	cache          *operationstorage.OperationsCache
 	providerClient Client
+	apqClient      apq.Client
 }
 
-func NewClient(opts *Options) (Client, error) {
+func NewClient(opts *Options) (SaveClient, error) {
 	cacheSize := int64(opts.CacheSize)
 
-	var cache *ristretto.Cache[string, []byte]
-	var err error
-
-	if cacheSize > 0 {
-		cache, err = ristretto.NewCache(&ristretto.Config[string, []byte]{
-			// assume an average of persistentAverageCacheEntrySize per operation, then
-			// multiply by 10 to obtain the recommended number of counters
-			NumCounters: (cacheSize * 10) / persistentAverageCacheEntrySize,
-			MaxCost:     cacheSize,
-			BufferItems: 64,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("initializing CDN cache: %v", err)
-		}
+	cache, err := operationstorage.NewOperationsCache(cacheSize)
+	if err != nil {
+		return nil, errors.Join(err, fmt.Errorf("initializing CDN cache"))
 	}
 
 	return &client{
-		options:        opts,
 		providerClient: opts.ProviderClient,
-		cache:          &OperationsCache{Cache: cache},
+		cache:          cache,
+		apqClient:      opts.ApqClient,
 	}, nil
 }
 
-func (c client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error) {
+func (c client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, bool, error) {
+	if c.apqClient != nil && c.apqClient.Enabled() {
+		resp, apqErr := c.apqClient.PersistedOperation(ctx, clientName, sha256Hash)
+		if len(resp) > 0 || apqErr != nil {
+			return resp, true, apqErr
+		}
+	}
+
 	if data := c.cache.Get(clientName, sha256Hash); data != nil {
-		return data, nil
+		return data, false, nil
 	}
 
-	content, err := c.providerClient.PersistedOperation(ctx, clientName, sha256Hash)
+	content, _, err := c.providerClient.PersistedOperation(ctx, clientName, sha256Hash)
+	if errors.As(err, &PoNotFoundErr) && c.apqClient != nil {
+		// This could well be the first time a client is requesting an APQ operation and the query is attached to the request. Return without error here, and we'll verify the operation later.
+		return content, true, nil
+	}
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
-	c.cache.Set(clientName, sha256Hash, content)
+	c.cache.Set(clientName, sha256Hash, content, 0)
 
-	return content, nil
+	return content, false, nil
+}
+
+func (c client) SaveOperation(ctx context.Context, clientName, sha256Hash, operationBody string) error {
+	if c.apqClient != nil && c.apqClient.Enabled() {
+		return c.apqClient.SaveOperation(ctx, clientName, sha256Hash, []byte(operationBody))
+	}
+
+	return nil
 }
 
 func (c client) Close() {
-	c.providerClient.Close()
+	if c.providerClient != nil {
+		c.providerClient.Close()
+	}
+	if c.cache != nil && c.cache.Cache != nil {
+		c.cache.Cache.Close()
+	}
+	if c.apqClient != nil {
+		c.apqClient.Close()
+	}
 }
