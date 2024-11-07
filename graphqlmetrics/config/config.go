@@ -37,7 +37,8 @@ type Config struct {
 	PrometheusPath       string `default:"/metrics" envconfig:"PROMETHEUS_PATH"`
 
 	BatchMaxCostThreshold   int           `default:"10000" envconfig:"BATCH_MAX_COST_THRESHOLD"`
-	BatchMaxQueueSize       int           `default:"200" envconfig:"BATCH_MAX_QUEUE_SIZE"`
+	BatchMaxQueueSize       int           `default:"100" envconfig:"BATCH_MAX_QUEUE_SIZE"`
+	BatchMaxWorkers         int           `default:"10" envconfig:"BATCH_MAX_WORKERS"`
 	BatchProcessingInterval time.Duration `default:"10s" envconfig:"BATCH_PROCESSING_INTERVAL"`
 }
 

@@ -5,13 +5,12 @@ go 1.21.0
 require (
 	connectrpc.com/connect v1.16.2
 	github.com/ClickHouse/clickhouse-go/v2 v2.18.0
-	github.com/alitto/pond v1.9.2
 	github.com/amacneil/dbmate/v2 v2.12.0
 	github.com/avast/retry-go v3.0.0+incompatible
+	github.com/dgraph-io/ristretto v0.1.2-0.20240723054643-f5997484152c
 	github.com/go-playground/validator/v10 v10.22.1
 	github.com/golang-jwt/jwt/v5 v5.2.0
 	github.com/google/uuid v1.6.0
-	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/joho/godotenv v1.5.1
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/phayes/freeport v0.0.0-20220201140144-74d24b5ae9f5
@@ -36,6 +35,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
 	github.com/go-faster/city v1.0.1 // indirect
 	github.com/go-faster/errors v0.7.1 // indirect

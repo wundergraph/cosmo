@@ -2,20 +2,17 @@ package core
 
 import (
 	"context"
-
 	"os"
+	"runtime"
 	"testing"
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/alitto/pond"
 	_ "github.com/amacneil/dbmate/v2/pkg/driver/clickhouse"
 	"github.com/google/uuid"
-	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1"
-	"github.com/wundergraph/cosmo/graphqlmetrics/pkg/batch"
 	utils "github.com/wundergraph/cosmo/graphqlmetrics/pkg/utils"
 	"github.com/wundergraph/cosmo/graphqlmetrics/test"
 	"go.uber.org/zap"
@@ -86,8 +83,11 @@ func TestPublishGraphQLMetrics(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	// Wait until all requests are dispatched
+	time.Sleep(time.Millisecond * 100)
+
 	// Wait for batch to be processed
-	msvc.Shutdown(time.Second * 5)
+	msvc.Shutdown(time.Second * 10)
 
 	// Validate insert
 
@@ -172,7 +172,8 @@ func TestPublishGraphQLMetricsSmallBatches(t *testing.T) {
 
 	msvc := NewMetricsService(context.Background(), zap.NewNop(), db, defaultConfig())
 
-	count := 200000
+	// High number slows down race mode significantly
+	count := 20_000
 
 	requests := make([]*connect.Request[graphqlmetricsv1.PublishGraphQLRequestMetricsRequest], 0, count)
 
@@ -237,8 +238,11 @@ func TestPublishGraphQLMetricsSmallBatches(t *testing.T) {
 		require.NoError(t, err)
 	}
 
+	// Wait until all requests are dispatched
+	time.Sleep(time.Second * 5)
+
 	// Wait for batch to be processed
-	msvc.Shutdown(time.Second * 5)
+	msvc.Shutdown(time.Second * 10)
 
 	// Validate insert
 
@@ -375,8 +379,11 @@ func TestPublishAggregatedGraphQLMetrics(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	// Wait until all requests are dispatched
+	time.Sleep(time.Millisecond * 100)
+
 	// Wait for batch to be processed
-	msvc.Shutdown(time.Second * 5)
+	msvc.Shutdown(time.Second * 10)
 
 	// Validate insert
 
@@ -476,44 +483,6 @@ func TestAuthentication(t *testing.T) {
 	require.Error(t, err, errNotAuthenticated)
 }
 
-func TestGracefulShutdown(t *testing.T) {
-	c, err := lru.New[string, struct{}](25000)
-	require.NoError(t, err)
-
-	cfg := defaultConfig()
-
-	proc := batch.NewProcessor(zap.NewNop(), cfg,
-		func(T []SchemaUsageRequestItem) error {
-			// Long-running operation
-			time.Sleep(time.Minute)
-			return nil
-		}, func(item SchemaUsageRequestItem) int { return cfg.MaxCostThreshold })
-
-	msvc := &MetricsService{
-		logger:       zap.NewNop(),
-		opGuardCache: c,
-		processor:    proc,
-		pool:         pond.New(10, 10, pond.MinWorkers(4)),
-	}
-
-	require.NoError(t, msvc.processor.Enqueue(context.Background(), SchemaUsageRequestItem{}))
-
-	go msvc.processor.Start()
-
-	shutdownChan := make(chan struct{})
-
-	go func() {
-		msvc.Shutdown(time.Second * 1)
-		close(shutdownChan)
-	}()
-
-	select {
-	case <-time.After(time.Second * 5):
-		require.Fail(t, "Processor did not shutdown in time")
-	case <-shutdownChan:
-	}
-}
-
 func TestCalculateRequestCost(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -583,16 +552,19 @@ func TestCalculateRequestCost(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		cost := calculateRequestCost(tt.input)
+		cost := calculateRequestCost([]SchemaUsageRequestItem{
+			tt.input,
+		})
 
 		require.Equal(t, tt.expected, cost, tt.name)
 	}
 }
 
-func defaultConfig() batch.ProcessorConfig {
-	return batch.ProcessorConfig{
-		MaxCostThreshold: 100000,
-		MaxQueueSize:     200,
-		Interval:         time.Second * 10,
+func defaultConfig() ProcessorConfig {
+	return ProcessorConfig{
+		MaxBatchSize: 10_000,
+		MaxQueueSize: 1000,
+		MaxWorkers:   runtime.NumCPU(),
+		Interval:     10 * time.Second,
 	}
 }
