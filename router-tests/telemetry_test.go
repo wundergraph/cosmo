@@ -2743,6 +2743,7 @@ func TestTelemetry(t *testing.T) {
 							{
 								Attributes: attribute.NewSet(
 									attribute.String("from_header", "custom-value"),
+									attribute.StringSlice("error_codes", []string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
 									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
 									semconv.HTTPStatusCode(403),
 									otel.WgRequestError.Bool(true),
@@ -2817,7 +2818,9 @@ func TestTelemetry(t *testing.T) {
 							{
 								Attributes: attribute.NewSet(
 									attribute.String("from_header", "custom-value"),
+									attribute.StringSlice("error_codes", []string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
 									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
+									otel.WgRequestError.Bool(true),
 									semconv.HTTPStatusCode(403),
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
@@ -2841,6 +2844,7 @@ func TestTelemetry(t *testing.T) {
 									attribute.String("from_header", "custom-value"),
 									semconv.HTTPStatusCode(200),
 									attribute.StringSlice("services", []string{"employees", "products"}),
+									otel.WgRequestError.Bool(true),
 									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),

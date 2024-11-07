@@ -53,21 +53,22 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 
 	latency := time.Since(m.operationStartTime)
 
-	if reqContext.error != nil {
-		rm.MeasureRequestError(ctx, sliceAttrs, otelmetric.WithAttributeSet(attribute.NewSet(attrs...)))
-	}
-
 	o := otelmetric.WithAttributeSet(attribute.NewSet(attrs...))
 
 	if reqContext.error != nil {
+		rm.MeasureRequestError(ctx, sliceAttrs, o)
+
 		attrs = append(attrs, rotel.WgRequestError.Bool(true))
-		rm.MeasureRequestCount(ctx, sliceAttrs, otelmetric.WithAttributeSet(attribute.NewSet(attrs...)))
+		attrOpt := otelmetric.WithAttributeSet(attribute.NewSet(attrs...))
+
+		rm.MeasureRequestCount(ctx, sliceAttrs, attrOpt)
+		rm.MeasureLatency(ctx, latency, sliceAttrs, attrOpt)
 	} else {
 		rm.MeasureRequestCount(ctx, sliceAttrs, o)
+		rm.MeasureLatency(ctx, latency, sliceAttrs, o)
 	}
 
 	rm.MeasureRequestSize(ctx, m.requestContentLength, sliceAttrs, o)
-	rm.MeasureLatency(ctx, latency, sliceAttrs, o)
 	rm.MeasureResponseSize(ctx, int64(responseSize), sliceAttrs, o)
 
 	if m.trackUsageInfo && reqContext.operation != nil && !reqContext.operation.executionOptions.SkipLoader {

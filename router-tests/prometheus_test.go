@@ -1799,8 +1799,33 @@ func TestPrometheus(t *testing.T) {
 			mf, err := promRegistry.Gather()
 			require.NoError(t, err)
 
+			requestDuration := findMetricFamilyByName(mf, "router_http_request_duration_milliseconds")
+			requestDurationMetric := requestDuration.GetMetric()
+
+			/**
+			employees -> 200 Status code = 1
+			products -> 402 + 2x error codes = 2
+			router -> 200 Status code + 2x error codes = 2
+
+			Total metrics = 5
+			*/
+
+			require.Len(t, requestDurationMetric, 5)
+			require.Len(t, requestDurationMetric[0].Label, 14)
+			require.Len(t, requestDurationMetric[1].Label, 14)
+			require.Len(t, requestDurationMetric[2].Label, 14)
+			require.Len(t, requestDurationMetric[3].Label, 16)
+			require.Len(t, requestDurationMetric[4].Label, 16)
+
 			totalRequestsErrors := findMetricFamilyByName(mf, "router_http_requests_error_total")
 			totalRequestErrorsMetric := totalRequestsErrors.GetMetric()
+
+			/**
+			products -> 402 + 2x error codes = 2
+			router -> 200 Status code + 2x error codes = 2
+
+			Total metrics = 4
+			*/
 
 			require.Len(t, totalRequestErrorsMetric, 4)
 			require.Len(t, totalRequestErrorsMetric[0].Label, 13)

@@ -15,26 +15,31 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
 	"slices"
+	"time"
 )
 
 var (
-	_ resolve.LoaderHooks = (*EngineLoaderHooks)(nil)
+	_ resolve.LoaderHooks = (*engineLoaderHooks)(nil)
 )
 
-type MultiError = interface{ Unwrap() []error }
+type multiError = interface{ Unwrap() []error }
 
 const EngineLoaderHooksScopeName = "wundergraph/cosmo/router/engine/loader"
 const EngineLoaderHooksScopeVersion = "0.0.1"
 
-// EngineLoaderHooks implements resolve.LoaderHooks
+// engineLoaderHooks implements resolve.LoaderHooks
 // It is used to trace and measure the performance of the engine loader
-type EngineLoaderHooks struct {
+type engineLoaderHooks struct {
 	tracer      trace.Tracer
 	metricStore metric.Store
 }
 
+type engineLoaderHooksRequestContext struct {
+	startTime time.Time
+}
+
 func NewEngineRequestHooks(metricStore metric.Store) resolve.LoaderHooks {
-	return &EngineLoaderHooks{
+	return &engineLoaderHooks{
 		tracer: otel.GetTracerProvider().Tracer(
 			EngineLoaderHooksScopeName,
 			trace.WithInstrumentationVersion(EngineLoaderHooksScopeVersion),
@@ -43,11 +48,13 @@ func NewEngineRequestHooks(metricStore metric.Store) resolve.LoaderHooks {
 	}
 }
 
-func (f *EngineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInfo) context.Context {
+func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInfo) context.Context {
 
 	if resolve.IsIntrospectionDataSource(ds.ID) {
 		return ctx
 	}
+
+	start := time.Now()
 
 	reqContext := getRequestContext(ctx)
 	if reqContext == nil {
@@ -61,10 +68,12 @@ func (f *EngineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInf
 		}...),
 	)
 
-	return ctx
+	return context.WithValue(ctx, engineLoaderHooksContextKey, &engineLoaderHooksRequestContext{
+		startTime: start,
+	})
 }
 
-func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds resolve.DataSourceInfo, err error) {
+func (f *engineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds resolve.DataSourceInfo, err error) {
 
 	if resolve.IsIntrospectionDataSource(ds.ID) {
 		return
@@ -76,23 +85,34 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 		return
 	}
 
+	hookCtx, ok := ctx.Value(engineLoaderHooksContextKey).(*engineLoaderHooksRequestContext)
+	if !ok {
+		return
+	}
+
+	latency := time.Since(hookCtx.startTime)
+
 	span := trace.SpanFromContext(ctx)
 	defer span.End()
 
-	activeSubgraph := reqContext.SubgraphByID(ds.ID)
-
 	commonAttrs := []attribute.KeyValue{
 		semconv.HTTPStatusCode(statusCode),
-		rotel.WgSubgraphID.String(activeSubgraph.Id),
-		rotel.WgSubgraphName.String(activeSubgraph.Name),
+		rotel.WgSubgraphID.String(ds.ID),
+		rotel.WgSubgraphName.String(ds.Name),
 	}
+
+	traceAttrs := *reqContext.telemetry.AcquireAttributes()
+	defer reqContext.telemetry.ReleaseAttributes(&traceAttrs)
+	traceAttrs = append(traceAttrs, reqContext.telemetry.traceAttrs...)
+	traceAttrs = append(traceAttrs, rotel.WgComponentName.String("engine-loader"))
+	traceAttrs = append(traceAttrs, commonAttrs...)
 
 	metricAttrs := *reqContext.telemetry.AcquireAttributes()
 	defer reqContext.telemetry.ReleaseAttributes(&metricAttrs)
 	metricAttrs = append(metricAttrs, reqContext.telemetry.metricAttrs...)
 	metricAttrs = append(metricAttrs, commonAttrs...)
 
-	o := otelmetric.WithAttributeSet(attribute.NewSet(metricAttrs...))
+	metricAddOpt := otelmetric.WithAttributeSet(attribute.NewSet(metricAttrs...))
 
 	if err != nil {
 
@@ -103,7 +123,7 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 
 		var errorCodesAttr []string
 
-		if unwrapped, ok := err.(MultiError); ok {
+		if unwrapped, ok := err.(multiError); ok {
 			errs := unwrapped.Unwrap()
 			for _, e := range errs {
 				var subgraphError *resolve.SubgraphError
@@ -145,24 +165,17 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 			metricSliceAttrs = append(metricSliceAttrs, attribute.StringSlice(v, errorCodesAttr))
 		}
 
-		errorAttrs := *reqContext.telemetry.AcquireAttributes()
-		defer reqContext.telemetry.ReleaseAttributes(&errorAttrs)
-		errorAttrs = append(errorAttrs, commonAttrs...)
-		errorAttrs = append(errorAttrs, reqContext.telemetry.metricAttrs...)
+		f.metricStore.MeasureRequestError(ctx, metricSliceAttrs, metricAddOpt)
 
-		f.metricStore.MeasureRequestError(
-			ctx,
-			metricSliceAttrs,
-			otelmetric.WithAttributeSet(attribute.NewSet(errorAttrs...)),
-		)
+		metricAttrs = append(metricAttrs, rotel.WgRequestError.Bool(true))
 
-		errorAttrs = append(errorAttrs, rotel.WgRequestError.Bool(true))
-
-		f.metricStore.MeasureRequestCount(ctx, reqContext.telemetry.metricSliceAttrs, otelmetric.WithAttributeSet(attribute.NewSet(errorAttrs...)))
+		attrOpt := otelmetric.WithAttributeSet(attribute.NewSet(metricAttrs...))
+		f.metricStore.MeasureRequestCount(ctx, metricSliceAttrs, attrOpt)
+		f.metricStore.MeasureLatency(ctx, latency, metricSliceAttrs, attrOpt)
 	} else {
-		f.metricStore.MeasureRequestCount(ctx, reqContext.telemetry.metricSliceAttrs, o)
+		f.metricStore.MeasureRequestCount(ctx, reqContext.telemetry.metricSliceAttrs, metricAddOpt)
+		f.metricStore.MeasureLatency(ctx, latency, reqContext.telemetry.metricSliceAttrs, metricAddOpt)
 	}
 
-	span.SetAttributes(rotel.WgComponentName.String("engine-loader"))
-	span.SetAttributes(append(commonAttrs, reqContext.telemetry.traceAttrs...)...)
+	span.SetAttributes(traceAttrs...)
 }
