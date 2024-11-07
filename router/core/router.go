@@ -1094,14 +1094,12 @@ func (r *Router) Start(ctx context.Context) error {
 }
 
 // Shutdown gracefully shuts down the router. It blocks until the server is shutdown.
-// If the router is already shutdown, the method returns immediately without error. Not safe for concurrent use.
+// If the router is already shutdown, the method returns immediately without error.
 func (r *Router) Shutdown(ctx context.Context) (err error) {
 
-	if r.shutdown.Load() {
+	if !r.shutdown.CompareAndSwap(false, true) {
 		return nil
 	}
-
-	r.shutdown.Store(true)
 
 	// Respect grace period
 	if r.routerGracePeriod > 0 {
