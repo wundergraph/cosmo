@@ -517,10 +517,11 @@ describe('Interface tests', () => {
     });
 
     // TODO currently a warning until @inaccessible and entity interfaces are handled
-    test.skip('that an error is returned if a Field returns an Interface without any implementations', () => {
-      const { errors } = normalizeSubgraph(subgraphAM.definitions, subgraphAM.name);
-      expect(errors).toBeDefined();
-      expect(errors![0]).toStrictEqual(unimplementedInterfaceOutputTypeError('Interface'));
+    test('that a warning is returned if a Field returns an Interface without any implementations', () => {
+      const { errors, warnings } = normalizeSubgraph(subgraphAM.definitions, subgraphAM.name);
+      expect(errors).toBeUndefined();
+      expect(warnings).toHaveLength(1);
+      expect(warnings![0]).toStrictEqual(unimplementedInterfaceOutputTypeError(subgraphAM.name, 'Interface'));
     });
 
     test('that an Interface without implementations is valid if it not used as an output type', () => {
