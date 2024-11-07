@@ -1622,9 +1622,9 @@ export function unexpectedNonCompositeOutputTypeError(namedTypeName: string, act
 }
 
 // TODO Temporarily only used as a warning
-export function unimplementedInterfaceOutputTypeError(interfaceTypeName: string): Error {
+export function unimplementedInterfaceOutputTypeError(subgraphName: string, interfaceTypeName: string): Error {
   return new Error(
-    `The Interface "${interfaceTypeName}" is used as an output type` +
+    `Subgraph "${subgraphName}": The Interface "${interfaceTypeName}" is used as an output type` +
       ` without at least one Object type implementation defined in the schema.`,
   );
 }
