@@ -35,6 +35,10 @@ type Config struct {
 	IsPrometheusEnabled  bool   `default:"false" envconfig:"PROMETHEUS_ENABLED"`
 	PrometheusListenAddr string `default:"127.0.0.1:8088" envconfig:"PROMETHEUS_LISTEN_ADDR"`
 	PrometheusPath       string `default:"/metrics" envconfig:"PROMETHEUS_PATH"`
+
+	BatchMaxCostThreshold   int           `default:"10000" envconfig:"BATCH_MAX_COST_THRESHOLD"`
+	BatchMaxQueueSize       int           `default:"200" envconfig:"BATCH_MAX_QUEUE_SIZE"`
+	BatchProcessingInterval time.Duration `default:"10s" envconfig:"BATCH_PROCESSING_INTERVAL"`
 }
 
 func LoadConfig() (*Config, error) {
