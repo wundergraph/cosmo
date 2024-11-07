@@ -13,6 +13,7 @@ import {
 import { ComposedFederatedGraph } from '../composition/composer.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
 import { InspectorOperationResult } from '../services/SchemaUsageTrafficInspector.js';
+import { createBatches } from '../util.js';
 import { FederatedGraphConfig } from './FederatedGraphRepository.js';
 
 export class SchemaCheckRepository {
@@ -120,7 +121,11 @@ export class SchemaCheckRepository {
       return;
     }
 
-    await this.db.insert(schemaCheckChangeActionOperationUsage).values(values).execute();
+    const arrayOfValues: NewSchemaChangeOperationUsage[][] = createBatches<NewSchemaChangeOperationUsage>(values, 500);
+
+    for (const values of arrayOfValues) {
+      await this.db.insert(schemaCheckChangeActionOperationUsage).values(values).execute();
+    }
   }
 
   private mapChangesFromDriverValue = (val: any) => {
