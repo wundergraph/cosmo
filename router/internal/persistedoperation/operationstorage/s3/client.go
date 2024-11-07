@@ -74,13 +74,13 @@ func NewClient(endpoint string, options *Options) (persistedoperation.Client, er
 	return client, nil
 }
 
-func (c Client) PersistedOperation(ctx context.Context, clientName, sha256Hash string) ([]byte, error) {
+func (c Client) PersistedOperation(ctx context.Context, clientName, sha256Hash string) ([]byte, bool, error) {
 	content, err := c.persistedOperation(ctx, clientName, sha256Hash)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
-	return content, nil
+	return content, false, nil
 }
 
 func (c Client) persistedOperation(ctx context.Context, clientName, sha256Hash string) ([]byte, error) {
