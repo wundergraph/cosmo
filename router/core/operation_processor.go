@@ -650,11 +650,6 @@ type NormalizationCacheEntry struct {
 	operationType            string
 }
 
-func (e NormalizationCacheEntry) Length() int64 {
-	// uint64 is always 8 bytes
-	return int64(len(e.normalizedRepresentation) + len(e.operationType) + 8)
-}
-
 func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error) {
 
 	skipIncludeVariableNames := o.skipIncludeVariableNames()
@@ -819,14 +814,13 @@ func (o *OperationKit) savePersistedOperationToCache(isApq bool, skipIncludeVari
 		normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
 		operationType:            o.parsedOperation.Type,
 	}
-	cost := entry.Length()
 
 	if isApq {
 		ttl := o.cache.automaticPersistedOperationCacheTtl
 		ttlD := time.Duration(ttl) * time.Second
-		o.cache.persistedOperationNormalizationCache.SetWithTTL(cacheKey, entry, cost, ttlD)
+		o.cache.persistedOperationNormalizationCache.SetWithTTL(cacheKey, entry, 1, ttlD)
 	} else {
-		o.cache.persistedOperationNormalizationCache.Set(cacheKey, entry, cost)
+		o.cache.persistedOperationNormalizationCache.Set(cacheKey, entry, 1)
 	}
 
 	o.cache.persistedOperationVariableNamesLock.Lock()

@@ -402,7 +402,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	}
 
 	if s.engineExecutionConfiguration.EnablePersistedOperationsCache || s.automaticPersistedQueriesConfig.Enabled {
-		cacheSize := int64(1024) // 0.5MB
+		cacheSize := int64(1024 * 10)
 		persistedOperationCacheConfig := &ristretto.Config[uint64, NormalizationCacheEntry]{
 			MaxCost:     cacheSize,
 			NumCounters: cacheSize * 10,
