@@ -42,8 +42,8 @@ type Processor[T any] struct {
 	// each element that is added to the buffer.
 	costFunc func(T) int
 
-	// currentThreshold holds the current total cost of the buffer.
-	currentThreshold int
+	// currentBufferCost holds the current total cost of the buffer.
+	currentBufferCost int
 }
 
 const defaultBufferSize = 10000
@@ -80,7 +80,7 @@ func (p *Processor[T]) Enqueue(ctx context.Context, element ...T) error {
 
 		select {
 		case p.queue <- e:
-			return nil
+			p.logger.Debug("element added to the queue", zap.Any("element", e))
 		case <-ctx.Done():
 			return ctx.Err()
 		}
@@ -91,19 +91,25 @@ func (p *Processor[T]) Enqueue(ctx context.Context, element ...T) error {
 
 // Start starts the batch processor.
 func (p *Processor[T]) Start(ctx context.Context) {
+	p.logger.Debug("Starting processor")
+
 	ticker := time.NewTicker(p.config.Interval)
 	defer ticker.Stop()
-
 	for {
 		select {
 		case <-ticker.C:
+			p.logger.Debug("interval completed - processing batch")
 			p.process()
-		case batch := <-p.queue:
-			p.receiveElement(batch)
+		case element := <-p.queue:
+			p.logger.Debug("receiving element from queue",
+				zap.Any("element", element),
+				zap.Int("queue_size", len(p.queue)),
+			)
+
+			p.receiveElement(element)
 		case <-ctx.Done():
 			p.process()
 			p.Stop()
-			return
 		case <-p.closeChan:
 			close(p.shutdownChan)
 			return
@@ -114,15 +120,18 @@ func (p *Processor[T]) Start(ctx context.Context) {
 // Stop instructs to processor to shut down.
 // It will ensure that all remaining items in the queue and buffer are processed.
 func (p *Processor[T]) Stop() {
+	p.logger.Info("Shutdown requested - stopping processor")
 	close(p.closeChan)
 	close(p.queue)
 
 	<-p.shutdownChan
 
+	p.logger.Info("processing remaining items in the queue", zap.Int("queue_size", len(p.queue)))
 	for batch := range p.queue {
 		p.receiveElement(batch)
 	}
 
+	p.logger.Info("processing remaining items in the buffer", zap.Int("buffer_size", len(p.buffer)))
 	if len(p.buffer) > 0 {
 		p.process()
 	}
@@ -138,28 +147,34 @@ func (p *Processor[T]) canAcceptBatch() bool {
 }
 
 func (p *Processor[T]) process() {
+	p.logger.Debug("Processing batch", zap.Int("buffer_size", len(p.buffer)))
 	if err := p.processBatch(p.buffer); err != nil {
 		p.logger.Error("Failed to process batch", zap.Error(err))
 		return
 	}
 
 	p.buffer = p.buffer[:0]
-	p.currentThreshold = 0
+	p.currentBufferCost = 0
+
+	p.logger.Debug("Batch processed successfully")
 }
 
 // receiveElement receives a batch of buffer adds them to the buffer.
 // If the buffer is full, the batch processing will be invoked.
 func (p *Processor[T]) receiveElement(element T) {
-	p.logger.Debug("Received element", zap.Any("element", element))
-
 	p.buffer = append(p.buffer, element)
 
 	if p.costFunc != nil {
-		p.currentThreshold += p.costFunc(element)
+		p.currentBufferCost += p.costFunc(element)
 	}
 
-	if p.currentThreshold >= p.config.MaxCostThreshold || len(p.buffer) == defaultBufferSize {
+	p.logger.Debug("current buffer cost", zap.Int("currentCost", p.currentBufferCost))
+	if p.currentBufferCost >= p.config.MaxCostThreshold || len(p.buffer) == defaultBufferSize {
+		p.logger.Debug("buffer threshold reached - processing batch",
+			zap.Int("buffer_size", len(p.buffer)),
+			zap.Int("currentCost", p.currentBufferCost),
+			zap.Int("maxCostThreshold", p.config.MaxCostThreshold))
+
 		p.process()
 	}
-
 }

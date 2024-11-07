@@ -174,6 +174,32 @@ func TestStartAndStopProcessor(t *testing.T) {
 	}
 }
 
+func TestStartProcessorWithCanceledContext(t *testing.T) {
+	config := ProcessorConfig{
+		MaxCostThreshold: 10,
+		MaxQueueSize:     5,
+		Interval:         time.Minute,
+	}
+	processor := NewProcessor(zap.NewNop(), config, mockProcessBatch, mockCostFunc)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	go processor.Start(ctx)
+
+	require.NoError(t, processor.Enqueue(ctx, []int{1, 2, 3}...))
+	require.NoError(t, processor.Enqueue(ctx, []int{4, 5}...))
+
+	cancel()
+
+	select {
+	case _, open := <-processor.closeChan:
+		require.Equal(t, 0, len(processor.buffer), "Buffer should be empty after Stop is called")
+		require.False(t, open, "Close channel should be closed after context is canceled")
+	case <-time.After(2 * time.Second):
+		require.Fail(t, "Processor should stop immediately after context is canceled")
+	}
+}
+
 // Mock function to simulate batch processing
 func mockProcessBatch(batch []int) error {
 	if len(batch) == 0 {

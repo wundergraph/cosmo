@@ -113,7 +113,7 @@ func main() {
 	}
 
 	batchConf := batch.ProcessorConfig{
-		MaxCostThreshold: cfg.MaxThreshold,
+		MaxCostThreshold: cfg.MaxCostThreshold,
 		MaxQueueSize:     cfg.MaxQueueSize,
 		Interval:         cfg.BatchProcessingInterval,
 	}
