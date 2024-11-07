@@ -427,3 +427,14 @@ export function mergeUrls(baseUrl: string, relativeUrl: string) {
 
   return new URL(relativeUrl, baseUrl).toString();
 }
+
+export function createBatches<T>(array: T[], batchSize: number): T[][] {
+  const batches: T[][] = [];
+
+  for (let i = 0; i < array.length; i += batchSize) {
+    const batch = array.slice(i, i + batchSize);
+    batches.push(batch);
+  }
+
+  return batches;
+}
