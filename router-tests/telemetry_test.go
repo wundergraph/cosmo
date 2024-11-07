@@ -2349,13 +2349,14 @@ func TestTelemetry(t *testing.T) {
 			require.Equal(t, codes.Error, sn[1].Status().Code)
 			require.Contains(t, sn[1].Status().Description, "unexpected literal - got: UNDEFINED want one of: [ENUM TYPE UNION QUERY INPUT EXTEND SCHEMA SCALAR FRAGMENT INTERFACE DIRECTIVE]")
 
-			require.Lenf(t, sn[1].Attributes(), 7, "expected 14 attributes, got %d", len(sn[1].Attributes()))
+			require.Lenf(t, sn[1].Attributes(), 8, "expected 8 attributes, got %d", len(sn[1].Attributes()))
 
 			require.Contains(t, sn[1].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[1].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[1].Attributes(), otel.WgFederatedGraphID.String("graph"))
 			require.Contains(t, sn[1].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
 			require.Contains(t, sn[1].Attributes(), otel.WgClientName.String("unknown"))
+			require.Contains(t, sn[1].Attributes(), otel.WgRequestError.Bool(true))
 			require.Contains(t, sn[1].Attributes(), otel.WgClientVersion.String("missing"))
 			require.Contains(t, sn[1].Attributes(), otel.WgOperationProtocol.String("http"))
 
@@ -2368,7 +2369,7 @@ func TestTelemetry(t *testing.T) {
 			require.Equal(t, codes.Error, sn[2].Status().Code)
 			require.Contains(t, sn[2].Status().Description, "unexpected literal - got: UNDEFINED want one of: [ENUM TYPE UNION QUERY INPUT EXTEND SCHEMA SCALAR FRAGMENT INTERFACE DIRECTIVE]")
 
-			require.Lenf(t, sn[2].Attributes(), 22, "expected 23 attributes, got %d", len(sn[2].Attributes()))
+			require.Lenf(t, sn[2].Attributes(), 23, "expected 23 attributes, got %d", len(sn[2].Attributes()))
 
 			events = sn[2].Events()
 			require.Len(t, events, 1, "expected 1 event because the GraphQL request failed")
