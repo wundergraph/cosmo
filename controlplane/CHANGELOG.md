@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.114.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.114.2...controlplane@0.114.3) (2024-11-07)
+
+### Bug Fixes
+
+* max call stack reached while inserting operation usage of checks ([#1338](https://github.com/wundergraph/cosmo/issues/1338)) ([a3fd3d9](https://github.com/wundergraph/cosmo/commit/a3fd3d9f44779b6f1b2918e7808653520769ff53)) (@JivusAyrus)
+
 ## [0.114.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.114.1...controlplane@0.114.2) (2024-11-05)
 
 **Note:** Version bump only for package controlplane
