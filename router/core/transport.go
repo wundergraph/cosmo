@@ -96,27 +96,15 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 	inFlightDone := ct.metricStore.MeasureInFlight(req.Context(), reqContext.telemetry.metricSliceAttrs, o)
 	ct.metricStore.MeasureRequestSize(req.Context(), req.ContentLength, reqContext.telemetry.metricSliceAttrs, o)
 
-	operationStartTime := time.Now()
-
 	return func(err error, resp *http.Response) {
 		defer reqContext.telemetry.ReleaseAttributes(&attributes)
 
 		inFlightDone()
 
-		latency := time.Since(operationStartTime)
-
-		if err != nil {
-			attributes = append(attributes, otel.WgRequestError.Bool(true))
-		} else if resp != nil {
-			attributes = append(attributes, semconv.HTTPStatusCode(resp.StatusCode))
-		}
-
-		o = otelmetric.WithAttributeSet(attribute.NewSet(attributes...))
-
-		ct.metricStore.MeasureRequestCount(req.Context(), reqContext.telemetry.metricSliceAttrs, o)
-		ct.metricStore.MeasureLatency(req.Context(), latency, reqContext.telemetry.metricSliceAttrs, o)
-
 		if resp != nil {
+			attributes = append(attributes, semconv.HTTPStatusCode(resp.StatusCode))
+			o = otelmetric.WithAttributeSet(attribute.NewSet(attributes...))
+
 			ct.metricStore.MeasureResponseSize(req.Context(), resp.ContentLength, reqContext.telemetry.metricSliceAttrs, o)
 		}
 	}

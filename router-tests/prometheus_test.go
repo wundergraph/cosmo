@@ -1645,8 +1645,8 @@ func TestPrometheus(t *testing.T) {
 			totalRequestErrorsMetric := totalRequestsErrors.GetMetric()
 
 			require.Len(t, totalRequestErrorsMetric, 2)
-			require.Len(t, totalRequestErrorsMetric[0].Label, 13)
-			require.Len(t, totalRequestErrorsMetric[1].Label, 15)
+			require.Len(t, totalRequestErrorsMetric[0].Label, 12)
+			require.Len(t, totalRequestErrorsMetric[1].Label, 14)
 
 			// Error metric for the subgraph error
 			require.Equal(t, []*io_prometheus_client.LabelPair{
@@ -1687,10 +1687,6 @@ func TestPrometheus(t *testing.T) {
 					Value: PointerOf("query"),
 				},
 				{
-					Name:  PointerOf("wg_request_error"),
-					Value: PointerOf("true"),
-				},
-				{
 					Name:  PointerOf("wg_router_cluster_name"),
 					Value: PointerOf(""),
 				},
@@ -1725,10 +1721,6 @@ func TestPrometheus(t *testing.T) {
 				{
 					Name:  PointerOf("wg_client_version"),
 					Value: PointerOf("missing"),
-				},
-				{
-					Name:  PointerOf("wg_component_name"),
-					Value: PointerOf("engine-loader"),
 				},
 				{
 					Name:  PointerOf("wg_federated_graph_id"),
@@ -1807,13 +1799,39 @@ func TestPrometheus(t *testing.T) {
 			mf, err := promRegistry.Gather()
 			require.NoError(t, err)
 
+			requestDuration := findMetricFamilyByName(mf, "router_http_request_duration_milliseconds")
+			requestDurationMetric := requestDuration.GetMetric()
+
+			/**
+			employees -> 200 Status code = 1
+			products -> 402 + 2x error codes = 2
+			router -> 200 Status code + 2x error codes = 2
+
+			Total metrics = 5
+			*/
+
+			require.Len(t, requestDurationMetric, 5)
+			require.Len(t, requestDurationMetric[0].Label, 14)
+			require.Len(t, requestDurationMetric[1].Label, 14)
+			require.Len(t, requestDurationMetric[2].Label, 14)
+			require.Len(t, requestDurationMetric[3].Label, 16)
+			require.Len(t, requestDurationMetric[4].Label, 16)
+
 			totalRequestsErrors := findMetricFamilyByName(mf, "router_http_requests_error_total")
 			totalRequestErrorsMetric := totalRequestsErrors.GetMetric()
 
-			require.Len(t, totalRequestErrorsMetric, 3)
-			require.Len(t, totalRequestErrorsMetric[0].Label, 14)
-			require.Len(t, totalRequestErrorsMetric[1].Label, 14)
+			/**
+			products -> 402 + 2x error codes = 2
+			router -> 200 Status code + 2x error codes = 2
+
+			Total metrics = 4
+			*/
+
+			require.Len(t, totalRequestErrorsMetric, 4)
+			require.Len(t, totalRequestErrorsMetric[0].Label, 13)
+			require.Len(t, totalRequestErrorsMetric[1].Label, 13)
 			require.Len(t, totalRequestErrorsMetric[2].Label, 15)
+			require.Len(t, totalRequestErrorsMetric[3].Label, 15)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
@@ -1855,10 +1873,6 @@ func TestPrometheus(t *testing.T) {
 				{
 					Name:  PointerOf("wg_operation_type"),
 					Value: PointerOf("query"),
-				},
-				{
-					Name:  PointerOf("wg_request_error"),
-					Value: PointerOf("true"),
 				},
 				{
 					Name:  PointerOf("wg_router_cluster_name"),
@@ -1917,10 +1931,6 @@ func TestPrometheus(t *testing.T) {
 					Value: PointerOf("query"),
 				},
 				{
-					Name:  PointerOf("wg_request_error"),
-					Value: PointerOf("true"),
-				},
-				{
 					Name:  PointerOf("wg_router_cluster_name"),
 					Value: PointerOf(""),
 				},
@@ -1936,6 +1946,10 @@ func TestPrometheus(t *testing.T) {
 
 			// Error metric for the subgraph error
 			require.Equal(t, []*io_prometheus_client.LabelPair{
+				{
+					Name:  PointerOf("error_codes"),
+					Value: PointerOf("UNAUTHORIZED"),
+				},
 				{
 					Name:  PointerOf("http_status_code"),
 					Value: PointerOf("403"),
@@ -1955,10 +1969,6 @@ func TestPrometheus(t *testing.T) {
 				{
 					Name:  PointerOf("wg_client_version"),
 					Value: PointerOf("missing"),
-				},
-				{
-					Name:  PointerOf("wg_component_name"),
-					Value: PointerOf("engine-loader"),
 				},
 				{
 					Name:  PointerOf("wg_federated_graph_id"),
@@ -1997,6 +2007,69 @@ func TestPrometheus(t *testing.T) {
 					Value: PointerOf("products"),
 				},
 			}, totalRequestErrorsMetric[2].Label)
+
+			require.Equal(t, []*io_prometheus_client.LabelPair{
+				{
+					Name:  PointerOf("error_codes"),
+					Value: PointerOf("YOUR_ERROR_CODE"),
+				},
+				{
+					Name:  PointerOf("http_status_code"),
+					Value: PointerOf("403"),
+				},
+				{
+					Name:  PointerOf("otel_scope_name"),
+					Value: PointerOf("cosmo.router.prometheus"),
+				},
+				{
+					Name:  PointerOf("otel_scope_version"),
+					Value: PointerOf("0.0.1"),
+				},
+				{
+					Name:  PointerOf("wg_client_name"),
+					Value: PointerOf("unknown"),
+				},
+				{
+					Name:  PointerOf("wg_client_version"),
+					Value: PointerOf("missing"),
+				},
+				{
+					Name:  PointerOf("wg_federated_graph_id"),
+					Value: PointerOf("graph"),
+				},
+				{
+					Name:  PointerOf("wg_operation_name"),
+					Value: PointerOf("myQuery"),
+				},
+				{
+					Name:  PointerOf("wg_operation_protocol"),
+					Value: PointerOf("http"),
+				},
+				{
+					Name:  PointerOf("wg_operation_type"),
+					Value: PointerOf("query"),
+				},
+				{
+					Name:  PointerOf("wg_router_cluster_name"),
+					Value: PointerOf(""),
+				},
+				{
+					Name:  PointerOf("wg_router_config_version"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+				},
+				{
+					Name:  PointerOf("wg_router_version"),
+					Value: PointerOf("dev"),
+				},
+				{
+					Name:  PointerOf("wg_subgraph_id"),
+					Value: PointerOf("3"),
+				},
+				{
+					Name:  PointerOf("wg_subgraph_name"),
+					Value: PointerOf("products"),
+				},
+			}, totalRequestErrorsMetric[3].Label)
 		})
 	})
 

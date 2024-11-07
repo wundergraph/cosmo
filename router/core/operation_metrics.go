@@ -2,10 +2,9 @@ package core
 
 import (
 	"context"
+	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"time"
-
-	"github.com/wundergraph/cosmo/router/pkg/otel"
 
 	"go.uber.org/zap"
 
@@ -54,17 +53,22 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 
 	latency := time.Since(m.operationStartTime)
 
-	if reqContext.error != nil {
-		// We don't store false values in the metrics, so only add the error attribute if it's true
-		attrs = append(attrs, otel.WgRequestError.Bool(true))
-		rm.MeasureRequestError(ctx, sliceAttrs, otelmetric.WithAttributeSet(attribute.NewSet(attrs...)))
-	}
-
 	o := otelmetric.WithAttributeSet(attribute.NewSet(attrs...))
 
-	rm.MeasureRequestCount(ctx, sliceAttrs, o)
+	if reqContext.error != nil {
+		rm.MeasureRequestError(ctx, sliceAttrs, o)
+
+		attrs = append(attrs, rotel.WgRequestError.Bool(true))
+		attrOpt := otelmetric.WithAttributeSet(attribute.NewSet(attrs...))
+
+		rm.MeasureRequestCount(ctx, sliceAttrs, attrOpt)
+		rm.MeasureLatency(ctx, latency, sliceAttrs, attrOpt)
+	} else {
+		rm.MeasureRequestCount(ctx, sliceAttrs, o)
+		rm.MeasureLatency(ctx, latency, sliceAttrs, o)
+	}
+
 	rm.MeasureRequestSize(ctx, m.requestContentLength, sliceAttrs, o)
-	rm.MeasureLatency(ctx, latency, sliceAttrs, o)
 	rm.MeasureResponseSize(ctx, int64(responseSize), sliceAttrs, o)
 
 	if m.trackUsageInfo && reqContext.operation != nil && !reqContext.operation.executionOptions.SkipLoader {
