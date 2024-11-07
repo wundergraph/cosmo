@@ -49,8 +49,6 @@ type MetricsService struct {
 	opGuardCache *ristretto.Cache[string, struct{}]
 
 	processor *batchprocessor.BatchProcessor[SchemaUsageRequestItem]
-
-	processorConfig ProcessorConfig
 }
 
 // NewMetricsService creates a new metrics service
