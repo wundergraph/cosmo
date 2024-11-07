@@ -199,23 +199,6 @@ func (ct *CustomTransport) allowSingleFlight(req *http.Request) bool {
 	return true
 }
 
-var (
-	ctBufPool = &sync.Pool{
-		New: func() any {
-			return &bytes.Buffer{}
-		},
-	}
-)
-
-func getBuffer() *bytes.Buffer {
-	return ctBufPool.Get().(*bytes.Buffer)
-}
-
-func releaseBuffer(buf *bytes.Buffer) {
-	buf.Reset()
-	ctBufPool.Put(buf)
-}
-
 func (ct *CustomTransport) roundTripSingleFlight(req *http.Request) (*http.Response, error) {
 
 	key := ct.singleFlightKey(req)
@@ -282,17 +265,15 @@ func (ct *CustomTransport) roundTripSingleFlight(req *http.Request) (*http.Respo
 		return nil, err
 	}
 
-	buf := getBuffer()
-	defer releaseBuffer(buf)
-	_, err = buf.ReadFrom(res.Body)
+	defer res.Body.Close()
+
+	item.body, err = io.ReadAll(res.Body)
 	if err != nil {
 		item.err = err
 		return nil, err
 	}
 
 	item.response = res
-	item.body = make([]byte, buf.Len())
-	copy(item.body, buf.Bytes())
 
 	// Restore the body
 	res.Body = io.NopCloser(bytes.NewReader(item.body))
