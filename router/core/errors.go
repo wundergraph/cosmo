@@ -115,7 +115,7 @@ func trackFinalResponseError(ctx context.Context, err error) {
 
 func getAggregatedSubgraphErrorCodes(err error) []string {
 
-	if unwrapped, ok := err.(MultiError); ok {
+	if unwrapped, ok := err.(multiError); ok {
 
 		errs := unwrapped.Unwrap()
 
@@ -144,7 +144,7 @@ func getSubgraphNames(ds []resolve.DataSourceInfo) []string {
 
 func getAggregatedSubgraphServiceNames(err error) []string {
 
-	if unwrapped, ok := err.(MultiError); ok {
+	if unwrapped, ok := err.(multiError); ok {
 
 		errs := unwrapped.Unwrap()
 
