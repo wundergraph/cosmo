@@ -2029,7 +2029,7 @@ export class NormalizationFactory {
         const implementationTypeNames = this.concreteTypeNamesByAbstractTypeName.get(referencedTypeName);
         if (!implementationTypeNames || implementationTypeNames.size < 0) {
           // Temporarily propagate as a warning until @inaccessible, entity interfaces and other such considerations are handled
-          this.warnings.push(unimplementedInterfaceOutputTypeError(referencedTypeName));
+          this.warnings.push(unimplementedInterfaceOutputTypeError(this.subgraphName, referencedTypeName));
         }
         continue;
       }
