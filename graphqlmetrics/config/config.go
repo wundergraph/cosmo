@@ -36,7 +36,6 @@ type Config struct {
 	PrometheusListenAddr string `default:"127.0.0.1:8088" envconfig:"PROMETHEUS_LISTEN_ADDR"`
 	PrometheusPath       string `default:"/metrics" envconfig:"PROMETHEUS_PATH"`
 
-	MaxBatchSize            int           `default:"1000" envconfig:"MAX_BATCH_SIZE"`
 	MaxThreshold            int           `default:"10000" envconfig:"MAX_THRESHOLD"`
 	MaxQueueSize            int           `default:"200" envconfig:"MAX_QUEUE_SIZE"`
 	BatchProcessingInterval time.Duration `default:"10s" envconfig:"BATCH_PROCESSING_INTERVAL"`

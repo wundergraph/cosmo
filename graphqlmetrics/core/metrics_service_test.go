@@ -170,7 +170,7 @@ func TestPublishGraphQLMetricsSmallBatches(t *testing.T) {
 
 	msvc := NewMetricsService(context.Background(), zap.NewNop(), db, defaultConfig())
 
-	count := 1000
+	count := 200000
 
 	requests := make([]*connect.Request[graphqlmetricsv1.PublishGraphQLRequestMetricsRequest], 0, count)
 
@@ -285,7 +285,7 @@ func TestPublishGraphQLMetricsSmallBatches(t *testing.T) {
 		has(Path, 'hello')
 	`).Scan(&allHelloEntries))
 
-	assert.Equal(t, fieldUsageCount, uint64(1000))
+	assert.Equal(t, int(fieldUsageCount), count)
 
 	// Validate materialized view
 
@@ -476,9 +476,8 @@ func TestAuthentication(t *testing.T) {
 
 func defaultConfig() batch.ProcessorConfig {
 	return batch.ProcessorConfig{
-		MaxBatchSize: 1000,
-		MaxThreshold: 10000,
-		MaxQueueSize: 200,
-		Interval:     time.Second * 10,
+		MaxCostThreshold: 100000,
+		MaxQueueSize:     200,
+		Interval:         time.Second * 10,
 	}
 }

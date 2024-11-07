@@ -10,12 +10,9 @@ import (
 
 // ProcessorConfig represents the configuration for the batch processor.
 type ProcessorConfig struct {
-	// MaxBatchSize is the maximum number of buffer to be sent in one request.
-	MaxBatchSize int
-
-	// MaxThreshold defines the maximum number of buffer items, to be evaluated against
+	// MaxCostThreshold defines the maximum number of buffer items, to be evaluated against
 	// a cost function before sending the batch. The cost function is custom to the user.
-	MaxThreshold int
+	MaxCostThreshold int
 
 	// MaxQueueSize is the maximum number of batches to be stored in the queue.
 	MaxQueueSize int
@@ -49,6 +46,8 @@ type Processor[T any] struct {
 	currentThreshold int
 }
 
+const defaultBufferSize = 10000
+
 // NewProcessor creates a new batch processor for a given configuration.
 // The ProcessFunc is the function to be invoked once a batch is ready.
 func NewProcessor[T any](
@@ -64,7 +63,7 @@ func NewProcessor[T any](
 		config:       config,
 
 		queue:  make(chan T, config.MaxQueueSize),
-		buffer: make([]T, 0, config.MaxBatchSize),
+		buffer: make([]T, 0, defaultBufferSize),
 
 		processBatch: processFunc,
 		costFunc:     costFunc,
@@ -159,7 +158,7 @@ func (p *Processor[T]) receiveElement(element T) {
 		p.currentThreshold += p.costFunc(element)
 	}
 
-	if p.currentThreshold >= p.config.MaxThreshold || len(p.buffer) == p.config.MaxBatchSize {
+	if p.currentThreshold >= p.config.MaxCostThreshold || len(p.buffer) == defaultBufferSize {
 		p.process()
 	}
 

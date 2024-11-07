@@ -15,6 +15,7 @@ import (
 	"github.com/wundergraph/cosmo/graphqlmetrics/config"
 	"github.com/wundergraph/cosmo/graphqlmetrics/core"
 	"github.com/wundergraph/cosmo/graphqlmetrics/internal/logging"
+	"github.com/wundergraph/cosmo/graphqlmetrics/pkg/batch"
 	"github.com/wundergraph/cosmo/graphqlmetrics/pkg/telemetry"
 	"go.uber.org/automaxprocs/maxprocs"
 	"go.uber.org/zap"
@@ -111,7 +112,13 @@ func main() {
 		logger.Info("Migration is up to date")
 	}
 
-	ms := core.NewMetricsService(ctx, logger, conn)
+	batchConf := batch.ProcessorConfig{
+		MaxCostThreshold: cfg.MaxThreshold,
+		MaxQueueSize:     cfg.MaxQueueSize,
+		Interval:         cfg.BatchProcessingInterval,
+	}
+
+	ms := core.NewMetricsService(ctx, logger, conn, batchConf)
 
 	metricsConfig := telemetry.NewTelemetryConfig(
 		core.Version,

@@ -31,8 +31,7 @@ func TestReceiveBatch(t *testing.T) {
 			input: input{
 				batch: make([]int, 10),
 				config: ProcessorConfig{
-					MaxBatchSize: 11,
-					MaxThreshold: 100,
+					MaxCostThreshold: 100,
 				},
 			},
 			expected: expected{
@@ -45,8 +44,7 @@ func TestReceiveBatch(t *testing.T) {
 			input: input{
 				batch: make([]int, 10),
 				config: ProcessorConfig{
-					MaxBatchSize: 5,
-					MaxThreshold: 100,
+					MaxCostThreshold: 5,
 				},
 			},
 			expected: expected{
@@ -59,27 +57,12 @@ func TestReceiveBatch(t *testing.T) {
 			input: input{
 				batch: make([]int, 14),
 				config: ProcessorConfig{
-					MaxBatchSize: 5,
-					MaxThreshold: 100,
+					MaxCostThreshold: 5,
 				},
 			},
 			expected: expected{
 				itemSize:                 4,
 				numberOfBatchInvocations: 2,
-			},
-		},
-		{
-			name: "should invoke process function because threshold is reached",
-			input: input{
-				batch: make([]int, 12),
-				config: ProcessorConfig{
-					MaxBatchSize: 5,
-					MaxThreshold: 4,
-				},
-			},
-			expected: expected{
-				itemSize:                 0,
-				numberOfBatchInvocations: 3,
 			},
 		},
 	}
@@ -107,10 +90,9 @@ func TestReceiveBatch(t *testing.T) {
 
 func TestNewProcessor(t *testing.T) {
 	config := ProcessorConfig{
-		MaxBatchSize: 10,
-		MaxThreshold: 20,
-		MaxQueueSize: 5,
-		Interval:     time.Second,
+		MaxCostThreshold: 20,
+		MaxQueueSize:     5,
+		Interval:         time.Second,
 	}
 	processor := NewProcessor(zap.NewNop(), config, mockProcessBatch, mockCostFunc)
 
@@ -123,10 +105,9 @@ func TestNewProcessor(t *testing.T) {
 
 func TestEnqueue(t *testing.T) {
 	config := ProcessorConfig{
-		MaxBatchSize: 10,
-		MaxThreshold: 20,
-		MaxQueueSize: 5,
-		Interval:     time.Second,
+		MaxCostThreshold: 20,
+		MaxQueueSize:     5,
+		Interval:         time.Second,
 	}
 	processor := NewProcessor(zap.NewNop(), config, mockProcessBatch, mockCostFunc)
 
@@ -153,10 +134,9 @@ func TestEnqueue(t *testing.T) {
 
 func TestProcess(t *testing.T) {
 	config := ProcessorConfig{
-		MaxBatchSize: 10,
-		MaxThreshold: 20,
-		MaxQueueSize: 5,
-		Interval:     time.Second,
+		MaxCostThreshold: 20,
+		MaxQueueSize:     5,
+		Interval:         time.Second,
 	}
 	processor := NewProcessor(zap.NewNop(), config, mockProcessBatch, mockCostFunc)
 
@@ -169,10 +149,9 @@ func TestProcess(t *testing.T) {
 
 func TestStartAndStopProcessor(t *testing.T) {
 	config := ProcessorConfig{
-		MaxBatchSize: 10,
-		MaxThreshold: 10,
-		MaxQueueSize: 5,
-		Interval:     time.Minute,
+		MaxCostThreshold: 10,
+		MaxQueueSize:     5,
+		Interval:         time.Minute,
 	}
 	processor := NewProcessor(zap.NewNop(), config, mockProcessBatch, mockCostFunc)
 
