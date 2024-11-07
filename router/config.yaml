@@ -4,13 +4,3 @@
 # This file is used to debugging purposes only.
 
 version: "1"
-
-graphql_metrics:
-  enabled: false
-
-telemetry:
-  tracing:
-    enabled: false
-  metrics:
-    prometheus:
-      listen_addr: localhost:8041
