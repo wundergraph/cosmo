@@ -107,7 +107,7 @@ func TestExposingPrometheusMetrics(t *testing.T) {
 					t.Fatalf("Failed to shut down server: %v", err)
 				}
 			}()
-			time.Sleep(2 * time.Second)
+			time.Sleep(1 * time.Second)
 
 			endpoint := fmt.Sprintf("http://%s%s", tt.prom.ListenAddr, tt.prom.Path)
 			resp, err := http.Get(endpoint)
@@ -227,13 +227,14 @@ func TestValidateExposedMetrics(t *testing.T) {
 			"go_memstats_stack_sys_bytes",
 			"go_memstats_sys_bytes",
 			"go_threads",
-			"process_cpu_seconds_total",
-			"process_max_fds",
-			"process_open_fds",
-			"process_resident_memory_bytes",
-			"process_start_time_seconds",
-			"process_virtual_memory_bytes",
-			"process_virtual_memory_max_bytes",
+			// Only on linux
+			//"process_cpu_seconds_total",
+			//"process_max_fds",
+			//"process_open_fds",
+			//"process_resident_memory_bytes",
+			//"process_start_time_seconds",
+			//"process_virtual_memory_bytes",
+			//"process_virtual_memory_max_bytes",
 			"promhttp_metric_handler_errors_total",
 			"promhttp_metric_handler_errors_total",
 		}
@@ -366,7 +367,7 @@ func TestValidateExposedAttirbutesWithoutClaims(t *testing.T) {
 		}
 	}()
 
-	time.Sleep(2 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	t.Run("publishing metrics without having proper claims should indicate this in the rpc_grpc_status_code", func(t *testing.T) {
 		client := graphqlmetricsv1connect.NewGraphQLMetricsServiceClient(
