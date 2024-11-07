@@ -5,6 +5,7 @@ go 1.21.0
 require (
 	connectrpc.com/connect v1.16.2
 	github.com/ClickHouse/clickhouse-go/v2 v2.18.0
+	github.com/alitto/pond v1.9.2
 	github.com/amacneil/dbmate/v2 v2.12.0
 	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/go-playground/validator/v10 v10.22.1
@@ -31,7 +32,6 @@ require (
 
 require (
 	github.com/ClickHouse/ch-go v0.61.2 // indirect
-	github.com/alitto/pond v1.9.2 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
