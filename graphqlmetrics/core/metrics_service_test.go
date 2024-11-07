@@ -87,7 +87,7 @@ func TestPublishGraphQLMetrics(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for batch to be processed
-	msvc.Shutdown(time.Second * 5)
+	msvc.Shutdown(time.Second * 1)
 
 	// Validate insert
 
@@ -376,7 +376,7 @@ func TestPublishAggregatedGraphQLMetrics(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for batch to be processed
-	msvc.Shutdown(time.Second * 5)
+	msvc.Shutdown(time.Second * 1)
 
 	// Validate insert
 
@@ -591,8 +591,8 @@ func TestCalculateRequestCost(t *testing.T) {
 
 func defaultConfig() batch.ProcessorConfig {
 	return batch.ProcessorConfig{
-		MaxCostThreshold: 100000,
-		MaxQueueSize:     200,
-		Interval:         time.Second * 10,
+		MaxCostThreshold: 1000,
+		MaxQueueSize:     100,
+		Interval:         time.Millisecond * 100,
 	}
 }

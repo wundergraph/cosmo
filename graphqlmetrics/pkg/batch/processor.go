@@ -80,7 +80,7 @@ func (p *Processor[T]) Enqueue(ctx context.Context, element ...T) error {
 
 		select {
 		case p.queue <- e:
-			p.logger.Debug("element added to the queue", zap.Any("element", e))
+			p.logger.Debug("element added to the queue")
 		case <-ctx.Done():
 			return ctx.Err()
 		}
@@ -98,17 +98,16 @@ func (p *Processor[T]) Start() {
 	for {
 		select {
 		case <-ticker.C:
-			p.logger.Debug("interval completed - processing batch")
-			p.process()
-		case element := <-p.queue:
-			p.logger.Debug("receiving element from queue",
-				zap.Any("element", element),
-				zap.Int("queue_size", len(p.queue)),
-			)
-
-			if p.receiveElement(element) {
-				ticker.Reset(p.config.Interval)
+			if len(p.buffer) > 0 {
+				p.process()
 			}
+		case element, ok := <-p.queue:
+			if !ok {
+				return
+			}
+
+			ticker.Reset(p.config.Interval)
+			p.receiveElement(element)
 		case <-p.closeChan:
 			close(p.shutdownChan)
 			return
@@ -164,17 +163,15 @@ func (p *Processor[T]) process() {
 
 // receiveElement receives a batch of buffer adds them to the buffer.
 // If the buffer is full, the batch processing will be invoked.
-// It returns true if the batch processing was invoked.
-func (p *Processor[T]) receiveElement(element T) bool {
+func (p *Processor[T]) receiveElement(element T) {
 	p.buffer = append(p.buffer, element)
 
 	if p.costFunc != nil {
 		p.currentBufferCost += p.costFunc(element)
 	}
 
-	processCalled := false
-
 	p.logger.Debug("current buffer cost", zap.Int("currentCost", p.currentBufferCost))
+
 	if p.currentBufferCost >= p.config.MaxCostThreshold || len(p.buffer) == defaultBufferSize {
 		p.logger.Debug("buffer threshold reached - processing batch",
 			zap.Int("buffer_size", len(p.buffer)),
@@ -182,9 +179,5 @@ func (p *Processor[T]) receiveElement(element T) bool {
 			zap.Int("max_cost_threshold", p.config.MaxCostThreshold))
 
 		p.process()
-
-		processCalled = true
 	}
-
-	return processCalled
 }

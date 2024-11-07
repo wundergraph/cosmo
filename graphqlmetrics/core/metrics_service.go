@@ -59,7 +59,8 @@ func NewMetricsService(ctx context.Context, logger *zap.Logger, chConn clickhous
 		logger:       logger,
 		conn:         chConn,
 		opGuardCache: c,
-		pool:         pond.New(100, 500, pond.MinWorkers(4)),
+		// sync with max open clickhouse connections
+		pool: pond.New(32, 500, pond.MinWorkers(8)),
 	}
 
 	setupAndStartBatchProcessor(ctx, logger, ms, config)
@@ -166,13 +167,16 @@ func (s *MetricsService) Shutdown(timeout time.Duration) {
 // prepareClickhouseBatches prepares the operation and metric batches for the given schema usage.
 func (s *MetricsService) prepareClickhouseBatches(
 	ctx context.Context, insertTime time.Time, batch []SchemaUsageRequestItem,
-) (operationBatch, metricBatch driver.Batch, err error) {
-	opTempBatch, err := s.conn.PrepareBatch(ctx, `INSERT INTO gql_metrics_operations`)
+) (driver.Batch, driver.Batch, error) {
+
+	var err error
+
+	operationBatch, err := s.conn.PrepareBatch(ctx, `INSERT INTO gql_metrics_operations`)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to prepare operation batch for metrics: %w", err)
 	}
 
-	metricTempBatch, err := s.conn.PrepareBatch(ctx, `INSERT INTO gql_metrics_schema_usage`)
+	metricBatch, err := s.conn.PrepareBatch(ctx, `INSERT INTO gql_metrics_schema_usage`)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to prepare metric batch for metrics: %w", err)
 	}
@@ -189,7 +193,7 @@ func (s *MetricsService) prepareClickhouseBatches(
 			if _, exists := s.opGuardCache.Get(schemaUsage.OperationInfo.Hash); exists {
 				continue
 			}
-			err := opTempBatch.Append(
+			err := operationBatch.Append(
 				insertTime,
 				schemaUsage.OperationInfo.Name,
 				schemaUsage.OperationInfo.Hash,
@@ -199,30 +203,28 @@ func (s *MetricsService) prepareClickhouseBatches(
 			if err != nil {
 				return nil, nil, fmt.Errorf("failed to append operation to batch: %w", err)
 			}
-
 			operationHasItems = true
-
-			added, err := s.appendUsageMetrics(metricTempBatch, insertTime, item.Claims, schemaUsage)
-			if err != nil {
-				return nil, nil, err
-			}
-
-			metricsHasItems = metricsHasItems || added
 		}
 	}
 
-	// declaring and returning an interface in go which has been assigned a value before will not be nil anymore
-	// even when assigning nil
-	if operationHasItems {
-		operationBatch = opTempBatch
-	} else {
-		err = opTempBatch.Abort()
+	if !operationHasItems {
+		err = operationBatch.Abort()
+		operationBatch = nil
 	}
 
-	if metricsHasItems {
-		metricBatch = metricTempBatch
-	} else {
-		err = metricTempBatch.Abort()
+	for _, item := range batch {
+		for _, schemaUsage := range item.SchemaUsage {
+			added, err := s.appendUsageMetrics(metricBatch, insertTime, item.Claims, schemaUsage)
+			if err != nil {
+				return nil, nil, err
+			}
+			metricsHasItems = added
+		}
+	}
+
+	if !metricsHasItems {
+		err = metricBatch.Abort()
+		metricBatch = nil
 	}
 
 	return operationBatch, metricBatch, err
@@ -355,60 +357,62 @@ func (s *MetricsService) processBatch(batch []SchemaUsageRequestItem) error {
 
 	operationsBatch, metricsBatch, err := s.prepareClickhouseBatches(insertCtx, insertTime, batch)
 	if err != nil {
-		s.logger.Error("Failed to prepare metrics batches", zap.Error(err))
+		s.logger.Error("Failed to prepare or abort metrics batches", zap.Error(err))
 		return err
 	}
 
 	s.pool.Submit(func() {
-		wg := sync.WaitGroup{}
 
-		wg.Add(2)
-		go func() {
-			defer wg.Done()
+		var wg sync.WaitGroup
 
-			if operationsBatch == nil {
-				return
-			}
+		if operationsBatch != nil {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
 
-			err := retryOnError(insertCtx, s.logger.With(zap.String("component", "operations")), func(ctx context.Context) error {
-				if err := operationsBatch.Send(); err != nil {
-					return fmt.Errorf("failed to send operation batch: %w", err)
+				err := retryOnError(insertCtx, s.logger.With(zap.String("component", "operations")), func(ctx context.Context) error {
+					if err := operationsBatch.Send(); err != nil {
+						return fmt.Errorf("failed to send operation batch: %w", err)
+					}
+
+					for _, su := range aggregated {
+						// Add the operation to the cache once it has been written
+						s.opGuardCache.Add(su.OperationInfo.Hash, struct{}{})
+					}
+
+					storedOperations += operationsBatch.Rows()
+					return nil
+				})
+
+				if err != nil {
+					s.logger.Error("Failed to write operations", zap.Error(err))
+				}
+			}()
+		}
+
+		if metricsBatch != nil {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+
+				if metricsBatch == nil {
+					return
 				}
 
-				for _, su := range aggregated {
-					// Add the operation to the cache once it has been written
-					s.opGuardCache.Add(su.OperationInfo.Hash, struct{}{})
+				err := retryOnError(insertCtx, s.logger.With(zap.String("component", "metrics")), func(ctx context.Context) error {
+					if err := metricsBatch.Send(); err != nil {
+						return fmt.Errorf("failed to send metrics batch: %w", err)
+					}
+
+					storedMetrics += metricsBatch.Rows()
+					return nil
+				})
+
+				if err != nil {
+					s.logger.Error("Failed to write metrics", zap.Error(err))
 				}
-
-				storedOperations += operationsBatch.Rows()
-				return nil
-			})
-
-			if err != nil {
-				s.logger.Error("Failed to write operations", zap.Error(err))
-			}
-		}()
-
-		go func() {
-			defer wg.Done()
-
-			if metricsBatch == nil {
-				return
-			}
-
-			err := retryOnError(insertCtx, s.logger.With(zap.String("component", "metrics")), func(ctx context.Context) error {
-				if err := metricsBatch.Send(); err != nil {
-					return fmt.Errorf("failed to send metrics batch: %w", err)
-				}
-
-				storedMetrics += metricsBatch.Rows()
-				return nil
-			})
-
-			if err != nil {
-				s.logger.Error("Failed to write metrics", zap.Error(err))
-			}
-		}()
+			}()
+		}
 
 		wg.Wait()
 
