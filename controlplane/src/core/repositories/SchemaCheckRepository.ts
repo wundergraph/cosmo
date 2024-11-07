@@ -13,6 +13,7 @@ import {
 import { ComposedFederatedGraph } from '../composition/composer.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
 import { InspectorOperationResult } from '../services/SchemaUsageTrafficInspector.js';
+import { createBatches } from '../util.js';
 import { FederatedGraphConfig } from './FederatedGraphRepository.js';
 
 export class SchemaCheckRepository {
@@ -120,10 +121,7 @@ export class SchemaCheckRepository {
       return;
     }
 
-    const arrayOfValues: NewSchemaChangeOperationUsage[][] = [];
-    for (let i = 0; i < values.length; i += 500) {
-      arrayOfValues.push(values.slice(i, i + 500));
-    }
+    const arrayOfValues: NewSchemaChangeOperationUsage[][] = createBatches<NewSchemaChangeOperationUsage>(values, 500);
 
     for (const values of arrayOfValues) {
       await this.db.insert(schemaCheckChangeActionOperationUsage).values(values).execute();
