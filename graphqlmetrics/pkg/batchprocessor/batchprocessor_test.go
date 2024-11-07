@@ -61,6 +61,65 @@ func TestBatchProcessor_PushAndDispatchByCost(t *testing.T) {
 	}
 }
 
+func TestBatchProcessor_CorrectBatches(t *testing.T) {
+	var dispatchedBatches [][]int
+	var mutex sync.Mutex
+
+	// Define the cost function
+	costFunc := func(batch []int) int {
+		return len(batch)
+	}
+
+	// Define the dispatcher function
+	dispatcher := func(ctx context.Context, batch []int) {
+		mutex.Lock()
+		dispatchedBatches = append(dispatchedBatches, batch)
+		mutex.Unlock()
+	}
+
+	batchSize := 10
+	dispatchItems := 100
+
+	// Create a new BatchProcessor using the Options struct
+	bp := New(Options[int]{
+		MaxQueueSize:  100,
+		CostFunc:      costFunc,
+		MaxWorkers:    2,
+		CostThreshold: batchSize,
+		Dispatcher:    dispatcher,
+		Interval:      1 * time.Second,
+	})
+
+	// Push items onto the queue
+	for i := 0; i < dispatchItems; i++ {
+		_ = bp.Push(i)
+	}
+
+	// Wait a moment to allow dispatch
+	time.Sleep(100 * time.Millisecond)
+
+	// Clean up
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	err := bp.StopAndWait(ctx)
+	if err != nil {
+		t.Fatalf("StopAndWait error: %v", err)
+	}
+
+	// Check that the correct number of batches were dispatched
+	if len(dispatchedBatches) != batchSize {
+		t.Fatalf("Expected 10 dispatched batches, got %d", len(dispatchedBatches))
+	}
+
+	for i := 0; i < dispatchItems; i++ {
+		if i%batchSize == 0 {
+			if len(dispatchedBatches[i/batchSize]) != batchSize {
+				t.Fatalf("Expected batch size 10, got %d", len(dispatchedBatches[i/batchSize]))
+			}
+		}
+	}
+}
+
 func TestBatchProcessor_DispatchByInterval(t *testing.T) {
 	var dispatchedBatches [][]int
 	var mutex sync.Mutex
