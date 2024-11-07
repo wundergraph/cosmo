@@ -18,7 +18,6 @@ require (
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/go-redis/redis_rate/v10 v10.0.1
 	github.com/gobwas/ws v1.3.1
-	github.com/goccy/go-json v0.10.3
 	github.com/goccy/go-yaml v1.13.4
 	github.com/golang-jwt/jwt/v5 v5.2.0
 	github.com/gorilla/websocket v1.5.1
@@ -96,6 +95,7 @@ require (
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
+	github.com/goccy/go-json v0.10.3 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/uuid v1.6.0 // indirect

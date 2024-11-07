@@ -2,10 +2,10 @@ package config
 
 import (
 	_ "embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/dustin/go-humanize"
-	"github.com/goccy/go-json"
 	"github.com/goccy/go-yaml"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"golang.org/x/text/message"
