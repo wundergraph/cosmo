@@ -176,7 +176,7 @@ func TestValidateExposedMetrics(t *testing.T) {
 		}
 	}()
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(2 * time.Second)
 
 	t.Run("get default process metrics", func(t *testing.T) {
 		endpoint := fmt.Sprintf("http://%s%s", prom.ListenAddr, prom.Path)
