@@ -90,7 +90,7 @@ func (p *Processor[T]) Enqueue(ctx context.Context, element ...T) error {
 }
 
 // Start starts the batch processor.
-func (p *Processor[T]) Start(ctx context.Context) {
+func (p *Processor[T]) Start() {
 	p.logger.Debug("Starting processor")
 
 	ticker := time.NewTicker(p.config.Interval)
@@ -109,9 +109,6 @@ func (p *Processor[T]) Start(ctx context.Context) {
 			if p.receiveElement(element) {
 				ticker.Reset(p.config.Interval)
 			}
-		case <-ctx.Done():
-			p.process()
-			p.Stop()
 		case <-p.closeChan:
 			close(p.shutdownChan)
 			return

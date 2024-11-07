@@ -498,7 +498,7 @@ func TestGracefulShutdown(t *testing.T) {
 
 	require.NoError(t, msvc.processor.Enqueue(context.Background(), SchemaUsageRequestItem{}))
 
-	go msvc.processor.Start(context.Background())
+	go msvc.processor.Start()
 
 	shutdownChan := make(chan struct{})
 

@@ -117,19 +117,17 @@ func TestEnqueue(t *testing.T) {
 		require.NoError(t, err, "Enqueue should succeed when queue is not full")
 	}
 
-	// Test context cancellation during enqueue
-	cancelCtx, cancel := context.WithCancel(ctx)
-	go processor.Start(cancelCtx)
+	go processor.Start()
 
-	cancel()
+	processor.Stop()
 	var err error
 	select {
 	case <-processor.closeChan:
-		err = processor.Enqueue(cancelCtx, []int{3, 4, 5}...)
+		err = processor.Enqueue(context.Background(), []int{3, 4, 5}...)
 	case <-time.After(2 * time.Second):
 		err = nil
 	}
-	require.Error(t, err, "Enqueue should fail if context is canceled")
+	require.Error(t, err, "Enqueue should fail processor is closed")
 }
 
 func TestProcess(t *testing.T) {
@@ -156,7 +154,7 @@ func TestStartAndStopProcessor(t *testing.T) {
 	processor := NewProcessor(zap.NewNop(), config, mockProcessBatch, mockCostFunc)
 
 	ctx := context.Background()
-	go processor.Start(ctx)
+	go processor.Start()
 
 	require.NoError(t, processor.Enqueue(ctx, []int{1, 2, 3}...))
 	require.NoError(t, processor.Enqueue(ctx, []int{4, 5}...))
@@ -171,32 +169,6 @@ func TestStartAndStopProcessor(t *testing.T) {
 		require.False(t, open, "Close channel should be closed after Stop is called")
 	case <-time.After(2 * time.Second):
 		require.Fail(t, "Close channel should be closed after Stop is called")
-	}
-}
-
-func TestStartProcessorWithCanceledContext(t *testing.T) {
-	config := ProcessorConfig{
-		MaxCostThreshold: 10,
-		MaxQueueSize:     5,
-		Interval:         time.Minute,
-	}
-	processor := NewProcessor(zap.NewNop(), config, mockProcessBatch, mockCostFunc)
-
-	ctx, cancel := context.WithCancel(context.Background())
-
-	go processor.Start(ctx)
-
-	require.NoError(t, processor.Enqueue(ctx, []int{1, 2, 3}...))
-	require.NoError(t, processor.Enqueue(ctx, []int{4, 5}...))
-
-	cancel()
-
-	select {
-	case _, open := <-processor.closeChan:
-		require.Equal(t, 0, len(processor.buffer), "Buffer should be empty after Stop is called")
-		require.False(t, open, "Close channel should be closed after context is canceled")
-	case <-time.After(2 * time.Second):
-		require.Fail(t, "Processor should stop immediately after context is canceled")
 	}
 }
 

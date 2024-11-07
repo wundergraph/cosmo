@@ -74,7 +74,7 @@ func setupAndStartBatchProcessor(ctx context.Context, logger *zap.Logger, ms *Me
 	)
 
 	ms.processor = processor
-	go ms.processor.Start(ctx)
+	go ms.processor.Start()
 }
 
 func (s *MetricsService) PublishGraphQLMetrics(
