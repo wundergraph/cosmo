@@ -27,9 +27,9 @@ type BatchProcessor[T any] struct {
 	stopChan       chan struct{}
 	doneChan       chan struct{}
 	costThreshold  int
-	mutex          sync.Mutex
 	ctx            context.Context
 	cancel         context.CancelFunc
+	dispatchChan   chan []T
 	workerCount    int
 	wg             sync.WaitGroup
 }
@@ -37,6 +37,9 @@ type BatchProcessor[T any] struct {
 // New creates a new BatchProcessor with the provided options.
 func New[T any](opts Options[T]) *BatchProcessor[T] {
 	ctx, cancel := context.WithCancel(context.Background())
+	if opts.MaxWorkers <= 0 {
+		opts.MaxWorkers = 1 // Ensure at least one worker
+	}
 	bp := &BatchProcessor[T]{
 		queue:          make(chan T, opts.MaxQueueSize),
 		batch:          make([]T, 0),
@@ -48,33 +51,57 @@ func New[T any](opts Options[T]) *BatchProcessor[T] {
 		doneChan:       make(chan struct{}),
 		ctx:            ctx,
 		cancel:         cancel,
+		dispatchChan:   make(chan []T),
 		workerCount:    opts.MaxWorkers,
 	}
-	if bp.workerCount <= 0 {
-		bp.workerCount = 1 // Ensure at least one worker
-	}
+
+	// Start the batch manager goroutine
+	go bp.runBatchManager()
+
+	// Start worker goroutines
 	bp.wg.Add(bp.workerCount)
 	for i := 0; i < bp.workerCount; i++ {
 		go bp.runWorker()
 	}
-	go bp.monitor()
+
 	return bp
 }
 
-// Push adds an item to the queue. Blocks if the queue is full.
-func (bp *BatchProcessor[T]) Push(item T) {
-	bp.queue <- item
+// Push adds an item to the queue. Returns an error if the processor is stopped.
+func (bp *BatchProcessor[T]) Push(item T) error {
+	select {
+	case bp.queue <- item:
+		return nil
+	case <-bp.stopChan:
+		return errors.New("batch processor stopped")
+	}
 }
 
 // StopAndWait stops the processor and waits until all items are processed or the context is done.
-// It will call bp.cancel() only after ctx is canceled.
 func (bp *BatchProcessor[T]) StopAndWait(ctx context.Context) error {
 	// Signal the processor to stop accepting new items
 	close(bp.stopChan)
+	close(bp.queue) // Close the queue to stop the batch manager when the queue is drained
+
+	// Wait for batch manager to finish
 	select {
 	case <-bp.doneChan:
-		// Processor has finished processing all items
-		return nil
+		// Processor has finished processing all items, including dispatching
+	case <-ctx.Done():
+		// Context is canceled; cancel the context for dispatchers
+		bp.cancel()
+	}
+
+	// Wait for worker goroutines to finish
+	done := make(chan struct{})
+	go func() {
+		bp.wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// All workers have finished
 	case <-ctx.Done():
 		// Context is canceled; cancel the context for dispatchers
 		bp.cancel()
@@ -85,60 +112,37 @@ func (bp *BatchProcessor[T]) StopAndWait(ctx context.Context) error {
 			return ctx.Err()
 		}
 	}
+
+	return nil
 }
 
-func (bp *BatchProcessor[T]) runWorker() {
-	defer bp.wg.Done()
+func (bp *BatchProcessor[T]) runBatchManager() {
+	ticker := time.NewTicker(bp.interval)
+	defer ticker.Stop()
+	defer close(bp.doneChan)
+	defer close(bp.dispatchChan) // Close dispatchChan only after doneChan is closed
+
 	for {
 		select {
 		case item, ok := <-bp.queue:
 			if !ok {
+				// Queue closed, process any remaining items
+				if len(bp.batch) > 0 {
+					bp.dispatch()
+				}
 				return
 			}
-			bp.addToBatch(item)
-		case <-bp.stopChan:
-			return
-		case <-bp.ctx.Done():
-			return
-		}
-	}
-}
-
-func (bp *BatchProcessor[T]) addToBatch(item T) {
-	bp.mutex.Lock()
-	defer bp.mutex.Unlock()
-	bp.batch = append(bp.batch, item)
-	cost := bp.costFunction(bp.batch)
-	if cost >= bp.costThreshold {
-		bp.dispatch()
-	}
-}
-
-func (bp *BatchProcessor[T]) monitor() {
-	ticker := time.NewTicker(bp.interval)
-	defer ticker.Stop()
-	defer close(bp.doneChan)
-
-	for {
-		select {
+			bp.batch = append(bp.batch, item)
+			cost := bp.costFunction(bp.batch)
+			if cost >= bp.costThreshold {
+				bp.dispatch()
+			}
 		case <-ticker.C:
-			bp.mutex.Lock()
 			if len(bp.batch) > 0 {
 				bp.dispatch()
 			}
-			bp.mutex.Unlock()
-		case <-bp.stopChan:
-			// Wait for workers to finish
-			bp.wg.Wait()
-			// Dispatch any remaining items
-			bp.mutex.Lock()
-			if len(bp.batch) > 0 {
-				bp.dispatch()
-			}
-			bp.mutex.Unlock()
-			return
 		case <-bp.ctx.Done():
-			// Context canceled, exit monitor
+			// Context canceled, exit batch manager
 			return
 		}
 	}
@@ -150,6 +154,17 @@ func (bp *BatchProcessor[T]) dispatch() {
 	copy(batchCopy, bp.batch)
 	// Reset the batch
 	bp.batch = bp.batch[:0]
-	// Process the batch with the context
-	bp.dispatcherFunc(bp.ctx, batchCopy)
+	// Send the batch to the dispatch channel
+	select {
+	case bp.dispatchChan <- batchCopy:
+	case <-bp.ctx.Done():
+	}
+}
+
+func (bp *BatchProcessor[T]) runWorker() {
+	defer bp.wg.Done()
+	for batch := range bp.dispatchChan {
+		// Process the batch with the context
+		bp.dispatcherFunc(bp.ctx, batch)
+	}
 }
