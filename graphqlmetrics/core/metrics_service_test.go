@@ -83,6 +83,9 @@ func TestPublishGraphQLMetrics(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	// Wait until all requests are dispatched
+	time.Sleep(time.Millisecond * 100)
+
 	// Wait for batch to be processed
 	msvc.Shutdown(time.Second * 10)
 
@@ -235,8 +238,8 @@ func TestPublishGraphQLMetricsSmallBatches(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	// Drain the queue
-	time.Sleep(time.Second * 2)
+	// Wait until all requests are dispatched
+	time.Sleep(time.Second * 5)
 
 	// Wait for batch to be processed
 	msvc.Shutdown(time.Second * 10)
@@ -375,6 +378,9 @@ func TestPublishAggregatedGraphQLMetrics(t *testing.T) {
 		pReq,
 	)
 	require.NoError(t, err)
+
+	// Wait until all requests are dispatched
+	time.Sleep(time.Millisecond * 100)
 
 	// Wait for batch to be processed
 	msvc.Shutdown(time.Second * 10)
