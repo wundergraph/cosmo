@@ -2,7 +2,7 @@ package integration_test
 
 import (
 	"context"
-	"github.com/goccy/go-json"
+	"encoding/json"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"net/http"

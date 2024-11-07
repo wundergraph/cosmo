@@ -22,7 +22,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"golang.org/x/sync/semaphore"
 
-	"github.com/goccy/go-json"
+	"encoding/json"
 
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/gobwas/ws"

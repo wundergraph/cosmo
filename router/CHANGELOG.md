@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.139.1](https://github.com/wundergraph/cosmo/compare/router@0.139.0...router@0.139.1) (2024-11-06)
+
+### Bug Fixes
+
+* revert APQ due to memory leak ([#1340](https://github.com/wundergraph/cosmo/issues/1340)) ([a1bfdcc](https://github.com/wundergraph/cosmo/commit/a1bfdcc4e1cab906d45c8e0b0d8a507811c26231)) (@StarpTech)
+
+# [0.139.0](https://github.com/wundergraph/cosmo/compare/router@0.138.0...router@0.139.0) (2024-11-06)
+
+### Bug Fixes
+
+* fix goccy ([#1339](https://github.com/wundergraph/cosmo/issues/1339)) ([99f9e29](https://github.com/wundergraph/cosmo/commit/99f9e29f6030af23ae1c7f08640cbc1f62f84dad)) (@df-wg)
+
+### Features
+
+* **router:** implement automatic persistent queries (apq) ([#1330](https://github.com/wundergraph/cosmo/issues/1330)) ([133ea40](https://github.com/wundergraph/cosmo/commit/133ea404e4b422b0de3e812e79abbe3cf6748021)) (@df-wg)
+
 # [0.138.0](https://github.com/wundergraph/cosmo/compare/router@0.137.1...router@0.138.0) (2024-11-05)
 
 ### Bug Fixes
