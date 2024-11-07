@@ -27,6 +27,7 @@ type contextKey int
 const (
 	requestContextKey contextKey = iota
 	subgraphResolverContextKey
+	engineLoaderHooksContextKey
 )
 
 var _ RequestContext = (*requestContext)(nil)
