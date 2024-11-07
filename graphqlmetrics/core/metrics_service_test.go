@@ -169,7 +169,8 @@ func TestPublishGraphQLMetricsSmallBatches(t *testing.T) {
 
 	msvc := NewMetricsService(context.Background(), zap.NewNop(), db, defaultConfig())
 
-	count := 200_000
+	// High number slows down race mode significantly
+	count := 20_000
 
 	requests := make([]*connect.Request[graphqlmetricsv1.PublishGraphQLRequestMetricsRequest], 0, count)
 
