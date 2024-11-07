@@ -90,10 +90,10 @@ type OperationProcessorOptions struct {
 	Executor                            *Executor
 	MaxOperationSizeInBytes             int64
 	PersistedOperationClient            persistedoperation.SaveClient
-	PersistedOperationCacheSize         int64
 	AutomaticPersistedOperationCacheTtl int
 
 	EnablePersistedOperationsCache bool
+	PersistedOpsNormalizationCache *ristretto.Cache[uint64, NormalizationCacheEntry]
 	NormalizationCache             *ristretto.Cache[uint64, NormalizationCacheEntry]
 	ValidationCache                *ristretto.Cache[uint64, bool]
 	QueryDepthCache                *ristretto.Cache[uint64, int]
@@ -136,11 +136,11 @@ type OperationCache struct {
 
 	automaticPersistedOperationCacheTtl float64
 
-	persistedOperationCache *ristretto.Cache[uint64, normalizedOperationCacheEntry]
-	normalizationCache      *ristretto.Cache[uint64, NormalizationCacheEntry]
-	validationCache         *ristretto.Cache[uint64, bool]
-	queryDepthCache         *ristretto.Cache[uint64, int]
-	operationHashCache      *ristretto.Cache[uint64, string]
+	persistedOperationNormalizationCache *ristretto.Cache[uint64, NormalizationCacheEntry]
+	normalizationCache                   *ristretto.Cache[uint64, NormalizationCacheEntry]
+	validationCache                      *ristretto.Cache[uint64, bool]
+	queryDepthCache                      *ristretto.Cache[uint64, int]
+	operationHashCache                   *ristretto.Cache[uint64, string]
 }
 
 // OperationKit provides methods to parse, normalize and validate operations.
@@ -637,7 +637,7 @@ func (o *OperationKit) normalizePersistedOperation(isApq bool) (cached bool, err
 	o.parsedOperation.NormalizedRepresentation = o.kit.normalizedOperation.String()
 	o.parsedOperation.Request.Variables = o.kit.doc.Input.Variables
 
-	if o.cache != nil && o.cache.persistedOperationCache != nil {
+	if o.cache != nil && o.cache.persistedOperationNormalizationCache != nil {
 		o.savePersistedOperationToCache(isApq, skipIncludeNames)
 	}
 
@@ -648,6 +648,11 @@ type NormalizationCacheEntry struct {
 	operationID              uint64
 	normalizedRepresentation string
 	operationType            string
+}
+
+func (e NormalizationCacheEntry) Length() int64 {
+	// uint64 is always 8 bytes
+	return int64(len(e.normalizedRepresentation) + len(e.operationType) + 8)
 }
 
 func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error) {
@@ -750,20 +755,9 @@ func (o *OperationKit) NormalizeVariables() error {
 	return nil
 }
 
-type normalizedOperationCacheEntry struct {
-	operationID              uint64
-	normalizedRepresentation string
-	operationType            string
-}
-
-func (e normalizedOperationCacheEntry) Length() int {
-	// uint64 is always 8 bytes
-	return len(e.normalizedRepresentation) + len(e.operationType) + 8
-}
-
 func (o *OperationKit) loadPersistedOperationFromCache() (ok bool, err error) {
 
-	if o.cache == nil || o.cache.persistedOperationCache == nil {
+	if o.cache == nil || o.cache.persistedOperationNormalizationCache == nil {
 		return false, nil
 	}
 
@@ -772,7 +766,7 @@ func (o *OperationKit) loadPersistedOperationFromCache() (ok bool, err error) {
 		return false, nil
 	}
 
-	entry, ok := o.cache.persistedOperationCache.Get(cacheKey)
+	entry, ok := o.cache.persistedOperationNormalizationCache.Get(cacheKey)
 	if !ok {
 		return false, nil
 	}
@@ -814,25 +808,25 @@ func (o *OperationKit) persistedOperationCacheKeyHasTtl() (bool, []string) {
 	}
 	cacheKey := o.generatePersistedOperationCacheKey(variableNames)
 
-	ttl, ok := o.cache.persistedOperationCache.GetTTL(cacheKey)
+	ttl, ok := o.cache.persistedOperationNormalizationCache.GetTTL(cacheKey)
 	return ok && ttl > 0, variableNames
 }
 
 func (o *OperationKit) savePersistedOperationToCache(isApq bool, skipIncludeVariableNames []string) {
 	cacheKey := o.generatePersistedOperationCacheKey(skipIncludeVariableNames)
-	entry := normalizedOperationCacheEntry{
+	entry := NormalizationCacheEntry{
 		operationID:              o.parsedOperation.ID,
 		normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
 		operationType:            o.parsedOperation.Type,
 	}
-	cost := int64(entry.Length())
+	cost := entry.Length()
 
 	if isApq {
 		ttl := o.cache.automaticPersistedOperationCacheTtl
 		ttlD := time.Duration(ttl) * time.Second
-		o.cache.persistedOperationCache.SetWithTTL(cacheKey, entry, cost, ttlD)
+		o.cache.persistedOperationNormalizationCache.SetWithTTL(cacheKey, entry, cost, ttlD)
 	} else {
-		o.cache.persistedOperationCache.Set(cacheKey, entry, cost)
+		o.cache.persistedOperationNormalizationCache.Set(cacheKey, entry, cost)
 	}
 
 	o.cache.persistedOperationVariableNamesLock.Lock()
@@ -1044,49 +1038,21 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		processor.parseKitSemaphore <- i
 		processor.parseKits[i] = createParseKit(i, &parseKitOptions{apolloCompatibilityFlags: opts.ApolloCompatibilityFlags})
 	}
-	if opts.EnablePersistedOperationsCache {
+	if opts.NormalizationCache != nil || opts.ValidationCache != nil || opts.QueryDepthCache != nil || opts.OperationHashCache != nil || opts.EnablePersistedOperationsCache {
 		processor.operationCache = &OperationCache{
-			automaticPersistedOperationCacheTtl: float64(opts.AutomaticPersistedOperationCacheTtl),
-			persistedOperationVariableNames:     map[string][]string{},
-			persistedOperationVariableNamesLock: &sync.RWMutex{},
+			normalizationCache: opts.NormalizationCache,
+			validationCache:    opts.ValidationCache,
+			queryDepthCache:    opts.QueryDepthCache,
+			operationHashCache: opts.OperationHashCache,
 		}
+	}
+	if opts.EnablePersistedOperationsCache {
+		processor.operationCache.automaticPersistedOperationCacheTtl = float64(opts.AutomaticPersistedOperationCacheTtl)
+		processor.operationCache.persistedOperationVariableNames = map[string][]string{}
+		processor.operationCache.persistedOperationVariableNamesLock = &sync.RWMutex{}
+		processor.operationCache.persistedOperationNormalizationCache = opts.PersistedOpsNormalizationCache
+	}
 
-		cacheSize := opts.PersistedOperationCacheSize
-		if cacheSize <= 0 {
-			cacheSize = 1024 * 1024 * 10 // 10MB
-		}
-
-		processor.operationCache.persistedOperationCache, _ = ristretto.NewCache[uint64, normalizedOperationCacheEntry](
-			&ristretto.Config[uint64, normalizedOperationCacheEntry]{
-				MaxCost:     cacheSize,
-				NumCounters: cacheSize,
-				BufferItems: 64,
-			})
-	}
-	if opts.NormalizationCache != nil {
-		if processor.operationCache == nil {
-			processor.operationCache = &OperationCache{}
-		}
-		processor.operationCache.normalizationCache = opts.NormalizationCache
-	}
-	if opts.ValidationCache != nil {
-		if processor.operationCache == nil {
-			processor.operationCache = &OperationCache{}
-		}
-		processor.operationCache.validationCache = opts.ValidationCache
-	}
-	if opts.QueryDepthCache != nil {
-		if processor.operationCache == nil {
-			processor.operationCache = &OperationCache{}
-		}
-		processor.operationCache.queryDepthCache = opts.QueryDepthCache
-	}
-	if opts.OperationHashCache != nil {
-		if processor.operationCache == nil {
-			processor.operationCache = &OperationCache{}
-		}
-		processor.operationCache.operationHashCache = opts.OperationHashCache
-	}
 	return processor
 }
 

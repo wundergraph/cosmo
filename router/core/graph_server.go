@@ -267,13 +267,14 @@ func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.M
 }
 
 type graphMux struct {
-	mux                  *chi.Mux
-	planCache            ExecutionPlanCache[uint64, *planWithMetaData]
-	normalizationCache   *ristretto.Cache[uint64, NormalizationCacheEntry]
-	validationCache      *ristretto.Cache[uint64, bool]
-	queryDepthCache      *ristretto.Cache[uint64, int]
-	operationHashCache   *ristretto.Cache[uint64, string]
-	accessLogsFileLogger *logging.BufferedLogger
+	mux                     *chi.Mux
+	planCache               ExecutionPlanCache[uint64, *planWithMetaData]
+	persistedOperationCache *ristretto.Cache[uint64, NormalizationCacheEntry]
+	normalizationCache      *ristretto.Cache[uint64, NormalizationCacheEntry]
+	validationCache         *ristretto.Cache[uint64, bool]
+	queryDepthCache         *ristretto.Cache[uint64, int]
+	operationHashCache      *ristretto.Cache[uint64, string]
+	accessLogsFileLogger    *logging.BufferedLogger
 }
 
 func (s *graphMux) Shutdown(_ context.Context) error {
@@ -281,6 +282,10 @@ func (s *graphMux) Shutdown(_ context.Context) error {
 	var err error
 
 	s.planCache.Close()
+
+	if s.persistedOperationCache != nil {
+		s.persistedOperationCache.Close()
+	}
 
 	if s.normalizationCache != nil {
 		s.normalizationCache.Close()
@@ -394,6 +399,17 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		}
 	} else {
 		gm.planCache = NewNoopExecutionPlanCache()
+	}
+
+	if s.engineExecutionConfiguration.EnablePersistedOperationsCache || s.automaticPersistedQueriesConfig.Enabled {
+		cacheSize := int64(1024) // 0.5MB
+		persistedOperationCacheConfig := &ristretto.Config[uint64, NormalizationCacheEntry]{
+			MaxCost:     cacheSize,
+			NumCounters: cacheSize * 10,
+			BufferItems: 64,
+		}
+
+		gm.persistedOperationCache, _ = ristretto.NewCache[uint64, NormalizationCacheEntry](persistedOperationCacheConfig)
 	}
 
 	if s.engineExecutionConfiguration.EnableNormalizationCache && s.engineExecutionConfiguration.NormalizationCacheSize > 0 {
@@ -689,9 +705,9 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		Executor:                            executor,
 		MaxOperationSizeInBytes:             int64(s.routerTrafficConfig.MaxRequestBodyBytes),
 		PersistedOperationClient:            s.persistedOperationClient,
-		PersistedOperationCacheSize:         int64(s.persistedOperationsConfig.Cache.Size.Uint64()),
 		AutomaticPersistedOperationCacheTtl: s.automaticPersistedQueriesConfig.Cache.TTL,
 		EnablePersistedOperationsCache:      s.engineExecutionConfiguration.EnablePersistedOperationsCache,
+		PersistedOpsNormalizationCache:      gm.persistedOperationCache,
 		NormalizationCache:                  gm.normalizationCache,
 		ValidationCache:                     gm.validationCache,
 		QueryDepthCache:                     gm.queryDepthCache,
