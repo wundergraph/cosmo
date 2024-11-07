@@ -70,15 +70,14 @@ func (bp *BatchProcessor[T]) Push(item T) error {
 	select {
 	case bp.queue <- item:
 		return nil
-	case <-bp.doneChan:
+	case <-bp.doneChan: // Processor stopped when doneChan is closed
 		return errors.New("batch processor stopped")
 	}
 }
 
 // StopAndWait stops the processor and waits until all items are processed or the context is done.
 func (bp *BatchProcessor[T]) StopAndWait(ctx context.Context) error {
-	close(bp.queue)
-	close(bp.doneChan)
+	close(bp.doneChan) // Signal the manager to stop
 
 	// Wait for worker goroutines to finish
 	done := make(chan struct{})
@@ -107,7 +106,8 @@ func (bp *BatchProcessor[T]) runBatchManager() {
 	ticker := time.NewTicker(bp.interval)
 	defer ticker.Stop()
 
-	defer close(bp.dispatchChan) // Close the workers
+	defer close(bp.queue)        // Stop the queue
+	defer close(bp.dispatchChan) // Stop the workers after draining / close the queue
 
 	for {
 		select {
@@ -116,6 +116,7 @@ func (bp *BatchProcessor[T]) runBatchManager() {
 			cost := bp.costFunction(bp.batch)
 			if cost >= bp.costThreshold {
 				bp.dispatch()
+				ticker.Reset(bp.interval) // Reset the timer after dispatching
 			}
 		case <-ticker.C:
 			if len(bp.batch) > 0 {
