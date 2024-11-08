@@ -803,7 +803,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 
 	startNormalization := time.Now()
 
-	if _, err := operationKit.NormalizeOperation(isApq); err != nil {
+	if _, err := operationKit.NormalizeOperation(h.clientInfo.Name, isApq); err != nil {
 		opContext.normalizationTime = time.Since(startNormalization)
 		return nil, nil, err
 	}
