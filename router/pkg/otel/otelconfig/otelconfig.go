@@ -13,8 +13,9 @@ const (
 	DefaultMetricsPath            = "/v1/metrics"
 	DefaultTracesPath             = "/v1/traces"
 
-	DeltaTemporality      ExporterTemporality = "delta"
-	CumulativeTemporality ExporterTemporality = "cumulative"
+	DeltaTemporality       ExporterTemporality = "delta"
+	CumulativeTemporality  ExporterTemporality = "cumulative"
+	CustomCloudTemporality ExporterTemporality = "custom"
 )
 
 // DefaultEndpoint is the default endpoint used by subsystems that
