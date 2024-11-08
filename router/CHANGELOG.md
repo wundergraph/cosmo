@@ -4,6 +4,42 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.140.0](https://github.com/wundergraph/cosmo/compare/router@0.139.2...router@0.140.0) (2024-11-07)
+
+### Features
+
+* add apq back in ([#1346](https://github.com/wundergraph/cosmo/issues/1346)) ([61c0d9b](https://github.com/wundergraph/cosmo/commit/61c0d9b9ac383ad744d47a461fc7ac9b07c9c981)) (@df-wg)
+
+## [0.139.2](https://github.com/wundergraph/cosmo/compare/router@0.139.1...router@0.139.2) (2024-11-07)
+
+**Note:** Version bump only for package router
+
+## [0.139.1](https://github.com/wundergraph/cosmo/compare/router@0.139.0...router@0.139.1) (2024-11-06)
+
+### Bug Fixes
+
+* revert APQ due to memory leak ([#1340](https://github.com/wundergraph/cosmo/issues/1340)) ([a1bfdcc](https://github.com/wundergraph/cosmo/commit/a1bfdcc4e1cab906d45c8e0b0d8a507811c26231)) (@StarpTech)
+
+# [0.139.0](https://github.com/wundergraph/cosmo/compare/router@0.138.0...router@0.139.0) (2024-11-06)
+
+### Bug Fixes
+
+* fix goccy ([#1339](https://github.com/wundergraph/cosmo/issues/1339)) ([99f9e29](https://github.com/wundergraph/cosmo/commit/99f9e29f6030af23ae1c7f08640cbc1f62f84dad)) (@df-wg)
+
+### Features
+
+* **router:** implement automatic persistent queries (apq) ([#1330](https://github.com/wundergraph/cosmo/issues/1330)) ([133ea40](https://github.com/wundergraph/cosmo/commit/133ea404e4b422b0de3e812e79abbe3cf6748021)) (@df-wg)
+
+# [0.138.0](https://github.com/wundergraph/cosmo/compare/router@0.137.1...router@0.138.0) (2024-11-05)
+
+### Bug Fixes
+
+* playground scripts inconsistent states ([#1337](https://github.com/wundergraph/cosmo/issues/1337)) ([73309eb](https://github.com/wundergraph/cosmo/commit/73309eb1f492246f9488b192f5956da24d4ebe5f)) (@thisisnithin)
+
+### Features
+
+* context handling performance & memory improvements ([#1336](https://github.com/wundergraph/cosmo/issues/1336)) ([1aed39a](https://github.com/wundergraph/cosmo/commit/1aed39a99d604595ca4fef711a45ef0b059f77a5)) (@jensneuse)
+
 ## [0.137.1](https://github.com/wundergraph/cosmo/compare/router@0.137.0...router@0.137.1) (2024-11-04)
 
 ### Bug Fixes

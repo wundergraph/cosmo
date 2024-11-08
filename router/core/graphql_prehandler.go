@@ -5,15 +5,18 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/config"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
-	otelmetric "go.opentelemetry.io/otel/metric"
 	"net/http"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/pkg/config"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	otelmetric "go.opentelemetry.io/otel/metric"
+
+	"github.com/wundergraph/astjson"
 
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt/v5"
@@ -91,6 +94,7 @@ type PreHandler struct {
 	clientHeader                config.ClientHeader
 	computeOperationSha256      bool
 	apolloCompatibilityFlags    *config.ApolloCompatibilityFlags
+	variableParsePool           astjson.ParserPool
 }
 
 type httpOperation struct {
@@ -314,7 +318,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			readOperationBodySpan.End()
 		}
 
-		err = h.handleOperation(r, buf, &httpOperation{
+		variablesParser := h.variableParsePool.Get()
+		defer h.variableParsePool.Put(variablesParser)
+
+		err = h.handleOperation(r, buf, variablesParser, &httpOperation{
 			requestContext:   requestContext,
 			requestLogger:    requestLogger,
 			routerSpan:       routerSpan,
@@ -384,7 +391,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 	})
 }
 
-func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpOperation *httpOperation) error {
+func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, variablesParser *astjson.Parser, httpOperation *httpOperation) error {
 	operationKit, err := h.operationProcessor.NewKit()
 	if err != nil {
 		return err
@@ -414,7 +421,7 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 	} else if req.Method == http.MethodPost {
 		if err := operationKit.UnmarshalOperationFromBody(httpOperation.body); err != nil {
 			return &httpGraphqlError{
-				message:    fmt.Sprintf("error parsing request body: %s", err),
+				message:    "error parsing request body",
 				statusCode: http.StatusBadRequest,
 			}
 		}
@@ -438,9 +445,18 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 	}
 
 	requestContext.operation.extensions = operationKit.parsedOperation.Request.Extensions
-	requestContext.operation.variables = operationKit.parsedOperation.Request.Variables
+	requestContext.operation.variables, err = variablesParser.ParseBytes(operationKit.parsedOperation.Request.Variables)
+	if err != nil {
+		return &httpGraphqlError{
+			message:    fmt.Sprintf("error parsing variables: %s", err),
+			statusCode: http.StatusBadRequest,
+		}
+	}
 
-	var skipParse bool
+	var (
+		skipParse bool
+		isApq     bool
+	)
 
 	if operationKit.parsedOperation.IsPersistedOperation {
 		ctx, span := h.tracer.Start(req.Context(), "Load Persisted Operation",
@@ -448,7 +464,7 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 			trace.WithAttributes(requestContext.telemetry.traceAttrs...),
 		)
 
-		skipParse, err = operationKit.FetchPersistedOperation(ctx, requestContext.operation.clientInfo)
+		skipParse, isApq, err = operationKit.FetchPersistedOperation(ctx, requestContext.operation.clientInfo)
 		if err != nil {
 			span.RecordError(err)
 			span.SetAttributes(otel.WgEnginePersistedOperationCacheHit.Bool(operationKit.parsedOperation.PersistedOperationCacheHit))
@@ -560,7 +576,7 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 		trace.WithAttributes(requestContext.telemetry.traceAttrs...),
 	)
 
-	cached, err := operationKit.NormalizeOperation()
+	cached, err := operationKit.NormalizeOperation(requestContext.operation.clientInfo.Name, isApq)
 	if err != nil {
 		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
 
@@ -607,7 +623,15 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 	}
 
 	requestContext.operation.content = operationKit.parsedOperation.NormalizedRepresentation
-	requestContext.operation.variables = operationKit.parsedOperation.Request.Variables
+	requestContext.operation.variables, err = variablesParser.ParseBytes(operationKit.parsedOperation.Request.Variables)
+	if err != nil {
+		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
+		if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
+			httpOperation.traceTimings.EndNormalize()
+		}
+		engineNormalizeSpan.End()
+		return err
+	}
 	requestContext.operation.normalizationTime = time.Since(startNormalization)
 
 	if !requestContext.operation.traceOptions.ExcludeNormalizeStats {

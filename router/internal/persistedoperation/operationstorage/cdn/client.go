@@ -3,9 +3,9 @@ package cdn
 import (
 	"compress/gzip"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/goccy/go-json"
 	"github.com/wundergraph/cosmo/router/internal/httpclient"
 	"github.com/wundergraph/cosmo/router/internal/jwt"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
@@ -36,13 +36,13 @@ type client struct {
 	logger         *zap.Logger
 }
 
-func (cdn *client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error) {
+func (cdn *client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, bool, error) {
 	content, err := cdn.persistedOperation(ctx, clientName, sha256Hash)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
-	return content, nil
+	return content, false, nil
 }
 
 func (cdn *client) persistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error) {

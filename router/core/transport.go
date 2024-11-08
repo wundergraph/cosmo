@@ -3,7 +3,6 @@ package core
 import (
 	"bytes"
 	"fmt"
-	otelmetric "go.opentelemetry.io/otel/metric"
 	"io"
 	"net/http"
 	"net/url"
@@ -11,6 +10,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	otelmetric "go.opentelemetry.io/otel/metric"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"go.opentelemetry.io/otel/attribute"
@@ -95,27 +96,15 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 	inFlightDone := ct.metricStore.MeasureInFlight(req.Context(), reqContext.telemetry.metricSliceAttrs, o)
 	ct.metricStore.MeasureRequestSize(req.Context(), req.ContentLength, reqContext.telemetry.metricSliceAttrs, o)
 
-	operationStartTime := time.Now()
-
 	return func(err error, resp *http.Response) {
 		defer reqContext.telemetry.ReleaseAttributes(&attributes)
 
 		inFlightDone()
 
-		latency := time.Since(operationStartTime)
-
-		if err != nil {
-			attributes = append(attributes, otel.WgRequestError.Bool(true))
-		} else if resp != nil {
-			attributes = append(attributes, semconv.HTTPStatusCode(resp.StatusCode))
-		}
-
-		o = otelmetric.WithAttributeSet(attribute.NewSet(attributes...))
-
-		ct.metricStore.MeasureRequestCount(req.Context(), reqContext.telemetry.metricSliceAttrs, o)
-		ct.metricStore.MeasureLatency(req.Context(), latency, reqContext.telemetry.metricSliceAttrs, o)
-
 		if resp != nil {
+			attributes = append(attributes, semconv.HTTPStatusCode(resp.StatusCode))
+			o = otelmetric.WithAttributeSet(attribute.NewSet(attributes...))
+
 			ct.metricStore.MeasureResponseSize(req.Context(), resp.ContentLength, reqContext.telemetry.metricSliceAttrs, o)
 		}
 	}
@@ -198,23 +187,6 @@ func (ct *CustomTransport) allowSingleFlight(req *http.Request) bool {
 	return true
 }
 
-var (
-	ctBufPool = &sync.Pool{
-		New: func() any {
-			return &bytes.Buffer{}
-		},
-	}
-)
-
-func getBuffer() *bytes.Buffer {
-	return ctBufPool.Get().(*bytes.Buffer)
-}
-
-func releaseBuffer(buf *bytes.Buffer) {
-	buf.Reset()
-	ctBufPool.Put(buf)
-}
-
 func (ct *CustomTransport) roundTripSingleFlight(req *http.Request) (*http.Response, error) {
 
 	key := ct.singleFlightKey(req)
@@ -244,8 +216,8 @@ func (ct *CustomTransport) roundTripSingleFlight(req *http.Request) (*http.Respo
 		res := &http.Response{}
 		res.Status = item.response.Status
 		res.StatusCode = item.response.StatusCode
-		res.Header = item.response.Header.Clone()
-		res.Trailer = item.response.Trailer.Clone()
+		res.Header = item.response.Header
+		res.Trailer = item.response.Trailer
 		res.ContentLength = item.response.ContentLength
 		res.TransferEncoding = item.response.TransferEncoding
 		res.Close = item.response.Close
@@ -281,17 +253,15 @@ func (ct *CustomTransport) roundTripSingleFlight(req *http.Request) (*http.Respo
 		return nil, err
 	}
 
-	buf := getBuffer()
-	defer releaseBuffer(buf)
-	_, err = buf.ReadFrom(res.Body)
+	defer res.Body.Close()
+
+	item.body, err = io.ReadAll(res.Body)
 	if err != nil {
 		item.err = err
 		return nil, err
 	}
 
 	item.response = res
-	item.body = make([]byte, buf.Len())
-	copy(item.body, buf.Bytes())
 
 	// Restore the body
 	res.Body = io.NopCloser(bytes.NewReader(item.body))

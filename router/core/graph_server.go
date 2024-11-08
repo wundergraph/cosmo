@@ -5,20 +5,21 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/klauspost/compress/gzhttp"
+	"github.com/klauspost/compress/gzip"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
+
 	"github.com/cloudflare/backoff"
 	"github.com/dgraph-io/ristretto"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/klauspost/compress/gzhttp"
-	"github.com/klauspost/compress/gzip"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
@@ -172,7 +173,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	}
 
 	wrapper, err := gzhttp.NewWrapper(
-		gzhttp.MinSize(1024), // 1KB
+		gzhttp.MinSize(1024*4), // 4KB
 		gzhttp.CompressionLevel(gzip.DefaultCompression),
 		gzhttp.ContentTypes(CompressibleContentTypes),
 	)
@@ -266,13 +267,14 @@ func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.M
 }
 
 type graphMux struct {
-	mux                  *chi.Mux
-	planCache            ExecutionPlanCache[uint64, *planWithMetaData]
-	normalizationCache   *ristretto.Cache[uint64, NormalizationCacheEntry]
-	validationCache      *ristretto.Cache[uint64, bool]
-	queryDepthCache      *ristretto.Cache[uint64, int]
-	operationHashCache   *ristretto.Cache[uint64, string]
-	accessLogsFileLogger *logging.BufferedLogger
+	mux                     *chi.Mux
+	planCache               ExecutionPlanCache[uint64, *planWithMetaData]
+	persistedOperationCache *ristretto.Cache[uint64, NormalizationCacheEntry]
+	normalizationCache      *ristretto.Cache[uint64, NormalizationCacheEntry]
+	validationCache         *ristretto.Cache[uint64, bool]
+	queryDepthCache         *ristretto.Cache[uint64, int]
+	operationHashCache      *ristretto.Cache[uint64, string]
+	accessLogsFileLogger    *logging.BufferedLogger
 }
 
 func (s *graphMux) Shutdown(_ context.Context) error {
@@ -280,6 +282,10 @@ func (s *graphMux) Shutdown(_ context.Context) error {
 	var err error
 
 	s.planCache.Close()
+
+	if s.persistedOperationCache != nil {
+		s.persistedOperationCache.Close()
+	}
 
 	if s.normalizationCache != nil {
 		s.normalizationCache.Close()
@@ -393,6 +399,17 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		}
 	} else {
 		gm.planCache = NewNoopExecutionPlanCache()
+	}
+
+	if s.engineExecutionConfiguration.EnablePersistedOperationsCache || s.automaticPersistedQueriesConfig.Enabled {
+		cacheSize := int64(1024 * 10)
+		persistedOperationCacheConfig := &ristretto.Config[uint64, NormalizationCacheEntry]{
+			MaxCost:     cacheSize,
+			NumCounters: cacheSize * 10,
+			BufferItems: 64,
+		}
+
+		gm.persistedOperationCache, _ = ristretto.NewCache[uint64, NormalizationCacheEntry](persistedOperationCacheConfig)
 	}
 
 	if s.engineExecutionConfiguration.EnableNormalizationCache && s.engineExecutionConfiguration.NormalizationCacheSize > 0 {
@@ -685,17 +702,19 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	}
 
 	operationProcessor := NewOperationProcessor(OperationProcessorOptions{
-		Executor:                       executor,
-		MaxOperationSizeInBytes:        int64(s.routerTrafficConfig.MaxRequestBodyBytes),
-		PersistedOperationClient:       s.persistedOperationClient,
-		EnablePersistedOperationsCache: s.engineExecutionConfiguration.EnablePersistedOperationsCache,
-		NormalizationCache:             gm.normalizationCache,
-		ValidationCache:                gm.validationCache,
-		QueryDepthCache:                gm.queryDepthCache,
-		OperationHashCache:             gm.operationHashCache,
-		ParseKitPoolSize:               s.engineExecutionConfiguration.ParseKitPoolSize,
-		IntrospectionEnabled:           s.Config.introspection,
-		ApolloCompatibilityFlags:       s.apolloCompatibilityFlags,
+		Executor:                            executor,
+		MaxOperationSizeInBytes:             int64(s.routerTrafficConfig.MaxRequestBodyBytes),
+		PersistedOperationClient:            s.persistedOperationClient,
+		AutomaticPersistedOperationCacheTtl: s.automaticPersistedQueriesConfig.Cache.TTL,
+		EnablePersistedOperationsCache:      s.engineExecutionConfiguration.EnablePersistedOperationsCache,
+		PersistedOpsNormalizationCache:      gm.persistedOperationCache,
+		NormalizationCache:                  gm.normalizationCache,
+		ValidationCache:                     gm.validationCache,
+		QueryDepthCache:                     gm.queryDepthCache,
+		OperationHashCache:                  gm.operationHashCache,
+		ParseKitPoolSize:                    s.engineExecutionConfiguration.ParseKitPoolSize,
+		IntrospectionEnabled:                s.Config.introspection,
+		ApolloCompatibilityFlags:            s.apolloCompatibilityFlags,
 	})
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
 

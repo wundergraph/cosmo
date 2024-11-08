@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/wundergraph/astjson"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"go.opentelemetry.io/otel/attribute"
 
@@ -21,7 +22,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"golang.org/x/sync/semaphore"
 
-	"github.com/goccy/go-json"
+	"encoding/json"
 
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/gobwas/ws"
@@ -769,10 +770,13 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 
 	opContext.extensions = operationKit.parsedOperation.Request.Extensions
 
-	var skipParse bool
+	var (
+		skipParse bool
+		isApq     bool
+	)
 
 	if operationKit.parsedOperation.IsPersistedOperation {
-		skipParse, err = operationKit.FetchPersistedOperation(h.ctx, h.clientInfo)
+		skipParse, isApq, err = operationKit.FetchPersistedOperation(h.ctx, h.clientInfo)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -799,7 +803,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 
 	startNormalization := time.Now()
 
-	if _, err := operationKit.NormalizeOperation(); err != nil {
+	if _, err := operationKit.NormalizeOperation(h.clientInfo.Name, isApq); err != nil {
 		opContext.normalizationTime = time.Since(startNormalization)
 		return nil, nil, err
 	}
@@ -814,7 +818,10 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 
 	opContext.normalizationTime = time.Since(startNormalization)
 	opContext.content = operationKit.parsedOperation.NormalizedRepresentation
-	opContext.variables = operationKit.parsedOperation.Request.Variables
+	opContext.variables, err = astjson.ParseBytes(operationKit.parsedOperation.Request.Variables)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	startValidation := time.Now()
 

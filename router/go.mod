@@ -15,11 +15,10 @@ require (
 	// Link: https://github.com/dgraph-io/ristretto/pull/384
 	github.com/dgraph-io/ristretto v0.1.2-0.20240723054643-f5997484152c
 	github.com/dustin/go-humanize v1.0.1
-	github.com/go-chi/chi/v5 v5.0.11
+	github.com/go-chi/chi/v5 v5.1.0
 	github.com/go-redis/redis_rate/v10 v10.0.1
-	github.com/gobwas/ws v1.3.1
-	github.com/goccy/go-json v0.10.3
-	github.com/goccy/go-yaml v1.12.0
+	github.com/gobwas/ws v1.4.0
+	github.com/goccy/go-yaml v1.13.4
 	github.com/golang-jwt/jwt/v5 v5.2.0
 	github.com/gorilla/websocket v1.5.1
 	github.com/hashicorp/go-multierror v1.1.1
@@ -38,7 +37,7 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/twmb/franz-go v1.16.1
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.116
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.120
 	// Do not upgrade, it renames attributes we rely on
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/contrib/propagators/b3 v1.23.0
@@ -73,9 +72,9 @@ require (
 	github.com/pquerna/cachecontrol v0.2.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1
 	github.com/tonglil/opentelemetry-go-datadog-propagator v0.1.3
-	github.com/wundergraph/astjson v0.0.0-20240910140849-bb15f94bd362
+	github.com/wundergraph/astjson v0.0.0-20241105103047-3b2e8a2b2779
 	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8
-	golang.org/x/text v0.16.0
+	golang.org/x/text v0.19.0
 )
 
 require (
@@ -88,15 +87,15 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/docker/go-units v0.5.0 // indirect
-	github.com/fatih/color v1.16.0 // indirect
+	github.com/fatih/color v1.18.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
-	github.com/go-playground/validator/v10 v10.20.0 // indirect
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
+	github.com/goccy/go-json v0.10.3 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/uuid v1.6.0 // indirect
@@ -136,9 +135,8 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.23.1 // indirect
 	go.opentelemetry.io/proto/otlp v1.1.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/crypto v0.24.0 // indirect
-	golang.org/x/net v0.26.0 // indirect
-	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
+	golang.org/x/crypto v0.28.0 // indirect
+	golang.org/x/net v0.30.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240102182953-50ed04b92917 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240102182953-50ed04b92917 // indirect
 	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect

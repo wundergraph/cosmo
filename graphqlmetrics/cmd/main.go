@@ -111,7 +111,14 @@ func main() {
 		logger.Info("Migration is up to date")
 	}
 
-	ms := core.NewMetricsService(logger, conn)
+	procConfig := core.ProcessorConfig{
+		MaxBatchSize: cfg.BatchMaxCostThreshold,
+		MaxQueueSize: cfg.BatchMaxQueueSize,
+		MaxWorkers:   cfg.BatchMaxWorkers,
+		Interval:     cfg.BatchProcessingInterval,
+	}
+
+	ms := core.NewMetricsService(ctx, logger, conn, procConfig)
 
 	metricsConfig := telemetry.NewTelemetryConfig(
 		core.Version,
