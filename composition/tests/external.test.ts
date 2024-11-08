@@ -200,6 +200,7 @@ describe('@external directive tests', () => {
       expect(warnings).toBeDefined();
       expect(warnings).toHaveLength(1);
       expect(warnings![0]).toStrictEqual(externalInterfaceFieldsWarning(N_A, 'Interface', ['age', 'name']));
+      expect(warnings![0].subgraphName).toBe(N_A);
     });
 
     test('that a warning is returned if a V1 interface extension field is declared @external', () => {
@@ -219,6 +220,7 @@ describe('@external directive tests', () => {
       expect(warnings).toBeDefined();
       expect(warnings).toHaveLength(1);
       expect(warnings![0]).toStrictEqual(externalInterfaceFieldsWarning(N_A, 'Interface', ['age', 'id']));
+      expect(warnings![0].subgraphName).toBe(N_A);
     });
   });
 

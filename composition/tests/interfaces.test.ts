@@ -16,7 +16,7 @@ import {
   SCALAR,
   selfImplementationError,
   Subgraph,
-  unimplementedInterfaceOutputTypeError,
+  unimplementedInterfaceOutputTypeWarning,
 } from '../src';
 import { describe, expect, test } from 'vitest';
 import {
@@ -521,7 +521,8 @@ describe('Interface tests', () => {
       const { errors, warnings } = normalizeSubgraph(subgraphAM.definitions, subgraphAM.name);
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(1);
-      expect(warnings![0]).toStrictEqual(unimplementedInterfaceOutputTypeError(subgraphAM.name, 'Interface'));
+      expect(warnings![0]).toStrictEqual(unimplementedInterfaceOutputTypeWarning(subgraphAM.name, 'Interface'));
+      expect(warnings![0].subgraphName).toBe(subgraphAM.name);
     });
 
     test('that an Interface without implementations is valid if it not used as an output type', () => {
