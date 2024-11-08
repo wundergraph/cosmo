@@ -27,11 +27,9 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 					Enabled: true,
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "does-not-exist"}}`),
 				})
-				require.NoError(t, err)
-				require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
 				require.Equal(t, `{"errors":[{"message":"persisted query not found","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res.Body)
 			})
 		})
@@ -47,12 +45,10 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				header := make(http.Header)
 				header.Add("graphql-client-name", "my-client")
-				res0, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				res0 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
 					Header:     header,
 				})
-				require.NoError(t, err)
-				require.Equal(t, http.StatusBadRequest, res0.Response.StatusCode)
 				require.Equal(t, `{"errors":[{"message":"persisted query not found","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res0.Body)
 
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -92,12 +88,10 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 
 				time.Sleep(3 * time.Second)
 
-				res0, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				res0 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
 					Header:     header,
 				})
-				require.NoError(t, err)
-				require.Equal(t, http.StatusBadRequest, res0.Response.StatusCode)
 				require.Equal(t, `{"errors":[{"message":"persisted query not found","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res0.Body)
 			})
 		})
@@ -174,11 +168,9 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "does-not-exist"}}`),
 				})
-				require.NoError(t, err)
-				require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
 				require.Equal(t, `{"errors":[{"message":"persisted query not found","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res.Body)
 			})
 		})
@@ -210,12 +202,10 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				header := make(http.Header)
 				header.Add("graphql-client-name", "my-client")
-				res0, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				res0 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
 					Header:     header,
 				})
-				require.NoError(t, err)
-				require.Equal(t, http.StatusBadRequest, res0.Response.StatusCode)
 				require.Equal(t, `{"errors":[{"message":"persisted query not found","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res0.Body)
 
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -273,12 +263,10 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 
 				time.Sleep(3 * time.Second)
 
-				res0, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				res0 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
 					Header:     header,
 				})
-				require.NoError(t, err)
-				require.Equal(t, http.StatusBadRequest, res0.Response.StatusCode)
 				require.Equal(t, `{"errors":[{"message":"persisted query not found","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res0.Body)
 			})
 		})
@@ -358,14 +346,11 @@ func BenchmarkAutomaticPersistedQueriesCacheEnabled(b *testing.B) {
 	}, func(b *testing.B, xEnv *testenv.Environment) {
 		header := make(http.Header)
 		header.Add("graphql-client-name", "my-client")
-		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query:      `{ employees { details { forename location { ...CountryFields } maritalStatus middlename nationality pastLocations { country { ...CountryFields } name type } pets { class gender name ...AlligatorFields ...CatFields ...DogFields ...MouseFields ...PonyFields } surname } } } fragment CountryFields on Country { key { name } } fragment AlligatorFields on Alligator { __typename class dangerous gender name } fragment CatFields on Cat { __typename class gender name type } fragment DogFields on Dog { __typename breed class gender name } fragment MouseFields on Mouse { __typename class gender name } fragment PonyFields on Pony { __typename class gender name }`,
 			Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "fb51f4141cc4f185fedc9956ae9e047b193edb196c6c095af8be785011a7c2ff"}}`),
 			Header:     header,
 		})
-		if err != nil {
-			b.Fatal(err)
-		}
 		if res.Body != expected {
 			b.Fatalf("unexpected response: %s", res.Body)
 		}
@@ -373,14 +358,11 @@ func BenchmarkAutomaticPersistedQueriesCacheEnabled(b *testing.B) {
 			for pb.Next() {
 				header := make(http.Header)
 				header.Add("graphql-client-name", "my-client")
-				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query:      `{ employees { details { forename location { ...CountryFields } maritalStatus middlename nationality pastLocations { country { ...CountryFields } name type } pets { class gender name ...AlligatorFields ...CatFields ...DogFields ...MouseFields ...PonyFields } surname } } } fragment CountryFields on Country { key { name } } fragment AlligatorFields on Alligator { __typename class dangerous gender name } fragment CatFields on Cat { __typename class gender name type } fragment DogFields on Dog { __typename breed class gender name } fragment MouseFields on Mouse { __typename class gender name } fragment PonyFields on Pony { __typename class gender name }`,
 					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "fb51f4141cc4f185fedc9956ae9e047b193edb196c6c095af8be785011a7c2ff"}}`),
 					Header:     header,
 				})
-				if err != nil {
-					b.Fatal(err)
-				}
 				if res.Body != expected {
 					b.Fatalf("unexpected response: %s", res.Body)
 				}

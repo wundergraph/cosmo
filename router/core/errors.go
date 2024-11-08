@@ -281,8 +281,8 @@ func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *
 	case errors.As(err, &httpErr):
 		writeRequestErrors(r, w, httpErr.StatusCode(), requestErrorsFromHttpError(httpErr), requestLogger)
 	case errors.As(err, &poNotFoundErr):
-		newErr := NewHttpGraphqlError("persisted query not found", "PERSISTED_QUERY_NOT_FOUND", http.StatusBadRequest)
-		writeRequestErrors(r, w, http.StatusBadRequest, requestErrorsFromHttpError(newErr), requestLogger)
+		newErr := NewHttpGraphqlError("persisted query not found", "PERSISTED_QUERY_NOT_FOUND", http.StatusOK)
+		writeRequestErrors(r, w, http.StatusOK, requestErrorsFromHttpError(newErr), requestLogger)
 	case errors.As(err, &reportErr):
 		report := reportErr.Report()
 		logInternalErrorsFromReport(reportErr.Report(), requestLogger)
