@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.29.1](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.29.0...graphqlmetrics@0.29.1) (2024-11-07)
+
+### Bug Fixes
+
+* improve batch processing ([#1348](https://github.com/wundergraph/cosmo/issues/1348)) ([8ddbff4](https://github.com/wundergraph/cosmo/commit/8ddbff4de4347ead5a780e2909e4e030b0e0086f)) (@StarpTech)
+
+# [0.29.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.28.1...graphqlmetrics@0.29.0) (2024-11-07)
+
+### Features
+
+* **graphqlmetrics:** implement more efficient batching of clickhouse entries ([#1344](https://github.com/wundergraph/cosmo/issues/1344)) ([5f4db6a](https://github.com/wundergraph/cosmo/commit/5f4db6a54d1d744af9dc193951a7adb7260fa4a1)) (@Noroth)
+
 ## [0.28.1](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.28.0...graphqlmetrics@0.28.1) (2024-11-05)
 
 **Note:** Version bump only for package graphqlmetrics

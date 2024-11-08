@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.140.0](https://github.com/wundergraph/cosmo/compare/router@0.139.2...router@0.140.0) (2024-11-07)
+
+### Features
+
+* add apq back in ([#1346](https://github.com/wundergraph/cosmo/issues/1346)) ([61c0d9b](https://github.com/wundergraph/cosmo/commit/61c0d9b9ac383ad744d47a461fc7ac9b07c9c981)) (@df-wg)
+
+## [0.139.2](https://github.com/wundergraph/cosmo/compare/router@0.139.1...router@0.139.2) (2024-11-07)
+
+**Note:** Version bump only for package router
+
 ## [0.139.1](https://github.com/wundergraph/cosmo/compare/router@0.139.0...router@0.139.1) (2024-11-06)
 
 ### Bug Fixes
