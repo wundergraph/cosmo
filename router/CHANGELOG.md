@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.140.2](https://github.com/wundergraph/cosmo/compare/router@0.140.1...router@0.140.2) (2024-11-08)
+
+### Bug Fixes
+
+* json parsing and input templates rendering ([#1350](https://github.com/wundergraph/cosmo/issues/1350)) ([578a408](https://github.com/wundergraph/cosmo/commit/578a4085862b3149dbbfb10362aff118c62dfff2)) (@jensneuse)
+* **router:** don't flush all redis keys while shutdown ([#1349](https://github.com/wundergraph/cosmo/issues/1349)) ([9f37105](https://github.com/wundergraph/cosmo/commit/9f371059ec9608fce5f9da8c72246604b46fd34d)) (@git-hulk)
+
 ## [0.140.1](https://github.com/wundergraph/cosmo/compare/router@0.140.0...router@0.140.1) (2024-11-08)
 
 ### Bug Fixes
