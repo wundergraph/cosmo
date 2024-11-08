@@ -576,7 +576,7 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, varia
 		trace.WithAttributes(requestContext.telemetry.traceAttrs...),
 	)
 
-	cached, err := operationKit.NormalizeOperation(isApq)
+	cached, err := operationKit.NormalizeOperation(requestContext.operation.clientInfo.Name, isApq)
 	if err != nil {
 		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
 
