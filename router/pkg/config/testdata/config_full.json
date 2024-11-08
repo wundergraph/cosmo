@@ -463,7 +463,13 @@
         "Secure": false
       }
     ],
-    "CDN": null
+    "CDN": null,
+    "Redis": [
+      {
+        "ID": "my_redis",
+        "URL": "redis://:test@localhost:6379"
+      }
+    ]
   },
   "ExecutionConfig": {
     "File": {
@@ -487,6 +493,17 @@
     "Storage": {
       "ProviderID": "s3",
       "ObjectPrefix": "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/operations/foo"
+    }
+  },
+  "AutomaticPersistedQueries": {
+    "Enabled": true,
+    "Cache": {
+      "Size": 100000000,
+      "TTL": 900
+    },
+    "Storage": {
+      "ProviderID": "redis",
+      "ObjectPrefix": "cosmo_apq"
     }
   },
   "ApolloCompatibilityFlags": {

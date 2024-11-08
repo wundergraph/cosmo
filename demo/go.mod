@@ -13,9 +13,9 @@ require (
 	github.com/rs/cors v1.11.0
 	github.com/vektah/gqlparser/v2 v2.5.16
 	github.com/wundergraph/cosmo/composition-go v0.0.0-20240124120900-5effe48a4a1d
-	github.com/wundergraph/cosmo/router v0.0.0-20241105094558-324cf6f09b54
+	github.com/wundergraph/cosmo/router v0.0.0-20241108155000-9f371059ec96
 	github.com/wundergraph/cosmo/router-tests v0.0.0-20241024215101-0c757faf23de
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.117
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.121
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/otel v1.28.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.23.1
@@ -56,7 +56,7 @@ require (
 	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
-	github.com/gobwas/ws v1.3.1 // indirect
+	github.com/gobwas/ws v1.4.0 // indirect
 	github.com/goccy/go-json v0.10.3 // indirect
 	github.com/goccy/go-yaml v1.13.4 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.0 // indirect
@@ -119,7 +119,7 @@ require (
 	github.com/twmb/franz-go/pkg/kadm v1.11.0 // indirect
 	github.com/twmb/franz-go/pkg/kmsg v1.7.0 // indirect
 	github.com/urfave/cli/v2 v2.27.2 // indirect
-	github.com/wundergraph/astjson v0.0.0-20241105103047-3b2e8a2b2779 // indirect
+	github.com/wundergraph/astjson v0.0.0-20241108124845-44485579ffa5 // indirect
 	github.com/xrash/smetrics v0.0.0-20240312152122-5f08fbb34913 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opentelemetry.io/contrib v1.16.1 // indirect

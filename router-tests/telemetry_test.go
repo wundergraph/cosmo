@@ -2349,16 +2349,16 @@ func TestTelemetry(t *testing.T) {
 			require.Equal(t, codes.Error, sn[1].Status().Code)
 			require.Contains(t, sn[1].Status().Description, "unexpected literal - got: UNDEFINED want one of: [ENUM TYPE UNION QUERY INPUT EXTEND SCHEMA SCALAR FRAGMENT INTERFACE DIRECTIVE]")
 
-			require.Lenf(t, sn[1].Attributes(), 8, "expected 14 attributes, got %d", len(sn[1].Attributes()))
+			require.Lenf(t, sn[1].Attributes(), 8, "expected 8 attributes, got %d", len(sn[1].Attributes()))
 
 			require.Contains(t, sn[1].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[1].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[1].Attributes(), otel.WgFederatedGraphID.String("graph"))
 			require.Contains(t, sn[1].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
 			require.Contains(t, sn[1].Attributes(), otel.WgClientName.String("unknown"))
+			require.Contains(t, sn[1].Attributes(), otel.WgRequestError.Bool(true))
 			require.Contains(t, sn[1].Attributes(), otel.WgClientVersion.String("missing"))
 			require.Contains(t, sn[1].Attributes(), otel.WgOperationProtocol.String("http"))
-			require.Contains(t, sn[1].Attributes(), otel.WgRequestError.Bool(true))
 
 			events := sn[1].Events()
 			require.Len(t, events, 1, "expected 1 event because the GraphQL parsing failed")
@@ -2370,7 +2370,6 @@ func TestTelemetry(t *testing.T) {
 			require.Contains(t, sn[2].Status().Description, "unexpected literal - got: UNDEFINED want one of: [ENUM TYPE UNION QUERY INPUT EXTEND SCHEMA SCALAR FRAGMENT INTERFACE DIRECTIVE]")
 
 			require.Lenf(t, sn[2].Attributes(), 23, "expected 23 attributes, got %d", len(sn[2].Attributes()))
-			require.Contains(t, sn[2].Attributes(), otel.WgRequestError.Bool(true))
 
 			events = sn[2].Events()
 			require.Len(t, events, 1, "expected 1 event because the GraphQL request failed")
@@ -2745,8 +2744,10 @@ func TestTelemetry(t *testing.T) {
 							{
 								Attributes: attribute.NewSet(
 									attribute.String("from_header", "custom-value"),
+									attribute.StringSlice("error_codes", []string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
 									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
 									semconv.HTTPStatusCode(403),
+									otel.WgRequestError.Bool(true),
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
@@ -2818,7 +2819,9 @@ func TestTelemetry(t *testing.T) {
 							{
 								Attributes: attribute.NewSet(
 									attribute.String("from_header", "custom-value"),
+									attribute.StringSlice("error_codes", []string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
 									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
+									otel.WgRequestError.Bool(true),
 									semconv.HTTPStatusCode(403),
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
@@ -2837,12 +2840,12 @@ func TestTelemetry(t *testing.T) {
 							},
 							{
 								Attributes: attribute.NewSet(
-									otel.WgRequestError.Bool(true),
 									attribute.StringSlice("error_codes", []string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
 									attribute.StringSlice("error_services", []string{"products"}),
 									attribute.String("from_header", "custom-value"),
 									semconv.HTTPStatusCode(200),
 									attribute.StringSlice("services", []string{"employees", "products"}),
+									otel.WgRequestError.Bool(true),
 									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
@@ -2916,7 +2919,6 @@ func TestTelemetry(t *testing.T) {
 									attribute.StringSlice("services", []string{"employees", "products"}),
 									attribute.StringSlice("error_services", []string{"products"}),
 									semconv.HTTPStatusCode(200),
-									otel.WgRequestError.Bool(true),
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
@@ -3009,7 +3011,6 @@ func TestTelemetry(t *testing.T) {
 									attribute.StringSlice("services", []string{"employees", "products"}),
 									attribute.StringSlice("error_services", []string{"products"}),
 									semconv.HTTPStatusCode(200),
-									otel.WgRequestError.Bool(true),
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
@@ -3129,9 +3130,9 @@ func TestTelemetry(t *testing.T) {
 							{
 								Attributes: attribute.NewSet(
 									attribute.String("from_header", "custom-value"),
+									attribute.StringSlice("error_codes", []string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
 									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
 									semconv.HTTPStatusCode(403),
-									otel.WgComponentName.String("engine-loader"),
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
@@ -3165,7 +3166,6 @@ func TestTelemetry(t *testing.T) {
 									otel.WgRouterClusterName.String(""),
 									otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 									otel.WgRouterVersion.String("dev"),
-									otel.WgRequestError.Bool(true),
 								),
 								Value: 1,
 							},
@@ -3189,6 +3189,7 @@ func TestTelemetry(t *testing.T) {
 						failedRequestsMetric,
 					},
 				}
+
 				metricdatatest.AssertEqual(t, want, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 			})
 		})

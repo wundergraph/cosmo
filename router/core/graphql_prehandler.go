@@ -453,7 +453,10 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, varia
 		}
 	}
 
-	var skipParse bool
+	var (
+		skipParse bool
+		isApq     bool
+	)
 
 	if operationKit.parsedOperation.IsPersistedOperation {
 		ctx, span := h.tracer.Start(req.Context(), "Load Persisted Operation",
@@ -461,7 +464,7 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, varia
 			trace.WithAttributes(requestContext.telemetry.traceAttrs...),
 		)
 
-		skipParse, err = operationKit.FetchPersistedOperation(ctx, requestContext.operation.clientInfo)
+		skipParse, isApq, err = operationKit.FetchPersistedOperation(ctx, requestContext.operation.clientInfo)
 		if err != nil {
 			span.RecordError(err)
 			span.SetAttributes(otel.WgEnginePersistedOperationCacheHit.Bool(operationKit.parsedOperation.PersistedOperationCacheHit))
@@ -573,7 +576,7 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, varia
 		trace.WithAttributes(requestContext.telemetry.traceAttrs...),
 	)
 
-	cached, err := operationKit.NormalizeOperation()
+	cached, err := operationKit.NormalizeOperation(requestContext.operation.clientInfo.Name, isApq)
 	if err != nil {
 		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
 

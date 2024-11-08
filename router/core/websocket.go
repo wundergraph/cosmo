@@ -770,10 +770,13 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 
 	opContext.extensions = operationKit.parsedOperation.Request.Extensions
 
-	var skipParse bool
+	var (
+		skipParse bool
+		isApq     bool
+	)
 
 	if operationKit.parsedOperation.IsPersistedOperation {
-		skipParse, err = operationKit.FetchPersistedOperation(h.ctx, h.clientInfo)
+		skipParse, isApq, err = operationKit.FetchPersistedOperation(h.ctx, h.clientInfo)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -800,7 +803,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 
 	startNormalization := time.Now()
 
-	if _, err := operationKit.NormalizeOperation(); err != nil {
+	if _, err := operationKit.NormalizeOperation(h.clientInfo.Name, isApq); err != nil {
 		opContext.normalizationTime = time.Since(startNormalization)
 		return nil, nil, err
 	}
