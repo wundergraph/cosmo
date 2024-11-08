@@ -23,7 +23,8 @@ export function invalidOverrideTargetSubgraphNameWarning(
   originSubgraphName: string,
 ): Warning {
   return new Warning({
-    message: `The Object type "${parentTypeName}" defines the directive "@override(from: "${targetSubgraphName})" on the following field` +
+    message:
+      `The Object type "${parentTypeName}" defines the directive "@override(from: "${targetSubgraphName})" on the following field` +
       (fieldNames.length > 1 ? 's' : '') +
       `: "` +
       fieldNames.join(QUOTATION_JOIN) +
@@ -31,7 +32,7 @@ export function invalidOverrideTargetSubgraphNameWarning(
       `The required "from" argument of type "String!" should be provided with an existing subgraph name.\n` +
       `However, a subgraph by the name of "${targetSubgraphName}" does not exist.\n` +
       `If this subgraph has been recently deleted, remember to clean up unused @override directives that reference this subgraph.`,
-    subgraphName: originSubgraphName
+    subgraphName: originSubgraphName,
   });
 }
 
@@ -49,7 +50,8 @@ export function externalInterfaceFieldsWarning(
   fieldNames: Array<string>,
 ): Warning {
   return new Warning({
-     message: versionOneWarningPropagationMessage(subgraphName) +
+    message:
+      versionOneWarningPropagationMessage(subgraphName) +
       `The Interface "${typeName}" is invalid because the following Field definition` +
       (fieldNames.length > 1 ? 's are' : ' is') +
       ` declared "@external":\n "` +
@@ -70,7 +72,8 @@ export function nonExternalConditionalFieldWarning(
   fieldSetDirective: FieldSetDirective,
 ): Warning {
   return new Warning({
-    message: versionOneWarningPropagationMessage(subgraphName) +
+    message:
+      versionOneWarningPropagationMessage(subgraphName) +
       `The Field "${originCoords}" in subgraph "${subgraphName}" defines a "@${fieldSetDirective}" directive with the following` +
       ` field set:\n "${fieldSet}".` +
       `\nHowever, neither the Field "${targetCoords}" nor any of its field set ancestors are declared @external.` +
@@ -83,7 +86,8 @@ export function nonExternalConditionalFieldWarning(
 // TODO Temporarily only used as a warning
 export function unimplementedInterfaceOutputTypeWarning(subgraphName: string, interfaceTypeName: string): Warning {
   return new Warning({
-    message: `Subgraph "${subgraphName}": The Interface "${interfaceTypeName}" is used as an output type` +
+    message:
+      `Subgraph "${subgraphName}": The Interface "${interfaceTypeName}" is used as an output type` +
       ` without at least one Object type implementation defined in the schema.`,
     subgraphName,
   });

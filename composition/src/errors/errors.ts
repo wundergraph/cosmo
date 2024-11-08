@@ -1620,4 +1620,3 @@ export function unexpectedNonCompositeOutputTypeError(namedTypeName: string, act
       ` but received "${actualTypeString}".\nThis should never happen. Please report this issue on GitHub.`,
   );
 }
-

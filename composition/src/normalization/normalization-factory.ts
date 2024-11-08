@@ -199,7 +199,8 @@ import { printTypeNode } from '@graphql-tools/merge';
 import { InternalSubgraph, recordSubgraphName, Subgraph } from '../subgraph/subgraph';
 import {
   externalInterfaceFieldsWarning,
-  invalidOverrideTargetSubgraphNameWarning, unimplementedInterfaceOutputTypeWarning,
+  invalidOverrideTargetSubgraphNameWarning,
+  unimplementedInterfaceOutputTypeWarning,
   Warning,
 } from '../warnings/warnings';
 import {
@@ -2201,7 +2202,12 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
           normalizationResult.originalTypeNameByRenamedTypeName.get(parentTypeName) || parentTypeName;
         if (!isTargetValid) {
           warnings.push(
-            invalidOverrideTargetSubgraphNameWarning(targetSubgraphName, originalParentTypeName, [...fieldNames], subgraph.name),
+            invalidOverrideTargetSubgraphNameWarning(
+              targetSubgraphName,
+              originalParentTypeName,
+              [...fieldNames],
+              subgraph.name,
+            ),
           );
         } else {
           const overridesData = getValueOrDefault(

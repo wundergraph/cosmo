@@ -97,7 +97,9 @@ describe('@override directive tests', () => {
       const { errors, federationResult, warnings } = federateSubgraphs([subgraphA, subgraphB]);
       expect(errors).toBeUndefined();
       expect(warnings).toBeDefined();
-      expect(warnings![0]).toStrictEqual(invalidOverrideTargetSubgraphNameWarning('subgraph-z', 'Entity', ['age'], 'subgraph-b'));
+      expect(warnings![0]).toStrictEqual(
+        invalidOverrideTargetSubgraphNameWarning('subgraph-z', 'Entity', ['age'], 'subgraph-b'),
+      );
       expect(warnings![0].subgraphName).toBe('subgraph-b');
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
