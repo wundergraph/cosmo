@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	_ "github.com/amacneil/dbmate/v2/pkg/driver/clickhouse"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -560,11 +561,266 @@ func TestCalculateRequestCost(t *testing.T) {
 	}
 }
 
+type mockDriver struct {
+	driver.Conn
+	mockPrepareBatch func(ctx context.Context, query string, opts ...driver.PrepareBatchOption) (driver.Batch, error)
+}
+
+func (m *mockDriver) PrepareBatch(ctx context.Context, query string, opts ...driver.PrepareBatchOption) (driver.Batch, error) {
+	return m.mockPrepareBatch(ctx, query, opts...)
+}
+
+type mockBatch struct {
+	driver.Batch
+	mockAppendFunc func(v ...any) error
+}
+
+func (m *mockBatch) Append(v ...any) error {
+	return m.mockAppendFunc(v...)
+}
+
+func TestPrepareClickhouseBatches(t *testing.T) {
+	type input struct {
+		batch []SchemaUsageRequestItem
+	}
+	type expected struct {
+		expectedPrepareBatchCalls int
+		operationBatchCreated     bool
+		metricsBatchCreated       bool
+	}
+
+	tests := []struct {
+		name            string
+		preCachedHashes []string
+		input           input
+		expected        expected
+	}{
+		{
+			name: "should call prepare batch once",
+			input: input{
+				batch: []SchemaUsageRequestItem{
+					{
+						Claims: &utils.GraphAPITokenClaims{
+							OrganizationID:   "TestOrg",
+							FederatedGraphID: "TestGraph",
+						},
+						SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{
+							buildSchemaUsageInfoItem("hash123", "query Hello { hello }", 0, 0, 0),
+						},
+					},
+				},
+			},
+			expected: expected{
+				expectedPrepareBatchCalls: 1,
+				operationBatchCreated:     true,
+				metricsBatchCreated:       false,
+			},
+		},
+		{
+			name: "should call prepare batch twice",
+			input: input{
+				batch: []SchemaUsageRequestItem{
+					{
+						Claims: &utils.GraphAPITokenClaims{
+							OrganizationID:   "TestOrg",
+							FederatedGraphID: "TestGraph",
+						},
+						SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{
+							buildSchemaUsageInfoItem("hash123", "query Hello { hello }", 1, 1, 1),
+						},
+					},
+				},
+			},
+			expected: expected{
+				expectedPrepareBatchCalls: 2,
+				operationBatchCreated:     true,
+				metricsBatchCreated:       true,
+			},
+		},
+		{
+			name: "should not call prepare batch",
+			input: input{
+				batch: []SchemaUsageRequestItem{
+					{
+						Claims: &utils.GraphAPITokenClaims{
+							OrganizationID:   "TestOrg",
+							FederatedGraphID: "TestGraph",
+						},
+						SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{
+							buildSchemaUsageInfoItem("hash123", "", 0, 0, 0),
+						},
+					},
+				},
+			},
+			expected: expected{
+				expectedPrepareBatchCalls: 0,
+				operationBatchCreated:     false,
+				metricsBatchCreated:       false,
+			},
+		},
+		{
+			name: "should not call prepare batch if hash is in the cache",
+			input: input{
+				batch: []SchemaUsageRequestItem{
+					{
+						Claims: &utils.GraphAPITokenClaims{
+							OrganizationID:   "TestOrg",
+							FederatedGraphID: "TestGraph",
+						},
+						SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{
+							buildSchemaUsageInfoItem("hash123", "", 0, 0, 0),
+						},
+					},
+					{
+						Claims: &utils.GraphAPITokenClaims{
+							OrganizationID:   "TestOrg",
+							FederatedGraphID: "TestGraph",
+						},
+						SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{
+							buildSchemaUsageInfoItem("hash234", "", 0, 0, 0),
+						},
+					},
+					{
+						Claims: &utils.GraphAPITokenClaims{
+							OrganizationID:   "TestOrg",
+							FederatedGraphID: "TestGraph",
+						},
+						SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{
+							buildSchemaUsageInfoItem("hash123", "", 0, 0, 0),
+						},
+					},
+				},
+			},
+			preCachedHashes: []string{"hash123", "hash234"},
+			expected: expected{
+				expectedPrepareBatchCalls: 0,
+				operationBatchCreated:     false,
+				metricsBatchCreated:       false,
+			},
+		},
+		{
+			name: "should not call prepare batch if hash is in the cache but still send metrics",
+			input: input{
+				batch: []SchemaUsageRequestItem{
+					{
+						Claims: &utils.GraphAPITokenClaims{
+							OrganizationID:   "TestOrg",
+							FederatedGraphID: "TestGraph",
+						},
+						SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{
+							buildSchemaUsageInfoItem("hash123", "", 1, 2, 0),
+						},
+					},
+				},
+			},
+			preCachedHashes: []string{"hash123"},
+			expected: expected{
+				expectedPrepareBatchCalls: 1,
+				operationBatchCreated:     false,
+				metricsBatchCreated:       true,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			numPrepareBatchCalls := 0
+
+			batch := &mockBatch{mockAppendFunc: func(v ...any) error {
+				return nil
+			}}
+
+			db := &mockDriver{mockPrepareBatch: func(ctx context.Context, query string, opts ...driver.PrepareBatchOption) (driver.Batch, error) {
+				numPrepareBatchCalls++
+				return batch, nil
+			}}
+
+			msvc := NewMetricsService(context.Background(), zap.NewNop(), db, defaultConfig())
+
+			for _, hash := range tt.preCachedHashes {
+				msvc.opGuardCache.Set(hash, struct{}{}, 1)
+			}
+
+			opBatch, metricsBatch, err := msvc.prepareClickhouseBatches(context.Background(), time.Now(), tt.input.batch)
+			require.NoError(t, err)
+			require.Equal(t, tt.expected.expectedPrepareBatchCalls, numPrepareBatchCalls)
+
+			if tt.expected.operationBatchCreated {
+				require.NotNil(t, opBatch)
+			} else {
+				require.Nil(t, opBatch)
+			}
+
+			if tt.expected.metricsBatchCreated {
+				require.NotNil(t, metricsBatch)
+			} else {
+				require.Nil(t, metricsBatch)
+			}
+		})
+	}
+}
+
 func defaultConfig() ProcessorConfig {
 	return ProcessorConfig{
 		MaxBatchSize: 10_000,
 		MaxQueueSize: 1000,
 		MaxWorkers:   runtime.NumCPU(),
 		Interval:     10 * time.Second,
+	}
+}
+
+func buildSchemaUsageInfoItem(hash, reqDoc string, numArgMetrics, numTypeMetrics, numInputMetrics int) *graphqlmetricsv1.SchemaUsageInfo {
+	argMetrics := make([]*graphqlmetricsv1.ArgumentUsageInfo, 0, numArgMetrics)
+	typeMetrics := make([]*graphqlmetricsv1.TypeFieldUsageInfo, 0, numTypeMetrics)
+	inputMetrics := make([]*graphqlmetricsv1.InputUsageInfo, 0, numInputMetrics)
+
+	for i := 0; i < numArgMetrics; i++ {
+		argMetrics = append(argMetrics, &graphqlmetricsv1.ArgumentUsageInfo{
+			Path:     []string{"hello"},
+			TypeName: "testType",
+		})
+	}
+
+	for i := 0; i < numTypeMetrics; i++ {
+		typeMetrics = append(typeMetrics, &graphqlmetricsv1.TypeFieldUsageInfo{
+			Path:                   []string{"hello"},
+			TypeNames:              []string{"Query"},
+			SubgraphIDs:            []string{"sub123"},
+			IndirectInterfaceField: false,
+		})
+	}
+
+	for i := 0; i < numInputMetrics; i++ {
+		inputMetrics = append(inputMetrics, &graphqlmetricsv1.InputUsageInfo{
+			Path:       []string{"hello"},
+			TypeName:   "testType",
+			EnumValues: []string{"test"},
+		})
+	}
+
+	return &graphqlmetricsv1.SchemaUsageInfo{
+		RequestDocument:  reqDoc,
+		ArgumentMetrics:  argMetrics,
+		TypeFieldMetrics: typeMetrics,
+		InputMetrics:     inputMetrics,
+		OperationInfo: &graphqlmetricsv1.OperationInfo{
+			Hash: hash,
+			Name: "Hello",
+			Type: graphqlmetricsv1.OperationType_QUERY,
+		},
+		SchemaInfo: &graphqlmetricsv1.SchemaInfo{
+			Version: "v1",
+		},
+		ClientInfo: &graphqlmetricsv1.ClientInfo{
+			Name:    "wundergraph",
+			Version: "1.0.0",
+		},
+		RequestInfo: &graphqlmetricsv1.RequestInfo{
+			StatusCode: 200,
+			Error:      true,
+		},
+		Attributes: map[string]string{
+			"test": "test123",
+		},
 	}
 }
