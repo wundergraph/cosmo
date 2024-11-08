@@ -360,7 +360,7 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 			statusCode: http.StatusOK,
 		}
 	}
-	fromCache, err := o.loadPersistedOperationFromCache()
+	fromCache, err := o.loadPersistedOperationFromCache(clientInfo.Name)
 	if err != nil {
 		return false, false, &httpGraphqlError{
 			statusCode: http.StatusInternalServerError,
@@ -368,7 +368,7 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 		}
 	}
 	if fromCache {
-		if isApq, _ := o.persistedOperationCacheKeyHasTtl(); isApq {
+		if isApq, _ := o.persistedOperationCacheKeyHasTtl(clientInfo.Name); isApq {
 			// if it is an APQ request, we need to save it again to renew the TTL expiration
 			if err = o.operationProcessor.persistedOperationClient.SaveOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.NormalizedRepresentation); err != nil {
 				return false, false, err
@@ -589,18 +589,18 @@ func (o *OperationKit) Parse() error {
 
 // NormalizeOperation normalizes the operation. After normalization the normalized representation of the operation
 // and variables is available. Also, the final operation ID is generated.
-func (o *OperationKit) NormalizeOperation(isApq bool) (bool, error) {
+func (o *OperationKit) NormalizeOperation(clientName string, isApq bool) (bool, error) {
 	if o.parsedOperation.IsPersistedOperation {
-		return o.normalizePersistedOperation(isApq)
+		return o.normalizePersistedOperation(clientName, isApq)
 	}
 	return o.normalizeNonPersistedOperation()
 }
 
-func (o *OperationKit) normalizePersistedOperation(isApq bool) (cached bool, err error) {
+func (o *OperationKit) normalizePersistedOperation(clientName string, isApq bool) (cached bool, err error) {
 	if o.parsedOperation.NormalizedRepresentation != "" {
 		// when dealing with APQ requests which have a TTL set, we need to renew the TTL
-		if shouldRenew, skipIncludeNames := o.persistedOperationCacheKeyHasTtl(); shouldRenew {
-			o.savePersistedOperationToCache(true, skipIncludeNames)
+		if shouldRenew, skipIncludeNames := o.persistedOperationCacheKeyHasTtl(clientName); shouldRenew {
+			o.savePersistedOperationToCache(clientName, true, skipIncludeNames)
 		}
 		// normalized operation was loaded from cache
 		return true, nil
@@ -638,7 +638,7 @@ func (o *OperationKit) normalizePersistedOperation(isApq bool) (cached bool, err
 	o.parsedOperation.Request.Variables = o.kit.doc.Input.Variables
 
 	if o.cache != nil && o.cache.persistedOperationNormalizationCache != nil {
-		o.savePersistedOperationToCache(isApq, skipIncludeNames)
+		o.savePersistedOperationToCache(clientName, isApq, skipIncludeNames)
 	}
 
 	return false, nil
@@ -750,13 +750,13 @@ func (o *OperationKit) NormalizeVariables() error {
 	return nil
 }
 
-func (o *OperationKit) loadPersistedOperationFromCache() (ok bool, err error) {
+func (o *OperationKit) loadPersistedOperationFromCache(clientName string) (ok bool, err error) {
 
 	if o.cache == nil || o.cache.persistedOperationNormalizationCache == nil {
 		return false, nil
 	}
 
-	cacheKey, ok := o.loadPersistedOperationCacheKey(o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
+	cacheKey, ok := o.loadPersistedOperationCacheKey(clientName, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
 	if !ok {
 		return false, nil
 	}
@@ -790,7 +790,7 @@ func (o *OperationKit) jsonIsNull(variables []byte) bool {
 	return value.Type() == fastjson.TypeNull
 }
 
-func (o *OperationKit) persistedOperationCacheKeyHasTtl() (bool, []string) {
+func (o *OperationKit) persistedOperationCacheKeyHasTtl(clientName string) (bool, []string) {
 	if o.cache == nil || o.cache.persistedOperationVariableNames == nil || o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash == "" {
 		return false, nil
 	}
@@ -801,14 +801,14 @@ func (o *OperationKit) persistedOperationCacheKeyHasTtl() (bool, []string) {
 	if !present {
 		return false, variableNames
 	}
-	cacheKey := o.generatePersistedOperationCacheKey(variableNames)
+	cacheKey := o.generatePersistedOperationCacheKey(clientName, variableNames)
 
 	ttl, ok := o.cache.persistedOperationNormalizationCache.GetTTL(cacheKey)
 	return ok && ttl > 0, variableNames
 }
 
-func (o *OperationKit) savePersistedOperationToCache(isApq bool, skipIncludeVariableNames []string) {
-	cacheKey := o.generatePersistedOperationCacheKey(skipIncludeVariableNames)
+func (o *OperationKit) savePersistedOperationToCache(clientName string, isApq bool, skipIncludeVariableNames []string) {
+	cacheKey := o.generatePersistedOperationCacheKey(clientName, skipIncludeVariableNames)
 	entry := NormalizationCacheEntry{
 		operationID:              o.parsedOperation.ID,
 		normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
@@ -828,20 +828,21 @@ func (o *OperationKit) savePersistedOperationToCache(isApq bool, skipIncludeVari
 	o.cache.persistedOperationVariableNamesLock.Unlock()
 }
 
-func (o *OperationKit) loadPersistedOperationCacheKey(persistedQuerySha256Hash string) (key uint64, ok bool) {
+func (o *OperationKit) loadPersistedOperationCacheKey(clientName, persistedQuerySha256Hash string) (key uint64, ok bool) {
 	o.cache.persistedOperationVariableNamesLock.RLock()
 	variableNames, ok := o.cache.persistedOperationVariableNames[persistedQuerySha256Hash]
 	o.cache.persistedOperationVariableNamesLock.RUnlock()
 	if !ok {
 		return 0, false
 	}
-	key = o.generatePersistedOperationCacheKey(variableNames)
+	key = o.generatePersistedOperationCacheKey(clientName, variableNames)
 	return key, true
 }
 
-func (o *OperationKit) generatePersistedOperationCacheKey(skipIncludeVariableNames []string) uint64 {
+func (o *OperationKit) generatePersistedOperationCacheKey(clientName string, skipIncludeVariableNames []string) uint64 {
 	_, _ = o.kit.keyGen.WriteString(o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
 	_, _ = o.kit.keyGen.WriteString(o.parsedOperation.Request.OperationName)
+	_, _ = o.kit.keyGen.WriteString(clientName)
 	o.writeSkipIncludeCacheKeyToKeyGen(skipIncludeVariableNames)
 	sum := o.kit.keyGen.Sum64()
 	o.kit.keyGen.Reset()
