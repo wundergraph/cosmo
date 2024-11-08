@@ -16,7 +16,7 @@ This example demonstrates how to run the entire Cosmo platform locally with Dock
 1. Start the platform:
 
 ```shell
-./start.sh
+./start.sh --last-release
 ```
 
 2. Navigate to the [Studio Playground](http://localhost:3000/wundergraph/default/graph/mygraph/playground) and login before with the default credentials:
@@ -43,4 +43,4 @@ query MyEmployees {
 }
 ```
 
-After you are done, you can clean up the demo by running `./destroy.sh`.
+After you are done, you can clean up the demo by running `./destroy.sh --last-release`.
