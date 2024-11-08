@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.140.1](https://github.com/wundergraph/cosmo/compare/router@0.140.0...router@0.140.1) (2024-11-08)
+
+### Bug Fixes
+
+* default metric temporality selector and override the selector for the cloud endpoint ([#1331](https://github.com/wundergraph/cosmo/issues/1331)) ([2a292ea](https://github.com/wundergraph/cosmo/commit/2a292eaec75624282becec7b84c9b57ab37a5f50)) (@JivusAyrus)
+* **router:** l2 cache uses client name in key, persisted operation not found returns 200 ([#1351](https://github.com/wundergraph/cosmo/issues/1351)) ([34cf5b5](https://github.com/wundergraph/cosmo/commit/34cf5b5c7f58b698c032c159c24cdda1cfe1bbdf)) (@df-wg)
+
 # [0.140.0](https://github.com/wundergraph/cosmo/compare/router@0.139.2...router@0.140.0) (2024-11-07)
 
 ### Features
