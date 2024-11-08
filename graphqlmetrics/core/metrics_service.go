@@ -156,20 +156,12 @@ func (s *MetricsService) Shutdown(timeout time.Duration) {
 func (s *MetricsService) prepareClickhouseBatches(
 	ctx context.Context, insertTime time.Time, batch []SchemaUsageRequestItem,
 ) (driver.Batch, driver.Batch, error) {
+	var (
+		err                         error
+		operationBatch, metricBatch driver.Batch
+	)
 
-	var err error
-
-	operationBatch, err := s.conn.PrepareBatch(ctx, `INSERT INTO gql_metrics_operations`)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to prepare operation batch for metrics: %w", err)
-	}
-
-	metricBatch, err := s.conn.PrepareBatch(ctx, `INSERT INTO gql_metrics_schema_usage`)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to prepare metric batch for metrics: %w", err)
-	}
-
-	operationHasItems, metricsHasItems := false, false
+	processableOperationItems := make([]*graphqlmetricsv1.SchemaUsageInfo, 0)
 
 	for _, item := range batch {
 		for _, schemaUsage := range item.SchemaUsage {
@@ -181,6 +173,21 @@ func (s *MetricsService) prepareClickhouseBatches(
 			if _, exists := s.opGuardCache.Get(schemaUsage.OperationInfo.Hash); exists {
 				continue
 			}
+
+			// If the operation is not in the cache, we need to write it
+			processableOperationItems = append(processableOperationItems, schemaUsage)
+		}
+	}
+
+	if len(processableOperationItems) > 0 {
+		// We only prepare the operation batch if there are operations to write
+		// Aborting the operation will log an error in clickhouse
+		operationBatch, err = s.conn.PrepareBatch(ctx, `INSERT INTO gql_metrics_operations`)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to prepare operation batch for metrics: %w", err)
+		}
+
+		for _, schemaUsage := range processableOperationItems {
 			err := operationBatch.Append(
 				insertTime,
 				schemaUsage.OperationInfo.Name,
@@ -191,31 +198,40 @@ func (s *MetricsService) prepareClickhouseBatches(
 			if err != nil {
 				return nil, nil, fmt.Errorf("failed to append operation to batch: %w", err)
 			}
-			operationHasItems = true
 		}
 	}
 
-	if !operationHasItems {
-		err = operationBatch.Abort()
-		operationBatch = nil
+	if !hasProcessableMetricsItems(batch) {
+		return operationBatch, nil, nil
+	}
+
+	metricBatch, err = s.conn.PrepareBatch(ctx, `INSERT INTO gql_metrics_schema_usage`)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to prepare metric batch for metrics: %w", err)
 	}
 
 	for _, item := range batch {
 		for _, schemaUsage := range item.SchemaUsage {
-			added, err := s.appendUsageMetrics(metricBatch, insertTime, item.Claims, schemaUsage)
+			err := s.appendUsageMetrics(metricBatch, insertTime, item.Claims, schemaUsage)
 			if err != nil {
 				return nil, nil, err
 			}
-			metricsHasItems = added
 		}
 	}
 
-	if !metricsHasItems {
-		err = metricBatch.Abort()
-		metricBatch = nil
+	return operationBatch, metricBatch, err
+}
+
+func hasProcessableMetricsItems(batch []SchemaUsageRequestItem) bool {
+	for _, item := range batch {
+		for _, schemaUsage := range item.SchemaUsage {
+			if len(schemaUsage.ArgumentMetrics) > 0 || len(schemaUsage.InputMetrics) > 0 || len(schemaUsage.TypeFieldMetrics) > 0 {
+				return true
+			}
+		}
 	}
 
-	return operationBatch, metricBatch, err
+	return false
 }
 
 func (*MetricsService) appendUsageMetrics(
@@ -223,7 +239,7 @@ func (*MetricsService) appendUsageMetrics(
 	insertTime time.Time,
 	claims *utils.GraphAPITokenClaims,
 	schemaUsage *graphqlmetricsv1.SchemaUsageInfo,
-) (added bool, err error) {
+) error {
 	operationType := strings.ToLower(schemaUsage.OperationInfo.Type.String())
 
 	for _, fieldUsage := range schemaUsage.TypeFieldMetrics {
@@ -260,10 +276,8 @@ func (*MetricsService) appendUsageMetrics(
 			fieldUsage.IndirectInterfaceField,
 		)
 		if err != nil {
-			return false, fmt.Errorf("failed to append field metric to batch: %w", err)
+			return fmt.Errorf("failed to append field metric to batch: %w", err)
 		}
-
-		added = true
 	}
 
 	for _, argumentUsage := range schemaUsage.ArgumentMetrics {
@@ -291,10 +305,8 @@ func (*MetricsService) appendUsageMetrics(
 			false,
 		)
 		if err != nil {
-			return false, fmt.Errorf("failed to append argument metric to batch: %w", err)
+			return fmt.Errorf("failed to append argument metric to batch: %w", err)
 		}
-
-		added = true
 	}
 
 	for _, inputUsage := range schemaUsage.InputMetrics {
@@ -322,13 +334,11 @@ func (*MetricsService) appendUsageMetrics(
 			false,
 		)
 		if err != nil {
-			return false, fmt.Errorf("failed to append input metric to batch: %w", err)
+			return fmt.Errorf("failed to append input metric to batch: %w", err)
 		}
-
-		added = true
 	}
 
-	return added, err
+	return nil
 }
 
 func (s *MetricsService) processBatch(ctx context.Context, batch []SchemaUsageRequestItem) {
