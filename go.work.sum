@@ -188,7 +188,6 @@ github.com/gobwas/glob v0.2.3/go.mod h1:d3Ez4x06l9bZtSvzIay5+Yzi0fmZzPgnTbPcKjJA
 github.com/gobwas/httphead v0.0.0-20180130184737-2c6c146eadee/go.mod h1:L0fX3K22YWvt/FAX9NnzrNzcI4wNYi9Yku4O0LKYflo=
 github.com/gobwas/pool v0.2.0/go.mod h1:q8bcK0KcYlCgd9e7WYLm9LpyS+YeLd8JVDW6WezmKEw=
 github.com/gobwas/ws v1.0.2/go.mod h1:szmBTxLgaFppYjEmNtny/v3w89xOydFnnZMcgRRu/EM=
-github.com/gobwas/ws v1.4.0 h1:CTaoG1tojrh4ucGPcoJFiAQUAsEWekEWvLy7GsVNqGs=
 github.com/goccmack/gocc v0.0.0-20230228185258-2292f9e40198 h1:FSii2UQeSLngl3jFoR4tUKZLprO7qUlh/TKKticc0BM=
 github.com/goccmack/gocc v0.0.0-20230228185258-2292f9e40198/go.mod h1:DTh/Y2+NbnOVVoypCCQrovMPDKUGp4yZpSbWg5D0XIM=
 github.com/goccy/go-json v0.10.2/go.mod h1:6MelG93GURQebXPDq3khkgXZkazVtN9CRI+MGFi0w8I=
@@ -431,6 +430,8 @@ github.com/vishvananda/netlink v1.2.1-beta.2/go.mod h1:twkDnbuQxJYemMlGd4JFIcuhg
 github.com/vishvananda/netns v0.0.0-20210104183010-2eb08e3e575f h1:p4VB7kIXpOQvVn1ZaTIVp+3vuYAXFe3OJEvjbUYJLaA=
 github.com/vishvananda/netns v0.0.0-20210104183010-2eb08e3e575f/go.mod h1:DD4vA1DwXk04H54A1oHXtwZmA0grkVMdPxx/VGLCah0=
 github.com/wundergraph/astjson v0.0.0-20241029194815-849566801950/go.mod h1:eOTL6acwctsN4F3b7YE+eE2t8zcJ/doLm9sZzsxxxrE=
+github.com/wundergraph/astjson v0.0.0-20241108124845-44485579ffa5 h1:rc+IQxG3rrAXEjBywirkzhKkyCKvXLGQXABVD8GiUtU=
+github.com/wundergraph/astjson v0.0.0-20241108124845-44485579ffa5/go.mod h1:eOTL6acwctsN4F3b7YE+eE2t8zcJ/doLm9sZzsxxxrE=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.44 h1:X4xrx6RwfdTL88JwfclczftIbBR7IQIhZ9umcEvJTao=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.44/go.mod h1:hNR2C7S1M+c9Ap24tHCEMe9gFY9K3smX46x5E1U1NQw=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.48 h1:181I6TqMBORu0JEb0ObISRjC7RxqK8r5jccgOAc22xo=
@@ -448,6 +449,8 @@ github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.90/go.mod h1:zkPVYJu1iQd0y1
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.95/go.mod h1:zkPVYJu1iQd0y1fBNj+oXe9uMI/33TSoiXEsKSAESZY=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.102 h1:UUT6mLcUH1sGepg+GFZr6TfC+mkZWF3YLdnQruBvIZA=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.102/go.mod h1:zkPVYJu1iQd0y1fBNj+oXe9uMI/33TSoiXEsKSAESZY=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.121 h1:VsrSvBsOcQNiTwESJg55tecBzHfZPUdII/zDstHyBuc=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.121/go.mod h1:s4r/lhVEU5s0c6tCgpR0hK6FHEmX0cbrKcMU1pMc/ZI=
 github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=
 github.com/x448/float16 v0.8.4/go.mod h1:14CWIYCyZA/cWjXOioeEpHeN/83MdbZDRQHoFcYsOfg=
 github.com/xdg-go/pbkdf2 v1.0.0 h1:Su7DPu48wXMwC3bs7MCNG+z4FhcyEuz5dlvchbq0B0c=

@@ -6,15 +6,16 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/cdn"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/s3"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/cdn"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/s3"
 
 	"connectrpc.com/connect"
 	"github.com/wundergraph/cosmo/router/pkg/watcher"
@@ -1194,9 +1195,6 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 		go func() {
 			defer wg.Done()
 
-			if subErr := r.redisClient.FlushAll(ctx); subErr.Err() != nil {
-				err = errors.Join(err, fmt.Errorf("failed to flush redis client: %w", subErr.Err()))
-			}
 			if closeErr := r.redisClient.Close(); closeErr != nil {
 				err = errors.Join(err, fmt.Errorf("failed to close redis client: %w", closeErr))
 			}
