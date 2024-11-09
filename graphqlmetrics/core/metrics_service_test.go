@@ -164,6 +164,63 @@ func TestPublishGraphQLMetrics(t *testing.T) {
 	assert.Greater(t, fieldUsageCountMv, uint64(0))
 }
 
+func TestPublishGraphQLMetricsSendEmptyAndFilledMetrics(t *testing.T) {
+	if os.Getenv("INT_TESTS") != "true" {
+		t.Skip("Skipping integration tests")
+	}
+
+	db := test.GetTestDatabase(t)
+
+	msvc := NewMetricsService(zap.NewNop(), db, defaultConfig())
+
+	su1 := buildSchemaUsageInfoItem("Hash1", "query Hello { hello }", 0, 0, 0)
+	su2 := buildSchemaUsageInfoItem("Hash2", "query Hello { hello }", 1, 2, 0)
+
+	req := &graphqlmetricsv1.PublishGraphQLRequestMetricsRequest{
+		SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{su1, su2},
+	}
+
+	pReq := connect.NewRequest[graphqlmetricsv1.PublishGraphQLRequestMetricsRequest](req)
+
+	ctx := utils.SetClaims(context.Background(), &utils.GraphAPITokenClaims{
+		FederatedGraphID: "fed123",
+		OrganizationID:   "org123",
+	})
+
+	_, err := msvc.PublishGraphQLMetrics(
+		ctx,
+		pReq,
+	)
+	require.NoError(t, err)
+
+	// Wait for batch to be processed
+	msvc.Shutdown(time.Second * 10)
+
+	// Validate insert
+
+	var opCount uint64
+
+	require.NoError(t, db.QueryRow(ctx, `
+		SELECT COUNT(*) FROM gql_metrics_operations
+    	WHERE OperationName = 'Hello' AND
+		OperationType = 'query' AND
+    	OperationContent = 'query Hello { hello }'
+	`).Scan(&opCount))
+
+	assert.Equal(t, opCount, uint64(2))
+
+	// Validate insert
+
+	var fieldUsageCount uint64
+	require.NoError(t, db.QueryRow(ctx, `
+		SELECT COUNT(*) FROM gql_metrics_schema_usage
+		WHERE OrganizationID = 'org123' AND
+		FederatedGraphID = 'fed123'
+	`).Scan(&fieldUsageCount))
+
+	assert.Equal(t, int(fieldUsageCount), 3)
+}
+
 func TestPublishGraphQLMetricsSmallBatches(t *testing.T) {
 	if os.Getenv("INT_TESTS") != "true" {
 		t.Skip("Skipping integration tests")

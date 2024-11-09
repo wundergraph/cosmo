@@ -161,13 +161,13 @@ func (s *MetricsService) prepareClickhouseBatches(
 		operationBatch, metricBatch driver.Batch
 	)
 
-	hasProcessableMetricsItems := false
+	metricsBatchPrepared := false
 
 	for _, item := range batch {
 		for _, su := range item.SchemaUsage {
 
-			if !hasProcessableMetricsItems && (len(su.TypeFieldMetrics) > 0 || len(su.ArgumentMetrics) > 0 || len(su.InputMetrics) > 0) {
-				hasProcessableMetricsItems = true
+			if !metricsBatchPrepared && (len(su.TypeFieldMetrics) > 0 || len(su.ArgumentMetrics) > 0 || len(su.InputMetrics) > 0) {
+				metricsBatchPrepared = true
 
 				// If any of the schema usage items has metrics to process, we need to ensure the metric batch is prepared once.
 				metricBatch, err = s.conn.PrepareBatch(ctx, `INSERT INTO gql_metrics_schema_usage`)
@@ -175,7 +175,7 @@ func (s *MetricsService) prepareClickhouseBatches(
 					return nil, nil, fmt.Errorf("failed to prepare metric batch for metrics: %w", err)
 				}
 			}
-
+			
 			err := s.appendUsageMetrics(metricBatch, insertTime, item.Claims, su)
 			if err != nil {
 				return nil, nil, err
@@ -213,7 +213,7 @@ func (s *MetricsService) prepareClickhouseBatches(
 	return operationBatch, metricBatch, err
 }
 
-func (*MetricsService) appendUsageMetrics(
+func (s *MetricsService) appendUsageMetrics(
 	metricBatch driver.Batch,
 	insertTime time.Time,
 	claims *utils.GraphAPITokenClaims,
