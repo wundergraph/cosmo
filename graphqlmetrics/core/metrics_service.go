@@ -166,16 +166,22 @@ func (s *MetricsService) prepareClickhouseBatches(
 	for _, item := range batch {
 		for _, su := range item.SchemaUsage {
 
-			// As we are already iterating over the schema usage items, we can check if there are any metrics to process.
 			if !hasProcessableMetricsItems && (len(su.TypeFieldMetrics) > 0 || len(su.ArgumentMetrics) > 0 || len(su.InputMetrics) > 0) {
 				hasProcessableMetricsItems = true
+
+				// If any of the schema usage items has metrics to process, we need to ensure the metric batch is prepared once.
+				metricBatch, err = s.conn.PrepareBatch(ctx, `INSERT INTO gql_metrics_schema_usage`)
+				if err != nil {
+					return nil, nil, fmt.Errorf("failed to prepare metric batch for metrics: %w", err)
+				}
 			}
 
-			if su.RequestDocument == "" {
-				continue
+			err := s.appendUsageMetrics(metricBatch, insertTime, item.Claims, su)
+			if err != nil {
+				return nil, nil, err
 			}
 
-			if _, exists := s.opGuardCache.Get(su.OperationInfo.Hash); exists {
+			if _, exists := s.opGuardCache.Get(su.OperationInfo.Hash); su.RequestDocument == "" || exists {
 				continue
 			}
 
@@ -191,7 +197,7 @@ func (s *MetricsService) prepareClickhouseBatches(
 				}
 			}
 
-			err := operationBatch.Append(
+			err = operationBatch.Append(
 				insertTime,
 				su.OperationInfo.Name,
 				su.OperationInfo.Hash,
@@ -200,24 +206,6 @@ func (s *MetricsService) prepareClickhouseBatches(
 			)
 			if err != nil {
 				return nil, nil, fmt.Errorf("failed to append operation to batch: %w", err)
-			}
-		}
-	}
-
-	if !hasProcessableMetricsItems {
-		return operationBatch, nil, nil
-	}
-
-	metricBatch, err = s.conn.PrepareBatch(ctx, `INSERT INTO gql_metrics_schema_usage`)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to prepare metric batch for metrics: %w", err)
-	}
-
-	for _, item := range batch {
-		for _, schemaUsage := range item.SchemaUsage {
-			err := s.appendUsageMetrics(metricBatch, insertTime, item.Claims, schemaUsage)
-			if err != nil {
-				return nil, nil, err
 			}
 		}
 	}
