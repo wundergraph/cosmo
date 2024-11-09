@@ -1,5 +1,9 @@
 module github.com/wundergraph/cosmo/aws-lambda-router
 
+go 1.21.5
+
+toolchain go1.22.0
+
 require (
 	github.com/akrylysov/algnhsa v1.1.0
 	github.com/aws/aws-lambda-go v1.43.0
@@ -124,6 +128,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-go 1.21.5
-
-toolchain go1.22.0
+replace (
+	github.com/wundergraph/cosmo/router => ../router
+)
