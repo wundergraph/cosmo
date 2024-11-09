@@ -2,8 +2,10 @@ package core
 
 import (
 	"context"
+	"errors"
 	"os"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -630,15 +632,23 @@ func (m *mockDriver) PrepareBatch(ctx context.Context, query string, opts ...dri
 type mockBatch struct {
 	driver.Batch
 	mockAppendFunc func(v ...any) error
+	mockAbortFunc  func() error
 }
 
 func (m *mockBatch) Append(v ...any) error {
 	return m.mockAppendFunc(v...)
 }
 
+func (m *mockBatch) Abort() error {
+	return m.mockAbortFunc()
+}
+
 func TestPrepareClickhouseBatches(t *testing.T) {
 	type input struct {
-		batch []SchemaUsageRequestItem
+		batch                    []SchemaUsageRequestItem
+		preCachedHashes          []string
+		metricsBatchAppendFunc   func(v ...any) error
+		operationBatchAppendFunc func(v ...any) error
 	}
 	type expected struct {
 		expectedPrepareBatchCalls int
@@ -647,10 +657,9 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 	}
 
 	tests := []struct {
-		name            string
-		preCachedHashes []string
-		input           input
-		expected        expected
+		name     string
+		input    input
+		expected expected
 	}{
 		{
 			name: "should call prepare batch once",
@@ -718,6 +727,7 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 		{
 			name: "should not call prepare batch if hash is in the cache",
 			input: input{
+				preCachedHashes: []string{"hash123", "hash234"},
 				batch: []SchemaUsageRequestItem{
 					{
 						Claims: &utils.GraphAPITokenClaims{
@@ -748,7 +758,6 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 					},
 				},
 			},
-			preCachedHashes: []string{"hash123", "hash234"},
 			expected: expected{
 				expectedPrepareBatchCalls: 0,
 				operationBatchCreated:     false,
@@ -758,6 +767,7 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 		{
 			name: "should not call prepare batch if hash is in the cache but still send metrics",
 			input: input{
+				preCachedHashes: []string{"hash123"},
 				batch: []SchemaUsageRequestItem{
 					{
 						Claims: &utils.GraphAPITokenClaims{
@@ -770,11 +780,34 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 					},
 				},
 			},
-			preCachedHashes: []string{"hash123"},
 			expected: expected{
 				expectedPrepareBatchCalls: 1,
 				operationBatchCreated:     false,
 				metricsBatchCreated:       true,
+			},
+		},
+		{
+			name: "should prepare operation batch if appendUsageMetrics fails and abort the metrics batch",
+			input: input{
+				metricsBatchAppendFunc: func(v ...any) error {
+					return errors.New("error while appending metrics")
+				},
+				batch: []SchemaUsageRequestItem{
+					{
+						Claims: &utils.GraphAPITokenClaims{
+							OrganizationID:   "TestOrg",
+							FederatedGraphID: "TestGraph",
+						},
+						SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{
+							buildSchemaUsageInfoItem("hash123", "query Hello { hello }", 1, 2, 0),
+						},
+					},
+				},
+			},
+			expected: expected{
+				expectedPrepareBatchCalls: 2,
+				operationBatchCreated:     true,
+				metricsBatchCreated:       false,
 			},
 		},
 	}
@@ -783,18 +816,45 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			numPrepareBatchCalls := 0
 
-			batch := &mockBatch{mockAppendFunc: func(v ...any) error {
-				return nil
-			}}
+			operationMockBatch := &mockBatch{
+				mockAppendFunc: func(v ...any) error {
+					if tt.input.operationBatchAppendFunc != nil {
+						return tt.input.operationBatchAppendFunc(v...)
+					}
+
+					return nil
+				},
+				mockAbortFunc: func() error {
+					return nil
+				},
+			}
+
+			metricsMockBatch := &mockBatch{
+				mockAppendFunc: func(v ...any) error {
+					if tt.input.metricsBatchAppendFunc != nil {
+						return tt.input.metricsBatchAppendFunc(v...)
+					}
+
+					return nil
+				},
+				mockAbortFunc: func() error {
+					return nil
+				},
+			}
 
 			db := &mockDriver{mockPrepareBatch: func(ctx context.Context, query string, opts ...driver.PrepareBatchOption) (driver.Batch, error) {
 				numPrepareBatchCalls++
-				return batch, nil
+
+				if strings.Contains(query, `gql_metrics_operations`) {
+					return operationMockBatch, nil
+				}
+
+				return metricsMockBatch, nil
 			}}
 
 			msvc := NewMetricsService(zap.NewNop(), db, defaultConfig())
 
-			for _, hash := range tt.preCachedHashes {
+			for _, hash := range tt.input.preCachedHashes {
 				msvc.opGuardCache.Set(hash, struct{}{}, 1)
 			}
 

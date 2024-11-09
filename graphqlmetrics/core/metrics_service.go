@@ -159,14 +159,16 @@ func (s *MetricsService) prepareClickhouseBatches(
 	var (
 		err                         error
 		operationBatch, metricBatch driver.Batch
-	)
 
-	metricsBatchPrepared := false
+		metricsBatchPrepared = false
+		numAddedMetricItems  = 0
+	)
 
 	for _, item := range batch {
 		for _, su := range item.SchemaUsage {
+			suMetricCount := getSchemaUsageMetricCount(su)
 
-			if !metricsBatchPrepared && (len(su.TypeFieldMetrics) > 0 || len(su.ArgumentMetrics) > 0 || len(su.InputMetrics) > 0) {
+			if !metricsBatchPrepared && suMetricCount > 0 {
 				metricsBatchPrepared = true
 
 				// If any of the schema usage items has metrics to process, we need to ensure the metric batch is prepared once.
@@ -175,10 +177,14 @@ func (s *MetricsService) prepareClickhouseBatches(
 					return nil, nil, fmt.Errorf("failed to prepare metric batch for metrics: %w", err)
 				}
 			}
-			
-			err := s.appendUsageMetrics(metricBatch, insertTime, item.Claims, su)
-			if err != nil {
-				return nil, nil, err
+
+			if suMetricCount > 0 {
+				err := s.appendUsageMetrics(metricBatch, insertTime, item.Claims, su)
+				if err != nil {
+					s.logger.Warn("Failed to append usage metrics", zap.Error(err))
+				} else {
+					numAddedMetricItems++
+				}
 			}
 
 			if _, exists := s.opGuardCache.Get(su.OperationInfo.Hash); su.RequestDocument == "" || exists {
@@ -208,6 +214,16 @@ func (s *MetricsService) prepareClickhouseBatches(
 				return nil, nil, fmt.Errorf("failed to append operation to batch: %w", err)
 			}
 		}
+	}
+
+	if numAddedMetricItems == 0 && metricBatch != nil {
+		// every insert failed, something went completely wrong.
+		// As this batch is empty, we need to abort it.
+		if err := metricBatch.Abort(); err != nil {
+			s.logger.Warn("Failed to abort metric batch", zap.Error(err))
+		}
+
+		metricBatch = nil
 	}
 
 	return operationBatch, metricBatch, err
@@ -399,12 +415,17 @@ func (s *MetricsService) processBatch(ctx context.Context, batch []SchemaUsageRe
 	)
 }
 
+// getSchemaUsageMetricCount returns the total number of entries of a schema usage.
+func getSchemaUsageMetricCount(schemaUsage *graphqlmetricsv1.SchemaUsageInfo) int {
+	return len(schemaUsage.ArgumentMetrics) + len(schemaUsage.InputMetrics) + len(schemaUsage.TypeFieldMetrics)
+}
+
 // calculateRequestCost the total number of entries of metrics batch.
 func calculateRequestCost(items []SchemaUsageRequestItem) int {
 	total := 0
 	for _, item := range items {
 		for _, schemaUsage := range item.SchemaUsage {
-			total += len(schemaUsage.ArgumentMetrics) + len(schemaUsage.InputMetrics) + len(schemaUsage.TypeFieldMetrics)
+			total += getSchemaUsageMetricCount(schemaUsage)
 		}
 	}
 	return total
