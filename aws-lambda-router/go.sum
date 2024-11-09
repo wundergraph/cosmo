@@ -252,7 +252,6 @@ github.com/wundergraph/astjson v0.0.0-20241108124845-44485579ffa5 h1:rc+IQxG3rrA
 github.com/wundergraph/astjson v0.0.0-20241108124845-44485579ffa5/go.mod h1:eOTL6acwctsN4F3b7YE+eE2t8zcJ/doLm9sZzsxxxrE=
 github.com/wundergraph/cosmo/router v0.0.0-20241107203432-34a709900e23 h1:0CHBPKdqj0tKyNwAc7KC/q3nxRCzsankxolNtAQlC+k=
 github.com/wundergraph/cosmo/router v0.0.0-20241107203432-34a709900e23/go.mod h1:xSraMjn2YsV+yGHKmzBu7g5Z1UV96OFAhCm+9S7T1iA=
-github.com/wundergraph/cosmo/router v0.0.0-20241108151630-db3184e032a7/go.mod h1:xSraMjn2YsV+yGHKmzBu7g5Z1UV96OFAhCm+9S7T1iA=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.121 h1:VsrSvBsOcQNiTwESJg55tecBzHfZPUdII/zDstHyBuc=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.121/go.mod h1:s4r/lhVEU5s0c6tCgpR0hK6FHEmX0cbrKcMU1pMc/ZI=
 github.com/yusufpapurcu/wmi v1.2.4 h1:zFUKzehAFReQwLys1b/iSMl+JQGSCSjtVqQn9bBrPo0=
