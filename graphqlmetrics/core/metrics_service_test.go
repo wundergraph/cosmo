@@ -26,7 +26,7 @@ func TestPublishGraphQLMetrics(t *testing.T) {
 
 	db := test.GetTestDatabase(t)
 
-	msvc := NewMetricsService(context.Background(), zap.NewNop(), db, defaultConfig())
+	msvc := NewMetricsService(zap.NewNop(), db, defaultConfig())
 
 	req := &graphqlmetricsv1.PublishGraphQLRequestMetricsRequest{
 		SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{
@@ -171,7 +171,7 @@ func TestPublishGraphQLMetricsSmallBatches(t *testing.T) {
 
 	db := test.GetTestDatabase(t)
 
-	msvc := NewMetricsService(context.Background(), zap.NewNop(), db, defaultConfig())
+	msvc := NewMetricsService(zap.NewNop(), db, defaultConfig())
 
 	// High number slows down race mode significantly
 	count := 20_000
@@ -321,7 +321,7 @@ func TestPublishAggregatedGraphQLMetrics(t *testing.T) {
 
 	db := test.GetTestDatabase(t)
 
-	msvc := NewMetricsService(context.Background(), zap.NewNop(), db, defaultConfig())
+	msvc := NewMetricsService(zap.NewNop(), db, defaultConfig())
 
 	req := &graphqlmetricsv1.PublishAggregatedGraphQLRequestMetricsRequest{
 		Aggregation: []*graphqlmetricsv1.SchemaUsageInfoAggregation{
@@ -467,7 +467,7 @@ func TestAuthentication(t *testing.T) {
 
 	db := test.GetTestDatabase(t)
 
-	msvc := NewMetricsService(context.Background(), zap.NewNop(), db, defaultConfig())
+	msvc := NewMetricsService(zap.NewNop(), db, defaultConfig())
 
 	req := &graphqlmetricsv1.PublishGraphQLRequestMetricsRequest{
 		SchemaUsage: nil,
@@ -735,7 +735,7 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 				return batch, nil
 			}}
 
-			msvc := NewMetricsService(context.Background(), zap.NewNop(), db, defaultConfig())
+			msvc := NewMetricsService(zap.NewNop(), db, defaultConfig())
 
 			for _, hash := range tt.preCachedHashes {
 				msvc.opGuardCache.Set(hash, struct{}{}, 1)
