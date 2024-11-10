@@ -242,7 +242,7 @@ func (s *MetricsService) prepareClickhouseBatches(
 
 			err := s.appendUsageMetrics(metricBatch, insertTime, item.Claims, su)
 			if err != nil {
-				s.logger.Warn("Failed to append usage metrics", zap.Error(err))
+				s.logger.Error("Failed to append usage metrics", zap.Error(err))
 			} else {
 				numAddedMetricItems++
 			}
