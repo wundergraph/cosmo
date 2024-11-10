@@ -17,7 +17,7 @@ type cors struct {
 }
 
 var (
-	maxRecursionDepth = 100 // Safeguard against deep recursion
+	maxRecursionDepth = 10 // Safeguard against deep recursion
 	DefaultSchemas    = []string{
 		"http://",
 		"https://",
