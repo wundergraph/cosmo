@@ -155,7 +155,7 @@ func TestCors(t *testing.T) {
 			})
 		})
 
-		t.Run("matching multiple wildcard succeeds", func(t *testing.T) {
+		t.Run("matching multiple complex wildcards succeeds", func(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{

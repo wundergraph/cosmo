@@ -17,7 +17,8 @@ type cors struct {
 }
 
 var (
-	DefaultSchemas = []string{
+	maxRecursionDepth = 100 // Safeguard against deep recursion
+	DefaultSchemas    = []string{
 		"http://",
 		"https://",
 	}
@@ -114,8 +115,6 @@ func (cors *cors) validateOrigin(origin string) bool {
 	}
 	return false
 }
-
-const maxRecursionDepth = 100 // Safeguard against deep recursion
 
 func (cors *cors) validateWildcardOrigin(origin string) bool {
 	for _, w := range cors.wildcardOrigins {
