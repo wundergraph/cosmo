@@ -211,7 +211,7 @@ func (s *MetricsService) prepareClickhouseBatches(
 		s.logger.Error("No operations were added to the batch but it was expected to have some")
 
 		// Batch was prepared but every insert failed. Something went completely wrong.
-		// As this batch is empty, we need to abort it.
+		// As this point the batch is empty, we need to abort it.
 		if err := operationBatch.Abort(); err != nil {
 			s.logger.Warn("Failed to abort operation batch", zap.Error(err))
 		}
@@ -252,7 +252,7 @@ func (s *MetricsService) prepareClickhouseBatches(
 	if numAddedMetricItems == 0 && metricBatch != nil {
 		s.logger.Error("No metrics were added to the batch but it was expected to have some")
 		// Batch was prepared but every insert failed. Something went completely wrong.
-		// As this batch is empty, we need to abort it.
+		// As this point the batch is empty, we need to abort it.
 		if err := metricBatch.Abort(); err != nil {
 			s.logger.Warn("Failed to abort metric batch", zap.Error(err))
 		}
