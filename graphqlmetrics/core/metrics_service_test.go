@@ -810,6 +810,61 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 				metricsBatchCreated:       false,
 			},
 		},
+		{
+			name: "should prepare metrics batch even if operations batch fails",
+			input: input{
+				operationBatchAppendFunc: func(v ...any) error {
+					return errors.New("error while appending metrics")
+				},
+				batch: []SchemaUsageRequestItem{
+					{
+						Claims: &utils.GraphAPITokenClaims{
+							OrganizationID:   "TestOrg",
+							FederatedGraphID: "TestGraph",
+						},
+						SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{
+							buildSchemaUsageInfoItem("hash123", "query Hello { hello }", 1, 2, 0),
+							buildSchemaUsageInfoItem("hash123", "query Hello { hello }", 1, 2, 0),
+							buildSchemaUsageInfoItem("hash123", "query Hello { hello }", 1, 2, 0),
+						},
+					},
+				},
+			},
+			expected: expected{
+				expectedPrepareBatchCalls: 2,
+				operationBatchCreated:     false,
+				metricsBatchCreated:       true,
+			},
+		},
+		{
+			name: "should abort both batches they contain no entries",
+			input: input{
+				operationBatchAppendFunc: func(v ...any) error {
+					return errors.New("error while appending metrics")
+				},
+				metricsBatchAppendFunc: func(v ...any) error {
+					return errors.New("error while appending metrics")
+				},
+				batch: []SchemaUsageRequestItem{
+					{
+						Claims: &utils.GraphAPITokenClaims{
+							OrganizationID:   "TestOrg",
+							FederatedGraphID: "TestGraph",
+						},
+						SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{
+							buildSchemaUsageInfoItem("hash1", "query Hello { hello }", 1, 2, 0),
+							buildSchemaUsageInfoItem("hash2", "query Hello { hello }", 1, 2, 0),
+							buildSchemaUsageInfoItem("hash3", "query Hello { hello }", 1, 2, 0),
+						},
+					},
+				},
+			},
+			expected: expected{
+				expectedPrepareBatchCalls: 2,
+				operationBatchCreated:     false,
+				metricsBatchCreated:       false,
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -858,8 +913,7 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 				msvc.opGuardCache.Set(hash, struct{}{}, 1)
 			}
 
-			opBatch, metricsBatch, err := msvc.prepareClickhouseBatches(context.Background(), time.Now(), tt.input.batch)
-			require.NoError(t, err)
+			opBatch, metricsBatch := msvc.prepareClickhouseBatches(context.Background(), time.Now(), tt.input.batch)
 			require.Equal(t, tt.expected.expectedPrepareBatchCalls, numPrepareBatchCalls)
 
 			if tt.expected.operationBatchCreated {

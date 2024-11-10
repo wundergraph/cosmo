@@ -155,36 +155,22 @@ func (s *MetricsService) Shutdown(timeout time.Duration) {
 // prepareClickhouseBatches prepares the operation and metric batches for the given schema usage.
 func (s *MetricsService) prepareClickhouseBatches(
 	ctx context.Context, insertTime time.Time, batch []SchemaUsageRequestItem,
-) (driver.Batch, driver.Batch, error) {
+) (driver.Batch, driver.Batch) {
 	var (
 		err                         error
 		operationBatch, metricBatch driver.Batch
 
-		metricsBatchPrepared = false
-		numAddedMetricItems  = 0
+		numAddedMetricItems    = 0
+		numAddedOperationItems = 0
+		hasMetrics             = false
 	)
 
 	for _, item := range batch {
 		for _, su := range item.SchemaUsage {
-			suMetricCount := getSchemaUsageMetricCount(su)
-
-			if !metricsBatchPrepared && suMetricCount > 0 {
-				metricsBatchPrepared = true
-
-				// If any of the schema usage items has metrics to process, we need to ensure the metric batch is prepared once.
-				metricBatch, err = s.conn.PrepareBatch(ctx, `INSERT INTO gql_metrics_schema_usage`)
-				if err != nil {
-					return nil, nil, fmt.Errorf("failed to prepare metric batch for metrics: %w", err)
-				}
-			}
-
-			if suMetricCount > 0 {
-				err := s.appendUsageMetrics(metricBatch, insertTime, item.Claims, su)
-				if err != nil {
-					s.logger.Warn("Failed to append usage metrics", zap.Error(err))
-				} else {
-					numAddedMetricItems++
-				}
+			// We will take care of metrics later, but we can already check if there are any
+			// metrics to process to save some time later.
+			if getSchemaUsageMetricCount(su) > 0 {
+				hasMetrics = true
 			}
 
 			if _, exists := s.opGuardCache.Get(su.OperationInfo.Hash); su.RequestDocument == "" || exists {
@@ -199,7 +185,8 @@ func (s *MetricsService) prepareClickhouseBatches(
 				operationBatch, err = s.conn.PrepareBatch(ctx, `INSERT INTO gql_metrics_operations`)
 
 				if err != nil {
-					return nil, nil, fmt.Errorf("failed to prepare operation batch for metrics: %w", err)
+					s.logger.Error("Failed to prepare operation batch", zap.Error(err))
+					continue
 				}
 			}
 
@@ -210,14 +197,61 @@ func (s *MetricsService) prepareClickhouseBatches(
 				strings.ToLower(su.OperationInfo.Type.String()),
 				su.RequestDocument,
 			)
+
 			if err != nil {
-				return nil, nil, fmt.Errorf("failed to append operation to batch: %w", err)
+				s.logger.Error("Failed to append operation to batch", zap.Error(err))
+				continue
+			} else {
+				numAddedOperationItems++
+			}
+		}
+	}
+
+	if numAddedOperationItems == 0 && operationBatch != nil {
+		s.logger.Error("No operations were added to the batch but it was expected to have some")
+
+		// Batch was prepared but every insert failed. Something went completely wrong.
+		// As this batch is empty, we need to abort it.
+		if err := operationBatch.Abort(); err != nil {
+			s.logger.Warn("Failed to abort operation batch", zap.Error(err))
+		}
+
+		operationBatch = nil
+	}
+
+	// If we do not have any metrics to process, we can return early.
+	if !hasMetrics {
+		return operationBatch, nil
+	}
+
+	for _, item := range batch {
+		for _, su := range item.SchemaUsage {
+			if getSchemaUsageMetricCount(su) == 0 {
+				// Skip schema usage items without metrics
+				continue
+			}
+
+			if metricBatch == nil {
+				// If any of the schema usage items has metrics to process, we need to ensure the metric batch is prepared once.
+				metricBatch, err = s.conn.PrepareBatch(ctx, `INSERT INTO gql_metrics_schema_usage`)
+				if err != nil {
+					s.logger.Error("Failed to prepare metric batch", zap.Error(err))
+					continue
+				}
+			}
+
+			err := s.appendUsageMetrics(metricBatch, insertTime, item.Claims, su)
+			if err != nil {
+				s.logger.Warn("Failed to append usage metrics", zap.Error(err))
+			} else {
+				numAddedMetricItems++
 			}
 		}
 	}
 
 	if numAddedMetricItems == 0 && metricBatch != nil {
-		// every insert failed, something went completely wrong.
+		s.logger.Error("No metrics were added to the batch but it was expected to have some")
+		// Batch was prepared but every insert failed. Something went completely wrong.
 		// As this batch is empty, we need to abort it.
 		if err := metricBatch.Abort(); err != nil {
 			s.logger.Warn("Failed to abort metric batch", zap.Error(err))
@@ -226,7 +260,7 @@ func (s *MetricsService) prepareClickhouseBatches(
 		metricBatch = nil
 	}
 
-	return operationBatch, metricBatch, err
+	return operationBatch, metricBatch
 }
 
 func (s *MetricsService) appendUsageMetrics(
@@ -343,11 +377,7 @@ func (s *MetricsService) processBatch(ctx context.Context, batch []SchemaUsageRe
 	insertTime := time.Now()
 	insertCtx := context.Background()
 
-	operationsBatch, metricsBatch, err := s.prepareClickhouseBatches(insertCtx, insertTime, batch)
-	if err != nil {
-		s.logger.Error("Failed to prepare or abort metrics batches", zap.Error(err))
-		return
-	}
+	operationsBatch, metricsBatch := s.prepareClickhouseBatches(insertCtx, insertTime, batch)
 
 	var wg sync.WaitGroup
 
