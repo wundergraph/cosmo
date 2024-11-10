@@ -527,6 +527,26 @@ func TestComplexWildcards(t *testing.T) {
 	}
 }
 
+func TestMaxRecursionDepth(t *testing.T) {
+	router := newTestRouter(Config{
+		Enabled: true,
+		AllowOrigins: []string{
+			"https://*.example.*.*.com", // multiple sequential wildcards
+			"https://*.*.*.*.com",
+		},
+		AllowMethods:  []string{"GET"},
+		AllowWildcard: true,
+	})
+
+	maxRecursionDepth = 2
+	w := performRequest(router, "GET", "https://subdomain.example.subdomain.example.com")
+	assert.Equal(t, 403, w.Code)
+
+	maxRecursionDepth = 10
+	w = performRequest(router, "GET", "https://subdomain.example.subdomain.example.com")
+	assert.Equal(t, 200, w.Code)
+}
+
 func TestDisabled(t *testing.T) {
 	config := Config{
 		Enabled:       true,
