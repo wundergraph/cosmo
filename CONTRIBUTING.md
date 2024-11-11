@@ -37,6 +37,26 @@ make
 
 Ready! You can now start contributing to the WunderGraph Cosmo repository. Feel free to open an issue or pull request to add a new feature or fix a bug.
 
+## Go workspace
+
+According to best practices, we don't commit the `go.work` or `go.sum` files. Those files are personal to each developer. As a result, we use the `go.mod` file to manage the dependencies and overwrites. You can still create `go.work` file in the root of the repository if you are feeling more comfortable with it or to improve tooling support.
+
+### Example
+
+```
+go 1.21.5
+
+toolchain go1.22.0
+
+use (
+	./demo
+	./router
+	./router-tests
+)
+
+// Here you can add custom replacements
+```
+
 ## Conventional Commit Standard
 
 We use [conventionalcommits](https://www.conventionalcommits.org/en/v1.0.0-beta.2/#why-use-conventional-commits) for changelog generation and more structured commit messages.
