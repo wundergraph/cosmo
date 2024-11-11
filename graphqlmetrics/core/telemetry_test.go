@@ -320,7 +320,7 @@ func TestValidateExposedMetrics(t *testing.T) {
 	})
 }
 
-func TestValidateExposedAttirbutesWithoutClaims(t *testing.T) {
+func TestValidateExposedAttributesWithoutClaims(t *testing.T) {
 	if os.Getenv("INT_TESTS") != "true" {
 		t.Skip("Skipping integration tests")
 	}

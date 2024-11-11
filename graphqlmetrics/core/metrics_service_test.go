@@ -725,6 +725,25 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 			},
 		},
 		{
+			name: "should not call prepare batch with no data",
+			input: input{
+				batch: []SchemaUsageRequestItem{
+					{
+						Claims: &utils.GraphAPITokenClaims{
+							OrganizationID:   "TestOrg",
+							FederatedGraphID: "TestGraph",
+						},
+						SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{},
+					},
+				},
+			},
+			expected: expected{
+				expectedPrepareBatchCalls: 0,
+				operationBatchCreated:     false,
+				metricsBatchCreated:       false,
+			},
+		},
+		{
 			name: "should not call prepare batch if hash is in the cache",
 			input: input{
 				preCachedHashes: []string{"hash123", "hash234"},
@@ -787,7 +806,7 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 			},
 		},
 		{
-			name: "should prepare operation batch if appendUsageMetrics fails and abort the metrics batch",
+			name: "should prepare operation and metrics batch even if appendUsageMetrics fails",
 			input: input{
 				metricsBatchAppendFunc: func(v ...any) error {
 					return errors.New("error while appending metrics")
@@ -807,11 +826,11 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 			expected: expected{
 				expectedPrepareBatchCalls: 2,
 				operationBatchCreated:     true,
-				metricsBatchCreated:       false,
+				metricsBatchCreated:       true,
 			},
 		},
 		{
-			name: "should prepare metrics batch even if operations batch fails",
+			name: "should prepare operation and metrics batch even if appending to operations batch fails",
 			input: input{
 				operationBatchAppendFunc: func(v ...any) error {
 					return errors.New("error while appending metrics")
@@ -832,12 +851,12 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 			},
 			expected: expected{
 				expectedPrepareBatchCalls: 2,
-				operationBatchCreated:     false,
+				operationBatchCreated:     true,
 				metricsBatchCreated:       true,
 			},
 		},
 		{
-			name: "should abort both batches they contain no entries",
+			name: "should return empty batches if both append functions fail",
 			input: input{
 				operationBatchAppendFunc: func(v ...any) error {
 					return errors.New("error while appending metrics")
@@ -861,8 +880,8 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 			},
 			expected: expected{
 				expectedPrepareBatchCalls: 2,
-				operationBatchCreated:     false,
-				metricsBatchCreated:       false,
+				operationBatchCreated:     true,
+				metricsBatchCreated:       true,
 			},
 		},
 	}

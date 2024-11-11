@@ -153,6 +153,7 @@ func (s *MetricsService) Shutdown(timeout time.Duration) {
 }
 
 // prepareClickhouseBatches prepares the operation and metric batches for the given schema usage.
+// It returns the operation and metric batch. Either batch can be nil if there is nothing to write.
 func (s *MetricsService) prepareClickhouseBatches(
 	ctx context.Context, insertTime time.Time, batch []SchemaUsageRequestItem,
 ) (driver.Batch, driver.Batch) {
@@ -160,9 +161,7 @@ func (s *MetricsService) prepareClickhouseBatches(
 		err                         error
 		operationBatch, metricBatch driver.Batch
 
-		numAddedMetricItems    = 0
-		numAddedOperationItems = 0
-		hasMetrics             = false
+		hasMetrics = false
 	)
 
 	for _, item := range batch {
@@ -201,22 +200,8 @@ func (s *MetricsService) prepareClickhouseBatches(
 			if err != nil {
 				s.logger.Error("Failed to append operation to batch", zap.Error(err))
 				continue
-			} else {
-				numAddedOperationItems++
 			}
 		}
-	}
-
-	if numAddedOperationItems == 0 && operationBatch != nil {
-		s.logger.Error("No operations were added to the batch but it was expected to have some")
-
-		// Batch was prepared but every insert failed. Something went completely wrong.
-		// As this point the batch is empty, we need to abort it.
-		if err := operationBatch.Abort(); err != nil {
-			s.logger.Warn("Failed to abort operation batch", zap.Error(err))
-		}
-
-		operationBatch = nil
 	}
 
 	// If we do not have any metrics to process, we can return early.
@@ -243,21 +228,8 @@ func (s *MetricsService) prepareClickhouseBatches(
 			err := s.appendUsageMetrics(metricBatch, insertTime, item.Claims, su)
 			if err != nil {
 				s.logger.Error("Failed to append usage metrics", zap.Error(err))
-			} else {
-				numAddedMetricItems++
 			}
 		}
-	}
-
-	if numAddedMetricItems == 0 && metricBatch != nil {
-		s.logger.Error("No metrics were added to the batch but it was expected to have some")
-		// Batch was prepared but every insert failed. Something went completely wrong.
-		// As this point the batch is empty, we need to abort it.
-		if err := metricBatch.Abort(); err != nil {
-			s.logger.Warn("Failed to abort metric batch", zap.Error(err))
-		}
-
-		metricBatch = nil
 	}
 
 	return operationBatch, metricBatch
