@@ -361,15 +361,41 @@
     }
   },
   "SecurityConfiguration": {
+    "BlockMutations": false,
+    "BlockSubscriptions": false,
+    "BlockNonPersistedOperations": false,
+    "ComplexityCalculationCache": {
+      "Enabled": false,
+      "CacheSize": 1024
+    },
+    "ComplexityLimits": {
+      "Depth": {
+        "Enabled": false,
+        "Limit": 0,
+        "IgnorePersistedOperations": false
+      },
+      "TotalFields": {
+        "Enabled": false,
+        "Limit": 0,
+        "IgnorePersistedOperations": false
+      },
+      "RootFields": {
+        "Enabled": false,
+        "Limit": 0,
+        "IgnorePersistedOperations": false
+      },
+      "RootFieldAliases": {
+        "Enabled": false,
+        "Limit": 0,
+        "IgnorePersistedOperations": false
+      }
+    },
     "DepthLimit": {
       "Enabled": false,
       "Limit": 0,
       "CacheSize": 1024,
       "IgnorePersistedOperations": false
-    },
-    "BlockMutations": false,
-    "BlockSubscriptions": false,
-    "BlockNonPersistedOperations": false
+    }
   },
   "EngineExecutionConfiguration": {
     "Debug": {

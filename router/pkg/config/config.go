@@ -321,10 +321,12 @@ type EngineExecutionConfiguration struct {
 }
 
 type SecurityConfiguration struct {
-	DepthLimit                  QueryDepthConfiguration `yaml:"depth_limit"`
-	BlockMutations              bool                    `yaml:"block_mutations" envDefault:"false" env:"SECURITY_BLOCK_MUTATIONS"`
-	BlockSubscriptions          bool                    `yaml:"block_subscriptions" envDefault:"false" env:"SECURITY_BLOCK_SUBSCRIPTIONS"`
-	BlockNonPersistedOperations bool                    `yaml:"block_non_persisted_operations" envDefault:"false" env:"SECURITY_BLOCK_NON_PERSISTED_OPERATIONS"`
+	BlockMutations              bool                        `yaml:"block_mutations" envDefault:"false" env:"SECURITY_BLOCK_MUTATIONS"`
+	BlockSubscriptions          bool                        `yaml:"block_subscriptions" envDefault:"false" env:"SECURITY_BLOCK_SUBSCRIPTIONS"`
+	BlockNonPersistedOperations bool                        `yaml:"block_non_persisted_operations" envDefault:"false" env:"SECURITY_BLOCK_NON_PERSISTED_OPERATIONS"`
+	ComplexityCalculationCache  *ComplexityCalculationCache `yaml:"complexity_calculation_cache"`
+	ComplexityLimits            *ComplexityLimits           `yaml:"complexity_limits"`
+	DepthLimit                  *QueryDepthConfiguration    `yaml:"depth_limit"`
 }
 
 type QueryDepthConfiguration struct {
@@ -332,6 +334,24 @@ type QueryDepthConfiguration struct {
 	Limit                     int   `yaml:"limit,omitempty" envDefault:"0" env:"SECURITY_QUERY_DEPTH_LIMIT"`
 	CacheSize                 int64 `yaml:"cache_size,omitempty" envDefault:"1024" env:"SECURITY_QUERY_DEPTH_CACHE_SIZE"`
 	IgnorePersistedOperations bool  `yaml:"ignore_persisted_operations,omitempty" envDefault:"false" env:"SECURITY_QUERY_DEPTH_IGNORE_PERSISTED_OPERATIONS"`
+}
+
+type ComplexityCalculationCache struct {
+	Enabled   bool  `yaml:"enabled" envDefault:"false" env:"SECURITY_COMPLEXITY_CACHE_ENABLED"`
+	CacheSize int64 `yaml:"cache_size,omitempty" envDefault:"1024" env:"SECURITY_COMPLEXITY_CACHE_SIZE"`
+}
+
+type ComplexityLimits struct {
+	Depth            *ComplexityLimit `yaml:"depth"`
+	TotalFields      *ComplexityLimit `yaml:"total_fields"`
+	RootFields       *ComplexityLimit `yaml:"root_fields"`
+	RootFieldAliases *ComplexityLimit `yaml:"root_field_aliases"`
+}
+
+type ComplexityLimit struct {
+	Enabled                   bool `yaml:"enabled" envDefault:"false"`
+	Limit                     int  `yaml:"limit,omitempty" envDefault:"0"`
+	IgnorePersistedOperations bool `yaml:"ignore_persisted_operations,omitempty" envDefault:"false"`
 }
 
 type OverrideRoutingURLConfiguration struct {

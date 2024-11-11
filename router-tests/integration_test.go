@@ -1061,6 +1061,9 @@ func TestQueryDepthLimit(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+				if securityConfiguration.DepthLimit == nil {
+					securityConfiguration.DepthLimit = &config.QueryDepthConfiguration{}
+				}
 				securityConfiguration.DepthLimit.Enabled = true
 				securityConfiguration.DepthLimit.Limit = 0
 				securityConfiguration.DepthLimit.CacheSize = 1024
@@ -1077,6 +1080,9 @@ func TestQueryDepthLimit(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+				if securityConfiguration.DepthLimit == nil {
+					securityConfiguration.DepthLimit = &config.QueryDepthConfiguration{}
+				}
 				securityConfiguration.DepthLimit.Enabled = true
 				securityConfiguration.DepthLimit.Limit = 3
 				securityConfiguration.DepthLimit.CacheSize = 1024
@@ -1093,6 +1099,9 @@ func TestQueryDepthLimit(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+				if securityConfiguration.DepthLimit == nil {
+					securityConfiguration.DepthLimit = &config.QueryDepthConfiguration{}
+				}
 				securityConfiguration.DepthLimit.Enabled = true
 				securityConfiguration.DepthLimit.Limit = 2
 				securityConfiguration.DepthLimit.CacheSize = 1024
@@ -1110,6 +1119,9 @@ func TestQueryDepthLimit(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+				if securityConfiguration.DepthLimit == nil {
+					securityConfiguration.DepthLimit = &config.QueryDepthConfiguration{}
+				}
 				securityConfiguration.DepthLimit.Enabled = true
 				securityConfiguration.DepthLimit.Limit = 2
 				securityConfiguration.DepthLimit.CacheSize = 1024
@@ -1132,6 +1144,9 @@ func TestQueryDepthLimit(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+				if securityConfiguration.DepthLimit == nil {
+					securityConfiguration.DepthLimit = &config.QueryDepthConfiguration{}
+				}
 				securityConfiguration.DepthLimit.Enabled = true
 				securityConfiguration.DepthLimit.Limit = 2
 				securityConfiguration.DepthLimit.CacheSize = 1024
@@ -1160,6 +1175,9 @@ func TestQueryDepthLimit(t *testing.T) {
 			TraceExporter: exporter,
 			MetricReader:  metricReader,
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+				if securityConfiguration.DepthLimit == nil {
+					securityConfiguration.DepthLimit = &config.QueryDepthConfiguration{}
+				}
 				securityConfiguration.DepthLimit.Enabled = true
 				securityConfiguration.DepthLimit.Limit = 2
 				securityConfiguration.DepthLimit.CacheSize = 1024
