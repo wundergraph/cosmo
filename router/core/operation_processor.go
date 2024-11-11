@@ -971,7 +971,7 @@ func (o *OperationKit) runComplexityComparisons(complexityLimitConfig *config.Co
 	}
 	if complexityLimitConfig.TotalFields != nil && complexityLimitConfig.TotalFields.Enabled && (!isPersisted || !complexityLimitConfig.TotalFields.IgnorePersistedOperations) {
 		testComparisons = append(testComparisons,
-			comp{complexityLimitConfig.TotalFields.Limit, cachedComplexity.Depth, fmt.Sprintf("The query depth %d exceeds the max query depth allowed (%d)", cachedComplexity.Depth, complexityLimitConfig.TotalFields.Limit)})
+			comp{complexityLimitConfig.TotalFields.Limit, cachedComplexity.TotalFields, fmt.Sprintf("The query total fields %d exceeds the max total fields allowed (%d)", cachedComplexity.TotalFields, complexityLimitConfig.TotalFields.Limit)})
 	}
 	if complexityLimitConfig.RootFields != nil && complexityLimitConfig.RootFields.Enabled && (!isPersisted || !complexityLimitConfig.RootFields.IgnorePersistedOperations) {
 		testComparisons = append(testComparisons,
