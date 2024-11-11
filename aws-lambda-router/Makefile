@@ -3,7 +3,6 @@
 bump-router:
 	go get github.com/wundergraph/cosmo/router@upgrade
 	go mod tidy
-	cd .. && go work sync
 
 VERSION?=dev
 # RFC3339 format
@@ -40,4 +39,3 @@ create-lambda-zip: build fetch-router-config
 bump-deps:
 	go get github.com/wundergraph/cosmo/router@upgrade
 	go mod tidy
-	cd .. && go work sync

@@ -154,7 +154,6 @@ sync-go-workspace:
 	cd composition-go && go mod tidy
 	cd graphqlmetrics && go mod tidy
 	cd router-tests && make bump-deps
-	go work sync
 
 # Validates if any breaking changes has been introduced.
 # Compares the head of the branch with your local changes

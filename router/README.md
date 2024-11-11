@@ -22,6 +22,14 @@ Code is committed to the repository, but if you want to regenerate the code, you
 make generate-go
 ```
 
+## Develop with a local Engine version
+
+You can uncomment te replace directive in the [`go.mod`](go.mod) file to use the local version of the `graphql-go-tools` package. You only need to ensure that you have checked out the `graphql-go-tools` repository in the same parent directory as the `router` repository.
+
+```
+replace github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
+```
+
 ## Build your own Router
 
 See [Router Customizability](https://cosmo-docs.wundergraph.com/router/customizability) how to build your own router.
