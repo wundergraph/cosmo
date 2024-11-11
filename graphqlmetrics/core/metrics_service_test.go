@@ -2,8 +2,10 @@ package core
 
 import (
 	"context"
+	"errors"
 	"os"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -26,7 +28,7 @@ func TestPublishGraphQLMetrics(t *testing.T) {
 
 	db := test.GetTestDatabase(t)
 
-	msvc := NewMetricsService(context.Background(), zap.NewNop(), db, defaultConfig())
+	msvc := NewMetricsService(zap.NewNop(), db, defaultConfig())
 
 	req := &graphqlmetricsv1.PublishGraphQLRequestMetricsRequest{
 		SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{
@@ -164,6 +166,63 @@ func TestPublishGraphQLMetrics(t *testing.T) {
 	assert.Greater(t, fieldUsageCountMv, uint64(0))
 }
 
+func TestPublishGraphQLMetricsSendEmptyAndFilledMetrics(t *testing.T) {
+	if os.Getenv("INT_TESTS") != "true" {
+		t.Skip("Skipping integration tests")
+	}
+
+	db := test.GetTestDatabase(t)
+
+	msvc := NewMetricsService(zap.NewNop(), db, defaultConfig())
+
+	su1 := buildSchemaUsageInfoItem("Hash1", "query Hello { hello }", 0, 0, 0)
+	su2 := buildSchemaUsageInfoItem("Hash2", "query Hello { hello }", 1, 2, 0)
+
+	req := &graphqlmetricsv1.PublishGraphQLRequestMetricsRequest{
+		SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{su1, su2},
+	}
+
+	pReq := connect.NewRequest[graphqlmetricsv1.PublishGraphQLRequestMetricsRequest](req)
+
+	ctx := utils.SetClaims(context.Background(), &utils.GraphAPITokenClaims{
+		FederatedGraphID: "fed123",
+		OrganizationID:   "org123",
+	})
+
+	_, err := msvc.PublishGraphQLMetrics(
+		ctx,
+		pReq,
+	)
+	require.NoError(t, err)
+
+	// Wait for batch to be processed
+	msvc.Shutdown(time.Second * 10)
+
+	// Validate insert
+
+	var opCount uint64
+
+	require.NoError(t, db.QueryRow(ctx, `
+		SELECT COUNT(*) FROM gql_metrics_operations
+    	WHERE OperationName = 'Hello' AND
+		OperationType = 'query' AND
+    	OperationContent = 'query Hello { hello }'
+	`).Scan(&opCount))
+
+	assert.Equal(t, opCount, uint64(2))
+
+	// Validate insert
+
+	var fieldUsageCount uint64
+	require.NoError(t, db.QueryRow(ctx, `
+		SELECT COUNT(*) FROM gql_metrics_schema_usage
+		WHERE OrganizationID = 'org123' AND
+		FederatedGraphID = 'fed123'
+	`).Scan(&fieldUsageCount))
+
+	assert.Equal(t, int(fieldUsageCount), 3)
+}
+
 func TestPublishGraphQLMetricsSmallBatches(t *testing.T) {
 	if os.Getenv("INT_TESTS") != "true" {
 		t.Skip("Skipping integration tests")
@@ -171,7 +230,7 @@ func TestPublishGraphQLMetricsSmallBatches(t *testing.T) {
 
 	db := test.GetTestDatabase(t)
 
-	msvc := NewMetricsService(context.Background(), zap.NewNop(), db, defaultConfig())
+	msvc := NewMetricsService(zap.NewNop(), db, defaultConfig())
 
 	// High number slows down race mode significantly
 	count := 20_000
@@ -321,7 +380,7 @@ func TestPublishAggregatedGraphQLMetrics(t *testing.T) {
 
 	db := test.GetTestDatabase(t)
 
-	msvc := NewMetricsService(context.Background(), zap.NewNop(), db, defaultConfig())
+	msvc := NewMetricsService(zap.NewNop(), db, defaultConfig())
 
 	req := &graphqlmetricsv1.PublishAggregatedGraphQLRequestMetricsRequest{
 		Aggregation: []*graphqlmetricsv1.SchemaUsageInfoAggregation{
@@ -467,7 +526,7 @@ func TestAuthentication(t *testing.T) {
 
 	db := test.GetTestDatabase(t)
 
-	msvc := NewMetricsService(context.Background(), zap.NewNop(), db, defaultConfig())
+	msvc := NewMetricsService(zap.NewNop(), db, defaultConfig())
 
 	req := &graphqlmetricsv1.PublishGraphQLRequestMetricsRequest{
 		SchemaUsage: nil,
@@ -573,15 +632,23 @@ func (m *mockDriver) PrepareBatch(ctx context.Context, query string, opts ...dri
 type mockBatch struct {
 	driver.Batch
 	mockAppendFunc func(v ...any) error
+	mockAbortFunc  func() error
 }
 
 func (m *mockBatch) Append(v ...any) error {
 	return m.mockAppendFunc(v...)
 }
 
+func (m *mockBatch) Abort() error {
+	return m.mockAbortFunc()
+}
+
 func TestPrepareClickhouseBatches(t *testing.T) {
 	type input struct {
-		batch []SchemaUsageRequestItem
+		batch                    []SchemaUsageRequestItem
+		preCachedHashes          []string
+		metricsBatchAppendFunc   func(v ...any) error
+		operationBatchAppendFunc func(v ...any) error
 	}
 	type expected struct {
 		expectedPrepareBatchCalls int
@@ -590,10 +657,9 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 	}
 
 	tests := []struct {
-		name            string
-		preCachedHashes []string
-		input           input
-		expected        expected
+		name     string
+		input    input
+		expected expected
 	}{
 		{
 			name: "should call prepare batch once",
@@ -659,8 +725,28 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 			},
 		},
 		{
+			name: "should not call prepare batch with no data",
+			input: input{
+				batch: []SchemaUsageRequestItem{
+					{
+						Claims: &utils.GraphAPITokenClaims{
+							OrganizationID:   "TestOrg",
+							FederatedGraphID: "TestGraph",
+						},
+						SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{},
+					},
+				},
+			},
+			expected: expected{
+				expectedPrepareBatchCalls: 0,
+				operationBatchCreated:     false,
+				metricsBatchCreated:       false,
+			},
+		},
+		{
 			name: "should not call prepare batch if hash is in the cache",
 			input: input{
+				preCachedHashes: []string{"hash123", "hash234"},
 				batch: []SchemaUsageRequestItem{
 					{
 						Claims: &utils.GraphAPITokenClaims{
@@ -691,7 +777,6 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 					},
 				},
 			},
-			preCachedHashes: []string{"hash123", "hash234"},
 			expected: expected{
 				expectedPrepareBatchCalls: 0,
 				operationBatchCreated:     false,
@@ -701,6 +786,7 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 		{
 			name: "should not call prepare batch if hash is in the cache but still send metrics",
 			input: input{
+				preCachedHashes: []string{"hash123"},
 				batch: []SchemaUsageRequestItem{
 					{
 						Claims: &utils.GraphAPITokenClaims{
@@ -713,10 +799,88 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 					},
 				},
 			},
-			preCachedHashes: []string{"hash123"},
 			expected: expected{
 				expectedPrepareBatchCalls: 1,
 				operationBatchCreated:     false,
+				metricsBatchCreated:       true,
+			},
+		},
+		{
+			name: "should prepare operation and metrics batch even if appendUsageMetrics fails",
+			input: input{
+				metricsBatchAppendFunc: func(v ...any) error {
+					return errors.New("error while appending metrics")
+				},
+				batch: []SchemaUsageRequestItem{
+					{
+						Claims: &utils.GraphAPITokenClaims{
+							OrganizationID:   "TestOrg",
+							FederatedGraphID: "TestGraph",
+						},
+						SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{
+							buildSchemaUsageInfoItem("hash123", "query Hello { hello }", 1, 2, 0),
+						},
+					},
+				},
+			},
+			expected: expected{
+				expectedPrepareBatchCalls: 2,
+				operationBatchCreated:     true,
+				metricsBatchCreated:       true,
+			},
+		},
+		{
+			name: "should prepare operation and metrics batch even if appending to operations batch fails",
+			input: input{
+				operationBatchAppendFunc: func(v ...any) error {
+					return errors.New("error while appending metrics")
+				},
+				batch: []SchemaUsageRequestItem{
+					{
+						Claims: &utils.GraphAPITokenClaims{
+							OrganizationID:   "TestOrg",
+							FederatedGraphID: "TestGraph",
+						},
+						SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{
+							buildSchemaUsageInfoItem("hash123", "query Hello { hello }", 1, 2, 0),
+							buildSchemaUsageInfoItem("hash123", "query Hello { hello }", 1, 2, 0),
+							buildSchemaUsageInfoItem("hash123", "query Hello { hello }", 1, 2, 0),
+						},
+					},
+				},
+			},
+			expected: expected{
+				expectedPrepareBatchCalls: 2,
+				operationBatchCreated:     true,
+				metricsBatchCreated:       true,
+			},
+		},
+		{
+			name: "should return empty batches if both append functions fail",
+			input: input{
+				operationBatchAppendFunc: func(v ...any) error {
+					return errors.New("error while appending metrics")
+				},
+				metricsBatchAppendFunc: func(v ...any) error {
+					return errors.New("error while appending metrics")
+				},
+				batch: []SchemaUsageRequestItem{
+					{
+						Claims: &utils.GraphAPITokenClaims{
+							OrganizationID:   "TestOrg",
+							FederatedGraphID: "TestGraph",
+						},
+						SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{
+							buildSchemaUsageInfoItem("hash1", "query Hello { hello }", 1, 2, 0),
+							buildSchemaUsageInfoItem("hash2", "query Hello { hello }", 1, 2, 0),
+							buildSchemaUsageInfoItem("hash3", "query Hello { hello }", 1, 2, 0),
+						},
+					},
+				},
+			},
+			expected: expected{
+				expectedPrepareBatchCalls: 2,
+				operationBatchCreated:     true,
 				metricsBatchCreated:       true,
 			},
 		},
@@ -726,23 +890,49 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			numPrepareBatchCalls := 0
 
-			batch := &mockBatch{mockAppendFunc: func(v ...any) error {
-				return nil
-			}}
+			operationMockBatch := &mockBatch{
+				mockAppendFunc: func(v ...any) error {
+					if tt.input.operationBatchAppendFunc != nil {
+						return tt.input.operationBatchAppendFunc(v...)
+					}
+
+					return nil
+				},
+				mockAbortFunc: func() error {
+					return nil
+				},
+			}
+
+			metricsMockBatch := &mockBatch{
+				mockAppendFunc: func(v ...any) error {
+					if tt.input.metricsBatchAppendFunc != nil {
+						return tt.input.metricsBatchAppendFunc(v...)
+					}
+
+					return nil
+				},
+				mockAbortFunc: func() error {
+					return nil
+				},
+			}
 
 			db := &mockDriver{mockPrepareBatch: func(ctx context.Context, query string, opts ...driver.PrepareBatchOption) (driver.Batch, error) {
 				numPrepareBatchCalls++
-				return batch, nil
+
+				if strings.Contains(query, `gql_metrics_operations`) {
+					return operationMockBatch, nil
+				}
+
+				return metricsMockBatch, nil
 			}}
 
-			msvc := NewMetricsService(context.Background(), zap.NewNop(), db, defaultConfig())
+			msvc := NewMetricsService(zap.NewNop(), db, defaultConfig())
 
-			for _, hash := range tt.preCachedHashes {
+			for _, hash := range tt.input.preCachedHashes {
 				msvc.opGuardCache.Set(hash, struct{}{}, 1)
 			}
 
-			opBatch, metricsBatch, err := msvc.prepareClickhouseBatches(context.Background(), time.Now(), tt.input.batch)
-			require.NoError(t, err)
+			opBatch, metricsBatch := msvc.prepareClickhouseBatches(context.Background(), time.Now(), tt.input.batch)
 			require.Equal(t, tt.expected.expectedPrepareBatchCalls, numPrepareBatchCalls)
 
 			if tt.expected.operationBatchCreated {

@@ -118,7 +118,7 @@ func main() {
 		Interval:     cfg.BatchProcessingInterval,
 	}
 
-	ms := core.NewMetricsService(ctx, logger, conn, procConfig)
+	ms := core.NewMetricsService(logger, conn, procConfig)
 
 	metricsConfig := telemetry.NewTelemetryConfig(
 		core.Version,
