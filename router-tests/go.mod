@@ -169,3 +169,8 @@ require (
 	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
 	nhooyr.io/websocket v1.8.11 // indirect
 )
+
+replace (
+	github.com/wundergraph/cosmo/demo => ../demo
+	github.com/wundergraph/cosmo/router => ../router
+)

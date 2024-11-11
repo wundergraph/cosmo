@@ -296,6 +296,7 @@ github.com/urfave/cli/v2 v2.27.2/go.mod h1:g0+79LmHHATl7DAcHO99smiR/T7uGLw84w8Y4
 github.com/vektah/gqlparser/v2 v2.5.16 h1:1gcmLTvs3JLKXckwCwlUagVn/IlV2bwqle0vJ0vy5p8=
 github.com/vektah/gqlparser/v2 v2.5.16/go.mod h1:1lz1OeCqgQbQepsGxPVywrjdBHW2T08PUS3pJqepRww=
 github.com/wundergraph/astjson v0.0.0-20241108124845-44485579ffa5 h1:rc+IQxG3rrAXEjBywirkzhKkyCKvXLGQXABVD8GiUtU=
+github.com/wundergraph/astjson v0.0.0-20241108124845-44485579ffa5/go.mod h1:eOTL6acwctsN4F3b7YE+eE2t8zcJ/doLm9sZzsxxxrE=
 github.com/wundergraph/cosmo/composition-go v0.0.0-20240124120900-5effe48a4a1d h1:NEUrhuqOaTO1dpW8pz2tu6dKbQAqFvgiF/m4NXdzZm0=
 github.com/wundergraph/cosmo/composition-go v0.0.0-20240124120900-5effe48a4a1d/go.mod h1:9I3gPMAlAY+m1/cFL20iN7XHTyuZd3VT5ijccdU/FsI=
 github.com/wundergraph/cosmo/router v0.0.0-20241108155000-9f371059ec96 h1:F1n+3lSwxX5kkT9GLoZ1HWpr65oFdZrM0k3h9NI3z/Q=
@@ -303,6 +304,7 @@ github.com/wundergraph/cosmo/router v0.0.0-20241108155000-9f371059ec96/go.mod h1
 github.com/wundergraph/cosmo/router-tests v0.0.0-20241024215101-0c757faf23de h1:kEiNUGYSxHaT1I5GKre0GqHFCHVabpC/N33Chfue/rs=
 github.com/wundergraph/cosmo/router-tests v0.0.0-20241024215101-0c757faf23de/go.mod h1:7WvZF+cOkfV4GaXka1qZfCqf/9GmOcksbPoMmJXtja4=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.121 h1:VsrSvBsOcQNiTwESJg55tecBzHfZPUdII/zDstHyBuc=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.121/go.mod h1:s4r/lhVEU5s0c6tCgpR0hK6FHEmX0cbrKcMU1pMc/ZI=
 github.com/xrash/smetrics v0.0.0-20240312152122-5f08fbb34913 h1:+qGGcbkzsfDQNPPe9UDgpxAWQrhbbBXOYJFQDq/dtJw=
 github.com/xrash/smetrics v0.0.0-20240312152122-5f08fbb34913/go.mod h1:4aEEwZQutDLsQv2Deui4iYQ6DWTxR14g6m8Wv88+Xqk=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
