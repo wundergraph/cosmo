@@ -149,7 +149,7 @@ type (
 		staticExecutionConfig           *nodev1.RouterConfig
 		awsLambda                       bool
 		shutdown                        atomic.Bool
-		bootstrapped                    bool
+		bootstrapped                    atomic.Bool
 		ipAnonymization                 *IPAnonymizationConfig
 		listenAddr                      string
 		baseURL                         string
@@ -652,13 +652,11 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 }
 
 // bootstrap initializes the Router. It is called by Start() and NewServer().
-// It should only be called once for a Router instance. Not safe for concurrent use.
+// It should only be called once for a Router instance.
 func (r *Router) bootstrap(ctx context.Context) error {
-	if r.bootstrapped {
+	if !r.bootstrapped.CompareAndSwap(false, true) {
 		return fmt.Errorf("router is already bootstrapped")
 	}
-
-	r.bootstrapped = true
 
 	cosmoCloudTracingEnabled := r.traceConfig.Enabled && rtrace.DefaultExporter(r.traceConfig) != nil
 	artInProductionEnabled := r.engineExecutionConfiguration.EnableRequestTracing && !r.developmentMode
