@@ -1806,9 +1806,11 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 		Attributes:         cfg.Metrics.Attributes,
 		ResourceAttributes: buildResourceAttributes(cfg.ResourceAttributes),
 		OpenTelemetry: rmetric.OpenTelemetry{
-			Enabled:       cfg.Metrics.OTLP.Enabled,
-			RouterRuntime: cfg.Metrics.OTLP.RouterRuntime,
-			Exporters:     openTelemetryExporters,
+			Enabled:             cfg.Metrics.OTLP.Enabled,
+			RouterRuntime:       cfg.Metrics.OTLP.RouterRuntime,
+			Exporters:           openTelemetryExporters,
+			ExcludeMetrics:      cfg.Metrics.OTLP.ExcludeMetrics,
+			ExcludeMetricLabels: cfg.Metrics.OTLP.ExcludeMetricLabels,
 		},
 		Prometheus: rmetric.PrometheusConfig{
 			Enabled:             cfg.Metrics.Prometheus.Enabled,
