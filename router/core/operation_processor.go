@@ -6,12 +6,21 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"hash"
+	"io"
+	"net/http"
+	"net/url"
+	"slices"
+	"sync"
+	"time"
+
 	"github.com/buger/jsonparser"
 	"github.com/cespare/xxhash/v2"
 	"github.com/dgraph-io/ristretto"
 	"github.com/pkg/errors"
 	"github.com/tidwall/sjson"
 	fastjson "github.com/wundergraph/astjson"
+
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -25,13 +34,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/middleware/operation_complexity"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/variablesvalidation"
-	"hash"
-	"io"
-	"net/http"
-	"net/url"
-	"slices"
-	"sync"
-	"time"
 )
 
 var (
@@ -730,7 +732,7 @@ func (o *OperationKit) setAndParseOperationDoc() error {
 func (o *OperationKit) NormalizeVariables() error {
 	before := len(o.kit.doc.Input.Variables) + len(o.kit.doc.Input.RawBytes)
 	report := &operationreport.Report{}
-	o.kit.variablesNormalizer.NormalizeNamedOperation(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.parsedOperation.Request.OperationName, report)
+	o.kit.variablesNormalizer.NormalizeOperation(o.kit.doc, o.operationProcessor.executor.ClientSchema, report)
 	if report.HasErrors() {
 		return &reportError{
 			report: report,
@@ -996,9 +998,9 @@ func createParseKit(i int, options *parseKitOptions) *parseKit {
 		keyGen:     xxhash.New(),
 		sha256Hash: sha256.New(),
 		staticNormalizer: astnormalization.NewWithOpts(
+			astnormalization.WithRemoveNotMatchingOperationDefinitions(),
 			astnormalization.WithInlineFragmentSpreads(),
 			astnormalization.WithRemoveFragmentDefinitions(),
-			astnormalization.WithRemoveNotMatchingOperationDefinitions(),
 			astnormalization.WithRemoveUnusedVariables(),
 		),
 		variablesNormalizer: astnormalization.NewVariablesNormalizer(),
