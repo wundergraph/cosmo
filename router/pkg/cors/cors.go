@@ -123,21 +123,27 @@ func (c *Config) parseWildcardRules() [][]string {
 			continue
 		}
 
-		if c := strings.Count(o, "*"); c > 1 {
-			panic(errors.New("only one * is allowed").Error())
-		}
+		// Split origin by wildcard (*)
+		parts := strings.Split(o, "*")
 
-		i := strings.Index(o, "*")
-		if i == 0 {
-			wRules = append(wRules, []string{"*", o[1:]})
-			continue
-		}
-		if i == (len(o) - 1) {
-			wRules = append(wRules, []string{o[:i-1], "*"})
+		// If there’s no wildcard, skip this origin
+		if len(parts) == 1 {
 			continue
 		}
 
-		wRules = append(wRules, []string{o[:i], o[i+1:]})
+		// Generate rules for origins with multiple wildcard segments
+		var rule []string
+		for i, part := range parts {
+			if i > 0 {
+				rule = append(rule, "*") // Add wildcard indicator between segments
+			}
+			if part != "" {
+				rule = append(rule, part)
+			}
+		}
+
+		// Add parsed rule to wRules
+		wRules = append(wRules, rule)
 	}
 
 	return wRules

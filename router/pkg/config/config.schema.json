@@ -883,6 +883,20 @@
                     },
                     "required": ["exporter", "endpoint"]
                   }
+                },
+                "exclude_metrics": {
+                  "type": "array",
+                  "description": "The metrics to exclude from the OTEL metrics. Accepts a list of Go regular expressions. Use https://regex101.com/ to test your regular expressions.",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "exclude_metric_labels": {
+                  "type": "array",
+                  "description": "The metric labels to exclude from the OTEL metrics. Accepts a list of Go regular expressions. Use https://regex101.com/ to test your regular expressions.",
+                  "items": {
+                    "type": "string"
+                  }
                 }
               }
             },
