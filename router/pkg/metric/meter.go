@@ -387,9 +387,8 @@ func defaultOtlpMetricOptions(ctx context.Context, serviceInstanceID string, c *
 	}
 
 	attributeFilter := func(value attribute.KeyValue) bool {
-		name := sanitizeName(string(value.Key))
 		for _, re := range c.OpenTelemetry.ExcludeMetricLabels {
-			if re.MatchString(name) {
+			if re.MatchString(string(value.Key)) {
 				return false
 			}
 		}
@@ -401,9 +400,8 @@ func defaultOtlpMetricOptions(ctx context.Context, serviceInstanceID string, c *
 		s := sdkmetric.Stream{Name: i.Name, Description: i.Description, Unit: i.Unit}
 
 		// Filter out metrics that match the excludeMetrics regexes
-		sanitized := sanitizeName(i.Name)
 		for _, re := range c.OpenTelemetry.ExcludeMetrics {
-			if re.MatchString(sanitized) {
+			if re.MatchString(i.Name) {
 				// Drop the metric
 				s.Aggregation = sdkmetric.AggregationDrop{}
 				return s, true
