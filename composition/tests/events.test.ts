@@ -481,6 +481,12 @@ describe('events Configuration tests', () => {
         ]),
       );
     });
+
+    test('that an error is returned if a NATS subject references an invalid argument', () => {
+      const { errors } = normalizeSubgraph(subgraphW.definitions, subgraphW.name);
+      expect(errors).toBeDefined();
+      expect(errors![0]).toStrictEqual('');
+    });
   });
 
   describe('Federation tests', () => {
@@ -1253,6 +1259,27 @@ const subgraphV: Subgraph = {
 
     type Object {
       id: ID!
+    }
+  `),
+};
+
+const subgraphW: Subgraph = {
+  name: 'subgraph-w',
+  url: '',
+  definitions: parse(`
+    type Subscription {
+      entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(
+        subjects: ["entities.{{ args.invalid }}"],
+      )
+    }
+
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+
+    input edfs__NatsStreamConfiguration {
+      consumerName: String!
+      streamName: String!
     }
   `),
 };
