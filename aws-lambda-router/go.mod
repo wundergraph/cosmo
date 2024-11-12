@@ -8,7 +8,7 @@ require (
 	github.com/akrylysov/algnhsa v1.1.0
 	github.com/aws/aws-lambda-go v1.43.0
 	github.com/stretchr/testify v1.9.0
-	github.com/wundergraph/cosmo/router v0.0.0-20241107203432-34a709900e23
+	github.com/wundergraph/cosmo/router v0.0.0-20241112142156-4cc72b2fef27
 	go.uber.org/zap v1.27.0
 )
 
