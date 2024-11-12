@@ -149,7 +149,7 @@ type (
 		staticExecutionConfig           *nodev1.RouterConfig
 		awsLambda                       bool
 		shutdown                        atomic.Bool
-		bootstrapped                    bool
+		bootstrapped                    atomic.Bool
 		ipAnonymization                 *IPAnonymizationConfig
 		listenAddr                      string
 		baseURL                         string
@@ -652,13 +652,11 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 }
 
 // bootstrap initializes the Router. It is called by Start() and NewServer().
-// It should only be called once for a Router instance. Not safe for concurrent use.
+// It should only be called once for a Router instance.
 func (r *Router) bootstrap(ctx context.Context) error {
-	if r.bootstrapped {
+	if !r.bootstrapped.CompareAndSwap(false, true) {
 		return fmt.Errorf("router is already bootstrapped")
 	}
-
-	r.bootstrapped = true
 
 	cosmoCloudTracingEnabled := r.traceConfig.Enabled && rtrace.DefaultExporter(r.traceConfig) != nil
 	artInProductionEnabled := r.engineExecutionConfiguration.EnableRequestTracing && !r.developmentMode
@@ -1094,14 +1092,12 @@ func (r *Router) Start(ctx context.Context) error {
 }
 
 // Shutdown gracefully shuts down the router. It blocks until the server is shutdown.
-// If the router is already shutdown, the method returns immediately without error. Not safe for concurrent use.
+// If the router is already shutdown, the method returns immediately without error.
 func (r *Router) Shutdown(ctx context.Context) (err error) {
 
-	if r.shutdown.Load() {
+	if !r.shutdown.CompareAndSwap(false, true) {
 		return nil
 	}
-
-	r.shutdown.Store(true)
 
 	// Respect grace period
 	if r.routerGracePeriod > 0 {
