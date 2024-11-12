@@ -44,7 +44,7 @@ func NewRedisClient(opts *RedisOptions) (KVClient, error) {
 	return rclient, nil
 }
 
-func (r *redisClient) Get(ctx context.Context, clientName, operationHash string) ([]byte, error) {
+func (r *redisClient) Get(ctx context.Context, operationHash string) ([]byte, error) {
 	cmd := r.client.Get(ctx, r.prefix+operationHash)
 	if errors.Is(cmd.Err(), redis.Nil) {
 		return nil, nil
