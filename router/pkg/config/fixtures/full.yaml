@@ -87,6 +87,8 @@ telemetry:
     otlp:
       enabled: true
       router_runtime: true
+      exclude_metric_labels: []
+      exclude_metrics: []
       # If no exporters are defined, the default one is used
       exporters:
         - exporter: http # or grpc

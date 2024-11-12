@@ -33,6 +33,8 @@
       "OTLP": {
         "Enabled": true,
         "RouterRuntime": true,
+        "ExcludeMetrics": null,
+        "ExcludeMetricLabels": null,
         "Exporters": null
       },
       "Prometheus": {

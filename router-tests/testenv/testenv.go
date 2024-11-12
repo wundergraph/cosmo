@@ -19,6 +19,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -104,6 +105,13 @@ type RouterConfig struct {
 	ConfigPollerFactory func(config *nodev1.RouterConfig) configpoller.ConfigPoller
 }
 
+type MetricExclusions struct {
+	ExcludedPrometheusMetrics      []*regexp.Regexp
+	ExcludedPrometheusMetricLabels []*regexp.Regexp
+	ExcludedOTLPMetrics            []*regexp.Regexp
+	ExcludedOTLPMetricLabels       []*regexp.Regexp
+}
+
 type Config struct {
 	Subgraphs                          SubgraphsConfig
 	RouterConfig                       *RouterConfig
@@ -126,6 +134,7 @@ type Config struct {
 	CustomResourceAttributes           []config.CustomStaticAttribute
 	MetricReader                       metric.Reader
 	PrometheusRegistry                 *prometheus.Registry
+	MetricExclusions                   MetricExclusions
 	ShutdownDelay                      time.Duration
 	NoRetryClient                      bool
 	PropagationConfig                  config.PropagationConfig
@@ -736,10 +745,12 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			return nil, fmt.Errorf("could not get free port: %w", err)
 		}
 		prometheusConfig = rmetric.PrometheusConfig{
-			Enabled:      true,
-			ListenAddr:   fmt.Sprintf("localhost:%d", port),
-			Path:         "/metrics",
-			TestRegistry: testConfig.PrometheusRegistry,
+			Enabled:             true,
+			ListenAddr:          fmt.Sprintf("localhost:%d", port),
+			Path:                "/metrics",
+			TestRegistry:        testConfig.PrometheusRegistry,
+			ExcludeMetrics:      testConfig.MetricExclusions.ExcludedPrometheusMetrics,
+			ExcludeMetricLabels: testConfig.MetricExclusions.ExcludedPrometheusMetricLabels,
 		}
 	}
 
@@ -754,8 +765,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 					Enabled: true,
 				},
 				OTLP: config.MetricsOTLP{
-					Enabled:       true,
-					RouterRuntime: false,
+					Enabled:             true,
+					RouterRuntime:       false,
+					ExcludeMetrics:      testConfig.MetricExclusions.ExcludedOTLPMetrics,
+					ExcludeMetricLabels: testConfig.MetricExclusions.ExcludedOTLPMetricLabels,
 				},
 			},
 		})
