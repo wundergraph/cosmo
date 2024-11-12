@@ -690,6 +690,7 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 
 	// Generate the operation ID
 	o.parsedOperation.ID = o.kit.keyGen.Sum64()
+	o.kit.keyGen.Reset()
 
 	// Print the operation with the original operation name
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = o.originalOperationNameRef
