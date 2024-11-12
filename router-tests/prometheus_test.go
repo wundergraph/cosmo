@@ -2586,14 +2586,254 @@ func TestPrometheus(t *testing.T) {
 	t.Run("Collect and export OTEL metrics to Prometheus with exclusion", func(t *testing.T) {
 		t.Parallel()
 
-		exporter := tracetest.NewInMemoryExporter(t)
-		metricReader := metric.NewManualReader()
-		promRegistry := prometheus.NewRegistry()
+		var (
+			err        error
+			mfFull     []*io_prometheus_client.MetricFamily
+			mfFiltered []*io_prometheus_client.MetricFamily
+		)
+
+		metricReaderFull := metric.NewManualReader()
+		promRegistryFull := prometheus.NewRegistry()
 
 		testenv.Run(t, &testenv.Config{
-			TraceExporter:      exporter,
-			MetricReader:       metricReader,
-			PrometheusRegistry: promRegistry,
+			MetricReader:       metricReaderFull,
+			PrometheusRegistry: promRegistryFull,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query myQuery { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			mfFull, err = promRegistryFull.Gather()
+			require.NoError(t, err)
+
+			requestTotal := findMetricFamilyByName(mfFull, "router_http_requests_total")
+			requestTotalMetrics := requestTotal.GetMetric()
+
+			require.Len(t, requestTotalMetrics, 2)
+			require.Len(t, requestTotalMetrics[0].Label, 12)
+			require.Len(t, requestTotalMetrics[1].Label, 14)
+
+			require.Equal(t, []*io_prometheus_client.LabelPair{
+				{
+					Name:  PointerOf("http_status_code"),
+					Value: PointerOf("200"),
+				},
+				{
+					Name:  PointerOf("otel_scope_name"),
+					Value: PointerOf("cosmo.router.prometheus"),
+				},
+				{
+					Name:  PointerOf("otel_scope_version"),
+					Value: PointerOf("0.0.1"),
+				},
+				{
+					Name:  PointerOf("wg_client_name"),
+					Value: PointerOf("unknown"),
+				},
+				{
+					Name:  PointerOf("wg_client_version"),
+					Value: PointerOf("missing"),
+				},
+				{
+					Name:  PointerOf("wg_federated_graph_id"),
+					Value: PointerOf("graph"),
+				},
+				{
+					Name:  PointerOf("wg_operation_name"),
+					Value: PointerOf("myQuery"),
+				},
+				{
+					Name:  PointerOf("wg_operation_protocol"),
+					Value: PointerOf("http"),
+				},
+				{
+					Name:  PointerOf("wg_operation_type"),
+					Value: PointerOf("query"),
+				},
+				{
+					Name:  PointerOf("wg_router_cluster_name"),
+					Value: PointerOf(""),
+				},
+				{
+					Name:  PointerOf("wg_router_config_version"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+				},
+				{
+					Name:  PointerOf("wg_router_version"),
+					Value: PointerOf("dev"),
+				},
+			}, requestTotalMetrics[0].Label)
+
+			require.Equal(t, []*io_prometheus_client.LabelPair{
+				{
+					Name:  PointerOf("http_status_code"),
+					Value: PointerOf("200"),
+				},
+				{
+					Name:  PointerOf("otel_scope_name"),
+					Value: PointerOf("cosmo.router.prometheus"),
+				},
+				{
+					Name:  PointerOf("otel_scope_version"),
+					Value: PointerOf("0.0.1"),
+				},
+				{
+					Name:  PointerOf("wg_client_name"),
+					Value: PointerOf("unknown"),
+				},
+				{
+					Name:  PointerOf("wg_client_version"),
+					Value: PointerOf("missing"),
+				},
+				{
+					Name:  PointerOf("wg_federated_graph_id"),
+					Value: PointerOf("graph"),
+				},
+				{
+					Name:  PointerOf("wg_operation_name"),
+					Value: PointerOf("myQuery"),
+				},
+				{
+					Name:  PointerOf("wg_operation_protocol"),
+					Value: PointerOf("http"),
+				},
+				{
+					Name:  PointerOf("wg_operation_type"),
+					Value: PointerOf("query"),
+				},
+				{
+					Name:  PointerOf("wg_router_cluster_name"),
+					Value: PointerOf(""),
+				},
+				{
+					Name:  PointerOf("wg_router_config_version"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+				},
+				{
+					Name:  PointerOf("wg_router_version"),
+					Value: PointerOf("dev"),
+				},
+				{
+					Name:  PointerOf("wg_subgraph_id"),
+					Value: PointerOf("0"),
+				},
+				{
+					Name:  PointerOf("wg_subgraph_name"),
+					Value: PointerOf("employees"),
+				},
+			}, requestTotalMetrics[1].Label)
+
+			requestsInFlight := findMetricFamilyByName(mfFull, "router_http_requests_in_flight")
+			requestsInFlightMetrics := requestsInFlight.GetMetric()
+
+			require.Len(t, requestsInFlightMetrics, 2)
+			require.Len(t, requestsInFlightMetrics[0].Label, 9)
+			require.Len(t, requestsInFlightMetrics[1].Label, 13)
+
+			require.Equal(t, []*io_prometheus_client.LabelPair{
+				{
+					Name:  PointerOf("otel_scope_name"),
+					Value: PointerOf("cosmo.router.prometheus"),
+				},
+				{
+					Name:  PointerOf("otel_scope_version"),
+					Value: PointerOf("0.0.1"),
+				},
+				{
+					Name:  PointerOf("wg_client_name"),
+					Value: PointerOf("unknown"),
+				},
+				{
+					Name:  PointerOf("wg_client_version"),
+					Value: PointerOf("missing"),
+				},
+				{
+					Name:  PointerOf("wg_federated_graph_id"),
+					Value: PointerOf("graph"),
+				},
+				{
+					Name:  PointerOf("wg_operation_protocol"),
+					Value: PointerOf("http"),
+				},
+				{
+					Name:  PointerOf("wg_router_cluster_name"),
+					Value: PointerOf(""),
+				},
+				{
+					Name:  PointerOf("wg_router_config_version"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+				},
+				{
+					Name:  PointerOf("wg_router_version"),
+					Value: PointerOf("dev"),
+				},
+			}, requestsInFlightMetrics[0].Label)
+
+			require.Equal(t, []*io_prometheus_client.LabelPair{
+				{
+					Name:  PointerOf("otel_scope_name"),
+					Value: PointerOf("cosmo.router.prometheus"),
+				},
+				{
+					Name:  PointerOf("otel_scope_version"),
+					Value: PointerOf("0.0.1"),
+				},
+				{
+					Name:  PointerOf("wg_client_name"),
+					Value: PointerOf("unknown"),
+				},
+				{
+					Name:  PointerOf("wg_client_version"),
+					Value: PointerOf("missing"),
+				},
+				{
+					Name:  PointerOf("wg_federated_graph_id"),
+					Value: PointerOf("graph"),
+				},
+				{
+					Name:  PointerOf("wg_operation_name"),
+					Value: PointerOf("myQuery"),
+				},
+				{
+					Name:  PointerOf("wg_operation_protocol"),
+					Value: PointerOf("http"),
+				},
+				{
+					Name:  PointerOf("wg_operation_type"),
+					Value: PointerOf("query"),
+				},
+				{
+					Name:  PointerOf("wg_router_cluster_name"),
+					Value: PointerOf(""),
+				},
+				{
+					Name:  PointerOf("wg_router_config_version"),
+					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+				},
+				{
+					Name:  PointerOf("wg_router_version"),
+					Value: PointerOf("dev"),
+				},
+				{
+					Name:  PointerOf("wg_subgraph_id"),
+					Value: PointerOf("0"),
+				},
+				{
+					Name:  PointerOf("wg_subgraph_name"),
+					Value: PointerOf("employees"),
+				},
+			}, requestsInFlightMetrics[1].Label)
+
+		})
+
+		metricReaderFiltered := metric.NewManualReader()
+		promRegistryFiltered := prometheus.NewRegistry()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader:       metricReaderFiltered,
+			PrometheusRegistry: promRegistryFiltered,
 			MetricExclusions: testenv.MetricExclusions{
 				ExcludedPrometheusMetrics: []*regexp.Regexp{
 					regexp.MustCompile(`^router_http_requests$`),
@@ -2610,19 +2850,22 @@ func TestPrometheus(t *testing.T) {
 
 			require.JSONEq(t, employeesIDData, res.Body)
 
-			mf, err := promRegistry.Gather()
+			mfFiltered, err = promRegistryFiltered.Gather()
 			require.NoError(t, err)
 
-			rt := findMetricFamilyByName(mf, "router_http_requests_total")
+			rt := findMetricFamilyByName(mfFiltered, "router_http_requests_total")
 
 			require.Nil(t, rt)
 
-			requestsInFlight := findMetricFamilyByName(mf, "router_http_requests_in_flight")
-			requestsInFlightMetrics := requestsInFlight.GetMetric()
+			requestsInFlightFull := findMetricFamilyByName(mfFull, "router_http_requests_in_flight")
+			requestsInFlightMetricsFull := requestsInFlightFull.GetMetric()
 
-			require.Len(t, requestsInFlightMetrics, 2)
-			require.Len(t, requestsInFlightMetrics[0].Label, 7)
-			require.Len(t, requestsInFlightMetrics[1].Label, 11)
+			requestsInFlightFiltered := findMetricFamilyByName(mfFiltered, "router_http_requests_in_flight")
+			requestsInFlightMetricsFiltered := requestsInFlightFiltered.GetMetric()
+
+			require.Len(t, requestsInFlightMetricsFiltered, 2)
+			require.Len(t, requestsInFlightMetricsFiltered[0].Label, 7)
+			require.Len(t, requestsInFlightMetricsFiltered[1].Label, 11)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
@@ -2653,7 +2896,7 @@ func TestPrometheus(t *testing.T) {
 					Name:  PointerOf("wg_router_version"),
 					Value: PointerOf("dev"),
 				},
-			}, requestsInFlightMetrics[0].Label)
+			}, requestsInFlightMetricsFiltered[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
@@ -2700,7 +2943,12 @@ func TestPrometheus(t *testing.T) {
 					Name:  PointerOf("wg_subgraph_name"),
 					Value: PointerOf("employees"),
 				},
-			}, requestsInFlightMetrics[1].Label)
+			}, requestsInFlightMetricsFiltered[1].Label)
+
+			// Check that the full and filtered metrics are different
+			require.Greater(t, len(mfFull), len(mfFiltered), "full metrics should have more metrics than filtered")
+			require.Greater(t, len(requestsInFlightMetricsFull[0].Label), len(requestsInFlightMetricsFiltered[0].Label))
+			require.Greater(t, len(requestsInFlightMetricsFull[1].Label), len(requestsInFlightMetricsFiltered[1].Label))
 		})
 	})
 }
