@@ -12,6 +12,7 @@ import {
   FeatureFlagRouterExecutionConfig,
   FeatureFlagRouterExecutionConfigs,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import Table from 'cli-table3';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { composeSubgraphs, introspectSubgraph } from '../../../utils.js';
 
@@ -52,6 +53,7 @@ export default (opts: BaseCommandOptions) => {
   );
   command.requiredOption('-i, --input <path-to-input>', 'The yaml file with data about graph and subgraphs.');
   command.option('-o, --out [string]', 'Destination file for the router config.');
+  command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
   command.action(async (options) => {
     const inputFile = resolve(options.input);
     const inputFileLocation = dirname(inputFile);
@@ -105,11 +107,38 @@ export default (opts: BaseCommandOptions) => {
     );
 
     if (result.errors && result.errors.length > 0) {
-      program.error(`Failed to compose: ${result.errors[0]}`);
+      const compositionErrorsTable = new Table({
+        head: [pc.bold(pc.white('ERROR_MESSAGE'))],
+        colWidths: [120],
+        wordWrap: true,
+      });
+
+      console.log(
+        pc.red(`We found composition errors, while composing.\n${pc.bold('Please check the errors below:')}`),
+      );
+      for (const compositionError of result.errors) {
+        compositionErrorsTable.push([compositionError.message]);
+      }
+      console.log(compositionErrorsTable.toString());
+      process.exit(1);
     }
 
     if (!result.federationResult) {
       program.error('Failed to compose given subgraphs');
+    }
+
+    if (!options.suppressWarnings && result.warnings.length > 0) {
+      const compositionWarningsTable = new Table({
+        head: [pc.bold(pc.white('WARNING_MESSAGE'))],
+        colWidths: [120],
+        wordWrap: true,
+      });
+
+      console.log(pc.yellow(`The following warnings were produced while composing:`));
+      for (const warning of result.warnings) {
+        compositionWarningsTable.push([warning.message]);
+      }
+      console.log(compositionWarningsTable.toString());
     }
 
     const federatedClientSDL = result.federationResult.shouldIncludeClientSchema
@@ -211,11 +240,44 @@ export default (opts: BaseCommandOptions) => {
         );
 
         if (result.errors && result.errors.length > 0) {
-          program.error(`Failed to compose for feature flags: ${result.errors[0]}`);
+          const compositionErrorsTable = new Table({
+            head: [pc.bold(pc.white('ERROR_MESSAGE'))],
+            colWidths: [120],
+            wordWrap: true,
+          });
+
+          console.log(
+            pc.red(
+              `We found composition errors, while composing the feature flag ${pc.italic(ff.name)}.\n${pc.bold(
+                'Please check the errors below:',
+              )}`,
+            ),
+          );
+          for (const compositionError of result.errors) {
+            compositionErrorsTable.push([compositionError.message]);
+          }
+          console.log(compositionErrorsTable.toString());
+          continue;
         }
 
         if (!result.federationResult) {
           program.error('Failed to compose given subgraphs for feature flags');
+        }
+
+        if (!options.suppressWarnings && result.warnings.length > 0) {
+          const compositionWarningsTable = new Table({
+            head: [pc.bold(pc.white('WARNING_MESSAGE'))],
+            colWidths: [120],
+            wordWrap: true,
+          });
+
+          console.log(
+            pc.yellow(`The following warnings were produced while composing the feature flag ${pc.italic(ff.name)}:`),
+          );
+          for (const warning of result.warnings) {
+            compositionWarningsTable.push([warning.message]);
+          }
+          console.log(compositionWarningsTable.toString());
         }
 
         const federatedClientSDL = result.federationResult.shouldIncludeClientSchema
@@ -259,6 +321,7 @@ export default (opts: BaseCommandOptions) => {
 
     if (options.out) {
       await writeFile(options.out, routerConfig.toJsonString());
+      console.log(pc.green(`Router config successfully written to ${pc.bold(options.out)}`));
     } else {
       console.log(routerConfig.toJsonString());
     }
