@@ -365,37 +365,32 @@
     "BlockSubscriptions": false,
     "BlockNonPersistedOperations": false,
     "ComplexityCalculationCache": {
-      "Enabled": false,
+      "Enabled": true,
       "CacheSize": 1024
     },
     "ComplexityLimits": {
       "Depth": {
-        "Enabled": false,
-        "Limit": 0,
-        "IgnorePersistedOperations": false
+        "Enabled": true,
+        "Limit": 5,
+        "IgnorePersistedOperations": true
       },
       "TotalFields": {
-        "Enabled": false,
-        "Limit": 0,
-        "IgnorePersistedOperations": false
+        "Enabled": true,
+        "Limit": 7,
+        "IgnorePersistedOperations": true
       },
       "RootFields": {
-        "Enabled": false,
-        "Limit": 0,
-        "IgnorePersistedOperations": false
+        "Enabled": true,
+        "Limit": 3,
+        "IgnorePersistedOperations": true
       },
       "RootFieldAliases": {
-        "Enabled": false,
-        "Limit": 0,
-        "IgnorePersistedOperations": false
+        "Enabled": true,
+        "Limit": 4,
+        "IgnorePersistedOperations": true
       }
     },
-    "DepthLimit": {
-      "Enabled": false,
-      "Limit": 0,
-      "CacheSize": 1024,
-      "IgnorePersistedOperations": false
-    }
+    "DepthLimit": null
   },
   "EngineExecutionConfiguration": {
     "Debug": {

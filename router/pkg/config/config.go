@@ -338,7 +338,7 @@ type QueryDepthConfiguration struct {
 
 type ComplexityCalculationCache struct {
 	Enabled   bool  `yaml:"enabled" envDefault:"false" env:"SECURITY_COMPLEXITY_CACHE_ENABLED"`
-	CacheSize int64 `yaml:"cache_size,omitempty" envDefault:"1024" env:"SECURITY_COMPLEXITY_CACHE_SIZE"`
+	CacheSize int64 `yaml:"size,omitempty" envDefault:"1024" env:"SECURITY_COMPLEXITY_CACHE_SIZE"`
 }
 
 type ComplexityLimits struct {

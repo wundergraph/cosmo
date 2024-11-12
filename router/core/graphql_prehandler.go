@@ -85,7 +85,6 @@ type PreHandler struct {
 	maxUploadFiles              int
 	maxUploadFileSize           int
 	complexityLimits            *config.ComplexityLimits
-	queryIgnorePersistent       bool
 	bodyReadBuffers             *sync.Pool
 	trackSchemaUsageInfo        bool
 	clientHeader                config.ClientHeader

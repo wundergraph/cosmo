@@ -296,6 +296,27 @@ storage_providers:
     - id: "my_redis"
       url: "redis://:test@localhost:6379"
 
+security:
+  complexity_calculation_cache:
+    enabled: true
+    size: 1024
+  complexity_limits:
+    depth:
+        enabled: true
+        limit: 5
+        ignore_persisted_operations: true
+    total_fields:
+      enabled: true
+      limit: 7
+      ignore_persisted_operations: true
+    root_fields:
+      enabled: true
+      limit: 3
+      ignore_persisted_operations: true
+    root_field_aliases:
+      enabled: true
+      limit: 4
+      ignore_persisted_operations: true
 persisted_operations:
   cache:
     size: 100MB
