@@ -22,7 +22,7 @@ type Client interface {
 
 type KVClient interface {
 	// Get retrieves the operation body from the KV store with the given operation hash as the key
-	Get(ctx context.Context, clientName, operationHash string) ([]byte, error)
+	Get(ctx context.Context, operationHash string) ([]byte, error)
 	// Set saves the operation body in the KV store with the given operation hash as the key and the ttl in seconds
 	Set(ctx context.Context, operationHash string, operationBody []byte, ttl int) error
 	// Close closes the KV store connection
@@ -70,10 +70,11 @@ func (c *client) Enabled() bool {
 
 func (c *client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error) {
 	if c.kvClient != nil {
-		return c.kvClient.Get(ctx, clientName, sha256Hash)
+		return c.kvClient.Get(ctx, sha256Hash)
 	}
 
-	return c.cache.Get(clientName, sha256Hash), nil
+	// we don't use the client name in the APQ cache, because operations should be persisted across all clients
+	return c.cache.Get("", sha256Hash), nil
 }
 
 func (c *client) SaveOperation(ctx context.Context, clientName, sha256Hash string, operationBody []byte) error {
@@ -81,7 +82,8 @@ func (c *client) SaveOperation(ctx context.Context, clientName, sha256Hash strin
 		return c.kvClient.Set(ctx, sha256Hash, operationBody, c.ttl)
 	}
 
-	c.cache.Set(clientName, sha256Hash, operationBody, c.ttl)
+	// we don't use the client name in the APQ cache, because operations should be persisted across all clients
+	c.cache.Set("", sha256Hash, operationBody, c.ttl)
 	return nil
 }
 

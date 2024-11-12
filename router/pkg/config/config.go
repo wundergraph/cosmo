@@ -583,6 +583,11 @@ type BaseStorageProvider struct {
 	URL string `yaml:"url,omitempty" envDefault:"https://cosmo-cdn.wundergraph.com"`
 }
 
+type RedisStorageProvider struct {
+	ID  string `yaml:"id,omitempty" env:"STORAGE_PROVIDER_REDIS_ID"`
+	URL string `yaml:"url,omitempty" env:"STORAGE_PROVIDER_REDIS_URL"`
+}
+
 type PersistedOperationsCDNProvider struct {
 	URL string `yaml:"url,omitempty" envDefault:"https://cosmo-cdn.wundergraph.com"`
 }
