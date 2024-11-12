@@ -1039,6 +1039,23 @@ func (e *Environment) MakeGraphQLRequestWithContext(ctx context.Context, request
 	return e.makeGraphQLRequest(req)
 }
 
+func (e *Environment) MakeGraphQLRequestWithHeaders(request GraphQLRequest, headers map[string]string) (*TestResponse, error) {
+	data, err := json.Marshal(request)
+	require.NoError(e.t, err)
+	req, err := http.NewRequestWithContext(e.Context, http.MethodPost, e.GraphQLRequestURL(), bytes.NewReader(data))
+	if err != nil {
+		return nil, err
+	}
+	if request.Header != nil {
+		req.Header = request.Header
+	}
+	req.Header.Set("Accept-Encoding", "identity")
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+	return e.makeGraphQLRequest(req)
+}
+
 func (e *Environment) MakeGraphQLRequestOverGET(request GraphQLRequest) (*TestResponse, error) {
 	req, err := e.newGraphQLRequestOverGET(e.GraphQLRequestURL(), request)
 	if err != nil {
