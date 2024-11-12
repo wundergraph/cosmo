@@ -3,6 +3,7 @@ package integration
 import (
 	"context"
 	"net/http"
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -2650,6 +2651,307 @@ func TestTelemetry(t *testing.T) {
 			}
 			require.Equal(t, "name", clientName)
 			require.Equal(t, "version", clientVersion)
+		})
+	})
+
+	t.Run("Excluded metrics and attributes should not be exported", func(t *testing.T) {
+		t.Parallel()
+
+		var (
+			rmFull     metricdata.ResourceMetrics
+			rmFiltered metricdata.ResourceMetrics
+		)
+
+		metricReaderFull := metric.NewManualReader()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader: metricReaderFull,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			err := metricReaderFull.Collect(context.Background(), &rmFull)
+			require.NoError(t, err)
+
+			require.Equal(t, 1, len(rmFull.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rmFull.ScopeMetrics))
+			require.Equal(t, 6, len(rmFull.ScopeMetrics[0].Metrics), "expected 6 Metrics, got %d", len(rmFull.ScopeMetrics[0].Metrics))
+		})
+
+		metricReaderFiltered := metric.NewManualReader()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader: metricReaderFiltered,
+			MetricExclusions: testenv.MetricExclusions{
+				ExcludedOTLPMetrics: []*regexp.Regexp{
+					regexp.MustCompile(`^router_http_requests$`),
+				},
+				ExcludedOTLPMetricLabels: []*regexp.Regexp{
+					regexp.MustCompile(`^wg_client_name$`),
+					regexp.MustCompile(`^wg_operation.*`),
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			err := metricReaderFiltered.Collect(context.Background(), &rmFiltered)
+			require.NoError(t, err)
+
+			requestDurationMetric := metricdata.Metrics{
+				Name:        "router.http.request.duration_milliseconds",
+				Description: "Server latency in milliseconds",
+				Unit:        "ms",
+				Data: metricdata.Histogram[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
+						{
+							Attributes: attribute.NewSet(
+								semconv.HTTPStatusCode(200),
+								otel.WgClientVersion.String("missing"),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgRouterClusterName.String(""),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+								otel.WgSubgraphID.String("0"),
+								otel.WgSubgraphName.String("employees"),
+							),
+							Sum: 0,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.HTTPStatusCode(200),
+								otel.WgClientVersion.String("missing"),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgRouterClusterName.String(""),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+							),
+							Sum: 0,
+						},
+					},
+				},
+			}
+
+			requestContentLengthMetric := metricdata.Metrics{
+				Name:        "router.http.request.content_length",
+				Description: "Total number of request bytes",
+				Unit:        "bytes",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								otel.WgClientVersion.String("missing"),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgRouterClusterName.String(""),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+								otel.WgSubgraphID.String("0"),
+								otel.WgSubgraphName.String("employees"),
+							),
+							Value: 28,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.HTTPStatusCode(200),
+								otel.WgClientVersion.String("missing"),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgRouterClusterName.String(""),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+							),
+							Value: 38,
+						},
+					},
+				},
+			}
+
+			responseContentLengthMetric := metricdata.Metrics{
+				Name:        "router.http.response.content_length",
+				Description: "Total number of response bytes",
+				Unit:        "bytes",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								semconv.HTTPStatusCode(200),
+								otel.WgClientVersion.String("missing"),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgRouterClusterName.String(""),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+								otel.WgSubgraphID.String("0"),
+								otel.WgSubgraphName.String("employees"),
+							),
+							Value: 117,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.HTTPStatusCode(200),
+								otel.WgClientVersion.String("missing"),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgRouterClusterName.String(""),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+							),
+							Value: 117,
+						},
+					},
+				},
+			}
+
+			requestInFlightMetric := metricdata.Metrics{
+				Name:        "router.http.requests.in_flight",
+				Description: "Number of requests in flight",
+				Unit:        "",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								otel.WgClientVersion.String("missing"),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgRouterClusterName.String(""),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+							),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(
+								otel.WgClientVersion.String("missing"),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgRouterClusterName.String(""),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+								otel.WgSubgraphID.String("0"),
+								otel.WgSubgraphName.String("employees"),
+							),
+							Value: 0,
+						},
+					},
+				},
+			}
+
+			operationPlanningTimeMetric := metricdata.Metrics{
+				Name:        "router.graphql.operation.planning_time",
+				Description: "Operation planning time in milliseconds",
+				Unit:        "ms",
+				Data: metricdata.Histogram[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
+						{
+							Attributes: attribute.NewSet(
+								otel.WgEnginePlanCacheHit.Bool(false),
+								otel.WgClientVersion.String("missing"),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgRouterClusterName.String(""),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+							),
+							Sum: 0,
+						},
+					},
+				},
+			}
+
+			want := metricdata.ScopeMetrics{
+				Scope: instrumentation.Scope{
+					Name:      "cosmo.router",
+					SchemaURL: "",
+					Version:   "0.0.1",
+				},
+				Metrics: []metricdata.Metrics{
+					requestDurationMetric,
+					requestContentLengthMetric,
+					responseContentLengthMetric,
+					requestInFlightMetric,
+					operationPlanningTimeMetric,
+				},
+			}
+
+			rs := attribute.NewSet(rmFiltered.Resource.Attributes()...)
+
+			require.True(t, rs.HasValue("host.name"))
+			require.True(t, rs.HasValue("os.type"))
+			require.True(t, rs.HasValue("process.pid"))
+
+			require.NotEmpty(t, rmFiltered.Resource.Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
+			require.Contains(t, rmFiltered.Resource.Attributes(), attribute.String("service.instance.id", "test-instance"))
+			require.Contains(t, rmFiltered.Resource.Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
+			require.Contains(t, rmFiltered.Resource.Attributes(), attribute.String("telemetry.sdk.language", "go"))
+			require.Contains(t, rmFiltered.Resource.Attributes(), attribute.String("service.version", "dev"))
+			require.Contains(t, rmFiltered.Resource.Attributes(), attribute.String("service.name", "cosmo-router"))
+
+			require.Equal(t, 1, len(rmFiltered.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rmFiltered.ScopeMetrics))
+			require.Equal(t, 5, len(rmFiltered.ScopeMetrics[0].Metrics), "expected 6 Metrics, got %d", len(rmFiltered.ScopeMetrics[0].Metrics))
+
+			metricdatatest.AssertEqual(t, want, rmFiltered.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
+			metricdatatest.AssertEqual(t, requestDurationMetric, rmFiltered.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, requestContentLengthMetric, rmFiltered.ScopeMetrics[0].Metrics[1], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, responseContentLengthMetric, rmFiltered.ScopeMetrics[0].Metrics[2], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, requestInFlightMetric, rmFiltered.ScopeMetrics[0].Metrics[3], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, rmFiltered.ScopeMetrics[0].Metrics[4], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
+			// Check if the excluded attributes are not present in the Resource
+			// The first metric completely excluded, the second one should be the first in filtered
+			require.NotEqual(t, rmFull.ScopeMetrics[0].Metrics[0].Name, rmFiltered.ScopeMetrics[0].Metrics[0].Name)
+			require.Equal(t, rmFull.ScopeMetrics[0].Metrics[1].Name, rmFiltered.ScopeMetrics[0].Metrics[0].Name)
+
+			// All other metrics should have fewer attributes in the filtered set compared to the full one
+			rdFull, ok := rmFull.ScopeMetrics[0].Metrics[1].Data.(metricdata.Histogram[float64])
+			require.True(t, ok)
+
+			rdFiltered, ok := rmFiltered.ScopeMetrics[0].Metrics[0].Data.(metricdata.Histogram[float64])
+			require.True(t, ok)
+
+			require.Greater(t, len(rdFull.DataPoints[0].Attributes.ToSlice()), len(rdFiltered.DataPoints[0].Attributes.ToSlice()))
+			require.Greater(t, len(rdFull.DataPoints[1].Attributes.ToSlice()), len(rdFiltered.DataPoints[1].Attributes.ToSlice()))
+
+			rclFull, ok := rmFull.ScopeMetrics[0].Metrics[2].Data.(metricdata.Sum[int64])
+			require.True(t, ok)
+
+			rclFiltered, ok := rmFiltered.ScopeMetrics[0].Metrics[1].Data.(metricdata.Sum[int64])
+			require.True(t, ok)
+
+			require.Greater(t, len(rclFull.DataPoints[0].Attributes.ToSlice()), len(rclFiltered.DataPoints[0].Attributes.ToSlice()))
+			require.Greater(t, len(rclFull.DataPoints[1].Attributes.ToSlice()), len(rclFiltered.DataPoints[1].Attributes.ToSlice()))
+
+			resClFull, ok := rmFull.ScopeMetrics[0].Metrics[3].Data.(metricdata.Sum[int64])
+			require.True(t, ok)
+
+			resClFiltered, ok := rmFiltered.ScopeMetrics[0].Metrics[2].Data.(metricdata.Sum[int64])
+			require.True(t, ok)
+
+			require.Greater(t, len(resClFull.DataPoints[0].Attributes.ToSlice()), len(resClFiltered.DataPoints[0].Attributes.ToSlice()))
+			require.Greater(t, len(resClFull.DataPoints[1].Attributes.ToSlice()), len(resClFiltered.DataPoints[1].Attributes.ToSlice()))
+
+			rifFull, ok := rmFull.ScopeMetrics[0].Metrics[4].Data.(metricdata.Sum[int64])
+			require.True(t, ok)
+
+			rifFiltered, ok := rmFiltered.ScopeMetrics[0].Metrics[3].Data.(metricdata.Sum[int64])
+			require.True(t, ok)
+
+			require.Greater(t, len(rifFull.DataPoints[0].Attributes.ToSlice()), len(rifFiltered.DataPoints[0].Attributes.ToSlice()))
+			require.Greater(t, len(rifFull.DataPoints[1].Attributes.ToSlice()), len(rifFiltered.DataPoints[1].Attributes.ToSlice()))
+
+			optFull, ok := rmFull.ScopeMetrics[0].Metrics[5].Data.(metricdata.Histogram[float64])
+			require.True(t, ok)
+
+			optFiltered, ok := rmFiltered.ScopeMetrics[0].Metrics[4].Data.(metricdata.Histogram[float64])
+			require.True(t, ok)
+
+			require.Greater(t, len(optFull.DataPoints[0].Attributes.ToSlice()), len(optFiltered.DataPoints[0].Attributes.ToSlice()))
 		})
 	})
 
