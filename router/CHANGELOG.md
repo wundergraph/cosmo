@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.141.1](https://github.com/wundergraph/cosmo/compare/router@0.141.0...router@0.141.1) (2024-11-12)
+
+### Bug Fixes
+
+* **router:** use OTLP separators for regex ([#1362](https://github.com/wundergraph/cosmo/issues/1362)) ([e9dd4ac](https://github.com/wundergraph/cosmo/commit/e9dd4ac01c864afbde533f5b70da920ac460086f)) (@Noroth)
+
 # [0.141.0](https://github.com/wundergraph/cosmo/compare/router@0.140.2...router@0.141.0) (2024-11-12)
 
 ### Bug Fixes
