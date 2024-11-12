@@ -566,3 +566,48 @@ func TestDisabled(t *testing.T) {
 	w = performRequest(router, "GET", "https://a.test.com")
 	assert.Equal(t, 200, w.Code)
 }
+
+func BenchmarkCorsWithoutWildcards(b *testing.B) {
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	b.Run("without wildcards", func(b *testing.B) {
+		router := newTestRouter(Config{
+			Enabled: true,
+			AllowOrigins: []string{
+				"https://*.wgexample.com",
+				"https://wgexample.com",
+				"https://*.wgexample.io:*",
+				"https://*.wgexample.org",
+				"https://*.d2grknavcceso7.amplifyapp.com",
+				"https://*.example.*.*.com", // multiple sequential wildcards
+				"https://*.*.*.*.com",
+			},
+			AllowMethods:  []string{"GET"},
+			AllowWildcard: true,
+		})
+
+		w := performRequest(router, "GET", "https://wgexample.com")
+		assert.Equal(b, 200, w.Code)
+	})
+}
+
+func BenchmarkCorsWithWildcards(b *testing.B) {
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	b.Run("with wildcards", func(b *testing.B) {
+		router := newTestRouter(Config{
+			Enabled: true,
+			AllowOrigins: []string{
+				"https://*.example.*.*.com", // multiple sequential wildcards
+				"https://*.*.*.*.com",
+			},
+			AllowMethods:  []string{"GET"},
+			AllowWildcard: true,
+		})
+
+		w := performRequest(router, "GET", "https://subdomain.test.example.subdomain.example.co.whatgoeshere.woohoo.com")
+		assert.Equal(b, 200, w.Code)
+	})
+}
