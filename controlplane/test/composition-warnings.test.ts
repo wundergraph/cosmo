@@ -21,7 +21,7 @@ describe('Composition warning tests', (ctx) => {
     await afterAllSetup(dbname);
   });
 
-  test('that an warnings is returned if a field is override from a subgraph that doesnt exist', async () => {
+  test(`that a warning is returned if the target subgraph of an override does not exist`, async () => {
     const { client, server } = await SetupTest({ dbname });
 
     const federatedGraphName = genID('fedGraph');
@@ -51,7 +51,7 @@ describe('Composition warning tests', (ctx) => {
     expect(publishFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
     expect(publishFederatedSubgraphResp.compositionWarnings).toHaveLength(1);
     expect(publishFederatedSubgraphResp.compositionWarnings[0].message).toBe(
-      invalidOverrideTargetSubgraphNameWarning('employees', 'Query', ['hello']).message,
+      invalidOverrideTargetSubgraphNameWarning('employees', 'Query', ['hello'], 'pandas').message,
     );
 
     await server.close();

@@ -1503,6 +1503,7 @@ describe('openfed_FieldSet tests', () => {
           FieldSetDirective.REQUIRES,
         ),
       );
+      expect(warnings[0].subgraph.name).toBe('subgraph-f');
       const e = federationResult!.subgraphConfigBySubgraphName.get(subgraphE.name);
       expect(e).toBeDefined();
       expect(e!.configurationDataByTypeName).toStrictEqual(
@@ -1623,6 +1624,7 @@ describe('openfed_FieldSet tests', () => {
           FieldSetDirective.PROVIDES,
         ),
       );
+      expect(warnings[0].subgraph.name).toBe('subgraph-g');
       const e = federationResult!.subgraphConfigBySubgraphName.get(subgraphE.name);
       expect(e).toBeDefined();
       expect(e!.configurationDataByTypeName).toStrictEqual(
