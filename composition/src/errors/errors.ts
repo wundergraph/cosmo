@@ -1223,6 +1223,14 @@ export function invalidEventSubjectsItemErrorMessage(argumentName: string): stri
   );
 }
 
+export function invalidEventSubjectsArgumentErrorMessage(argumentName: string): string {
+  return `The argument "${argumentName}" is invalid.`;
+}
+
+export function undefinedEventSubjectsArgumentErrorMessage(argumentName: string): string {
+  return `The argument "${argumentName}" is undefined.`;
+}
+
 export const invalidEventProviderIdErrorMessage = `If explicitly defined, the "providerId" argument must be a string with a minimum length of one.`;
 
 export function invalidEventDirectiveError(directiveName: string, fieldPath: string, errorMessages: string[]): Error {
