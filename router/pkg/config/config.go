@@ -354,6 +354,10 @@ type ComplexityLimit struct {
 	IgnorePersistedOperations bool `yaml:"ignore_persisted_operations,omitempty" envDefault:"false"`
 }
 
+func (c *ComplexityLimit) ApplyLimit(isPersistent bool) bool {
+	return c.Enabled && (!isPersistent || isPersistent && !c.IgnorePersistedOperations)
+}
+
 type OverrideRoutingURLConfiguration struct {
 	Subgraphs map[string]string `yaml:"subgraphs"`
 }
