@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.31.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.30.1...@wundergraph/composition@0.31.0) (2024-11-13)
+
+### Features
+
+* add subgraph property to Warnings ([#1355](https://github.com/wundergraph/cosmo/issues/1355)) ([cacc0f3](https://github.com/wundergraph/cosmo/commit/cacc0f3c01673b7bf1ea8d20305d04939ca3351e)) (@Aenimus)
+
 ## [0.30.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.30.0...@wundergraph/composition@0.30.1) (2024-11-07)
 
 **Note:** Version bump only for package @wundergraph/composition
