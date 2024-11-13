@@ -3,6 +3,7 @@ package integration
 import (
 	"context"
 	"net/http"
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -2653,6 +2654,106 @@ func TestTelemetry(t *testing.T) {
 		})
 	})
 
+	t.Run("Excluded metrics and attributes should not be exported", func(t *testing.T) {
+		t.Parallel()
+
+		var (
+			rmFull     metricdata.ResourceMetrics
+			rmFiltered metricdata.ResourceMetrics
+		)
+
+		metricReaderFull := metric.NewManualReader()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader: metricReaderFull,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			err := metricReaderFull.Collect(context.Background(), &rmFull)
+			require.NoError(t, err)
+
+			require.Equal(t, 1, len(rmFull.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rmFull.ScopeMetrics))
+			require.Equal(t, 6, len(rmFull.ScopeMetrics[0].Metrics), "expected 6 Metrics, got %d", len(rmFull.ScopeMetrics[0].Metrics))
+
+			require.Equal(t, "router.http.requests", rmFull.ScopeMetrics[0].Metrics[0].Name)
+			require.True(t, metricdatatest.AssertHasAttributes(t, rmFull.ScopeMetrics[0].Metrics[0], otel.WgClientName.String("unknown")))
+			require.True(t, metricdatatest.AssertHasAttributes(t, rmFull.ScopeMetrics[0].Metrics[0], otel.WgOperationName.String("")))
+
+			require.True(t, metricdatatest.AssertHasAttributes(t, rmFull.ScopeMetrics[0].Metrics[1], otel.WgClientName.String("unknown")))
+			require.True(t, metricdatatest.AssertHasAttributes(t, rmFull.ScopeMetrics[0].Metrics[1], otel.WgOperationName.String("")))
+
+			require.True(t, metricdatatest.AssertHasAttributes(t, rmFull.ScopeMetrics[0].Metrics[2], otel.WgClientName.String("unknown")))
+			require.True(t, metricdatatest.AssertHasAttributes(t, rmFull.ScopeMetrics[0].Metrics[2], otel.WgOperationName.String("")))
+
+			require.True(t, metricdatatest.AssertHasAttributes(t, rmFull.ScopeMetrics[0].Metrics[3], otel.WgClientName.String("unknown")))
+			require.True(t, metricdatatest.AssertHasAttributes(t, rmFull.ScopeMetrics[0].Metrics[3], otel.WgOperationName.String("")))
+
+			require.True(t, metricdatatest.AssertHasAttributes(t, rmFull.ScopeMetrics[0].Metrics[4], otel.WgClientName.String("unknown")))
+		})
+
+		metricReaderFiltered := metric.NewManualReader()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader: metricReaderFiltered,
+			MetricExclusions: testenv.MetricExclusions{
+				ExcludedOTLPMetrics: []*regexp.Regexp{
+					regexp.MustCompile(`^router\.http\.requests$`),
+				},
+				ExcludedOTLPMetricLabels: []*regexp.Regexp{
+					regexp.MustCompile(`^wg\.client\.name$`),
+					regexp.MustCompile(`^wg\.operation.*`),
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			err := metricReaderFiltered.Collect(context.Background(), &rmFiltered)
+			require.NoError(t, err)
+
+			require.Equal(t, 1, len(rmFiltered.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rmFiltered.ScopeMetrics))
+			require.Equal(t, 5, len(rmFiltered.ScopeMetrics[0].Metrics), "expected 6 Metrics, got %d", len(rmFiltered.ScopeMetrics[0].Metrics))
+
+			// Check if the excluded attributes are not present in the Resource
+			// The first metric completely excluded, the second one should be the first in filtered
+			require.NotEqual(t, rmFull.ScopeMetrics[0].Metrics[0].Name, rmFiltered.ScopeMetrics[0].Metrics[0].Name)
+			require.Equal(t, rmFull.ScopeMetrics[0].Metrics[1].Name, rmFiltered.ScopeMetrics[0].Metrics[0].Name)
+
+			// All other metrics should have fewer attributes in the filtered set compared to the full one
+
+			rdFiltered, ok := rmFiltered.ScopeMetrics[0].Metrics[0].Data.(metricdata.Histogram[float64])
+			require.True(t, ok)
+
+			assertAttributeNotInSet(t, rdFiltered.DataPoints[0].Attributes, otel.WgClientName.String("unknown"))
+			assertAttributeNotInSet(t, rdFiltered.DataPoints[1].Attributes, otel.WgClientName.String("unknown"))
+			assertAttributeNotInSet(t, rdFiltered.DataPoints[0].Attributes, otel.WgOperationName.String(""))
+			assertAttributeNotInSet(t, rdFiltered.DataPoints[1].Attributes, otel.WgOperationName.String(""))
+
+			rclFiltered, ok := rmFiltered.ScopeMetrics[0].Metrics[1].Data.(metricdata.Sum[int64])
+			require.True(t, ok)
+
+			assertAttributeNotInSet(t, rclFiltered.DataPoints[0].Attributes, otel.WgClientName.String("unknown"))
+			assertAttributeNotInSet(t, rclFiltered.DataPoints[1].Attributes, otel.WgClientName.String("unknown"))
+			assertAttributeNotInSet(t, rclFiltered.DataPoints[0].Attributes, otel.WgOperationName.String(""))
+			assertAttributeNotInSet(t, rclFiltered.DataPoints[1].Attributes, otel.WgOperationName.String(""))
+
+			resClFiltered, ok := rmFiltered.ScopeMetrics[0].Metrics[2].Data.(metricdata.Sum[int64])
+			require.True(t, ok)
+
+			assertAttributeNotInSet(t, resClFiltered.DataPoints[0].Attributes, otel.WgClientName.String("unknown"))
+			assertAttributeNotInSet(t, resClFiltered.DataPoints[1].Attributes, otel.WgClientName.String("unknown"))
+			assertAttributeNotInSet(t, resClFiltered.DataPoints[0].Attributes, otel.WgOperationName.String(""))
+			assertAttributeNotInSet(t, resClFiltered.DataPoints[1].Attributes, otel.WgOperationName.String(""))
+		})
+	})
+
 	t.Run("Custom Metric Attributes", func(t *testing.T) {
 
 		t.Run("Custom attributes are added to all metrics / subgraph error", func(t *testing.T) {
@@ -3278,4 +3379,11 @@ func TestTelemetry(t *testing.T) {
 		})
 
 	})
+}
+
+func assertAttributeNotInSet(t *testing.T, set attribute.Set, attr attribute.KeyValue) {
+	t.Helper()
+
+	_, ok := set.Value(attr.Key)
+	require.False(t, ok)
 }

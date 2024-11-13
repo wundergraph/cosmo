@@ -330,10 +330,33 @@ func TestAnonymousQuery(t *testing.T) {
 	t.Parallel()
 
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-			Query: `{ employees { id } }`,
+		t.Run("anonymous query", func(t *testing.T) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
 		})
-		require.JSONEq(t, employeesIDData, res.Body)
+
+		t.Run("sequence of queries with different count of variables", func(t *testing.T) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query ($a: Float! = 1) { floatField(arg: $a) }`,
+			})
+			require.JSONEq(t, `{"data":{"floatField":1}}`, res.Body)
+
+			// we need to obtain more parse kits to reuse them
+			for i := 0; i < 10; i++ {
+				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query ($a: String = "A", $b: Int = 1) { delay(response: $a, ms: $b ) }`,
+				})
+				require.JSONEq(t, `{"data":{"delay":"A"}}`, res.Body)
+			}
+
+			// this query should not fail with panic because of the reuse of variables normalizer
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query ($a: Float! = 1) { floatField(arg: $a) }`,
+			})
+			require.JSONEq(t, `{"data":{"floatField":1}}`, res.Body)
+		})
 	})
 }
 

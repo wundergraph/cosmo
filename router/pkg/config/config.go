@@ -107,9 +107,11 @@ type Metrics struct {
 }
 
 type MetricsOTLP struct {
-	Enabled       bool                  `yaml:"enabled" envDefault:"true" env:"METRICS_OTLP_ENABLED"`
-	RouterRuntime bool                  `yaml:"router_runtime" envDefault:"true" env:"METRICS_OTLP_ROUTER_RUNTIME"`
-	Exporters     []MetricsOTLPExporter `yaml:"exporters"`
+	Enabled             bool                  `yaml:"enabled" envDefault:"true" env:"METRICS_OTLP_ENABLED"`
+	RouterRuntime       bool                  `yaml:"router_runtime" envDefault:"true" env:"METRICS_OTLP_ROUTER_RUNTIME"`
+	ExcludeMetrics      RegExArray            `yaml:"exclude_metrics,omitempty" env:"METRICS_OTLP_EXCLUDE_METRICS"`
+	ExcludeMetricLabels RegExArray            `yaml:"exclude_metric_labels,omitempty" env:"METRICS_OTLP_EXCLUDE_METRIC_LABELS"`
+	Exporters           []MetricsOTLPExporter `yaml:"exporters"`
 }
 
 type Telemetry struct {
@@ -579,6 +581,11 @@ type S3StorageProvider struct {
 type BaseStorageProvider struct {
 	ID  string `yaml:"id,omitempty"`
 	URL string `yaml:"url,omitempty" envDefault:"https://cosmo-cdn.wundergraph.com"`
+}
+
+type RedisStorageProvider struct {
+	ID  string `yaml:"id,omitempty" env:"STORAGE_PROVIDER_REDIS_ID"`
+	URL string `yaml:"url,omitempty" env:"STORAGE_PROVIDER_REDIS_URL"`
 }
 
 type PersistedOperationsCDNProvider struct {

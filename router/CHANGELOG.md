@@ -4,6 +4,29 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.141.2](https://github.com/wundergraph/cosmo/compare/router@0.141.1...router@0.141.2) (2024-11-12)
+
+### Bug Fixes
+
+* variables normalization for the anonymous operations ([#1365](https://github.com/wundergraph/cosmo/issues/1365)) ([0b8ff06](https://github.com/wundergraph/cosmo/commit/0b8ff06592954bef2329fa69a660c60e55e4eb3d)) (@devsergiy)
+
+## [0.141.1](https://github.com/wundergraph/cosmo/compare/router@0.141.0...router@0.141.1) (2024-11-12)
+
+### Bug Fixes
+
+* **router:** use OTLP separators for regex ([#1362](https://github.com/wundergraph/cosmo/issues/1362)) ([e9dd4ac](https://github.com/wundergraph/cosmo/commit/e9dd4ac01c864afbde533f5b70da920ac460086f)) (@Noroth)
+
+# [0.141.0](https://github.com/wundergraph/cosmo/compare/router@0.140.2...router@0.141.0) (2024-11-12)
+
+### Bug Fixes
+
+* enable redis url injection via env var, allow apq from diff clients ([#1361](https://github.com/wundergraph/cosmo/issues/1361)) ([a123088](https://github.com/wundergraph/cosmo/commit/a1230886626b9412422fcfd8dca70be330488c68)) (@df-wg)
+
+### Features
+
+* **router:** allow exclusion of OTLP metrics via configuration ([#1359](https://github.com/wundergraph/cosmo/issues/1359)) ([31a583e](https://github.com/wundergraph/cosmo/commit/31a583e009cb2ea748f77b0d3e3240f9073291aa)) (@Noroth)
+* **router:** allow users to have multiple wildcards cores allow_origins ([#1358](https://github.com/wundergraph/cosmo/issues/1358)) ([8735f50](https://github.com/wundergraph/cosmo/commit/8735f50620c06a61540f4b94b191a2db0a2fac9b)) (@df-wg)
+
 ## [0.140.2](https://github.com/wundergraph/cosmo/compare/router@0.140.1...router@0.140.2) (2024-11-08)
 
 ### Bug Fixes

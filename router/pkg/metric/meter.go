@@ -386,30 +386,46 @@ func defaultOtlpMetricOptions(ctx context.Context, serviceInstanceID string, c *
 		Boundaries: cloudOtelBytesBucketBounds,
 	}
 
+	attributeFilter := func(value attribute.KeyValue) bool {
+		for _, re := range c.OpenTelemetry.ExcludeMetricLabels {
+			if re.MatchString(string(value.Key)) {
+				return false
+			}
+		}
+		return true
+	}
+
+	var view sdkmetric.View = func(i sdkmetric.Instrument) (sdkmetric.Stream, bool) {
+		// In a custom View function, we need to explicitly copy the name, description, and unit.
+		s := sdkmetric.Stream{Name: i.Name, Description: i.Description, Unit: i.Unit}
+
+		// Filter out metrics that match the excludeMetrics regexes
+		for _, re := range c.OpenTelemetry.ExcludeMetrics {
+			if re.MatchString(i.Name) {
+				// Drop the metric
+				s.Aggregation = sdkmetric.AggregationDrop{}
+				return s, true
+			}
+		}
+
+		// Filter out attributes that match the excludeMetricAttributes regexes
+		s.AttributeFilter = attributeFilter
+
+		if i.Unit == unitBytes && i.Kind == sdkmetric.InstrumentKindHistogram {
+			s.Aggregation = bytesBucketHistogram
+		} else if i.Unit == unitMilliseconds && i.Kind == sdkmetric.InstrumentKindHistogram {
+			s.Aggregation = msBucketHistogram
+		}
+
+		return s, true
+	}
+
 	// Info: There can be only a single view per instrument. A view with less restriction might override a view.
 
 	return []sdkmetric.Option{
 		// Record information about this application in a Resource.
 		sdkmetric.WithResource(r),
-		// Use different histogram buckets for PrometheusConfig and OTLP
-		sdkmetric.WithView(sdkmetric.NewView(
-			sdkmetric.Instrument{
-				Kind: sdkmetric.InstrumentKindHistogram,
-				Unit: unitMilliseconds,
-			},
-			sdkmetric.Stream{
-				Aggregation: msBucketHistogram,
-			},
-		)),
-		sdkmetric.WithView(sdkmetric.NewView(
-			sdkmetric.Instrument{
-				Kind: sdkmetric.InstrumentKindHistogram,
-				Unit: unitBytes,
-			},
-			sdkmetric.Stream{
-				Aggregation: bytesBucketHistogram,
-			},
-		)),
+		sdkmetric.WithView(view),
 	}, nil
 }
 
