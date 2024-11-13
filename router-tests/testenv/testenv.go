@@ -54,11 +54,11 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
+	"github.com/hashicorp/consul/sdk/freeport"
 	"github.com/hashicorp/go-retryablehttp"
 	natsserver "github.com/nats-io/nats-server/v2/server"
 	natstest "github.com/nats-io/nats-server/v2/test"
 	"github.com/nats-io/nats.go"
-	"github.com/phayes/freeport"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
@@ -266,10 +266,11 @@ func setupNatsServers(t testing.TB) (*NatsData, error) {
 		return setupNatsData(t)
 	}
 
-	natsPort := freeport.GetPort()
-	if natsPort == 0 {
-		t.Fatalf("could not get free port for nats")
+	natsPorts, natsPortsErr := freeport.Take(1)
+	if natsPortsErr != nil {
+		t.Fatalf("could not get free port for nats: %s", natsPortsErr.Error())
 	}
+	natsPort := natsPorts[0]
 
 	// create dir in tmp for nats server
 	natsDir := filepath.Join(os.TempDir(), fmt.Sprintf("nats-%s", uuid.New()))
@@ -335,15 +336,8 @@ func setupKafkaServers(t testing.TB) (*KafkaData, error) {
 	kafkaData.Brokers, err = kafkaData.Container.Brokers(ctx)
 	require.NoError(t, err)
 
-	//t.Cleanup(func() {
-	//	require.NoError(t, kafkaData.Container.Terminate(ctx))
-	//	kafkaData = &KafkaData{}
-	//})
-
 	return kafkaData, nil
 }
-
-var envMux sync.Mutex
 
 func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	pubSubPrefix := strconv.FormatUint(rand.Uint64(), 16)
@@ -566,20 +560,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		cfg.AccessLogger = cfg.Logger
 	}
 
-	envMux.Lock()
-	var envMuxUnlockedMux sync.Mutex
-	var envMuxUnlocked bool
-	envMuxUnlock := func() {
-		envMuxUnlockedMux.Lock()
-		defer envMuxUnlockedMux.Unlock()
-		if envMuxUnlocked {
-			return
-		}
-		envMuxUnlocked = true
-		envMux.Unlock()
-	}
-	defer envMuxUnlock()
-	ports, portsErr := freeport.GetFreePorts(2)
+	ports, portsErr := freeport.Take(2)
 	if portsErr != nil {
 		t.Fatalf("could not get free port for router and prometheus")
 	}
@@ -631,7 +612,6 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		if err := rr.Start(ctx); err != nil {
 			t.Fatal("Could not start router", zap.Error(err))
 		}
-		envMuxUnlock()
 	}()
 
 	graphQLPath := "/graphql"
