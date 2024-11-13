@@ -3,6 +3,11 @@ package integration
 import (
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
+	"go.opentelemetry.io/otel/codes"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 	"io"
 	"net/http"
 	"strings"
@@ -35,5 +40,114 @@ func TestNormalization(t *testing.T) {
 			require.JSONEq(t, `{"data":{"employee":{"details":{"pets":[{"name":"Abby","__typename":"Dog","breed":"GOLDEN_RETRIEVER","class":"MAMMAL","gender":"FEMALE"},{"name":"Survivor","__typename":"Pony"}]}}}}`, string(body))
 
 		})
+	})
+
+	t.Run("Different variable values should not produce different hashes", func(t *testing.T) {
+
+		testCases := []struct {
+			Name          string
+			Query         string
+			OperationHash string
+			Output        string
+		}{
+			/**
+			 * Queries with different variable values should produce different hashes
+			 */
+			{
+				Name:          "Variable with User ID 1",
+				OperationHash: "12414436944120948510",
+				Query: `{
+    "query": "query Employee($id: Int! = 1) {\n  employee(id: $id) {\n    details {\n      pets {\n        name\n      }\n    }\n  }\n}",
+    "variables": {
+        "id": 1
+    },
+    "operationName": "Employee"
+}`,
+				Output: `{"data":{"employee":{"details":{"pets":null}}}}`,
+			},
+			{
+				Name:          "Variable with User ID 3",
+				OperationHash: "12414436944120948510",
+				Query: `{
+    "query": "query Employee($id: Int! = 1) {\n  employee(id: $id) {\n    details {\n      pets {\n        name\n      }\n    }\n  }\n}",
+    "variables": {
+        "id": 3
+    },
+    "operationName": "Employee"
+}`,
+				Output: `{"data":{"employee":{"details":{"pets":[{"name":"Snappy"}]}}}}`,
+			},
+			/**
+			 * Queries with different default values should have the same hash
+			 */
+			{
+				Name:          "Variable with default value 1",
+				OperationHash: "12414436944120948510",
+				Query: `{
+    "query": "query Employee($id: Int! = 1) {\n  employee(id: $id) {\n    details {\n      pets {\n        name\n      }\n    }\n  }\n}",
+    "operationName": "Employee"
+}`,
+				Output: `{"data":{"employee":{"details":{"pets":null}}}}`,
+			},
+			{
+				Name:          "Variable with default value 3",
+				OperationHash: "12414436944120948510",
+				Query: `{
+    "query": "query Employee($id: Int! = 3) {\n  employee(id: $id) {\n    details {\n      pets {\n        name\n      }\n    }\n  }\n}",
+    "operationName": "Employee"
+}`,
+				Output: `{"data":{"employee":{"details":{"pets":[{"name":"Snappy"}]}}}}`,
+			},
+			/**
+			 * Queries with different inline values should produce same hashes
+			 */
+			{
+				Name:          "Inline value with User ID 1",
+				OperationHash: "6058851224116005894",
+				Query: `{
+    "query": "query Employee{\n  employee(id: 1) {\n    details {\n      pets {\n        name\n      }\n    }\n  }\n}",
+    "operationName": "Employee"
+}`,
+				Output: `{"data":{"employee":{"details":{"pets":null}}}}`,
+			},
+			{
+				Name:          "Inline value with User ID 3",
+				OperationHash: "6058851224116005894",
+				Query: `{
+    "query": "query Employee{\n  employee(id: 3) {\n    details {\n      pets {\n        name\n      }\n    }\n  }\n}",
+    "operationName": "Employee"
+}`,
+				Output: `{"data":{"employee":{"details":{"pets":[{"name":"Snappy"}]}}}}`,
+			},
+		}
+
+		for _, tc := range testCases {
+			tc := tc
+			t.Run(tc.Name, func(t *testing.T) {
+				exporter := tracetest.NewInMemoryExporter(t)
+				testenv.Run(t, &testenv.Config{
+					TraceExporter: exporter,
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", nil, strings.NewReader(tc.Query))
+					require.NoError(t, err)
+					defer res.Body.Close()
+					require.Equal(t, http.StatusOK, res.StatusCode)
+
+					body, err := io.ReadAll(res.Body)
+					require.NoError(t, err)
+
+					require.JSONEq(t, tc.Output, string(body))
+
+					sn := exporter.GetSpans().Snapshots()
+
+					require.Equal(t, "query Employee", sn[7].Name())
+					require.Equal(t, trace.SpanKindClient, sn[7].SpanKind())
+					require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[7].Status())
+					require.Contains(t, sn[7].Attributes(), otel.WgOperationHash.String(tc.OperationHash))
+
+				})
+			})
+		}
+
 	})
 }
