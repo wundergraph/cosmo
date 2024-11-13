@@ -1628,11 +1628,3 @@ export function unexpectedNonCompositeOutputTypeError(namedTypeName: string, act
       ` but received "${actualTypeString}".\nThis should never happen. Please report this issue on GitHub.`,
   );
 }
-
-// TODO Temporarily only used as a warning
-export function unimplementedInterfaceOutputTypeError(subgraphName: string, interfaceTypeName: string): Error {
-  return new Error(
-    `Subgraph "${subgraphName}": The Interface "${interfaceTypeName}" is used as an output type` +
-      ` without at least one Object type implementation defined in the schema.`,
-  );
-}
