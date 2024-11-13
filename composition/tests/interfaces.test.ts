@@ -522,7 +522,7 @@ describe('Interface tests', () => {
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(1);
       expect(warnings![0]).toStrictEqual(unimplementedInterfaceOutputTypeWarning(subgraphAM.name, 'Interface'));
-      expect(warnings![0].subgraphName).toBe(subgraphAM.name);
+      expect(warnings![0].subgraph.name).toBe(subgraphAM.name);
     });
 
     test('that an Interface without implementations is valid if it not used as an output type', () => {

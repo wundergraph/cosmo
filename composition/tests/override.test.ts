@@ -100,7 +100,7 @@ describe('@override directive tests', () => {
       expect(warnings![0]).toStrictEqual(
         invalidOverrideTargetSubgraphNameWarning('subgraph-z', 'Entity', ['age'], 'subgraph-b'),
       );
-      expect(warnings![0].subgraphName).toBe('subgraph-b');
+      expect(warnings![0].subgraph.name).toBe('subgraph-b');
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
           versionTwoRouterDefinitions +

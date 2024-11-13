@@ -1,18 +1,22 @@
 import { QUOTATION_JOIN } from '../utils/string-constants';
 import { FieldSetDirective } from '../schema-building/utils';
 
+export type WarningSubgraphData = {
+  name: string;
+}
+
 export type WarningOptions = {
   message: string;
-  subgraphName: string;
+  subgraph: WarningSubgraphData;
 };
 
 export class Warning extends Error {
-  subgraphName: string;
+  subgraph: WarningSubgraphData;
 
   constructor(options: WarningOptions) {
     super(options.message);
     this.name = 'Warning';
-    this.subgraphName = options.subgraphName;
+    this.subgraph = options.subgraph;
   }
 }
 
@@ -24,15 +28,17 @@ export function invalidOverrideTargetSubgraphNameWarning(
 ): Warning {
   return new Warning({
     message:
-      `The Object type "${parentTypeName}" defines the directive "@override(from: "${targetSubgraphName})" on the following field` +
+      `The Object type "${parentTypeName}" defines the directive "@override(from: "${targetSubgraphName}")" on the following field` +
       (fieldNames.length > 1 ? 's' : '') +
       `: "` +
       fieldNames.join(QUOTATION_JOIN) +
       `".\n` +
       `The required "from" argument of type "String!" should be provided with an existing subgraph name.\n` +
       `However, a subgraph by the name of "${targetSubgraphName}" does not exist.\n` +
-      `If this subgraph has been recently deleted, remember to clean up unused @override directives that reference this subgraph.`,
-    subgraphName: originSubgraphName,
+      `If this subgraph has been recently deleted, remember to clean up unused "@override" directives that reference this subgraph.`,
+    subgraph: {
+      name: originSubgraphName,
+    },
   });
 }
 
@@ -60,7 +66,9 @@ export function externalInterfaceFieldsWarning(
       `Interface Fields should not be declared "@external". This is because Interface Fields do not resolve directly,` +
       ` but the "@external" directive relates to whether a Field instance can be resolved` +
       ` by the subgraph in which it is defined.`,
-    subgraphName,
+    subgraph: {
+      name: subgraphName,
+    },
   });
 }
 
@@ -79,7 +87,9 @@ export function nonExternalConditionalFieldWarning(
       `\nHowever, neither the Field "${targetCoords}" nor any of its field set ancestors are declared @external.` +
       `\nConsequently, "${targetCoords}" is already provided by subgraph "${subgraphName}" and should not form part of` +
       ` a "@${fieldSetDirective}" directive field set.`,
-    subgraphName,
+    subgraph: {
+      name: subgraphName,
+    },
   });
 }
 
@@ -89,6 +99,8 @@ export function unimplementedInterfaceOutputTypeWarning(subgraphName: string, in
     message:
       `Subgraph "${subgraphName}": The Interface "${interfaceTypeName}" is used as an output type` +
       ` without at least one Object type implementation defined in the schema.`,
-    subgraphName,
+    subgraph: {
+      name: subgraphName,
+    },
   });
 }
