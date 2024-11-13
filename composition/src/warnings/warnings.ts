@@ -3,7 +3,7 @@ import { FieldSetDirective } from '../schema-building/utils';
 
 export type WarningSubgraphData = {
   name: string;
-}
+};
 
 export type WarningOptions = {
   message: string;
