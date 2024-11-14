@@ -104,13 +104,16 @@ func GetCustomDynamicAttributeValue(attribute *config.CustomDynamicAttribute, re
 			return op.sha256Hash
 		}
 	case ContextFieldOperationHash:
+		if opOk && op.hash != 0 {
+			return strconv.FormatUint(op.hash, 10)
+		}
 		return operation.Hash()
 	case ContextFieldPersistedOperationSha256:
 		if opOk {
 			return op.persistedID
 		}
 	case ContextFieldResponseErrorMessage:
-		if reqOk {
+		if reqOk && reqContext.error != nil {
 			return reqContext.error.Error()
 		}
 	case ContextFieldOperationServices:
