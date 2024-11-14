@@ -537,6 +537,121 @@ describe('events Configuration tests', () => {
         ]),
       );
     });
+
+    test('that an error is returned if a NATS subscribe subject references two invalid arguments', () => {
+      const { errors } = normalizeSubgraph(subgraphAB.definitions, subgraphAB.name);
+      expect(errors).toBeDefined();
+      expect(errors).toHaveLength(1);
+      expect(errors![0]).toStrictEqual(
+        invalidEventDirectiveError('edfs__natsSubscribe', 'Subscription.entitySubscription', [
+          undefinedEventSubjectsArgumentErrorMessage('invalid'),
+          undefinedEventSubjectsArgumentErrorMessage('alsoinvalid'),
+        ]),
+      );
+    });
+
+    test('that an error is returned if a NATS request subject references two invalid arguments', () => {
+      const { errors } = normalizeSubgraph(subgraphAC.definitions, subgraphAC.name);
+      expect(errors).toBeDefined();
+      expect(errors).toHaveLength(1);
+      expect(errors![0]).toStrictEqual(
+        invalidEventDirectiveError('edfs__natsRequest', 'Query.entityRequest', [
+          undefinedEventSubjectsArgumentErrorMessage('invalid'),
+          undefinedEventSubjectsArgumentErrorMessage('alsoinvalid'),
+        ]),
+      );
+    });
+
+    test('that an error is returned if a NATS publish subject references two invalid arguments', () => {
+      const { errors } = normalizeSubgraph(subgraphAD.definitions, subgraphAD.name);
+      expect(errors).toBeDefined();
+      expect(errors).toHaveLength(1);
+      expect(errors![0]).toStrictEqual(
+        invalidEventDirectiveError('edfs__natsPublish', 'Mutation.entityPublish', [
+          undefinedEventSubjectsArgumentErrorMessage('invalid'),
+          undefinedEventSubjectsArgumentErrorMessage('alsoinvalid'),
+        ]),
+      );
+    });
+
+    test('that an error is returned if a Kafka subscribe subject references two invalid arguments', () => {
+      const { errors } = normalizeSubgraph(subgraphAE.definitions, subgraphAE.name);
+      expect(errors).toBeDefined();
+      expect(errors).toHaveLength(1);
+      expect(errors![0]).toStrictEqual(
+        invalidEventDirectiveError('edfs__kafkaSubscribe', 'Subscription.entitySubscription', [
+          undefinedEventSubjectsArgumentErrorMessage('invalid'),
+          undefinedEventSubjectsArgumentErrorMessage('alsoinvalid'),
+        ]),
+      );
+    });
+
+    test('that an error is returned if a Kafka publish subject references two invalid arguments', () => {
+      const { errors } = normalizeSubgraph(subgraphAF.definitions, subgraphAF.name);
+      expect(errors).toBeDefined();
+      expect(errors).toHaveLength(1);
+      expect(errors![0]).toStrictEqual(
+        invalidEventDirectiveError('edfs__kafkaPublish', 'Mutation.entityPublish', [
+          undefinedEventSubjectsArgumentErrorMessage('invalid'),
+          undefinedEventSubjectsArgumentErrorMessage('alsoinvalid'),
+        ]),
+      );
+    });
+  });
+
+  test('that an error is returned if a NATS subscribe subject references a valid argument and an invalid one', () => {
+    const { errors } = normalizeSubgraph(subgraphAG.definitions, subgraphAG.name);
+    expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
+    expect(errors![0]).toStrictEqual(
+      invalidEventDirectiveError('edfs__natsSubscribe', 'Subscription.entitySubscription', [
+        undefinedEventSubjectsArgumentErrorMessage('invalid'),
+      ]),
+    );
+  });
+
+  test('that an error is returned if a NATS request subject references a valid argument and an invalid one', () => {
+    const { errors } = normalizeSubgraph(subgraphAH.definitions, subgraphAH.name);
+    expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
+    expect(errors![0]).toStrictEqual(
+      invalidEventDirectiveError('edfs__natsRequest', 'Query.entityRequest', [
+        undefinedEventSubjectsArgumentErrorMessage('invalid'),
+      ]),
+    );
+  });
+
+  test('that an error is returned if a NATS publish subject references a valid argument and an invalid one', () => {
+    const { errors } = normalizeSubgraph(subgraphAI.definitions, subgraphAI.name);
+    expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
+    expect(errors![0]).toStrictEqual(
+      invalidEventDirectiveError('edfs__natsPublish', 'Mutation.entityPublish', [
+        undefinedEventSubjectsArgumentErrorMessage('invalid'),
+      ]),
+    );
+  });
+
+  test('that an error is returned if a Kafka subscribe subject references a valid argument and an invalid one', () => {
+    const { errors } = normalizeSubgraph(subgraphAL.definitions, subgraphAL.name);
+    expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
+    expect(errors![0]).toStrictEqual(
+      invalidEventDirectiveError('edfs__kafkaSubscribe', 'Subscription.entitySubscription', [
+        undefinedEventSubjectsArgumentErrorMessage('invalid'),
+      ]),
+    );
+  });
+
+  test('that an error is returned if a Kafka publish subject references a valid argument and an invalid one', () => {
+    const { errors } = normalizeSubgraph(subgraphAM.definitions, subgraphAM.name);
+    expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
+    expect(errors![0]).toStrictEqual(
+      invalidEventDirectiveError('edfs__kafkaPublish', 'Mutation.entityPublish', [
+        undefinedEventSubjectsArgumentErrorMessage('invalid'),
+      ]),
+    );
   });
 
   describe('Federation tests', () => {
@@ -1394,6 +1509,186 @@ const subgraphAA: Subgraph = {
     type Mutation {
       entityPublish(id: ID!): edfs__PublishResult! @edfs__kafkaPublish(
         topic: "entities.{{ args.invalid }}",
+      )
+    }
+
+    type edfs__PublishResult {
+      success: Boolean!
+    }
+  `),
+};
+
+const subgraphAB: Subgraph = {
+  name: 'subgraph-ab',
+  url: '',
+  definitions: parse(`
+    type Subscription {
+      entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(
+        subjects: ["entities.{{ args.invalid }}{{ args.alsoinvalid }}"],
+      )
+    }
+
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+
+    input edfs__NatsStreamConfiguration {
+      consumerName: String!
+      streamName: String!
+    }
+  `),
+};
+
+const subgraphAC: Subgraph = {
+  name: 'subgraph-ac',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entityRequest(id: ID!): Entity! @edfs__natsRequest(
+        subject: "entities.{{ args.invalid }}{{ args.alsoinvalid }}",
+      )
+    }
+
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+  `),
+};
+
+const subgraphAD: Subgraph = {
+  name: 'subgraph-ad',
+  url: '',
+  definitions: parse(`
+    type Mutation {
+      entityPublish(id: ID!): edfs__PublishResult! @edfs__natsPublish(
+        subject: "entities.{{ args.invalid }}{{ args.alsoinvalid }}",
+      )
+    }
+
+    type edfs__PublishResult {
+      success: Boolean!
+    }
+  `),
+};
+
+const subgraphAE: Subgraph = {
+  name: 'subgraph-ae',
+  url: '',
+  definitions: parse(`
+    type Subscription {
+      entitySubscription(id: ID!): Entity! @edfs__kafkaSubscribe(
+        topics: ["entities.{{ args.invalid }}{{ args.alsoinvalid }}"],
+      )
+    }
+
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+
+    input edfs__KafkaStreamConfiguration {
+      consumerName: String!
+      streamName: String!
+    }
+  `),
+};
+
+const subgraphAF: Subgraph = {
+  name: 'subgraph-af',
+  url: '',
+  definitions: parse(`
+    type Mutation {
+      entityPublish(id: ID!): edfs__PublishResult! @edfs__kafkaPublish(
+        topic: "entities.{{ args.invalid }}{{ args.alsoinvalid }}",
+      )
+    }
+
+    type edfs__PublishResult {
+      success: Boolean!
+    }
+  `),
+};
+
+const subgraphAG: Subgraph = {
+  name: 'subgraph-ag',
+  url: '',
+  definitions: parse(`
+    type Subscription {
+      entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(
+        subjects: ["entities.{{ args.invalid }}{{ args.id }}"],
+      )
+    }
+
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+
+    input edfs__NatsStreamConfiguration {
+      consumerName: String!
+      streamName: String!
+    }
+  `),
+};
+
+const subgraphAH: Subgraph = {
+  name: 'subgraph-aH',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entityRequest(id: ID!): Entity! @edfs__natsRequest(
+        subject: "entities.{{ args.invalid }}{{ args.id }}",
+      )
+    }
+
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+  `),
+};
+
+const subgraphAI: Subgraph = {
+  name: 'subgraph-ai',
+  url: '',
+  definitions: parse(`
+    type Mutation {
+      entityPublish(id: ID!): edfs__PublishResult! @edfs__natsPublish(
+        subject: "entities.{{ args.invalid }}{{ args.id }}",
+      )
+    }
+
+    type edfs__PublishResult {
+      success: Boolean!
+    }
+  `),
+};
+
+const subgraphAL: Subgraph = {
+  name: 'subgraph-al',
+  url: '',
+  definitions: parse(`
+    type Subscription {
+      entitySubscription(id: ID!): Entity! @edfs__kafkaSubscribe(
+        topics: ["entities.{{ args.invalid }}{{ args.id }}"],
+      )
+    }
+
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+
+    input edfs__KafkaStreamConfiguration {
+      consumerName: String!
+      streamName: String!
+    }
+  `),
+};
+
+const subgraphAM: Subgraph = {
+  name: 'subgraph-am',
+  url: '',
+  definitions: parse(`
+    type Mutation {
+      entityPublish(id: ID!): edfs__PublishResult! @edfs__kafkaPublish(
+        topic: "entities.{{ args.invalid }}{{ args.id }}",
       )
     }
 
