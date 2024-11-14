@@ -308,15 +308,15 @@ type EngineExecutionConfiguration struct {
 	EpollKqueuePollTimeout                 time.Duration            `envDefault:"1s" env:"ENGINE_EPOLL_KQUEUE_POLL_TIMEOUT" yaml:"epoll_kqueue_poll_timeout,omitempty"`
 	EpollKqueueConnBufferSize              int                      `envDefault:"128" env:"ENGINE_EPOLL_KQUEUE_CONN_BUFFER_SIZE" yaml:"epoll_kqueue_conn_buffer_size,omitempty"`
 	WebSocketReadTimeout                   time.Duration            `envDefault:"5s" env:"ENGINE_WEBSOCKET_READ_TIMEOUT" yaml:"websocket_read_timeout,omitempty"`
-	ExecutionPlanCacheSize                 int64                    `envDefault:"1024" env:"ENGINE_EXECUTION_PLAN_CACHE_SIZE" yaml:"execution_plan_cache_size,omitempty"`
+	ExecutionPlanCacheSize                 int64                    `envDefault:"10240" env:"ENGINE_EXECUTION_PLAN_CACHE_SIZE" yaml:"execution_plan_cache_size,omitempty"`
 	MinifySubgraphOperations               bool                     `envDefault:"true" env:"ENGINE_MINIFY_SUBGRAPH_OPERATIONS" yaml:"minify_subgraph_operations"`
 	EnablePersistedOperationsCache         bool                     `envDefault:"true" env:"ENGINE_ENABLE_PERSISTED_OPERATIONS_CACHE" yaml:"enable_persisted_operations_cache"`
 	EnableNormalizationCache               bool                     `envDefault:"true" env:"ENGINE_ENABLE_NORMALIZATION_CACHE" yaml:"enable_normalization_cache"`
-	NormalizationCacheSize                 int64                    `envDefault:"1024" env:"ENGINE_NORMALIZATION_CACHE_SIZE" yaml:"normalization_cache_size,omitempty"`
+	NormalizationCacheSize                 int64                    `envDefault:"10240" env:"ENGINE_NORMALIZATION_CACHE_SIZE" yaml:"normalization_cache_size,omitempty"`
 	OperationHashCacheSize                 int64                    `envDefault:"2048" env:"ENGINE_OPERATION_HASH_CACHE_SIZE" yaml:"operation_hash_cache_size,omitempty"`
 	ParseKitPoolSize                       int                      `envDefault:"16" env:"ENGINE_PARSEKIT_POOL_SIZE" yaml:"parsekit_pool_size,omitempty"`
 	EnableValidationCache                  bool                     `envDefault:"true" env:"ENGINE_ENABLE_VALIDATION_CACHE" yaml:"enable_validation_cache"`
-	ValidationCacheSize                    int64                    `envDefault:"1024" env:"ENGINE_VALIDATION_CACHE_SIZE" yaml:"validation_cache_size,omitempty"`
+	ValidationCacheSize                    int64                    `envDefault:"10240" env:"ENGINE_VALIDATION_CACHE_SIZE" yaml:"validation_cache_size,omitempty"`
 	ResolverMaxRecyclableParserSize        int                      `envDefault:"32768" env:"ENGINE_RESOLVER_MAX_RECYCLABLE_PARSER_SIZE" yaml:"resolver_max_recyclable_parser_size,omitempty"`
 }
 
@@ -332,13 +332,13 @@ type SecurityConfiguration struct {
 type QueryDepthConfiguration struct {
 	Enabled                   bool  `yaml:"enabled" envDefault:"false" env:"SECURITY_QUERY_DEPTH_ENABLED"`
 	Limit                     int   `yaml:"limit,omitempty" envDefault:"0" env:"SECURITY_QUERY_DEPTH_LIMIT"`
-	CacheSize                 int64 `yaml:"cache_size,omitempty" envDefault:"1024" env:"SECURITY_QUERY_DEPTH_CACHE_SIZE"`
+	CacheSize                 int64 `yaml:"cache_size,omitempty" envDefault:"10240" env:"SECURITY_QUERY_DEPTH_CACHE_SIZE"`
 	IgnorePersistedOperations bool  `yaml:"ignore_persisted_operations,omitempty" envDefault:"false" env:"SECURITY_QUERY_DEPTH_IGNORE_PERSISTED_OPERATIONS"`
 }
 
 type ComplexityCalculationCache struct {
 	Enabled   bool  `yaml:"enabled" envDefault:"false" env:"SECURITY_COMPLEXITY_CACHE_ENABLED"`
-	CacheSize int64 `yaml:"size,omitempty" envDefault:"1024" env:"SECURITY_COMPLEXITY_CACHE_SIZE"`
+	CacheSize int64 `yaml:"size,omitempty" envDefault:"10240" env:"SECURITY_COMPLEXITY_CACHE_SIZE"`
 }
 
 type ComplexityLimits struct {

@@ -174,6 +174,12 @@ type GraphQLRequestExtensionsPersistedQuery struct {
 	Sha256Hash string `json:"sha256Hash"`
 }
 
+type complexityComparison struct {
+	field        int
+	cachedField  int
+	errorMessage string
+}
+
 // NewOperationKit creates a new OperationKit. The kit is used to parse, normalize and validate operations.
 // It allocates resources that need to be freed by calling OperationKit.Free()
 func NewOperationKit(processor *OperationProcessor) *OperationKit {
@@ -958,28 +964,22 @@ func (o *OperationKit) ValidateQueryComplexity(complexityLimitConfig *config.Com
 }
 
 func (o *OperationKit) runComplexityComparisons(complexityLimitConfig *config.ComplexityLimits, cachedComplexity ComplexityCacheEntry, isPersisted bool) error {
-	type comp struct {
-		field        int
-		cachedField  int
-		errorMessage string
-	}
-
-	testComparisons := []comp{}
+	testComparisons := []complexityComparison{}
 	if complexityLimitConfig.Depth != nil && complexityLimitConfig.Depth.ApplyLimit(isPersisted) {
 		testComparisons = append(testComparisons,
-			comp{complexityLimitConfig.Depth.Limit, cachedComplexity.Depth, fmt.Sprintf("The query depth %d exceeds the max query depth allowed (%d)", cachedComplexity.Depth, complexityLimitConfig.Depth.Limit)})
+			complexityComparison{complexityLimitConfig.Depth.Limit, cachedComplexity.Depth, fmt.Sprintf("The query depth %d exceeds the max query depth allowed (%d)", cachedComplexity.Depth, complexityLimitConfig.Depth.Limit)})
 	}
 	if complexityLimitConfig.TotalFields != nil && complexityLimitConfig.TotalFields.ApplyLimit(isPersisted) {
 		testComparisons = append(testComparisons,
-			comp{complexityLimitConfig.TotalFields.Limit, cachedComplexity.TotalFields, fmt.Sprintf("The query total fields %d exceeds the max total fields allowed (%d)", cachedComplexity.TotalFields, complexityLimitConfig.TotalFields.Limit)})
+			complexityComparison{complexityLimitConfig.TotalFields.Limit, cachedComplexity.TotalFields, fmt.Sprintf("The total number of fields %d exceeds the limit allowed (%d)", cachedComplexity.TotalFields, complexityLimitConfig.TotalFields.Limit)})
 	}
 	if complexityLimitConfig.RootFields != nil && complexityLimitConfig.RootFields.ApplyLimit(isPersisted) {
 		testComparisons = append(testComparisons,
-			comp{complexityLimitConfig.RootFields.Limit, cachedComplexity.RootFields, fmt.Sprintf("The number of root fields %d exceeds the root field limit allowed (%d)", cachedComplexity.RootFields, complexityLimitConfig.RootFields.Limit)})
+			complexityComparison{complexityLimitConfig.RootFields.Limit, cachedComplexity.RootFields, fmt.Sprintf("The number of root fields %d exceeds the root field limit allowed (%d)", cachedComplexity.RootFields, complexityLimitConfig.RootFields.Limit)})
 	}
 	if complexityLimitConfig.RootFieldAliases != nil && complexityLimitConfig.RootFieldAliases.ApplyLimit(isPersisted) {
 		testComparisons = append(testComparisons,
-			comp{complexityLimitConfig.RootFieldAliases.Limit, cachedComplexity.RootFieldAliases, fmt.Sprintf("The number of root fields aliases %d exceeds the root field aliases limit allowed (%d)", cachedComplexity.RootFieldAliases, complexityLimitConfig.RootFieldAliases.Limit)})
+			complexityComparison{complexityLimitConfig.RootFieldAliases.Limit, cachedComplexity.RootFieldAliases, fmt.Sprintf("The number of root field aliases %d exceeds the root field aliases limit allowed (%d)", cachedComplexity.RootFieldAliases, complexityLimitConfig.RootFieldAliases.Limit)})
 	}
 
 	for _, comparison := range testComparisons {
