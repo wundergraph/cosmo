@@ -937,7 +937,7 @@ export function isNodeQuery(typeName: string, operationTypeNode?: OperationTypeN
   return typeName === QUERY || operationTypeNode === OperationTypeNode.QUERY;
 }
 
-export function validateDirectiveArgumentValue(
+export function validateArgumentTemplateReferences(
   value: string,
   argumentDataByArgumentName: Map<string, InputValueData>,
   errorMessages: string[],

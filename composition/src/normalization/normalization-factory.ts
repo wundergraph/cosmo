@@ -38,7 +38,7 @@ import {
 } from '../ast/utils';
 import {
   addFieldNamesToConfigurationData,
-  validateDirectiveArgumentValue,
+  validateArgumentTemplateReferences,
   FieldSetData,
   InputValidationContainer,
   isNodeQuery,
@@ -1203,7 +1203,7 @@ export class NormalizationFactory {
             errorMessages.push(invalidEventSubjectErrorMessage(TOPIC));
             continue;
           }
-          validateDirectiveArgumentValue(argumentNode.value.value, argumentDataByArgumentName, errorMessages);
+          validateArgumentTemplateReferences(argumentNode.value.value, argumentDataByArgumentName, errorMessages);
           topics.push(argumentNode.value.value);
           break;
         }
@@ -1242,7 +1242,7 @@ export class NormalizationFactory {
               errorMessages.push(invalidEventSubjectsItemErrorMessage(TOPICS));
               break;
             }
-            validateDirectiveArgumentValue(value.value, argumentDataByArgumentName, errorMessages);
+            validateArgumentTemplateReferences(value.value, argumentDataByArgumentName, errorMessages);
             topics.push(value.value);
           }
           break;
@@ -1284,7 +1284,7 @@ export class NormalizationFactory {
             errorMessages.push(invalidEventSubjectErrorMessage(SUBJECT));
             continue;
           }
-          validateDirectiveArgumentValue(argumentNode.value.value, argumentDataByArgumentName, errorMessages);
+          validateArgumentTemplateReferences(argumentNode.value.value, argumentDataByArgumentName, errorMessages);
           subjects.push(argumentNode.value.value);
           break;
         }
@@ -1325,7 +1325,7 @@ export class NormalizationFactory {
               errorMessages.push(invalidEventSubjectsItemErrorMessage(SUBJECTS));
               break;
             }
-            validateDirectiveArgumentValue(value.value, argumentDataByArgumentName, errorMessages);
+            validateArgumentTemplateReferences(value.value, argumentDataByArgumentName, errorMessages);
             subjects.push(value.value);
           }
           break;
