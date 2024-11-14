@@ -164,6 +164,16 @@ func TestPublishGraphQLMetrics(t *testing.T) {
 	`).Scan(&fieldUsageCountMv))
 
 	assert.Greater(t, fieldUsageCountMv, uint64(0))
+
+	var requestCount uint64
+	require.NoError(t, db.QueryRow(ctx, `
+	SELECT SUM(RequestCount) 
+	FROM gql_metrics_router_requests
+	WHERE FederatedGraphID = 'fed123' AND
+	OrganizationID = 'org123'
+	`).Scan(&requestCount))
+
+	require.Equal(t, uint64(1), requestCount)
 }
 
 func TestPublishGraphQLMetricsSendEmptyAndFilledMetrics(t *testing.T) {
@@ -221,6 +231,16 @@ func TestPublishGraphQLMetricsSendEmptyAndFilledMetrics(t *testing.T) {
 	`).Scan(&fieldUsageCount))
 
 	assert.Equal(t, int(fieldUsageCount), 3)
+
+	var requestCount uint64
+	require.NoError(t, db.QueryRow(ctx, `
+	SELECT SUM(RequestCount) 
+	FROM gql_metrics_router_requests
+	WHERE FederatedGraphID = 'fed123' AND
+	OrganizationID = 'org123'
+	`).Scan(&requestCount))
+
+	require.Equal(t, uint64(1), requestCount)
 }
 
 func TestPublishGraphQLMetricsSmallBatches(t *testing.T) {
@@ -371,6 +391,16 @@ func TestPublishGraphQLMetricsSmallBatches(t *testing.T) {
 	`).Scan(&fieldUsageCountMv))
 
 	assert.Greater(t, fieldUsageCountMv, uint64(0))
+
+	var requestCount uint64
+	require.NoError(t, db.QueryRow(ctx, `
+	SELECT SUM(RequestCount) 
+	FROM gql_metrics_router_requests
+	WHERE FederatedGraphID = 'fed123' AND
+	OrganizationID = 'org123'
+	`).Scan(&requestCount))
+
+	require.Equal(t, uint64(count), requestCount)
 }
 
 func TestPublishAggregatedGraphQLMetrics(t *testing.T) {
@@ -517,6 +547,78 @@ func TestPublishAggregatedGraphQLMetrics(t *testing.T) {
 	`).Scan(&fieldUsageCountMv))
 
 	assert.Greater(t, fieldUsageCountMv, uint64(0))
+
+	var requestCount uint64
+	require.NoError(t, db.QueryRow(ctx, `
+	SELECT SUM(RequestCount)
+	FROM gql_metrics_router_requests
+	WHERE FederatedGraphID = 'fed123' AND
+	OrganizationID = 'org123'
+	`).Scan(&requestCount))
+
+	require.Equal(t, uint64(1), requestCount)
+}
+
+func TestPublishAggregatedGraphQLMetricsDifferentRequestCounts(t *testing.T) {
+	if os.Getenv("INT_TESTS") != "true" {
+		t.Skip("Skipping integration tests")
+	}
+
+	db := test.GetTestDatabase(t)
+
+	msvc := NewMetricsService(zap.NewNop(), db, defaultConfig())
+
+	req := &graphqlmetricsv1.PublishAggregatedGraphQLRequestMetricsRequest{
+		Aggregation: []*graphqlmetricsv1.SchemaUsageInfoAggregation{
+			{
+				RequestCount: 10,
+				SchemaUsage:  buildSchemaUsageInfoItem("hash1", "query Hello1 { hello1 }", 1, 1, 1),
+			},
+			{
+				RequestCount: 20,
+				SchemaUsage:  buildSchemaUsageInfoItem("hash2", "query Hello2 { hello2 }", 2, 2, 2),
+			},
+			{
+				RequestCount: 5,
+				SchemaUsage:  buildSchemaUsageInfoItem("hash3", "query Hello3 { hello3 }", 3, 3, 3),
+			},
+		},
+	}
+
+	totalCount := uint64(0)
+
+	for _, item := range req.Aggregation {
+		totalCount += item.RequestCount
+	}
+
+	pReq := connect.NewRequest[graphqlmetricsv1.PublishAggregatedGraphQLRequestMetricsRequest](req)
+
+	ctx := utils.SetClaims(context.Background(), &utils.GraphAPITokenClaims{
+		FederatedGraphID: "fed123",
+		OrganizationID:   "org123",
+	})
+
+	_, err := msvc.PublishAggregatedGraphQLMetrics(
+		ctx,
+		pReq,
+	)
+	require.NoError(t, err)
+
+	// Wait until all requests are dispatched
+	time.Sleep(time.Millisecond * 100)
+
+	// Wait for batch to be processed
+	msvc.Shutdown(time.Second * 10)
+
+	var requestCount uint64
+	require.NoError(t, db.QueryRow(ctx, `
+	SELECT SUM(RequestCount)
+	FROM gql_metrics_router_requests
+	WHERE FederatedGraphID = 'fed123' AND
+	OrganizationID = 'org123'
+	`).Scan(&requestCount))
+
+	require.Equal(t, totalCount, requestCount)
 }
 
 func TestAuthentication(t *testing.T) {
@@ -632,15 +734,10 @@ func (m *mockDriver) PrepareBatch(ctx context.Context, query string, opts ...dri
 type mockBatch struct {
 	driver.Batch
 	mockAppendFunc func(v ...any) error
-	mockAbortFunc  func() error
 }
 
 func (m *mockBatch) Append(v ...any) error {
 	return m.mockAppendFunc(v...)
-}
-
-func (m *mockBatch) Abort() error {
-	return m.mockAbortFunc()
 }
 
 func TestPrepareClickhouseBatches(t *testing.T) {
@@ -649,11 +746,13 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 		preCachedHashes          []string
 		metricsBatchAppendFunc   func(v ...any) error
 		operationBatchAppendFunc func(v ...any) error
+		requestBatchAppendFunc   func(v ...any) error
 	}
 	type expected struct {
 		expectedPrepareBatchCalls int
 		operationBatchCreated     bool
 		metricsBatchCreated       bool
+		requestCountBatchCreated  bool
 	}
 
 	tests := []struct {
@@ -662,10 +761,11 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 		expected expected
 	}{
 		{
-			name: "should call prepare batch once",
+			name: "should call prepare operation and request count batch",
 			input: input{
 				batch: []SchemaUsageRequestItem{
 					{
+						TotalRequestCount: 1,
 						Claims: &utils.GraphAPITokenClaims{
 							OrganizationID:   "TestOrg",
 							FederatedGraphID: "TestGraph",
@@ -677,16 +777,18 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 				},
 			},
 			expected: expected{
-				expectedPrepareBatchCalls: 1,
+				expectedPrepareBatchCalls: 2,
 				operationBatchCreated:     true,
 				metricsBatchCreated:       false,
+				requestCountBatchCreated:  true,
 			},
 		},
 		{
-			name: "should call prepare batch twice",
+			name: "should prepare all batches",
 			input: input{
 				batch: []SchemaUsageRequestItem{
 					{
+						TotalRequestCount: 1,
 						Claims: &utils.GraphAPITokenClaims{
 							OrganizationID:   "TestOrg",
 							FederatedGraphID: "TestGraph",
@@ -698,16 +800,18 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 				},
 			},
 			expected: expected{
-				expectedPrepareBatchCalls: 2,
+				expectedPrepareBatchCalls: 3,
 				operationBatchCreated:     true,
 				metricsBatchCreated:       true,
+				requestCountBatchCreated:  true,
 			},
 		},
 		{
-			name: "should not call prepare batch",
+			name: "should only prepare request count batch",
 			input: input{
 				batch: []SchemaUsageRequestItem{
 					{
+						TotalRequestCount: 1,
 						Claims: &utils.GraphAPITokenClaims{
 							OrganizationID:   "TestOrg",
 							FederatedGraphID: "TestGraph",
@@ -719,28 +823,22 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 				},
 			},
 			expected: expected{
-				expectedPrepareBatchCalls: 0,
+				expectedPrepareBatchCalls: 1,
 				operationBatchCreated:     false,
 				metricsBatchCreated:       false,
+				requestCountBatchCreated:  true,
 			},
 		},
 		{
 			name: "should not call prepare batch with no data",
 			input: input{
-				batch: []SchemaUsageRequestItem{
-					{
-						Claims: &utils.GraphAPITokenClaims{
-							OrganizationID:   "TestOrg",
-							FederatedGraphID: "TestGraph",
-						},
-						SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{},
-					},
-				},
+				batch: nil,
 			},
 			expected: expected{
 				expectedPrepareBatchCalls: 0,
 				operationBatchCreated:     false,
 				metricsBatchCreated:       false,
+				requestCountBatchCreated:  false,
 			},
 		},
 		{
@@ -778,9 +876,10 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 				},
 			},
 			expected: expected{
-				expectedPrepareBatchCalls: 0,
+				expectedPrepareBatchCalls: 1,
 				operationBatchCreated:     false,
 				metricsBatchCreated:       false,
+				requestCountBatchCreated:  true,
 			},
 		},
 		{
@@ -800,13 +899,14 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 				},
 			},
 			expected: expected{
-				expectedPrepareBatchCalls: 1,
+				expectedPrepareBatchCalls: 2,
 				operationBatchCreated:     false,
 				metricsBatchCreated:       true,
+				requestCountBatchCreated:  true,
 			},
 		},
 		{
-			name: "should prepare operation and metrics batch even if appendUsageMetrics fails",
+			name: "should prepare all batches even if appendUsageMetrics fails",
 			input: input{
 				metricsBatchAppendFunc: func(v ...any) error {
 					return errors.New("error while appending metrics")
@@ -824,17 +924,16 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 				},
 			},
 			expected: expected{
-				expectedPrepareBatchCalls: 2,
+				expectedPrepareBatchCalls: 3,
 				operationBatchCreated:     true,
 				metricsBatchCreated:       true,
+				requestCountBatchCreated:  true,
 			},
 		},
 		{
-			name: "should prepare operation and metrics batch even if appending to operations batch fails",
+			name: "should prepare request, operation and metrics batch even if appending to operations batch fails",
 			input: input{
-				operationBatchAppendFunc: func(v ...any) error {
-					return errors.New("error while appending metrics")
-				},
+				operationBatchAppendFunc: func(v ...any) error { return errors.New("error while appending metrics") },
 				batch: []SchemaUsageRequestItem{
 					{
 						Claims: &utils.GraphAPITokenClaims{
@@ -850,20 +949,40 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 				},
 			},
 			expected: expected{
-				expectedPrepareBatchCalls: 2,
+				expectedPrepareBatchCalls: 3,
 				operationBatchCreated:     true,
 				metricsBatchCreated:       true,
+				requestCountBatchCreated:  true,
+			},
+		},
+		{
+			name: "should return empty request count batch even if appending to request count batch fails",
+			input: input{
+				requestBatchAppendFunc: func(v ...any) error { return errors.New("error while appending metrics") },
+				batch: []SchemaUsageRequestItem{
+					{
+						TotalRequestCount: 10,
+						Claims: &utils.GraphAPITokenClaims{
+							OrganizationID:   "TestOrg",
+							FederatedGraphID: "TestGraph",
+						},
+						SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{},
+					},
+				},
+			},
+			expected: expected{
+				expectedPrepareBatchCalls: 1,
+				operationBatchCreated:     false,
+				metricsBatchCreated:       false,
+				requestCountBatchCreated:  true,
 			},
 		},
 		{
 			name: "should return empty batches if both append functions fail",
 			input: input{
-				operationBatchAppendFunc: func(v ...any) error {
-					return errors.New("error while appending metrics")
-				},
-				metricsBatchAppendFunc: func(v ...any) error {
-					return errors.New("error while appending metrics")
-				},
+				operationBatchAppendFunc: func(v ...any) error { return errors.New("error while appending metrics") },
+				metricsBatchAppendFunc:   func(v ...any) error { return errors.New("error while appending metrics") },
+				requestBatchAppendFunc:   func(v ...any) error { return errors.New("error while appending metrics") },
 				batch: []SchemaUsageRequestItem{
 					{
 						Claims: &utils.GraphAPITokenClaims{
@@ -879,9 +998,10 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 				},
 			},
 			expected: expected{
-				expectedPrepareBatchCalls: 2,
+				expectedPrepareBatchCalls: 3,
 				operationBatchCreated:     true,
 				metricsBatchCreated:       true,
+				requestCountBatchCreated:  true,
 			},
 		},
 	}
@@ -898,9 +1018,6 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 
 					return nil
 				},
-				mockAbortFunc: func() error {
-					return nil
-				},
 			}
 
 			metricsMockBatch := &mockBatch{
@@ -911,7 +1028,13 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 
 					return nil
 				},
-				mockAbortFunc: func() error {
+			}
+
+			requestCountMockBatch := &mockBatch{
+				mockAppendFunc: func(v ...any) error {
+					if tt.input.requestBatchAppendFunc != nil {
+						return tt.input.requestBatchAppendFunc(v...)
+					}
 					return nil
 				},
 			}
@@ -923,7 +1046,11 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 					return operationMockBatch, nil
 				}
 
-				return metricsMockBatch, nil
+				if strings.Contains(query, `gql_metrics_schema_usage`) {
+					return metricsMockBatch, nil
+				}
+
+				return requestCountMockBatch, nil
 			}}
 
 			msvc := NewMetricsService(zap.NewNop(), db, defaultConfig())
@@ -932,7 +1059,7 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 				msvc.opGuardCache.Set(hash, struct{}{}, 1)
 			}
 
-			opBatch, metricsBatch := msvc.prepareClickhouseBatches(context.Background(), time.Now(), tt.input.batch)
+			opBatch, metricsBatch, _ := msvc.prepareClickhouseBatches(context.Background(), time.Now(), tt.input.batch)
 			require.Equal(t, tt.expected.expectedPrepareBatchCalls, numPrepareBatchCalls)
 
 			if tt.expected.operationBatchCreated {
