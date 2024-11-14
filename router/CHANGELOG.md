@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.141.3](https://github.com/wundergraph/cosmo/compare/router@0.141.2...router@0.141.3) (2024-11-14)
+
+### Bug Fixes
+
+* fix merging of response nodes of enum type ([#1373](https://github.com/wundergraph/cosmo/issues/1373)) ([f3927e3](https://github.com/wundergraph/cosmo/commit/f3927e3cfc382bff9beff0a7868b444db213b9d6)) (@devsergiy)
+
 ## [0.141.2](https://github.com/wundergraph/cosmo/compare/router@0.141.1...router@0.141.2) (2024-11-12)
 
 ### Bug Fixes
