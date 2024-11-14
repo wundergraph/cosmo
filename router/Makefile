@@ -10,8 +10,10 @@ test:
 test-fresh: clean-testcache test
 
 lint:
-	go vet ./...
-	staticcheck ./...
+	go run -modfile ./tools/go.mod github.com/golangci/golangci-lint/cmd/golangci-lint run --timeout 5m
+
+lint-only-changed-files:
+	go run -modfile ./tools/go.mod github.com/golangci/golangci-lint/cmd/golangci-lint run --timeout 5m --new-from-rev origin/main
 
 clean-testcache:
 	go clean -testcache
@@ -32,5 +34,3 @@ build-custom:
 	CGO_ENABLED=0 go build -trimpath -ldflags "-extldflags -static -X github.com/wundergraph/cosmo/router/core.Version=$(VERSION) -X github.com/wundergraph/cosmo/router/core.Date=$(DATE) -X github.com/wundergraph/cosmo/router/core.Commit=$(COMMIT)" -a -o router cmd/custom/main.go
 
 .PHONY: dev test build lint bump-engine update-snapshot
-
-

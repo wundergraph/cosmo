@@ -11,9 +11,13 @@ test-fresh: clean-testcache test
 test-no-race:
 	go test ./...
 
+
 lint:
-	go vet ./...
-	staticcheck ./...
+	go run -modfile ./tools/go.mod github.com/golangci/golangci-lint/cmd/golangci-lint run --timeout 5m
+
+lint-only-changed-files:
+	go run -modfile ./tools/go.mod github.com/golangci/golangci-lint/cmd/golangci-lint run --timeout 5m --new-from-rev origin/main
+
 
 LOOPS=20
 test-stability:
