@@ -110,6 +110,24 @@ func TestForwardHeaders(t *testing.T) {
 					require.Equal(t, `{"data":{"headerValue":"`+headerVal+`"}}`, res.Body)
 				})
 		})
+
+		t.Run("explicit header overwrites dynamic header", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: setRequestDynamicAttribute(opNameHeader, core.ContextFieldOperationName),
+			},
+				func(t *testing.T, xEnv *testenv.Environment) {
+					res, err := xEnv.MakeGraphQLRequestWithHeaders(testenv.GraphQLRequest{
+						Query: `query myQuery { headerValue(name:"` + opNameHeader + `") }`,
+					}, map[string]string{
+						opNameHeader: "not-myQuery",
+					})
+					require.NoError(t, err)
+					headerVal := "not-myQuery"
+					require.Equal(t, `{"data":{"headerValue":"`+headerVal+`"}}`, res.Body)
+				})
+		})
 	})
 
 	t.Run("HTTP with client extension", func(t *testing.T) {
