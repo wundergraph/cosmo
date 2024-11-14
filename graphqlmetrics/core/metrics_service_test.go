@@ -205,6 +205,9 @@ func TestPublishGraphQLMetricsSendEmptyAndFilledMetrics(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	// Wait until all requests are dispatched
+	time.Sleep(time.Millisecond * 100)
+
 	// Wait for batch to be processed
 	msvc.Shutdown(time.Second * 10)
 
