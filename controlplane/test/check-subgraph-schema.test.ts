@@ -171,7 +171,7 @@ describe('CheckSubgraphSchema', (ctx) => {
     });
     expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
     expect(checkResp.compositionWarnings).toHaveLength(1);
-    expect(checkResp.compositionWarnings[0].message).toBe(invalidOverrideTargetSubgraphNameWarning('employees', 'Query', ['hello']).message);
+    expect(checkResp.compositionWarnings[0].message).toBe(invalidOverrideTargetSubgraphNameWarning('employees', 'Query', ['hello'], subgraphName).message);
 
     await server.close();
   });
