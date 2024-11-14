@@ -239,9 +239,6 @@ func (r *RequestHeaderRule) GetMatching() string {
 	return r.Matching
 }
 
-type HeaderValueFrom struct {
-	ContextField string `yaml:"context_field,omitempty"`
-}
 type ResponseHeaderRuleAlgorithm string
 
 const (
