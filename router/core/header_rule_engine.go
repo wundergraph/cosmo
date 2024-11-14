@@ -397,7 +397,7 @@ func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.R
 			request.Header.Set(rule.Named, ctx.Request().Header.Get(rule.Named))
 		} else if rule.Default != "" {
 			request.Header.Set(rule.Named, rule.Default)
-		} else if rule.ValueFrom.ContextField != "" {
+		} else if rule.ValueFrom != nil && rule.ValueFrom.ContextField != "" {
 			val := GetCustomDynamicAttributeValue(rule.ValueFrom, ctx)
 			value = fmt.Sprintf("%v", val)
 			if value != "" {
