@@ -13,6 +13,7 @@ runs:
     - name: Run linter action
       run: make lint
       working-directory: ${{ inputs.working-directory }}
+      shell: bash
 #    - name: Run go vet
 #      run: go vet ./...
 #      shell: bash
