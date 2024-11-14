@@ -351,6 +351,15 @@ func (h *HeaderPropagation) applyResponseRuleKeyValue(res *http.Response, propag
 
 func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.Request, rule *config.RequestHeaderRule) {
 	if rule.Operation == config.HeaderRuleOperationSet {
+		if rule.ValueFrom != nil && rule.ValueFrom.ContextField != "" {
+			val := getCustomDynamicAttributeValue(rule.ValueFrom, getRequestContext(request.Context()))
+			value := fmt.Sprintf("%v", val)
+			if value != "" {
+				request.Header.Set(rule.Name, value)
+			}
+			return
+		}
+
 		request.Header.Set(rule.Name, rule.Value)
 		return
 	}
@@ -389,15 +398,6 @@ func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.R
 
 	if rule.Named != "" {
 		if slices.Contains(ignoredHeaders, rule.Named) {
-			return
-		}
-
-		if rule.ValueFrom != nil && rule.ValueFrom.ContextField != "" {
-			val := getCustomDynamicAttributeValue(rule.ValueFrom, getRequestContext(request.Context()))
-			value := fmt.Sprintf("%v", val)
-			if value != "" {
-				request.Header.Set(rule.Named, value)
-			}
 			return
 		}
 
@@ -632,7 +632,7 @@ func PropagatedHeaders(rules []*config.RequestHeaderRule) (headerNames []string,
 	for _, rule := range rules {
 		switch rule.Operation {
 		case config.HeaderRuleOperationSet:
-			if rule.Name == "" || rule.Value == "" {
+			if rule.Name == "" || (rule.Value == "" && rule.ValueFrom == nil) {
 				return nil, nil, fmt.Errorf("invalid header set rule %+v, no header name/value combination", rule)
 			}
 			headerNames = append(headerNames, rule.Name)

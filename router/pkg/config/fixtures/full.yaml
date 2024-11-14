@@ -164,8 +164,8 @@ headers:
       - op: "set"
         name: "X-API-Key"
         value: "some-secret"
-      - op: "propagate"
-        named: "x-operation-name"
+      - op: "set"
+        name: "x-operation-name"
         value_from:
           context_field: "operation_name"
     response:

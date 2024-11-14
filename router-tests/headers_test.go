@@ -88,8 +88,8 @@ func TestForwardHeaders(t *testing.T) {
 					All: &config.GlobalHeaderRule{
 						Request: []*config.RequestHeaderRule{
 							{
-								Operation: config.HeaderRuleOperationPropagate,
-								Named:     headerName,
+								Operation: config.HeaderRuleOperationSet,
+								Name:      headerName,
 								ValueFrom: &config.CustomDynamicAttribute{
 									ContextField: contextField,
 								}}}}})}

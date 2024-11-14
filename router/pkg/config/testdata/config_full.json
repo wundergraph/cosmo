@@ -131,9 +131,9 @@
           "Named": "X-Test-Header",
           "Rename": "",
           "Default": "",
-          "ValueFrom": null,
           "Name": "",
-          "Value": ""
+          "Value": "",
+          "ValueFrom": null
         },
         {
           "Operation": "propagate",
@@ -141,9 +141,9 @@
           "Named": "",
           "Rename": "",
           "Default": "",
-          "ValueFrom": null,
           "Name": "",
-          "Value": ""
+          "Value": "",
+          "ValueFrom": null
         },
         {
           "Operation": "propagate",
@@ -151,9 +151,9 @@
           "Named": "X-User-Id",
           "Rename": "",
           "Default": "123",
-          "ValueFrom": null,
           "Name": "",
-          "Value": ""
+          "Value": "",
+          "ValueFrom": null
         },
         {
           "Operation": "set",
@@ -161,22 +161,22 @@
           "Named": "",
           "Rename": "",
           "Default": "",
-          "ValueFrom": null,
           "Name": "X-API-Key",
-          "Value": "some-secret"
+          "Value": "some-secret",
+          "ValueFrom": null
         },
         {
-          "Operation": "propagate",
+          "Operation": "set",
           "Matching": "",
-          "Named": "x-operation-name",
+          "Named": "",
           "Rename": "",
           "Default": "",
+          "Name": "x-operation-name",
+          "Value": "",
           "ValueFrom": {
             "RequestHeader": "",
             "ContextField": "operation_name"
-          },
-          "Name": "",
-          "Value": ""
+          }
         }
       ],
       "Response": [
@@ -201,9 +201,9 @@
             "Named": "Subgraph-Secret",
             "Rename": "",
             "Default": "some-secret",
-            "ValueFrom": null,
             "Name": "",
-            "Value": ""
+            "Value": "",
+            "ValueFrom": null
           }
         ],
         "Response": [

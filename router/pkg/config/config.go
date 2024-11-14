@@ -221,14 +221,14 @@ type RequestHeaderRule struct {
 	Rename string `yaml:"rename,omitempty"`
 	// Default is the default value to set if the header is not present
 	Default string `yaml:"default"`
-	// ValueFrom is the context field to get the value from, in propagating to subgraphs
-	ValueFrom *CustomDynamicAttribute `yaml:"value_from,omitempty"`
 
 	// Set header options
 	// Name is the name of the header to set
 	Name string `yaml:"name"`
 	// Value is the value of the header to set
 	Value string `yaml:"value"`
+	// ValueFrom is the context field to get the value from, in propagating to subgraphs
+	ValueFrom *CustomDynamicAttribute `yaml:"value_from,omitempty"`
 }
 
 func (r *RequestHeaderRule) GetOperation() HeaderRuleOperation {
