@@ -1223,6 +1223,14 @@ export function invalidEventSubjectsItemErrorMessage(argumentName: string): stri
   );
 }
 
+export function invalidEventSubjectsArgumentErrorMessage(argumentName: string): string {
+  return `An argument template references the invalid argument "${argumentName}".`;
+}
+
+export function undefinedEventSubjectsArgumentErrorMessage(argumentName: string): string {
+  return `An argument template references the undefined argument "${argumentName}".`;
+}
+
 export const invalidEventProviderIdErrorMessage = `If explicitly defined, the "providerId" argument must be a string with a minimum length of one.`;
 
 export function invalidEventDirectiveError(directiveName: string, fieldPath: string, errorMessages: string[]): Error {
