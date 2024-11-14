@@ -38,6 +38,7 @@ import {
 } from '../ast/utils';
 import {
   addFieldNamesToConfigurationData,
+  validateArgumentTemplateReferences,
   FieldSetData,
   InputValidationContainer,
   isNodeQuery,
@@ -49,6 +50,7 @@ import {
   BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME,
   BASE_DIRECTIVE_DEFINITIONS,
   BASE_SCALARS,
+  EDFS_ARGS_REGEXP,
   EVENT_DRIVEN_DIRECTIVE_DEFINITIONS_BY_DIRECTIVE_NAME,
   FIELD_SET_SCALAR_DEFINITION,
   SCOPE_SCALAR_DEFINITION,
@@ -103,6 +105,7 @@ import {
   invalidEventDrivenMutationResponseTypeErrorMessage,
   invalidEventProviderIdErrorMessage,
   invalidEventSubjectErrorMessage,
+  invalidEventSubjectsArgumentErrorMessage,
   invalidEventSubjectsErrorMessage,
   invalidEventSubjectsItemErrorMessage,
   invalidImplementedTypeError,
@@ -137,6 +140,7 @@ import {
   subgraphInvalidSyntaxError,
   subgraphValidationError,
   subgraphValidationFailureError,
+  undefinedEventSubjectsArgumentErrorMessage,
   undefinedNatsStreamConfigurationInputErrorMessage,
   undefinedObjectLikeParentError,
   undefinedRequiredArgumentsErrorMessage,
@@ -1185,7 +1189,11 @@ export class NormalizationFactory {
     overriddenFieldNamesForParent.add(this.childName);
   }
 
-  getKafkaPublishConfiguration(directive: ConstDirectiveNode, errorMessages: string[]): EventConfiguration | undefined {
+  getKafkaPublishConfiguration(
+    directive: ConstDirectiveNode,
+    argumentDataByArgumentName: Map<string, InputValueData>,
+    errorMessages: string[],
+  ): EventConfiguration | undefined {
     const topics: string[] = [];
     let providerId = DEFAULT_EDFS_PROVIDER_ID;
     for (const argumentNode of directive.arguments || []) {
@@ -1195,6 +1203,7 @@ export class NormalizationFactory {
             errorMessages.push(invalidEventSubjectErrorMessage(TOPIC));
             continue;
           }
+          validateArgumentTemplateReferences(argumentNode.value.value, argumentDataByArgumentName, errorMessages);
           topics.push(argumentNode.value.value);
           break;
         }
@@ -1216,6 +1225,7 @@ export class NormalizationFactory {
 
   getKafkaSubscribeConfiguration(
     directive: ConstDirectiveNode,
+    argumentDataByArgumentName: Map<string, InputValueData>,
     errorMessages: string[],
   ): EventConfiguration | undefined {
     const topics: string[] = [];
@@ -1232,6 +1242,7 @@ export class NormalizationFactory {
               errorMessages.push(invalidEventSubjectsItemErrorMessage(TOPICS));
               break;
             }
+            validateArgumentTemplateReferences(value.value, argumentDataByArgumentName, errorMessages);
             topics.push(value.value);
           }
           break;
@@ -1261,6 +1272,7 @@ export class NormalizationFactory {
   getNatsPublishAndRequestConfiguration(
     eventType: NatsEventType,
     directive: ConstDirectiveNode,
+    argumentDataByArgumentName: Map<string, InputValueData>,
     errorMessages: string[],
   ): EventConfiguration | undefined {
     const subjects: string[] = [];
@@ -1272,6 +1284,7 @@ export class NormalizationFactory {
             errorMessages.push(invalidEventSubjectErrorMessage(SUBJECT));
             continue;
           }
+          validateArgumentTemplateReferences(argumentNode.value.value, argumentDataByArgumentName, errorMessages);
           subjects.push(argumentNode.value.value);
           break;
         }
@@ -1293,6 +1306,7 @@ export class NormalizationFactory {
 
   getNatsSubscribeConfiguration(
     directive: ConstDirectiveNode,
+    argumentDataByArgumentName: Map<string, InputValueData>,
     errorMessages: string[],
   ): EventConfiguration | undefined {
     const subjects: string[] = [];
@@ -1311,6 +1325,7 @@ export class NormalizationFactory {
               errorMessages.push(invalidEventSubjectsItemErrorMessage(SUBJECTS));
               break;
             }
+            validateArgumentTemplateReferences(value.value, argumentDataByArgumentName, errorMessages);
             subjects.push(value.value);
           }
           break;
@@ -1405,7 +1420,10 @@ export class NormalizationFactory {
     }
   }
 
-  extractEventDirectivesToConfiguration(node: FieldDefinitionNode) {
+  extractEventDirectivesToConfiguration(
+    node: FieldDefinitionNode,
+    argumentDataByArgumentName: Map<string, InputValueData>,
+  ) {
     // Validation is handled elsewhere
     if (!node.directives) {
       return;
@@ -1416,21 +1434,35 @@ export class NormalizationFactory {
       let eventConfiguration: EventConfiguration | undefined;
       switch (directive.name.value) {
         case EDFS_KAFKA_PUBLISH:
-          eventConfiguration = this.getKafkaPublishConfiguration(directive, errorMessages);
+          eventConfiguration = this.getKafkaPublishConfiguration(directive, argumentDataByArgumentName, errorMessages);
           break;
         case EDFS_KAFKA_SUBSCRIBE:
-          eventConfiguration = this.getKafkaSubscribeConfiguration(directive, errorMessages);
+          eventConfiguration = this.getKafkaSubscribeConfiguration(
+            directive,
+            argumentDataByArgumentName,
+            errorMessages,
+          );
           break;
         case EDFS_NATS_PUBLISH: {
-          eventConfiguration = this.getNatsPublishAndRequestConfiguration(PUBLISH, directive, errorMessages);
+          eventConfiguration = this.getNatsPublishAndRequestConfiguration(
+            PUBLISH,
+            directive,
+            argumentDataByArgumentName,
+            errorMessages,
+          );
           break;
         }
         case EDFS_NATS_REQUEST: {
-          eventConfiguration = this.getNatsPublishAndRequestConfiguration(REQUEST, directive, errorMessages);
+          eventConfiguration = this.getNatsPublishAndRequestConfiguration(
+            REQUEST,
+            directive,
+            argumentDataByArgumentName,
+            errorMessages,
+          );
           break;
         }
         case EDFS_NATS_SUBSCRIBE: {
-          eventConfiguration = this.getNatsSubscribeConfiguration(directive, errorMessages);
+          eventConfiguration = this.getNatsSubscribeConfiguration(directive, argumentDataByArgumentName, errorMessages);
           break;
         }
         default:

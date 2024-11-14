@@ -800,3 +800,5 @@ export const baseDirectives = `
     streamName: String!
   }
 `;
+
+export const EDFS_ARGS_REGEXP = /{{\s*args\.([a-zA-Z0-9_]+)\s*}}/g;

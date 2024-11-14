@@ -325,7 +325,6 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           if (nf.childName === SERVICE_FIELD || nf.childName === ENTITIES_FIELD) {
             return false;
           }
-          nf.extractEventDirectivesToConfiguration(node);
         }
         // subscriptionFilter is temporarily an EDFS-only feature
         if (nf.edfsDirectiveReferences.size > 0) {
@@ -395,6 +394,9 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           nf.isSubgraphVersionTwo,
           nf.errors,
         );
+        if (isParentRootType) {
+          nf.extractEventDirectivesToConfiguration(node, argumentDataByArgumentName);
+        }
         const providesDirectives = fieldData.directivesByDirectiveName.get(PROVIDES);
         const requiresDirectives = fieldData.directivesByDirectiveName.get(REQUIRES);
         // return early to avoid creating unnecessary FieldSetDatas

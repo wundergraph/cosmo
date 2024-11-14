@@ -36,7 +36,7 @@ input UpdateEmployeeInput {
 
 type Mutation {
     updateEmployeeMyKafka(employeeID: Int!, update: UpdateEmployeeInput!): edfs__PublishResult! @edfs__kafkaPublish(topic: "employeeUpdated", providerId: "my-kafka")
-    updateEmployeeMyNats(employeeID: Int!, update: UpdateEmployeeInput!): edfs__PublishResult! @edfs__natsPublish(subject: "employeeUpdatedMyNats.{{ args.employeeID }}", providerId: "my-nats")
+    updateEmployeeMyNats(id: Int!, update: UpdateEmployeeInput!): edfs__PublishResult! @edfs__natsPublish(subject: "employeeUpdatedMyNats.{{ args.id }}", providerId: "my-nats")
 }
 
 type Subscription {

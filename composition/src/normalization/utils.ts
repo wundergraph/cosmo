@@ -64,8 +64,10 @@ import {
   unknownTypeInFieldSetErrorMessage,
   unparsableFieldSetErrorMessage,
   unparsableFieldSetSelectionErrorMessage,
+  undefinedEventSubjectsArgumentErrorMessage,
+  invalidEventSubjectsArgumentErrorMessage,
 } from '../errors/errors';
-import { BASE_SCALARS } from '../utils/constants';
+import { BASE_SCALARS, EDFS_ARGS_REGEXP } from '../utils/constants';
 import {
   ConfigurationData,
   newFieldSetConditionData,
@@ -73,6 +75,7 @@ import {
 } from '../router-configuration/router-configuration';
 import {
   FieldData,
+  InputValueData,
   ParentDefinitionData,
   ParentWithFieldsData,
   UnionDefinitionData,
@@ -932,4 +935,29 @@ export function validateAndAddConditionalFieldSetsToConfiguration(
 
 export function isNodeQuery(typeName: string, operationTypeNode?: OperationTypeNode): boolean {
   return typeName === QUERY || operationTypeNode === OperationTypeNode.QUERY;
+}
+
+export function validateArgumentTemplateReferences(
+  value: string,
+  argumentDataByArgumentName: Map<string, InputValueData>,
+  errorMessages: string[],
+) {
+  const matches = value.matchAll(EDFS_ARGS_REGEXP);
+  const undefinedArgs = new Set<string>();
+  const invalidArgs = new Set<string>();
+  for (const match of matches) {
+    if (match.length < 2) {
+      invalidArgs.add(match[0]);
+      continue;
+    }
+    if (!argumentDataByArgumentName.has(match[1])) {
+      undefinedArgs.add(match[1]);
+    }
+  }
+  for (const undefinedArg of undefinedArgs) {
+    errorMessages.push(undefinedEventSubjectsArgumentErrorMessage(undefinedArg));
+  }
+  for (const invalidArg of invalidArgs) {
+    errorMessages.push(invalidEventSubjectsArgumentErrorMessage(invalidArg));
+  }
 }
