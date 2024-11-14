@@ -81,7 +81,7 @@ func TestForwardHeaders(t *testing.T) {
 		})
 	})
 
-	t.Run("PropagateHeadersFromContext", func(t *testing.T) {
+	t.Run("SetHeadersFromContext", func(t *testing.T) {
 		setRequestDynamicAttribute := func(headerName, contextField string) []core.Option {
 			return []core.Option{
 				core.WithHeaderRules(config.HeaderRules{
