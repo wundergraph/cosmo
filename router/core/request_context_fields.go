@@ -55,8 +55,8 @@ func NewDurationLogField(val time.Duration, attribute config.CustomAttribute) za
 	return zap.Skip()
 }
 
-func GetLogFieldFromCustomAttribute(field config.CustomAttribute, req RequestContext) zap.Field {
-	val := GetCustomDynamicAttributeValue(field.ValueFrom, req)
+func GetLogFieldFromCustomAttribute(field config.CustomAttribute, req *requestContext) zap.Field {
+	val := getCustomDynamicAttributeValue(field.ValueFrom, req)
 	switch v := val.(type) {
 	case string:
 		return NewStringLogField(v, field)
@@ -69,65 +69,43 @@ func GetLogFieldFromCustomAttribute(field config.CustomAttribute, req RequestCon
 	return zap.Skip()
 }
 
-func GetCustomDynamicAttributeValue(attribute *config.CustomDynamicAttribute, req RequestContext) interface{} {
+func getCustomDynamicAttributeValue(attribute *config.CustomDynamicAttribute, reqContext *requestContext) interface{} {
 	if attribute.ContextField == "" {
 		return ""
 	}
 
-	operation := req.Operation()
-	op, opOk := operation.(*operationContext)
-	reqContext, reqOk := req.(*requestContext)
-
 	switch attribute.ContextField {
 	case ContextFieldOperationName:
-		return operation.Name()
+		return reqContext.operation.Name()
 	case ContextFieldOperationType:
-		return operation.Type()
+		return reqContext.operation.Type()
 	case ContextFieldOperationPlanningTime:
-		if opOk {
-			return op.planningTime
-		}
+		return reqContext.operation.planningTime
 	case ContextFieldOperationNormalizationTime:
-		if opOk {
-			return op.normalizationTime
-		}
+		return reqContext.operation.normalizationTime
 	case ContextFieldOperationParsingTime:
-		if opOk {
-			return op.parsingTime
-		}
+		return reqContext.operation.parsingTime
 	case ContextFieldOperationValidationTime:
-		if opOk {
-			return op.validationTime
-		}
+		return reqContext.operation.validationTime
 	case ContextFieldOperationSha256:
-		if opOk {
-			return op.sha256Hash
-		}
+		return reqContext.operation.sha256Hash
 	case ContextFieldOperationHash:
-		if opOk && op.hash != 0 {
-			return strconv.FormatUint(op.hash, 10)
+		if reqContext.operation.hash != 0 {
+			return strconv.FormatUint(reqContext.operation.hash, 10)
 		}
-		return operation.Hash()
+		return reqContext.operation.Hash()
 	case ContextFieldPersistedOperationSha256:
-		if opOk {
-			return op.persistedID
-		}
+		return reqContext.operation.persistedID
 	case ContextFieldResponseErrorMessage:
-		if reqOk && reqContext.error != nil {
+		if reqContext.error != nil {
 			return reqContext.error.Error()
 		}
 	case ContextFieldOperationServices:
-		if reqOk {
-			return reqContext.dataSourceNames
-		}
+		return reqContext.dataSourceNames
 	case ContextFieldGraphQLErrorServices:
-		if reqOk {
-			return reqContext.graphQLErrorServices
-		}
+		return reqContext.graphQLErrorServices
 	case ContextFieldGraphQLErrorCodes:
-		if reqOk {
-			return reqContext.graphQLErrorCodes
-		}
+		return reqContext.graphQLErrorCodes
 	}
 
 	return ""
