@@ -131,6 +131,7 @@
           "Named": "X-Test-Header",
           "Rename": "",
           "Default": "",
+          "ValueFrom": null,
           "Name": "",
           "Value": ""
         },
@@ -140,6 +141,7 @@
           "Named": "",
           "Rename": "",
           "Default": "",
+          "ValueFrom": null,
           "Name": "",
           "Value": ""
         },
@@ -149,6 +151,7 @@
           "Named": "X-User-Id",
           "Rename": "",
           "Default": "123",
+          "ValueFrom": null,
           "Name": "",
           "Value": ""
         },
@@ -158,8 +161,22 @@
           "Named": "",
           "Rename": "",
           "Default": "",
+          "ValueFrom": null,
           "Name": "X-API-Key",
           "Value": "some-secret"
+        },
+        {
+          "Operation": "propagate",
+          "Matching": "",
+          "Named": "x-operation-name",
+          "Rename": "",
+          "Default": "",
+          "ValueFrom": {
+            "RequestHeader": "",
+            "ContextField": "operation_name"
+          },
+          "Name": "",
+          "Value": ""
         }
       ],
       "Response": [
@@ -184,6 +201,7 @@
             "Named": "Subgraph-Secret",
             "Rename": "",
             "Default": "some-secret",
+            "ValueFrom": null,
             "Name": "",
             "Value": ""
           }

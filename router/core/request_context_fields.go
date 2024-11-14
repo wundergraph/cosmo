@@ -54,3 +54,78 @@ func NewDurationLogField(val time.Duration, attribute config.CustomAttribute) za
 	}
 	return zap.Skip()
 }
+
+func GetLogFieldFromCustomAttribute(field config.CustomAttribute, req RequestContext) zap.Field {
+	val := GetCustomDynamicAttributeValue(field.ValueFrom, req)
+	switch v := val.(type) {
+	case string:
+		return NewStringLogField(v, field)
+	case []string:
+		return NewStringSliceLogField(v, field)
+	case time.Duration:
+		return NewDurationLogField(v, field)
+	}
+
+	return zap.Skip()
+}
+
+func GetCustomDynamicAttributeValue(attribute *config.CustomDynamicAttribute, req RequestContext) interface{} {
+	if attribute.ContextField == "" {
+		return ""
+	}
+
+	operation := req.Operation()
+	op, opOk := operation.(*operationContext)
+	reqContext, reqOk := req.(*requestContext)
+
+	switch attribute.ContextField {
+	case ContextFieldOperationName:
+		return operation.Name()
+	case ContextFieldOperationType:
+		return operation.Type()
+	case ContextFieldOperationPlanningTime:
+		if opOk {
+			return op.planningTime
+		}
+	case ContextFieldOperationNormalizationTime:
+		if opOk {
+			return op.normalizationTime
+		}
+	case ContextFieldOperationParsingTime:
+		if opOk {
+			return op.parsingTime
+		}
+	case ContextFieldOperationValidationTime:
+		if opOk {
+			return op.validationTime
+		}
+	case ContextFieldOperationSha256:
+		if opOk {
+			return op.sha256Hash
+		}
+	case ContextFieldOperationHash:
+		return operation.Hash()
+	case ContextFieldPersistedOperationSha256:
+		if opOk {
+			return op.persistedID
+		}
+	case ContextFieldResponseErrorMessage:
+		if reqOk {
+			return reqContext.error.Error()
+		}
+	case ContextFieldOperationServices:
+		if reqOk {
+			return reqContext.dataSourceNames
+		}
+	case ContextFieldGraphQLErrorServices:
+		if reqOk {
+			return reqContext.graphQLErrorServices
+		}
+	case ContextFieldGraphQLErrorCodes:
+		if reqOk {
+			return reqContext.graphQLErrorCodes
+		}
+	}
+
+	return ""
+}

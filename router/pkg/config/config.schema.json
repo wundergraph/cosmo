@@ -2093,6 +2093,34 @@
           "type": "string",
           "examples": ["default-value"],
           "description": "The default value of the header in case it is not present in the request."
+        },
+        "value_from": {
+          "type": "object",
+          "description": "The configuration for the value from. The value from is used to extract a value from a request context and propagate it to subgraphs,",
+          "additionalProperties": false,
+          "required": ["context_field"],
+          "properties": {
+            "context_field": {
+              "type": "string",
+              "description": "The field name of the context from which to extract the value. The value is only extracted when a context is available otherwise the default value is used.",
+              "enum": [
+                "operation_name",
+                "operation_type",
+                "operation_service_names",
+                "operation_hash",
+                "persisted_operation_sha256",
+                "operation_sha256",
+                "response_error_message",
+                "graphql_error_codes",
+                "graphql_error_service_names",
+                "operation_parsing_time",
+                "operation_validation_time",
+                "operation_planning_time",
+                "operation_normalization_time"
+              ]
+
+            }
+          }
         }
       },
       "required": ["op"]

@@ -30,8 +30,8 @@ type CustomStaticAttribute struct {
 }
 
 type CustomDynamicAttribute struct {
-	RequestHeader string `yaml:"request_header"`
-	ContextField  string `yaml:"context_field"`
+	RequestHeader string `yaml:"request_header,omitempty"`
+	ContextField  string `yaml:"context_field,omitempty"`
 }
 
 type CustomAttribute struct {
@@ -221,6 +221,8 @@ type RequestHeaderRule struct {
 	Rename string `yaml:"rename,omitempty"`
 	// Default is the default value to set if the header is not present
 	Default string `yaml:"default"`
+	// ValueFrom is the context field to get the value from, in propagating to subgraphs
+	ValueFrom *CustomDynamicAttribute `yaml:"value_from,omitempty"`
 
 	// Set header options
 	// Name is the name of the header to set
@@ -237,6 +239,9 @@ func (r *RequestHeaderRule) GetMatching() string {
 	return r.Matching
 }
 
+type HeaderValueFrom struct {
+	ContextField string `yaml:"context_field,omitempty"`
+}
 type ResponseHeaderRuleAlgorithm string
 
 const (

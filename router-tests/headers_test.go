@@ -81,6 +81,34 @@ func TestForwardHeaders(t *testing.T) {
 		})
 	})
 
+	t.Run("PropagateHeadersFromContext", func(t *testing.T) {
+		t.Run("successfully sets operation name header", func(t *testing.T) {
+			t.Parallel()
+			opNameHeader := "x-operation-name"
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithHeaderRules(config.HeaderRules{
+						All: &config.GlobalHeaderRule{
+							Request: []*config.RequestHeaderRule{
+								{
+									Operation: config.HeaderRuleOperationPropagate,
+									Named:     opNameHeader,
+									ValueFrom: &config.CustomDynamicAttribute{
+										ContextField: core.ContextFieldOperationName,
+									},
+								},
+							}}})}},
+				func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query myQuery { headerValue(name:"` + opNameHeader + `") }`,
+					})
+					headerVal := "myQuery"
+					require.Equal(t, `{"data":{"headerValue":"`+headerVal+`"}}`, res.Body)
+				})
+		})
+	})
+
 	t.Run("HTTP with client extension", func(t *testing.T) {
 		t.Parallel()
 
