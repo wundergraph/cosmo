@@ -111,7 +111,7 @@ func TestForwardHeaders(t *testing.T) {
 				})
 		})
 
-		t.Run("explicit header overwrites dynamic header", func(t *testing.T) {
+		t.Run("propagated header overwrites explicit header", func(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
@@ -124,7 +124,7 @@ func TestForwardHeaders(t *testing.T) {
 						opNameHeader: "not-myQuery",
 					})
 					require.NoError(t, err)
-					headerVal := "not-myQuery"
+					headerVal := "myQuery"
 					require.Equal(t, `{"data":{"headerValue":"`+headerVal+`"}}`, res.Body)
 				})
 		})
