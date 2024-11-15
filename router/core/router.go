@@ -474,6 +474,30 @@ func NewRouter(opts ...Option) (*Router, error) {
 		)
 	}
 
+	if r.securityConfiguration.DepthLimit != nil {
+		r.logger.Warn("The security configuration field 'depth_limit' is deprecated, and will be removed. Use 'security.complexity_limits.depth' instead.")
+
+		if r.securityConfiguration.ComplexityCalculationCache == nil {
+			r.securityConfiguration.ComplexityCalculationCache = &config.ComplexityCalculationCache{
+				Enabled:   true,
+				CacheSize: r.securityConfiguration.DepthLimit.CacheSize,
+			}
+		}
+
+		if r.securityConfiguration.ComplexityLimits == nil {
+			r.securityConfiguration.ComplexityLimits = &config.ComplexityLimits{}
+		}
+		if r.securityConfiguration.ComplexityLimits.Depth == nil {
+			r.securityConfiguration.ComplexityLimits.Depth = &config.ComplexityLimit{
+				Enabled:                   r.securityConfiguration.DepthLimit.Enabled,
+				Limit:                     r.securityConfiguration.DepthLimit.Limit,
+				IgnorePersistedOperations: r.securityConfiguration.DepthLimit.IgnorePersistedOperations,
+			}
+		} else {
+			r.logger.Warn("Ignoring deprecated security configuration field 'depth_limit', in favor of the `security_complexity_limits.depth` configuration")
+		}
+	}
+
 	if r.developmentMode {
 		r.logger.Warn("Development mode enabled. This should only be used for testing purposes")
 	}

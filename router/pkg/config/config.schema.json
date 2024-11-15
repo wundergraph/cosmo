@@ -1716,9 +1716,126 @@
           "default": false,
           "description": "Block non-persisted Operations. If the value is true, the non-persisted operations are blocked."
         },
+        "complexity_calculation_cache": {
+          "type": "object",
+            "description": "The configuration for the complexity calculation cache. The complexity calculation cache is used to cache the complexity calculation for the queries.",
+            "additionalProperties": false,
+            "properties": {
+              "enabled": {
+                "type": "boolean",
+                "default": true,
+                "description": "Enable the complexity calculation cache. If the value is true, the complexity calculation cache is enabled."
+              },
+              "size": {
+                "type": "integer",
+                "default": 10240,
+                "description": "The size of the cache for the complexity calculation."
+              }
+            }
+        },
+        "complexity_limits": {
+          "type": "object",
+          "description": "The configuration for complexity limits for queries",
+          "additionalProperties": false,
+          "properties": {
+            "depth": {
+              "type": "object",
+              "description": "The configuration for adding a max depth limit for query (how many nested levels you can have in a query). This limit prevents infinite querying, and also limits the size of the data returned. If the limit is 0, this limit isn't applied.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable query depth limits. If the value is true (default: false), and a valid limit value is set, a query depth will be calculated for your requests, and a limit applied to the queries."
+                },
+                "limit": {
+                  "type": "integer",
+                  "description": "The depth limit for query. If the limit is 0, this limit isn't applied.",
+                  "default": 0,
+                  "minimum": 0
+                },
+                "ignore_persisted_operations": {
+                  "type": "boolean",
+                  "description": "Disable the max query depth limit for persisted operations. Since persisted operations are stored intentionally, users may want to disable the limit to consciously allow nested persisted operations.",
+                  "default": false
+                }
+              }
+            },
+            "total_fields": {
+              "type": "object",
+              "description": "How many total fields are allowed to be in a particular query. This limit prevents queries from becoming too large.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the total field limit."
+                },
+                "limit": {
+                  "type": "integer",
+                  "description": "The field limit for query. If the limit is 0, this limit isn't applied.",
+                  "default": 0,
+                  "minimum": 0
+                },
+                "ignore_persisted_operations": {
+                  "type": "boolean",
+                  "description": "Disable the total field limit for persisted operations. Since persisted operations are stored intentionally, users may want to disable the limit to consciously allow nested persisted operations.",
+                  "default": false
+                }
+              }
+            },
+            "root_fields": {
+              "type": "object",
+              "description": "How many root fields are allowed in a query.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the root field query limit."
+                },
+                "limit": {
+                  "type": "integer",
+                  "description": "The root field limit for query. If the limit is 0, this limit isn't applied.",
+                  "default": 0,
+                  "minimum": 0
+                },
+                "ignore_persisted_operations": {
+                  "type": "boolean",
+                  "description": "Disable the root fieldlimit for persisted operations. Since persisted operations are stored intentionally, users may want to disable the limit to consciously allow nested persisted operations.",
+                  "default": false
+                }
+              }
+            },
+            "root_field_aliases": {
+              "type": "object",
+              "description": "How many root field aliases are allowed in a query.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the root field alias query limit."
+                },
+                "limit": {
+                  "type": "integer",
+                  "description": "The root field alias limit for query. If the limit is 0, this limit isn't applied.",
+                  "default": 0,
+                  "minimum": 0
+                },
+                "ignore_persisted_operations": {
+                  "type": "boolean",
+                  "description": "Disable the root field alias limit for persisted operations. Since persisted operations are stored intentionally, users may want to disable the limit to consciously allow nested persisted operations.",
+                  "default": false
+                }
+              }
+            }
+          }
+        },
         "depth_limit": {
           "type": "object",
-          "description": "The configuration for adding a max depth limit for query (how many nested levels you can have in a query). This limit prevents infinite querying, and also limits the size of the data returned. If the limit is 0, this limit isn't applied.",
+          "description": "DEPRECATED (move to complexity_limits.depth): The configuration for adding a max depth limit for query (how many nested levels you can have in a query).",
+          "deprecated": true,
           "additionalProperties": false,
           "properties": {
             "enabled": {
@@ -1734,7 +1851,7 @@
             },
             "cache_size": {
               "type": "integer",
-              "default": 1024,
+              "default": 10240,
               "description": "The size of the cache for query depth. If users set a max_query_depth, we cache the decision per query."
             },
             "ignore_persisted_operations": {
@@ -1863,7 +1980,7 @@
         },
         "execution_plan_cache_size": {
           "type": "integer",
-          "default": 1024,
+          "default": 10240,
           "description": "The size of the execution plan cache."
         },
         "operation_hash_cache_size": {
@@ -1888,7 +2005,7 @@
         },
         "normalization_cache_size": {
           "type": "integer",
-          "default": 1024,
+          "default": 10240,
           "description": "The size of the normalization cache."
         },
         "parsekit_pool_size": {
@@ -1908,7 +2025,7 @@
         },
         "validation_cache_size": {
           "type": "integer",
-          "default": 1024,
+          "default": 10240,
           "description": "The size of the validation cache."
         }
       }
