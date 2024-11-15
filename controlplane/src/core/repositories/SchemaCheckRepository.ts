@@ -123,7 +123,7 @@ export class SchemaCheckRepository {
       return;
     }
 
-    const arrayOfValues: NewSchemaChangeOperationUsage[][] = createBatches<NewSchemaChangeOperationUsage>(values, 10);
+    const arrayOfValues: NewSchemaChangeOperationUsage[][] = createBatches<NewSchemaChangeOperationUsage>(values, 1000);
     const promises = [];
 
     for (const values of arrayOfValues) {
