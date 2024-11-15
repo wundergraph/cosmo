@@ -15,7 +15,7 @@ env:
 
 jobs:
   build_test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-m
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4

@@ -18,7 +18,7 @@ env:
 jobs:
   build_test:
     timeout-minutes: 10
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-m
     services:
       redis:
         # Docker Hub image
@@ -79,7 +79,7 @@ jobs:
           DB_URL: "postgresql://postgres:changeme@localhost:5432/controlplane"
 
   build_push_image:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-m
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
