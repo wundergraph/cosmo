@@ -111,7 +111,7 @@ func TestForwardHeaders(t *testing.T) {
 				})
 		})
 
-		t.Run("propagated header overwrites explicit header", func(t *testing.T) {
+		t.Run("set dynamic header overwrites explicit header", func(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
