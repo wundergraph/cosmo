@@ -21,11 +21,10 @@ deploy: build-sam
 	sam deploy
 
 lint:
-	go run -modfile ./tools/go.mod github.com/golangci/golangci-lint/cmd/golangci-lint run --timeout 5m
+	golangci-lint run --timeout 5m
 
 lint-only-changed-files:
-	go run -modfile ./tools/go.mod github.com/golangci/golangci-lint/cmd/golangci-lint run --timeout 5m --new-from-rev origin/main
-
+	golangci-lint run --timeout 5m --new-from-rev origin/main
 
 test:
 	go test -v ./...

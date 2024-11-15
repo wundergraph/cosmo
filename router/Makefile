@@ -10,10 +10,10 @@ test:
 test-fresh: clean-testcache test
 
 lint:
-	go run -modfile ./tools/go.mod github.com/golangci/golangci-lint/cmd/golangci-lint run --timeout 5m
+	golangci-lint run --timeout 5m
 
 lint-only-changed-files:
-	go run -modfile ./tools/go.mod github.com/golangci/golangci-lint/cmd/golangci-lint run --timeout 5m --new-from-rev origin/main
+	golangci-lint run --timeout 5m --new-from-rev origin/main
 
 clean-testcache:
 	go clean -testcache
