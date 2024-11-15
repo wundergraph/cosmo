@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 
@@ -868,68 +867,14 @@ func (s *graphServer) accessLogsFieldHandler(panicError any, request *http.Reque
 		if field.ValueFrom != nil && field.ValueFrom.RequestHeader != "" {
 			resFields = append(resFields, NewStringLogField(request.Header.Get(field.ValueFrom.RequestHeader), field))
 		} else if field.ValueFrom != nil && field.ValueFrom.ContextField != "" && reqContext.operation != nil {
-			switch field.ValueFrom.ContextField {
-			case ContextFieldOperationName:
-				if v := NewStringLogField(reqContext.operation.name, field); v != zap.Skip() {
-					resFields = append(resFields, v)
-				}
-			case ContextFieldOperationType:
-				if v := NewStringLogField(reqContext.operation.opType, field); v != zap.Skip() {
-					resFields = append(resFields, v)
-				}
-			case ContextFieldOperationPlanningTime:
-				if v := NewDurationLogField(reqContext.operation.planningTime, field); v != zap.Skip() {
-					resFields = append(resFields, v)
-				}
-			case ContextFieldOperationNormalizationTime:
-				if v := NewDurationLogField(reqContext.operation.normalizationTime, field); v != zap.Skip() {
-					resFields = append(resFields, v)
-				}
-			case ContextFieldOperationParsingTime:
-				if v := NewDurationLogField(reqContext.operation.parsingTime, field); v != zap.Skip() {
-					resFields = append(resFields, v)
-				}
-			case ContextFieldOperationValidationTime:
-				if v := NewDurationLogField(reqContext.operation.validationTime, field); v != zap.Skip() {
-					resFields = append(resFields, v)
-				}
-			case ContextFieldOperationSha256:
-				if v := NewStringLogField(reqContext.operation.sha256Hash, field); v != zap.Skip() {
-					resFields = append(resFields, v)
-				}
-			case ContextFieldOperationHash:
-				if reqContext.operation.hash != 0 {
-					if v := NewStringLogField(strconv.FormatUint(reqContext.operation.hash, 10), field); v != zap.Skip() {
-						resFields = append(resFields, v)
-					}
-				}
-			case ContextFieldPersistedOperationSha256:
-				if v := NewStringLogField(reqContext.operation.persistedID, field); v != zap.Skip() {
-					resFields = append(resFields, v)
-				}
-			case ContextFieldResponseErrorMessage:
-				var errMessage string
-				if panicError != nil {
-					errMessage = fmt.Sprintf("%v", panicError)
-				} else if reqContext.error != nil {
-					errMessage = reqContext.error.Error()
-				}
+			if field.ValueFrom.ContextField == ContextFieldResponseErrorMessage && panicError != nil {
+				errMessage := fmt.Sprintf("%v", panicError)
 				if v := NewStringLogField(errMessage, field); v != zap.Skip() {
 					resFields = append(resFields, v)
 				}
-
-			case ContextFieldOperationServices:
-				if v := NewStringSliceLogField(reqContext.dataSourceNames, field); v != zap.Skip() {
-					resFields = append(resFields, v)
-				}
-			case ContextFieldGraphQLErrorServices:
-				if v := NewStringSliceLogField(reqContext.graphQLErrorServices, field); v != zap.Skip() {
-					resFields = append(resFields, v)
-				}
-			case ContextFieldGraphQLErrorCodes:
-				if v := NewStringSliceLogField(reqContext.graphQLErrorCodes, field); v != zap.Skip() {
-					resFields = append(resFields, v)
-				}
+			}
+			if v := GetLogFieldFromCustomAttribute(field, reqContext); v != zap.Skip() {
+				resFields = append(resFields, v)
 			}
 		} else if field.Default != "" {
 			resFields = append(resFields, NewStringLogField(field.Default, field))

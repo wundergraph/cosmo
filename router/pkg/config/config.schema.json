@@ -2156,9 +2156,24 @@
           "type": "string",
           "examples": ["My-Secret-Value"],
           "description": "The value to set for the header. This can include environment variables."
+        },
+        "value_from": {
+          "type": "object",
+          "description": "The configuration for the value from. The value from is used to extract a value from a request context and propagate it to subgraphs. This is currently only valid in requests",
+          "additionalProperties": false,
+          "required": ["context_field"],
+          "properties": {
+            "context_field": {
+              "type": "string",
+              "description": "The field name of the context from which to extract the value. The value is only extracted when a context is available otherwise the default value is used.",
+              "enum": [
+                "operation_name"
+              ]
+            }
+          }
         }
       },
-      "required": ["op", "name", "value"]
+      "required": ["op", "name"]
     }
   }
 }
