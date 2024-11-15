@@ -104,7 +104,7 @@ func TestPublishGraphQLMetrics(t *testing.T) {
     	GROUP BY OperationHash LIMIT 1
 	`).Scan(&opCount))
 
-	assert.Equal(t, opCount, uint64(1))
+	assert.Equal(t, uint64(1), opCount)
 
 	// Validate materialized view
 
@@ -124,7 +124,7 @@ func TestPublishGraphQLMetrics(t *testing.T) {
 		startsWith(Path, ['hi'])
 	`).Scan(&fieldUsageCountMv))
 
-	assert.Equal(t, fieldUsageCountMv, uint64(1))
+	assert.Equal(t, uint64(1), fieldUsageCountMv)
 
 	var fieldUsageCount2Mv uint64
 	require.NoError(t, db.QueryRow(ctx, `
@@ -142,7 +142,7 @@ func TestPublishGraphQLMetrics(t *testing.T) {
 		startsWith(Path, ['hello'])
 	`).Scan(&fieldUsageCount2Mv))
 
-	assert.Equal(t, fieldUsageCount2Mv, uint64(1))
+	assert.Equal(t, uint64(1), fieldUsageCount2Mv)
 
 	var fieldUsageLiteCount uint64
 	require.NoError(t, db.QueryRow(ctx, `
@@ -210,7 +210,7 @@ func TestPublishGraphQLMetricsSendEmptyAndFilledMetrics(t *testing.T) {
     	OperationContent = 'query Hello { hello }'
 	`).Scan(&opCount))
 
-	assert.Equal(t, opCount, uint64(2))
+	assert.Equal(t, uint64(2), opCount)
 
 	// Validate materialized view
 
@@ -221,7 +221,7 @@ func TestPublishGraphQLMetricsSendEmptyAndFilledMetrics(t *testing.T) {
 		FederatedGraphID = 'fed123'
 	`).Scan(&fieldUsageCount))
 
-	assert.Equal(t, int(fieldUsageCount), 2)
+	assert.Equal(t, 2, int(fieldUsageCount))
 
 	var fieldUsageLiteCount uint64
 	require.NoError(t, db.QueryRow(ctx, `
@@ -240,7 +240,7 @@ func TestPublishGraphQLMetricsSendEmptyAndFilledMetrics(t *testing.T) {
 	OrganizationID = 'org123'
 	`).Scan(&requestCount))
 
-	require.Equal(t, requestCount, uint64(1))
+	require.Equal(t, uint64(1), requestCount)
 }
 
 func TestPublishGraphQLMetricsSmallBatches(t *testing.T) {
@@ -354,7 +354,7 @@ func TestPublishGraphQLMetricsSmallBatches(t *testing.T) {
 		startsWith(Path, ['hello'])
 	`).Scan(&fieldUsageCountMv))
 
-	assert.Equal(t, fieldUsageCountMv, uint64(20_000))
+	assert.Equal(t, uint64(20_000), fieldUsageCountMv)
 
 	var requestCount uint64
 	require.NoError(t, db.QueryRow(ctx, `
@@ -453,7 +453,7 @@ func TestPublishAggregatedGraphQLMetrics(t *testing.T) {
     	GROUP BY OperationHash LIMIT 1
 	`).Scan(&opCount))
 
-	assert.Equal(t, opCount, uint64(1))
+	assert.Equal(t, uint64(1), opCount)
 
 	// Validate materialized view
 
@@ -473,7 +473,7 @@ func TestPublishAggregatedGraphQLMetrics(t *testing.T) {
 		startsWith(Path, ['hello'])
 	`).Scan(&fieldUsageCountMv))
 
-	assert.Equal(t, fieldUsageCountMv, uint64(1))
+	assert.Equal(t, uint64(1), fieldUsageCountMv)
 
 	var requestCount uint64
 	require.NoError(t, db.QueryRow(ctx, `
@@ -483,7 +483,7 @@ func TestPublishAggregatedGraphQLMetrics(t *testing.T) {
 	OrganizationID = 'org123'
 	`).Scan(&requestCount))
 
-	require.Equal(t, requestCount, uint64(1))
+	require.Equal(t, uint64(1), requestCount)
 }
 
 func TestPublishAggregatedGraphQLMetricsDifferentRequestCounts(t *testing.T) {
