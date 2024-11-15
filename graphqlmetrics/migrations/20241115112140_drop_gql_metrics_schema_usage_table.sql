@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS gql_metrics_schema_usage
     INDEX idx_attr_value mapValues(Attributes) TYPE bloom_filter(0.01) GRANULARITY 1,
     INDEX idx_count Count TYPE minmax GRANULARITY 1
 )
-    ENGINE = ReplicatedMergeTree('/clickhouse/tables/{uuid}/{shard}', '{replica}')
+    ENGINE = MergeTree
         PARTITION BY toDate(Timestamp)
         ORDER BY (OrganizationID, FederatedGraphID, ClientName, ClientVersion, RouterConfigVersion, OperationHash, HttpStatusCode, HasError, toUnixTimestamp(Timestamp))
         TTL toDateTime(Timestamp) + toIntervalDay(7)

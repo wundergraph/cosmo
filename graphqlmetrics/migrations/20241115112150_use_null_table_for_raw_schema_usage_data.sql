@@ -56,5 +56,3 @@ CREATE TABLE IF NOT EXISTS gql_metrics_schema_usage
 
 DROP TABLE IF EXISTS gql_metrics_schema_usage;
 
--- migrate:down
-
