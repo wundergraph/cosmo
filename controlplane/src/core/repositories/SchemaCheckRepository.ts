@@ -2,6 +2,7 @@ import { and, eq, inArray, or, sql } from 'drizzle-orm';
 import _ from 'lodash';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { VCSContext } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import pLimit from 'p-limit';
 import { NewSchemaChangeOperationUsage } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
@@ -98,6 +99,7 @@ export class SchemaCheckRepository {
     federatedGraphId: string,
   ) {
     const values: NewSchemaChangeOperationUsage[] = [];
+    const limit = pLimit(10);
 
     for (const [schemaCheckChangeActionId, operations] of schemaCheckActionOperations.entries()) {
       values.push(
@@ -121,11 +123,14 @@ export class SchemaCheckRepository {
       return;
     }
 
-    const arrayOfValues: NewSchemaChangeOperationUsage[][] = createBatches<NewSchemaChangeOperationUsage>(values, 500);
+    const arrayOfValues: NewSchemaChangeOperationUsage[][] = createBatches<NewSchemaChangeOperationUsage>(values, 10);
+    const promises = [];
 
     for (const values of arrayOfValues) {
-      await this.db.insert(schemaCheckChangeActionOperationUsage).values(values).execute();
+      promises.push(limit(() => this.db.insert(schemaCheckChangeActionOperationUsage).values(values).execute()));
     }
+
+    await Promise.all(promises);
   }
 
   private mapChangesFromDriverValue = (val: any) => {
