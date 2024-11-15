@@ -1,7 +1,7 @@
-import { and, eq, inArray, or, sql } from 'drizzle-orm';
-import _ from 'lodash';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { VCSContext } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { and, eq, inArray, sql } from 'drizzle-orm';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import _ from 'lodash';
 import { NewSchemaChangeOperationUsage } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
@@ -317,16 +317,6 @@ export class SchemaCheckRepository {
           hash: schema.schemaCheckChangeActionOperationUsage.hash,
           name: schema.schemaCheckChangeActionOperationUsage.name,
           type: schema.schemaCheckChangeActionOperationUsage.type,
-          firstSeenAt: sql`min(${schema.schemaCheckChangeActionOperationUsage.firstSeenAt})`.mapWith({
-            mapFromDriverValue: (value) => new Date(value).toUTCString(),
-          }),
-          lastSeenAt: sql`max(${schema.schemaCheckChangeActionOperationUsage.lastSeenAt})`.mapWith({
-            mapFromDriverValue: (value) => new Date(value).toUTCString(),
-          }),
-          schemaChangeIds: sql<
-            string[]
-          >`array_agg(${schema.schemaCheckChangeActionOperationUsage.schemaCheckChangeActionId})`,
-          isSafe: sql<boolean>`true = all(array_agg(${schema.schemaCheckChangeActionOperationUsage.isSafeOverride}))`,
         })
         .from(schema.schemaCheckChangeActionOperationUsage)
         .where(inArray(schema.schemaCheckChangeActionOperationUsage.schemaCheckChangeActionId, changeActionIds))
