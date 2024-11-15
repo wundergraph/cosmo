@@ -266,14 +266,14 @@ func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.M
 }
 
 type graphMux struct {
-	mux                     *chi.Mux
-	planCache               ExecutionPlanCache[uint64, *planWithMetaData]
-	persistedOperationCache *ristretto.Cache[uint64, NormalizationCacheEntry]
-	normalizationCache      *ristretto.Cache[uint64, NormalizationCacheEntry]
-	validationCache         *ristretto.Cache[uint64, bool]
-	queryDepthCache         *ristretto.Cache[uint64, int]
-	operationHashCache      *ristretto.Cache[uint64, string]
-	accessLogsFileLogger    *logging.BufferedLogger
+	mux                        *chi.Mux
+	planCache                  ExecutionPlanCache[uint64, *planWithMetaData]
+	persistedOperationCache    *ristretto.Cache[uint64, NormalizationCacheEntry]
+	normalizationCache         *ristretto.Cache[uint64, NormalizationCacheEntry]
+	complexityCalculationCache *ristretto.Cache[uint64, ComplexityCacheEntry]
+	validationCache            *ristretto.Cache[uint64, bool]
+	operationHashCache         *ristretto.Cache[uint64, string]
+	accessLogsFileLogger       *logging.BufferedLogger
 }
 
 func (s *graphMux) Shutdown(_ context.Context) error {
@@ -294,8 +294,8 @@ func (s *graphMux) Shutdown(_ context.Context) error {
 		s.validationCache.Close()
 	}
 
-	if s.queryDepthCache != nil {
-		s.queryDepthCache.Close()
+	if s.complexityCalculationCache != nil {
+		s.complexityCalculationCache.Close()
 	}
 
 	if s.accessLogsFileLogger != nil {
@@ -435,13 +435,13 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		}
 	}
 
-	if s.securityConfiguration.DepthLimit.Enabled && s.securityConfiguration.DepthLimit.CacheSize > 0 {
-		queryDepthCacheConfig := &ristretto.Config[uint64, int]{
-			MaxCost:     s.securityConfiguration.DepthLimit.CacheSize,
-			NumCounters: s.securityConfiguration.DepthLimit.CacheSize * 10,
+	if s.securityConfiguration.ComplexityCalculationCache != nil && s.securityConfiguration.ComplexityCalculationCache.Enabled && s.securityConfiguration.ComplexityCalculationCache.CacheSize > 0 {
+		complexityCalculationCacheConfig := &ristretto.Config[uint64, ComplexityCacheEntry]{
+			MaxCost:     s.securityConfiguration.ComplexityCalculationCache.CacheSize,
+			NumCounters: s.securityConfiguration.ComplexityCalculationCache.CacheSize * 10,
 			BufferItems: 64,
 		}
-		gm.queryDepthCache, err = ristretto.NewCache[uint64, int](queryDepthCacheConfig)
+		gm.complexityCalculationCache, err = ristretto.NewCache[uint64, ComplexityCacheEntry](complexityCalculationCacheConfig)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create query depth cache: %w", err)
 		}
@@ -709,7 +709,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		PersistedOpsNormalizationCache:      gm.persistedOperationCache,
 		NormalizationCache:                  gm.normalizationCache,
 		ValidationCache:                     gm.validationCache,
-		QueryDepthCache:                     gm.queryDepthCache,
+		QueryDepthCache:                     gm.complexityCalculationCache,
 		OperationHashCache:                  gm.operationHashCache,
 		ParseKitPoolSize:                    s.engineExecutionConfiguration.ParseKitPoolSize,
 		IntrospectionEnabled:                s.Config.introspection,
@@ -774,9 +774,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		FileUploadEnabled:           s.fileUploadConfig.Enabled,
 		MaxUploadFiles:              s.fileUploadConfig.MaxFiles,
 		MaxUploadFileSize:           int(s.fileUploadConfig.MaxFileSizeBytes),
-		QueryDepthEnabled:           s.securityConfiguration.DepthLimit.Enabled,
-		QueryDepthLimit:             s.securityConfiguration.DepthLimit.Limit,
-		QueryIgnorePersistent:       s.securityConfiguration.DepthLimit.IgnorePersistedOperations,
+		ComplexityLimits:            s.securityConfiguration.ComplexityLimits,
 		AlwaysIncludeQueryPlan:      s.engineExecutionConfiguration.Debug.AlwaysIncludeQueryPlan,
 		AlwaysSkipLoader:            s.engineExecutionConfiguration.Debug.AlwaysSkipLoader,
 		QueryPlansEnabled:           s.Config.queryPlansEnabled,
