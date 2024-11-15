@@ -81,6 +81,55 @@ func TestForwardHeaders(t *testing.T) {
 		})
 	})
 
+	t.Run("SetHeadersFromContext", func(t *testing.T) {
+		setRequestDynamicAttribute := func(headerName, contextField string) []core.Option {
+			return []core.Option{
+				core.WithHeaderRules(config.HeaderRules{
+					All: &config.GlobalHeaderRule{
+						Request: []*config.RequestHeaderRule{
+							{
+								Operation: config.HeaderRuleOperationSet,
+								Name:      headerName,
+								ValueFrom: &config.CustomDynamicAttribute{
+									ContextField: contextField,
+								}}}}})}
+		}
+		opNameHeader := "x-operation-info"
+
+		t.Run("successfully sets operation name header", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: setRequestDynamicAttribute(opNameHeader, core.ContextFieldOperationName),
+			},
+				func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query myQuery { headerValue(name:"` + opNameHeader + `") }`,
+					})
+					headerVal := "myQuery"
+					require.Equal(t, `{"data":{"headerValue":"`+headerVal+`"}}`, res.Body)
+				})
+		})
+
+		t.Run("set dynamic header overwrites explicit header", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: setRequestDynamicAttribute(opNameHeader, core.ContextFieldOperationName),
+			},
+				func(t *testing.T, xEnv *testenv.Environment) {
+					res, err := xEnv.MakeGraphQLRequestWithHeaders(testenv.GraphQLRequest{
+						Query: `query myQuery { headerValue(name:"` + opNameHeader + `") }`,
+					}, map[string]string{
+						opNameHeader: "not-myQuery",
+					})
+					require.NoError(t, err)
+					headerVal := "myQuery"
+					require.Equal(t, `{"data":{"headerValue":"`+headerVal+`"}}`, res.Body)
+				})
+		})
+	})
+
 	t.Run("HTTP with client extension", func(t *testing.T) {
 		t.Parallel()
 

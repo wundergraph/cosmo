@@ -30,8 +30,8 @@ type CustomStaticAttribute struct {
 }
 
 type CustomDynamicAttribute struct {
-	RequestHeader string `yaml:"request_header"`
-	ContextField  string `yaml:"context_field"`
+	RequestHeader string `yaml:"request_header,omitempty"`
+	ContextField  string `yaml:"context_field,omitempty"`
 }
 
 type CustomAttribute struct {
@@ -227,6 +227,8 @@ type RequestHeaderRule struct {
 	Name string `yaml:"name"`
 	// Value is the value of the header to set
 	Value string `yaml:"value"`
+	// ValueFrom is the context field to get the value from, in propagating to subgraphs
+	ValueFrom *CustomDynamicAttribute `yaml:"value_from,omitempty"`
 }
 
 func (r *RequestHeaderRule) GetOperation() HeaderRuleOperation {

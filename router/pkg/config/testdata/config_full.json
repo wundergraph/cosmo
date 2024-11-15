@@ -132,7 +132,8 @@
           "Rename": "",
           "Default": "",
           "Name": "",
-          "Value": ""
+          "Value": "",
+          "ValueFrom": null
         },
         {
           "Operation": "propagate",
@@ -141,7 +142,8 @@
           "Rename": "",
           "Default": "",
           "Name": "",
-          "Value": ""
+          "Value": "",
+          "ValueFrom": null
         },
         {
           "Operation": "propagate",
@@ -150,7 +152,8 @@
           "Rename": "",
           "Default": "123",
           "Name": "",
-          "Value": ""
+          "Value": "",
+          "ValueFrom": null
         },
         {
           "Operation": "set",
@@ -159,7 +162,21 @@
           "Rename": "",
           "Default": "",
           "Name": "X-API-Key",
-          "Value": "some-secret"
+          "Value": "some-secret",
+          "ValueFrom": null
+        },
+        {
+          "Operation": "set",
+          "Matching": "",
+          "Named": "",
+          "Rename": "",
+          "Default": "",
+          "Name": "x-operation-name",
+          "Value": "",
+          "ValueFrom": {
+            "RequestHeader": "",
+            "ContextField": "operation_name"
+          }
         }
       ],
       "Response": [
@@ -185,7 +202,8 @@
             "Rename": "",
             "Default": "some-secret",
             "Name": "",
-            "Value": ""
+            "Value": "",
+            "ValueFrom": null
           }
         ],
         "Response": [
