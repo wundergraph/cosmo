@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.30.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.29.4...graphqlmetrics@0.30.0) (2024-11-15)
+
+### Features
+
+* **graphqlmetrics:** allow measurement of total request count per day ([#1369](https://github.com/wundergraph/cosmo/issues/1369)) ([d29b462](https://github.com/wundergraph/cosmo/commit/d29b462a863202ff8fe01d231b0a7c427c981680)) (@Noroth)
+
 ## [0.29.4](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.29.3...graphqlmetrics@0.29.4) (2024-11-12)
 
 ### Performance Improvements

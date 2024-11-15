@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.142.0](https://github.com/wundergraph/cosmo/compare/router@0.141.3...router@0.142.0) (2024-11-15)
+
+### Bug Fixes
+
+* **router:** refactor complexity limits ([#1364](https://github.com/wundergraph/cosmo/issues/1364)) ([9558ece](https://github.com/wundergraph/cosmo/commit/9558ece2d892dab1b310e0ff5f4b9b9029abf297)) (@df-wg)
+
+### Features
+
+* **router:** enable setting request header from context ([#1371](https://github.com/wundergraph/cosmo/issues/1371)) ([c96485d](https://github.com/wundergraph/cosmo/commit/c96485d0635c301e89773e3736dd00372bcd3fd5)) (@df-wg)
+
 ## [0.141.3](https://github.com/wundergraph/cosmo/compare/router@0.141.2...router@0.141.3) (2024-11-14)
 
 ### Bug Fixes
