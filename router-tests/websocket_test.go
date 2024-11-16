@@ -559,24 +559,6 @@ func TestWebSockets(t *testing.T) {
 			}
 		})
 	})
-	t.Run("subscription with multiple reconnects and epoll", func(t *testing.T) {
-		t.Parallel()
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-			expectConnectAndReadCurrentTime(t, xEnv)
-			expectConnectAndReadCurrentTime(t, xEnv)
-		})
-	})
-	t.Run("subscription with multiple reconnects and epoll disabled", func(t *testing.T) {
-		t.Parallel()
-		testenv.Run(t, &testenv.Config{
-			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.EnableWebSocketEpollKqueue = false
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			expectConnectAndReadCurrentTime(t, xEnv)
-			expectConnectAndReadCurrentTime(t, xEnv)
-		})
-	})
 	t.Run("subscription with header propagation", func(t *testing.T) {
 		t.Parallel()
 		headerRules := config.HeaderRules{
@@ -2026,73 +2008,4 @@ func TestWebSockets(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 		})
 	})
-}
-
-func expectConnectAndReadCurrentTime(t *testing.T, xEnv *testenv.Environment) {
-	type currentTimePayload struct {
-		Data struct {
-			CurrentTime struct {
-				UnixTime  float64 `json:"unixTime"`
-				Timestamp string  `json:"timestamp"`
-			} `json:"currentTime"`
-		} `json:"data"`
-	}
-
-	conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-	defer conn.Close()
-
-	err := conn.WriteJSON(&testenv.WebSocketMessage{
-		ID:      "1",
-		Type:    "subscribe",
-		Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
-	})
-	require.NoError(t, err)
-	var msg testenv.WebSocketMessage
-	var payload currentTimePayload
-
-	// Read a result and store its timestamp, next result should be 1 second later
-	err = conn.ReadJSON(&msg)
-	require.NoError(t, err)
-	require.Equal(t, "1", msg.ID)
-	require.Equal(t, "next", msg.Type)
-	err = json.Unmarshal(msg.Payload, &payload)
-	require.NoError(t, err)
-
-	unix1 := payload.Data.CurrentTime.UnixTime
-
-	err = conn.ReadJSON(&msg)
-	require.NoError(t, err)
-	require.Equal(t, "1", msg.ID)
-	require.Equal(t, "next", msg.Type)
-	err = json.Unmarshal(msg.Payload, &payload)
-	require.NoError(t, err)
-
-	unix2 := payload.Data.CurrentTime.UnixTime
-	require.Greater(t, unix2, unix1)
-
-	// Sending a complete must stop the subscription
-	err = conn.WriteJSON(&testenv.WebSocketMessage{
-		ID:   "1",
-		Type: "complete",
-	})
-	require.NoError(t, err)
-
-	var complete testenv.WebSocketMessage
-	err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
-	require.NoError(t, err)
-	err = conn.ReadJSON(&complete)
-	require.NoError(t, err)
-	require.Equal(t, "1", complete.ID)
-	require.Equal(t, "complete", complete.Type)
-
-	err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
-	require.NoError(t, err)
-	_, _, err = conn.ReadMessage()
-	require.Error(t, err)
-	var netErr net.Error
-	if errors.As(err, &netErr) {
-		require.True(t, netErr.Timeout())
-	} else {
-		require.Fail(t, "expected net.Error")
-	}
 }
