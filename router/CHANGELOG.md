@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.142.1](https://github.com/wundergraph/cosmo/compare/router@0.142.0...router@0.142.1) (2024-11-16)
+
+### Bug Fixes
+
+* **tests:** deadlock on unsubscribe when epoll disabled ([#1380](https://github.com/wundergraph/cosmo/issues/1380)) ([337a60f](https://github.com/wundergraph/cosmo/commit/337a60f15577b373ca67a83497304d53fe19f55d)) (@StarpTech)
+
 # [0.142.0](https://github.com/wundergraph/cosmo/compare/router@0.141.3...router@0.142.0) (2024-11-15)
 
 ### Bug Fixes
