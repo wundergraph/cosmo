@@ -170,6 +170,9 @@ require (
 	nhooyr.io/websocket v1.8.11 // indirect
 )
 
+// Remember you can use Go workspaces to avoid using replace directives in multiple go.mod files
+// Use what is best for your personal workflow. See CONTRIBUTING.md for more information
+
 replace (
 	github.com/wundergraph/cosmo/demo => ../demo
 	github.com/wundergraph/cosmo/router => ../router
