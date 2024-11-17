@@ -193,8 +193,8 @@ func TestNatsEvents(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.EnableEpoll = false
-				engineExecutionConfiguration.EpollWebsocketClientReadTimeout = time.Millisecond * 100
+				engineExecutionConfiguration.EnableNetPoll = false
+				engineExecutionConfiguration.WebsocketClientReadTimeout = time.Millisecond * 100
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
@@ -807,7 +807,7 @@ func TestNatsEvents(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.EpollWebsocketClientReadTimeout = time.Millisecond * 10
+				engineExecutionConfiguration.WebsocketClientReadTimeout = time.Millisecond * 10
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			type subscriptionPayload struct {
@@ -872,7 +872,7 @@ func TestNatsEvents(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.EpollWebsocketClientReadTimeout = time.Millisecond * 10
+				engineExecutionConfiguration.WebsocketClientReadTimeout = time.Millisecond * 10
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			type subscriptionPayload struct {
@@ -1021,7 +1021,7 @@ func TestNatsEvents(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.EpollWebsocketClientReadTimeout = time.Millisecond * 100
+				engineExecutionConfiguration.WebsocketClientReadTimeout = time.Millisecond * 100
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			type subscriptionPayload struct {

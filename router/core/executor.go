@@ -255,7 +255,7 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 		b.transport,
 		b.logger,
 		routerEngineCfg.Execution.EnableSingleFlight,
-		routerEngineCfg.Execution.EnableEpoll,
+		routerEngineCfg.Execution.EnableNetPoll,
 		pubSubProviders.nats,
 		pubSubProviders.kafka,
 	))
