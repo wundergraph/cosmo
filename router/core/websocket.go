@@ -54,9 +54,9 @@ type WebsocketMiddlewareOptions struct {
 	Stats              WebSocketsStatistics
 	ReadTimeout        time.Duration
 
-	EnableEpoll         bool
-	EpollTimeout        time.Duration
-	EpollConnBufferSize int
+	EnableNetPoll         bool
+	NetPollTimeout        time.Duration
+	NetPollConnBufferSize int
 
 	WebSocketConfiguration *config.WebSocketConfiguration
 	ClientHeader           config.ClientHeader
@@ -121,7 +121,7 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 		handler.forwardQueryParamsConfig.withStaticAllowList = len(handler.forwardQueryParamsConfig.staticAllowList) > 0
 		handler.forwardQueryParamsConfig.withRegexAllowList = len(handler.forwardQueryParamsConfig.regexAllowList) > 0
 	}
-	if opts.EnableEpoll {
+	if opts.EnableNetPoll {
 		if err := epoller.EpollSupported(); err != nil {
 			if errors.Is(err, epoller.ErrUnsupported) {
 				opts.Logger.Warn(
@@ -135,7 +135,7 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 				)
 			}
 		} else {
-			poller, err := epoller.NewPoller(opts.EpollConnBufferSize, opts.EpollTimeout)
+			poller, err := epoller.NewPoller(opts.NetPollConnBufferSize, opts.NetPollTimeout)
 			if err == nil {
 				opts.Logger.Debug("Epoll is available")
 
