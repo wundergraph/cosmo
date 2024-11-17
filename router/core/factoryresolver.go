@@ -89,7 +89,7 @@ func NewDefaultFactoryResolver(
 
 	netPollConfig.ApplyDefaults()
 
-	netPollConfig.Disable = !enableNetPoll
+	netPollConfig.Enable = enableNetPoll
 
 	subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(
 		defaultHttpClient,

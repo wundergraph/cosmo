@@ -630,7 +630,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		},
 		WebsocketClientPollTimeout:     300 * time.Millisecond,
 		WebsocketClientConnBufferSize:  1,
-		WebsocketClientReadTimeout:     time.Millisecond * 100,
+		WebsocketClientReadTimeout:     100 * time.Millisecond,
 		MaxConcurrentResolvers:         32,
 		ExecutionPlanCacheSize:         1024,
 		EnablePersistedOperationsCache: true,
