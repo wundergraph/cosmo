@@ -495,14 +495,14 @@ func TestWebSockets(t *testing.T) {
 			expectConnectAndReadCurrentTime(t, xEnv)
 		})
 	})
-	t.Run("subscription with multiple reconnects and epoll", func(t *testing.T) {
+	t.Run("subscription with multiple reconnects and netPoll", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			expectConnectAndReadCurrentTime(t, xEnv)
 			expectConnectAndReadCurrentTime(t, xEnv)
 		})
 	})
-	t.Run("subscription with multiple reconnects and epoll disabled", func(t *testing.T) {
+	t.Run("subscription with multiple reconnects and netPoll disabled", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
@@ -1609,7 +1609,7 @@ func TestWebSockets(t *testing.T) {
 
 	// times out on GitHub Actions
 
-	t.Run("shutdown with epoll", func(t *testing.T) {
+	t.Run("shutdown with netPoll", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
@@ -1637,7 +1637,7 @@ func TestWebSockets(t *testing.T) {
 		})
 	})
 
-	t.Run("shutdown without epoll", func(t *testing.T) {
+	t.Run("shutdown without netPoll", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {

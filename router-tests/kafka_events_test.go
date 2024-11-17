@@ -364,7 +364,7 @@ func TestKafkaEvents(t *testing.T) {
 		})
 	})
 
-	t.Run("subscribe async epoll/kqueue disabled", func(t *testing.T) {
+	t.Run("subscribe async netPoll disabled", func(t *testing.T) {
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
