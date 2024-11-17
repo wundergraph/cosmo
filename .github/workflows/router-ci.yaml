@@ -96,7 +96,7 @@ jobs:
   # that have access to the secrets
   build_test:
     if: github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
+    runs-on: ghcr.io/cirruslabs/ubuntu-runner-amd64:22.04-lg
     timeout-minutes: 15
     services:
       redis:
@@ -123,7 +123,7 @@ jobs:
           username: ${{secrets.DOCKER_USERNAME}}
           password: ${{secrets.DOCKER_PASSWORD}}
 
-      - uses: actions/cache@v4
+      - uses: cirruslabs/cache@v4
         with:
           path: |
             ~/.cache/go-build
