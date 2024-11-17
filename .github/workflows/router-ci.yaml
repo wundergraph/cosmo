@@ -93,7 +93,7 @@ jobs:
         run: make build
 
   # Runs for people with write access to the repository
-  # that have access to the secrets
+  # that have access to the secrets and can push to the Docker registry
   build_test:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ghcr.io/cirruslabs/ubuntu-runner-amd64:22.04-lg
