@@ -54,9 +54,9 @@ type WebsocketMiddlewareOptions struct {
 	Stats              WebSocketsStatistics
 	ReadTimeout        time.Duration
 
-	EnableWebSocketEpollKqueue bool
-	EpollKqueuePollTimeout     time.Duration
-	EpollKqueueConnBufferSize  int
+	EnableEpoll         bool
+	EpollTimeout        time.Duration
+	EpollConnBufferSize int
 
 	WebSocketConfiguration *config.WebSocketConfiguration
 	ClientHeader           config.ClientHeader
@@ -121,19 +121,31 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 		handler.forwardQueryParamsConfig.withStaticAllowList = len(handler.forwardQueryParamsConfig.staticAllowList) > 0
 		handler.forwardQueryParamsConfig.withRegexAllowList = len(handler.forwardQueryParamsConfig.regexAllowList) > 0
 	}
-	if opts.EnableWebSocketEpollKqueue {
-		poller, err := epoller.NewPoller(opts.EpollKqueueConnBufferSize, opts.EpollKqueuePollTimeout)
-		if err == nil {
-			opts.Logger.Debug("Epoll is available")
-
-			handler.epoll = poller
-			handler.connections = make(map[int]*WebSocketConnectionHandler)
-			go handler.runPoller()
+	if opts.EnableEpoll {
+		if err := epoller.EpollSupported(); err != nil {
+			if errors.Is(err, epoller.ErrUnsupported) {
+				opts.Logger.Warn(
+					"Epoll is only available on Linux and MacOS. Falling back to less efficient synchronous handling.",
+					zap.Error(err),
+				)
+			} else {
+				opts.Logger.Warn(
+					"Epoll is not functional by the environment. Ensure that the system supports epoll/kqueue and that necessary syscall permissions are granted. Falling back to less efficient synchronous handling.",
+					zap.Error(err),
+				)
+			}
 		} else {
-			opts.Logger.Warn("Epoll is only available on Linux and MacOS. Falling back to synchronous handling.")
+			poller, err := epoller.NewPoller(opts.EpollConnBufferSize, opts.EpollTimeout)
+			if err == nil {
+				opts.Logger.Debug("Epoll is available")
+
+				handler.epoll = poller
+				handler.connections = make(map[int]*WebSocketConnectionHandler)
+				go handler.runPoller()
+			}
 		}
 	} else {
-		opts.Logger.Debug("Epoll is disabled by configuration")
+		opts.Logger.Warn("Epoll is disabled by configuration. Falling back to less efficient synchronous handling.")
 	}
 
 	return func(next http.Handler) http.Handler {

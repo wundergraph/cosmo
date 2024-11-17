@@ -19,7 +19,7 @@ func TestCors(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketReadTimeout = time.Millisecond * 10
+				cfg.EpollWebsocketClientReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithCors(&cors.Config{

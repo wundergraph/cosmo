@@ -306,10 +306,10 @@ type EngineExecutionConfiguration struct {
 	EnableRequestTracing                   bool                     `envDefault:"true" env:"ENGINE_ENABLE_REQUEST_TRACING" yaml:"enable_request_tracing"`
 	EnableExecutionPlanCacheResponseHeader bool                     `envDefault:"false" env:"ENGINE_ENABLE_EXECUTION_PLAN_CACHE_RESPONSE_HEADER" yaml:"enable_execution_plan_cache_response_header"`
 	MaxConcurrentResolvers                 int                      `envDefault:"32" env:"ENGINE_MAX_CONCURRENT_RESOLVERS" yaml:"max_concurrent_resolvers,omitempty"`
-	EnableWebSocketEpollKqueue             bool                     `envDefault:"true" env:"ENGINE_ENABLE_WEBSOCKET_EPOLL_KQUEUE" yaml:"enable_websocket_epoll_kqueue"`
-	EpollKqueuePollTimeout                 time.Duration            `envDefault:"1s" env:"ENGINE_EPOLL_KQUEUE_POLL_TIMEOUT" yaml:"epoll_kqueue_poll_timeout,omitempty"`
-	EpollKqueueConnBufferSize              int                      `envDefault:"128" env:"ENGINE_EPOLL_KQUEUE_CONN_BUFFER_SIZE" yaml:"epoll_kqueue_conn_buffer_size,omitempty"`
-	WebSocketReadTimeout                   time.Duration            `envDefault:"5s" env:"ENGINE_WEBSOCKET_READ_TIMEOUT" yaml:"websocket_read_timeout,omitempty"`
+	EnableEpoll                            bool                     `envDefault:"true" env:"ENGINE_ENABLE_EPOLL" yaml:"enable_epoll"`
+	EpollWebsocketClientPollTimeout        time.Duration            `envDefault:"1s" env:"ENGINE_EPOLL_WEBSOCKET_CLIENT_POLL_TIMEOUT" yaml:"epoll_websocket_client_poll_timeout,omitempty"`
+	EpollWebsocketClientConnBufferSize     int                      `envDefault:"128" env:"ENGINE_EPOLL_WEBSOCKET_CLIENT_CONN_BUFFER_SIZE" yaml:"epoll_websocket_client_conn_buffer_size,omitempty"`
+	EpollWebsocketClientReadTimeout        time.Duration            `envDefault:"5s" env:"ENGINE_EPOLL_WEBSOCKET_CLIENT_READ_TIMEOUT" yaml:"epoll_websocket_client_read_timeout,omitempty"`
 	ExecutionPlanCacheSize                 int64                    `envDefault:"10240" env:"ENGINE_EXECUTION_PLAN_CACHE_SIZE" yaml:"execution_plan_cache_size,omitempty"`
 	MinifySubgraphOperations               bool                     `envDefault:"true" env:"ENGINE_MINIFY_SUBGRAPH_OPERATIONS" yaml:"minify_subgraph_operations"`
 	EnablePersistedOperationsCache         bool                     `envDefault:"true" env:"ENGINE_ENABLE_PERSISTED_OPERATIONS_CACHE" yaml:"enable_persisted_operations_cache"`

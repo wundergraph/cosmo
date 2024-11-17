@@ -1956,27 +1956,27 @@
           "description": "The maximum number of concurrent resolvers.",
           "default": 32
         },
-        "enable_websocket_epoll_kqueue": {
+        "enable_epoll": {
           "type": "boolean",
-          "description": "Enable the websocket epoll kqueue. The websocket epoll kqueue is used to optimize the websocket connections. Only available on Linux and MacOS.",
+          "description": "Enables the more efficient epoll implementation for all WebSocket implementations (client, server) of the router. This is only available on Linux and MacOS. On Windows or when the host system is limited, the default synchronous implementation is used.",
           "default": true
         },
-        "epoll_kqueue_poll_timeout": {
+        "epoll_websocket_client_poll_timeout": {
           "type": "string",
           "format": "go-duration",
           "default": "1s",
-          "description": "The timeout for the epoll kqueue poll. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+          "description": "The timeout for the epoll loop of the WebSocket client implementation. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
         },
-        "epoll_kqueue_conn_buffer_size": {
+        "epoll_websocket_client_conn_buffer_size": {
           "type": "integer",
           "default": 128,
-          "description": "The buffer size for the epoll kqueue connection."
+          "description": "The buffer size for the epoll buffer of the WebSocket client implementation. The buffer size determines how many connections can be handled in one loop."
         },
-        "websocket_read_timeout": {
+        "epoll_websocket_client_read_timeout": {
           "type": "string",
           "format": "go-duration",
           "default": "5s",
-          "description": "The timeout for the websocket read. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+          "description": "The timeout for the websocket read of the WebSocket client implementation. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
         },
         "execution_plan_cache_size": {
           "type": "integer",

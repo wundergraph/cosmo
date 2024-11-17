@@ -176,5 +176,5 @@ require (
 replace (
 	github.com/wundergraph/cosmo/demo => ../demo
 	github.com/wundergraph/cosmo/router => ../router
-// github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
+//  github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
 )
