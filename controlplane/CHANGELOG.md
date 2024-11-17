@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.115.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.115.1...controlplane@0.115.2) (2024-11-16)
+
+### Bug Fixes
+
+* increase the batch size of operation usage insertion ([#1378](https://github.com/wundergraph/cosmo/issues/1378)) ([44ac8a8](https://github.com/wundergraph/cosmo/commit/44ac8a83782556f3d30c868d7942781ae47edf1b)) (@JivusAyrus)
+
 ## [0.115.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.115.0...controlplane@0.115.1) (2024-11-14)
 
 **Note:** Version bump only for package controlplane
