@@ -122,30 +122,15 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 		handler.forwardQueryParamsConfig.withRegexAllowList = len(handler.forwardQueryParamsConfig.regexAllowList) > 0
 	}
 	if opts.EnableNetPoll {
-		if err := netpoll.Supported(); err != nil {
-			if errors.Is(err, netpoll.ErrUnsupported) {
-				opts.Logger.Warn(
-					"Net poller is only available on Linux and MacOS. Falling back to less efficient connection handling method.",
-					zap.Error(err),
-				)
-			} else {
-				opts.Logger.Warn(
-					"Net poller is not functional by the environment. Ensure that the system supports epoll/kqueue and that necessary syscall permissions are granted. Falling back to less efficient connection handling method.",
-					zap.Error(err),
-				)
-			}
-		} else {
-			poller, err := netpoll.NewPoller(opts.NetPollConnBufferSize, opts.NetPollTimeout)
-			if err == nil {
-				opts.Logger.Debug("Net poller is available")
+		poller, err := netpoll.NewPoller(opts.NetPollConnBufferSize, opts.NetPollTimeout)
+		if err == nil {
+			opts.Logger.Debug("Net poller is available")
 
-				handler.netPoll = poller
-				handler.connections = make(map[int]*WebSocketConnectionHandler)
-				go handler.runPoller()
-			}
+			handler.netPoll = poller
+			handler.connections = make(map[int]*WebSocketConnectionHandler)
+			go handler.runPoller()
 		}
-	} else {
-		opts.Logger.Warn("Net poller is disabled by configuration. Falling back to less efficient connection handling method.")
+
 	}
 
 	return func(next http.Handler) http.Handler {
