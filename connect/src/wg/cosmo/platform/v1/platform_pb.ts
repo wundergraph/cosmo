@@ -3969,6 +3969,16 @@ export class GetCheckOperationsRequest extends Message<GetCheckOperationsRequest
    */
   namespace = "";
 
+  /**
+   * @generated from field: int32 limit = 4;
+   */
+  limit = 0;
+
+  /**
+   * @generated from field: int32 offset = 5;
+   */
+  offset = 0;
+
   constructor(data?: PartialMessage<GetCheckOperationsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3980,6 +3990,8 @@ export class GetCheckOperationsRequest extends Message<GetCheckOperationsRequest
     { no: 1, name: "check_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 5, name: "offset", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckOperationsRequest {
@@ -4028,6 +4040,11 @@ export class GetCheckOperationsResponse extends Message<GetCheckOperationsRespon
    */
   clientTrafficCheckSkipped = false;
 
+  /**
+   * @generated from field: int32 totalOperationsCount = 6;
+   */
+  totalOperationsCount = 0;
+
   constructor(data?: PartialMessage<GetCheckOperationsResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4041,6 +4058,7 @@ export class GetCheckOperationsResponse extends Message<GetCheckOperationsRespon
     { no: 3, name: "traffic_check_days", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 4, name: "created_at", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "client_traffic_check_skipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 6, name: "totalOperationsCount", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckOperationsResponse {
