@@ -85,39 +85,14 @@ func TestCors(t *testing.T) {
 	})
 
 	t.Run("wildcard matching", func(t *testing.T) {
-		t.Run("matching wildcard with allow false fails", func(t *testing.T) {
-			t.Parallel()
-
-			testenv.Run(t, &testenv.Config{
-				RouterOptions: []core.Option{
-					core.WithCors(&cors.Config{
-						Enabled:       true,
-						AllowOrigins:  []string{"http://example.com/*"},
-						AllowWildcard: false,
-					}),
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				res, err := xEnv.MakeGraphQLRequestWithHeaders(testenv.GraphQLRequest{
-					Query:      `query { initialPayload }`,
-					Extensions: []byte(`{"token":"123"}`),
-				}, map[string]string{
-					"Origin": "http://example.com/test",
-				})
-				require.NoError(t, err)
-				require.Equal(t, "", res.Body)
-				require.Equal(t, http.StatusForbidden, res.Response.StatusCode)
-			})
-		})
-
 		t.Run("matching single wildcard succeeds", func(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
 					core.WithCors(&cors.Config{
-						Enabled:       true,
-						AllowOrigins:  []string{"http://example.com/*"},
-						AllowWildcard: true,
+						Enabled:      true,
+						AllowOrigins: []string{"http://example.com/*"},
 					}),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -138,9 +113,8 @@ func TestCors(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
 					core.WithCors(&cors.Config{
-						Enabled:       true,
-						AllowOrigins:  []string{"http://*example.com:*"},
-						AllowWildcard: true,
+						Enabled:      true,
+						AllowOrigins: []string{"http://*example.com:*"},
 					}),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -161,9 +135,8 @@ func TestCors(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
 					core.WithCors(&cors.Config{
-						Enabled:       true,
-						AllowOrigins:  []string{"http://*example.com:*"},
-						AllowWildcard: true,
+						Enabled:      true,
+						AllowOrigins: []string{"http://*example.com:*"},
 					}),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -184,9 +157,8 @@ func TestCors(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
 					core.WithCors(&cors.Config{
-						Enabled:       true,
-						AllowOrigins:  []string{"http://*example.com:*"},
-						AllowWildcard: true,
+						Enabled:      true,
+						AllowOrigins: []string{"http://*example.com:*"},
 					}),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {

@@ -262,7 +262,6 @@ func TestValidateOrigin(t *testing.T) {
 			"*.some-domain.com",
 		},
 		AllowBrowserExtensions: true,
-		AllowWildcard:          true,
 	})
 	assert.True(t, cors.validateOrigin("chrome-extension://random-extension-id"))
 	assert.True(t, cors.validateOrigin("chrome-extension://another-one"))
@@ -302,7 +301,6 @@ func TestValidateOrigin(t *testing.T) {
 			"https://*.wgexample.org",
 			"https://*.d2grknavcceso7.amplifyapp.com",
 		},
-		AllowWildcard: true,
 	})
 	// Matching cases for "*.wgexample.com" wildcard
 	assert.True(t, cors.validateOrigin("https://subdomain.wgexample.com"))
@@ -435,10 +433,9 @@ func TestPassesAllowAllOrigins(t *testing.T) {
 
 func TestWildcard(t *testing.T) {
 	router := newTestRouter(Config{
-		Enabled:       true,
-		AllowOrigins:  []string{"https://*.github.com", "https://api.*", "http://*", "https://facebook.com", "*.golang.org"},
-		AllowMethods:  []string{"GET"},
-		AllowWildcard: true,
+		Enabled:      true,
+		AllowOrigins: []string{"https://*.github.com", "https://api.*", "http://*", "https://facebook.com", "*.golang.org"},
+		AllowMethods: []string{"GET"},
 	})
 
 	w := performRequest(router, "GET", "https://gist.github.com")
@@ -487,8 +484,7 @@ func TestComplexWildcards(t *testing.T) {
 			"https://*.example.*.*.com", // multiple sequential wildcards
 			"https://*.*.*.*.com",
 		},
-		AllowMethods:  []string{"GET"},
-		AllowWildcard: true,
+		AllowMethods: []string{"GET"},
 	})
 
 	type testCases struct {
@@ -534,8 +530,7 @@ func TestMaxRecursionDepth(t *testing.T) {
 			"https://*.example.*.*.com", // multiple sequential wildcards
 			"https://*.*.*.*.com",
 		},
-		AllowMethods:  []string{"GET"},
-		AllowWildcard: true,
+		AllowMethods: []string{"GET"},
 	})
 
 	maxRecursionDepth = 2
@@ -549,10 +544,9 @@ func TestMaxRecursionDepth(t *testing.T) {
 
 func TestDisabled(t *testing.T) {
 	config := Config{
-		Enabled:       true,
-		AllowOrigins:  []string{"https://api.*"},
-		AllowMethods:  []string{"GET"},
-		AllowWildcard: true,
+		Enabled:      true,
+		AllowOrigins: []string{"https://api.*"},
+		AllowMethods: []string{"GET"},
 	}
 
 	router := newTestRouter(config)
@@ -583,8 +577,7 @@ func BenchmarkCorsWithoutWildcards(b *testing.B) {
 				"https://*.example.*.*.com", // multiple sequential wildcards
 				"https://*.*.*.*.com",
 			},
-			AllowMethods:  []string{"GET"},
-			AllowWildcard: true,
+			AllowMethods: []string{"GET"},
 		})
 
 		w := performRequest(router, "GET", "https://wgexample.com")
@@ -603,8 +596,7 @@ func BenchmarkCorsWithWildcards(b *testing.B) {
 				"https://*.example.*.*.com", // multiple sequential wildcards
 				"https://*.*.*.*.com",
 			},
-			AllowMethods:  []string{"GET"},
-			AllowWildcard: true,
+			AllowMethods: []string{"GET"},
 		})
 
 		w := performRequest(router, "GET", "https://subdomain.test.example.subdomain.example.co.whatgoeshere.woohoo.com")
