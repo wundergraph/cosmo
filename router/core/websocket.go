@@ -33,7 +33,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/epoller"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 )
@@ -54,9 +54,9 @@ type WebsocketMiddlewareOptions struct {
 	Stats              WebSocketsStatistics
 	ReadTimeout        time.Duration
 
-	EnableWebSocketEpollKqueue bool
-	EpollKqueuePollTimeout     time.Duration
-	EpollKqueueConnBufferSize  int
+	EnableNetPoll         bool
+	NetPollTimeout        time.Duration
+	NetPollConnBufferSize int
 
 	WebSocketConfiguration *config.WebSocketConfiguration
 	ClientHeader           config.ClientHeader
@@ -121,19 +121,31 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 		handler.forwardQueryParamsConfig.withStaticAllowList = len(handler.forwardQueryParamsConfig.staticAllowList) > 0
 		handler.forwardQueryParamsConfig.withRegexAllowList = len(handler.forwardQueryParamsConfig.regexAllowList) > 0
 	}
-	if opts.EnableWebSocketEpollKqueue {
-		poller, err := epoller.NewPoller(opts.EpollKqueueConnBufferSize, opts.EpollKqueuePollTimeout)
-		if err == nil {
-			opts.Logger.Debug("Epoll is available")
-
-			handler.epoll = poller
-			handler.connections = make(map[int]*WebSocketConnectionHandler)
-			go handler.runPoller()
+	if opts.EnableNetPoll {
+		if err := netpoll.Supported(); err != nil {
+			if errors.Is(err, netpoll.ErrUnsupported) {
+				opts.Logger.Warn(
+					"Net poller is only available on Linux and MacOS. Falling back to less efficient connection handling method.",
+					zap.Error(err),
+				)
+			} else {
+				opts.Logger.Warn(
+					"Net poller is not functional by the environment. Ensure that the system supports epoll/kqueue and that necessary syscall permissions are granted. Falling back to less efficient connection handling method.",
+					zap.Error(err),
+				)
+			}
 		} else {
-			opts.Logger.Warn("Epoll is only available on Linux and MacOS. Falling back to synchronous handling.")
+			poller, err := netpoll.NewPoller(opts.NetPollConnBufferSize, opts.NetPollTimeout)
+			if err == nil {
+				opts.Logger.Debug("Net poller is available")
+
+				handler.netPoll = poller
+				handler.connections = make(map[int]*WebSocketConnectionHandler)
+				go handler.runPoller()
+			}
 		}
 	} else {
-		opts.Logger.Debug("Epoll is disabled by configuration")
+		opts.Logger.Warn("Net poller is disabled by configuration. Falling back to less efficient connection handling method.")
 	}
 
 	return func(next http.Handler) http.Handler {
@@ -202,7 +214,7 @@ type WebsocketHandler struct {
 	accessController   *AccessController
 	logger             *zap.Logger
 
-	epoll         epoller.Poller
+	netPoll       netpoll.Poller
 	connections   map[int]*WebSocketConnectionHandler
 	connectionsMu sync.RWMutex
 
@@ -376,17 +388,17 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		}
 	}
 
-	// Only when epoll is available. On Windows, epoll is not available
-	if h.epoll != nil {
+	// Only when epoll/kqueue is available. On Windows, epoll is not available
+	if h.netPoll != nil {
 		err = h.addConnection(c, handler)
 		if err != nil {
-			requestLogger.Error("Adding connection to epoll", zap.Error(err))
+			requestLogger.Error("Adding connection to net poller", zap.Error(err))
 			handler.Close()
 		}
 		return
 	}
 
-	// Handle messages sync when epoll is not available
+	// Handle messages sync when net poller implementation is not available
 
 	go h.handleConnectionSync(handler)
 }
@@ -437,7 +449,7 @@ func (h *WebsocketHandler) addConnection(conn net.Conn, handler *WebSocketConnec
 		return fmt.Errorf("unable to get socket fd for conn: %d", handler.connectionID)
 	}
 	h.connections[fd] = handler
-	return h.epoll.Add(conn)
+	return h.netPoll.Add(conn)
 }
 
 func (h *WebsocketHandler) removeConnection(conn net.Conn, handler *WebSocketConnectionHandler, fd int) {
@@ -445,9 +457,9 @@ func (h *WebsocketHandler) removeConnection(conn net.Conn, handler *WebSocketCon
 	h.connectionsMu.Lock()
 	delete(h.connections, fd)
 	h.connectionsMu.Unlock()
-	err := h.epoll.Remove(conn)
+	err := h.netPoll.Remove(conn)
 	if err != nil {
-		h.logger.Warn("Removing connection from epoll", zap.Error(err))
+		h.logger.Warn("Removing connection from net poller", zap.Error(err))
 	}
 	handler.Close()
 }
@@ -464,7 +476,7 @@ func socketFd(conn net.Conn) int {
 		})
 		return sfd
 	}
-	if con, ok := conn.(epoller.ConnImpl); ok {
+	if con, ok := conn.(netpoll.ConnImpl); ok {
 		return con.GetFD()
 	}
 	return 0
@@ -485,7 +497,7 @@ func (h *WebsocketHandler) runPoller() {
 	done := h.ctx.Done()
 	defer func() {
 		h.connectionsMu.Lock()
-		_ = h.epoll.Close(true)
+		_ = h.netPoll.Close(true)
 		h.connectionsMu.Unlock()
 	}()
 	for {
@@ -493,16 +505,16 @@ func (h *WebsocketHandler) runPoller() {
 		case <-done:
 			return
 		default:
-			connections, err := h.epoll.Wait(128)
+			connections, err := h.netPoll.Wait(128)
 			if err != nil {
-				h.logger.Warn("Epoll wait", zap.Error(err))
+				h.logger.Warn("Net Poller wait", zap.Error(err))
 				continue
 			}
 			for i := 0; i < len(connections); i++ {
 				if connections[i] == nil {
 					continue
 				}
-				conn := connections[i].(epoller.ConnImpl)
+				conn := connections[i].(netpoll.ConnImpl)
 				// check if the connection is still valid
 				fd := socketFd(conn)
 				h.connectionsMu.RLock()
