@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.143.2](https://github.com/wundergraph/cosmo/compare/router@0.143.1...router@0.143.2) (2024-11-18)
+
+### Bug Fixes
+
+* fix regression on removing null variables which was undefined ([#1385](https://github.com/wundergraph/cosmo/issues/1385)) ([475d58e](https://github.com/wundergraph/cosmo/commit/475d58eb79b693b4cee9f561d0694d392152faf8)) (@devsergiy)
+
 ## [0.143.1](https://github.com/wundergraph/cosmo/compare/router@0.143.0...router@0.143.1) (2024-11-18)
 
 ### Bug Fixes
