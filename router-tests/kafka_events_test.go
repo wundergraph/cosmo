@@ -372,7 +372,7 @@ func TestKafkaEvents(t *testing.T) {
 			KafkaSeeds: seeds,
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.EnableNetPoll = false
-				engineExecutionConfiguration.WebsocketClientReadTimeout = time.Millisecond * 100
+				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 100
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
