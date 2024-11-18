@@ -616,7 +616,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	}
 
 	engineExecutionConfig := config.EngineExecutionConfiguration{
-		EnableWebSocketEpollKqueue:             true,
+		EnableNetPoll:                          true,
 		EnableSingleFlight:                     true,
 		EnableRequestTracing:                   true,
 		EnableExecutionPlanCacheResponseHeader: true,
@@ -628,9 +628,9 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			EnablePersistedOperationsCacheResponseHeader: true,
 			EnableNormalizationCacheResponseHeader:       true,
 		},
-		EpollKqueuePollTimeout:         300 * time.Millisecond,
-		EpollKqueueConnBufferSize:      1,
-		WebSocketReadTimeout:           time.Millisecond * 100,
+		WebSocketClientPollTimeout:     300 * time.Millisecond,
+		WebSocketClientConnBufferSize:  1,
+		WebSocketClientReadTimeout:     100 * time.Millisecond,
 		MaxConcurrentResolvers:         32,
 		ExecutionPlanCacheSize:         1024,
 		EnablePersistedOperationsCache: true,

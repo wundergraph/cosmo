@@ -188,13 +188,13 @@ func TestNatsEvents(t *testing.T) {
 		})
 	})
 
-	t.Run("subscribe async epoll/kqueue disabled", func(t *testing.T) {
+	t.Run("subscribe async netPoll disabled", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.EnableWebSocketEpollKqueue = false
-				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 100
+				engineExecutionConfiguration.EnableNetPoll = false
+				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 100
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
@@ -807,7 +807,7 @@ func TestNatsEvents(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
+				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 10
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			type subscriptionPayload struct {
@@ -872,7 +872,7 @@ func TestNatsEvents(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
+				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 10
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			type subscriptionPayload struct {
@@ -1021,7 +1021,7 @@ func TestNatsEvents(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 100
+				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 100
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			type subscriptionPayload struct {
