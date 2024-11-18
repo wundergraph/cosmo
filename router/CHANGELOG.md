@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.143.1](https://github.com/wundergraph/cosmo/compare/router@0.143.0...router@0.143.1) (2024-11-18)
+
+### Bug Fixes
+
+* do netPoll detection once and set it globally ([#1384](https://github.com/wundergraph/cosmo/issues/1384)) ([2cba138](https://github.com/wundergraph/cosmo/commit/2cba13896e2f46dee127071d0777a6bff65e21b6)) (@StarpTech)
+
 # [0.143.0](https://github.com/wundergraph/cosmo/compare/router@0.142.1...router@0.143.0) (2024-11-18)
 
 ### Bug Fixes
