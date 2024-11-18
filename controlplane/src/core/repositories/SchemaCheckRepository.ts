@@ -1,7 +1,7 @@
-import { and, eq, inArray, or, sql } from 'drizzle-orm';
-import _ from 'lodash';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { VCSContext } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { and, eq, inArray, sql } from 'drizzle-orm';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import _ from 'lodash';
 import pLimit from 'p-limit';
 import { NewSchemaChangeOperationUsage } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
@@ -247,7 +247,15 @@ export class SchemaCheckRepository {
       .execute();
   }
 
-  public async getAffectedOperationsByCheckId(checkId: string) {
+  public async getAffectedOperationsByCheckId({
+    checkId,
+    limit,
+    offset,
+  }: {
+    checkId: string;
+    limit?: number;
+    offset?: number;
+  }) {
     const changeActionIds = (
       await this.db.query.schemaCheckChangeAction.findMany({
         where: and(
@@ -261,7 +269,7 @@ export class SchemaCheckRepository {
     ).map((r) => r.id);
 
     if (changeActionIds.length > 0) {
-      return await this.db
+      const dbQuery = this.db
         .selectDistinctOn([schema.schemaCheckChangeActionOperationUsage.hash], {
           hash: schema.schemaCheckChangeActionOperationUsage.hash,
           name: schema.schemaCheckChangeActionOperationUsage.name,
@@ -280,9 +288,50 @@ export class SchemaCheckRepository {
         .from(schema.schemaCheckChangeActionOperationUsage)
         .where(inArray(schema.schemaCheckChangeActionOperationUsage.schemaCheckChangeActionId, changeActionIds))
         .groupBy(({ hash, name, type }) => [hash, name, type]);
+
+      if (limit) {
+        dbQuery.limit(limit);
+      }
+
+      if (offset) {
+        dbQuery.offset(offset);
+      }
+
+      return await dbQuery.execute();
     }
 
     return [];
+  }
+
+  public async getAffectedOperationsCountByCheckId({ checkId }: { checkId: string }) {
+    const changeActionIds = (
+      await this.db.query.schemaCheckChangeAction.findMany({
+        where: and(
+          eq(schema.schemaCheckChangeAction.schemaCheckId, checkId),
+          eq(schema.schemaCheckChangeAction.isBreaking, true),
+        ),
+        columns: {
+          id: true,
+        },
+      })
+    ).map((r) => r.id);
+
+    if (changeActionIds.length > 0) {
+      const result = await this.db
+        .selectDistinctOn([schema.schemaCheckChangeActionOperationUsage.hash], {
+          hash: schema.schemaCheckChangeActionOperationUsage.hash,
+          name: schema.schemaCheckChangeActionOperationUsage.name,
+          type: schema.schemaCheckChangeActionOperationUsage.type,
+        })
+        .from(schema.schemaCheckChangeActionOperationUsage)
+        .where(inArray(schema.schemaCheckChangeActionOperationUsage.schemaCheckChangeActionId, changeActionIds))
+        .groupBy(({ hash, name, type }) => [hash, name, type])
+        .execute();
+
+      return result.length;
+    }
+
+    return 0;
   }
 
   public createSchemaCheckCompositions(data: { schemaCheckID: string; compositions: ComposedFederatedGraph[] }) {

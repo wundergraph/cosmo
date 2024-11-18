@@ -50,7 +50,9 @@ export function createIgnoreOverridesForAllOperations(
     return await opts.db.transaction(async (tx) => {
       const auditLogRepo = new AuditLogRepository(tx);
       const operationsRepo = new OperationsRepository(tx, graph.id);
-      const affectedOperations = await schemaCheckRepo.getAffectedOperationsByCheckId(req.checkId);
+      const affectedOperations = await schemaCheckRepo.getAffectedOperationsByCheckId({
+        checkId: req.checkId,
+      });
 
       for (const affectedOperation of affectedOperations) {
         const affectedChanges = await operationsRepo.createIgnoreAllOverride({

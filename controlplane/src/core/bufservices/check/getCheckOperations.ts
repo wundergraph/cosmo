@@ -39,6 +39,7 @@ export function getCheckOperations(
         trafficCheckDays: 0,
         createdAt: '',
         clientTrafficCheckSkipped: false,
+        totalOperationsCount: 0,
       };
     }
 
@@ -55,10 +56,30 @@ export function getCheckOperations(
         trafficCheckDays: 0,
         createdAt: '',
         clientTrafficCheckSkipped: false,
+        totalOperationsCount: 0,
       };
     }
 
-    const affectedOperations = await schemaCheckRepo.getAffectedOperationsByCheckId(req.checkId);
+    // check that the limit is less than the max option provided in the ui
+    if (req.limit > 200) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: 'Invalid limit',
+        },
+        operations: [],
+        trafficCheckDays: 0,
+        createdAt: '',
+        clientTrafficCheckSkipped: false,
+        totalOperationsCount: 0,
+      };
+    }
+
+    const affectedOperations = await schemaCheckRepo.getAffectedOperationsByCheckId({
+      checkId: req.checkId,
+      limit: req.limit,
+      offset: req.offset,
+    });
 
     const { trafficCheckDays } = await schemaCheckRepo.getFederatedGraphConfigForCheckId(req.checkId, graph.id);
 
@@ -70,6 +91,10 @@ export function getCheckOperations(
 
     const ignoreAllOverrides = await operationsRepo.getIgnoreAllOverrides({
       namespaceId: graph.namespaceId,
+    });
+
+    const affectedOperationsCount = await schemaCheckRepo.getAffectedOperationsCountByCheckId({
+      checkId: req.checkId,
     });
 
     return {
@@ -91,6 +116,7 @@ export function getCheckOperations(
       trafficCheckDays,
       createdAt: check.timestamp,
       clientTrafficCheckSkipped: check.clientTrafficCheckSkipped || false,
+      totalOperationsCount: affectedOperationsCount,
     };
   });
 }

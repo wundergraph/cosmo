@@ -676,7 +676,7 @@ const CheckDetails = ({
             </>
           )}
         </dl>
-        <div className="h-full flex-1">
+        <div className="h-full flex-1 overflow-auto scrollbar-custom">
           <Tabs
             value={tab ?? "changes"}
             className="flex h-full min-h-0 flex-col"
