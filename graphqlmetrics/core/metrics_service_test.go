@@ -104,52 +104,31 @@ func TestPublishGraphQLMetrics(t *testing.T) {
     	GROUP BY OperationHash LIMIT 1
 	`).Scan(&opCount))
 
-	assert.Greater(t, opCount, uint64(0))
-
-	// Validate insert
-
-	var fieldUsageCount uint64
-	require.NoError(t, db.QueryRow(ctx, `
-		SELECT COUNT(*) FROM gql_metrics_schema_usage
-		WHERE OperationHash = 'hash123' AND
-		OrganizationID = 'org123' AND
-		FederatedGraphID = 'fed123' AND
-		RouterConfigVersion = 'v1' AND
-		Attributes['test'] = 'test123' AND
-		HttpStatusCode = '200' AND
-		HasError = true AND
-		ClientName = 'wundergraph' AND
-		ClientVersion = '1.0.0' AND
-		hasAny(TypeNames, ['Query']) AND
-		startsWith(Path, ['hello'])
-	`).Scan(&fieldUsageCount))
-
-	assert.Greater(t, fieldUsageCount, uint64(0))
-
-	var indirectFieldUsageCount uint64
-	require.NoError(t, db.QueryRow(ctx, `
-		SELECT COUNT(*) FROM gql_metrics_schema_usage
-		WHERE OperationHash = 'hash123' AND
-		OrganizationID = 'org123' AND
-		FederatedGraphID = 'fed123' AND
-		RouterConfigVersion = 'v1' AND
-		Attributes['test'] = 'test123' AND
-		HttpStatusCode = '200' AND
-		HasError = true AND
-		ClientName = 'wundergraph' AND
-		ClientVersion = '1.0.0' AND
-		hasAny(TypeNames, ['Query']) AND
-		startsWith(Path, ['hello']) AND
-		IsIndirectFieldUsage = true
-	`).Scan(&indirectFieldUsageCount))
-
-	assert.Greater(t, fieldUsageCount, uint64(0))
+	assert.Equal(t, uint64(1), opCount)
 
 	// Validate materialized view
 
 	var fieldUsageCountMv uint64
 	require.NoError(t, db.QueryRow(ctx, `
-		SELECT COUNT(*) FROM gql_metrics_schema_usage_5m_90d_mv
+		SELECT COUNT(*) FROM gql_metrics_schema_usage_5m_90d
+		WHERE OperationHash = 'hash123' AND
+		OrganizationID = 'org123' AND
+		FederatedGraphID = 'fed123' AND
+		RouterConfigVersion = 'v1' AND
+		TotalErrors = 1 AND
+		TotalUsages = 1 AND
+		TotalClientErrors = 0 AND
+		ClientName = 'wundergraph' AND
+		ClientVersion = '1.0.0' AND
+		hasAny(TypeNames, ['Query']) AND
+		startsWith(Path, ['hi'])
+	`).Scan(&fieldUsageCountMv))
+
+	assert.Equal(t, uint64(1), fieldUsageCountMv)
+
+	var fieldUsageCount2Mv uint64
+	require.NoError(t, db.QueryRow(ctx, `
+		SELECT COUNT(*) FROM gql_metrics_schema_usage_5m_90d
 		WHERE OperationHash = 'hash123' AND
 		OrganizationID = 'org123' AND
 		FederatedGraphID = 'fed123' AND
@@ -161,9 +140,18 @@ func TestPublishGraphQLMetrics(t *testing.T) {
 		ClientVersion = '1.0.0' AND
 		hasAny(TypeNames, ['Query']) AND
 		startsWith(Path, ['hello'])
-	`).Scan(&fieldUsageCountMv))
+	`).Scan(&fieldUsageCount2Mv))
 
-	assert.Greater(t, fieldUsageCountMv, uint64(0))
+	assert.Equal(t, uint64(1), fieldUsageCount2Mv)
+
+	var fieldUsageLiteCount uint64
+	require.NoError(t, db.QueryRow(ctx, `
+		SELECT COUNT(*) FROM gql_metrics_schema_usage_lite_1d_90d
+		WHERE OrganizationID = 'org123' AND
+		FederatedGraphID = 'fed123'
+	`).Scan(&fieldUsageLiteCount))
+
+	assert.Equal(t, 2, int(fieldUsageLiteCount))
 
 	var requestCount uint64
 	require.NoError(t, db.QueryRow(ctx, `
@@ -222,18 +210,27 @@ func TestPublishGraphQLMetricsSendEmptyAndFilledMetrics(t *testing.T) {
     	OperationContent = 'query Hello { hello }'
 	`).Scan(&opCount))
 
-	assert.Equal(t, opCount, uint64(2))
+	assert.Equal(t, uint64(2), opCount)
 
-	// Validate insert
+	// Validate materialized view
 
 	var fieldUsageCount uint64
 	require.NoError(t, db.QueryRow(ctx, `
-		SELECT COUNT(*) FROM gql_metrics_schema_usage
+		SELECT COUNT(*) FROM gql_metrics_schema_usage_5m_90d
 		WHERE OrganizationID = 'org123' AND
 		FederatedGraphID = 'fed123'
 	`).Scan(&fieldUsageCount))
 
-	assert.Equal(t, int(fieldUsageCount), 3)
+	assert.Equal(t, 2, int(fieldUsageCount))
+
+	var fieldUsageLiteCount uint64
+	require.NoError(t, db.QueryRow(ctx, `
+		SELECT COUNT(*) FROM gql_metrics_schema_usage_lite_1d_90d
+		WHERE OrganizationID = 'org123' AND
+		FederatedGraphID = 'fed123'
+	`).Scan(&fieldUsageLiteCount))
+
+	assert.Equal(t, 2, int(fieldUsageLiteCount))
 
 	var requestCount uint64
 	require.NoError(t, db.QueryRow(ctx, `
@@ -340,47 +337,11 @@ func TestPublishGraphQLMetricsSmallBatches(t *testing.T) {
 
 	assert.Equal(t, opCount, uint64(count))
 
-	// Validate insert
-
-	var fieldUsageCount uint64
-	require.NoError(t, db.QueryRow(ctx, `
-		SELECT COUNT(*) FROM gql_metrics_schema_usage
-		WHERE OrganizationID = 'org123' AND
-		FederatedGraphID = 'fed123' AND
-		RouterConfigVersion = 'v1' AND
-		Attributes['test'] = 'test123' AND
-		HttpStatusCode = '200' AND
-		HasError = true AND
-		ClientName = 'wundergraph' AND
-		ClientVersion = '1.0.0' AND
-		hasAny(TypeNames, ['Query']) AND
-		startsWith(Path, ['hello'])
-	`).Scan(&fieldUsageCount))
-
-	assert.Greater(t, fieldUsageCount, uint64(0))
-
-	var allHelloEntries uint64
-	require.NoError(t, db.QueryRow(ctx, `
-	SELECT COUNT(*) FROM gql_metrics_schema_usage
-	WHERE OrganizationID = 'org123' AND
-		FederatedGraphID = 'fed123' AND
-		RouterConfigVersion = 'v1' AND
-		Attributes['test'] = 'test123' AND
-		HttpStatusCode = '200' AND
-		HasError = true AND
-		ClientName = 'wundergraph' AND
-		ClientVersion = '1.0.0' AND
-		hasAny(TypeNames, ['Query']) AND
-		has(Path, 'hello')
-	`).Scan(&allHelloEntries))
-
-	assert.Equal(t, int(fieldUsageCount), count)
-
 	// Validate materialized view
 
 	var fieldUsageCountMv uint64
 	require.NoError(t, db.QueryRow(ctx, `
-		SELECT COUNT(*) FROM gql_metrics_schema_usage_5m_90d_mv
+		SELECT COUNT(*) FROM gql_metrics_schema_usage_5m_90d
 		WHERE OrganizationID = 'org123' AND
 		FederatedGraphID = 'fed123' AND
 		RouterConfigVersion = 'v1' AND
@@ -393,7 +354,7 @@ func TestPublishGraphQLMetricsSmallBatches(t *testing.T) {
 		startsWith(Path, ['hello'])
 	`).Scan(&fieldUsageCountMv))
 
-	assert.Greater(t, fieldUsageCountMv, uint64(0))
+	assert.Equal(t, uint64(20_000), fieldUsageCountMv)
 
 	var requestCount uint64
 	require.NoError(t, db.QueryRow(ctx, `
@@ -426,12 +387,14 @@ func TestPublishAggregatedGraphQLMetrics(t *testing.T) {
 							TypeNames:              []string{"Query"},
 							SubgraphIDs:            []string{"sub123"},
 							IndirectInterfaceField: false,
+							Count:                  1,
 						},
 						{
 							Path:                   []string{"hi"},
 							TypeNames:              []string{"Query"},
 							SubgraphIDs:            []string{"sub123"},
 							IndirectInterfaceField: true,
+							Count:                  1,
 						},
 					},
 					OperationInfo: &graphqlmetricsv1.OperationInfo{
@@ -490,52 +453,13 @@ func TestPublishAggregatedGraphQLMetrics(t *testing.T) {
     	GROUP BY OperationHash LIMIT 1
 	`).Scan(&opCount))
 
-	assert.Greater(t, opCount, uint64(0))
-
-	// Validate insert
-
-	var fieldUsageCount uint64
-	require.NoError(t, db.QueryRow(ctx, `
-		SELECT COUNT(*) FROM gql_metrics_schema_usage
-		WHERE OperationHash = 'hash123' AND
-		OrganizationID = 'org123' AND
-		FederatedGraphID = 'fed123' AND
-		RouterConfigVersion = 'v1' AND
-		Attributes['test'] = 'test123' AND
-		HttpStatusCode = '200' AND
-		HasError = true AND
-		ClientName = 'wundergraph' AND
-		ClientVersion = '1.0.0' AND
-		hasAny(TypeNames, ['Query']) AND
-		startsWith(Path, ['hello'])
-	`).Scan(&fieldUsageCount))
-
-	assert.Greater(t, fieldUsageCount, uint64(0))
-
-	var indirectFieldUsageCount uint64
-	require.NoError(t, db.QueryRow(ctx, `
-		SELECT COUNT(*) FROM gql_metrics_schema_usage
-		WHERE OperationHash = 'hash123' AND
-		OrganizationID = 'org123' AND
-		FederatedGraphID = 'fed123' AND
-		RouterConfigVersion = 'v1' AND
-		Attributes['test'] = 'test123' AND
-		HttpStatusCode = '200' AND
-		HasError = true AND
-		ClientName = 'wundergraph' AND
-		ClientVersion = '1.0.0' AND
-		hasAny(TypeNames, ['Query']) AND
-		startsWith(Path, ['hello']) AND
-		IsIndirectFieldUsage = true
-	`).Scan(&indirectFieldUsageCount))
-
-	assert.Greater(t, fieldUsageCount, uint64(0))
+	assert.Equal(t, uint64(1), opCount)
 
 	// Validate materialized view
 
 	var fieldUsageCountMv uint64
 	require.NoError(t, db.QueryRow(ctx, `
-		SELECT COUNT(*) FROM gql_metrics_schema_usage_5m_90d_mv
+		SELECT COUNT(*) FROM gql_metrics_schema_usage_5m_90d
 		WHERE OperationHash = 'hash123' AND
 		OrganizationID = 'org123' AND
 		FederatedGraphID = 'fed123' AND
@@ -549,7 +473,7 @@ func TestPublishAggregatedGraphQLMetrics(t *testing.T) {
 		startsWith(Path, ['hello'])
 	`).Scan(&fieldUsageCountMv))
 
-	assert.Greater(t, fieldUsageCountMv, uint64(0))
+	assert.Equal(t, uint64(1), fieldUsageCountMv)
 
 	var requestCount uint64
 	require.NoError(t, db.QueryRow(ctx, `
@@ -1098,6 +1022,7 @@ func buildSchemaUsageInfoItem(hash, reqDoc string, numArgMetrics, numTypeMetrics
 		argMetrics = append(argMetrics, &graphqlmetricsv1.ArgumentUsageInfo{
 			Path:     []string{"hello"},
 			TypeName: "testType",
+			Count:    1,
 		})
 	}
 
@@ -1107,6 +1032,7 @@ func buildSchemaUsageInfoItem(hash, reqDoc string, numArgMetrics, numTypeMetrics
 			TypeNames:              []string{"Query"},
 			SubgraphIDs:            []string{"sub123"},
 			IndirectInterfaceField: false,
+			Count:                  1,
 		})
 	}
 
@@ -1115,6 +1041,7 @@ func buildSchemaUsageInfoItem(hash, reqDoc string, numArgMetrics, numTypeMetrics
 			Path:       []string{"hello"},
 			TypeName:   "testType",
 			EnumValues: []string{"test"},
+			Count:      1,
 		})
 	}
 
