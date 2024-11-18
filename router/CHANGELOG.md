@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.143.0](https://github.com/wundergraph/cosmo/compare/router@0.142.1...router@0.143.0) (2024-11-18)
+
+### Bug Fixes
+
+* **router:** ensure that cors wildcard support is enabled ([#1375](https://github.com/wundergraph/cosmo/issues/1375)) ([fde6885](https://github.com/wundergraph/cosmo/commit/fde68852e3cabae372a80620d8846b30a0038ea3)) (@df-wg)
+
+### Features
+
+* better epoll detection, allow to disable epoll ([#1381](https://github.com/wundergraph/cosmo/issues/1381)) ([6c3c4a0](https://github.com/wundergraph/cosmo/commit/6c3c4a0e5170f964e3f3145bb31d50eb11886932)) (@StarpTech)
+
 ## [0.142.1](https://github.com/wundergraph/cosmo/compare/router@0.142.0...router@0.142.1) (2024-11-16)
 
 ### Bug Fixes
