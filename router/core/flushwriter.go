@@ -105,7 +105,7 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http
 	if wfw, ok := w.(withFlushWriter); ok {
 		return ctx, wfw.SubscriptionResponseWriter(), true
 	}
-	wgParams := NewWgRequestParams(r)
+	wgParams := NegotiateSubscriptionParams(r)
 
 	flusher, ok := w.(http.Flusher)
 	if !ok {
@@ -154,7 +154,8 @@ func wrapMultipartMessage(resp []byte) ([]byte, error) {
 	return respValue.MarshalTo(nil), nil
 }
 
-func setSubscriptionHeaders(wgParams WgRequestParams, r *http.Request, w http.ResponseWriter) {
+// setSubscriptionHeaders sets the headers for the subscription response. Only used for non-websocket subscriptions.
+func setSubscriptionHeaders(wgParams SubscriptionParams, r *http.Request, w http.ResponseWriter) {
 	if wgParams.SubscribeOnce {
 		return
 	}
@@ -175,20 +176,22 @@ func setSubscriptionHeaders(wgParams WgRequestParams, r *http.Request, w http.Re
 	w.Header().Set("X-Accel-Buffering", "no")
 }
 
-func NewWgRequestParams(r *http.Request) WgRequestParams {
+func NegotiateSubscriptionParams(r *http.Request) SubscriptionParams {
 	q := r.URL.Query()
 	acceptHeader := r.Header.Get("Accept")
 
 	mediaType, _, _ := mime.ParseMediaType(acceptHeader)
+	subscribeOnce := q.Has(WgSubscribeOnceParam)
+	useMultipart := mediaType == multipartMime
 
-	return WgRequestParams{
+	return SubscriptionParams{
 		UseSse:        q.Has(WgSseParam) || mediaType == sseMimeType,
-		SubscribeOnce: q.Has(WgSubscribeOnceParam),
-		UseMultipart:  mediaType == multipartMime,
+		SubscribeOnce: subscribeOnce,
+		UseMultipart:  useMultipart,
 	}
 }
 
-type WgRequestParams struct {
+type SubscriptionParams struct {
 	UseSse        bool
 	SubscribeOnce bool
 	UseMultipart  bool
