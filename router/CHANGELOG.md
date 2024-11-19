@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.143.3](https://github.com/wundergraph/cosmo/compare/router@0.143.2...router@0.143.3) (2024-11-19)
+
+### Bug Fixes
+
+* upgrade engine to fix fd issue with TLS connections ([#1388](https://github.com/wundergraph/cosmo/issues/1388)) ([7c8bb55](https://github.com/wundergraph/cosmo/commit/7c8bb55d074d732180f433eb6ac3b6139f4416c0)) (@StarpTech)
+
 ## [0.143.2](https://github.com/wundergraph/cosmo/compare/router@0.143.1...router@0.143.2) (2024-11-18)
 
 ### Bug Fixes
