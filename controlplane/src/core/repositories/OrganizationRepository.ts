@@ -34,6 +34,7 @@ import { BillingRepository } from './BillingRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { OidcRepository } from './OidcRepository.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
+import { TargetRepository } from './TargetRepository.js';
 
 /**
  * Repository for organization related operations.
@@ -855,27 +856,14 @@ export class OrganizationRepository {
     return this.db.transaction(async (tx) => {
       const oidcRepo = new OidcRepository(tx);
       const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, organizationId);
-      const subgraphRepo = new SubgraphRepository(this.logger, tx, organizationId);
+      const targetRepo = new TargetRepository(tx, organizationId);
 
       const graphs = await fedGraphRepo.list({
         limit: 0,
         offset: 0,
       });
-      const subgraphs = await subgraphRepo.list({
-        limit: 0,
-        offset: 0,
-        excludeFeatureSubgraphs: false,
-      });
 
-      // Delete graphs
-      const promises = [];
-      for (const graph of graphs) {
-        promises.push(fedGraphRepo.delete(graph.targetId));
-      }
-      for (const subgraph of subgraphs) {
-        promises.push(subgraphRepo.delete(subgraph.targetId));
-      }
-      await Promise.all(promises);
+      await targetRepo.deleteAll();
 
       // Clean up blob storage
       const blobPromises = [];

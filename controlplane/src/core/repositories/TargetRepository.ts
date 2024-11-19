@@ -58,4 +58,8 @@ export class TargetRepository {
 
     await this.db.update(targets).set({ namespaceId: newNamespaceId }).where(inArray(targets.id, targetIds));
   }
+
+  public async deleteAll() {
+    await this.db.delete(targets).where(and(eq(targets.organizationId, this.organizationId)));
+  }
 }
