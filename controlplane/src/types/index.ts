@@ -645,3 +645,12 @@ export interface S3StorageOptions {
   password?: string;
   forcePathStyle?: boolean;
 }
+
+export interface NamespaceDTO {
+  id: string;
+  name: string;
+  createdBy?: string;
+  organizationId: string;
+  enableLinting: boolean;
+  enableGraphPruning: boolean;
+}

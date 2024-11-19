@@ -59,6 +59,9 @@ const (
 	// PlatformServiceGetNamespacesProcedure is the fully-qualified name of the PlatformService's
 	// GetNamespaces RPC.
 	PlatformServiceGetNamespacesProcedure = "/wg.cosmo.platform.v1.PlatformService/GetNamespaces"
+	// PlatformServiceGetNamespaceProcedure is the fully-qualified name of the PlatformService's
+	// GetNamespace RPC.
+	PlatformServiceGetNamespaceProcedure = "/wg.cosmo.platform.v1.PlatformService/GetNamespace"
 	// PlatformServiceCreateContractProcedure is the fully-qualified name of the PlatformService's
 	// CreateContract RPC.
 	PlatformServiceCreateContractProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateContract"
@@ -448,6 +451,12 @@ const (
 	// PlatformServiceGetFeatureFlagsByFederatedGraphProcedure is the fully-qualified name of the
 	// PlatformService's GetFeatureFlagsByFederatedGraph RPC.
 	PlatformServiceGetFeatureFlagsByFederatedGraphProcedure = "/wg.cosmo.platform.v1.PlatformService/GetFeatureFlagsByFederatedGraph"
+	// PlatformServiceGetFederatedGraphProcedure is the fully-qualified name of the PlatformService's
+	// GetFederatedGraph RPC.
+	PlatformServiceGetFederatedGraphProcedure = "/wg.cosmo.platform.v1.PlatformService/GetFederatedGraph"
+	// PlatformServiceGetSubgraphProcedure is the fully-qualified name of the PlatformService's
+	// GetSubgraph RPC.
+	PlatformServiceGetSubgraphProcedure = "/wg.cosmo.platform.v1.PlatformService/GetSubgraph"
 	// PlatformServiceGetBillingPlansProcedure is the fully-qualified name of the PlatformService's
 	// GetBillingPlans RPC.
 	PlatformServiceGetBillingPlansProcedure = "/wg.cosmo.platform.v1.PlatformService/GetBillingPlans"
@@ -473,6 +482,7 @@ var (
 	platformServiceDeleteNamespaceMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("DeleteNamespace")
 	platformServiceRenameNamespaceMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("RenameNamespace")
 	platformServiceGetNamespacesMethodDescriptor                         = platformServiceServiceDescriptor.Methods().ByName("GetNamespaces")
+	platformServiceGetNamespaceMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("GetNamespace")
 	platformServiceCreateContractMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("CreateContract")
 	platformServiceUpdateContractMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("UpdateContract")
 	platformServiceMoveFederatedGraphMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("MoveFederatedGraph")
@@ -603,6 +613,8 @@ var (
 	platformServiceGetFeatureSubgraphsByFeatureFlagMethodDescriptor      = platformServiceServiceDescriptor.Methods().ByName("GetFeatureSubgraphsByFeatureFlag")
 	platformServiceGetFeatureSubgraphsMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("GetFeatureSubgraphs")
 	platformServiceGetFeatureFlagsByFederatedGraphMethodDescriptor       = platformServiceServiceDescriptor.Methods().ByName("GetFeatureFlagsByFederatedGraph")
+	platformServiceGetFederatedGraphMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("GetFederatedGraph")
+	platformServiceGetSubgraphMethodDescriptor                           = platformServiceServiceDescriptor.Methods().ByName("GetSubgraph")
 	platformServiceGetBillingPlansMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetBillingPlans")
 	platformServiceCreateCheckoutSessionMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("CreateCheckoutSession")
 	platformServiceCreateBillingPortalSessionMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("CreateBillingPortalSession")
@@ -621,6 +633,7 @@ type PlatformServiceClient interface {
 	DeleteNamespace(context.Context, *connect.Request[v1.DeleteNamespaceRequest]) (*connect.Response[v1.DeleteNamespaceResponse], error)
 	RenameNamespace(context.Context, *connect.Request[v1.RenameNamespaceRequest]) (*connect.Response[v1.RenameNamespaceResponse], error)
 	GetNamespaces(context.Context, *connect.Request[v1.GetNamespacesRequest]) (*connect.Response[v1.GetNamespacesResponse], error)
+	GetNamespace(context.Context, *connect.Request[v1.GetNamespaceRequest]) (*connect.Response[v1.GetNamespaceResponse], error)
 	// Contracts
 	CreateContract(context.Context, *connect.Request[v1.CreateContractRequest]) (*connect.Response[v1.CreateContractResponse], error)
 	UpdateContract(context.Context, *connect.Request[v1.UpdateContractRequest]) (*connect.Response[v1.UpdateContractResponse], error)
@@ -867,6 +880,10 @@ type PlatformServiceClient interface {
 	GetFeatureSubgraphs(context.Context, *connect.Request[v1.GetFeatureSubgraphsRequest]) (*connect.Response[v1.GetFeatureSubgraphsResponse], error)
 	// GetFeatureFlagsByFederatedGraph returns the list of feature flags which match the label matchers of the federated graph.
 	GetFeatureFlagsByFederatedGraph(context.Context, *connect.Request[v1.GetFeatureFlagsByFederatedGraphRequest]) (*connect.Response[v1.GetFeatureFlagsByFederatedGraphResponse], error)
+	// GetFederatedGraph returns the federated graph by id/name.
+	GetFederatedGraph(context.Context, *connect.Request[v1.GetFederatedGraphRequest]) (*connect.Response[v1.GetFederatedGraphResponse], error)
+	// GetSubgraph returns the subgraph by id/name.
+	GetSubgraph(context.Context, *connect.Request[v1.GetSubgraphRequest]) (*connect.Response[v1.GetSubgraphResponse], error)
 	// Billing
 	// -----------------------------------------------------------------------------------------------------------------------------
 	// Return the available billing plans
@@ -935,6 +952,12 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+PlatformServiceGetNamespacesProcedure,
 			connect.WithSchema(platformServiceGetNamespacesMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getNamespace: connect.NewClient[v1.GetNamespaceRequest, v1.GetNamespaceResponse](
+			httpClient,
+			baseURL+PlatformServiceGetNamespaceProcedure,
+			connect.WithSchema(platformServiceGetNamespaceMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		createContract: connect.NewClient[v1.CreateContractRequest, v1.CreateContractResponse](
@@ -1724,6 +1747,18 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceGetFeatureFlagsByFederatedGraphMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		getFederatedGraph: connect.NewClient[v1.GetFederatedGraphRequest, v1.GetFederatedGraphResponse](
+			httpClient,
+			baseURL+PlatformServiceGetFederatedGraphProcedure,
+			connect.WithSchema(platformServiceGetFederatedGraphMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getSubgraph: connect.NewClient[v1.GetSubgraphRequest, v1.GetSubgraphResponse](
+			httpClient,
+			baseURL+PlatformServiceGetSubgraphProcedure,
+			connect.WithSchema(platformServiceGetSubgraphMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		getBillingPlans: connect.NewClient[v1.GetBillingPlansRequest, v1.GetBillingPlansResponse](
 			httpClient,
 			baseURL+PlatformServiceGetBillingPlansProcedure,
@@ -1761,6 +1796,7 @@ type platformServiceClient struct {
 	deleteNamespace                       *connect.Client[v1.DeleteNamespaceRequest, v1.DeleteNamespaceResponse]
 	renameNamespace                       *connect.Client[v1.RenameNamespaceRequest, v1.RenameNamespaceResponse]
 	getNamespaces                         *connect.Client[v1.GetNamespacesRequest, v1.GetNamespacesResponse]
+	getNamespace                          *connect.Client[v1.GetNamespaceRequest, v1.GetNamespaceResponse]
 	createContract                        *connect.Client[v1.CreateContractRequest, v1.CreateContractResponse]
 	updateContract                        *connect.Client[v1.UpdateContractRequest, v1.UpdateContractResponse]
 	moveFederatedGraph                    *connect.Client[v1.MoveGraphRequest, v1.MoveGraphResponse]
@@ -1891,6 +1927,8 @@ type platformServiceClient struct {
 	getFeatureSubgraphsByFeatureFlag      *connect.Client[v1.GetFeatureSubgraphsByFeatureFlagRequest, v1.GetFeatureSubgraphsByFeatureFlagResponse]
 	getFeatureSubgraphs                   *connect.Client[v1.GetFeatureSubgraphsRequest, v1.GetFeatureSubgraphsResponse]
 	getFeatureFlagsByFederatedGraph       *connect.Client[v1.GetFeatureFlagsByFederatedGraphRequest, v1.GetFeatureFlagsByFederatedGraphResponse]
+	getFederatedGraph                     *connect.Client[v1.GetFederatedGraphRequest, v1.GetFederatedGraphResponse]
+	getSubgraph                           *connect.Client[v1.GetSubgraphRequest, v1.GetSubgraphResponse]
 	getBillingPlans                       *connect.Client[v1.GetBillingPlansRequest, v1.GetBillingPlansResponse]
 	createCheckoutSession                 *connect.Client[v1.CreateCheckoutSessionRequest, v1.CreateCheckoutSessionResponse]
 	createBillingPortalSession            *connect.Client[v1.CreateBillingPortalSessionRequest, v1.CreateBillingPortalSessionResponse]
@@ -1935,6 +1973,11 @@ func (c *platformServiceClient) RenameNamespace(ctx context.Context, req *connec
 // GetNamespaces calls wg.cosmo.platform.v1.PlatformService.GetNamespaces.
 func (c *platformServiceClient) GetNamespaces(ctx context.Context, req *connect.Request[v1.GetNamespacesRequest]) (*connect.Response[v1.GetNamespacesResponse], error) {
 	return c.getNamespaces.CallUnary(ctx, req)
+}
+
+// GetNamespace calls wg.cosmo.platform.v1.PlatformService.GetNamespace.
+func (c *platformServiceClient) GetNamespace(ctx context.Context, req *connect.Request[v1.GetNamespaceRequest]) (*connect.Response[v1.GetNamespaceResponse], error) {
+	return c.getNamespace.CallUnary(ctx, req)
 }
 
 // CreateContract calls wg.cosmo.platform.v1.PlatformService.CreateContract.
@@ -2611,6 +2654,16 @@ func (c *platformServiceClient) GetFeatureFlagsByFederatedGraph(ctx context.Cont
 	return c.getFeatureFlagsByFederatedGraph.CallUnary(ctx, req)
 }
 
+// GetFederatedGraph calls wg.cosmo.platform.v1.PlatformService.GetFederatedGraph.
+func (c *platformServiceClient) GetFederatedGraph(ctx context.Context, req *connect.Request[v1.GetFederatedGraphRequest]) (*connect.Response[v1.GetFederatedGraphResponse], error) {
+	return c.getFederatedGraph.CallUnary(ctx, req)
+}
+
+// GetSubgraph calls wg.cosmo.platform.v1.PlatformService.GetSubgraph.
+func (c *platformServiceClient) GetSubgraph(ctx context.Context, req *connect.Request[v1.GetSubgraphRequest]) (*connect.Response[v1.GetSubgraphResponse], error) {
+	return c.getSubgraph.CallUnary(ctx, req)
+}
+
 // GetBillingPlans calls wg.cosmo.platform.v1.PlatformService.GetBillingPlans.
 func (c *platformServiceClient) GetBillingPlans(ctx context.Context, req *connect.Request[v1.GetBillingPlansRequest]) (*connect.Response[v1.GetBillingPlansResponse], error) {
 	return c.getBillingPlans.CallUnary(ctx, req)
@@ -2643,6 +2696,7 @@ type PlatformServiceHandler interface {
 	DeleteNamespace(context.Context, *connect.Request[v1.DeleteNamespaceRequest]) (*connect.Response[v1.DeleteNamespaceResponse], error)
 	RenameNamespace(context.Context, *connect.Request[v1.RenameNamespaceRequest]) (*connect.Response[v1.RenameNamespaceResponse], error)
 	GetNamespaces(context.Context, *connect.Request[v1.GetNamespacesRequest]) (*connect.Response[v1.GetNamespacesResponse], error)
+	GetNamespace(context.Context, *connect.Request[v1.GetNamespaceRequest]) (*connect.Response[v1.GetNamespaceResponse], error)
 	// Contracts
 	CreateContract(context.Context, *connect.Request[v1.CreateContractRequest]) (*connect.Response[v1.CreateContractResponse], error)
 	UpdateContract(context.Context, *connect.Request[v1.UpdateContractRequest]) (*connect.Response[v1.UpdateContractResponse], error)
@@ -2889,6 +2943,10 @@ type PlatformServiceHandler interface {
 	GetFeatureSubgraphs(context.Context, *connect.Request[v1.GetFeatureSubgraphsRequest]) (*connect.Response[v1.GetFeatureSubgraphsResponse], error)
 	// GetFeatureFlagsByFederatedGraph returns the list of feature flags which match the label matchers of the federated graph.
 	GetFeatureFlagsByFederatedGraph(context.Context, *connect.Request[v1.GetFeatureFlagsByFederatedGraphRequest]) (*connect.Response[v1.GetFeatureFlagsByFederatedGraphResponse], error)
+	// GetFederatedGraph returns the federated graph by id/name.
+	GetFederatedGraph(context.Context, *connect.Request[v1.GetFederatedGraphRequest]) (*connect.Response[v1.GetFederatedGraphResponse], error)
+	// GetSubgraph returns the subgraph by id/name.
+	GetSubgraph(context.Context, *connect.Request[v1.GetSubgraphRequest]) (*connect.Response[v1.GetSubgraphResponse], error)
 	// Billing
 	// -----------------------------------------------------------------------------------------------------------------------------
 	// Return the available billing plans
@@ -2953,6 +3011,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		PlatformServiceGetNamespacesProcedure,
 		svc.GetNamespaces,
 		connect.WithSchema(platformServiceGetNamespacesMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetNamespaceHandler := connect.NewUnaryHandler(
+		PlatformServiceGetNamespaceProcedure,
+		svc.GetNamespace,
+		connect.WithSchema(platformServiceGetNamespaceMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceCreateContractHandler := connect.NewUnaryHandler(
@@ -3742,6 +3806,18 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceGetFeatureFlagsByFederatedGraphMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceGetFederatedGraphHandler := connect.NewUnaryHandler(
+		PlatformServiceGetFederatedGraphProcedure,
+		svc.GetFederatedGraph,
+		connect.WithSchema(platformServiceGetFederatedGraphMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetSubgraphHandler := connect.NewUnaryHandler(
+		PlatformServiceGetSubgraphProcedure,
+		svc.GetSubgraph,
+		connect.WithSchema(platformServiceGetSubgraphMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	platformServiceGetBillingPlansHandler := connect.NewUnaryHandler(
 		PlatformServiceGetBillingPlansProcedure,
 		svc.GetBillingPlans,
@@ -3784,6 +3860,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceRenameNamespaceHandler.ServeHTTP(w, r)
 		case PlatformServiceGetNamespacesProcedure:
 			platformServiceGetNamespacesHandler.ServeHTTP(w, r)
+		case PlatformServiceGetNamespaceProcedure:
+			platformServiceGetNamespaceHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateContractProcedure:
 			platformServiceCreateContractHandler.ServeHTTP(w, r)
 		case PlatformServiceUpdateContractProcedure:
@@ -4044,6 +4122,10 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceGetFeatureSubgraphsHandler.ServeHTTP(w, r)
 		case PlatformServiceGetFeatureFlagsByFederatedGraphProcedure:
 			platformServiceGetFeatureFlagsByFederatedGraphHandler.ServeHTTP(w, r)
+		case PlatformServiceGetFederatedGraphProcedure:
+			platformServiceGetFederatedGraphHandler.ServeHTTP(w, r)
+		case PlatformServiceGetSubgraphProcedure:
+			platformServiceGetSubgraphHandler.ServeHTTP(w, r)
 		case PlatformServiceGetBillingPlansProcedure:
 			platformServiceGetBillingPlansHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateCheckoutSessionProcedure:
@@ -4091,6 +4173,10 @@ func (UnimplementedPlatformServiceHandler) RenameNamespace(context.Context, *con
 
 func (UnimplementedPlatformServiceHandler) GetNamespaces(context.Context, *connect.Request[v1.GetNamespacesRequest]) (*connect.Response[v1.GetNamespacesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetNamespaces is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetNamespace(context.Context, *connect.Request[v1.GetNamespaceRequest]) (*connect.Response[v1.GetNamespaceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetNamespace is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) CreateContract(context.Context, *connect.Request[v1.CreateContractRequest]) (*connect.Response[v1.CreateContractResponse], error) {
@@ -4611,6 +4697,14 @@ func (UnimplementedPlatformServiceHandler) GetFeatureSubgraphs(context.Context, 
 
 func (UnimplementedPlatformServiceHandler) GetFeatureFlagsByFederatedGraph(context.Context, *connect.Request[v1.GetFeatureFlagsByFederatedGraphRequest]) (*connect.Response[v1.GetFeatureFlagsByFederatedGraphResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetFeatureFlagsByFederatedGraph is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetFederatedGraph(context.Context, *connect.Request[v1.GetFederatedGraphRequest]) (*connect.Response[v1.GetFederatedGraphResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetFederatedGraph is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetSubgraph(context.Context, *connect.Request[v1.GetSubgraphRequest]) (*connect.Response[v1.GetSubgraphResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetSubgraph is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) GetBillingPlans(context.Context, *connect.Request[v1.GetBillingPlansRequest]) (*connect.Response[v1.GetBillingPlansResponse], error) {
