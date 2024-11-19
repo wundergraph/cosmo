@@ -852,6 +852,10 @@ export class OrganizationRepository {
     return result[0];
   }
 
+  /**
+    This manually deletes graphs, oidc providers and blob storage.
+    Everything else is deleted automatically by db constraints
+  */
   public deleteOrganization(organizationId: string, blobStorage: BlobStorage) {
     return this.db.transaction(async (tx) => {
       const oidcRepo = new OidcRepository(tx);
