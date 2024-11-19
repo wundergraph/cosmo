@@ -56,7 +56,7 @@ func TestOperationsOverGET(t *testing.T) {
 func TestSubscriptionOverGET(t *testing.T) {
 	t.Parallel()
 
-	t.Run("subscription over sse", func(t *testing.T) {
+	t.Run("subscription over sse with content negotiation", func(t *testing.T) {
 		t.Parallel()
 
 		type currentTimePayload struct {
@@ -118,7 +118,7 @@ func TestSubscriptionOverGET(t *testing.T) {
 			var wg sync.WaitGroup
 			wg.Add(2)
 
-			go xEnv.GraphQLSubscriptionOverSSE(ctx, testenv.GraphQLRequest{
+			go xEnv.GraphQLSubscriptionOverSSEWithQueryParam(ctx, testenv.GraphQLRequest{
 				OperationName: []byte(`CurrentTime`),
 				Query:         `subscription CurrentTime { currentTime { unixTime timeStamp }}`,
 				Header: map[string][]string{
