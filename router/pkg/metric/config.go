@@ -44,6 +44,10 @@ type OpenTelemetry struct {
 	Enabled       bool
 	RouterRuntime bool
 	Exporters     []*OpenTelemetryExporter
+	// Metrics to exclude from the OTLP exporter.
+	ExcludeMetrics []*regexp.Regexp
+	// Metric labels to exclude from the OTLP exporter.
+	ExcludeMetricLabels []*regexp.Regexp
 	// TestReader is used for testing purposes. If set, the reader will be used instead of the configured exporters.
 	TestReader sdkmetric.Reader
 }

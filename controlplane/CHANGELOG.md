@@ -4,6 +4,28 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.116.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.115.2...controlplane@0.116.0) (2024-11-18)
+
+### Features
+
+* add pagination to operations page in check summary ([#1377](https://github.com/wundergraph/cosmo/issues/1377)) ([e61d4f1](https://github.com/wundergraph/cosmo/commit/e61d4f12873fe434d89c9069b8a1b1e3da225ebf)) (@JivusAyrus)
+
+## [0.115.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.115.1...controlplane@0.115.2) (2024-11-16)
+
+### Bug Fixes
+
+* increase the batch size of operation usage insertion ([#1378](https://github.com/wundergraph/cosmo/issues/1378)) ([44ac8a8](https://github.com/wundergraph/cosmo/commit/44ac8a83782556f3d30c868d7942781ae47edf1b)) (@JivusAyrus)
+
+## [0.115.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.115.0...controlplane@0.115.1) (2024-11-14)
+
+**Note:** Version bump only for package controlplane
+
+# [0.115.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.114.3...controlplane@0.115.0) (2024-11-13)
+
+### Features
+
+* add subgraph property to Warnings ([#1355](https://github.com/wundergraph/cosmo/issues/1355)) ([cacc0f3](https://github.com/wundergraph/cosmo/commit/cacc0f3c01673b7bf1ea8d20305d04939ca3351e)) (@Aenimus)
+
 ## [0.114.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.114.2...controlplane@0.114.3) (2024-11-07)
 
 ### Bug Fixes

@@ -33,6 +33,8 @@
       "OTLP": {
         "Enabled": true,
         "RouterRuntime": true,
+        "ExcludeMetrics": null,
+        "ExcludeMetricLabels": null,
         "Exporters": null
       },
       "Prometheus": {
@@ -198,15 +200,12 @@
     "Subgraphs": null
   },
   "SecurityConfiguration": {
-    "DepthLimit": {
-      "Enabled": false,
-      "Limit": 0,
-      "CacheSize": 1024,
-      "IgnorePersistedOperations": false
-    },
     "BlockMutations": false,
     "BlockSubscriptions": false,
-    "BlockNonPersistedOperations": false
+    "BlockNonPersistedOperations": false,
+    "ComplexityCalculationCache": null,
+    "ComplexityLimits": null,
+    "DepthLimit": null
   },
   "EngineExecutionConfiguration": {
     "Debug": {
@@ -231,19 +230,19 @@
     "EnableRequestTracing": true,
     "EnableExecutionPlanCacheResponseHeader": false,
     "MaxConcurrentResolvers": 32,
-    "EnableWebSocketEpollKqueue": true,
-    "EpollKqueuePollTimeout": 1000000000,
-    "EpollKqueueConnBufferSize": 128,
-    "WebSocketReadTimeout": 5000000000,
-    "ExecutionPlanCacheSize": 1024,
+    "EnableNetPoll": true,
+    "WebSocketClientPollTimeout": 1000000000,
+    "WebSocketClientConnBufferSize": 128,
+    "WebSocketClientReadTimeout": 5000000000,
+    "ExecutionPlanCacheSize": 10240,
     "MinifySubgraphOperations": true,
     "EnablePersistedOperationsCache": true,
     "EnableNormalizationCache": true,
-    "NormalizationCacheSize": 1024,
+    "NormalizationCacheSize": 10240,
     "OperationHashCacheSize": 2048,
     "ParseKitPoolSize": 16,
     "EnableValidationCache": true,
-    "ValidationCacheSize": 1024,
+    "ValidationCacheSize": 10240,
     "ResolverMaxRecyclableParserSize": 32768
   },
   "WebSocket": {

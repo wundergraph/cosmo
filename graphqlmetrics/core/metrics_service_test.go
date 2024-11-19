@@ -2,8 +2,10 @@ package core
 
 import (
 	"context"
+	"errors"
 	"os"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -26,7 +28,7 @@ func TestPublishGraphQLMetrics(t *testing.T) {
 
 	db := test.GetTestDatabase(t)
 
-	msvc := NewMetricsService(context.Background(), zap.NewNop(), db, defaultConfig())
+	msvc := NewMetricsService(zap.NewNop(), db, defaultConfig())
 
 	req := &graphqlmetricsv1.PublishGraphQLRequestMetricsRequest{
 		SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{
@@ -102,52 +104,31 @@ func TestPublishGraphQLMetrics(t *testing.T) {
     	GROUP BY OperationHash LIMIT 1
 	`).Scan(&opCount))
 
-	assert.Greater(t, opCount, uint64(0))
-
-	// Validate insert
-
-	var fieldUsageCount uint64
-	require.NoError(t, db.QueryRow(ctx, `
-		SELECT COUNT(*) FROM gql_metrics_schema_usage
-		WHERE OperationHash = 'hash123' AND
-		OrganizationID = 'org123' AND
-		FederatedGraphID = 'fed123' AND
-		RouterConfigVersion = 'v1' AND
-		Attributes['test'] = 'test123' AND
-		HttpStatusCode = '200' AND
-		HasError = true AND
-		ClientName = 'wundergraph' AND
-		ClientVersion = '1.0.0' AND
-		hasAny(TypeNames, ['Query']) AND
-		startsWith(Path, ['hello'])
-	`).Scan(&fieldUsageCount))
-
-	assert.Greater(t, fieldUsageCount, uint64(0))
-
-	var indirectFieldUsageCount uint64
-	require.NoError(t, db.QueryRow(ctx, `
-		SELECT COUNT(*) FROM gql_metrics_schema_usage
-		WHERE OperationHash = 'hash123' AND
-		OrganizationID = 'org123' AND
-		FederatedGraphID = 'fed123' AND
-		RouterConfigVersion = 'v1' AND
-		Attributes['test'] = 'test123' AND
-		HttpStatusCode = '200' AND
-		HasError = true AND
-		ClientName = 'wundergraph' AND
-		ClientVersion = '1.0.0' AND
-		hasAny(TypeNames, ['Query']) AND
-		startsWith(Path, ['hello']) AND
-		IsIndirectFieldUsage = true
-	`).Scan(&indirectFieldUsageCount))
-
-	assert.Greater(t, fieldUsageCount, uint64(0))
+	assert.Equal(t, uint64(1), opCount)
 
 	// Validate materialized view
 
 	var fieldUsageCountMv uint64
 	require.NoError(t, db.QueryRow(ctx, `
-		SELECT COUNT(*) FROM gql_metrics_schema_usage_5m_90d_mv
+		SELECT COUNT(*) FROM gql_metrics_schema_usage_5m_90d
+		WHERE OperationHash = 'hash123' AND
+		OrganizationID = 'org123' AND
+		FederatedGraphID = 'fed123' AND
+		RouterConfigVersion = 'v1' AND
+		TotalErrors = 1 AND
+		TotalUsages = 1 AND
+		TotalClientErrors = 0 AND
+		ClientName = 'wundergraph' AND
+		ClientVersion = '1.0.0' AND
+		hasAny(TypeNames, ['Query']) AND
+		startsWith(Path, ['hi'])
+	`).Scan(&fieldUsageCountMv))
+
+	assert.Equal(t, uint64(1), fieldUsageCountMv)
+
+	var fieldUsageCount2Mv uint64
+	require.NoError(t, db.QueryRow(ctx, `
+		SELECT COUNT(*) FROM gql_metrics_schema_usage_5m_90d
 		WHERE OperationHash = 'hash123' AND
 		OrganizationID = 'org123' AND
 		FederatedGraphID = 'fed123' AND
@@ -159,9 +140,107 @@ func TestPublishGraphQLMetrics(t *testing.T) {
 		ClientVersion = '1.0.0' AND
 		hasAny(TypeNames, ['Query']) AND
 		startsWith(Path, ['hello'])
-	`).Scan(&fieldUsageCountMv))
+	`).Scan(&fieldUsageCount2Mv))
 
-	assert.Greater(t, fieldUsageCountMv, uint64(0))
+	assert.Equal(t, uint64(1), fieldUsageCount2Mv)
+
+	var fieldUsageLiteCount uint64
+	require.NoError(t, db.QueryRow(ctx, `
+		SELECT COUNT(*) FROM gql_metrics_schema_usage_lite_1d_90d
+		WHERE OrganizationID = 'org123' AND
+		FederatedGraphID = 'fed123'
+	`).Scan(&fieldUsageLiteCount))
+
+	assert.Equal(t, 2, int(fieldUsageLiteCount))
+
+	var requestCount uint64
+	require.NoError(t, db.QueryRow(ctx, `
+	SELECT SUM(RequestCount) 
+	FROM gql_metrics_router_requests
+	WHERE FederatedGraphID = 'fed123' AND
+	OrganizationID = 'org123'
+	`).Scan(&requestCount))
+
+	require.Equal(t, uint64(1), requestCount)
+}
+
+func TestPublishGraphQLMetricsSendEmptyAndFilledMetrics(t *testing.T) {
+	if os.Getenv("INT_TESTS") != "true" {
+		t.Skip("Skipping integration tests")
+	}
+
+	db := test.GetTestDatabase(t)
+
+	msvc := NewMetricsService(zap.NewNop(), db, defaultConfig())
+
+	su1 := buildSchemaUsageInfoItem("Hash1", "query Hello { hello }", 0, 0, 0)
+	su2 := buildSchemaUsageInfoItem("Hash2", "query Hello { hello }", 1, 2, 0)
+
+	req := &graphqlmetricsv1.PublishGraphQLRequestMetricsRequest{
+		SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{su1, su2},
+	}
+
+	pReq := connect.NewRequest[graphqlmetricsv1.PublishGraphQLRequestMetricsRequest](req)
+
+	ctx := utils.SetClaims(context.Background(), &utils.GraphAPITokenClaims{
+		FederatedGraphID: "fed123",
+		OrganizationID:   "org123",
+	})
+
+	_, err := msvc.PublishGraphQLMetrics(
+		ctx,
+		pReq,
+	)
+	require.NoError(t, err)
+
+	// Wait until all requests are dispatched
+	time.Sleep(time.Millisecond * 100)
+
+	// Wait for batch to be processed
+	msvc.Shutdown(time.Second * 10)
+
+	// Validate insert
+
+	var opCount uint64
+
+	require.NoError(t, db.QueryRow(ctx, `
+		SELECT COUNT(*) FROM gql_metrics_operations
+    	WHERE OperationName = 'Hello' AND
+		OperationType = 'query' AND
+    	OperationContent = 'query Hello { hello }'
+	`).Scan(&opCount))
+
+	assert.Equal(t, uint64(2), opCount)
+
+	// Validate materialized view
+
+	var fieldUsageCount uint64
+	require.NoError(t, db.QueryRow(ctx, `
+		SELECT COUNT(*) FROM gql_metrics_schema_usage_5m_90d
+		WHERE OrganizationID = 'org123' AND
+		FederatedGraphID = 'fed123'
+	`).Scan(&fieldUsageCount))
+
+	assert.Equal(t, 2, int(fieldUsageCount))
+
+	var fieldUsageLiteCount uint64
+	require.NoError(t, db.QueryRow(ctx, `
+		SELECT COUNT(*) FROM gql_metrics_schema_usage_lite_1d_90d
+		WHERE OrganizationID = 'org123' AND
+		FederatedGraphID = 'fed123'
+	`).Scan(&fieldUsageLiteCount))
+
+	assert.Equal(t, 2, int(fieldUsageLiteCount))
+
+	var requestCount uint64
+	require.NoError(t, db.QueryRow(ctx, `
+	SELECT SUM(RequestCount) 
+	FROM gql_metrics_router_requests
+	WHERE FederatedGraphID = 'fed123' AND
+	OrganizationID = 'org123'
+	`).Scan(&requestCount))
+
+	require.Equal(t, uint64(1), requestCount)
 }
 
 func TestPublishGraphQLMetricsSmallBatches(t *testing.T) {
@@ -171,7 +250,7 @@ func TestPublishGraphQLMetricsSmallBatches(t *testing.T) {
 
 	db := test.GetTestDatabase(t)
 
-	msvc := NewMetricsService(context.Background(), zap.NewNop(), db, defaultConfig())
+	msvc := NewMetricsService(zap.NewNop(), db, defaultConfig())
 
 	// High number slows down race mode significantly
 	count := 20_000
@@ -258,47 +337,11 @@ func TestPublishGraphQLMetricsSmallBatches(t *testing.T) {
 
 	assert.Equal(t, opCount, uint64(count))
 
-	// Validate insert
-
-	var fieldUsageCount uint64
-	require.NoError(t, db.QueryRow(ctx, `
-		SELECT COUNT(*) FROM gql_metrics_schema_usage
-		WHERE OrganizationID = 'org123' AND
-		FederatedGraphID = 'fed123' AND
-		RouterConfigVersion = 'v1' AND
-		Attributes['test'] = 'test123' AND
-		HttpStatusCode = '200' AND
-		HasError = true AND
-		ClientName = 'wundergraph' AND
-		ClientVersion = '1.0.0' AND
-		hasAny(TypeNames, ['Query']) AND
-		startsWith(Path, ['hello'])
-	`).Scan(&fieldUsageCount))
-
-	assert.Greater(t, fieldUsageCount, uint64(0))
-
-	var allHelloEntries uint64
-	require.NoError(t, db.QueryRow(ctx, `
-	SELECT COUNT(*) FROM gql_metrics_schema_usage
-	WHERE OrganizationID = 'org123' AND
-		FederatedGraphID = 'fed123' AND
-		RouterConfigVersion = 'v1' AND
-		Attributes['test'] = 'test123' AND
-		HttpStatusCode = '200' AND
-		HasError = true AND
-		ClientName = 'wundergraph' AND
-		ClientVersion = '1.0.0' AND
-		hasAny(TypeNames, ['Query']) AND
-		has(Path, 'hello')
-	`).Scan(&allHelloEntries))
-
-	assert.Equal(t, int(fieldUsageCount), count)
-
 	// Validate materialized view
 
 	var fieldUsageCountMv uint64
 	require.NoError(t, db.QueryRow(ctx, `
-		SELECT COUNT(*) FROM gql_metrics_schema_usage_5m_90d_mv
+		SELECT COUNT(*) FROM gql_metrics_schema_usage_5m_90d
 		WHERE OrganizationID = 'org123' AND
 		FederatedGraphID = 'fed123' AND
 		RouterConfigVersion = 'v1' AND
@@ -311,7 +354,17 @@ func TestPublishGraphQLMetricsSmallBatches(t *testing.T) {
 		startsWith(Path, ['hello'])
 	`).Scan(&fieldUsageCountMv))
 
-	assert.Greater(t, fieldUsageCountMv, uint64(0))
+	assert.Equal(t, uint64(20_000), fieldUsageCountMv)
+
+	var requestCount uint64
+	require.NoError(t, db.QueryRow(ctx, `
+	SELECT SUM(RequestCount) 
+	FROM gql_metrics_router_requests
+	WHERE FederatedGraphID = 'fed123' AND
+	OrganizationID = 'org123'
+	`).Scan(&requestCount))
+
+	require.Equal(t, uint64(count), requestCount)
 }
 
 func TestPublishAggregatedGraphQLMetrics(t *testing.T) {
@@ -321,7 +374,7 @@ func TestPublishAggregatedGraphQLMetrics(t *testing.T) {
 
 	db := test.GetTestDatabase(t)
 
-	msvc := NewMetricsService(context.Background(), zap.NewNop(), db, defaultConfig())
+	msvc := NewMetricsService(zap.NewNop(), db, defaultConfig())
 
 	req := &graphqlmetricsv1.PublishAggregatedGraphQLRequestMetricsRequest{
 		Aggregation: []*graphqlmetricsv1.SchemaUsageInfoAggregation{
@@ -334,12 +387,14 @@ func TestPublishAggregatedGraphQLMetrics(t *testing.T) {
 							TypeNames:              []string{"Query"},
 							SubgraphIDs:            []string{"sub123"},
 							IndirectInterfaceField: false,
+							Count:                  1,
 						},
 						{
 							Path:                   []string{"hi"},
 							TypeNames:              []string{"Query"},
 							SubgraphIDs:            []string{"sub123"},
 							IndirectInterfaceField: true,
+							Count:                  1,
 						},
 					},
 					OperationInfo: &graphqlmetricsv1.OperationInfo{
@@ -398,52 +453,13 @@ func TestPublishAggregatedGraphQLMetrics(t *testing.T) {
     	GROUP BY OperationHash LIMIT 1
 	`).Scan(&opCount))
 
-	assert.Greater(t, opCount, uint64(0))
-
-	// Validate insert
-
-	var fieldUsageCount uint64
-	require.NoError(t, db.QueryRow(ctx, `
-		SELECT COUNT(*) FROM gql_metrics_schema_usage
-		WHERE OperationHash = 'hash123' AND
-		OrganizationID = 'org123' AND
-		FederatedGraphID = 'fed123' AND
-		RouterConfigVersion = 'v1' AND
-		Attributes['test'] = 'test123' AND
-		HttpStatusCode = '200' AND
-		HasError = true AND
-		ClientName = 'wundergraph' AND
-		ClientVersion = '1.0.0' AND
-		hasAny(TypeNames, ['Query']) AND
-		startsWith(Path, ['hello'])
-	`).Scan(&fieldUsageCount))
-
-	assert.Greater(t, fieldUsageCount, uint64(0))
-
-	var indirectFieldUsageCount uint64
-	require.NoError(t, db.QueryRow(ctx, `
-		SELECT COUNT(*) FROM gql_metrics_schema_usage
-		WHERE OperationHash = 'hash123' AND
-		OrganizationID = 'org123' AND
-		FederatedGraphID = 'fed123' AND
-		RouterConfigVersion = 'v1' AND
-		Attributes['test'] = 'test123' AND
-		HttpStatusCode = '200' AND
-		HasError = true AND
-		ClientName = 'wundergraph' AND
-		ClientVersion = '1.0.0' AND
-		hasAny(TypeNames, ['Query']) AND
-		startsWith(Path, ['hello']) AND
-		IsIndirectFieldUsage = true
-	`).Scan(&indirectFieldUsageCount))
-
-	assert.Greater(t, fieldUsageCount, uint64(0))
+	assert.Equal(t, uint64(1), opCount)
 
 	// Validate materialized view
 
 	var fieldUsageCountMv uint64
 	require.NoError(t, db.QueryRow(ctx, `
-		SELECT COUNT(*) FROM gql_metrics_schema_usage_5m_90d_mv
+		SELECT COUNT(*) FROM gql_metrics_schema_usage_5m_90d
 		WHERE OperationHash = 'hash123' AND
 		OrganizationID = 'org123' AND
 		FederatedGraphID = 'fed123' AND
@@ -457,7 +473,79 @@ func TestPublishAggregatedGraphQLMetrics(t *testing.T) {
 		startsWith(Path, ['hello'])
 	`).Scan(&fieldUsageCountMv))
 
-	assert.Greater(t, fieldUsageCountMv, uint64(0))
+	assert.Equal(t, uint64(1), fieldUsageCountMv)
+
+	var requestCount uint64
+	require.NoError(t, db.QueryRow(ctx, `
+	SELECT SUM(RequestCount)
+	FROM gql_metrics_router_requests
+	WHERE FederatedGraphID = 'fed123' AND
+	OrganizationID = 'org123'
+	`).Scan(&requestCount))
+
+	require.Equal(t, uint64(1), requestCount)
+}
+
+func TestPublishAggregatedGraphQLMetricsDifferentRequestCounts(t *testing.T) {
+	if os.Getenv("INT_TESTS") != "true" {
+		t.Skip("Skipping integration tests")
+	}
+
+	db := test.GetTestDatabase(t)
+
+	msvc := NewMetricsService(zap.NewNop(), db, defaultConfig())
+
+	req := &graphqlmetricsv1.PublishAggregatedGraphQLRequestMetricsRequest{
+		Aggregation: []*graphqlmetricsv1.SchemaUsageInfoAggregation{
+			{
+				RequestCount: 10,
+				SchemaUsage:  buildSchemaUsageInfoItem("hash1", "query Hello1 { hello1 }", 1, 1, 1),
+			},
+			{
+				RequestCount: 20,
+				SchemaUsage:  buildSchemaUsageInfoItem("hash2", "query Hello2 { hello2 }", 2, 2, 2),
+			},
+			{
+				RequestCount: 5,
+				SchemaUsage:  buildSchemaUsageInfoItem("hash3", "query Hello3 { hello3 }", 3, 3, 3),
+			},
+		},
+	}
+
+	totalCount := uint64(0)
+
+	for _, item := range req.Aggregation {
+		totalCount += item.RequestCount
+	}
+
+	pReq := connect.NewRequest[graphqlmetricsv1.PublishAggregatedGraphQLRequestMetricsRequest](req)
+
+	ctx := utils.SetClaims(context.Background(), &utils.GraphAPITokenClaims{
+		FederatedGraphID: "fed123",
+		OrganizationID:   "org123",
+	})
+
+	_, err := msvc.PublishAggregatedGraphQLMetrics(
+		ctx,
+		pReq,
+	)
+	require.NoError(t, err)
+
+	// Wait until all requests are dispatched
+	time.Sleep(time.Millisecond * 100)
+
+	// Wait for batch to be processed
+	msvc.Shutdown(time.Second * 10)
+
+	var requestCount uint64
+	require.NoError(t, db.QueryRow(ctx, `
+	SELECT SUM(RequestCount)
+	FROM gql_metrics_router_requests
+	WHERE FederatedGraphID = 'fed123' AND
+	OrganizationID = 'org123'
+	`).Scan(&requestCount))
+
+	require.Equal(t, totalCount, requestCount)
 }
 
 func TestAuthentication(t *testing.T) {
@@ -467,7 +555,7 @@ func TestAuthentication(t *testing.T) {
 
 	db := test.GetTestDatabase(t)
 
-	msvc := NewMetricsService(context.Background(), zap.NewNop(), db, defaultConfig())
+	msvc := NewMetricsService(zap.NewNop(), db, defaultConfig())
 
 	req := &graphqlmetricsv1.PublishGraphQLRequestMetricsRequest{
 		SchemaUsage: nil,
@@ -581,25 +669,30 @@ func (m *mockBatch) Append(v ...any) error {
 
 func TestPrepareClickhouseBatches(t *testing.T) {
 	type input struct {
-		batch []SchemaUsageRequestItem
+		batch                    []SchemaUsageRequestItem
+		preCachedHashes          []string
+		metricsBatchAppendFunc   func(v ...any) error
+		operationBatchAppendFunc func(v ...any) error
+		requestBatchAppendFunc   func(v ...any) error
 	}
 	type expected struct {
 		expectedPrepareBatchCalls int
 		operationBatchCreated     bool
 		metricsBatchCreated       bool
+		requestCountBatchCreated  bool
 	}
 
 	tests := []struct {
-		name            string
-		preCachedHashes []string
-		input           input
-		expected        expected
+		name     string
+		input    input
+		expected expected
 	}{
 		{
-			name: "should call prepare batch once",
+			name: "should call prepare operation and request count batch",
 			input: input{
 				batch: []SchemaUsageRequestItem{
 					{
+						TotalRequestCount: 1,
 						Claims: &utils.GraphAPITokenClaims{
 							OrganizationID:   "TestOrg",
 							FederatedGraphID: "TestGraph",
@@ -611,16 +704,18 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 				},
 			},
 			expected: expected{
-				expectedPrepareBatchCalls: 1,
+				expectedPrepareBatchCalls: 2,
 				operationBatchCreated:     true,
 				metricsBatchCreated:       false,
+				requestCountBatchCreated:  true,
 			},
 		},
 		{
-			name: "should call prepare batch twice",
+			name: "should prepare all batches",
 			input: input{
 				batch: []SchemaUsageRequestItem{
 					{
+						TotalRequestCount: 1,
 						Claims: &utils.GraphAPITokenClaims{
 							OrganizationID:   "TestOrg",
 							FederatedGraphID: "TestGraph",
@@ -632,16 +727,18 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 				},
 			},
 			expected: expected{
-				expectedPrepareBatchCalls: 2,
+				expectedPrepareBatchCalls: 3,
 				operationBatchCreated:     true,
 				metricsBatchCreated:       true,
+				requestCountBatchCreated:  true,
 			},
 		},
 		{
-			name: "should not call prepare batch",
+			name: "should only prepare request count batch",
 			input: input{
 				batch: []SchemaUsageRequestItem{
 					{
+						TotalRequestCount: 1,
 						Claims: &utils.GraphAPITokenClaims{
 							OrganizationID:   "TestOrg",
 							FederatedGraphID: "TestGraph",
@@ -653,14 +750,28 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 				},
 			},
 			expected: expected{
+				expectedPrepareBatchCalls: 1,
+				operationBatchCreated:     false,
+				metricsBatchCreated:       false,
+				requestCountBatchCreated:  true,
+			},
+		},
+		{
+			name: "should not call prepare batch with no data",
+			input: input{
+				batch: nil,
+			},
+			expected: expected{
 				expectedPrepareBatchCalls: 0,
 				operationBatchCreated:     false,
 				metricsBatchCreated:       false,
+				requestCountBatchCreated:  false,
 			},
 		},
 		{
 			name: "should not call prepare batch if hash is in the cache",
 			input: input{
+				preCachedHashes: []string{"hash123", "hash234"},
 				batch: []SchemaUsageRequestItem{
 					{
 						Claims: &utils.GraphAPITokenClaims{
@@ -691,16 +802,17 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 					},
 				},
 			},
-			preCachedHashes: []string{"hash123", "hash234"},
 			expected: expected{
-				expectedPrepareBatchCalls: 0,
+				expectedPrepareBatchCalls: 1,
 				operationBatchCreated:     false,
 				metricsBatchCreated:       false,
+				requestCountBatchCreated:  true,
 			},
 		},
 		{
 			name: "should not call prepare batch if hash is in the cache but still send metrics",
 			input: input{
+				preCachedHashes: []string{"hash123"},
 				batch: []SchemaUsageRequestItem{
 					{
 						Claims: &utils.GraphAPITokenClaims{
@@ -713,11 +825,110 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 					},
 				},
 			},
-			preCachedHashes: []string{"hash123"},
+			expected: expected{
+				expectedPrepareBatchCalls: 2,
+				operationBatchCreated:     false,
+				metricsBatchCreated:       true,
+				requestCountBatchCreated:  true,
+			},
+		},
+		{
+			name: "should prepare all batches even if appendUsageMetrics fails",
+			input: input{
+				metricsBatchAppendFunc: func(v ...any) error {
+					return errors.New("error while appending metrics")
+				},
+				batch: []SchemaUsageRequestItem{
+					{
+						Claims: &utils.GraphAPITokenClaims{
+							OrganizationID:   "TestOrg",
+							FederatedGraphID: "TestGraph",
+						},
+						SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{
+							buildSchemaUsageInfoItem("hash123", "query Hello { hello }", 1, 2, 0),
+						},
+					},
+				},
+			},
+			expected: expected{
+				expectedPrepareBatchCalls: 3,
+				operationBatchCreated:     true,
+				metricsBatchCreated:       true,
+				requestCountBatchCreated:  true,
+			},
+		},
+		{
+			name: "should prepare request, operation and metrics batch even if appending to operations batch fails",
+			input: input{
+				operationBatchAppendFunc: func(v ...any) error { return errors.New("error while appending metrics") },
+				batch: []SchemaUsageRequestItem{
+					{
+						Claims: &utils.GraphAPITokenClaims{
+							OrganizationID:   "TestOrg",
+							FederatedGraphID: "TestGraph",
+						},
+						SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{
+							buildSchemaUsageInfoItem("hash123", "query Hello { hello }", 1, 2, 0),
+							buildSchemaUsageInfoItem("hash123", "query Hello { hello }", 1, 2, 0),
+							buildSchemaUsageInfoItem("hash123", "query Hello { hello }", 1, 2, 0),
+						},
+					},
+				},
+			},
+			expected: expected{
+				expectedPrepareBatchCalls: 3,
+				operationBatchCreated:     true,
+				metricsBatchCreated:       true,
+				requestCountBatchCreated:  true,
+			},
+		},
+		{
+			name: "should return empty request count batch even if appending to request count batch fails",
+			input: input{
+				requestBatchAppendFunc: func(v ...any) error { return errors.New("error while appending metrics") },
+				batch: []SchemaUsageRequestItem{
+					{
+						TotalRequestCount: 10,
+						Claims: &utils.GraphAPITokenClaims{
+							OrganizationID:   "TestOrg",
+							FederatedGraphID: "TestGraph",
+						},
+						SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{},
+					},
+				},
+			},
 			expected: expected{
 				expectedPrepareBatchCalls: 1,
 				operationBatchCreated:     false,
+				metricsBatchCreated:       false,
+				requestCountBatchCreated:  true,
+			},
+		},
+		{
+			name: "should return empty batches if both append functions fail",
+			input: input{
+				operationBatchAppendFunc: func(v ...any) error { return errors.New("error while appending metrics") },
+				metricsBatchAppendFunc:   func(v ...any) error { return errors.New("error while appending metrics") },
+				requestBatchAppendFunc:   func(v ...any) error { return errors.New("error while appending metrics") },
+				batch: []SchemaUsageRequestItem{
+					{
+						Claims: &utils.GraphAPITokenClaims{
+							OrganizationID:   "TestOrg",
+							FederatedGraphID: "TestGraph",
+						},
+						SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{
+							buildSchemaUsageInfoItem("hash1", "query Hello { hello }", 1, 2, 0),
+							buildSchemaUsageInfoItem("hash2", "query Hello { hello }", 1, 2, 0),
+							buildSchemaUsageInfoItem("hash3", "query Hello { hello }", 1, 2, 0),
+						},
+					},
+				},
+			},
+			expected: expected{
+				expectedPrepareBatchCalls: 3,
+				operationBatchCreated:     true,
 				metricsBatchCreated:       true,
+				requestCountBatchCreated:  true,
 			},
 		},
 	}
@@ -726,23 +937,56 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			numPrepareBatchCalls := 0
 
-			batch := &mockBatch{mockAppendFunc: func(v ...any) error {
-				return nil
-			}}
+			operationMockBatch := &mockBatch{
+				mockAppendFunc: func(v ...any) error {
+					if tt.input.operationBatchAppendFunc != nil {
+						return tt.input.operationBatchAppendFunc(v...)
+					}
+
+					return nil
+				},
+			}
+
+			metricsMockBatch := &mockBatch{
+				mockAppendFunc: func(v ...any) error {
+					if tt.input.metricsBatchAppendFunc != nil {
+						return tt.input.metricsBatchAppendFunc(v...)
+					}
+
+					return nil
+				},
+			}
+
+			requestCountMockBatch := &mockBatch{
+				mockAppendFunc: func(v ...any) error {
+					if tt.input.requestBatchAppendFunc != nil {
+						return tt.input.requestBatchAppendFunc(v...)
+					}
+					return nil
+				},
+			}
 
 			db := &mockDriver{mockPrepareBatch: func(ctx context.Context, query string, opts ...driver.PrepareBatchOption) (driver.Batch, error) {
 				numPrepareBatchCalls++
-				return batch, nil
+
+				if strings.Contains(query, `gql_metrics_operations`) {
+					return operationMockBatch, nil
+				}
+
+				if strings.Contains(query, `gql_metrics_schema_usage`) {
+					return metricsMockBatch, nil
+				}
+
+				return requestCountMockBatch, nil
 			}}
 
-			msvc := NewMetricsService(context.Background(), zap.NewNop(), db, defaultConfig())
+			msvc := NewMetricsService(zap.NewNop(), db, defaultConfig())
 
-			for _, hash := range tt.preCachedHashes {
+			for _, hash := range tt.input.preCachedHashes {
 				msvc.opGuardCache.Set(hash, struct{}{}, 1)
 			}
 
-			opBatch, metricsBatch, err := msvc.prepareClickhouseBatches(context.Background(), time.Now(), tt.input.batch)
-			require.NoError(t, err)
+			opBatch, metricsBatch, _ := msvc.prepareClickhouseBatches(context.Background(), time.Now(), tt.input.batch)
 			require.Equal(t, tt.expected.expectedPrepareBatchCalls, numPrepareBatchCalls)
 
 			if tt.expected.operationBatchCreated {
@@ -778,6 +1022,7 @@ func buildSchemaUsageInfoItem(hash, reqDoc string, numArgMetrics, numTypeMetrics
 		argMetrics = append(argMetrics, &graphqlmetricsv1.ArgumentUsageInfo{
 			Path:     []string{"hello"},
 			TypeName: "testType",
+			Count:    1,
 		})
 	}
 
@@ -787,6 +1032,7 @@ func buildSchemaUsageInfoItem(hash, reqDoc string, numArgMetrics, numTypeMetrics
 			TypeNames:              []string{"Query"},
 			SubgraphIDs:            []string{"sub123"},
 			IndirectInterfaceField: false,
+			Count:                  1,
 		})
 	}
 
@@ -795,6 +1041,7 @@ func buildSchemaUsageInfoItem(hash, reqDoc string, numArgMetrics, numTypeMetrics
 			Path:       []string{"hello"},
 			TypeName:   "testType",
 			EnumValues: []string{"test"},
+			Count:      1,
 		})
 	}
 

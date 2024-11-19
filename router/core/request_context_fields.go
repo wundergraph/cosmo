@@ -54,3 +54,59 @@ func NewDurationLogField(val time.Duration, attribute config.CustomAttribute) za
 	}
 	return zap.Skip()
 }
+
+func GetLogFieldFromCustomAttribute(field config.CustomAttribute, req *requestContext) zap.Field {
+	val := getCustomDynamicAttributeValue(field.ValueFrom, req)
+	switch v := val.(type) {
+	case string:
+		return NewStringLogField(v, field)
+	case []string:
+		return NewStringSliceLogField(v, field)
+	case time.Duration:
+		return NewDurationLogField(v, field)
+	}
+
+	return zap.Skip()
+}
+
+func getCustomDynamicAttributeValue(attribute *config.CustomDynamicAttribute, reqContext *requestContext) interface{} {
+	if attribute.ContextField == "" {
+		return ""
+	}
+
+	switch attribute.ContextField {
+	case ContextFieldOperationName:
+		return reqContext.operation.Name()
+	case ContextFieldOperationType:
+		return reqContext.operation.Type()
+	case ContextFieldOperationPlanningTime:
+		return reqContext.operation.planningTime
+	case ContextFieldOperationNormalizationTime:
+		return reqContext.operation.normalizationTime
+	case ContextFieldOperationParsingTime:
+		return reqContext.operation.parsingTime
+	case ContextFieldOperationValidationTime:
+		return reqContext.operation.validationTime
+	case ContextFieldOperationSha256:
+		return reqContext.operation.sha256Hash
+	case ContextFieldOperationHash:
+		if reqContext.operation.hash != 0 {
+			return strconv.FormatUint(reqContext.operation.hash, 10)
+		}
+		return reqContext.operation.Hash()
+	case ContextFieldPersistedOperationSha256:
+		return reqContext.operation.persistedID
+	case ContextFieldResponseErrorMessage:
+		if reqContext.error != nil {
+			return reqContext.error.Error()
+		}
+	case ContextFieldOperationServices:
+		return reqContext.dataSourceNames
+	case ContextFieldGraphQLErrorServices:
+		return reqContext.graphQLErrorServices
+	case ContextFieldGraphQLErrorCodes:
+		return reqContext.graphQLErrorCodes
+	}
+
+	return ""
+}

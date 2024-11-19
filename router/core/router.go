@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
 	"net"
 	"net/http"
 	"net/url"
@@ -149,7 +150,7 @@ type (
 		staticExecutionConfig           *nodev1.RouterConfig
 		awsLambda                       bool
 		shutdown                        atomic.Bool
-		bootstrapped                    bool
+		bootstrapped                    atomic.Bool
 		ipAnonymization                 *IPAnonymizationConfig
 		listenAddr                      string
 		baseURL                         string
@@ -474,6 +475,30 @@ func NewRouter(opts ...Option) (*Router, error) {
 		)
 	}
 
+	if r.securityConfiguration.DepthLimit != nil {
+		r.logger.Warn("The security configuration field 'depth_limit' is deprecated, and will be removed. Use 'security.complexity_limits.depth' instead.")
+
+		if r.securityConfiguration.ComplexityCalculationCache == nil {
+			r.securityConfiguration.ComplexityCalculationCache = &config.ComplexityCalculationCache{
+				Enabled:   true,
+				CacheSize: r.securityConfiguration.DepthLimit.CacheSize,
+			}
+		}
+
+		if r.securityConfiguration.ComplexityLimits == nil {
+			r.securityConfiguration.ComplexityLimits = &config.ComplexityLimits{}
+		}
+		if r.securityConfiguration.ComplexityLimits.Depth == nil {
+			r.securityConfiguration.ComplexityLimits.Depth = &config.ComplexityLimit{
+				Enabled:                   r.securityConfiguration.DepthLimit.Enabled,
+				Limit:                     r.securityConfiguration.DepthLimit.Limit,
+				IgnorePersistedOperations: r.securityConfiguration.DepthLimit.IgnorePersistedOperations,
+			}
+		} else {
+			r.logger.Warn("Ignoring deprecated security configuration field 'depth_limit', in favor of the `security_complexity_limits.depth` configuration")
+		}
+	}
+
 	if r.developmentMode {
 		r.logger.Warn("Development mode enabled. This should only be used for testing purposes")
 	}
@@ -489,6 +514,26 @@ func NewRouter(opts ...Option) (*Router, error) {
 	}
 	for _, source := range r.eventsConfig.Providers.Kafka {
 		r.logger.Info("Kafka Event source enabled", zap.String("provider_id", source.ID), zap.Strings("brokers", source.Brokers))
+	}
+
+	if !r.engineExecutionConfiguration.EnableNetPoll {
+		r.logger.Warn("Net poller is disabled by configuration. Falling back to less efficient connection handling method.")
+	} else if err := netpoll.Supported(); err != nil {
+
+		// Disable netPoll if it's not supported. This flag is used everywhere to decide whether to use netPoll or not.
+		r.engineExecutionConfiguration.EnableNetPoll = false
+
+		if errors.Is(err, netpoll.ErrUnsupported) {
+			r.logger.Warn(
+				"Net poller is only available on Linux and MacOS. Falling back to less efficient connection handling method.",
+				zap.Error(err),
+			)
+		} else {
+			r.logger.Warn(
+				"Net poller is not functional by the environment. Ensure that the system supports epoll/kqueue and that necessary syscall permissions are granted. Falling back to less efficient connection handling method.",
+				zap.Error(err),
+			)
+		}
 	}
 
 	return r, nil
@@ -652,13 +697,11 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 }
 
 // bootstrap initializes the Router. It is called by Start() and NewServer().
-// It should only be called once for a Router instance. Not safe for concurrent use.
+// It should only be called once for a Router instance.
 func (r *Router) bootstrap(ctx context.Context) error {
-	if r.bootstrapped {
+	if !r.bootstrapped.CompareAndSwap(false, true) {
 		return fmt.Errorf("router is already bootstrapped")
 	}
-
-	r.bootstrapped = true
 
 	cosmoCloudTracingEnabled := r.traceConfig.Enabled && rtrace.DefaultExporter(r.traceConfig) != nil
 	artInProductionEnabled := r.engineExecutionConfiguration.EnableRequestTracing && !r.developmentMode
@@ -1094,14 +1137,12 @@ func (r *Router) Start(ctx context.Context) error {
 }
 
 // Shutdown gracefully shuts down the router. It blocks until the server is shutdown.
-// If the router is already shutdown, the method returns immediately without error. Not safe for concurrent use.
+// If the router is already shutdown, the method returns immediately without error.
 func (r *Router) Shutdown(ctx context.Context) (err error) {
 
-	if r.shutdown.Load() {
+	if !r.shutdown.CompareAndSwap(false, true) {
 		return nil
 	}
-
-	r.shutdown.Store(true)
 
 	// Respect grace period
 	if r.routerGracePeriod > 0 {
@@ -1810,9 +1851,11 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 		Attributes:         cfg.Metrics.Attributes,
 		ResourceAttributes: buildResourceAttributes(cfg.ResourceAttributes),
 		OpenTelemetry: rmetric.OpenTelemetry{
-			Enabled:       cfg.Metrics.OTLP.Enabled,
-			RouterRuntime: cfg.Metrics.OTLP.RouterRuntime,
-			Exporters:     openTelemetryExporters,
+			Enabled:             cfg.Metrics.OTLP.Enabled,
+			RouterRuntime:       cfg.Metrics.OTLP.RouterRuntime,
+			Exporters:           openTelemetryExporters,
+			ExcludeMetrics:      cfg.Metrics.OTLP.ExcludeMetrics,
+			ExcludeMetricLabels: cfg.Metrics.OTLP.ExcludeMetricLabels,
 		},
 		Prometheus: rmetric.PrometheusConfig{
 			Enabled:             cfg.Metrics.Prometheus.Enabled,

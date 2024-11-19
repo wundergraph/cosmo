@@ -150,11 +150,9 @@ run-subgraphs-local:
 sync-go-workspace:
 	cd router && go mod tidy
 	cd demo && make bump-deps
-	cd aws-lambda-router && make bump-deps
 	cd composition-go && go mod tidy
 	cd graphqlmetrics && go mod tidy
 	cd router-tests && make bump-deps
-	go work sync
 
 # Validates if any breaking changes has been introduced.
 # Compares the head of the branch with your local changes

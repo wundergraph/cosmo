@@ -1223,6 +1223,14 @@ export function invalidEventSubjectsItemErrorMessage(argumentName: string): stri
   );
 }
 
+export function invalidEventSubjectsArgumentErrorMessage(argumentName: string): string {
+  return `An argument template references the invalid argument "${argumentName}".`;
+}
+
+export function undefinedEventSubjectsArgumentErrorMessage(argumentName: string): string {
+  return `An argument template references the undefined argument "${argumentName}".`;
+}
+
 export const invalidEventProviderIdErrorMessage = `If explicitly defined, the "providerId" argument must be a string with a minimum length of one.`;
 
 export function invalidEventDirectiveError(directiveName: string, fieldPath: string, errorMessages: string[]): Error {
@@ -1618,13 +1626,5 @@ export function unexpectedNonCompositeOutputTypeError(namedTypeName: string, act
   return new Error(
     `Expected named type "${namedTypeName}" to be a composite output type (Object or Interface)` +
       ` but received "${actualTypeString}".\nThis should never happen. Please report this issue on GitHub.`,
-  );
-}
-
-// TODO Temporarily only used as a warning
-export function unimplementedInterfaceOutputTypeError(subgraphName: string, interfaceTypeName: string): Error {
-  return new Error(
-    `Subgraph "${subgraphName}": The Interface "${interfaceTypeName}" is used as an output type` +
-      ` without at least one Object type implementation defined in the schema.`,
   );
 }

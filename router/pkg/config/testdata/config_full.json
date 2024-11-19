@@ -43,6 +43,8 @@
       "OTLP": {
         "Enabled": true,
         "RouterRuntime": true,
+        "ExcludeMetrics": null,
+        "ExcludeMetricLabels": null,
         "Exporters": [
           {
             "Disabled": false,
@@ -130,7 +132,8 @@
           "Rename": "",
           "Default": "",
           "Name": "",
-          "Value": ""
+          "Value": "",
+          "ValueFrom": null
         },
         {
           "Operation": "propagate",
@@ -139,7 +142,8 @@
           "Rename": "",
           "Default": "",
           "Name": "",
-          "Value": ""
+          "Value": "",
+          "ValueFrom": null
         },
         {
           "Operation": "propagate",
@@ -148,7 +152,8 @@
           "Rename": "",
           "Default": "123",
           "Name": "",
-          "Value": ""
+          "Value": "",
+          "ValueFrom": null
         },
         {
           "Operation": "set",
@@ -157,7 +162,21 @@
           "Rename": "",
           "Default": "",
           "Name": "X-API-Key",
-          "Value": "some-secret"
+          "Value": "some-secret",
+          "ValueFrom": null
+        },
+        {
+          "Operation": "set",
+          "Matching": "",
+          "Named": "",
+          "Rename": "",
+          "Default": "",
+          "Name": "x-operation-name",
+          "Value": "",
+          "ValueFrom": {
+            "RequestHeader": "",
+            "ContextField": "operation_name"
+          }
         }
       ],
       "Response": [
@@ -183,7 +202,8 @@
             "Rename": "",
             "Default": "some-secret",
             "Name": "",
-            "Value": ""
+            "Value": "",
+            "ValueFrom": null
           }
         ],
         "Response": [
@@ -359,15 +379,36 @@
     }
   },
   "SecurityConfiguration": {
-    "DepthLimit": {
-      "Enabled": false,
-      "Limit": 0,
-      "CacheSize": 1024,
-      "IgnorePersistedOperations": false
-    },
     "BlockMutations": false,
     "BlockSubscriptions": false,
-    "BlockNonPersistedOperations": false
+    "BlockNonPersistedOperations": false,
+    "ComplexityCalculationCache": {
+      "Enabled": true,
+      "CacheSize": 1024
+    },
+    "ComplexityLimits": {
+      "Depth": {
+        "Enabled": true,
+        "Limit": 5,
+        "IgnorePersistedOperations": true
+      },
+      "TotalFields": {
+        "Enabled": true,
+        "Limit": 7,
+        "IgnorePersistedOperations": true
+      },
+      "RootFields": {
+        "Enabled": true,
+        "Limit": 3,
+        "IgnorePersistedOperations": true
+      },
+      "RootFieldAliases": {
+        "Enabled": true,
+        "Limit": 4,
+        "IgnorePersistedOperations": true
+      }
+    },
+    "DepthLimit": null
   },
   "EngineExecutionConfiguration": {
     "Debug": {
@@ -392,19 +433,19 @@
     "EnableRequestTracing": true,
     "EnableExecutionPlanCacheResponseHeader": false,
     "MaxConcurrentResolvers": 32,
-    "EnableWebSocketEpollKqueue": true,
-    "EpollKqueuePollTimeout": 1000000000,
-    "EpollKqueueConnBufferSize": 128,
-    "WebSocketReadTimeout": 5000000000,
+    "EnableNetPoll": true,
+    "WebSocketClientPollTimeout": 1000000000,
+    "WebSocketClientConnBufferSize": 128,
+    "WebSocketClientReadTimeout": 5000000000,
     "ExecutionPlanCacheSize": 1024,
     "MinifySubgraphOperations": true,
     "EnablePersistedOperationsCache": true,
     "EnableNormalizationCache": true,
-    "NormalizationCacheSize": 1024,
+    "NormalizationCacheSize": 10240,
     "OperationHashCacheSize": 2048,
     "ParseKitPoolSize": 16,
     "EnableValidationCache": true,
-    "ValidationCacheSize": 1024,
+    "ValidationCacheSize": 10240,
     "ResolverMaxRecyclableParserSize": 4096
   },
   "WebSocket": {

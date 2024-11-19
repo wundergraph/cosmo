@@ -19,6 +19,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -104,6 +105,13 @@ type RouterConfig struct {
 	ConfigPollerFactory func(config *nodev1.RouterConfig) configpoller.ConfigPoller
 }
 
+type MetricExclusions struct {
+	ExcludedPrometheusMetrics      []*regexp.Regexp
+	ExcludedPrometheusMetricLabels []*regexp.Regexp
+	ExcludedOTLPMetrics            []*regexp.Regexp
+	ExcludedOTLPMetricLabels       []*regexp.Regexp
+}
+
 type Config struct {
 	Subgraphs                          SubgraphsConfig
 	RouterConfig                       *RouterConfig
@@ -126,6 +134,7 @@ type Config struct {
 	CustomResourceAttributes           []config.CustomStaticAttribute
 	MetricReader                       metric.Reader
 	PrometheusRegistry                 *prometheus.Registry
+	MetricExclusions                   MetricExclusions
 	ShutdownDelay                      time.Duration
 	NoRetryClient                      bool
 	PropagationConfig                  config.PropagationConfig
@@ -607,7 +616,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	}
 
 	engineExecutionConfig := config.EngineExecutionConfiguration{
-		EnableWebSocketEpollKqueue:             true,
+		EnableNetPoll:                          true,
 		EnableSingleFlight:                     true,
 		EnableRequestTracing:                   true,
 		EnableExecutionPlanCacheResponseHeader: true,
@@ -619,9 +628,9 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			EnablePersistedOperationsCacheResponseHeader: true,
 			EnableNormalizationCacheResponseHeader:       true,
 		},
-		EpollKqueuePollTimeout:         300 * time.Millisecond,
-		EpollKqueueConnBufferSize:      1,
-		WebSocketReadTimeout:           time.Millisecond * 100,
+		WebSocketClientPollTimeout:     300 * time.Millisecond,
+		WebSocketClientConnBufferSize:  1,
+		WebSocketClientReadTimeout:     100 * time.Millisecond,
 		MaxConcurrentResolvers:         32,
 		ExecutionPlanCacheSize:         1024,
 		EnablePersistedOperationsCache: true,
@@ -736,10 +745,12 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			return nil, fmt.Errorf("could not get free port: %w", err)
 		}
 		prometheusConfig = rmetric.PrometheusConfig{
-			Enabled:      true,
-			ListenAddr:   fmt.Sprintf("localhost:%d", port),
-			Path:         "/metrics",
-			TestRegistry: testConfig.PrometheusRegistry,
+			Enabled:             true,
+			ListenAddr:          fmt.Sprintf("localhost:%d", port),
+			Path:                "/metrics",
+			TestRegistry:        testConfig.PrometheusRegistry,
+			ExcludeMetrics:      testConfig.MetricExclusions.ExcludedPrometheusMetrics,
+			ExcludeMetricLabels: testConfig.MetricExclusions.ExcludedPrometheusMetricLabels,
 		}
 	}
 
@@ -754,8 +765,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 					Enabled: true,
 				},
 				OTLP: config.MetricsOTLP{
-					Enabled:       true,
-					RouterRuntime: false,
+					Enabled:             true,
+					RouterRuntime:       false,
+					ExcludeMetrics:      testConfig.MetricExclusions.ExcludedOTLPMetrics,
+					ExcludeMetricLabels: testConfig.MetricExclusions.ExcludedOTLPMetricLabels,
 				},
 			},
 		})
@@ -1023,6 +1036,23 @@ func (e *Environment) MakeGraphQLRequestWithContext(ctx context.Context, request
 		req.Header = request.Header
 	}
 	req.Header.Set("Accept-Encoding", "identity")
+	return e.makeGraphQLRequest(req)
+}
+
+func (e *Environment) MakeGraphQLRequestWithHeaders(request GraphQLRequest, headers map[string]string) (*TestResponse, error) {
+	data, err := json.Marshal(request)
+	require.NoError(e.t, err)
+	req, err := http.NewRequestWithContext(e.Context, http.MethodPost, e.GraphQLRequestURL(), bytes.NewReader(data))
+	if err != nil {
+		return nil, err
+	}
+	if request.Header != nil {
+		req.Header = request.Header
+	}
+	req.Header.Set("Accept-Encoding", "identity")
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
 	return e.makeGraphQLRequest(req)
 }
 

@@ -3,6 +3,7 @@ package integration
 import (
 	"context"
 	"net/http"
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -2653,6 +2654,106 @@ func TestTelemetry(t *testing.T) {
 		})
 	})
 
+	t.Run("Excluded metrics and attributes should not be exported", func(t *testing.T) {
+		t.Parallel()
+
+		var (
+			rmFull     metricdata.ResourceMetrics
+			rmFiltered metricdata.ResourceMetrics
+		)
+
+		metricReaderFull := metric.NewManualReader()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader: metricReaderFull,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			err := metricReaderFull.Collect(context.Background(), &rmFull)
+			require.NoError(t, err)
+
+			require.Equal(t, 1, len(rmFull.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rmFull.ScopeMetrics))
+			require.Equal(t, 6, len(rmFull.ScopeMetrics[0].Metrics), "expected 6 Metrics, got %d", len(rmFull.ScopeMetrics[0].Metrics))
+
+			require.Equal(t, "router.http.requests", rmFull.ScopeMetrics[0].Metrics[0].Name)
+			require.True(t, metricdatatest.AssertHasAttributes(t, rmFull.ScopeMetrics[0].Metrics[0], otel.WgClientName.String("unknown")))
+			require.True(t, metricdatatest.AssertHasAttributes(t, rmFull.ScopeMetrics[0].Metrics[0], otel.WgOperationName.String("")))
+
+			require.True(t, metricdatatest.AssertHasAttributes(t, rmFull.ScopeMetrics[0].Metrics[1], otel.WgClientName.String("unknown")))
+			require.True(t, metricdatatest.AssertHasAttributes(t, rmFull.ScopeMetrics[0].Metrics[1], otel.WgOperationName.String("")))
+
+			require.True(t, metricdatatest.AssertHasAttributes(t, rmFull.ScopeMetrics[0].Metrics[2], otel.WgClientName.String("unknown")))
+			require.True(t, metricdatatest.AssertHasAttributes(t, rmFull.ScopeMetrics[0].Metrics[2], otel.WgOperationName.String("")))
+
+			require.True(t, metricdatatest.AssertHasAttributes(t, rmFull.ScopeMetrics[0].Metrics[3], otel.WgClientName.String("unknown")))
+			require.True(t, metricdatatest.AssertHasAttributes(t, rmFull.ScopeMetrics[0].Metrics[3], otel.WgOperationName.String("")))
+
+			require.True(t, metricdatatest.AssertHasAttributes(t, rmFull.ScopeMetrics[0].Metrics[4], otel.WgClientName.String("unknown")))
+		})
+
+		metricReaderFiltered := metric.NewManualReader()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader: metricReaderFiltered,
+			MetricExclusions: testenv.MetricExclusions{
+				ExcludedOTLPMetrics: []*regexp.Regexp{
+					regexp.MustCompile(`^router\.http\.requests$`),
+				},
+				ExcludedOTLPMetricLabels: []*regexp.Regexp{
+					regexp.MustCompile(`^wg\.client\.name$`),
+					regexp.MustCompile(`^wg\.operation.*`),
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			err := metricReaderFiltered.Collect(context.Background(), &rmFiltered)
+			require.NoError(t, err)
+
+			require.Equal(t, 1, len(rmFiltered.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rmFiltered.ScopeMetrics))
+			require.Equal(t, 5, len(rmFiltered.ScopeMetrics[0].Metrics), "expected 6 Metrics, got %d", len(rmFiltered.ScopeMetrics[0].Metrics))
+
+			// Check if the excluded attributes are not present in the Resource
+			// The first metric completely excluded, the second one should be the first in filtered
+			require.NotEqual(t, rmFull.ScopeMetrics[0].Metrics[0].Name, rmFiltered.ScopeMetrics[0].Metrics[0].Name)
+			require.Equal(t, rmFull.ScopeMetrics[0].Metrics[1].Name, rmFiltered.ScopeMetrics[0].Metrics[0].Name)
+
+			// All other metrics should have fewer attributes in the filtered set compared to the full one
+
+			rdFiltered, ok := rmFiltered.ScopeMetrics[0].Metrics[0].Data.(metricdata.Histogram[float64])
+			require.True(t, ok)
+
+			assertAttributeNotInSet(t, rdFiltered.DataPoints[0].Attributes, otel.WgClientName.String("unknown"))
+			assertAttributeNotInSet(t, rdFiltered.DataPoints[1].Attributes, otel.WgClientName.String("unknown"))
+			assertAttributeNotInSet(t, rdFiltered.DataPoints[0].Attributes, otel.WgOperationName.String(""))
+			assertAttributeNotInSet(t, rdFiltered.DataPoints[1].Attributes, otel.WgOperationName.String(""))
+
+			rclFiltered, ok := rmFiltered.ScopeMetrics[0].Metrics[1].Data.(metricdata.Sum[int64])
+			require.True(t, ok)
+
+			assertAttributeNotInSet(t, rclFiltered.DataPoints[0].Attributes, otel.WgClientName.String("unknown"))
+			assertAttributeNotInSet(t, rclFiltered.DataPoints[1].Attributes, otel.WgClientName.String("unknown"))
+			assertAttributeNotInSet(t, rclFiltered.DataPoints[0].Attributes, otel.WgOperationName.String(""))
+			assertAttributeNotInSet(t, rclFiltered.DataPoints[1].Attributes, otel.WgOperationName.String(""))
+
+			resClFiltered, ok := rmFiltered.ScopeMetrics[0].Metrics[2].Data.(metricdata.Sum[int64])
+			require.True(t, ok)
+
+			assertAttributeNotInSet(t, resClFiltered.DataPoints[0].Attributes, otel.WgClientName.String("unknown"))
+			assertAttributeNotInSet(t, resClFiltered.DataPoints[1].Attributes, otel.WgClientName.String("unknown"))
+			assertAttributeNotInSet(t, resClFiltered.DataPoints[0].Attributes, otel.WgOperationName.String(""))
+			assertAttributeNotInSet(t, resClFiltered.DataPoints[1].Attributes, otel.WgOperationName.String(""))
+		})
+	})
+
 	t.Run("Custom Metric Attributes", func(t *testing.T) {
 
 		t.Run("Custom attributes are added to all metrics / subgraph error", func(t *testing.T) {
@@ -3278,4 +3379,199 @@ func TestTelemetry(t *testing.T) {
 		})
 
 	})
+
+	t.Run("Complexity Cache Metrics", func(t *testing.T) {
+		t.Run("total fields caches success and failure runs", func(t *testing.T) {
+			t.Parallel()
+
+			metricReader := metric.NewManualReader()
+			exporter := tracetest.NewInMemoryExporter(t)
+			testenv.Run(t, &testenv.Config{
+				TraceExporter: exporter,
+				MetricReader:  metricReader,
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.ComplexityCalculationCache = &config.ComplexityCalculationCache{
+						Enabled:   true,
+						CacheSize: 1024,
+					}
+					securityConfiguration.ComplexityLimits = &config.ComplexityLimits{
+						TotalFields: &config.ComplexityLimit{
+							Enabled: true,
+							Limit:   1,
+						},
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				failedRes, _ := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query: `{ employee(id:1) { id details { forename surname } } }`,
+				})
+				require.Equal(t, 400, failedRes.Response.StatusCode)
+				require.Equal(t, `{"errors":[{"message":"The total number of fields 2 exceeds the limit allowed (1)"}]}`, failedRes.Body)
+
+				testSpan := requireSpanWithName(t, exporter, "Operation - Validate")
+				require.Contains(t, testSpan.Attributes(), otel.WgQueryTotalFields.Int(2))
+				require.Contains(t, testSpan.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
+				exporter.Reset()
+
+				failedRes2, _ := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query: `{ employee(id:1) { id details { forename surname } } }`,
+				})
+				require.Equal(t, 400, failedRes2.Response.StatusCode)
+				require.Equal(t, `{"errors":[{"message":"The total number of fields 2 exceeds the limit allowed (1)"}]}`, failedRes2.Body)
+
+				testSpan2 := requireSpanWithName(t, exporter, "Operation - Validate")
+				require.Contains(t, testSpan2.Attributes(), otel.WgQueryTotalFields.Int(2))
+				require.Contains(t, testSpan2.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
+				exporter.Reset()
+
+				successRes := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { employees { id } }`,
+				})
+				require.JSONEq(t, employeesIDData, successRes.Body)
+				testSpan3 := requireSpanWithName(t, exporter, "Operation - Validate")
+				require.Contains(t, testSpan3.Attributes(), otel.WgQueryTotalFields.Int(1))
+				require.Contains(t, testSpan3.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
+				exporter.Reset()
+
+				successRes2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { employees { id } }`,
+				})
+				require.JSONEq(t, employeesIDData, successRes2.Body)
+				testSpan4 := requireSpanWithName(t, exporter, "Operation - Validate")
+				require.Contains(t, testSpan4.Attributes(), otel.WgQueryTotalFields.Int(1))
+				require.Contains(t, testSpan4.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
+			})
+		})
+
+		t.Run("root fields caches success and failure runs", func(t *testing.T) {
+			t.Parallel()
+
+			metricReader := metric.NewManualReader()
+			exporter := tracetest.NewInMemoryExporter(t)
+			testenv.Run(t, &testenv.Config{
+				TraceExporter: exporter,
+				MetricReader:  metricReader,
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.ComplexityCalculationCache = &config.ComplexityCalculationCache{
+						Enabled:   true,
+						CacheSize: 1024,
+					}
+					securityConfiguration.ComplexityLimits = &config.ComplexityLimits{
+						RootFields: &config.ComplexityLimit{
+							Enabled: true,
+							Limit:   2,
+						},
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				failedRes, _ := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query: `query { initialPayload employee(id:1) { id } employees { id } }`,
+				})
+				require.Equal(t, 400, failedRes.Response.StatusCode)
+				require.Equal(t, `{"errors":[{"message":"The number of root fields 3 exceeds the root field limit allowed (2)"}]}`, failedRes.Body)
+
+				testSpan := requireSpanWithName(t, exporter, "Operation - Validate")
+				require.Contains(t, testSpan.Attributes(), otel.WgQueryRootFields.Int(3))
+				require.Contains(t, testSpan.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
+				exporter.Reset()
+
+				failedRes2, _ := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query: `query { initialPayload employee(id:1) { id } employees { id } }`,
+				})
+				require.Equal(t, 400, failedRes2.Response.StatusCode)
+				require.Equal(t, `{"errors":[{"message":"The number of root fields 3 exceeds the root field limit allowed (2)"}]}`, failedRes2.Body)
+
+				testSpan2 := requireSpanWithName(t, exporter, "Operation - Validate")
+				require.Contains(t, testSpan2.Attributes(), otel.WgQueryRootFields.Int(3))
+				require.Contains(t, testSpan2.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
+				exporter.Reset()
+
+				successRes := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { employees { id } }`,
+				})
+				require.JSONEq(t, employeesIDData, successRes.Body)
+				testSpan3 := requireSpanWithName(t, exporter, "Operation - Validate")
+				require.Contains(t, testSpan3.Attributes(), otel.WgQueryRootFields.Int(1))
+				require.Contains(t, testSpan3.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
+				exporter.Reset()
+
+				successRes2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { employees { id } }`,
+				})
+				require.JSONEq(t, employeesIDData, successRes2.Body)
+				testSpan4 := requireSpanWithName(t, exporter, "Operation - Validate")
+				require.Contains(t, testSpan4.Attributes(), otel.WgQueryRootFields.Int(1))
+				require.Contains(t, testSpan4.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
+			})
+		})
+
+		t.Run("root fields caches success and failure runs", func(t *testing.T) {
+			t.Parallel()
+
+			metricReader := metric.NewManualReader()
+			exporter := tracetest.NewInMemoryExporter(t)
+			testenv.Run(t, &testenv.Config{
+				TraceExporter: exporter,
+				MetricReader:  metricReader,
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.ComplexityCalculationCache = &config.ComplexityCalculationCache{
+						Enabled:   true,
+						CacheSize: 1024,
+					}
+					securityConfiguration.ComplexityLimits = &config.ComplexityLimits{
+						RootFieldAliases: &config.ComplexityLimit{
+							Enabled: true,
+							Limit:   1,
+						},
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				failedRes, _ := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query: `query { firstemployee: employee(id:1) { id } employee2: employee(id:2) { id } }`,
+				})
+				require.Equal(t, 400, failedRes.Response.StatusCode)
+				require.Equal(t, `{"errors":[{"message":"The number of root field aliases 2 exceeds the root field aliases limit allowed (1)"}]}`, failedRes.Body)
+
+				testSpan := requireSpanWithName(t, exporter, "Operation - Validate")
+				require.Contains(t, testSpan.Attributes(), otel.WgQueryRootFieldAliases.Int(2))
+				require.Contains(t, testSpan.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
+				exporter.Reset()
+
+				failedRes2, _ := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query: `query { firstemployee: employee(id:1) { id } employee2: employee(id:2) { id } }`,
+				})
+				require.Equal(t, 400, failedRes2.Response.StatusCode)
+				require.Equal(t, `{"errors":[{"message":"The number of root field aliases 2 exceeds the root field aliases limit allowed (1)"}]}`, failedRes2.Body)
+
+				testSpan2 := requireSpanWithName(t, exporter, "Operation - Validate")
+				require.Contains(t, testSpan2.Attributes(), otel.WgQueryRootFieldAliases.Int(2))
+				require.Contains(t, testSpan2.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
+				exporter.Reset()
+
+				successRes := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { employees { id } }`,
+				})
+				require.JSONEq(t, employeesIDData, successRes.Body)
+				testSpan3 := requireSpanWithName(t, exporter, "Operation - Validate")
+				require.Contains(t, testSpan3.Attributes(), otel.WgQueryRootFieldAliases.Int(0))
+				require.Contains(t, testSpan3.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
+				exporter.Reset()
+
+				successRes2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { employees { id } }`,
+				})
+				require.JSONEq(t, employeesIDData, successRes2.Body)
+				testSpan4 := requireSpanWithName(t, exporter, "Operation - Validate")
+				require.Contains(t, testSpan4.Attributes(), otel.WgQueryRootFieldAliases.Int(0))
+				require.Contains(t, testSpan4.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
+			})
+		})
+	})
+}
+
+func assertAttributeNotInSet(t *testing.T, set attribute.Set, attr attribute.KeyValue) {
+	t.Helper()
+
+	_, ok := set.Value(attr.Key)
+	require.False(t, ok)
 }

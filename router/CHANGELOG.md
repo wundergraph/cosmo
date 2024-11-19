@@ -4,6 +4,73 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.143.2](https://github.com/wundergraph/cosmo/compare/router@0.143.1...router@0.143.2) (2024-11-18)
+
+### Bug Fixes
+
+* fix regression on removing null variables which was undefined ([#1385](https://github.com/wundergraph/cosmo/issues/1385)) ([475d58e](https://github.com/wundergraph/cosmo/commit/475d58eb79b693b4cee9f561d0694d392152faf8)) (@devsergiy)
+
+## [0.143.1](https://github.com/wundergraph/cosmo/compare/router@0.143.0...router@0.143.1) (2024-11-18)
+
+### Bug Fixes
+
+* do netPoll detection once and set it globally ([#1384](https://github.com/wundergraph/cosmo/issues/1384)) ([2cba138](https://github.com/wundergraph/cosmo/commit/2cba13896e2f46dee127071d0777a6bff65e21b6)) (@StarpTech)
+
+# [0.143.0](https://github.com/wundergraph/cosmo/compare/router@0.142.1...router@0.143.0) (2024-11-18)
+
+### Bug Fixes
+
+* **router:** ensure that cors wildcard support is enabled ([#1375](https://github.com/wundergraph/cosmo/issues/1375)) ([fde6885](https://github.com/wundergraph/cosmo/commit/fde68852e3cabae372a80620d8846b30a0038ea3)) (@df-wg)
+
+### Features
+
+* better epoll detection, allow to disable epoll ([#1381](https://github.com/wundergraph/cosmo/issues/1381)) ([6c3c4a0](https://github.com/wundergraph/cosmo/commit/6c3c4a0e5170f964e3f3145bb31d50eb11886932)) (@StarpTech)
+
+## [0.142.1](https://github.com/wundergraph/cosmo/compare/router@0.142.0...router@0.142.1) (2024-11-16)
+
+### Bug Fixes
+
+* **tests:** deadlock on unsubscribe when epoll disabled ([#1380](https://github.com/wundergraph/cosmo/issues/1380)) ([337a60f](https://github.com/wundergraph/cosmo/commit/337a60f15577b373ca67a83497304d53fe19f55d)) (@StarpTech)
+
+# [0.142.0](https://github.com/wundergraph/cosmo/compare/router@0.141.3...router@0.142.0) (2024-11-15)
+
+### Bug Fixes
+
+* **router:** refactor complexity limits ([#1364](https://github.com/wundergraph/cosmo/issues/1364)) ([9558ece](https://github.com/wundergraph/cosmo/commit/9558ece2d892dab1b310e0ff5f4b9b9029abf297)) (@df-wg)
+
+### Features
+
+* **router:** enable setting request header from context ([#1371](https://github.com/wundergraph/cosmo/issues/1371)) ([c96485d](https://github.com/wundergraph/cosmo/commit/c96485d0635c301e89773e3736dd00372bcd3fd5)) (@df-wg)
+
+## [0.141.3](https://github.com/wundergraph/cosmo/compare/router@0.141.2...router@0.141.3) (2024-11-14)
+
+### Bug Fixes
+
+* fix merging of response nodes of enum type ([#1373](https://github.com/wundergraph/cosmo/issues/1373)) ([f3927e3](https://github.com/wundergraph/cosmo/commit/f3927e3cfc382bff9beff0a7868b444db213b9d6)) (@devsergiy)
+
+## [0.141.2](https://github.com/wundergraph/cosmo/compare/router@0.141.1...router@0.141.2) (2024-11-12)
+
+### Bug Fixes
+
+* variables normalization for the anonymous operations ([#1365](https://github.com/wundergraph/cosmo/issues/1365)) ([0b8ff06](https://github.com/wundergraph/cosmo/commit/0b8ff06592954bef2329fa69a660c60e55e4eb3d)) (@devsergiy)
+
+## [0.141.1](https://github.com/wundergraph/cosmo/compare/router@0.141.0...router@0.141.1) (2024-11-12)
+
+### Bug Fixes
+
+* **router:** use OTLP separators for regex ([#1362](https://github.com/wundergraph/cosmo/issues/1362)) ([e9dd4ac](https://github.com/wundergraph/cosmo/commit/e9dd4ac01c864afbde533f5b70da920ac460086f)) (@Noroth)
+
+# [0.141.0](https://github.com/wundergraph/cosmo/compare/router@0.140.2...router@0.141.0) (2024-11-12)
+
+### Bug Fixes
+
+* enable redis url injection via env var, allow apq from diff clients ([#1361](https://github.com/wundergraph/cosmo/issues/1361)) ([a123088](https://github.com/wundergraph/cosmo/commit/a1230886626b9412422fcfd8dca70be330488c68)) (@df-wg)
+
+### Features
+
+* **router:** allow exclusion of OTLP metrics via configuration ([#1359](https://github.com/wundergraph/cosmo/issues/1359)) ([31a583e](https://github.com/wundergraph/cosmo/commit/31a583e009cb2ea748f77b0d3e3240f9073291aa)) (@Noroth)
+* **router:** allow users to have multiple wildcards cores allow_origins ([#1358](https://github.com/wundergraph/cosmo/issues/1358)) ([8735f50](https://github.com/wundergraph/cosmo/commit/8735f50620c06a61540f4b94b191a2db0a2fac9b)) (@df-wg)
+
 ## [0.140.2](https://github.com/wundergraph/cosmo/compare/router@0.140.1...router@0.140.2) (2024-11-08)
 
 ### Bug Fixes

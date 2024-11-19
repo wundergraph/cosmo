@@ -25,9 +25,9 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
-	github.com/wundergraph/cosmo/demo v0.0.0-20241108155000-9f371059ec96
-	github.com/wundergraph/cosmo/router v0.0.0-20241108155000-9f371059ec96
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.121
+	github.com/wundergraph/cosmo/demo v0.0.0-20241118164309-37af7e49ffff
+	github.com/wundergraph/cosmo/router v0.0.0-20241118164309-37af7e49ffff
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.126
 	go.opentelemetry.io/otel v1.28.0
 	go.opentelemetry.io/otel/sdk v1.28.0
 	go.opentelemetry.io/otel/sdk/metric v1.28.0
@@ -168,4 +168,13 @@ require (
 	google.golang.org/grpc v1.61.0 // indirect
 	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
 	nhooyr.io/websocket v1.8.11 // indirect
+)
+
+// Remember you can use Go workspaces to avoid using replace directives in multiple go.mod files
+// Use what is best for your personal workflow. See CONTRIBUTING.md for more information
+
+replace (
+	github.com/wundergraph/cosmo/demo => ../demo
+	github.com/wundergraph/cosmo/router => ../router
+//  github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
 )

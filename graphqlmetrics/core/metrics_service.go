@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/dgraph-io/ristretto"
-	"github.com/wundergraph/cosmo/graphqlmetrics/pkg/batchprocessor"
 	"sort"
 	"strconv"
 	"strings"
@@ -16,7 +14,9 @@ import (
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/avast/retry-go"
+	"github.com/dgraph-io/ristretto"
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1"
+	"github.com/wundergraph/cosmo/graphqlmetrics/pkg/batchprocessor"
 	utils "github.com/wundergraph/cosmo/graphqlmetrics/pkg/utils"
 	"go.uber.org/zap"
 )
@@ -28,8 +28,9 @@ var (
 // SchemaUsageRequestItem is a struct which holds information about the schema usage
 // and the JWT claims of a request.
 type SchemaUsageRequestItem struct {
-	SchemaUsage []*graphqlmetricsv1.SchemaUsageInfo
-	Claims      *utils.GraphAPITokenClaims
+	SchemaUsage       []*graphqlmetricsv1.SchemaUsageInfo
+	Claims            *utils.GraphAPITokenClaims
+	TotalRequestCount uint64
 }
 
 type ProcessorConfig struct {
@@ -52,7 +53,7 @@ type MetricsService struct {
 }
 
 // NewMetricsService creates a new metrics service
-func NewMetricsService(ctx context.Context, logger *zap.Logger, chConn clickhouse.Conn, processorConfig ProcessorConfig) *MetricsService {
+func NewMetricsService(logger *zap.Logger, chConn clickhouse.Conn, processorConfig ProcessorConfig) *MetricsService {
 	cacheConfig := &ristretto.Config[string, struct{}]{
 		MaxCost:     50_000,
 		NumCounters: 50_000 * 10,
@@ -100,8 +101,9 @@ func (s *MetricsService) PublishGraphQLMetrics(
 	}
 
 	s.processor.Push(SchemaUsageRequestItem{
-		SchemaUsage: req.Msg.SchemaUsage,
-		Claims:      claims,
+		SchemaUsage:       req.Msg.SchemaUsage,
+		Claims:            claims,
+		TotalRequestCount: 1,
 	})
 
 	return res, nil
@@ -119,8 +121,11 @@ func (s *MetricsService) PublishAggregatedGraphQLMetrics(ctx context.Context, re
 		return res, nil
 	}
 
+	var totalRequestCount uint64
+
 	schemaUsage := make([]*graphqlmetricsv1.SchemaUsageInfo, len(req.Msg.Aggregation))
 	for i, agg := range req.Msg.Aggregation {
+		totalRequestCount += agg.RequestCount
 		for j := range agg.SchemaUsage.ArgumentMetrics {
 			agg.SchemaUsage.ArgumentMetrics[j].Count = agg.RequestCount
 		}
@@ -134,8 +139,9 @@ func (s *MetricsService) PublishAggregatedGraphQLMetrics(ctx context.Context, re
 	}
 
 	s.processor.Push(SchemaUsageRequestItem{
-		SchemaUsage: schemaUsage,
-		Claims:      claims,
+		SchemaUsage:       schemaUsage,
+		Claims:            claims,
+		TotalRequestCount: totalRequestCount,
 	})
 
 	return res, nil
@@ -152,89 +158,113 @@ func (s *MetricsService) Shutdown(timeout time.Duration) {
 	}
 }
 
-// prepareClickhouseBatches prepares the operation and metric batches for the given schema usage.
+// prepareClickhouseBatches prepares the clickhouse batches for the given batch
+// of schema usage items. It returns the operation, metric and request count batches.
+// If there is nothing to be processed, the corresponding batch will be nil.
 func (s *MetricsService) prepareClickhouseBatches(
 	ctx context.Context, insertTime time.Time, batch []SchemaUsageRequestItem,
-) (driver.Batch, driver.Batch, error) {
+) (driver.Batch, driver.Batch, driver.Batch) {
 	var (
-		err                         error
-		operationBatch, metricBatch driver.Batch
+		err               error
+		operationBatch    driver.Batch
+		metricBatch       driver.Batch
+		requestCountBatch driver.Batch
+
+		hasMetrics = false
 	)
 
-	processableOperationItems := make([]*graphqlmetricsv1.SchemaUsageInfo, 0)
-
-	for _, item := range batch {
-		for _, schemaUsage := range item.SchemaUsage {
-			// Skip if there are no request document
-			if schemaUsage.RequestDocument == "" {
-				continue
-			}
-			// If the operation is already in the cache, we can skip it and don't write it again
-			if _, exists := s.opGuardCache.Get(schemaUsage.OperationInfo.Hash); exists {
-				continue
-			}
-
-			// If the operation is not in the cache, we need to write it
-			processableOperationItems = append(processableOperationItems, schemaUsage)
-		}
+	if len(batch) == 0 {
+		return nil, nil, nil
 	}
 
-	if len(processableOperationItems) > 0 {
-		// We only prepare the operation batch if there are operations to write
-		// Aborting the operation will log an error in clickhouse
-		operationBatch, err = s.conn.PrepareBatch(ctx, `INSERT INTO gql_metrics_operations`)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to prepare operation batch for metrics: %w", err)
-		}
+	if requestCountBatch, err = s.conn.PrepareBatch(ctx, `INSERT INTO gql_metrics_router_requests`); err != nil {
+		s.logger.Error("Failed to prepare request count batch", zap.Error(err))
+	}
 
-		for _, schemaUsage := range processableOperationItems {
-			err := operationBatch.Append(
+	for _, item := range batch {
+		if requestCountBatch != nil {
+			err = requestCountBatch.Append(
 				insertTime,
-				schemaUsage.OperationInfo.Name,
-				schemaUsage.OperationInfo.Hash,
-				strings.ToLower(schemaUsage.OperationInfo.Type.String()),
-				schemaUsage.RequestDocument,
+				item.Claims.OrganizationID,
+				item.Claims.FederatedGraphID,
+				item.TotalRequestCount,
 			)
 			if err != nil {
-				return nil, nil, fmt.Errorf("failed to append operation to batch: %w", err)
+				s.logger.Error("Failed to append request count to batch", zap.Error(err))
 			}
 		}
-	}
 
-	if !hasProcessableMetricsItems(batch) {
-		return operationBatch, nil, nil
-	}
+		for _, su := range item.SchemaUsage {
+			// We will take care of metrics later, but we can already check if there are any
+			// metrics to process to save some time later.
+			if getSchemaUsageMetricCount(su) > 0 {
+				hasMetrics = true
+			}
 
-	metricBatch, err = s.conn.PrepareBatch(ctx, `INSERT INTO gql_metrics_schema_usage`)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to prepare metric batch for metrics: %w", err)
-	}
+			if _, exists := s.opGuardCache.Get(su.OperationInfo.Hash); su.RequestDocument == "" || exists {
+				continue
+			}
 
-	for _, item := range batch {
-		for _, schemaUsage := range item.SchemaUsage {
-			err := s.appendUsageMetrics(metricBatch, insertTime, item.Claims, schemaUsage)
+			// At this point we know that we have at least one operation to write.
+			// Therefore, we need to ensure the operation batch is prepared.
+			if operationBatch == nil {
+				// We only prepare the operation batch if there are operations to write
+				// Aborting the operation will log an error in clickhouse
+				operationBatch, err = s.conn.PrepareBatch(ctx, `INSERT INTO gql_metrics_operations`)
+
+				if err != nil {
+					s.logger.Error("Failed to prepare operation batch", zap.Error(err))
+					continue
+				}
+			}
+
+			err = operationBatch.Append(
+				insertTime,
+				su.OperationInfo.Name,
+				su.OperationInfo.Hash,
+				strings.ToLower(su.OperationInfo.Type.String()),
+				su.RequestDocument,
+			)
+
 			if err != nil {
-				return nil, nil, err
+				s.logger.Error("Failed to append operation to batch", zap.Error(err))
+				continue
 			}
 		}
 	}
 
-	return operationBatch, metricBatch, err
-}
+	// If we do not have any metrics to process, we can return early.
+	if !hasMetrics {
+		return operationBatch, nil, requestCountBatch
+	}
 
-func hasProcessableMetricsItems(batch []SchemaUsageRequestItem) bool {
 	for _, item := range batch {
-		for _, schemaUsage := range item.SchemaUsage {
-			if len(schemaUsage.ArgumentMetrics) > 0 || len(schemaUsage.InputMetrics) > 0 || len(schemaUsage.TypeFieldMetrics) > 0 {
-				return true
+		for _, su := range item.SchemaUsage {
+			if getSchemaUsageMetricCount(su) == 0 {
+				// Skip schema usage items without metrics
+				continue
+			}
+
+			if metricBatch == nil {
+				// If any of the schema usage items has metrics to process, we need to ensure the metric batch is prepared once.
+				metricBatch, err = s.conn.PrepareBatch(ctx, `INSERT INTO gql_metrics_schema_usage`)
+				if err != nil {
+					s.logger.Error("Failed to prepare metric batch", zap.Error(err))
+					continue
+				}
+			}
+
+			err := s.appendUsageMetrics(metricBatch, insertTime, item.Claims, su)
+			if err != nil {
+				s.logger.Error("Failed to append usage metrics", zap.Error(err))
 			}
 		}
 	}
 
-	return false
+	return operationBatch, metricBatch, requestCountBatch
 }
 
-func (*MetricsService) appendUsageMetrics(
+func (s *MetricsService) appendUsageMetrics(
 	metricBatch driver.Batch,
 	insertTime time.Time,
 	claims *utils.GraphAPITokenClaims,
@@ -341,78 +371,91 @@ func (*MetricsService) appendUsageMetrics(
 	return nil
 }
 
-func (s *MetricsService) processBatch(ctx context.Context, batch []SchemaUsageRequestItem) {
-	var (
-		storedOperations, storedMetrics int
-	)
+func (s *MetricsService) processBatch(_ context.Context, batch []SchemaUsageRequestItem) {
+	var storedOperations, storedMetrics int
+
 	insertTime := time.Now()
 	insertCtx := context.Background()
 
-	aggregated := make([]*graphqlmetricsv1.SchemaUsageInfo, 0, len(batch))
-	for _, item := range batch {
-		aggregated = append(aggregated, item.SchemaUsage...)
-	}
-
-	operationsBatch, metricsBatch, err := s.prepareClickhouseBatches(insertCtx, insertTime, batch)
-	if err != nil {
-		s.logger.Error("Failed to prepare or abort metrics batches", zap.Error(err))
-		return
-	}
+	operationsBatch, metricsBatch, requestCountBatch := s.prepareClickhouseBatches(insertCtx, insertTime, batch)
 
 	var wg sync.WaitGroup
 
-	if operationsBatch != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 
-			err := retryOnError(insertCtx, s.logger.With(zap.String("component", "operations")), func(ctx context.Context) error {
-				if err := operationsBatch.Send(); err != nil {
-					return fmt.Errorf("failed to send operation batch: %w", err)
-				}
+		if operationsBatch == nil {
+			return
+		}
 
-				for _, su := range aggregated {
+		err := retryOnError(insertCtx, s.logger.With(zap.String("component", "operations")), func(ctx context.Context) error {
+			if err := operationsBatch.Send(); err != nil {
+				return fmt.Errorf("failed to send operation batch: %w", err)
+			}
+
+			for _, item := range batch {
+				for _, su := range item.SchemaUsage {
 					// Add the operation to the cache once it has been written
 					// We use a TTL of 30 days to prevent caching of operations that are no in our database
 					// due to storage retention policies
 					s.opGuardCache.SetWithTTL(su.OperationInfo.Hash, struct{}{}, 1, 30*24*time.Hour)
 				}
-
-				s.opGuardCache.Wait()
-
-				storedOperations += operationsBatch.Rows()
-				return nil
-			})
-
-			if err != nil {
-				s.logger.Error("Failed to write operations", zap.Error(err))
-			}
-		}()
-	}
-
-	if metricsBatch != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
-			if metricsBatch == nil {
-				return
 			}
 
-			err := retryOnError(insertCtx, s.logger.With(zap.String("component", "metrics")), func(ctx context.Context) error {
-				if err := metricsBatch.Send(); err != nil {
-					return fmt.Errorf("failed to send metrics batch: %w", err)
-				}
+			s.opGuardCache.Wait()
 
-				storedMetrics += metricsBatch.Rows()
-				return nil
-			})
+			storedOperations += operationsBatch.Rows()
+			return nil
+		})
 
-			if err != nil {
-				s.logger.Error("Failed to write metrics", zap.Error(err))
+		if err != nil {
+			s.logger.Error("Failed to write operations", zap.Error(err))
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		if metricsBatch == nil {
+			return
+		}
+
+		err := retryOnError(insertCtx, s.logger.With(zap.String("component", "metrics")), func(ctx context.Context) error {
+			if err := metricsBatch.Send(); err != nil {
+				return fmt.Errorf("failed to send metrics batch: %w", err)
 			}
-		}()
-	}
+
+			storedMetrics += metricsBatch.Rows()
+			return nil
+		})
+
+		if err != nil {
+			s.logger.Error("Failed to write metrics", zap.Error(err))
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		if requestCountBatch == nil {
+			return
+		}
+
+		err := retryOnError(insertCtx, s.logger.With(zap.String("component", "total_requests")), func(ctx context.Context) error {
+			if err := requestCountBatch.Send(); err != nil {
+				return fmt.Errorf("failed to send total request batch: %w", err)
+			}
+
+			return nil
+		})
+
+		if err != nil {
+			s.logger.Error("Failed to write total requests", zap.Error(err))
+		}
+	}()
 
 	wg.Wait()
 
@@ -423,12 +466,17 @@ func (s *MetricsService) processBatch(ctx context.Context, batch []SchemaUsageRe
 	)
 }
 
+// getSchemaUsageMetricCount returns the total number of entries of a schema usage.
+func getSchemaUsageMetricCount(schemaUsage *graphqlmetricsv1.SchemaUsageInfo) int {
+	return len(schemaUsage.ArgumentMetrics) + len(schemaUsage.InputMetrics) + len(schemaUsage.TypeFieldMetrics)
+}
+
 // calculateRequestCost the total number of entries of metrics batch.
 func calculateRequestCost(items []SchemaUsageRequestItem) int {
 	total := 0
 	for _, item := range items {
 		for _, schemaUsage := range item.SchemaUsage {
-			total += len(schemaUsage.ArgumentMetrics) + len(schemaUsage.InputMetrics) + len(schemaUsage.TypeFieldMetrics)
+			total += getSchemaUsageMetricCount(schemaUsage)
 		}
 	}
 	return total

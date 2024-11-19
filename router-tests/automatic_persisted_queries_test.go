@@ -63,6 +63,14 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 					Header:     header,
 				})
 				require.Equal(t, `{"data":{"__typename":"Query"}}`, res2.Body)
+
+				header2 := make(http.Header)
+				header2.Add("graphql-client-name", "not-my-client")
+				res3 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+					Header:     header2,
+				})
+				require.Equal(t, `{"data":{"__typename":"Query"}}`, res3.Body)
 			})
 		})
 
@@ -220,6 +228,14 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 					Header:     header,
 				})
 				require.Equal(t, `{"data":{"__typename":"Query"}}`, res2.Body)
+
+				header2 := make(http.Header)
+				header2.Add("graphql-client-name", "not-my-client")
+				res3 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+					Header:     header2,
+				})
+				require.Equal(t, `{"data":{"__typename":"Query"}}`, res3.Body)
 			})
 		})
 

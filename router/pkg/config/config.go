@@ -30,8 +30,8 @@ type CustomStaticAttribute struct {
 }
 
 type CustomDynamicAttribute struct {
-	RequestHeader string `yaml:"request_header"`
-	ContextField  string `yaml:"context_field"`
+	RequestHeader string `yaml:"request_header,omitempty"`
+	ContextField  string `yaml:"context_field,omitempty"`
 }
 
 type CustomAttribute struct {
@@ -107,9 +107,11 @@ type Metrics struct {
 }
 
 type MetricsOTLP struct {
-	Enabled       bool                  `yaml:"enabled" envDefault:"true" env:"METRICS_OTLP_ENABLED"`
-	RouterRuntime bool                  `yaml:"router_runtime" envDefault:"true" env:"METRICS_OTLP_ROUTER_RUNTIME"`
-	Exporters     []MetricsOTLPExporter `yaml:"exporters"`
+	Enabled             bool                  `yaml:"enabled" envDefault:"true" env:"METRICS_OTLP_ENABLED"`
+	RouterRuntime       bool                  `yaml:"router_runtime" envDefault:"true" env:"METRICS_OTLP_ROUTER_RUNTIME"`
+	ExcludeMetrics      RegExArray            `yaml:"exclude_metrics,omitempty" env:"METRICS_OTLP_EXCLUDE_METRICS"`
+	ExcludeMetricLabels RegExArray            `yaml:"exclude_metric_labels,omitempty" env:"METRICS_OTLP_EXCLUDE_METRIC_LABELS"`
+	Exporters           []MetricsOTLPExporter `yaml:"exporters"`
 }
 
 type Telemetry struct {
@@ -225,6 +227,8 @@ type RequestHeaderRule struct {
 	Name string `yaml:"name"`
 	// Value is the value of the header to set
 	Value string `yaml:"value"`
+	// ValueFrom is the context field to get the value from, in propagating to subgraphs
+	ValueFrom *CustomDynamicAttribute `yaml:"value_from,omitempty"`
 }
 
 func (r *RequestHeaderRule) GetOperation() HeaderRuleOperation {
@@ -302,34 +306,58 @@ type EngineExecutionConfiguration struct {
 	EnableRequestTracing                   bool                     `envDefault:"true" env:"ENGINE_ENABLE_REQUEST_TRACING" yaml:"enable_request_tracing"`
 	EnableExecutionPlanCacheResponseHeader bool                     `envDefault:"false" env:"ENGINE_ENABLE_EXECUTION_PLAN_CACHE_RESPONSE_HEADER" yaml:"enable_execution_plan_cache_response_header"`
 	MaxConcurrentResolvers                 int                      `envDefault:"32" env:"ENGINE_MAX_CONCURRENT_RESOLVERS" yaml:"max_concurrent_resolvers,omitempty"`
-	EnableWebSocketEpollKqueue             bool                     `envDefault:"true" env:"ENGINE_ENABLE_WEBSOCKET_EPOLL_KQUEUE" yaml:"enable_websocket_epoll_kqueue"`
-	EpollKqueuePollTimeout                 time.Duration            `envDefault:"1s" env:"ENGINE_EPOLL_KQUEUE_POLL_TIMEOUT" yaml:"epoll_kqueue_poll_timeout,omitempty"`
-	EpollKqueueConnBufferSize              int                      `envDefault:"128" env:"ENGINE_EPOLL_KQUEUE_CONN_BUFFER_SIZE" yaml:"epoll_kqueue_conn_buffer_size,omitempty"`
-	WebSocketReadTimeout                   time.Duration            `envDefault:"5s" env:"ENGINE_WEBSOCKET_READ_TIMEOUT" yaml:"websocket_read_timeout,omitempty"`
-	ExecutionPlanCacheSize                 int64                    `envDefault:"1024" env:"ENGINE_EXECUTION_PLAN_CACHE_SIZE" yaml:"execution_plan_cache_size,omitempty"`
+	EnableNetPoll                          bool                     `envDefault:"true" env:"ENGINE_ENABLE_NET_POLL" yaml:"enable_net_poll"`
+	WebSocketClientPollTimeout             time.Duration            `envDefault:"1s" env:"ENGINE_WEBSOCKET_CLIENT_POLL_TIMEOUT" yaml:"websocket_client_poll_timeout,omitempty"`
+	WebSocketClientConnBufferSize          int                      `envDefault:"128" env:"ENGINE_WEBSOCKET_CLIENT_CONN_BUFFER_SIZE" yaml:"websocket_client_conn_buffer_size,omitempty"`
+	WebSocketClientReadTimeout             time.Duration            `envDefault:"5s" env:"ENGINE_WEBSOCKET_CLIENT_READ_TIMEOUT" yaml:"websocket_client_read_timeout,omitempty"`
+	ExecutionPlanCacheSize                 int64                    `envDefault:"10240" env:"ENGINE_EXECUTION_PLAN_CACHE_SIZE" yaml:"execution_plan_cache_size,omitempty"`
 	MinifySubgraphOperations               bool                     `envDefault:"true" env:"ENGINE_MINIFY_SUBGRAPH_OPERATIONS" yaml:"minify_subgraph_operations"`
 	EnablePersistedOperationsCache         bool                     `envDefault:"true" env:"ENGINE_ENABLE_PERSISTED_OPERATIONS_CACHE" yaml:"enable_persisted_operations_cache"`
 	EnableNormalizationCache               bool                     `envDefault:"true" env:"ENGINE_ENABLE_NORMALIZATION_CACHE" yaml:"enable_normalization_cache"`
-	NormalizationCacheSize                 int64                    `envDefault:"1024" env:"ENGINE_NORMALIZATION_CACHE_SIZE" yaml:"normalization_cache_size,omitempty"`
+	NormalizationCacheSize                 int64                    `envDefault:"10240" env:"ENGINE_NORMALIZATION_CACHE_SIZE" yaml:"normalization_cache_size,omitempty"`
 	OperationHashCacheSize                 int64                    `envDefault:"2048" env:"ENGINE_OPERATION_HASH_CACHE_SIZE" yaml:"operation_hash_cache_size,omitempty"`
 	ParseKitPoolSize                       int                      `envDefault:"16" env:"ENGINE_PARSEKIT_POOL_SIZE" yaml:"parsekit_pool_size,omitempty"`
 	EnableValidationCache                  bool                     `envDefault:"true" env:"ENGINE_ENABLE_VALIDATION_CACHE" yaml:"enable_validation_cache"`
-	ValidationCacheSize                    int64                    `envDefault:"1024" env:"ENGINE_VALIDATION_CACHE_SIZE" yaml:"validation_cache_size,omitempty"`
+	ValidationCacheSize                    int64                    `envDefault:"10240" env:"ENGINE_VALIDATION_CACHE_SIZE" yaml:"validation_cache_size,omitempty"`
 	ResolverMaxRecyclableParserSize        int                      `envDefault:"32768" env:"ENGINE_RESOLVER_MAX_RECYCLABLE_PARSER_SIZE" yaml:"resolver_max_recyclable_parser_size,omitempty"`
 }
 
 type SecurityConfiguration struct {
-	DepthLimit                  QueryDepthConfiguration `yaml:"depth_limit"`
-	BlockMutations              bool                    `yaml:"block_mutations" envDefault:"false" env:"SECURITY_BLOCK_MUTATIONS"`
-	BlockSubscriptions          bool                    `yaml:"block_subscriptions" envDefault:"false" env:"SECURITY_BLOCK_SUBSCRIPTIONS"`
-	BlockNonPersistedOperations bool                    `yaml:"block_non_persisted_operations" envDefault:"false" env:"SECURITY_BLOCK_NON_PERSISTED_OPERATIONS"`
+	BlockMutations              bool                        `yaml:"block_mutations" envDefault:"false" env:"SECURITY_BLOCK_MUTATIONS"`
+	BlockSubscriptions          bool                        `yaml:"block_subscriptions" envDefault:"false" env:"SECURITY_BLOCK_SUBSCRIPTIONS"`
+	BlockNonPersistedOperations bool                        `yaml:"block_non_persisted_operations" envDefault:"false" env:"SECURITY_BLOCK_NON_PERSISTED_OPERATIONS"`
+	ComplexityCalculationCache  *ComplexityCalculationCache `yaml:"complexity_calculation_cache"`
+	ComplexityLimits            *ComplexityLimits           `yaml:"complexity_limits"`
+	DepthLimit                  *QueryDepthConfiguration    `yaml:"depth_limit"`
 }
 
 type QueryDepthConfiguration struct {
 	Enabled                   bool  `yaml:"enabled" envDefault:"false" env:"SECURITY_QUERY_DEPTH_ENABLED"`
 	Limit                     int   `yaml:"limit,omitempty" envDefault:"0" env:"SECURITY_QUERY_DEPTH_LIMIT"`
-	CacheSize                 int64 `yaml:"cache_size,omitempty" envDefault:"1024" env:"SECURITY_QUERY_DEPTH_CACHE_SIZE"`
+	CacheSize                 int64 `yaml:"cache_size,omitempty" envDefault:"10240" env:"SECURITY_QUERY_DEPTH_CACHE_SIZE"`
 	IgnorePersistedOperations bool  `yaml:"ignore_persisted_operations,omitempty" envDefault:"false" env:"SECURITY_QUERY_DEPTH_IGNORE_PERSISTED_OPERATIONS"`
+}
+
+type ComplexityCalculationCache struct {
+	Enabled   bool  `yaml:"enabled" envDefault:"false" env:"SECURITY_COMPLEXITY_CACHE_ENABLED"`
+	CacheSize int64 `yaml:"size,omitempty" envDefault:"10240" env:"SECURITY_COMPLEXITY_CACHE_SIZE"`
+}
+
+type ComplexityLimits struct {
+	Depth            *ComplexityLimit `yaml:"depth"`
+	TotalFields      *ComplexityLimit `yaml:"total_fields"`
+	RootFields       *ComplexityLimit `yaml:"root_fields"`
+	RootFieldAliases *ComplexityLimit `yaml:"root_field_aliases"`
+}
+
+type ComplexityLimit struct {
+	Enabled                   bool `yaml:"enabled" envDefault:"false"`
+	Limit                     int  `yaml:"limit,omitempty" envDefault:"0"`
+	IgnorePersistedOperations bool `yaml:"ignore_persisted_operations,omitempty" envDefault:"false"`
+}
+
+func (c *ComplexityLimit) ApplyLimit(isPersistent bool) bool {
+	return c.Enabled && (!isPersistent || isPersistent && !c.IgnorePersistedOperations)
 }
 
 type OverrideRoutingURLConfiguration struct {
@@ -579,6 +607,11 @@ type S3StorageProvider struct {
 type BaseStorageProvider struct {
 	ID  string `yaml:"id,omitempty"`
 	URL string `yaml:"url,omitempty" envDefault:"https://cosmo-cdn.wundergraph.com"`
+}
+
+type RedisStorageProvider struct {
+	ID  string `yaml:"id,omitempty" env:"STORAGE_PROVIDER_REDIS_ID"`
+	URL string `yaml:"url,omitempty" env:"STORAGE_PROVIDER_REDIS_URL"`
 }
 
 type PersistedOperationsCDNProvider struct {
