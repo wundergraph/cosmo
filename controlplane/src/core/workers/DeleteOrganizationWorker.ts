@@ -92,18 +92,11 @@ class DeleteOrganizationWorker {
         });
       }
 
+      await orgRepo.deleteOrganization(job.data.organizationId, this.input.blobStorage);
+
       await this.input.keycloakClient.deleteOrganizationGroup({
         realm: this.input.keycloakRealm,
         organizationSlug: org.slug,
-      });
-
-      await this.input.db.transaction(async (tx) => {
-        const orgRepo = new OrganizationRepository(this.input.logger, tx);
-        const oidcRepo = new OidcRepository(tx);
-
-        await oidcRepo.deleteOidcProvider({ organizationId: job.data.organizationId });
-
-        await orgRepo.deleteOrganization(job.data.organizationId, this.input.blobStorage);
       });
     } catch (err) {
       this.input.logger.error(err, `Failed to delete organization with id ${job.data.organizationId}`);
