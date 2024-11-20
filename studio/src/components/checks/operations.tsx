@@ -387,11 +387,11 @@ export const CheckOperations = () => {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <div className="flex h-[calc(100%_-_36px)] flex-col gap-y-3">
+      <div className="flex h-[calc(100%_-_36px)] flex-col gap-y-6">
         <Accordion
           type="single"
           collapsible
-          className="scrollbar-custom mt-4 h-[calc(100%_-_140px)] w-full overflow-auto"
+          className="scrollbar-custom mt-4 max-h-[calc(100%_-_96px)] w-full overflow-auto"
         >
           {filteredOperations.map(
             ({
