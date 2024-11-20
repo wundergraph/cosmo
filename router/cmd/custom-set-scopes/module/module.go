@@ -14,15 +14,8 @@ func init() {
 
 const myModuleID = "setScopesModule"
 
-// SetScopesModule is a simple module that has access to the GraphQL operation and add a header to the response
-// It demonstrates how to use the different handlers to customize the router.
-// It also shows how to use the config file to configure and validate your module config.
-// By default, the config file is located at `config.yaml` in the working directory of the router.
+// SetScopesModule is a simple module that has access to the GraphQL operation and adds custom scopes to the response
 type SetScopesModule struct {
-	// Properties that are set by the config file are automatically populated based on the `mapstructure` tag
-	// Create a new section under `modules.<name>` in the config file with the same name as your module.
-	// Don't forget in Go the first letter of a property must be uppercase to be exported
-
 	Value uint64 `mapstructure:"value"`
 
 	Logger *zap.Logger

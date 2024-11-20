@@ -19,7 +19,6 @@ import (
 const (
 	jwksName                      = "my-jwks-server"
 	employeesQueryRequiringClaims = `{"query":"{ employees { id startDate } }"}`
-	unauthorizedExpectedData      = `{"errors":[{"message":"unauthorized"}]}`
 	xAuthenticatedByHeader        = "X-Authenticated-By"
 )
 
