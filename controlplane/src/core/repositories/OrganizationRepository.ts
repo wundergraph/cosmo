@@ -877,7 +877,7 @@ export class OrganizationRepository {
       await Promise.allSettled(blobPromises);
 
       // Delete organization from db
-      await this.db.delete(organizations).where(eq(organizations.id, organizationId)).execute();
+      await tx.delete(organizations).where(eq(organizations.id, organizationId)).execute();
     });
   }
 
