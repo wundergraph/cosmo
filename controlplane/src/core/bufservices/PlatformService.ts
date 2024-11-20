@@ -1,9 +1,6 @@
 import { ServiceImpl } from '@connectrpc/connect';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
-import {
-  GetFederatedGraphRequest,
-  GetSubgraphRequest,
-} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { GetFederatedGraphRequest, GetSubgraphRequest } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import type { RouterOptions } from '../routes.js';
 import { getAnalyticsView } from './analytics/getAnalyticsView.js';
 import { getDashboardAnalyticsView } from './analytics/getDashboardAnalyticsView.js';
