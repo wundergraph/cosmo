@@ -66,6 +66,7 @@ func (a *authentication) SetScopes(scopes []string) {
 	if existingScopes != nil && existingScopes.(string) != "" {
 		scopes = append(scopes, existingScopes.(string))
 	}
+	// per https://datatracker.ietf.org/doc/html/rfc8693#section-2.1-4.8, scopes should be space separated
 	a.claims["scope"] = strings.Join(scopes, " ")
 }
 
