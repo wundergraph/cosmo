@@ -85,7 +85,10 @@ export class UserRepository {
       }
     }
 
-    // First perform DB mutations
+    // Perform Keycloak deletions.
+    await this.deleteUserFromKeycloak({ ...input, oidcProviders, orgMemberships });
+
+    // Perform DB deletions
     await this.db.transaction(async (tx) => {
       const orgRepo = new OrganizationRepository(this.logger, tx);
       const billingRepo = new BillingRepository(tx);
@@ -105,9 +108,6 @@ export class UserRepository {
       // Delete from db
       await tx.delete(users).where(eq(users.id, input.id)).execute();
     });
-
-    // Perform Keycloak deletions.
-    await this.deleteUserFromKeycloak({ ...input, oidcProviders, orgMemberships });
   }
 
   private async deleteUserFromKeycloak(input: {
@@ -166,6 +166,7 @@ export class UserRepository {
         },
         'Error deleting user details from keycloak.',
       );
+      throw e;
     }
   }
 

@@ -853,12 +853,11 @@ export class OrganizationRepository {
   }
 
   /**
-    This manually deletes graphs, oidc providers and blob storage.
+    This manually deletes graphs from db and blob storage.
     Everything else is deleted automatically by db constraints
   */
   public deleteOrganization(organizationId: string, blobStorage: BlobStorage) {
     return this.db.transaction(async (tx) => {
-      const oidcRepo = new OidcRepository(tx);
       const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, organizationId);
       const targetRepo = new TargetRepository(tx, organizationId);
 
@@ -876,8 +875,6 @@ export class OrganizationRepository {
         blobPromises.push(blobStorage.removeDirectory({ key: blobStorageDirectory }));
       }
       await Promise.allSettled(blobPromises);
-
-      await oidcRepo.deleteOidcProvider({ organizationId });
 
       // Delete organization from db
       await this.db.delete(organizations).where(eq(organizations.id, organizationId)).execute();
