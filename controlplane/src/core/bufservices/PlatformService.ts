@@ -1,5 +1,9 @@
 import { ServiceImpl } from '@connectrpc/connect';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
+import {
+  GetFederatedGraphRequest,
+  GetSubgraphRequest,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import type { RouterOptions } from '../routes.js';
 import { getAnalyticsView } from './analytics/getAnalyticsView.js';
 import { getDashboardAnalyticsView } from './analytics/getDashboardAnalyticsView.js';
@@ -61,7 +65,6 @@ import { deleteRouterToken } from './federated-graph/deleteRouterToken.js';
 import { generateRouterToken } from './federated-graph/generateRouterToken.js';
 import { getCompositionDetails } from './federated-graph/getCompositionDetails.js';
 import { getCompositions } from './federated-graph/getCompositions.js';
-import { getFederatedGraphByName } from './federated-graph/getFederatedGraphByName.js';
 import { getFederatedGraphChangelog } from './federated-graph/getFederatedGraphChangelog.js';
 import { getFederatedGraphSDLByName } from './federated-graph/getFederatedGraphSDLByName.js';
 import { getFederatedGraphs } from './federated-graph/getFederatedGraphs.js';
@@ -121,7 +124,6 @@ import { createFederatedSubgraph } from './subgraph/createFederatedSubgraph.js';
 import { deleteFederatedSubgraph } from './subgraph/deleteFederatedSubgraph.js';
 import { fixSubgraphSchema } from './subgraph/fixSubgraphSchema.js';
 import { getLatestSubgraphSDL } from './subgraph/getLatestSubgraphSDL.js';
-import { getSubgraphByName } from './subgraph/getSubgraphByName.js';
 import { getSubgraphMembers } from './subgraph/getSubgraphMembers.js';
 import { getSubgraphSDLFromLatestComposition } from './subgraph/getSubgraphSDLFromLatestComposition.js';
 import { getSubgraphs } from './subgraph/getSubgraphs.js';
@@ -433,7 +435,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getSubgraphByName: (req, ctx) => {
-      return getSubgraphByName(opts, req, ctx);
+      const request: GetSubgraphRequest = new GetSubgraphRequest({
+        name: req.name,
+        namespace: req.namespace,
+      });
+      return getSubgraph(opts, request, ctx);
     },
 
     getSubgraph: (req, ctx) => {
@@ -461,7 +467,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getFederatedGraphByName: (req, ctx) => {
-      return getFederatedGraphByName(opts, req, ctx);
+      const request: GetFederatedGraphRequest = new GetFederatedGraphRequest({
+        name: req.name,
+        includeMetrics: req.includeMetrics,
+        namespace: req.namespace,
+      });
+      return getFederatedGraph(opts, request, ctx);
     },
 
     getFederatedGraph: (req, ctx) => {
