@@ -1,4 +1,4 @@
-package module
+package custom_set_scopes
 
 import (
 	"net/http"
