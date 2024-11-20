@@ -143,6 +143,9 @@ import { createPlaygroundScript } from './playground/createPlaygroundScript.js';
 import { deletePlaygroundScript } from './playground/deletePlaygroundScript.js';
 import { getPlaygroundScripts } from './playground/getPlaygroundScripts.js';
 import { updatePlaygroundScript } from './playground/updatePlaygroundScript.js';
+import { getFederatedGraph } from './federated-graph/getFederatedGraph.js';
+import { getSubgraph } from './subgraph/getSubgraph.js';
+import { getNamespace } from './namespace/getNamespace.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -433,6 +436,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return getSubgraphByName(opts, req, ctx);
     },
 
+    getSubgraph: (req, ctx) => {
+      return getSubgraph(opts, req, ctx);
+    },
+
     getFederatedGraphs: (req, ctx) => {
       return getFederatedGraphs(opts, req, ctx);
     },
@@ -455,6 +462,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     getFederatedGraphByName: (req, ctx) => {
       return getFederatedGraphByName(opts, req, ctx);
+    },
+
+    getFederatedGraph: (req, ctx) => {
+      return getFederatedGraph(opts, req, ctx);
+    },
+
+    getNamespace: (req, ctx) => {
+      return getNamespace(opts, req, ctx);
     },
 
     getFederatedGraphChangelog: (req, ctx) => {
