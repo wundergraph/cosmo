@@ -65,7 +65,7 @@ describe('Delete Organization', (ctx) => {
 
     const graphKey = `${org!.id}/${graphRes.graph?.id}/routerconfigs/latest.json`;
 
-    expect(blobStorage.keys().some((key) => key === graphKey)).toEqual(true);
+    expect(blobStorage.keys().includes(graphKey)).toEqual(true);
 
     const deleteOrgRes = await client.deleteOrganization({
       userID: mainUserContext.userId,
@@ -83,7 +83,7 @@ describe('Delete Organization', (ctx) => {
     const orgAfterDeletion = await orgRepo.bySlug(orgName);
     expect(orgAfterDeletion).toBeNull();
 
-    expect(blobStorage.keys().some((key) => key === graphKey)).toEqual(false);
+    expect(blobStorage.keys().includes(graphKey)).toEqual(false);
     await server.close();
   });
 
