@@ -16,15 +16,15 @@ const myModuleID = "setScopesModule"
 
 // SetScopesModule is a simple module that has access to the GraphQL operation and adds custom scopes to the response
 type SetScopesModule struct {
-	Value uint64 `mapstructure:"value"`
-
+	Value  uint64   `mapstructure:"value"`
+	Scopes []string `mapstructure:"scopes"`
 	Logger *zap.Logger
 }
 
 func (m *SetScopesModule) Middleware(ctx core.RequestContext, next http.Handler) {
 	auth := ctx.Authentication()
 	if auth != nil {
-		auth.SetScopes([]string{"read:employee", "read:private"})
+		auth.SetScopes(m.Scopes)
 	}
 
 	// Call the next handler in the chain or return early by calling w.Write()
