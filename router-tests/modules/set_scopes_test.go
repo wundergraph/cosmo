@@ -3,8 +3,8 @@ package module_test
 import (
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/jwks"
+	setScopesModule "github.com/wundergraph/cosmo/router-tests/modules/custom-set-scopes/module"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
-	setScopesModule "github.com/wundergraph/cosmo/router/cmd/custom-set-scopes/module"
 	"github.com/wundergraph/cosmo/router/cmd/custom/module"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
