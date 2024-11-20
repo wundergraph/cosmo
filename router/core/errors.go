@@ -178,39 +178,45 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 	if requestErrors == nil {
 		return
 	}
-	wgRequestParams := NewWgRequestParams(r)
-	if wgRequestParams.UseSse {
+	wgRequestParams := NegotiateSubscriptionParams(r)
+
+	// Is subscription
+	if wgRequestParams.UseSse || wgRequestParams.UseMultipart {
 		setSubscriptionHeaders(wgRequestParams, r, w)
 
 		if statusCode != 0 {
 			w.WriteHeader(statusCode)
 		}
-		_, err := w.Write([]byte("event: next\ndata: "))
-		if err != nil {
-			if requestLogger != nil {
-				if rErrors.IsBrokenPipe(err) {
-					requestLogger.Warn("Broken pipe, error writing response", zap.Error(err))
-					return
+
+		if wgRequestParams.UseSse {
+			_, err := w.Write([]byte("event: next\ndata: "))
+			if err != nil {
+				if requestLogger != nil {
+					if rErrors.IsBrokenPipe(err) {
+						requestLogger.Warn("Broken pipe, error writing response", zap.Error(err))
+						return
+					}
+					requestLogger.Error("Error writing response", zap.Error(err))
 				}
-				requestLogger.Error("Error writing response", zap.Error(err))
+				return
+			}
+		} else if wgRequestParams.UseMultipart {
+			// Handle multipart error response
+			if err := writeMultipartError(w, requestErrors, requestLogger); err != nil {
+				if requestLogger != nil {
+					requestLogger.Error("error writing multipart response", zap.Error(err))
+				}
 			}
 			return
 		}
-	} else if wgRequestParams.UseMultipart {
-		// Handle multipart error response
-		if err := writeMultipartError(w, requestErrors, requestLogger); err != nil {
-			if requestLogger != nil {
-				requestLogger.Error("error writing multipart response", zap.Error(err))
-			}
+	} else {
+		// Regular request
+		w.Header().Set("Content-Type", "application/json")
+		if statusCode != 0 {
+			w.WriteHeader(statusCode)
 		}
-		return
 	}
 
-	// Set header before writing status code
-	w.Header().Set("Content-Type", "application/json")
-	if statusCode != 0 {
-		w.WriteHeader(statusCode)
-	}
 	if _, err := requestErrors.WriteResponse(w); err != nil {
 		if requestLogger != nil {
 			if rErrors.IsBrokenPipe(err) {

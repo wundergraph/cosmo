@@ -3,6 +3,8 @@ package watcher_test
 import (
 	"context"
 	"errors"
+	"fmt"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/pkg/watcher"
 	"go.uber.org/zap"
@@ -88,9 +90,16 @@ func TestCreate(t *testing.T) {
 	require.Eventually(t, func() bool {
 		events, err := getEvent(eventCh)
 		require.NoError(t, err)
-		require.Len(t, events, 1)
-		require.Equal(t, events[0].Path, tempFile)
-		require.Equal(t, events[0].Op, watcher.OpCreate)
+
+		// For debugging
+		if len(events) > 1 {
+			fmt.Printf("event-1: op: %v, path: %v\n", events[0].Op, events[0].Path)
+			fmt.Printf("events-2: op: %v, path: %v\n", events[1].Op, events[1].Path)
+		}
+
+		assert.Len(t, events, 1)
+		assert.Equal(t, events[0].Path, tempFile)
+		assert.Equal(t, events[0].Op, watcher.OpCreate)
 		return true
 	}, waitForEvents, 10*time.Millisecond)
 
