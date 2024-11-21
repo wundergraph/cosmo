@@ -15,6 +15,7 @@ import {
   invalidSelectionOnUnionErrorMessage,
   invalidSelectionSetDefinitionErrorMessage,
   invalidSelectionSetErrorMessage,
+  NOT_APPLICABLE,
   nonExternalConditionalFieldError,
   nonExternalConditionalFieldWarning,
   normalizeSubgraph,
@@ -23,6 +24,7 @@ import {
   parse,
   PROVIDES,
   REQUIRES,
+  requiresDefinedOnNonEntityFieldWarning,
   SCALAR,
   Subgraph,
   undefinedFieldInFieldSetErrorMessage,
@@ -902,15 +904,25 @@ describe('openfed_FieldSet tests', () => {
   });
 
   describe('@requires FieldSets', () => {
-    // todo
     test('that a @requires directive is ignored when declared on a non-entity parent', () => {
-      const { errors, normalizationResult } = normalizeSubgraphFromString(`
+      const { errors, normalizationResult, warnings } = normalizeSubgraphFromString(`
         type Object {
           id: ID!
           name: Object! @requires(fields: "id")
         }
       `);
       expect(errors).toBeUndefined();
+      expect(warnings).toHaveLength(2);
+      expect(warnings[0]).toStrictEqual(requiresDefinedOnNonEntityFieldWarning(`Object.name`, NOT_APPLICABLE));
+      expect(warnings[1]).toStrictEqual(
+        nonExternalConditionalFieldWarning(
+          'Object.name',
+          NOT_APPLICABLE,
+          'Object.id',
+          'id',
+          FieldSetDirective.REQUIRES,
+        ),
+      );
       expect(normalizationResult).toBeDefined();
       expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
@@ -918,6 +930,12 @@ describe('openfed_FieldSet tests', () => {
             'Object',
             {
               fieldNames: new Set<string>(['id', 'name']),
+              requires: [
+                {
+                  fieldName: 'name',
+                  selectionSet: 'id',
+                },
+              ],
               isRootNode: false,
               typeName: 'Object',
             },
