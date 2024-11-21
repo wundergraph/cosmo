@@ -38,7 +38,7 @@ func configureAuth(t *testing.T) ([]authentication.Authenticator, *jwks.Server) 
 }
 
 func TestCustomModuleSetScopes(t *testing.T) {
-	t.Run("it can set scopes", func(t *testing.T) {
+	t.Run("it can set scopes and request passes", func(t *testing.T) {
 		t.Parallel()
 
 		cfg := config.Config{
@@ -77,7 +77,7 @@ func TestCustomModuleSetScopes(t *testing.T) {
 		})
 	})
 
-	t.Run("it overrides existing scopes", func(t *testing.T) {
+	t.Run("it can override existing scopes (and request will fail with missing permissions)", func(t *testing.T) {
 		t.Parallel()
 
 		cfg := config.Config{
