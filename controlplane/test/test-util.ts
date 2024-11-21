@@ -40,6 +40,9 @@ import { DeleteOrganizationQueue } from '../src/core/workers/DeleteOrganizationW
 import * as schema from '../src/db/schema.js';
 import { FeatureIds, Label } from '../src/types/index.js';
 import { NewBillingPlan } from '../src/db/models.js';
+import { DeactivateOrganizationQueue } from '../src/core/workers/DeactivateOrganizationWorker.js';
+import { DeleteUserQueue } from '../src/core/workers/DeleteUserQueue.js';
+import { ReactivateOrganizationQueue } from '../src/core/workers/ReactivateOrganizationWorker.js';
 
 export const DEFAULT_ROUTER_URL = 'http://localhost:3002';
 export const DEFAULT_SUBGRAPH_URL_ONE = 'http://localhost:4001';
@@ -125,6 +128,9 @@ export const SetupTest = async function ({
 
   const readmeQueue = new AIGraphReadmeQueue(log, server.redisForQueue);
   const deleteOrganizationQueue = new DeleteOrganizationQueue(log, server.redisForQueue);
+  const deactivateOrganizationQueue = new DeactivateOrganizationQueue(log, server.redisForQueue);
+  const deleteUserQueue = new DeleteUserQueue(log, server.redisForQueue);
+  const reactivateOrganizationQueue = new ReactivateOrganizationQueue(log, server.redisForQueue);
 
   const blobStorage = new InMemoryBlobStorage();
   await server.register(fastifyConnectPlugin, {
@@ -151,6 +157,9 @@ export const SetupTest = async function ({
       queues: {
         readmeQueue,
         deleteOrganizationQueue,
+        deactivateOrganizationQueue,
+        reactivateOrganizationQueue,
+        deleteUserQueue,
       },
     }),
   });

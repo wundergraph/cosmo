@@ -38,64 +38,6 @@ spec:
           image: "{{ include "controlplane.image" . }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
-            - name: KC_REALM
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-configmap
-                  key: keycloakRealm
-            - name: KC_LOGIN_REALM
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-configmap
-                  key: keycloakLoginRealm
-            - name: KC_API_URL
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-configmap
-                  key: keycloakApiUrl
-            - name: KC_ADMIN_USER
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "controlplane.secretName" . }}
-                  key: keycloakAdminUser
-            - name: KC_ADMIN_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "controlplane.secretName" . }}
-                  key: keycloakAdminPassword
-            - name: KC_CLIENT_ID
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-configmap
-                  key: keycloakClientId
-
-            - name: DB_URL
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "controlplane.secretName" . }}
-                  key: databaseUrl
-            {{- if .Values.configuration.databaseTlsCert }}
-            - name: DB_TLS_CERT
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "controlplane.secretName" . }}
-                  key: databaseTlsCert
-            {{- end }}
-            {{- if .Values.configuration.databaseTlsCa }}
-            - name: DB_TLS_CA
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "controlplane.secretName" . }}
-                  key: databaseTlsCa
-            {{- end }}
-            {{- if .Values.configuration.databaseTlsKey }}
-            - name: DB_TLS_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "controlplane.secretName" . }}
-                  key: databaseTlsKey
-            {{- end }}
-
             - name: REDIS_HOST
               valueFrom:
                 configMapKeyRef:
@@ -133,47 +75,6 @@ spec:
                 secretKeyRef:
                   name: {{ include "controlplane.secretName" . }}
                   key: redisTlsCa
-            {{- end }}
-
-            {{- if .Values.configuration.s3StorageUrl }}
-            - name: S3_STORAGE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "controlplane.secretName" . }}
-                  key: s3StorageUrl
-            {{- end }}
-            - name: S3_REGION
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-configmap
-                  key: s3Region
-            {{- if .Values.configuration.s3Endpoint }}
-            - name: S3_ENDPOINT
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-configmap
-                  key: s3Endpoint
-            {{- end }}
-            {{- if .Values.configuration.s3ForcePathStyle }}
-            - name: S3_FORCE_PATH_STYLE
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-configmap
-                  key: s3ForcePathStyle
-            {{- end }}
-            {{- if .Values.configuration.s3AccessKeyId }}
-            - name: S3_ACCESS_KEY_ID
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "controlplane.secretName" . }}
-                  key: s3AccessKeyId
-            {{- end }}
-            {{- if .Values.configuration.s3SecretAccessKey }}
-            - name: S3_SECRET_ACCESS_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "controlplane.secretName" . }}
-                  key: s3SecretAccessKey
             {{- end }}
 
             - name: ORGANIZATION_SLUG

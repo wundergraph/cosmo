@@ -40,6 +40,15 @@ import { AIGraphReadmeQueue, createAIGraphReadmeWorker } from './workers/AIGraph
 import { fastifyLoggerId, createS3ClientConfig, extractS3BucketName } from './util.js';
 import { ApiKeyRepository } from './repositories/ApiKeyRepository.js';
 import { createDeleteOrganizationWorker, DeleteOrganizationQueue } from './workers/DeleteOrganizationWorker.js';
+import {
+  createDeactivateOrganizationWorker,
+  DeactivateOrganizationQueue,
+} from './workers/DeactivateOrganizationWorker.js';
+import { createDeleteUserWorker, DeleteUserQueue } from './workers/DeleteUserQueue.js';
+import {
+  createReactivateOrganizationWorker,
+  ReactivateOrganizationQueue,
+} from './workers/ReactivateOrganizationWorker.js';
 
 export interface BuildConfig {
   logger: LoggerOptions;
@@ -297,6 +306,8 @@ export default async function build(opts: BuildConfig) {
   const s3Client = new S3Client(s3Config);
   const blobStorage = new S3BlobStorage(s3Client, bucketName);
 
+  const platformWebhooks = new PlatformWebhookService(opts.webhook?.url, opts.webhook?.key, logger);
+
   const readmeQueue = new AIGraphReadmeQueue(logger, fastify.redisForQueue);
 
   if (opts.openaiAPIKey) {
@@ -319,6 +330,41 @@ export default async function build(opts: BuildConfig) {
       keycloakClient,
       keycloakRealm: opts.keycloak.realm,
       blobStorage,
+    }),
+  );
+
+  const deactivateOrganizationQueue = new DeactivateOrganizationQueue(logger, fastify.redisForQueue);
+  bullWorkers.push(
+    createDeactivateOrganizationWorker({
+      redisConnection: fastify.redisForWorker,
+      db: fastify.db,
+      logger,
+      keycloakClient,
+      keycloakRealm: opts.keycloak.realm,
+      deleteOrganizationQueue,
+    }),
+  );
+
+  const reactivateOrganizationQueue = new ReactivateOrganizationQueue(logger, fastify.redisForQueue);
+  bullWorkers.push(
+    createReactivateOrganizationWorker({
+      redisConnection: fastify.redisForWorker,
+      db: fastify.db,
+      logger,
+      deleteOrganizationQueue,
+    }),
+  );
+
+  const deleteUserQueue = new DeleteUserQueue(logger, fastify.redisForQueue);
+  bullWorkers.push(
+    createDeleteUserWorker({
+      redisConnection: fastify.redisForWorker,
+      db: fastify.db,
+      logger,
+      keycloakClient,
+      keycloakRealm: opts.keycloak.realm,
+      blobStorage,
+      platformWebhooks,
     }),
   );
 
@@ -364,8 +410,6 @@ export default async function build(opts: BuildConfig) {
   /**
    * Controllers registration
    */
-
-  const platformWebhooks = new PlatformWebhookService(opts.webhook?.url, opts.webhook?.key, logger);
 
   await fastify.register(AuthController, {
     organizationRepository,
@@ -424,6 +468,9 @@ export default async function build(opts: BuildConfig) {
       queues: {
         readmeQueue,
         deleteOrganizationQueue,
+        deactivateOrganizationQueue,
+        reactivateOrganizationQueue,
+        deleteUserQueue,
       },
       stripeSecretKey: opts.stripe?.secret,
       admissionWebhookJWTSecret: opts.admissionWebhook.secret,

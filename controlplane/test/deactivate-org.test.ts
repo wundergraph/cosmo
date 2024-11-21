@@ -6,6 +6,7 @@ import { OrganizationRepository } from '../src/core/repositories/OrganizationRep
 import { afterAllSetup, beforeAllSetup, genID, TestUser } from '../src/core/test-util.js';
 import { createDeleteOrganizationWorker } from '../src/core/workers/DeleteOrganizationWorker.js';
 import { SetupTest } from './test-util.js';
+import { createReactivateOrganizationWorker } from '../src/core/workers/ReactivateOrganizationWorker.js';
 
 let dbname = '';
 
@@ -117,7 +118,7 @@ describe('Deactivate Organization', (ctx) => {
       organizationSlug: org!.slug,
     });
 
-    const worker = createDeleteOrganizationWorker({
+    const deleteOrgWorker = createDeleteOrganizationWorker({
       redisConnection: server.redisForWorker,
       db: server.db,
       logger: server.log,
@@ -141,10 +142,22 @@ describe('Deactivate Organization', (ctx) => {
     const deactivatedOrg = await orgRepo.bySlug(orgName);
     expect(deactivatedOrg?.deactivation).toBeDefined();
 
-    await orgRepo.reactivateOrganization({
-      organizationId: org!.id,
+    const reactivateWorker = createReactivateOrganizationWorker({
+      redisConnection: server.redisForWorker,
+      db: server.db,
+      logger: server.log,
       deleteOrganizationQueue: queues.deleteOrganizationQueue,
     });
+
+    const reactivateJob = await orgRepo.deactivateOrganization({
+      organizationId: org!.id,
+      keycloakClient,
+      keycloakRealm: realm,
+      deleteOrganizationQueue: queues.deleteOrganizationQueue,
+    });
+
+    await reactivateJob.changeDelay(0);
+    await reactivateJob.waitUntilFinished(new QueueEvents(reactivateJob.queueName));
 
     const removedJob = await queues.deleteOrganizationQueue.getJob({
       organizationId: org!.id,
@@ -154,7 +167,8 @@ describe('Deactivate Organization', (ctx) => {
     const reactivatedOrg = await orgRepo.bySlug(orgName);
     expect(reactivatedOrg?.deactivation).toBeUndefined();
 
-    await worker.close();
+    await deleteOrgWorker.close();
+    await reactivateWorker.close();
 
     await server.close();
   });
