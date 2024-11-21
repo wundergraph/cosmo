@@ -18,6 +18,8 @@ on:
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - 'composition-go/index.global.js'
   schedule:
     - cron: '27 3 * * 1'
 
