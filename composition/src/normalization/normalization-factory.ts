@@ -38,19 +38,18 @@ import {
 } from '../ast/utils';
 import {
   addFieldNamesToConfigurationData,
-  validateArgumentTemplateReferences,
   FieldSetData,
   InputValidationContainer,
   isNodeQuery,
   KeyFieldSetData,
   validateAndAddConditionalFieldSetsToConfiguration,
+  validateArgumentTemplateReferences,
   validateKeyFieldSets,
 } from './utils';
 import {
   BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME,
   BASE_DIRECTIVE_DEFINITIONS,
   BASE_SCALARS,
-  EDFS_ARGS_REGEXP,
   EVENT_DRIVEN_DIRECTIVE_DEFINITIONS_BY_DIRECTIVE_NAME,
   FIELD_SET_SCALAR_DEFINITION,
   SCOPE_SCALAR_DEFINITION,
@@ -105,9 +104,9 @@ import {
   invalidEventDrivenMutationResponseTypeErrorMessage,
   invalidEventProviderIdErrorMessage,
   invalidEventSubjectErrorMessage,
-  invalidEventSubjectsArgumentErrorMessage,
   invalidEventSubjectsErrorMessage,
   invalidEventSubjectsItemErrorMessage,
+  invalidExternalDirectiveError,
   invalidImplementedTypeError,
   invalidInterfaceImplementationError,
   invalidKeyDirectiveArgumentErrorMessage,
@@ -140,7 +139,6 @@ import {
   subgraphInvalidSyntaxError,
   subgraphValidationError,
   subgraphValidationFailureError,
-  undefinedEventSubjectsArgumentErrorMessage,
   undefinedNatsStreamConfigurationInputErrorMessage,
   undefinedObjectLikeParentError,
   undefinedRequiredArgumentsErrorMessage,
@@ -203,6 +201,7 @@ import { printTypeNode } from '@graphql-tools/merge';
 import { InternalSubgraph, recordSubgraphName, Subgraph } from '../subgraph/subgraph';
 import {
   externalInterfaceFieldsWarning,
+  invalidExternalFieldWarning,
   invalidOverrideTargetSubgraphNameWarning,
   unimplementedInterfaceOutputTypeWarning,
   Warning,
@@ -218,8 +217,8 @@ import {
   ExtensionType,
   FieldData,
   InputValueData,
+  ObjectDefinitionData,
   ParentDefinitionData,
-  ParentWithFieldsData,
   PersistedDirectiveDefinitionData,
   SchemaData,
   UnionDefinitionData,
@@ -237,7 +236,6 @@ import {
   getUnionNodeByData,
   isTypeValidImplementation,
   newPersistedDirectivesData,
-  ObjectData,
 } from '../schema-building/utils';
 import {
   CompositeOutputNode,
@@ -321,6 +319,7 @@ export class NormalizationFactory {
   entityDataByTypeName = new Map<string, EntityData>();
   entityInterfaceDataByTypeName = new Map<string, EntityInterfaceSubgraphData>();
   eventsConfigurations = new Map<string, EventConfiguration[]>();
+  unvalidatedExternalFieldCoords = new Set<string>();
   interfaceTypeNamesWithAuthorizationDirectives = new Set<string>();
   internalGraph: Graph;
   isCurrentParentExtension = false;
@@ -1050,7 +1049,7 @@ export class NormalizationFactory {
     }
   }
 
-  validateInterfaceImplementations(data: ParentWithFieldsData) {
+  validateInterfaceImplementations(data: CompositeOutputData) {
     if (data.implementedInterfaceTypeNames.size < 1) {
       return;
     }
@@ -1059,19 +1058,16 @@ export class NormalizationFactory {
     const invalidImplementationTypeStringByTypeName = new Map<string, string>();
     let doesInterfaceImplementItself = false;
     for (const interfaceName of data.implementedInterfaceTypeNames) {
-      const implementationData = this.parentDefinitionDataByTypeName.get(interfaceName);
-      if (!implementationData) {
+      const interfaceData = this.parentDefinitionDataByTypeName.get(interfaceName);
+      if (!interfaceData) {
         this.errors.push(undefinedTypeError(interfaceName));
         continue;
       }
-      if (implementationData.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
-        invalidImplementationTypeStringByTypeName.set(
-          implementationData.name,
-          kindToTypeString(implementationData.kind),
-        );
+      if (interfaceData.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
+        invalidImplementationTypeStringByTypeName.set(interfaceData.name, kindToTypeString(interfaceData.kind));
         continue;
       }
-      if (data.name === implementationData.name) {
+      if (data.name === interfaceData.name) {
         doesInterfaceImplementItself = true;
         continue;
       }
@@ -1080,7 +1076,8 @@ export class NormalizationFactory {
         unimplementedFields: [],
       };
       let hasErrors = false;
-      for (const [fieldName, interfaceField] of implementationData.fieldDataByFieldName) {
+      for (const [fieldName, interfaceField] of interfaceData.fieldDataByFieldName) {
+        this.unvalidatedExternalFieldCoords.delete(`${data.name}.${fieldName}`);
         let hasNestedErrors = false;
         const fieldData = data.fieldDataByFieldName.get(fieldName);
         if (!fieldData) {
@@ -1516,7 +1513,7 @@ export class NormalizationFactory {
   }
 
   validateEventDrivenRootType(
-    data: ObjectData,
+    data: ObjectDefinitionData,
     invalidEventsDirectiveDataByRootFieldPath: Map<string, InvalidRootTypeFieldEventsDirectiveData>,
     invalidResponseTypeStringByRootFieldPath: Map<string, string>,
     invalidResponseTypeNameByMutationPath: Map<string, string>,
@@ -1772,7 +1769,7 @@ export class NormalizationFactory {
     }
   }
 
-  validateAndAddKeyToConfiguration(parentData: ParentWithFieldsData, keyFieldSetData: KeyFieldSetData) {
+  validateAndAddKeyToConfiguration(parentData: CompositeOutputData, keyFieldSetData: KeyFieldSetData) {
     const configurationData = getOrThrowError(
       this.configurationDataByParentTypeName,
       getParentTypeName(parentData),
@@ -2105,6 +2102,13 @@ export class NormalizationFactory {
     this.isSubgraphEventDrivenGraph = this.edfsDirectiveReferences.size > 0;
     if (this.isSubgraphEventDrivenGraph) {
       this.validateEventDrivenSubgraph();
+    }
+    for (const fieldCoords of this.unvalidatedExternalFieldCoords) {
+      if (this.isSubgraphVersionTwo) {
+        this.errors.push(invalidExternalDirectiveError(fieldCoords));
+      } else {
+        this.warnings.push(invalidExternalFieldWarning(fieldCoords, this.subgraphName));
+      }
     }
     if (this.errors.length > 0) {
       return { errors: this.errors, warnings: this.warnings };

@@ -33,7 +33,6 @@ import {
   NodeData,
   ObjectDefinitionData,
   ParentDefinitionData,
-  ParentWithFieldsData,
   PersistedDirectiveDefinitionData,
   PersistedDirectivesData,
   ScalarDefinitionData,
@@ -103,7 +102,6 @@ import {
   SUBSCRIPTION,
   TAG,
 } from '../utils/string-constants';
-import { ObjectExtensionData, ParentExtensionData } from './type-extension-data';
 import { areNodeKindAndDirectiveLocationCompatible, getDirectiveDefinitionArgumentSets } from '../normalization/utils';
 import {
   AuthorizationData,
@@ -121,8 +119,6 @@ import {
   SubscriptionFilterValue,
 } from '../router-configuration/router-configuration';
 import { printTypeNode } from '@graphql-tools/merge';
-
-export type ObjectData = ObjectDefinitionData | ObjectExtensionData;
 
 export function newPersistedDirectivesData(): PersistedDirectivesData {
   return {
@@ -838,9 +834,7 @@ export function getUnionNodeByData(
   return unionDefinitionData.node;
 }
 
-export function removeInheritableDirectivesFromParentWithFieldsData(
-  parentData: ParentDefinitionData | ParentExtensionData,
-) {
+export function removeInheritableDirectivesFromParentWithFieldsData(parentData: ParentDefinitionData) {
   for (const directiveName of INHERITABLE_DIRECTIVE_NAMES) {
     parentData.directivesByDirectiveName.delete(directiveName);
   }
@@ -860,6 +854,13 @@ export function isParentDataRootType(parentData: ParentDefinitionData): boolean 
     return false;
   }
   return parentData.isRootType;
+}
+
+export function isParentDataInterfaceType(parentData: ParentDefinitionData): boolean {
+  if (parentData.kind === Kind.INTERFACE_TYPE_DEFINITION) {
+    return true;
+  }
+  return false;
 }
 
 export function setParentDataExtensionType(existingData: ParentDefinitionData, incomingData: ParentDefinitionData) {
@@ -1294,7 +1295,7 @@ export function isTypeValidImplementation(
   }
 }
 
-export function isNodeDataInaccessible(data: NodeData | ObjectExtensionData): boolean {
+export function isNodeDataInaccessible(data: NodeData): boolean {
   return data.persistedDirectivesData.directives.has(INACCESSIBLE) || data.directivesByDirectiveName.has(INACCESSIBLE);
 }
 
@@ -1330,11 +1331,9 @@ export function getSubscriptionFilterValue(
   }
 }
 
-export function getParentTypeName(parentData: ParentWithFieldsData): string {
+export function getParentTypeName(parentData: CompositeOutputData): string {
   switch (parentData.kind) {
     case Kind.OBJECT_TYPE_DEFINITION:
-    // intentional fallthrough
-    case Kind.OBJECT_TYPE_EXTENSION:
       return parentData.renamedTypeName;
     default:
       return parentData.name;

@@ -19,7 +19,6 @@ import {
   MutableTypeNode,
   MutableUnionNode,
 } from './ast';
-import { ExtensionWithFieldsData } from './type-extension-data';
 
 export enum ExtensionType {
   EXTENDS,
@@ -179,8 +178,6 @@ export type ParentDefinitionData =
   | ObjectDefinitionData
   | ScalarDefinitionData
   | UnionDefinitionData;
-
-export type ParentWithFieldsData = CompositeOutputData | ExtensionWithFieldsData;
 
 export type ChildData = EnumValueData | FieldData | InputValueData;
 

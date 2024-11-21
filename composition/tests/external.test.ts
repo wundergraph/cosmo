@@ -6,11 +6,14 @@ import {
   externalInterfaceFieldsWarning,
   federateSubgraphs,
   invalidDirectiveError,
+  invalidExternalDirectiveError,
+  invalidExternalFieldWarning,
   invalidRepeatedDirectiveErrorMessage,
   N_A,
   normalizeSubgraph,
   normalizeSubgraphFromString,
   parse,
+  requiresDefinedOnNonEntityFieldWarning,
   Subgraph,
 } from '../src';
 import {
@@ -221,6 +224,324 @@ describe('@external directive tests', () => {
       expect(warnings).toHaveLength(1);
       expect(warnings![0]).toStrictEqual(externalInterfaceFieldsWarning(N_A, 'Interface', ['age', 'id']));
       expect(warnings![0].subgraph.name).toBe(N_A);
+    });
+
+    test('that an error is returned for an invalid V2 @external directive', () => {
+      const { errors } = normalizeSubgraph(
+        parse(`
+          type Object {
+            name: String! @shareable
+            age: Int! @external
+          }
+        `),
+      );
+      expect(errors).toBeDefined();
+      expect(errors).toHaveLength(1);
+      expect(errors![0]).toStrictEqual(invalidExternalDirectiveError(`Object.age`));
+    });
+
+    test('that V2 @external is valid on a Field to satisfy an Interface #1', () => {
+      const { errors } = normalizeSubgraph(
+        parse(`
+          interface Interface {
+            age: Int!
+          }
+          
+          type Object implements Interface {
+            name: String! @shareable
+            age: Int! @external
+          }
+        `),
+      );
+      expect(errors).toBeUndefined();
+    });
+
+    test('that V2 @external is valid on a Field to satisfy an Interface #2', () => {
+      const { errors } = normalizeSubgraph(
+        parse(`
+          interface Interface {
+            age: Int!
+          }
+
+          type Object {
+            name: String! @shareable
+            nested: Nested!
+          }
+
+          type Nested implements Interface {
+            age: Int! @external
+          }
+        `),
+      );
+      expect(errors).toBeUndefined();
+    });
+
+    test('that an error is returned if a V2 @external directive is invalid', () => {
+      const { errors } = normalizeSubgraph(
+        parse(`
+          interface Interface {
+            nested: Nested!
+          }
+          
+          type Object implements Interface {
+            name: String! @shareable
+            nested: Nested!
+          }
+          
+          type Nested {
+            age: Int! @external
+          }
+        `),
+      );
+      expect(errors).toBeDefined();
+      expect(errors).toHaveLength(1);
+      expect(errors![0]).toStrictEqual(invalidExternalDirectiveError(`Nested.age`));
+    });
+
+    test('that a warning is returned if a V1 @external directive is unused', () => {
+      const { errors, warnings } = normalizeSubgraph(
+        parse(`
+          interface Interface {
+            nested: Nested!
+          }
+          
+          type Object implements Interface {
+            name: String!
+            nested: Nested!
+          }
+          
+          type Nested {
+            age: Int! @external
+          }
+        `),
+      );
+      expect(errors).toBeUndefined();
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toStrictEqual(invalidExternalFieldWarning(`Nested.age`, N_A));
+    });
+
+    test('that V2 @external is valid on a Field that forms part of a @key FieldSet #1', () => {
+      const { errors } = normalizeSubgraph(
+        parse(`
+          type NestedOne {
+            nestedTwo: NestedTwo! @external
+          }
+
+          type NestedTwo {
+            field: Int!
+          }
+
+          type Entity @key(fields: "nestedOne { nestedTwo { field } }") {
+            name: String! @shareable
+            nestedOne: NestedOne!
+          }
+
+          type Query {
+            entity: Entity!
+          }
+        `),
+      );
+      expect(errors).toBeUndefined();
+    });
+
+    test('that @external is valid on a Field that forms part of a @key FieldSet #2', () => {
+      const { errors } = normalizeSubgraph(
+        parse(`
+          type NestedOne {
+            nestedTwo: NestedTwo!
+          }
+
+          type NestedTwo {
+            field: Int! @external
+          }
+
+          type Entity @key(fields: "nestedOne { nestedTwo { field } }") {
+            name: String! @shareable
+            nestedOne: NestedOne!
+          }
+
+          type Query {
+            entity: Entity!
+          }
+        `),
+      );
+      expect(errors).toBeUndefined();
+    });
+
+    test('that @external is valid on a Field that forms part of a @key FieldSet #3', () => {
+      const { errors } = normalizeSubgraph(
+        parse(`
+          type NestedOne {
+            nestedTwo: NestedTwo! @external
+          }
+
+          type NestedTwo {
+            field: Int! @external
+          }
+
+          type Entity @key(fields: "nestedOne { nestedTwo { field } }") {
+            name: String! @shareable
+            nestedOne: NestedOne!
+          }
+
+          type Query {
+            entity: Entity!
+          }
+        `),
+      );
+      expect(errors).toBeUndefined();
+    });
+
+    test('that V2 @external is valid on a Field that forms part of a @provides FieldSet #1', () => {
+      const { errors } = normalizeSubgraph(
+        parse(`
+          type NestedOne {
+            nestedTwo: NestedTwo! @external
+          }
+          
+          type NestedTwo {
+            field: Int!
+          }
+          
+          type Object {
+            name: String! @shareable
+            nestedOne: NestedOne!
+          }
+          
+          type Query {
+            object: Object! @provides(fields: "nestedOne { nestedTwo { field } }")
+          }
+        `),
+      );
+      expect(errors).toBeUndefined();
+    });
+
+    test('that @external is valid on a Field that forms part of a @provides FieldSet #2', () => {
+      const { errors } = normalizeSubgraph(
+        parse(`
+          type NestedOne {
+            nestedTwo: NestedTwo!
+          }
+          
+          type NestedTwo {
+            field: Int! @external
+          }
+          
+          type Object {
+            name: String! @shareable
+            nestedOne: NestedOne!
+          }
+          
+          type Query {
+            object: Object! @provides(fields: "nestedOne { nestedTwo { field } }")
+          }
+        `),
+      );
+      expect(errors).toBeUndefined();
+    });
+
+    test('that @external is valid on a Field that forms part of a @provides FieldSet #3', () => {
+      const { errors } = normalizeSubgraph(
+        parse(`
+          type NestedOne {
+            nestedTwo: NestedTwo! @external
+          }
+          
+          type NestedTwo {
+            field: Int! @external
+          }
+          
+          type Object {
+            name: String! @shareable
+            nestedOne: NestedOne!
+          }
+          
+          type Query {
+            object: Object! @provides(fields: "nestedOne { nestedTwo { field } }")
+          }
+        `),
+      );
+      expect(errors).toBeUndefined();
+    });
+
+    test('that V2 @external is valid on a Field that forms part of a @requires FieldSet #1', () => {
+      const { errors, warnings } = normalizeSubgraph(
+        parse(`
+          type Entity @key(fields: "id") {
+            id: ID!
+            name: String! @shareable @requires(fields: "nestedOne { nestedTwo { field } }")
+            nestedOne: NestedOne!
+          }
+          
+          type NestedOne {
+            nestedTwo: NestedTwo! @external
+          }
+          
+          type NestedTwo {
+            field: Int!
+          }
+          
+          type Query {
+            entity: Entity!
+          }
+        `),
+      );
+      expect(errors).toBeUndefined();
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that @external is valid on a Field that forms part of a @requires FieldSet #2', () => {
+      const { errors, warnings } = normalizeSubgraph(
+        parse(`
+          type Entity @key(fields: "id") {
+            id: ID!
+            name: String!
+            nestedOne: NestedOne!
+          }
+          
+          type NestedOne {
+            field: Int! @shareable @requires(fields: "nestedTwo { field }")
+            nestedTwo: NestedTwo!
+          }
+          
+          type NestedTwo {
+            field: Int! @external
+          }
+          
+          type Query {
+            entity: Entity!
+          }
+        `),
+      );
+      expect(errors).toBeUndefined();
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toStrictEqual(requiresDefinedOnNonEntityFieldWarning('NestedOne.field', N_A));
+    });
+
+    test('that @external is valid on a Field that forms part of a @requires FieldSet #3', () => {
+      const { errors, warnings } = normalizeSubgraph(
+        parse(`
+          type Entity @key(fields: "id") {
+            id: ID!
+            name: String! @shareable @requires(fields: "nestedOne { nestedTwo { field } }")
+            nestedOne: NestedOne!
+          }
+          
+          type NestedOne {
+            nestedTwo: NestedTwo! @external
+          }
+          
+          type NestedTwo {
+            field: Int! @external
+          }
+          
+          type Query {
+            entity: Entity!
+          }
+        `),
+      );
+      expect(errors).toBeUndefined();
+      expect(warnings).toHaveLength(0);
     });
   });
 
