@@ -77,7 +77,7 @@ func TestCustomModuleSetScopes(t *testing.T) {
 		})
 	})
 
-	t.Run("it can override existing scopes (and request will fail with missing permissions)", func(t *testing.T) {
+	t.Run("should fail with authorization error because module didn't set the necessary scopes to execute the query", func(t *testing.T) {
 		t.Parallel()
 
 		cfg := config.Config{
