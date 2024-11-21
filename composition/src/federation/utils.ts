@@ -12,7 +12,6 @@ import {
   InterfaceDefinitionData,
   ObjectDefinitionData,
   ParentDefinitionData,
-  ParentWithFieldsData,
 } from '../schema-building/type-definition-data';
 import { addIterableValuesToSet, AuthorizationData, EntityData, EntityInterfaceFederationData } from '../utils/utils';
 import { Graph } from '../resolvability-graph/graph';
@@ -131,7 +130,7 @@ export function validateImplicitFieldSets({
       // This would be caught as an error elsewhere
       continue;
     }
-    const parentDatas: ParentWithFieldsData[] = [objectData];
+    const parentDatas: CompositeOutputData[] = [objectData];
     const definedFields: Set<string>[] = [];
     const keyFieldNames = new Set<string>();
     const fieldSetConditions: Array<FieldSetCondition> = [];

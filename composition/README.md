@@ -158,3 +158,13 @@ const subgraphA: Subgraph = {
 | name        | unique name of the subgraph               | string               |
 | url         | unique endpoint for the subgraph          | string               |
 | definitions | an AST representation of the subgraph SDL | graphql.DocumentNode |
+
+### Contributing
+Some GraphQL and Federation jargon should begin with a capitalised letter for clarity, e.g.,:
+- Argument
+- Enum
+- Field
+- Input Object
+- Interface
+- Object
+When adding or changing errors, please begin these terms with a capital letter.

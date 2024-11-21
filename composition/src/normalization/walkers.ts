@@ -33,6 +33,7 @@ import {
   ENTITIES_FIELD,
   ENTITY_UNION,
   EVENT_DIRECTIVE_NAMES,
+  EXTERNAL,
   PARENT_DEFINITION_DATA,
   PROVIDES,
   REQUIRES,
@@ -50,13 +51,14 @@ import {
   extractArguments,
   extractDirectives,
   getRenamedRootTypeName,
+  isParentDataInterfaceType,
   isTypeNameRootType,
-  ObjectData,
   removeInheritableDirectivesFromParentWithFieldsData,
 } from '../schema-building/utils';
-import { InputValueData } from '../schema-building/type-definition-data';
+import { InputValueData, ObjectDefinitionData } from '../schema-building/type-definition-data';
 import { getTypeNodeNamedTypeName } from '../schema-building/ast';
 import { GraphNode, RootNode } from '../resolvability-graph/graph-nodes';
+import { requiresDefinedOnNonEntityFieldWarning } from '../warnings/warnings';
 
 // Walker to collect schema definition, directive definitions, and entities
 export function upsertDirectiveSchemaAndEntityDefinitions(nf: NormalizationFactory, document: DocumentNode) {
@@ -394,6 +396,9 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           nf.isSubgraphVersionTwo,
           nf.errors,
         );
+        if (!isParentDataInterfaceType(parentData) && directivesByDirectiveName.has(EXTERNAL)) {
+          nf.unvalidatedExternalFieldCoords.add(`${nf.originalParentTypeName}.${node.name.value}`);
+        }
         if (isParentRootType) {
           nf.extractEventDirectivesToConfiguration(node, argumentDataByArgumentName);
         }
@@ -404,23 +409,22 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           return;
         }
         const entityData = nf.entityDataByTypeName.get(nf.originalParentTypeName);
+        const fieldSetData = getValueOrDefault(nf.fieldSetDataByTypeName, nf.originalParentTypeName, newFieldSetData);
         if (entityData) {
           entityData.fieldNames.add(nf.childName);
-          const fieldSetData = getValueOrDefault(nf.fieldSetDataByTypeName, nf.originalParentTypeName, newFieldSetData);
-          extractFieldSetValue(nf.childName, fieldSetData.requires, requiresDirectives);
+        }
+        if (providesDirectives) {
           extractFieldSetValue(nf.childName, fieldSetData.provides, providesDirectives);
-          return;
         }
-        // @requires should only be defined on a field whose parent is an entity
         if (requiresDirectives) {
-          // todo warning
+          if (!entityData) {
+            // @TODO @requires can only be satisfied if the host Field parent is an Entity
+            nf.warnings.push(
+              requiresDefinedOnNonEntityFieldWarning(`${nf.originalParentTypeName}.${nf.childName}`, nf.subgraphName),
+            );
+          }
+          extractFieldSetValue(nf.childName, fieldSetData.requires, requiresDirectives);
         }
-        // Check whether the directive exists to avoid creating unnecessary fieldSet configurations
-        if (!providesDirectives) {
-          return;
-        }
-        const fieldSetData = getValueOrDefault(nf.fieldSetDataByTypeName, nf.originalParentTypeName, newFieldSetData);
-        extractFieldSetValue(nf.childName, fieldSetData.provides, providesDirectives);
       },
       leave() {
         nf.childName = '';
@@ -705,7 +709,7 @@ export function consolidateAuthorizationDirectives(nf: NormalizationFactory, def
           return false;
         }
         nf.originalParentTypeName = parentData.name;
-        nf.renamedParentTypeName = (parentData as ObjectData).renamedTypeName;
+        nf.renamedParentTypeName = (parentData as ObjectDefinitionData).renamedTypeName;
         parentAuthorizationData = nf.getAuthorizationData(node);
       },
       leave() {
@@ -721,7 +725,7 @@ export function consolidateAuthorizationDirectives(nf: NormalizationFactory, def
           return false;
         }
         nf.originalParentTypeName = parentData.name;
-        nf.renamedParentTypeName = (parentData as ObjectData).renamedTypeName;
+        nf.renamedParentTypeName = (parentData as ObjectDefinitionData).renamedTypeName;
         parentAuthorizationData = nf.getAuthorizationData(node);
       },
       leave() {

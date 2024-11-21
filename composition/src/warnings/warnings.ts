@@ -104,3 +104,29 @@ export function unimplementedInterfaceOutputTypeWarning(subgraphName: string, in
     },
   });
 }
+
+export function invalidExternalFieldWarning(fieldCoords: string, subgraphName: string): Warning {
+  return new Warning({
+    message:
+      versionOneWarningPropagationMessage(subgraphName) +
+      ` The Object Field "${fieldCoords}" is invalidly declared "@external". An Object Field should only` +
+      ` be declared "@external" if it is part of a "@key", "@provides", or "@requires" FieldSet, or the Field is` +
+      ` necessary to satisfy an Interface implementation. In the case that none of these conditions is true, the` +
+      ` "@external" directive should be removed.`,
+    subgraph: {
+      name: subgraphName,
+    },
+  });
+}
+
+export function requiresDefinedOnNonEntityFieldWarning(fieldCoords: string, subgraphName: string): Warning {
+  return new Warning({
+    message:
+      ` The Object Field "${fieldCoords}" defines a "@requires" directive, but the Object is not an entity.` +
+      ' Consequently, the "@requires" FieldSet cannot be satisfied because there is no entity resolver with which to' +
+      ' provide the required Fields.',
+    subgraph: {
+      name: subgraphName,
+    },
+  });
+}

@@ -1,9 +1,9 @@
 import { FederationFactory } from './federation-factory';
 import { InternalSubgraph } from '../subgraph/subgraph';
 import {
+  CompositeOutputData,
   InterfaceDefinitionData,
   ObjectDefinitionData,
-  ParentWithFieldsData,
 } from '../schema-building/type-definition-data';
 import { visit } from 'graphql';
 import { ENTITIES_FIELD, OPERATION_TO_DEFAULT, PARENT_DEFINITION_DATA, SERVICE_FIELD } from '../utils/string-constants';
@@ -12,7 +12,7 @@ import { operationTypeNodeToDefaultType } from '../ast/utils';
 import { renameNamedTypeName } from '../schema-building/type-merging';
 
 export function renameRootTypes(ff: FederationFactory, subgraph: InternalSubgraph) {
-  let parentData: ParentWithFieldsData | undefined;
+  let parentData: CompositeOutputData | undefined;
   let isParentRootType = false;
   let overriddenFieldNames: Set<string> | undefined;
   visit(subgraph.definitions, {

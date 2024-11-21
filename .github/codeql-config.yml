@@ -1,0 +1,2 @@
+paths-ignore:
+  - 'composition-go/index.global.js'
