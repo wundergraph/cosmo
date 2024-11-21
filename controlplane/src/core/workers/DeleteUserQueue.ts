@@ -8,6 +8,7 @@ import { OrganizationRepository } from '../repositories/OrganizationRepository.j
 import { UserRepository } from '../repositories/UserRepository.js';
 import Keycloak from '../services/Keycloak.js';
 import { PlatformWebhookService } from '../webhooks/PlatformWebhookService.js';
+import { IQueue, IWorker } from './Worker.js';
 
 const QueueName = 'user.delete';
 const WorkerName = 'DeleteUserWorker';
@@ -16,7 +17,7 @@ export interface DeleteUserInput {
   userId: string;
 }
 
-export class DeleteUserQueue {
+export class DeleteUserQueue implements IQueue<DeleteUserInput> {
   private readonly queue: Queue<DeleteUserInput>;
   private readonly logger: pino.Logger;
 
@@ -25,8 +26,12 @@ export class DeleteUserQueue {
     this.queue = new Queue<DeleteUserInput>(QueueName, {
       connection: conn,
       defaultJobOptions: {
-        removeOnComplete: true,
-        removeOnFail: true,
+        removeOnComplete: {
+          age: 90 * 86_400,
+        },
+        removeOnFail: {
+          age: 90 * 86_400,
+        },
         attempts: 3,
         backoff: {
           type: 'exponential',
@@ -56,7 +61,7 @@ export class DeleteUserQueue {
   }
 }
 
-class DeleteUserWorker {
+class DeleteUserWorker implements IWorker {
   constructor(
     private input: {
       redisConnection: ConnectionOptions;
@@ -86,7 +91,7 @@ class DeleteUserWorker {
       const { isSafe, soloOrganizations, unsafeOrganizations } = await orgRepo.canUserBeDeleted(job.data.userId);
 
       if (!isSafe) {
-        this.input.logger.error(
+        this.input.logger.info(
           {
             userId: job.data.userId,
             soloOrganizations,
@@ -111,7 +116,7 @@ class DeleteUserWorker {
         user_email: user.email!,
       });
     } catch (err) {
-      this.input.logger.error(err, `Failed to delete user with id ${job.data.userId}`);
+      this.input.logger.error({ jobId: job.id, userId: job.data.userId, err }, `Failed to delete user`);
       throw err;
     }
   }
@@ -132,7 +137,7 @@ export const createDeleteUserWorker = (input: {
     concurrency: 10,
   });
   worker.on('stalled', (job) => {
-    log.warn(`Job ${job} stalled`);
+    log.warn({ joinId: job }, `Job stalled`);
   });
   worker.on('error', (err) => {
     log.error(err, 'Worker error');

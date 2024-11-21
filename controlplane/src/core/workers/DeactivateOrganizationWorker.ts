@@ -5,6 +5,7 @@ import * as schema from '../../db/schema.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import Keycloak from '../services/Keycloak.js';
 import { DeleteOrganizationQueue } from './DeleteOrganizationWorker.js';
+import { IQueue, IWorker } from './Worker.js';
 
 const QueueName = 'organization.deactivate';
 const WorkerName = 'DeactivateOrganizationWorker';
@@ -15,7 +16,7 @@ export interface DeactivateOrganizationInput {
   deactivationReason?: string;
 }
 
-export class DeactivateOrganizationQueue {
+export class DeactivateOrganizationQueue implements IQueue<DeactivateOrganizationInput> {
   private readonly queue: Queue<DeactivateOrganizationInput>;
   private readonly logger: pino.Logger;
 
@@ -24,8 +25,12 @@ export class DeactivateOrganizationQueue {
     this.queue = new Queue<DeactivateOrganizationInput>(QueueName, {
       connection: conn,
       defaultJobOptions: {
-        removeOnComplete: true,
-        removeOnFail: true,
+        removeOnComplete: {
+          age: 90 * 86_400,
+        },
+        removeOnFail: {
+          age: 90 * 86_400,
+        },
         attempts: 3,
         backoff: {
           type: 'exponential',
@@ -56,7 +61,7 @@ export class DeactivateOrganizationQueue {
   }
 }
 
-class DeactivateOrganizationWorker {
+class DeactivateOrganizationWorker implements IWorker {
   constructor(
     private input: {
       db: PostgresJsDatabase<typeof schema>;
@@ -93,7 +98,10 @@ class DeactivateOrganizationWorker {
         deleteOrganizationQueue: this.input.deleteOrganizationQueue,
       });
     } catch (err) {
-      this.input.logger.error(err, `Failed to deactivate organization with id ${job.data.organizationId}`);
+      this.input.logger.error(
+        { jobId: job.id, organizationId: job.data.organizationId, err },
+        `Failed to deactivate organization`,
+      );
       throw err;
     }
   }
@@ -117,7 +125,7 @@ export const createDeactivateOrganizationWorker = (input: {
     },
   );
   worker.on('stalled', (job) => {
-    log.warn(`Job ${job} stalled`);
+    log.warn({ joinId: job }, `Job stalled`);
   });
   worker.on('error', (err) => {
     log.error(err, 'Worker error');

@@ -7,6 +7,7 @@ import Keycloak from '../services/Keycloak.js';
 import { OidcRepository } from '../repositories/OidcRepository.js';
 import OidcProvider from '../services/OidcProvider.js';
 import { BlobStorage } from '../blobstorage/index.js';
+import { IQueue, IWorker } from './Worker.js';
 
 const QueueName = 'organization.delete';
 const WorkerName = 'DeleteOrganizationWorker';
@@ -15,7 +16,7 @@ export interface DeleteOrganizationInput {
   organizationId: string;
 }
 
-export class DeleteOrganizationQueue {
+export class DeleteOrganizationQueue implements IQueue<DeleteOrganizationInput> {
   private readonly queue: Queue<DeleteOrganizationInput>;
   private readonly logger: pino.Logger;
 
@@ -24,8 +25,12 @@ export class DeleteOrganizationQueue {
     this.queue = new Queue<DeleteOrganizationInput>(QueueName, {
       connection: conn,
       defaultJobOptions: {
-        removeOnComplete: true,
-        removeOnFail: true,
+        removeOnComplete: {
+          age: 90 * 86_400,
+        },
+        removeOnFail: {
+          age: 90 * 86_400,
+        },
         attempts: 3,
         backoff: {
           type: 'exponential',
@@ -55,7 +60,7 @@ export class DeleteOrganizationQueue {
   }
 }
 
-class DeleteOrganizationWorker {
+class DeleteOrganizationWorker implements IWorker {
   constructor(
     private input: {
       redisConnection: ConnectionOptions;
@@ -99,7 +104,10 @@ class DeleteOrganizationWorker {
         organizationSlug: org.slug,
       });
     } catch (err) {
-      this.input.logger.error(err, `Failed to delete organization with id ${job.data.organizationId}`);
+      this.input.logger.error(
+        { jobId: job.id, organizationId: job.data.organizationId, err },
+        `Failed to delete organization`,
+      );
       throw err;
     }
   }
@@ -123,7 +131,7 @@ export const createDeleteOrganizationWorker = (input: {
     },
   );
   worker.on('stalled', (job) => {
-    log.warn(`Job ${job} stalled`);
+    log.warn({ joinId: job }, `Job stalled`);
   });
   worker.on('error', (err) => {
     log.error(err, 'Worker error');
