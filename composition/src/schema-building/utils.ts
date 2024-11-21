@@ -1332,12 +1332,10 @@ export function getSubscriptionFilterValue(
 }
 
 export function getParentTypeName(parentData: CompositeOutputData): string {
-  switch (parentData.kind) {
-    case Kind.OBJECT_TYPE_DEFINITION:
-      return parentData.renamedTypeName;
-    default:
-      return parentData.name;
+  if (parentData.kind === Kind.OBJECT_TYPE_DEFINITION) {
+    return parentData.renamedTypeName;
   }
+  return parentData.name;
 }
 
 export enum FieldSetDirective {
