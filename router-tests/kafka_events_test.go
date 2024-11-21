@@ -91,7 +91,7 @@ func TestKafkaEvents(t *testing.T) {
 				} `graphql:"employeeUpdatedMyKafka(employeeID: 3)"`
 			}
 
-			surl := xEnv.GraphQLSubscriptionURL()
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 			t.Cleanup(func() {
 				_ = client.Close()
@@ -149,7 +149,7 @@ func TestKafkaEvents(t *testing.T) {
 				} `graphql:"employeeUpdatedMyKafka(employeeID: 3)"`
 			}
 
-			surl := xEnv.GraphQLSubscriptionURL()
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 			t.Cleanup(func() {
 				_ = client.Close()
@@ -231,7 +231,7 @@ func TestKafkaEvents(t *testing.T) {
 				} `graphql:"employeeUpdatedMyKafka(employeeID: 3)"`
 			}
 
-			surl := xEnv.GraphQLSubscriptionURL()
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 
 			wg := &sync.WaitGroup{}
@@ -295,7 +295,7 @@ func TestKafkaEvents(t *testing.T) {
 				} `graphql:"employeeUpdatedMyKafka(employeeID: 3)"`
 			}
 
-			surl := xEnv.GraphQLSubscriptionURL()
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 			t.Cleanup(func() {
 				_ = client.Close()
@@ -388,7 +388,7 @@ func TestKafkaEvents(t *testing.T) {
 				} `graphql:"employeeUpdatedMyKafka(employeeID: 3)"`
 			}
 
-			surl := xEnv.GraphQLSubscriptionURL()
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 			t.Cleanup(func() {
 				_ = client.Close()
@@ -538,7 +538,7 @@ func TestKafkaEvents(t *testing.T) {
 				client := http.Client{
 					Timeout: time.Second * 10,
 				}
-				req, gErr := http.NewRequest(http.MethodPost, xEnv.GraphQLServeSentEventsURL(), bytes.NewReader(subscribePayload))
+				req, gErr := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
 				require.NoError(t, gErr)
 
 				req.Header.Set("Content-Type", "application/json")
