@@ -1198,7 +1198,7 @@ func TestWebSockets(t *testing.T) {
 				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Second
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			client := graphql.NewSubscriptionClient(xEnv.GraphQLSubscriptionURL()).
+			client := graphql.NewSubscriptionClient(xEnv.GraphQLWebSocketSubscriptionURL()).
 				WithProtocol(graphql.GraphQLWS)
 
 			var wg sync.WaitGroup
@@ -1353,7 +1353,7 @@ func TestWebSockets(t *testing.T) {
 					Timestamp string  `graphql:"timeStamp"`
 				} `graphql:"currentTime"`
 			}
-			client := graphql.NewSubscriptionClient(xEnv.GraphQLSubscriptionURL()).WithProtocol(graphql.GraphQLWS)
+			client := graphql.NewSubscriptionClient(xEnv.GraphQLWebSocketSubscriptionURL()).WithProtocol(graphql.GraphQLWS)
 			t.Cleanup(func() {
 				err := client.Close()
 				require.NoError(t, err)
@@ -1386,7 +1386,7 @@ func TestWebSockets(t *testing.T) {
 					Timestamp string  `graphql:"timeStamp"`
 				} `graphql:"currentTime"`
 			}
-			client := graphql.NewSubscriptionClient(xEnv.GraphQLSubscriptionURL()).WithProtocol(graphql.SubscriptionsTransportWS)
+			client := graphql.NewSubscriptionClient(xEnv.GraphQLWebSocketSubscriptionURL()).WithProtocol(graphql.SubscriptionsTransportWS)
 			t.Cleanup(func() {
 				err := client.Close()
 				require.NoError(t, err)

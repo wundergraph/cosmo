@@ -1245,7 +1245,7 @@ func (e *Environment) MakeGraphQLMultipartRequest(method string, body io.Reader)
 	return req
 }
 
-func (e *Environment) GraphQLSubscriptionURL() string {
+func (e *Environment) GraphQLWebSocketSubscriptionURL() string {
 	u, err := url.Parse(e.GraphQLRequestURL())
 	require.NoError(e.t, err)
 	u.Scheme = "ws"
@@ -1296,7 +1296,7 @@ func (e *Environment) GraphQLWebsocketDialWithRetry(header http.Header, query ur
 	var err error
 
 	for i := 0; i <= maxSocketRetries; i++ {
-		urlStr := e.GraphQLSubscriptionURL()
+		urlStr := e.GraphQLWebSocketSubscriptionURL()
 		if query != nil {
 			urlStr += "?" + query.Encode()
 		}
@@ -1338,16 +1338,11 @@ func (e *Environment) InitGraphQLWebSocketConnection(header http.Header, query u
 	return conn
 }
 
-func (e *Environment) GraphQLSubscriptionOverGetAndSSE(ctx context.Context, request GraphQLRequest, handler func(data string)) {
-	req, err := e.newGraphQLRequestOverGET(e.GraphQLServeSentEventsURL(), request)
+func (e *Environment) GraphQLSubscriptionOverSSE(ctx context.Context, request GraphQLRequest, handler func(data string)) {
+	req, err := e.newGraphQLRequestOverGET(e.GraphQLRequestURL(), request)
 	if err != nil {
 		e.t.Fatalf("could not create request: %s", err)
 	}
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "text/event-stream")
-	req.Header.Set("Connection", "keep-alive")
-	req.Header.Set("Cache-Control", "no-cache")
 
 	resp, err := e.RouterClient.Do(req)
 	if err != nil {
@@ -1355,12 +1350,46 @@ func (e *Environment) GraphQLSubscriptionOverGetAndSSE(ctx context.Context, requ
 	}
 	defer resp.Body.Close()
 
+	require.Equal(e.t, "text/event-stream", resp.Header.Get("Content-Type"))
+	require.Equal(e.t, "no-cache", resp.Header.Get("Cache-Control"))
+	require.Equal(e.t, "keep-alive", resp.Header.Get("Connection"))
+	require.Equal(e.t, "no", resp.Header.Get("X-Accel-Buffering"))
+
 	// Check for the correct response status code
 	if resp.StatusCode != http.StatusOK {
 		e.t.Fatalf("expected status code 200, got %d", resp.StatusCode)
 	}
 
-	reader := bufio.NewReader(resp.Body)
+	e.ReadSSE(ctx, resp.Body, handler)
+}
+
+func (e *Environment) GraphQLSubscriptionOverSSEWithQueryParam(ctx context.Context, request GraphQLRequest, handler func(data string)) {
+	req, err := e.newGraphQLRequestOverGET(e.GraphQLServeSentEventsURL(), request)
+	if err != nil {
+		e.t.Fatalf("could not create request: %s", err)
+	}
+
+	resp, err := e.RouterClient.Do(req)
+	if err != nil {
+		e.t.Fatalf("could not make request: %s", err)
+	}
+	defer resp.Body.Close()
+
+	require.Equal(e.t, "text/event-stream", resp.Header.Get("Content-Type"))
+	require.Equal(e.t, "no-cache", resp.Header.Get("Cache-Control"))
+	require.Equal(e.t, "keep-alive", resp.Header.Get("Connection"))
+	require.Equal(e.t, "no", resp.Header.Get("X-Accel-Buffering"))
+
+	// Check for the correct response status code
+	if resp.StatusCode != http.StatusOK {
+		e.t.Fatalf("expected status code 200, got %d", resp.StatusCode)
+	}
+
+	e.ReadSSE(ctx, resp.Body, handler)
+}
+
+func (e *Environment) ReadSSE(ctx context.Context, body io.ReadCloser, handler func(data string)) {
+	reader := bufio.NewReader(body)
 
 	// Process incoming events
 	for {
@@ -1369,7 +1398,7 @@ func (e *Environment) GraphQLSubscriptionOverGetAndSSE(ctx context.Context, requ
 			return
 		case <-e.Context.Done():
 			return
-		case <-req.Context().Done():
+		case <-ctx.Done():
 			return
 		default:
 			line, err := reader.ReadString('\n')
