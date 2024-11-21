@@ -533,7 +533,7 @@ export const CompositionDetails = ({
                     <Alert variant="destructive">
                       <AlertTitle>Composition Errors</AlertTitle>
                       <AlertDescription>
-                        <pre className="">
+                        <pre className="whitespace-pre-wrap">
                           {compositionErrors.length > 0
                             ? compositionErrors
                             : "No composition errors"}
@@ -678,7 +678,7 @@ export const CompositionDetails = ({
                     <Alert variant="warn">
                       <AlertTitle>Composition Warnings</AlertTitle>
                       <AlertDescription>
-                        <pre className="">
+                        <pre className="whitespace-pre-wrap">
                           {compositionWarnings.split("Warning: ").join("\n")}
                         </pre>
                       </AlertDescription>
