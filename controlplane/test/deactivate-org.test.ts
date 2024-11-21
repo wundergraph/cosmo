@@ -5,8 +5,8 @@ import { OidcRepository } from '../src/core/repositories/OidcRepository.js';
 import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
 import { afterAllSetup, beforeAllSetup, genID, TestUser } from '../src/core/test-util.js';
 import { createDeleteOrganizationWorker } from '../src/core/workers/DeleteOrganizationWorker.js';
-import { SetupTest } from './test-util.js';
 import { createReactivateOrganizationWorker } from '../src/core/workers/ReactivateOrganizationWorker.js';
+import { SetupTest } from './test-util.js';
 
 let dbname = '';
 
