@@ -92,4 +92,4 @@ jobs:
       uses: github/codeql-action/analyze@v3
       with:
         category: "/language:${{matrix.language}}"
-        config-file: .github/codeql-config.yml
+        config-file: ./.github/codeql-config.yml

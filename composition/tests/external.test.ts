@@ -9,7 +9,7 @@ import {
   invalidExternalDirectiveError,
   invalidExternalFieldWarning,
   invalidRepeatedDirectiveErrorMessage,
-  N_A,
+  NOT_APPLICABLE,
   normalizeSubgraph,
   normalizeSubgraphFromString,
   parse,
@@ -202,8 +202,8 @@ describe('@external directive tests', () => {
       expect(errors).toBeUndefined();
       expect(warnings).toBeDefined();
       expect(warnings).toHaveLength(1);
-      expect(warnings![0]).toStrictEqual(externalInterfaceFieldsWarning(N_A, 'Interface', ['age', 'name']));
-      expect(warnings![0].subgraph.name).toBe(N_A);
+      expect(warnings![0]).toStrictEqual(externalInterfaceFieldsWarning(NOT_APPLICABLE, 'Interface', ['age', 'name']));
+      expect(warnings![0].subgraph.name).toBe(NOT_APPLICABLE);
     });
 
     test('that a warning is returned if a V1 interface extension field is declared @external', () => {
@@ -222,8 +222,8 @@ describe('@external directive tests', () => {
       expect(errors).toBeUndefined();
       expect(warnings).toBeDefined();
       expect(warnings).toHaveLength(1);
-      expect(warnings![0]).toStrictEqual(externalInterfaceFieldsWarning(N_A, 'Interface', ['age', 'id']));
-      expect(warnings![0].subgraph.name).toBe(N_A);
+      expect(warnings![0]).toStrictEqual(externalInterfaceFieldsWarning(NOT_APPLICABLE, 'Interface', ['age', 'id']));
+      expect(warnings![0].subgraph.name).toBe(NOT_APPLICABLE);
     });
 
     test('that an error is returned for an invalid V2 @external directive', () => {
@@ -317,7 +317,7 @@ describe('@external directive tests', () => {
       );
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(1);
-      expect(warnings[0]).toStrictEqual(invalidExternalFieldWarning(`Nested.age`, N_A));
+      expect(warnings[0]).toStrictEqual(invalidExternalFieldWarning(`Nested.age`, NOT_APPLICABLE));
     });
 
     test('that V2 @external is valid on a Field that forms part of a @key FieldSet #1', () => {
@@ -515,7 +515,7 @@ describe('@external directive tests', () => {
       );
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(1);
-      expect(warnings[0]).toStrictEqual(requiresDefinedOnNonEntityFieldWarning('NestedOne.field', N_A));
+      expect(warnings[0]).toStrictEqual(requiresDefinedOnNonEntityFieldWarning('NestedOne.field', NOT_APPLICABLE));
     });
 
     test('that @external is valid on a Field that forms part of a @requires FieldSet #3', () => {

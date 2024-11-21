@@ -165,7 +165,7 @@ import {
   INACCESSIBLE,
   KEY,
   MUTATION,
-  N_A,
+  NOT_APPLICABLE,
   NON_NULLABLE_BOOLEAN,
   NON_NULLABLE_EDFS_PUBLISH_EVENT_RESULT,
   NON_NULLABLE_STRING,
@@ -351,7 +351,7 @@ export class NormalizationFactory {
     for (const [baseDirectiveName, baseDirectiveDefinition] of BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME) {
       this.directiveDefinitionByDirectiveName.set(baseDirectiveName, baseDirectiveDefinition);
     }
-    this.subgraphName = subgraphName || N_A;
+    this.subgraphName = subgraphName || NOT_APPLICABLE;
     this.internalGraph = internalGraph;
     this.internalGraph.setSubgraphName(this.subgraphName);
     this.schemaDefinition = {

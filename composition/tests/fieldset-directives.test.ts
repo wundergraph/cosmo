@@ -15,7 +15,7 @@ import {
   invalidSelectionOnUnionErrorMessage,
   invalidSelectionSetDefinitionErrorMessage,
   invalidSelectionSetErrorMessage,
-  N_A,
+  NOT_APPLICABLE,
   nonExternalConditionalFieldError,
   nonExternalConditionalFieldWarning,
   normalizeSubgraph,
@@ -913,9 +913,15 @@ describe('openfed_FieldSet tests', () => {
       `);
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(2);
-      expect(warnings[0]).toStrictEqual(requiresDefinedOnNonEntityFieldWarning(`Object.name`, N_A));
+      expect(warnings[0]).toStrictEqual(requiresDefinedOnNonEntityFieldWarning(`Object.name`, NOT_APPLICABLE));
       expect(warnings[1]).toStrictEqual(
-        nonExternalConditionalFieldWarning('Object.name', N_A, 'Object.id', 'id', FieldSetDirective.REQUIRES),
+        nonExternalConditionalFieldWarning(
+          'Object.name',
+          NOT_APPLICABLE,
+          'Object.id',
+          'id',
+          FieldSetDirective.REQUIRES,
+        ),
       );
       expect(normalizationResult).toBeDefined();
       expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
