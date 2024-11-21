@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.95.1](https://github.com/wundergraph/cosmo/compare/studio@0.95.0...studio@0.95.1) (2024-11-21)
+
+### Bug Fixes
+
+* pagination ui of operations ([#1389](https://github.com/wundergraph/cosmo/issues/1389)) ([7ca20fb](https://github.com/wundergraph/cosmo/commit/7ca20fba7f0c5c988dacc45702f408565729b1f1)) (@JivusAyrus)
+* text overflow of composition errors and warnings ([#1391](https://github.com/wundergraph/cosmo/issues/1391)) ([6d8e36c](https://github.com/wundergraph/cosmo/commit/6d8e36c0c01255a88973eb476536b31ceae0ec35)) (@JivusAyrus)
+
 # [0.95.0](https://github.com/wundergraph/cosmo/compare/studio@0.94.3...studio@0.95.0) (2024-11-18)
 
 ### Features
