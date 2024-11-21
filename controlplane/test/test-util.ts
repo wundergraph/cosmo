@@ -327,8 +327,11 @@ export const SetupTest = async function ({
     authenticator,
     realm,
     queues: {
-      deleteOrganizationQueue,
       readmeQueue,
+      deleteOrganizationQueue,
+      deactivateOrganizationQueue,
+      deleteUserQueue,
+      reactivateOrganizationQueue,
     },
   };
 };

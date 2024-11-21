@@ -149,14 +149,11 @@ describe('Deactivate Organization', (ctx) => {
       deleteOrganizationQueue: queues.deleteOrganizationQueue,
     });
 
-    const reactivateJob = await orgRepo.deactivateOrganization({
+    const reactivateJob = await queues.reactivateOrganizationQueue.addJob({
       organizationId: org!.id,
-      keycloakClient,
-      keycloakRealm: realm,
-      deleteOrganizationQueue: queues.deleteOrganizationQueue,
+      organizationSlug: org!.slug,
     });
 
-    await reactivateJob.changeDelay(0);
     await reactivateJob.waitUntilFinished(new QueueEvents(reactivateJob.queueName));
 
     const removedJob = await queues.deleteOrganizationQueue.getJob({
