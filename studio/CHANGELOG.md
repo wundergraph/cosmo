@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.95.2](https://github.com/wundergraph/cosmo/compare/studio@0.95.1...studio@0.95.2) (2024-11-22)
+
+### Bug Fixes
+
+* delete org and user workflows ([#1326](https://github.com/wundergraph/cosmo/issues/1326)) ([484898d](https://github.com/wundergraph/cosmo/commit/484898d885fc99dda8f81a2855173bd3628a5639)) (@thisisnithin)
+
 ## [0.95.1](https://github.com/wundergraph/cosmo/compare/studio@0.95.0...studio@0.95.1) (2024-11-21)
 
 ### Bug Fixes
