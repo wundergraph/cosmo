@@ -709,7 +709,7 @@ export function undefinedFieldInFieldSetErrorMessage(
 ): string {
   return (
     ` The following field set is invalid:\n  "${fieldSet}"\n` +
-    ` This is because of the selection set corresponding to the field coordinate "${parentTypeName}.${fieldName}".\n` +
+    ` This is because of the selection set corresponding to the Field coordinates "${parentTypeName}.${fieldName}".\n` +
     ` The type "${parentTypeName}" does not define a field named "${fieldName}".`
   );
 }
@@ -1626,5 +1626,14 @@ export function unexpectedNonCompositeOutputTypeError(namedTypeName: string, act
   return new Error(
     `Expected named type "${namedTypeName}" to be a composite output type (Object or Interface)` +
       ` but received "${actualTypeString}".\nThis should never happen. Please report this issue on GitHub.`,
+  );
+}
+
+export function invalidExternalDirectiveError(fieldCoords: string): Error {
+  return new Error(
+    `The Object Field "${fieldCoords}" is invalidly declared "@external". An Object Field should only` +
+      ` be declared "@external" if it is part of a "@key", "@provides", or "@requires" FieldSet, or the Field is` +
+      ` necessary to satisfy an Interface implementation. In the case that none of these conditions is true, the` +
+      ` "@external" directive should be removed.`,
   );
 }
