@@ -33,10 +33,10 @@ export class DeleteUserQueue implements IQueue<DeleteUserInput> {
         removeOnFail: {
           age: 90 * 86_400,
         },
-        attempts: 3,
+        attempts: 6,
         backoff: {
           type: 'exponential',
-          delay: 10_000,
+          delay: 112_000,
         },
       },
     });

@@ -27,10 +27,10 @@ export class AIGraphReadmeQueue implements IQueue<CreateReadmeInputEvent> {
       defaultJobOptions: {
         removeOnComplete: true,
         removeOnFail: true,
-        attempts: 3,
+        attempts: 6,
         backoff: {
           type: 'exponential',
-          delay: 10_000,
+          delay: 112_000,
         },
       },
     });
