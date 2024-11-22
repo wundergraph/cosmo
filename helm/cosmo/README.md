@@ -85,7 +85,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | controlplane.configuration.smtp.requireTls | bool | `true` | Forces the client to use STARTTLS. Default is true. |
 | controlplane.configuration.smtp.secure | bool | `true` | Defines if the connection should use SSL. Default is true. |
 | controlplane.configuration.smtp.username | string | `""` | The username to use. Default is "". |
-| controlplane.jobs | object | `{"activateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","slug":"foo"},"clickhouseMigration":{"additionalLabels":{}},"databaseMigration":{"additionalLabels":{}},"deactivateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","reason":"","slug":"foo"},"deleteUser":{"additionalLabels":{},"enabled":false,"id":"123"},"seedOrganization":{"additionalLabels":{}}}` | Configure jobs to be executed in the control plane |
+| controlplane.jobs | object | `{"activateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","slug":"foo"},"clickhouseMigration":{"additionalLabels":{}},"databaseMigration":{"additionalLabels":{}},"deactivateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","reason":"","slug":"foo"},"deleteUser":{"additionalLabels":{},"email":"foo@wundergraph.com","enabled":true,"id":"67c5a810-cbf8-4ca2-9a48-84d39dc0a06b"},"seedOrganization":{"additionalLabels":{}}}` | Configure jobs to be executed in the control plane |
 | controlplane.jobs.activateOrganization | object | `{"additionalLabels":{},"enabled":false,"id":"123","slug":"foo"}` | Used to activate an organization and remove the scheduled deletion |
 | controlplane.jobs.activateOrganization.additionalLabels | object | `{}` | Adds additional labels to the job |
 | controlplane.jobs.activateOrganization.enabled | bool | `false` | Enables the job to be run |
@@ -99,10 +99,11 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | controlplane.jobs.deactivateOrganization.id | string | `"123"` | The unique identifier of the organization |
 | controlplane.jobs.deactivateOrganization.reason | string | `""` | The reason for deactivation |
 | controlplane.jobs.deactivateOrganization.slug | string | `"foo"` | The slug of the organization |
-| controlplane.jobs.deleteUser | object | `{"additionalLabels":{},"enabled":false,"id":"123"}` | Used to delete the user |
+| controlplane.jobs.deleteUser | object | `{"additionalLabels":{},"email":"foo@wundergraph.com","enabled":true,"id":"67c5a810-cbf8-4ca2-9a48-84d39dc0a06b"}` | Used to delete the user |
 | controlplane.jobs.deleteUser.additionalLabels | object | `{}` | Adds additional labels to the job |
-| controlplane.jobs.deleteUser.enabled | bool | `false` | Enables the job to be run |
-| controlplane.jobs.deleteUser.id | string | `"123"` | The unique identifier of the user |
+| controlplane.jobs.deleteUser.email | string | `"foo@wundergraph.com"` | The email of the user |
+| controlplane.jobs.deleteUser.enabled | bool | `true` | Enables the job to be run |
+| controlplane.jobs.deleteUser.id | string | `"67c5a810-cbf8-4ca2-9a48-84d39dc0a06b"` | The unique identifier of the user |
 | controlplane.jobs.seedOrganization.additionalLabels | object | `{}` | Adds additional labels to the job (see: .Values.global.seed) |
 | global.cdn.enabled | bool | `true` |  |
 | global.cdn.port | int | `8787` |  |
