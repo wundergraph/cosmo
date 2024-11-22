@@ -3295,7 +3295,7 @@ func TestTelemetry(t *testing.T) {
 			})
 		})
 
-		t.Run("Should emit subgraph error metric regardless if subgraph does not return any error codes", func(t *testing.T) {
+		t.Run("Should emit subgraph error metric regardless if subgraph does return any error without codes", func(t *testing.T) {
 			t.Parallel()
 
 			exporter := tracetest.NewInMemoryExporter(t)
