@@ -3295,6 +3295,69 @@ func TestTelemetry(t *testing.T) {
 			})
 		})
 
+		t.Run("Should emit subgraph error metric regardless if subgraph does not return any error codes", func(t *testing.T) {
+			t.Parallel()
+
+			exporter := tracetest.NewInMemoryExporter(t)
+			metricReader := metric.NewManualReader()
+
+			testenv.Run(t, &testenv.Config{
+				TraceExporter: exporter,
+				MetricReader:  metricReader,
+				CustomMetricAttributes: []config.CustomAttribute{
+					{
+						Key: "error_codes",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldGraphQLErrorCodes,
+						},
+					},
+					{
+						Key: "error_services",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldGraphQLErrorServices,
+						},
+					},
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					Products: testenv.SubgraphConfig{
+						Middleware: func(handler http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								w.Header().Set("Content-Type", "application/json")
+								w.WriteHeader(http.StatusForbidden)
+								_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","path": ["foo"]},{"message":"MyErrorMessage","path": ["bar"]}]}`))
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Header: map[string][]string{
+						"x-custom-header": {"custom-value"},
+					},
+					Query: `query myQuery { employees { id details { forename surname } notes } }`,
+				})
+				require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'products' at Path 'employees'.","extensions":{"errors":[{"message":"Unauthorized","path":["foo"]},{"message":"MyErrorMessage","path":["bar"]}],"statusCode":403}}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
+
+				rm := metricdata.ResourceMetrics{}
+				err := metricReader.Collect(context.Background(), &rm)
+				require.NoError(t, err)
+
+				found := false
+
+				for _, point := range rm.ScopeMetrics[0].Metrics[1].Data.(metricdata.Sum[int64]).DataPoints {
+
+					require.Equal(t, int64(1), point.Value)
+
+					if point.Attributes.HasValue(otel.WgSubgraphName) && point.Attributes.HasValue(otel.WgSubgraphID) {
+						found = true
+						break
+					}
+				}
+
+				require.True(t, found, "expected to find a datapoint with subgraph name and id in the metrics")
+			})
+		})
+
 		t.Run("Tracing is not affected by custom metric attributes", func(t *testing.T) {
 			t.Parallel()
 
