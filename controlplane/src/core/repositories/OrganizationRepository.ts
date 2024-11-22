@@ -29,9 +29,12 @@ import {
 import { Feature, FeatureIds, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
 import Keycloak from '../services/Keycloak.js';
 import { DeleteOrganizationQueue } from '../workers/DeleteOrganizationWorker.js';
+import { BlobStorage } from '../blobstorage/index.js';
 import { BillingRepository } from './BillingRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { OidcRepository } from './OidcRepository.js';
+import { SubgraphRepository } from './SubgraphRepository.js';
+import { TargetRepository } from './TargetRepository.js';
 
 /**
  * Repository for organization related operations.
@@ -849,13 +852,32 @@ export class OrganizationRepository {
     return result[0];
   }
 
-  public deleteOrganization(organizationId: string) {
+  /**
+    This manually deletes graphs from db and blob storage.
+    Everything else is deleted automatically by db constraints
+  */
+  public deleteOrganization(organizationId: string, blobStorage: BlobStorage) {
     return this.db.transaction(async (tx) => {
-      const oidcRepo = new OidcRepository(tx);
-      await oidcRepo.deleteOidcProvider({ organizationId });
+      const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, organizationId);
+      const targetRepo = new TargetRepository(tx, organizationId);
+
+      const graphs = await fedGraphRepo.list({
+        limit: 0,
+        offset: 0,
+      });
+
+      await targetRepo.deleteAll();
+
+      // Clean up blob storage
+      const blobPromises = [];
+      for (const graph of graphs) {
+        const blobStorageDirectory = `${organizationId}/${graph.id}`;
+        blobPromises.push(blobStorage.removeDirectory({ key: blobStorageDirectory }));
+      }
+      await Promise.allSettled(blobPromises);
 
       // Delete organization from db
-      await this.db.delete(organizations).where(eq(organizations.id, organizationId)).execute();
+      await tx.delete(organizations).where(eq(organizations.id, organizationId)).execute();
     });
   }
 
