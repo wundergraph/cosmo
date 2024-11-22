@@ -1,97 +1,34 @@
 import process from 'node:process';
-import { drizzle } from 'drizzle-orm/postgres-js';
 import { pino } from 'pino';
-import postgres from 'postgres';
-import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
-import { buildDatabaseConnectionConfig } from '../core/plugins/database.js';
-import { UserRepository } from '../core/repositories/UserRepository.js';
-import { PlatformWebhookService } from '../core/webhooks/PlatformWebhookService.js';
-import Keycloak from '../core/services/Keycloak.js';
-import * as schema from '../db/schema.js';
-import { OrganizationRepository } from '../core/repositories/OrganizationRepository.js';
+import { createRedisConnections } from '../core/plugins/redis.js';
+import { DeleteUserQueue } from '../core/workers/DeleteUserQueue.js';
 import { getConfig } from './get-config.js';
 
-const {
-  realm,
-  loginRealm,
-  adminUser,
-  adminPassword,
-  clientId,
-  apiUrl,
-  databaseConnectionUrl,
-  databaseTlsCa,
-  databaseTlsCert,
-  databaseTlsKey,
-  webhookUrl,
-  webhookSecret,
-} = getConfig();
+const { redis } = getConfig();
 
 const userId = process.env.USER_ID || '';
+const userEmail = process.env.USER_EMAIL || '';
 
-// Establish database connection
-const connectionConfig = await buildDatabaseConnectionConfig({
-  tls:
-    databaseTlsCa || databaseTlsCert || databaseTlsKey
-      ? { ca: databaseTlsCa, cert: databaseTlsCert, key: databaseTlsKey }
-      : undefined,
+const { redisQueue, redisWorker } = await createRedisConnections({
+  host: redis.host!,
+  port: Number(redis.port),
+  password: redis.password,
+  tls: redis.tls,
 });
-const queryConnection = postgres(databaseConnectionUrl, {
-  ...connectionConfig,
-  max: 1,
-});
-const db = drizzle(queryConnection, { schema: { ...schema } });
 
-// Authenticate with keycloak
-const keycloakClient = new Keycloak({
-  apiUrl,
-  realm: loginRealm,
-  clientId,
-  adminUser,
-  adminPassword,
-});
-await keycloakClient.authenticateClient();
+await redisQueue.connect();
+await redisWorker.connect();
+await redisWorker.ping();
+await redisQueue.ping();
 
 const logger = pino();
 
-// Init platform webhooks
-const platformWebhooks = new PlatformWebhookService(webhookUrl, webhookSecret, logger);
+const deleteUserQueue = new DeleteUserQueue(logger, redisQueue);
 
-// Find user on keycloak
-const user = await keycloakClient.client.users.findOne({
-  realm,
-  id: userId,
+await deleteUserQueue.addJob({
+  userId,
+  userEmail,
 });
 
-const userRepo = new UserRepository(logger, db);
-const orgRepo = new OrganizationRepository(logger, db);
-
-if (!user || !user.id || !user.email) {
-  throw new Error('User not found');
-}
-
-// Check if user can be deleted
-const { isSafe, soloOrganizations, unsafeOrganizations } = await orgRepo.canUserBeDeleted(user.id);
-
-console.log(`soloOrganizations=${JSON.stringify(soloOrganizations)}\n`);
-console.log(`unsafeOrganizations=${JSON.stringify(unsafeOrganizations)}\n`);
-
-if (!isSafe) {
-  throw new Error('Cannot delete user because they are the only admin of an organization with several members.');
-}
-
-// Delete the user
-await userRepo.deleteUser({
-  id: user.id,
-  keycloakClient,
-  keycloakRealm: realm,
-});
-
-platformWebhooks.send(PlatformEventName.USER_DELETE_SUCCESS, {
-  user_id: user.id,
-  user_email: user.email!,
-});
-
-// Close database connection
-await queryConnection.end({
-  timeout: 1,
-});
+redisQueue.disconnect();
+redisWorker.disconnect();
