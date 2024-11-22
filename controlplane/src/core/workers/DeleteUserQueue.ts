@@ -15,6 +15,7 @@ const WorkerName = 'DeleteUserWorker';
 
 export interface DeleteUserInput {
   userId: string;
+  userEmail: string;
 }
 
 export class DeleteUserQueue implements IQueue<DeleteUserInput> {
@@ -84,36 +85,34 @@ class DeleteUserWorker implements IWorker {
       await this.input.keycloakClient.authenticateClient();
 
       const user = await userRepo.byId(job.data.userId);
-      if (!user || !user.id || !user.email) {
-        throw new Error('User not found');
-      }
+      if (user) {
+        const { isSafe, soloOrganizations, unsafeOrganizations } = await orgRepo.canUserBeDeleted(job.data.userId);
 
-      const { isSafe, soloOrganizations, unsafeOrganizations } = await orgRepo.canUserBeDeleted(job.data.userId);
+        if (!isSafe) {
+          this.input.logger.info(
+            {
+              userId: job.data.userId,
+              soloOrganizations,
+              unsafeOrganizations,
+            },
+            'Unsafe to delete user',
+          );
+          return;
+        }
 
-      if (!isSafe) {
-        this.input.logger.info(
+        await userRepo.deleteUser(
           {
-            userId: job.data.userId,
-            soloOrganizations,
-            unsafeOrganizations,
+            id: job.data.userId,
+            keycloakClient: this.input.keycloakClient,
+            keycloakRealm: this.input.keycloakRealm,
           },
-          'Unsafe to delete user',
+          this.input.blobStorage,
         );
-        return;
       }
 
-      await userRepo.deleteUser(
-        {
-          id: job.data.userId,
-          keycloakClient: this.input.keycloakClient,
-          keycloakRealm: this.input.keycloakRealm,
-        },
-        this.input.blobStorage,
-      );
-
-      this.input.platformWebhooks.send(PlatformEventName.USER_DELETE_SUCCESS, {
-        user_id: user.id,
-        user_email: user.email!,
+      await this.input.platformWebhooks.send(PlatformEventName.USER_DELETE_SUCCESS, {
+        user_id: job.data.userId,
+        user_email: job.data.userEmail,
       });
     } catch (err) {
       this.input.logger.error({ jobId: job.id, userId: job.data.userId, err }, `Failed to delete user`);

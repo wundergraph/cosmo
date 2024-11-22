@@ -78,6 +78,8 @@ spec:
 
             - name: USER_ID
               value: "{{ .Values.jobs.deleteUser.id }}"
+            - name: USER_EMAIL
+              value: "{{ .Values.jobs.deleteUser.email }}"
           args:
             - "/app/dist/bin/delete-user.js"
 {{- end }}

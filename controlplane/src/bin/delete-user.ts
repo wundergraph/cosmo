@@ -7,6 +7,7 @@ import { getConfig } from './get-config.js';
 const { redis } = getConfig();
 
 const userId = process.env.USER_ID || '';
+const userEmail = process.env.USER_EMAIL || '';
 
 const { redisQueue, redisWorker } = await createRedisConnections({
   host: redis.host!,
@@ -26,6 +27,7 @@ const deleteUserQueue = new DeleteUserQueue(logger, redisQueue);
 
 await deleteUserQueue.addJob({
   userId,
+  userEmail,
 });
 
 redisQueue.disconnect();

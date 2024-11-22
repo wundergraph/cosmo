@@ -168,9 +168,11 @@ controlplane:
       # -- Adds additional labels to the job
       additionalLabels: {}
       # -- Enables the job to be run
-      enabled: false
+      enabled: true
       # -- The unique identifier of the user
-      id: '123'
+      id: '67c5a810-cbf8-4ca2-9a48-84d39dc0a06b'
+      # -- The email of the user
+      email: 'foo@wundergraph.com'
     clickhouseMigration:
       # -- Adds additional labels to the clickhouse migration job (see: .Values.global.otelcollector)
       additionalLabels: {}
