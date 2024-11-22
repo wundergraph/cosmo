@@ -4,25 +4,24 @@ import pino from 'pino';
 import * as schema from '../../db/schema.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import Keycloak from '../services/Keycloak.js';
-import { OidcRepository } from '../repositories/OidcRepository.js';
-import OidcProvider from '../services/OidcProvider.js';
-import { BlobStorage } from '../blobstorage/index.js';
+import { DeleteOrganizationQueue } from './DeleteOrganizationWorker.js';
 import { IQueue, IWorker } from './Worker.js';
 
-const QueueName = 'organization.delete';
-const WorkerName = 'DeleteOrganizationWorker';
+const QueueName = 'organization.reactivate';
+const WorkerName = 'ReactivateOrganizationWorker';
 
-export interface DeleteOrganizationInput {
+export interface ReactivateOrganizationInput {
   organizationId: string;
+  organizationSlug: string;
 }
 
-export class DeleteOrganizationQueue implements IQueue<DeleteOrganizationInput> {
-  private readonly queue: Queue<DeleteOrganizationInput>;
+export class ReactivateOrganizationQueue implements IQueue<ReactivateOrganizationInput> {
+  private readonly queue: Queue<ReactivateOrganizationInput>;
   private readonly logger: pino.Logger;
 
   constructor(log: pino.Logger, conn: ConnectionOptions) {
     this.logger = log.child({ queue: QueueName });
-    this.queue = new Queue<DeleteOrganizationInput>(QueueName, {
+    this.queue = new Queue<ReactivateOrganizationInput>(QueueName, {
       connection: conn,
       defaultJobOptions: {
         removeOnComplete: {
@@ -44,87 +43,70 @@ export class DeleteOrganizationQueue implements IQueue<DeleteOrganizationInput> 
     });
   }
 
-  public addJob(job: DeleteOrganizationInput, opts?: Omit<JobsOptions, 'jobId'>) {
+  public addJob(job: ReactivateOrganizationInput, opts?: Omit<JobsOptions, 'jobId'>) {
     return this.queue.add(job.organizationId, job, {
       ...opts,
       jobId: job.organizationId,
     });
   }
 
-  public removeJob(job: DeleteOrganizationInput) {
+  public removeJob(job: ReactivateOrganizationInput) {
     return this.queue.remove(job.organizationId);
   }
 
-  public getJob(job: DeleteOrganizationInput) {
+  public getJob(job: ReactivateOrganizationInput) {
     return this.queue.getJob(job.organizationId);
   }
 }
 
-class DeleteOrganizationWorker implements IWorker {
+class ReactivateOrganizationWorker implements IWorker {
   constructor(
     private input: {
-      redisConnection: ConnectionOptions;
       db: PostgresJsDatabase<typeof schema>;
       logger: pino.Logger;
-      keycloakClient: Keycloak;
-      keycloakRealm: string;
-      blobStorage: BlobStorage;
+      deleteOrganizationQueue: DeleteOrganizationQueue;
     },
   ) {
     this.input.logger = input.logger.child({ worker: WorkerName });
   }
 
-  public async handler(job: Job<DeleteOrganizationInput>) {
+  public async handler(job: Job<ReactivateOrganizationInput>) {
     try {
       const orgRepo = new OrganizationRepository(this.input.logger, this.input.db);
-      const oidcRepo = new OidcRepository(this.input.db);
-      const oidcProvider = new OidcProvider();
 
-      await this.input.keycloakClient.authenticateClient();
-
-      const org = await orgRepo.byId(job.data.organizationId);
+      const org = await orgRepo.bySlug(job.data.organizationSlug);
       if (!org) {
         throw new Error('Organization not found');
       }
 
-      const provider = await oidcRepo.getOidcProvider({ organizationId: job.data.organizationId });
-      if (provider) {
-        await oidcProvider.deleteOidcProvider({
-          kcClient: this.input.keycloakClient,
-          kcRealm: this.input.keycloakRealm,
-          organizationSlug: org.slug,
-          alias: provider.alias,
-        });
+      if (org.id !== job.data.organizationId) {
+        throw new Error('Id and slug mismatch');
       }
 
-      await orgRepo.deleteOrganization(job.data.organizationId, this.input.blobStorage);
-
-      await this.input.keycloakClient.deleteOrganizationGroup({
-        realm: this.input.keycloakRealm,
-        organizationSlug: org.slug,
+      await orgRepo.reactivateOrganization({
+        organizationId: job.data.organizationId,
+        deleteOrganizationQueue: this.input.deleteOrganizationQueue,
       });
     } catch (err) {
       this.input.logger.error(
         { jobId: job.id, organizationId: job.data.organizationId, err },
-        `Failed to delete organization`,
+        `Failed to reactivate organization`,
       );
       throw err;
     }
   }
 }
 
-export const createDeleteOrganizationWorker = (input: {
+export const createReactivateOrganizationWorker = (input: {
   redisConnection: ConnectionOptions;
   db: PostgresJsDatabase<typeof schema>;
   logger: pino.Logger;
-  keycloakClient: Keycloak;
-  keycloakRealm: string;
-  blobStorage: BlobStorage;
+  deleteOrganizationQueue: DeleteOrganizationQueue;
 }) => {
   const log = input.logger.child({ worker: WorkerName });
-  const worker = new Worker<DeleteOrganizationInput>(
+  const worker = new Worker<ReactivateOrganizationInput>(
     QueueName,
-    (job) => new DeleteOrganizationWorker(input).handler(job),
+    (job) => new ReactivateOrganizationWorker(input).handler(job),
     {
       connection: input.redisConnection,
       concurrency: 10,

@@ -1453,36 +1453,34 @@ const DeleteOrganization = () => {
     mode: "onChange",
   });
 
-  const { mutate, isPending } = useMutation(deleteOrganization);
-
   const { toast } = useToast();
 
+  const { mutate, isPending } = useMutation(deleteOrganization, {
+    onSuccess: (d) => {
+      if (d.response?.code === EnumStatusCode.OK) {
+        router.reload();
+        toast({
+          description: "Deleted the organization succesfully.",
+          duration: 3000,
+        });
+      } else if (d.response?.details) {
+        toast({ description: d.response.details, duration: 3000 });
+      }
+      setOpen(false);
+    },
+    onError: (error) => {
+      toast({
+        description: "Could not delete the organization. Please try again.",
+        duration: 3000,
+      });
+      setOpen(false);
+    },
+  });
+
   const handleDeleteOrg = () => {
-    mutate(
-      {
-        userID: user?.id,
-      },
-      {
-        onSuccess: (d) => {
-          if (d.response?.code === EnumStatusCode.OK) {
-            router.reload();
-            toast({
-              description: "Deleted the organization succesfully.",
-              duration: 3000,
-            });
-          } else if (d.response?.details) {
-            toast({ description: d.response.details, duration: 3000 });
-          }
-        },
-        onError: (error) => {
-          toast({
-            description: "Could not delete the organization. Please try again.",
-            duration: 3000,
-          });
-        },
-      },
-    );
-    setOpen(false);
+    mutate({
+      userID: user?.id,
+    });
   };
 
   return (

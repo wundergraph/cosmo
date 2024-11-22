@@ -17,6 +17,9 @@ import Mailer from './services/Mailer.js';
 import { Authorization } from './services/Authorization.js';
 import { AIGraphReadmeQueue } from './workers/AIGraphReadmeWorker.js';
 import { DeleteOrganizationQueue } from './workers/DeleteOrganizationWorker.js';
+import { DeactivateOrganizationQueue } from './workers/DeactivateOrganizationWorker.js';
+import { DeleteUserQueue } from './workers/DeleteUserQueue.js';
+import { ReactivateOrganizationQueue } from './workers/ReactivateOrganizationWorker.js';
 
 export interface RouterOptions {
   db: PostgresJsDatabase<typeof schema>;
@@ -40,6 +43,9 @@ export interface RouterOptions {
   queues: {
     readmeQueue: AIGraphReadmeQueue;
     deleteOrganizationQueue: DeleteOrganizationQueue;
+    deactivateOrganizationQueue: DeactivateOrganizationQueue;
+    reactivateOrganizationQueue: ReactivateOrganizationQueue;
+    deleteUserQueue: DeleteUserQueue;
   };
   stripeSecretKey?: string;
   cdnBaseUrl: string;

@@ -40,11 +40,14 @@ export function deleteUser(
     await opts.keycloakClient.authenticateClient();
 
     // Delete the user
-    await userRepo.deleteUser({
-      id: authContext.userId,
-      keycloakClient: opts.keycloakClient,
-      keycloakRealm: opts.keycloakRealm,
-    });
+    await userRepo.deleteUser(
+      {
+        id: authContext.userId,
+        keycloakClient: opts.keycloakClient,
+        keycloakRealm: opts.keycloakRealm,
+      },
+      opts.blobStorage,
+    );
 
     opts.platformWebhooks.send(PlatformEventName.USER_DELETE_SUCCESS, {
       user_id: authContext.userId,

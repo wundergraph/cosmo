@@ -5,6 +5,7 @@ import * as schema from '../../db/schema.js';
 import { OpenAIGraphql } from '../openai-graphql/index.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
+import { IQueue, IWorker } from './Worker.js';
 
 const QueueName = 'ai.graph-readme-generator';
 const WorkerName = 'AIGraphReadmeWorker';
@@ -15,7 +16,7 @@ export interface CreateReadmeInputEvent {
   type: 'subgraph' | 'federated_graph';
 }
 
-export class AIGraphReadmeQueue {
+export class AIGraphReadmeQueue implements IQueue<CreateReadmeInputEvent> {
   private readonly queue: Queue<CreateReadmeInputEvent>;
   private readonly logger: pino.Logger;
 
@@ -39,8 +40,8 @@ export class AIGraphReadmeQueue {
     });
   }
 
-  public async addJob(job: CreateReadmeInputEvent) {
-    await this.queue.add(`targets/${job.targetId}`, job, {
+  public addJob(job: CreateReadmeInputEvent) {
+    return this.queue.add(`targets/${job.targetId}`, job, {
       removeOnComplete: {
         age: 3600, // keep up to 1 hour
         count: 100, // keep up to 100 jobs
@@ -50,9 +51,17 @@ export class AIGraphReadmeQueue {
       },
     });
   }
+
+  public removeJob(job: CreateReadmeInputEvent) {
+    return this.queue.remove(job.targetId);
+  }
+
+  public getJob(job: CreateReadmeInputEvent) {
+    return this.queue.getJob(job.targetId);
+  }
 }
 
-class AIGraphReadmeWorker {
+class AIGraphReadmeWorker implements IWorker {
   private readonly openaiGraphql: OpenAIGraphql;
 
   constructor(
