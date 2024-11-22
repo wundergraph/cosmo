@@ -2027,6 +2027,11 @@
           "type": "integer",
           "default": 10240,
           "description": "The size of the validation cache."
+        },
+        "enable_operation_name_propagation": {
+            "type": "boolean",
+            "default": true,
+            "description": "Enable the operation name propagation. This will include the operation name and fetch ID in each corresponding request."
         }
       }
     },

@@ -243,7 +243,8 @@
     "ParseKitPoolSize": 16,
     "EnableValidationCache": true,
     "ValidationCacheSize": 10240,
-    "ResolverMaxRecyclableParserSize": 32768
+    "ResolverMaxRecyclableParserSize": 32768,
+    "EnableOperationNamePropagation": true
   },
   "WebSocket": {
     "Enabled": true,

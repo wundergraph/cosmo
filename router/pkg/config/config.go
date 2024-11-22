@@ -320,6 +320,7 @@ type EngineExecutionConfiguration struct {
 	EnableValidationCache                  bool                     `envDefault:"true" env:"ENGINE_ENABLE_VALIDATION_CACHE" yaml:"enable_validation_cache"`
 	ValidationCacheSize                    int64                    `envDefault:"10240" env:"ENGINE_VALIDATION_CACHE_SIZE" yaml:"validation_cache_size,omitempty"`
 	ResolverMaxRecyclableParserSize        int                      `envDefault:"32768" env:"ENGINE_RESOLVER_MAX_RECYCLABLE_PARSER_SIZE" yaml:"resolver_max_recyclable_parser_size,omitempty"`
+	EnableOperationNamePropagation         bool                     `envDefault:"true" env:"ENGINE_ENABLE_OPERATION_NAME_PROPAGATION" yaml:"enable_operation_name_propagation"`
 }
 
 type SecurityConfiguration struct {
