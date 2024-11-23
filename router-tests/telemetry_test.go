@@ -3295,7 +3295,7 @@ func TestTelemetry(t *testing.T) {
 			})
 		})
 
-		t.Run("Should emit subgraph error metric regardless if subgraph does return any error without codes", func(t *testing.T) {
+		t.Run("Should emit subgraph error metric when subgraph request failed", func(t *testing.T) {
 			t.Parallel()
 
 			exporter := tracetest.NewInMemoryExporter(t)
@@ -3318,15 +3318,12 @@ func TestTelemetry(t *testing.T) {
 						},
 					},
 				},
+				RouterOptions: []core.Option{
+					core.WithSubgraphRetryOptions(false, 0, 0, 0),
+				},
 				Subgraphs: testenv.SubgraphsConfig{
 					Products: testenv.SubgraphConfig{
-						Middleware: func(handler http.Handler) http.Handler {
-							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-								w.Header().Set("Content-Type", "application/json")
-								w.WriteHeader(http.StatusForbidden)
-								_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","path": ["foo"]},{"message":"MyErrorMessage","path": ["bar"]}]}`))
-							})
-						},
+						CloseOnStart: true,
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -3336,7 +3333,7 @@ func TestTelemetry(t *testing.T) {
 					},
 					Query: `query myQuery { employees { id details { forename surname } notes } }`,
 				})
-				require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'products' at Path 'employees'.","extensions":{"errors":[{"message":"Unauthorized","path":["foo"]},{"message":"MyErrorMessage","path":["bar"]}],"statusCode":403}}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
+				require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'products' at Path 'employees'."}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
 
 				rm := metricdata.ResourceMetrics{}
 				err := metricReader.Collect(context.Background(), &rm)
