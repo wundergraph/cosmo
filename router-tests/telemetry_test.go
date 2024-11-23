@@ -3295,7 +3295,7 @@ func TestTelemetry(t *testing.T) {
 			})
 		})
 
-		t.Run("Should emit subgraph error metric when subgraph request failed", func(t *testing.T) {
+		t.Run("Should emit subgraph error metric when subgraph request failed / connection issue", func(t *testing.T) {
 			t.Parallel()
 
 			exporter := tracetest.NewInMemoryExporter(t)
