@@ -84,6 +84,21 @@ services:
     profiles:
       - debug
 
+  grafana:
+    image: grafana/grafana:11.3.1
+    ports:
+      - '9300:3000'
+    volumes:
+      - grafana-storage:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning
+    container_name: grafana
+    restart: unless-stopped
+    networks:
+      - primary
+    environment:
+      - GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=true
+      - GF_INSTALL_PLUGINS=grafana-clickhouse-datasource
+
   graphqlmetrics:
     image: ghcr.io/wundergraph/cosmo/graphqlmetrics:${DC_GRAPHQLMETRICS_VERSION:-latest}
     build:
@@ -254,6 +269,7 @@ volumes:
   postgres:
   clickhouse:
   prometheus:
+  grafana-storage:
   minio:
   redis:
   redis-slave:
