@@ -17,6 +17,6 @@ datasources:
       defaultDatabase: cosmo
       port: 9000
       host: clickhouse
-      username: default
+      username: $__env{CLICKHOUSE_USER}
     secureJsonData:
-      password: changeme
+      password: $__env{CLICKHOUSE_PASSWORD}
