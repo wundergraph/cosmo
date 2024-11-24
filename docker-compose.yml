@@ -98,6 +98,8 @@ services:
     environment:
       - GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=true
       - GF_INSTALL_PLUGINS=grafana-clickhouse-datasource
+    profiles:
+      - debug
 
   graphqlmetrics:
     image: ghcr.io/wundergraph/cosmo/graphqlmetrics:${DC_GRAPHQLMETRICS_VERSION:-latest}
