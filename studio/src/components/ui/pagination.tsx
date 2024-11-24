@@ -42,7 +42,7 @@ export const Pagination = ({
   const pageSizeOptions = options ?? [10, 20, 30, 40, 50];
 
   return (
-    <div className="flex justify-end">
+    <div className="flex justify-end space-x-3">
       <div className="flex items-center space-x-2">
         <p className="text-sm font-medium">Rows per page</p>
         <Select
@@ -64,7 +64,7 @@ export const Pagination = ({
           </SelectContent>
         </Select>
       </div>
-      <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+      <div className="flex items-center justify-center text-sm font-medium">
         Page {noOfPages === 0 ? "0" : pageNumber} of {noOfPages}
       </div>
       <div className="flex items-center space-x-2">

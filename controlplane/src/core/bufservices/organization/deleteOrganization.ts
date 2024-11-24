@@ -89,7 +89,7 @@ export function deleteOrganization(
       });
     }
 
-    await orgRepo.deleteOrganization(authContext.organizationId);
+    await orgRepo.deleteOrganization(authContext.organizationId, opts.blobStorage);
 
     await opts.keycloakClient.deleteOrganizationGroup({
       realm: opts.keycloakRealm,

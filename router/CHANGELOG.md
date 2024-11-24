@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.144.0](https://github.com/wundergraph/cosmo/compare/router@0.143.3...router@0.144.0) (2024-11-21)
+
+### Features
+
+* **router:** add ability to set auth scopes in custom module ([#1390](https://github.com/wundergraph/cosmo/issues/1390)) ([251f1d5](https://github.com/wundergraph/cosmo/commit/251f1d506b0fdc939c456daf247742775f0e12ce)) (@df-wg)
+
 ## [0.143.3](https://github.com/wundergraph/cosmo/compare/router@0.143.2...router@0.143.3) (2024-11-19)
 
 ### Bug Fixes

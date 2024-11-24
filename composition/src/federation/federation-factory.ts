@@ -190,10 +190,9 @@ import {
   setParentDataExtensionType,
   validateExternalAndShareable,
 } from '../schema-building/utils';
-import { ObjectExtensionData } from '../schema-building/type-extension-data';
 
 import { renameRootTypes } from './walkers';
-import { cloneDeep, union } from 'lodash';
+import { cloneDeep } from 'lodash';
 import {
   DivergentType,
   FederateTypeOptions,
@@ -880,7 +879,7 @@ export class FederationFactory {
     return members;
   }
 
-  recordTagNamesByPath(data: NodeData | ObjectExtensionData, nodePath?: string) {
+  recordTagNamesByPath(data: NodeData, nodePath?: string) {
     const path = nodePath || data.name;
     if (data.persistedDirectivesData.tags.size > 0) {
       const tagNames = getValueOrDefault(this.tagNamesByPath, path, () => new Set<string>());
@@ -1101,7 +1100,7 @@ export class FederationFactory {
   }
 
   propagateInaccessibilityToExistingChildren(
-    data: InputObjectDefinitionData | InterfaceDefinitionData | ObjectDefinitionData | ObjectExtensionData,
+    data: InputObjectDefinitionData | InterfaceDefinitionData | ObjectDefinitionData,
   ) {
     data.isInaccessible = true;
     switch (data.kind) {
