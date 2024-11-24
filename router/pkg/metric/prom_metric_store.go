@@ -101,7 +101,16 @@ func (h *PromMetricStore) Shutdown(ctx context.Context) error {
 // explodeAddInstrument explodes the metric into multiple metrics with different label values in Prometheus.
 func explodeAddInstrument(ctx context.Context, sliceAttrs []attribute.KeyValue, collect func(ctx context.Context, opts ...otelmetric.AddOption)) {
 	for _, attr := range sliceAttrs {
-		for _, v := range attr.Value.AsStringSlice() {
+		s := attr.Value.AsStringSlice()
+
+		// If the slice is empty, we should at least emit the metric without the attribute.
+		// to not ignore the metric emission.
+		if len(s) == 0 {
+			collect(ctx)
+			continue
+		}
+
+		for _, v := range s {
 			kv := attribute.KeyValue{
 				Key:   attr.Key,
 				Value: attribute.StringValue(v),
@@ -117,7 +126,16 @@ func explodeAddInstrument(ctx context.Context, sliceAttrs []attribute.KeyValue, 
 // explodeRecordInstrument explodes the metric into multiple metrics with different label values in Prometheus.
 func explodeRecordInstrument(ctx context.Context, sliceAttrs []attribute.KeyValue, collect func(ctx context.Context, opts ...otelmetric.RecordOption)) {
 	for _, attr := range sliceAttrs {
-		for _, v := range attr.Value.AsStringSlice() {
+		s := attr.Value.AsStringSlice()
+
+		// If the slice is empty, we should at least emit the metric without the attribute.
+		// to not ignore the metric emission.
+		if len(s) == 0 {
+			collect(ctx)
+			continue
+		}
+
+		for _, v := range s {
 			kv := attribute.KeyValue{
 				Key:   attr.Key,
 				Value: attribute.StringValue(v),
