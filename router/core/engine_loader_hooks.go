@@ -161,7 +161,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 		metricSliceAttrs = append(metricSliceAttrs, reqContext.telemetry.metricSliceAttrs...)
 
 		// We can't add this earlier because this is done per subgraph response
-		if v, ok := reqContext.telemetry.metricSetAttrs[ContextFieldGraphQLErrorCodes]; ok {
+		if v, ok := reqContext.telemetry.metricSetAttrs[ContextFieldGraphQLErrorCodes]; ok && len(errorCodesAttr) > 0 {
 			metricSliceAttrs = append(metricSliceAttrs, attribute.StringSlice(v, errorCodesAttr))
 		}
 
