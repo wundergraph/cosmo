@@ -278,6 +278,6 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 	}
 	planConfig.MinifySubgraphOperations = routerEngineCfg.Execution.MinifySubgraphOperations
 
-	planConfig.EnableOperationNamePropagation = routerEngineCfg.Execution.EnableOperationNamePropagation
+	planConfig.EnableOperationNamePropagation = routerEngineCfg.Execution.EnableOperationNameToSubgraphPropagation
 	return planConfig, nil
 }
