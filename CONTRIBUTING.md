@@ -145,3 +145,44 @@ We manage multiple compose files:
 - `docker-compose.cosmo.yml`: This compose file allows to build all Cosmo components and manage them in a single compose file. It is used for testing and releasing.
 
 **Clean up a compose stack before starting another one!**
+
+### Compose Profiles Overview
+
+#### `dev` Profile
+
+The `dev` profile is the primary profile used to set up the required infrastructure containers for the local demo environment. The setup and teardown processes are managed through the following Make targets:
+
+- **`infra-up`**: Starts the infrastructure containers.
+- **`infra-down`**: Stops and removes the infrastructure containers.
+- **`infra-down-v`**: Stops and removes the infrastructure containers and volumes.
+
+#### `debug` Profile
+
+The `debug` profile provides additional containers to facilitate local debugging, particularly when working with the Cosmo Router. These containers include tools such as:
+
+- **Prometheus**
+- **Jaeger**
+- **Grafana**
+
+The setup and teardown of the debug-specific services are handled through the following Make targets:
+
+- **`infra-debug-up`**: Starts the debugging containers.
+- **`infra-debug-down`**: Stops and removes the debugging containers.
+- **`infra-debug-down-v`**: Stops and removes the debugging containers and volumes.
+
+#### Usage
+
+1. Use the `dev` profile to set up the core infrastructure required for the local demo.
+2. Optionally, use the `debug` profile to enable additional debugging tools.
+
+These profiles can be managed independently or in conjunction, depending on your local development and debugging requirements.
+**NOTE:** The `debug` profile is not required for the core functionality of the Cosmo platform, but you need to have the infrastructure containers running to use the debugging tools.
+
+### Grafana
+
+Grafana is available at [http://localhost:9300](http://localhost:9300) with the default credentials:
+
+```
+Username: admin
+Password: admin
+```

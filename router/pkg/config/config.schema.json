@@ -2031,7 +2031,7 @@
         "enable_subgraph_fetch_operation_name": {
             "type": "boolean",
             "default": true,
-            "description": "Enable appending the operation name to subgraph fetches. This will ensure that the operation name will be included the the corresponding subgraph requests in the following format: $operationName__$subgraphName__$sequenceID."
+            "description": "Enable appending the operation name to subgraph fetches. This will ensure that the operation name will be included in the corresponding subgraph requests using the following format: $operationName__$subgraphName__$sequenceID."
         }
       }
     },
