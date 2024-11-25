@@ -219,18 +219,22 @@ func TestPersistedSubscriptionOverGET(t *testing.T) {
 		}
 
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-			header := make(http.Header)
-			header.Add("graphql-client-name", "my-client")
-
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 
 			var wg sync.WaitGroup
 			wg.Add(2)
 
-			go xEnv.GraphQLSubscriptionOverGetAndSSE(ctx, testenv.GraphQLRequest{
+			go xEnv.GraphQLSubscriptionOverSSE(ctx, testenv.GraphQLRequest{
 				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "a78014f326504cdcc3ed9c4440c989ca0ac7ef237f6379ea7fee0ffde5ea71cb"}}`),
-				Header:     header,
+				Header: map[string][]string{
+					"Content-Type":  {"application/json"},
+					"Accept":        {"text/event-stream"},
+					"Connection":    {"keep-alive"},
+					"Cache-Control": {"no-cache"},
+
+					"graphql-client-name": {"my-client"},
+				},
 			}, func(data string) {
 				defer wg.Done()
 

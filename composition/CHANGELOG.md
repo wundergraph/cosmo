@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.32.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.31.1...@wundergraph/composition@0.32.0) (2024-11-21)
+
+### Features
+
+* add validation for V2 [@external](https://github.com/external) directive ([#1392](https://github.com/wundergraph/cosmo/issues/1392)) ([d2a8f73](https://github.com/wundergraph/cosmo/commit/d2a8f73e1c47b62a435ddacc3ceffd7d7abd7b9f)) (@Aenimus)
+
 ## [0.31.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.31.0...@wundergraph/composition@0.31.1) (2024-11-14)
 
 ### Bug Fixes

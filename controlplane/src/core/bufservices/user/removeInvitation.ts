@@ -100,11 +100,14 @@ export function removeInvitation(
     // this will happen only when the user was invited but the user didn't login and the admin removed that user,
     // in this case the user will not have a personal org
     if (userMemberships.length === 0 && userPendingInvitations.length === 0) {
-      await userRepo.deleteUser({
-        id: user.id,
-        keycloakClient: opts.keycloakClient,
-        keycloakRealm: opts.keycloakRealm,
-      });
+      await userRepo.deleteUser(
+        {
+          id: user.id,
+          keycloakClient: opts.keycloakClient,
+          keycloakRealm: opts.keycloakRealm,
+        },
+        opts.blobStorage,
+      );
     }
 
     await auditLogRepo.addAuditLog({
