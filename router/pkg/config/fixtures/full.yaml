@@ -232,7 +232,7 @@ engine:
   enable_execution_plan_cache_response_header: false
   max_concurrent_resolvers: 32
   enable_net_poll: true
-  enable_operation_name_to_subgraph_propagation: false
+  enable_subgraph_fetch_operation_name: false
   websocket_client_poll_timeout: "1s"
   websocket_client_conn_buffer_size: 128
   websocket_client_read_timeout: "5s"

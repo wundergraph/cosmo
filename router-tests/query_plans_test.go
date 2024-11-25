@@ -172,7 +172,7 @@ func TestQueryPlans(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.Debug.AlwaysIncludeQueryPlan = true
-				cfg.EnableOperationNameToSubgraphPropagation = true
+				cfg.EnableSubgraphFetchOperationName = true
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{

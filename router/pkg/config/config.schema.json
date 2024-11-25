@@ -2028,10 +2028,10 @@
           "default": 10240,
           "description": "The size of the validation cache."
         },
-        "enable_operation_name_to_subgraph_propagation": {
+        "enable_subgraph_fetch_operation_name": {
             "type": "boolean",
             "default": true,
-            "description": "Enable the operation name to subgraph propagation. This will ensure that the operation name will be included the the corresponding subgraph requests in the following format: $operationName__$subgraphName__$sequenceID."
+            "description": "Enable appending the operation name to subgraph fetches. This will ensure that the operation name will be included the the corresponding subgraph requests in the following format: $operationName__$subgraphName__$sequenceID."
         }
       }
     },
