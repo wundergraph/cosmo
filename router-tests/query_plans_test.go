@@ -168,4 +168,30 @@ func TestQueryPlans(t *testing.T) {
 			}
 		})
 	})
+	t.Run("include operation name in each request", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.Debug.AlwaysIncludeQueryPlan = true
+				cfg.EnableSubgraphFetchOperationName = true
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query Requires {
+					  products {
+						__typename
+						... on Consultancy {
+						  lead {
+							__typename
+							id
+							derivedMood
+						  }
+						  isLeadAvailable
+						}
+					  }
+					}`,
+			})
+
+			g.Assert(t, "response_with_query_plan_operation_name", prettifyJSON(res.Body))
+		})
+	})
 }
