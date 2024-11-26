@@ -80,8 +80,6 @@ type (
 		publicKey               *ecdsa.PublicKey
 		executionTransport      *http.Transport
 		baseOtelAttributes      []attribute.KeyValue
-		runtimeMetrics          *rmetric.RuntimeMetrics
-		metricStore             rmetric.Store
 		baseRouterConfigVersion string
 		mux                     *chi.Mux
 		// inFlightRequests is used to track the number of requests currently being processed
@@ -100,7 +98,6 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		cancelFunc:              cancel,
 		Config:                  &r.Config,
 		websocketStats:          r.WebsocketStats,
-		metricStore:             rmetric.NewNoopMetrics(),
 		executionTransport:      newHTTPTransport(r.subgraphTransportOptions, proxy),
 		playgroundHandler:       r.playgroundHandler,
 		baseRouterConfigVersion: routerConfig.GetVersion(),
@@ -274,9 +271,11 @@ type graphMux struct {
 	validationCache            *ristretto.Cache[uint64, bool]
 	operationHashCache         *ristretto.Cache[uint64, string]
 	accessLogsFileLogger       *logging.BufferedLogger
+	runtimeMetrics             *rmetric.RuntimeMetrics
+	metricStore                rmetric.Store
 }
 
-func (s *graphMux) Shutdown(_ context.Context) error {
+func (s *graphMux) Shutdown(ctx context.Context) error {
 
 	var err error
 
@@ -304,6 +303,18 @@ func (s *graphMux) Shutdown(_ context.Context) error {
 		}
 	}
 
+	if s.metricStore != nil {
+		if aErr := s.metricStore.Shutdown(ctx); aErr != nil {
+			err = errors.Join(err, aErr)
+		}
+	}
+
+	if s.runtimeMetrics != nil {
+		if aErr := s.runtimeMetrics.Shutdown(); aErr != nil {
+			err = errors.Join(err, aErr)
+		}
+	}
+
 	return err
 }
 
@@ -316,7 +327,9 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	engineConfig *nodev1.EngineConfiguration,
 	configSubgraphs []*nodev1.Subgraph) (*graphMux, error) {
 
-	gm := &graphMux{}
+	gm := &graphMux{
+		metricStore: rmetric.NewNoopMetrics(),
+	}
 
 	httpRouter := chi.NewRouter()
 
@@ -331,19 +344,19 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	if s.metricConfig.OpenTelemetry.RouterRuntime {
 		// Create runtime metrics exported to OTEL
-		s.runtimeMetrics = rmetric.NewRuntimeMetrics(
+		gm.runtimeMetrics = rmetric.NewRuntimeMetrics(
 			s.logger,
 			s.otlpMeterProvider,
 			// We track runtime metrics with base router config version
 			// even when we have multiple feature flags
 			append([]attribute.KeyValue{
 				otel.WgRouterConfigVersion.String(s.baseRouterConfigVersion),
-			}, s.baseOtelAttributes...),
+			}, baseOtelAttributes...),
 			s.processStartTime,
 		)
 
 		// Start runtime metrics
-		if err := s.runtimeMetrics.Start(); err != nil {
+		if err := gm.runtimeMetrics.Start(); err != nil {
 			return nil, err
 		}
 	}
@@ -356,6 +369,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		m, err := rmetric.NewStore(
 			rmetric.WithPromMeterProvider(s.promMeterProvider),
 			rmetric.WithOtlpMeterProvider(s.otlpMeterProvider),
+			rmetric.WithBaseAttributes(baseOtelAttributes),
 			rmetric.WithLogger(s.logger),
 			rmetric.WithProcessStartTime(s.processStartTime),
 		)
@@ -363,7 +377,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			return nil, fmt.Errorf("failed to create metric handler: %w", err)
 		}
 
-		s.metricStore = m
+		gm.metricStore = m
 	}
 
 	subgraphs, err := configureSubgraphOverwrites(
@@ -479,7 +493,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	}
 
 	metrics := NewRouterMetrics(&routerMetricsConfig{
-		metrics:             s.metricStore,
+		metrics:             gm.metricStore,
 		gqlMetricsExporter:  s.gqlMetricsExporter,
 		exportEnabled:       s.graphqlMetricsConfig.Enabled,
 		routerConfigVersion: routerConfigVersion,
@@ -566,7 +580,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 			reqContext := getRequestContext(r.Context())
 
-			reqContext.telemetry.addCommonAttribute(baseOtelAttributes...)
+			reqContext.telemetry.addCommonTraceAttribute(baseOtelAttributes...)
 
 			if commonAttrRequestMapper != nil {
 				reqContext.telemetry.addCommonAttribute(commonAttrRequestMapper(r)...)
@@ -669,7 +683,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			RequestTimeout: s.subgraphTransportOptions.RequestTimeout,
 			PreHandlers:    s.preOriginHandlers,
 			PostHandlers:   s.postOriginHandlers,
-			MetricStore:    s.metricStore,
+			MetricStore:    gm.metricStore,
 			RetryOptions: retrytransport.RetryOptions{
 				Enabled:       s.retryOptions.Enabled,
 				MaxRetryCount: s.retryOptions.MaxRetryCount,
@@ -737,7 +751,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		TracerProvider:                              s.tracerProvider,
 		Authorizer:                                  NewCosmoAuthorizer(authorizerOptions),
 		SubgraphErrorPropagation:                    s.subgraphErrorPropagation,
-		EngineLoaderHooks:                           NewEngineRequestHooks(s.metricStore),
+		EngineLoaderHooks:                           NewEngineRequestHooks(gm.metricStore),
 	}
 
 	if s.redisClient != nil {
@@ -1009,20 +1023,6 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 		defer cancel()
 
 		ctx = newCtx
-	}
-
-	if s.metricStore != nil {
-		if err := s.metricStore.Shutdown(ctx); err != nil {
-			s.logger.Error("Failed to shutdown metric store", zap.Error(err))
-			finalErr = errors.Join(finalErr, err)
-		}
-	}
-
-	if s.runtimeMetrics != nil {
-		if err := s.runtimeMetrics.Shutdown(); err != nil {
-			s.logger.Error("Failed to shutdown runtime metrics", zap.Error(err))
-			finalErr = errors.Join(finalErr, err)
-		}
 	}
 
 	if s.pubSubProviders != nil {
