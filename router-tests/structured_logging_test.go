@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -135,6 +136,64 @@ func TestAccessLogsFileOutput(t *testing.T) {
 		})
 	})
 
+	t.Run("subgraph", func(t *testing.T) {
+		t.Run("Simple", func(t *testing.T) {
+			t.Parallel()
+
+			fp := filepath.Join(os.TempDir(), "access.log")
+			f, err := logging.NewLogFile(filepath.Join(os.TempDir(), "access.log"))
+			require.NoError(t, err)
+
+			t.Cleanup(func() {
+				require.NoError(t, f.Close())
+				require.NoError(t, os.RemoveAll(fp))
+			})
+
+			logger := logging.NewZapAccessLogger(f, false, false)
+			require.NoError(t, err)
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithAccessLogs(&core.AccessLogsConfig{
+						SubgraphEnabled: true,
+						Logger:          logger,
+					}),
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				}}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employees { id } }`,
+				})
+				require.JSONEq(t, employeesIDData, res.Body)
+				data, err := os.ReadFile(fp)
+				require.NoError(t, err)
+
+				lines := bytes.Split(data, []byte("\n"))
+				var logEntry map[string]interface{}
+				require.NoError(t, json.Unmarshal(lines[0], &logEntry))
+
+				expectedValues1 := map[string]interface{}{
+					"level":         "info",
+					"msg":           "/graphql",
+					"log_type":      "client/subgraph",
+					"subgraph_name": "employees",
+					"subgraph_id":   "0",
+					"status":        float64(200),
+					"method":        "POST",
+					"path":          "/graphql",
+					"query":         "",
+					"ip":            "[REDACTED]",
+				}
+				additionalExpectedKeys1 := []string{
+					"time", "hostname", "pid", "latency",
+					"user_agent", "config_version", "request_id",
+				}
+				checkValues(t, logEntry, expectedValues1, additionalExpectedKeys1)
+			})
+		})
+	})
 }
 
 func TestAccessLogs(t *testing.T) {
@@ -1259,7 +1318,7 @@ func TestAccessLogs(t *testing.T) {
 				})
 				require.JSONEq(t, employeesIDData, res.Body)
 				logEntries := xEnv.Observer().All()
-				require.Len(t, logEntries, 14)
+				require.Len(t, logEntries, 13)
 				requestLog := xEnv.Observer().FilterMessage("/graphql")
 				require.Equal(t, requestLog.Len(), 2)
 				requestContext := requestLog.All()[0].ContextMap()
@@ -1314,7 +1373,7 @@ func checkValues(t *testing.T, requestContext map[string]interface{}, expectedVa
 	for key, val := range expectedValues {
 		mapVal, exists := requestContext[key]
 		require.Truef(t, exists, "key '%s' not found", key)
-		require.Equalf(t, mapVal, val, "expected '%v', got '%v'", val, mapVal)
+		require.Equalf(t, val, mapVal, "expected '%v', got '%v'", val, mapVal)
 	}
 	for _, key := range additionalExpectedKeys {
 		_, exists := requestContext[key]
