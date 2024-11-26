@@ -116,7 +116,7 @@ export class AnalyticsRequestViewRepository {
       title: 'Errors',
     },
     errorRate: {
-      title: 'Error Rate%',
+      title: 'Error Rate',
       unit: Unit.Percentage,
     },
     rate: {
