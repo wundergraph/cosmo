@@ -966,6 +966,344 @@ func TestAccessLogs(t *testing.T) {
 			checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 		})
 	})
+
+	t.Run("subgraph logs", func(t *testing.T) {
+		t.Run("Simple without custom attributes", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				SubgraphAccessLogsEnabled: true,
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				}}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employees { id } }`,
+				})
+				require.JSONEq(t, employeesIDData, res.Body)
+				logEntries := xEnv.Observer().All()
+				require.Len(t, logEntries, 13)
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				require.Equal(t, requestLog.Len(), 2)
+
+				requestContext := requestLog.All()[0].ContextMap()
+				expectedValues := map[string]interface{}{
+					"log_type":      "client/subgraph",
+					"subgraph_name": "employees",
+					"subgraph_id":   "0",
+					"status":        int64(200),
+					"method":        "POST",
+					"path":          "/graphql",
+					"query":         "", // http query is empty
+					"ip":            "[REDACTED]",
+				}
+				additionalExpectedKeys := []string{
+					"user_agent", "latency", "config_version", "request_id", "pid", "hostname",
+				}
+				checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
+
+				requestContext1 := requestLog.All()[1].ContextMap()
+				expectedValues1 := map[string]interface{}{
+					"log_type": "request",
+					"status":   int64(200),
+					"method":   "POST",
+					"path":     "/graphql",
+					"query":    "", // http query is empty
+					"ip":       "[REDACTED]",
+				}
+				checkValues(t, requestContext1, expectedValues1, additionalExpectedKeys)
+			})
+		})
+
+		t.Run("Simple with tracing enabled", func(t *testing.T) {
+			t.Parallel()
+
+			exporter := tracetest.NewInMemoryExporter(t)
+
+			testenv.Run(t, &testenv.Config{
+				SubgraphAccessLogsEnabled: true,
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+				TraceExporter: exporter,
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employees { id } }`,
+				})
+				require.JSONEq(t, employeesIDData, res.Body)
+				logEntries := xEnv.Observer().All()
+				require.Len(t, logEntries, 13)
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				require.Equal(t, requestLog.Len(), 2)
+				requestContext := requestLog.All()[0].ContextMap()
+				expectedValues := map[string]interface{}{
+					"log_type":      "client/subgraph",
+					"subgraph_name": "employees",
+					"subgraph_id":   "0",
+					"status":        int64(200),
+					"method":        "POST",
+					"path":          "/graphql",
+					"query":         "", // http query is empty
+					"ip":            "[REDACTED]",
+				}
+				additionalExpectedKeys := []string{
+					"user_agent", "latency", "config_version", "request_id", "pid", "hostname", "trace_id",
+				}
+				checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
+
+				requestContext1 := requestLog.All()[1].ContextMap()
+				expectedValues1 := map[string]interface{}{
+					"log_type": "request",
+					"status":   int64(200),
+					"method":   "POST",
+					"path":     "/graphql",
+					"query":    "", // http query is empty
+					"ip":       "[REDACTED]",
+				}
+				checkValues(t, requestContext1, expectedValues1, additionalExpectedKeys)
+			})
+		})
+
+		t.Run("Doesn't add in router custom access log fields", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				SubgraphAccessLogsEnabled: true,
+				AccessLogFields: []config.CustomAttribute{
+					{
+						Key:     "service_name",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							RequestHeader: "service-name",
+						},
+					},
+					{
+						Key:     "operation_hash",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationHash,
+						},
+					},
+					{
+						Key:     "operation_sha256",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationSha256,
+						},
+					},
+					{
+						Key:     "operation_name",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationName,
+						},
+					},
+					{
+						Key:     "operation_type",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationType,
+						},
+					},
+					{
+						Key:     "normalized_time",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationNormalizationTime,
+						},
+					},
+					{
+						Key:     "parsed_time",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationParsingTime,
+						},
+					},
+					{
+						Key:     "validation_time",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationValidationTime,
+						},
+					},
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				}}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:  `query employees { employees { id } }`,
+					Header: map[string][]string{"service-name": {"service-name"}},
+				})
+				require.JSONEq(t, employeesIDData, res.Body)
+				logEntries := xEnv.Observer().All()
+				require.Len(t, logEntries, 13)
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				require.Equal(t, requestLog.Len(), 2)
+				requestContext := requestLog.All()[0].ContextMap()
+				expectedValues := map[string]interface{}{
+					"log_type":      "client/subgraph",
+					"subgraph_name": "employees",
+					"subgraph_id":   "0",
+					"status":        int64(200),
+					"method":        "POST",
+					"path":          "/graphql",
+					"query":         "", // http query is empty
+					"ip":            "[REDACTED]",
+				}
+				additionalExpectedKeys := []string{
+					"user_agent", "latency", "config_version", "request_id", "pid", "hostname",
+				}
+				checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
+
+				requestContext1 := requestLog.All()[1].ContextMap()
+				expectedValues1 := map[string]interface{}{
+					"log_type":         "request",
+					"status":           int64(200),
+					"method":           "POST",
+					"path":             "/graphql",
+					"query":            "",
+					"ip":               "[REDACTED]",
+					"service_name":     "service-name",                                                     // From header
+					"operation_hash":   "14226210703439426856",                                             // From context
+					"operation_sha256": "c13e0fafb0a3a72e74c19df743fedee690fe133554a17a9408747585a0d1b423", // From context
+					"operation_name":   "employees",                                                        // From context
+					"operation_type":   "query",                                                            // From context
+				}
+				additionalExpectedKeys1 := []string{
+					"user_agent",
+					"latency",
+					"config_version",
+					"request_id",
+					"pid",
+					"hostname",
+					"normalized_time",
+					"parsed_time",
+					"validation_time",
+				}
+				checkValues(t, requestContext1, expectedValues1, additionalExpectedKeys1)
+			})
+		})
+
+		t.Run("Adds subgraph custom access log fields", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				SubgraphAccessLogsEnabled: true,
+				SubgraphAccessLogFields: []config.CustomAttribute{
+					{
+						Key:     "service_name",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							RequestHeader: "service-name",
+						},
+					},
+					{
+						Key:     "operation_hash",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationHash,
+						},
+					},
+					{
+						Key:     "operation_sha256",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationSha256,
+						},
+					},
+					{
+						Key:     "operation_name",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationName,
+						},
+					},
+					{
+						Key:     "operation_type",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationType,
+						},
+					},
+					{
+						Key:     "normalized_time",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationNormalizationTime,
+						},
+					},
+					{
+						Key:     "parsed_time",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationParsingTime,
+						},
+					},
+					{
+						Key:     "validation_time",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationValidationTime,
+						},
+					},
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				}}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:  `query employees { employees { id } }`,
+					Header: map[string][]string{"service-name": {"service-name"}},
+				})
+				require.JSONEq(t, employeesIDData, res.Body)
+				logEntries := xEnv.Observer().All()
+				require.Len(t, logEntries, 14)
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				require.Equal(t, requestLog.Len(), 2)
+				requestContext := requestLog.All()[0].ContextMap()
+				expectedValues := map[string]interface{}{
+					"log_type":         "client/subgraph",
+					"subgraph_name":    "employees",
+					"subgraph_id":      "0",
+					"status":           int64(200),
+					"method":           "POST",
+					"path":             "/graphql",
+					"query":            "", // http query is empty
+					"ip":               "[REDACTED]",
+					"service_name":     "service-name",                                                     // From header
+					"operation_hash":   "14226210703439426856",                                             // From context
+					"operation_sha256": "c13e0fafb0a3a72e74c19df743fedee690fe133554a17a9408747585a0d1b423", // From context
+					"operation_name":   "employees",                                                        // From context
+					"operation_type":   "query",                                                            // From context
+				}
+				additionalExpectedKeys := []string{
+					"user_agent", "latency", "config_version", "request_id", "pid", "hostname", "normalized_time", "parsed_time", "validation_time",
+				}
+				checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
+
+				requestContext1 := requestLog.All()[1].ContextMap()
+				expectedValues1 := map[string]interface{}{
+					"log_type": "request",
+					"status":   int64(200),
+					"method":   "POST",
+					"path":     "/graphql",
+					"query":    "",
+					"ip":       "[REDACTED]",
+				}
+				additionalExpectedKeys1 := []string{
+					"user_agent",
+					"latency",
+					"config_version",
+					"request_id",
+					"pid",
+					"hostname",
+				}
+				checkValues(t, requestContext1, expectedValues1, additionalExpectedKeys1)
+			})
+		})
+	})
 }
 
 func checkValues(t *testing.T, requestContext map[string]interface{}, expectedValues map[string]interface{}, additionalExpectedKeys []string) {

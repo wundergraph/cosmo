@@ -144,6 +144,7 @@
       "Fields": null
     },
     "Subgraphs": {
+      "Enabled": false,
       "Fields": null
     }
   },

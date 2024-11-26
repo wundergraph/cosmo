@@ -8,6 +8,7 @@ import (
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"net"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
@@ -38,15 +39,9 @@ const (
 )
 
 type handler struct {
-	timeFormat            string
-	utc                   bool
-	skipPaths             []string
-	ipAnonymizationConfig *IPAnonymizationConfig
-	traceID               bool // optionally log Open Telemetry TraceID
-	fieldsHandler         ContextFunc
-	handler               http.Handler
-	logger                *zap.Logger
-	baseFields            []zapcore.Field
+	accessLogger *accessLogger
+	handler      http.Handler
+	logger       *zap.Logger
 }
 
 func parseOptions(r *handler, opts ...Option) http.Handler {
@@ -59,44 +54,45 @@ func parseOptions(r *handler, opts ...Option) http.Handler {
 
 func WithAnonymization(ipConfig *IPAnonymizationConfig) Option {
 	return func(r *handler) {
-		r.ipAnonymizationConfig = ipConfig
+		r.accessLogger.ipAnonymizationConfig = ipConfig
 	}
 }
 
 func WithFieldsHandler(fn ContextFunc) Option {
 	return func(r *handler) {
-		r.fieldsHandler = fn
+		r.accessLogger.fieldsHandler = fn
 	}
 }
 
 func WithNoTimeField() Option {
 	return func(r *handler) {
-		r.timeFormat = ""
-		r.utc = false
+		r.accessLogger.timeFormat = ""
+		r.accessLogger.utc = false
 	}
 }
 
 func WithFields(fields ...zapcore.Field) Option {
 	return func(r *handler) {
-		r.baseFields = fields
+		r.accessLogger.baseFields = fields
 	}
 }
 
 func WithDefaultOptions() Option {
 	return func(r *handler) {
-		r.timeFormat = time.RFC3339
-		r.utc = true
-		r.skipPaths = []string{}
-		r.traceID = true
-		r.fieldsHandler = nil
+		r.accessLogger.timeFormat = time.RFC3339
+		r.accessLogger.utc = true
+		r.accessLogger.skipPaths = []string{}
+		r.accessLogger.traceID = true
+		r.accessLogger.fieldsHandler = nil
 	}
 }
 
 func New(logger *zap.Logger, opts ...Option) func(h http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		r := &handler{
-			handler: h,
-			logger:  logger.With(zap.String("log_type", "request")),
+			handler:      h,
+			logger:       logger.With(zap.String("log_type", "request")),
+			accessLogger: &accessLogger{},
 		}
 		return parseOptions(r, opts...)
 	}
@@ -106,47 +102,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	start := time.Now()
 	path := r.URL.Path
-	query := r.URL.RawQuery
-	remoteAddr := r.RemoteAddr
-
-	if h.ipAnonymizationConfig != nil && h.ipAnonymizationConfig.Enabled {
-		if h.ipAnonymizationConfig.Method == Hash {
-			h := sha256.New()
-			remoteAddr = fmt.Sprintf("%d", h.Sum([]byte(r.RemoteAddr)))
-		} else if h.ipAnonymizationConfig.Method == Redact {
-			remoteAddr = "[REDACTED]"
-		}
-	}
-
-	// All fields are snake_case
-
-	fields := []zapcore.Field{
-		zap.String("method", r.Method),
-		zap.String("path", path),
-		zap.String("query", query),
-		// Has to be processed by a middleware before this one
-		zap.String("ip", remoteAddr),
-		zap.String("user_agent", r.UserAgent()),
-	}
-
-	if len(h.baseFields) > 0 {
-		fields = append(fields, h.baseFields...)
-	}
-
-	if h.utc {
-		start = start.UTC()
-	}
-
-	if h.timeFormat != "" {
-		fields = append(fields, zap.String("time", start.Format(h.timeFormat)))
-	}
-
-	if h.traceID {
-		traceID := rtrace.GetTraceID(r.Context())
-		if traceID != "" {
-			fields = append(fields, logging.WithTraceID(traceID))
-		}
-	}
+	fields := h.accessLogger.getRequestFields(r.URL, r)
 
 	defer func() {
 
@@ -170,8 +126,8 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 			// This is only called on panic so it is safe to call it here again
 			// to gather all the fields that are needed for logging
-			if h.fieldsHandler != nil {
-				fields = append(fields, h.fieldsHandler(err, r)...)
+			if h.accessLogger.fieldsHandler != nil {
+				fields = append(fields, h.accessLogger.fieldsHandler(err, r)...)
 			}
 
 			if brokenPipe {
@@ -199,9 +155,57 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		zap.Int("status", ww.Status()),
 	}
 
-	if h.fieldsHandler != nil {
-		resFields = append(resFields, h.fieldsHandler(nil, r)...)
+	if h.accessLogger.fieldsHandler != nil {
+		resFields = append(resFields, h.accessLogger.fieldsHandler(nil, r)...)
 	}
 
 	h.logger.Info(path, append(fields, resFields...)...)
+}
+
+func (al accessLogger) getRequestFields(url *url.URL, r *http.Request) []zapcore.Field {
+	start := time.Now()
+	path := url.Path
+	query := url.RawQuery
+	remoteAddr := r.RemoteAddr
+
+	if al.ipAnonymizationConfig != nil && al.ipAnonymizationConfig.Enabled {
+		if al.ipAnonymizationConfig.Method == Hash {
+			h := sha256.New()
+			remoteAddr = fmt.Sprintf("%d", h.Sum([]byte(r.RemoteAddr)))
+		} else if al.ipAnonymizationConfig.Method == Redact {
+			remoteAddr = "[REDACTED]"
+		}
+	}
+
+	// All fields are snake_case
+
+	fields := []zapcore.Field{
+		zap.String("method", r.Method),
+		zap.String("path", path),
+		zap.String("query", query),
+		// Has to be processed by a middleware before this one
+		zap.String("ip", remoteAddr),
+		zap.String("user_agent", r.UserAgent()),
+	}
+
+	if len(al.baseFields) > 0 {
+		fields = append(fields, al.baseFields...)
+	}
+
+	if al.utc {
+		start = start.UTC()
+	}
+
+	if al.timeFormat != "" {
+		fields = append(fields, zap.String("time", start.Format(al.timeFormat)))
+	}
+
+	if al.traceID {
+		traceID := rtrace.GetTraceID(r.Context())
+		if traceID != "" {
+			fields = append(fields, logging.WithTraceID(traceID))
+		}
+	}
+
+	return fields
 }

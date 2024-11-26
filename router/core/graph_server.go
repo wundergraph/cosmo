@@ -466,7 +466,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			}
 		}
 	} else if s.accessLogsConfig != nil {
-		for _, customAttribute := range s.accessLogsConfig.Attributes {
+		for _, customAttribute := range append(s.accessLogsConfig.Attributes, s.accessLogsConfig.SubgraphAttributes...) {
 			if customAttribute.ValueFrom != nil && customAttribute.ValueFrom.ContextField == ContextFieldOperationSha256 {
 				computeSha256 = true
 				break
@@ -632,6 +632,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		httpRouter.Use(traceHandler.Handler)
 	}
 
+	var subgraphAccessLogger *requestlogger.SubgraphAccessLogger
 	if s.accessLogsConfig != nil && s.accessLogsConfig.Logger != nil {
 		requestLoggerOpts := []requestlogger.Option{
 			requestlogger.WithDefaultOptions(),
@@ -640,19 +641,30 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			requestlogger.WithFieldsHandler(s.accessLogsFieldHandler),
 		}
 
+		var ipAnonConfig *requestlogger.IPAnonymizationConfig
 		if s.ipAnonymization.Enabled {
-			requestLoggerOpts = append(requestLoggerOpts, requestlogger.WithAnonymization(&requestlogger.IPAnonymizationConfig{
+			ipAnonConfig = &requestlogger.IPAnonymizationConfig{
 				Enabled: s.ipAnonymization.Enabled,
 				Method:  requestlogger.IPAnonymizationMethod(s.ipAnonymization.Method),
-			}))
+			}
+			requestLoggerOpts = append(requestLoggerOpts, requestlogger.WithAnonymization(ipAnonConfig))
 		}
 
 		requestLogger := requestlogger.New(
 			s.accessLogsConfig.Logger,
 			requestLoggerOpts...,
 		)
-
 		httpRouter.Use(requestLogger)
+
+		if s.accessLogsConfig.SubgraphEnabled {
+			subgraphAccessLogger = requestlogger.NewSubgraphAccessLogger(
+				s.accessLogsConfig.Logger,
+				requestlogger.SubgraphOptions{
+					IPAnonymizationConfig: ipAnonConfig,
+					FieldsHandler:         s.accessSubgraphLogsFieldHandler,
+					Fields:                baseLogFields,
+				})
+		}
 	}
 
 	routerEngineConfig := &RouterEngineConfiguration{
@@ -745,7 +757,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		TracerProvider:                              s.tracerProvider,
 		Authorizer:                                  NewCosmoAuthorizer(authorizerOptions),
 		SubgraphErrorPropagation:                    s.subgraphErrorPropagation,
-		EngineLoaderHooks:                           NewEngineRequestHooks(gm.metricStore),
+		EngineLoaderHooks:                           NewEngineRequestHooks(gm.metricStore, subgraphAccessLogger),
 	}
 
 	if s.redisClient != nil {
@@ -872,6 +884,35 @@ func (s *graphServer) accessLogsFieldHandler(panicError any, request *http.Reque
 
 	for _, field := range s.accessLogsConfig.Attributes {
 
+		if field.ValueFrom != nil && field.ValueFrom.RequestHeader != "" {
+			resFields = append(resFields, NewStringLogField(request.Header.Get(field.ValueFrom.RequestHeader), field))
+		} else if field.ValueFrom != nil && field.ValueFrom.ContextField != "" && reqContext.operation != nil {
+			if field.ValueFrom.ContextField == ContextFieldResponseErrorMessage && panicError != nil {
+				errMessage := fmt.Sprintf("%v", panicError)
+				if v := NewStringLogField(errMessage, field); v != zap.Skip() {
+					resFields = append(resFields, v)
+				}
+			}
+			if v := GetLogFieldFromCustomAttribute(field, reqContext); v != zap.Skip() {
+				resFields = append(resFields, v)
+			}
+		} else if field.Default != "" {
+			resFields = append(resFields, NewStringLogField(field.Default, field))
+		}
+	}
+
+	return resFields
+}
+
+func (s *graphServer) accessSubgraphLogsFieldHandler(panicError any, request *http.Request) []zapcore.Field {
+	reqContext := getRequestContext(request.Context())
+	if reqContext == nil {
+		return nil
+	}
+	resFields := make([]zapcore.Field, 0, len(s.accessLogsConfig.SubgraphAttributes))
+	resFields = append(resFields, logging.WithRequestID(middleware.GetReqID(request.Context())))
+
+	for _, field := range s.accessLogsConfig.SubgraphAttributes {
 		if field.ValueFrom != nil && field.ValueFrom.RequestHeader != "" {
 			resFields = append(resFields, NewStringLogField(request.Header.Get(field.ValueFrom.RequestHeader), field))
 		} else if field.ValueFrom != nil && field.ValueFrom.ContextField != "" && reqContext.operation != nil {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/requestlogger"
 	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
@@ -14,6 +15,7 @@ import (
 	otelmetric "go.opentelemetry.io/otel/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
+	"go.uber.org/zap"
 	"slices"
 	"time"
 )
@@ -30,21 +32,23 @@ const EngineLoaderHooksScopeVersion = "0.0.1"
 // engineLoaderHooks implements resolve.LoaderHooks
 // It is used to trace and measure the performance of the engine loader
 type engineLoaderHooks struct {
-	tracer      trace.Tracer
-	metricStore metric.Store
+	tracer       trace.Tracer
+	metricStore  metric.Store
+	accessLogger *requestlogger.SubgraphAccessLogger
 }
 
 type engineLoaderHooksRequestContext struct {
 	startTime time.Time
 }
 
-func NewEngineRequestHooks(metricStore metric.Store) resolve.LoaderHooks {
+func NewEngineRequestHooks(metricStore metric.Store, logger *requestlogger.SubgraphAccessLogger) resolve.LoaderHooks {
 	return &engineLoaderHooks{
 		tracer: otel.GetTracerProvider().Tracer(
 			EngineLoaderHooksScopeName,
 			trace.WithInstrumentationVersion(EngineLoaderHooksScopeVersion),
 		),
-		metricStore: metricStore,
+		metricStore:  metricStore,
+		accessLogger: logger,
 	}
 }
 
@@ -114,8 +118,22 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 
 	metricAddOpt := otelmetric.WithAttributeSet(attribute.NewSet(metricAttrs...))
 
-	if err != nil {
+	if f.accessLogger != nil {
+		fields := []zap.Field{
+			zap.String("subgraph_name", ds.Name),
+			zap.String("subgraph_id", ds.ID),
+			zap.Int("status", statusCode),
+			zap.Duration("latency", latency),
+		}
+		if err != nil {
+			fields = append(fields, zap.Any("error", err))
+		}
 
+		subgraph := reqContext.SubgraphByID(ds.ID)
+		f.accessLogger.WriteRequestLog(subgraph.Url, reqContext.request, fields)
+	}
+
+	if err != nil {
 		// Set error status. This is the fetch error from the engine
 		// Downstream errors are extracted from the subgraph response
 		span.SetStatus(codes.Error, err.Error())

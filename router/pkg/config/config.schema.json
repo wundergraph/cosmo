@@ -562,6 +562,11 @@
           "additionalProperties": false,
           "description": "The configuration for the subgraph access logs",
           "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable the subgraph access logs.",
+              "default": false
+            },
             "fields": {
               "$ref": "#/definitions/context_fields"
             }

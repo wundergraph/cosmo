@@ -697,7 +697,8 @@ type AccessLogsRouterConfig struct {
 }
 
 type AccessLogsSubgraphsConfig struct {
-	Fields []CustomAttribute `yaml:"fields,omitempty" env:"ACCESS_LOGS_ROUTER_FIELDS"`
+	Enabled bool              `yaml:"enabled" env:"ACCESS_LOGS_SUBGRAPH_ENABLED" envDefault:"false"`
+	Fields  []CustomAttribute `yaml:"fields,omitempty" env:"ACCESS_LOGS_SUBGRAPH_FIELDS"`
 }
 
 type ApolloCompatibilityFlags struct {

@@ -149,6 +149,8 @@ type Config struct {
 	EnableRuntimeMetrics               bool
 	EnableNats                         bool
 	EnableKafka                        bool
+	SubgraphAccessLogsEnabled          bool
+	SubgraphAccessLogFields            []config.CustomAttribute
 }
 
 type SubgraphsConfig struct {
@@ -685,8 +687,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	routerOpts := []core.Option{
 		core.WithLogger(testConfig.Logger),
 		core.WithAccessLogs(&core.AccessLogsConfig{
-			Logger:     testConfig.AccessLogger,
-			Attributes: testConfig.AccessLogFields,
+			Logger:             testConfig.AccessLogger,
+			Attributes:         testConfig.AccessLogFields,
+			SubgraphEnabled:    testConfig.SubgraphAccessLogsEnabled,
+			SubgraphAttributes: testConfig.SubgraphAccessLogFields,
 		}),
 		core.WithGraphApiToken(graphApiToken),
 		core.WithDevelopmentMode(true),

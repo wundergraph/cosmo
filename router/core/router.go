@@ -129,8 +129,10 @@ type (
 	}
 
 	AccessLogsConfig struct {
-		Attributes []config.CustomAttribute
-		Logger     *zap.Logger
+		Attributes         []config.CustomAttribute
+		Logger             *zap.Logger
+		SubgraphEnabled    bool
+		SubgraphAttributes []config.CustomAttribute
 	}
 
 	// Config defines the configuration options for the Router.
