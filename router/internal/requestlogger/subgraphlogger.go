@@ -14,7 +14,6 @@ type accessLogger struct {
 	ipAnonymizationConfig *IPAnonymizationConfig
 	traceID               bool // optionally log Open Telemetry TraceID
 	fieldsHandler         ContextFunc
-	logger                *zap.Logger
 	baseFields            []zapcore.Field
 }
 
