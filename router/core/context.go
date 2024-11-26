@@ -211,13 +211,6 @@ func (r *requestTelemetryAttributes) addCommonTraceAttribute(vals ...attribute.K
 	r.traceAttrs = append(r.traceAttrs, vals...)
 }
 
-func (r *requestTelemetryAttributes) addCommonMetricAttribute(vals ...attribute.KeyValue) {
-	if !r.metricsEnabled {
-		return
-	}
-	r.metricAttrs = append(r.metricAttrs, vals...)
-}
-
 func (r *requestTelemetryAttributes) addMetricAttribute(vals ...attribute.KeyValue) {
 	if !r.metricsEnabled {
 		return
