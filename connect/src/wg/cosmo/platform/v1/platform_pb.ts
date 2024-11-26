@@ -125,6 +125,11 @@ export enum Unit {
    * @generated from enum value: SpanID = 7;
    */
   SpanID = 7,
+
+  /**
+   * @generated from enum value: Percentage = 8;
+   */
+  Percentage = 8,
 }
 // Retrieve enum metadata with: proto3.getEnumType(Unit)
 proto3.util.setEnumType(Unit, "wg.cosmo.platform.v1.Unit", [
@@ -136,6 +141,7 @@ proto3.util.setEnumType(Unit, "wg.cosmo.platform.v1.Unit", [
   { no: 5, name: "StatusCode" },
   { no: 6, name: "TraceID" },
   { no: 7, name: "SpanID" },
+  { no: 8, name: "Percentage" },
 ]);
 
 /**

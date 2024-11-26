@@ -583,7 +583,7 @@ export const ErrorMetricsCard = (props: {
         formatter={formatter}
         queryParams={{
           group: "OperationName",
-          sort: "errorsWithRate",
+          sort: "errors",
           sortDir: "desc",
         }}
         isSubgraphAnalytics={props.isSubgraphAnalytics}
