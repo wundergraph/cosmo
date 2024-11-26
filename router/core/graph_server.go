@@ -86,6 +86,7 @@ type (
 		// does not include websocket (hijacked) connections
 		inFlightRequests *atomic.Uint64
 		graphMuxes       []*graphMux
+		runtimeMetrics   *rmetric.RuntimeMetrics
 	}
 )
 
@@ -123,6 +124,23 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	}
 
 	s.baseOtelAttributes = baseOtelAttributes
+
+	if s.metricConfig.OpenTelemetry.RouterRuntime {
+		s.runtimeMetrics = rmetric.NewRuntimeMetrics(
+			s.logger,
+			s.otlpMeterProvider,
+			// We track runtime metrics with base router config version
+			append([]attribute.KeyValue{
+				otel.WgRouterConfigVersion.String(s.baseRouterConfigVersion),
+			}, baseOtelAttributes...),
+			s.processStartTime,
+		)
+
+		// Start runtime metrics
+		if err := s.runtimeMetrics.Start(); err != nil {
+			return nil, err
+		}
+	}
 
 	if s.registrationInfo != nil {
 		publicKey, err := jwt.ParseECPublicKeyFromPEM([]byte(s.registrationInfo.GetGraphPublicKey()))
@@ -271,7 +289,6 @@ type graphMux struct {
 	validationCache            *ristretto.Cache[uint64, bool]
 	operationHashCache         *ristretto.Cache[uint64, string]
 	accessLogsFileLogger       *logging.BufferedLogger
-	runtimeMetrics             *rmetric.RuntimeMetrics
 	metricStore                rmetric.Store
 }
 
@@ -309,12 +326,6 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 		}
 	}
 
-	if s.runtimeMetrics != nil {
-		if aErr := s.runtimeMetrics.Shutdown(); aErr != nil {
-			err = errors.Join(err, aErr)
-		}
-	}
-
 	return err
 }
 
@@ -340,25 +351,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	if featureFlagName != "" {
 		baseOtelAttributes = append(baseOtelAttributes, otel.WgFeatureFlag.String(featureFlagName))
-	}
-
-	if s.metricConfig.OpenTelemetry.RouterRuntime {
-		// Create runtime metrics exported to OTEL
-		gm.runtimeMetrics = rmetric.NewRuntimeMetrics(
-			s.logger,
-			s.otlpMeterProvider,
-			// We track runtime metrics with base router config version
-			// even when we have multiple feature flags
-			append([]attribute.KeyValue{
-				otel.WgRouterConfigVersion.String(s.baseRouterConfigVersion),
-			}, baseOtelAttributes...),
-			s.processStartTime,
-		)
-
-		// Start runtime metrics
-		if err := gm.runtimeMetrics.Start(); err != nil {
-			return nil, err
-		}
 	}
 
 	metricsEnabled := s.metricConfig.IsEnabled()
@@ -1023,6 +1015,13 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 		defer cancel()
 
 		ctx = newCtx
+	}
+
+	if s.runtimeMetrics != nil {
+		if err := s.runtimeMetrics.Shutdown(); err != nil {
+			s.logger.Error("Failed to shutdown runtime metrics", zap.Error(err))
+			finalErr = errors.Join(finalErr, err)
+		}
 	}
 
 	if s.pubSubProviders != nil {
