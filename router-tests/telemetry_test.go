@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"regexp"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -23,6 +24,381 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 )
+
+func TestRuntimeTelemetry(t *testing.T) {
+	t.Parallel()
+
+	const employeesIDData = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
+
+	t.Run("Trace unnamed GraphQL operation and validate all runtime metrics / including a feature graph", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter:        exporter,
+			MetricReader:         metricReader,
+			EnableRuntimeMetrics: true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			rm := metricdata.ResourceMetrics{}
+			err := metricReader.Collect(context.Background(), &rm)
+			require.NoError(t, err)
+
+			require.Len(t, rm.ScopeMetrics, 2)
+
+			// Runtime metrics
+
+			sm := getMetricScopeByName(rm.ScopeMetrics, "cosmo.router.runtime")
+			require.NotNil(t, sm)
+
+			require.Len(t, sm.Metrics, 15)
+
+			runtimeScope := getMetricScopeByName(rm.ScopeMetrics, "cosmo.router.runtime")
+			require.NotNil(t, runtimeScope)
+
+			runtimeUptimeMetric := metricdata.Metrics{
+				Name:        "runtime.uptime",
+				Description: "Seconds since application was initialized",
+				Unit:        "s",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								otel.WgRouterClusterName.String(""),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+							),
+							Value: 0,
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, runtimeUptimeMetric, *getMetricByName(runtimeScope, "runtime.uptime"), metricdatatest.IgnoreTimestamp())
+
+			processCpuUsageMetric := metricdata.Metrics{
+				Name:        "process.cpu.usage",
+				Description: "Total CPU usage of this process in percentage of host total CPU capacity",
+				Unit:        "percent",
+				Data: metricdata.Gauge[float64]{
+					DataPoints: []metricdata.DataPoint[float64]{
+						{
+							Attributes: attribute.NewSet(
+								otel.WgRouterClusterName.String(""),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+							),
+							Value: 0,
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, processCpuUsageMetric, *getMetricByName(runtimeScope, "process.cpu.usage"), metricdatatest.IgnoreTimestamp())
+
+			serverUptimeMetric := metricdata.Metrics{
+				Name:        "server.uptime",
+				Description: "Seconds since the server started. Resets between router config changes.",
+				Unit:        "s",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								otel.WgRouterClusterName.String(""),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+							),
+							Value: 0,
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, serverUptimeMetric, *getMetricByName(runtimeScope, "server.uptime"), metricdatatest.IgnoreTimestamp())
+
+			processRuntimeGoMemHeapAllocMetric := metricdata.Metrics{
+				Name:        "process.runtime.go.mem.heap_alloc",
+				Description: "Bytes of allocated heap objects",
+				Unit:        "By",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: false,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								otel.WgRouterClusterName.String(""),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+							),
+							Value: 0,
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapAllocMetric, *getMetricByName(runtimeScope, "process.runtime.go.mem.heap_alloc"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
+			processRuntimeGoMemHeapIdleMetric := metricdata.Metrics{
+				Name:        "process.runtime.go.mem.heap_idle",
+				Description: "Bytes in idle (unused) spans",
+				Unit:        "By",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: false,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								otel.WgRouterClusterName.String(""),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+							),
+							Value: 0,
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapIdleMetric, *getMetricByName(runtimeScope, "process.runtime.go.mem.heap_idle"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
+			processRuntimeGoMemHeapInUseMetric := metricdata.Metrics{
+				Name:        "process.runtime.go.mem.heap_inuse",
+				Description: "Bytes in in-use spans",
+				Unit:        "By",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: false,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								otel.WgRouterClusterName.String(""),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+							),
+							Value: 0,
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapInUseMetric, *getMetricByName(runtimeScope, "process.runtime.go.mem.heap_inuse"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
+			processRuntimeGoMemHeapObjectsMetric := metricdata.Metrics{
+				Name:        "process.runtime.go.mem.heap_objects",
+				Description: "Number of allocated heap objects",
+				Unit:        "",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: false,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								otel.WgRouterClusterName.String(""),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+							),
+							Value: 0,
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapObjectsMetric, *getMetricByName(runtimeScope, "process.runtime.go.mem.heap_objects"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
+			processRuntimeGoMemHeapReleasedMetric := metricdata.Metrics{
+				Name:        "process.runtime.go.mem.heap_released",
+				Description: "Bytes of idle spans whose physical memory has been returned to the OS",
+				Unit:        "By",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: false,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								otel.WgRouterClusterName.String(""),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+							),
+							Value: 0,
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapReleasedMetric, *getMetricByName(runtimeScope, "process.runtime.go.mem.heap_released"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
+			processRuntimeGoMemHeapSysMetric := metricdata.Metrics{
+				Name:        "process.runtime.go.mem.heap_sys",
+				Description: "Bytes of heap memory obtained from the OS",
+				Unit:        "By",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: false,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								otel.WgRouterClusterName.String(""),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+							),
+							Value: 0,
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapSysMetric, *getMetricByName(runtimeScope, "process.runtime.go.mem.heap_sys"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
+			processRuntimeGoMemLiveObjectsMetric := metricdata.Metrics{
+				Name:        "process.runtime.go.mem.live_objects",
+				Description: "Number of live objects is the number of cumulative Mallocs - Frees",
+				Unit:        "",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: false,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								otel.WgRouterClusterName.String(""),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+							),
+							Value: 0,
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, processRuntimeGoMemLiveObjectsMetric, *getMetricByName(runtimeScope, "process.runtime.go.mem.live_objects"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
+			processRuntimeGoGcCountMetric := metricdata.Metrics{
+				Name:        "process.runtime.go.gc.count",
+				Description: "Number of completed garbage collection cycles",
+				Unit:        "",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								otel.WgRouterClusterName.String(""),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+							),
+							Value: 0,
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, processRuntimeGoGcCountMetric, *getMetricByName(runtimeScope, "process.runtime.go.gc.count"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
+			processRuntimeGoGoRoutinesCountMetric := metricdata.Metrics{
+				Name:        "process.runtime.go.goroutines.count",
+				Description: "Number of goroutines that currently exist",
+				Unit:        "",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: false,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								otel.WgRouterClusterName.String(""),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+							),
+							Value: 0,
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, processRuntimeGoGoRoutinesCountMetric, *getMetricByName(runtimeScope, "process.runtime.go.goroutines.count"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
+			processRuntimeGoInfoMetric := metricdata.Metrics{
+				Name:        "process.runtime.go.info",
+				Description: "Information about the Go runtime environment",
+				Unit:        "",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: false,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								otel.WgRouterClusterName.String(""),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+								attribute.String("version", runtime.Version()),
+							),
+							Value: 0,
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, processRuntimeGoInfoMetric, *getMetricByName(runtimeScope, "process.runtime.go.info"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
+			processRuntimeGoGcPauseTotalMetric := metricdata.Metrics{
+				Name:        "process.runtime.go.gc.pause_total",
+				Description: "Cumulative nanoseconds in GC stop-the-world pauses since the program started",
+				Unit:        "ns",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								otel.WgRouterClusterName.String(""),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+							),
+							Value: 0,
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, processRuntimeGoGcPauseTotalMetric, *getMetricByName(runtimeScope, "process.runtime.go.gc.pause_total"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
+			processRuntimeGoGcPauseMetric := metricdata.Metrics{
+				Name:        "process.runtime.go.gc.pause",
+				Description: "Amount of nanoseconds in GC stop-the-world pauses",
+				Unit:        "ns",
+				Data: metricdata.Histogram[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[int64]{
+						{},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, processRuntimeGoGcPauseMetric, *getMetricByName(runtimeScope, "process.runtime.go.gc.pause"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+		})
+	})
+}
 
 func TestTelemetry(t *testing.T) {
 	t.Parallel()
@@ -3634,4 +4010,22 @@ func assertAttributeNotInSet(t *testing.T, set attribute.Set, attr attribute.Key
 
 	_, ok := set.Value(attr.Key)
 	require.False(t, ok)
+}
+
+func getMetricByName(scopeMetric *metricdata.ScopeMetrics, name string) *metricdata.Metrics {
+	for _, m := range scopeMetric.Metrics {
+		if m.Name == name {
+			return &m
+		}
+	}
+	return nil
+}
+
+func getMetricScopeByName(metrics []metricdata.ScopeMetrics, name string) *metricdata.ScopeMetrics {
+	for _, m := range metrics {
+		if m.Scope.Name == name {
+			return &m
+		}
+	}
+	return nil
 }

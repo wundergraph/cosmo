@@ -146,6 +146,7 @@ type Config struct {
 	Logger                             *zap.Logger
 	AccessLogger                       *zap.Logger
 	AccessLogFields                    []config.CustomAttribute
+	EnableRuntimeMetrics               bool
 }
 
 type SubgraphsConfig struct {
@@ -766,7 +767,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 				},
 				OTLP: config.MetricsOTLP{
 					Enabled:             true,
-					RouterRuntime:       false,
+					RouterRuntime:       testConfig.EnableRuntimeMetrics,
 					ExcludeMetrics:      testConfig.MetricExclusions.ExcludedOTLPMetrics,
 					ExcludeMetricLabels: testConfig.MetricExclusions.ExcludedOTLPMetricLabels,
 				},
