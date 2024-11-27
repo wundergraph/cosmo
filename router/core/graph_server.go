@@ -87,6 +87,7 @@ type (
 		inFlightRequests *atomic.Uint64
 		graphMuxes       []*graphMux
 		runtimeMetrics   *rmetric.RuntimeMetrics
+		cacheMetrics     *rmetric.CacheMetrics
 	}
 )
 
@@ -140,6 +141,29 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		if err := s.runtimeMetrics.Start(); err != nil {
 			return nil, err
 		}
+	}
+
+	var cacheMetricProviders []*sdkmetric.MeterProvider
+	if s.metricConfig.OpenTelemetry.GraphqlCache {
+		cacheMetricProviders = append(cacheMetricProviders, s.otlpMeterProvider)
+	}
+
+	if s.metricConfig.Prometheus.GraphqlCache {
+		cacheMetricProviders = append(cacheMetricProviders, s.promMeterProvider)
+	}
+
+	if len(cacheMetricProviders) > 0 {
+		cacheMetrics, err := rmetric.NewCacheMetrics(
+			s.logger,
+			append([]attribute.KeyValue{
+				otel.WgRouterConfigVersion.String(s.baseRouterConfigVersion),
+			}, baseOtelAttributes...),
+			cacheMetricProviders...,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create cache metrics: %w", err)
+		}
+		s.cacheMetrics = cacheMetrics
 	}
 
 	if s.registrationInfo != nil {
@@ -394,6 +418,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	if s.engineExecutionConfiguration.ExecutionPlanCacheSize > 0 {
 		planCacheConfig := &ristretto.Config[uint64, *planWithMetaData]{
+			Metrics:     s.metricConfig.OpenTelemetry.GraphqlCache || s.metricConfig.Prometheus.GraphqlCache,
 			MaxCost:     s.engineExecutionConfiguration.ExecutionPlanCacheSize,
 			NumCounters: s.engineExecutionConfiguration.ExecutionPlanCacheSize * 10,
 			BufferItems: 64,
@@ -419,6 +444,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	if s.engineExecutionConfiguration.EnableNormalizationCache && s.engineExecutionConfiguration.NormalizationCacheSize > 0 {
 		normalizationCacheConfig := &ristretto.Config[uint64, NormalizationCacheEntry]{
+			Metrics:     s.metricConfig.OpenTelemetry.GraphqlCache || s.metricConfig.Prometheus.GraphqlCache,
 			MaxCost:     s.engineExecutionConfiguration.NormalizationCacheSize,
 			NumCounters: s.engineExecutionConfiguration.NormalizationCacheSize * 10,
 			BufferItems: 64,
@@ -431,6 +457,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	if s.engineExecutionConfiguration.EnableValidationCache && s.engineExecutionConfiguration.ValidationCacheSize > 0 {
 		validationCacheConfig := &ristretto.Config[uint64, bool]{
+			Metrics:     s.metricConfig.OpenTelemetry.GraphqlCache || s.metricConfig.Prometheus.GraphqlCache,
 			MaxCost:     s.engineExecutionConfiguration.ValidationCacheSize,
 			NumCounters: s.engineExecutionConfiguration.ValidationCacheSize * 10,
 			BufferItems: 64,
@@ -451,6 +478,37 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		if err != nil {
 			return nil, fmt.Errorf("failed to create query depth cache: %w", err)
 		}
+	}
+
+	if s.cacheMetrics != nil {
+
+		var metricInfos []rmetric.CacheMetricInfo
+
+		var metrics *ristretto.Metrics
+		executionPlanCache, ok := gm.planCache.(*ristretto.Cache[uint64, *planWithMetaData])
+		if ok {
+			metrics = executionPlanCache.Metrics
+		}
+
+		if metrics != nil {
+			metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("execution", s.engineExecutionConfiguration.ExecutionPlanCacheSize, metrics))
+		}
+
+		if gm.normalizationCache != nil {
+			metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("normalization", s.engineExecutionConfiguration.NormalizationCacheSize, gm.normalizationCache.Metrics))
+
+		}
+
+		if gm.validationCache != nil {
+			metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("validation", s.engineExecutionConfiguration.ValidationCacheSize, gm.validationCache.Metrics))
+		}
+
+		err := s.cacheMetrics.Observe(metricInfos)
+
+		if err != nil {
+			return nil, fmt.Errorf("failed to start cache metrics: %w", err)
+		}
+
 	}
 
 	computeSha256 := false
@@ -1020,6 +1078,13 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 	if s.runtimeMetrics != nil {
 		if err := s.runtimeMetrics.Shutdown(); err != nil {
 			s.logger.Error("Failed to shutdown runtime metrics", zap.Error(err))
+			finalErr = errors.Join(finalErr, err)
+		}
+	}
+
+	if s.cacheMetrics != nil {
+		if err := s.cacheMetrics.Shutdown(); err != nil {
+			s.logger.Error("Failed to shutdown cache metrics", zap.Error(err))
 			finalErr = errors.Join(finalErr, err)
 		}
 	}
