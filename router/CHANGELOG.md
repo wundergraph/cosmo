@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.145.0](https://github.com/wundergraph/cosmo/compare/router@0.144.1...router@0.145.0) (2024-11-27)
+
+### Bug Fixes
+
+* ensure that apq alone (without persistent operations enabled) works ([#1402](https://github.com/wundergraph/cosmo/issues/1402)) ([0681d60](https://github.com/wundergraph/cosmo/commit/0681d60a5f89826813963c848773c42b4e998121)) (@df-wg)
+* move runtime metric store to graph server ([#1400](https://github.com/wundergraph/cosmo/issues/1400)) ([1e00f4b](https://github.com/wundergraph/cosmo/commit/1e00f4b55fb5c7d624010a6e672aba7dad317c68)) (@StarpTech)
+
+### Features
+
+* **router:** allow operation name propagation ([#1394](https://github.com/wundergraph/cosmo/issues/1394)) ([7aa6a20](https://github.com/wundergraph/cosmo/commit/7aa6a20a4008507d6a344830663a789531947f44)) (@Noroth)
+
 ## [0.144.1](https://github.com/wundergraph/cosmo/compare/router@0.144.0...router@0.144.1) (2024-11-24)
 
 ### Bug Fixes
