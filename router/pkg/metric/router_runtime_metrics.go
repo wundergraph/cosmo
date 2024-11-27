@@ -30,8 +30,10 @@ type RuntimeMetrics struct {
 	logger                  *zap.Logger
 }
 
+// NewRuntimeMetrics creates a new instance of RuntimeMetrics. Runtime metrics are metrics that are collected from the Go and process runtime.
+// These metrics are shared across feature flags.
 func NewRuntimeMetrics(logger *zap.Logger, meterProvider *metric.MeterProvider, baseAttributes []attribute.KeyValue, processStartTime time.Time) *RuntimeMetrics {
-	// Used to export metrics to OpenTelemetry backend.
+	// Calling meter with the same name and version will return the same instance of the meter.
 	meter := meterProvider.Meter(cosmoRouterRuntimeMeterName,
 		otelmetric.WithInstrumentationVersion(cosmoRouterRuntimeMeterVersion),
 	)
@@ -76,15 +78,6 @@ func (r *RuntimeMetrics) Start() error {
 		"runtime.uptime",
 		otelmetric.WithUnit("s"),
 		otelmetric.WithDescription("Seconds since application was initialized"),
-	)
-	if err != nil {
-		return err
-	}
-
-	serverUptime, err := r.meter.Int64ObservableCounter(
-		"server.uptime",
-		otelmetric.WithUnit("s"),
-		otelmetric.WithDescription("Seconds since the server started. Resets between router config changes."),
 	)
 	if err != nil {
 		return err
@@ -196,12 +189,21 @@ func (r *RuntimeMetrics) Start() error {
 		return err
 	}
 
-	now := time.Now()
+	serverUptime, err := r.meter.Int64ObservableCounter(
+		"server.uptime",
+		otelmetric.WithUnit("s"),
+		otelmetric.WithDescription("Seconds since the server started. Resets between router config changes."),
+	)
+	if err != nil {
+		return err
+	}
 
 	p, err := process.NewProcess(int32(os.Getpid()))
 	if err != nil {
 		return err
 	}
+
+	now := time.Now()
 
 	rc, err := r.meter.RegisterCallback(
 		func(ctx context.Context, o otelmetric.Observer) error {
@@ -222,19 +224,19 @@ func (r *RuntimeMetrics) Start() error {
 				)
 			}
 
-			/*
-			* Process uptime
-			 */
-			o.ObserveInt64(runtimeUptime, int64(time.Since(r.processStartTime).Seconds()),
-				otelmetric.WithAttributes(r.baseAttributes...),
-			)
-
 			/**
 			* Server uptime. Everytime the store is reloaded, the server uptime is reset.
 			 */
 
 			o.ObserveInt64(serverUptime,
 				int64(time.Since(now).Seconds()),
+				otelmetric.WithAttributes(r.baseAttributes...),
+			)
+
+			/*
+			* Process uptime
+			 */
+			o.ObserveInt64(runtimeUptime, int64(time.Since(r.processStartTime).Seconds()),
 				otelmetric.WithAttributes(r.baseAttributes...),
 			)
 
@@ -288,8 +290,8 @@ func (r *RuntimeMetrics) Start() error {
 		pauseTotalNs,
 
 		processCPUUsage,
-		serverUptime,
 		runtimeUptime,
+		serverUptime,
 	)
 
 	if err != nil {

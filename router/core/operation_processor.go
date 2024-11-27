@@ -97,8 +97,8 @@ type OperationProcessorOptions struct {
 	EnablePersistedOperationsCache bool
 	PersistedOpsNormalizationCache *ristretto.Cache[uint64, NormalizationCacheEntry]
 	NormalizationCache             *ristretto.Cache[uint64, NormalizationCacheEntry]
+	QueryDepthCache                *ristretto.Cache[uint64, ComplexityCacheEntry]
 	ValidationCache                *ristretto.Cache[uint64, bool]
-	QueryDepthCache                *ristretto.Cache[uint64, int]
 	OperationHashCache             *ristretto.Cache[uint64, string]
 	ParseKitPoolSize               int
 	IntrospectionEnabled           bool
@@ -140,8 +140,8 @@ type OperationCache struct {
 
 	persistedOperationNormalizationCache *ristretto.Cache[uint64, NormalizationCacheEntry]
 	normalizationCache                   *ristretto.Cache[uint64, NormalizationCacheEntry]
+	complexityCache                      *ristretto.Cache[uint64, ComplexityCacheEntry]
 	validationCache                      *ristretto.Cache[uint64, bool]
-	queryDepthCache                      *ristretto.Cache[uint64, int]
 	operationHashCache                   *ristretto.Cache[uint64, string]
 }
 
@@ -172,6 +172,12 @@ type GraphQLRequestExtensions struct {
 type GraphQLRequestExtensionsPersistedQuery struct {
 	Version    int    `json:"version"`
 	Sha256Hash string `json:"sha256Hash"`
+}
+
+type complexityComparison struct {
+	field        int
+	cachedField  int
+	errorMessage string
 }
 
 // NewOperationKit creates a new OperationKit. The kit is used to parse, normalize and validate operations.
@@ -652,6 +658,13 @@ type NormalizationCacheEntry struct {
 	operationType            string
 }
 
+type ComplexityCacheEntry struct {
+	Depth            int
+	TotalFields      int
+	RootFields       int
+	RootFieldAliases int
+}
+
 func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error) {
 
 	skipIncludeVariableNames := o.skipIncludeVariableNames()
@@ -921,37 +934,65 @@ func (o *OperationKit) Validate(skipLoader bool) (cacheHit bool, err error) {
 	return
 }
 
-// ValidateQueryDepth validates that the operation query depth isn't greater than the max query depth.
-func (o *OperationKit) ValidateQueryDepth(maxQueryDepth int, operation, definition *ast.Document) (bool, int, error) {
-	if o.cache != nil && o.cache.queryDepthCache != nil {
-		depth, cacheHit := o.cache.queryDepthCache.Get(o.parsedOperation.ID)
-		if cacheHit {
-			valid := depth <= maxQueryDepth
-			if !valid {
-				return cacheHit, depth, &httpGraphqlError{
-					message:    fmt.Sprintf("The query depth %d exceeds the max query depth allowed (%d)", depth, maxQueryDepth),
-					statusCode: http.StatusBadRequest,
-				}
-			}
-			return cacheHit, depth, nil
+// ValidateQueryComplexity validates that the query complexity is within the limits set in the configuration
+func (o *OperationKit) ValidateQueryComplexity(complexityLimitConfig *config.ComplexityLimits, operation, definition *ast.Document, isPersisted bool) (bool, ComplexityCacheEntry, error) {
+	if o.cache != nil && o.cache.complexityCache != nil {
+		if cachedComplexity, ok := o.cache.complexityCache.Get(o.parsedOperation.ID); ok {
+			return ok, cachedComplexity, o.runComplexityComparisons(complexityLimitConfig, cachedComplexity, isPersisted)
 		}
 	}
 
 	report := operationreport.Report{}
-	globalComplexityResult, _ := operation_complexity.CalculateOperationComplexity(operation, definition, &report)
-	valid := globalComplexityResult.Depth <= maxQueryDepth
-
-	if o.cache != nil && o.cache.queryDepthCache != nil {
-		o.cache.queryDepthCache.Set(o.parsedOperation.ID, globalComplexityResult.Depth, 1)
+	globalComplexityResult, rootFieldStats := operation_complexity.CalculateOperationComplexity(operation, definition, &report)
+	cacheResult := ComplexityCacheEntry{
+		Depth:       globalComplexityResult.Depth,
+		TotalFields: globalComplexityResult.NodeCount,
 	}
-
-	if !valid {
-		return false, globalComplexityResult.Depth, &httpGraphqlError{
-			message:    fmt.Sprintf("The query depth %d exceeds the max query depth allowed (%d)", globalComplexityResult.Depth, maxQueryDepth),
-			statusCode: http.StatusBadRequest,
+	for _, entry := range rootFieldStats {
+		if entry.Alias == "" {
+			cacheResult.RootFields += 1
+		} else {
+			cacheResult.RootFieldAliases += 1
 		}
 	}
-	return false, globalComplexityResult.Depth, nil
+
+	if o.cache != nil && o.cache.complexityCache != nil {
+		o.cache.complexityCache.Set(o.parsedOperation.ID, cacheResult, 1)
+	}
+
+	return false, cacheResult, o.runComplexityComparisons(complexityLimitConfig, cacheResult, isPersisted)
+}
+
+func (o *OperationKit) runComplexityComparisons(complexityLimitConfig *config.ComplexityLimits, cachedComplexity ComplexityCacheEntry, isPersisted bool) error {
+	testComparisons := []complexityComparison{}
+	if complexityLimitConfig.Depth != nil && complexityLimitConfig.Depth.ApplyLimit(isPersisted) {
+		testComparisons = append(testComparisons,
+			complexityComparison{complexityLimitConfig.Depth.Limit, cachedComplexity.Depth, fmt.Sprintf("The query depth %d exceeds the max query depth allowed (%d)", cachedComplexity.Depth, complexityLimitConfig.Depth.Limit)})
+	}
+	if complexityLimitConfig.TotalFields != nil && complexityLimitConfig.TotalFields.ApplyLimit(isPersisted) {
+		testComparisons = append(testComparisons,
+			complexityComparison{complexityLimitConfig.TotalFields.Limit, cachedComplexity.TotalFields, fmt.Sprintf("The total number of fields %d exceeds the limit allowed (%d)", cachedComplexity.TotalFields, complexityLimitConfig.TotalFields.Limit)})
+	}
+	if complexityLimitConfig.RootFields != nil && complexityLimitConfig.RootFields.ApplyLimit(isPersisted) {
+		testComparisons = append(testComparisons,
+			complexityComparison{complexityLimitConfig.RootFields.Limit, cachedComplexity.RootFields, fmt.Sprintf("The number of root fields %d exceeds the root field limit allowed (%d)", cachedComplexity.RootFields, complexityLimitConfig.RootFields.Limit)})
+	}
+	if complexityLimitConfig.RootFieldAliases != nil && complexityLimitConfig.RootFieldAliases.ApplyLimit(isPersisted) {
+		testComparisons = append(testComparisons,
+			complexityComparison{complexityLimitConfig.RootFieldAliases.Limit, cachedComplexity.RootFieldAliases, fmt.Sprintf("The number of root field aliases %d exceeds the root field aliases limit allowed (%d)", cachedComplexity.RootFieldAliases, complexityLimitConfig.RootFieldAliases.Limit)})
+	}
+
+	for _, comparison := range testComparisons {
+		valid := comparison.field <= 0 || comparison.cachedField <= comparison.field
+		if !valid {
+			return &httpGraphqlError{
+				message:    comparison.errorMessage,
+				statusCode: http.StatusBadRequest,
+			}
+		}
+	}
+
+	return nil
 }
 
 var (
@@ -1039,7 +1080,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		processor.operationCache = &OperationCache{
 			normalizationCache: opts.NormalizationCache,
 			validationCache:    opts.ValidationCache,
-			queryDepthCache:    opts.QueryDepthCache,
+			complexityCache:    opts.QueryDepthCache,
 			operationHashCache: opts.OperationHashCache,
 		}
 	}

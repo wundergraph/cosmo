@@ -59,7 +59,7 @@ export class PlatformWebhookService implements IPlatformWebhookService {
     });
   }
 
-  send<T extends keyof EventMap>(eventName: T, eventData: EventMap[T]) {
+  async send<T extends keyof EventMap>(eventName: T, eventData: EventMap[T]) {
     if (!this.url) {
       return;
     }
@@ -73,7 +73,9 @@ export class PlatformWebhookService implements IPlatformWebhookService {
     };
 
     // @TODO Use a queue to send the events
-    makeWebhookRequest(this.httpClient, data, this.url, this.key).catch((error: AxiosError) => {
+    try {
+      await makeWebhookRequest(this.httpClient, data, this.url, this.key);
+    } catch (error) {
       if (error instanceof AxiosError) {
         logger.error(
           { statusCode: error.response?.status, message: error.message },
@@ -82,7 +84,7 @@ export class PlatformWebhookService implements IPlatformWebhookService {
       } else {
         logger.error(error, 'Could not send platform webhook event');
       }
-    });
+    }
   }
 }
 

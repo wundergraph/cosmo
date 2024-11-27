@@ -4,6 +4,85 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.145.1](https://github.com/wundergraph/cosmo/compare/router@0.145.0...router@0.145.1) (2024-11-27)
+
+### Bug Fixes
+
+* have enable_subgraph_fetch_operation_name default to false ([#1405](https://github.com/wundergraph/cosmo/issues/1405)) ([26cdadc](https://github.com/wundergraph/cosmo/commit/26cdadc1503f04cb10e1e0aed6b646dce5b500f0)) (@df-wg)
+
+# [0.145.0](https://github.com/wundergraph/cosmo/compare/router@0.144.1...router@0.145.0) (2024-11-27)
+
+### Bug Fixes
+
+* ensure that apq alone (without persistent operations enabled) works ([#1402](https://github.com/wundergraph/cosmo/issues/1402)) ([0681d60](https://github.com/wundergraph/cosmo/commit/0681d60a5f89826813963c848773c42b4e998121)) (@df-wg)
+* move runtime metric store to graph server ([#1400](https://github.com/wundergraph/cosmo/issues/1400)) ([1e00f4b](https://github.com/wundergraph/cosmo/commit/1e00f4b55fb5c7d624010a6e672aba7dad317c68)) (@StarpTech)
+
+### Features
+
+* **router:** allow operation name propagation ([#1394](https://github.com/wundergraph/cosmo/issues/1394)) ([7aa6a20](https://github.com/wundergraph/cosmo/commit/7aa6a20a4008507d6a344830663a789531947f44)) (@Noroth)
+
+## [0.144.1](https://github.com/wundergraph/cosmo/compare/router@0.144.0...router@0.144.1) (2024-11-24)
+
+### Bug Fixes
+
+* ensure metric emission even when slice attr is empty ([#1395](https://github.com/wundergraph/cosmo/issues/1395)) ([f576641](https://github.com/wundergraph/cosmo/commit/f576641b2ece9ffb18e81ed0d67137e209aace2a)) (@StarpTech)
+
+# [0.144.0](https://github.com/wundergraph/cosmo/compare/router@0.143.3...router@0.144.0) (2024-11-21)
+
+### Features
+
+* **router:** add ability to set auth scopes in custom module ([#1390](https://github.com/wundergraph/cosmo/issues/1390)) ([251f1d5](https://github.com/wundergraph/cosmo/commit/251f1d506b0fdc939c456daf247742775f0e12ce)) (@df-wg)
+
+## [0.143.3](https://github.com/wundergraph/cosmo/compare/router@0.143.2...router@0.143.3) (2024-11-19)
+
+### Bug Fixes
+
+* upgrade engine to fix fd issue with TLS connections ([#1388](https://github.com/wundergraph/cosmo/issues/1388)) ([7c8bb55](https://github.com/wundergraph/cosmo/commit/7c8bb55d074d732180f433eb6ac3b6139f4416c0)) (@StarpTech)
+
+## [0.143.2](https://github.com/wundergraph/cosmo/compare/router@0.143.1...router@0.143.2) (2024-11-18)
+
+### Bug Fixes
+
+* fix regression on removing null variables which was undefined ([#1385](https://github.com/wundergraph/cosmo/issues/1385)) ([475d58e](https://github.com/wundergraph/cosmo/commit/475d58eb79b693b4cee9f561d0694d392152faf8)) (@devsergiy)
+
+## [0.143.1](https://github.com/wundergraph/cosmo/compare/router@0.143.0...router@0.143.1) (2024-11-18)
+
+### Bug Fixes
+
+* do netPoll detection once and set it globally ([#1384](https://github.com/wundergraph/cosmo/issues/1384)) ([2cba138](https://github.com/wundergraph/cosmo/commit/2cba13896e2f46dee127071d0777a6bff65e21b6)) (@StarpTech)
+
+# [0.143.0](https://github.com/wundergraph/cosmo/compare/router@0.142.1...router@0.143.0) (2024-11-18)
+
+### Bug Fixes
+
+* **router:** ensure that cors wildcard support is enabled ([#1375](https://github.com/wundergraph/cosmo/issues/1375)) ([fde6885](https://github.com/wundergraph/cosmo/commit/fde68852e3cabae372a80620d8846b30a0038ea3)) (@df-wg)
+
+### Features
+
+* better epoll detection, allow to disable epoll ([#1381](https://github.com/wundergraph/cosmo/issues/1381)) ([6c3c4a0](https://github.com/wundergraph/cosmo/commit/6c3c4a0e5170f964e3f3145bb31d50eb11886932)) (@StarpTech)
+
+## [0.142.1](https://github.com/wundergraph/cosmo/compare/router@0.142.0...router@0.142.1) (2024-11-16)
+
+### Bug Fixes
+
+* **tests:** deadlock on unsubscribe when epoll disabled ([#1380](https://github.com/wundergraph/cosmo/issues/1380)) ([337a60f](https://github.com/wundergraph/cosmo/commit/337a60f15577b373ca67a83497304d53fe19f55d)) (@StarpTech)
+
+# [0.142.0](https://github.com/wundergraph/cosmo/compare/router@0.141.3...router@0.142.0) (2024-11-15)
+
+### Bug Fixes
+
+* **router:** refactor complexity limits ([#1364](https://github.com/wundergraph/cosmo/issues/1364)) ([9558ece](https://github.com/wundergraph/cosmo/commit/9558ece2d892dab1b310e0ff5f4b9b9029abf297)) (@df-wg)
+
+### Features
+
+* **router:** enable setting request header from context ([#1371](https://github.com/wundergraph/cosmo/issues/1371)) ([c96485d](https://github.com/wundergraph/cosmo/commit/c96485d0635c301e89773e3736dd00372bcd3fd5)) (@df-wg)
+
+## [0.141.3](https://github.com/wundergraph/cosmo/compare/router@0.141.2...router@0.141.3) (2024-11-14)
+
+### Bug Fixes
+
+* fix merging of response nodes of enum type ([#1373](https://github.com/wundergraph/cosmo/issues/1373)) ([f3927e3](https://github.com/wundergraph/cosmo/commit/f3927e3cfc382bff9beff0a7868b444db213b9d6)) (@devsergiy)
+
 ## [0.141.2](https://github.com/wundergraph/cosmo/compare/router@0.141.1...router@0.141.2) (2024-11-12)
 
 ### Bug Fixes

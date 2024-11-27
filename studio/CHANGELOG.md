@@ -4,6 +4,37 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.95.4](https://github.com/wundergraph/cosmo/compare/studio@0.95.3...studio@0.95.4) (2024-11-27)
+
+### Bug Fixes
+
+* scrollable dropdown ([#1404](https://github.com/wundergraph/cosmo/issues/1404)) ([d562e89](https://github.com/wundergraph/cosmo/commit/d562e89c05567c2c58e86235312b9b469aba56a5)) (@thisisnithin)
+
+## [0.95.3](https://github.com/wundergraph/cosmo/compare/studio@0.95.2...studio@0.95.3) (2024-11-27)
+
+### Bug Fixes
+
+* error ordering for traces ([#1398](https://github.com/wundergraph/cosmo/issues/1398)) ([444fb8d](https://github.com/wundergraph/cosmo/commit/444fb8dbc79a076c1a12c2a2ba813b91a19fc79d)) (@thisisnithin)
+
+## [0.95.2](https://github.com/wundergraph/cosmo/compare/studio@0.95.1...studio@0.95.2) (2024-11-22)
+
+### Bug Fixes
+
+* delete org and user workflows ([#1326](https://github.com/wundergraph/cosmo/issues/1326)) ([484898d](https://github.com/wundergraph/cosmo/commit/484898d885fc99dda8f81a2855173bd3628a5639)) (@thisisnithin)
+
+## [0.95.1](https://github.com/wundergraph/cosmo/compare/studio@0.95.0...studio@0.95.1) (2024-11-21)
+
+### Bug Fixes
+
+* pagination ui of operations ([#1389](https://github.com/wundergraph/cosmo/issues/1389)) ([7ca20fb](https://github.com/wundergraph/cosmo/commit/7ca20fba7f0c5c988dacc45702f408565729b1f1)) (@JivusAyrus)
+* text overflow of composition errors and warnings ([#1391](https://github.com/wundergraph/cosmo/issues/1391)) ([6d8e36c](https://github.com/wundergraph/cosmo/commit/6d8e36c0c01255a88973eb476536b31ceae0ec35)) (@JivusAyrus)
+
+# [0.95.0](https://github.com/wundergraph/cosmo/compare/studio@0.94.3...studio@0.95.0) (2024-11-18)
+
+### Features
+
+* add pagination to operations page in check summary ([#1377](https://github.com/wundergraph/cosmo/issues/1377)) ([e61d4f1](https://github.com/wundergraph/cosmo/commit/e61d4f12873fe434d89c9069b8a1b1e3da225ebf)) (@JivusAyrus)
+
 ## [0.94.3](https://github.com/wundergraph/cosmo/compare/studio@0.94.2...studio@0.94.3) (2024-11-05)
 
 ### Bug Fixes

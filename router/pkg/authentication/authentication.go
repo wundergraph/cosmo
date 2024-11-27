@@ -32,6 +32,9 @@ type Authentication interface {
 	// Claims returns the claims of the authenticated request, as returned by
 	// the Authenticator.
 	Claims() Claims
+	// SetScopes sets the scopes of the authenticated request. It will replace the scopes already parsed from the claims.
+	// If users desire to append the scopes, they can first run `Scopes` to get the current scopes, and then append the new scopes
+	SetScopes(scopes []string)
 	// Scopes returns the scopes of the authenticated request, as returned by
 	// the Authenticator.
 	Scopes() []string
@@ -51,6 +54,17 @@ func (a *authentication) Claims() Claims {
 		return nil
 	}
 	return a.claims
+}
+
+func (a *authentication) SetScopes(scopes []string) {
+	if a == nil {
+		return
+	}
+	if a.claims == nil {
+		a.claims = make(Claims)
+	}
+	// per https://datatracker.ietf.org/doc/html/rfc8693#section-2.1-4.8, scopes should be space separated
+	a.claims["scope"] = strings.Join(scopes, " ")
 }
 
 func (a *authentication) Scopes() []string {

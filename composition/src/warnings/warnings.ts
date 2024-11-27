@@ -1,28 +1,45 @@
 import { QUOTATION_JOIN } from '../utils/string-constants';
 import { FieldSetDirective } from '../schema-building/utils';
 
+export type WarningSubgraphData = {
+  name: string;
+};
+
+export type WarningOptions = {
+  message: string;
+  subgraph: WarningSubgraphData;
+};
+
 export class Warning extends Error {
-  constructor(message: string) {
-    super(message);
+  subgraph: WarningSubgraphData;
+
+  constructor(options: WarningOptions) {
+    super(options.message);
     this.name = 'Warning';
+    this.subgraph = options.subgraph;
   }
 }
 
 export function invalidOverrideTargetSubgraphNameWarning(
-  subgraphName: string,
+  targetSubgraphName: string,
   parentTypeName: string,
   fieldNames: string[],
+  originSubgraphName: string,
 ): Warning {
-  return new Warning(
-    `The object type "${parentTypeName}" defines the directive "@override(from: "${subgraphName})" on the following field` +
+  return new Warning({
+    message:
+      `The Object type "${parentTypeName}" defines the directive "@override(from: "${targetSubgraphName}")" on the following field` +
       (fieldNames.length > 1 ? 's' : '') +
       `: "` +
       fieldNames.join(QUOTATION_JOIN) +
       `".\n` +
       `The required "from" argument of type "String!" should be provided with an existing subgraph name.\n` +
-      `However, a subgraph by the name of "${subgraphName}" does not exist.\n` +
-      `If this subgraph has been recently deleted, remember to clean up unused @override directives that reference this subgraph.`,
-  );
+      `However, a subgraph by the name of "${targetSubgraphName}" does not exist.\n` +
+      `If this subgraph has been recently deleted, remember to clean up unused "@override" directives that reference this subgraph.`,
+    subgraph: {
+      name: originSubgraphName,
+    },
+  });
 }
 
 function versionOneWarningPropagationMessage(subgraphName: string): string {
@@ -38,17 +55,21 @@ export function externalInterfaceFieldsWarning(
   typeName: string,
   fieldNames: Array<string>,
 ): Warning {
-  return new Warning(
-    versionOneWarningPropagationMessage(subgraphName) +
-      `The interface "${typeName}" is invalid because the following field definition` +
+  return new Warning({
+    message:
+      versionOneWarningPropagationMessage(subgraphName) +
+      `The Interface "${typeName}" is invalid because the following Field definition` +
       (fieldNames.length > 1 ? 's are' : ' is') +
       ` declared "@external":\n "` +
       fieldNames.join(QUOTATION_JOIN) +
       `"\n` +
-      `Interface fields should not be declared "@external". This is because interface fields do not resolve directly,` +
-      ` but the "@external" directive relates to whether a field instance can be resolved` +
+      `Interface Fields should not be declared "@external". This is because Interface Fields do not resolve directly,` +
+      ` but the "@external" directive relates to whether a Field instance can be resolved` +
       ` by the subgraph in which it is defined.`,
-  );
+    subgraph: {
+      name: subgraphName,
+    },
+  });
 }
 
 export function nonExternalConditionalFieldWarning(
@@ -58,12 +79,54 @@ export function nonExternalConditionalFieldWarning(
   fieldSet: string,
   fieldSetDirective: FieldSetDirective,
 ): Warning {
-  return new Warning(
-    versionOneWarningPropagationMessage(subgraphName) +
-      `The field "${originCoords}" in subgraph "${subgraphName}" defines a "@${fieldSetDirective}" directive with the following` +
+  return new Warning({
+    message:
+      versionOneWarningPropagationMessage(subgraphName) +
+      `The Field "${originCoords}" in subgraph "${subgraphName}" defines a "@${fieldSetDirective}" directive with the following` +
       ` field set:\n "${fieldSet}".` +
-      `\nHowever, neither the field "${targetCoords}" nor any of its field set ancestors are declared @external.` +
+      `\nHowever, neither the Field "${targetCoords}" nor any of its field set ancestors are declared @external.` +
       `\nConsequently, "${targetCoords}" is already provided by subgraph "${subgraphName}" and should not form part of` +
       ` a "@${fieldSetDirective}" directive field set.`,
-  );
+    subgraph: {
+      name: subgraphName,
+    },
+  });
+}
+
+// TODO Temporarily only used as a warning
+export function unimplementedInterfaceOutputTypeWarning(subgraphName: string, interfaceTypeName: string): Warning {
+  return new Warning({
+    message:
+      `Subgraph "${subgraphName}": The Interface "${interfaceTypeName}" is used as an output type` +
+      ` without at least one Object type implementation defined in the schema.`,
+    subgraph: {
+      name: subgraphName,
+    },
+  });
+}
+
+export function invalidExternalFieldWarning(fieldCoords: string, subgraphName: string): Warning {
+  return new Warning({
+    message:
+      versionOneWarningPropagationMessage(subgraphName) +
+      ` The Object Field "${fieldCoords}" is invalidly declared "@external". An Object Field should only` +
+      ` be declared "@external" if it is part of a "@key", "@provides", or "@requires" FieldSet, or the Field is` +
+      ` necessary to satisfy an Interface implementation. In the case that none of these conditions is true, the` +
+      ` "@external" directive should be removed.`,
+    subgraph: {
+      name: subgraphName,
+    },
+  });
+}
+
+export function requiresDefinedOnNonEntityFieldWarning(fieldCoords: string, subgraphName: string): Warning {
+  return new Warning({
+    message:
+      ` The Object Field "${fieldCoords}" defines a "@requires" directive, but the Object is not an entity.` +
+      ' Consequently, the "@requires" FieldSet cannot be satisfied because there is no entity resolver with which to' +
+      ' provide the required Fields.',
+    subgraph: {
+      name: subgraphName,
+    },
+  });
 }

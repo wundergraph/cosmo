@@ -45,7 +45,7 @@ func TestNatsEvents(t *testing.T) {
 				} `graphql:"employeeUpdated(employeeID: 3)"`
 			}
 
-			surl := xEnv.GraphQLSubscriptionURL()
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 			t.Cleanup(func() {
 				_ = client.Close()
@@ -113,7 +113,7 @@ func TestNatsEvents(t *testing.T) {
 				} `graphql:"employeeUpdated(employeeID: 3)"`
 			}
 
-			surl := xEnv.GraphQLSubscriptionURL()
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 			t.Cleanup(func() {
 				_ = client.Close()
@@ -188,13 +188,13 @@ func TestNatsEvents(t *testing.T) {
 		})
 	})
 
-	t.Run("subscribe async epoll/kqueue disabled", func(t *testing.T) {
+	t.Run("subscribe async netPoll disabled", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.EnableWebSocketEpollKqueue = false
-				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 100
+				engineExecutionConfiguration.EnableNetPoll = false
+				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 100
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
@@ -208,7 +208,7 @@ func TestNatsEvents(t *testing.T) {
 				} `graphql:"employeeUpdated(employeeID: 3)"`
 			}
 
-			surl := xEnv.GraphQLSubscriptionURL()
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 			t.Cleanup(func() {
 				_ = client.Close()
@@ -297,6 +297,10 @@ func TestNatsEvents(t *testing.T) {
 					require.NoError(t, err)
 					require.Equal(t, http.StatusOK, resp.StatusCode)
 					defer resp.Body.Close()
+
+					require.Equal(t, "application/json", resp.Header.Get("Content-Type"))
+					require.Equal(t, "no-cache", resp.Header.Get("Cache-Control"))
+					require.Equal(t, "no", resp.Header.Get("X-Accel-Buffering"))
 
 					require.Equal(t, []string(nil), resp.TransferEncoding)
 
@@ -607,7 +611,7 @@ func TestNatsEvents(t *testing.T) {
 			client := http.Client{
 				Timeout: time.Second * 10,
 			}
-			reqOne, err := http.NewRequest(http.MethodPost, xEnv.GraphQLServeSentEventsURL(), bytes.NewReader(subscribePayloadOne))
+			reqOne, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayloadOne))
 			require.NoError(t, err)
 
 			reqOne.Header.Set("Content-Type", "application/json")
@@ -619,6 +623,12 @@ func TestNatsEvents(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, respOne.StatusCode)
 			defer respOne.Body.Close()
+
+			require.Equal(t, "text/event-stream", respOne.Header.Get("Content-Type"))
+			require.Equal(t, "no-cache", respOne.Header.Get("Cache-Control"))
+			require.Equal(t, "keep-alive", respOne.Header.Get("Connection"))
+			require.Equal(t, "no", respOne.Header.Get("X-Accel-Buffering"))
+
 			readerOne := bufio.NewReader(respOne.Body)
 
 			eventNextOne, _, err := readerOne.ReadLine()
@@ -628,7 +638,7 @@ func TestNatsEvents(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "data: {\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}", string(dataOne))
 
-			reqTwo, err := http.NewRequest(http.MethodPost, xEnv.GraphQLServeSentEventsURL(), bytes.NewReader(subscribePayloadTwo))
+			reqTwo, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayloadTwo))
 			require.NoError(t, err)
 
 			reqTwo.Header.Set("Content-Type", "application/json")
@@ -665,7 +675,7 @@ func TestNatsEvents(t *testing.T) {
 				client := http.Client{
 					Timeout: time.Second * 10,
 				}
-				req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLServeSentEventsURL(), bytes.NewReader(firstSubscribePayload))
+				req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(firstSubscribePayload))
 				require.NoError(t, err)
 
 				req.Header.Set("Content-Type", "application/json")
@@ -677,6 +687,12 @@ func TestNatsEvents(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, http.StatusOK, resp.StatusCode)
 				defer resp.Body.Close()
+
+				require.Equal(t, "text/event-stream", resp.Header.Get("Content-Type"))
+				require.Equal(t, "no-cache", resp.Header.Get("Cache-Control"))
+				require.Equal(t, "keep-alive", resp.Header.Get("Connection"))
+				require.Equal(t, "no", resp.Header.Get("X-Accel-Buffering"))
+
 				reader := bufio.NewReader(resp.Body)
 
 				eventNext, _, err := reader.ReadLine()
@@ -807,7 +823,7 @@ func TestNatsEvents(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
+				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 10
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			type subscriptionPayload struct {
@@ -872,7 +888,7 @@ func TestNatsEvents(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
+				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 10
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			type subscriptionPayload struct {
@@ -991,7 +1007,7 @@ func TestNatsEvents(t *testing.T) {
 			require.Equal(t, "nats: API error: code=404 err_code=10059 description=stream not found", err.Error())
 			require.Equal(t, nil, stream)
 
-			surl := xEnv.GraphQLSubscriptionURL()
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 			t.Cleanup(func() {
 				_ = client.Close()
@@ -1021,7 +1037,7 @@ func TestNatsEvents(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 100
+				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 100
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			type subscriptionPayload struct {
@@ -1176,7 +1192,7 @@ func TestNatsEvents(t *testing.T) {
 				client := http.Client{
 					Timeout: time.Second * 10,
 				}
-				req, gErr := http.NewRequest(http.MethodPost, xEnv.GraphQLServeSentEventsURL(), bytes.NewReader(subscribePayload))
+				req, gErr := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
 				require.NoError(t, gErr)
 
 				req.Header.Set("Content-Type", "application/json")
@@ -1188,6 +1204,12 @@ func TestNatsEvents(t *testing.T) {
 				require.NoError(t, gErr)
 				require.Equal(t, http.StatusOK, resp.StatusCode)
 				defer resp.Body.Close()
+
+				require.Equal(t, "text/event-stream", resp.Header.Get("Content-Type"))
+				require.Equal(t, "no-cache", resp.Header.Get("Cache-Control"))
+				require.Equal(t, "keep-alive", resp.Header.Get("Connection"))
+				require.Equal(t, "no", resp.Header.Get("X-Accel-Buffering"))
+
 				reader := bufio.NewReader(resp.Body)
 
 				eventNext, _, gErr := reader.ReadLine()

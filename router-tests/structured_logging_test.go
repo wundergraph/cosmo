@@ -471,6 +471,7 @@ func TestAccessLogs(t *testing.T) {
 			NoRetryClient: true,
 			RouterOptions: []core.Option{
 				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableNetPoll:          true,
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),
@@ -581,6 +582,7 @@ func TestAccessLogs(t *testing.T) {
 			NoRetryClient: true,
 			RouterOptions: []core.Option{
 				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableNetPoll:          true,
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),
@@ -704,6 +706,7 @@ func TestAccessLogs(t *testing.T) {
 					},
 				}),
 				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableNetPoll:          true,
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),
@@ -831,6 +834,7 @@ func TestAccessLogs(t *testing.T) {
 					},
 				}),
 				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableNetPoll:          true,
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),

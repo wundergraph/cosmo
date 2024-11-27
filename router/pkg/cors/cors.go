@@ -43,9 +43,6 @@ type Config struct {
 	// can be cached
 	MaxAge time.Duration
 
-	// Allows to add origins like http://some-domain/*, https://api.* or http://some.*.subdomain.com
-	AllowWildcard bool
-
 	// Allows usage of popular browser extensions schemas
 	AllowBrowserExtensions bool
 
@@ -113,10 +110,6 @@ func (c *Config) Validate() error {
 
 func (c *Config) parseWildcardRules() [][]string {
 	var wRules [][]string
-
-	if !c.AllowWildcard {
-		return wRules
-	}
 
 	for _, o := range c.AllowOrigins {
 		if !strings.Contains(o, "*") {

@@ -709,7 +709,7 @@ export function undefinedFieldInFieldSetErrorMessage(
 ): string {
   return (
     ` The following field set is invalid:\n  "${fieldSet}"\n` +
-    ` This is because of the selection set corresponding to the field coordinate "${parentTypeName}.${fieldName}".\n` +
+    ` This is because of the selection set corresponding to the Field coordinates "${parentTypeName}.${fieldName}".\n` +
     ` The type "${parentTypeName}" does not define a field named "${fieldName}".`
   );
 }
@@ -1223,6 +1223,14 @@ export function invalidEventSubjectsItemErrorMessage(argumentName: string): stri
   );
 }
 
+export function invalidEventSubjectsArgumentErrorMessage(argumentName: string): string {
+  return `An argument template references the invalid argument "${argumentName}".`;
+}
+
+export function undefinedEventSubjectsArgumentErrorMessage(argumentName: string): string {
+  return `An argument template references the undefined argument "${argumentName}".`;
+}
+
 export const invalidEventProviderIdErrorMessage = `If explicitly defined, the "providerId" argument must be a string with a minimum length of one.`;
 
 export function invalidEventDirectiveError(directiveName: string, fieldPath: string, errorMessages: string[]): Error {
@@ -1621,10 +1629,11 @@ export function unexpectedNonCompositeOutputTypeError(namedTypeName: string, act
   );
 }
 
-// TODO Temporarily only used as a warning
-export function unimplementedInterfaceOutputTypeError(subgraphName: string, interfaceTypeName: string): Error {
+export function invalidExternalDirectiveError(fieldCoords: string): Error {
   return new Error(
-    `Subgraph "${subgraphName}": The Interface "${interfaceTypeName}" is used as an output type` +
-      ` without at least one Object type implementation defined in the schema.`,
+    `The Object Field "${fieldCoords}" is invalidly declared "@external". An Object Field should only` +
+      ` be declared "@external" if it is part of a "@key", "@provides", or "@requires" FieldSet, or the Field is` +
+      ` necessary to satisfy an Interface implementation. In the case that none of these conditions is true, the` +
+      ` "@external" directive should be removed.`,
   );
 }

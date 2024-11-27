@@ -350,8 +350,8 @@ github.com/vektah/gqlparser/v2 v2.5.16 h1:1gcmLTvs3JLKXckwCwlUagVn/IlV2bwqle0vJ0
 github.com/vektah/gqlparser/v2 v2.5.16/go.mod h1:1lz1OeCqgQbQepsGxPVywrjdBHW2T08PUS3pJqepRww=
 github.com/wundergraph/astjson v0.0.0-20241108124845-44485579ffa5 h1:rc+IQxG3rrAXEjBywirkzhKkyCKvXLGQXABVD8GiUtU=
 github.com/wundergraph/astjson v0.0.0-20241108124845-44485579ffa5/go.mod h1:eOTL6acwctsN4F3b7YE+eE2t8zcJ/doLm9sZzsxxxrE=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.122 h1:nOjGdtP7LkVUq6TxY06yS28gelS4P4YtFtGPLDRYSYA=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.122/go.mod h1:s4r/lhVEU5s0c6tCgpR0hK6FHEmX0cbrKcMU1pMc/ZI=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.128 h1:0qFNHSFjXLBOEeeaIY8Pa5usEW//yTQY3ahIQnPouG8=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.128/go.mod h1:s4r/lhVEU5s0c6tCgpR0hK6FHEmX0cbrKcMU1pMc/ZI=
 github.com/xrash/smetrics v0.0.0-20240312152122-5f08fbb34913 h1:+qGGcbkzsfDQNPPe9UDgpxAWQrhbbBXOYJFQDq/dtJw=
 github.com/xrash/smetrics v0.0.0-20240312152122-5f08fbb34913/go.mod h1:4aEEwZQutDLsQv2Deui4iYQ6DWTxR14g6m8Wv88+Xqk=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=

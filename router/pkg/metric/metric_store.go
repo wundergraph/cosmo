@@ -77,6 +77,8 @@ type (
 		processStartTime   time.Time
 		otlpRequestMetrics Provider
 		promRequestMetrics Provider
+		baseAttributes     []attribute.KeyValue
+		baseAttributesOpt  otelmetric.MeasurementOption
 
 		logger *zap.Logger
 	}
@@ -118,6 +120,8 @@ func NewStore(opts ...Option) (Store, error) {
 		opt(h)
 	}
 
+	h.baseAttributesOpt = otelmetric.WithAttributes(h.baseAttributes...)
+
 	// Create OTLP metrics exported to OTEL
 	oltpMetrics, err := NewOtlpMetricStore(h.logger, h.otelMeterProvider)
 	if err != nil {
@@ -140,16 +144,24 @@ func NewStore(opts ...Option) (Store, error) {
 func (h *Metrics) MeasureInFlight(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption) func() {
 	handlers := make([]func(), 0, 2)
 
+	opts := []otelmetric.AddOption{h.baseAttributesOpt, opt}
+
+	// Explode for prometheus metrics
+
 	if len(sliceAttr) == 0 {
-		handlers = append(handlers, h.promRequestMetrics.MeasureInFlight(ctx, opt))
+		handlers = append(handlers, h.promRequestMetrics.MeasureInFlight(ctx, opts...))
 	} else {
 		explodeAddInstrument(ctx, sliceAttr, func(ctx context.Context, newOpts ...otelmetric.AddOption) {
-			newOpts = append(newOpts, opt)
+			newOpts = append(newOpts, opts...)
 			handlers = append(handlers, h.promRequestMetrics.MeasureInFlight(ctx, newOpts...))
 		})
 	}
 
-	handlers = append(handlers, h.otlpRequestMetrics.MeasureInFlight(ctx, otelmetric.WithAttributes(sliceAttr...), opt))
+	// OTEL metrics
+
+	opts = append(opts, otelmetric.WithAttributes(sliceAttr...))
+
+	handlers = append(handlers, h.otlpRequestMetrics.MeasureInFlight(ctx, opts...))
 
 	return func() {
 		for _, h := range handlers {
@@ -159,88 +171,135 @@ func (h *Metrics) MeasureInFlight(ctx context.Context, sliceAttr []attribute.Key
 }
 
 func (h *Metrics) MeasureRequestCount(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption) {
+	opts := []otelmetric.AddOption{h.baseAttributesOpt, opt}
+
+	// Explode for prometheus metrics
+
 	if len(sliceAttr) == 0 {
-		h.promRequestMetrics.MeasureRequestCount(ctx, opt)
+		h.promRequestMetrics.MeasureRequestCount(ctx, opts...)
 	} else {
 		explodeAddInstrument(ctx, sliceAttr, func(ctx context.Context, newOpts ...otelmetric.AddOption) {
-			newOpts = append(newOpts, opt)
+			newOpts = append(newOpts, opts...)
 			h.promRequestMetrics.MeasureRequestCount(ctx, newOpts...)
 		})
 	}
 
-	h.otlpRequestMetrics.MeasureRequestCount(ctx, otelmetric.WithAttributes(sliceAttr...), opt)
+	// OTEL metrics
+
+	opts = append(opts, otelmetric.WithAttributes(sliceAttr...))
+
+	h.otlpRequestMetrics.MeasureRequestCount(ctx, opts...)
 }
 
 func (h *Metrics) MeasureRequestSize(ctx context.Context, contentLength int64, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption) {
+	opts := []otelmetric.AddOption{h.baseAttributesOpt, opt}
+
+	// Explode for prometheus metrics
+
 	if len(sliceAttr) == 0 {
-		h.promRequestMetrics.MeasureRequestSize(ctx, contentLength, opt)
+		h.promRequestMetrics.MeasureRequestSize(ctx, contentLength, opts...)
 	} else {
 		explodeAddInstrument(ctx, sliceAttr, func(ctx context.Context, newOpts ...otelmetric.AddOption) {
-			newOpts = append(newOpts, opt)
+			newOpts = append(newOpts, opts...)
 			h.promRequestMetrics.MeasureRequestSize(ctx, contentLength, newOpts...)
 		})
 	}
 
-	h.otlpRequestMetrics.MeasureRequestSize(ctx, contentLength, otelmetric.WithAttributes(sliceAttr...), opt)
+	// OTEL metrics
+
+	opts = append(opts, otelmetric.WithAttributes(sliceAttr...))
+
+	h.otlpRequestMetrics.MeasureRequestSize(ctx, contentLength, opts...)
 }
 
 func (h *Metrics) MeasureResponseSize(ctx context.Context, size int64, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption) {
+	opts := []otelmetric.AddOption{h.baseAttributesOpt, opt}
+
+	// Explode for prometheus metrics
+
 	if len(sliceAttr) == 0 {
-		h.promRequestMetrics.MeasureResponseSize(ctx, size, opt)
+		h.promRequestMetrics.MeasureResponseSize(ctx, size, opts...)
 	} else {
 		explodeAddInstrument(ctx, sliceAttr, func(ctx context.Context, newOpts ...otelmetric.AddOption) {
-			newOpts = append(newOpts, opt)
+			newOpts = append(newOpts, opts...)
 			h.promRequestMetrics.MeasureResponseSize(ctx, size, newOpts...)
 		})
 	}
 
-	h.otlpRequestMetrics.MeasureResponseSize(ctx, size, otelmetric.WithAttributes(sliceAttr...), opt)
+	// OTEL metrics
+
+	opts = append(opts, otelmetric.WithAttributes(sliceAttr...))
+
+	h.otlpRequestMetrics.MeasureResponseSize(ctx, size, opts...)
 }
 
 func (h *Metrics) MeasureLatency(ctx context.Context, latency time.Duration, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption) {
+	opts := []otelmetric.RecordOption{h.baseAttributesOpt, opt}
 
 	// Use floating point division here for higher precision (instead of Millisecond method).
 	latencyTime := float64(latency) / float64(time.Millisecond)
 
+	// Explode for prometheus metrics
+
 	if len(sliceAttr) == 0 {
-		h.promRequestMetrics.MeasureLatency(ctx, latencyTime, opt)
+		h.promRequestMetrics.MeasureLatency(ctx, latencyTime, opts...)
 	} else {
 		explodeRecordInstrument(ctx, sliceAttr, func(ctx context.Context, newOpts ...otelmetric.RecordOption) {
-			newOpts = append(newOpts, opt)
+			newOpts = append(newOpts, opts...)
 			h.promRequestMetrics.MeasureLatency(ctx, latencyTime, newOpts...)
 		})
 	}
 
-	h.otlpRequestMetrics.MeasureLatency(ctx, latencyTime, otelmetric.WithAttributes(sliceAttr...), opt)
+	// OTEL metrics
+
+	opts = append(opts, otelmetric.WithAttributes(sliceAttr...))
+
+	h.otlpRequestMetrics.MeasureLatency(ctx, latencyTime, opts...)
 }
 
 func (h *Metrics) MeasureRequestError(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption) {
+	opts := []otelmetric.AddOption{h.baseAttributesOpt, opt}
+
+	// Explode for prometheus metrics
+
 	if len(sliceAttr) == 0 {
-		h.promRequestMetrics.MeasureRequestError(ctx, opt)
+		h.promRequestMetrics.MeasureRequestError(ctx, opts...)
 	} else {
 		explodeAddInstrument(ctx, sliceAttr, func(ctx context.Context, newOpts ...otelmetric.AddOption) {
-			newOpts = append(newOpts, opt)
+			newOpts = append(newOpts, opts...)
 			h.promRequestMetrics.MeasureRequestError(ctx, newOpts...)
 		})
 	}
 
-	h.otlpRequestMetrics.MeasureRequestError(ctx, otelmetric.WithAttributes(sliceAttr...), opt)
+	// OTEL metrics
+
+	opts = append(opts, otelmetric.WithAttributes(sliceAttr...))
+
+	h.otlpRequestMetrics.MeasureRequestError(ctx, opts...)
 }
 
 func (h *Metrics) MeasureOperationPlanningTime(ctx context.Context, planningTime time.Duration, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption) {
+	opts := []otelmetric.RecordOption{h.baseAttributesOpt, opt}
+
 	// Use floating point division here for higher precision (instead of Millisecond method).
 	elapsedTime := float64(planningTime) / float64(time.Millisecond)
 
+	// Explode for prometheus metrics
+
 	if len(sliceAttr) == 0 {
-		h.promRequestMetrics.MeasureOperationPlanningTime(ctx, elapsedTime, opt)
+		h.promRequestMetrics.MeasureOperationPlanningTime(ctx, elapsedTime, opts...)
 	} else {
 		explodeRecordInstrument(ctx, sliceAttr, func(ctx context.Context, newOpts ...otelmetric.RecordOption) {
-			newOpts = append(newOpts, opt)
+			newOpts = append(newOpts, opts...)
 			h.promRequestMetrics.MeasureOperationPlanningTime(ctx, elapsedTime, newOpts...)
 		})
 	}
 
-	h.otlpRequestMetrics.MeasureOperationPlanningTime(ctx, elapsedTime, otelmetric.WithAttributes(sliceAttr...), opt)
+	// OTEL metrics
+
+	opts = append(opts, otelmetric.WithAttributes(sliceAttr...))
+
+	h.otlpRequestMetrics.MeasureOperationPlanningTime(ctx, elapsedTime, opts...)
 }
 
 // Flush flushes the metrics to the backend synchronously.
@@ -279,6 +338,12 @@ func WithLogger(logger *zap.Logger) Option {
 func WithOtlpMeterProvider(otelMeterProvider *metric.MeterProvider) Option {
 	return func(h *Metrics) {
 		h.otelMeterProvider = otelMeterProvider
+	}
+}
+
+func WithBaseAttributes(baseAttributes []attribute.KeyValue) Option {
+	return func(h *Metrics) {
+		h.baseAttributes = baseAttributes
 	}
 }
 

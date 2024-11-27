@@ -23,6 +23,9 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 
 		t.Run("Sha without query fails", func(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithGraphApiToken(""),
+				},
 				ApqConfig: config.AutomaticPersistedQueriesConfig{
 					Enabled: true,
 				},
@@ -36,6 +39,11 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 
 		t.Run("Sha with query works", func(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					// This ensures that no CDN client for persistent operations is created, so we can verify that
+					// APQ alone (without persistent operation support setup) works as expected.
+					core.WithGraphApiToken(""),
+				},
 				ApqConfig: config.AutomaticPersistedQueriesConfig{
 					Enabled: true,
 					Cache: config.AutomaticPersistedQueriesCacheConfig{

@@ -507,6 +507,8 @@ message GetCheckOperationsRequest {
   string check_id = 1;
   string graph_name = 2;
   string namespace = 3;
+  int32 limit = 4;
+  int32 offset = 5;
 }
 
 message GetCheckOperationsResponse {
@@ -526,6 +528,7 @@ message GetCheckOperationsResponse {
   int32 traffic_check_days = 3;
   string created_at = 4;
   bool client_traffic_check_skipped = 5;
+  int32 totalOperationsCount = 6;
 }
 
 message GetOperationContentRequest {
@@ -732,6 +735,7 @@ enum Unit {
   StatusCode = 5;
   TraceID = 6;
   SpanID = 7;
+  Percentage = 8;
 }
 
 enum AnalyticsViewFilterOperator {

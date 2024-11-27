@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.37.6](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.37.5...aws-lambda-router@0.37.6) (2024-11-16)
+
+### Bug Fixes
+
+* **tests:** deadlock on unsubscribe when epoll disabled ([#1380](https://github.com/wundergraph/cosmo/issues/1380)) ([337a60f](https://github.com/wundergraph/cosmo/commit/337a60f15577b373ca67a83497304d53fe19f55d)) (@StarpTech)
+
+## [0.37.5](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.37.4...aws-lambda-router@0.37.5) (2024-11-14)
+
+### Bug Fixes
+
+* fix merging of response nodes of enum type ([#1373](https://github.com/wundergraph/cosmo/issues/1373)) ([f3927e3](https://github.com/wundergraph/cosmo/commit/f3927e3cfc382bff9beff0a7868b444db213b9d6)) (@devsergiy)
+
 ## [0.37.4](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.37.3...aws-lambda-router@0.37.4) (2024-11-12)
 
 ### Bug Fixes

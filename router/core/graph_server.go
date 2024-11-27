@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 
@@ -81,14 +80,13 @@ type (
 		publicKey               *ecdsa.PublicKey
 		executionTransport      *http.Transport
 		baseOtelAttributes      []attribute.KeyValue
-		runtimeMetrics          *rmetric.RuntimeMetrics
-		metricStore             rmetric.Store
 		baseRouterConfigVersion string
 		mux                     *chi.Mux
 		// inFlightRequests is used to track the number of requests currently being processed
 		// does not include websocket (hijacked) connections
 		inFlightRequests *atomic.Uint64
 		graphMuxes       []*graphMux
+		runtimeMetrics   *rmetric.RuntimeMetrics
 	}
 )
 
@@ -101,7 +99,6 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		cancelFunc:              cancel,
 		Config:                  &r.Config,
 		websocketStats:          r.WebsocketStats,
-		metricStore:             rmetric.NewNoopMetrics(),
 		executionTransport:      newHTTPTransport(r.subgraphTransportOptions, proxy),
 		playgroundHandler:       r.playgroundHandler,
 		baseRouterConfigVersion: routerConfig.GetVersion(),
@@ -127,6 +124,23 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	}
 
 	s.baseOtelAttributes = baseOtelAttributes
+
+	if s.metricConfig.OpenTelemetry.RouterRuntime {
+		s.runtimeMetrics = rmetric.NewRuntimeMetrics(
+			s.logger,
+			s.otlpMeterProvider,
+			// We track runtime metrics with base router config version
+			append([]attribute.KeyValue{
+				otel.WgRouterConfigVersion.String(s.baseRouterConfigVersion),
+			}, baseOtelAttributes...),
+			s.processStartTime,
+		)
+
+		// Start runtime metrics
+		if err := s.runtimeMetrics.Start(); err != nil {
+			return nil, err
+		}
+	}
 
 	if s.registrationInfo != nil {
 		publicKey, err := jwt.ParseECPublicKeyFromPEM([]byte(s.registrationInfo.GetGraphPublicKey()))
@@ -267,17 +281,18 @@ func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.M
 }
 
 type graphMux struct {
-	mux                     *chi.Mux
-	planCache               ExecutionPlanCache[uint64, *planWithMetaData]
-	persistedOperationCache *ristretto.Cache[uint64, NormalizationCacheEntry]
-	normalizationCache      *ristretto.Cache[uint64, NormalizationCacheEntry]
-	validationCache         *ristretto.Cache[uint64, bool]
-	queryDepthCache         *ristretto.Cache[uint64, int]
-	operationHashCache      *ristretto.Cache[uint64, string]
-	accessLogsFileLogger    *logging.BufferedLogger
+	mux                        *chi.Mux
+	planCache                  ExecutionPlanCache[uint64, *planWithMetaData]
+	persistedOperationCache    *ristretto.Cache[uint64, NormalizationCacheEntry]
+	normalizationCache         *ristretto.Cache[uint64, NormalizationCacheEntry]
+	complexityCalculationCache *ristretto.Cache[uint64, ComplexityCacheEntry]
+	validationCache            *ristretto.Cache[uint64, bool]
+	operationHashCache         *ristretto.Cache[uint64, string]
+	accessLogsFileLogger       *logging.BufferedLogger
+	metricStore                rmetric.Store
 }
 
-func (s *graphMux) Shutdown(_ context.Context) error {
+func (s *graphMux) Shutdown(ctx context.Context) error {
 
 	var err error
 
@@ -295,12 +310,18 @@ func (s *graphMux) Shutdown(_ context.Context) error {
 		s.validationCache.Close()
 	}
 
-	if s.queryDepthCache != nil {
-		s.queryDepthCache.Close()
+	if s.complexityCalculationCache != nil {
+		s.complexityCalculationCache.Close()
 	}
 
 	if s.accessLogsFileLogger != nil {
 		if aErr := s.accessLogsFileLogger.Close(); aErr != nil {
+			err = errors.Join(err, aErr)
+		}
+	}
+
+	if s.metricStore != nil {
+		if aErr := s.metricStore.Shutdown(ctx); aErr != nil {
 			err = errors.Join(err, aErr)
 		}
 	}
@@ -317,7 +338,9 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	engineConfig *nodev1.EngineConfiguration,
 	configSubgraphs []*nodev1.Subgraph) (*graphMux, error) {
 
-	gm := &graphMux{}
+	gm := &graphMux{
+		metricStore: rmetric.NewNoopMetrics(),
+	}
 
 	httpRouter := chi.NewRouter()
 
@@ -330,25 +353,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		baseOtelAttributes = append(baseOtelAttributes, otel.WgFeatureFlag.String(featureFlagName))
 	}
 
-	if s.metricConfig.OpenTelemetry.RouterRuntime {
-		// Create runtime metrics exported to OTEL
-		s.runtimeMetrics = rmetric.NewRuntimeMetrics(
-			s.logger,
-			s.otlpMeterProvider,
-			// We track runtime metrics with base router config version
-			// even when we have multiple feature flags
-			append([]attribute.KeyValue{
-				otel.WgRouterConfigVersion.String(s.baseRouterConfigVersion),
-			}, s.baseOtelAttributes...),
-			s.processStartTime,
-		)
-
-		// Start runtime metrics
-		if err := s.runtimeMetrics.Start(); err != nil {
-			return nil, err
-		}
-	}
-
 	metricsEnabled := s.metricConfig.IsEnabled()
 	traceEnabled := s.traceConfig.Enabled
 
@@ -357,6 +361,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		m, err := rmetric.NewStore(
 			rmetric.WithPromMeterProvider(s.promMeterProvider),
 			rmetric.WithOtlpMeterProvider(s.otlpMeterProvider),
+			rmetric.WithBaseAttributes(baseOtelAttributes),
 			rmetric.WithLogger(s.logger),
 			rmetric.WithProcessStartTime(s.processStartTime),
 		)
@@ -364,7 +369,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			return nil, fmt.Errorf("failed to create metric handler: %w", err)
 		}
 
-		s.metricStore = m
+		gm.metricStore = m
 	}
 
 	subgraphs, err := configureSubgraphOverwrites(
@@ -436,13 +441,13 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		}
 	}
 
-	if s.securityConfiguration.DepthLimit.Enabled && s.securityConfiguration.DepthLimit.CacheSize > 0 {
-		queryDepthCacheConfig := &ristretto.Config[uint64, int]{
-			MaxCost:     s.securityConfiguration.DepthLimit.CacheSize,
-			NumCounters: s.securityConfiguration.DepthLimit.CacheSize * 10,
+	if s.securityConfiguration.ComplexityCalculationCache != nil && s.securityConfiguration.ComplexityCalculationCache.Enabled && s.securityConfiguration.ComplexityCalculationCache.CacheSize > 0 {
+		complexityCalculationCacheConfig := &ristretto.Config[uint64, ComplexityCacheEntry]{
+			MaxCost:     s.securityConfiguration.ComplexityCalculationCache.CacheSize,
+			NumCounters: s.securityConfiguration.ComplexityCalculationCache.CacheSize * 10,
 			BufferItems: 64,
 		}
-		gm.queryDepthCache, err = ristretto.NewCache[uint64, int](queryDepthCacheConfig)
+		gm.complexityCalculationCache, err = ristretto.NewCache[uint64, ComplexityCacheEntry](complexityCalculationCacheConfig)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create query depth cache: %w", err)
 		}
@@ -480,7 +485,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	}
 
 	metrics := NewRouterMetrics(&routerMetricsConfig{
-		metrics:             s.metricStore,
+		metrics:             gm.metricStore,
 		gqlMetricsExporter:  s.gqlMetricsExporter,
 		exportEnabled:       s.graphqlMetricsConfig.Enabled,
 		routerConfigVersion: routerConfigVersion,
@@ -567,7 +572,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 			reqContext := getRequestContext(r.Context())
 
-			reqContext.telemetry.addCommonAttribute(baseOtelAttributes...)
+			reqContext.telemetry.addCommonTraceAttribute(baseOtelAttributes...)
 
 			if commonAttrRequestMapper != nil {
 				reqContext.telemetry.addCommonAttribute(commonAttrRequestMapper(r)...)
@@ -670,7 +675,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			RequestTimeout: s.subgraphTransportOptions.RequestTimeout,
 			PreHandlers:    s.preOriginHandlers,
 			PostHandlers:   s.postOriginHandlers,
-			MetricStore:    s.metricStore,
+			MetricStore:    gm.metricStore,
 			RetryOptions: retrytransport.RetryOptions{
 				Enabled:       s.retryOptions.Enabled,
 				MaxRetryCount: s.retryOptions.MaxRetryCount,
@@ -710,7 +715,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		PersistedOpsNormalizationCache:      gm.persistedOperationCache,
 		NormalizationCache:                  gm.normalizationCache,
 		ValidationCache:                     gm.validationCache,
-		QueryDepthCache:                     gm.queryDepthCache,
+		QueryDepthCache:                     gm.complexityCalculationCache,
 		OperationHashCache:                  gm.operationHashCache,
 		ParseKitPoolSize:                    s.engineExecutionConfiguration.ParseKitPoolSize,
 		IntrospectionEnabled:                s.Config.introspection,
@@ -738,7 +743,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		TracerProvider:                              s.tracerProvider,
 		Authorizer:                                  NewCosmoAuthorizer(authorizerOptions),
 		SubgraphErrorPropagation:                    s.subgraphErrorPropagation,
-		EngineLoaderHooks:                           NewEngineRequestHooks(s.metricStore),
+		EngineLoaderHooks:                           NewEngineRequestHooks(gm.metricStore),
 	}
 
 	if s.redisClient != nil {
@@ -775,9 +780,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		FileUploadEnabled:           s.fileUploadConfig.Enabled,
 		MaxUploadFiles:              s.fileUploadConfig.MaxFiles,
 		MaxUploadFileSize:           int(s.fileUploadConfig.MaxFileSizeBytes),
-		QueryDepthEnabled:           s.securityConfiguration.DepthLimit.Enabled,
-		QueryDepthLimit:             s.securityConfiguration.DepthLimit.Limit,
-		QueryIgnorePersistent:       s.securityConfiguration.DepthLimit.IgnorePersistedOperations,
+		ComplexityLimits:            s.securityConfiguration.ComplexityLimits,
 		AlwaysIncludeQueryPlan:      s.engineExecutionConfiguration.Debug.AlwaysIncludeQueryPlan,
 		AlwaysSkipLoader:            s.engineExecutionConfiguration.Debug.AlwaysSkipLoader,
 		QueryPlansEnabled:           s.Config.queryPlansEnabled,
@@ -790,22 +793,22 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
 		wsMiddleware := NewWebsocketMiddleware(ctx, WebsocketMiddlewareOptions{
-			OperationProcessor:         operationProcessor,
-			OperationBlocker:           operationBlocker,
-			Planner:                    operationPlanner,
-			GraphQLHandler:             graphqlHandler,
-			PreHandler:                 graphqlPreHandler,
-			Metrics:                    metrics,
-			AccessController:           s.accessController,
-			Logger:                     s.logger,
-			Stats:                      s.websocketStats,
-			ReadTimeout:                s.engineExecutionConfiguration.WebSocketReadTimeout,
-			EnableWebSocketEpollKqueue: s.engineExecutionConfiguration.EnableWebSocketEpollKqueue,
-			EpollKqueuePollTimeout:     s.engineExecutionConfiguration.EpollKqueuePollTimeout,
-			EpollKqueueConnBufferSize:  s.engineExecutionConfiguration.EpollKqueueConnBufferSize,
-			WebSocketConfiguration:     s.webSocketConfiguration,
-			ClientHeader:               s.clientHeader,
-			Attributes:                 baseOtelAttributes,
+			OperationProcessor:     operationProcessor,
+			OperationBlocker:       operationBlocker,
+			Planner:                operationPlanner,
+			GraphQLHandler:         graphqlHandler,
+			PreHandler:             graphqlPreHandler,
+			Metrics:                metrics,
+			AccessController:       s.accessController,
+			Logger:                 s.logger,
+			Stats:                  s.websocketStats,
+			ReadTimeout:            s.engineExecutionConfiguration.WebSocketClientReadTimeout,
+			EnableNetPoll:          s.engineExecutionConfiguration.EnableNetPoll,
+			NetPollTimeout:         s.engineExecutionConfiguration.WebSocketClientPollTimeout,
+			NetPollConnBufferSize:  s.engineExecutionConfiguration.WebSocketClientConnBufferSize,
+			WebSocketConfiguration: s.webSocketConfiguration,
+			ClientHeader:           s.clientHeader,
+			Attributes:             baseOtelAttributes,
 		})
 
 		// When the playground path is equal to the graphql path, we need to handle
@@ -868,68 +871,14 @@ func (s *graphServer) accessLogsFieldHandler(panicError any, request *http.Reque
 		if field.ValueFrom != nil && field.ValueFrom.RequestHeader != "" {
 			resFields = append(resFields, NewStringLogField(request.Header.Get(field.ValueFrom.RequestHeader), field))
 		} else if field.ValueFrom != nil && field.ValueFrom.ContextField != "" && reqContext.operation != nil {
-			switch field.ValueFrom.ContextField {
-			case ContextFieldOperationName:
-				if v := NewStringLogField(reqContext.operation.name, field); v != zap.Skip() {
-					resFields = append(resFields, v)
-				}
-			case ContextFieldOperationType:
-				if v := NewStringLogField(reqContext.operation.opType, field); v != zap.Skip() {
-					resFields = append(resFields, v)
-				}
-			case ContextFieldOperationPlanningTime:
-				if v := NewDurationLogField(reqContext.operation.planningTime, field); v != zap.Skip() {
-					resFields = append(resFields, v)
-				}
-			case ContextFieldOperationNormalizationTime:
-				if v := NewDurationLogField(reqContext.operation.normalizationTime, field); v != zap.Skip() {
-					resFields = append(resFields, v)
-				}
-			case ContextFieldOperationParsingTime:
-				if v := NewDurationLogField(reqContext.operation.parsingTime, field); v != zap.Skip() {
-					resFields = append(resFields, v)
-				}
-			case ContextFieldOperationValidationTime:
-				if v := NewDurationLogField(reqContext.operation.validationTime, field); v != zap.Skip() {
-					resFields = append(resFields, v)
-				}
-			case ContextFieldOperationSha256:
-				if v := NewStringLogField(reqContext.operation.sha256Hash, field); v != zap.Skip() {
-					resFields = append(resFields, v)
-				}
-			case ContextFieldOperationHash:
-				if reqContext.operation.hash != 0 {
-					if v := NewStringLogField(strconv.FormatUint(reqContext.operation.hash, 10), field); v != zap.Skip() {
-						resFields = append(resFields, v)
-					}
-				}
-			case ContextFieldPersistedOperationSha256:
-				if v := NewStringLogField(reqContext.operation.persistedID, field); v != zap.Skip() {
-					resFields = append(resFields, v)
-				}
-			case ContextFieldResponseErrorMessage:
-				var errMessage string
-				if panicError != nil {
-					errMessage = fmt.Sprintf("%v", panicError)
-				} else if reqContext.error != nil {
-					errMessage = reqContext.error.Error()
-				}
+			if field.ValueFrom.ContextField == ContextFieldResponseErrorMessage && panicError != nil {
+				errMessage := fmt.Sprintf("%v", panicError)
 				if v := NewStringLogField(errMessage, field); v != zap.Skip() {
 					resFields = append(resFields, v)
 				}
-
-			case ContextFieldOperationServices:
-				if v := NewStringSliceLogField(reqContext.dataSourceNames, field); v != zap.Skip() {
-					resFields = append(resFields, v)
-				}
-			case ContextFieldGraphQLErrorServices:
-				if v := NewStringSliceLogField(reqContext.graphQLErrorServices, field); v != zap.Skip() {
-					resFields = append(resFields, v)
-				}
-			case ContextFieldGraphQLErrorCodes:
-				if v := NewStringSliceLogField(reqContext.graphQLErrorCodes, field); v != zap.Skip() {
-					resFields = append(resFields, v)
-				}
+			}
+			if v := GetLogFieldFromCustomAttribute(field, reqContext); v != zap.Skip() {
+				resFields = append(resFields, v)
 			}
 		} else if field.Default != "" {
 			resFields = append(resFields, NewStringLogField(field.Default, field))
@@ -1066,13 +1015,6 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 		defer cancel()
 
 		ctx = newCtx
-	}
-
-	if s.metricStore != nil {
-		if err := s.metricStore.Shutdown(ctx); err != nil {
-			s.logger.Error("Failed to shutdown metric store", zap.Error(err))
-			finalErr = errors.Join(finalErr, err)
-		}
 	}
 
 	if s.runtimeMetrics != nil {

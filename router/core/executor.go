@@ -255,6 +255,7 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 		b.transport,
 		b.logger,
 		routerEngineCfg.Execution.EnableSingleFlight,
+		routerEngineCfg.Execution.EnableNetPoll,
 		pubSubProviders.nats,
 		pubSubProviders.kafka,
 	))
@@ -276,5 +277,7 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 		DatasourceVisitor:             debug.DatasourceVisitor,
 	}
 	planConfig.MinifySubgraphOperations = routerEngineCfg.Execution.MinifySubgraphOperations
+
+	planConfig.EnableOperationNamePropagation = routerEngineCfg.Execution.EnableSubgraphFetchOperationName
 	return planConfig, nil
 }
