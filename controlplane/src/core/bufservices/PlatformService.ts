@@ -439,10 +439,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return getSubgraph(opts, request, ctx);
     },
 
-    getSubgraph: (req, ctx) => {
-      return getSubgraph(opts, req, ctx);
-    },
-
     getFederatedGraphs: (req, ctx) => {
       return getFederatedGraphs(opts, req, ctx);
     },
@@ -470,14 +466,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         namespace: req.namespace,
       });
       return getFederatedGraph(opts, request, ctx);
-    },
-
-    getFederatedGraph: (req, ctx) => {
-      return getFederatedGraph(opts, req, ctx);
-    },
-
-    getNamespace: (req, ctx) => {
-      return getNamespace(opts, req, ctx);
     },
 
     getFederatedGraphChangelog: (req, ctx) => {
@@ -744,6 +732,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     deletePlaygroundScript: (req, ctx) => {
       return deletePlaygroundScript(opts, req, ctx);
+    },
+
+    // apis used by the terraform provider
+
+    getSubgraph: (req, ctx) => {
+      return getSubgraph(opts, req, ctx);
+    },
+
+    getFederatedGraph: (req, ctx) => {
+      return getFederatedGraph(opts, req, ctx);
+    },
+
+    getNamespace: (req, ctx) => {
+      return getNamespace(opts, req, ctx);
     },
   };
 }
