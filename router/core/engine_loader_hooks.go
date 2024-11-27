@@ -194,21 +194,23 @@ func (f *engineLoaderHooks) OnHttpFinished(ctx context.Context, ds resolve.DataS
 		return
 	}
 
-	hookCtx, ok := ctx.Value(engineLoaderHooksContextKey).(*engineLoaderHooksRequestContext)
-	if !ok {
-		return
-	}
-
-	latency := time.Since(hookCtx.startTime)
 	if f.accessLogger != nil {
 		fields := []zap.Field{
 			zap.String("subgraph_name", ds.Name),
 			zap.String("subgraph_id", ds.ID),
 			zap.Int("status", response.StatusCode),
-			zap.Duration("latency", latency),
 		}
 		if err != nil {
 			fields = append(fields, zap.Any("error", err))
+		}
+		if ctx != nil {
+			hookCtx, ok := ctx.Value(engineLoaderHooksContextKey).(*engineLoaderHooksRequestContext)
+			if !ok {
+				return
+			}
+
+			latency := time.Since(hookCtx.startTime)
+			fields = append(fields, zap.Duration("latency", latency))
 		}
 
 		f.accessLogger.WriteRequestLog(request, response, fields)
