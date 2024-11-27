@@ -16730,6 +16730,11 @@ export class UpdateContractRequest extends Message<UpdateContractRequest> {
    */
   includeTags: string[] = [];
 
+  /**
+   * @generated from field: optional string readme = 5;
+   */
+  readme?: string;
+
   constructor(data?: PartialMessage<UpdateContractRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -16742,6 +16747,7 @@ export class UpdateContractRequest extends Message<UpdateContractRequest> {
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "exclude_tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 4, name: "include_tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 5, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateContractRequest {

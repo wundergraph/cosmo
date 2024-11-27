@@ -2129,6 +2129,7 @@ message UpdateContractRequest {
   string namespace = 2;
   repeated string exclude_tags = 3;
   repeated string include_tags = 4;
+  optional string readme = 5;
 }
 
 message UpdateContractResponse {

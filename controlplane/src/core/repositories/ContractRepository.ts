@@ -5,6 +5,7 @@ import * as schema from '../../db/schema.js';
 import { FederatedGraphDTO } from '../../types/index.js';
 import { contracts, federatedGraphs, targets } from '../../db/schema.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
+import { TargetRepository } from './TargetRepository.js';
 
 export class ContractRepository {
   constructor(
@@ -31,19 +32,34 @@ export class ContractRepository {
     return res[0];
   }
 
-  public async update(data: { id: string; excludeTags: string[]; includeTags: string[]; actorId: string }) {
-    const res = await this.db
-      .update(schema.contracts)
-      .set({
-        excludeTags: data.excludeTags,
-        includeTags: data.includeTags,
-        updatedById: data.actorId,
-        updatedAt: new Date(),
-      })
-      .where(eq(schema.contracts.id, data.id))
-      .returning();
+  public update(data: {
+    id: string;
+    excludeTags: string[];
+    includeTags: string[];
+    actorId: string;
+    targetId: string;
+    readme?: string;
+  }) {
+    return this.db.transaction(async (tx) => {
+      const targetRepo = new TargetRepository(tx, this.organizationId);
 
-    return res[0];
+      const res = await tx
+        .update(schema.contracts)
+        .set({
+          excludeTags: data.excludeTags,
+          includeTags: data.includeTags,
+          updatedById: data.actorId,
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.contracts.id, data.id))
+        .returning();
+
+      if (data.readme !== undefined) {
+        await targetRepo.updateReadmeOfTarget({ id: data.targetId, readme: data.readme });
+      }
+      
+      return res[0];
+    });
   }
 
   public delete(id: string) {

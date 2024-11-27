@@ -1,8 +1,11 @@
+import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import Table from 'cli-table3';
 import { Command, program } from 'commander';
 import pc from 'picocolors';
 import ora from 'ora';
+import { resolve } from 'pathe';
 import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 
@@ -14,6 +17,7 @@ export default (opts: BaseCommandOptions) => {
   command.option('--exclude [tags...]', 'Schema elements with these tags will be excluded from the contract schema.');
   command.option('--include [tags...]', 'Schema elements with these tags will be included from the contract schema.');
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
+  command.option('--readme <path-to-readme>', 'The markdown file which describes the contract.');
   command.action(async (name, options) => {
     const spinner = ora('Contract is being updated...').start();
 
@@ -28,12 +32,25 @@ export default (opts: BaseCommandOptions) => {
       );
     }
 
+    let readmeFile;
+    if (options.readme) {
+      readmeFile = resolve(options.readme);
+      if (!existsSync(readmeFile)) {
+        program.error(
+          pc.red(
+            pc.bold(`The readme file '${pc.bold(readmeFile)}' does not exist. Please check the path and try again.`),
+          ),
+        );
+      }
+    }
+
     const resp = await opts.client.platform.updateContract(
       {
         name,
         namespace: options.namespace,
         excludeTags: options.exclude,
         includeTags: options.include,
+        readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
       },
       {
         headers: getBaseHeaders(),

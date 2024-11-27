@@ -123,6 +123,8 @@ export function updateContract(
       excludeTags: req.excludeTags,
       includeTags: req.includeTags,
       actorId: authContext.userId,
+      readme: req.readme,
+      targetId: graph.targetId,
     });
 
     const compositionErrors: PlainMessage<CompositionError>[] = [];
