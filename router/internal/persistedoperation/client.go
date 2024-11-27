@@ -78,6 +78,11 @@ func (c client) PersistedOperation(ctx context.Context, clientName string, sha25
 		return data, false, nil
 	}
 
+	if c.providerClient == nil {
+		// This can happen if we are using APQ client, without any persisted operation client. Otherwise, we should have a provider client and shouldn't reach here.
+		return nil, c.apqClient != nil, nil
+	}
+
 	content, _, err := c.providerClient.PersistedOperation(ctx, clientName, sha256Hash)
 	if errors.As(err, &PoNotFoundErr) && c.apqClient != nil {
 		// This could well be the first time a client is requesting an APQ operation and the query is attached to the request. Return without error here, and we'll verify the operation later.
