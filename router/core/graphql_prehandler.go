@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
+	"github.com/cespare/xxhash/v2"
 	"net/http"
 	"strconv"
 	"strings"
@@ -593,16 +594,6 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, varia
 	// Set the cache hit attribute on the span
 	engineNormalizeSpan.SetAttributes(otel.WgNormalizationCacheHit.Bool(cached))
 
-	requestContext.operation.hash = operationKit.parsedOperation.ID
-	requestContext.operation.normalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
-
-	operationHashString := strconv.FormatUint(operationKit.parsedOperation.ID, 10)
-	operationHashAttribute := otel.WgOperationHash.String(operationHashString)
-
-	requestContext.telemetry.addCommonAttribute(operationHashAttribute)
-
-	httpOperation.routerSpan.SetAttributes(operationHashAttribute)
-
 	/**
 	* Normalize the variables
 	 */
@@ -621,6 +612,22 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, varia
 
 		return err
 	}
+
+	normalizedOperationHash := xxhash.New()
+	err = operationKit.kit.printer.Print(operationKit.kit.doc, normalizedOperationHash)
+	if err != nil {
+		return err
+	}
+
+	requestContext.operation.hash = normalizedOperationHash.Sum64()
+	requestContext.operation.normalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
+
+	operationHashString := strconv.FormatUint(normalizedOperationHash.Sum64(), 10)
+	operationHashAttribute := otel.WgOperationHash.String(operationHashString)
+
+	requestContext.telemetry.addCommonAttribute(operationHashAttribute)
+
+	httpOperation.routerSpan.SetAttributes(operationHashAttribute)
 
 	requestContext.operation.content = operationKit.parsedOperation.NormalizedRepresentation
 	requestContext.operation.variables, err = variablesParser.ParseBytes(operationKit.parsedOperation.Request.Variables)

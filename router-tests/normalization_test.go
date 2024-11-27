@@ -55,7 +55,7 @@ func TestNormalization(t *testing.T) {
 			 */
 			{
 				Name:          "Variable with User ID 1",
-				OperationHash: "12414436944120948510",
+				OperationHash: "17236947914586555433",
 				Query: `{
     "query": "query Employee($id: Int! = 1) {\n  employee(id: $id) {\n    details {\n      pets {\n        name\n      }\n    }\n  }\n}",
     "variables": {
@@ -67,7 +67,7 @@ func TestNormalization(t *testing.T) {
 			},
 			{
 				Name:          "Variable with User ID 3",
-				OperationHash: "12414436944120948510",
+				OperationHash: "17236947914586555433",
 				Query: `{
     "query": "query Employee($id: Int! = 1) {\n  employee(id: $id) {\n    details {\n      pets {\n        name\n      }\n    }\n  }\n}",
     "variables": {
@@ -82,7 +82,7 @@ func TestNormalization(t *testing.T) {
 			 */
 			{
 				Name:          "Variable with default value 1",
-				OperationHash: "12414436944120948510",
+				OperationHash: "17236947914586555433",
 				Query: `{
     "query": "query Employee($id: Int! = 1) {\n  employee(id: $id) {\n    details {\n      pets {\n        name\n      }\n    }\n  }\n}",
     "operationName": "Employee"
@@ -91,7 +91,7 @@ func TestNormalization(t *testing.T) {
 			},
 			{
 				Name:          "Variable with default value 3",
-				OperationHash: "12414436944120948510",
+				OperationHash: "17236947914586555433",
 				Query: `{
     "query": "query Employee($id: Int! = 3) {\n  employee(id: $id) {\n    details {\n      pets {\n        name\n      }\n    }\n  }\n}",
     "operationName": "Employee"
@@ -103,7 +103,7 @@ func TestNormalization(t *testing.T) {
 			 */
 			{
 				Name:          "Inline value with User ID 1",
-				OperationHash: "6058851224116005894",
+				OperationHash: "5295522593792610114",
 				Query: `{
     "query": "query Employee{\n  employee(id: 1) {\n    details {\n      pets {\n        name\n      }\n    }\n  }\n}",
     "operationName": "Employee"
@@ -112,7 +112,7 @@ func TestNormalization(t *testing.T) {
 			},
 			{
 				Name:          "Inline value with User ID 3",
-				OperationHash: "6058851224116005894",
+				OperationHash: "5295522593792610114",
 				Query: `{
     "query": "query Employee{\n  employee(id: 3) {\n    details {\n      pets {\n        name\n      }\n    }\n  }\n}",
     "operationName": "Employee"
