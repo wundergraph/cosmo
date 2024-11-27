@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.95.4](https://github.com/wundergraph/cosmo/compare/studio@0.95.3...studio@0.95.4) (2024-11-27)
+
+### Bug Fixes
+
+* scrollable dropdown ([#1404](https://github.com/wundergraph/cosmo/issues/1404)) ([d562e89](https://github.com/wundergraph/cosmo/commit/d562e89c05567c2c58e86235312b9b469aba56a5)) (@thisisnithin)
+
+## [0.95.3](https://github.com/wundergraph/cosmo/compare/studio@0.95.2...studio@0.95.3) (2024-11-27)
+
+### Bug Fixes
+
+* error ordering for traces ([#1398](https://github.com/wundergraph/cosmo/issues/1398)) ([444fb8d](https://github.com/wundergraph/cosmo/commit/444fb8dbc79a076c1a12c2a2ba813b91a19fc79d)) (@thisisnithin)
+
 ## [0.95.2](https://github.com/wundergraph/cosmo/compare/studio@0.95.1...studio@0.95.2) (2024-11-22)
 
 ### Bug Fixes
