@@ -57,7 +57,7 @@ export class ContractRepository {
       if (data.readme !== undefined) {
         await targetRepo.updateReadmeOfTarget({ id: data.targetId, readme: data.readme });
       }
-      
+
       return res[0];
     });
   }
