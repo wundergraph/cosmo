@@ -735,6 +735,7 @@ enum Unit {
   StatusCode = 5;
   TraceID = 6;
   SpanID = 7;
+  Percentage = 8;
 }
 
 enum AnalyticsViewFilterOperator {

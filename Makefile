@@ -38,6 +38,15 @@ infra-restart:
 infra-down-v:
 	docker compose -f docker-compose.yml --profile dev down --remove-orphans -v
 
+infra-debug-down:
+	docker compose -f docker-compose.yml --profile debug down --remove-orphans
+
+infra-debug-down-v:
+	docker compose -f docker-compose.yml --profile debug down --remove-orphans -v
+
+infra-debug-up:
+	docker compose -f docker-compose.yml --profile debug up --remove-orphans --detach
+
 seed:
 	pnpm -r run --filter './controlplane' seed
 
