@@ -2,28 +2,27 @@ import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
-  GetFederatedGraphRequest,
-  GetFederatedGraphResponse,
+  GetFederatedGraphByIdRequest,
+  GetFederatedGraphByIdResponse,
   RequestSeriesItem,
   Subgraph,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { FeatureFlagDTO, FederatedGraphDTO } from '../../../types/index.js';
+import { FeatureFlagDTO } from '../../../types/index.js';
 import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
-import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import { AnalyticsDashboardViewRepository } from '../../repositories/analytics/AnalyticsDashboardViewRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 
-export function getFederatedGraph(
+export function getFederatedGraphById(
   opts: RouterOptions,
-  req: GetFederatedGraphRequest,
+  req: GetFederatedGraphByIdRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<GetFederatedGraphResponse>> {
+): Promise<PlainMessage<GetFederatedGraphByIdResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<GetFederatedGraphResponse>>(ctx, logger, async () => {
+  return handleError<PlainMessage<GetFederatedGraphByIdResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
@@ -31,14 +30,7 @@ export function getFederatedGraph(
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
     const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
 
-    req.namespace = req.namespace || DefaultNamespace;
-    let federatedGraph: FederatedGraphDTO | undefined;
-
-    if (req.id) {
-      federatedGraph = await fedRepo.byId(req.id);
-    } else {
-      federatedGraph = await fedRepo.byName(req.name, req.namespace);
-    }
+    const federatedGraph = await fedRepo.byId(req.id);
 
     if (!federatedGraph) {
       return {
@@ -49,7 +41,7 @@ export function getFederatedGraph(
         graphRequestToken: '',
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
-          details: `Graph '${req.name}' not found`,
+          details: `Graph '${req.id}' not found`,
         },
       };
     }

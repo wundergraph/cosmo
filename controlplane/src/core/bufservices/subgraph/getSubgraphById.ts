@@ -1,40 +1,34 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { GetSubgraphRequest, GetSubgraphResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
+import {
+  GetSubgraphByIdRequest,
+  GetSubgraphByIdResponse,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
-import { SubgraphDTO } from '../../../types/index.js';
 
-export function getSubgraph(
+export function getSubgraphById(
   opts: RouterOptions,
-  req: GetSubgraphRequest,
+  req: GetSubgraphByIdRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<GetSubgraphResponse>> {
+): Promise<PlainMessage<GetSubgraphByIdResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<GetSubgraphResponse>>(ctx, logger, async () => {
+  return handleError<PlainMessage<GetSubgraphByIdResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
 
-    req.namespace = req.namespace || DefaultNamespace;
-    let subgraph: SubgraphDTO | undefined;
-
-    if (req.id) {
-      subgraph = await subgraphRepo.byId(req.id);
-    } else {
-      subgraph = await subgraphRepo.byName(req.name, req.namespace);
-    }
+    const subgraph = await subgraphRepo.byId(req.id);
 
     if (!subgraph) {
       return {
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
-          details: `The subgraph "${req.name}" was not found.`,
+          details: `The subgraph "${req.id}" was not found.`,
         },
         members: [],
       };

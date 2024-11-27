@@ -451,12 +451,12 @@ const (
 	// PlatformServiceGetFeatureFlagsByFederatedGraphProcedure is the fully-qualified name of the
 	// PlatformService's GetFeatureFlagsByFederatedGraph RPC.
 	PlatformServiceGetFeatureFlagsByFederatedGraphProcedure = "/wg.cosmo.platform.v1.PlatformService/GetFeatureFlagsByFederatedGraph"
-	// PlatformServiceGetFederatedGraphProcedure is the fully-qualified name of the PlatformService's
-	// GetFederatedGraph RPC.
-	PlatformServiceGetFederatedGraphProcedure = "/wg.cosmo.platform.v1.PlatformService/GetFederatedGraph"
-	// PlatformServiceGetSubgraphProcedure is the fully-qualified name of the PlatformService's
-	// GetSubgraph RPC.
-	PlatformServiceGetSubgraphProcedure = "/wg.cosmo.platform.v1.PlatformService/GetSubgraph"
+	// PlatformServiceGetFederatedGraphByIdProcedure is the fully-qualified name of the
+	// PlatformService's GetFederatedGraphById RPC.
+	PlatformServiceGetFederatedGraphByIdProcedure = "/wg.cosmo.platform.v1.PlatformService/GetFederatedGraphById"
+	// PlatformServiceGetSubgraphByIdProcedure is the fully-qualified name of the PlatformService's
+	// GetSubgraphById RPC.
+	PlatformServiceGetSubgraphByIdProcedure = "/wg.cosmo.platform.v1.PlatformService/GetSubgraphById"
 	// PlatformServiceGetBillingPlansProcedure is the fully-qualified name of the PlatformService's
 	// GetBillingPlans RPC.
 	PlatformServiceGetBillingPlansProcedure = "/wg.cosmo.platform.v1.PlatformService/GetBillingPlans"
@@ -613,8 +613,8 @@ var (
 	platformServiceGetFeatureSubgraphsByFeatureFlagMethodDescriptor      = platformServiceServiceDescriptor.Methods().ByName("GetFeatureSubgraphsByFeatureFlag")
 	platformServiceGetFeatureSubgraphsMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("GetFeatureSubgraphs")
 	platformServiceGetFeatureFlagsByFederatedGraphMethodDescriptor       = platformServiceServiceDescriptor.Methods().ByName("GetFeatureFlagsByFederatedGraph")
-	platformServiceGetFederatedGraphMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("GetFederatedGraph")
-	platformServiceGetSubgraphMethodDescriptor                           = platformServiceServiceDescriptor.Methods().ByName("GetSubgraph")
+	platformServiceGetFederatedGraphByIdMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("GetFederatedGraphById")
+	platformServiceGetSubgraphByIdMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetSubgraphById")
 	platformServiceGetBillingPlansMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetBillingPlans")
 	platformServiceCreateCheckoutSessionMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("CreateCheckoutSession")
 	platformServiceCreateBillingPortalSessionMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("CreateBillingPortalSession")
@@ -880,10 +880,10 @@ type PlatformServiceClient interface {
 	GetFeatureSubgraphs(context.Context, *connect.Request[v1.GetFeatureSubgraphsRequest]) (*connect.Response[v1.GetFeatureSubgraphsResponse], error)
 	// GetFeatureFlagsByFederatedGraph returns the list of feature flags which match the label matchers of the federated graph.
 	GetFeatureFlagsByFederatedGraph(context.Context, *connect.Request[v1.GetFeatureFlagsByFederatedGraphRequest]) (*connect.Response[v1.GetFeatureFlagsByFederatedGraphResponse], error)
-	// GetFederatedGraph returns the federated graph by id/name.
-	GetFederatedGraph(context.Context, *connect.Request[v1.GetFederatedGraphRequest]) (*connect.Response[v1.GetFederatedGraphResponse], error)
-	// GetSubgraph returns the subgraph by id/name.
-	GetSubgraph(context.Context, *connect.Request[v1.GetSubgraphRequest]) (*connect.Response[v1.GetSubgraphResponse], error)
+	// GetFederatedGraphById returns the federated graph by id.
+	GetFederatedGraphById(context.Context, *connect.Request[v1.GetFederatedGraphByIdRequest]) (*connect.Response[v1.GetFederatedGraphByIdResponse], error)
+	// GetSubgraphById returns the subgraph by id.
+	GetSubgraphById(context.Context, *connect.Request[v1.GetSubgraphByIdRequest]) (*connect.Response[v1.GetSubgraphByIdResponse], error)
 	// Billing
 	// -----------------------------------------------------------------------------------------------------------------------------
 	// Return the available billing plans
@@ -1747,16 +1747,16 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceGetFeatureFlagsByFederatedGraphMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
-		getFederatedGraph: connect.NewClient[v1.GetFederatedGraphRequest, v1.GetFederatedGraphResponse](
+		getFederatedGraphById: connect.NewClient[v1.GetFederatedGraphByIdRequest, v1.GetFederatedGraphByIdResponse](
 			httpClient,
-			baseURL+PlatformServiceGetFederatedGraphProcedure,
-			connect.WithSchema(platformServiceGetFederatedGraphMethodDescriptor),
+			baseURL+PlatformServiceGetFederatedGraphByIdProcedure,
+			connect.WithSchema(platformServiceGetFederatedGraphByIdMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
-		getSubgraph: connect.NewClient[v1.GetSubgraphRequest, v1.GetSubgraphResponse](
+		getSubgraphById: connect.NewClient[v1.GetSubgraphByIdRequest, v1.GetSubgraphByIdResponse](
 			httpClient,
-			baseURL+PlatformServiceGetSubgraphProcedure,
-			connect.WithSchema(platformServiceGetSubgraphMethodDescriptor),
+			baseURL+PlatformServiceGetSubgraphByIdProcedure,
+			connect.WithSchema(platformServiceGetSubgraphByIdMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		getBillingPlans: connect.NewClient[v1.GetBillingPlansRequest, v1.GetBillingPlansResponse](
@@ -1927,8 +1927,8 @@ type platformServiceClient struct {
 	getFeatureSubgraphsByFeatureFlag      *connect.Client[v1.GetFeatureSubgraphsByFeatureFlagRequest, v1.GetFeatureSubgraphsByFeatureFlagResponse]
 	getFeatureSubgraphs                   *connect.Client[v1.GetFeatureSubgraphsRequest, v1.GetFeatureSubgraphsResponse]
 	getFeatureFlagsByFederatedGraph       *connect.Client[v1.GetFeatureFlagsByFederatedGraphRequest, v1.GetFeatureFlagsByFederatedGraphResponse]
-	getFederatedGraph                     *connect.Client[v1.GetFederatedGraphRequest, v1.GetFederatedGraphResponse]
-	getSubgraph                           *connect.Client[v1.GetSubgraphRequest, v1.GetSubgraphResponse]
+	getFederatedGraphById                 *connect.Client[v1.GetFederatedGraphByIdRequest, v1.GetFederatedGraphByIdResponse]
+	getSubgraphById                       *connect.Client[v1.GetSubgraphByIdRequest, v1.GetSubgraphByIdResponse]
 	getBillingPlans                       *connect.Client[v1.GetBillingPlansRequest, v1.GetBillingPlansResponse]
 	createCheckoutSession                 *connect.Client[v1.CreateCheckoutSessionRequest, v1.CreateCheckoutSessionResponse]
 	createBillingPortalSession            *connect.Client[v1.CreateBillingPortalSessionRequest, v1.CreateBillingPortalSessionResponse]
@@ -2654,14 +2654,14 @@ func (c *platformServiceClient) GetFeatureFlagsByFederatedGraph(ctx context.Cont
 	return c.getFeatureFlagsByFederatedGraph.CallUnary(ctx, req)
 }
 
-// GetFederatedGraph calls wg.cosmo.platform.v1.PlatformService.GetFederatedGraph.
-func (c *platformServiceClient) GetFederatedGraph(ctx context.Context, req *connect.Request[v1.GetFederatedGraphRequest]) (*connect.Response[v1.GetFederatedGraphResponse], error) {
-	return c.getFederatedGraph.CallUnary(ctx, req)
+// GetFederatedGraphById calls wg.cosmo.platform.v1.PlatformService.GetFederatedGraphById.
+func (c *platformServiceClient) GetFederatedGraphById(ctx context.Context, req *connect.Request[v1.GetFederatedGraphByIdRequest]) (*connect.Response[v1.GetFederatedGraphByIdResponse], error) {
+	return c.getFederatedGraphById.CallUnary(ctx, req)
 }
 
-// GetSubgraph calls wg.cosmo.platform.v1.PlatformService.GetSubgraph.
-func (c *platformServiceClient) GetSubgraph(ctx context.Context, req *connect.Request[v1.GetSubgraphRequest]) (*connect.Response[v1.GetSubgraphResponse], error) {
-	return c.getSubgraph.CallUnary(ctx, req)
+// GetSubgraphById calls wg.cosmo.platform.v1.PlatformService.GetSubgraphById.
+func (c *platformServiceClient) GetSubgraphById(ctx context.Context, req *connect.Request[v1.GetSubgraphByIdRequest]) (*connect.Response[v1.GetSubgraphByIdResponse], error) {
+	return c.getSubgraphById.CallUnary(ctx, req)
 }
 
 // GetBillingPlans calls wg.cosmo.platform.v1.PlatformService.GetBillingPlans.
@@ -2943,10 +2943,10 @@ type PlatformServiceHandler interface {
 	GetFeatureSubgraphs(context.Context, *connect.Request[v1.GetFeatureSubgraphsRequest]) (*connect.Response[v1.GetFeatureSubgraphsResponse], error)
 	// GetFeatureFlagsByFederatedGraph returns the list of feature flags which match the label matchers of the federated graph.
 	GetFeatureFlagsByFederatedGraph(context.Context, *connect.Request[v1.GetFeatureFlagsByFederatedGraphRequest]) (*connect.Response[v1.GetFeatureFlagsByFederatedGraphResponse], error)
-	// GetFederatedGraph returns the federated graph by id/name.
-	GetFederatedGraph(context.Context, *connect.Request[v1.GetFederatedGraphRequest]) (*connect.Response[v1.GetFederatedGraphResponse], error)
-	// GetSubgraph returns the subgraph by id/name.
-	GetSubgraph(context.Context, *connect.Request[v1.GetSubgraphRequest]) (*connect.Response[v1.GetSubgraphResponse], error)
+	// GetFederatedGraphById returns the federated graph by id.
+	GetFederatedGraphById(context.Context, *connect.Request[v1.GetFederatedGraphByIdRequest]) (*connect.Response[v1.GetFederatedGraphByIdResponse], error)
+	// GetSubgraphById returns the subgraph by id.
+	GetSubgraphById(context.Context, *connect.Request[v1.GetSubgraphByIdRequest]) (*connect.Response[v1.GetSubgraphByIdResponse], error)
 	// Billing
 	// -----------------------------------------------------------------------------------------------------------------------------
 	// Return the available billing plans
@@ -3806,16 +3806,16 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceGetFeatureFlagsByFederatedGraphMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
-	platformServiceGetFederatedGraphHandler := connect.NewUnaryHandler(
-		PlatformServiceGetFederatedGraphProcedure,
-		svc.GetFederatedGraph,
-		connect.WithSchema(platformServiceGetFederatedGraphMethodDescriptor),
+	platformServiceGetFederatedGraphByIdHandler := connect.NewUnaryHandler(
+		PlatformServiceGetFederatedGraphByIdProcedure,
+		svc.GetFederatedGraphById,
+		connect.WithSchema(platformServiceGetFederatedGraphByIdMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
-	platformServiceGetSubgraphHandler := connect.NewUnaryHandler(
-		PlatformServiceGetSubgraphProcedure,
-		svc.GetSubgraph,
-		connect.WithSchema(platformServiceGetSubgraphMethodDescriptor),
+	platformServiceGetSubgraphByIdHandler := connect.NewUnaryHandler(
+		PlatformServiceGetSubgraphByIdProcedure,
+		svc.GetSubgraphById,
+		connect.WithSchema(platformServiceGetSubgraphByIdMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetBillingPlansHandler := connect.NewUnaryHandler(
@@ -4122,10 +4122,10 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceGetFeatureSubgraphsHandler.ServeHTTP(w, r)
 		case PlatformServiceGetFeatureFlagsByFederatedGraphProcedure:
 			platformServiceGetFeatureFlagsByFederatedGraphHandler.ServeHTTP(w, r)
-		case PlatformServiceGetFederatedGraphProcedure:
-			platformServiceGetFederatedGraphHandler.ServeHTTP(w, r)
-		case PlatformServiceGetSubgraphProcedure:
-			platformServiceGetSubgraphHandler.ServeHTTP(w, r)
+		case PlatformServiceGetFederatedGraphByIdProcedure:
+			platformServiceGetFederatedGraphByIdHandler.ServeHTTP(w, r)
+		case PlatformServiceGetSubgraphByIdProcedure:
+			platformServiceGetSubgraphByIdHandler.ServeHTTP(w, r)
 		case PlatformServiceGetBillingPlansProcedure:
 			platformServiceGetBillingPlansHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateCheckoutSessionProcedure:
@@ -4699,12 +4699,12 @@ func (UnimplementedPlatformServiceHandler) GetFeatureFlagsByFederatedGraph(conte
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetFeatureFlagsByFederatedGraph is not implemented"))
 }
 
-func (UnimplementedPlatformServiceHandler) GetFederatedGraph(context.Context, *connect.Request[v1.GetFederatedGraphRequest]) (*connect.Response[v1.GetFederatedGraphResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetFederatedGraph is not implemented"))
+func (UnimplementedPlatformServiceHandler) GetFederatedGraphById(context.Context, *connect.Request[v1.GetFederatedGraphByIdRequest]) (*connect.Response[v1.GetFederatedGraphByIdResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetFederatedGraphById is not implemented"))
 }
 
-func (UnimplementedPlatformServiceHandler) GetSubgraph(context.Context, *connect.Request[v1.GetSubgraphRequest]) (*connect.Response[v1.GetSubgraphResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetSubgraph is not implemented"))
+func (UnimplementedPlatformServiceHandler) GetSubgraphById(context.Context, *connect.Request[v1.GetSubgraphByIdRequest]) (*connect.Response[v1.GetSubgraphByIdResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetSubgraphById is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) GetBillingPlans(context.Context, *connect.Request[v1.GetBillingPlansRequest]) (*connect.Response[v1.GetBillingPlansResponse], error) {

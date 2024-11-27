@@ -1,6 +1,5 @@
 import { ServiceImpl } from '@connectrpc/connect';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
-import { GetFederatedGraphRequest, GetSubgraphRequest } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import type { RouterOptions } from '../routes.js';
 import { getAnalyticsView } from './analytics/getAnalyticsView.js';
 import { getDashboardAnalyticsView } from './analytics/getDashboardAnalyticsView.js';
@@ -142,9 +141,11 @@ import { createPlaygroundScript } from './playground/createPlaygroundScript.js';
 import { deletePlaygroundScript } from './playground/deletePlaygroundScript.js';
 import { getPlaygroundScripts } from './playground/getPlaygroundScripts.js';
 import { updatePlaygroundScript } from './playground/updatePlaygroundScript.js';
-import { getFederatedGraph } from './federated-graph/getFederatedGraph.js';
-import { getSubgraph } from './subgraph/getSubgraph.js';
+import { getFederatedGraphByName } from './federated-graph/getFederatedGraphByName.js';
+import { getSubgraphByName } from './subgraph/getSubgraphByName.js';
 import { getNamespace } from './namespace/getNamespace.js';
+import { getSubgraphById } from './subgraph/getSubgraphById.js';
+import { getFederatedGraphById } from './federated-graph/getFederatedGraphById.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -432,11 +433,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getSubgraphByName: (req, ctx) => {
-      const request: GetSubgraphRequest = new GetSubgraphRequest({
-        name: req.name,
-        namespace: req.namespace,
-      });
-      return getSubgraph(opts, request, ctx);
+      return getSubgraphByName(opts, req, ctx);
     },
 
     getFederatedGraphs: (req, ctx) => {
@@ -460,12 +457,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getFederatedGraphByName: (req, ctx) => {
-      const request: GetFederatedGraphRequest = new GetFederatedGraphRequest({
-        name: req.name,
-        includeMetrics: req.includeMetrics,
-        namespace: req.namespace,
-      });
-      return getFederatedGraph(opts, request, ctx);
+      return getFederatedGraphByName(opts, req, ctx);
     },
 
     getFederatedGraphChangelog: (req, ctx) => {
@@ -736,12 +728,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     // apis used by the terraform provider
 
-    getSubgraph: (req, ctx) => {
-      return getSubgraph(opts, req, ctx);
+    getSubgraphById: (req, ctx) => {
+      return getSubgraphById(opts, req, ctx);
     },
 
-    getFederatedGraph: (req, ctx) => {
-      return getFederatedGraph(opts, req, ctx);
+    getFederatedGraphById: (req, ctx) => {
+      return getFederatedGraphById(opts, req, ctx);
     },
 
     getNamespace: (req, ctx) => {

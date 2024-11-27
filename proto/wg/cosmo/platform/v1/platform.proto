@@ -2377,14 +2377,12 @@ message GetPlaygroundScriptsResponse {
   repeated PlaygroundScript scripts = 2;
 }
 
-message GetFederatedGraphRequest {
-  string name = 1;
-  string id = 2;
-  bool includeMetrics = 3;
-  string namespace = 4;
+message GetFederatedGraphByIdRequest {
+  string id = 1;
+  bool includeMetrics = 2;
 }
 
-message GetFederatedGraphResponse {
+message GetFederatedGraphByIdResponse {
   Response response = 1;
   FederatedGraph graph = 2;
   repeated Subgraph subgraphs = 3;
@@ -2395,13 +2393,11 @@ message GetFederatedGraphResponse {
   repeated Subgraph featureSubgraphs = 6;
 }
 
-message GetSubgraphRequest {
-  string name = 1;
-  string id = 2;
-  string namespace = 3;
+message GetSubgraphByIdRequest {
+  string id = 1;
 }
 
-message GetSubgraphResponse {
+message GetSubgraphByIdResponse {
   Response response = 1;
   Subgraph graph = 2;
   repeated SubgraphMember members = 3;
@@ -2720,10 +2716,10 @@ service PlatformService {
   // GetFeatureFlagsByFederatedGraph returns the list of feature flags which match the label matchers of the federated graph.
   rpc GetFeatureFlagsByFederatedGraph(GetFeatureFlagsByFederatedGraphRequest) returns (GetFeatureFlagsByFederatedGraphResponse) {}
 
-  // GetFederatedGraph returns the federated graph by id/name.
-  rpc GetFederatedGraph(GetFederatedGraphRequest) returns (GetFederatedGraphResponse) {}
-  // GetSubgraph returns the subgraph by id/name.
-  rpc GetSubgraph(GetSubgraphRequest) returns (GetSubgraphResponse) {}
+  // GetFederatedGraphById returns the federated graph by id.
+  rpc GetFederatedGraphById(GetFederatedGraphByIdRequest) returns (GetFederatedGraphByIdResponse) {}
+  // GetSubgraphById returns the subgraph by id.
+  rpc GetSubgraphById(GetSubgraphByIdRequest) returns (GetSubgraphByIdResponse) {}
 
   //
   // Billing
