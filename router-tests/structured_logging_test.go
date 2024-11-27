@@ -188,7 +188,7 @@ func TestAccessLogsFileOutput(t *testing.T) {
 				}
 				additionalExpectedKeys1 := []string{
 					"time", "hostname", "pid", "latency",
-					"user_agent", "config_version", "request_id",
+					"user_agent", "config_version", "request_id", "trace_id",
 				}
 				checkValues(t, logEntry, expectedValues1, additionalExpectedKeys1)
 			})
@@ -1059,7 +1059,7 @@ func TestAccessLogs(t *testing.T) {
 				additionalExpectedKeys := []string{
 					"user_agent", "latency", "config_version", "request_id", "pid", "hostname",
 				}
-				checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
+				checkValues(t, requestContext, expectedValues, append(additionalExpectedKeys, "trace_id"))
 
 				requestContext1 := requestLog.All()[1].ContextMap()
 				expectedValues1 := map[string]interface{}{
@@ -1212,7 +1212,7 @@ func TestAccessLogs(t *testing.T) {
 					"ip":            "[REDACTED]",
 				}
 				additionalExpectedKeys := []string{
-					"user_agent", "latency", "config_version", "request_id", "pid", "hostname",
+					"user_agent", "latency", "config_version", "request_id", "pid", "hostname", "trace_id",
 				}
 				checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 
@@ -1256,6 +1256,13 @@ func TestAccessLogs(t *testing.T) {
 						Default: "",
 						ValueFrom: &config.CustomDynamicAttribute{
 							RequestHeader: "service-name",
+						},
+					},
+					{
+						Key:     "response_header",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ResponseHeader: "response-header-name",
 						},
 					},
 					{
@@ -1311,7 +1318,30 @@ func TestAccessLogs(t *testing.T) {
 				LogObservation: testenv.LogObservationConfig{
 					Enabled:  true,
 					LogLevel: zapcore.InfoLevel,
-				}}, func(t *testing.T, xEnv *testenv.Environment) {
+				},
+				RouterOptions: []core.Option{
+					core.WithHeaderRules(config.HeaderRules{
+						All: &config.GlobalHeaderRule{
+							Request: []*config.RequestHeaderRule{
+								{
+									Operation: config.HeaderRuleOperationPropagate,
+									Named:     "service-name",
+								},
+							},
+						},
+					}),
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{
+						Middleware: func(handler http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								w.Header().Set("response-header-name", "my-response-value")
+								handler.ServeHTTP(w, r)
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query:  `query employees { employees { id } }`,
 					Header: map[string][]string{"service-name": {"service-name"}},
@@ -1331,14 +1361,15 @@ func TestAccessLogs(t *testing.T) {
 					"path":             "/graphql",
 					"query":            "", // http query is empty
 					"ip":               "[REDACTED]",
-					"service_name":     "service-name",                                                     // From header
+					"service_name":     "service-name",                                                     // From request header
+					"response_header":  "my-response-value",                                                // From response header
 					"operation_hash":   "14226210703439426856",                                             // From context
 					"operation_sha256": "c13e0fafb0a3a72e74c19df743fedee690fe133554a17a9408747585a0d1b423", // From context
 					"operation_name":   "employees",                                                        // From context
 					"operation_type":   "query",                                                            // From context
 				}
 				additionalExpectedKeys := []string{
-					"user_agent", "latency", "config_version", "request_id", "pid", "hostname", "normalized_time", "parsed_time", "validation_time",
+					"user_agent", "latency", "config_version", "request_id", "pid", "hostname", "normalized_time", "parsed_time", "validation_time", "trace_id",
 				}
 				checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 

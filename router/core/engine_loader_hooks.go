@@ -16,6 +16,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
+	"net/http"
 	"slices"
 	"time"
 )
@@ -41,7 +42,12 @@ type engineLoaderHooksRequestContext struct {
 	startTime time.Time
 }
 
-func NewEngineRequestHooks(metricStore metric.Store, logger *requestlogger.SubgraphAccessLogger) resolve.LoaderHooks {
+type JointHooks interface {
+	resolve.LoaderHooks
+	resolve.HttpLoaderHooks
+}
+
+func NewEngineRequestHooks(metricStore metric.Store, logger *requestlogger.SubgraphAccessLogger) JointHooks {
 	return &engineLoaderHooks{
 		tracer: otel.GetTracerProvider().Tracer(
 			EngineLoaderHooksScopeName,
@@ -118,21 +124,6 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 
 	metricAddOpt := otelmetric.WithAttributeSet(attribute.NewSet(metricAttrs...))
 
-	if f.accessLogger != nil {
-		fields := []zap.Field{
-			zap.String("subgraph_name", ds.Name),
-			zap.String("subgraph_id", ds.ID),
-			zap.Int("status", statusCode),
-			zap.Duration("latency", latency),
-		}
-		if err != nil {
-			fields = append(fields, zap.Any("error", err))
-		}
-
-		subgraph := reqContext.SubgraphByID(ds.ID)
-		f.accessLogger.WriteRequestLog(subgraph.Url, reqContext.request, fields)
-	}
-
 	if err != nil {
 		// Set error status. This is the fetch error from the engine
 		// Downstream errors are extracted from the subgraph response
@@ -196,4 +187,30 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 	}
 
 	span.SetAttributes(traceAttrs...)
+}
+
+func (f *engineLoaderHooks) OnHttpFinished(ctx context.Context, ds resolve.DataSourceInfo, err error, request *http.Request, response *http.Response) {
+	if resolve.IsIntrospectionDataSource(ds.ID) {
+		return
+	}
+
+	hookCtx, ok := ctx.Value(engineLoaderHooksContextKey).(*engineLoaderHooksRequestContext)
+	if !ok {
+		return
+	}
+
+	latency := time.Since(hookCtx.startTime)
+	if f.accessLogger != nil {
+		fields := []zap.Field{
+			zap.String("subgraph_name", ds.Name),
+			zap.String("subgraph_id", ds.ID),
+			zap.Int("status", response.StatusCode),
+			zap.Duration("latency", latency),
+		}
+		if err != nil {
+			fields = append(fields, zap.Any("error", err))
+		}
+
+		f.accessLogger.WriteRequestLog(request, response, fields)
+	}
 }

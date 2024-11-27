@@ -1,10 +1,10 @@
 package requestlogger
 
 import (
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"net/http"
-	"net/url"
 )
 
 type accessLogger struct {
@@ -15,6 +15,7 @@ type accessLogger struct {
 	traceID               bool // optionally log Open Telemetry TraceID
 	fieldsHandler         ContextFunc
 	baseFields            []zapcore.Field
+	attributes            []config.CustomAttribute
 }
 
 type SubgraphAccessLogger struct {
@@ -26,6 +27,7 @@ type SubgraphOptions struct {
 	IPAnonymizationConfig *IPAnonymizationConfig
 	FieldsHandler         ContextFunc
 	Fields                []zapcore.Field
+	Attributes            []config.CustomAttribute
 }
 
 func NewSubgraphAccessLogger(logger *zap.Logger, opts SubgraphOptions) *SubgraphAccessLogger {
@@ -34,17 +36,18 @@ func NewSubgraphAccessLogger(logger *zap.Logger, opts SubgraphOptions) *Subgraph
 		accessLogger: &accessLogger{
 			baseFields:            opts.Fields,
 			ipAnonymizationConfig: opts.IPAnonymizationConfig,
-			fieldsHandler:         opts.FieldsHandler,
 			traceID:               true,
+			fieldsHandler:         opts.FieldsHandler,
+			attributes:            opts.Attributes,
 		},
 	}
 }
 
-func (h *SubgraphAccessLogger) WriteRequestLog(url *url.URL, r *http.Request, subgraphFields []zap.Field) {
-	path := url.Path
-	fields := h.accessLogger.getRequestFields(url, r)
+func (h *SubgraphAccessLogger) WriteRequestLog(r *http.Request, rs *http.Response, subgraphFields []zap.Field) {
+	path := r.URL.Path
+	fields := h.accessLogger.getRequestFields(r)
 	if h.accessLogger.fieldsHandler != nil {
-		fields = append(fields, h.accessLogger.fieldsHandler(nil, r)...)
+		fields = append(fields, h.accessLogger.fieldsHandler(h.accessLogger.attributes, nil, r, rs)...)
 	}
 
 	fields = append(subgraphFields, fields...)

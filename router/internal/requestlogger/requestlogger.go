@@ -4,11 +4,11 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"github.com/wundergraph/cosmo/router/internal/errors"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"net"
 	"net/http"
-	"net/url"
 	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
@@ -17,7 +17,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type ContextFunc func(panic any, r *http.Request) []zapcore.Field
+type ContextFunc func(fields []config.CustomAttribute, panic any, r *http.Request, re *http.Response) []zapcore.Field
 
 // Option provides a functional approach to define
 // configuration for a handler; such as setting the logging
@@ -50,6 +50,12 @@ func parseOptions(r *handler, opts ...Option) http.Handler {
 	}
 
 	return r
+}
+
+func WithAttributes(attributes []config.CustomAttribute) Option {
+	return func(r *handler) {
+		r.accessLogger.attributes = attributes
+	}
 }
 
 func WithAnonymization(ipConfig *IPAnonymizationConfig) Option {
@@ -102,7 +108,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	start := time.Now()
 	path := r.URL.Path
-	fields := h.accessLogger.getRequestFields(r.URL, r)
+	fields := h.accessLogger.getRequestFields(r)
 
 	defer func() {
 
@@ -127,7 +133,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			// This is only called on panic so it is safe to call it here again
 			// to gather all the fields that are needed for logging
 			if h.accessLogger.fieldsHandler != nil {
-				fields = append(fields, h.accessLogger.fieldsHandler(err, r)...)
+				fields = append(fields, h.accessLogger.fieldsHandler(h.accessLogger.attributes, err, r, nil)...)
 			}
 
 			if brokenPipe {
@@ -156,14 +162,15 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if h.accessLogger.fieldsHandler != nil {
-		resFields = append(resFields, h.accessLogger.fieldsHandler(nil, r)...)
+		resFields = append(resFields, h.accessLogger.fieldsHandler(h.accessLogger.attributes, nil, r, nil)...)
 	}
 
 	h.logger.Info(path, append(fields, resFields...)...)
 }
 
-func (al accessLogger) getRequestFields(url *url.URL, r *http.Request) []zapcore.Field {
+func (al accessLogger) getRequestFields(r *http.Request) []zapcore.Field {
 	start := time.Now()
+	url := r.URL
 	path := url.Path
 	query := url.RawQuery
 	remoteAddr := r.RemoteAddr

@@ -638,6 +638,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			requestlogger.WithDefaultOptions(),
 			requestlogger.WithNoTimeField(),
 			requestlogger.WithFields(baseLogFields...),
+			requestlogger.WithAttributes(s.accessLogsConfig.Attributes),
 			requestlogger.WithFieldsHandler(s.accessLogsFieldHandler),
 		}
 
@@ -661,8 +662,9 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 				s.accessLogsConfig.Logger,
 				requestlogger.SubgraphOptions{
 					IPAnonymizationConfig: ipAnonConfig,
-					FieldsHandler:         s.accessSubgraphLogsFieldHandler,
+					FieldsHandler:         s.accessLogsFieldHandler,
 					Fields:                baseLogFields,
+					Attributes:            s.accessLogsConfig.SubgraphAttributes,
 				})
 		}
 	}
@@ -746,6 +748,8 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		authorizerOptions.RejectOperationIfUnauthorized = s.authorization.RejectOperationIfUnauthorized
 	}
 
+	hooks := NewEngineRequestHooks(gm.metricStore, subgraphAccessLogger)
+
 	handlerOpts := HandlerOptions{
 		Executor:                               executor,
 		Log:                                    s.logger,
@@ -757,7 +761,8 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		TracerProvider:                              s.tracerProvider,
 		Authorizer:                                  NewCosmoAuthorizer(authorizerOptions),
 		SubgraphErrorPropagation:                    s.subgraphErrorPropagation,
-		EngineLoaderHooks:                           NewEngineRequestHooks(gm.metricStore, subgraphAccessLogger),
+		EngineLoaderHooks:                           hooks,
+		HttpLoaderHooks:                             hooks,
 	}
 
 	if s.redisClient != nil {
@@ -874,37 +879,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	return gm, nil
 }
 
-func (s *graphServer) accessLogsFieldHandler(panicError any, request *http.Request) []zapcore.Field {
-	reqContext := getRequestContext(request.Context())
-	if reqContext == nil {
-		return nil
-	}
-	resFields := make([]zapcore.Field, 0, len(s.accessLogsConfig.Attributes))
-	resFields = append(resFields, logging.WithRequestID(middleware.GetReqID(request.Context())))
-
-	for _, field := range s.accessLogsConfig.Attributes {
-
-		if field.ValueFrom != nil && field.ValueFrom.RequestHeader != "" {
-			resFields = append(resFields, NewStringLogField(request.Header.Get(field.ValueFrom.RequestHeader), field))
-		} else if field.ValueFrom != nil && field.ValueFrom.ContextField != "" && reqContext.operation != nil {
-			if field.ValueFrom.ContextField == ContextFieldResponseErrorMessage && panicError != nil {
-				errMessage := fmt.Sprintf("%v", panicError)
-				if v := NewStringLogField(errMessage, field); v != zap.Skip() {
-					resFields = append(resFields, v)
-				}
-			}
-			if v := GetLogFieldFromCustomAttribute(field, reqContext); v != zap.Skip() {
-				resFields = append(resFields, v)
-			}
-		} else if field.Default != "" {
-			resFields = append(resFields, NewStringLogField(field.Default, field))
-		}
-	}
-
-	return resFields
-}
-
-func (s *graphServer) accessSubgraphLogsFieldHandler(panicError any, request *http.Request) []zapcore.Field {
+func (s *graphServer) accessLogsFieldHandler(attributes []config.CustomAttribute, panicError any, request *http.Request, response *http.Response) []zapcore.Field {
 	reqContext := getRequestContext(request.Context())
 	if reqContext == nil {
 		return nil
@@ -912,8 +887,10 @@ func (s *graphServer) accessSubgraphLogsFieldHandler(panicError any, request *ht
 	resFields := make([]zapcore.Field, 0, len(s.accessLogsConfig.SubgraphAttributes))
 	resFields = append(resFields, logging.WithRequestID(middleware.GetReqID(request.Context())))
 
-	for _, field := range s.accessLogsConfig.SubgraphAttributes {
-		if field.ValueFrom != nil && field.ValueFrom.RequestHeader != "" {
+	for _, field := range attributes {
+		if field.ValueFrom != nil && field.ValueFrom.ResponseHeader != "" && response != nil {
+			resFields = append(resFields, NewStringLogField(response.Header.Get(field.ValueFrom.ResponseHeader), field))
+		} else if field.ValueFrom != nil && field.ValueFrom.RequestHeader != "" {
 			resFields = append(resFields, NewStringLogField(request.Header.Get(field.ValueFrom.RequestHeader), field))
 		} else if field.ValueFrom != nil && field.ValueFrom.ContextField != "" && reqContext.operation != nil {
 			if field.ValueFrom.ContextField == ContextFieldResponseErrorMessage && panicError != nil {
