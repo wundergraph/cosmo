@@ -168,7 +168,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info(path, append(fields, resFields...)...)
 }
 
-func (al accessLogger) getRequestFields(r *http.Request) []zapcore.Field {
+func (al *accessLogger) getRequestFields(r *http.Request) []zapcore.Field {
 	if r == nil {
 		return al.baseFields
 	}

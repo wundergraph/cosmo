@@ -41,12 +41,7 @@ type engineLoaderHooksRequestContext struct {
 	startTime time.Time
 }
 
-type JointHooks interface {
-	resolve.LoaderHooks
-	//resolve.HttpLoaderHooks
-}
-
-func NewEngineRequestHooks(metricStore metric.Store, logger *requestlogger.SubgraphAccessLogger) JointHooks {
+func NewEngineRequestHooks(metricStore metric.Store, logger *requestlogger.SubgraphAccessLogger) resolve.LoaderHooks {
 	return &engineLoaderHooks{
 		tracer: otel.GetTracerProvider().Tracer(
 			EngineLoaderHooksScopeName,

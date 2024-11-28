@@ -748,8 +748,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		authorizerOptions.RejectOperationIfUnauthorized = s.authorization.RejectOperationIfUnauthorized
 	}
 
-	hooks := NewEngineRequestHooks(gm.metricStore, subgraphAccessLogger)
-
 	handlerOpts := HandlerOptions{
 		Executor:                               executor,
 		Log:                                    s.logger,
@@ -761,7 +759,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		TracerProvider:                              s.tracerProvider,
 		Authorizer:                                  NewCosmoAuthorizer(authorizerOptions),
 		SubgraphErrorPropagation:                    s.subgraphErrorPropagation,
-		EngineLoaderHooks:                           hooks,
+		EngineLoaderHooks:                           NewEngineRequestHooks(gm.metricStore, subgraphAccessLogger),
 	}
 
 	if s.redisClient != nil {
