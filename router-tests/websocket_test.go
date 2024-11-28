@@ -182,6 +182,7 @@ func TestWebSockets(t *testing.T) {
 		authenticators := []authentication.Authenticator{authenticator}
 
 		testenv.Run(t, &testenv.Config{
+			EnableNats: true,
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
@@ -240,6 +241,7 @@ func TestWebSockets(t *testing.T) {
 		authenticators := []authentication.Authenticator{authenticator}
 
 		testenv.Run(t, &testenv.Config{
+			EnableNats: true,
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
@@ -296,6 +298,7 @@ func TestWebSockets(t *testing.T) {
 		authenticators := []authentication.Authenticator{authenticator}
 
 		testenv.Run(t, &testenv.Config{
+			EnableNats: true,
 			ModifyWebsocketConfiguration: func(cfg *config.WebSocketConfiguration) {
 				cfg.Authentication.FromInitialPayload.Enabled = true
 				cfg.Enabled = true
@@ -446,6 +449,7 @@ func TestWebSockets(t *testing.T) {
 		require.NoError(t, err)
 
 		testenv.Run(t, &testenv.Config{
+			EnableNats: true,
 			ModifyWebsocketConfiguration: func(cfg *config.WebSocketConfiguration) {
 				cfg.Authentication.FromInitialPayload.Enabled = true
 				cfg.Authentication.FromInitialPayload.ExportToken.Enabled = true
@@ -1708,7 +1712,9 @@ func TestWebSockets(t *testing.T) {
 	})
 	t.Run("single connection multiple differing subscriptions", func(t *testing.T) {
 		t.Parallel()
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		testenv.Run(t, &testenv.Config{
+			EnableNats: true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 
