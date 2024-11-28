@@ -659,6 +659,7 @@ type NormalizationCacheEntry struct {
 	operationID              uint64
 	normalizedRepresentation string
 	operationType            string
+	operationDefinitionRef   int
 }
 
 type ComplexityCacheEntry struct {
@@ -770,7 +771,7 @@ func (o *OperationKit) NormalizeVariables() error {
 	}
 
 	o.kit.keyGen.Reset()
-	_, err = o.kit.keyGen.WriteString(o.parsedOperation.NormalizedRepresentation)
+	_, err = o.kit.keyGen.WriteString(o.kit.normalizedOperation.String())
 	if err != nil {
 		return err
 	}
@@ -820,6 +821,7 @@ func (o *OperationKit) loadPersistedOperationFromCache(clientName string) (ok bo
 	o.parsedOperation.InternalID = entry.operationID
 	o.parsedOperation.NormalizedRepresentation = entry.normalizedRepresentation
 	o.parsedOperation.Type = entry.operationType
+	o.operationDefinitionRef = entry.operationDefinitionRef
 	err = o.setAndParseOperationDoc()
 	if err != nil {
 		return false, err
@@ -861,9 +863,10 @@ func (o *OperationKit) persistedOperationCacheKeyHasTtl(clientName string) (bool
 func (o *OperationKit) savePersistedOperationToCache(clientName string, isApq bool, skipIncludeVariableNames []string) {
 	cacheKey := o.generatePersistedOperationCacheKey(clientName, skipIncludeVariableNames)
 	entry := NormalizationCacheEntry{
-		operationID:              o.parsedOperation.ID,
+		operationID:              o.parsedOperation.InternalID,
 		normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
 		operationType:            o.parsedOperation.Type,
+		operationDefinitionRef:   o.operationDefinitionRef,
 	}
 
 	if isApq {
@@ -950,7 +953,7 @@ func (o *OperationKit) Validate(skipLoader bool) (cacheHit bool, err error) {
 		}
 		if o.cache != nil && o.cache.validationCache != nil {
 			var valid bool
-			valid, cacheHit = o.cache.validationCache.Get(o.parsedOperation.ID)
+			valid, cacheHit = o.cache.validationCache.Get(o.parsedOperation.InternalID)
 			if valid {
 				return
 			}
@@ -960,7 +963,7 @@ func (o *OperationKit) Validate(skipLoader bool) (cacheHit bool, err error) {
 	o.kit.operationValidator.Validate(o.kit.doc, o.operationProcessor.executor.ClientSchema, report)
 	if o.cache != nil && o.cache.validationCache != nil {
 		valid := !report.HasErrors()
-		o.cache.validationCache.Set(o.parsedOperation.ID, valid, 1)
+		o.cache.validationCache.Set(o.parsedOperation.InternalID, valid, 1)
 	}
 	if report.HasErrors() {
 		return cacheHit, &reportError{
@@ -973,7 +976,7 @@ func (o *OperationKit) Validate(skipLoader bool) (cacheHit bool, err error) {
 // ValidateQueryComplexity validates that the query complexity is within the limits set in the configuration
 func (o *OperationKit) ValidateQueryComplexity(complexityLimitConfig *config.ComplexityLimits, operation, definition *ast.Document, isPersisted bool) (bool, ComplexityCacheEntry, error) {
 	if o.cache != nil && o.cache.complexityCache != nil {
-		if cachedComplexity, ok := o.cache.complexityCache.Get(o.parsedOperation.ID); ok {
+		if cachedComplexity, ok := o.cache.complexityCache.Get(o.parsedOperation.InternalID); ok {
 			return ok, cachedComplexity, o.runComplexityComparisons(complexityLimitConfig, cachedComplexity, isPersisted)
 		}
 	}
@@ -993,7 +996,7 @@ func (o *OperationKit) ValidateQueryComplexity(complexityLimitConfig *config.Com
 	}
 
 	if o.cache != nil && o.cache.complexityCache != nil {
-		o.cache.complexityCache.Set(o.parsedOperation.ID, cacheResult, 1)
+		o.cache.complexityCache.Set(o.parsedOperation.InternalID, cacheResult, 1)
 	}
 
 	return false, cacheResult, o.runComplexityComparisons(complexityLimitConfig, cacheResult, isPersisted)
