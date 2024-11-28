@@ -261,6 +261,8 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("multipart", func(t *testing.T) {
+		t.Parallel()
+
 		assertLineEquals := func(reader *bufio.Reader, expected string) {
 			line, _, err := reader.ReadLine()
 			require.NoError(t, err)
@@ -993,6 +995,8 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("subscribing to a non-existent stream returns an error", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			var subscription struct {
 				employeeUpdatedNatsStream struct {
