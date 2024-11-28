@@ -790,6 +790,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 				OTLP: config.MetricsOTLP{
 					Enabled:             true,
 					RouterRuntime:       testConfig.MetricOptions.EnableRuntimeMetrics,
+					GraphqlCache:        testConfig.MetricOptions.EnableOTLPRouterCache,
 					ExcludeMetrics:      testConfig.MetricOptions.MetricExclusions.ExcludedOTLPMetrics,
 					ExcludeMetricLabels: testConfig.MetricOptions.MetricExclusions.ExcludedOTLPMetricLabels,
 				},

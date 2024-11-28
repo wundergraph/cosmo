@@ -25,6 +25,301 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 )
 
+func TestOperationCacheTelemetry(t *testing.T) {
+	t.Parallel()
+
+	const (
+		baseCost         = 57
+		employeesIDData  = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
+		employeesTagData = `{"data":{"employees":[{"tag":""},{"tag":""},{"tag":""},{"tag":""},{"tag":""},{"tag":""},{"tag":""},{"tag":""},{"tag":""},{"tag":""}]}}`
+	)
+
+	t.Run("Validate operation cache telemetry", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(eec *config.EngineExecutionConfiguration) {
+				eec.ExecutionPlanCacheSize = int64(baseCost * 10)
+				eec.NormalizationCacheSize = int64(baseCost * 20)
+				eec.ValidationCacheSize = int64(baseCost)
+			},
+			MetricReader: metricReader,
+			MetricOptions: testenv.MetricOptions{
+				EnableOTLPRouterCache: true,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query myQuery { employees { id } }`,
+			})
+
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query myQuery { employees { id } }`,
+			})
+
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query myQuery { employees { tag } }`,
+			})
+
+			require.JSONEq(t, employeesTagData, res.Body)
+
+			rm := metricdata.ResourceMetrics{}
+			err := metricReader.Collect(context.Background(), &rm)
+
+			require.NoError(t, err)
+			require.Len(t, rm.ScopeMetrics, 2)
+
+			cacheScope := getMetricScopeByName(rm.ScopeMetrics, "cosmo.router.cache")
+			require.NotNil(t, cacheScope)
+
+			require.Len(t, cacheScope.Metrics, 4)
+
+			baseAttributes := []attribute.KeyValue{
+				otel.WgRouterClusterName.String(""),
+				otel.WgFederatedGraphID.String("graph"),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+				otel.WgRouterVersion.String("dev"),
+			}
+
+			hitStatMetrics := metricdata.Metrics{
+				Name:        "router.graphql.cache.hits.stats",
+				Description: "Cache stats related to cache access. Tracks cache hits and misses. Can be used to calculate the ratio",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "execution"),
+								attribute.String("type", "hits"),
+							)...),
+							Value: 1,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "execution"),
+								attribute.String("type", "misses"),
+							)...),
+							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "normalization"),
+								attribute.String("type", "hits"),
+							)...),
+							Value: 1,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "normalization"),
+								attribute.String("type", "misses"),
+							)...),
+							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "validation"),
+								attribute.String("type", "hits"),
+							)...),
+							Value: 1,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "validation"),
+								attribute.String("type", "misses"),
+							)...),
+							Value: 2,
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, hitStatMetrics, *getMetricByName(cacheScope, "router.graphql.cache.hits.stats"), metricdatatest.IgnoreTimestamp())
+
+			keyStatMetrics := metricdata.Metrics{
+				Name:        "router.graphql.cache.keys.stats",
+				Description: "Cache stats for Keys. Tracks added, updated and evicted keys. Can be used to get the total number of items",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "execution"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "execution"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "execution"),
+								attribute.String("operation", "updated"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "normalization"),
+								attribute.String("operation", "updated"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "validation"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "validation"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 1,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "validation"),
+								attribute.String("operation", "updated"),
+							)...),
+							Value: 0,
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, keyStatMetrics, *getMetricByName(cacheScope, "router.graphql.cache.keys.stats"), metricdatatest.IgnoreTimestamp())
+
+			costStatsMetrics := metricdata.Metrics{
+				Name:        "router.graphql.cache.cost.stats",
+				Description: "Cache stats for Cost. Tracks the cost of the cache operations. Can be used to calculate the cost of the cache operations",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "execution"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: baseCost * 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "execution"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: baseCost * 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "validation"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: baseCost * 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "validation"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: baseCost,
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, costStatsMetrics, *getMetricByName(cacheScope, "router.graphql.cache.cost.stats"), metricdatatest.IgnoreTimestamp())
+
+			maxCostMetrics := metricdata.Metrics{
+				Name:        "router.graphql.cache.cost.max",
+				Description: "Tracks the maximum configured cost for a cache. Useful to investigate differences between the number of keys and the current cost",
+				Data: metricdata.Gauge[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "execution"),
+							)...),
+							Value: baseCost * 10,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "normalization"),
+							)...),
+							Value: baseCost * 20,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "validation"),
+							)...),
+							Value: baseCost,
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, maxCostMetrics, *getMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp())
+		})
+	})
+}
+
 func TestRuntimeTelemetry(t *testing.T) {
 	t.Parallel()
 
@@ -56,13 +351,9 @@ func TestRuntimeTelemetry(t *testing.T) {
 
 			// Runtime metrics
 
-			sm := getMetricScopeByName(rm.ScopeMetrics, "cosmo.router.runtime")
-			require.NotNil(t, sm)
-
-			require.Len(t, sm.Metrics, 15)
-
 			runtimeScope := getMetricScopeByName(rm.ScopeMetrics, "cosmo.router.runtime")
 			require.NotNil(t, runtimeScope)
+			require.Len(t, runtimeScope.Metrics, 15)
 
 			runtimeUptimeMetric := metricdata.Metrics{
 				Name:        "runtime.uptime",
