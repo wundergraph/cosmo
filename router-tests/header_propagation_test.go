@@ -1,14 +1,15 @@
 package integration
 
 import (
-	"github.com/stretchr/testify/require"
-	"github.com/wundergraph/cosmo/router-tests/testenv"
-	"github.com/wundergraph/cosmo/router/core"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
 func TestHeaderPropagation(t *testing.T) {
@@ -161,6 +162,7 @@ func TestHeaderPropagation(t *testing.T) {
 	})
 
 	t.Run("LastWriteWins", func(t *testing.T) {
+		t.Parallel()
 		t.Run("global last write wins", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
@@ -209,6 +211,7 @@ func TestHeaderPropagation(t *testing.T) {
 
 	// Test for the First Write Wins Algorithm
 	t.Run("FirstWriteWins", func(t *testing.T) {
+		t.Parallel()
 		t.Run("global first write wins", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
@@ -257,6 +260,7 @@ func TestHeaderPropagation(t *testing.T) {
 
 	// Test for the Append Algorithm
 	t.Run("AppendHeaders", func(t *testing.T) {
+		t.Parallel()
 		t.Run("global append headers", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
@@ -304,6 +308,7 @@ func TestHeaderPropagation(t *testing.T) {
 	})
 
 	t.Run("Cache Control Propagation", func(t *testing.T) {
+		t.Parallel()
 		// Global test: All subgraphs' responses are considered and most restrictive cache directive wins
 		t.Run("enable global cache control", func(t *testing.T) {
 			t.Parallel()
@@ -624,6 +629,7 @@ func TestHeaderPropagation(t *testing.T) {
 			})
 		})
 		t.Run("set operation can override cache control policies", func(t *testing.T) {
+			t.Parallel()
 			t.Run("global set operation", func(t *testing.T) {
 				t.Parallel()
 				testenv.Run(t, &testenv.Config{
@@ -635,7 +641,7 @@ func TestHeaderPropagation(t *testing.T) {
 					RouterOptions: []core.Option{core.WithHeaderRules(config.HeaderRules{
 						All: &config.GlobalHeaderRule{
 							Response: []*config.ResponseHeaderRule{
-								&config.ResponseHeaderRule{
+								{
 									Operation: config.HeaderRuleOperationSet,
 									Name:      "Cache-Control",
 									Value:     "my-fake-value",
@@ -663,9 +669,9 @@ func TestHeaderPropagation(t *testing.T) {
 					Subgraphs: cacheOptions("max-age=180", "max-age=250"),
 					RouterOptions: []core.Option{core.WithHeaderRules(config.HeaderRules{
 						Subgraphs: map[string]*config.GlobalHeaderRule{
-							"employees": &config.GlobalHeaderRule{
+							"employees": {
 								Response: []*config.ResponseHeaderRule{
-									&config.ResponseHeaderRule{
+									{
 										Operation: config.HeaderRuleOperationSet,
 										Name:      "Cache-Control",
 										Value:     "my-fake-value",
