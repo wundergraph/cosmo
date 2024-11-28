@@ -51,7 +51,7 @@ func TestNormalization(t *testing.T) {
 			Output        string
 		}{
 			/**
-			 * Queries with different variable values should produce different hashes
+			 * Queries with different variable values should not produce different hashes
 			 */
 			{
 				Name:          "Variable with User ID 1",
