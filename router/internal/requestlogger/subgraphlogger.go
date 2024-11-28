@@ -2,9 +2,9 @@ package requestlogger
 
 import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"net/http"
 )
 
 type accessLogger struct {
@@ -43,11 +43,11 @@ func NewSubgraphAccessLogger(logger *zap.Logger, opts SubgraphOptions) *Subgraph
 	}
 }
 
-func (h *SubgraphAccessLogger) WriteRequestLog(r *http.Request, rs *http.Response, subgraphFields []zap.Field) {
-	path := r.URL.Path
-	fields := h.accessLogger.getRequestFields(r)
+func (h *SubgraphAccessLogger) WriteRequestLog(respInfo *resolve.ResponseInfo, subgraphFields []zap.Field) {
+	path := respInfo.Request.URL.Path
+	fields := h.accessLogger.getRequestFields(respInfo.Request)
 	if h.accessLogger.fieldsHandler != nil {
-		fields = append(fields, h.accessLogger.fieldsHandler(h.accessLogger.attributes, nil, r, rs)...)
+		fields = append(fields, h.accessLogger.fieldsHandler(h.accessLogger.attributes, nil, respInfo.Request, &respInfo.ResponseHeaders)...)
 	}
 
 	fields = append(subgraphFields, fields...)

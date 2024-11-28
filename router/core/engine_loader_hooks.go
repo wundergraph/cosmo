@@ -16,7 +16,6 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
-	"net/http"
 	"slices"
 	"time"
 )
@@ -44,7 +43,7 @@ type engineLoaderHooksRequestContext struct {
 
 type JointHooks interface {
 	resolve.LoaderHooks
-	resolve.HttpLoaderHooks
+	//resolve.HttpLoaderHooks
 }
 
 func NewEngineRequestHooks(metricStore metric.Store, logger *requestlogger.SubgraphAccessLogger) JointHooks {
@@ -83,7 +82,7 @@ func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInf
 	})
 }
 
-func (f *engineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds resolve.DataSourceInfo, err error) {
+func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourceInfo, responseInfo *resolve.ResponseInfo) {
 
 	if resolve.IsIntrospectionDataSource(ds.ID) {
 		return
@@ -106,7 +105,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 	defer span.End()
 
 	commonAttrs := []attribute.KeyValue{
-		semconv.HTTPStatusCode(statusCode),
+		semconv.HTTPStatusCode(responseInfo.StatusCode),
 		rotel.WgSubgraphID.String(ds.ID),
 		rotel.WgSubgraphName.String(ds.Name),
 	}
@@ -124,15 +123,37 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 
 	metricAddOpt := otelmetric.WithAttributeSet(attribute.NewSet(metricAttrs...))
 
-	if err != nil {
+	if f.accessLogger != nil {
+		fields := []zap.Field{
+			zap.String("subgraph_name", ds.Name),
+			zap.String("subgraph_id", ds.ID),
+			zap.Int("status", responseInfo.StatusCode),
+		}
+		if responseInfo.Err != nil {
+			fields = append(fields, zap.Any("error", responseInfo.Err))
+		}
+		if ctx != nil {
+			hookCtx, ok := ctx.Value(engineLoaderHooksContextKey).(*engineLoaderHooksRequestContext)
+			if !ok {
+				return
+			}
+
+			latency := time.Since(hookCtx.startTime)
+			fields = append(fields, zap.Duration("latency", latency))
+		}
+
+		f.accessLogger.WriteRequestLog(responseInfo, fields)
+	}
+
+	if responseInfo.Err != nil {
 		// Set error status. This is the fetch error from the engine
 		// Downstream errors are extracted from the subgraph response
-		span.SetStatus(codes.Error, err.Error())
-		span.RecordError(err)
+		span.SetStatus(codes.Error, responseInfo.Err.Error())
+		span.RecordError(responseInfo.Err)
 
 		var errorCodesAttr []string
 
-		if unwrapped, ok := err.(multiError); ok {
+		if unwrapped, ok := responseInfo.Err.(multiError); ok {
 			errs := unwrapped.Unwrap()
 			for _, e := range errs {
 				var subgraphError *resolve.SubgraphError
@@ -187,32 +208,4 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, statusCode int, ds r
 	}
 
 	span.SetAttributes(traceAttrs...)
-}
-
-func (f *engineLoaderHooks) OnHttpFinished(ctx context.Context, ds resolve.DataSourceInfo, err error, request *http.Request, response *http.Response) {
-	if resolve.IsIntrospectionDataSource(ds.ID) {
-		return
-	}
-
-	if f.accessLogger != nil {
-		fields := []zap.Field{
-			zap.String("subgraph_name", ds.Name),
-			zap.String("subgraph_id", ds.ID),
-			zap.Int("status", response.StatusCode),
-		}
-		if err != nil {
-			fields = append(fields, zap.Any("error", err))
-		}
-		if ctx != nil {
-			hookCtx, ok := ctx.Value(engineLoaderHooksContextKey).(*engineLoaderHooksRequestContext)
-			if !ok {
-				return
-			}
-
-			latency := time.Since(hookCtx.startTime)
-			fields = append(fields, zap.Duration("latency", latency))
-		}
-
-		f.accessLogger.WriteRequestLog(request, response, fields)
-	}
 }

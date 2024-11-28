@@ -76,7 +76,6 @@ type HandlerOptions struct {
 	RateLimitConfig                             *config.RateLimitConfiguration
 	SubgraphErrorPropagation                    config.SubgraphErrorPropagationConfiguration
 	EngineLoaderHooks                           resolve.LoaderHooks
-	HttpLoaderHooks                             resolve.HttpLoaderHooks
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -97,7 +96,6 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		rateLimitConfig:          opts.RateLimitConfig,
 		subgraphErrorPropagation: opts.SubgraphErrorPropagation,
 		engineLoaderHooks:        opts.EngineLoaderHooks,
-		httpLoaderHooks:          opts.HttpLoaderHooks,
 	}
 	return graphQLHandler
 }
@@ -123,7 +121,6 @@ type GraphQLHandler struct {
 	rateLimitConfig          *config.RateLimitConfiguration
 	subgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
 	engineLoaderHooks        resolve.LoaderHooks
-	httpLoaderHooks          resolve.HttpLoaderHooks
 
 	enableExecutionPlanCacheResponseHeader      bool
 	enablePersistedOperationCacheResponseHeader bool
@@ -160,10 +157,6 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if h.engineLoaderHooks != nil {
 		ctx.SetEngineLoaderHooks(h.engineLoaderHooks)
-	}
-
-	if h.httpLoaderHooks != nil {
-		ctx.SetEngineHttpLoaderHooks(h.httpLoaderHooks)
 	}
 
 	ctx = h.configureRateLimiting(ctx)

@@ -762,7 +762,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		Authorizer:                                  NewCosmoAuthorizer(authorizerOptions),
 		SubgraphErrorPropagation:                    s.subgraphErrorPropagation,
 		EngineLoaderHooks:                           hooks,
-		HttpLoaderHooks:                             hooks,
 	}
 
 	if s.redisClient != nil {
@@ -879,7 +878,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	return gm, nil
 }
 
-func (s *graphServer) accessLogsFieldHandler(attributes []config.CustomAttribute, panicError any, request *http.Request, response *http.Response) []zapcore.Field {
+func (s *graphServer) accessLogsFieldHandler(attributes []config.CustomAttribute, panicError any, request *http.Request, responseHeader *http.Header) []zapcore.Field {
 	reqContext := getRequestContext(request.Context())
 	if reqContext == nil {
 		return nil
@@ -888,8 +887,8 @@ func (s *graphServer) accessLogsFieldHandler(attributes []config.CustomAttribute
 	resFields = append(resFields, logging.WithRequestID(middleware.GetReqID(request.Context())))
 
 	for _, field := range attributes {
-		if field.ValueFrom != nil && field.ValueFrom.ResponseHeader != "" && response != nil {
-			resFields = append(resFields, NewStringLogField(response.Header.Get(field.ValueFrom.ResponseHeader), field))
+		if field.ValueFrom != nil && field.ValueFrom.ResponseHeader != "" && responseHeader != nil {
+			resFields = append(resFields, NewStringLogField(responseHeader.Get(field.ValueFrom.ResponseHeader), field))
 		} else if field.ValueFrom != nil && field.ValueFrom.RequestHeader != "" {
 			resFields = append(resFields, NewStringLogField(request.Header.Get(field.ValueFrom.RequestHeader), field))
 		} else if field.ValueFrom != nil && field.ValueFrom.ContextField != "" && reqContext.operation != nil {

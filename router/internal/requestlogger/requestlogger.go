@@ -17,7 +17,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type ContextFunc func(fields []config.CustomAttribute, panic any, r *http.Request, re *http.Response) []zapcore.Field
+type ContextFunc func(fields []config.CustomAttribute, panic any, r *http.Request, rh *http.Header) []zapcore.Field
 
 // Option provides a functional approach to define
 // configuration for a handler; such as setting the logging
@@ -169,6 +169,10 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (al accessLogger) getRequestFields(r *http.Request) []zapcore.Field {
+	if r == nil {
+		return al.baseFields
+	}
+
 	start := time.Now()
 	url := r.URL
 	path := url.Path
