@@ -158,7 +158,6 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h.engineLoaderHooks != nil {
 		ctx.SetEngineLoaderHooks(h.engineLoaderHooks)
 	}
-
 	ctx = h.configureRateLimiting(ctx)
 
 	switch p := requestContext.operation.preparedPlan.preparedPlan.(type) {

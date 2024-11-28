@@ -881,7 +881,7 @@ func (s *graphServer) accessLogsFieldHandler(attributes []config.CustomAttribute
 	if reqContext == nil {
 		return nil
 	}
-	resFields := make([]zapcore.Field, 0, len(s.accessLogsConfig.SubgraphAttributes))
+	resFields := make([]zapcore.Field, 0, len(attributes))
 	resFields = append(resFields, logging.WithRequestID(middleware.GetReqID(request.Context())))
 
 	for _, field := range attributes {
