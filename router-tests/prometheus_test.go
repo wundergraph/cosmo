@@ -3,11 +3,13 @@ package integration
 import (
 	"net/http"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/wundergraph/cosmo/router/core"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	io_prometheus_client "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -18,8 +20,8 @@ import (
 
 func TestPrometheus(t *testing.T) {
 	t.Parallel()
-
 	const employeesIDData = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
+	const employeesTagData = `{"data":{"employees":[{"tag":""},{"tag":""},{"tag":""},{"tag":""},{"tag":""},{"tag":""},{"tag":""},{"tag":""},{"tag":""},{"tag":""}]}}`
 
 	t.Run("Collect and export OTEL metrics to Prometheus from named operation", func(t *testing.T) {
 		t.Parallel()
@@ -2839,13 +2841,15 @@ func TestPrometheus(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			MetricReader:       metricReaderFiltered,
 			PrometheusRegistry: promRegistryFiltered,
-			MetricExclusions: testenv.MetricExclusions{
-				ExcludedPrometheusMetrics: []*regexp.Regexp{
-					regexp.MustCompile(`^router_http_requests$`),
-				},
-				ExcludedPrometheusMetricLabels: []*regexp.Regexp{
-					regexp.MustCompile(`^wg_client_name$`),
-					regexp.MustCompile(`^wg_router_cluster.*`),
+			MetricOptions: testenv.MetricOptions{
+				MetricExclusions: testenv.MetricExclusions{
+					ExcludedPrometheusMetrics: []*regexp.Regexp{
+						regexp.MustCompile(`^router_http_requests$`),
+					},
+					ExcludedPrometheusMetricLabels: []*regexp.Regexp{
+						regexp.MustCompile(`^wg_client_name$`),
+						regexp.MustCompile(`^wg_router_cluster.*`),
+					},
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -2956,6 +2960,186 @@ func TestPrometheus(t *testing.T) {
 			require.Greater(t, len(requestsInFlightMetricsFull[1].Label), len(requestsInFlightMetricsFiltered[1].Label))
 		})
 	})
+
+	t.Run("Collect router cache metrics", func(t *testing.T) {
+		var (
+			err            error
+			metricFamilies []*io_prometheus_client.MetricFamily
+			baseCost       = 57
+		)
+
+		metricReaderFiltered := metric.NewManualReader()
+		promRegistryFiltered := prometheus.NewRegistry()
+
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(eec *config.EngineExecutionConfiguration) {
+				eec.ExecutionPlanCacheSize = int64(baseCost * 10)
+				eec.NormalizationCacheSize = int64(baseCost * 20)
+				eec.ValidationCacheSize = int64(baseCost)
+			},
+			MetricReader:       metricReaderFiltered,
+			PrometheusRegistry: promRegistryFiltered,
+			MetricOptions: testenv.MetricOptions{
+				EnablePrometheusRouterCache: true,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			promRegistryFiltered.Unregister(collectors.NewGoCollector())
+
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query myQuery { employees { id } }`,
+			})
+
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query myQuery { employees { id } }`,
+			})
+
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query myQuery { employees { tag } }`,
+			})
+
+			require.JSONEq(t, employeesTagData, res.Body)
+
+			metricFamilies, err = promRegistryFiltered.Gather()
+			require.NoError(t, err)
+
+			cacheMetrics := findCacheMetrics(metricFamilies)
+
+			for _, c := range cacheMetrics {
+				assertCacheTypeLabels(t, c)
+
+				if c.GetName() == "router_graphql_cache_cost_max" {
+					for _, m := range c.GetMetric() {
+						switch getCacheType(t, m) {
+						case "execution":
+							require.Equal(t, float64(baseCost*10), m.GetGauge().GetValue())
+						case "normalization":
+							require.Equal(t, float64(baseCost*20), m.GetGauge().GetValue())
+						case "validation":
+							require.Equal(t, float64(baseCost), m.GetGauge().GetValue())
+						}
+					}
+				}
+
+				if c.GetName() == "router_graphql_cache_cost_stats_total" {
+					const searchLabel = "operation"
+					require.Len(t, c.GetMetric(), 6)
+					for _, m := range c.GetMetric() {
+						switch getCacheType(t, m) {
+						case "execution":
+							switch getLabel(t, m, searchLabel) {
+							case "added":
+								require.Equal(t, float64(baseCost*2), m.GetCounter().GetValue())
+							case "evicted":
+								require.Equal(t, float64(0), m.GetCounter().GetValue())
+							default:
+								require.Fail(t, "unable to find operation")
+							}
+						case "normalization":
+							switch getLabel(t, m, searchLabel) {
+							case "added":
+								require.Equal(t, float64(baseCost*2), m.GetCounter().GetValue())
+							case "evicted":
+								require.Equal(t, float64(0), m.GetCounter().GetValue())
+							default:
+								require.Fail(t, "unable to find operation")
+							}
+						case "validation":
+							switch getLabel(t, m, searchLabel) {
+							case "added":
+								require.Equal(t, float64(baseCost*2), m.GetCounter().GetValue())
+							case "evicted":
+								require.Equal(t, float64(baseCost), m.GetCounter().GetValue())
+							default:
+								require.Fail(t, "unable to find operation")
+							}
+						}
+					}
+				}
+
+				if c.GetName() == "router_graphql_cache_hits_stats_total" {
+					require.Len(t, c.GetMetric(), 6)
+					const searchLabel = "type"
+					for _, m := range c.GetMetric() {
+						switch getCacheType(t, m) {
+						case "execution":
+							switch getLabel(t, m, searchLabel) {
+							case "hits":
+								require.Equal(t, float64(1), m.GetCounter().GetValue())
+							case "misses":
+								require.Equal(t, float64(2), m.GetCounter().GetValue())
+							default:
+								require.Fail(t, "unable to find expected type")
+							}
+						case "normalization":
+							switch getLabel(t, m, searchLabel) {
+							case "hits":
+								require.Equal(t, float64(1), m.GetCounter().GetValue())
+							case "misses":
+								require.Equal(t, float64(2), m.GetCounter().GetValue())
+							default:
+								require.Fail(t, "unable to find expected type")
+							}
+						case "validation":
+							switch getLabel(t, m, searchLabel) {
+							case "hits":
+								require.Equal(t, float64(1), m.GetCounter().GetValue())
+							case "misses":
+								require.Equal(t, float64(2), m.GetCounter().GetValue())
+							default:
+								require.Fail(t, "unable to find expected type")
+							}
+						}
+					}
+				}
+
+				if c.GetName() == "router_graphql_cache_keys_stats_total" {
+					require.Len(t, c.GetMetric(), 9)
+					const searchLabel = "operation"
+					for _, m := range c.GetMetric() {
+						switch getCacheType(t, m) {
+						case "execution":
+							switch getLabel(t, m, searchLabel) {
+							case "added":
+								require.Equal(t, float64(2), m.GetCounter().GetValue())
+							case "evicted":
+								require.Equal(t, float64(0), m.GetCounter().GetValue())
+							case "updated":
+								require.Equal(t, float64(0), m.GetCounter().GetValue())
+							default:
+								require.Fail(t, "unable to find operation")
+							}
+						case "normalization":
+							switch getLabel(t, m, searchLabel) {
+							case "added":
+								require.Equal(t, float64(2), m.GetCounter().GetValue())
+							case "evicted":
+								require.Equal(t, float64(0), m.GetCounter().GetValue())
+							case "updated":
+								require.Equal(t, float64(0), m.GetCounter().GetValue())
+							default:
+								require.Fail(t, "unable to find operation")
+							}
+						case "validation":
+							switch getLabel(t, m, searchLabel) {
+							case "added":
+								require.Equal(t, float64(2), m.GetCounter().GetValue())
+							case "evicted":
+								require.Equal(t, float64(1), m.GetCounter().GetValue())
+							case "updated":
+								require.Equal(t, float64(0), m.GetCounter().GetValue())
+							default:
+								require.Fail(t, "unable to find operation")
+							}
+						}
+					}
+				}
+			}
+		})
+	})
 }
 
 // Creates a separate prometheus metric when service error codes are used as custom attributes
@@ -2978,6 +3162,58 @@ func findMetricLabelByName(mf []*io_prometheus_client.Metric, name string) *io_p
 		}
 	}
 	return nil
+}
+
+func findCacheMetrics(mf []*io_prometheus_client.MetricFamily) []*io_prometheus_client.MetricFamily {
+	var cacheMetrics []*io_prometheus_client.MetricFamily
+	for _, m := range mf {
+		if strings.HasPrefix(m.GetName(), "router_graphql_cache_") {
+			cacheMetrics = append(cacheMetrics, m)
+		}
+	}
+	return cacheMetrics
+}
+
+func assertCacheTypeLabels(t *testing.T, mf *io_prometheus_client.MetricFamily) {
+	t.Helper()
+
+	cacheTypes := map[string]struct{}{
+		"execution":     {},
+		"validation":    {},
+		"normalization": {},
+	}
+
+	// The metrics should contain a cache_type label with one of the expected values
+	for _, m := range mf.GetMetric() {
+		for _, l := range m.GetLabel() {
+			if l.GetName() == "cache_type" {
+				_, found := cacheTypes[l.GetValue()]
+				require.Truef(t, found, "unexpected cache type label value: %s", l.GetValue())
+			}
+		}
+	}
+}
+
+func getCacheType(t *testing.T, m *io_prometheus_client.Metric) string {
+	for _, l := range m.GetLabel() {
+		if l.GetName() == "cache_type" {
+			return l.GetValue()
+		}
+	}
+
+	require.Fail(t, "cache_type label not found")
+	return ""
+}
+
+func getLabel(t *testing.T, m *io_prometheus_client.Metric, name string) string {
+	for _, l := range m.GetLabel() {
+		if l.GetName() == name {
+			return l.GetValue()
+		}
+	}
+
+	require.Fail(t, "operation label not found")
+	return ""
 }
 
 func PointerOf[T any](t T) *T {

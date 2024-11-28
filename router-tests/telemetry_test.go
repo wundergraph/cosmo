@@ -37,9 +37,11 @@ func TestRuntimeTelemetry(t *testing.T) {
 		exporter := tracetest.NewInMemoryExporter(t)
 
 		testenv.Run(t, &testenv.Config{
-			TraceExporter:        exporter,
-			MetricReader:         metricReader,
-			EnableRuntimeMetrics: true,
+			TraceExporter: exporter,
+			MetricReader:  metricReader,
+			MetricOptions: testenv.MetricOptions{
+				EnableRuntimeMetrics: true,
+			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
@@ -3079,13 +3081,15 @@ func TestTelemetry(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			MetricReader: metricReaderFiltered,
-			MetricExclusions: testenv.MetricExclusions{
-				ExcludedOTLPMetrics: []*regexp.Regexp{
-					regexp.MustCompile(`^router\.http\.requests$`),
-				},
-				ExcludedOTLPMetricLabels: []*regexp.Regexp{
-					regexp.MustCompile(`^wg\.client\.name$`),
-					regexp.MustCompile(`^wg\.operation.*`),
+			MetricOptions: testenv.MetricOptions{
+				MetricExclusions: testenv.MetricExclusions{
+					ExcludedOTLPMetrics: []*regexp.Regexp{
+						regexp.MustCompile(`^router\.http\.requests$`),
+					},
+					ExcludedOTLPMetricLabels: []*regexp.Regexp{
+						regexp.MustCompile(`^wg\.client\.name$`),
+						regexp.MustCompile(`^wg\.operation.*`),
+					},
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
