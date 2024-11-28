@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/cespare/xxhash/v2"
 	"net/http"
 	"strconv"
 	"strings"
@@ -588,8 +587,8 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, varia
 	// Set the cache hit attribute on the span
 	engineNormalizeSpan.SetAttributes(otel.WgNormalizationCacheHit.Bool(cached))
 
-	requestContext.operation.hash = operationKit.parsedOperation.ID
 	requestContext.operation.normalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
+	requestContext.operation.internalHash = operationKit.parsedOperation.InternalID
 
 	/**
 	* Normalize the variables
@@ -610,17 +609,11 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, varia
 		return err
 	}
 
-	normalizedOperationHash := xxhash.New()
-	err = operationKit.kit.printer.Print(operationKit.kit.doc, normalizedOperationHash)
-	if err != nil {
-		return err
-	}
+	requestContext.operation.hash = operationKit.parsedOperation.ID
+	operationHashString := strconv.FormatUint(operationKit.parsedOperation.ID, 10)
 
-	operationHashString := strconv.FormatUint(normalizedOperationHash.Sum64(), 10)
 	operationHashAttribute := otel.WgOperationHash.String(operationHashString)
-
 	requestContext.telemetry.addCommonAttribute(operationHashAttribute)
-
 	httpOperation.routerSpan.SetAttributes(operationHashAttribute)
 
 	requestContext.operation.content = operationKit.parsedOperation.NormalizedRepresentation
