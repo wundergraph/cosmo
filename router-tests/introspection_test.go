@@ -1,9 +1,10 @@
 package integration
 
 import (
+	"testing"
+
 	"github.com/sebdah/goldie/v2"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
-	"testing"
 )
 
 const introspectionQuery = `query IntrospectionQuery {
@@ -107,7 +108,6 @@ fragment TypeRef on __Type {
 }`
 
 func TestIntrospection(t *testing.T) {
-
 	t.Parallel()
 
 	g := goldie.New(
@@ -118,7 +118,6 @@ func TestIntrospection(t *testing.T) {
 	)
 
 	t.Run("Return proper introspection result", func(t *testing.T) {
-
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -130,7 +129,6 @@ func TestIntrospection(t *testing.T) {
 	})
 
 	t.Run("Return correct introspection result from feature flag schema", func(t *testing.T) {
-
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {

@@ -1,10 +1,11 @@
 package integration
 
 import (
-	"github.com/wundergraph/cosmo/router/core"
 	"net/http"
 	"regexp"
 	"testing"
+
+	"github.com/wundergraph/cosmo/router/core"
 
 	"github.com/prometheus/client_golang/prometheus"
 	io_prometheus_client "github.com/prometheus/client_model/go"
@@ -1614,6 +1615,8 @@ func TestPrometheus(t *testing.T) {
 	})
 
 	t.Run("Subgraph errors are tracked through request error metric", func(t *testing.T) {
+		t.Parallel()
+
 		exporter := tracetest.NewInMemoryExporter(t)
 		metricReader := metric.NewManualReader()
 		promRegistry := prometheus.NewRegistry()
@@ -1764,6 +1767,8 @@ func TestPrometheus(t *testing.T) {
 	})
 
 	t.Run("Custom slice metric attributes produces multiple metric series", func(t *testing.T) {
+		t.Parallel()
+
 		exporter := tracetest.NewInMemoryExporter(t)
 		metricReader := metric.NewManualReader()
 		promRegistry := prometheus.NewRegistry()

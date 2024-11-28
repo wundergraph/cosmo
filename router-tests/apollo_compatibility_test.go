@@ -2,9 +2,10 @@ package integration
 
 import (
 	"encoding/json"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/stretchr/testify/require"
 
@@ -17,6 +18,7 @@ func TestApolloCompatibility(t *testing.T) {
 	t.Parallel()
 
 	t.Run("enable all", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
@@ -43,6 +45,7 @@ func TestApolloCompatibility(t *testing.T) {
 		})
 	})
 	t.Run("enable value completion", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
@@ -71,6 +74,7 @@ func TestApolloCompatibility(t *testing.T) {
 		})
 	})
 	t.Run("float compaction off", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			Subgraphs: testenv.SubgraphsConfig{
 				Test1: testenv.SubgraphConfig{
@@ -92,6 +96,7 @@ func TestApolloCompatibility(t *testing.T) {
 		})
 	})
 	t.Run("should not truncate - off", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			Subgraphs: testenv.SubgraphsConfig{
 				Test1: testenv.SubgraphConfig{
@@ -113,6 +118,7 @@ func TestApolloCompatibility(t *testing.T) {
 		})
 	})
 	t.Run("should not truncate - on", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
@@ -141,6 +147,7 @@ func TestApolloCompatibility(t *testing.T) {
 		})
 	})
 	t.Run("float compaction on", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
@@ -169,6 +176,7 @@ func TestApolloCompatibility(t *testing.T) {
 		})
 	})
 	t.Run("float compaction global", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
@@ -195,6 +203,7 @@ func TestApolloCompatibility(t *testing.T) {
 		})
 	})
 	t.Run("nullable array item with non-nullable array item field", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
@@ -222,6 +231,7 @@ func TestApolloCompatibility(t *testing.T) {
 		})
 	})
 	t.Run("non-nullable array item", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
@@ -249,6 +259,7 @@ func TestApolloCompatibility(t *testing.T) {
 		})
 	})
 	t.Run("non-nullable array item with non-nullable array item field", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
@@ -276,6 +287,7 @@ func TestApolloCompatibility(t *testing.T) {
 		})
 	})
 	t.Run("simple fetch with suppress fetch errors enabled", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
@@ -306,6 +318,7 @@ func TestApolloCompatibility(t *testing.T) {
 		})
 	})
 	t.Run("simple fetch with suppress fetch errors disabled", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
@@ -336,6 +349,7 @@ func TestApolloCompatibility(t *testing.T) {
 		})
 	})
 	t.Run("should suppress errors when enable all is true", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
@@ -361,6 +375,7 @@ func TestApolloCompatibility(t *testing.T) {
 		})
 	})
 	t.Run("enable replace undefined operation field error", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
@@ -379,6 +394,7 @@ func TestApolloCompatibility(t *testing.T) {
 		})
 	})
 	t.Run("enable all: replace undefined operation field error", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
@@ -395,6 +411,7 @@ func TestApolloCompatibility(t *testing.T) {
 		})
 	})
 	t.Run("enable replace invalid variable error", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
@@ -414,6 +431,7 @@ func TestApolloCompatibility(t *testing.T) {
 		})
 	})
 	t.Run("enable all: replace invalid variable error", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{

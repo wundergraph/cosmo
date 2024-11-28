@@ -31,10 +31,13 @@ func TestNatsEvents(t *testing.T) {
 	t.Run("subscribe async", func(t *testing.T) {
 		t.Parallel()
 
-		testenv.Run(t, &testenv.Config{LogObservation: testenv.LogObservationConfig{
-			Enabled:  true,
-			LogLevel: zapcore.InfoLevel,
-		}}, func(t *testing.T, xEnv *testenv.Environment) {
+		testenv.Run(t, &testenv.Config{
+			EnableNats: true,
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
 			var subscriptionOne struct {
 				employeeUpdated struct {
 					ID      float64 `graphql:"id"`
@@ -102,7 +105,9 @@ func TestNatsEvents(t *testing.T) {
 	t.Run("message and resolve errors should not abort the subscription", func(t *testing.T) {
 		t.Parallel()
 
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		testenv.Run(t, &testenv.Config{
+			EnableNats: true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
 			var subscriptionOne struct {
 				employeeUpdated struct {
 					ID      float64 `graphql:"id"`
@@ -192,6 +197,7 @@ func TestNatsEvents(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
+			EnableNats: true,
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.EnableNetPoll = false
 				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 100
@@ -261,6 +267,8 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("multipart", func(t *testing.T) {
+		t.Parallel()
+
 		assertLineEquals := func(reader *bufio.Reader, expected string) {
 			line, _, err := reader.ReadLine()
 			require.NoError(t, err)
@@ -279,6 +287,7 @@ func TestNatsEvents(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
+				EnableNats: true,
 				TLSConfig: &core.TlsConfig{
 					Enabled:  true,
 					CertFile: "testdata/tls/cert.pem",
@@ -343,7 +352,8 @@ func TestNatsEvents(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
-				TLSConfig: nil, // Force Http/1
+				EnableNats: true,
+				TLSConfig:  nil, // Force Http/1
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 
 				subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`)
@@ -382,7 +392,9 @@ func TestNatsEvents(t *testing.T) {
 		t.Run("subscribe with closing channel", func(t *testing.T) {
 			t.Parallel()
 
-			testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			testenv.Run(t, &testenv.Config{
+				EnableNats: true,
+			}, func(t *testing.T, xEnv *testenv.Environment) {
 
 				subscribePayload := []byte(`{"query":"subscription { countFor(count: 3) }"}`)
 
@@ -429,6 +441,7 @@ func TestNatsEvents(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
+				EnableNats: true,
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 					securityConfiguration.BlockSubscriptions = true
 				},
@@ -463,7 +476,9 @@ func TestNatsEvents(t *testing.T) {
 	t.Run("subscribe once", func(t *testing.T) {
 		t.Parallel()
 
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		testenv.Run(t, &testenv.Config{
+			EnableNats: true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`)
 
@@ -528,7 +543,9 @@ func TestNatsEvents(t *testing.T) {
 	t.Run("subscribe sync sse works without query param", func(t *testing.T) {
 		t.Parallel()
 
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		testenv.Run(t, &testenv.Config{
+			EnableNats: true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`)
 
@@ -601,6 +618,7 @@ func TestNatsEvents(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
+			EnableNats: true,
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 				securityConfiguration.BlockSubscriptions = true
 			},
@@ -664,7 +682,9 @@ func TestNatsEvents(t *testing.T) {
 	t.Run("subscribe sync sse client close", func(t *testing.T) {
 		t.Parallel()
 
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		testenv.Run(t, &testenv.Config{
+			EnableNats: true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			firstSubscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } }}"}`)
 
@@ -733,7 +753,9 @@ func TestNatsEvents(t *testing.T) {
 	t.Run("request", func(t *testing.T) {
 		t.Parallel()
 
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		testenv.Run(t, &testenv.Config{
+			EnableNats: true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			firstSub, err := xEnv.NatsConnectionDefault.Subscribe("getEmployee.3", func(msg *nats.Msg) {
 				err := msg.Respond([]byte(`{"id": 3, "__typename": "Employee"}`))
@@ -775,7 +797,9 @@ func TestNatsEvents(t *testing.T) {
 	t.Run("publish", func(t *testing.T) {
 		t.Parallel()
 
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		testenv.Run(t, &testenv.Config{
+			EnableNats: true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
 			firstSub, err := xEnv.NatsConnectionDefault.SubscribeSync("employeeUpdatedMyNats.3")
 			require.NoError(t, err)
 			require.NoError(t, xEnv.NatsConnectionDefault.Flush())
@@ -822,6 +846,7 @@ func TestNatsEvents(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
+			EnableNats: true,
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 10
 			},
@@ -887,6 +912,7 @@ func TestNatsEvents(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
+			EnableNats: true,
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 10
 			},
@@ -993,7 +1019,11 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("subscribing to a non-existent stream returns an error", func(t *testing.T) {
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			EnableNats: true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
 			var subscription struct {
 				employeeUpdatedNatsStream struct {
 					ID float64 `graphql:"id"`
@@ -1036,6 +1066,7 @@ func TestNatsEvents(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
+			EnableNats: true,
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 100
 			},
@@ -1176,7 +1207,9 @@ func TestNatsEvents(t *testing.T) {
 	t.Run("subscribe sse with filter", func(t *testing.T) {
 		t.Parallel()
 
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		testenv.Run(t, &testenv.Config{
+			EnableNats: true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			subscribePayload := []byte(`{"query":"subscription { filteredEmployeeUpdated(id: 1) { id details { forename surname } } }"}`)
 

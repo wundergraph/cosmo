@@ -1,15 +1,15 @@
 package integration
 
 import (
+	"net/http"
+	"testing"
+
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/pkg/config"
-	"net/http"
-	"testing"
 )
 
 func TestErrorPropagation(t *testing.T) {
-
 	t.Parallel()
 
 	t.Run("StatusCode extensions field is not set on origin connection issues / wrapped mode", func(t *testing.T) {

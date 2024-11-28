@@ -24,6 +24,7 @@ func prettifyJSON(data string) []byte {
 }
 
 func TestQueryPlans(t *testing.T) {
+	t.Parallel()
 
 	g := goldie.New(
 		t,
@@ -33,6 +34,8 @@ func TestQueryPlans(t *testing.T) {
 	)
 
 	t.Run("always include query plan", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.Debug.AlwaysIncludeQueryPlan = true
@@ -58,6 +61,8 @@ func TestQueryPlans(t *testing.T) {
 		})
 	})
 	t.Run("include query plan via header", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Header: http.Header{
@@ -82,6 +87,8 @@ func TestQueryPlans(t *testing.T) {
 		})
 	})
 	t.Run("query plans disabled", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{core.WithQueryPlans(false)},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -108,6 +115,8 @@ func TestQueryPlans(t *testing.T) {
 		})
 	})
 	t.Run("only query plan without data", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Header: http.Header{
@@ -133,6 +142,8 @@ func TestQueryPlans(t *testing.T) {
 		})
 	})
 	t.Run("only query plan without data but with trace", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.EnableRequestTracing = true
@@ -169,6 +180,8 @@ func TestQueryPlans(t *testing.T) {
 		})
 	})
 	t.Run("include operation name in each request", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.Debug.AlwaysIncludeQueryPlan = true

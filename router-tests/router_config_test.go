@@ -1,10 +1,11 @@
 package integration
 
 import (
+	"testing"
+
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
-	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -12,6 +13,7 @@ import (
 
 func TestRouterConfigParsing(t *testing.T) {
 	t.Parallel()
+
 	routerConfig, err := execution_config.FromFile("./testdata/routerConfig.json")
 	require.NoError(t, err)
 
@@ -81,6 +83,7 @@ func TestRouterConfigParsing(t *testing.T) {
 
 func TestRouterConfigParsingOfUnknownProperties(t *testing.T) {
 	t.Parallel()
+
 	routerConfig, err := execution_config.FromFile("./testdata/routerConfigWithUnknownProperties.json")
 	require.NoError(t, err)
 

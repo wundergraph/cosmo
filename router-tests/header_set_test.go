@@ -2,16 +2,19 @@ package integration
 
 import (
 	"fmt"
+	"net/http"
+	"strings"
+	"testing"
+
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
-	"net/http"
-	"strings"
-	"testing"
 )
 
 func TestHeaderSet(t *testing.T) {
+	t.Parallel()
+
 	const (
 		customHeader = "X-Custom-Header"
 		employeeVal  = "employee-value"
@@ -30,6 +33,8 @@ func TestHeaderSet(t *testing.T) {
 	}`
 
 	t.Run("RequestSet", func(t *testing.T) {
+		t.Parallel()
+
 		getRule := func(name, val string) *config.RequestHeaderRule {
 			rule := &config.RequestHeaderRule{
 				Operation: config.HeaderRuleOperationSet,
@@ -66,6 +71,8 @@ func TestHeaderSet(t *testing.T) {
 	})
 
 	t.Run("ResponseSet", func(t *testing.T) {
+		t.Parallel()
+
 		getRule := func(name, val string) *config.ResponseHeaderRule {
 			rule := &config.ResponseHeaderRule{
 				Operation: config.HeaderRuleOperationSet,

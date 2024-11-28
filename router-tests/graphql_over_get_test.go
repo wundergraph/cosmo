@@ -16,6 +16,7 @@ func TestOperationsOverGET(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Operation executed successfully", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
 				OperationName: []byte(`Employees`),
@@ -28,6 +29,7 @@ func TestOperationsOverGET(t *testing.T) {
 	})
 
 	t.Run("Operation with variables executed successfully", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
 				OperationName: []byte(`Find`),
@@ -41,6 +43,7 @@ func TestOperationsOverGET(t *testing.T) {
 	})
 
 	t.Run("Only queries are supported over GET", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
 				OperationName: []byte(`updateEmployeeTag`),

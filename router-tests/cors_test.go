@@ -1,14 +1,15 @@
 package integration
 
 import (
+	"net/http"
+	"testing"
+	"time"
+
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
-	"net/http"
-	"testing"
-	"time"
 )
 
 func TestCors(t *testing.T) {
@@ -85,6 +86,7 @@ func TestCors(t *testing.T) {
 	})
 
 	t.Run("wildcard matching", func(t *testing.T) {
+		t.Parallel()
 		t.Run("matching single wildcard succeeds", func(t *testing.T) {
 			t.Parallel()
 

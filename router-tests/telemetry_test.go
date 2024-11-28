@@ -2604,6 +2604,8 @@ func TestTelemetry(t *testing.T) {
 	})
 
 	t.Run("Subgraph error produces a span event per GraphQL error", func(t *testing.T) {
+		t.Parallel()
+
 		exporter := tracetest.NewInMemoryExporter(t)
 
 		testenv.Run(t, &testenv.Config{
@@ -2804,6 +2806,8 @@ func TestTelemetry(t *testing.T) {
 	})
 
 	t.Run("Datadog Propagation", func(t *testing.T) {
+		t.Parallel()
+
 		var (
 			datadogTraceId = "9532127138774266268"
 			testPropConfig = config.PropagationConfig{
@@ -3131,8 +3135,11 @@ func TestTelemetry(t *testing.T) {
 	})
 
 	t.Run("Custom Metric Attributes", func(t *testing.T) {
+		t.Parallel()
 
 		t.Run("Custom attributes are added to all metrics / subgraph error", func(t *testing.T) {
+			t.Parallel()
+
 			exporter := tracetest.NewInMemoryExporter(t)
 			metricReader := metric.NewManualReader()
 
@@ -3817,6 +3824,7 @@ func TestTelemetry(t *testing.T) {
 	})
 
 	t.Run("Complexity Cache Metrics", func(t *testing.T) {
+		t.Parallel()
 		t.Run("total fields caches success and failure runs", func(t *testing.T) {
 			t.Parallel()
 

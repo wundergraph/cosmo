@@ -1,6 +1,9 @@
 package integration
 
 import (
+	"net/http"
+	"testing"
+
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -9,13 +12,12 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/trace"
 	tracetest2 "go.opentelemetry.io/otel/sdk/trace/tracetest"
-	"net/http"
-	"testing"
 )
 
 func TestComplexityLimits(t *testing.T) {
 	t.Parallel()
 	t.Run("old max query depth configuration still works", func(t *testing.T) {
+		t.Parallel()
 		t.Run("max query depth of 0 doesn't block", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
@@ -185,6 +187,7 @@ func TestComplexityLimits(t *testing.T) {
 	})
 
 	t.Run("depth limit", func(t *testing.T) {
+		t.Parallel()
 		t.Run("depth limit blocks queries over the limit", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
@@ -261,6 +264,7 @@ func TestComplexityLimits(t *testing.T) {
 		t.Parallel()
 
 		t.Run("total fields limit blocks queries over the limit", func(t *testing.T) {
+			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 					securityConfiguration.ComplexityLimits = &config.ComplexityLimits{
@@ -280,6 +284,7 @@ func TestComplexityLimits(t *testing.T) {
 		})
 
 		t.Run("total fields allows queries under the limit", func(t *testing.T) {
+			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 					securityConfiguration.ComplexityLimits = &config.ComplexityLimits{
@@ -302,6 +307,7 @@ func TestComplexityLimits(t *testing.T) {
 		t.Parallel()
 
 		t.Run("root fields limit blocks queries over the limit", func(t *testing.T) {
+			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 					securityConfiguration.ComplexityLimits = &config.ComplexityLimits{
@@ -321,6 +327,7 @@ func TestComplexityLimits(t *testing.T) {
 		})
 
 		t.Run("root fields allows queries under the limit", func(t *testing.T) {
+			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 					securityConfiguration.ComplexityLimits = &config.ComplexityLimits{
@@ -343,6 +350,7 @@ func TestComplexityLimits(t *testing.T) {
 		t.Parallel()
 
 		t.Run("root field aliases limit blocks queries over the limit", func(t *testing.T) {
+			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 					securityConfiguration.ComplexityLimits = &config.ComplexityLimits{
@@ -362,6 +370,7 @@ func TestComplexityLimits(t *testing.T) {
 		})
 
 		t.Run("root field aliases allows queries under the limit", func(t *testing.T) {
+			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 					securityConfiguration.ComplexityLimits = &config.ComplexityLimits{

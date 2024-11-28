@@ -3,11 +3,6 @@ package integration
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"github.com/stretchr/testify/require"
-	"github.com/wundergraph/cosmo/router-tests/testenv"
-	"github.com/wundergraph/cosmo/router/core"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"io"
 	"net"
 	"net/http"
@@ -15,12 +10,17 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 const employeesIDData = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
 
 func TestTLS(t *testing.T) {
-
 	t.Parallel()
 
 	t.Run("Ensure router URL is https when passing TLSConfig", func(t *testing.T) {
@@ -197,7 +197,6 @@ func TestTLS(t *testing.T) {
 }
 
 func TestMTLS(t *testing.T) {
-
 	t.Parallel()
 
 	t.Run("TestPlayground", func(t *testing.T) {

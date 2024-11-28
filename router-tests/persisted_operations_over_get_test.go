@@ -3,19 +3,22 @@ package integration_test
 import (
 	"context"
 	"encoding/json"
-	"github.com/stretchr/testify/require"
-	"github.com/wundergraph/cosmo/router-tests/testenv"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 	"net/http"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
 func TestPersistedOperationOverGET(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Operation not found", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			header := make(http.Header)
 			header.Add("graphql-client-name", "my-client")
@@ -30,6 +33,8 @@ func TestPersistedOperationOverGET(t *testing.T) {
 	})
 
 	t.Run("Operation executed successfully", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			header := make(http.Header)
 			header.Add("graphql-client-name", "my-client")
@@ -45,6 +50,8 @@ func TestPersistedOperationOverGET(t *testing.T) {
 	})
 
 	t.Run("Operation with variables executed successfully", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			header := make(http.Header)
 			header.Add("graphql-client-name", "my-client")
@@ -61,6 +68,8 @@ func TestPersistedOperationOverGET(t *testing.T) {
 	})
 
 	t.Run("Only queries are supported over GET", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			header := make(http.Header)
 			header.Add("graphql-client-name", "my-client")
@@ -80,6 +89,8 @@ func TestAutomatedPersistedQueriesOverGET(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Operation not found", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ApqConfig: config.AutomaticPersistedQueriesConfig{
 				Enabled: true,
@@ -98,6 +109,8 @@ func TestAutomatedPersistedQueriesOverGET(t *testing.T) {
 	})
 
 	t.Run("Operation executed successfully", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ApqConfig: config.AutomaticPersistedQueriesConfig{
 				Enabled: true,
@@ -137,6 +150,8 @@ func TestAutomatedPersistedQueriesOverGET(t *testing.T) {
 	})
 
 	t.Run("Operation with variables executed successfully", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ApqConfig: config.AutomaticPersistedQueriesConfig{
 				Enabled: true,
@@ -177,6 +192,8 @@ func TestAutomatedPersistedQueriesOverGET(t *testing.T) {
 	})
 
 	t.Run("Only queries are supported over GET", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ApqConfig: config.AutomaticPersistedQueriesConfig{
 				Enabled: true,
