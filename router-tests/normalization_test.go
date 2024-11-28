@@ -49,13 +49,14 @@ func TestNormalization(t *testing.T) {
 			Query         string
 			OperationHash string
 			Output        string
+			OperationName string
 		}{
 			/**
 			 * Queries with different variable values should not produce different hashes
 			 */
 			{
 				Name:          "Variable with User ID 1",
-				OperationHash: "17236947914586555433",
+				OperationHash: "17367320933561257453",
 				Query: `{
     "query": "query Employee($id: Int! = 1) {\n  employee(id: $id) {\n    details {\n      pets {\n        name\n      }\n    }\n  }\n}",
     "variables": {
@@ -63,11 +64,12 @@ func TestNormalization(t *testing.T) {
     },
     "operationName": "Employee"
 }`,
-				Output: `{"data":{"employee":{"details":{"pets":null}}}}`,
+				Output:        `{"data":{"employee":{"details":{"pets":null}}}}`,
+				OperationName: "Employee",
 			},
 			{
 				Name:          "Variable with User ID 3",
-				OperationHash: "17236947914586555433",
+				OperationHash: "17367320933561257453",
 				Query: `{
     "query": "query Employee($id: Int! = 1) {\n  employee(id: $id) {\n    details {\n      pets {\n        name\n      }\n    }\n  }\n}",
     "variables": {
@@ -75,49 +77,81 @@ func TestNormalization(t *testing.T) {
     },
     "operationName": "Employee"
 }`,
-				Output: `{"data":{"employee":{"details":{"pets":[{"name":"Snappy"}]}}}}`,
+				Output:        `{"data":{"employee":{"details":{"pets":[{"name":"Snappy"}]}}}}`,
+				OperationName: "Employee",
 			},
 			/**
 			 * Queries with different default values should have the same hash
 			 */
 			{
 				Name:          "Variable with default value 1",
-				OperationHash: "17236947914586555433",
+				OperationHash: "17367320933561257453",
 				Query: `{
     "query": "query Employee($id: Int! = 1) {\n  employee(id: $id) {\n    details {\n      pets {\n        name\n      }\n    }\n  }\n}",
     "operationName": "Employee"
 }`,
-				Output: `{"data":{"employee":{"details":{"pets":null}}}}`,
+				Output:        `{"data":{"employee":{"details":{"pets":null}}}}`,
+				OperationName: "Employee",
 			},
 			{
 				Name:          "Variable with default value 3",
-				OperationHash: "17236947914586555433",
+				OperationHash: "17367320933561257453",
 				Query: `{
     "query": "query Employee($id: Int! = 3) {\n  employee(id: $id) {\n    details {\n      pets {\n        name\n      }\n    }\n  }\n}",
     "operationName": "Employee"
 }`,
-				Output: `{"data":{"employee":{"details":{"pets":[{"name":"Snappy"}]}}}}`,
+				Output:        `{"data":{"employee":{"details":{"pets":[{"name":"Snappy"}]}}}}`,
+				OperationName: "Employee",
 			},
+			/**
+			 * Queries with different operation names but the same operation should produce same hashes
+			 */
+			{
+				Name:          "Operation with different name",
+				OperationHash: "17367320933561257453",
+				Query: `{
+    "query": "query Test($id: Int! = 3) {\n  employee(id: $id) {\n    details {\n      pets {\n        name\n      }\n    }\n  }\n}",
+    "operationName": "Test"
+}`,
+				Output:        `{"data":{"employee":{"details":{"pets":[{"name":"Snappy"}]}}}}`,
+				OperationName: "Test",
+			},
+			/**
+			 * Queries with different whitespaces should produce same hashes
+			 */
+			{
+				Name:          "Operation with different whitespaces",
+				OperationHash: "17367320933561257453",
+				Query: `{
+    "query": "query Employee($id: Int! = 3) {\n  employee(id: $id) {\n    details {pets {\n        name\n      }\n    }\n  }}",
+    "operationName": "Employee"
+}`,
+				Output:        `{"data":{"employee":{"details":{"pets":[{"name":"Snappy"}]}}}}`,
+				OperationName: "Employee",
+			},
+
 			/**
 			 * Queries with different inline values should produce same hashes
 			 */
 			{
 				Name:          "Inline value with User ID 1",
-				OperationHash: "5295522593792610114",
+				OperationHash: "14247917063282800240",
 				Query: `{
     "query": "query Employee{\n  employee(id: 1) {\n    details {\n      pets {\n        name\n      }\n    }\n  }\n}",
     "operationName": "Employee"
 }`,
-				Output: `{"data":{"employee":{"details":{"pets":null}}}}`,
+				Output:        `{"data":{"employee":{"details":{"pets":null}}}}`,
+				OperationName: "Employee",
 			},
 			{
 				Name:          "Inline value with User ID 3",
-				OperationHash: "5295522593792610114",
+				OperationHash: "14247917063282800240",
 				Query: `{
     "query": "query Employee{\n  employee(id: 3) {\n    details {\n      pets {\n        name\n      }\n    }\n  }\n}",
     "operationName": "Employee"
 }`,
-				Output: `{"data":{"employee":{"details":{"pets":[{"name":"Snappy"}]}}}}`,
+				Output:        `{"data":{"employee":{"details":{"pets":[{"name":"Snappy"}]}}}}`,
+				OperationName: "Employee",
 			},
 		}
 
@@ -140,7 +174,7 @@ func TestNormalization(t *testing.T) {
 
 					sn := exporter.GetSpans().Snapshots()
 
-					require.Equal(t, "query Employee", sn[7].Name())
+					require.Equal(t, "query "+ tc.OperationName, sn[7].Name())
 					require.Equal(t, trace.SpanKindClient, sn[7].SpanKind())
 					require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[7].Status())
 					require.Contains(t, sn[7].Attributes(), otel.WgOperationHash.String(tc.OperationHash))
