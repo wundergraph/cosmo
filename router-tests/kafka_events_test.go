@@ -37,6 +37,7 @@ func TestLocalKafka(t *testing.T) {
 }
 
 func TestKafkaEvents(t *testing.T) {
+	t.Parallel()
 	// All tests are running in sequence because they are using the same kafka topic
 
 	if testing.Short() {
@@ -434,7 +435,6 @@ func TestKafkaEvents(t *testing.T) {
 	})
 
 	t.Run("multipart", func(t *testing.T) {
-		t.Parallel()
 		assertLineEquals := func(reader *bufio.Reader, expected string) {
 			line, _, err := reader.ReadLine()
 			require.NoError(t, err)
@@ -448,7 +448,6 @@ func TestKafkaEvents(t *testing.T) {
 		}
 
 		t.Run("subscribe sync", func(t *testing.T) {
-			t.Parallel()
 			topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 			testenv.Run(t, &testenv.Config{
@@ -497,7 +496,6 @@ func TestKafkaEvents(t *testing.T) {
 		})
 
 		t.Run("subscribe sync with block", func(t *testing.T) {
-			t.Parallel()
 
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
@@ -647,7 +645,6 @@ func TestKafkaEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe sync sse with block", func(t *testing.T) {
-		t.Parallel()
 
 		subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 

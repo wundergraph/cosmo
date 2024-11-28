@@ -1,18 +1,17 @@
 package integration
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"testing"
 )
 
 func TestFeatureFlags(t *testing.T) {
-
 	t.Parallel()
 
 	t.Run("Base feature graph schema is served when no feature flag is enabled", func(t *testing.T) {
-
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -25,7 +24,6 @@ func TestFeatureFlags(t *testing.T) {
 	})
 
 	t.Run("Base feature graph schema is served when feature flag does not exist / header", func(t *testing.T) {
-
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -41,7 +39,6 @@ func TestFeatureFlags(t *testing.T) {
 	})
 
 	t.Run("Base feature graph schema is served without feature flags", func(t *testing.T) {
-
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
@@ -61,7 +58,6 @@ func TestFeatureFlags(t *testing.T) {
 	})
 
 	t.Run("Base feature graph schema is served when feature flag does not exist / cookie", func(t *testing.T) {
-
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -77,7 +73,6 @@ func TestFeatureFlags(t *testing.T) {
 	})
 
 	t.Run("Should replace product feature graph when feature flag is sent over header", func(t *testing.T) {
-
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -93,7 +88,6 @@ func TestFeatureFlags(t *testing.T) {
 	})
 
 	t.Run("Should replace product feature graph when feature flag is sent over cookie", func(t *testing.T) {
-
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {

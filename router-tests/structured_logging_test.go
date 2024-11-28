@@ -53,6 +53,7 @@ func (m MyPanicModule) Module() core.ModuleInfo {
 
 func TestRouterStartLogs(t *testing.T) {
 	t.Parallel()
+
 	testenv.Run(t, &testenv.Config{
 		EnableNats:  true,
 		EnableKafka: true,
@@ -79,7 +80,6 @@ func TestRouterStartLogs(t *testing.T) {
 }
 
 func TestAccessLogsFileOutput(t *testing.T) {
-
 	t.Parallel()
 
 	t.Run("Simple", func(t *testing.T) {
@@ -138,7 +138,6 @@ func TestAccessLogsFileOutput(t *testing.T) {
 }
 
 func TestAccessLogs(t *testing.T) {
-
 	t.Parallel()
 
 	t.Run("Simple without custom attributes", func(t *testing.T) {
@@ -898,6 +897,7 @@ func TestAccessLogs(t *testing.T) {
 
 	t.Run("Log graphql error codes and service names", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			AccessLogFields: []config.CustomAttribute{
 				{
