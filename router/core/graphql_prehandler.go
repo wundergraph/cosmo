@@ -588,6 +588,9 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, varia
 	// Set the cache hit attribute on the span
 	engineNormalizeSpan.SetAttributes(otel.WgNormalizationCacheHit.Bool(cached))
 
+	requestContext.operation.hash = operationKit.parsedOperation.ID
+	requestContext.operation.normalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
+
 	/**
 	* Normalize the variables
 	 */
@@ -612,9 +615,6 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, varia
 	if err != nil {
 		return err
 	}
-
-	requestContext.operation.hash = normalizedOperationHash.Sum64()
-	requestContext.operation.normalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
 
 	operationHashString := strconv.FormatUint(normalizedOperationHash.Sum64(), 10)
 	operationHashAttribute := otel.WgOperationHash.String(operationHashString)
