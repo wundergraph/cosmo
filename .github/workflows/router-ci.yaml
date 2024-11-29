@@ -17,7 +17,7 @@ env:
   CI: true
   ROUTER_REGISTRATION: false
 
-# Both jobs need to kept in sync. We need to distinguish between forks and people with write access to the repository. de
+# Both jobs need to kept in sync. We need to distinguish between forks and people with write access to the repository.
 jobs:
   # Runs for forks without access to repository secrets
   build_test_fork:
@@ -98,7 +98,7 @@ jobs:
     if: github.event.pull_request.head.repo.full_name == github.repository
     strategy:
       matrix:
-        os: [ghcr.io/cirruslabs/ubuntu-runner-amd64:22.04-lg, ghcr.io/cirruslabs/ubuntu-runner-arm64:22.04-lg]
+        os: ['ghcr.io/cirruslabs/ubuntu-runner-amd64:22.04-lg', 'ghcr.io/cirruslabs/ubuntu-runner-arm64:22.04-lg']
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     services:
