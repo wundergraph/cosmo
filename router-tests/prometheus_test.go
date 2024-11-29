@@ -25,9 +25,13 @@ const ristrettoInternalCost = int64(unsafe.Sizeof(storeItem[any]{}))
 
 // storeItem is a type that represents the structure of an internal item in the ristretto.Cache.
 type storeItem[V any] struct {
-	key        uint64
-	conflict   uint64
-	value      V
+	//lint:ignore U1000 reason: temporary workaround
+	key uint64
+	//lint:ignore U1000 reason: temporary workaround
+	conflict uint64
+	//lint:ignore U1000 reason: temporary workaround
+	value V
+	//lint:ignore U1000 reason: temporary workaround
 	expiration time.Time
 }
 
@@ -2988,9 +2992,9 @@ func TestPrometheus(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(eec *config.EngineExecutionConfiguration) {
-				eec.ExecutionPlanCacheSize = int64(baseCost * 10)
-				eec.NormalizationCacheSize = int64(baseCost * 20)
-				eec.ValidationCacheSize = int64(baseCost)
+				eec.ExecutionPlanCacheSize = baseCost * 10
+				eec.NormalizationCacheSize = baseCost * 20
+				eec.ValidationCacheSize = baseCost
 			},
 			MetricReader:       metricReaderFiltered,
 			PrometheusRegistry: promRegistryFiltered,

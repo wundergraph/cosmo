@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/dgraph-io/ristretto"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -141,49 +142,58 @@ func (c *CacheMetrics) observeForCacheType(o otelmetric.Observer, cacheType stri
 
 	o.ObserveInt64(cacheHitStats, int64(metrics.Hits()),
 		otelmetric.WithAttributes(c.baseAttributes...),
-		otelmetric.WithAttributes(attribute.String("type", "hits")),
-		otelmetric.WithAttributes(attribute.String("cache_type", cacheType)),
+		otelmetric.WithAttributes(
+			otel.CacheMetricsTypeAttribute.String("hits"),
+			otel.CacheMetricsCacheTypeAttribute.String(cacheType)),
 	)
 
 	o.ObserveInt64(cacheHitStats, int64(metrics.Misses()),
 		otelmetric.WithAttributes(c.baseAttributes...),
-		otelmetric.WithAttributes(attribute.String("type", "misses")),
-		otelmetric.WithAttributes(attribute.String("cache_type", cacheType)),
+		otelmetric.WithAttributes(
+			otel.CacheMetricsTypeAttribute.String("misses"),
+			otel.CacheMetricsCacheTypeAttribute.String(cacheType)),
 	)
 
 	o.ObserveInt64(cacheKeyStats, int64(metrics.KeysAdded()),
 		otelmetric.WithAttributes(c.baseAttributes...),
-		otelmetric.WithAttributes(attribute.String("operation", "added")),
-		otelmetric.WithAttributes(attribute.String("cache_type", cacheType)),
+		otelmetric.WithAttributes(
+			otel.CacheMetricsOperationAttribute.String("added"),
+			otel.CacheMetricsCacheTypeAttribute.String(cacheType)),
 	)
 
 	o.ObserveInt64(cacheKeyStats, int64(metrics.KeysUpdated()),
 		otelmetric.WithAttributes(c.baseAttributes...),
-		otelmetric.WithAttributes(attribute.String("operation", "updated")),
-		otelmetric.WithAttributes(attribute.String("cache_type", cacheType)),
+		otelmetric.WithAttributes(
+			otel.CacheMetricsOperationAttribute.String("updated"),
+			otel.CacheMetricsCacheTypeAttribute.String(cacheType)),
 	)
 
 	o.ObserveInt64(cacheKeyStats, int64(metrics.KeysEvicted()),
 		otelmetric.WithAttributes(c.baseAttributes...),
-		otelmetric.WithAttributes(attribute.String("operation", "evicted")),
-		otelmetric.WithAttributes(attribute.String("cache_type", cacheType)),
+		otelmetric.WithAttributes(
+			otel.CacheMetricsOperationAttribute.String("evicted"),
+			otel.CacheMetricsCacheTypeAttribute.String(cacheType)),
 	)
 
 	o.ObserveInt64(cacheCostStats, int64(metrics.CostAdded()),
 		otelmetric.WithAttributes(c.baseAttributes...),
-		otelmetric.WithAttributes(attribute.String("operation", "added")),
-		otelmetric.WithAttributes(attribute.String("cache_type", cacheType)),
+		otelmetric.WithAttributes(
+			otel.CacheMetricsOperationAttribute.String("added"),
+			otel.CacheMetricsCacheTypeAttribute.String(cacheType)),
 	)
 
 	o.ObserveInt64(cacheCostStats, int64(metrics.CostEvicted()),
 		otelmetric.WithAttributes(c.baseAttributes...),
-		otelmetric.WithAttributes(attribute.String("operation", "evicted")),
-		otelmetric.WithAttributes(attribute.String("cache_type", cacheType)),
+		otelmetric.WithAttributes(
+			otel.CacheMetricsOperationAttribute.String("evicted"),
+			otel.CacheMetricsCacheTypeAttribute.String(cacheType)),
 	)
 
 	o.ObserveInt64(cacheMaxCost, maxCost,
 		otelmetric.WithAttributes(c.baseAttributes...),
-		otelmetric.WithAttributes(attribute.String("cache_type", cacheType)),
+		otelmetric.WithAttributes(
+			otel.CacheMetricsCacheTypeAttribute.String(cacheType),
+		),
 	)
 }
 

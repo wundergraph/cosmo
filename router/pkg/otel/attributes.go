@@ -47,6 +47,12 @@ const (
 	HTTPRequestUploadFileCount = attribute.Key("http.request.upload.file_count")
 )
 
+const (
+	CacheMetricsCacheTypeAttribute = attribute.Key("cache_type")
+	CacheMetricsTypeAttribute      = attribute.Key("type")
+	CacheMetricsOperationAttribute = attribute.Key("operation")
+)
+
 var (
 	RouterServerAttribute    = WgComponentName.String("router-server")
 	EngineTransportAttribute = WgComponentName.String("engine-transport")

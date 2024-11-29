@@ -42,9 +42,9 @@ func TestOperationCacheTelemetry(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(eec *config.EngineExecutionConfiguration) {
-				eec.ExecutionPlanCacheSize = int64(baseCost * 10)
-				eec.NormalizationCacheSize = int64(baseCost * 20)
-				eec.ValidationCacheSize = int64(baseCost)
+				eec.ExecutionPlanCacheSize = baseCost * 10
+				eec.NormalizationCacheSize = baseCost * 20
+				eec.ValidationCacheSize = baseCost
 			},
 			MetricReader: metricReader,
 			MetricOptions: testenv.MetricOptions{
