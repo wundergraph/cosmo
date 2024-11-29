@@ -98,7 +98,7 @@ jobs:
     if: github.event.pull_request.head.repo.full_name == github.repository
     strategy:
       matrix:
-        os: ['ghcr.io/cirruslabs/ubuntu-runner-amd64:22.04-lg', 'ghcr.io/cirruslabs/ubuntu-runner-arm64:22.04-lg']
+        os: ['ghcr.io/cirruslabs/ubuntu-runner-amd64:22.04-lg', 'ghcr.io/cirruslabs/macos-runner:sonoma']
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     services:
