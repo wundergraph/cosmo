@@ -316,7 +316,7 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 		cacheMetricProviders...,
 	)
 	if err != nil {
-		fmt.Errorf("failed to create cache metrics: %w", err)
+		return fmt.Errorf("failed to create cache metrics: %w", err)
 	}
 
 	s.cacheMetrics = cacheMetrics
