@@ -46,10 +46,6 @@ jobs:
             router-tests/go.sum
             demo/go.sum
 
-      - uses: ./.github/actions/go
-        with:
-          cache-dependency-path: router/go.sum
-
       - uses: ./.github/actions/go-mod-tidy
         with:
           working-directory: ./router
@@ -126,10 +122,6 @@ jobs:
             router/go.sum
             router-tests/go.sum
             demo/go.sum
-
-      - uses: ./.github/actions/go
-        with:
-          cache-dependency-path: router/go.sum
 
       - uses: ./.github/actions/go-mod-tidy
         with:
