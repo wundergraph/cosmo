@@ -96,7 +96,7 @@ jobs:
   # that have access to the secrets
   build_test:
     if: github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: depot-ubuntu-22.04-8
+    runs-on: depot-ubuntu-22.04-16
     timeout-minutes: 15
     services:
       redis:
@@ -177,7 +177,7 @@ jobs:
         run: make build
 
   build_push_image:
-    runs-on: ubuntu-latest
+    runs-on: depot-ubuntu-22.04-8
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
