@@ -45,7 +45,6 @@ func (c *ConfigPollerMock) Stop(_ context.Context) error {
 }
 
 func TestConfigHotReload(t *testing.T) {
-
 	t.Parallel()
 
 	t.Run("Swap config and be able to make requests successfully", func(t *testing.T) {
@@ -91,7 +90,6 @@ func TestConfigHotReload(t *testing.T) {
 	})
 
 	t.Run("Swap config must not interrupt existing client traffic. All requests are served successfully", func(t *testing.T) {
-
 		t.Parallel()
 
 		pm := ConfigPollerMock{
@@ -168,7 +166,6 @@ func TestConfigHotReload(t *testing.T) {
 	})
 
 	t.Run("Shutdown server waits until all requests has been served", func(t *testing.T) {
-
 		t.Parallel()
 
 		pm := ConfigPollerMock{
@@ -218,7 +215,6 @@ func TestConfigHotReload(t *testing.T) {
 	})
 
 	t.Run("Router grace period defines how long the shutdown can take until all client connections are closed immediately", func(t *testing.T) {
-
 		t.Parallel()
 
 		pm := ConfigPollerMock{
@@ -268,7 +264,6 @@ func TestConfigHotReload(t *testing.T) {
 	})
 
 	t.Run("Swap config closes websockets connections of old graph instance immediately", func(t *testing.T) {
-
 		t.Parallel()
 
 		type currentTimePayload struct {

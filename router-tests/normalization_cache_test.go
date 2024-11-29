@@ -10,6 +10,8 @@ import (
 )
 
 func TestNormalizationCache(t *testing.T) {
+	t.Parallel()
+
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"Employee"`),
@@ -63,6 +65,8 @@ func TestNormalizationCache(t *testing.T) {
 }
 
 func TestDefaultValuesForSkipInclude(t *testing.T) {
+	t.Parallel()
+
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"MyQuery"`),
@@ -116,6 +120,8 @@ func TestDefaultValuesForSkipInclude(t *testing.T) {
 }
 
 func TestNormalizationCacheWithNestedVariables(t *testing.T) {
+	t.Parallel()
+
 	testenv.Run(t, &testenv.Config{
 		ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 			cfg.EnableNormalizationCache = true
@@ -175,6 +181,8 @@ func TestNormalizationCacheWithNestedVariables(t *testing.T) {
 }
 
 func TestWithoutNormalizationCache(t *testing.T) {
+	t.Parallel()
+
 	testenv.Run(t, &testenv.Config{
 		ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 			cfg.EnableNormalizationCache = false
@@ -208,6 +216,8 @@ func TestWithoutNormalizationCache(t *testing.T) {
 }
 
 func TestWithInputListCoercion(t *testing.T) {
+	t.Parallel()
+
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"MyQuery"`),
