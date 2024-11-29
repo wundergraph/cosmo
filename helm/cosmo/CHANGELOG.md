@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.3](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.12.2...helm-cosmo@0.12.3) (2024-11-22)
+
+
+### Bug Fixes
+
+* delete org and user workflows ([#1326](https://github.com/wundergraph/cosmo/issues/1326)) ([484898d](https://github.com/wundergraph/cosmo/commit/484898d885fc99dda8f81a2855173bd3628a5639))
+
 ## [0.12.2](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.12.1...helm-cosmo@0.12.2) (2024-10-11)
 
 

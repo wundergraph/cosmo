@@ -676,7 +676,7 @@ const CheckDetails = ({
             </>
           )}
         </dl>
-        <div className="h-full flex-1">
+        <div className="scrollbar-custom h-full flex-1 overflow-auto">
           <Tabs
             value={tab ?? "changes"}
             className="flex h-full min-h-0 flex-col"
@@ -779,9 +779,12 @@ const CheckDetails = ({
                   <Alert variant="destructive">
                     <AlertTitle>Composition Errors</AlertTitle>
                     <AlertDescription>
-                      <pre className="">
+                      <pre className="whitespace-pre-wrap">
                         {data.compositionErrors.length > 0
-                          ? data.compositionErrors.join("\n")
+                          ? data.compositionErrors
+                              .join("\n")
+                              .split("Error: ")
+                              .join("\n")
                           : "No composition errors"}
                       </pre>
                     </AlertDescription>
@@ -792,7 +795,7 @@ const CheckDetails = ({
                   <Alert variant="warn">
                     <AlertTitle>Composition Warnings</AlertTitle>
                     <AlertDescription>
-                      <pre className="">
+                      <pre className="whitespace-pre-wrap">
                         {data.compositionWarnings.length > 0
                           ? data.compositionWarnings
                               .join("\n")

@@ -331,6 +331,8 @@ func TestPersistedOperationsWithNestedVariablesExtraction(t *testing.T) {
 }
 
 func TestPersistedOperationCacheWithVariablesAndDefaultValues(t *testing.T) {
+	t.Parallel()
+
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 		header := make(http.Header)
 		header.Add("graphql-client-name", "my-client")
@@ -392,6 +394,8 @@ func TestPersistedOperationCacheWithVariablesAndDefaultValues(t *testing.T) {
 }
 
 func TestPersistedOperationCacheWithVariablesCoercion(t *testing.T) {
+	t.Parallel()
+
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 		header := make(http.Header)
 		header.Add("graphql-client-name", "my-client")

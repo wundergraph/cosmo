@@ -27,7 +27,9 @@ func TestLocalKafka(t *testing.T) {
 	t.Skip("skip only for local testing")
 
 	t.Run("subscribe async", func(t *testing.T) {
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		testenv.Run(t, &testenv.Config{
+			EnableKafka: true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// ensureTopicExists(t, xEnv, "employeeUpdated", "employeeUpdatedTwo")
 			produceKafkaMessage(t, xEnv, "employeeUpdatedTwo", `{"__typename":"Employee","id": 2,"update":{"name":"foo"}}`)
 		})
@@ -35,6 +37,7 @@ func TestLocalKafka(t *testing.T) {
 }
 
 func TestKafkaEvents(t *testing.T) {
+	t.Parallel()
 	// All tests are running in sequence because they are using the same kafka topic
 
 	if testing.Short() {
@@ -76,7 +79,8 @@ func TestKafkaEvents(t *testing.T) {
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds: seeds,
+			KafkaSeeds:  seeds,
+			EnableKafka: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)
@@ -91,7 +95,7 @@ func TestKafkaEvents(t *testing.T) {
 				} `graphql:"employeeUpdatedMyKafka(employeeID: 3)"`
 			}
 
-			surl := xEnv.GraphQLSubscriptionURL()
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 			t.Cleanup(func() {
 				_ = client.Close()
@@ -134,7 +138,8 @@ func TestKafkaEvents(t *testing.T) {
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds: seeds,
+			KafkaSeeds:  seeds,
+			EnableKafka: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)
@@ -149,7 +154,7 @@ func TestKafkaEvents(t *testing.T) {
 				} `graphql:"employeeUpdatedMyKafka(employeeID: 3)"`
 			}
 
-			surl := xEnv.GraphQLSubscriptionURL()
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 			t.Cleanup(func() {
 				_ = client.Close()
@@ -216,7 +221,8 @@ func TestKafkaEvents(t *testing.T) {
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds: seeds,
+			KafkaSeeds:  seeds,
+			EnableKafka: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)
@@ -231,7 +237,7 @@ func TestKafkaEvents(t *testing.T) {
 				} `graphql:"employeeUpdatedMyKafka(employeeID: 3)"`
 			}
 
-			surl := xEnv.GraphQLSubscriptionURL()
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 
 			wg := &sync.WaitGroup{}
@@ -280,7 +286,8 @@ func TestKafkaEvents(t *testing.T) {
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds: seeds,
+			KafkaSeeds:  seeds,
+			EnableKafka: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)
@@ -295,7 +302,7 @@ func TestKafkaEvents(t *testing.T) {
 				} `graphql:"employeeUpdatedMyKafka(employeeID: 3)"`
 			}
 
-			surl := xEnv.GraphQLSubscriptionURL()
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 			t.Cleanup(func() {
 				_ = client.Close()
@@ -364,15 +371,16 @@ func TestKafkaEvents(t *testing.T) {
 		})
 	})
 
-	t.Run("subscribe async epoll/kqueue disabled", func(t *testing.T) {
+	t.Run("subscribe async netPoll disabled", func(t *testing.T) {
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds: seeds,
+			KafkaSeeds:  seeds,
+			EnableKafka: true,
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.EnableWebSocketEpollKqueue = false
-				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 100
+				engineExecutionConfiguration.EnableNetPoll = false
+				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 100
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
@@ -388,7 +396,7 @@ func TestKafkaEvents(t *testing.T) {
 				} `graphql:"employeeUpdatedMyKafka(employeeID: 3)"`
 			}
 
-			surl := xEnv.GraphQLSubscriptionURL()
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 			t.Cleanup(func() {
 				_ = client.Close()
@@ -439,13 +447,12 @@ func TestKafkaEvents(t *testing.T) {
 			assertLineEquals(reader, "")
 		}
 
-		heartbeatInterval := 7 * time.Second
-
 		t.Run("subscribe sync", func(t *testing.T) {
 			topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 			testenv.Run(t, &testenv.Config{
-				KafkaSeeds: seeds,
+				KafkaSeeds:  seeds,
+				EnableKafka: true,
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 
 				ensureTopicExists(t, xEnv, topics...)
@@ -478,7 +485,7 @@ func TestKafkaEvents(t *testing.T) {
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
 
 				produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
-				time.Sleep(heartbeatInterval * 2)
+				time.Sleep(time.Second * 11)
 				produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
 				wg.Wait()
@@ -489,12 +496,12 @@ func TestKafkaEvents(t *testing.T) {
 		})
 
 		t.Run("subscribe sync with block", func(t *testing.T) {
-			t.Parallel()
 
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
 			testenv.Run(t, &testenv.Config{
-				KafkaSeeds: seeds,
+				KafkaSeeds:  seeds,
+				EnableKafka: true,
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 					securityConfiguration.BlockSubscriptions = true
 				},
@@ -524,7 +531,8 @@ func TestKafkaEvents(t *testing.T) {
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds: seeds,
+			KafkaSeeds:  seeds,
+			EnableKafka: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)
@@ -538,7 +546,7 @@ func TestKafkaEvents(t *testing.T) {
 				client := http.Client{
 					Timeout: time.Second * 10,
 				}
-				req, gErr := http.NewRequest(http.MethodPost, xEnv.GraphQLServeSentEventsURL(), bytes.NewReader(subscribePayload))
+				req, gErr := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
 				require.NoError(t, gErr)
 
 				req.Header.Set("Content-Type", "application/json")
@@ -582,7 +590,8 @@ func TestKafkaEvents(t *testing.T) {
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds: seeds,
+			KafkaSeeds:  seeds,
+			EnableKafka: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)
@@ -636,12 +645,12 @@ func TestKafkaEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe sync sse with block", func(t *testing.T) {
-		t.Parallel()
 
 		subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds: seeds,
+			KafkaSeeds:  seeds,
+			EnableKafka: true,
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 				securityConfiguration.BlockSubscriptions = true
 			},
@@ -681,7 +690,8 @@ func TestKafkaEvents(t *testing.T) {
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds: seeds,
+			KafkaSeeds:  seeds,
+			EnableKafka: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)
@@ -787,7 +797,8 @@ func TestKafkaEvents(t *testing.T) {
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds: seeds,
+			KafkaSeeds:  seeds,
+			EnableKafka: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)
@@ -882,7 +893,8 @@ func TestKafkaEvents(t *testing.T) {
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds: seeds,
+			KafkaSeeds:  seeds,
+			EnableKafka: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)
@@ -977,7 +989,8 @@ func TestKafkaEvents(t *testing.T) {
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds: seeds,
+			KafkaSeeds:  seeds,
+			EnableKafka: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)

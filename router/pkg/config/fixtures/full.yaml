@@ -231,10 +231,11 @@ engine:
   enable_request_tracing: true
   enable_execution_plan_cache_response_header: false
   max_concurrent_resolvers: 32
-  enable_websocket_epoll_kqueue: true
-  epoll_kqueue_poll_timeout: "1s"
-  epoll_kqueue_conn_buffer_size: 128
-  websocket_read_timeout: "5s"
+  enable_net_poll: true
+  enable_subgraph_fetch_operation_name: false
+  websocket_client_poll_timeout: "1s"
+  websocket_client_conn_buffer_size: 128
+  websocket_client_read_timeout: "5s"
   execution_plan_cache_size: 1024
   resolver_max_recyclable_parser_size: 4096
   debug:

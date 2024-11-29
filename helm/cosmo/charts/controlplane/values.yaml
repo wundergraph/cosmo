@@ -276,6 +276,8 @@ jobs:
     enabled: false
     # -- The unique identifier of the user
     id: '123'
+    # -- The email of the user
+    email: 'foo@wundergraph.com'
   clickhouseMigration:
     # -- Adds additional labels to the clickhouse migration job (see: .Values.global.otelcollector)
     additionalLabels: {}

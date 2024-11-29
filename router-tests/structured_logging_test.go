@@ -3,17 +3,18 @@ package integration_test
 import (
 	"encoding/json"
 	"fmt"
+	"math"
+	"net/http"
+	"os"
+	"path/filepath"
+	"testing"
+
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"math"
-	"net/http"
-	"os"
-	"path/filepath"
-	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -52,10 +53,15 @@ func (m MyPanicModule) Module() core.ModuleInfo {
 
 func TestRouterStartLogs(t *testing.T) {
 	t.Parallel()
-	testenv.Run(t, &testenv.Config{LogObservation: testenv.LogObservationConfig{
-		Enabled:  true,
-		LogLevel: zapcore.InfoLevel,
-	}}, func(t *testing.T, xEnv *testenv.Environment) {
+
+	testenv.Run(t, &testenv.Config{
+		EnableNats:  true,
+		EnableKafka: true,
+		LogObservation: testenv.LogObservationConfig{
+			Enabled:  true,
+			LogLevel: zapcore.InfoLevel,
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
 		logEntries := xEnv.Observer().All()
 		require.Len(t, logEntries, 11)
 		natsLogs := xEnv.Observer().FilterMessageSnippet("Nats Event source enabled").All()
@@ -74,7 +80,6 @@ func TestRouterStartLogs(t *testing.T) {
 }
 
 func TestAccessLogsFileOutput(t *testing.T) {
-
 	t.Parallel()
 
 	t.Run("Simple", func(t *testing.T) {
@@ -133,7 +138,6 @@ func TestAccessLogsFileOutput(t *testing.T) {
 }
 
 func TestAccessLogs(t *testing.T) {
-
 	t.Parallel()
 
 	t.Run("Simple without custom attributes", func(t *testing.T) {
@@ -149,7 +153,7 @@ func TestAccessLogs(t *testing.T) {
 			})
 			require.JSONEq(t, employeesIDData, res.Body)
 			logEntries := xEnv.Observer().All()
-			require.Len(t, logEntries, 12)
+			require.Len(t, logEntries, 10)
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
@@ -185,7 +189,7 @@ func TestAccessLogs(t *testing.T) {
 			})
 			require.JSONEq(t, employeesIDData, res.Body)
 			logEntries := xEnv.Observer().All()
-			require.Len(t, logEntries, 12)
+			require.Len(t, logEntries, 10)
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
@@ -276,7 +280,7 @@ func TestAccessLogs(t *testing.T) {
 			})
 			require.JSONEq(t, employeesIDData, res.Body)
 			logEntries := xEnv.Observer().All()
-			require.Len(t, logEntries, 12)
+			require.Len(t, logEntries, 10)
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
@@ -337,7 +341,7 @@ func TestAccessLogs(t *testing.T) {
 			})
 			require.JSONEq(t, employeesIDData, res.Body)
 			logEntries := xEnv.Observer().All()
-			require.Len(t, logEntries, 12)
+			require.Len(t, logEntries, 10)
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
@@ -382,7 +386,7 @@ func TestAccessLogs(t *testing.T) {
 			})
 			require.JSONEq(t, employeesIDData, res.Body)
 			logEntries := xEnv.Observer().All()
-			require.Len(t, logEntries, 12)
+			require.Len(t, logEntries, 10)
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
@@ -471,6 +475,7 @@ func TestAccessLogs(t *testing.T) {
 			NoRetryClient: true,
 			RouterOptions: []core.Option{
 				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableNetPoll:          true,
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),
@@ -489,7 +494,7 @@ func TestAccessLogs(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, `{"errors":[{"message":"unexpected token - got: EOF want one of: [RBRACE IDENT SPREAD]","locations":[{"line":0,"column":0}]}]}`, res.Body)
 			logEntries := xEnv.Observer().All()
-			require.Len(t, logEntries, 12)
+			require.Len(t, logEntries, 10)
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
@@ -581,6 +586,7 @@ func TestAccessLogs(t *testing.T) {
 			NoRetryClient: true,
 			RouterOptions: []core.Option{
 				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableNetPoll:          true,
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),
@@ -599,7 +605,7 @@ func TestAccessLogs(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, `{"errors":[{"message":"field: notExists not defined on type: Query","path":["query"]}]}`, res.Body)
 			logEntries := xEnv.Observer().All()
-			require.Len(t, logEntries, 12)
+			require.Len(t, logEntries, 10)
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
@@ -704,6 +710,7 @@ func TestAccessLogs(t *testing.T) {
 					},
 				}),
 				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableNetPoll:          true,
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),
@@ -723,7 +730,7 @@ func TestAccessLogs(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "", res.Body)
 			logEntries := xEnv.Observer().All()
-			require.Len(t, logEntries, 13)
+			require.Len(t, logEntries, 11)
 			requestLog := xEnv.Observer().FilterMessage("[Recovery from panic]")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
@@ -753,7 +760,7 @@ func TestAccessLogs(t *testing.T) {
 				"validation_time",
 			}
 
-			require.NotEmpty(t, logEntries[12].Stack)
+			require.NotEmpty(t, logEntries[10].Stack)
 
 			checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 		})
@@ -831,6 +838,7 @@ func TestAccessLogs(t *testing.T) {
 					},
 				}),
 				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableNetPoll:          true,
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),
@@ -851,7 +859,7 @@ func TestAccessLogs(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "", res.Body)
 			logEntries := xEnv.Observer().All()
-			require.Len(t, logEntries, 13)
+			require.Len(t, logEntries, 11)
 			requestLog := xEnv.Observer().FilterMessage("[Recovery from panic]")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
@@ -881,7 +889,7 @@ func TestAccessLogs(t *testing.T) {
 				"validation_time",
 			}
 
-			require.NotEmpty(t, logEntries[12].Stack)
+			require.NotEmpty(t, logEntries[10].Stack)
 
 			checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 		})
@@ -889,6 +897,7 @@ func TestAccessLogs(t *testing.T) {
 
 	t.Run("Log graphql error codes and service names", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			AccessLogFields: []config.CustomAttribute{
 				{
@@ -931,7 +940,7 @@ func TestAccessLogs(t *testing.T) {
 			})
 			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'products' at Path 'employees'.","extensions":{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}],"statusCode":403}}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
 			logEntries := xEnv.Observer().All()
-			require.Len(t, logEntries, 12)
+			require.Len(t, logEntries, 10)
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()

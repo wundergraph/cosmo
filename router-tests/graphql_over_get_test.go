@@ -16,6 +16,7 @@ func TestOperationsOverGET(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Operation executed successfully", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
 				OperationName: []byte(`Employees`),
@@ -28,6 +29,7 @@ func TestOperationsOverGET(t *testing.T) {
 	})
 
 	t.Run("Operation with variables executed successfully", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
 				OperationName: []byte(`Find`),
@@ -41,6 +43,7 @@ func TestOperationsOverGET(t *testing.T) {
 	})
 
 	t.Run("Only queries are supported over GET", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
 				OperationName: []byte(`updateEmployeeTag`),
@@ -56,7 +59,7 @@ func TestOperationsOverGET(t *testing.T) {
 func TestSubscriptionOverGET(t *testing.T) {
 	t.Parallel()
 
-	t.Run("subscription over sse", func(t *testing.T) {
+	t.Run("subscription over sse with content negotiation", func(t *testing.T) {
 		t.Parallel()
 
 		type currentTimePayload struct {
@@ -75,9 +78,57 @@ func TestSubscriptionOverGET(t *testing.T) {
 			var wg sync.WaitGroup
 			wg.Add(2)
 
-			go xEnv.GraphQLSubscriptionOverGetAndSSE(ctx, testenv.GraphQLRequest{
+			go xEnv.GraphQLSubscriptionOverSSE(ctx, testenv.GraphQLRequest{
 				OperationName: []byte(`CurrentTime`),
 				Query:         `subscription CurrentTime { currentTime { unixTime timeStamp }}`,
+				Header: map[string][]string{
+					"Content-Type":  {"application/json"},
+					"Accept":        {"text/event-stream"},
+					"Connection":    {"keep-alive"},
+					"Cache-Control": {"no-cache"},
+				},
+			}, func(data string) {
+				defer wg.Done()
+
+				var payload currentTimePayload
+				err := json.Unmarshal([]byte(data), &payload)
+				require.NoError(t, err)
+
+				require.NotZero(t, payload.Data.CurrentTime.UnixTime)
+				require.NotEmpty(t, payload.Data.CurrentTime.Timestamp)
+			})
+
+			wg.Wait()
+		})
+	})
+
+	t.Run("subscription over sse with wg_sse params and without content negotiation", func(t *testing.T) {
+		t.Parallel()
+
+		type currentTimePayload struct {
+			Data struct {
+				CurrentTime struct {
+					UnixTime  float64 `json:"unixTime"`
+					Timestamp string  `json:"timestamp"`
+				} `json:"currentTime"`
+			} `json:"data"`
+		}
+
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+
+			var wg sync.WaitGroup
+			wg.Add(2)
+
+			go xEnv.GraphQLSubscriptionOverSSEWithQueryParam(ctx, testenv.GraphQLRequest{
+				OperationName: []byte(`CurrentTime`),
+				Query:         `subscription CurrentTime { currentTime { unixTime timeStamp }}`,
+				Header: map[string][]string{
+					"Content-Type":  {"application/json"},
+					"Connection":    {"keep-alive"},
+					"Cache-Control": {"no-cache"},
+				},
 			}, func(data string) {
 				defer wg.Done()
 
