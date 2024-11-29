@@ -621,7 +621,7 @@ func TestAccessLogs(t *testing.T) {
 				"operation_type": "query",        // From context
 				"operation_name": "employees",    // From context
 				"error_message":  "field: notExists not defined on type: Query",
-				"operation_hash": "10501571900000980785",
+				"operation_hash": "3291586836053813139",
 			}
 			additionalExpectedKeys := []string{
 				"latency",
