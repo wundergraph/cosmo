@@ -3,7 +3,6 @@ package integration
 import (
 	"bytes"
 	"encoding/json"
-	"io"
 	"net/http"
 	"regexp"
 	"testing"
@@ -210,30 +209,10 @@ func TestQueryPlans(t *testing.T) {
 		})
 	})
 
-	t.Run("modified mood and availability subgraphs should be called with sanitized operation names", func(t *testing.T) {
+	t.Run("modified mood and availability subgraphs include sanitized operation names in query plan", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			Subgraphs: testenv.SubgraphsConfig{
-				Mood: testenv.SubgraphConfig{
-					Middleware: func(handler http.Handler) http.Handler {
-						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-							body, err := io.ReadAll(r.Body)
-							require.NoError(t, err)
-							require.Contains(t, string(body), "query Requires__mo_o_d__1")
-						})
-					},
-				},
-				Availability: testenv.SubgraphConfig{
-					Middleware: func(handler http.Handler) http.Handler {
-						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-							body, err := io.ReadAll(r.Body)
-							require.NoError(t, err)
-							require.Contains(t, string(body), "query Requires__av_ai_la_bi_lit_y__2")
-						})
-					},
-				},
-			},
 			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
 				for _, subgraph := range routerConfig.Subgraphs {
 					if subgraph.GetName() == "mood" {
@@ -249,7 +228,7 @@ func TestQueryPlans(t *testing.T) {
 				cfg.EnableSubgraphFetchOperationName = true
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			_ = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query Requires {
 					  products {
 						__typename
@@ -264,6 +243,9 @@ func TestQueryPlans(t *testing.T) {
 					  }
 					}`,
 			})
+
+			require.Contains(t, res.Body, "query Requires__mo_o_d__1")
+			require.Contains(t, res.Body, "query Requires__av_ai_la_bi_lit_y__2")
 		})
 	})
 
