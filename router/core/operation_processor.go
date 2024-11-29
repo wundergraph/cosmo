@@ -761,6 +761,8 @@ func (o *OperationKit) NormalizeVariables() error {
 	// Afterward we can calculate the operation ID that is used as a stable identifier for analytics
 
 	o.kit.normalizedOperation.Reset()
+	// store the original name of the operation
+	nameRef := o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name
 
 	staticNameRef := o.kit.doc.Input.AppendInputBytes([]byte(""))
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = staticNameRef
@@ -769,6 +771,8 @@ func (o *OperationKit) NormalizeVariables() error {
 	if err != nil {
 		return err
 	}
+	// Reset the doc with the original name
+	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = nameRef
 
 	o.kit.keyGen.Reset()
 	_, err = o.kit.keyGen.WriteString(o.kit.normalizedOperation.String())
