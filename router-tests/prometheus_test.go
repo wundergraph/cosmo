@@ -2979,6 +2979,7 @@ func TestPrometheus(t *testing.T) {
 	})
 
 	t.Run("Collect router cache metrics", func(t *testing.T) {
+		t.Parallel()
 
 		var (
 			err            error
