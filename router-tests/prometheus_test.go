@@ -5,6 +5,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
+	"unsafe"
 
 	"github.com/wundergraph/cosmo/router/core"
 
@@ -17,6 +19,17 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 	"go.opentelemetry.io/otel/sdk/metric"
 )
+
+// TODO: This is a temporary workaround to get the size of the storeItem struct as ristretto.Cache adds an internal cost to the provided cost.
+const ristrettoInternalCost = int64(unsafe.Sizeof(storeItem[any]{}))
+
+// storeItem is a type that represents the structure of an internal item in the ristretto.Cache.
+type storeItem[V any] struct {
+	key        uint64
+	conflict   uint64
+	value      V
+	expiration time.Time
+}
 
 func TestPrometheus(t *testing.T) {
 	t.Parallel()
@@ -2962,10 +2975,12 @@ func TestPrometheus(t *testing.T) {
 	})
 
 	t.Run("Collect router cache metrics", func(t *testing.T) {
+
 		var (
 			err            error
 			metricFamilies []*io_prometheus_client.MetricFamily
-			baseCost       = 57
+			// The base cost to store any item in the cache with the current configuration
+			baseCost = ristrettoInternalCost + 1
 		)
 
 		metricReaderFiltered := metric.NewManualReader()

@@ -29,7 +29,8 @@ func TestOperationCacheTelemetry(t *testing.T) {
 	t.Parallel()
 
 	const (
-		baseCost         = 57
+		// The base cost to store any item in the cache with the current configuration
+		baseCost         = ristrettoInternalCost + 1
 		employeesIDData  = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
 		employeesTagData = `{"data":{"employees":[{"tag":""},{"tag":""},{"tag":""},{"tag":""},{"tag":""},{"tag":""},{"tag":""},{"tag":""},{"tag":""},{"tag":""}]}}`
 	)
