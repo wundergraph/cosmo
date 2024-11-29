@@ -22,9 +22,7 @@ jobs:
 
       - uses: ./.github/actions/go
         with:
-          cache-dependency-path: |
-            aws-lambda-router/go.sum
-            router/go.sum
+          cache-dependency-path: aws-lambda-router/go.sum
 
       - uses: ./.github/actions/go-mod-tidy
         with:
