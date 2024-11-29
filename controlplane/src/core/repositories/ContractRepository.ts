@@ -32,34 +32,19 @@ export class ContractRepository {
     return res[0];
   }
 
-  public update(data: {
-    id: string;
-    excludeTags: string[];
-    includeTags: string[];
-    actorId: string;
-    targetId: string;
-    readme?: string;
-  }) {
-    return this.db.transaction(async (tx) => {
-      const targetRepo = new TargetRepository(tx, this.organizationId);
+  public async update(data: { id: string; excludeTags: string[]; includeTags: string[]; actorId: string }) {
+    const res = await this.db
+      .update(schema.contracts)
+      .set({
+        excludeTags: data.excludeTags,
+        includeTags: data.includeTags,
+        updatedById: data.actorId,
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.contracts.id, data.id))
+      .returning();
 
-      const res = await tx
-        .update(schema.contracts)
-        .set({
-          excludeTags: data.excludeTags,
-          includeTags: data.includeTags,
-          updatedById: data.actorId,
-          updatedAt: new Date(),
-        })
-        .where(eq(schema.contracts.id, data.id))
-        .returning();
-
-      if (data.readme !== undefined) {
-        await targetRepo.updateReadmeOfTarget({ id: data.targetId, readme: data.readme });
-      }
-
-      return res[0];
-    });
+    return res[0];
   }
 
   public delete(id: string) {

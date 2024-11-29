@@ -447,7 +447,7 @@ describe('Contract tests', (ctx) => {
     await server.close();
   });
 
-  test('that contract readme is updated', async () => {
+  test('that contract routing url and readme is updated', async () => {
     const { client, server } = await SetupTest({ dbname });
 
     const subgraphName = genID('subgraph');
@@ -489,6 +489,7 @@ describe('Contract tests', (ctx) => {
       namespace: DEFAULT_NAMESPACE,
       excludeTags: ['new'],
       readme: 'new',
+      routingUrl: 'http://localhost:8082',
     });
 
     let contractGraphUpdatedRes = await client.getFederatedGraphByName({
@@ -498,6 +499,7 @@ describe('Contract tests', (ctx) => {
     expect(contractGraphUpdatedRes.graph?.contract?.excludeTags).toEqual(['new']);
     expect(contractGraphUpdatedRes.graph?.contract?.includeTags).toEqual([]);
     expect(contractGraphUpdatedRes.graph?.readme).toEqual('new');
+    expect(contractGraphUpdatedRes.graph?.routingURL).toEqual('http://localhost:8082');
 
     await client.updateContract({
       name: contractGraphName,
@@ -512,6 +514,7 @@ describe('Contract tests', (ctx) => {
     });
     expect(contractGraphUpdatedRes.graph?.contract?.excludeTags).toEqual(['new']);
     expect(contractGraphUpdatedRes.graph?.contract?.includeTags).toEqual([]);
+    expect(contractGraphUpdatedRes.graph?.routingURL).toEqual('http://localhost:8082');
     expect(contractGraphUpdatedRes.graph?.readme).toBeUndefined();
 
     await server.close();

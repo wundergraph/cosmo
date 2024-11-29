@@ -14,10 +14,22 @@ export default (opts: BaseCommandOptions) => {
   command.description('Updates the tags of a contract.');
   command.argument('<name>', 'The name of the contract graph to update.');
   command.option('-n, --namespace [string]', 'The namespace of the contract update.');
+  command.option(
+    '-r, --routing-url <url>',
+    'The routing url of your router. This is the url that the router will be accessible at.',
+  );
   command.option('--exclude [tags...]', 'Schema elements with these tags will be excluded from the contract schema.');
   command.option('--include [tags...]', 'Schema elements with these tags will be included from the contract schema.');
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
   command.option('--readme <path-to-readme>', 'The markdown file which describes the contract.');
+  command.option(
+    '--admission-webhook-url <url>',
+    'The admission webhook url. This is the url that the controlplane will use to implement admission control for the federated graph.',
+  );
+  command.option(
+    '--admission-webhook-secret [string]',
+    'The admission webhook secret is used to sign requests to the webhook url.',
+  );
   command.action(async (name, options) => {
     const spinner = ora('Contract is being updated...').start();
 
@@ -51,6 +63,9 @@ export default (opts: BaseCommandOptions) => {
         excludeTags: options.exclude,
         includeTags: options.include,
         readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
+        routingUrl: options.routingUrl,
+        admissionWebhookUrl: options.admissionWebhookUrl,
+        admissionWebhookSecret: options.admissionWebhookSecret,
       },
       {
         headers: getBaseHeaders(),
