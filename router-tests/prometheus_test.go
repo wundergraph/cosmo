@@ -3051,7 +3051,6 @@ func TestPrometheus(t *testing.T) {
 			cacheMetrics := findCacheMetrics(metricFamilies)
 
 			// cache max cost metrics
-
 			cacheMaxCostMetricMf := findMetricFamilyByName(cacheMetrics, "router_graphql_cache_cost_max")
 			cacheMaxCostExecution := findMetricsByLabel(cacheMaxCostMetricMf, "cache_type", "execution")
 			cacheMaxCostNormalization := findMetricsByLabel(cacheMaxCostMetricMf, "cache_type", "normalization")
