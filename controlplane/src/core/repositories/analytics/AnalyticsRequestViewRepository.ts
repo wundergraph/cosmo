@@ -112,8 +112,12 @@ export class AnalyticsRequestViewRepository {
       unit: Unit.Nanoseconds,
       title: 'P95 Latency',
     },
-    errorsWithRate: {
-      title: 'Errors (Rate%)',
+    errors: {
+      title: 'Errors',
+    },
+    errorRate: {
+      title: 'Error Rate',
+      unit: Unit.Percentage,
     },
     rate: {
       title: 'Rate',
@@ -289,12 +293,8 @@ export class AnalyticsRequestViewRepository {
             OperationType as operationType,
             sum(TotalRequests) as totalRequests,
             quantilesMerge(0.95)(DurationQuantiles)[1] as p95,
-            CONCAT(
-              toString(sum(TotalRequestsError)),
-              ' (',
-              toString(round(sum(TotalRequestsError) / sum(TotalRequests) * 100, 2)),
-              '%)'
-            ) as errorsWithRate,
+            sum(TotalRequestsError) as errors,
+            round(sum(TotalRequestsError) / sum(TotalRequests) * 100, 2) as errorRate,
             toString(toUnixTimestamp(max(LastCalled))) as lastCalled
           FROM
             ${this.client.database}.traces_by_operation_quarter_hourly
@@ -307,6 +307,7 @@ export class AnalyticsRequestViewRepository {
           ${baseOrderSql || 'ORDER BY totalRequests DESC'}
           ${basePaginationSql}
         `;
+
         break;
       }
       case AnalyticsViewGroupName.Client: {
@@ -316,12 +317,8 @@ export class AnalyticsRequestViewRepository {
             ClientVersion as clientVersion,
             sum(TotalRequests) as totalRequests,
             quantilesMerge(0.95)(DurationQuantiles)[1] as p95,
-            CONCAT(
-              toString(sum(TotalRequestsError)),
-              ' (',
-              toString(round(sum(TotalRequestsError) / sum(TotalRequests) * 100, 2)),
-              '%)'
-            ) as errorsWithRate,
+            sum(TotalRequestsError) as errors,
+            round(sum(TotalRequestsError) / sum(TotalRequests) * 100, 2) as errorRate,
             toString(toUnixTimestamp(max(LastCalled))) as lastCalled
           FROM
             ${this.client.database}.traces_by_client_quarter_hourly

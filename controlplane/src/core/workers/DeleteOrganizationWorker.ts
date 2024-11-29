@@ -6,6 +6,8 @@ import { OrganizationRepository } from '../repositories/OrganizationRepository.j
 import Keycloak from '../services/Keycloak.js';
 import { OidcRepository } from '../repositories/OidcRepository.js';
 import OidcProvider from '../services/OidcProvider.js';
+import { BlobStorage } from '../blobstorage/index.js';
+import { IQueue, IWorker } from './Worker.js';
 
 const QueueName = 'organization.delete';
 const WorkerName = 'DeleteOrganizationWorker';
@@ -14,7 +16,7 @@ export interface DeleteOrganizationInput {
   organizationId: string;
 }
 
-export class DeleteOrganizationQueue {
+export class DeleteOrganizationQueue implements IQueue<DeleteOrganizationInput> {
   private readonly queue: Queue<DeleteOrganizationInput>;
   private readonly logger: pino.Logger;
 
@@ -23,12 +25,16 @@ export class DeleteOrganizationQueue {
     this.queue = new Queue<DeleteOrganizationInput>(QueueName, {
       connection: conn,
       defaultJobOptions: {
-        removeOnComplete: true,
-        removeOnFail: true,
-        attempts: 3,
+        removeOnComplete: {
+          age: 90 * 86_400,
+        },
+        removeOnFail: {
+          age: 90 * 86_400,
+        },
+        attempts: 6,
         backoff: {
           type: 'exponential',
-          delay: 10_000,
+          delay: 112_000,
         },
       },
     });
@@ -54,7 +60,7 @@ export class DeleteOrganizationQueue {
   }
 }
 
-class DeleteOrganizationWorker {
+class DeleteOrganizationWorker implements IWorker {
   constructor(
     private input: {
       redisConnection: ConnectionOptions;
@@ -62,6 +68,7 @@ class DeleteOrganizationWorker {
       logger: pino.Logger;
       keycloakClient: Keycloak;
       keycloakRealm: string;
+      blobStorage: BlobStorage;
     },
   ) {
     this.input.logger = input.logger.child({ worker: WorkerName });
@@ -90,21 +97,17 @@ class DeleteOrganizationWorker {
         });
       }
 
+      await orgRepo.deleteOrganization(job.data.organizationId, this.input.blobStorage);
+
       await this.input.keycloakClient.deleteOrganizationGroup({
         realm: this.input.keycloakRealm,
         organizationSlug: org.slug,
       });
-
-      await this.input.db.transaction(async (tx) => {
-        const orgRepo = new OrganizationRepository(this.input.logger, tx);
-        const oidcRepo = new OidcRepository(tx);
-
-        await oidcRepo.deleteOidcProvider({ organizationId: job.data.organizationId });
-
-        await orgRepo.deleteOrganization(job.data.organizationId);
-      });
     } catch (err) {
-      this.input.logger.error(err, `Failed to delete organization with id ${job.data.organizationId}`);
+      this.input.logger.error(
+        { jobId: job.id, organizationId: job.data.organizationId, err },
+        `Failed to delete organization`,
+      );
       throw err;
     }
   }
@@ -116,6 +119,7 @@ export const createDeleteOrganizationWorker = (input: {
   logger: pino.Logger;
   keycloakClient: Keycloak;
   keycloakRealm: string;
+  blobStorage: BlobStorage;
 }) => {
   const log = input.logger.child({ worker: WorkerName });
   const worker = new Worker<DeleteOrganizationInput>(
@@ -127,7 +131,7 @@ export const createDeleteOrganizationWorker = (input: {
     },
   );
   worker.on('stalled', (job) => {
-    log.warn(`Job ${job} stalled`);
+    log.warn({ joinId: job }, `Job stalled`);
   });
   worker.on('error', (err) => {
     log.error(err, 'Worker error');

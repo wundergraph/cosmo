@@ -2,12 +2,13 @@ package integration
 
 import (
 	"encoding/json"
-	"github.com/stretchr/testify/require"
-	"github.com/wundergraph/cosmo/router-tests/testenv"
-	"github.com/wundergraph/cosmo/router/core"
 	"math"
 	"net/http"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
 )
 
 // Interface guard
@@ -65,8 +66,10 @@ func (m MyCustomWebsocketModule) OnOriginRequest(req *http.Request, ctx core.Req
 }
 
 func TestWebsocketCustomModule(t *testing.T) {
+	t.Parallel()
 
 	t.Run("Should be able to intercept upgrade requests and access all operation information / async subscription", func(t *testing.T) {
+		t.Parallel()
 
 		postHandlerCalled := new(bool)
 

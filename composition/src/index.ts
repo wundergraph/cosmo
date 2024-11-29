@@ -14,7 +14,6 @@ export * from './resolvability-graph/graph-nodes';
 export * from './resolvability-graph/utils';
 export * from './schema-building/ast';
 export * from './schema-building/type-definition-data';
-export * from './schema-building/type-extension-data';
 export * from './schema-building/type-merging';
 export * from './schema-building/utils';
 export * from './subgraph/subgraph';

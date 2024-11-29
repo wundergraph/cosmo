@@ -34,6 +34,7 @@ func TestWebSockets(t *testing.T) {
 
 	t.Run("disabled", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			DisableWebSockets: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -43,6 +44,7 @@ func TestWebSockets(t *testing.T) {
 	})
 	t.Run("query", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 			err := conn.WriteJSON(testenv.WebSocketMessage{
@@ -182,6 +184,7 @@ func TestWebSockets(t *testing.T) {
 		authenticators := []authentication.Authenticator{authenticator}
 
 		testenv.Run(t, &testenv.Config{
+			EnableNats: true,
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
@@ -240,6 +243,7 @@ func TestWebSockets(t *testing.T) {
 		authenticators := []authentication.Authenticator{authenticator}
 
 		testenv.Run(t, &testenv.Config{
+			EnableNats: true,
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
@@ -296,6 +300,7 @@ func TestWebSockets(t *testing.T) {
 		authenticators := []authentication.Authenticator{authenticator}
 
 		testenv.Run(t, &testenv.Config{
+			EnableNats: true,
 			ModifyWebsocketConfiguration: func(cfg *config.WebSocketConfiguration) {
 				cfg.Authentication.FromInitialPayload.Enabled = true
 				cfg.Enabled = true
@@ -446,6 +451,7 @@ func TestWebSockets(t *testing.T) {
 		require.NoError(t, err)
 
 		testenv.Run(t, &testenv.Config{
+			EnableNats: true,
 			ModifyWebsocketConfiguration: func(cfg *config.WebSocketConfiguration) {
 				cfg.Authentication.FromInitialPayload.Enabled = true
 				cfg.Authentication.FromInitialPayload.ExportToken.Enabled = true
@@ -487,26 +493,29 @@ func TestWebSockets(t *testing.T) {
 	})
 	t.Run("subscription", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
+				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 10
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			expectConnectAndReadCurrentTime(t, xEnv)
 		})
 	})
-	t.Run("subscription with multiple reconnects and epoll", func(t *testing.T) {
+	t.Run("subscription with multiple reconnects and netPoll", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			expectConnectAndReadCurrentTime(t, xEnv)
 			expectConnectAndReadCurrentTime(t, xEnv)
 		})
 	})
-	t.Run("subscription with multiple reconnects and epoll disabled", func(t *testing.T) {
+	t.Run("subscription with multiple reconnects and netPoll disabled", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.EnableWebSocketEpollKqueue = false
+				engineExecutionConfiguration.EnableNetPoll = false
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			expectConnectAndReadCurrentTime(t, xEnv)
@@ -515,6 +524,7 @@ func TestWebSockets(t *testing.T) {
 	})
 	t.Run("subscription with header propagation", func(t *testing.T) {
 		t.Parallel()
+
 		headerRules := config.HeaderRules{
 			All: &config.GlobalHeaderRule{
 				Request: []*config.RequestHeaderRule{
@@ -535,7 +545,7 @@ func TestWebSockets(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
+				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),
@@ -651,6 +661,7 @@ func TestWebSockets(t *testing.T) {
 	})
 	t.Run("empty allow lists should allow all headers and query args", func(t *testing.T) {
 		t.Parallel()
+
 		headerRules := config.HeaderRules{
 			All: &config.GlobalHeaderRule{
 				Request: []*config.RequestHeaderRule{
@@ -671,7 +682,7 @@ func TestWebSockets(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
+				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 10
 			},
 			ModifyWebsocketConfiguration: func(cfg *config.WebSocketConfiguration) {
 				cfg.ForwardUpgradeHeaders.AllowList = nil
@@ -794,6 +805,7 @@ func TestWebSockets(t *testing.T) {
 	})
 	t.Run("subscription with header propagation sse subgraph post", func(t *testing.T) {
 		t.Parallel()
+
 		headerRules := config.HeaderRules{
 			All: &config.GlobalHeaderRule{
 				Request: []*config.RequestHeaderRule{
@@ -806,7 +818,7 @@ func TestWebSockets(t *testing.T) {
 		}
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
+				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 10
 			},
 			ModifyRouterConfig: func(cfg *nodev1.RouterConfig) {
 				for i := range cfg.EngineConfig.DatasourceConfigurations {
@@ -909,6 +921,7 @@ func TestWebSockets(t *testing.T) {
 	})
 	t.Run("subscription with header propagation sse subgraph get", func(t *testing.T) {
 		t.Parallel()
+
 		headerRules := config.HeaderRules{
 			All: &config.GlobalHeaderRule{
 				Request: []*config.RequestHeaderRule{
@@ -921,7 +934,7 @@ func TestWebSockets(t *testing.T) {
 		}
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
+				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 10
 			},
 			ModifyRouterConfig: func(cfg *nodev1.RouterConfig) {
 				for i := range cfg.EngineConfig.DatasourceConfigurations {
@@ -1024,9 +1037,10 @@ func TestWebSockets(t *testing.T) {
 	})
 	t.Run("subscription with upgrade error", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
+				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 10
 			},
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees: testenv.SubgraphConfig{
@@ -1059,9 +1073,10 @@ func TestWebSockets(t *testing.T) {
 	})
 	t.Run("subscription with unexposed upgrade error", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
+				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 10
 			},
 			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
 				cfg.PropagateStatusCodes = false
@@ -1097,9 +1112,10 @@ func TestWebSockets(t *testing.T) {
 	})
 	t.Run("subscription error in resolver", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
+				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 10
 			},
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees: testenv.SubgraphConfig{
@@ -1132,9 +1148,10 @@ func TestWebSockets(t *testing.T) {
 	})
 	t.Run("subscription error in resolver unexposed", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
+				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 10
 			},
 			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
 				cfg.Enabled = false
@@ -1170,6 +1187,7 @@ func TestWebSockets(t *testing.T) {
 	})
 	t.Run("subscription blocked", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 				securityConfiguration.BlockSubscriptions = true
@@ -1193,12 +1211,14 @@ func TestWebSockets(t *testing.T) {
 		})
 	})
 	t.Run("multiple subscriptions one connection", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.WebSocketReadTimeout = time.Second
+				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Second
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			client := graphql.NewSubscriptionClient(xEnv.GraphQLSubscriptionURL()).
+			client := graphql.NewSubscriptionClient(xEnv.GraphQLWebSocketSubscriptionURL()).
 				WithProtocol(graphql.GraphQLWS)
 
 			var wg sync.WaitGroup
@@ -1322,6 +1342,7 @@ func TestWebSockets(t *testing.T) {
 	})
 	t.Run("error", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 			err := conn.WriteJSON(&testenv.WebSocketMessage{
@@ -1346,6 +1367,7 @@ func TestWebSockets(t *testing.T) {
 	})
 	t.Run("subscription with library graphql-ws", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			var subscription struct {
 				CurrentTime struct {
@@ -1353,7 +1375,7 @@ func TestWebSockets(t *testing.T) {
 					Timestamp string  `graphql:"timeStamp"`
 				} `graphql:"currentTime"`
 			}
-			client := graphql.NewSubscriptionClient(xEnv.GraphQLSubscriptionURL()).WithProtocol(graphql.GraphQLWS)
+			client := graphql.NewSubscriptionClient(xEnv.GraphQLWebSocketSubscriptionURL()).WithProtocol(graphql.GraphQLWS)
 			t.Cleanup(func() {
 				err := client.Close()
 				require.NoError(t, err)
@@ -1379,6 +1401,7 @@ func TestWebSockets(t *testing.T) {
 	})
 	t.Run("subscription with library graphql-transport-ws", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			var subscription struct {
 				CurrentTime struct {
@@ -1386,7 +1409,7 @@ func TestWebSockets(t *testing.T) {
 					Timestamp string  `graphql:"timeStamp"`
 				} `graphql:"currentTime"`
 			}
-			client := graphql.NewSubscriptionClient(xEnv.GraphQLSubscriptionURL()).WithProtocol(graphql.SubscriptionsTransportWS)
+			client := graphql.NewSubscriptionClient(xEnv.GraphQLWebSocketSubscriptionURL()).WithProtocol(graphql.SubscriptionsTransportWS)
 			t.Cleanup(func() {
 				err := client.Close()
 				require.NoError(t, err)
@@ -1412,6 +1435,7 @@ func TestWebSockets(t *testing.T) {
 	})
 	t.Run("forward extensions", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Make sure sending two simultaneous subscriptions with different extensions
 			// triggers two subscriptions to the upstream
@@ -1457,6 +1481,7 @@ func TestWebSockets(t *testing.T) {
 	})
 	t.Run("forward query params via initial payload", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Make sure sending two simultaneous subscriptions with different extensions
 			// triggers two subscriptions to the upstream
@@ -1489,6 +1514,7 @@ func TestWebSockets(t *testing.T) {
 	})
 	t.Run("forward query params via initial payload alongside existing", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Make sure sending two simultaneous subscriptions with different extensions
 			// triggers two subscriptions to the upstream
@@ -1521,6 +1547,7 @@ func TestWebSockets(t *testing.T) {
 	})
 	t.Run("same graphql path as playground", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			OverrideGraphQLPath: "/",
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -1540,6 +1567,7 @@ func TestWebSockets(t *testing.T) {
 	})
 	t.Run("different path", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			OverrideGraphQLPath: "/foo",
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -1562,6 +1590,7 @@ func TestWebSockets(t *testing.T) {
 
 	t.Run("query a field from a feature flag that provides the productCount field / feature flags", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			conn := xEnv.InitGraphQLWebSocketConnection(map[string][]string{
 				"X-Feature-Flag": {"myff"},
@@ -1589,6 +1618,7 @@ func TestWebSockets(t *testing.T) {
 
 	t.Run("return an error because the field is not provided by the base graph / feature flags", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 			err := conn.WriteJSON(testenv.WebSocketMessage{
@@ -1609,12 +1639,13 @@ func TestWebSockets(t *testing.T) {
 
 	// times out on GitHub Actions
 
-	t.Run("shutdown with epoll", func(t *testing.T) {
+	t.Run("shutdown with netPoll", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.EnableWebSocketEpollKqueue = true
-				cfg.WebSocketReadTimeout = time.Millisecond * 10
+				cfg.EnableNetPoll = true
+				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
@@ -1637,12 +1668,13 @@ func TestWebSockets(t *testing.T) {
 		})
 	})
 
-	t.Run("shutdown without epoll", func(t *testing.T) {
+	t.Run("shutdown without netPoll", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.EnableWebSocketEpollKqueue = false
-				cfg.WebSocketReadTimeout = time.Millisecond * 10
+				cfg.EnableNetPoll = false
+				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
@@ -1667,9 +1699,10 @@ func TestWebSockets(t *testing.T) {
 	})
 	t.Run("single connection with initial payload", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketReadTimeout = time.Millisecond * 10
+				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"123":456,"extensions":{"hello":"world"}}`))
@@ -1687,9 +1720,10 @@ func TestWebSockets(t *testing.T) {
 	})
 	t.Run("single connection with initial payload and extensions in the request", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketReadTimeout = time.Millisecond * 10
+				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// "extensions" in the request should override the "extensions" in initial payload
@@ -1708,7 +1742,10 @@ func TestWebSockets(t *testing.T) {
 	})
 	t.Run("single connection multiple differing subscriptions", func(t *testing.T) {
 		t.Parallel()
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+
+		testenv.Run(t, &testenv.Config{
+			EnableNats: true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 
@@ -1820,9 +1857,10 @@ func TestWebSockets(t *testing.T) {
 	})
 	t.Run("multiple connections with different initial payloads", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketReadTimeout = time.Millisecond * 10
+				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// "extensions" in the request should override the "extensions" in initial payload
@@ -1852,9 +1890,10 @@ func TestWebSockets(t *testing.T) {
 	})
 	t.Run("absinthe subscription", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
+				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 10
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
@@ -1932,6 +1971,7 @@ func TestWebSockets(t *testing.T) {
 
 	t.Run("websocket negotiation headers should not leak down", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{core.WithHeaderRules(config.HeaderRules{
 				All: &config.GlobalHeaderRule{

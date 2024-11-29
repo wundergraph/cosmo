@@ -278,13 +278,13 @@ export default class Keycloak {
     });
 
     if (orgGroups.length === 0) {
-      throw new Error(`Organization group '${organizationSlug}' not found`);
+      return;
     }
 
     const orgGroup = orgGroups.find((group) => group.name === organizationSlug);
 
     if (!orgGroup) {
-      throw new Error(`Organization group '${organizationSlug}' not found`);
+      return;
     }
 
     await this.client.groups.del({

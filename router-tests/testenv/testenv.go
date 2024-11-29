@@ -146,6 +146,9 @@ type Config struct {
 	Logger                             *zap.Logger
 	AccessLogger                       *zap.Logger
 	AccessLogFields                    []config.CustomAttribute
+	EnableRuntimeMetrics               bool
+	EnableNats                         bool
+	EnableKafka                        bool
 }
 
 type SubgraphsConfig struct {
@@ -250,7 +253,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	var kafkaAdminClient *kadm.Client
 	var kafkaClient *kgo.Client
-	{
+	if cfg.EnableKafka {
 		client, err := kgo.NewClient(
 			kgo.SeedBrokers(cfg.KafkaSeeds...),
 		)
@@ -259,15 +262,8 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		}
 
 		kafkaClient = client
-
 		kafkaAdminClient = kadm.NewClient(client)
 	}
-
-	natsData, err := setupNatsServers(t)
-	if err != nil {
-		return nil, err
-	}
-	require.Equal(t, 2, len(natsData.Connections))
 
 	counters := &SubgraphRequestCount{
 		Global:       atomic.NewInt64(0),
@@ -282,8 +278,21 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		Countries:    atomic.NewInt64(0),
 	}
 
+	var (
+		natsData *NatsData
+		err      error
+	)
+
+	if cfg.EnableNats {
+		natsData, err = setupNatsServers(t)
+		if err != nil {
+			return nil, err
+		}
+		require.Equal(t, 2, len(natsData.Connections))
+	}
+
 	employees := &Subgraph{
-		handler:          subgraphs.EmployeesHandler(subgraphOptions(ctx, t, natsData.Server)),
+		handler:          subgraphs.EmployeesHandler(subgraphOptions(ctx, t, natsData)),
 		middleware:       cfg.Subgraphs.Employees.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -293,7 +302,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	family := &Subgraph{
-		handler:          subgraphs.FamilyHandler(subgraphOptions(ctx, t, natsData.Server)),
+		handler:          subgraphs.FamilyHandler(subgraphOptions(ctx, t, natsData)),
 		middleware:       cfg.Subgraphs.Family.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -303,7 +312,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	hobbies := &Subgraph{
-		handler:          subgraphs.HobbiesHandler(subgraphOptions(ctx, t, natsData.Server)),
+		handler:          subgraphs.HobbiesHandler(subgraphOptions(ctx, t, natsData)),
 		middleware:       cfg.Subgraphs.Hobbies.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -313,7 +322,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	products := &Subgraph{
-		handler:          subgraphs.ProductsHandler(subgraphOptions(ctx, t, natsData.Server)),
+		handler:          subgraphs.ProductsHandler(subgraphOptions(ctx, t, natsData)),
 		middleware:       cfg.Subgraphs.Products.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -323,7 +332,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	productsFg := &Subgraph{
-		handler:          subgraphs.ProductsFGHandler(subgraphOptions(ctx, t, natsData.Server)),
+		handler:          subgraphs.ProductsFGHandler(subgraphOptions(ctx, t, natsData)),
 		middleware:       cfg.Subgraphs.ProductsFg.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -333,7 +342,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	test1 := &Subgraph{
-		handler:          subgraphs.Test1Handler(subgraphOptions(ctx, t, natsData.Server)),
+		handler:          subgraphs.Test1Handler(subgraphOptions(ctx, t, natsData)),
 		middleware:       cfg.Subgraphs.Test1.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -343,7 +352,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	availability := &Subgraph{
-		handler:          subgraphs.AvailabilityHandler(subgraphOptions(ctx, t, natsData.Server)),
+		handler:          subgraphs.AvailabilityHandler(subgraphOptions(ctx, t, natsData)),
 		middleware:       cfg.Subgraphs.Availability.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -353,7 +362,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	mood := &Subgraph{
-		handler:          subgraphs.MoodHandler(subgraphOptions(ctx, t, natsData.Server)),
+		handler:          subgraphs.MoodHandler(subgraphOptions(ctx, t, natsData)),
 		middleware:       cfg.Subgraphs.Mood.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -363,7 +372,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	countries := &Subgraph{
-		handler:          subgraphs.CountriesHandler(subgraphOptions(ctx, t, natsData.Server)),
+		handler:          subgraphs.CountriesHandler(subgraphOptions(ctx, t, natsData)),
 		middleware:       cfg.Subgraphs.Countries.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -452,7 +461,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		cfg.AccessLogger = cfg.Logger
 	}
 
-	rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdn, natsData.Server)
+	rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdn, natsData)
 	if err != nil {
 		return nil, err
 	}
@@ -542,6 +551,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	e := &Environment{
 		t:                       t,
+		cfg:                     cfg,
 		routerConfigVersionMain: routerConfig.Version,
 		graphQLPath:             graphQLPath,
 		absinthePath:            absinthePath,
@@ -551,9 +561,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		RouterURL:               rr.BaseURL(),
 		RouterClient:            client,
 		CDN:                     cdn,
-		NatsServer:              natsData.Server,
-		NatsConnectionDefault:   natsData.Connections[0],
-		NatsConnectionMyNats:    natsData.Connections[1],
+		NatsData:                natsData,
 		SubgraphRequestCount:    counters,
 		KafkaAdminClient:        kafkaAdminClient,
 		KafkaClient:             kafkaClient,
@@ -572,6 +580,11 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		},
 	}
 
+	if natsData != nil {
+		e.NatsConnectionDefault = natsData.Connections[0]
+		e.NatsConnectionMyNats = natsData.Connections[1]
+	}
+
 	if routerConfig.FeatureFlagConfigs != nil {
 		myFF, ok := routerConfig.FeatureFlagConfigs.ConfigByFeatureFlagName["myff"]
 		if ok {
@@ -584,7 +597,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	return e, nil
 }
 
-func configureRouter(listenerAddr string, testConfig *Config, routerConfig *nodev1.RouterConfig, cdn *httptest.Server, natsServer *natsserver.Server) (*core.Router, error) {
+func configureRouter(listenerAddr string, testConfig *Config, routerConfig *nodev1.RouterConfig, cdn *httptest.Server, natsData *NatsData) (*core.Router, error) {
 	cfg := config.Config{
 		Graph: config.Graph{},
 		CDN: config.CDNConfiguration{
@@ -616,7 +629,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	}
 
 	engineExecutionConfig := config.EngineExecutionConfiguration{
-		EnableWebSocketEpollKqueue:             true,
+		EnableNetPoll:                          true,
 		EnableSingleFlight:                     true,
 		EnableRequestTracing:                   true,
 		EnableExecutionPlanCacheResponseHeader: true,
@@ -628,9 +641,9 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			EnablePersistedOperationsCacheResponseHeader: true,
 			EnableNormalizationCacheResponseHeader:       true,
 		},
-		EpollKqueuePollTimeout:         300 * time.Millisecond,
-		EpollKqueueConnBufferSize:      1,
-		WebSocketReadTimeout:           time.Millisecond * 100,
+		WebSocketClientPollTimeout:     300 * time.Millisecond,
+		WebSocketClientConnBufferSize:  1,
+		WebSocketClientReadTimeout:     100 * time.Millisecond,
 		MaxConcurrentResolvers:         32,
 		ExecutionPlanCacheSize:         1024,
 		EnablePersistedOperationsCache: true,
@@ -654,11 +667,13 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	natsEventSources := make([]config.NatsEventSource, len(demoNatsProviders))
 	kafkaEventSources := make([]config.KafkaEventSource, len(demoKafkaProviders))
 
-	for _, sourceName := range demoNatsProviders {
-		natsEventSources = append(natsEventSources, config.NatsEventSource{
-			ID:  sourceName,
-			URL: natsServer.ClientURL(),
-		})
+	if natsData != nil {
+		for _, sourceName := range demoNatsProviders {
+			natsEventSources = append(natsEventSources, config.NatsEventSource{
+				ID:  sourceName,
+				URL: natsData.Server.ClientURL(),
+			})
+		}
 	}
 	for _, sourceName := range demoKafkaProviders {
 		kafkaEventSources = append(kafkaEventSources, config.KafkaEventSource{
@@ -766,7 +781,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 				},
 				OTLP: config.MetricsOTLP{
 					Enabled:             true,
-					RouterRuntime:       false,
+					RouterRuntime:       testConfig.EnableRuntimeMetrics,
 					ExcludeMetrics:      testConfig.MetricExclusions.ExcludedOTLPMetrics,
 					ExcludeMetricLabels: testConfig.MetricExclusions.ExcludedOTLPMetricLabels,
 				},
@@ -876,6 +891,7 @@ func gqlURL(srv *httptest.Server) string {
 
 type Environment struct {
 	t                     testing.TB
+	cfg                   *Config
 	graphQLPath           string
 	absinthePath          string
 	shutdown              *atomic.Bool
@@ -886,7 +902,7 @@ type Environment struct {
 	RouterClient          *http.Client
 	Servers               []*httptest.Server
 	CDN                   *httptest.Server
-	NatsServer            *natsserver.Server
+	NatsData              *NatsData
 	NatsConnectionDefault *nats.Conn
 	NatsConnectionMyNats  *nats.Conn
 	SubgraphRequestCount  *SubgraphRequestCount
@@ -951,13 +967,17 @@ func (e *Environment) Shutdown() {
 	e.CDN.CloseClientConnections()
 
 	// Close NATS
-	e.NatsConnectionDefault.Close()
-	e.NatsConnectionMyNats.Close()
-	e.NatsServer.Shutdown()
+	if e.cfg.EnableNats {
+		e.NatsConnectionDefault.Close()
+		e.NatsConnectionMyNats.Close()
+		e.NatsData.Server.Shutdown()
+	}
 
 	// Close Kafka
-	e.KafkaAdminClient.Close()
-	e.KafkaClient.Close()
+	if e.cfg.EnableKafka {
+		e.KafkaAdminClient.Close()
+		e.KafkaClient.Close()
+	}
 }
 
 type SubgraphRequestCount struct {
@@ -1245,7 +1265,7 @@ func (e *Environment) MakeGraphQLMultipartRequest(method string, body io.Reader)
 	return req
 }
 
-func (e *Environment) GraphQLSubscriptionURL() string {
+func (e *Environment) GraphQLWebSocketSubscriptionURL() string {
 	u, err := url.Parse(e.GraphQLRequestURL())
 	require.NoError(e.t, err)
 	u.Scheme = "ws"
@@ -1296,7 +1316,7 @@ func (e *Environment) GraphQLWebsocketDialWithRetry(header http.Header, query ur
 	var err error
 
 	for i := 0; i <= maxSocketRetries; i++ {
-		urlStr := e.GraphQLSubscriptionURL()
+		urlStr := e.GraphQLWebSocketSubscriptionURL()
 		if query != nil {
 			urlStr += "?" + query.Encode()
 		}
@@ -1338,16 +1358,11 @@ func (e *Environment) InitGraphQLWebSocketConnection(header http.Header, query u
 	return conn
 }
 
-func (e *Environment) GraphQLSubscriptionOverGetAndSSE(ctx context.Context, request GraphQLRequest, handler func(data string)) {
-	req, err := e.newGraphQLRequestOverGET(e.GraphQLServeSentEventsURL(), request)
+func (e *Environment) GraphQLSubscriptionOverSSE(ctx context.Context, request GraphQLRequest, handler func(data string)) {
+	req, err := e.newGraphQLRequestOverGET(e.GraphQLRequestURL(), request)
 	if err != nil {
 		e.t.Fatalf("could not create request: %s", err)
 	}
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "text/event-stream")
-	req.Header.Set("Connection", "keep-alive")
-	req.Header.Set("Cache-Control", "no-cache")
 
 	resp, err := e.RouterClient.Do(req)
 	if err != nil {
@@ -1355,12 +1370,46 @@ func (e *Environment) GraphQLSubscriptionOverGetAndSSE(ctx context.Context, requ
 	}
 	defer resp.Body.Close()
 
+	require.Equal(e.t, "text/event-stream", resp.Header.Get("Content-Type"))
+	require.Equal(e.t, "no-cache", resp.Header.Get("Cache-Control"))
+	require.Equal(e.t, "keep-alive", resp.Header.Get("Connection"))
+	require.Equal(e.t, "no", resp.Header.Get("X-Accel-Buffering"))
+
 	// Check for the correct response status code
 	if resp.StatusCode != http.StatusOK {
 		e.t.Fatalf("expected status code 200, got %d", resp.StatusCode)
 	}
 
-	reader := bufio.NewReader(resp.Body)
+	e.ReadSSE(ctx, resp.Body, handler)
+}
+
+func (e *Environment) GraphQLSubscriptionOverSSEWithQueryParam(ctx context.Context, request GraphQLRequest, handler func(data string)) {
+	req, err := e.newGraphQLRequestOverGET(e.GraphQLServeSentEventsURL(), request)
+	if err != nil {
+		e.t.Fatalf("could not create request: %s", err)
+	}
+
+	resp, err := e.RouterClient.Do(req)
+	if err != nil {
+		e.t.Fatalf("could not make request: %s", err)
+	}
+	defer resp.Body.Close()
+
+	require.Equal(e.t, "text/event-stream", resp.Header.Get("Content-Type"))
+	require.Equal(e.t, "no-cache", resp.Header.Get("Cache-Control"))
+	require.Equal(e.t, "keep-alive", resp.Header.Get("Connection"))
+	require.Equal(e.t, "no", resp.Header.Get("X-Accel-Buffering"))
+
+	// Check for the correct response status code
+	if resp.StatusCode != http.StatusOK {
+		e.t.Fatalf("expected status code 200, got %d", resp.StatusCode)
+	}
+
+	e.ReadSSE(ctx, resp.Body, handler)
+}
+
+func (e *Environment) ReadSSE(ctx context.Context, body io.ReadCloser, handler func(data string)) {
+	reader := bufio.NewReader(body)
 
 	// Process incoming events
 	for {
@@ -1369,7 +1418,7 @@ func (e *Environment) GraphQLSubscriptionOverGetAndSSE(ctx context.Context, requ
 			return
 		case <-e.Context.Done():
 			return
-		case <-req.Context().Done():
+		case <-ctx.Done():
 			return
 		default:
 			line, err := reader.ReadString('\n')
@@ -1563,10 +1612,15 @@ func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Dura
 
 }
 
-func subgraphOptions(ctx context.Context, t testing.TB, natsServer *natsserver.Server) *subgraphs.SubgraphOptions {
+func subgraphOptions(ctx context.Context, t testing.TB, natsData *NatsData) *subgraphs.SubgraphOptions {
+	if natsData == nil {
+		return &subgraphs.SubgraphOptions{
+			NatsPubSubByProviderID: map[string]pubsub_datasource.NatsPubSub{},
+		}
+	}
 	natsPubSubByProviderID := make(map[string]pubsub_datasource.NatsPubSub, len(demoNatsProviders))
 	for _, sourceName := range demoNatsProviders {
-		natsConnection, err := nats.Connect(natsServer.ClientURL())
+		natsConnection, err := nats.Connect(natsData.Server.ClientURL())
 		require.NoError(t, err)
 
 		js, err := jetstream.New(natsConnection)

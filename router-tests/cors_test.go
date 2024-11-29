@@ -1,14 +1,15 @@
 package integration
 
 import (
+	"net/http"
+	"testing"
+	"time"
+
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
-	"net/http"
-	"testing"
-	"time"
 )
 
 func TestCors(t *testing.T) {
@@ -19,7 +20,7 @@ func TestCors(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketReadTimeout = time.Millisecond * 10
+				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithCors(&cors.Config{
@@ -85,39 +86,15 @@ func TestCors(t *testing.T) {
 	})
 
 	t.Run("wildcard matching", func(t *testing.T) {
-		t.Run("matching wildcard with allow false fails", func(t *testing.T) {
-			t.Parallel()
-
-			testenv.Run(t, &testenv.Config{
-				RouterOptions: []core.Option{
-					core.WithCors(&cors.Config{
-						Enabled:       true,
-						AllowOrigins:  []string{"http://example.com/*"},
-						AllowWildcard: false,
-					}),
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				res, err := xEnv.MakeGraphQLRequestWithHeaders(testenv.GraphQLRequest{
-					Query:      `query { initialPayload }`,
-					Extensions: []byte(`{"token":"123"}`),
-				}, map[string]string{
-					"Origin": "http://example.com/test",
-				})
-				require.NoError(t, err)
-				require.Equal(t, "", res.Body)
-				require.Equal(t, http.StatusForbidden, res.Response.StatusCode)
-			})
-		})
-
+		t.Parallel()
 		t.Run("matching single wildcard succeeds", func(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
 					core.WithCors(&cors.Config{
-						Enabled:       true,
-						AllowOrigins:  []string{"http://example.com/*"},
-						AllowWildcard: true,
+						Enabled:      true,
+						AllowOrigins: []string{"http://example.com/*"},
 					}),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -138,9 +115,8 @@ func TestCors(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
 					core.WithCors(&cors.Config{
-						Enabled:       true,
-						AllowOrigins:  []string{"http://*example.com:*"},
-						AllowWildcard: true,
+						Enabled:      true,
+						AllowOrigins: []string{"http://*example.com:*"},
 					}),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -161,9 +137,8 @@ func TestCors(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
 					core.WithCors(&cors.Config{
-						Enabled:       true,
-						AllowOrigins:  []string{"http://*example.com:*"},
-						AllowWildcard: true,
+						Enabled:      true,
+						AllowOrigins: []string{"http://*example.com:*"},
 					}),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -184,9 +159,8 @@ func TestCors(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
 					core.WithCors(&cors.Config{
-						Enabled:       true,
-						AllowOrigins:  []string{"http://*example.com:*"},
-						AllowWildcard: true,
+						Enabled:      true,
+						AllowOrigins: []string{"http://*example.com:*"},
 					}),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {

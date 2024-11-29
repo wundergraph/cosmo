@@ -53,7 +53,9 @@ export function toggleChangeOverridesForAllOperations(
       const auditLogRepo = new AuditLogRepository(tx);
       const operationsRepo = new OperationsRepository(tx, graph.id);
 
-      const affectedOperations = await schemaCheckRepo.getAffectedOperationsByCheckId(req.checkId);
+      const affectedOperations = await schemaCheckRepo.getAffectedOperationsByCheckId({
+        checkId: req.checkId,
+      });
       const checkDetails = await subgraphRepo.checkDetails(req.checkId, graph.targetId);
 
       if (!checkDetails) {

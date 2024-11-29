@@ -67,6 +67,7 @@ func NewDefaultFactoryResolver(
 	baseTransport http.RoundTripper,
 	log *zap.Logger,
 	enableSingleFlight bool,
+	enableNetPoll bool,
 	natsPubSubBySourceID map[string]pubsub_datasource.NatsPubSub,
 	kafkaPubSubBySourceID map[string]pubsub_datasource.KafkaPubSub,
 ) *DefaultFactoryResolver {
@@ -84,11 +85,18 @@ func NewDefaultFactoryResolver(
 		factoryLogger = abstractlogger.NewZapLogger(log, abstractlogger.DebugLevel)
 	}
 
+	var netPollConfig graphql_datasource.NetPollConfiguration
+
+	netPollConfig.ApplyDefaults()
+
+	netPollConfig.Enable = enableNetPoll
+
 	subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(
 		defaultHttpClient,
 		streamingClient,
 		ctx,
 		graphql_datasource.WithLogger(factoryLogger),
+		graphql_datasource.WithNetPollConfiguration(netPollConfig),
 	)
 
 	return &DefaultFactoryResolver{

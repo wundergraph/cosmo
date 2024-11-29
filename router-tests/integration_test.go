@@ -354,6 +354,7 @@ func TestAnonymousQuery(t *testing.T) {
 }
 
 func TestProxy(t *testing.T) {
+	t.Parallel()
 
 	fakeSubgraph := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -800,6 +801,7 @@ func FuzzQuery(f *testing.F) {
 }
 
 func TestSubgraphOperationMinifier(t *testing.T) {
+	t.Parallel()
 	t.Run("prefer minified version", func(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
