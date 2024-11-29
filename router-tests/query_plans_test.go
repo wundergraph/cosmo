@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
@@ -207,4 +208,88 @@ func TestQueryPlans(t *testing.T) {
 			g.Assert(t, "response_with_query_plan_operation_name", prettifyJSON(res.Body))
 		})
 	})
+
+	t.Run("operation name should be sanitized for subgraphs with invalid characters", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
+				for _, subgraph := range routerConfig.Subgraphs {
+					if subgraph.GetName() == "mood" {
+						subgraph.Name = "--_$mo&o-d_-$-_-"
+					}
+					if subgraph.GetName() == "availability" {
+						subgraph.Name = "--_$av_ai-la%bi$lit-y_-$-_-"
+					}
+				}
+			},
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.Debug.AlwaysIncludeQueryPlan = true
+				cfg.EnableSubgraphFetchOperationName = true
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query Requires {
+					  products {
+						__typename
+						... on Consultancy {
+						  lead {
+							__typename
+							id
+							derivedMood
+						  }
+						  isLeadAvailable
+						}
+					  }
+					}`,
+			})
+
+			g.Assert(t, "response_with_query_plan_operation_name_sanitized", prettifyJSON(res.Body))
+		})
+	})
+
+	t.Run("operation name should be sanitized for subgraphs with invalid characters without data", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
+				for _, subgraph := range routerConfig.Subgraphs {
+					if subgraph.GetName() == "mood" {
+						subgraph.Name = "--_$mo&o-d_-$-_-"
+					}
+					if subgraph.GetName() == "availability" {
+						subgraph.Name = "--_$av_ai-la%bi$lit-y_-$-_-"
+					}
+				}
+			},
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.EnableRequestTracing = true
+				cfg.EnableSubgraphFetchOperationName = true
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Header: http.Header{
+					"X-WG-Include-Query-Plan": []string{"true"},
+					"X-WG-Skip-Loader":        []string{"true"},
+					"X-WG-Trace":              []string{"true", "enable_predictable_debug_timings"},
+				},
+				Query: `query Requires {
+					  products {
+						__typename
+						... on Consultancy {
+						  lead {
+							__typename
+							id
+							derivedMood
+						  }
+						  isLeadAvailable
+						}
+					  }
+					}`,
+			})
+
+			g.Assert(t, "response_with_query_plan_operation_name_sanitized_no_data", prettifyJSON(res.Body))
+		})
+	})
+
 }
