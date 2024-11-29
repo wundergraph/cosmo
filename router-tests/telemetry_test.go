@@ -620,6 +620,8 @@ func TestOperationCacheTelemetry(t *testing.T) {
 				},
 			})
 
+			require.JSONEq(t, employeesIDData, res.Body)
+
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
 				Header: map[string][]string{
@@ -627,12 +629,16 @@ func TestOperationCacheTelemetry(t *testing.T) {
 				},
 			})
 
+			require.JSONEq(t, employeesIDData, res.Body)
+
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { tag } }`,
 				Header: map[string][]string{
 					"X-Feature-Flag": {"myff"},
 				},
 			})
+
+			require.JSONEq(t, employeesTagData, res.Body)
 
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query myQuery { employees { id } }`,
