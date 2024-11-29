@@ -310,9 +310,7 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 
 	cacheMetrics, err := rmetric.NewCacheMetrics(
 		srv.logger,
-		append([]attribute.KeyValue{
-			otel.WgRouterConfigVersion.String(srv.baseRouterConfigVersion),
-		}, baseOtelAttributes...),
+		baseOtelAttributes,
 		cacheMetricProviders...,
 	)
 	if err != nil {
