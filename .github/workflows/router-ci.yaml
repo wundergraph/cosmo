@@ -98,7 +98,7 @@ jobs:
     if: github.event.pull_request.head.repo.full_name == github.repository
     strategy:
       matrix:
-        os: [ubuntu-runner-amd64:22.04-lg, ghcr.io/cirruslabs/ubuntu-runner-arm64:22.04-lg]
+        os: [ghcr.io/cirruslabs/ubuntu-runner-amd64:22.04-lg, ghcr.io/cirruslabs/ubuntu-runner-arm64:22.04-lg]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     services:
@@ -180,7 +180,7 @@ jobs:
         run: make build
 
   build_push_image:
-    runs-on: ghcr.io/cirruslabs/ubuntu-22.04-16core
+    runs-on: ghcr.io/cirruslabs/ubuntu-runner-amd64:22.04-lg
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
