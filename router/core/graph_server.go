@@ -306,7 +306,7 @@ func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.M
 
 type graphMux struct {
 	mux                        *chi.Mux
-	planCache                  ExecutionPlanCache[uint64, *planWithMetaData]
+	planCache                  *ristretto.Cache[uint64, *planWithMetaData]
 	persistedOperationCache    *ristretto.Cache[uint64, NormalizationCacheEntry]
 	normalizationCache         *ristretto.Cache[uint64, NormalizationCacheEntry]
 	complexityCalculationCache *ristretto.Cache[uint64, ComplexityCacheEntry]
@@ -320,7 +320,9 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 
 	var err error
 
-	s.planCache.Close()
+	if s.planCache != nil {
+		s.planCache.Close()
+	}
 
 	if s.persistedOperationCache != nil {
 		s.persistedOperationCache.Close()
@@ -427,8 +429,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		if err != nil {
 			return nil, fmt.Errorf("failed to create planner cache: %w", err)
 		}
-	} else {
-		gm.planCache = NewNoopExecutionPlanCache()
 	}
 
 	if s.engineExecutionConfiguration.EnablePersistedOperationsCache || s.automaticPersistedQueriesConfig.Enabled {
@@ -484,14 +484,8 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 		var metricInfos []rmetric.CacheMetricInfo
 
-		var metrics *ristretto.Metrics
-		executionPlanCache, ok := gm.planCache.(*ristretto.Cache[uint64, *planWithMetaData])
-		if ok {
-			metrics = executionPlanCache.Metrics
-		}
-
-		if metrics != nil {
-			metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("execution", s.engineExecutionConfiguration.ExecutionPlanCacheSize, metrics))
+		if gm.planCache != nil {
+			metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("execution", s.engineExecutionConfiguration.ExecutionPlanCacheSize, gm.planCache.Metrics))
 		}
 
 		if gm.normalizationCache != nil {
