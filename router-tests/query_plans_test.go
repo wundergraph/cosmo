@@ -3,6 +3,7 @@ package integration
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"regexp"
 	"testing"
@@ -180,7 +181,7 @@ func TestQueryPlans(t *testing.T) {
 			}
 		})
 	})
-	t.Run("include operation name in each request", func(t *testing.T) {
+	t.Run("enabling subgraph fetch operation name should return valid data and include the subgraph and fetch id in the plan", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
@@ -209,10 +210,30 @@ func TestQueryPlans(t *testing.T) {
 		})
 	})
 
-	t.Run("operation name should be sanitized for subgraphs with invalid characters", func(t *testing.T) {
+	t.Run("modified mood and availability subgraphs should be called with sanitized operation names", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				Mood: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							body, err := io.ReadAll(r.Body)
+							require.NoError(t, err)
+							require.Contains(t, string(body), "query Requires__mo_o_d__1")
+						})
+					},
+				},
+				Availability: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							body, err := io.ReadAll(r.Body)
+							require.NoError(t, err)
+							require.Contains(t, string(body), "query Requires__av_ai_la_bi_lit_y__2")
+						})
+					},
+				},
+			},
 			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
 				for _, subgraph := range routerConfig.Subgraphs {
 					if subgraph.GetName() == "mood" {
@@ -228,7 +249,7 @@ func TestQueryPlans(t *testing.T) {
 				cfg.EnableSubgraphFetchOperationName = true
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			_ = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query Requires {
 					  products {
 						__typename
@@ -243,12 +264,10 @@ func TestQueryPlans(t *testing.T) {
 					  }
 					}`,
 			})
-
-			g.Assert(t, "response_with_query_plan_operation_name_sanitized", prettifyJSON(res.Body))
 		})
 	})
 
-	t.Run("operation name should be sanitized for subgraphs with invalid characters without data", func(t *testing.T) {
+	t.Run("modified mood and availability subgraphs should provide valid execution plan with no data but trace", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
