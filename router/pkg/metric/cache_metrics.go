@@ -108,7 +108,7 @@ func configureMeter(meter otelmetric.Meter) error {
 	return nil
 }
 
-func (c *CacheMetrics) Observe(
+func (c *CacheMetrics) RegisterObservers(
 	operationCacheMetrics []CacheMetricInfo,
 ) error {
 	for _, meter := range c.meters {

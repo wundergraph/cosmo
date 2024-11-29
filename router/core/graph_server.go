@@ -503,7 +503,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("validation", s.engineExecutionConfiguration.ValidationCacheSize, gm.validationCache.Metrics))
 		}
 
-		err := s.cacheMetrics.Observe(metricInfos)
+		err := s.cacheMetrics.RegisterObservers(metricInfos)
 
 		if err != nil {
 			return nil, fmt.Errorf("failed to start cache metrics: %w", err)
