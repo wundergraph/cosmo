@@ -16,7 +16,7 @@ import (
 )
 
 func TestNormalization(t *testing.T) {
-	t.Parallel()
+	//t.Parallel()
 
 	t.Run("Whitespaces in variables should not impact normalization", func(t *testing.T) {
 		t.Parallel()
@@ -177,7 +177,7 @@ func TestNormalization(t *testing.T) {
 
 					sn := exporter.GetSpans().Snapshots()
 
-					require.Equal(t, "query "+ tc.OperationName, sn[7].Name())
+					require.Equal(t, "query "+tc.OperationName, sn[7].Name())
 					require.Equal(t, trace.SpanKindClient, sn[7].SpanKind())
 					require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[7].Status())
 					require.Contains(t, sn[7].Attributes(), otel.WgOperationHash.String(tc.OperationHash))
