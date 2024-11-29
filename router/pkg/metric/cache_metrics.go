@@ -16,7 +16,7 @@ const (
 	cosmoRouterCacheMeterVersion = "0.0.1"
 
 	operationCacheMetricBaseName = "router.graphql.cache."
-	operationCacheHitMetric      = operationCacheMetricBaseName + "hits.stats"
+	operationCacheRequestsMetric = operationCacheMetricBaseName + "requests.stats"
 	operationCacheKeyMetric      = operationCacheMetricBaseName + "keys.stats"
 	operationCacheCostMetric     = operationCacheMetricBaseName + "cost.stats"
 	operationCacheCostMaxMetric  = operationCacheMetricBaseName + "cost.max"
@@ -39,10 +39,10 @@ func NewCacheMetricInfo(cacheType string, maxCost int64, cacheMetrics *ristretto
 }
 
 var (
-	cacheHitStats  otelmetric.Int64ObservableCounter
-	cacheKeyStats  otelmetric.Int64ObservableCounter
-	cacheCostStats otelmetric.Int64ObservableCounter
-	cacheMaxCost   otelmetric.Int64ObservableGauge
+	cacheRequestStats otelmetric.Int64ObservableCounter
+	cacheKeyStats     otelmetric.Int64ObservableCounter
+	cacheCostStats    otelmetric.Int64ObservableCounter
+	cacheMaxCost      otelmetric.Int64ObservableGauge
 )
 
 // CacheMetrics is a struct that holds the metrics for various graphql operation caches.
@@ -77,9 +77,9 @@ func NewCacheMetrics(logger *zap.Logger, baseAttributes []attribute.KeyValue, pr
 
 func configureMeter(meter otelmetric.Meter) error {
 	var err error
-	if cacheHitStats, err = meter.Int64ObservableCounter(
-		operationCacheHitMetric,
-		otelmetric.WithDescription("Cache stats related to cache access. Tracks cache hits and misses. Can be used to calculate the ratio"),
+	if cacheRequestStats, err = meter.Int64ObservableCounter(
+		operationCacheRequestsMetric,
+		otelmetric.WithDescription("Cache stats related to cache requests. Tracks cache hits and misses. Can be used to calculate the ratio"),
 	); err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ func (c *CacheMetrics) RegisterObservers(
 
 			return nil
 		},
-			cacheHitStats,
+			cacheRequestStats,
 			cacheKeyStats,
 			cacheCostStats,
 			cacheMaxCost,
@@ -140,14 +140,14 @@ func (c *CacheMetrics) observeForCacheType(o otelmetric.Observer, cacheType stri
 		return
 	}
 
-	o.ObserveInt64(cacheHitStats, int64(metrics.Hits()),
+	o.ObserveInt64(cacheRequestStats, int64(metrics.Hits()),
 		otelmetric.WithAttributes(c.baseAttributes...),
 		otelmetric.WithAttributes(
 			otel.CacheMetricsTypeAttribute.String("hits"),
 			otel.CacheMetricsCacheTypeAttribute.String(cacheType)),
 	)
 
-	o.ObserveInt64(cacheHitStats, int64(metrics.Misses()),
+	o.ObserveInt64(cacheRequestStats, int64(metrics.Misses()),
 		otelmetric.WithAttributes(c.baseAttributes...),
 		otelmetric.WithAttributes(
 			otel.CacheMetricsTypeAttribute.String("misses"),
