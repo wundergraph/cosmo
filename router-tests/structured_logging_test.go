@@ -292,7 +292,7 @@ func TestAccessLogs(t *testing.T) {
 				"query":            "",
 				"ip":               "[REDACTED]",
 				"service_name":     "service-name",                                                     // From header
-				"operation_hash":   "14226210703439426856",                                             // From context
+				"operation_hash":   "1163600561566987607",                                             // From context
 				"operation_sha256": "c13e0fafb0a3a72e74c19df743fedee690fe133554a17a9408747585a0d1b423", // From context
 				"operation_name":   "employees",                                                        // From context
 				"operation_type":   "query",                                                            // From context
@@ -744,7 +744,7 @@ func TestAccessLogs(t *testing.T) {
 				"user_agent":     "Go-http-client/1.1",
 				"error":          "implement me",
 				"service_name":   "service-name",         // From header
-				"operation_hash": "14226210703439426856", // From context
+				"operation_hash": "1163600561566987607", // From context
 				"operation_name": "employees",            // From context
 				"operation_type": "query",                // From context
 				"error_message":  "implement me",
@@ -873,7 +873,7 @@ func TestAccessLogs(t *testing.T) {
 				"user_agent":     "Go-http-client/1.1",
 				"error":          "implement me",
 				"service_name":   "service-name",         // From header
-				"operation_hash": "14226210703439426856", // From context
+				"operation_hash": "1163600561566987607", // From context
 				"operation_name": "employees",            // From context
 				"operation_type": "query",                // From context
 				"error_message":  "implement me",
