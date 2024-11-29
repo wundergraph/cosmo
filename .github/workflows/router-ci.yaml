@@ -96,7 +96,10 @@ jobs:
   # that have access to the secrets and can push to the Docker registry
   build_test:
     if: github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ghcr.io/cirruslabs/ubuntu-runner-amd64:22.04-lg
+    strategy:
+      matrix:
+        os: [ghcr.io/cirruslabs/ubuntu-22.04-16core, ghcr.io/cirruslabs/ubuntu-22.04-16core-arm64]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     services:
       redis:
@@ -177,7 +180,7 @@ jobs:
         run: make build
 
   build_push_image:
-    runs-on: ubuntu-latest
+    runs-on: ghcr.io/cirruslabs/ubuntu-22.04-16core
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
