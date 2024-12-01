@@ -568,7 +568,35 @@
               "default": false
             },
             "fields": {
-              "$ref": "#/definitions/context_fields"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/context_fields"
+                },
+                {
+                  "items": {
+                    "properties": {
+                      "value_from": {
+                        "properties": {
+                          "context_field": {
+                            "enum": [
+                              "operation_name",
+                              "operation_type",
+                             "operation_hash",
+                              "persisted_operation_sha256",
+                              "operation_sha256",
+                              "response_error_message",
+                              "operation_parsing_time",
+                              "operation_validation_time",
+                              "operation_planning_time",
+                              "operation_normalization_time"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
             }
           }
         }

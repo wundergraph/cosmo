@@ -44,12 +44,17 @@ func NewSubgraphAccessLogger(logger *zap.Logger, opts SubgraphOptions) *Subgraph
 }
 
 func (h *SubgraphAccessLogger) WriteRequestLog(respInfo *resolve.ResponseInfo, subgraphFields []zap.Field) {
+	if respInfo == nil {
+		return
+	}
 	path := respInfo.Request.URL.Path
 	fields := h.accessLogger.getRequestFields(respInfo.Request)
 	if h.accessLogger.fieldsHandler != nil {
 		fields = append(fields, h.accessLogger.fieldsHandler(h.accessLogger.attributes, nil, respInfo.Request, &respInfo.ResponseHeaders)...)
 	}
 
-	fields = append(subgraphFields, fields...)
+	if subgraphFields != nil && len(subgraphFields) > 0 {
+		fields = append(fields, subgraphFields...)
+	}
 	h.logger.Info(path, fields...)
 }
