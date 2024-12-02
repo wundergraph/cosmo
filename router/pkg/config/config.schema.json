@@ -581,10 +581,9 @@
                             "enum": [
                               "operation_name",
                               "operation_type",
-                             "operation_hash",
+                              "operation_hash",
                               "persisted_operation_sha256",
                               "operation_sha256",
-                              "response_error_message",
                               "operation_parsing_time",
                               "operation_validation_time",
                               "operation_planning_time",

@@ -182,7 +182,7 @@ func (al *accessLogger) getRequestFields(r *http.Request) []zapcore.Field {
 	if al.ipAnonymizationConfig != nil && al.ipAnonymizationConfig.Enabled {
 		if al.ipAnonymizationConfig.Method == Hash {
 			h := sha256.New()
-			remoteAddr = fmt.Sprintf("%d", h.Sum([]byte(r.RemoteAddr)))
+			remoteAddr = fmt.Sprintf("%x", h.Sum([]byte(r.RemoteAddr)))
 		} else if al.ipAnonymizationConfig.Method == Redact {
 			remoteAddr = "[REDACTED]"
 		}

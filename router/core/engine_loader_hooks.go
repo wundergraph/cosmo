@@ -99,6 +99,10 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	span := trace.SpanFromContext(ctx)
 	defer span.End()
 
+	if responseInfo == nil {
+		responseInfo = &resolve.ResponseInfo{}
+	}
+
 	commonAttrs := []attribute.KeyValue{
 		semconv.HTTPStatusCode(responseInfo.StatusCode),
 		rotel.WgSubgraphID.String(ds.ID),

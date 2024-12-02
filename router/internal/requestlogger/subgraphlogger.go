@@ -53,7 +53,7 @@ func (h *SubgraphAccessLogger) WriteRequestLog(respInfo *resolve.ResponseInfo, s
 		fields = append(fields, h.accessLogger.fieldsHandler(h.accessLogger.attributes, nil, respInfo.Request, &respInfo.ResponseHeaders)...)
 	}
 
-	if subgraphFields != nil && len(subgraphFields) > 0 {
+	if len(subgraphFields) > 0 {
 		fields = append(fields, subgraphFields...)
 	}
 	h.logger.Info(path, fields...)

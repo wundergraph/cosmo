@@ -44,7 +44,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 		checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 	})
 
-	t.Run("adds ip", func(t *testing.T) {
+	t.Run("can add ip field", func(t *testing.T) {
 		var zCore zapcore.Core
 		zCore, logObserver := observer.New(zapcore.InfoLevel)
 		l := logging.NewZapLoggerWithCore(zCore, true)
@@ -135,13 +135,13 @@ func TestSubgraphAccessLogger(t *testing.T) {
 			"method":   "POST",
 			"path":     "/graphql",
 			"query":    "",
-			"ip":       "[109 121 45 116 101 115 116 227 176 196 66 152 252 28 20 154 251 244 200 153 111 185 36 39 174 65 228 100 155 147 76 164 149 153 27 120 82 184 85]",
+			"ip":       "6d792d74657374e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
 		}
 		additionalExpectedKeys := []string{"user_agent", "hostname", "pid"}
 		checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 	})
 
-	t.Run("fields handler is called", func(t *testing.T) {
+	t.Run("calls fields handler and adds request/response headers", func(t *testing.T) {
 		var zCore zapcore.Core
 		zCore, logObserver := observer.New(zapcore.InfoLevel)
 		l := logging.NewZapLoggerWithCore(zCore, true)

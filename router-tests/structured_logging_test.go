@@ -1266,20 +1266,6 @@ func TestAccessLogs(t *testing.T) {
 						},
 					},
 					{
-						Key:     "operation_hash",
-						Default: "",
-						ValueFrom: &config.CustomDynamicAttribute{
-							ContextField: core.ContextFieldOperationHash,
-						},
-					},
-					{
-						Key:     "operation_sha256",
-						Default: "",
-						ValueFrom: &config.CustomDynamicAttribute{
-							ContextField: core.ContextFieldOperationSha256,
-						},
-					},
-					{
 						Key:     "operation_name",
 						Default: "",
 						ValueFrom: &config.CustomDynamicAttribute{
@@ -1294,10 +1280,31 @@ func TestAccessLogs(t *testing.T) {
 						},
 					},
 					{
-						Key:     "normalized_time",
+						Key:     "operation_hash",
 						Default: "",
 						ValueFrom: &config.CustomDynamicAttribute{
-							ContextField: core.ContextFieldOperationNormalizationTime,
+							ContextField: core.ContextFieldOperationHash,
+						},
+					},
+					{
+						Key:     "operation_persisted_hash",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldPersistedOperationSha256,
+						},
+					},
+					{
+						Key:     "operation_sha256",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationSha256,
+						},
+					},
+					{
+						Key:     "response_error_message",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldResponseErrorMessage,
 						},
 					},
 					{
@@ -1312,6 +1319,20 @@ func TestAccessLogs(t *testing.T) {
 						Default: "",
 						ValueFrom: &config.CustomDynamicAttribute{
 							ContextField: core.ContextFieldOperationValidationTime,
+						},
+					},
+					{
+						Key:     "planned_time",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationPlanningTime,
+						},
+					},
+					{
+						Key:     "normalized_time",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationNormalizationTime,
 						},
 					},
 				},
@@ -1369,7 +1390,359 @@ func TestAccessLogs(t *testing.T) {
 					"operation_type":   "query",                                                            // From context
 				}
 				additionalExpectedKeys := []string{
-					"user_agent", "latency", "config_version", "request_id", "pid", "hostname", "normalized_time", "parsed_time", "validation_time", "trace_id",
+					"user_agent", "latency", "config_version", "request_id", "pid", "hostname", "normalized_time", "parsed_time", "planned_time", "validation_time", "trace_id",
+				}
+				checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
+
+				requestContext1 := requestLog.All()[1].ContextMap()
+				expectedValues1 := map[string]interface{}{
+					"log_type": "request",
+					"status":   int64(200),
+					"method":   "POST",
+					"path":     "/graphql",
+					"query":    "",
+					"ip":       "[REDACTED]",
+				}
+				additionalExpectedKeys1 := []string{
+					"user_agent",
+					"latency",
+					"config_version",
+					"request_id",
+					"pid",
+					"hostname",
+				}
+				checkValues(t, requestContext1, expectedValues1, additionalExpectedKeys1)
+			})
+		})
+
+		t.Run("Sets subgraph custom access logs with subgraph errors", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				SubgraphAccessLogsEnabled: true,
+				SubgraphAccessLogFields: []config.CustomAttribute{
+					{
+						Key:     "service_name",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							RequestHeader: "service-name",
+						},
+					},
+					{
+						Key:     "response_header",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ResponseHeader: "response-header-name",
+						},
+					},
+					{
+						Key:     "operation_name",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationName,
+						},
+					},
+					{
+						Key:     "operation_type",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationType,
+						},
+					},
+					{
+						Key:     "operation_hash",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationHash,
+						},
+					},
+					{
+						Key:     "operation_persisted_hash",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldPersistedOperationSha256,
+						},
+					},
+					{
+						Key:     "operation_sha256",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationSha256,
+						},
+					},
+					{
+						Key:     "response_error_message",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldResponseErrorMessage,
+						},
+					},
+					{
+						Key:     "parsed_time",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationParsingTime,
+						},
+					},
+					{
+						Key:     "validation_time",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationValidationTime,
+						},
+					},
+					{
+						Key:     "planned_time",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationPlanningTime,
+						},
+					},
+					{
+						Key:     "normalized_time",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationNormalizationTime,
+						},
+					},
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+				RouterOptions: []core.Option{
+					core.WithHeaderRules(config.HeaderRules{
+						All: &config.GlobalHeaderRule{
+							Request: []*config.RequestHeaderRule{
+								{
+									Operation: config.HeaderRuleOperationPropagate,
+									Named:     "service-name",
+								},
+							},
+						},
+					}),
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					Products: testenv.SubgraphConfig{
+						Middleware: func(handler http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								w.Header().Set("Content-Type", "application/json")
+								w.WriteHeader(http.StatusForbidden)
+								_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]}`))
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:  `query employees { employees { id details { forename surname } notes } }`,
+					Header: map[string][]string{"service-name": {"service-name"}},
+				})
+				require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'products' at Path 'employees'.","extensions":{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}],"statusCode":403}}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
+				logEntries := xEnv.Observer().All()
+				require.Len(t, logEntries, 12)
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				require.Equal(t, requestLog.Len(), 3)
+
+				employeeContext := requestLog.All()[0].ContextMap()
+				employeeSubgraphVals := map[string]interface{}{
+					"log_type":         "client/subgraph",
+					"subgraph_name":    "employees",
+					"subgraph_id":      "0",
+					"status":           int64(200),
+					"method":           "POST",
+					"path":             "/graphql",
+					"query":            "", // http query is empty
+					"ip":               "[REDACTED]",
+					"service_name":     "service-name",                                                     // From request header
+					"operation_hash":   "16884868987896027258",                                             // From context
+					"operation_sha256": "049efe2ebbdf2e4845e69f69cb7965963b118612a6247ab6d91b1961ea0158dc", // From context
+					"operation_name":   "employees",                                                        // From context
+					"operation_type":   "query",                                                            // From context
+				}
+				additionalExpectedKeys := []string{
+					"user_agent", "latency", "config_version", "request_id", "pid", "hostname", "normalized_time", "parsed_time", "planned_time", "validation_time", "trace_id",
+				}
+				checkValues(t, employeeContext, employeeSubgraphVals, additionalExpectedKeys)
+
+				productContext := requestLog.All()[1].ContextMap()
+				productSubgraphVals := map[string]interface{}{
+					"log_type":         "client/subgraph",
+					"subgraph_name":    "products",
+					"subgraph_id":      "3",
+					"status":           int64(403),
+					"method":           "POST",
+					"path":             "/graphql",
+					"query":            "", // http query is empty
+					"ip":               "[REDACTED]",
+					"service_name":     "service-name",                                                     // From request header
+					"error":            "Failed to fetch from Subgraph 'products' at Path: 'employees'.",   // From context
+					"operation_hash":   "16884868987896027258",                                             // From context
+					"operation_sha256": "049efe2ebbdf2e4845e69f69cb7965963b118612a6247ab6d91b1961ea0158dc", // From context
+					"operation_name":   "employees",                                                        // From context
+					"operation_type":   "query",                                                            // From context
+				}
+				checkValues(t, productContext, productSubgraphVals, additionalExpectedKeys)
+
+				graphContext := requestLog.All()[2].ContextMap()
+				graphVals := map[string]interface{}{
+					"log_type": "request",
+					"status":   int64(200),
+					"method":   "POST",
+					"path":     "/graphql",
+					"query":    "",
+					"ip":       "[REDACTED]",
+				}
+				graphKeys := []string{
+					"user_agent",
+					"latency",
+					"config_version",
+					"request_id",
+					"pid",
+					"hostname",
+				}
+				checkValues(t, graphContext, graphVals, graphKeys)
+			})
+		})
+
+		t.Run("Sets persisted operation hash from access log fields", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				SubgraphAccessLogsEnabled: true,
+				SubgraphAccessLogFields: []config.CustomAttribute{
+					{
+						Key:     "service_name",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							RequestHeader: "service-name",
+						},
+					},
+					{
+						Key:     "response_header",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ResponseHeader: "response-header-name",
+						},
+					},
+					{
+						Key:     "operation_name",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationName,
+						},
+					},
+					{
+						Key:     "operation_type",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationType,
+						},
+					},
+					{
+						Key:     "operation_hash",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationHash,
+						},
+					},
+					{
+						Key:     "operation_persisted_hash",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldPersistedOperationSha256,
+						},
+					},
+					{
+						Key:     "operation_sha256",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationSha256,
+						},
+					},
+					{
+						Key:     "response_error_message",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldResponseErrorMessage,
+						},
+					},
+					{
+						Key:     "parsed_time",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationParsingTime,
+						},
+					},
+					{
+						Key:     "validation_time",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationValidationTime,
+						},
+					},
+					{
+						Key:     "planned_time",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationPlanningTime,
+						},
+					},
+					{
+						Key:     "normalized_time",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationNormalizationTime,
+						},
+					},
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+				RouterOptions: []core.Option{
+					core.WithHeaderRules(config.HeaderRules{
+						All: &config.GlobalHeaderRule{
+							Request: []*config.RequestHeaderRule{
+								{
+									Operation: config.HeaderRuleOperationPropagate,
+									Named:     "service-name",
+								},
+							},
+						},
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					OperationName: []byte(`"Employees"`),
+					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+					Header:        map[string][]string{"service-name": {"service-name"}, "graphql-client-name": {"my-client"}},
+				})
+				require.NoError(t, err)
+				require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+				logEntries := xEnv.Observer().All()
+				require.Len(t, logEntries, 11)
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				require.Equal(t, requestLog.Len(), 2)
+				requestContext := requestLog.All()[0].ContextMap()
+				expectedValues := map[string]interface{}{
+					"log_type":                 "client/subgraph",
+					"subgraph_name":            "employees",
+					"subgraph_id":              "0",
+					"status":                   int64(200),
+					"method":                   "POST",
+					"path":                     "/graphql",
+					"query":                    "", // http query is empty
+					"ip":                       "[REDACTED]",
+					"service_name":             "service-name",                                                     // From request header
+					"operation_persisted_hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f", // From context
+					"operation_hash":           "14226210703439426856",                                             // From context
+					"operation_sha256":         "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // From context
+					"operation_name":           "Employees",                                                        // From context
+					"operation_type":           "query",                                                            // From context
+				}
+				additionalExpectedKeys := []string{
+					"user_agent", "latency", "config_version", "request_id", "pid", "hostname", "normalized_time", "parsed_time", "planned_time", "validation_time", "trace_id",
 				}
 				checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 
