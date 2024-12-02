@@ -18812,3 +18812,288 @@ export class GetPlaygroundScriptsResponse extends Message<GetPlaygroundScriptsRe
   }
 }
 
+/**
+ * @generated from message wg.cosmo.platform.v1.GetFederatedGraphByIdRequest
+ */
+export class GetFederatedGraphByIdRequest extends Message<GetFederatedGraphByIdRequest> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: bool includeMetrics = 2;
+   */
+  includeMetrics = false;
+
+  constructor(data?: PartialMessage<GetFederatedGraphByIdRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetFederatedGraphByIdRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "includeMetrics", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFederatedGraphByIdRequest {
+    return new GetFederatedGraphByIdRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetFederatedGraphByIdRequest {
+    return new GetFederatedGraphByIdRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetFederatedGraphByIdRequest {
+    return new GetFederatedGraphByIdRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetFederatedGraphByIdRequest | PlainMessage<GetFederatedGraphByIdRequest> | undefined, b: GetFederatedGraphByIdRequest | PlainMessage<GetFederatedGraphByIdRequest> | undefined): boolean {
+    return proto3.util.equals(GetFederatedGraphByIdRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetFederatedGraphByIdResponse
+ */
+export class GetFederatedGraphByIdResponse extends Message<GetFederatedGraphByIdResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: wg.cosmo.platform.v1.FederatedGraph graph = 2;
+   */
+  graph?: FederatedGraph;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.Subgraph subgraphs = 3;
+   */
+  subgraphs: Subgraph[] = [];
+
+  /**
+   * @generated from field: string graphRequestToken = 4;
+   */
+  graphRequestToken = "";
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.FeatureFlag featureFlagsInLatestValidComposition = 5;
+   */
+  featureFlagsInLatestValidComposition: FeatureFlag[] = [];
+
+  /**
+   * includes all the feature subgraphs that are part of the federated graph, 
+   * even the ones that are not part of the latest composition
+   *
+   * @generated from field: repeated wg.cosmo.platform.v1.Subgraph featureSubgraphs = 6;
+   */
+  featureSubgraphs: Subgraph[] = [];
+
+  constructor(data?: PartialMessage<GetFederatedGraphByIdResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetFederatedGraphByIdResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "graph", kind: "message", T: FederatedGraph },
+    { no: 3, name: "subgraphs", kind: "message", T: Subgraph, repeated: true },
+    { no: 4, name: "graphRequestToken", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "featureFlagsInLatestValidComposition", kind: "message", T: FeatureFlag, repeated: true },
+    { no: 6, name: "featureSubgraphs", kind: "message", T: Subgraph, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFederatedGraphByIdResponse {
+    return new GetFederatedGraphByIdResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetFederatedGraphByIdResponse {
+    return new GetFederatedGraphByIdResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetFederatedGraphByIdResponse {
+    return new GetFederatedGraphByIdResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetFederatedGraphByIdResponse | PlainMessage<GetFederatedGraphByIdResponse> | undefined, b: GetFederatedGraphByIdResponse | PlainMessage<GetFederatedGraphByIdResponse> | undefined): boolean {
+    return proto3.util.equals(GetFederatedGraphByIdResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetSubgraphByIdRequest
+ */
+export class GetSubgraphByIdRequest extends Message<GetSubgraphByIdRequest> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  constructor(data?: PartialMessage<GetSubgraphByIdRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetSubgraphByIdRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSubgraphByIdRequest {
+    return new GetSubgraphByIdRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetSubgraphByIdRequest {
+    return new GetSubgraphByIdRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetSubgraphByIdRequest {
+    return new GetSubgraphByIdRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetSubgraphByIdRequest | PlainMessage<GetSubgraphByIdRequest> | undefined, b: GetSubgraphByIdRequest | PlainMessage<GetSubgraphByIdRequest> | undefined): boolean {
+    return proto3.util.equals(GetSubgraphByIdRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetSubgraphByIdResponse
+ */
+export class GetSubgraphByIdResponse extends Message<GetSubgraphByIdResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Subgraph graph = 2;
+   */
+  graph?: Subgraph;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.SubgraphMember members = 3;
+   */
+  members: SubgraphMember[] = [];
+
+  constructor(data?: PartialMessage<GetSubgraphByIdResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetSubgraphByIdResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "graph", kind: "message", T: Subgraph },
+    { no: 3, name: "members", kind: "message", T: SubgraphMember, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSubgraphByIdResponse {
+    return new GetSubgraphByIdResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetSubgraphByIdResponse {
+    return new GetSubgraphByIdResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetSubgraphByIdResponse {
+    return new GetSubgraphByIdResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetSubgraphByIdResponse | PlainMessage<GetSubgraphByIdResponse> | undefined, b: GetSubgraphByIdResponse | PlainMessage<GetSubgraphByIdResponse> | undefined): boolean {
+    return proto3.util.equals(GetSubgraphByIdResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetNamespaceRequest
+ */
+export class GetNamespaceRequest extends Message<GetNamespaceRequest> {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string id = 2;
+   */
+  id = "";
+
+  constructor(data?: PartialMessage<GetNamespaceRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetNamespaceRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetNamespaceRequest {
+    return new GetNamespaceRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetNamespaceRequest {
+    return new GetNamespaceRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetNamespaceRequest {
+    return new GetNamespaceRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetNamespaceRequest | PlainMessage<GetNamespaceRequest> | undefined, b: GetNamespaceRequest | PlainMessage<GetNamespaceRequest> | undefined): boolean {
+    return proto3.util.equals(GetNamespaceRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetNamespaceResponse
+ */
+export class GetNamespaceResponse extends Message<GetNamespaceResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Namespace namespace = 2;
+   */
+  namespace?: Namespace;
+
+  constructor(data?: PartialMessage<GetNamespaceResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetNamespaceResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "namespace", kind: "message", T: Namespace },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetNamespaceResponse {
+    return new GetNamespaceResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetNamespaceResponse {
+    return new GetNamespaceResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetNamespaceResponse {
+    return new GetNamespaceResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetNamespaceResponse | PlainMessage<GetNamespaceResponse> | undefined, b: GetNamespaceResponse | PlainMessage<GetNamespaceResponse> | undefined): boolean {
+    return proto3.util.equals(GetNamespaceResponse, a, b);
+  }
+}
+
