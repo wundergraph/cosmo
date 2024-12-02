@@ -244,7 +244,7 @@
     "EnableValidationCache": true,
     "ValidationCacheSize": 10240,
     "ResolverMaxRecyclableParserSize": 32768,
-    "EnableSubgraphFetchOperationName": false
+    "EnableSubgraphFetchOperationName": true
   },
   "WebSocket": {
     "Enabled": true,
