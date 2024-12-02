@@ -31,8 +31,6 @@ export default (opts: BaseCommandOptions) => {
     'The admission webhook secret is used to sign requests to the webhook url.',
   );
   command.action(async (name, options) => {
-    const spinner = ora('Contract is being updated...').start();
-
     if (options.exclude?.length > 0 && options.include?.length > 0) {
       program.error(
         pc.red(
@@ -56,6 +54,7 @@ export default (opts: BaseCommandOptions) => {
       }
     }
 
+    const spinner = ora('Contract is being updated...').start();
     const resp = await opts.client.platform.updateContract(
       {
         name,
