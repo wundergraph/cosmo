@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/klauspost/compress/gzhttp"
@@ -85,7 +86,8 @@ type (
 		// inFlightRequests is used to track the number of requests currently being processed
 		// does not include websocket (hijacked) connections
 		inFlightRequests *atomic.Uint64
-		graphMuxes       []*graphMux
+		graphMuxList     []*graphMux
+		graphMuxListLock sync.Mutex
 		runtimeMetrics   *rmetric.RuntimeMetrics
 	}
 )
@@ -103,7 +105,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		playgroundHandler:       r.playgroundHandler,
 		baseRouterConfigVersion: routerConfig.GetVersion(),
 		inFlightRequests:        &atomic.Uint64{},
-		graphMuxes:              make([]*graphMux, 0, 1),
+		graphMuxList:            make([]*graphMux, 0, 1),
 		pubSubProviders: &EnginePubSubProviders{
 			nats:  map[string]pubsub_datasource.NatsPubSub{},
 			kafka: map[string]pubsub_datasource.KafkaPubSub{},
@@ -853,7 +855,9 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	gm.mux = httpRouter
 
-	s.graphMuxes = append(s.graphMuxes, gm)
+	s.graphMuxListLock.Lock()
+	defer s.graphMuxListLock.Unlock()
+	s.graphMuxList = append(s.graphMuxList, gm)
 
 	return gm, nil
 }
@@ -1058,7 +1062,9 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 
 	// Shutdown all graphs muxes to release resources
 	// e.g. planner cache
-	for _, mux := range s.graphMuxes {
+	s.graphMuxListLock.Lock()
+	defer s.graphMuxListLock.Unlock()
+	for _, mux := range s.graphMuxList {
 		if err := mux.Shutdown(ctx); err != nil {
 			s.logger.Error("Failed to shutdown graph mux", zap.Error(err))
 			finalErr = errors.Join(finalErr, err)

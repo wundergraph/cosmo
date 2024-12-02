@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
@@ -24,6 +25,7 @@ func prettifyJSON(data string) []byte {
 }
 
 func TestQueryPlans(t *testing.T) {
+	t.Parallel()
 
 	g := goldie.New(
 		t,
@@ -33,6 +35,8 @@ func TestQueryPlans(t *testing.T) {
 	)
 
 	t.Run("always include query plan", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.Debug.AlwaysIncludeQueryPlan = true
@@ -58,6 +62,8 @@ func TestQueryPlans(t *testing.T) {
 		})
 	})
 	t.Run("include query plan via header", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Header: http.Header{
@@ -82,6 +88,8 @@ func TestQueryPlans(t *testing.T) {
 		})
 	})
 	t.Run("query plans disabled", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{core.WithQueryPlans(false)},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -108,6 +116,8 @@ func TestQueryPlans(t *testing.T) {
 		})
 	})
 	t.Run("only query plan without data", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Header: http.Header{
@@ -133,6 +143,8 @@ func TestQueryPlans(t *testing.T) {
 		})
 	})
 	t.Run("only query plan without data but with trace", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.EnableRequestTracing = true
@@ -168,7 +180,9 @@ func TestQueryPlans(t *testing.T) {
 			}
 		})
 	})
-	t.Run("include operation name in each request", func(t *testing.T) {
+	t.Run("enabling subgraph fetch operation name should return valid data and include the subgraph and fetch id in the plan", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.Debug.AlwaysIncludeQueryPlan = true
@@ -194,4 +208,89 @@ func TestQueryPlans(t *testing.T) {
 			g.Assert(t, "response_with_query_plan_operation_name", prettifyJSON(res.Body))
 		})
 	})
+
+	t.Run("modified mood and availability subgraphs include sanitized operation names in query plan", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
+				for _, subgraph := range routerConfig.Subgraphs {
+					if subgraph.GetName() == "mood" {
+						subgraph.Name = "--_$mo&o-d_-$-_-"
+					}
+					if subgraph.GetName() == "availability" {
+						subgraph.Name = "--_$av_ai-la%bi$lit-y_-$-_-"
+					}
+				}
+			},
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.Debug.AlwaysIncludeQueryPlan = true
+				cfg.EnableSubgraphFetchOperationName = true
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query Requires {
+					  products {
+						__typename
+						... on Consultancy {
+						  lead {
+							__typename
+							id
+							derivedMood
+						  }
+						  isLeadAvailable
+						}
+					  }
+					}`,
+			})
+
+			require.Contains(t, res.Body, "query Requires__mo_o_d__1")
+			require.Contains(t, res.Body, "query Requires__av_ai_la_bi_lit_y__2")
+		})
+	})
+
+	t.Run("modified mood and availability subgraphs should provide valid execution plan with no data but trace", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
+				for _, subgraph := range routerConfig.Subgraphs {
+					if subgraph.GetName() == "mood" {
+						subgraph.Name = "--_$mo&o-d_-$-_-"
+					}
+					if subgraph.GetName() == "availability" {
+						subgraph.Name = "--_$av_ai-la%bi$lit-y_-$-_-"
+					}
+				}
+			},
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.EnableRequestTracing = true
+				cfg.EnableSubgraphFetchOperationName = true
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Header: http.Header{
+					"X-WG-Include-Query-Plan": []string{"true"},
+					"X-WG-Skip-Loader":        []string{"true"},
+					"X-WG-Trace":              []string{"true", "enable_predictable_debug_timings"},
+				},
+				Query: `query Requires {
+					  products {
+						__typename
+						... on Consultancy {
+						  lead {
+							__typename
+							id
+							derivedMood
+						  }
+						  isLeadAvailable
+						}
+					  }
+					}`,
+			})
+
+			g.Assert(t, "response_with_query_plan_operation_name_sanitized_no_data", prettifyJSON(res.Body))
+		})
+	})
+
 }

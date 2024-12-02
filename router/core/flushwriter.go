@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"context"
+	"io"
 	"mime"
 	"net/http"
 
@@ -24,7 +25,7 @@ const (
 type HttpFlushWriter struct {
 	ctx           context.Context
 	cancel        context.CancelFunc
-	writer        http.ResponseWriter
+	writer        io.Writer
 	flusher       http.Flusher
 	subscribeOnce bool
 	sse           bool
@@ -90,7 +91,6 @@ func (f *HttpFlushWriter) Flush() (err error) {
 	if err != nil {
 		return err
 	}
-
 	f.flusher.Flush()
 	if f.subscribeOnce {
 		defer f.Close()
@@ -114,6 +114,8 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http
 
 	setSubscriptionHeaders(wgParams, r, w)
 
+	flusher.Flush()
+
 	flushWriter := &HttpFlushWriter{
 		writer:        w,
 		flusher:       flusher,
@@ -121,7 +123,6 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http
 		multipart:     wgParams.UseMultipart,
 		subscribeOnce: wgParams.SubscribeOnce,
 		buf:           &bytes.Buffer{},
-		ctx:           ctx.Context(),
 	}
 
 	flushWriter.ctx, flushWriter.cancel = context.WithCancel(ctx.Context())
