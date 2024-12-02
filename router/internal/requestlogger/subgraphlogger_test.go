@@ -44,7 +44,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 		checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 	})
 
-	t.Run("can add ip field", func(t *testing.T) {
+	t.Run("Should include IP as custom attribute if requested", func(t *testing.T) {
 		var zCore zapcore.Core
 		zCore, logObserver := observer.New(zapcore.InfoLevel)
 		l := logging.NewZapLoggerWithCore(zCore, true)
@@ -73,7 +73,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 		checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 	})
 
-	t.Run("redacts ip with anonymization config enabled", func(t *testing.T) {
+	t.Run("Should redact client IP and add as a custom attribute", func(t *testing.T) {
 		var zCore zapcore.Core
 		zCore, logObserver := observer.New(zapcore.InfoLevel)
 		l := logging.NewZapLoggerWithCore(zCore, true)
@@ -107,7 +107,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 		checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 	})
 
-	t.Run("gets hash of ip with anonymization config enabled and hash set", func(t *testing.T) {
+	t.Run("Should hash client IP and add it as a custom attribute", func(t *testing.T) {
 		var zCore zapcore.Core
 		zCore, logObserver := observer.New(zapcore.InfoLevel)
 		l := logging.NewZapLoggerWithCore(zCore, true)
