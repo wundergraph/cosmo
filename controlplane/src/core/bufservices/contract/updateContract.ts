@@ -125,6 +125,24 @@ export function updateContract(
       actorId: authContext.userId,
     });
 
+    await fedGraphRepo.update({
+      targetId: graph.targetId,
+      // if the routingUrl is not provided, it will be set to an empty string.
+      // As the routing url wont be updated in this case.
+      routingUrl: req.routingUrl || '',
+      updatedBy: authContext.userId,
+      readme: req.readme,
+      blobStorage: opts.blobStorage,
+      namespaceId: graph.namespaceId,
+      admissionWebhookURL: req.admissionWebhookUrl,
+      admissionWebhookSecret: req.admissionWebhookSecret,
+      admissionConfig: {
+        cdnBaseUrl: opts.cdnBaseUrl,
+        jwtSecret: opts.admissionWebhookJWTSecret,
+      },
+      labelMatchers: [],
+    });
+
     const compositionErrors: PlainMessage<CompositionError>[] = [];
     const deploymentErrors: PlainMessage<DeploymentError>[] = [];
     const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
@@ -133,6 +151,10 @@ export function updateContract(
       federatedGraphs: [
         {
           ...graph,
+          routingUrl: req.routingUrl || graph.routingUrl,
+          admissionWebhookURL: req.admissionWebhookUrl || graph.admissionWebhookURL,
+          admissionWebhookSecret: req.admissionWebhookSecret || graph.admissionWebhookSecret,
+          readme: req.readme || graph.readme,
           contract: {
             ...graph.contract,
             ...updatedContractDetails,

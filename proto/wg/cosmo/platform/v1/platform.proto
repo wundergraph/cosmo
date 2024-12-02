@@ -2129,6 +2129,10 @@ message UpdateContractRequest {
   string namespace = 2;
   repeated string exclude_tags = 3;
   repeated string include_tags = 4;
+  optional string routing_url = 5;
+  optional string admission_webhook_url = 6;
+  optional string admission_webhook_secret = 7;
+  optional string readme = 8;
 }
 
 message UpdateContractResponse {
