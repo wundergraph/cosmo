@@ -16730,6 +16730,26 @@ export class UpdateContractRequest extends Message<UpdateContractRequest> {
    */
   includeTags: string[] = [];
 
+  /**
+   * @generated from field: optional string routing_url = 5;
+   */
+  routingUrl?: string;
+
+  /**
+   * @generated from field: optional string admission_webhook_url = 6;
+   */
+  admissionWebhookUrl?: string;
+
+  /**
+   * @generated from field: optional string admission_webhook_secret = 7;
+   */
+  admissionWebhookSecret?: string;
+
+  /**
+   * @generated from field: optional string readme = 8;
+   */
+  readme?: string;
+
   constructor(data?: PartialMessage<UpdateContractRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -16742,6 +16762,10 @@ export class UpdateContractRequest extends Message<UpdateContractRequest> {
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "exclude_tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 4, name: "include_tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 5, name: "routing_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 6, name: "admission_webhook_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 7, name: "admission_webhook_secret", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateContractRequest {
