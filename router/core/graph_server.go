@@ -290,34 +290,37 @@ type graphMux struct {
 	operationHashCache         *ristretto.Cache[uint64, string]
 	accessLogsFileLogger       *logging.BufferedLogger
 	metricStore                rmetric.Store
-	cacheMetrics               *rmetric.CacheMetrics
+	prometheusCacheMetrics     *rmetric.CacheMetrics
+	otelCacheMetrics           *rmetric.CacheMetrics
 }
 
 // configureCacheMetrics sets up the cache metrics for this mux if enabled in the config.
 func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []attribute.KeyValue) error {
-	var cacheMetricProviders []*sdkmetric.MeterProvider
 	if srv.metricConfig.OpenTelemetry.GraphqlCache {
-		cacheMetricProviders = append(cacheMetricProviders, srv.otlpMeterProvider)
+		cacheMetrics, err := rmetric.NewCacheMetrics(
+			srv.logger,
+			baseOtelAttributes,
+			srv.otlpMeterProvider)
+
+		if err != nil {
+			return fmt.Errorf("failed to create cache metrics for OTLP: %w", err)
+		}
+
+		s.otelCacheMetrics = cacheMetrics
 	}
 
 	if srv.metricConfig.Prometheus.GraphqlCache {
-		cacheMetricProviders = append(cacheMetricProviders, srv.promMeterProvider)
-	}
+		cacheMetrics, err := rmetric.NewCacheMetrics(
+			srv.logger,
+			baseOtelAttributes,
+			srv.promMeterProvider)
 
-	if len(cacheMetricProviders) == 0 {
-		return nil
-	}
+		if err != nil {
+			return fmt.Errorf("failed to create cache metrics for Prometheus: %w", err)
+		}
 
-	cacheMetrics, err := rmetric.NewCacheMetrics(
-		srv.logger,
-		baseOtelAttributes,
-		cacheMetricProviders...,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to create cache metrics: %w", err)
+		s.prometheusCacheMetrics = cacheMetrics
 	}
-
-	s.cacheMetrics = cacheMetrics
 
 	var metricInfos []rmetric.CacheMetricInfo
 
@@ -333,10 +336,16 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("validation", srv.engineExecutionConfiguration.ValidationCacheSize, s.validationCache.Metrics))
 	}
 
-	err = s.cacheMetrics.RegisterObservers(metricInfos)
+	if s.otelCacheMetrics != nil {
+		if err := s.otelCacheMetrics.RegisterObservers(metricInfos); err != nil {
+			return fmt.Errorf("failed to register observer for OTLP cache metrics: %w", err)
+		}
+	}
 
-	if err != nil {
-		return fmt.Errorf("failed to start cache metrics: %w", err)
+	if s.prometheusCacheMetrics != nil {
+		if err := s.prometheusCacheMetrics.RegisterObservers(metricInfos); err != nil {
+			return fmt.Errorf("failed to register observer for Prometheus cache metrics: %w", err)
+		}
 	}
 
 	return nil
@@ -372,8 +381,14 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 		}
 	}
 
-	if s.cacheMetrics != nil {
-		if aErr := s.cacheMetrics.Shutdown(); aErr != nil {
+	if s.otelCacheMetrics != nil {
+		if aErr := s.otelCacheMetrics.Shutdown(); aErr != nil {
+			err = errors.Join(err, aErr)
+		}
+	}
+
+	if s.prometheusCacheMetrics != nil {
+		if aErr := s.prometheusCacheMetrics.Shutdown(); aErr != nil {
 			err = errors.Join(err, aErr)
 		}
 	}
