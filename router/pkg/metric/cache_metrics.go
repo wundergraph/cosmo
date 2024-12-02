@@ -147,49 +147,49 @@ func (c *CacheMetrics) observeForCacheType(o otelmetric.Observer, config *provid
 	o.ObserveInt64(config.cacheRequestStats, int64(metrics.Hits()),
 		otelmetric.WithAttributes(c.baseAttributes...),
 		otelmetric.WithAttributes(
-			otel.CacheMetricsTypeAttribute.String("hits"),
+			otel.CacheMetricsTypeAttribute.String(otel.CacheMetricsRequestTypeHits),
 			otel.CacheMetricsCacheTypeAttribute.String(cacheType)),
 	)
 
 	o.ObserveInt64(config.cacheRequestStats, int64(metrics.Misses()),
 		otelmetric.WithAttributes(c.baseAttributes...),
 		otelmetric.WithAttributes(
-			otel.CacheMetricsTypeAttribute.String("misses"),
+			otel.CacheMetricsTypeAttribute.String(otel.CacheMetricsRequestTypeMisses),
 			otel.CacheMetricsCacheTypeAttribute.String(cacheType)),
 	)
 
 	o.ObserveInt64(config.cacheKeyStats, int64(metrics.KeysAdded()),
 		otelmetric.WithAttributes(c.baseAttributes...),
 		otelmetric.WithAttributes(
-			otel.CacheMetricsOperationAttribute.String("added"),
+			otel.CacheMetricsOperationAttribute.String(otel.CacheMetricsOperationTypeAdded),
 			otel.CacheMetricsCacheTypeAttribute.String(cacheType)),
 	)
 
 	o.ObserveInt64(config.cacheKeyStats, int64(metrics.KeysUpdated()),
 		otelmetric.WithAttributes(c.baseAttributes...),
 		otelmetric.WithAttributes(
-			otel.CacheMetricsOperationAttribute.String("updated"),
+			otel.CacheMetricsOperationAttribute.String(otel.CacheMetricsOperationTypeUpdated),
 			otel.CacheMetricsCacheTypeAttribute.String(cacheType)),
 	)
 
 	o.ObserveInt64(config.cacheKeyStats, int64(metrics.KeysEvicted()),
 		otelmetric.WithAttributes(c.baseAttributes...),
 		otelmetric.WithAttributes(
-			otel.CacheMetricsOperationAttribute.String("evicted"),
+			otel.CacheMetricsOperationAttribute.String(otel.CacheMetricsOperationTypeEvicted),
 			otel.CacheMetricsCacheTypeAttribute.String(cacheType)),
 	)
 
 	o.ObserveInt64(config.cacheCostStats, int64(metrics.CostAdded()),
 		otelmetric.WithAttributes(c.baseAttributes...),
 		otelmetric.WithAttributes(
-			otel.CacheMetricsOperationAttribute.String("added"),
+			otel.CacheMetricsOperationAttribute.String(otel.CacheMetricsOperationTypeAdded),
 			otel.CacheMetricsCacheTypeAttribute.String(cacheType)),
 	)
 
 	o.ObserveInt64(config.cacheCostStats, int64(metrics.CostEvicted()),
 		otelmetric.WithAttributes(c.baseAttributes...),
 		otelmetric.WithAttributes(
-			otel.CacheMetricsOperationAttribute.String("evicted"),
+			otel.CacheMetricsOperationAttribute.String(otel.CacheMetricsOperationTypeEvicted),
 			otel.CacheMetricsCacheTypeAttribute.String(cacheType)),
 	)
 

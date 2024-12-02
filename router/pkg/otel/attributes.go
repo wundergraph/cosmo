@@ -48,6 +48,15 @@ const (
 )
 
 const (
+	CacheMetricsOperationTypeAdded   = "added"
+	CacheMetricsOperationTypeUpdated = "updated"
+	CacheMetricsOperationTypeEvicted = "evicted"
+
+	CacheMetricsRequestTypeHits   = "hits"
+	CacheMetricsRequestTypeMisses = "misses"
+)
+
+const (
 	CacheMetricsCacheTypeAttribute = attribute.Key("cache_type")
 	CacheMetricsTypeAttribute      = attribute.Key("type")
 	CacheMetricsOperationAttribute = attribute.Key("operation")
