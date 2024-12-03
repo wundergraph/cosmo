@@ -30,8 +30,9 @@ type CustomStaticAttribute struct {
 }
 
 type CustomDynamicAttribute struct {
-	RequestHeader string `yaml:"request_header,omitempty"`
-	ContextField  string `yaml:"context_field,omitempty"`
+	RequestHeader  string `yaml:"request_header,omitempty"`
+	ContextField   string `yaml:"context_field,omitempty"`
+	ResponseHeader string `yaml:"response_header,omitempty"`
 }
 
 type CustomAttribute struct {
@@ -664,10 +665,11 @@ type AutomaticPersistedQueriesConfig struct {
 }
 
 type AccessLogsConfig struct {
-	Enabled bool                   `yaml:"enabled" env:"ACCESS_LOGS_ENABLED" envDefault:"true"`
-	Buffer  AccessLogsBufferConfig `yaml:"buffer,omitempty" env:"ACCESS_LOGS_BUFFER"`
-	Output  AccessLogsOutputConfig `yaml:"output,omitempty" env:"ACCESS_LOGS_OUTPUT"`
-	Fields  []CustomAttribute      `yaml:"fields,omitempty" env:"ACCESS_LOGS_FIELDS"`
+	Enabled   bool                      `yaml:"enabled" env:"ACCESS_LOGS_ENABLED" envDefault:"true"`
+	Buffer    AccessLogsBufferConfig    `yaml:"buffer,omitempty" env:"ACCESS_LOGS_BUFFER"`
+	Output    AccessLogsOutputConfig    `yaml:"output,omitempty" env:"ACCESS_LOGS_OUTPUT"`
+	Router    AccessLogsRouterConfig    `yaml:"router,omitempty" env:"ACCESS_LOGS_ROUTER"`
+	Subgraphs AccessLogsSubgraphsConfig `yaml:"subgraphs,omitempty" env:"ACCESS_LOGS_SUBGRAPH"`
 }
 
 type AccessLogsBufferConfig struct {
@@ -690,6 +692,15 @@ type AccessLogsStdOutOutputConfig struct {
 type AccessLogsFileOutputConfig struct {
 	Enabled bool   `yaml:"enabled" env:"ACCESS_LOGS_OUTPUT_FILE_ENABLED" envDefault:"false"`
 	Path    string `yaml:"path" env:"ACCESS_LOGS_FILE_OUTPUT_PATH" envDefault:"access.log"`
+}
+
+type AccessLogsRouterConfig struct {
+	Fields []CustomAttribute `yaml:"fields,omitempty" env:"ACCESS_LOGS_ROUTER_FIELDS"`
+}
+
+type AccessLogsSubgraphsConfig struct {
+	Enabled bool              `yaml:"enabled" env:"ACCESS_LOGS_SUBGRAPH_ENABLED" envDefault:"false"`
+	Fields  []CustomAttribute `yaml:"fields,omitempty" env:"ACCESS_LOGS_SUBGRAPH_FIELDS"`
 }
 
 type ApolloCompatibilityFlags struct {
