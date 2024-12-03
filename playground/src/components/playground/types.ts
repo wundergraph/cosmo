@@ -16,16 +16,22 @@ export type TabsState = {
   activeTabIndex: number;
 };
 
+export type PlaygroundView = 'response' | 'request-trace' | 'query-plan';
+
 type PlaygroundContextType = {
   graphId: string;
   tabsState: TabsState;
   status?: number;
   statusText?: string;
+  view: PlaygroundView;
+  setView: (val: PlaygroundView) => void;
 };
 
 export const PlaygroundContext = createContext<PlaygroundContextType>({
   graphId: '',
   tabsState: { tabs: [], activeTabIndex: 0 },
+  view: 'response',
+  setView: () => {},
 });
 
 export type PlaygroundScript = {
