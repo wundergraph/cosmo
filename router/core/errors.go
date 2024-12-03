@@ -7,6 +7,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"net"
 	"net/http"
+	"strings"
 
 	"github.com/hashicorp/go-multierror"
 	rErrors "github.com/wundergraph/cosmo/router/internal/errors"
@@ -32,6 +33,7 @@ const (
 	errorTypeUpgradeFailed
 	errorTypeEDFS
 	errorTypeInvalidWsSubprotocol
+	errorTypeEDFSInvalidMessage
 )
 
 type (
@@ -74,9 +76,11 @@ func getErrorType(err error) errorType {
 		return errorTypeEDFS
 	}
 	var invalidWsSubprotocolErr graphql_datasource.InvalidWsSubprotocolError
-
 	if errors.As(err, &invalidWsSubprotocolErr) {
 		return errorTypeInvalidWsSubprotocol
+	}
+	if strings.HasPrefix(err.Error(), "cannot parse JSON:") {
+		return errorTypeEDFSInvalidMessage
 	}
 	return errorTypeUnknown
 }
