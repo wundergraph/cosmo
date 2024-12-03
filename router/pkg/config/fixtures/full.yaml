@@ -87,6 +87,7 @@ telemetry:
     otlp:
       enabled: true
       router_runtime: true
+      graphql_cache: true
       exclude_metric_labels: []
       exclude_metrics: []
       # If no exporters are defined, the default one is used
@@ -103,6 +104,7 @@ telemetry:
       enabled: true
       path: "/metrics"
       listen_addr: "127.0.0.1:8088"
+      graphql_cache: true
       exclude_metrics: []
       exclude_metric_labels: []
 

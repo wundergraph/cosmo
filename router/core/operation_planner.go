@@ -38,22 +38,6 @@ type ExecutionPlanCache[K any, V any] interface {
 	Close()
 }
 
-func NewNoopExecutionPlanCache() ExecutionPlanCache[uint64, *planWithMetaData] {
-	return &noopExecutionPlanCache{}
-}
-
-type noopExecutionPlanCache struct{}
-
-func (n *noopExecutionPlanCache) Close() {}
-
-func (n *noopExecutionPlanCache) Get(key uint64) (*planWithMetaData, bool) {
-	return nil, false
-}
-
-func (n *noopExecutionPlanCache) Set(key uint64, value *planWithMetaData, cost int64) bool {
-	return true
-}
-
 func NewOperationPlanner(executor *Executor, planCache ExecutionPlanCache[uint64, *planWithMetaData]) *OperationPlanner {
 	return &OperationPlanner{
 		planCache:      planCache,

@@ -33,6 +33,7 @@
       "OTLP": {
         "Enabled": true,
         "RouterRuntime": true,
+        "GraphqlCache": false,
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
         "Exporters": null
@@ -41,6 +42,7 @@
         "Enabled": true,
         "Path": "/metrics",
         "ListenAddr": "127.0.0.1:8088",
+        "GraphqlCache": false,
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null
       }
