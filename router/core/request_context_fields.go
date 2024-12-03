@@ -1,8 +1,13 @@
 package core
 
 import (
+	"fmt"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"net/http"
 	"strconv"
 	"time"
 )
@@ -53,6 +58,35 @@ func NewDurationLogField(val time.Duration, attribute config.CustomAttribute) za
 		}
 	}
 	return zap.Skip()
+}
+
+func AccessLogsFieldHandler(attributes []config.CustomAttribute, panicError any, request *http.Request, responseHeader *http.Header) []zapcore.Field {
+	reqContext := getRequestContext(request.Context())
+
+	resFields := make([]zapcore.Field, 0, len(attributes))
+	resFields = append(resFields, logging.WithRequestID(middleware.GetReqID(request.Context())))
+
+	for _, field := range attributes {
+		if field.ValueFrom != nil && field.ValueFrom.ResponseHeader != "" && responseHeader != nil {
+			resFields = append(resFields, NewStringLogField(responseHeader.Get(field.ValueFrom.ResponseHeader), field))
+		} else if field.ValueFrom != nil && field.ValueFrom.RequestHeader != "" {
+			resFields = append(resFields, NewStringLogField(request.Header.Get(field.ValueFrom.RequestHeader), field))
+		} else if field.ValueFrom != nil && field.ValueFrom.ContextField != "" && reqContext != nil && reqContext.operation != nil {
+			if field.ValueFrom.ContextField == ContextFieldResponseErrorMessage && panicError != nil {
+				errMessage := fmt.Sprintf("%v", panicError)
+				if v := NewStringLogField(errMessage, field); v != zap.Skip() {
+					resFields = append(resFields, v)
+				}
+			}
+			if v := GetLogFieldFromCustomAttribute(field, reqContext); v != zap.Skip() {
+				resFields = append(resFields, v)
+			}
+		} else if field.Default != "" {
+			resFields = append(resFields, NewStringLogField(field.Default, field))
+		}
+	}
+
+	return resFields
 }
 
 func GetLogFieldFromCustomAttribute(field config.CustomAttribute, req *requestContext) zap.Field {
