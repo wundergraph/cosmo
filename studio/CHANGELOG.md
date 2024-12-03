@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.95.6](https://github.com/wundergraph/cosmo/compare/studio@0.95.5...studio@0.95.6) (2024-12-03)
+
+### Bug Fixes
+
+* disable query plan for subscriptions ([#1417](https://github.com/wundergraph/cosmo/issues/1417)) ([7cdad41](https://github.com/wundergraph/cosmo/commit/7cdad413861535c78f8b664d2dbe4750e16770fb)) (@thisisnithin)
+
 ## [0.95.5](https://github.com/wundergraph/cosmo/compare/studio@0.95.4...studio@0.95.5) (2024-12-03)
 
 ### Bug Fixes
