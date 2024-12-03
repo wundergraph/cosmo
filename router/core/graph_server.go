@@ -284,7 +284,7 @@ func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.M
 
 type graphMux struct {
 	mux                        *chi.Mux
-	planCache                  ExecutionPlanCache[uint64, *planWithMetaData]
+	planCache                  *ristretto.Cache[uint64, *planWithMetaData]
 	persistedOperationCache    *ristretto.Cache[uint64, NormalizationCacheEntry]
 	normalizationCache         *ristretto.Cache[uint64, NormalizationCacheEntry]
 	complexityCalculationCache *ristretto.Cache[uint64, ComplexityCacheEntry]
@@ -292,13 +292,74 @@ type graphMux struct {
 	operationHashCache         *ristretto.Cache[uint64, string]
 	accessLogsFileLogger       *logging.BufferedLogger
 	metricStore                rmetric.Store
+	prometheusCacheMetrics     *rmetric.CacheMetrics
+	otelCacheMetrics           *rmetric.CacheMetrics
+}
+
+// configureCacheMetrics sets up the cache metrics for this mux if enabled in the config.
+func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []attribute.KeyValue) error {
+	if srv.metricConfig.OpenTelemetry.GraphqlCache {
+		cacheMetrics, err := rmetric.NewCacheMetrics(
+			srv.logger,
+			baseOtelAttributes,
+			srv.otlpMeterProvider)
+
+		if err != nil {
+			return fmt.Errorf("failed to create cache metrics for OTLP: %w", err)
+		}
+
+		s.otelCacheMetrics = cacheMetrics
+	}
+
+	if srv.metricConfig.Prometheus.GraphqlCache {
+		cacheMetrics, err := rmetric.NewCacheMetrics(
+			srv.logger,
+			baseOtelAttributes,
+			srv.promMeterProvider)
+
+		if err != nil {
+			return fmt.Errorf("failed to create cache metrics for Prometheus: %w", err)
+		}
+
+		s.prometheusCacheMetrics = cacheMetrics
+	}
+
+	var metricInfos []rmetric.CacheMetricInfo
+
+	if s.planCache != nil {
+		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("execution", srv.engineExecutionConfiguration.ExecutionPlanCacheSize, s.planCache.Metrics))
+	}
+
+	if s.normalizationCache != nil {
+		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("normalization", srv.engineExecutionConfiguration.NormalizationCacheSize, s.normalizationCache.Metrics))
+	}
+
+	if s.validationCache != nil {
+		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("validation", srv.engineExecutionConfiguration.ValidationCacheSize, s.validationCache.Metrics))
+	}
+
+	if s.otelCacheMetrics != nil {
+		if err := s.otelCacheMetrics.RegisterObservers(metricInfos); err != nil {
+			return fmt.Errorf("failed to register observer for OTLP cache metrics: %w", err)
+		}
+	}
+
+	if s.prometheusCacheMetrics != nil {
+		if err := s.prometheusCacheMetrics.RegisterObservers(metricInfos); err != nil {
+			return fmt.Errorf("failed to register observer for Prometheus cache metrics: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (s *graphMux) Shutdown(ctx context.Context) error {
 
 	var err error
 
-	s.planCache.Close()
+	if s.planCache != nil {
+		s.planCache.Close()
+	}
 
 	if s.persistedOperationCache != nil {
 		s.persistedOperationCache.Close()
@@ -318,6 +379,18 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 
 	if s.accessLogsFileLogger != nil {
 		if aErr := s.accessLogsFileLogger.Close(); aErr != nil {
+			err = errors.Join(err, aErr)
+		}
+	}
+
+	if s.otelCacheMetrics != nil {
+		if aErr := s.otelCacheMetrics.Shutdown(); aErr != nil {
+			err = errors.Join(err, aErr)
+		}
+	}
+
+	if s.prometheusCacheMetrics != nil {
+		if aErr := s.prometheusCacheMetrics.Shutdown(); aErr != nil {
 			err = errors.Join(err, aErr)
 		}
 	}
@@ -396,6 +469,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	if s.engineExecutionConfiguration.ExecutionPlanCacheSize > 0 {
 		planCacheConfig := &ristretto.Config[uint64, *planWithMetaData]{
+			Metrics:     s.metricConfig.OpenTelemetry.GraphqlCache || s.metricConfig.Prometheus.GraphqlCache,
 			MaxCost:     s.engineExecutionConfiguration.ExecutionPlanCacheSize,
 			NumCounters: s.engineExecutionConfiguration.ExecutionPlanCacheSize * 10,
 			BufferItems: 64,
@@ -404,8 +478,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		if err != nil {
 			return nil, fmt.Errorf("failed to create planner cache: %w", err)
 		}
-	} else {
-		gm.planCache = NewNoopExecutionPlanCache()
 	}
 
 	if s.engineExecutionConfiguration.EnablePersistedOperationsCache || s.automaticPersistedQueriesConfig.Enabled {
@@ -421,6 +493,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	if s.engineExecutionConfiguration.EnableNormalizationCache && s.engineExecutionConfiguration.NormalizationCacheSize > 0 {
 		normalizationCacheConfig := &ristretto.Config[uint64, NormalizationCacheEntry]{
+			Metrics:     s.metricConfig.OpenTelemetry.GraphqlCache || s.metricConfig.Prometheus.GraphqlCache,
 			MaxCost:     s.engineExecutionConfiguration.NormalizationCacheSize,
 			NumCounters: s.engineExecutionConfiguration.NormalizationCacheSize * 10,
 			BufferItems: 64,
@@ -433,6 +506,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	if s.engineExecutionConfiguration.EnableValidationCache && s.engineExecutionConfiguration.ValidationCacheSize > 0 {
 		validationCacheConfig := &ristretto.Config[uint64, bool]{
+			Metrics:     s.metricConfig.OpenTelemetry.GraphqlCache || s.metricConfig.Prometheus.GraphqlCache,
 			MaxCost:     s.engineExecutionConfiguration.ValidationCacheSize,
 			NumCounters: s.engineExecutionConfiguration.ValidationCacheSize * 10,
 			BufferItems: 64,
@@ -453,6 +527,10 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		if err != nil {
 			return nil, fmt.Errorf("failed to create query depth cache: %w", err)
 		}
+	}
+
+	if err = gm.configureCacheMetrics(s, baseOtelAttributes); err != nil {
+		return nil, err
 	}
 
 	computeSha256 := false

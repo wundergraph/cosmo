@@ -844,6 +844,11 @@
                   "default": true,
                   "description": "Enable the collection of metrics for the router runtime."
                 },
+                "graphql_cache": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the collection of metrics for the GraphQL operation router caches. The default value is false."
+                },
                 "exporters": {
                   "type": "array",
                   "description": "The exporters to use to export the metrics. If no exporters are specified, the default Cosmo Cloud exporter is used. If you override, please make sure to include the default exporter.",
@@ -922,6 +927,11 @@
                   "description": "The address on which the metrics are served.",
                   "format": "hostname-port",
                   "default": "localhost:8088"
+                },
+                "graphql_cache": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the collection of metrics for the GraphQL operation router caches. The default value is false."
                 },
                 "exclude_metrics": {
                   "type": "array",
