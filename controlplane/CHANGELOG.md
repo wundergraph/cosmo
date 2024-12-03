@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.118.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.117.2...controlplane@0.118.0) (2024-12-03)
+
+### Features
+
+* add an option to update the readme, routing url and admission webhook url of a contract ([#1403](https://github.com/wundergraph/cosmo/issues/1403)) ([226bc9c](https://github.com/wundergraph/cosmo/commit/226bc9cd863e27537afd42ef23418c3acd06733a)) (@JivusAyrus)
+* add apis to fetch fedGraph, subgraph and namespace by id ([#1386](https://github.com/wundergraph/cosmo/issues/1386)) ([66b3650](https://github.com/wundergraph/cosmo/commit/66b365061677d41b7218d289aad99f0661e5d51e)) (@JivusAyrus)
+
 ## [0.117.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.117.1...controlplane@0.117.2) (2024-11-27)
 
 ### Bug Fixes

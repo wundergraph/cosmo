@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.71.0](https://github.com/wundergraph/cosmo/compare/wgc@0.70.5...wgc@0.71.0) (2024-12-03)
+
+### Features
+
+* add an option to update the readme, routing url and admission webhook url of a contract ([#1403](https://github.com/wundergraph/cosmo/issues/1403)) ([226bc9c](https://github.com/wundergraph/cosmo/commit/226bc9cd863e27537afd42ef23418c3acd06733a)) (@JivusAyrus)
+
 ## [0.70.5](https://github.com/wundergraph/cosmo/compare/wgc@0.70.4...wgc@0.70.5) (2024-11-27)
 
 **Note:** Version bump only for package wgc
