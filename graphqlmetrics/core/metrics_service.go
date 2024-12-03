@@ -55,9 +55,10 @@ type MetricsService struct {
 // NewMetricsService creates a new metrics service
 func NewMetricsService(logger *zap.Logger, chConn clickhouse.Conn, processorConfig ProcessorConfig) *MetricsService {
 	cacheConfig := &ristretto.Config[string, struct{}]{
-		MaxCost:     50_000,
-		NumCounters: 50_000 * 10,
-		BufferItems: 64,
+		MaxCost:            50_000,
+		NumCounters:        50_000 * 10,
+		BufferItems:        64,
+		IgnoreInternalCost: true,
 	}
 	opGuardCache, err := ristretto.NewCache[string, struct{}](cacheConfig)
 	if err != nil {

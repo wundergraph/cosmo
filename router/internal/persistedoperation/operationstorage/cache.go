@@ -29,9 +29,10 @@ func NewOperationsCache(cacheSize int64) (*OperationsCache, error) {
 
 	var err error
 	oc.Cache, err = ristretto.NewCache(&ristretto.Config[string, []byte]{
-		NumCounters: (cacheSize * 10) / persistentAverageCacheEntrySize,
-		MaxCost:     cacheSize,
-		BufferItems: 64,
+		NumCounters:        (cacheSize * 10) / persistentAverageCacheEntrySize,
+		MaxCost:            cacheSize,
+		IgnoreInternalCost: true,
+		BufferItems:        64,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("initializing operations cache: %v", err)

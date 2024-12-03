@@ -296,6 +296,90 @@ type graphMux struct {
 	otelCacheMetrics           *rmetric.CacheMetrics
 }
 
+// buildOperationCaches creates the caches for the graph mux.
+// The caches are created based on the engine configuration.
+func (s *graphMux) buildOperationCaches(srv *graphServer) (err error) {
+
+	// We create a new execution plan cache for each operation planner which is coupled to
+	// the specific engine configuration. This is necessary because otherwise we would return invalid plans.
+	//
+	// when an execution plan was generated, which can be quite expensive, we want to cache it
+	// this means that we can hash the input and cache the generated plan
+	// the next time we get the same input, we can just return the cached plan
+	// the engine is smart enough to first do normalization and then hash the input
+	// this means that we can cache the normalized input and don't have to worry about
+	// different inputs that would generate the same execution plan
+
+	if srv.engineExecutionConfiguration.ExecutionPlanCacheSize > 0 {
+		planCacheConfig := &ristretto.Config[uint64, *planWithMetaData]{
+			Metrics:            srv.metricConfig.OpenTelemetry.GraphqlCache || srv.metricConfig.Prometheus.GraphqlCache,
+			MaxCost:            srv.engineExecutionConfiguration.ExecutionPlanCacheSize,
+			NumCounters:        srv.engineExecutionConfiguration.ExecutionPlanCacheSize * 10,
+			IgnoreInternalCost: true,
+			BufferItems:        64,
+		}
+		s.planCache, err = ristretto.NewCache[uint64, *planWithMetaData](planCacheConfig)
+		if err != nil {
+			return fmt.Errorf("failed to create planner cache: %w", err)
+		}
+	}
+
+	if srv.engineExecutionConfiguration.EnablePersistedOperationsCache || srv.automaticPersistedQueriesConfig.Enabled {
+		cacheSize := int64(1024)
+		persistedOperationCacheConfig := &ristretto.Config[uint64, NormalizationCacheEntry]{
+			MaxCost:            cacheSize,
+			NumCounters:        cacheSize * 10,
+			IgnoreInternalCost: true,
+			BufferItems:        64,
+		}
+
+		s.persistedOperationCache, _ = ristretto.NewCache[uint64, NormalizationCacheEntry](persistedOperationCacheConfig)
+	}
+
+	if srv.engineExecutionConfiguration.EnableNormalizationCache && srv.engineExecutionConfiguration.NormalizationCacheSize > 0 {
+		normalizationCacheConfig := &ristretto.Config[uint64, NormalizationCacheEntry]{
+			Metrics:            srv.metricConfig.OpenTelemetry.GraphqlCache || srv.metricConfig.Prometheus.GraphqlCache,
+			MaxCost:            srv.engineExecutionConfiguration.NormalizationCacheSize,
+			NumCounters:        srv.engineExecutionConfiguration.NormalizationCacheSize * 10,
+			IgnoreInternalCost: true,
+			BufferItems:        64,
+		}
+		s.normalizationCache, err = ristretto.NewCache[uint64, NormalizationCacheEntry](normalizationCacheConfig)
+		if err != nil {
+			return fmt.Errorf("failed to create normalization cache: %w", err)
+		}
+	}
+
+	if srv.engineExecutionConfiguration.EnableValidationCache && srv.engineExecutionConfiguration.ValidationCacheSize > 0 {
+		validationCacheConfig := &ristretto.Config[uint64, bool]{
+			Metrics:            srv.metricConfig.OpenTelemetry.GraphqlCache || srv.metricConfig.Prometheus.GraphqlCache,
+			MaxCost:            srv.engineExecutionConfiguration.ValidationCacheSize,
+			NumCounters:        srv.engineExecutionConfiguration.ValidationCacheSize * 10,
+			IgnoreInternalCost: true,
+			BufferItems:        64,
+		}
+		s.validationCache, err = ristretto.NewCache[uint64, bool](validationCacheConfig)
+		if err != nil {
+			return fmt.Errorf("failed to create validation cache: %w", err)
+		}
+	}
+
+	if srv.securityConfiguration.ComplexityCalculationCache != nil && srv.securityConfiguration.ComplexityCalculationCache.Enabled && srv.securityConfiguration.ComplexityCalculationCache.CacheSize > 0 {
+		complexityCalculationCacheConfig := &ristretto.Config[uint64, ComplexityCacheEntry]{
+			MaxCost:            srv.securityConfiguration.ComplexityCalculationCache.CacheSize,
+			NumCounters:        srv.securityConfiguration.ComplexityCalculationCache.CacheSize * 10,
+			IgnoreInternalCost: true,
+			BufferItems:        64,
+		}
+		s.complexityCalculationCache, err = ristretto.NewCache[uint64, ComplexityCacheEntry](complexityCalculationCacheConfig)
+		if err != nil {
+			return fmt.Errorf("failed to create query depth cache: %w", err)
+		}
+	}
+
+	return nil
+}
+
 // configureCacheMetrics sets up the cache metrics for this mux if enabled in the config.
 func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []attribute.KeyValue) error {
 	if srv.metricConfig.OpenTelemetry.GraphqlCache {
@@ -457,76 +541,8 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		return nil, err
 	}
 
-	// We create a new execution plan cache for each operation planner which is coupled to
-	// the specific engine configuration. This is necessary because otherwise we would return invalid plans.
-	//
-	// when an execution plan was generated, which can be quite expensive, we want to cache it
-	// this means that we can hash the input and cache the generated plan
-	// the next time we get the same input, we can just return the cached plan
-	// the engine is smart enough to first do normalization and then hash the input
-	// this means that we can cache the normalized input and don't have to worry about
-	// different inputs that would generate the same execution plan
-
-	if s.engineExecutionConfiguration.ExecutionPlanCacheSize > 0 {
-		planCacheConfig := &ristretto.Config[uint64, *planWithMetaData]{
-			Metrics:     s.metricConfig.OpenTelemetry.GraphqlCache || s.metricConfig.Prometheus.GraphqlCache,
-			MaxCost:     s.engineExecutionConfiguration.ExecutionPlanCacheSize,
-			NumCounters: s.engineExecutionConfiguration.ExecutionPlanCacheSize * 10,
-			BufferItems: 64,
-		}
-		gm.planCache, err = ristretto.NewCache[uint64, *planWithMetaData](planCacheConfig)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create planner cache: %w", err)
-		}
-	}
-
-	if s.engineExecutionConfiguration.EnablePersistedOperationsCache || s.automaticPersistedQueriesConfig.Enabled {
-		cacheSize := int64(1024 * 10)
-		persistedOperationCacheConfig := &ristretto.Config[uint64, NormalizationCacheEntry]{
-			MaxCost:     cacheSize,
-			NumCounters: cacheSize * 10,
-			BufferItems: 64,
-		}
-
-		gm.persistedOperationCache, _ = ristretto.NewCache[uint64, NormalizationCacheEntry](persistedOperationCacheConfig)
-	}
-
-	if s.engineExecutionConfiguration.EnableNormalizationCache && s.engineExecutionConfiguration.NormalizationCacheSize > 0 {
-		normalizationCacheConfig := &ristretto.Config[uint64, NormalizationCacheEntry]{
-			Metrics:     s.metricConfig.OpenTelemetry.GraphqlCache || s.metricConfig.Prometheus.GraphqlCache,
-			MaxCost:     s.engineExecutionConfiguration.NormalizationCacheSize,
-			NumCounters: s.engineExecutionConfiguration.NormalizationCacheSize * 10,
-			BufferItems: 64,
-		}
-		gm.normalizationCache, err = ristretto.NewCache[uint64, NormalizationCacheEntry](normalizationCacheConfig)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create normalization cache: %w", err)
-		}
-	}
-
-	if s.engineExecutionConfiguration.EnableValidationCache && s.engineExecutionConfiguration.ValidationCacheSize > 0 {
-		validationCacheConfig := &ristretto.Config[uint64, bool]{
-			Metrics:     s.metricConfig.OpenTelemetry.GraphqlCache || s.metricConfig.Prometheus.GraphqlCache,
-			MaxCost:     s.engineExecutionConfiguration.ValidationCacheSize,
-			NumCounters: s.engineExecutionConfiguration.ValidationCacheSize * 10,
-			BufferItems: 64,
-		}
-		gm.validationCache, err = ristretto.NewCache[uint64, bool](validationCacheConfig)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create validation cache: %w", err)
-		}
-	}
-
-	if s.securityConfiguration.ComplexityCalculationCache != nil && s.securityConfiguration.ComplexityCalculationCache.Enabled && s.securityConfiguration.ComplexityCalculationCache.CacheSize > 0 {
-		complexityCalculationCacheConfig := &ristretto.Config[uint64, ComplexityCacheEntry]{
-			MaxCost:     s.securityConfiguration.ComplexityCalculationCache.CacheSize,
-			NumCounters: s.securityConfiguration.ComplexityCalculationCache.CacheSize * 10,
-			BufferItems: 64,
-		}
-		gm.complexityCalculationCache, err = ristretto.NewCache[uint64, ComplexityCacheEntry](complexityCalculationCacheConfig)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create query depth cache: %w", err)
-		}
+	if err = gm.buildOperationCaches(s); err != nil {
+		return nil, err
 	}
 
 	if err = gm.configureCacheMetrics(s, baseOtelAttributes); err != nil {
@@ -554,9 +570,10 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	if computeSha256 {
 		operationHashCacheConfig := &ristretto.Config[uint64, string]{
-			MaxCost:     s.engineExecutionConfiguration.OperationHashCacheSize,
-			NumCounters: s.engineExecutionConfiguration.OperationHashCacheSize * 10,
-			BufferItems: 64,
+			MaxCost:            s.engineExecutionConfiguration.OperationHashCacheSize,
+			NumCounters:        s.engineExecutionConfiguration.OperationHashCacheSize * 10,
+			IgnoreInternalCost: true,
+			BufferItems:        64,
 		}
 		gm.operationHashCache, err = ristretto.NewCache[uint64, string](operationHashCacheConfig)
 		if err != nil {

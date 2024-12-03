@@ -450,11 +450,11 @@
     "MinifySubgraphOperations": true,
     "EnablePersistedOperationsCache": true,
     "EnableNormalizationCache": true,
-    "NormalizationCacheSize": 10240,
+    "NormalizationCacheSize": 1024,
     "OperationHashCacheSize": 2048,
     "ParseKitPoolSize": 16,
     "EnableValidationCache": true,
-    "ValidationCacheSize": 10240,
+    "ValidationCacheSize": 1024,
     "ResolverMaxRecyclableParserSize": 4096,
     "EnableSubgraphFetchOperationName": false
   },
