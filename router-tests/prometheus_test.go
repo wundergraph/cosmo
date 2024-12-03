@@ -5,35 +5,17 @@ import (
 	"regexp"
 	"strings"
 	"testing"
-	"time"
-	"unsafe"
-
-	"github.com/wundergraph/cosmo/router/core"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	io_prometheus_client "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 	"go.opentelemetry.io/otel/sdk/metric"
 )
-
-// TODO: This is a temporary workaround to get the size of the storeItem struct as ristretto.Cache adds an internal cost to the provided cost.
-const ristrettoInternalCost = int64(unsafe.Sizeof(storeItem[any]{}))
-
-// storeItem is a type that represents the structure of an internal item in the ristretto.Cache.
-type storeItem[V any] struct {
-	//lint:ignore U1000 reason: temporary workaround
-	key uint64
-	//lint:ignore U1000 reason: temporary workaround
-	conflict uint64
-	//lint:ignore U1000 reason: temporary workaround
-	value V
-	//lint:ignore U1000 reason: temporary workaround
-	expiration time.Time
-}
 
 func TestPrometheus(t *testing.T) {
 	t.Parallel()
@@ -2985,7 +2967,7 @@ func TestPrometheus(t *testing.T) {
 			err            error
 			metricFamilies []*io_prometheus_client.MetricFamily
 			// The base cost to store any item in the cache with the current configuration
-			baseCost = ristrettoInternalCost + 1
+			baseCost int64 = 1
 		)
 
 		metricReaderFiltered := metric.NewManualReader()
@@ -3313,7 +3295,7 @@ func TestPrometheus(t *testing.T) {
 			err            error
 			metricFamilies []*io_prometheus_client.MetricFamily
 			// The base cost to store any item in the cache with the current configuration
-			baseCost = ristrettoInternalCost + 1
+			baseCost int64 = 1
 		)
 
 		metricReaderFiltered := metric.NewManualReader()
@@ -3640,7 +3622,7 @@ func TestPrometheus(t *testing.T) {
 			err            error
 			metricFamilies []*io_prometheus_client.MetricFamily
 			// The base cost to store any item in the cache with the current configuration
-			baseCost = ristrettoInternalCost + 1
+			baseCost int64 = 1
 		)
 
 		metricReaderFiltered := metric.NewManualReader()
