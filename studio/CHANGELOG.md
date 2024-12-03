@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.95.5](https://github.com/wundergraph/cosmo/compare/studio@0.95.4...studio@0.95.5) (2024-12-03)
+
+### Bug Fixes
+
+* override toggle in check details page ([#1414](https://github.com/wundergraph/cosmo/issues/1414)) ([f0b4354](https://github.com/wundergraph/cosmo/commit/f0b435410ef5c538866cded69c9b02f1808bc788)) (@JivusAyrus)
+
 ## [0.95.4](https://github.com/wundergraph/cosmo/compare/studio@0.95.3...studio@0.95.4) (2024-11-27)
 
 ### Bug Fixes
