@@ -9,7 +9,7 @@
     "build": "del dist && tsc"
   },
   "dependencies": {
-    "@hono/node-server": "1.11.0",
+    "@hono/node-server": "1.13.7",
     "@wundergraph/cosmo-shared": "workspace:^",
     "dotenv": "^16.4.5",
     "hono": "4.6.12"

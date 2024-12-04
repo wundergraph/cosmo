@@ -71,8 +71,8 @@ importers:
   admission-server:
     dependencies:
       '@hono/node-server':
-        specifier: 1.11.0
-        version: 1.11.0
+        specifier: 1.13.7
+        version: 1.13.7(hono@4.6.12)
       '@wundergraph/cosmo-shared':
         specifier: workspace:^
         version: link:../shared
@@ -3428,10 +3428,6 @@ packages:
     resolution: {integrity: sha512-7TyMjRrZZMBPa+/5Y8lN0iyvUU/01PeMGX2+RE7cQWpEUIcb4QotzUObFkJDejj/HUH4qjP/eQ0gzzKs2f+6Yw==}
     peerDependencies:
       react: 18.3.1
-
-  '@hono/node-server@1.11.0':
-    resolution: {integrity: sha512-TLIJq9TMtD1NEG1mVoqNUn1Ita0qSaB5XboZErjFBcO/GJYXwWY4dVdTi9G0lbxtu0x+hJXDItcLaFHb7rlFTw==}
-    engines: {node: '>=18.14.1'}
 
   '@hono/node-server@1.13.7':
     resolution: {integrity: sha512-kTfUMsoloVKtRA2fLiGSd9qBddmru9KadNyhJCwgKBxTiNkaAJEwkVN9KV/rS4HtmmNRtUh6P+YpmjRMl0d9vQ==}
@@ -15794,8 +15790,6 @@ snapshots:
   '@heroicons/react@2.0.18(react@18.3.1)':
     dependencies:
       react: 18.3.1
-
-  '@hono/node-server@1.11.0': {}
 
   '@hono/node-server@1.13.7(hono@4.6.12)':
     dependencies:
