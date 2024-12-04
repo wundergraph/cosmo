@@ -54,6 +54,7 @@ type ExecutorBuildOptions struct {
 	PubSubProviders          *EnginePubSubProviders
 	Reporter                 resolve.Reporter
 	ApolloCompatibilityFlags config.ApolloCompatibilityFlags
+	HeartbeatInterval        time.Duration
 }
 
 func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *ExecutorBuildOptions) (*Executor, error) {
@@ -76,6 +77,7 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 		DefaultErrorExtensionCode:          opts.RouterEngineConfig.SubgraphErrorPropagation.DefaultExtensionCode,
 		AllowedSubgraphErrorFields:         opts.RouterEngineConfig.SubgraphErrorPropagation.AllowedFields,
 		MaxRecyclableParserSize:            opts.RouterEngineConfig.Execution.ResolverMaxRecyclableParserSize,
+		HeartbeatInterval:                  opts.HeartbeatInterval,
 	}
 
 	if opts.ApolloCompatibilityFlags.ValueCompletion.Enabled {

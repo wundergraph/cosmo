@@ -214,6 +214,7 @@ type (
 		webSocketConfiguration   *config.WebSocketConfiguration
 		subgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
 		clientHeader             config.ClientHeader
+		heartbeatInterval        time.Duration
 	}
 	// Option defines the method to customize server.
 	Option func(svr *Router)
@@ -1314,6 +1315,13 @@ func WithTracing(cfg *rtrace.Config) Option {
 func WithCors(corsOpts *cors.Config) Option {
 	return func(r *Router) {
 		r.corsOptions = corsOpts
+	}
+}
+
+// WithHeartbeatInterval sets the interval for the engine to send heartbeats for multipart subscriptions.
+func WithHeartbeatInterval(interval time.Duration) Option {
+	return func(r *Router) {
+		r.heartbeatInterval = interval
 	}
 }
 

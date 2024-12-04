@@ -281,12 +281,15 @@ func TestNatsEvents(t *testing.T) {
 			assertLineEquals(reader, "")
 		}
 
-		heartbeatInterval := 5 * time.Second
+		heartbeatInterval := 1 * time.Second
 
 		t.Run("subscribe with multipart responses", func(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithHeartbeatInterval(heartbeatInterval),
+				},
 				EnableNats: true,
 				TLSConfig: &core.TlsConfig{
 					Enabled:  true,
@@ -354,6 +357,9 @@ func TestNatsEvents(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				EnableNats: true,
 				TLSConfig:  nil, // Force Http/1
+				RouterOptions: []core.Option{
+					core.WithHeartbeatInterval(heartbeatInterval),
+				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 
 				subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`)
