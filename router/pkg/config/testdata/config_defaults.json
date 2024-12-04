@@ -33,6 +33,7 @@
       "OTLP": {
         "Enabled": true,
         "RouterRuntime": true,
+        "GraphqlCache": false,
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
         "Exporters": null
@@ -41,6 +42,7 @@
         "Enabled": true,
         "Path": "/metrics",
         "ListenAddr": "127.0.0.1:8088",
+        "GraphqlCache": false,
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null
       }
@@ -140,7 +142,13 @@
         "Path": "access.log"
       }
     },
-    "Fields": null
+    "Router": {
+      "Fields": null
+    },
+    "Subgraphs": {
+      "Enabled": false,
+      "Fields": null
+    }
   },
   "ListenAddr": "localhost:3002",
   "ControlplaneURL": "https://cosmo-cp.wundergraph.com",
@@ -234,17 +242,17 @@
     "WebSocketClientPollTimeout": 1000000000,
     "WebSocketClientConnBufferSize": 128,
     "WebSocketClientReadTimeout": 5000000000,
-    "ExecutionPlanCacheSize": 10240,
+    "ExecutionPlanCacheSize": 1024,
     "MinifySubgraphOperations": true,
     "EnablePersistedOperationsCache": true,
     "EnableNormalizationCache": true,
-    "NormalizationCacheSize": 10240,
+    "NormalizationCacheSize": 1024,
     "OperationHashCacheSize": 2048,
     "ParseKitPoolSize": 16,
     "EnableValidationCache": true,
-    "ValidationCacheSize": 10240,
+    "ValidationCacheSize": 1024,
     "ResolverMaxRecyclableParserSize": 32768,
-    "EnableSubgraphFetchOperationName": false
+    "EnableSubgraphFetchOperationName": true
   },
   "WebSocket": {
     "Enabled": true,

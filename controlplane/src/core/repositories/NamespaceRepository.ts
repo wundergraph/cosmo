@@ -1,6 +1,7 @@
-import { and, eq } from 'drizzle-orm';
+import { Name, and, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
+import { NamespaceDTO } from '../../types/index.js';
 
 export const DefaultNamespace = 'default';
 
@@ -10,10 +11,42 @@ export class NamespaceRepository {
     private organizationId: string,
   ) {}
 
-  public byName(name: string) {
-    return this.db.query.namespaces.findFirst({
+  public async byName(name: string): Promise<NamespaceDTO | undefined> {
+    const namespace = await this.db.query.namespaces.findFirst({
       where: and(eq(schema.namespaces.organizationId, this.organizationId), eq(schema.namespaces.name, name)),
     });
+
+    if (!namespace) {
+      return undefined;
+    }
+
+    return {
+      id: namespace.id,
+      name: namespace.name,
+      enableGraphPruning: namespace.enableGraphPruning,
+      enableLinting: namespace.enableLinting,
+      organizationId: namespace.organizationId,
+      createdBy: namespace.createdBy || undefined,
+    };
+  }
+
+  public async byId(id: string): Promise<NamespaceDTO | undefined> {
+    const namespace = await this.db.query.namespaces.findFirst({
+      where: and(eq(schema.namespaces.organizationId, this.organizationId), eq(schema.namespaces.id, id)),
+    });
+
+    if (!namespace) {
+      return undefined;
+    }
+
+    return {
+      id: namespace.id,
+      name: namespace.name,
+      enableGraphPruning: namespace.enableGraphPruning,
+      enableLinting: namespace.enableLinting,
+      organizationId: namespace.organizationId,
+      createdBy: namespace.createdBy || undefined,
+    };
   }
 
   public async byTargetId(id: string) {

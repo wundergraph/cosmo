@@ -14,9 +14,10 @@ import (
 const DefaultServerName = "cosmo-router"
 
 type PrometheusConfig struct {
-	Enabled    bool
-	ListenAddr string
-	Path       string
+	Enabled      bool
+	ListenAddr   string
+	Path         string
+	GraphqlCache bool
 	// Metrics to exclude from Prometheus exporter
 	ExcludeMetrics []*regexp.Regexp
 	// Metric labels to exclude from Prometheus exporter
@@ -43,6 +44,7 @@ type OpenTelemetryExporter struct {
 type OpenTelemetry struct {
 	Enabled       bool
 	RouterRuntime bool
+	GraphqlCache  bool
 	Exporters     []*OpenTelemetryExporter
 	// Metrics to exclude from the OTLP exporter.
 	ExcludeMetrics []*regexp.Regexp

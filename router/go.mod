@@ -37,7 +37,7 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/twmb/franz-go v1.16.1
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.128
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.131
 	// Do not upgrade, it renames attributes we rely on
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/contrib/propagators/b3 v1.23.0
@@ -56,8 +56,8 @@ require (
 	go.uber.org/automaxprocs v1.5.3
 	go.uber.org/zap v1.27.0
 	go.withmatt.com/connect-brotli v0.4.0
-	golang.org/x/sync v0.8.0
-	golang.org/x/sys v0.26.0 // indirect
+	golang.org/x/sync v0.9.0
+	golang.org/x/sys v0.27.0 // indirect
 	google.golang.org/grpc v1.61.0
 	google.golang.org/protobuf v1.34.2
 )

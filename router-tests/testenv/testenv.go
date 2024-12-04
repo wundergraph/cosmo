@@ -112,6 +112,13 @@ type MetricExclusions struct {
 	ExcludedOTLPMetricLabels       []*regexp.Regexp
 }
 
+type MetricOptions struct {
+	MetricExclusions            MetricExclusions
+	EnableRuntimeMetrics        bool
+	EnableOTLPRouterCache       bool
+	EnablePrometheusRouterCache bool
+}
+
 type Config struct {
 	Subgraphs                          SubgraphsConfig
 	RouterConfig                       *RouterConfig
@@ -134,7 +141,6 @@ type Config struct {
 	CustomResourceAttributes           []config.CustomStaticAttribute
 	MetricReader                       metric.Reader
 	PrometheusRegistry                 *prometheus.Registry
-	MetricExclusions                   MetricExclusions
 	ShutdownDelay                      time.Duration
 	NoRetryClient                      bool
 	PropagationConfig                  config.PropagationConfig
@@ -146,9 +152,12 @@ type Config struct {
 	Logger                             *zap.Logger
 	AccessLogger                       *zap.Logger
 	AccessLogFields                    []config.CustomAttribute
+	MetricOptions                      MetricOptions
 	EnableRuntimeMetrics               bool
 	EnableNats                         bool
 	EnableKafka                        bool
+	SubgraphAccessLogsEnabled          bool
+	SubgraphAccessLogFields            []config.CustomAttribute
 }
 
 type SubgraphsConfig struct {
@@ -685,8 +694,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	routerOpts := []core.Option{
 		core.WithLogger(testConfig.Logger),
 		core.WithAccessLogs(&core.AccessLogsConfig{
-			Logger:     testConfig.AccessLogger,
-			Attributes: testConfig.AccessLogFields,
+			Logger:             testConfig.AccessLogger,
+			Attributes:         testConfig.AccessLogFields,
+			SubgraphEnabled:    testConfig.SubgraphAccessLogsEnabled,
+			SubgraphAttributes: testConfig.SubgraphAccessLogFields,
 		}),
 		core.WithGraphApiToken(graphApiToken),
 		core.WithDevelopmentMode(true),
@@ -764,8 +775,9 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			ListenAddr:          fmt.Sprintf("localhost:%d", port),
 			Path:                "/metrics",
 			TestRegistry:        testConfig.PrometheusRegistry,
-			ExcludeMetrics:      testConfig.MetricExclusions.ExcludedPrometheusMetrics,
-			ExcludeMetricLabels: testConfig.MetricExclusions.ExcludedPrometheusMetricLabels,
+			GraphqlCache:        testConfig.MetricOptions.EnablePrometheusRouterCache,
+			ExcludeMetrics:      testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetrics,
+			ExcludeMetricLabels: testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetricLabels,
 		}
 	}
 
@@ -781,9 +793,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 				},
 				OTLP: config.MetricsOTLP{
 					Enabled:             true,
-					RouterRuntime:       testConfig.EnableRuntimeMetrics,
-					ExcludeMetrics:      testConfig.MetricExclusions.ExcludedOTLPMetrics,
-					ExcludeMetricLabels: testConfig.MetricExclusions.ExcludedOTLPMetricLabels,
+					RouterRuntime:       testConfig.MetricOptions.EnableRuntimeMetrics,
+					GraphqlCache:        testConfig.MetricOptions.EnableOTLPRouterCache,
+					ExcludeMetrics:      testConfig.MetricOptions.MetricExclusions.ExcludedOTLPMetrics,
+					ExcludeMetricLabels: testConfig.MetricOptions.MetricExclusions.ExcludedOTLPMetricLabels,
 				},
 			},
 		})
