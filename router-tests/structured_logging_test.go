@@ -351,7 +351,7 @@ func TestAccessLogs(t *testing.T) {
 				"query":            "",
 				"ip":               "[REDACTED]",
 				"service_name":     "service-name",                                                     // From header
-				"operation_hash":   "1163600561566987607",                                             // From context
+				"operation_hash":   "1163600561566987607",                                              // From context
 				"operation_sha256": "c13e0fafb0a3a72e74c19df743fedee690fe133554a17a9408747585a0d1b423", // From context
 				"operation_name":   "employees",                                                        // From context
 				"operation_type":   "query",                                                            // From context
@@ -802,10 +802,10 @@ func TestAccessLogs(t *testing.T) {
 				"ip":             "[REDACTED]",
 				"user_agent":     "Go-http-client/1.1",
 				"error":          "implement me",
-				"service_name":   "service-name",         // From header
+				"service_name":   "service-name",        // From header
 				"operation_hash": "1163600561566987607", // From context
-				"operation_name": "employees",            // From context
-				"operation_type": "query",                // From context
+				"operation_name": "employees",           // From context
+				"operation_type": "query",               // From context
 				"error_message":  "implement me",
 			}
 			additionalExpectedKeys := []string{
@@ -931,10 +931,10 @@ func TestAccessLogs(t *testing.T) {
 				"ip":             "[REDACTED]",
 				"user_agent":     "Go-http-client/1.1",
 				"error":          "implement me",
-				"service_name":   "service-name",         // From header
+				"service_name":   "service-name",        // From header
 				"operation_hash": "1163600561566987607", // From context
-				"operation_name": "employees",            // From context
-				"operation_type": "query",                // From context
+				"operation_name": "employees",           // From context
+				"operation_type": "query",               // From context
 				"error_message":  "implement me",
 			}
 			additionalExpectedKeys := []string{
@@ -1225,7 +1225,7 @@ func TestAccessLogs(t *testing.T) {
 					"query":            "",
 					"ip":               "[REDACTED]",
 					"service_name":     "service-name",                                                     // From header
-					"operation_hash":   "14226210703439426856",                                             // From context
+					"operation_hash":   "1163600561566987607",                                              // From context
 					"operation_sha256": "c13e0fafb0a3a72e74c19df743fedee690fe133554a17a9408747585a0d1b423", // From context
 					"operation_name":   "employees",                                                        // From context
 					"operation_type":   "query",                                                            // From context
@@ -1384,7 +1384,7 @@ func TestAccessLogs(t *testing.T) {
 					"ip":               "[REDACTED]",
 					"service_name":     "service-name",                                                     // From request header
 					"response_header":  "my-response-value",                                                // From response header
-					"operation_hash":   "14226210703439426856",                                             // From context
+					"operation_hash":   "1163600561566987607",                                              // From context
 					"operation_sha256": "c13e0fafb0a3a72e74c19df743fedee690fe133554a17a9408747585a0d1b423", // From context
 					"operation_name":   "employees",                                                        // From context
 					"operation_type":   "query",                                                            // From context
@@ -1555,7 +1555,7 @@ func TestAccessLogs(t *testing.T) {
 					"query":            "", // http query is empty
 					"ip":               "[REDACTED]",
 					"service_name":     "service-name",                                                     // From request header
-					"operation_hash":   "16884868987896027258",                                             // From context
+					"operation_hash":   "13939103824696605913",                                             // From context
 					"operation_sha256": "049efe2ebbdf2e4845e69f69cb7965963b118612a6247ab6d91b1961ea0158dc", // From context
 					"operation_name":   "employees",                                                        // From context
 					"operation_type":   "query",                                                            // From context
@@ -1577,7 +1577,7 @@ func TestAccessLogs(t *testing.T) {
 					"ip":               "[REDACTED]",
 					"service_name":     "service-name",                                                     // From request header
 					"error":            "Failed to fetch from Subgraph 'products' at Path: 'employees'.",   // From context
-					"operation_hash":   "16884868987896027258",                                             // From context
+					"operation_hash":   "13939103824696605913",                                             // From context
 					"operation_sha256": "049efe2ebbdf2e4845e69f69cb7965963b118612a6247ab6d91b1961ea0158dc", // From context
 					"operation_name":   "employees",                                                        // From context
 					"operation_type":   "query",                                                            // From context
@@ -1736,7 +1736,7 @@ func TestAccessLogs(t *testing.T) {
 					"ip":                       "[REDACTED]",
 					"service_name":             "service-name",                                                     // From request header
 					"operation_persisted_hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f", // From context
-					"operation_hash":           "14226210703439426856",                                             // From context
+					"operation_hash":           "1163600561566987607",                                              // From context
 					"operation_sha256":         "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // From context
 					"operation_name":           "Employees",                                                        // From context
 					"operation_type":           "query",                                                            // From context
