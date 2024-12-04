@@ -455,7 +455,7 @@ func TestKafkaEvents(t *testing.T) {
 				KafkaSeeds:  seeds,
 				EnableKafka: true,
 				RouterOptions: []core.Option{
-					core.WithHeartbeatInterval(1 * time.Second),
+					core.WithMultipartHeartbeatInterval(1 * time.Second),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 

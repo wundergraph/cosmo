@@ -811,7 +811,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			PubSubProviders:          s.pubSubProviders,
 			Reporter:                 s.websocketStats,
 			ApolloCompatibilityFlags: s.apolloCompatibilityFlags,
-			HeartbeatInterval:        s.heartbeatInterval,
+			HeartbeatInterval:        s.multipartHeartbeatInterval,
 		},
 	)
 	if err != nil {

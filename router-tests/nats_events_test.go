@@ -288,7 +288,7 @@ func TestNatsEvents(t *testing.T) {
 
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
-					core.WithHeartbeatInterval(heartbeatInterval),
+					core.WithMultipartHeartbeatInterval(heartbeatInterval),
 				},
 				EnableNats: true,
 				TLSConfig: &core.TlsConfig{
@@ -358,7 +358,7 @@ func TestNatsEvents(t *testing.T) {
 				EnableNats: true,
 				TLSConfig:  nil, // Force Http/1
 				RouterOptions: []core.Option{
-					core.WithHeartbeatInterval(heartbeatInterval),
+					core.WithMultipartHeartbeatInterval(heartbeatInterval),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 
