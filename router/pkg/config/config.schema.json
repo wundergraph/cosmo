@@ -547,53 +547,55 @@
             }
           }
         },
-        "fields": {
-          "type": "array",
-          "description": "The fields to add to the logs. The fields are added to the logs as key-value pairs.",
-          "items": {
-            "type": "object",
-            "description": "The configuration for custom fields. Custom attributes can be created from request headers or context fields. Not every context fields are available at all request life-cycle stages. If a value is a list, the value is JSON encoded for OTLP. For Prometheus, the values are exploded into multiple metrics with unique labels. Keep in mind, that every new custom attribute increases the cardinality.",
-            "additionalProperties": false,
-            "required": ["key"],
-            "properties": {
-              "key": {
-                "type": "string",
-                "description": "The key of the field."
-              },
-              "default": {
-                "type": "string",
-                "description": "The default value of the field. If the value is not set, value_from is used. If both value and value_from are set, value_from has precedence and in case of a missing value_from, the default value is used."
-              },
-              "value_from": {
-                "type": "object",
-                "description": "Defines a source for the field value e.g. from a request header. If both default and value_from are set, value_from has precedence.",
-                "additionalProperties": false,
-                "properties": {
-                  "request_header": {
-                    "type": "string",
-                    "description": "The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used."
-                  },
-                  "context_field": {
-                    "type": "string",
-                    "description": "The field name of the context from which to extract the value. The value is only extracted when a context is available otherwise the default value is used.",
-                    "enum": [
-                      "operation_name",
-                      "operation_type",
-                      "operation_service_names",
-                      "operation_hash",
-                      "persisted_operation_sha256",
-                      "operation_sha256",
-                      "response_error_message",
-                      "graphql_error_codes",
-                      "graphql_error_service_names",
-                      "operation_parsing_time",
-                      "operation_validation_time",
-                      "operation_planning_time",
-                      "operation_normalization_time"
-                    ]
+        "router": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "The configuration for the router access logs",
+          "properties": {
+            "fields": {
+              "$ref": "#/definitions/context_fields"
+            }
+          }
+        },
+        "subgraphs": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "The configuration for the subgraph access logs",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable the subgraph access logs.",
+              "default": false
+            },
+            "fields": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/context_fields"
+                },
+                {
+                  "items": {
+                    "properties": {
+                      "value_from": {
+                        "properties": {
+                          "context_field": {
+                            "enum": [
+                              "operation_name",
+                              "operation_type",
+                              "operation_hash",
+                              "persisted_operation_sha256",
+                              "operation_sha256",
+                              "operation_parsing_time",
+                              "operation_validation_time",
+                              "operation_planning_time",
+                              "operation_normalization_time"
+                            ]
+                          }
+                        }
+                      }
+                    }
                   }
                 }
-              }
+              ]
             }
           }
         }
@@ -842,6 +844,11 @@
                   "default": true,
                   "description": "Enable the collection of metrics for the router runtime."
                 },
+                "graphql_cache": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the collection of metrics for the GraphQL operation router caches. The default value is false."
+                },
                 "exporters": {
                   "type": "array",
                   "description": "The exporters to use to export the metrics. If no exporters are specified, the default Cosmo Cloud exporter is used. If you override, please make sure to include the default exporter.",
@@ -920,6 +927,11 @@
                   "description": "The address on which the metrics are served.",
                   "format": "hostname-port",
                   "default": "localhost:8088"
+                },
+                "graphql_cache": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the collection of metrics for the GraphQL operation router caches. The default value is false."
                 },
                 "exclude_metrics": {
                   "type": "array",
@@ -1728,7 +1740,7 @@
               },
               "size": {
                 "type": "integer",
-                "default": 10240,
+                "default": 1024,
                 "description": "The size of the cache for the complexity calculation."
               }
             }
@@ -1851,7 +1863,7 @@
             },
             "cache_size": {
               "type": "integer",
-              "default": 10240,
+              "default": 1024,
               "description": "The size of the cache for query depth. If users set a max_query_depth, we cache the decision per query."
             },
             "ignore_persisted_operations": {
@@ -1980,7 +1992,7 @@
         },
         "execution_plan_cache_size": {
           "type": "integer",
-          "default": 10240,
+          "default": 1024,
           "description": "The size of the execution plan cache."
         },
         "operation_hash_cache_size": {
@@ -2005,7 +2017,7 @@
         },
         "normalization_cache_size": {
           "type": "integer",
-          "default": 10240,
+          "default": 1024,
           "description": "The size of the normalization cache."
         },
         "parsekit_pool_size": {
@@ -2025,7 +2037,7 @@
         },
         "validation_cache_size": {
           "type": "integer",
-          "default": 10240,
+          "default": 1024,
           "description": "The size of the validation cache."
         },
         "enable_subgraph_fetch_operation_name": {
@@ -2296,6 +2308,56 @@
         }
       },
       "required": ["op", "name"]
+    },
+    "context_fields": {
+      "type": "array",
+      "description": "The fields to add to the logs. The fields are added to the logs as key-value pairs.",
+      "items": {
+        "type": "object",
+        "description": "The configuration for custom fields. Custom attributes can be created from request headers or context fields. Not every context fields are available at all request life-cycle stages. If a value is a list, the value is JSON encoded for OTLP. For Prometheus, the values are exploded into multiple metrics with unique labels. Keep in mind, that every new custom attribute increases the cardinality.",
+        "additionalProperties": false,
+        "required": ["key"],
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "The key of the field."
+          },
+          "default": {
+            "type": "string",
+            "description": "The default value of the field. If the value is not set, value_from is used. If both value and value_from are set, value_from has precedence and in case of a missing value_from, the default value is used."
+          },
+          "value_from": {
+            "type": "object",
+            "description": "Defines a source for the field value e.g. from a request header. If both default and value_from are set, value_from has precedence.",
+            "additionalProperties": false,
+            "properties": {
+              "request_header": {
+                "type": "string",
+                "description": "The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used."
+              },
+              "context_field": {
+                "type": "string",
+                "description": "The field name of the context from which to extract the value. The value is only extracted when a context is available otherwise the default value is used.",
+                "enum": [
+                  "operation_name",
+                  "operation_type",
+                  "operation_service_names",
+                  "operation_hash",
+                  "persisted_operation_sha256",
+                  "operation_sha256",
+                  "response_error_message",
+                  "graphql_error_codes",
+                  "graphql_error_service_names",
+                  "operation_parsing_time",
+                  "operation_validation_time",
+                  "operation_planning_time",
+                  "operation_normalization_time"
+                ]
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

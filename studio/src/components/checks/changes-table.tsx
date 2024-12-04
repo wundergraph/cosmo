@@ -147,6 +147,10 @@ const Row = ({
   const router = useRouter();
   const { toast } = useToast();
   const graphContext = useContext(GraphContext);
+  const pageNumber = router.query.page
+    ? parseInt(router.query.page as string)
+    : 1;
+  const limit = Number.parseInt((router.query.pageSize as string) || "10");
 
   const client = useQueryClient();
 
@@ -155,6 +159,8 @@ const Row = ({
       checkId: router.query.checkId as string,
       graphName: graphContext?.graph?.name,
       namespace: graphContext?.graph?.namespace,
+      limit: limit > 200 ? 200 : limit,
+      offset: (pageNumber - 1) * limit,
     });
     client.invalidateQueries({
       queryKey: key,

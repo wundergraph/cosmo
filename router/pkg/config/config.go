@@ -30,8 +30,9 @@ type CustomStaticAttribute struct {
 }
 
 type CustomDynamicAttribute struct {
-	RequestHeader string `yaml:"request_header,omitempty"`
-	ContextField  string `yaml:"context_field,omitempty"`
+	RequestHeader  string `yaml:"request_header,omitempty"`
+	ContextField   string `yaml:"context_field,omitempty"`
+	ResponseHeader string `yaml:"response_header,omitempty"`
 }
 
 type CustomAttribute struct {
@@ -87,6 +88,7 @@ type Prometheus struct {
 	Enabled             bool       `yaml:"enabled" envDefault:"true" env:"PROMETHEUS_ENABLED"`
 	Path                string     `yaml:"path" envDefault:"/metrics" env:"PROMETHEUS_HTTP_PATH"`
 	ListenAddr          string     `yaml:"listen_addr" envDefault:"127.0.0.1:8088" env:"PROMETHEUS_LISTEN_ADDR"`
+	GraphqlCache        bool       `yaml:"graphql_cache" envDefault:"false" env:"PROMETHEUS_GRAPHQL_CACHE"`
 	ExcludeMetrics      RegExArray `yaml:"exclude_metrics,omitempty" env:"PROMETHEUS_EXCLUDE_METRICS"`
 	ExcludeMetricLabels RegExArray `yaml:"exclude_metric_labels,omitempty" env:"PROMETHEUS_EXCLUDE_METRIC_LABELS"`
 }
@@ -109,6 +111,7 @@ type Metrics struct {
 type MetricsOTLP struct {
 	Enabled             bool                  `yaml:"enabled" envDefault:"true" env:"METRICS_OTLP_ENABLED"`
 	RouterRuntime       bool                  `yaml:"router_runtime" envDefault:"true" env:"METRICS_OTLP_ROUTER_RUNTIME"`
+	GraphqlCache        bool                  `yaml:"graphql_cache" envDefault:"false" env:"METRICS_OTLP_GRAPHQL_CACHE"`
 	ExcludeMetrics      RegExArray            `yaml:"exclude_metrics,omitempty" env:"METRICS_OTLP_EXCLUDE_METRICS"`
 	ExcludeMetricLabels RegExArray            `yaml:"exclude_metric_labels,omitempty" env:"METRICS_OTLP_EXCLUDE_METRIC_LABELS"`
 	Exporters           []MetricsOTLPExporter `yaml:"exporters"`
@@ -310,15 +313,15 @@ type EngineExecutionConfiguration struct {
 	WebSocketClientPollTimeout             time.Duration            `envDefault:"1s" env:"ENGINE_WEBSOCKET_CLIENT_POLL_TIMEOUT" yaml:"websocket_client_poll_timeout,omitempty"`
 	WebSocketClientConnBufferSize          int                      `envDefault:"128" env:"ENGINE_WEBSOCKET_CLIENT_CONN_BUFFER_SIZE" yaml:"websocket_client_conn_buffer_size,omitempty"`
 	WebSocketClientReadTimeout             time.Duration            `envDefault:"5s" env:"ENGINE_WEBSOCKET_CLIENT_READ_TIMEOUT" yaml:"websocket_client_read_timeout,omitempty"`
-	ExecutionPlanCacheSize                 int64                    `envDefault:"10240" env:"ENGINE_EXECUTION_PLAN_CACHE_SIZE" yaml:"execution_plan_cache_size,omitempty"`
+	ExecutionPlanCacheSize                 int64                    `envDefault:"1024" env:"ENGINE_EXECUTION_PLAN_CACHE_SIZE" yaml:"execution_plan_cache_size,omitempty"`
 	MinifySubgraphOperations               bool                     `envDefault:"true" env:"ENGINE_MINIFY_SUBGRAPH_OPERATIONS" yaml:"minify_subgraph_operations"`
 	EnablePersistedOperationsCache         bool                     `envDefault:"true" env:"ENGINE_ENABLE_PERSISTED_OPERATIONS_CACHE" yaml:"enable_persisted_operations_cache"`
 	EnableNormalizationCache               bool                     `envDefault:"true" env:"ENGINE_ENABLE_NORMALIZATION_CACHE" yaml:"enable_normalization_cache"`
-	NormalizationCacheSize                 int64                    `envDefault:"10240" env:"ENGINE_NORMALIZATION_CACHE_SIZE" yaml:"normalization_cache_size,omitempty"`
+	NormalizationCacheSize                 int64                    `envDefault:"1024" env:"ENGINE_NORMALIZATION_CACHE_SIZE" yaml:"normalization_cache_size,omitempty"`
 	OperationHashCacheSize                 int64                    `envDefault:"2048" env:"ENGINE_OPERATION_HASH_CACHE_SIZE" yaml:"operation_hash_cache_size,omitempty"`
 	ParseKitPoolSize                       int                      `envDefault:"16" env:"ENGINE_PARSEKIT_POOL_SIZE" yaml:"parsekit_pool_size,omitempty"`
 	EnableValidationCache                  bool                     `envDefault:"true" env:"ENGINE_ENABLE_VALIDATION_CACHE" yaml:"enable_validation_cache"`
-	ValidationCacheSize                    int64                    `envDefault:"10240" env:"ENGINE_VALIDATION_CACHE_SIZE" yaml:"validation_cache_size,omitempty"`
+	ValidationCacheSize                    int64                    `envDefault:"1024" env:"ENGINE_VALIDATION_CACHE_SIZE" yaml:"validation_cache_size,omitempty"`
 	ResolverMaxRecyclableParserSize        int                      `envDefault:"32768" env:"ENGINE_RESOLVER_MAX_RECYCLABLE_PARSER_SIZE" yaml:"resolver_max_recyclable_parser_size,omitempty"`
 	EnableSubgraphFetchOperationName       bool                     `envDefault:"true" env:"ENGINE_ENABLE_SUBGRAPH_FETCH_OPERATION_NAME" yaml:"enable_subgraph_fetch_operation_name"`
 }
@@ -335,13 +338,13 @@ type SecurityConfiguration struct {
 type QueryDepthConfiguration struct {
 	Enabled                   bool  `yaml:"enabled" envDefault:"false" env:"SECURITY_QUERY_DEPTH_ENABLED"`
 	Limit                     int   `yaml:"limit,omitempty" envDefault:"0" env:"SECURITY_QUERY_DEPTH_LIMIT"`
-	CacheSize                 int64 `yaml:"cache_size,omitempty" envDefault:"10240" env:"SECURITY_QUERY_DEPTH_CACHE_SIZE"`
+	CacheSize                 int64 `yaml:"cache_size,omitempty" envDefault:"1024" env:"SECURITY_QUERY_DEPTH_CACHE_SIZE"`
 	IgnorePersistedOperations bool  `yaml:"ignore_persisted_operations,omitempty" envDefault:"false" env:"SECURITY_QUERY_DEPTH_IGNORE_PERSISTED_OPERATIONS"`
 }
 
 type ComplexityCalculationCache struct {
 	Enabled   bool  `yaml:"enabled" envDefault:"false" env:"SECURITY_COMPLEXITY_CACHE_ENABLED"`
-	CacheSize int64 `yaml:"size,omitempty" envDefault:"10240" env:"SECURITY_COMPLEXITY_CACHE_SIZE"`
+	CacheSize int64 `yaml:"size,omitempty" envDefault:"1024" env:"SECURITY_COMPLEXITY_CACHE_SIZE"`
 }
 
 type ComplexityLimits struct {
@@ -662,10 +665,11 @@ type AutomaticPersistedQueriesConfig struct {
 }
 
 type AccessLogsConfig struct {
-	Enabled bool                   `yaml:"enabled" env:"ACCESS_LOGS_ENABLED" envDefault:"true"`
-	Buffer  AccessLogsBufferConfig `yaml:"buffer,omitempty" env:"ACCESS_LOGS_BUFFER"`
-	Output  AccessLogsOutputConfig `yaml:"output,omitempty" env:"ACCESS_LOGS_OUTPUT"`
-	Fields  []CustomAttribute      `yaml:"fields,omitempty" env:"ACCESS_LOGS_FIELDS"`
+	Enabled   bool                      `yaml:"enabled" env:"ACCESS_LOGS_ENABLED" envDefault:"true"`
+	Buffer    AccessLogsBufferConfig    `yaml:"buffer,omitempty" env:"ACCESS_LOGS_BUFFER"`
+	Output    AccessLogsOutputConfig    `yaml:"output,omitempty" env:"ACCESS_LOGS_OUTPUT"`
+	Router    AccessLogsRouterConfig    `yaml:"router,omitempty" env:"ACCESS_LOGS_ROUTER"`
+	Subgraphs AccessLogsSubgraphsConfig `yaml:"subgraphs,omitempty" env:"ACCESS_LOGS_SUBGRAPH"`
 }
 
 type AccessLogsBufferConfig struct {
@@ -688,6 +692,15 @@ type AccessLogsStdOutOutputConfig struct {
 type AccessLogsFileOutputConfig struct {
 	Enabled bool   `yaml:"enabled" env:"ACCESS_LOGS_OUTPUT_FILE_ENABLED" envDefault:"false"`
 	Path    string `yaml:"path" env:"ACCESS_LOGS_FILE_OUTPUT_PATH" envDefault:"access.log"`
+}
+
+type AccessLogsRouterConfig struct {
+	Fields []CustomAttribute `yaml:"fields,omitempty" env:"ACCESS_LOGS_ROUTER_FIELDS"`
+}
+
+type AccessLogsSubgraphsConfig struct {
+	Enabled bool              `yaml:"enabled" env:"ACCESS_LOGS_SUBGRAPH_ENABLED" envDefault:"false"`
+	Fields  []CustomAttribute `yaml:"fields,omitempty" env:"ACCESS_LOGS_SUBGRAPH_FIELDS"`
 }
 
 type ApolloCompatibilityFlags struct {
