@@ -1,11 +1,6 @@
 package integration
 
 import (
-	"github.com/wundergraph/cosmo/router/pkg/otel"
-	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
-	"go.opentelemetry.io/otel/codes"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/trace"
 	"io"
 	"net/http"
 	"strings"
@@ -13,10 +8,15 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
+	"go.opentelemetry.io/otel/codes"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func TestNormalization(t *testing.T) {
-	//t.Parallel()
+	t.Parallel()
 
 	t.Run("Whitespaces in variables should not impact normalization", func(t *testing.T) {
 		t.Parallel()
