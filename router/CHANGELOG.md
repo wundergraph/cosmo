@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.147.0](https://github.com/wundergraph/cosmo/compare/router@0.146.1...router@0.147.0) (2024-12-05)
+
+### Features
+
+* add NATS reconnect handling ([#1419](https://github.com/wundergraph/cosmo/issues/1419)) ([babb47c](https://github.com/wundergraph/cosmo/commit/babb47c415f977416d993f7a3278307ae32459fd)) (@Aenimus)
+
+## [0.146.1](https://github.com/wundergraph/cosmo/compare/router@0.146.0...router@0.146.1) (2024-12-03)
+
+### Bug Fixes
+
+* disable query plan for subscriptions ([#1417](https://github.com/wundergraph/cosmo/issues/1417)) ([7cdad41](https://github.com/wundergraph/cosmo/commit/7cdad413861535c78f8b664d2dbe4750e16770fb)) (@thisisnithin)
+
 # [0.146.0](https://github.com/wundergraph/cosmo/compare/router@0.145.1...router@0.146.0) (2024-12-03)
 
 ### Bug Fixes
