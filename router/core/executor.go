@@ -192,7 +192,6 @@ func buildNatsOptions(eventSource config.NatsEventSource, logger *zap.Logger) ([
 	opts := []nats.Option{
 		nats.Name(fmt.Sprintf("cosmo.router.edfs.nats.%s", eventSource.ID)),
 		nats.ReconnectJitter(500*time.Millisecond, 2*time.Second),
-		nats.MaxReconnects(60),
 		nats.ClosedHandler(func(conn *nats.Conn) {
 			logger.Info("NATS connection closed", zap.String("provider_id", eventSource.ID), zap.Error(conn.LastError()))
 		}),
