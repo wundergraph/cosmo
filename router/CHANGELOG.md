@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.147.0](https://github.com/wundergraph/cosmo/compare/router@0.146.1...router@0.147.0) (2024-12-05)
+
+### Features
+
+* add NATS reconnect handling ([#1419](https://github.com/wundergraph/cosmo/issues/1419)) ([babb47c](https://github.com/wundergraph/cosmo/commit/babb47c415f977416d993f7a3278307ae32459fd)) (@Aenimus)
+
 ## [0.146.1](https://github.com/wundergraph/cosmo/compare/router@0.146.0...router@0.146.1) (2024-12-03)
 
 ### Bug Fixes

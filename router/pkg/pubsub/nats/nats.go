@@ -220,7 +220,10 @@ func (p *natsPubSub) Shutdown(ctx context.Context) error {
 		err = errors.Join(err, fErr)
 	}
 
-	p.conn.Close()
+	drainErr := p.conn.Drain()
+	if drainErr != nil {
+		p.logger.Error("error draining NATS connection", zap.Error(drainErr))
+	}
 
 	// Wait for all subscriptions to be closed
 	p.closeWg.Wait()
