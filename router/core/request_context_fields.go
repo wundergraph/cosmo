@@ -27,7 +27,7 @@ const (
 	ContextFieldPersistedOperationSha256   = "persisted_operation_sha256"
 	ContextFieldOperationSha256            = "operation_sha256"
 	ContextFieldResponseErrorMessage       = "response_error_message"
-	ContextFieldRequestFailed              = "request_error"
+	ContextFieldRequestError               = "request_error"
 )
 
 // Helper functions to create zap fields for custom attributes.
@@ -68,7 +68,7 @@ func NewDurationLogField(val time.Duration, attribute config.CustomAttribute) za
 	return zap.Skip()
 }
 
-func AccessLogsFieldHandler(attributes []config.CustomAttribute, panicError any, request *http.Request, responseHeader *http.Header) []zapcore.Field {
+func AccessLogsFieldHandler(attributes []config.CustomAttribute, err any, request *http.Request, responseHeader *http.Header) []zapcore.Field {
 	reqContext := getRequestContext(request.Context())
 
 	resFields := make([]zapcore.Field, 0, len(attributes))
@@ -80,18 +80,7 @@ func AccessLogsFieldHandler(attributes []config.CustomAttribute, panicError any,
 		} else if field.ValueFrom != nil && field.ValueFrom.RequestHeader != "" {
 			resFields = append(resFields, NewStringLogField(request.Header.Get(field.ValueFrom.RequestHeader), field))
 		} else if field.ValueFrom != nil && field.ValueFrom.ContextField != "" && reqContext != nil && reqContext.operation != nil {
-			if panicError != nil {
-				if field.ValueFrom.ContextField == ContextFieldResponseErrorMessage {
-					if v := NewStringLogField(fmt.Sprintf("%v", panicError), field); v != zap.Skip() {
-						resFields = append(resFields, v)
-					}
-				} else if field.ValueFrom.ContextField == ContextFieldRequestFailed {
-					if v := NewBoolLogField(true, field); v != zap.Skip() {
-						resFields = append(resFields, v)
-					}
-				}
-			}
-			if v := GetLogFieldFromCustomAttribute(field, reqContext); v != zap.Skip() {
+			if v := GetLogFieldFromCustomAttribute(field, reqContext, err); v != zap.Skip() {
 				resFields = append(resFields, v)
 			}
 		} else if field.Default != "" {
@@ -102,8 +91,8 @@ func AccessLogsFieldHandler(attributes []config.CustomAttribute, panicError any,
 	return resFields
 }
 
-func GetLogFieldFromCustomAttribute(field config.CustomAttribute, req *requestContext) zap.Field {
-	val := getCustomDynamicAttributeValue(field.ValueFrom, req)
+func GetLogFieldFromCustomAttribute(field config.CustomAttribute, req *requestContext, err any) zap.Field {
+	val := getCustomDynamicAttributeValue(field.ValueFrom, req, err)
 	switch v := val.(type) {
 	case string:
 		return NewStringLogField(v, field)
@@ -118,14 +107,14 @@ func GetLogFieldFromCustomAttribute(field config.CustomAttribute, req *requestCo
 	return zap.Skip()
 }
 
-func getCustomDynamicAttributeValue(attribute *config.CustomDynamicAttribute, reqContext *requestContext) interface{} {
+func getCustomDynamicAttributeValue(attribute *config.CustomDynamicAttribute, reqContext *requestContext, err any) interface{} {
 	if attribute.ContextField == "" {
 		return ""
 	}
 
 	switch attribute.ContextField {
-	case ContextFieldRequestFailed:
-		return reqContext.error != nil
+	case ContextFieldRequestError:
+		return err != nil || reqContext.error != nil
 	case ContextFieldOperationName:
 		return reqContext.operation.Name()
 	case ContextFieldOperationType:
@@ -148,6 +137,9 @@ func getCustomDynamicAttributeValue(attribute *config.CustomDynamicAttribute, re
 	case ContextFieldPersistedOperationSha256:
 		return reqContext.operation.persistedID
 	case ContextFieldResponseErrorMessage:
+		if err != nil {
+			return fmt.Sprintf("%v", err)
+		}
 		if reqContext.error != nil {
 			return reqContext.error.Error()
 		}
