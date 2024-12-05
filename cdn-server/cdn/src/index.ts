@@ -93,8 +93,8 @@ const jwtMiddleware = (secret: string | ((c: Context) => string)) => {
     if (!organizationId || !federatedGraphId) {
       return c.text('Unauthorized - Malformed token', 403);
     }
-    c.set('authenticatedOrganizationId', organizationId);
-    c.set('authenticatedFederatedGraphId', federatedGraphId);
+    c.set('authenticatedOrganizationId', organizationId as string);
+    c.set('authenticatedFederatedGraphId', federatedGraphId as string);
 
     await next();
   };
