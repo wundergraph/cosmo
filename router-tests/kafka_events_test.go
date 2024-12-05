@@ -448,7 +448,7 @@ func TestKafkaEvents(t *testing.T) {
 			assertLineEquals(reader, "")
 		}
 
-		var multipartHeartbeatInterval = 400 * time.Millisecond
+		var multipartHeartbeatInterval = 500 * time.Millisecond
 
 		t.Run("subscribe sync", func(t *testing.T) {
 			topics := []string{"employeeUpdated", "employeeUpdatedTwo"}

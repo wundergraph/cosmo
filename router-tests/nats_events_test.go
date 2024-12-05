@@ -281,7 +281,7 @@ func TestNatsEvents(t *testing.T) {
 			assertLineEquals(reader, "")
 		}
 
-		heartbeatInterval := 70 * time.Millisecond
+		heartbeatInterval := 150 * time.Millisecond
 
 		t.Run("subscribe with multipart responses", func(t *testing.T) {
 			t.Parallel()
