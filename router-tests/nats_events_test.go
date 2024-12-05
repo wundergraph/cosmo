@@ -281,7 +281,7 @@ func TestNatsEvents(t *testing.T) {
 			assertLineEquals(reader, "")
 		}
 
-		heartbeatInterval := 1 * time.Second
+		heartbeatInterval := 70 * time.Millisecond
 
 		t.Run("subscribe with multipart responses", func(t *testing.T) {
 			t.Parallel()
@@ -434,9 +434,6 @@ func TestNatsEvents(t *testing.T) {
 				}()
 
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
-
-				// Sleep to ensure get heartbeat
-				time.Sleep(heartbeatInterval)
 
 				xEnv.NatsConnectionDefault.Close()
 				wg.Wait()

@@ -448,6 +448,8 @@ func TestKafkaEvents(t *testing.T) {
 			assertLineEquals(reader, "")
 		}
 
+		var multipartHeartbeatInterval = 400 * time.Millisecond
+
 		t.Run("subscribe sync", func(t *testing.T) {
 			topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
@@ -455,7 +457,7 @@ func TestKafkaEvents(t *testing.T) {
 				KafkaSeeds:  seeds,
 				EnableKafka: true,
 				RouterOptions: []core.Option{
-					core.WithMultipartHeartbeatInterval(1 * time.Second),
+					core.WithMultipartHeartbeatInterval(multipartHeartbeatInterval),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 
@@ -489,7 +491,7 @@ func TestKafkaEvents(t *testing.T) {
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
 
 				produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
-				time.Sleep(time.Second * 2)
+				time.Sleep(multipartHeartbeatInterval * 2)
 				produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
 				wg.Wait()
