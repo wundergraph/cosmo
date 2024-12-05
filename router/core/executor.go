@@ -196,7 +196,7 @@ func buildNatsOptions(eventSource config.NatsEventSource, logger *zap.Logger) ([
 			logger.Info("NATS connection closed", zap.String("provider_id", eventSource.ID), zap.Error(conn.LastError()))
 		}),
 		nats.ConnectHandler(func(nc *nats.Conn) {
-			logger.Info("url", zap.String("url", nc.ConnectedUrlRedacted()))
+			logger.Info("NATS connection established", zap.String("provider_id", eventSource.ID), zap.String("url", nc.ConnectedUrlRedacted()))
 		}),
 		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
 			if err != nil {
