@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
+	"os"
+	"strconv"
 	"time"
 
 	otelmetric "go.opentelemetry.io/otel/metric"
@@ -80,6 +82,13 @@ type (
 		baseAttributes     []attribute.KeyValue
 		baseAttributesOpt  otelmetric.MeasurementOption
 
+		// The cardinality limit is the hard limit on the number of metric streams that can be collected for a single instrument
+		//
+		// The otel go sdk currently does not yet allow us to define our own limiter.
+		// Without proper limitation it can be easy to accidentally create a large number of metric streams.
+		// See reference: https://github.com/open-telemetry/opentelemetry-go/blob/main/sdk/metric/internal/x/README.md
+		cardinalityLimit int
+
 		logger *zap.Logger
 	}
 
@@ -114,10 +123,16 @@ type (
 // NewStore creates a new metrics store instance.
 // The store abstract OTEL and Prometheus metrics with a single interface.
 func NewStore(opts ...Option) (Store, error) {
-	h := &Metrics{}
+	h := &Metrics{
+		logger: zap.NewNop(),
+	}
 
 	for _, opt := range opts {
 		opt(h)
+	}
+
+	if err := setCardinalityLimit(h.cardinalityLimit); err != nil {
+		h.logger.Warn("failed to set cardinality limit", zap.Error(err))
 	}
 
 	h.baseAttributesOpt = otelmetric.WithAttributes(h.baseAttributes...)
@@ -139,6 +154,19 @@ func NewStore(opts ...Option) (Store, error) {
 	h.promRequestMetrics = promMetrics
 
 	return h, nil
+}
+
+// setCardinalityLimit sets the cardinality limit for open telemetry.
+// This feature is experimental in otel-go and may be exposed in a different way in the future.
+// In order to avoid creating a large number of metric streams, we set a hard limit that can be collected for a single instrument.
+func setCardinalityLimit(limit int) error {
+	if limit < 0 {
+		// setting a limit of 0 disables  the cardinality limit
+		limit = 0
+	}
+
+	val := strconv.Itoa(limit)
+	return os.Setenv("OTEL_GO_X_CARDINALITY_LIMIT", val)
 }
 
 func (h *Metrics) MeasureInFlight(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption) func() {
@@ -356,5 +384,11 @@ func WithPromMeterProvider(promMeterProvider *metric.MeterProvider) Option {
 func WithProcessStartTime(processStartTime time.Time) Option {
 	return func(h *Metrics) {
 		h.processStartTime = processStartTime
+	}
+}
+
+func WithCardinalityLimit(cardinalityLimit int) Option {
+	return func(h *Metrics) {
+		h.cardinalityLimit = cardinalityLimit
 	}
 }
