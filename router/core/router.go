@@ -208,12 +208,13 @@ type (
 		// should be removed once the users have migrated to the new overrides config
 		overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration
 		// the new overrides config
-		overrides                config.OverridesConfiguration
-		authorization            *config.AuthorizationConfiguration
-		rateLimit                *config.RateLimitConfiguration
-		webSocketConfiguration   *config.WebSocketConfiguration
-		subgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
-		clientHeader             config.ClientHeader
+		overrides                  config.OverridesConfiguration
+		authorization              *config.AuthorizationConfiguration
+		rateLimit                  *config.RateLimitConfiguration
+		webSocketConfiguration     *config.WebSocketConfiguration
+		subgraphErrorPropagation   config.SubgraphErrorPropagationConfiguration
+		clientHeader               config.ClientHeader
+		multipartHeartbeatInterval time.Duration
 	}
 	// Option defines the method to customize server.
 	Option func(svr *Router)
@@ -1314,6 +1315,13 @@ func WithTracing(cfg *rtrace.Config) Option {
 func WithCors(corsOpts *cors.Config) Option {
 	return func(r *Router) {
 		r.corsOptions = corsOpts
+	}
+}
+
+// WithMultipartHeartbeatInterval sets the interval for the engine to send heartbeats for multipart subscriptions.
+func WithMultipartHeartbeatInterval(interval time.Duration) Option {
+	return func(r *Router) {
+		r.multipartHeartbeatInterval = interval
 	}
 }
 
