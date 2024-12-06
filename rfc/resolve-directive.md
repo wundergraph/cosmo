@@ -33,6 +33,27 @@ This input field can be market as `@inaccessible` to prevent exposing it to the 
 As such, clients are not able to define the input field in their queries.
 Instead, the Router will execute the query defined in the `@resolve` directive and pass the result to the input.
 
+# Benefits
+
+Implicit data dependencies between services are invisible.
+If you call a mutation on Subgraph A,
+and Subgraph A needs to call Subgraph B and C to fulfill this mutation,
+the reality is that this mutation depends on Subgraph A, B, and C.
+
+However, in this scenario, we're only seeing Subgraph A in the analytics, query planning, etc. because the Subgraphs B and C are being called "off-graph".
+Implicit off-graph calls are invisible.
+We're unaware they are happening, but even worse, we simply don't understand the relationship between a root field (e.g. Mutation) and our service layer.
+
+By explicitly defining our data dependencies on the graph,
+we can build tooling around information like query plans, analytics, etc.
+so we can make these dependencies nost just visible,
+but use them to our advantage.
+
+Breaking change detection can use schema usage from these "internal" calls to prevent production issues.
+Query plans can show these implicit dependencies.
+A dashboard can show which queries depend on which services, explicit and implicit.
+Another dashboard can show dependencies between services.
+
 ## Example 1: Validate a Reference
 
 ```graphql
