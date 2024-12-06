@@ -2,21 +2,23 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/logging"
+
 	"net/http"
 	"os"
 
 	"github.com/KimMachineGun/automemlimit/memlimit"
 	"github.com/dustin/go-humanize"
+	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/selfregister"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"go.uber.org/automaxprocs/maxprocs"
-
-	"github.com/wundergraph/cosmo/router/core"
 	"go.uber.org/zap"
 )
+
+const cardinalityLimit = 2000
 
 // Params are all required for the router to start up
 type Params struct {
@@ -158,7 +160,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		}),
 		core.WithDevelopmentMode(cfg.DevelopmentMode),
 		core.WithTracing(core.TraceConfigFromTelemetry(&cfg.Telemetry)),
-		core.WithMetrics(core.MetricConfigFromTelemetry(&cfg.Telemetry)),
+		core.WithMetrics(core.MetricConfigFromTelemetry(&cfg.Telemetry, cardinalityLimit)),
 		core.WithEngineExecutionConfig(cfg.EngineExecutionConfiguration),
 		core.WithCacheControlPolicy(cfg.CacheControl),
 		core.WithSecurityConfig(cfg.SecurityConfiguration),

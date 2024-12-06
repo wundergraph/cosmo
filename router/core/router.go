@@ -1842,7 +1842,7 @@ func buildResourceAttributes(attributes []config.CustomStaticAttribute) []attrib
 	return r.ToSlice()
 }
 
-func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
+func MetricConfigFromTelemetry(cfg *config.Telemetry, cardinalityLimit int) *rmetric.Config {
 	var openTelemetryExporters []*rmetric.OpenTelemetryExporter
 	for _, exp := range cfg.Metrics.OTLP.Exporters {
 		openTelemetryExporters = append(openTelemetryExporters, &rmetric.OpenTelemetryExporter{
@@ -1860,6 +1860,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 		Version:            Version,
 		Attributes:         cfg.Metrics.Attributes,
 		ResourceAttributes: buildResourceAttributes(cfg.ResourceAttributes),
+		CardinalityLimit:   cardinalityLimit,
 		OpenTelemetry: rmetric.OpenTelemetry{
 			Enabled:             cfg.Metrics.OTLP.Enabled,
 			RouterRuntime:       cfg.Metrics.OTLP.RouterRuntime,

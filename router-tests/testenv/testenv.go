@@ -117,6 +117,7 @@ type MetricOptions struct {
 	EnableRuntimeMetrics        bool
 	EnableOTLPRouterCache       bool
 	EnablePrometheusRouterCache bool
+	CardinalityLimit            int
 }
 
 type Config struct {
@@ -799,7 +800,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 					ExcludeMetricLabels: testConfig.MetricOptions.MetricExclusions.ExcludedOTLPMetricLabels,
 				},
 			},
-		})
+		}, testConfig.MetricOptions.CardinalityLimit)
 
 		c.Prometheus = prometheusConfig
 		c.OpenTelemetry.TestReader = testConfig.MetricReader
