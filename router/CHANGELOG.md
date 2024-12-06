@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.148.0](https://github.com/wundergraph/cosmo/compare/router@0.147.0...router@0.148.0) (2024-12-06)
+
+### Bug Fixes
+
+* update default value for subgraph fetch operation name ([#1422](https://github.com/wundergraph/cosmo/issues/1422)) ([1854c6d](https://github.com/wundergraph/cosmo/commit/1854c6d33995e0e8177908eda347f68c76b2138a)) (@Noroth)
+* update packages to address vulnerabilities ([#1411](https://github.com/wundergraph/cosmo/issues/1411)) ([7e84900](https://github.com/wundergraph/cosmo/commit/7e84900ed705164d69c99afcf5a698b3298fb6ad)) (@JivusAyrus)
+
+### Features
+
+* use configurable heartbeat to speed up tests ([#1418](https://github.com/wundergraph/cosmo/issues/1418)) ([f2ef4ab](https://github.com/wundergraph/cosmo/commit/f2ef4ab97424d892a77e4ed37d0b14ec4ca55bcc)) (@df-wg)
+
 # [0.147.0](https://github.com/wundergraph/cosmo/compare/router@0.146.1...router@0.147.0) (2024-12-05)
 
 ### Features
