@@ -171,7 +171,7 @@ func TestKafkaEvents(t *testing.T) {
 				if count == 0 {
 					var gqlErr graphql.Errors
 					require.ErrorAs(t, errValue, &gqlErr)
-					require.Equal(t, "Internal server error", gqlErr[0].Message)
+					require.Equal(t, "Invalid message received", gqlErr[0].Message)
 				} else if count == 1 || count == 3 {
 					require.NoError(t, errValue)
 					require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(dataValue))
@@ -1047,6 +1047,89 @@ func TestKafkaEvents(t *testing.T) {
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id":12}`)
 
 			wg.Wait()
+		})
+	})
+
+	t.Run("message with invalid JSON should give a specific error", func(t *testing.T) {
+
+		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
+
+		testenv.Run(t, &testenv.Config{
+			KafkaSeeds:  seeds,
+			EnableKafka: true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			ensureTopicExists(t, xEnv, topics...)
+
+			var subscriptionOne struct {
+				employeeUpdatedMyKafka struct {
+					ID      float64 `graphql:"id"`
+					Details struct {
+						Forename string `graphql:"forename"`
+						Surname  string `graphql:"surname"`
+					} `graphql:"details"`
+				} `graphql:"employeeUpdatedMyKafka(employeeID: 3)"`
+			}
+
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
+			client := graphql.NewSubscriptionClient(surl)
+			t.Cleanup(func() {
+				_ = client.Close()
+			})
+
+			wg := &sync.WaitGroup{}
+			wg.Add(4)
+
+			count := 0
+
+			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
+				defer wg.Done()
+
+				if count == 0 {
+					var gqlErr graphql.Errors
+					require.ErrorAs(t, errValue, &gqlErr)
+					require.Equal(t, "Invalid message received", gqlErr[0].Message)
+				} else if count == 1 || count == 3 {
+					require.NoError(t, errValue)
+					require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(dataValue))
+				} else if count == 2 {
+					var gqlErr graphql.Errors
+					require.ErrorAs(t, errValue, &gqlErr)
+					require.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdatedMyKafka.id'.", gqlErr[0].Message)
+				}
+
+				count++
+
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEmpty(t, subscriptionOneID)
+
+			go func() {
+				clientErr := client.Run()
+				require.NoError(t, clientErr)
+			}()
+
+			xEnv.WaitForSubscriptionCount(1, time.Second*10)
+
+			produceKafkaMessage(t, xEnv, topics[0], `{asas`) // Invalid message
+			xEnv.WaitForMessagesSent(1, time.Second*10)
+
+			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id":1}`) // Correct message
+			xEnv.WaitForMessagesSent(2, time.Second*10)
+
+			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","update":{"name":"foo"}}`) // Missing entity = Resolver error
+			xEnv.WaitForMessagesSent(3, time.Second*10)
+
+			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
+			xEnv.WaitForMessagesSent(4, time.Second*10)
+
+			wg.Wait()
+
+			require.NoError(t, client.Close())
+
+			xEnv.WaitForSubscriptionCount(0, time.Second*10)
+			xEnv.WaitForConnectionCount(0, time.Second*10)
 		})
 	})
 }
