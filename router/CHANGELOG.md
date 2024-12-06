@@ -4,6 +4,42 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.148.0](https://github.com/wundergraph/cosmo/compare/router@0.147.0...router@0.148.0) (2024-12-06)
+
+### Bug Fixes
+
+* update default value for subgraph fetch operation name ([#1422](https://github.com/wundergraph/cosmo/issues/1422)) ([1854c6d](https://github.com/wundergraph/cosmo/commit/1854c6d33995e0e8177908eda347f68c76b2138a)) (@Noroth)
+* update packages to address vulnerabilities ([#1411](https://github.com/wundergraph/cosmo/issues/1411)) ([7e84900](https://github.com/wundergraph/cosmo/commit/7e84900ed705164d69c99afcf5a698b3298fb6ad)) (@JivusAyrus)
+
+### Features
+
+* use configurable heartbeat to speed up tests ([#1418](https://github.com/wundergraph/cosmo/issues/1418)) ([f2ef4ab](https://github.com/wundergraph/cosmo/commit/f2ef4ab97424d892a77e4ed37d0b14ec4ca55bcc)) (@df-wg)
+
+# [0.147.0](https://github.com/wundergraph/cosmo/compare/router@0.146.1...router@0.147.0) (2024-12-05)
+
+### Features
+
+* add NATS reconnect handling ([#1419](https://github.com/wundergraph/cosmo/issues/1419)) ([babb47c](https://github.com/wundergraph/cosmo/commit/babb47c415f977416d993f7a3278307ae32459fd)) (@Aenimus)
+
+## [0.146.1](https://github.com/wundergraph/cosmo/compare/router@0.146.0...router@0.146.1) (2024-12-03)
+
+### Bug Fixes
+
+* disable query plan for subscriptions ([#1417](https://github.com/wundergraph/cosmo/issues/1417)) ([7cdad41](https://github.com/wundergraph/cosmo/commit/7cdad413861535c78f8b664d2dbe4750e16770fb)) (@thisisnithin)
+
+# [0.146.0](https://github.com/wundergraph/cosmo/compare/router@0.145.1...router@0.146.0) (2024-12-03)
+
+### Bug Fixes
+
+* ignore internal cost for ristretto caches ([#1413](https://github.com/wundergraph/cosmo/issues/1413)) ([94c9623](https://github.com/wundergraph/cosmo/commit/94c9623b3b10449de2075dff149640809cafb52a)) (@Noroth)
+* race on client request stop ([#1410](https://github.com/wundergraph/cosmo/issues/1410)) ([f732675](https://github.com/wundergraph/cosmo/commit/f7326756f1f947bde263f39c83510aae7b601074)) (@jensneuse)
+* **router:** use valid format for graphql operation ([#1406](https://github.com/wundergraph/cosmo/issues/1406)) ([93088ba](https://github.com/wundergraph/cosmo/commit/93088babaebc8b6f9d7536f1bc07843731dd569b)) (@Noroth)
+
+### Features
+
+* add subgraph access logs ([#1401](https://github.com/wundergraph/cosmo/issues/1401)) ([c52b2b0](https://github.com/wundergraph/cosmo/commit/c52b2b013d642e79d4c80df6ed4aae6656cb3c9e)) (@df-wg)
+* **router:** expose router operation cache metrics ([#1408](https://github.com/wundergraph/cosmo/issues/1408)) ([801f0b1](https://github.com/wundergraph/cosmo/commit/801f0b1089db670166371d25762b817aebbcda4f)) (@Noroth)
+
 ## [0.145.1](https://github.com/wundergraph/cosmo/compare/router@0.145.0...router@0.145.1) (2024-11-27)
 
 ### Bug Fixes

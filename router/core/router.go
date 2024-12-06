@@ -129,8 +129,10 @@ type (
 	}
 
 	AccessLogsConfig struct {
-		Attributes []config.CustomAttribute
-		Logger     *zap.Logger
+		Attributes         []config.CustomAttribute
+		Logger             *zap.Logger
+		SubgraphEnabled    bool
+		SubgraphAttributes []config.CustomAttribute
 	}
 
 	// Config defines the configuration options for the Router.
@@ -206,12 +208,13 @@ type (
 		// should be removed once the users have migrated to the new overrides config
 		overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration
 		// the new overrides config
-		overrides                config.OverridesConfiguration
-		authorization            *config.AuthorizationConfiguration
-		rateLimit                *config.RateLimitConfiguration
-		webSocketConfiguration   *config.WebSocketConfiguration
-		subgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
-		clientHeader             config.ClientHeader
+		overrides                  config.OverridesConfiguration
+		authorization              *config.AuthorizationConfiguration
+		rateLimit                  *config.RateLimitConfiguration
+		webSocketConfiguration     *config.WebSocketConfiguration
+		subgraphErrorPropagation   config.SubgraphErrorPropagationConfiguration
+		clientHeader               config.ClientHeader
+		multipartHeartbeatInterval time.Duration
 	}
 	// Option defines the method to customize server.
 	Option func(svr *Router)
@@ -510,7 +513,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 	}
 
 	for _, source := range r.eventsConfig.Providers.Nats {
-		r.logger.Info("Nats Event source enabled", zap.String("provider_id", source.ID), zap.String("url", source.URL))
+		r.logger.Info("Nats Event source enabled", zap.String("provider_id", source.ID))
 	}
 	for _, source := range r.eventsConfig.Providers.Kafka {
 		r.logger.Info("Kafka Event source enabled", zap.String("provider_id", source.ID), zap.Strings("brokers", source.Brokers))
@@ -1315,6 +1318,13 @@ func WithCors(corsOpts *cors.Config) Option {
 	}
 }
 
+// WithMultipartHeartbeatInterval sets the interval for the engine to send heartbeats for multipart subscriptions.
+func WithMultipartHeartbeatInterval(interval time.Duration) Option {
+	return func(r *Router) {
+		r.multipartHeartbeatInterval = interval
+	}
+}
+
 // WithGraphQLPath sets the path where the GraphQL endpoint is served.
 func WithGraphQLPath(p string) Option {
 	return func(r *Router) {
@@ -1853,6 +1863,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 		OpenTelemetry: rmetric.OpenTelemetry{
 			Enabled:             cfg.Metrics.OTLP.Enabled,
 			RouterRuntime:       cfg.Metrics.OTLP.RouterRuntime,
+			GraphqlCache:        cfg.Metrics.OTLP.GraphqlCache,
 			Exporters:           openTelemetryExporters,
 			ExcludeMetrics:      cfg.Metrics.OTLP.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.OTLP.ExcludeMetricLabels,
@@ -1861,6 +1872,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			Enabled:             cfg.Metrics.Prometheus.Enabled,
 			ListenAddr:          cfg.Metrics.Prometheus.ListenAddr,
 			Path:                cfg.Metrics.Prometheus.Path,
+			GraphqlCache:        cfg.Metrics.Prometheus.GraphqlCache,
 			ExcludeMetrics:      cfg.Metrics.Prometheus.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.Prometheus.ExcludeMetricLabels,
 		},

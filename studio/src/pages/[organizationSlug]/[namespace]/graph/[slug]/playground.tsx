@@ -16,6 +16,7 @@ import { PlanView } from "@/components/playground/plan-view";
 import { TraceContext, TraceView } from "@/components/playground/trace-view";
 import {
   PlaygroundContext,
+  PlaygroundView,
   QueryPlan,
   TabsState,
 } from "@/components/playground/types";
@@ -80,7 +81,13 @@ import {
 import { sentenceCase } from "change-case";
 import crypto from "crypto";
 import { GraphiQL } from "graphiql";
-import { GraphQLSchema, parse, validate } from "graphql";
+import {
+  GraphQLSchema,
+  Kind,
+  OperationTypeNode,
+  parse,
+  validate,
+} from "graphql";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/router";
 import { ReactNode, useContext, useEffect, useMemo, useState } from "react";
@@ -553,9 +560,9 @@ const PersistOperation = () => {
 };
 
 const ResponseToolbar = () => {
-  const [view, setView] = useState("response");
+  const { view, setView } = useContext(PlaygroundContext);
 
-  const onValueChange = (val: string) => {
+  const onValueChange = (val: PlaygroundView) => {
     const response = document.getElementsByClassName(
       "graphiql-response",
     )[0] as HTMLDivElement;
@@ -904,6 +911,8 @@ const PlaygroundPage: NextPageWithLayout = () => {
   const [isGraphiqlRendered, setIsGraphiqlRendered] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
+  const [view, setView] = useState<PlaygroundView>("response");
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const responseToolbar = document.getElementById("response-toolbar");
@@ -1160,13 +1169,27 @@ const PlaygroundPage: NextPageWithLayout = () => {
         !debouncedQuery ||
         !routingUrl ||
         !graphContext?.graphRequestToken ||
-        !graphContext?.graph?.id
+        !graphContext?.graph?.id ||
+        view !== "query-plan"
       ) {
         return;
       }
 
       try {
-        const errors = validate(schema, parse(debouncedQuery));
+        const parsed = parse(debouncedQuery);
+
+        const isSubscription =
+          parsed.definitions[0]?.kind === Kind.OPERATION_DEFINITION &&
+          parsed.definitions[0].operation === OperationTypeNode.SUBSCRIPTION;
+
+        // Disable for subscription
+        if (isSubscription) {
+          setPlanError("Query plan is currently unavailable for subscriptions");
+          setPlan(undefined);
+          return;
+        }
+
+        const errors = validate(schema, parsed);
         if (errors.length > 0) {
           setPlanError("Invalid query");
           return;
@@ -1231,6 +1254,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
     routingUrl,
     schema,
     type,
+    view,
   ]);
 
   const { theme } = useTheme();
@@ -1264,6 +1288,8 @@ const PlaygroundPage: NextPageWithLayout = () => {
         tabsState,
         status,
         statusText,
+        view,
+        setView,
       }}
     >
       <TraceContext.Provider

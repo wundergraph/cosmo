@@ -3,8 +3,8 @@ import { join } from 'node:path';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { RouterConfig } from "@wundergraph/cosmo-connect/dist/node/v1/node_pb";
-import { normalizeString } from "@wundergraph/composition/tests/utils/utils.js";
+import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import { normalizeString } from '@wundergraph/composition/tests/utils/utils.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
 import { unsuccessfulBaseCompositionError } from '../src/core/errors/errors.js';
 import {
@@ -176,7 +176,7 @@ describe('Contract tests', (ctx) => {
     expect(createContractResponse.response?.code).toBe(1);
     expect(createContractResponse.response?.details).toBe(
       `The "exclude" and "include" options for tags are currently mutually exclusive.` +
-      ` Both options have been provided, but one of the options must be empty or unset.`,
+        ` Both options have been provided, but one of the options must be empty or unset.`,
     );
 
     await server.close();
@@ -335,7 +335,7 @@ describe('Contract tests', (ctx) => {
     expect(updateContractResponse.response?.code).toBe(1);
     expect(updateContractResponse.response?.details).toBe(
       `The "exclude" and "include" options for tags are currently mutually exclusive.` +
-      ` Both options have been provided, but one of the options must be empty or unset.`,
+        ` Both options have been provided, but one of the options must be empty or unset.`,
     );
 
     await server.close();
@@ -443,6 +443,79 @@ describe('Contract tests', (ctx) => {
     });
     expect(contractGraphUpdatedRes.graph?.contract?.excludeTags).toEqual(['new']);
     expect(contractGraphUpdatedRes.graph?.contract?.includeTags).toEqual([]);
+
+    await server.close();
+  });
+
+  test('that contract routing url and readme is updated', async () => {
+    const { client, server } = await SetupTest({ dbname });
+
+    const subgraphName = genID('subgraph');
+    const fedGraphName = genID('fedGraph');
+    const contractGraphName = genID('contract');
+    const label = genUniqueLabel('label');
+
+    const subgraphSchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
+
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      subgraphSchemaSDL,
+      [label],
+      'http://localhost:8082',
+    );
+
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:8080');
+
+    await client.createContract({
+      name: contractGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      sourceGraphName: fedGraphName,
+      includeTags: ['test'],
+      routingUrl: 'http://localhost:8081',
+      readme: 'test',
+    });
+
+    const contractGraphRes = await client.getFederatedGraphByName({
+      name: contractGraphName,
+      namespace: DEFAULT_NAMESPACE,
+    });
+    expect(contractGraphRes.graph?.contract?.excludeTags).toEqual([]);
+    expect(contractGraphRes.graph?.contract?.includeTags).toEqual(['test']);
+
+    await client.updateContract({
+      name: contractGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      excludeTags: ['new'],
+      readme: 'new',
+      routingUrl: 'http://localhost:8082',
+    });
+
+    let contractGraphUpdatedRes = await client.getFederatedGraphByName({
+      name: contractGraphName,
+      namespace: DEFAULT_NAMESPACE,
+    });
+    expect(contractGraphUpdatedRes.graph?.contract?.excludeTags).toEqual(['new']);
+    expect(contractGraphUpdatedRes.graph?.contract?.includeTags).toEqual([]);
+    expect(contractGraphUpdatedRes.graph?.readme).toEqual('new');
+    expect(contractGraphUpdatedRes.graph?.routingURL).toEqual('http://localhost:8082');
+
+    await client.updateContract({
+      name: contractGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      excludeTags: ['new'],
+      readme: '',
+    });
+
+    contractGraphUpdatedRes = await client.getFederatedGraphByName({
+      name: contractGraphName,
+      namespace: DEFAULT_NAMESPACE,
+    });
+    expect(contractGraphUpdatedRes.graph?.contract?.excludeTags).toEqual(['new']);
+    expect(contractGraphUpdatedRes.graph?.contract?.includeTags).toEqual([]);
+    expect(contractGraphUpdatedRes.graph?.routingURL).toEqual('http://localhost:8082');
+    expect(contractGraphUpdatedRes.graph?.readme).toBeUndefined();
 
     await server.close();
   });
@@ -1597,7 +1670,8 @@ describe('Contract tests', (ctx) => {
     expect(executionConfig.engineConfig).toBeDefined();
     expect(executionConfig.engineConfig?.graphqlSchema).toBeDefined();
     expect(executionConfig.engineConfig?.graphqlClientSchema).toBeDefined();
-    expect(normalizeString(executionConfig.engineConfig!.graphqlSchema!)).toBe(normalizeString(`
+    expect(normalizeString(executionConfig.engineConfig!.graphqlSchema!)).toBe(
+      normalizeString(`
       schema {
         query: Query
         mutation: Mutation
@@ -1641,8 +1715,10 @@ describe('Contract tests', (ctx) => {
         product: Product!
         stock: Int!
       }
-    `));
-    expect(normalizeString(executionConfig.engineConfig!.graphqlClientSchema!)).toBe(normalizeString(`
+    `),
+    );
+    expect(normalizeString(executionConfig.engineConfig!.graphqlClientSchema!)).toBe(
+      normalizeString(`
       type Query {
         user(id: ID!): User!
         product(sku: ID!): User!
@@ -1663,7 +1739,8 @@ describe('Contract tests', (ctx) => {
         sku: ID!
         name: String!
       }
-    `));
+    `),
+    );
 
     const publishSubgraphResponse = await client.publishFederatedSubgraph({
       name: 'products',
@@ -1691,7 +1768,8 @@ describe('Contract tests', (ctx) => {
     expect(newExecutionConfig.engineConfig).toBeDefined();
     expect(newExecutionConfig.engineConfig?.graphqlSchema).toBeDefined();
     expect(newExecutionConfig.engineConfig?.graphqlClientSchema).toBeDefined();
-    expect(normalizeString(newExecutionConfig.engineConfig!.graphqlSchema!)).toBe(normalizeString(`
+    expect(normalizeString(newExecutionConfig.engineConfig!.graphqlSchema!)).toBe(
+      normalizeString(`
       schema {
         query: Query
         mutation: Mutation
@@ -1736,8 +1814,10 @@ describe('Contract tests', (ctx) => {
         product: Product!
         stock: Int!
       }
-    `));
-    expect(normalizeString(newExecutionConfig.engineConfig!.graphqlClientSchema!)).toBe(normalizeString(`
+    `),
+    );
+    expect(normalizeString(newExecutionConfig.engineConfig!.graphqlClientSchema!)).toBe(
+      normalizeString(`
       type Query {
         user(id: ID!): User!
         product(sku: ID!): User!
@@ -1759,7 +1839,8 @@ describe('Contract tests', (ctx) => {
         upc: Int!
         name: String!
       }
-    `));
+    `),
+    );
 
     await server.close();
   });
@@ -1837,7 +1918,8 @@ describe('Contract tests', (ctx) => {
     expect(executionConfig.engineConfig).toBeDefined();
     expect(executionConfig.engineConfig?.graphqlSchema).toBeDefined();
     expect(executionConfig.engineConfig?.graphqlClientSchema).toBeDefined();
-    expect(normalizeString(executionConfig.engineConfig!.graphqlSchema!)).toBe(normalizeString(`
+    expect(normalizeString(executionConfig.engineConfig!.graphqlSchema!)).toBe(
+      normalizeString(`
       schema {
         query: Query
         mutation: Mutation
@@ -1884,8 +1966,10 @@ describe('Contract tests', (ctx) => {
         product: Product! @inaccessible
         stock: Int!
       }
-    `));
-    expect(normalizeString(executionConfig.engineConfig!.graphqlClientSchema!)).toBe(normalizeString(`
+    `),
+    );
+    expect(normalizeString(executionConfig.engineConfig!.graphqlClientSchema!)).toBe(
+      normalizeString(`
       directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
       directive @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
 
@@ -1909,7 +1993,8 @@ describe('Contract tests', (ctx) => {
         sku: ID!
         stock: Int!
       }
-    `));
+    `),
+    );
 
     const publishSubgraphResponse = await client.publishFederatedSubgraph({
       name: 'products',
@@ -1937,7 +2022,8 @@ describe('Contract tests', (ctx) => {
     expect(newExecutionConfig.engineConfig).toBeDefined();
     expect(newExecutionConfig.engineConfig?.graphqlSchema).toBeDefined();
     expect(newExecutionConfig.engineConfig?.graphqlClientSchema).toBeDefined();
-    expect(normalizeString(newExecutionConfig.engineConfig!.graphqlSchema!)).toBe(normalizeString(`
+    expect(normalizeString(newExecutionConfig.engineConfig!.graphqlSchema!)).toBe(
+      normalizeString(`
       schema {
         query: Query
         mutation: Mutation
@@ -1985,8 +2071,10 @@ describe('Contract tests', (ctx) => {
         product: Product! @inaccessible
         stock: Int!
       }
-    `));
-    expect(normalizeString(newExecutionConfig.engineConfig!.graphqlClientSchema!)).toBe(normalizeString(`
+    `),
+    );
+    expect(normalizeString(newExecutionConfig.engineConfig!.graphqlClientSchema!)).toBe(
+      normalizeString(`
       directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
       directive @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
 
@@ -2010,7 +2098,8 @@ describe('Contract tests', (ctx) => {
         sku: ID!
         stock: Int!
       }
-    `));
+    `),
+    );
 
     await server.close();
   });

@@ -284,7 +284,7 @@ func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.M
 
 type graphMux struct {
 	mux                        *chi.Mux
-	planCache                  ExecutionPlanCache[uint64, *planWithMetaData]
+	planCache                  *ristretto.Cache[uint64, *planWithMetaData]
 	persistedOperationCache    *ristretto.Cache[uint64, NormalizationCacheEntry]
 	normalizationCache         *ristretto.Cache[uint64, NormalizationCacheEntry]
 	complexityCalculationCache *ristretto.Cache[uint64, ComplexityCacheEntry]
@@ -292,13 +292,158 @@ type graphMux struct {
 	operationHashCache         *ristretto.Cache[uint64, string]
 	accessLogsFileLogger       *logging.BufferedLogger
 	metricStore                rmetric.Store
+	prometheusCacheMetrics     *rmetric.CacheMetrics
+	otelCacheMetrics           *rmetric.CacheMetrics
+}
+
+// buildOperationCaches creates the caches for the graph mux.
+// The caches are created based on the engine configuration.
+func (s *graphMux) buildOperationCaches(srv *graphServer) (err error) {
+
+	// We create a new execution plan cache for each operation planner which is coupled to
+	// the specific engine configuration. This is necessary because otherwise we would return invalid plans.
+	//
+	// when an execution plan was generated, which can be quite expensive, we want to cache it
+	// this means that we can hash the input and cache the generated plan
+	// the next time we get the same input, we can just return the cached plan
+	// the engine is smart enough to first do normalization and then hash the input
+	// this means that we can cache the normalized input and don't have to worry about
+	// different inputs that would generate the same execution plan
+
+	if srv.engineExecutionConfiguration.ExecutionPlanCacheSize > 0 {
+		planCacheConfig := &ristretto.Config[uint64, *planWithMetaData]{
+			Metrics:            srv.metricConfig.OpenTelemetry.GraphqlCache || srv.metricConfig.Prometheus.GraphqlCache,
+			MaxCost:            srv.engineExecutionConfiguration.ExecutionPlanCacheSize,
+			NumCounters:        srv.engineExecutionConfiguration.ExecutionPlanCacheSize * 10,
+			IgnoreInternalCost: true,
+			BufferItems:        64,
+		}
+		s.planCache, err = ristretto.NewCache[uint64, *planWithMetaData](planCacheConfig)
+		if err != nil {
+			return fmt.Errorf("failed to create planner cache: %w", err)
+		}
+	}
+
+	if srv.engineExecutionConfiguration.EnablePersistedOperationsCache || srv.automaticPersistedQueriesConfig.Enabled {
+		cacheSize := int64(1024)
+		persistedOperationCacheConfig := &ristretto.Config[uint64, NormalizationCacheEntry]{
+			MaxCost:            cacheSize,
+			NumCounters:        cacheSize * 10,
+			IgnoreInternalCost: true,
+			BufferItems:        64,
+		}
+
+		s.persistedOperationCache, _ = ristretto.NewCache[uint64, NormalizationCacheEntry](persistedOperationCacheConfig)
+	}
+
+	if srv.engineExecutionConfiguration.EnableNormalizationCache && srv.engineExecutionConfiguration.NormalizationCacheSize > 0 {
+		normalizationCacheConfig := &ristretto.Config[uint64, NormalizationCacheEntry]{
+			Metrics:            srv.metricConfig.OpenTelemetry.GraphqlCache || srv.metricConfig.Prometheus.GraphqlCache,
+			MaxCost:            srv.engineExecutionConfiguration.NormalizationCacheSize,
+			NumCounters:        srv.engineExecutionConfiguration.NormalizationCacheSize * 10,
+			IgnoreInternalCost: true,
+			BufferItems:        64,
+		}
+		s.normalizationCache, err = ristretto.NewCache[uint64, NormalizationCacheEntry](normalizationCacheConfig)
+		if err != nil {
+			return fmt.Errorf("failed to create normalization cache: %w", err)
+		}
+	}
+
+	if srv.engineExecutionConfiguration.EnableValidationCache && srv.engineExecutionConfiguration.ValidationCacheSize > 0 {
+		validationCacheConfig := &ristretto.Config[uint64, bool]{
+			Metrics:            srv.metricConfig.OpenTelemetry.GraphqlCache || srv.metricConfig.Prometheus.GraphqlCache,
+			MaxCost:            srv.engineExecutionConfiguration.ValidationCacheSize,
+			NumCounters:        srv.engineExecutionConfiguration.ValidationCacheSize * 10,
+			IgnoreInternalCost: true,
+			BufferItems:        64,
+		}
+		s.validationCache, err = ristretto.NewCache[uint64, bool](validationCacheConfig)
+		if err != nil {
+			return fmt.Errorf("failed to create validation cache: %w", err)
+		}
+	}
+
+	if srv.securityConfiguration.ComplexityCalculationCache != nil && srv.securityConfiguration.ComplexityCalculationCache.Enabled && srv.securityConfiguration.ComplexityCalculationCache.CacheSize > 0 {
+		complexityCalculationCacheConfig := &ristretto.Config[uint64, ComplexityCacheEntry]{
+			MaxCost:            srv.securityConfiguration.ComplexityCalculationCache.CacheSize,
+			NumCounters:        srv.securityConfiguration.ComplexityCalculationCache.CacheSize * 10,
+			IgnoreInternalCost: true,
+			BufferItems:        64,
+		}
+		s.complexityCalculationCache, err = ristretto.NewCache[uint64, ComplexityCacheEntry](complexityCalculationCacheConfig)
+		if err != nil {
+			return fmt.Errorf("failed to create query depth cache: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// configureCacheMetrics sets up the cache metrics for this mux if enabled in the config.
+func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []attribute.KeyValue) error {
+	if srv.metricConfig.OpenTelemetry.GraphqlCache {
+		cacheMetrics, err := rmetric.NewCacheMetrics(
+			srv.logger,
+			baseOtelAttributes,
+			srv.otlpMeterProvider)
+
+		if err != nil {
+			return fmt.Errorf("failed to create cache metrics for OTLP: %w", err)
+		}
+
+		s.otelCacheMetrics = cacheMetrics
+	}
+
+	if srv.metricConfig.Prometheus.GraphqlCache {
+		cacheMetrics, err := rmetric.NewCacheMetrics(
+			srv.logger,
+			baseOtelAttributes,
+			srv.promMeterProvider)
+
+		if err != nil {
+			return fmt.Errorf("failed to create cache metrics for Prometheus: %w", err)
+		}
+
+		s.prometheusCacheMetrics = cacheMetrics
+	}
+
+	var metricInfos []rmetric.CacheMetricInfo
+
+	if s.planCache != nil {
+		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("execution", srv.engineExecutionConfiguration.ExecutionPlanCacheSize, s.planCache.Metrics))
+	}
+
+	if s.normalizationCache != nil {
+		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("normalization", srv.engineExecutionConfiguration.NormalizationCacheSize, s.normalizationCache.Metrics))
+	}
+
+	if s.validationCache != nil {
+		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("validation", srv.engineExecutionConfiguration.ValidationCacheSize, s.validationCache.Metrics))
+	}
+
+	if s.otelCacheMetrics != nil {
+		if err := s.otelCacheMetrics.RegisterObservers(metricInfos); err != nil {
+			return fmt.Errorf("failed to register observer for OTLP cache metrics: %w", err)
+		}
+	}
+
+	if s.prometheusCacheMetrics != nil {
+		if err := s.prometheusCacheMetrics.RegisterObservers(metricInfos); err != nil {
+			return fmt.Errorf("failed to register observer for Prometheus cache metrics: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (s *graphMux) Shutdown(ctx context.Context) error {
 
 	var err error
 
-	s.planCache.Close()
+	if s.planCache != nil {
+		s.planCache.Close()
+	}
 
 	if s.persistedOperationCache != nil {
 		s.persistedOperationCache.Close()
@@ -318,6 +463,18 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 
 	if s.accessLogsFileLogger != nil {
 		if aErr := s.accessLogsFileLogger.Close(); aErr != nil {
+			err = errors.Join(err, aErr)
+		}
+	}
+
+	if s.otelCacheMetrics != nil {
+		if aErr := s.otelCacheMetrics.Shutdown(); aErr != nil {
+			err = errors.Join(err, aErr)
+		}
+	}
+
+	if s.prometheusCacheMetrics != nil {
+		if aErr := s.prometheusCacheMetrics.Shutdown(); aErr != nil {
 			err = errors.Join(err, aErr)
 		}
 	}
@@ -384,75 +541,12 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		return nil, err
 	}
 
-	// We create a new execution plan cache for each operation planner which is coupled to
-	// the specific engine configuration. This is necessary because otherwise we would return invalid plans.
-	//
-	// when an execution plan was generated, which can be quite expensive, we want to cache it
-	// this means that we can hash the input and cache the generated plan
-	// the next time we get the same input, we can just return the cached plan
-	// the engine is smart enough to first do normalization and then hash the input
-	// this means that we can cache the normalized input and don't have to worry about
-	// different inputs that would generate the same execution plan
-
-	if s.engineExecutionConfiguration.ExecutionPlanCacheSize > 0 {
-		planCacheConfig := &ristretto.Config[uint64, *planWithMetaData]{
-			MaxCost:     s.engineExecutionConfiguration.ExecutionPlanCacheSize,
-			NumCounters: s.engineExecutionConfiguration.ExecutionPlanCacheSize * 10,
-			BufferItems: 64,
-		}
-		gm.planCache, err = ristretto.NewCache[uint64, *planWithMetaData](planCacheConfig)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create planner cache: %w", err)
-		}
-	} else {
-		gm.planCache = NewNoopExecutionPlanCache()
+	if err = gm.buildOperationCaches(s); err != nil {
+		return nil, err
 	}
 
-	if s.engineExecutionConfiguration.EnablePersistedOperationsCache || s.automaticPersistedQueriesConfig.Enabled {
-		cacheSize := int64(1024 * 10)
-		persistedOperationCacheConfig := &ristretto.Config[uint64, NormalizationCacheEntry]{
-			MaxCost:     cacheSize,
-			NumCounters: cacheSize * 10,
-			BufferItems: 64,
-		}
-
-		gm.persistedOperationCache, _ = ristretto.NewCache[uint64, NormalizationCacheEntry](persistedOperationCacheConfig)
-	}
-
-	if s.engineExecutionConfiguration.EnableNormalizationCache && s.engineExecutionConfiguration.NormalizationCacheSize > 0 {
-		normalizationCacheConfig := &ristretto.Config[uint64, NormalizationCacheEntry]{
-			MaxCost:     s.engineExecutionConfiguration.NormalizationCacheSize,
-			NumCounters: s.engineExecutionConfiguration.NormalizationCacheSize * 10,
-			BufferItems: 64,
-		}
-		gm.normalizationCache, err = ristretto.NewCache[uint64, NormalizationCacheEntry](normalizationCacheConfig)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create normalization cache: %w", err)
-		}
-	}
-
-	if s.engineExecutionConfiguration.EnableValidationCache && s.engineExecutionConfiguration.ValidationCacheSize > 0 {
-		validationCacheConfig := &ristretto.Config[uint64, bool]{
-			MaxCost:     s.engineExecutionConfiguration.ValidationCacheSize,
-			NumCounters: s.engineExecutionConfiguration.ValidationCacheSize * 10,
-			BufferItems: 64,
-		}
-		gm.validationCache, err = ristretto.NewCache[uint64, bool](validationCacheConfig)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create validation cache: %w", err)
-		}
-	}
-
-	if s.securityConfiguration.ComplexityCalculationCache != nil && s.securityConfiguration.ComplexityCalculationCache.Enabled && s.securityConfiguration.ComplexityCalculationCache.CacheSize > 0 {
-		complexityCalculationCacheConfig := &ristretto.Config[uint64, ComplexityCacheEntry]{
-			MaxCost:     s.securityConfiguration.ComplexityCalculationCache.CacheSize,
-			NumCounters: s.securityConfiguration.ComplexityCalculationCache.CacheSize * 10,
-			BufferItems: 64,
-		}
-		gm.complexityCalculationCache, err = ristretto.NewCache[uint64, ComplexityCacheEntry](complexityCalculationCacheConfig)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create query depth cache: %w", err)
-		}
+	if err = gm.configureCacheMetrics(s, baseOtelAttributes); err != nil {
+		return nil, err
 	}
 
 	computeSha256 := false
@@ -466,7 +560,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			}
 		}
 	} else if s.accessLogsConfig != nil {
-		for _, customAttribute := range s.accessLogsConfig.Attributes {
+		for _, customAttribute := range append(s.accessLogsConfig.Attributes, s.accessLogsConfig.SubgraphAttributes...) {
 			if customAttribute.ValueFrom != nil && customAttribute.ValueFrom.ContextField == ContextFieldOperationSha256 {
 				computeSha256 = true
 				break
@@ -476,9 +570,10 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	if computeSha256 {
 		operationHashCacheConfig := &ristretto.Config[uint64, string]{
-			MaxCost:     s.engineExecutionConfiguration.OperationHashCacheSize,
-			NumCounters: s.engineExecutionConfiguration.OperationHashCacheSize * 10,
-			BufferItems: 64,
+			MaxCost:            s.engineExecutionConfiguration.OperationHashCacheSize,
+			NumCounters:        s.engineExecutionConfiguration.OperationHashCacheSize * 10,
+			IgnoreInternalCost: true,
+			BufferItems:        64,
 		}
 		gm.operationHashCache, err = ristretto.NewCache[uint64, string](operationHashCacheConfig)
 		if err != nil {
@@ -632,27 +727,41 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		httpRouter.Use(traceHandler.Handler)
 	}
 
+	var subgraphAccessLogger *requestlogger.SubgraphAccessLogger
 	if s.accessLogsConfig != nil && s.accessLogsConfig.Logger != nil {
 		requestLoggerOpts := []requestlogger.Option{
 			requestlogger.WithDefaultOptions(),
 			requestlogger.WithNoTimeField(),
 			requestlogger.WithFields(baseLogFields...),
-			requestlogger.WithFieldsHandler(s.accessLogsFieldHandler),
+			requestlogger.WithAttributes(s.accessLogsConfig.Attributes),
+			requestlogger.WithFieldsHandler(AccessLogsFieldHandler),
 		}
 
+		var ipAnonConfig *requestlogger.IPAnonymizationConfig
 		if s.ipAnonymization.Enabled {
-			requestLoggerOpts = append(requestLoggerOpts, requestlogger.WithAnonymization(&requestlogger.IPAnonymizationConfig{
+			ipAnonConfig = &requestlogger.IPAnonymizationConfig{
 				Enabled: s.ipAnonymization.Enabled,
 				Method:  requestlogger.IPAnonymizationMethod(s.ipAnonymization.Method),
-			}))
+			}
+			requestLoggerOpts = append(requestLoggerOpts, requestlogger.WithAnonymization(ipAnonConfig))
 		}
 
 		requestLogger := requestlogger.New(
 			s.accessLogsConfig.Logger,
 			requestLoggerOpts...,
 		)
-
 		httpRouter.Use(requestLogger)
+
+		if s.accessLogsConfig.SubgraphEnabled {
+			subgraphAccessLogger = requestlogger.NewSubgraphAccessLogger(
+				s.accessLogsConfig.Logger,
+				requestlogger.SubgraphOptions{
+					IPAnonymizationConfig: ipAnonConfig,
+					FieldsHandler:         AccessLogsFieldHandler,
+					Fields:                baseLogFields,
+					Attributes:            s.accessLogsConfig.SubgraphAttributes,
+				})
+		}
 	}
 
 	routerEngineConfig := &RouterEngineConfiguration{
@@ -702,6 +811,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			PubSubProviders:          s.pubSubProviders,
 			Reporter:                 s.websocketStats,
 			ApolloCompatibilityFlags: s.apolloCompatibilityFlags,
+			HeartbeatInterval:        s.multipartHeartbeatInterval,
 		},
 	)
 	if err != nil {
@@ -745,7 +855,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		TracerProvider:                              s.tracerProvider,
 		Authorizer:                                  NewCosmoAuthorizer(authorizerOptions),
 		SubgraphErrorPropagation:                    s.subgraphErrorPropagation,
-		EngineLoaderHooks:                           NewEngineRequestHooks(gm.metricStore),
+		EngineLoaderHooks:                           NewEngineRequestHooks(gm.metricStore, subgraphAccessLogger),
 	}
 
 	if s.redisClient != nil {
@@ -860,36 +970,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	s.graphMuxList = append(s.graphMuxList, gm)
 
 	return gm, nil
-}
-
-func (s *graphServer) accessLogsFieldHandler(panicError any, request *http.Request) []zapcore.Field {
-	reqContext := getRequestContext(request.Context())
-	if reqContext == nil {
-		return nil
-	}
-	resFields := make([]zapcore.Field, 0, len(s.accessLogsConfig.Attributes))
-	resFields = append(resFields, logging.WithRequestID(middleware.GetReqID(request.Context())))
-
-	for _, field := range s.accessLogsConfig.Attributes {
-
-		if field.ValueFrom != nil && field.ValueFrom.RequestHeader != "" {
-			resFields = append(resFields, NewStringLogField(request.Header.Get(field.ValueFrom.RequestHeader), field))
-		} else if field.ValueFrom != nil && field.ValueFrom.ContextField != "" && reqContext.operation != nil {
-			if field.ValueFrom.ContextField == ContextFieldResponseErrorMessage && panicError != nil {
-				errMessage := fmt.Sprintf("%v", panicError)
-				if v := NewStringLogField(errMessage, field); v != zap.Skip() {
-					resFields = append(resFields, v)
-				}
-			}
-			if v := GetLogFieldFromCustomAttribute(field, reqContext); v != zap.Skip() {
-				resFields = append(resFields, v)
-			}
-		} else if field.Default != "" {
-			resFields = append(resFields, NewStringLogField(field.Default, field))
-		}
-	}
-
-	return resFields
 }
 
 func (s *graphServer) buildPubSubConfiguration(ctx context.Context, engineConfig *nodev1.EngineConfiguration, routerEngineCfg *RouterEngineConfiguration) error {

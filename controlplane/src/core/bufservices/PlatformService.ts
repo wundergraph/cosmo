@@ -61,7 +61,6 @@ import { deleteRouterToken } from './federated-graph/deleteRouterToken.js';
 import { generateRouterToken } from './federated-graph/generateRouterToken.js';
 import { getCompositionDetails } from './federated-graph/getCompositionDetails.js';
 import { getCompositions } from './federated-graph/getCompositions.js';
-import { getFederatedGraphByName } from './federated-graph/getFederatedGraphByName.js';
 import { getFederatedGraphChangelog } from './federated-graph/getFederatedGraphChangelog.js';
 import { getFederatedGraphSDLByName } from './federated-graph/getFederatedGraphSDLByName.js';
 import { getFederatedGraphs } from './federated-graph/getFederatedGraphs.js';
@@ -121,7 +120,6 @@ import { createFederatedSubgraph } from './subgraph/createFederatedSubgraph.js';
 import { deleteFederatedSubgraph } from './subgraph/deleteFederatedSubgraph.js';
 import { fixSubgraphSchema } from './subgraph/fixSubgraphSchema.js';
 import { getLatestSubgraphSDL } from './subgraph/getLatestSubgraphSDL.js';
-import { getSubgraphByName } from './subgraph/getSubgraphByName.js';
 import { getSubgraphMembers } from './subgraph/getSubgraphMembers.js';
 import { getSubgraphSDLFromLatestComposition } from './subgraph/getSubgraphSDLFromLatestComposition.js';
 import { getSubgraphs } from './subgraph/getSubgraphs.js';
@@ -143,6 +141,11 @@ import { createPlaygroundScript } from './playground/createPlaygroundScript.js';
 import { deletePlaygroundScript } from './playground/deletePlaygroundScript.js';
 import { getPlaygroundScripts } from './playground/getPlaygroundScripts.js';
 import { updatePlaygroundScript } from './playground/updatePlaygroundScript.js';
+import { getFederatedGraphByName } from './federated-graph/getFederatedGraphByName.js';
+import { getSubgraphByName } from './subgraph/getSubgraphByName.js';
+import { getNamespace } from './namespace/getNamespace.js';
+import { getSubgraphById } from './subgraph/getSubgraphById.js';
+import { getFederatedGraphById } from './federated-graph/getFederatedGraphById.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -721,6 +724,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     deletePlaygroundScript: (req, ctx) => {
       return deletePlaygroundScript(opts, req, ctx);
+    },
+
+    // apis used by the terraform provider
+
+    getSubgraphById: (req, ctx) => {
+      return getSubgraphById(opts, req, ctx);
+    },
+
+    getFederatedGraphById: (req, ctx) => {
+      return getFederatedGraphById(opts, req, ctx);
+    },
+
+    getNamespace: (req, ctx) => {
+      return getNamespace(opts, req, ctx);
     },
   };
 }

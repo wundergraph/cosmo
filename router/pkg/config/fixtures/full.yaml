@@ -87,6 +87,7 @@ telemetry:
     otlp:
       enabled: true
       router_runtime: true
+      graphql_cache: true
       exclude_metric_labels: []
       exclude_metrics: []
       # If no exporters are defined, the default one is used
@@ -103,6 +104,7 @@ telemetry:
       enabled: true
       path: "/metrics"
       listen_addr: "127.0.0.1:8088"
+      graphql_cache: true
       exclude_metrics: []
       exclude_metric_labels: []
 
@@ -232,7 +234,7 @@ engine:
   enable_execution_plan_cache_response_header: false
   max_concurrent_resolvers: 32
   enable_net_poll: true
-  enable_subgraph_fetch_operation_name: false
+  enable_subgraph_fetch_operation_name: true
   websocket_client_poll_timeout: "1s"
   websocket_client_conn_buffer_size: 128
   websocket_client_read_timeout: "5s"
