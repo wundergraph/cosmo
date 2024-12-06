@@ -2,7 +2,15 @@ import { TraceContext, TraceView } from '@/components/playground/trace-view';
 import { explorerPlugin } from '@graphiql/plugin-explorer';
 import { createGraphiQLFetcher } from '@graphiql/toolkit';
 import { GraphiQL } from 'graphiql';
-import { GraphQLSchema, buildClientSchema, getIntrospectionQuery, parse, validate } from 'graphql';
+import {
+  GraphQLSchema,
+  Kind,
+  OperationTypeNode,
+  buildClientSchema,
+  getIntrospectionQuery,
+  parse,
+  validate,
+} from 'graphql';
 import { useContext, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FaNetworkWired } from 'react-icons/fa';
@@ -15,7 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { LuLayoutDashboard } from 'react-icons/lu';
 import { sentenceCase } from 'change-case';
 import { PlanView } from './plan-view';
-import { PlaygroundContext, QueryPlan, TabsState } from './types';
+import { PlaygroundContext, QueryPlan, TabsState, PlaygroundView } from './types';
 import { useDebounce } from 'use-debounce';
 import { useLocalStorage } from '@/lib/use-local-storage';
 import {
@@ -218,9 +226,9 @@ const graphiQLFetch = async (
 };
 
 const ResponseToolbar = () => {
-  const [view, setView] = useState('response');
+  const { view, setView } = useContext(PlaygroundContext);
 
-  const onValueChange = (val: string) => {
+  const onValueChange = (val: PlaygroundView) => {
     const response = document.getElementsByClassName('graphiql-response')[0] as HTMLDivElement;
 
     const art = document.getElementById('art-visualization') as HTMLDivElement;
@@ -405,6 +413,7 @@ export const Playground = (input: {
   const url = input.routingUrl || import.meta.env.VITE_ROUTING_URL || '{{graphqlURL}}';
 
   const [isMounted, setIsMounted] = useState(false);
+  const [view, setView] = useState<PlaygroundView>('response');
 
   const [schema, setSchema] = useState<GraphQLSchema | null>(null);
 
@@ -595,12 +604,25 @@ export const Playground = (input: {
 
   useEffect(() => {
     const getPlan = async () => {
-      if (!schema || !debouncedQuery || !url) {
+      if (!schema || !debouncedQuery || !url || view !== 'query-plan') {
         return;
       }
 
       try {
-        const errors = validate(schema, parse(debouncedQuery));
+        const parsed = parse(debouncedQuery);
+
+        const isSubscription =
+          parsed.definitions[0]?.kind === Kind.OPERATION_DEFINITION &&
+          parsed.definitions[0].operation === OperationTypeNode.SUBSCRIPTION;
+
+        // Disable for subscription
+        if (isSubscription) {
+          setPlanError('Query plan is currently unavailable for subscriptions');
+          setPlan(undefined);
+          return;
+        }
+
+        const errors = validate(schema, parsed);
         if (errors.length > 0) {
           setPlanError('Invalid query');
           return;
@@ -641,7 +663,7 @@ export const Playground = (input: {
     };
 
     getPlan();
-  }, [debouncedQuery, debouncedHeaders, url, schema]);
+  }, [debouncedQuery, debouncedHeaders, url, schema, view]);
 
   const [tabsState, setTabsState] = useState<TabsState>({
     activeTabIndex: 0,
@@ -656,6 +678,8 @@ export const Playground = (input: {
           tabsState,
           status,
           statusText,
+          view,
+          setView,
         }}
       >
         <TraceContext.Provider
