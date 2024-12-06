@@ -136,7 +136,7 @@ func TestNatsEvents(t *testing.T) {
 				if count == 0 {
 					var gqlErr graphql.Errors
 					require.ErrorAs(t, errValue, &gqlErr)
-					require.Equal(t, "Internal server error", gqlErr[0].Message)
+					require.Equal(t, "Invalid message received", gqlErr[0].Message)
 				} else if count == 1 || count == 3 {
 					require.NoError(t, errValue)
 					require.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(dataValue))
@@ -1398,6 +1398,97 @@ func TestNatsEvents(t *testing.T) {
 			}
 
 			wg.Wait()
+		})
+	})
+
+	t.Run("message with invalid JSON should give a specific error", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			EnableNats: true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			var subscriptionOne struct {
+				employeeUpdated struct {
+					ID      float64 `graphql:"id"`
+					Details struct {
+						Forename string `graphql:"forename"`
+						Surname  string `graphql:"surname"`
+					} `graphql:"details"`
+				} `graphql:"employeeUpdated(employeeID: 3)"`
+			}
+
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
+			client := graphql.NewSubscriptionClient(surl)
+			t.Cleanup(func() {
+				_ = client.Close()
+			})
+
+			wg := &sync.WaitGroup{}
+			wg.Add(4)
+
+			count := 0
+
+			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
+
+				defer wg.Done()
+
+				if count == 0 {
+					var gqlErr graphql.Errors
+					require.ErrorAs(t, errValue, &gqlErr)
+					require.Equal(t, "Invalid message received", gqlErr[0].Message)
+				} else if count == 1 || count == 3 {
+					require.NoError(t, errValue)
+					require.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(dataValue))
+				} else if count == 2 {
+					var gqlErr graphql.Errors
+					require.ErrorAs(t, errValue, &gqlErr)
+					require.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdated.id'.", gqlErr[0].Message)
+				}
+
+				count++
+
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEqual(t, "", subscriptionOneID)
+
+			go func() {
+				clientErr := client.Run()
+				require.NoError(t, clientErr)
+			}()
+
+			xEnv.WaitForSubscriptionCount(1, time.Second*10)
+
+			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{asas`)) // Empty message
+			require.NoError(t, err)
+			err = xEnv.NatsConnectionDefault.Flush()
+			require.NoError(t, err)
+			xEnv.WaitForMessagesSent(1, time.Second*10)
+
+			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)) // Correct message
+			require.NoError(t, err)
+			err = xEnv.NatsConnectionDefault.Flush()
+			require.NoError(t, err)
+			xEnv.WaitForMessagesSent(2, time.Second*10)
+
+			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"__typename":"Employee","update":{"name":"foo"}}`)) // Missing id
+			require.NoError(t, err)
+			err = xEnv.NatsConnectionDefault.Flush()
+			require.NoError(t, err)
+			xEnv.WaitForMessagesSent(3, time.Second*10)
+
+			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)) // Correct message
+			require.NoError(t, err)
+			err = xEnv.NatsConnectionDefault.Flush()
+			require.NoError(t, err)
+			xEnv.WaitForMessagesSent(4, time.Second*10)
+
+			wg.Wait()
+
+			require.NoError(t, client.Close())
+
+			xEnv.WaitForSubscriptionCount(0, time.Second*10)
+			xEnv.WaitForConnectionCount(0, time.Second*10)
 		})
 	})
 }
