@@ -52,6 +52,9 @@ func TestEventsConfig(t *testing.T) {
 
 	t.Run("kafka provider not specified in the router configuration", func(t *testing.T) {
 		err := testenv.RunWithError(t, &testenv.Config{
+			EnableNats:        true,
+			EnableKafka:       false,
+			ForcePubSubChecks: true,
 			ModifyEventsConfiguration: func(eventsConfiguration *config.EventsConfiguration) {
 				eventsConfiguration.Providers.Kafka = nil
 			},
@@ -63,7 +66,10 @@ func TestEventsConfig(t *testing.T) {
 
 	t.Run("nats provider not specified in the router configuration", func(t *testing.T) {
 		err := testenv.RunWithError(t, &testenv.Config{
-			KafkaSeeds: seeds,
+			EnableNats:        false,
+			EnableKafka:       true,
+			ForcePubSubChecks: true,
+			KafkaSeeds:        seeds,
 			ModifyEventsConfiguration: func(eventsConfiguration *config.EventsConfiguration) {
 				eventsConfiguration.Providers.Nats = nil
 			},

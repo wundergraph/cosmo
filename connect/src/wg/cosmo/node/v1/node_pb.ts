@@ -1681,6 +1681,11 @@ export class DataSourceCustomEvents extends Message<DataSourceCustomEvents> {
    */
   kafka: KafkaEventConfiguration[] = [];
 
+  /**
+   * @generated from field: bool DontVerify = 3;
+   */
+  DontVerify = false;
+
   constructor(data?: PartialMessage<DataSourceCustomEvents>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1691,6 +1696,7 @@ export class DataSourceCustomEvents extends Message<DataSourceCustomEvents> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "nats", kind: "message", T: NatsEventConfiguration, repeated: true },
     { no: 2, name: "kafka", kind: "message", T: KafkaEventConfiguration, repeated: true },
+    { no: 3, name: "DontVerify", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DataSourceCustomEvents {

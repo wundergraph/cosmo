@@ -168,6 +168,7 @@ type Config struct {
 	EnableRuntimeMetrics               bool
 	EnableNats                         bool
 	EnableKafka                        bool
+	ForcePubSubChecks                  bool
 	SubgraphAccessLogsEnabled          bool
 	SubgraphAccessLogFields            []config.CustomAttribute
 }
@@ -433,6 +434,21 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	var routerConfig nodev1.RouterConfig
 	if err := protojson.Unmarshal([]byte(replaced), &routerConfig); err != nil {
 		return nil, err
+	}
+
+	if !cfg.ForcePubSubChecks {
+		for _, datasource := range routerConfig.EngineConfig.DatasourceConfigurations {
+			if customEvents := datasource.CustomEvents; customEvents != nil {
+				customEvents.DontVerify = true
+			}
+		}
+		for _, ffConfig := range routerConfig.FeatureFlagConfigs.GetConfigByFeatureFlagName() {
+			for _, datasource := range ffConfig.EngineConfig.DatasourceConfigurations {
+				if customEvents := datasource.CustomEvents; customEvents != nil {
+					customEvents.DontVerify = true
+				}
+			}
+		}
 	}
 
 	if cfg.ModifyRouterConfig != nil {
@@ -1048,12 +1064,15 @@ func (e *Environment) WaitForServer(ctx context.Context, url string, timeoutMs i
 		case err := <-routerStartErr:
 			return err
 		default:
-			req, err := http.NewRequest("GET", url, nil)
+			reqCtx, cancelFn := context.WithTimeout(context.Background(), time.Second)
+			req, err := http.NewRequestWithContext(reqCtx, "GET", url, nil)
 			if err != nil {
+				cancelFn()
 				e.t.Fatalf("Could not create request for health check")
 			}
 			req.Header.Set("User-Agent", "Router-tests")
 			resp, err := e.RouterClient.Do(req)
+			cancelFn()
 			if err == nil && resp.StatusCode == 200 {
 				return nil
 			}

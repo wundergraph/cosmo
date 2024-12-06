@@ -231,6 +231,7 @@ message EngineEventConfiguration {
 message DataSourceCustomEvents {
   repeated NatsEventConfiguration nats = 1;
   repeated KafkaEventConfiguration kafka = 2;
+  bool DontVerify = 3;
 }
 
 message DataSourceCustom_Static {
