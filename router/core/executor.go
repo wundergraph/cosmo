@@ -54,6 +54,7 @@ type ExecutorBuildOptions struct {
 	PubSubProviders          *EnginePubSubProviders
 	Reporter                 resolve.Reporter
 	ApolloCompatibilityFlags config.ApolloCompatibilityFlags
+	HeartbeatInterval        time.Duration
 }
 
 func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *ExecutorBuildOptions) (*Executor, error) {
@@ -76,6 +77,7 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 		DefaultErrorExtensionCode:          opts.RouterEngineConfig.SubgraphErrorPropagation.DefaultExtensionCode,
 		AllowedSubgraphErrorFields:         opts.RouterEngineConfig.SubgraphErrorPropagation.AllowedFields,
 		MaxRecyclableParserSize:            opts.RouterEngineConfig.Execution.ResolverMaxRecyclableParserSize,
+		MultipartSubHeartbeatInterval:      opts.HeartbeatInterval,
 	}
 
 	if opts.ApolloCompatibilityFlags.ValueCompletion.Enabled {
@@ -189,18 +191,35 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 }
 
 func buildNatsOptions(eventSource config.NatsEventSource, logger *zap.Logger) ([]nats.Option, error) {
-
 	opts := []nats.Option{
+		nats.Name(fmt.Sprintf("cosmo.router.edfs.nats.%s", eventSource.ID)),
+		nats.ReconnectJitter(500*time.Millisecond, 2*time.Second),
+		nats.ClosedHandler(func(conn *nats.Conn) {
+			logger.Info("NATS connection closed", zap.String("provider_id", eventSource.ID), zap.Error(conn.LastError()))
+		}),
+		nats.ConnectHandler(func(nc *nats.Conn) {
+			logger.Info("NATS connection established", zap.String("provider_id", eventSource.ID), zap.String("url", nc.ConnectedUrlRedacted()))
+		}),
+		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
+			if err != nil {
+				logger.Error("NATS disconnected; will attempt to reconnect", zap.Error(err), zap.String("provider_id", eventSource.ID))
+			} else {
+				logger.Info("NATS disconnected", zap.String("provider_id", eventSource.ID))
+			}
+		}),
 		nats.ErrorHandler(func(conn *nats.Conn, subscription *nats.Subscription, err error) {
-
 			if errors.Is(err, nats.ErrSlowConsumer) {
 				logger.Warn(
-					"Nats slow consumer detected. Events are being dropped. Please consider increasing the buffer size or reducing the number of messages being sent.",
+					"NATS slow consumer detected. Events are being dropped. Please consider increasing the buffer size or reducing the number of messages being sent.",
 					zap.Error(err),
+					zap.String("provider_id", eventSource.ID),
 				)
 			} else {
-				logger.Error("nats error", zap.Error(err))
+				logger.Error("NATS error", zap.Error(err))
 			}
+		}),
+		nats.ReconnectHandler(func(conn *nats.Conn) {
+			logger.Info("NATS reconnected", zap.String("provider_id", eventSource.ID), zap.String("url", conn.ConnectedUrlRedacted()))
 		}),
 	}
 

@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/core"
 	"net/http"
 	"sync"
 	"testing"
@@ -447,12 +448,17 @@ func TestKafkaEvents(t *testing.T) {
 			assertLineEquals(reader, "")
 		}
 
+		var multipartHeartbeatInterval = 500 * time.Millisecond
+
 		t.Run("subscribe sync", func(t *testing.T) {
 			topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 			testenv.Run(t, &testenv.Config{
 				KafkaSeeds:  seeds,
 				EnableKafka: true,
+				RouterOptions: []core.Option{
+					core.WithMultipartHeartbeatInterval(multipartHeartbeatInterval),
+				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 
 				ensureTopicExists(t, xEnv, topics...)
@@ -485,7 +491,7 @@ func TestKafkaEvents(t *testing.T) {
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
 
 				produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
-				time.Sleep(time.Second * 11)
+				time.Sleep(multipartHeartbeatInterval * 2)
 				produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
 				wg.Wait()
