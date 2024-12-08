@@ -188,7 +188,7 @@ func TestAccessLogsFileOutput(t *testing.T) {
 				}
 				additionalExpectedKeys1 := []string{
 					"time", "hostname", "pid", "latency",
-					"user_agent", "config_version", "request_id", "trace_id",
+					"user_agent", "config_version", "request_id", "trace_id", "url",
 				}
 				checkValues(t, logEntry, expectedValues1, additionalExpectedKeys1)
 			})
@@ -1059,7 +1059,7 @@ func TestAccessLogs(t *testing.T) {
 				additionalExpectedKeys := []string{
 					"user_agent", "latency", "config_version", "request_id", "pid", "hostname",
 				}
-				checkValues(t, requestContext, expectedValues, append(additionalExpectedKeys, "trace_id"))
+				checkValues(t, requestContext, expectedValues, append(additionalExpectedKeys, "trace_id", "url"))
 
 				requestContext1 := requestLog.All()[1].ContextMap()
 				expectedValues1 := map[string]interface{}{
@@ -1109,7 +1109,7 @@ func TestAccessLogs(t *testing.T) {
 				additionalExpectedKeys := []string{
 					"user_agent", "latency", "config_version", "request_id", "pid", "hostname", "trace_id",
 				}
-				checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
+				checkValues(t, requestContext, expectedValues, append(additionalExpectedKeys, "url"))
 
 				requestContext1 := requestLog.All()[1].ContextMap()
 				expectedValues1 := map[string]interface{}{
@@ -1212,7 +1212,7 @@ func TestAccessLogs(t *testing.T) {
 					"ip":            "[REDACTED]",
 				}
 				additionalExpectedKeys := []string{
-					"user_agent", "latency", "config_version", "request_id", "pid", "hostname", "trace_id",
+					"user_agent", "latency", "config_version", "request_id", "pid", "hostname", "trace_id", "url",
 				}
 				checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 
@@ -1390,7 +1390,7 @@ func TestAccessLogs(t *testing.T) {
 					"operation_type":   "query",                                                            // From context
 				}
 				additionalExpectedKeys := []string{
-					"user_agent", "latency", "config_version", "request_id", "pid", "hostname", "normalized_time", "parsed_time", "planned_time", "validation_time", "trace_id",
+					"user_agent", "latency", "config_version", "request_id", "pid", "hostname", "normalized_time", "parsed_time", "planned_time", "validation_time", "trace_id", "url",
 				}
 				checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 
@@ -1561,7 +1561,7 @@ func TestAccessLogs(t *testing.T) {
 					"operation_type":   "query",                                                            // From context
 				}
 				additionalExpectedKeys := []string{
-					"user_agent", "latency", "config_version", "request_id", "pid", "hostname", "normalized_time", "parsed_time", "planned_time", "validation_time", "trace_id",
+					"user_agent", "latency", "config_version", "request_id", "pid", "hostname", "normalized_time", "parsed_time", "planned_time", "validation_time", "trace_id", "url",
 				}
 				checkValues(t, employeeContext, employeeSubgraphVals, additionalExpectedKeys)
 
@@ -1742,7 +1742,7 @@ func TestAccessLogs(t *testing.T) {
 					"operation_type":           "query",                                                            // From context
 				}
 				additionalExpectedKeys := []string{
-					"user_agent", "latency", "config_version", "request_id", "pid", "hostname", "normalized_time", "parsed_time", "planned_time", "validation_time", "trace_id",
+					"user_agent", "latency", "config_version", "request_id", "pid", "hostname", "normalized_time", "parsed_time", "planned_time", "validation_time", "trace_id", "url",
 				}
 				checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 
