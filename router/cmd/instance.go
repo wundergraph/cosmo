@@ -2,19 +2,19 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/logging"
+
 	"net/http"
 	"os"
 
 	"github.com/KimMachineGun/automemlimit/memlimit"
 	"github.com/dustin/go-humanize"
+	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/selfregister"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"go.uber.org/automaxprocs/maxprocs"
-
-	"github.com/wundergraph/cosmo/router/core"
 	"go.uber.org/zap"
 )
 
