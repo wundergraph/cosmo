@@ -76,7 +76,7 @@ func TestGraphQLMetrics(t *testing.T) {
 	require.Equal(t, uint64(2), request.Aggregation[0].RequestCount)
 	require.Equal(t, "{employees {id}}", request.Aggregation[0].SchemaUsage.RequestDocument)
 	require.Equal(t, int32(200), request.Aggregation[0].SchemaUsage.RequestInfo.StatusCode)
-	require.Equal(t, "14226210703439426856", request.Aggregation[0].SchemaUsage.OperationInfo.Hash)
+	require.Equal(t, "1163600561566987607", request.Aggregation[0].SchemaUsage.OperationInfo.Hash)
 	require.Equal(t, graphqlmetrics.OperationType_QUERY, request.Aggregation[0].SchemaUsage.OperationInfo.Type)
 	require.Len(t, request.Aggregation[0].SchemaUsage.TypeFieldMetrics, 2)
 	require.Equal(t, []string{"employees"}, request.Aggregation[0].SchemaUsage.TypeFieldMetrics[0].Path)

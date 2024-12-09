@@ -587,15 +587,8 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, varia
 	// Set the cache hit attribute on the span
 	engineNormalizeSpan.SetAttributes(otel.WgNormalizationCacheHit.Bool(cached))
 
-	requestContext.operation.hash = operationKit.parsedOperation.ID
 	requestContext.operation.normalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
-
-	operationHashString := strconv.FormatUint(operationKit.parsedOperation.ID, 10)
-	operationHashAttribute := otel.WgOperationHash.String(operationHashString)
-
-	requestContext.telemetry.addCommonAttribute(operationHashAttribute)
-
-	httpOperation.routerSpan.SetAttributes(operationHashAttribute)
+	requestContext.operation.internalHash = operationKit.parsedOperation.InternalID
 
 	/**
 	* Normalize the variables
@@ -615,6 +608,13 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, varia
 
 		return err
 	}
+
+	requestContext.operation.hash = operationKit.parsedOperation.ID
+	operationHashString := strconv.FormatUint(operationKit.parsedOperation.ID, 10)
+
+	operationHashAttribute := otel.WgOperationHash.String(operationHashString)
+	requestContext.telemetry.addCommonAttribute(operationHashAttribute)
+	httpOperation.routerSpan.SetAttributes(operationHashAttribute)
 
 	requestContext.operation.content = operationKit.parsedOperation.NormalizedRepresentation
 	requestContext.operation.variables, err = variablesParser.ParseBytes(operationKit.parsedOperation.Request.Variables)
