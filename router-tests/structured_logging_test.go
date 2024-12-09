@@ -328,6 +328,13 @@ func TestAccessLogs(t *testing.T) {
 						ContextField: core.ContextFieldOperationValidationTime,
 					},
 				},
+				{
+					Key:     "request_error",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.ContextFieldRequestError,
+					},
+				},
 			},
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,
@@ -530,6 +537,13 @@ func TestAccessLogs(t *testing.T) {
 						ContextField: core.ContextFieldOperationValidationTime,
 					},
 				},
+				{
+					Key:     "request_error",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.ContextFieldRequestError,
+					},
+				},
 			},
 			NoRetryClient: true,
 			RouterOptions: []core.Option{
@@ -567,6 +581,7 @@ func TestAccessLogs(t *testing.T) {
 				"user_agent":    "Go-http-client/1.1",
 				"service_name":  "service-name", // From header
 				"error_message": "unexpected token - got: EOF want one of: [RBRACE IDENT SPREAD]",
+				"request_error": true,
 			}
 			additionalExpectedKeys := []string{
 				"latency",
@@ -641,6 +656,13 @@ func TestAccessLogs(t *testing.T) {
 						ContextField: core.ContextFieldOperationValidationTime,
 					},
 				},
+				{
+					Key:     "request_error",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.ContextFieldRequestError,
+					},
+				},
 			},
 			NoRetryClient: true,
 			RouterOptions: []core.Option{
@@ -681,6 +703,7 @@ func TestAccessLogs(t *testing.T) {
 				"operation_name": "employees",    // From context
 				"error_message":  "field: notExists not defined on type: Query",
 				"operation_hash": "10501571900000980785",
+				"request_error":  true,
 			}
 			additionalExpectedKeys := []string{
 				"latency",
@@ -757,6 +780,13 @@ func TestAccessLogs(t *testing.T) {
 						ContextField: core.ContextFieldOperationValidationTime,
 					},
 				},
+				{
+					Key:     "request_error",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.ContextFieldRequestError,
+					},
+				},
 			},
 			NoRetryClient: true,
 			RouterOptions: []core.Option{
@@ -807,6 +837,7 @@ func TestAccessLogs(t *testing.T) {
 				"operation_name": "employees",            // From context
 				"operation_type": "query",                // From context
 				"error_message":  "implement me",
+				"request_error":  true,
 			}
 			additionalExpectedKeys := []string{
 				"latency",
@@ -885,6 +916,13 @@ func TestAccessLogs(t *testing.T) {
 						ContextField: core.ContextFieldOperationValidationTime,
 					},
 				},
+				{
+					Key:     "request_error",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.ContextFieldRequestError,
+					},
+				},
 			},
 			NoRetryClient: true,
 			RouterOptions: []core.Option{
@@ -936,6 +974,7 @@ func TestAccessLogs(t *testing.T) {
 				"operation_name": "employees",            // From context
 				"operation_type": "query",                // From context
 				"error_message":  "implement me",
+				"request_error":  true,
 			}
 			additionalExpectedKeys := []string{
 				"latency",
@@ -971,6 +1010,13 @@ func TestAccessLogs(t *testing.T) {
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
 						ContextField: core.ContextFieldGraphQLErrorServices,
+					},
+				},
+				{
+					Key:     "request_error",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.ContextFieldRequestError,
 					},
 				},
 			},
@@ -1013,6 +1059,7 @@ func TestAccessLogs(t *testing.T) {
 				"user_agent":    "Go-http-client/1.1",
 				"error_codes":   []interface{}{"UNAUTHORIZED"},
 				"service_names": []interface{}{"products"},
+				"request_error": true,
 			}
 			additionalExpectedKeys := []string{
 				"latency",
@@ -1335,6 +1382,13 @@ func TestAccessLogs(t *testing.T) {
 							ContextField: core.ContextFieldOperationNormalizationTime,
 						},
 					},
+					{
+						Key:     "request_error",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldRequestError,
+						},
+					},
 				},
 				LogObservation: testenv.LogObservationConfig{
 					Enabled:  true,
@@ -1420,6 +1474,15 @@ func TestAccessLogs(t *testing.T) {
 
 			testenv.Run(t, &testenv.Config{
 				SubgraphAccessLogsEnabled: true,
+				AccessLogFields: []config.CustomAttribute{
+					{
+						Key:     "request_error",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldRequestError,
+						},
+					},
+				},
 				SubgraphAccessLogFields: []config.CustomAttribute{
 					{
 						Key:     "service_name",
@@ -1505,6 +1568,13 @@ func TestAccessLogs(t *testing.T) {
 							ContextField: core.ContextFieldOperationNormalizationTime,
 						},
 					},
+					{
+						Key:     "request_error",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldRequestError,
+						},
+					},
 				},
 				LogObservation: testenv.LogObservationConfig{
 					Enabled:  true,
@@ -1567,31 +1637,33 @@ func TestAccessLogs(t *testing.T) {
 
 				productContext := requestLog.All()[1].ContextMap()
 				productSubgraphVals := map[string]interface{}{
-					"log_type":         "client/subgraph",
-					"subgraph_name":    "products",
-					"subgraph_id":      "3",
-					"status":           int64(403),
-					"method":           "POST",
-					"path":             "/graphql",
-					"query":            "", // http query is empty
-					"ip":               "[REDACTED]",
-					"service_name":     "service-name",                                                     // From request header
-					"error":            "Failed to fetch from Subgraph 'products' at Path: 'employees'.",   // From context
-					"operation_hash":   "16884868987896027258",                                             // From context
-					"operation_sha256": "049efe2ebbdf2e4845e69f69cb7965963b118612a6247ab6d91b1961ea0158dc", // From context
-					"operation_name":   "employees",                                                        // From context
-					"operation_type":   "query",                                                            // From context
+					"log_type":               "client/subgraph",
+					"subgraph_name":          "products",
+					"subgraph_id":            "3",
+					"status":                 int64(403),
+					"method":                 "POST",
+					"path":                   "/graphql",
+					"query":                  "", // http query is empty
+					"ip":                     "[REDACTED]",
+					"service_name":           "service-name",                                                     // From request header
+					"response_error_message": "Failed to fetch from Subgraph 'products' at Path: 'employees'.",   // From context
+					"operation_hash":         "16884868987896027258",                                             // From context
+					"operation_sha256":       "049efe2ebbdf2e4845e69f69cb7965963b118612a6247ab6d91b1961ea0158dc", // From context
+					"operation_name":         "employees",                                                        // From context
+					"operation_type":         "query",                                                            // From context
+					"request_error":          true,                                                               // From context
 				}
 				checkValues(t, productContext, productSubgraphVals, additionalExpectedKeys)
 
 				graphContext := requestLog.All()[2].ContextMap()
 				graphVals := map[string]interface{}{
-					"log_type": "request",
-					"status":   int64(200),
-					"method":   "POST",
-					"path":     "/graphql",
-					"query":    "",
-					"ip":       "[REDACTED]",
+					"log_type":      "request",
+					"status":        int64(200),
+					"method":        "POST",
+					"path":          "/graphql",
+					"query":         "",
+					"ip":            "[REDACTED]",
+					"request_error": true, // From context
 				}
 				graphKeys := []string{
 					"user_agent",
