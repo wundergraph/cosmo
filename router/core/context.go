@@ -459,6 +459,7 @@ type operationContext struct {
 	hash uint64
 	// Content is the content of the operation
 	content    string
+	query      string
 	variables  *astjson.Value
 	files      []httpclient.File
 	clientInfo *ClientInfo

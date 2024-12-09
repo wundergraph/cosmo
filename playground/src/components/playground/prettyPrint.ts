@@ -7,6 +7,11 @@ export class PlanPrinter {
   print(plan: QueryPlan): string {
     this.buf = [];
     this.printText('QueryPlan {');
+    if (plan.trigger) {
+      this.depth++;
+      this.printFetchInfo(plan.trigger);
+      this.depth--;
+    }
     this.printPlanNode(plan, true);
     this.printText('}');
     return this.buf.join('\n');
@@ -19,6 +24,7 @@ export class PlanPrinter {
 
     switch (plan.kind) {
       case 'Single':
+      case 'Trigger':
         this.printFetchInfo(plan.fetch!);
         break;
       case 'Sequence':
@@ -51,7 +57,12 @@ export class PlanPrinter {
       this.depth++;
     }
 
-    this.printText(`${fetch.kind}Fetch(service: "${fetch.subgraphName}") {`);
+    let suffix = 'Fetch';
+    if (fetch.kind === 'Trigger') {
+      suffix = '';
+    }
+
+    this.printText(`${fetch.kind}${suffix}(service: "${fetch.subgraphName}") {`);
     this.depth++;
 
     if (fetch.representations) {

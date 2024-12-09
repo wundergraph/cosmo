@@ -75,6 +75,30 @@ const PlanTree = ({ queryPlan }: { queryPlan: QueryPlan }) => {
 
     parseNodes(queryPlan, "root");
 
+    if (queryPlan.trigger) {
+      tempNodes.unshift({
+        id: "trigger",
+        type: "fetch",
+        data: {
+          kind: "Trigger",
+          fetch: queryPlan.trigger,
+        },
+        position: {
+          x: 0,
+          y: 0,
+        },
+        connectable: false,
+        deletable: false,
+      });
+
+      tempEdges.unshift({
+        id: `trigger-root`,
+        source: "trigger",
+        target: "root",
+        animated: true,
+      });
+    }
+
     setInitialNodes(tempNodes);
     setInitialEdges(tempEdges);
   }, [queryPlan]);
