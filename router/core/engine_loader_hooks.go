@@ -132,6 +132,9 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 		if responseInfo.Err != nil {
 			fields = append(fields, zap.Any("error", responseInfo.Err))
 		}
+		if responseInfo.Request != nil && responseInfo.Request.URL != nil {
+			fields = append(fields, zap.String("url", responseInfo.Request.URL.String()))
+		}
 		f.accessLogger.WriteRequestLog(responseInfo, fields)
 	}
 

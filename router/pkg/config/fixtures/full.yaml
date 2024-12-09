@@ -42,6 +42,20 @@ cors:
   allow_credentials: true
   max_age: 5m
 
+access_logs:
+  enabled: true
+  router:
+    fields:
+      - key: "hello"
+        value_from:
+          context_field: "operation_name"
+  subgraphs:
+    enabled: true
+    fields:
+      - key: "response_field"
+        value_from:
+          response_header: "X-Response-Field"
+
 compliance:
   anonymize_ip:
     enabled: true
