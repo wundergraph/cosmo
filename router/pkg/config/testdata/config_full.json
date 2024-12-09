@@ -267,11 +267,31 @@
       }
     },
     "Router": {
-      "Fields": null
+      "Fields": [
+        {
+          "Key": "hello",
+          "Default": "",
+          "ValueFrom": {
+            "RequestHeader": "",
+            "ContextField": "operation_name",
+            "ResponseHeader": ""
+          }
+        }
+      ]
     },
     "Subgraphs": {
-      "Enabled": false,
-      "Fields": null
+      "Enabled": true,
+      "Fields": [
+        {
+          "Key": "response_field",
+          "Default": "",
+          "ValueFrom": {
+            "RequestHeader": "",
+            "ContextField": "",
+            "ResponseHeader": "X-Response-Field"
+          }
+        }
+      ]
     }
   },
   "ListenAddr": "localhost:3002",
@@ -456,7 +476,7 @@
     "EnableValidationCache": true,
     "ValidationCacheSize": 1024,
     "ResolverMaxRecyclableParserSize": 4096,
-    "EnableSubgraphFetchOperationName": false
+    "EnableSubgraphFetchOperationName": true
   },
   "WebSocket": {
     "Enabled": true,

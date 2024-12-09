@@ -2042,7 +2042,7 @@
         },
         "enable_subgraph_fetch_operation_name": {
             "type": "boolean",
-            "default": true,
+            "default": false,
             "description": "Enable appending the operation name to subgraph fetches. This will ensure that the operation name will be included in the corresponding subgraph requests using the following format: $operationName__$subgraphName__$sequenceID."
         }
       }
@@ -2334,6 +2334,10 @@
               "request_header": {
                 "type": "string",
                 "description": "The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used."
+              },
+              "response_header": {
+                "type": "string",
+                "description": "The name of the response header from which to extract the value. The value is only extracted for subgraph access logs"
               },
               "context_field": {
                 "type": "string",
