@@ -1645,7 +1645,6 @@ func TestAccessLogs(t *testing.T) {
 					"path":                   "/graphql",
 					"query":                  "", // http query is empty
 					"ip":                     "[REDACTED]",
-					"error":                  "Failed to fetch from Subgraph 'products' at Path: 'employees'.",   // Automatically added from error
 					"service_name":           "service-name",                                                     // From request header
 					"response_error_message": "Failed to fetch from Subgraph 'products' at Path: 'employees'.",   // From context
 					"operation_hash":         "16884868987896027258",                                             // From context
