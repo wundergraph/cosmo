@@ -1,5 +1,6 @@
 import http from 'k6/http';
 import { check } from 'k6';
+import { randomString } from 'https://jslib.k6.io/k6-utils/1.2.0/index.js';
 
 /*
     Benchmarking script to run a graphql query with a random operation name.
@@ -13,18 +14,6 @@ export const options = {
         { duration: '20s', target: 100 },
     ],
 };
-
-function generateOperationName(length) {
-    let result = '';
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    const charactersLength = characters.length;
-    let counter = 0;
-    while (counter < length) {
-        result += characters.charAt(Math.floor(Math.random() * charactersLength));
-        counter += 1;
-    }
-    return result;
-}
 
 // oha http://localhost:3002/graphql -n 100 -z 10s -H 'content-type: application/json' -d '{"query":"  query Bench {\n    employees {\n      details {\n        forename\n      }\n    }\n}","operationName":"Bench"}'
 
@@ -166,7 +155,7 @@ fragment EmployeeNameFragment on Employee {
     };
 
 
-    let operationName = generateOperationName(10);
+    let operationName = randomString(10, 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789')
 
     query = query.replace(/\$\$__REPLACE_ME__\$\$/g, operationName);
 

@@ -14,11 +14,10 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/selfregister"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
+	"github.com/wundergraph/cosmo/router/pkg/metric"
 	"go.uber.org/automaxprocs/maxprocs"
 	"go.uber.org/zap"
 )
-
-const cardinalityLimit = 2000
 
 // Params are all required for the router to start up
 type Params struct {
@@ -160,7 +159,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		}),
 		core.WithDevelopmentMode(cfg.DevelopmentMode),
 		core.WithTracing(core.TraceConfigFromTelemetry(&cfg.Telemetry)),
-		core.WithMetrics(core.MetricConfigFromTelemetry(&cfg.Telemetry, cardinalityLimit)),
+		core.WithMetrics(core.MetricConfigFromTelemetry(&cfg.Telemetry, metric.CardinalityLimit)),
 		core.WithEngineExecutionConfig(cfg.EngineExecutionConfiguration),
 		core.WithCacheControlPolicy(cfg.CacheControl),
 		core.WithSecurityConfig(cfg.SecurityConfiguration),

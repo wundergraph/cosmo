@@ -14,6 +14,9 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 )
 
+// CardinalityLimit is the hard limit on the number of metric streams that can be collected for a single instrument.
+const CardinalityLimit = 2000
+
 // Server HTTP metrics.
 const (
 	RequestCounter                = "router.http.requests"                      // Incoming request count total
@@ -161,7 +164,7 @@ func NewStore(opts ...Option) (Store, error) {
 // In order to avoid creating a large number of metric streams, we set a hard limit that can be collected for a single instrument.
 func setCardinalityLimit(limit int) error {
 	if limit < 0 {
-		// setting a limit of 0 disables  the cardinality limit
+		// setting a limit of 0 disables the cardinality limit
 		limit = 0
 	}
 
