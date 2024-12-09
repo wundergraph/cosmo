@@ -14,8 +14,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 )
 
-// CardinalityLimit is the hard limit on the number of metric streams that can be collected for a single instrument.
-const CardinalityLimit = 2000
+// DefaultCardinalityLimit is the hard limit on the number of metric streams that can be collected for a single instrument.
+const DefaultCardinalityLimit = 2000
 
 // Server HTTP metrics.
 const (
@@ -163,13 +163,13 @@ func NewStore(opts ...Option) (Store, error) {
 // This feature is experimental in otel-go and may be exposed in a different way in the future.
 // In order to avoid creating a large number of metric streams, we set a hard limit that can be collected for a single instrument.
 func setCardinalityLimit(limit int) error {
-	if limit < 0 {
-		// setting a limit of 0 disables the cardinality limit
-		limit = 0
+	if limit <= 0 {
+		// We set the default limit if the limit is not set or invalid.
+		// A limit of 0 would disable the cardinality limit.
+		limit = DefaultCardinalityLimit
 	}
 
-	val := strconv.Itoa(limit)
-	return os.Setenv("OTEL_GO_X_CARDINALITY_LIMIT", val)
+	return os.Setenv("OTEL_GO_X_CARDINALITY_LIMIT", strconv.Itoa(limit))
 }
 
 func (h *Metrics) MeasureInFlight(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption) func() {

@@ -72,7 +72,7 @@ func TestCardinalityLimit(t *testing.T) {
 		require.Len(t, histogram.DataPoints, 30)
 	})
 
-	t.Run("Should not allow negative cardinality limit and default to 0", func(t *testing.T) {
+	t.Run("Should not allow negative cardinality limit and use default cardinality limit", func(t *testing.T) {
 		t.Cleanup(func() {
 			require.NoError(t, os.Unsetenv("OTEL_GO_X_CARDINALITY_LIMIT"))
 		})
@@ -80,7 +80,8 @@ func TestCardinalityLimit(t *testing.T) {
 		metricReader := metric.NewManualReader()
 		store := createTestStore(t, -1, metricReader)
 
-		for i := 0; i < 30; i++ {
+		// We attempt to create more data points than the default cardinality limit
+		for i := 0; i < 2*DefaultCardinalityLimit; i++ {
 			store.MeasureLatency(context.Background(), time.Second, nil, otelmetric.WithAttributeSet(attribute.NewSet(a.String(fmt.Sprintf("testValue%d", i)))))
 		}
 
@@ -92,7 +93,31 @@ func TestCardinalityLimit(t *testing.T) {
 		require.True(t, ok)
 
 		// A negative limit should default to 0 which means that no limit is applied.
-		require.Len(t, histogram.DataPoints, 30)
+		require.Len(t, histogram.DataPoints, DefaultCardinalityLimit)
+	})
+
+	t.Run("Should not allow disabling cardinality limit and use default cardinality limit", func(t *testing.T) {
+		t.Cleanup(func() {
+			require.NoError(t, os.Unsetenv("OTEL_GO_X_CARDINALITY_LIMIT"))
+		})
+
+		metricReader := metric.NewManualReader()
+		store := createTestStore(t, 0, metricReader)
+
+		// We attempt to create more data points than the default cardinality limit
+		for i := 0; i < 2*DefaultCardinalityLimit; i++ {
+			store.MeasureLatency(context.Background(), time.Second, nil, otelmetric.WithAttributeSet(attribute.NewSet(a.String(fmt.Sprintf("testValue%d", i)))))
+		}
+
+		var rm metricdata.ResourceMetrics
+		err := metricReader.Collect(context.Background(), &rm)
+		require.NoError(t, err)
+
+		histogram, ok := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Histogram[float64])
+		require.True(t, ok)
+
+		// A negative limit should default to 0 which means that no limit is applied.
+		require.Len(t, histogram.DataPoints, DefaultCardinalityLimit)
 	})
 }
 

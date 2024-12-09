@@ -92,9 +92,6 @@ type Config struct {
 	ResourceAttributes []attribute.KeyValue
 
 	Attributes []config.CustomAttribute
-
-	// CardinalityLimit is the hard limit on the number of metric streams that can be collected for a single instrument.
-	CardinalityLimit int
 }
 
 func (c *Config) IsEnabled() bool {
