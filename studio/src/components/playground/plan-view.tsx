@@ -215,6 +215,7 @@ export const PlanView = () => {
               minimap: {
                 enabled: false,
               },
+              readOnly: true,
             }}
             beforeMount={(monaco) => {
               monaco.editor.defineTheme("wg-dark", schemaViewerDarkTheme);
