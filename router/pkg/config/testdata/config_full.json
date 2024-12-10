@@ -243,6 +243,11 @@
     },
     "Router": {
       "MaxRequestBodyBytes": 5000000
+    },
+    "Subgraphs": {
+      "products": {
+        "RequestTimeout": 120000000000
+      }
     }
   },
   "FileUpload": {
