@@ -1,4 +1,4 @@
-import { identifyKoala, resetKoala } from "@/lib/koala";
+import { identify, resetKoala } from "@/lib/track";
 import { Transport } from "@connectrpc/connect";
 import { TransportProvider } from "@connectrpc/connect-query";
 import { createConnectTransport } from "@connectrpc/connect-web";
@@ -185,8 +185,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         });
       }
 
-      // Identify call for koala script
-      identifyKoala({
+      // Identify call for tracking script
+      identify({
         id: data.id,
         email: data.email,
         organizationId: organization.id,
