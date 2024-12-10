@@ -47,10 +47,11 @@ func (h *SubgraphAccessLogger) WriteRequestLog(respInfo *resolve.ResponseInfo, s
 	if respInfo == nil {
 		return
 	}
+
 	path := respInfo.Request.URL.Path
 	fields := h.accessLogger.getRequestFields(respInfo.Request)
 	if h.accessLogger.fieldsHandler != nil {
-		fields = append(fields, h.accessLogger.fieldsHandler(h.accessLogger.attributes, nil, respInfo.Request, &respInfo.ResponseHeaders)...)
+		fields = append(fields, h.accessLogger.fieldsHandler(h.accessLogger.attributes, respInfo.Err, respInfo.Request, &respInfo.ResponseHeaders)...)
 	}
 
 	if len(subgraphFields) > 0 {

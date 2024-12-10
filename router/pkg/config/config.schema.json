@@ -587,7 +587,9 @@
                               "operation_parsing_time",
                               "operation_validation_time",
                               "operation_planning_time",
-                              "operation_normalization_time"
+                              "operation_normalization_time",
+                              "request_error",
+                              "response_error_message"
                             ]
                           }
                         }
@@ -2349,6 +2351,7 @@
                   "operation_hash",
                   "persisted_operation_sha256",
                   "operation_sha256",
+                  "request_error",
                   "response_error_message",
                   "graphql_error_codes",
                   "graphql_error_service_names",
