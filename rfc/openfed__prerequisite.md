@@ -19,7 +19,7 @@ This is the proposed definition of the directive (functionality is discussed in 
 ```graphql
 directive @openfed__prerequisite(
   resolveEntity: openfed__ResolveEntityInput
-  resolveQuery: openfed__QueryInput
+  resolveQuery: openfed__ResolveQueryInput
 ) on ARGUMENT_DEFINITION
 
 input openfed__ResolveEntityInput {
