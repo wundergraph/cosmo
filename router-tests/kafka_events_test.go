@@ -12,12 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/wait"
-
 	"github.com/hasura/go-graphql-client"
 	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go/modules/kafka"
 	"github.com/tidwall/gjson"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -44,43 +40,11 @@ func TestKafkaEvents(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
-
-	var (
-		kafkaContainer *kafka.KafkaContainer
-		err            error
-	)
-
-	ctx := context.Background()
-	require.Eventually(t, func() bool {
-		// when using Docker Desktop on Mac, it's possible that it takes 2 attempts to get the network port of the container
-		// I've debugged this extensively and the issue is not with the testcontainers-go library, but with the Docker Desktop
-		// Error message: container logs (port not found)
-		// This is an internal issue coming from the Docker pkg
-		// It seems like Docker Desktop on Mac is not always capable of providing a port mapping
-		// The solution is to retry the container creation until we get the network port
-		// Please don't try to improve this code as this workaround allows running the tests without any issues
-		kafkaContainer, err = kafka.RunContainer(ctx,
-			testcontainers.WithImage("confluentinc/confluent-local:7.6.1"),
-			testcontainers.WithWaitStrategyAndDeadline(time.Second*30, wait.ForListeningPort("9093/tcp")),
-		)
-		return err == nil && kafkaContainer != nil
-	}, time.Second*30, time.Second)
-
-	require.NoError(t, kafkaContainer.Start(ctx))
-
-	seeds, err := kafkaContainer.Brokers(ctx)
-	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		require.NoError(t, kafkaContainer.Terminate(ctx))
-	})
-
 	t.Run("subscribe async", func(t *testing.T) {
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds:  seeds,
 			EnableKafka: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
@@ -139,7 +103,6 @@ func TestKafkaEvents(t *testing.T) {
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds:  seeds,
 			EnableKafka: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
@@ -222,7 +185,6 @@ func TestKafkaEvents(t *testing.T) {
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds:  seeds,
 			EnableKafka: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
@@ -287,7 +249,6 @@ func TestKafkaEvents(t *testing.T) {
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds:  seeds,
 			EnableKafka: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
@@ -377,7 +338,6 @@ func TestKafkaEvents(t *testing.T) {
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds:  seeds,
 			EnableKafka: true,
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.EnableNetPoll = false
@@ -454,7 +414,6 @@ func TestKafkaEvents(t *testing.T) {
 			topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 			testenv.Run(t, &testenv.Config{
-				KafkaSeeds:  seeds,
 				EnableKafka: true,
 				RouterOptions: []core.Option{
 					core.WithMultipartHeartbeatInterval(multipartHeartbeatInterval),
@@ -506,7 +465,6 @@ func TestKafkaEvents(t *testing.T) {
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
 			testenv.Run(t, &testenv.Config{
-				KafkaSeeds:  seeds,
 				EnableKafka: true,
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 					securityConfiguration.BlockSubscriptions = true
@@ -537,7 +495,6 @@ func TestKafkaEvents(t *testing.T) {
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds:  seeds,
 			EnableKafka: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
@@ -596,7 +553,6 @@ func TestKafkaEvents(t *testing.T) {
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds:  seeds,
 			EnableKafka: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
@@ -655,7 +611,6 @@ func TestKafkaEvents(t *testing.T) {
 		subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds:  seeds,
 			EnableKafka: true,
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 				securityConfiguration.BlockSubscriptions = true
@@ -696,7 +651,6 @@ func TestKafkaEvents(t *testing.T) {
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds:  seeds,
 			EnableKafka: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
@@ -803,7 +757,6 @@ func TestKafkaEvents(t *testing.T) {
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds:  seeds,
 			EnableKafka: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
@@ -899,7 +852,6 @@ func TestKafkaEvents(t *testing.T) {
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds:  seeds,
 			EnableKafka: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
@@ -995,7 +947,6 @@ func TestKafkaEvents(t *testing.T) {
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds:  seeds,
 			EnableKafka: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
@@ -1062,14 +1013,18 @@ func ensureTopicExists(t *testing.T, xEnv *testenv.Environment, topics ...string
 
 	deleteCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+	prefixedTopics := make([]string, len(topics))
+	for _, topic := range topics {
+		prefixedTopics = append(prefixedTopics, xEnv.GetPubSubName(topic))
+	}
 
-	_, err := xEnv.KafkaAdminClient.DeleteTopics(deleteCtx, topics...)
+	_, err := xEnv.KafkaAdminClient.DeleteTopics(deleteCtx, prefixedTopics...)
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	_, err = xEnv.KafkaAdminClient.CreateTopics(ctx, 1, 1, nil, topics...)
+	_, err = xEnv.KafkaAdminClient.CreateTopics(ctx, 1, 1, nil, prefixedTopics...)
 	require.NoError(t, err)
 }
 
@@ -1083,7 +1038,7 @@ func produceKafkaMessage(t *testing.T, xEnv *testenv.Environment, topicName stri
 	var pErr error
 
 	xEnv.KafkaClient.Produce(ctx, &kgo.Record{
-		Topic: topicName,
+		Topic: xEnv.GetPubSubName(topicName),
 		Value: []byte(message),
 	}, func(record *kgo.Record, err error) {
 		defer wg.Done()
