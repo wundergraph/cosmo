@@ -1,3 +1,4 @@
+import { parse, print } from "graphql";
 import {
   QueryPlan,
   QueryPlanFetchNode,
@@ -79,7 +80,7 @@ export class PlanPrinter {
     }
 
     if (fetch.query) {
-      this.printQuery(fetch.query);
+      this.printQuery(print(parse(fetch.query)));
     }
 
     this.depth--;

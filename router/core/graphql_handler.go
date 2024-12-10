@@ -138,7 +138,6 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer graphqlExecutionSpan.End()
 
 	ctx := &resolve.Context{
-		Query:     requestContext.operation.query,
 		Variables: requestContext.operation.variables,
 		Files:     requestContext.operation.files,
 		Request: resolve.Request{

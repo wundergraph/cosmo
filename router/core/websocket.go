@@ -892,7 +892,6 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 		}
 	}
 	resolveCtx := &resolve.Context{
-		Query:     operationCtx.query,
 		Variables: operationCtx.Variables(),
 		Request: resolve.Request{
 			Header: registration.clientRequest.Header,

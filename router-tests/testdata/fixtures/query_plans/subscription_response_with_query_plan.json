@@ -10,7 +10,7 @@
         "subgraphName": "employees",
         "subgraphId": "0",
         "fetchId": 0,
-        "query": "subscription Q1 { currentTime { unixTime } }"
+        "query": "subscription{currentTime {unixTime}}"
       }
     }
   }

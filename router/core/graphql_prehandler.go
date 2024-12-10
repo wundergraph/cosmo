@@ -426,8 +426,6 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, varia
 		}
 	}
 
-	requestContext.operation.query = operationKit.parsedOperation.Request.Query
-
 	// Compute the operation sha256 hash as soon as possible for observability reasons
 	if h.computeOperationSha256 {
 		if err := operationKit.ComputeOperationSha256(); err != nil {
@@ -781,9 +779,7 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, varia
 		if h.queryPlansLoggingEnabled {
 			switch p := requestContext.operation.preparedPlan.preparedPlan.(type) {
 			case *plan.SynchronousResponsePlan:
-				printedPlan := p.Response.Fetches.QueryPlan(&resolve.Context{
-					Query: operationKit.parsedOperation.Request.Query,
-				}, p.Response.Data).PrettyPrint()
+				printedPlan := p.Response.Fetches.QueryPlan().PrettyPrint()
 
 				if h.developmentMode {
 					h.log.Sugar().Debugf("Query Plan:\n%s", printedPlan)
