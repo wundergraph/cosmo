@@ -587,7 +587,9 @@
                               "operation_parsing_time",
                               "operation_validation_time",
                               "operation_planning_time",
-                              "operation_normalization_time"
+                              "operation_normalization_time",
+                              "request_error",
+                              "response_error_message"
                             ]
                           }
                         }
@@ -2042,7 +2044,7 @@
         },
         "enable_subgraph_fetch_operation_name": {
             "type": "boolean",
-            "default": true,
+            "default": false,
             "description": "Enable appending the operation name to subgraph fetches. This will ensure that the operation name will be included in the corresponding subgraph requests using the following format: $operationName__$subgraphName__$sequenceID."
         }
       }
@@ -2335,6 +2337,10 @@
                 "type": "string",
                 "description": "The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used."
               },
+              "response_header": {
+                "type": "string",
+                "description": "The name of the response header from which to extract the value. The value is only extracted for subgraph access logs"
+              },
               "context_field": {
                 "type": "string",
                 "description": "The field name of the context from which to extract the value. The value is only extracted when a context is available otherwise the default value is used.",
@@ -2345,6 +2351,7 @@
                   "operation_hash",
                   "persisted_operation_sha256",
                   "operation_sha256",
+                  "request_error",
                   "response_error_message",
                   "graphql_error_codes",
                   "graphql_error_service_names",
