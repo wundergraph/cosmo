@@ -59,28 +59,28 @@ func TestNormalization(t *testing.T) {
 			 */
 			{
 				Name:          "Variable with User ID 1",
-				OperationHash: "17367320933561257453",
+				OperationHash: "1747906364159389403",
 				Query: `{
-    "query": "query Employee($id: Int! = 1) {\n  employee(id: $id) {\n    details {\n      pets {\n        name\n      }\n    }\n  }\n}",
+    "query": "query Employee($id: Int! = 1) {\n  employee(id: $id) {\n    id\n} \n}",
     "variables": {
         "id": 1
     },
     "operationName": "Employee"
 }`,
-				Output:        `{"data":{"employee":{"details":{"pets":null}}}}`,
+				Output:        `{"data": {"employee": {"id": 1}}}`,
 				OperationName: "Employee",
 			},
 			{
 				Name:          "Variable with User ID 3",
-				OperationHash: "17367320933561257453",
+				OperationHash: "1747906364159389403",
 				Query: `{
-    "query": "query Employee($id: Int! = 1) {\n  employee(id: $id) {\n    details {\n      pets {\n        name\n      }\n    }\n  }\n}",
+    "query": "query Employee($id: Int! = 1) {\n  employee(id: $id) {\n    id\n} \n}",
     "variables": {
         "id": 3
     },
     "operationName": "Employee"
 }`,
-				Output:        `{"data":{"employee":{"details":{"pets":[{"name":"Snappy"}]}}}}`,
+				Output:        `{"data": {"employee": {"id": 3}}}`,
 				OperationName: "Employee",
 			},
 			/**
@@ -88,22 +88,22 @@ func TestNormalization(t *testing.T) {
 			 */
 			{
 				Name:          "Variable with default value 1",
-				OperationHash: "17367320933561257453",
+				OperationHash: "1747906364159389403",
 				Query: `{
-    "query": "query Employee($id: Int! = 1) {\n  employee(id: $id) {\n    details {\n      pets {\n        name\n      }\n    }\n  }\n}",
+    "query": "query Employee($id: Int! = 1) {\n  employee(id: $id) {\n    id\n} \n}",
     "operationName": "Employee"
 }`,
-				Output:        `{"data":{"employee":{"details":{"pets":null}}}}`,
+				Output:        `{"data": {"employee": {"id": 1}}}`,
 				OperationName: "Employee",
 			},
 			{
 				Name:          "Variable with default value 3",
-				OperationHash: "17367320933561257453",
+				OperationHash: "1747906364159389403",
 				Query: `{
-    "query": "query Employee($id: Int! = 3) {\n  employee(id: $id) {\n    details {\n      pets {\n        name\n      }\n    }\n  }\n}",
+    "query": "query Employee($id: Int! = 3) {\n  employee(id: $id) {\n    id\n} \n}",
     "operationName": "Employee"
 }`,
-				Output:        `{"data":{"employee":{"details":{"pets":[{"name":"Snappy"}]}}}}`,
+				Output:        `{"data": {"employee": {"id": 3}}}`,
 				OperationName: "Employee",
 			},
 			/**
@@ -111,12 +111,12 @@ func TestNormalization(t *testing.T) {
 			 */
 			{
 				Name:          "Operation with different name",
-				OperationHash: "17367320933561257453",
+				OperationHash: "1747906364159389403",
 				Query: `{
-    "query": "query Test($id: Int! = 3) {\n  employee(id: $id) {\n    details {\n      pets {\n        name\n      }\n    }\n  }\n}",
+    "query": "query Test($id: Int! = 3) {\n  employee(id: $id) {\n    id \n} \n}",
     "operationName": "Test"
 }`,
-				Output:        `{"data":{"employee":{"details":{"pets":[{"name":"Snappy"}]}}}}`,
+				Output:        `{"data": {"employee": {"id": 3}}}`,
 				OperationName: "Test",
 			},
 			/**
@@ -124,12 +124,12 @@ func TestNormalization(t *testing.T) {
 			 */
 			{
 				Name:          "Operation with different whitespaces",
-				OperationHash: "17367320933561257453",
+				OperationHash: "1747906364159389403",
 				Query: `{
-    "query": "query Employee($id: Int! = 3) {\n  employee(id: $id) {\n    details {pets {\n        name\n      }\n    }\n  }}",
+    "query": "query Employee($id: Int! = 3) {\n  employee(id: $id) {\n    id  \n}    \n}",
     "operationName": "Employee"
 }`,
-				Output:        `{"data":{"employee":{"details":{"pets":[{"name":"Snappy"}]}}}}`,
+				Output:        `{"data": {"employee": {"id": 3}}}`,
 				OperationName: "Employee",
 			},
 
@@ -138,22 +138,22 @@ func TestNormalization(t *testing.T) {
 			 */
 			{
 				Name:          "Inline value with User ID 1",
-				OperationHash: "14247917063282800240",
+				OperationHash: "2190801858633811792",
 				Query: `{
-    "query": "query Employee{\n  employee(id: 1) {\n    details {\n      pets {\n        name\n      }\n    }\n  }\n}",
+    "query": "query Employee{\n  employee(id: 1) {\n    id\n} \n}",
     "operationName": "Employee"
 }`,
-				Output:        `{"data":{"employee":{"details":{"pets":null}}}}`,
+				Output:        `{"data": {"employee": {"id": 1}}}`,
 				OperationName: "Employee",
 			},
 			{
 				Name:          "Inline value with User ID 3",
-				OperationHash: "14247917063282800240",
+				OperationHash: "2190801858633811792",
 				Query: `{
-    "query": "query Employee{\n  employee(id: 3) {\n    details {\n      pets {\n        name\n      }\n    }\n  }\n}",
+    "query": "query Employee{\n  employee(id: 1) {\n    id\n} \n}",
     "operationName": "Employee"
 }`,
-				Output:        `{"data":{"employee":{"details":{"pets":[{"name":"Snappy"}]}}}}`,
+				Output:        `{"data": {"employee": {"id": 1}}}`,
 				OperationName: "Employee",
 			},
 		}
@@ -162,6 +162,9 @@ func TestNormalization(t *testing.T) {
 			tc := tc
 			t.Run(tc.Name, func(t *testing.T) {
 				exporter := tracetest.NewInMemoryExporter(t)
+
+				defer exporter.Reset()
+
 				testenv.Run(t, &testenv.Config{
 					TraceExporter: exporter,
 				}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -177,10 +180,10 @@ func TestNormalization(t *testing.T) {
 
 					sn := exporter.GetSpans().Snapshots()
 
-					require.Equal(t, "query "+tc.OperationName, sn[7].Name())
-					require.Equal(t, trace.SpanKindClient, sn[7].SpanKind())
-					require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[7].Status())
-					require.Contains(t, sn[7].Attributes(), otel.WgOperationHash.String(tc.OperationHash))
+					require.Equal(t, "query "+tc.OperationName, sn[5].Name())
+					require.Equal(t, trace.SpanKindClient, sn[5].SpanKind())
+					require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[5].Status())
+					require.Contains(t, sn[5].Attributes(), otel.WgOperationHash.String(tc.OperationHash))
 
 				})
 			})
