@@ -260,7 +260,7 @@ export const ReactFlowQueryPlanFetchNode = ({
         <div className="flex items-start justify-between gap-x-4 border-b px-8 py-4">
           <p className="flex flex-col gap-y-2 text-sm font-medium subpixel-antialiased">
             {data.fetch?.kind || data.kind}
-            {["Parallel", "Sequence", "ParallelList"].includes(
+            {["Parallel", "Sequence", "ParallelList", "Trigger"].includes(
               data.fetch?.kind || data.kind,
             )
               ? ""

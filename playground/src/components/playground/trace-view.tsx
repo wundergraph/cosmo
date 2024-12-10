@@ -1,4 +1,6 @@
 import { cn } from '@/lib/utils';
+import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { Kind, OperationTypeNode, parse } from 'graphql';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { BiRename } from 'react-icons/bi';
 import { LuNetwork } from 'react-icons/lu';
@@ -562,7 +564,7 @@ const Trace = ({
 };
 
 export const TraceView = () => {
-  const { response: activeResponse, subgraphs, headers: activeHeader } = useContext(TraceContext);
+  const { query, response: activeResponse, subgraphs, headers: activeHeader } = useContext(TraceContext);
 
   const [headers, setHeaders] = useState<string>();
   const [response, setResponse] = useState<string>();
@@ -605,6 +607,30 @@ export const TraceView = () => {
   const hasTrace = hasTraceHeader && hasTraceInResponse;
 
   const [view, setView] = useState<'tree' | 'waterfall'>('tree');
+
+  const isSubscription = useMemo(() => {
+    try {
+      const parsed = parse(query ?? '');
+
+      const isSubscription =
+        parsed.definitions[0]?.kind === Kind.OPERATION_DEFINITION &&
+        parsed.definitions[0].operation === OperationTypeNode.SUBSCRIPTION;
+
+      return isSubscription;
+    } catch {
+      return false;
+    }
+  }, [query]);
+
+  if (isSubscription) {
+    return (
+      <EmptyState
+        icon={<ExclamationTriangleIcon />}
+        title="Unsupported"
+        description="Advanced Request Tracing is not supported for subscriptions"
+      />
+    );
+  }
 
   if (!hasTrace) {
     return (

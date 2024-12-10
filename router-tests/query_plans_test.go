@@ -292,5 +292,21 @@ func TestQueryPlans(t *testing.T) {
 			g.Assert(t, "response_with_query_plan_operation_name_sanitized_no_data", prettifyJSON(res.Body))
 		})
 	})
+	t.Run("query plan on skip load for a subscription", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.Debug.AlwaysIncludeQueryPlan = true
+				cfg.Debug.AlwaysSkipLoader  = true
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `subscription Q1 { currentTime { unixTime } }`,
+			})
+
+			g.Assert(t, "subscription_response_with_query_plan", prettifyJSON(res.Body))
+		})
+	})
 
 }

@@ -98,5 +98,6 @@ export type QueryPlanFetchTypeNode = {
 
 export type QueryPlan = QueryPlanFetchTypeNode & {
   version: string;
+  trigger?: QueryPlanFetchNode;
   children: QueryPlanFetchTypeNode[];
 };
