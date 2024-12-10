@@ -1637,21 +1637,21 @@ func TestAccessLogs(t *testing.T) {
 
 				productContext := requestLog.All()[1].ContextMap()
 				productSubgraphVals := map[string]interface{}{
-					"log_type":         "client/subgraph",
-					"subgraph_name":    "products",
-					"subgraph_id":      "3",
-					"status":           int64(403),
-					"method":           "POST",
-					"path":             "/graphql",
-					"query":            "", // http query is empty
-					"ip":               "[REDACTED]",
-					"service_name":     "service-name",                                                     // From request header
-					"error":            "Failed to fetch from Subgraph 'products' at Path: 'employees'.",   // From context
-					"operation_hash":   "13939103824696605913",                                             // From context
-					"operation_sha256": "049efe2ebbdf2e4845e69f69cb7965963b118612a6247ab6d91b1961ea0158dc", // From context
-					"operation_name":   "employees",                                                        // From context
-					"operation_type":   "query",                                                            // From context
-					"request_error":    true,                                                               // From context
+					"log_type":               "client/subgraph",
+					"subgraph_name":          "products",
+					"subgraph_id":            "3",
+					"status":                 int64(403),
+					"method":                 "POST",
+					"path":                   "/graphql",
+					"query":                  "", // http query is empty
+					"ip":                     "[REDACTED]",
+					"service_name":           "service-name",                                                     // From request header
+					"response_error_message": "Failed to fetch from Subgraph 'products' at Path: 'employees'.",   // From context
+					"operation_hash":         "13939103824696605913",                                             // From context
+					"operation_sha256":       "049efe2ebbdf2e4845e69f69cb7965963b118612a6247ab6d91b1961ea0158dc", // From context
+					"operation_name":         "employees",                                                        // From context
+					"operation_type":         "query",                                                            // From context
+					"request_error":          true,                                                               // From context
 				}
 				checkValues(t, productContext, productSubgraphVals, additionalExpectedKeys)
 
