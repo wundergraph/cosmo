@@ -352,13 +352,13 @@ describe('Input tests', () => {
       );
     });
 
-    test('that an error is returned if a required Input Values uses a null default value', () => {
+    test('that an error is returned if a required Input values uses a null default value', () => {
       const { errors } = federateSubgraphs([subgraphWithInputField('subgraph', 'String! = null')]);
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         subgraphValidationError('subgraph', [
-          incompatibleInputValueDefaultValueTypeError('Input Field "field"', 'Input.field', 'String!', 'null'),
+          incompatibleInputValueDefaultValueTypeError('Input field "field"', 'Input.field', 'String!', 'null'),
         ]),
       );
     });
@@ -369,19 +369,24 @@ describe('Input tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         subgraphValidationError('subgraph', [
-          incompatibleInputValueDefaultValueTypeError('Input Field "name"', 'Input.name', 'String!', 'null'),
+          incompatibleInputValueDefaultValueTypeError('Input field "name"', 'Input.name', 'String!', 'null'),
         ]),
       );
     });
 
-    test.skip('that an error is returned if a required input field uses an enum default value', () => {
+    test.skip('a String input should coerce a default value string without quotations into a string', () => {
       const { errors } = federateSubgraphs([subgraphWithInputField('subgraph', 'String! = VALUE')]);
-      expect(errors).toBeDefined();
-      expect(errors).toHaveLength(1);
-      expect(errors![0]).toStrictEqual(
-        subgraphValidationError('subgraph', [
-          incompatibleInputValueDefaultValueTypeError('Input Field "field"', 'Input.field', 'String!', 'VALUE'),
-        ]),
+      expect(errors).toBeUndefined();
+      expect(
+        normalizeString(`
+        input Input {
+          field: String! = "Value"
+        }
+        
+        type Query {
+          dummy: String!
+        }
+      `),
       );
     });
 
@@ -391,7 +396,7 @@ describe('Input tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         subgraphValidationError('subgraph', [
-          incompatibleInputValueDefaultValueTypeError('Input Field "field"', 'Input.field', 'Boolean!', 'null'),
+          incompatibleInputValueDefaultValueTypeError('Input field "field"', 'Input.field', 'Boolean!', 'null'),
         ]),
       );
     });
@@ -402,7 +407,7 @@ describe('Input tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         subgraphValidationError('subgraph', [
-          incompatibleInputValueDefaultValueTypeError('Input Field "field"', 'Input.field', 'Int', '"test"'),
+          incompatibleInputValueDefaultValueTypeError('Input field "field"', 'Input.field', 'Int', '"test"'),
         ]),
       );
     });
@@ -413,7 +418,7 @@ describe('Input tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         subgraphValidationError('subgraph', [
-          incompatibleInputValueDefaultValueTypeError('Input Field "field"', 'Input.field', 'Int', '1.0'),
+          incompatibleInputValueDefaultValueTypeError('Input field "field"', 'Input.field', 'Int', '1.0'),
         ]),
       );
     });
